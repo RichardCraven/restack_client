@@ -1,5 +1,16 @@
+html, body{
+  height: 100%;
+  width: 100%;
+}
+#root{
+  height: 100%;
+}
 .App {
+  height: 100%;
   text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .App-logo {
@@ -35,4 +46,17 @@
   to {
     transform: rotate(360deg);
   }
+}
+
+.login-pane{
+  height: 30vh;
+  width: 40vw;
+  border: 1px solid grey;
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  flex-direction: column;
+}
+.login-button{
+  margin-right: 30px;
 }
