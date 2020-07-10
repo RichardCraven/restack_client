@@ -2,15 +2,18 @@ html, body{
   height: 100%;
   width: 100%;
 }
-*{
-  // transition: all 2s;
-}
 #root{
   height: 100%;
 }
 .fullpage{
   height: 100vh;
   width: 100vw;;
+}
+.relative-wrapper{
+  position: relative;
+}
+.absolute-wrapper{
+  position: absolute;
 }
 .button{
   cursor: pointer;
@@ -49,23 +52,32 @@ html, body{
     align-items: center;
     justify-content: space-around;
     flex-direction: column;
+    position: relative;
+    .invalid-credentials{
+      color: red;
+      position: absolute;
+      top: 25px;
+      width: 200%;
+    }
   }
   .login-button{
     margin-right: 30px;
   }
-  .inputs-container{
-    min-height: 125px;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-around;
-    align-items: center;
+  .inputs-container-row{
+    width: 100%;
+    display: inline-flex;
     position: relative;
-
-    .invalid-credentials{
-      color: red;
-      position: absolute;
-      bottom: -25px;
-      width: 200%;
+    display: flex;
+    justify-content: center;
+    .inputs-container{
+      min-height: 125px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-around;
+      align-items: center;
+      position: relative;
+      
+      
     }
   }
 }
@@ -81,4 +93,36 @@ html, body{
   transition: box-shadow 0.5s;
   will-change: transform;
   border: 15px solid white;
+}
+
+.landing-pane{
+  height: 60vh;
+  width: 70vw;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  div{
+    cursor: pointer;
+    transition: all 0.5s;
+    border: 1px solid slategray;
+    height: 100px;
+    width: 150px;
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    &.portal:hover{
+      background-color: thistle;
+    }
+    &.user-data:hover{
+      background-color: paleturquoise;
+    }
+    &.shop:hover{
+      background-color: coral;
+    }
+    &.enter-dungeon:hover{
+      background-color: black;
+      color: red;
+    }
+  }
 }

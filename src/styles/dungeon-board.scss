@@ -1,0 +1,41 @@
+.container{
+    align-items: center;
+    position: relative;
+    justify-content: center;
+    display: flex;
+    height: 100%;
+}
+.board{
+    /* margin-top: 300px; */
+    /* width: 1500px;
+    height: 1500px; */
+    border: 1px solid black;
+    display: flex;
+    flex-flow: row wrap;
+    align-content: flex-end;
+}
+#myCanvas{
+    height: 1504px; 
+    width: 1504px;
+    position: absolute;
+    z-index: -1;
+}
+.pyramid-level{
+    border: 1px solid grey;
+    background-color: whitesmoke;
+    height: 250px;
+    width: 80px;
+    position: fixed;
+    left: 144px;
+    display: flex;
+    flex-direction: column;
+}
+.pyramid-top,.pyramid-mid,.pyramid-bot{
+    height: 150px;
+    width: 100%;
+    border-top: 1px solid lightgrey;
+    border-bottom: 1px solid lightgrey;
+}
+.pyramid-top.active,.pyramid-mid.active,.pyramid-bot.active{
+    background-color: slategray;
+}
