@@ -54,19 +54,12 @@ export function BoardManager(){
             location: [26,18]
         }
         for(let i = 0; i< 225; i++){
-            // console.log('i', i)
             this.tiles.push({
                 type: 'tile',
                 id: i
             })
         }
-
-        this.tiles[5].image = 'monster'
-        this.tiles[99].color = 'maroon'
-        // this.tiles[19].image = 'avatar'
-        // this.tiles[19].playerTile = true;
         this.placePlayer([26,18])
-
         for(let t = 0; t<this.tiles.length; t++){
             const tile = this.tiles[t];
             // if odd
@@ -78,7 +71,7 @@ export function BoardManager(){
             if(t%2 !== 0){
                 tile.color = 'lightsalmon'
             }
-            tile.coordinates = [t+15+1,t+15+1]
+            // tile.coordinates = [t+15+1,t+15+1]
         }
         for(let j = 0; j < 15; j++){
             for(let p = 0; p<15; p++){
@@ -86,7 +79,6 @@ export function BoardManager(){
 
             }
         }
-        console.log('index of 19,16 is ', this.getIndexFromCoordinates([27,25]))
     }
     this.placePlayer = (coordinates) => {
         let index = this.getIndexFromCoordinates(coordinates)

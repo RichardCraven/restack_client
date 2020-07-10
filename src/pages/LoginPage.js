@@ -72,7 +72,7 @@ export default function LoginPage() {
             const response = await loginRequest({username: loginName, password: loginPass})
             console.log('login response: ', response)
             if(response.status === 200){
-              storeToken(response.data.token)
+              storeToken(response.data.token, response.data.isAdmin)
               setNav(true)
             } else {
               setInvalid(true)

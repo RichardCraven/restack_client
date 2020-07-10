@@ -6,6 +6,7 @@ import {BoardManager} from './utils/board-manager'
 
 import LandingPage from './pages/LandingPage'
 import DungeonPage from './pages/DungeonPage'
+import PortalPage from './pages/PortalPage'
 
 import { Route} from "react-router-dom";
 
@@ -39,6 +40,10 @@ function App(props) {
             <DungeonPage {...props} />
           )}/>
         <Route path="/landing" component={LandingPage}/>
+        {/* <Route path="/portal" component={PortalPage}/> */}
+        <Route exact path="/portal" render={() => (
+            <PortalPage {...props} />
+          )}/>
       </div>
   }
  </div>

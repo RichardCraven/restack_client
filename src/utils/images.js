@@ -1,3 +1,4 @@
+// monsters
 import monster from '../assets/icons/monster.png'
 import avatar from '../assets/icons/avatar.png'
 import avatar_white from '../assets/icons/avatar_white.png'
@@ -39,11 +40,48 @@ import mordu_devil from '../assets/icons/monsters/devils/mordu_devil.png'
 import vukular_devil from '../assets/icons/monsters/devils/vukular_devil.png'
 import zul_devil from '../assets/icons/monsters/devils/zul_devil.png'
 
-//demons
+// demons
 import black_demon from '../assets/icons/monsters/demons/black_demon.png'
 import dulu_demon from '../assets/icons/monsters/demons/dulu_demon.png'
 import golden_demon from '../assets/icons/monsters/demons/golden_demon.png'
 import kabuki_demon from '../assets/icons/monsters/demons/kabuki_demon.png'
+
+// ------------------------------------------------------------------------------------------------
+
+// items
+import evilai_amulet from '../assets/icons/items/amulets/evilai_amulet.png'
+import lundi_amulet from '../assets/icons/items/amulets/lundi_amulet.png'
+import nukta_amulet from '../assets/icons/items/amulets/nukta_amulet.png'
+import sayan_amulet from '../assets/icons/items/amulets/sayan_amulet.png'
+
+import beetle_charm from '../assets/icons/items/charms/beetle_charm.png'
+import demonskull_charm from '../assets/icons/items/charms/demonskull_charm.png'
+import evilai_charm from '../assets/icons/items/charms/evilai_charm.png'
+import hamsa_charm from '../assets/icons/items/charms/hamsa_charm.png'
+import lundi_charm from '../assets/icons/items/charms/lundi_charm.png'
+import nukta_charm from '../assets/icons/items/charms/nukta_charm.png'
+import scarab_charm from '../assets/icons/items/charms/scarab_charm.png'
+
+import crown from '../assets/icons/items/crown.png'
+import key from '../assets/icons/items/key.png'
+import potion from '../assets/icons/items/potion.png'
+import lantern from '../assets/icons/items/lantern.png'
+
+import seeing_shield from '../assets/icons/items/shields/seeing_shield.png'
+import basic_shield from '../assets/icons/items/shields/basic_shield.png'
+
+import bundu_mask from '../assets/icons/items/headgear/bundu_mask.png';
+import court_mask from '../assets/icons/items/headgear/court_mask.png';
+import lundi_mask from '../assets/icons/items/headgear/bundu_mask.png';
+import mardi_mask from '../assets/icons/items/headgear/mardi_mask.png';
+import solomon_mask from '../assets/icons/items/headgear/solomon_mask.png';
+import zul_mask from '../assets/icons/items/headgear/zul_mask.png';
+
+import basic_helm from '../assets/icons/items/headgear/basic_helm.png';
+import knight_helm from '../assets/icons/items/headgear/knight_helm.png';
+import spartan_helm from '../assets/icons/items/headgear/spartan_helm.png';
+import legionaire_helm from '../assets/icons/items/headgear/legionaire_helm.png';
+import cretan_helm from '../assets/icons/items/headgear/cretan_helm.png';
 
 export {
     monster,
@@ -87,5 +125,38 @@ export {
     black_demon,
     dulu_demon,
     golden_demon,
-    kabuki_demon
+    kabuki_demon,
+
+    evilai_amulet,
+    lundi_amulet,
+    nukta_amulet,
+    sayan_amulet,
+
+    beetle_charm,
+    demonskull_charm,
+    evilai_charm,
+    hamsa_charm,
+    lundi_charm,
+    nukta_charm,
+    scarab_charm,
+
+    crown,
+    key,
+    potion,
+    lantern,
+
+    seeing_shield,
+    basic_shield,
+
+    bundu_mask,
+    lundi_mask,
+    court_mask,
+    mardi_mask,
+    solomon_mask,
+    zul_mask,
+    basic_helm,
+    knight_helm,
+    spartan_helm,
+    legionaire_helm,
+    cretan_helm
 };
