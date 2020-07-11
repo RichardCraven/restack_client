@@ -72,6 +72,7 @@ export default function DungeonPage(props) {
             break;
         }
     }
+    //might need to put this function somewhere else so it doesnt fire on every rerender
     useEventListener('keydown', keyDownHandler);
 
 

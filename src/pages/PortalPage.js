@@ -26,14 +26,25 @@ export default function PortalPage(props) {
   const [pinnedOption, setPinnedOption] = useState(null)
   const [mouseDown, setMouseDown] = useState(false)
 
+  const initializeListeners = () => {
+    // useEventListener('mousedown', mouseDownHandler);
+    // useEventListener('mouseup', mouseUpHandler);
+    // useEventListener('resize', handleResize);
+  }
+
   useEffect(() => {
     console.log('in use effect')
+    window.addEventListener('mousedown', mouseDownHandler)
+    window.addEventListener('mouseup', mouseUpHandler)
     window.addEventListener('resize', handleResize)
+    initializeListeners();
     if(props.mapMaker){
         props.mapMaker.initializeTiles();
         setTiles(props.mapMaker.tiles)
     }
   },[props.mapMaker])
+
+  
 
   const handleHover = (id, type) => {
     if(mouseDown && props.mapMaker.paletteTiles[pinnedOption] && props.mapMaker.paletteTiles[pinnedOption].optionType === 'void'){
@@ -118,23 +129,19 @@ export default function PortalPage(props) {
   }
   const writeMap = () => {
     let obj = {
-      something: 'oppooooyah bebey',
-      twiddles: [1,2,3],
-      nested: {
-        child1: 'hi',
-        child2: 'by1e'
-      }
+      name: 'map1',
+      tiles: props.mapMaker.tiles
     }
     // writeRequest({message: JSON.stringify(obj)})
     addMapRequest(obj)
   }
-  const loadMap = () => {
-    loadMapRequest(5)
+  const loadMap = async () => {
+    const val = await loadMapRequest(6)
+    const map = JSON.parse(val.data[0].content);
+    setTiles(map.tiles)
   }
 
-  // useEventListener('mousedown', mouseDownHandler);
-  // useEventListener('mouseup', mouseUpHandler);
-  // useEventListener('resize', handleResize);
+  
 
 
   return (
