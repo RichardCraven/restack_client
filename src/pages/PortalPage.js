@@ -6,6 +6,7 @@ import {addMapRequest, loadMapRequest} from '../utils/api-handler';
 import {useEventListener} from '../utils/useEventListener'
 
 export default function PortalPage(props) {
+  
   const [tileSize, setTileSize] = useState(() => {
     const h = Math.floor((window.innerHeight/17));
     const w = Math.floor((window.innerWidth/17));
@@ -27,7 +28,7 @@ export default function PortalPage(props) {
 
   useEffect(() => {
     console.log('in use effect')
-    // window.addEventListener('resize', handleResize)
+    window.addEventListener('resize', handleResize)
     if(props.mapMaker){
         props.mapMaker.initializeTiles();
         setTiles(props.mapMaker.tiles)
@@ -35,22 +36,39 @@ export default function PortalPage(props) {
   },[props.mapMaker])
 
   const handleHover = (id, type) => {
-    
-    // if(mouseDown && props.mapMaker.paletteTiles[pinnedOption] && props.mapMaker.paletteTiles[pinnedOption].optionType === 'void'){
+    if(mouseDown && props.mapMaker.paletteTiles[pinnedOption] && props.mapMaker.paletteTiles[pinnedOption].optionType === 'void'){
       console.log('chi', id)
-      setHover(null);
-      props.mapMaker.tiles[id].color = 'black'
-      setTiles(props.mapMaker.tiles) 
-    // }else{
-    //   if(type === 'palette-tile'){
-    //     setPaletteHover(id)
-    //   } else {
-    //     setHover(id);
-    //   }
-    // }
+      let tile = props.mapMaker.tiles[id]
+      // handleClick(props.mapMaker.tiles[id])
+      // setHover(null);
+      // props.mapMaker.tiles[id].color = 'black'
+      // setTiles(props.mapMaker.tiles) 
+
+
+      let pinned = null;
+      if(props.mapMaker.paletteTiles[pinnedOption]){ 
+        console.log('money')
+        pinned = props.mapMaker.paletteTiles[pinnedOption]
+      }
+      if(pinned && pinned.optionType === 'void'){
+        console.log('hmm')
+        setHover(null);
+        props.mapMaker.tiles[tile.id].image = null;
+        props.mapMaker.tiles[tile.id].color = 'black'
+        console.log(props.mapMaker.tiles[tile.id])
+        setTiles(props.mapMaker.tiles)
+      } 
+    }else{
+      if(type === 'palette-tile'){
+        setPaletteHover(id)
+      } else {
+        setHover(id);
+      }
+    }
   }
   
   const mouseDownHandler = () => {
+    console.log('down')
     setMouseDown(true)
   }
   const mouseUpHandler = () => {
@@ -73,21 +91,26 @@ export default function PortalPage(props) {
   const handleClick = (tile) => {
     console.log('clicked ', tile)
     if(tile.type === 'palette-tile'){
-      console.log(props.mapMaker.paletteTiles[tile.index])
-      setOptionClicked(tile.index)
-      setPinnedOption(tile.index)
+      console.log(props.mapMaker.paletteTiles[tile.id])
+      setOptionClicked(tile.id)
+      setPinnedOption(tile.id)
     } else if(tile.type === 'board-tile'){
+      console.log('boardtile')
+
       let pinned = null;
       if(props.mapMaker.paletteTiles[pinnedOption]){ 
+        console.log('money')
         pinned = props.mapMaker.paletteTiles[pinnedOption]
       }
       if(pinned && pinned.optionType === 'void'){
+        console.log('hmm')
         setHover(null);
-        props.mapMaker.tiles[tile.index].color = 'black'
+        props.mapMaker.tiles[tile.id].image = null;
+        props.mapMaker.tiles[tile.id].color = 'black'
+        console.log(props.mapMaker.tiles[tile.id])
         setTiles(props.mapMaker.tiles)
       } else if(pinned){
-        // console.log(tile, props.mapMaker.paletteTiles[pinnedOption])
-        props.mapMaker.tiles[tile.index].image = pinned.image
+        props.mapMaker.tiles[tile.id].image = pinned.image
         setHover(null);
         setTiles(props.mapMaker.tiles)
       }
@@ -109,9 +132,9 @@ export default function PortalPage(props) {
     loadMapRequest(5)
   }
 
-  useEventListener('mousedown', mouseDownHandler);
-  useEventListener('mouseup', mouseUpHandler);
-  useEventListener('resize', handleResize);
+  // useEventListener('mousedown', mouseDownHandler);
+  // useEventListener('mouseup', mouseUpHandler);
+  // useEventListener('resize', handleResize);
 
 
   return (
@@ -144,6 +167,7 @@ export default function PortalPage(props) {
               return <Tile 
               key={i}
               id={tile.id}
+              index={tile.id}
               tileSize={tileSize}
               image={tile.image ? tile.image : null}
               color={tile.color ? tile.color : 'lightgrey'}
@@ -155,8 +179,8 @@ export default function PortalPage(props) {
               handleClick={handleClick}
               type={tile.type}
               hovered={
-                // hoveredTileIdx === tile.id ?
-                // true :
+                hoveredTileIdx === tile.id ?
+                true :
                 false
               }
               >
