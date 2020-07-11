@@ -1,21 +1,23 @@
-import React, {useState, useEffect} from 'react';
-import monsterImage from '../assets/icons/monster.png'
+import React from 'react';
 import * as images from '../utils/images'
 
 
 export default function Tile(props) {
     return (
         <div style={{
+            cursor: 'pointer',
             height: props.tileSize+'px',
             width: props.tileSize+'px',
             backgroundImage: "url(" + images[props.image] + ")",
-            backgroundColor: props.hovered ? '#8080807a' : props.color,
+            backgroundColor: (props.hovered && props.type === 'board-tile') ? '#8080807a' : props.color,
             backgroundSize: '100% 100%',
             fontSize: '0.7em',
-            position: 'relative'
+            position: 'relative',
+            borderLeft: (props.type === 'palette-tile' && !props.hovered) ? '2px solid transparent' : 
+            (props.type === 'palette-tile' && props.hovered ? '2px solid red' : 'none')
             }}
-            onMouseEnter={() => {return props.handleHover(props.id)}}
-            onClick={() => {return props.handleClick(props.id)}}
+            onMouseEnter={() => {return props.handleHover(props.id, props.type)}}
+            onMouseDown={() => {return props.handleClick(props)}}
         >
            {props.showCoordinates && 
                 <div>

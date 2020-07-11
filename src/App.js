@@ -1,8 +1,6 @@
-import React, {useEffect, useState} from 'react';
+import React, {useState} from 'react';
 import './App.scss';
-// import axios from 'axios';
 import LoginPage from './pages/LoginPage'
-import {BoardManager} from './utils/board-manager'
 
 import LandingPage from './pages/LandingPage'
 import DungeonPage from './pages/DungeonPage'
@@ -10,23 +8,8 @@ import PortalPage from './pages/PortalPage'
 
 import { Route} from "react-router-dom";
 
-const ogboardManager = new BoardManager();
-
 function App(props) {
-  console.log('app props: ', props)
-  const [isLoading] = useState(false);
-  // const wtf = 'wtf'
-  // const [boardManager, setBoard] = useState(null)
-  useEffect(()=>{
-    console.log('app useEffect')
-    // setBoard(ogboardManager)
-    // axios.get("http://localhost:5000/api/visitors/dogs")
-    // .then(res=>{
-    //   console.log('res is ', res)
-    //   setIsLoading(false)
-    // })
-    // .catch(err=>console.log(err))
- },[]);
+const [isLoading] = useState(false);
 
  return (
    <div className="fullpage">

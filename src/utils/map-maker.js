@@ -1,5 +1,6 @@
+// import * as images from "./images";
+
 export function MapMaker(props){
-    console.log('in map maker', props)
     this.tiles = [];
     this.paletteTiles = [];
     this.getIndexFromCoordinates = (coordinates) =>{
@@ -11,10 +12,9 @@ export function MapMaker(props){
         return index
     }
     this.initializeTiles = () => {
-        console.log('in mapmaker initializeTiles')
         for(let i = 0; i< 225; i++){
             this.tiles.push({
-                type: 'tile',
+                type: 'board-tile',
                 id: i,
                 color: null,
                 showCoordinates: false
@@ -28,19 +28,51 @@ export function MapMaker(props){
         }
 
         const options = [
-            'void',
             'door',
-            'key',
-            'monster',
             'pit',
+            'stairs',
             'cloud',
-            'item'
+            
+            'monster',
+            'item',
+            'magic',
+            'void',
         ]
-        for(const e of options){
-            console.log(e)
-            this.paletteTiles.push({
-                type: e,
-            })
+        function getPaletteImage(key){
+            switch(key){
+                case 'monster':
+                    return 'monster'
+                case 'item':
+                    return 'lantern'
+                case 'magic':
+                    return 'spell'
+                case 'stairs':
+                    return 'stairs_down'
+                case 'door':
+                    return 'closed_door'
+                default:
+                    return false
+            }
+        }
+        
+        for(let i = 0; i < options.length; i++){
+            let key = options[i]
+            if(key === 'void'){
+                this.paletteTiles.push({
+                    type: 'palette-tile',
+                    optionType: 'void',
+                    image: null,
+                    color: 'black',
+                    id: i
+                })
+            } else {
+                this.paletteTiles.push({
+                    type: 'palette-tile',
+                    image: getPaletteImage(key) ? getPaletteImage(key) : key,
+                    optionType: key,
+                    id: i
+                })
+            }
         }
     }
     this.setHovered = (idx) => {

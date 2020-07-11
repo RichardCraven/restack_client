@@ -63,9 +63,6 @@ const loadMapRequest = (id) => {
 const writeRequest = (messageObj) => {
   return axios.post("http://localhost:5000/api/admin/write", messageObj)
 }
-const loadRequest = (mapId) => {
-  return axios.post("http://localhost:5000/api/admin/write", mapId)
-}
 
 // const isAuthorized = ()
 

@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useRef} from 'react'
+import {useEffect, useRef} from 'react'
 export function useEventListener(eventName, handler, element = window){
     // Create a ref that stores handler
     const savedHandler = useRef();

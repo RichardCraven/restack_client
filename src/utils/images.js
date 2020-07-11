@@ -83,6 +83,51 @@ import spartan_helm from '../assets/icons/items/headgear/spartan_helm.png';
 import legionaire_helm from '../assets/icons/items/headgear/legionaire_helm.png';
 import cretan_helm from '../assets/icons/items/headgear/cretan_helm.png';
 
+import glindas_wand from '../assets/icons/items/wands/glindas_wand.png';
+import marlyns_rod from '../assets/icons/items/wands/maerlyns_rod.png';
+import volkas_wand from '../assets/icons/items/wands/volkas_wand.png';
+
+// weapons
+import axe_upright_white from '../assets/icons/items/weapons/axe_upright_white.png'
+import axe_upright from '../assets/icons/items/weapons/axe_upright.png'
+import axe_white from '../assets/icons/items/weapons/axe_white.png'
+import axe from '../assets/icons/items/weapons/axe.png'
+import flail_upright_white from '../assets/icons/items/weapons/flail_upright_white.png'
+import flail_upright from '../assets/icons/items/weapons/flail_upright.png'
+import flail_white from '../assets/icons/items/weapons/flail_white.png'
+import flail from '../assets/icons/items/weapons/flail.png'
+
+import scepter_upright_white from '../assets/icons/items/weapons/scepter_upright_white.png'
+import scepter_upright from '../assets/icons/items/weapons/scepter_upright.png'
+import scepter_white from '../assets/icons/items/weapons/scepter_white.png'
+import scepter from '../assets/icons/items/weapons/scepter.png'
+
+
+import scimitar from '../assets/icons/items/weapons/scimitar.png'
+import spear_upright_white from '../assets/icons/items/weapons/spear_upright_white.png'
+import spear_upright from '../assets/icons/items/weapons/spear_upright.png'
+import spear_white from '../assets/icons/items/weapons/spear_white.png'
+import spear from '../assets/icons/items/weapons/spear.png'
+import sword_upright_white from '../assets/icons/items/weapons/sword_upright_white.png'
+import sword_upright from '../assets/icons/items/weapons/sword_upright.png'
+import sword_white from '../assets/icons/items/weapons/sword_white.png'
+import sword from '../assets/icons/items/weapons/sword.png'
+
+// portals
+import closed_door from '../assets/icons/portals/closed_door.png';
+import open_door from '../assets/icons/portals/open_door.png';
+import pit from '../assets/icons/portals/pit.png';
+import stairs_down from '../assets/icons/portals/stairs_down.png';
+import cloud from '../assets/icons/portals/cloud.png';
+
+// magic
+import black_magic from '../assets/icons/magic/black_magic.png';
+import fireball from '../assets/icons/magic/fireball.png';
+import grimoire from '../assets/icons/magic/grimoire.png';
+import necromancy from '../assets/icons/magic/necromancy.png';
+import spell from '../assets/icons/magic/spell.png';
+import white_magic from '../assets/icons/magic/white_magic.png';
+
 export {
     monster,
     avatar,
@@ -158,5 +203,44 @@ export {
     knight_helm,
     spartan_helm,
     legionaire_helm,
-    cretan_helm
+    cretan_helm,
+
+    glindas_wand,
+    marlyns_rod,
+    volkas_wand,
+
+    axe,
+    axe_upright,
+    axe_white,
+    axe_upright_white,
+    flail,
+    flail_upright,
+    flail_upright_white,
+    flail_white,
+    scepter,
+    scepter_upright,
+    scepter_upright_white,
+    scepter_white,
+    scimitar,
+    sword,
+    sword_upright,
+    sword_upright_white,
+    sword_white,
+    spear,
+    spear_upright,
+    spear_white,
+    spear_upright_white,
+
+    closed_door,
+    open_door,
+    pit,
+    stairs_down,
+    cloud,
+
+    black_magic,
+    fireball,
+    grimoire,
+    necromancy,
+    spell,
+    white_magic
 };

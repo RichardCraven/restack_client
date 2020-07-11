@@ -55,7 +55,7 @@ export function BoardManager(){
         }
         for(let i = 0; i< 225; i++){
             this.tiles.push({
-                type: 'tile',
+                type: 'board-tile',
                 id: i
             })
         }
@@ -63,7 +63,7 @@ export function BoardManager(){
         for(let t = 0; t<this.tiles.length; t++){
             const tile = this.tiles[t];
             // if odd
-            if(t%2 == 0){
+            if(t%2 === 0){
                 tile.color = 'lightcoral'
                 tile.color = 'lightseagreen'
                 tile.color = 'lightsteelblue'

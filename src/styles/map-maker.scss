@@ -1,0 +1,29 @@
+.palette-options-pane{
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: flex-start;
+    .palette-option-container{
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        flex-direction: row;
+        .text-container{
+            width: 64%;
+            // border: 1px solid blue;
+            // background-color: yellow;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity:0;
+            transition: all 0.5s;
+            &.hovered{
+                opacity:1
+            }
+            &.pinned{
+                opacity:1
+            }
+        }
+    }
+}

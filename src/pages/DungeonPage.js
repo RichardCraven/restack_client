@@ -1,15 +1,9 @@
 import React, {useState, useEffect} from 'react'
 import '../styles/dungeon-board.scss'
 import Tile from '../components/tile'
-import {PlayerManager} from '../utils/player-manager'
 import {useEventListener} from '../utils/useEventListener'
 
 export default function DungeonPage(props) {
-    console.log('dungeon page, props are ', props)
-    
-    const playerManager = new PlayerManager();
-
-    const [boardManager] = useState(props.boardManager)
 
     const [tileSize, setTileSize] = useState(() => {
         const h = Math.floor((window.innerHeight/17));
@@ -47,14 +41,9 @@ export default function DungeonPage(props) {
             props.boardManager.initializeTiles();
             setTiles(props.boardManager.tiles)
         }
-    },[])
+    },[props.boardManager])
 
     const keyDownHandler = ({ key }) => {
-        // if (ESCAPE_KEYS.includes(String(key))) {
-        //   console.log('Escape key pressed!');
-        // }
-        // const that = this;
-        console.log(key)
         let newTiles = [];
         switch(key){
             case 'ArrowUp':
@@ -78,13 +67,22 @@ export default function DungeonPage(props) {
                 newTiles = [...props.boardManager.tiles]
                 setTiles(newTiles);
             break;
+            default:
+                console.log(key)
+            break;
         }
     }
     useEventListener('keydown', keyDownHandler);
-    const handleHover = (id) => {
+
+
+    const handleHover = (id, type) => {
         console.log('pp', id)
     }
-  return (
+    const handleClick = (tile) => {
+        console.log('clicked ', tile)
+    }
+
+    return (
     <div className="container">
         <div  className="board" style={{
             width: boardSize+'px', height: boardSize+ 'px',
@@ -101,6 +99,7 @@ export default function DungeonPage(props) {
                 showCoordinates={false}
                 editMode={false}
                 handleHover={handleHover}
+                type={tile.type}
                 >
                 </Tile>
             })}
