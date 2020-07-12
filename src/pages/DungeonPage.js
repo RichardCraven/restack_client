@@ -36,10 +36,17 @@ export default function DungeonPage(props) {
     
 
     useEffect(() => {
-        window.addEventListener('resize', handleResize)
+        let mounted = true;
+        if(mounted){
+            window.addEventListener('resize', handleResize)
+
+        }
         if(props.boardManager){
             props.boardManager.initializeTiles();
             setTiles(props.boardManager.tiles)
+        }
+        return () => {
+            mounted = false
         }
     },[props.boardManager])
 
@@ -79,9 +86,9 @@ export default function DungeonPage(props) {
     const handleHover = (id, type) => {
         console.log('pp', id)
     }
-    const handleClick = (tile) => {
-        console.log('clicked ', tile)
-    }
+    // const handleClick = (tile) => {
+    //     console.log('clicked ', tile)
+    // }
 
     return (
     <div className="container">

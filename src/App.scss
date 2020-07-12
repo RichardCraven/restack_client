@@ -37,7 +37,12 @@ html, body{
   display: flex;
   align-items: center;
   justify-content: center;
-
+  .logout-button{
+    position: absolute;
+    top: 25px;
+    left: 25px;
+    cursor: pointer;
+  }
   .pane{
     background-color: white;
     border-radius: 5px;

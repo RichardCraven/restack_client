@@ -1,6 +1,5 @@
 // import {useEventListener} from '../utils/useEventListener'
 export function BoardManager(){
-    console.log('in board manager')
     this.tiles = [];
     // this.playerTile = {
     //     location: [26,18]

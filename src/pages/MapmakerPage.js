@@ -3,10 +3,11 @@ import '../styles/dungeon-board.scss'
 import '../styles/map-maker.scss'
 import Tile from '../components/tile'
 import {addMapRequest, loadMapRequest, loadAllMapsRequest, updateMapRequest} from '../utils/api-handler';
-import {useEventListener} from '../utils/useEventListener'
+// import {useEventListener} from '../utils/useEventListener'
+// import { useHistory } from "react-router";
 
 export default function MapmakerPage(props) {
-  
+  // const history = useHistory();
   const [tileSize, setTileSize] = useState(() => {
     const h = Math.floor((window.innerHeight/17));
     const w = Math.floor((window.innerWidth/17));
@@ -36,15 +37,23 @@ export default function MapmakerPage(props) {
 
   useEffect(() => {
     console.log('in use effect')
-    window.addEventListener('mousedown', mouseDownHandler)
-    window.addEventListener('mouseup', mouseUpHandler)
-    window.addEventListener('resize', handleResize)
+    // history.push({
+    //   pathname: '/mapmaker'
+    // })
+    let mounted = true;
     initializeListeners();
     if(props.mapMaker){
-        props.mapMaker.initializeTiles();
-        setTiles(props.mapMaker.tiles)
+      props.mapMaker.initializeTiles();
+      setTiles(props.mapMaker.tiles)
     }
-    loadAllMaps()
+    if(mounted){
+      
+      window.addEventListener('mousedown', mouseDownHandler)
+      window.addEventListener('mouseup', mouseUpHandler)
+      window.addEventListener('resize', handleResize)
+      loadAllMaps()
+    }
+    return () => mounted = false;
   },[props.mapMaker])
 
   
@@ -252,7 +261,6 @@ export default function MapmakerPage(props) {
               image={tile.image ? tile.image : null}
               color={tile.color ? tile.color : 'lightgrey'}
               coordinates={tile.coordinates}
-              index={tile.id}
               showCoordinates={false}
               editMode={true}
               handleHover={handleHover}

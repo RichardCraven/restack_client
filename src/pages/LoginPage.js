@@ -1,4 +1,4 @@
-import React, {useState} from 'react'
+import React, {useState, useEffect} from 'react'
 import { useSpring, animated } from 'react-spring'
 // import { Keyframes, } from 'react-spring/renderprops'
 // import delay from 'delay'
@@ -7,7 +7,8 @@ import { Redirect } from "react-router-dom";
 import {loginRequest, registerRequest} from '../utils/api-handler';
 import {storeToken} from '../utils/session-handler';
 
-export default function LoginPage() {
+export default function LoginPage(props) {
+  
   const [paneToggle, setPane] = useState(null)
   const [registerName, setRegName] = useState('')
   const [registerPass1, setRegPass1] = useState('')
@@ -24,8 +25,12 @@ export default function LoginPage() {
   const [registrationInputPropsPass1, setRpass1] = useSpring(() => ({ x: '200px', opacity: 0, config: { mass: 6, tension: 350, friction: 40 } }))
   const [registrationInputPropsPass2, setRpass2] = useSpring(() => ({ x: '200px', opacity: 0, config: { mass: 5, tension: 250, friction: 40 } }))
 
+
+  useEffect(() => {
+    console.log('login page props are: ', props)
+  }, [props])
+
   const handleChange = (e, type) => {
-    console.log(e.target.value, type)
     switch(type){
       case 'register-name':
        setRegName(e.target.value)
@@ -48,7 +53,6 @@ export default function LoginPage() {
   }
 
   const handleClick = async (type) => {
-    // ApiHandler('boiii')
     setInvalid(false);
     switch(type){
       case 'login':
@@ -67,12 +71,10 @@ export default function LoginPage() {
 
           setPane('login')
         } else if(loginName.length > 0 && loginPass.length > 0){
-          console.log('trying to login with these creds:')
-          console.log(loginName, loginPass)
             const response = await loginRequest({username: loginName, password: loginPass})
-            console.log('login response: ', response)
             if(response.status === 200){
               storeToken(response.data.token, response.data.isAdmin)
+              props.login()
               setNav(true)
             } else {
               setInvalid(true)
@@ -94,20 +96,16 @@ export default function LoginPage() {
           }, 90)
           setPane('register')
         } else {
-          console.log('trying to register with these creds:')
-          console.log(registerName, registerPass1, registerPass2)
           if(registerPass1 !== registerPass2){
             alert('passwords must match')
           } else if(registerPass1.length > 0){
-            // console.log('logging in')
             const response = await registerRequest({username: registerName, password: registerPass1})
-            console.log('reg response: ', response)
             if(response.status === 200){
               storeToken(response.data.token)
+              props.login()
               setNav(true)
             } else {
               alert('something failed', response)
-              // setInvalid(true)
             }
           }
         }
@@ -116,42 +114,11 @@ export default function LoginPage() {
       break;
     }
   }
-  // const registerRequest = () => {
-  //   axios.post("http://localhost:5000/api/admin/register", {username: registerName, password: registerPass1})
-  //     .then(res=>{
-  //       console.log('register res is ', res)
-  //       // setDogs(res.data)
-  //       // setIsLoading(false)
-  //     })
-  //     .catch(err=>console.log(err))
-  // }
-  // const loginRequest = () => {
-  //   axios.post("http://localhost:5000/api/admin/login", {username: loginName, password: loginPass})
-  //     .then(res=>{
-  //       console.log('login res is ', res)
-  //       // setDogs(res.data)
-  //       // setIsLoading(false)
-  //       if(res.status === 200){
-  //         console.log('switch route')
-  //         setNav(true)
-  //         // return <Redirect to='/landing' />
-  //       }
-  //     })
-  //     .catch(err=> {
-  //       console.log(err)
-  //       setInvalid(true)
-  //     })
-  // }
-
   return (
-    // if(navToLanding){
-
-    // }
     <div>
       { navToLanding ? <Redirect to='/landing'/> :
         <div>
           <div className="login-pane pane">
-            {/* {renderSwitch(paneToggle)} */}
             {paneToggle === null && 
               <div
                 style={{
@@ -164,49 +131,54 @@ export default function LoginPage() {
               <div className="absolute-wrapper" style={{
                   pointerEvents: paneToggle === 'register' ? 'none' : 'auto'
                 }}>
-                <div className="inputs-container">  
-                      <animated.div style={{
-                        transform: loginInputPropsName.x.interpolate((x) => `translate3d(${x},0,0)`),
-                        opacity: loginInputPropsName.opacity,
-                        transition: 'opacity 0.1s'
-                        }}>
-                        <input value={loginName} type="text" placeholder="Name" onChange={(e) => {handleChange(e, 'login-name')}}/>
-                      </animated.div>
-                      <animated.div style={{
-                        transform: loginInputPropsPass.x.interpolate((x) => `translate3d(${x},0,0)`),
-                        opacity: loginInputPropsName.opacity,
-                        transition: 'opacity 0.1s'
-                        }}>
-                        <input value={loginPass} type="password" placeholder="Password" onChange={(e) => {handleChange(e, 'login-password')}}/>
-                      </animated.div>
-                </div>
+                <form action="">
+                  <div className="inputs-container">  
+                        <animated.div style={{
+                          transform: loginInputPropsName.x.interpolate((x) => `translate3d(${x},0,0)`),
+                          opacity: loginInputPropsName.opacity,
+                          transition: 'opacity 0.1s'
+                          }}>
+                          <input value={loginName} autoComplete="none" type="text" placeholder="Name" onChange={(e) => {handleChange(e, 'login-name')}}/>
+                        </animated.div>
+                        <animated.div style={{
+                          transform: loginInputPropsPass.x.interpolate((x) => `translate3d(${x},0,0)`),
+                          opacity: loginInputPropsName.opacity,
+                          transition: 'opacity 0.1s'
+                          }}>
+                          <input value={loginPass} autoComplete="current-password" type="password" placeholder="Password" onChange={(e) => {handleChange(e, 'login-password')}}/>
+                        </animated.div>
+                  </div>
+                </form>
               </div>
               <div className="absolute-wrapper" style={{
                   pointerEvents: paneToggle === 'login' ? 'none' : 'auto'
                 }}>
-                <div className="inputs-container">
-                  <animated.div style={{
-                      transform: registrationInputPropsName.x.interpolate((x) => `translate3d(${x},0,0)`),
-                      opacity: registrationInputPropsName.opacity,
-                      transition: 'opacity 0.1s'
-                      }}>
-                      <input value={registerName} type="text" placeholder="Name" onChange={(e) => {handleChange(e, 'register-name')}}/>
-                  </animated.div>
-                  <animated.div style={{
-                      transform: registrationInputPropsPass1.x.interpolate((x) => `translate3d(${x},0,0)`),
-                      opacity: registrationInputPropsPass1.opacity,
-                      transition: 'opacity 0.1s'
-                      }}>
-                      <input value={registerPass1} type="password" placeholder="Password" onChange={(e) => {handleChange(e, 'register-password1')}}/>
-                  </animated.div>
-                  <animated.div style={{
-                      transform: registrationInputPropsPass2.x.interpolate((x) => `translate3d(${x},0,0)`),
-                      opacity: registrationInputPropsPass2.opacity,
-                      transition: 'opacity 0.1s'
-                      }}>
-                      <input value={registerPass2} type="password" placeholder="Repeat password" onChange={(e) => {handleChange(e, 'register-password2')}}/>
-                  </animated.div>
-                </div>   
+                <form action="">
+                  <div className="inputs-container">
+                    <animated.div style={{
+                        transform: registrationInputPropsName.x.interpolate((x) => `translate3d(${x},0,0)`),
+                        opacity: registrationInputPropsName.opacity,
+                        transition: 'opacity 0.1s'
+                        }}>
+                        <input value={registerName} autoComplete="none" type="text" placeholder="Name" onChange={(e) => {handleChange(e, 'register-name')}}/>
+                    </animated.div>
+                    <animated.div style={{
+                        transform: registrationInputPropsPass1.x.interpolate((x) => `translate3d(${x},0,0)`),
+                        opacity: registrationInputPropsPass1.opacity,
+                        transition: 'opacity 0.1s'
+                        }}>
+                        <input value={registerPass1} autoComplete="current-password" type="password" placeholder="Password" onChange={(e) => {handleChange(e, 'register-password1')}}/>
+                    </animated.div>
+                    <animated.div style={{
+                        transform: registrationInputPropsPass2.x.interpolate((x) => `translate3d(${x},0,0)`),
+                        opacity: registrationInputPropsPass2.opacity,
+                        transition: 'opacity 0.1s'
+                        }}>
+                        <input value={registerPass2} autoComplete="current-password" type="password" placeholder="Repeat password" onChange={(e) => {handleChange(e, 'register-password2')}}/>
+                    </animated.div>
+                  </div>   
+                  
+                </form>
               </div>
             </div>
             {invalidCredentials && 
