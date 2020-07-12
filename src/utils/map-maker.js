@@ -28,6 +28,7 @@ export function MapMaker(props){
         }
 
         const options = [
+            'void',
             'door',
             'pit',
             'stairs',
@@ -36,7 +37,16 @@ export function MapMaker(props){
             'monster',
             'item',
             'magic',
-            'void',
+            'key',
+            'masterkey',
+            
+            'gate',
+            'treasure',
+            'gold',
+            'oracle',
+            'dream den'
+
+
         ]
         function getPaletteImage(key){
             switch(key){
@@ -50,6 +60,10 @@ export function MapMaker(props){
                     return 'stairs_down'
                 case 'door':
                     return 'closed_door'
+                case 'dream den':
+                    return 'moon_castle'
+                case 'masterkey':
+                    return 'ornate_key'    
                 default:
                     return false
             }

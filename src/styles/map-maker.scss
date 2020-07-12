@@ -27,3 +27,29 @@
         }
     }
 }
+.previews-container{
+    // height: 100%;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    .map-preview{
+        // border: 1px solid blue;
+        width: 100%;
+        display: flex;
+        flex-flow: row wrap;
+        align-content: flex-end;
+        .mini-tile{
+            height: 3px;
+            width: 3px;
+            // border: 1px solid black;
+        }
+    }
+}
+.container{
+    .palette{
+        .buttons-container{
+            display: flex;
+            flex-direction: column;
+        }
+    }
+}

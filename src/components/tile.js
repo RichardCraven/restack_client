@@ -11,13 +11,27 @@ export default function Tile(props) {
             backgroundImage: "url(" + images[props.image] + ")",
             backgroundColor: (props.hovered && props.type === 'board-tile') ? '#8080807a' : props.color,
             backgroundSize: '100% 100%',
+            backgroundRepeat: 'no-repeat',
             fontSize: '0.7em',
             position: 'relative',
             borderLeft: (props.type === 'palette-tile' && !props.hovered) ? '2px solid transparent' : 
             (props.type === 'palette-tile' && props.hovered ? '2px solid red' : 'none')
             }}
-            onMouseEnter={() => {return props.handleHover(props.id, props.type)}}
-            onMouseDown={() => {return props.handleClick(props)}}
+            onMouseEnter={() => {
+                if(props.handleHover){
+                    return props.handleHover(props.id, props.type)
+                } else {
+                    return null
+                }
+            }}
+            onMouseDown={() => {
+                if(props.handleClick){
+                    console.log('why', props)
+                    return props.handleClick(props)
+                } else {
+                    return null
+                }
+            }}
         >
            {props.showCoordinates && 
                 <div>

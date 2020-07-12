@@ -128,6 +128,15 @@ import necromancy from '../assets/icons/magic/necromancy.png';
 import spell from '../assets/icons/magic/spell.png';
 import white_magic from '../assets/icons/magic/white_magic.png';
 
+// staples
+import gate from '../assets/icons/staples/gate.png'
+import gold from '../assets/icons/staples/gold.png'
+import ornate_key from '../assets/icons/staples/key.png'
+import moon_castle from '../assets/icons/staples/moon_castle.png'
+import oracle from '../assets/icons/staples/oracle.png'
+import ornate_potion from '../assets/icons/staples/potion.png'
+import treasure from '../assets/icons/staples/treasure.png'
+
 export {
     monster,
     avatar,
@@ -242,5 +251,13 @@ export {
     grimoire,
     necromancy,
     spell,
-    white_magic
+    white_magic,
+
+    ornate_key,
+    ornate_potion,
+    gate,
+    moon_castle,
+    gold,
+    treasure,
+    oracle
 };

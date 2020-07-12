@@ -2,10 +2,10 @@ import React, {useState, useEffect} from 'react'
 import '../styles/dungeon-board.scss'
 import '../styles/map-maker.scss'
 import Tile from '../components/tile'
-import {addMapRequest, loadMapRequest} from '../utils/api-handler';
+import {addMapRequest, loadMapRequest, loadAllMapsRequest, updateMapRequest} from '../utils/api-handler';
 import {useEventListener} from '../utils/useEventListener'
 
-export default function PortalPage(props) {
+export default function MapmakerPage(props) {
   
   const [tileSize, setTileSize] = useState(() => {
     const h = Math.floor((window.innerHeight/17));
@@ -20,6 +20,8 @@ export default function PortalPage(props) {
   })
   const [boardSize, setBoardSize] = useState(tileSize*15)
   const [tiles, setTiles] = useState()
+  const [maps, setMaps] = useState([])
+  const [loadedMap, setLoadedMap] = useState()
   const [hoveredTileIdx, setHover] = useState()
   const [hoveredPaletteTileIdx, setPaletteHover] = useState(null)
   const [optionClickedIdx, setOptionClicked] = useState(null)
@@ -42,6 +44,7 @@ export default function PortalPage(props) {
         props.mapMaker.initializeTiles();
         setTiles(props.mapMaker.tiles)
     }
+    loadAllMaps()
   },[props.mapMaker])
 
   
@@ -100,7 +103,6 @@ export default function PortalPage(props) {
   }
   
   const handleClick = (tile) => {
-    console.log('clicked ', tile)
     if(tile.type === 'palette-tile'){
       console.log(props.mapMaker.paletteTiles[tile.id])
       setOptionClicked(tile.id)
@@ -128,17 +130,43 @@ export default function PortalPage(props) {
     }
   }
   const writeMap = () => {
-    let obj = {
-      name: 'map1',
-      tiles: props.mapMaker.tiles
+    if(loadedMap){
+      let obj = {
+        name: loadedMap.name,
+        tiles: props.mapMaker.tiles
+      }
+      updateMapRequest(loadedMap.id, obj)
+    } else {
+      let d = new Date()
+      let n = d.getTime();
+      let rand = n.toString().slice(3,7)
+      let obj = {
+        name: 'map'+rand,
+        tiles: props.mapMaker.tiles
+      }
+      addMapRequest(obj)
     }
     // writeRequest({message: JSON.stringify(obj)})
-    addMapRequest(obj)
   }
-  const loadMap = async () => {
-    const val = await loadMapRequest(6)
-    const map = JSON.parse(val.data[0].content);
+  const loadMap = async (id) => {
+    const val = await loadMapRequest(id)
+    let e = val.data[0];
+    let map = JSON.parse(e.content);
+    map.id = e.id;
     setTiles(map.tiles)
+    setLoadedMap(map)
+  }
+
+  const loadAllMaps = async () => {
+    const val = await loadAllMapsRequest()
+    let maps = [];
+    val.data.forEach((e)=>{
+      let map = JSON.parse(e.content)
+      map.id = e.id;
+      maps.push(map)
+    })
+    console.log('maps: ', maps)
+    setMaps(maps)
   }
 
   
@@ -153,13 +181,58 @@ export default function PortalPage(props) {
         backgroundColor: 'white',
         marginRight: '25px'
       }}
-      >
-        <button
-        onClick={() => {return writeMap()}}
-        >Write</button>
-        <button
-        onClick={() => {return loadMap()}}
-        >Load</button>
+      > 
+        <div className="buttons-container">
+          <button
+          onClick={() => {return console.log(loadedMap)}}
+          >Clear</button>
+          <button
+          onClick={() => {return writeMap()}}
+          >Save</button>
+          <button
+          onClick={() => {return loadMap()}}
+          >Load</button>
+        </div>
+        <div className="previews-container">
+          {maps && maps.map((map, i) => {
+            return (<div key={i}>
+                      <div 
+                        className="map-preview" 
+                        
+                        style={{
+                          height: (tileSize*3)
+                        }}
+                        onClick={() => {return loadMap(map.id)}}
+                      >
+                      {map.tiles.map((tile, i) => {
+                        return    <Tile 
+                                  key={i}
+                                  id={tile.id}
+                                  tileSize={(tileSize*3)/15}
+                                  image={tile.image ? tile.image : null}
+                                  color={tile.color ? tile.color : 'lightgrey'}
+                                  index={tile.id}
+                                  showCoordinates={false}
+                                  type={tile.type}
+                                  hovered={
+                                    false
+                                  }
+                                  >
+                                  </Tile>
+                                // <div 
+                                // key={i} 
+                                // style={{
+                                //   height: (tileSize*3)/15,
+                                //   width: (tileSize*3)/15
+                                // }} 
+                                // className="mini-tile"></div>
+                                
+                      })}
+                      </div>
+                      <div className="map-title">{map.name}</div>
+                  </div>)
+          })}
+        </div>
       </div>
 
       <div 

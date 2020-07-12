@@ -4,7 +4,8 @@ import LoginPage from './pages/LoginPage'
 
 import LandingPage from './pages/LandingPage'
 import DungeonPage from './pages/DungeonPage'
-import PortalPage from './pages/PortalPage'
+import MapmakerPage from './pages/MapmakerPage'
+import UserProfilePage from './pages/UserProfilePage'
 
 import { Route} from "react-router-dom";
 
@@ -18,15 +19,19 @@ const [isLoading] = useState(false);
      :
       <div  className="App">
         <Route exact path="/" component={LoginPage} />
-        {/* <Route exact path="/dungeon" component={DungeonPage} /> */}
+        <Route exact path="/userProfilePage" render={() => (
+            <UserProfilePage {...props} />
+        )}/>
         <Route exact path="/dungeon" render={() => (
             <DungeonPage {...props} />
           )}/>
         <Route path="/landing" component={LandingPage}/>
-        {/* <Route path="/portal" component={PortalPage}/> */}
-        <Route exact path="/portal" render={() => (
-            <PortalPage {...props} />
-          )}/>
+        <Route exact path="/mapmaker" render={() => (
+            <MapmakerPage {...props} />
+        )}/>
+        <Route exact path="/usermanager" render={() => (
+            <MapmakerPage {...props} />
+        )}/>
       </div>
   }
  </div>
