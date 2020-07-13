@@ -6,9 +6,44 @@ import {addMapRequest, loadMapRequest, loadAllMapsRequest, updateMapRequest} fro
 // import {useEventListener} from '../utils/useEventListener'
 // import { useHistory } from "react-router";
 
-export default function MapmakerPage(props) {
+class MapMakerPage extends React.Component {
   // const history = useHistory();
-  const [tileSize, setTileSize] = useState(() => {
+  constructor(props){
+    super(props)
+    this.state = {
+      tileSize: 0,
+      boardSize: 0,
+      maps : [],
+      loadedMap: null,
+      hoveredTileIdx: null,
+      hoveredPaletteTileIdx: null,
+      optionClickedIdx: null,
+      pinnedOption: null,
+      mouseDown: false
+    };
+    console.log('Map Maker Page props: ', this.props)
+  }
+
+  componentDidMount(){
+    console.log('component did mount')
+    let tileSize = this.getTileSize(),
+        boardSize = tileSize*15;
+    this.initializeListeners();
+    if(this.props.mapMaker){
+      this.props.mapMaker.initializeTiles();
+      // setTiles(props.mapMaker.tiles)
+    }
+    this.loadAllMaps();
+    this.setState((state, props) => {
+      return {
+        tileSize,
+        boardSize,
+        // maps,
+        tiles: props.mapMaker.tiles
+      }
+    })
+  }
+  getTileSize(){
     const h = Math.floor((window.innerHeight/17));
     const w = Math.floor((window.innerWidth/17));
     let tsize = 0;
@@ -18,50 +53,58 @@ export default function MapmakerPage(props) {
         tsize = w;
     }
     return tsize;
-  })
-  const [boardSize, setBoardSize] = useState(tileSize*15)
-  const [tiles, setTiles] = useState()
-  const [maps, setMaps] = useState([])
-  const [loadedMap, setLoadedMap] = useState()
-  const [hoveredTileIdx, setHover] = useState()
-  const [hoveredPaletteTileIdx, setPaletteHover] = useState(null)
-  const [optionClickedIdx, setOptionClicked] = useState(null)
-  const [pinnedOption, setPinnedOption] = useState(null)
-  const [mouseDown, setMouseDown] = useState(false)
+  }
+  // const [tileSize, setTileSize] = useState(() => {
+  //   const h = Math.floor((window.innerHeight/17));
+  //   const w = Math.floor((window.innerWidth/17));
+  //   let tsize = 0;
+  //   if(h < w){
+  //       tsize = h;
+  //     } else {
+  //       tsize = w;
+  //   }
+  //   return tsize;
+  // })
+  // const [boardSize, setBoardSize] = useState(tileSize*15)
+  // const [tiles, setTiles] = useState()
+  // const [maps, setMaps] = useState([])
+  // const [loadedMap, setLoadedMap] = useState()
+  // const [hoveredTileIdx, setHover] = useState()
+  // const [hoveredPaletteTileIdx, setPaletteHover] = useState(null)
+  // const [optionClickedIdx, setOptionClicked] = useState(null)
+  // const [pinnedOption, setPinnedOption] = useState(null)
+  // const [mouseDown, setMouseDown] = useState(false)
 
-  const initializeListeners = () => {
-    // useEventListener('mousedown', mouseDownHandler);
-    // useEventListener('mouseup', mouseUpHandler);
-    // useEventListener('resize', handleResize);
+  initializeListeners = () => {
+    window.addEventListener('mousedown', this.mouseDownHandler);
+    window.addEventListener('mouseup', this.mouseUpHandler);
+    window.addEventListener('resize', this.handleResize);
   }
 
-  useEffect(() => {
-    console.log('in use effect')
-    // history.push({
-    //   pathname: '/mapmaker'
-    // })
-    let mounted = true;
-    if(mounted){
-      initializeListeners();
-      if(props.mapMaker){
-        props.mapMaker.initializeTiles();
-        setTiles(props.mapMaker.tiles)
-      }
+  // useEffect(() => {
+  //   console.log('in use effect')
+  //   let mounted = true;
+  //   if(mounted){
+  //     initializeListeners();
+  //     if(props.mapMaker){
+  //       props.mapMaker.initializeTiles();
+  //       setTiles(props.mapMaker.tiles)
+  //     }
       
-      window.addEventListener('mousedown', mouseDownHandler)
-      window.addEventListener('mouseup', mouseUpHandler)
-      window.addEventListener('resize', handleResize)
-      loadAllMaps()
-    }
-    return () => mounted = false;
-  },[props.mapMaker])
+  //     window.addEventListener('mousedown', mouseDownHandler)
+  //     window.addEventListener('mouseup', mouseUpHandler)
+  //     window.addEventListener('resize', handleResize)
+  //     loadAllMaps()
+  //   }
+  //   return () => mounted = false;
+  // },[props.mapMaker])
 
   
 
-  const handleHover = (id, type) => {
-    if(mouseDown && props.mapMaker.paletteTiles[pinnedOption] && props.mapMaker.paletteTiles[pinnedOption].optionType === 'void'){
+  handleHover = (id, type) => {
+    if(this.state.mouseDown && this.props.mapMaker.paletteTiles[this.state.pinnedOption] && this.props.mapMaker.paletteTiles[this.state.pinnedOption].optionType === 'void'){
       console.log('chi', id)
-      let tile = props.mapMaker.tiles[id]
+      let tile = this.props.mapMaker.tiles[id]
       // handleClick(props.mapMaker.tiles[id])
       // setHover(null);
       // props.mapMaker.tiles[id].color = 'black'
@@ -69,36 +112,48 @@ export default function MapmakerPage(props) {
 
 
       let pinned = null;
-      if(props.mapMaker.paletteTiles[pinnedOption]){ 
+      if(this.props.mapMaker.paletteTiles[this.state.pinnedOption]){ 
         console.log('money')
-        pinned = props.mapMaker.paletteTiles[pinnedOption]
+        this.state.pinned = this.props.mapMaker.paletteTiles[this.state.pinnedOption]
       }
-      if(pinned && pinned.optionType === 'void'){
+      if(this.state.pinned && this.state.pinned.optionType === 'void'){
         console.log('hmm')
-        setHover(null);
-        props.mapMaker.tiles[tile.id].image = null;
-        props.mapMaker.tiles[tile.id].color = 'black'
-        console.log(props.mapMaker.tiles[tile.id])
-        setTiles(props.mapMaker.tiles)
+        // setHover(null);
+        this.props.mapMaker.tiles[tile.id].image = null;
+        this.props.mapMaker.tiles[tile.id].color = 'black'
+        console.log(this.props.mapMaker.tiles[tile.id])
+        // setTiles(props.mapMaker.tiles)
+        this.setState({
+          hoveredTileIdx: null,
+          tiles: this.props.mapMaker.tiles
+        })
       } 
     }else{
       if(type === 'palette-tile'){
-        setPaletteHover(id)
+        // setPaletteHover(id)
+        this.setState({
+          hoveredPaletteTileIdx: id
+        })
       } else {
-        setHover(id);
+        // setHover(id);
+        this.setState({
+          hoveredTileIdx: id
+        })
       }
     }
   }
   
-  const mouseDownHandler = () => {
+  mouseDownHandler = () => {
     console.log('down')
-    setMouseDown(true)
+    // setMouseDown(true)
+    this.setState({mouseDown: true})
   }
-  const mouseUpHandler = () => {
-    setMouseDown(false)
+  mouseUpHandler = () => {
+    // setMouseDown(false)
+    this.setState({mouseDown: false})
   }
   
-  function handleResize() {
+  handleResize() {
     const h = Math.floor((window.innerHeight/17));
     const w = Math.floor((window.innerWidth/17));
     let tsize = 0;
@@ -107,66 +162,94 @@ export default function MapmakerPage(props) {
     } else {
         tsize = w;
     }
-    setTileSize(tsize)
-    setBoardSize(tsize*15)
+    // setTileSize(tsize)
+    // setBoardSize(tsize*15)
+    this.setState({
+      tileSize: tsize,
+      boardSize: tsize*15
+    })
   }
   
-  const handleClick = (tile) => {
+  handleClick = (tile) => {
     if(tile.type === 'palette-tile'){
-      console.log(props.mapMaker.paletteTiles[tile.id])
-      setOptionClicked(tile.id)
-      setPinnedOption(tile.id)
+      console.log(this.props.mapMaker.paletteTiles[tile.id])
+      // setOptionClicked(tile.id)
+      // setPinnedOption(tile.id)
+      this.setState({
+        optionClickedIdx: tile.id,
+        pinnedOption: tile.id
+      })
     } else if(tile.type === 'board-tile'){
       console.log('boardtile')
 
       let pinned = null;
-      if(props.mapMaker.paletteTiles[pinnedOption]){ 
+      if(this.props.mapMaker.paletteTiles[this.state.pinnedOption]){ 
         console.log('money')
-        pinned = props.mapMaker.paletteTiles[pinnedOption]
+        pinned = this.props.mapMaker.paletteTiles[this.state.pinnedOption]
       }
       if(pinned && pinned.optionType === 'void'){
         console.log('hmm')
-        setHover(null);
-        props.mapMaker.tiles[tile.id].image = null;
-        props.mapMaker.tiles[tile.id].color = 'black'
-        console.log(props.mapMaker.tiles[tile.id])
-        setTiles(props.mapMaker.tiles)
+        // setHover(null);
+        this.props.mapMaker.tiles[tile.id].image = null;
+        this.props.mapMaker.tiles[tile.id].color = 'black'
+        console.log(this.props.mapMaker.tiles[tile.id])
+        // setTiles(props.mapMaker.tiles)
+        this.setState({
+          tiles: this.props.mapMaker.tiles,
+          hoveredTileIdx: null
+        })
       } else if(pinned){
-        props.mapMaker.tiles[tile.id].image = pinned.image
-        setHover(null);
-        setTiles(props.mapMaker.tiles)
+        this.props.mapMaker.tiles[tile.id].image = pinned.image
+        this.setState({
+          tiles: this.props.mapMaker.tiles,
+          hoveredTileIdx: null
+        })
       }
     }
   }
-  const writeMap = () => {
-    if(loadedMap){
+  setHover(id){
+    this.setState({
+      hoveredTileIdx: id
+    })
+  }
+  setPaletteHover(id){
+    this.setState({
+      hoveredPaletteTileIdx: id
+    })
+  }
+  writeMap = () => {
+    if(this.state.loadedMap){
       let obj = {
-        name: loadedMap.name,
-        tiles: props.mapMaker.tiles
+        name: this.state.loadedMap.name,
+        tiles: this.props.mapMaker.tiles
       }
-      updateMapRequest(loadedMap.id, obj)
+      updateMapRequest(this.state.loadedMap.id, obj)
     } else {
       let d = new Date()
       let n = d.getTime();
       let rand = n.toString().slice(3,7)
       let obj = {
         name: 'map'+rand,
-        tiles: props.mapMaker.tiles
+        tiles: this.props.mapMaker.tiles
       }
       addMapRequest(obj)
     }
     // writeRequest({message: JSON.stringify(obj)})
   }
-  const loadMap = async (id) => {
+  loadMap = async (id) => {
     const val = await loadMapRequest(id)
     let e = val.data[0];
     let map = JSON.parse(e.content);
     map.id = e.id;
-    setTiles(map.tiles)
-    setLoadedMap(map)
+    // setTiles(map.tiles)
+    // setLoadedMap(map)
+    this.setState({
+      loadedMap: map,
+      tiles: map.tiles
+    })
   }
 
-  const loadAllMaps = async () => {
+  loadAllMaps = async () => {
     const val = await loadAllMapsRequest()
     let maps = [];
     val.data.forEach((e)=>{
@@ -175,162 +258,172 @@ export default function MapmakerPage(props) {
       maps.push(map)
     })
     console.log('maps: ', maps)
-    setMaps(maps)
+    this.setState(() => {
+      return {
+        maps: maps
+      }
+    })
+    console.log('map maker state is now: ', this.state)
+    // setMaps(maps)
   }
 
-  
-
-
-  return (
-    <div className="container">
-      <div 
-      className="palette" 
-      style={{
-        width: tileSize*3+'px', height: boardSize+ 'px',
-        backgroundColor: 'white',
-        marginRight: '25px'
-      }}
-      > 
-        <div className="buttons-container">
-          <button
-          onClick={() => {return console.log(loadedMap)}}
-          >Clear</button>
-          <button
-          onClick={() => {return writeMap()}}
-          >Save</button>
-          <button
-          onClick={() => {return loadMap()}}
-          >Load</button>
-        </div>
-        <div className="previews-container">
-          {maps && maps.map((map, i) => {
-            return (<div key={i}>
-                      <div 
-                        className="map-preview" 
-                        
-                        style={{
-                          height: (tileSize*3)
-                        }}
-                        onClick={() => {return loadMap(map.id)}}
-                      >
-                      {map.tiles.map((tile, i) => {
-                        return    <Tile 
-                                  key={i}
-                                  id={tile.id}
-                                  tileSize={(tileSize*3)/15}
-                                  image={tile.image ? tile.image : null}
-                                  color={tile.color ? tile.color : 'lightgrey'}
-                                  index={tile.id}
-                                  showCoordinates={false}
-                                  type={tile.type}
-                                  hovered={
-                                    false
-                                  }
-                                  >
-                                  </Tile>
-                                // <div 
-                                // key={i} 
-                                // style={{
-                                //   height: (tileSize*3)/15,
-                                //   width: (tileSize*3)/15
-                                // }} 
-                                // className="mini-tile"></div>
-                                
-                      })}
-                      </div>
-                      <div className="map-title">{map.name}</div>
-                  </div>)
-          })}
-        </div>
-      </div>
-
-      <div 
-      className="board" 
-      style={{
-          width: boardSize+'px', height: boardSize+ 'px',
-          backgroundColor: 'white'
-      }}
-      onMouseLeave={() => {return setHover(null)}}
-      >
-          {tiles && tiles.map((tile, i) => {
-              return <Tile 
-              key={i}
-              id={tile.id}
-              index={tile.id}
-              tileSize={tileSize}
-              image={tile.image ? tile.image : null}
-              color={tile.color ? tile.color : 'lightgrey'}
-              coordinates={tile.coordinates}
-              showCoordinates={false}
-              editMode={true}
-              handleHover={handleHover}
-              handleClick={handleClick}
-              type={tile.type}
-              hovered={
-                hoveredTileIdx === tile.id ?
-                true :
-                false
-              }
-              >
-              </Tile>
-          })}
-      </div>
-      <div className="palette" style={{
-          width: tileSize*3+'px', height: boardSize+ 'px',
+  render (){
+    return (
+      <div className="container">
+        <div 
+        className="palette" 
+        style={{
+          width: this.state.tileSize*3+'px', height: this.state.boardSize+ 'px',
           backgroundColor: 'white',
-          marginLeft: '25px'
-          }}
-          onMouseLeave={() => {
-            if(optionClickedIdx === null){
-              return setPaletteHover(null)
-            }
-
-          }}
-          >
-            {props.mapMaker.paletteTiles && props.mapMaker.paletteTiles.map((tile, i) => {
-              return (
-                <div key={i} className="palette-options-pane">
-                  <div className="palette-option-container"
-                    style={{
-                      backgroundImage: optionClickedIdx === i ? 'linear-gradient(90deg, transparent, black)' : 'none'
-                    }}
-                  >
-                    <Tile 
-                    id={tile.id}
-                    tileSize={tileSize}
-                    image={tile.image ? tile.image : null}
-                    color={tile.color ? tile.color : 'apricot'}
-                    coordinates={tile.coordinates}
-                    index={tile.id}
-                    showCoordinates={false}
-                    editMode={true}
-                    handleHover={handleHover}
-                    handleClick={handleClick}
-                    type={tile.type}
-                    hovered={
-                      hoveredPaletteTileIdx === tile.id ?
-                      true :
-                      false
-                    }
-                    >
-                    </Tile>
-                    <div className={`
-                      text-container
-                      ${hoveredPaletteTileIdx === tile.id ? 'hovered' : ''}
-                      ${pinnedOption === tile.id ? 'pinned' : ''}
-                      `
-                      }>
-                      <span
+          marginRight: '25px'
+        }}
+        > 
+          <div className="buttons-container">
+            <button
+            onClick={() => {return console.log(this.state.loadedMap)}}
+            >Clear</button>
+            <button
+            onClick={() => {return this.writeMap()}}
+            >Save</button>
+            <button
+            onClick={() => {return this.loadMap()}}
+            >Load</button>
+          </div>
+          <div className="previews-container">
+            {this.state.maps && this.state.maps.map((map, i) => {
+              return (<div key={i}>
+                        <div 
+                          className="map-preview" 
+                          
+                          style={{
+                            height: (this.state.tileSize*3)
+                          }}
+                          onClick={() => {return this.loadMap(map.id)}}
+                        >
+                        {map.tiles.map((tile, i) => {
+                          return    <Tile 
+                                    key={i}
+                                    id={tile.id}
+                                    tileSize={(this.state.tileSize*3)/15}
+                                    image={tile.image ? tile.image : null}
+                                    color={tile.color ? tile.color : 'lightgrey'}
+                                    index={tile.id}
+                                    showCoordinates={false}
+                                    type={tile.type}
+                                    hovered={
+                                      false
+                                    }
+                                    >
+                                    </Tile>
+                                  // <div 
+                                  // key={i} 
+                                  // style={{
+                                  //   height: (tileSize*3)/15,
+                                  //   width: (tileSize*3)/15
+                                  // }} 
+                                  // className="mini-tile"></div>
+                                  
+                        })}
+                        </div>
+                        <div className="map-title">{map.name}</div>
+                    </div>)
+            })}
+          </div>
+        </div>
+  
+        <div 
+        className="board" 
+        style={{
+            width: this.state.boardSize+'px', height: this.state.boardSize+ 'px',
+            backgroundColor: 'white'
+        }}
+        onMouseLeave={() => {return this.setHover(null)}}
+        >
+            {this.state.tiles && this.state.tiles.map((tile, i) => {
+                return <Tile 
+                key={i}
+                id={tile.id}
+                index={tile.id}
+                tileSize={this.state.tileSize}
+                image={tile.image ? tile.image : null}
+                color={tile.color ? tile.color : 'lightgrey'}
+                coordinates={tile.coordinates}
+                showCoordinates={false}
+                editMode={true}
+                handleHover={this.handleHover}
+                handleClick={this.handleClick}
+                type={tile.type}
+                hovered={
+                  this.state.hoveredTileIdx === tile.id ?
+                  true :
+                  false
+                }
+                >
+                </Tile>
+            })}
+        </div>
+        <div className="palette" style={{
+            width: this.state.tileSize*3+'px', height: this.state.boardSize+ 'px',
+            backgroundColor: 'white',
+            marginLeft: '25px'
+            }}
+            onMouseLeave={() => {
+              if(this.state.optionClickedIdx === null){
+                return this.setPaletteHover(null)
+              }
+  
+            }}
+            >
+              {this.props.mapMaker.paletteTiles && this.props.mapMaker.paletteTiles.map((tile, i) => {
+                return (
+                  <div key={i} className="palette-options-pane">
+                    <div className="palette-option-container"
                       style={{
-                        color: optionClickedIdx === i ? 'white' : 'black'
+                        backgroundImage: this.state.optionClickedIdx === i ? 'linear-gradient(90deg, transparent, black)' : 'none'
                       }}
-                      >{tile.optionType}</span>
+                    >
+                      <Tile 
+                      id={tile.id}
+                      tileSize={this.state.tileSize}
+                      image={tile.image ? tile.image : null}
+                      color={tile.color ? tile.color : 'apricot'}
+                      coordinates={tile.coordinates}
+                      index={tile.id}
+                      showCoordinates={false}
+                      editMode={true}
+                      handleHover={this.handleHover}
+                      handleClick={this.handleClick}
+                      type={tile.type}
+                      hovered={
+                        this.state.hoveredPaletteTileIdx === tile.id ?
+                        true :
+                        false
+                      }
+                      >
+                      </Tile>
+                      <div className={`
+                        text-container
+                        ${this.state.hoveredPaletteTileIdx === tile.id ? 'hovered' : ''}
+                        ${this.state.pinnedOption === tile.id ? 'pinned' : ''}
+                        `
+                        }>
+                        <span
+                        style={{
+                          color: this.state.optionClickedIdx === i ? 'white' : 'black'
+                        }}
+                        >{tile.optionType}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )
-          })}
+                )
+            })}
+        </div>
       </div>
-    </div>
-  )
+    )
+
+  }
+
+
 }
+
+export default MapMakerPage;

@@ -32,9 +32,6 @@ const login = () => {
 }
  return (
    <div className="fullpage">
-    {isLoading ?
-      <h2>loading...</h2>
-     :
       <div  className="App">
         {loggedIn && <button className="logout-button" onClick={logout}>
           Logout
@@ -61,7 +58,6 @@ const login = () => {
           <Redirect to="/login" />}
         </Route>
       </div>
-  }
  </div>
  );
 }

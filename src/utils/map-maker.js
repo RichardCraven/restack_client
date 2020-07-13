@@ -1,6 +1,7 @@
 // import * as images from "./images";
 
 export function MapMaker(props){
+    console.log('in mapmaker.js')
     this.tiles = [];
     this.paletteTiles = [];
     this.getIndexFromCoordinates = (coordinates) =>{
@@ -12,6 +13,8 @@ export function MapMaker(props){
         return index
     }
     this.initializeTiles = () => {
+        this.tiles = [];
+        this.paletteTiles = [];
         for(let i = 0; i< 225; i++){
             this.tiles.push({
                 type: 'board-tile',
