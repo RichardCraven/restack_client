@@ -87,6 +87,22 @@ const loadAllMapsRequest = () => {
     })
 }
 
+const loadAllUsersRequest = () => {
+  console.log('getting users')
+  // return axios.get("http://localhost:5000/api/admin/maps")
+  return axios.get("http://localhost:5000/api/admin/users")
+    .then(res=>{
+      console.log('get all users req is ', res)
+      if(res.status === 200){
+        return(res)
+      }
+    })
+    .catch(err=> {
+      console.log(err)
+      return(err)
+    })
+}
+
 const writeRequest = (messageObj) => {
   return axios.post("http://localhost:5000/api/admin/write", messageObj)
 }
@@ -101,5 +117,6 @@ export {
   addMapRequest, 
   loadMapRequest, 
   loadAllMapsRequest,
-  updateMapRequest
+  updateMapRequest,
+  loadAllUsersRequest
 };

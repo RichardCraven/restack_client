@@ -41,12 +41,12 @@ export default function MapmakerPage(props) {
     //   pathname: '/mapmaker'
     // })
     let mounted = true;
-    initializeListeners();
-    if(props.mapMaker){
-      props.mapMaker.initializeTiles();
-      setTiles(props.mapMaker.tiles)
-    }
     if(mounted){
+      initializeListeners();
+      if(props.mapMaker){
+        props.mapMaker.initializeTiles();
+        setTiles(props.mapMaker.tiles)
+      }
       
       window.addEventListener('mousedown', mouseDownHandler)
       window.addEventListener('mouseup', mouseUpHandler)

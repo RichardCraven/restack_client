@@ -13,11 +13,18 @@ export default function LandingPage() {
   const history = useHistory();
 
   useEffect(()=> {
+    let mounted = true;
     history.push({
       pathname: '/landing'
     })
-    if(JSON.parse(sessionStorage.getItem('isAdmin'))){
-      setIsAdmin(true)
+    if(mounted){
+      if(JSON.parse(sessionStorage.getItem('isAdmin'))){
+        setIsAdmin(true)
+      }
+
+    }
+    return () => {
+      mounted = false;
     }
   },[history])
   // const handleClick = (type) => {
@@ -33,12 +40,12 @@ export default function LandingPage() {
          { navToUsermanager && <Redirect to='/usermanager'/> }
 
         <div className="user-row">
-         <div className="user-data" onClick={() => setNavUserProfile(true)}>User Profile</div>
-         <div className="shop" onClick={() => setNavShop(true)}>Shop</div>
-         <div  className="enter-dungeon" onClick={() => setNavDungeon(true)}>Enter Dungeon</div>
+         <div className="user-data" onClick={() => setNavUserProfile(true)}>Youser Profyl</div>
+         <div className="shop" onClick={() => setNavShop(true)}>Shoppe</div>
+         <div  className="enter-dungeon" onClick={() => setNavDungeon(true)}>Ye Dungeon</div>
         </div>
         { isAdmin && <div className="admin-row">
-          <div className="user-manager" onClick={() => setNavUsermanager(true)}>User Manager</div>
+          <div className="user-manager" onClick={() => setNavUsermanager(true)}>Youser Manager</div>
           <div className="map-maker" onClick={() => setNavMapmaker(true)}>Map Maker</div>
           {/* <div className="map-maker" onClick={() => setNavMapmaker(true)}>Map Maker</div> */}
         </div>}

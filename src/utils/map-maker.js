@@ -44,9 +44,9 @@ export function MapMaker(props){
             'treasure',
             'gold',
             'oracle',
-            'dream den'
+            'dream den',
 
-
+            'mordu_devil'
         ]
         function getPaletteImage(key){
             switch(key){

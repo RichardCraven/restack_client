@@ -8,4 +8,23 @@
     height: 60vh;
     width: 60vw;
     border-radius: 1%;
+
+    .table{
+        width: 90%;
+        .row{
+            width: 100%;
+            display: flex;
+            flex-direction: row;
+            justify-content: space-around;
+            div{
+                width: 13vw;
+                // border: 1px dashed grey;
+                display: flex;
+                justify-content: flex-start;
+                &.data-node{
+                    min-height: 4vh;
+                }
+            }
+        }
+    }
 }
