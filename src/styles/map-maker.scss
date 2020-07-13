@@ -4,6 +4,7 @@
     justify-content: flex-start;
     align-items: flex-start;
     .palette-option-container{
+        cursor: pointer;
         width: 100%;
         display: flex;
         align-items: center;
@@ -18,6 +19,7 @@
             justify-content: center;
             opacity:0;
             transition: all 0.5s;
+            
             &.hovered{
                 opacity:1
             }

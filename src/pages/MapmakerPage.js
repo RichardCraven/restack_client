@@ -21,7 +21,7 @@ class MapMakerPage extends React.Component {
       pinnedOption: null,
       mouseDown: false
     };
-    console.log('Map Maker Page props: ', this.props)
+    // console.log('Map Maker Page props: ', this.props)
   }
 
   componentDidMount(){
@@ -144,7 +144,7 @@ class MapMakerPage extends React.Component {
   }
   
   mouseDownHandler = () => {
-    console.log('down')
+    // console.log('down')
     // setMouseDown(true)
     this.setState({mouseDown: true})
   }
@@ -172,7 +172,7 @@ class MapMakerPage extends React.Component {
   
   handleClick = (tile) => {
     if(tile.type === 'palette-tile'){
-      console.log(this.props.mapMaker.paletteTiles[tile.id])
+      // console.log(this.props.mapMaker.paletteTiles[tile.id])
       // setOptionClicked(tile.id)
       // setPinnedOption(tile.id)
       this.setState({
@@ -180,7 +180,7 @@ class MapMakerPage extends React.Component {
         pinnedOption: tile.id
       })
     } else if(tile.type === 'board-tile'){
-      console.log('boardtile')
+      // console.log('boardtile')
 
       let pinned = null;
       if(this.props.mapMaker.paletteTiles[this.state.pinnedOption]){ 
@@ -380,6 +380,13 @@ class MapMakerPage extends React.Component {
                     <div className="palette-option-container"
                       style={{
                         backgroundImage: this.state.optionClickedIdx === i ? 'linear-gradient(90deg, transparent, black)' : 'none'
+                      }}
+                      onMouseOver={() => this.setPaletteHover(i)}
+                      onClick={() => {
+                        this.handleClick({
+                          type: 'palette-tile',
+                          id: i
+                        })
                       }}
                     >
                       <Tile 

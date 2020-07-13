@@ -72,7 +72,6 @@ const loadMapRequest = (id) => {
     })
 }
 const loadAllMapsRequest = () => {
-  console.log('um')
   // return axios.get("http://localhost:5000/api/admin/maps")
   return axios.get("http://localhost:5000/api/admin/allmaps/0")
     .then(res=>{
