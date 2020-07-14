@@ -48,10 +48,40 @@
     }
 }
 .container{
+    .view-toggle-button{
+        position: absolute;
+        right: 10px;
+        top: 10px;
+        background-color: white;
+        border: none;
+        height: 30px;
+        width: 100px;
+    }
+    .toast-pane{
+        background-color: white;
+        top: 10px;
+        position: absolute;
+        width: 100px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
     .palette{
         .buttons-container{
             display: flex;
             flex-direction: column;
         }
+    }
+}
+.mini-boards-container{
+    height: 100%;
+    width: 100%;
+    display: flex;
+    flex-flow: row wrap;
+    align-content: center;
+    justify-content: center;
+    .mini-board{
+        border: 1px solid pink;
     }
 }

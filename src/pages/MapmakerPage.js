@@ -14,12 +14,17 @@ class MapMakerPage extends React.Component {
       tileSize: 0,
       boardSize: 0,
       maps : [],
+      miniBoards: [],
       loadedMap: null,
       hoveredTileIdx: null,
       hoveredPaletteTileIdx: null,
       optionClickedIdx: null,
       pinnedOption: null,
-      mouseDown: false
+      mouseDown: false,
+      toastMessage: null,
+      mapView: true,
+      hoveredSection: null,
+      draggedMap: null
     };
     // console.log('Map Maker Page props: ', this.props)
   }
@@ -33,13 +38,18 @@ class MapMakerPage extends React.Component {
       this.props.mapMaker.initializeTiles();
       // setTiles(props.mapMaker.tiles)
     }
+    let arr = []
+    for(let i = 0; i < 9; i++){
+      arr.push([])
+    }
     this.loadAllMaps();
     this.setState((state, props) => {
       return {
         tileSize,
         boardSize,
         // maps,
-        tiles: props.mapMaker.tiles
+        tiles: props.mapMaker.tiles,
+        miniBoards: arr
       }
     })
   }
@@ -103,29 +113,25 @@ class MapMakerPage extends React.Component {
 
   handleHover = (id, type) => {
     if(this.state.mouseDown && this.props.mapMaker.paletteTiles[this.state.pinnedOption] && this.props.mapMaker.paletteTiles[this.state.pinnedOption].optionType === 'void'){
-      console.log('chi', id)
-      let tile = this.props.mapMaker.tiles[id]
-      // handleClick(props.mapMaker.tiles[id])
-      // setHover(null);
-      // props.mapMaker.tiles[id].color = 'black'
-      // setTiles(props.mapMaker.tiles) 
-
-
+      let tile = this.props.mapMaker.tiles[id];
       let pinned = null;
       if(this.props.mapMaker.paletteTiles[this.state.pinnedOption]){ 
         console.log('money')
-        this.state.pinned = this.props.mapMaker.paletteTiles[this.state.pinnedOption]
+        pinned = this.props.mapMaker.paletteTiles[this.state.pinnedOption]
       }
-      if(this.state.pinned && this.state.pinned.optionType === 'void'){
+      if(pinned && pinned.optionType === 'void'){
         console.log('hmm')
         // setHover(null);
-        this.props.mapMaker.tiles[tile.id].image = null;
-        this.props.mapMaker.tiles[tile.id].color = 'black'
-        console.log(this.props.mapMaker.tiles[tile.id])
+        let arr = [...this.state.tiles]
+        arr[tile.id].image = null;
+        arr[tile.id].color = 'black';
+        arr[tile.id].contains = 'void'
+
+        console.log(arr[tile.id])
         // setTiles(props.mapMaker.tiles)
         this.setState({
           hoveredTileIdx: null,
-          tiles: this.props.mapMaker.tiles
+          tiles: arr
         })
       } 
     }else{
@@ -184,24 +190,27 @@ class MapMakerPage extends React.Component {
 
       let pinned = null;
       if(this.props.mapMaker.paletteTiles[this.state.pinnedOption]){ 
-        console.log('money')
+        // console.log('money')
         pinned = this.props.mapMaker.paletteTiles[this.state.pinnedOption]
       }
       if(pinned && pinned.optionType === 'void'){
         console.log('hmm')
         // setHover(null);
-        this.props.mapMaker.tiles[tile.id].image = null;
-        this.props.mapMaker.tiles[tile.id].color = 'black'
-        console.log(this.props.mapMaker.tiles[tile.id])
-        // setTiles(props.mapMaker.tiles)
+        let arr = [...this.state.tiles];
+        arr[tile.id].image = null;
+        arr[tile.id].color = 'black'
+        arr[tile.id].contains = 'void'
+        console.log(arr[tile.id])
+        // setTiles(state.tiles)
         this.setState({
-          tiles: this.props.mapMaker.tiles,
+          tiles: arr,
           hoveredTileIdx: null
         })
       } else if(pinned){
-        this.props.mapMaker.tiles[tile.id].image = pinned.image
+        let arr = [...this.state.tiles];
+        arr[tile.id].image = pinned.image
         this.setState({
-          tiles: this.props.mapMaker.tiles,
+          tiles: arr,
           hoveredTileIdx: null
         })
       }
@@ -217,24 +226,46 @@ class MapMakerPage extends React.Component {
       hoveredPaletteTileIdx: id
     })
   }
-  writeMap = () => {
+  getMapConfiguration(){
+    
+  }
+  writeMap = async () => {
+    // console.log('wrting with: ', this.state.tiles)
+    const config = this.props.mapMaker.getMapConfiguration(this.state.tiles)
     if(this.state.loadedMap){
       let obj = {
         name: this.state.loadedMap.name,
-        tiles: this.props.mapMaker.tiles
+        tiles: this.state.tiles,
+        config
       }
-      updateMapRequest(this.state.loadedMap.id, obj)
+      await updateMapRequest(this.state.loadedMap.id, obj);
+      this.loadAllMaps(); 
+      this.toast('Map Saved')
     } else {
       let d = new Date()
       let n = d.getTime();
       let rand = n.toString().slice(3,7)
       let obj = {
         name: 'map'+rand,
-        tiles: this.props.mapMaker.tiles
+        tiles: this.state.tiles,
+        config
       }
-      addMapRequest(obj)
+      await addMapRequest(obj)
+      this.loadAllMaps(); 
+      this.toast('Map Saved')
     }
     // writeRequest({message: JSON.stringify(obj)})
+  }
+  toast(msg){
+    console.log('in toast')
+    this.setState({
+      toastMessage: msg
+    })
+    setTimeout(() => {
+      this.setState({
+        toastMessage: null
+      })
+    }, 2000)
   }
   loadMap = async (id) => {
     const val = await loadMapRequest(id)
@@ -243,10 +274,20 @@ class MapMakerPage extends React.Component {
     map.id = e.id;
     // setTiles(map.tiles)
     // setLoadedMap(map)
+    map.tiles.forEach((t)=>{
+      if(t.color === 'black'){
+        t['contains'] = 'void'
+      }
+    })
+    let boards = [...this.state.miniBoards]
+    boards[4] = map;
     this.setState({
       loadedMap: map,
-      tiles: map.tiles
+      tiles: map.tiles,
+      miniBoards: boards
     })
+    console.log(this.state.tiles)
+    console.log('miniboards: ', this.state.miniBoards)
   }
 
   loadAllMaps = async () => {
@@ -257,19 +298,65 @@ class MapMakerPage extends React.Component {
       map.id = e.id;
       maps.push(map)
     })
-    console.log('maps: ', maps)
+    console.log('now maps are ', maps)
     this.setState(() => {
       return {
         maps: maps
       }
     })
-    console.log('map maker state is now: ', this.state)
-    // setMaps(maps)
   }
+
+  // Drag and Drop code
+  onDragStart = (event, map) => {
+    console.log('dragstart on div: ', map);
+    // event.dataTransfer.setData("taskName", taskName);
+    this.setState({
+      draggedMap: map
+    })
+  }
+  onDragOver = (event, i) => {
+    // console.log('section id: ', i)
+    if(this.state.hoveredSection !== i){
+      this.setState({
+        hoveredSection: i
+      })
+    }
+      event.preventDefault();
+  }
+
+  onDrop = (event, id) => {
+    console.log('miniboard id: ', id)
+    let sections = [...this.state.miniBoards]
+    // section = sections[id]
+    if(this.state.draggedMap){
+      sections[id] = this.state.draggedMap
+      // console.log(section)
+      // console.log()
+      console.log('inside', sections)
+    }
+    this.setState({
+      hoveredSection: null,
+      draggedMap: null,
+      miniBoards: sections
+    })
+  }
+
 
   render (){
     return (
       <div className="container">
+        {this.state.toastMessage && <div className="toast-pane">
+          {this.state.toastMessage}
+        </div>}
+        <button
+            className="view-toggle-button"
+            onClick={() => {
+              return this.setState((state, props) => {
+                return {mapView: !state.mapView}
+              })
+            }}
+            >{this.state.mapView === true ? 'Dungeon View' : 'Map View'}
+        </button>
         <div 
         className="palette" 
         style={{
@@ -291,14 +378,22 @@ class MapMakerPage extends React.Component {
           </div>
           <div className="previews-container">
             {this.state.maps && this.state.maps.map((map, i) => {
-              return (<div key={i}>
+              return (<div 
+                        key={i}
+                        style={{
+                          marginBottom: '10px',
+                          marginTop: '10px'
+                        }}
+                      >
                         <div 
-                          className="map-preview" 
+                          className="map-preview draggable" 
                           
                           style={{
                             height: (this.state.tileSize*3)
                           }}
                           onClick={() => {return this.loadMap(map.id)}}
+                          onDragStart = {(event) => this.onDragStart(event, map)}
+                          draggable
                         >
                         {map.tiles.map((tile, i) => {
                           return    <Tile 
@@ -339,7 +434,7 @@ class MapMakerPage extends React.Component {
         }}
         onMouseLeave={() => {return this.setHover(null)}}
         >
-            {this.state.tiles && this.state.tiles.map((tile, i) => {
+            {this.state.mapView && this.state.tiles && this.state.tiles.map((tile, i) => {
                 return <Tile 
                 key={i}
                 id={tile.id}
@@ -361,6 +456,47 @@ class MapMakerPage extends React.Component {
                 >
                 </Tile>
             })}
+
+            {!this.state.mapView && 
+              <div className="mini-boards-container">
+                {this.state.miniBoards && this.state.miniBoards.map((board, i) => {
+                      return  <div 
+                              className="mini-board board" 
+                              key={i}
+                              style={{
+                                height: (this.state.tileSize*15)/3-2+'px',
+                                width: (this.state.tileSize*15)/3-2+'px',
+                                backgroundColor: this.state.hoveredSection === i ? 'lightgrey': 'white'
+                              }}
+                              onDragOver={(event)=>this.onDragOver(event, i)}
+                              onDrop={(event)=>{this.onDrop(event, i)}}
+                              >
+                                {board.tiles && board.tiles.map((tile, i) => {
+                                  return <Tile
+                                  key={i}
+                                  id={i}
+                                  tileSize={((this.state.tileSize*15)/3-2)/15}
+                                  image={tile.image ? tile.image : null}
+                                  color={tile.color ? tile.color : 'apricot'}
+                                  coordinates={tile.coordinates}
+                                  index={tile.id}
+                                  showCoordinates={false}
+                                  editMode={true}
+                                  handleHover={null}
+                                  handleClick={null}
+                                  type={tile.type}
+                                  hovered={
+                                    false
+                                  }
+                                  />
+                                })}
+                              </div>
+                
+            
+                })}
+              </div>
+            }
+              
         </div>
         <div className="palette" style={{
             width: this.state.tileSize*3+'px', height: this.state.boardSize+ 'px',
@@ -398,8 +534,8 @@ class MapMakerPage extends React.Component {
                       index={tile.id}
                       showCoordinates={false}
                       editMode={true}
-                      handleHover={this.handleHover}
-                      handleClick={this.handleClick}
+                      handleHover={null}
+                      handleClick={null}
                       type={tile.type}
                       hovered={
                         this.state.hoveredPaletteTileIdx === tile.id ?

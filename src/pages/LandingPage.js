@@ -46,7 +46,7 @@ export default function LandingPage() {
         </div>
         { isAdmin && <div className="admin-row">
           <div className="user-manager" onClick={() => setNavUsermanager(true)}>Youser Manager</div>
-          <div className="map-maker" onClick={() => setNavMapmaker(true)}>Map Maker</div>
+          <div className="map-maker" onClick={() => setNavMapmaker(true)}>Dungeon Builder</div>
           {/* <div className="map-maker" onClick={() => setNavMapmaker(true)}>Map Maker</div> */}
         </div>}
        </div>
