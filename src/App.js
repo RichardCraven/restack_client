@@ -12,12 +12,10 @@ import { Route, Redirect} from "react-router-dom";
 import { useEffect } from 'react';
 
 function App(props) {
-const [isLoading] = useState(false);
 const [loggedIn, setLoggedIn] = useState(false)
 useEffect(() => {
   const token = sessionStorage.getItem('token');
   if(token){
-    console.log('has token: ', true)
     setLoggedIn(true)
   }
 }, [])

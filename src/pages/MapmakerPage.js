@@ -1,13 +1,10 @@
-import React, {useState, useEffect} from 'react'
+import React from 'react'
 import '../styles/dungeon-board.scss'
 import '../styles/map-maker.scss'
 import Tile from '../components/tile'
 import {addMapRequest, loadMapRequest, loadAllMapsRequest, updateMapRequest} from '../utils/api-handler';
-// import {useEventListener} from '../utils/useEventListener'
-// import { useHistory } from "react-router";
 
 class MapMakerPage extends React.Component {
-  // const history = useHistory();
   constructor(props){
     super(props)
     this.state = {
@@ -24,9 +21,12 @@ class MapMakerPage extends React.Component {
       toastMessage: null,
       mapView: true,
       hoveredSection: null,
-      draggedMap: null
+      draggedMap: null,
+      filterPanelOpen: false,
+      adjacencyFilterPressed: false,
+      adjacencyHoverIdx: null,
+      adjacentTo: null
     };
-    // console.log('Map Maker Page props: ', this.props)
   }
 
   componentDidMount(){
@@ -36,7 +36,6 @@ class MapMakerPage extends React.Component {
     this.initializeListeners();
     if(this.props.mapMaker){
       this.props.mapMaker.initializeTiles();
-      // setTiles(props.mapMaker.tiles)
     }
     let arr = []
     for(let i = 0; i < 9; i++){
@@ -47,7 +46,6 @@ class MapMakerPage extends React.Component {
       return {
         tileSize,
         boardSize,
-        // maps,
         tiles: props.mapMaker.tiles,
         miniBoards: arr
       }
@@ -64,52 +62,12 @@ class MapMakerPage extends React.Component {
     }
     return tsize;
   }
-  // const [tileSize, setTileSize] = useState(() => {
-  //   const h = Math.floor((window.innerHeight/17));
-  //   const w = Math.floor((window.innerWidth/17));
-  //   let tsize = 0;
-  //   if(h < w){
-  //       tsize = h;
-  //     } else {
-  //       tsize = w;
-  //   }
-  //   return tsize;
-  // })
-  // const [boardSize, setBoardSize] = useState(tileSize*15)
-  // const [tiles, setTiles] = useState()
-  // const [maps, setMaps] = useState([])
-  // const [loadedMap, setLoadedMap] = useState()
-  // const [hoveredTileIdx, setHover] = useState()
-  // const [hoveredPaletteTileIdx, setPaletteHover] = useState(null)
-  // const [optionClickedIdx, setOptionClicked] = useState(null)
-  // const [pinnedOption, setPinnedOption] = useState(null)
-  // const [mouseDown, setMouseDown] = useState(false)
 
   initializeListeners = () => {
     window.addEventListener('mousedown', this.mouseDownHandler);
     window.addEventListener('mouseup', this.mouseUpHandler);
     window.addEventListener('resize', this.handleResize);
   }
-
-  // useEffect(() => {
-  //   console.log('in use effect')
-  //   let mounted = true;
-  //   if(mounted){
-  //     initializeListeners();
-  //     if(props.mapMaker){
-  //       props.mapMaker.initializeTiles();
-  //       setTiles(props.mapMaker.tiles)
-  //     }
-      
-  //     window.addEventListener('mousedown', mouseDownHandler)
-  //     window.addEventListener('mouseup', mouseUpHandler)
-  //     window.addEventListener('resize', handleResize)
-  //     loadAllMaps()
-  //   }
-  //   return () => mounted = false;
-  // },[props.mapMaker])
-
-  
 
   handleHover = (id, type) => {
     if(this.state.mouseDown && this.props.mapMaker.paletteTiles[this.state.pinnedOption] && this.props.mapMaker.paletteTiles[this.state.pinnedOption].optionType === 'void'){
@@ -120,15 +78,12 @@ class MapMakerPage extends React.Component {
         pinned = this.props.mapMaker.paletteTiles[this.state.pinnedOption]
       }
       if(pinned && pinned.optionType === 'void'){
-        console.log('hmm')
-        // setHover(null);
         let arr = [...this.state.tiles]
         arr[tile.id].image = null;
         arr[tile.id].color = 'black';
         arr[tile.id].contains = 'void'
 
         console.log(arr[tile.id])
-        // setTiles(props.mapMaker.tiles)
         this.setState({
           hoveredTileIdx: null,
           tiles: arr
@@ -136,12 +91,10 @@ class MapMakerPage extends React.Component {
       } 
     }else{
       if(type === 'palette-tile'){
-        // setPaletteHover(id)
         this.setState({
           hoveredPaletteTileIdx: id
         })
       } else {
-        // setHover(id);
         this.setState({
           hoveredTileIdx: id
         })
@@ -150,12 +103,9 @@ class MapMakerPage extends React.Component {
   }
   
   mouseDownHandler = () => {
-    // console.log('down')
-    // setMouseDown(true)
     this.setState({mouseDown: true})
   }
   mouseUpHandler = () => {
-    // setMouseDown(false)
     this.setState({mouseDown: false})
   }
   
@@ -168,8 +118,6 @@ class MapMakerPage extends React.Component {
     } else {
         tsize = w;
     }
-    // setTileSize(tsize)
-    // setBoardSize(tsize*15)
     this.setState({
       tileSize: tsize,
       boardSize: tsize*15
@@ -178,30 +126,22 @@ class MapMakerPage extends React.Component {
   
   handleClick = (tile) => {
     if(tile.type === 'palette-tile'){
-      // console.log(this.props.mapMaker.paletteTiles[tile.id])
-      // setOptionClicked(tile.id)
-      // setPinnedOption(tile.id)
       this.setState({
         optionClickedIdx: tile.id,
         pinnedOption: tile.id
       })
     } else if(tile.type === 'board-tile'){
-      // console.log('boardtile')
-
       let pinned = null;
       if(this.props.mapMaker.paletteTiles[this.state.pinnedOption]){ 
-        // console.log('money')
         pinned = this.props.mapMaker.paletteTiles[this.state.pinnedOption]
       }
       if(pinned && pinned.optionType === 'void'){
         console.log('hmm')
-        // setHover(null);
         let arr = [...this.state.tiles];
         arr[tile.id].image = null;
         arr[tile.id].color = 'black'
         arr[tile.id].contains = 'void'
         console.log(arr[tile.id])
-        // setTiles(state.tiles)
         this.setState({
           tiles: arr,
           hoveredTileIdx: null
@@ -230,7 +170,6 @@ class MapMakerPage extends React.Component {
     
   }
   writeMap = async () => {
-    // console.log('wrting with: ', this.state.tiles)
     const config = this.props.mapMaker.getMapConfiguration(this.state.tiles)
     if(this.state.loadedMap){
       let obj = {
@@ -272,22 +211,15 @@ class MapMakerPage extends React.Component {
     let e = val.data[0];
     let map = JSON.parse(e.content);
     map.id = e.id;
-    // setTiles(map.tiles)
-    // setLoadedMap(map)
     map.tiles.forEach((t)=>{
       if(t.color === 'black'){
         t['contains'] = 'void'
       }
     })
-    let boards = [...this.state.miniBoards]
-    boards[4] = map;
     this.setState({
       loadedMap: map,
-      tiles: map.tiles,
-      miniBoards: boards
+      tiles: map.tiles
     })
-    console.log(this.state.tiles)
-    console.log('miniboards: ', this.state.miniBoards)
   }
 
   loadAllMaps = async () => {
@@ -298,11 +230,36 @@ class MapMakerPage extends React.Component {
       map.id = e.id;
       maps.push(map)
     })
-    console.log('now maps are ', maps)
     this.setState(() => {
       return {
         maps: maps
       }
+    })
+  }
+  filterMapsClicked = () => {
+    this.setState((state, props) => {
+      return {filterPanelOpen: !state.filterPanelOpen}
+    })
+  }
+  adjacencyClicked(){
+    this.setState({
+      adjacencyFilterPressed: true
+    })
+  }
+  adjacencyHover(idx){
+    if(this.state.adjacencyFilterPressed){
+      this.setState({
+        adjacencyHoverIdx: idx
+      })
+    }
+  }
+  adjacencyFilter(board, index){
+    // console.log('ok now filter off this board for adjacency: ', board)
+    // console.log('maps to filter: ', this.state.maps)
+    this.props.mapMaker.filterMapAdjacency(board, index, this.state.maps)
+    this.setState({
+      adjacencyFilterPressed: false,
+      adjacencyHoverIdx: null
     })
   }
 
@@ -365,31 +322,73 @@ class MapMakerPage extends React.Component {
           marginRight: '25px'
         }}
         > 
-          <div className="buttons-container">
+          <div className="buttons-container" 
+          style={{
+            width: this.state.tileSize*3+'px',
+            height: this.state.tileSize*2
+          }}
+          >
             <button
             onClick={() => {return console.log(this.state.loadedMap)}}
+            style={{height: this.state.tileSize/2}}
             >Clear</button>
             <button
             onClick={() => {return this.writeMap()}}
+            style={{height: this.state.tileSize/2}}
             >Save</button>
             <button
             onClick={() => {return this.loadMap()}}
+            style={{height: this.state.tileSize/2}}
             >Load</button>
+            <button
+            onClick={() => {return this.filterMapsClicked()}}
+            style={{height: this.state.tileSize/2}}
+            >Filter</button>
           </div>
-          <div className="previews-container">
+          <div className="filter-container" 
+            style={{
+              width: this.state.tileSize*3+'px',
+              top: this.state.filterPanelOpen ? this.state.tileSize*2+'px' : 0
+            }}
+          >
+            <button
+            onClick={() => {return this.adjacencyClicked()}}
+            style={{
+              fontSize: '10px',
+              backgroundColor: this.state.adjacencyFilterPressed ? 'lightgreen' : 'inherit'
+            }}
+            >Adjacent to...</button>
+            <button
+            onClick={() => {return this.writeMap()}}
+            >Other</button>
+            {/* <button
+            onClick={() => {return this.loadMap()}}
+            >3</button>
+            <button
+            onClick={() => {return this.filterMaps()}}
+            >4</button> */}
+          </div>
+          <div 
+          className="previews-container"
+          style={{
+            paddingTop: this.state.filterPanelOpen ? this.state.tileSize*2 : 0
+          }}
+          >
             {this.state.maps && this.state.maps.map((map, i) => {
               return (<div 
                         key={i}
                         style={{
-                          marginBottom: '10px',
-                          marginTop: '10px'
+                          // marginBottom: '10px',
+                          // marginTop: '10px'
                         }}
                       >
                         <div 
                           className="map-preview draggable" 
                           
                           style={{
-                            height: (this.state.tileSize*3)
+                            // height: (this.state.tileSize*3),
+                            height: '156px',
+                            boxSizing: 'border-box'
                           }}
                           onClick={() => {return this.loadMap(map.id)}}
                           onDragStart = {(event) => this.onDragStart(event, map)}
@@ -466,10 +465,20 @@ class MapMakerPage extends React.Component {
                               style={{
                                 height: (this.state.tileSize*15)/3-2+'px',
                                 width: (this.state.tileSize*15)/3-2+'px',
-                                backgroundColor: this.state.hoveredSection === i ? 'lightgrey': 'white'
+                                backgroundColor: 
+                                this.state.hoveredSection === i ? 'lightgrey': 
+                                (this.state.adjacencyHoverIdx === i ? 'lightgreen' : 'white')
                               }}
                               onDragOver={(event)=>this.onDragOver(event, i)}
                               onDrop={(event)=>{this.onDrop(event, i)}}
+                              onMouseOver= {() => {
+                                this.adjacencyHover(i)
+                              }}
+                              onClick={() => {
+                                if(this.state.adjacencyHoverIdx === i && board.tiles){
+                                  this.adjacencyFilter(board, i)
+                                }
+                              }}
                               >
                                 {board.tiles && board.tiles.map((tile, i) => {
                                   return <Tile

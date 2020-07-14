@@ -1,3 +1,8 @@
+*{
+    // -webkit-backface-visibility: hidden;
+    backface-visibility:hidden;
+    // background-clip: padding-box;
+}
 .palette-options-pane{
     display: flex;
     flex-direction: column;
@@ -39,12 +44,7 @@
         width: 100%;
         display: flex;
         flex-flow: row wrap;
-        align-content: flex-end;
-        .mini-tile{
-            height: 3px;
-            width: 3px;
-            // border: 1px solid black;
-        }
+        // align-content: flex-end;
     }
 }
 .container{
@@ -68,9 +68,39 @@
         justify-content: center;
     }
     .palette{
-        .buttons-container{
+        overflow: scroll;
+        position: relative;
+        .previews-container{
+            padding-top: 100px;
+            
+            backface-visibility:hidden;
+-webkit-backface-visibility:hidden; /* Chrome and Safari */
+-moz-backface-visibility:hidden; /* Firefox */
+            transition: all 0.75s;
+        }
+        .buttons-container, .filter-container{
+            box-sizing: border-box;
             display: flex;
             flex-direction: column;
+            flex-flow: row wrap;
+            justify-content: space-evenly;
+            height: 100px;
+            position: fixed;
+            margin-bottom: 5px;
+            z-index: 10;
+            padding: 5px;
+            background-color: white;
+            border-bottom: 2px solid black;
+            &.filter-container{
+                z-index: 5;
+                transition: all 0.75s;
+                position: sticky;
+                margin-bottom: 0px;
+            }
+            button{
+                width: 40%;
+                margin: 5px;
+            }
         }
     }
 }

@@ -1,9 +1,6 @@
 // import * as images from "./images";
 
-import { isCompositeComponent } from "react-dom/test-utils";
-
 export function MapMaker(props){
-    console.log('in mapmaker.js')
     this.tiles = [];
     this.paletteTiles = [];
     this.configurations = {
@@ -161,5 +158,39 @@ export function MapMaker(props){
                 return openings
             }
         return [topRow(), rightCol(), botRow(), leftCol()]
+    }
+    this.filterMapAdjacency = (map, mapIndex, boards) => {
+        console.log(map, mapIndex, boards)
+        switch(mapIndex){
+            case 0: 
+                console.log('top left')
+            break;
+            case 1: 
+                console.log('top mid')
+            break;
+            case 2: 
+                console.log('top right')
+            break;
+            case 3: 
+                console.log('mid left')
+            break;
+            case 4: 
+                console.log('center')
+            break;
+            case 5: 
+                console.log('mid right')
+            break;
+            case 6: 
+                console.log('bot left')
+            break;
+            case 7: 
+                console.log('bot mid')
+            break;
+            case 8: 
+                console.log('bot right')
+            break;
+            default:
+            break;
+        }
     }
 }
