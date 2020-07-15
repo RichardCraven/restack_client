@@ -66,7 +66,7 @@ class MapMakerPage extends React.Component {
   initializeListeners = () => {
     window.addEventListener('mousedown', this.mouseDownHandler);
     window.addEventListener('mouseup', this.mouseUpHandler);
-    window.addEventListener('resize', this.handleResize);
+    window.addEventListener('resize', this.handleResize.bind(this));
   }
 
   handleHover = (id, type) => {
@@ -110,6 +110,7 @@ class MapMakerPage extends React.Component {
   }
   
   handleResize() {
+    console.log('resize this is ', this)
     const h = Math.floor((window.innerHeight/17));
     const w = Math.floor((window.innerWidth/17));
     let tsize = 0;
@@ -236,6 +237,25 @@ class MapMakerPage extends React.Component {
       }
     })
   }
+  clearLoadedMap(){
+    let arr = [...this.state.tiles]
+    for(let t of arr){
+      t.image = null;
+      t.contains = null;
+      t.color = null
+    }
+
+    let miniBoards = []
+    for(let i = 0; i < 9; i++){
+      miniBoards.push([])
+    }
+
+    this.setState({
+      loadedMap: null,
+      tiles: arr,
+      miniBoards
+    })
+  }
   filterMapsClicked = () => {
     this.setState((state, props) => {
       return {filterPanelOpen: !state.filterPanelOpen}
@@ -282,19 +302,21 @@ class MapMakerPage extends React.Component {
   }
 
   onDrop = (event, id) => {
-    console.log('miniboard id: ', id)
-    let sections = [...this.state.miniBoards]
-    // section = sections[id]
-    if(this.state.draggedMap){
-      sections[id] = this.state.draggedMap
-      // console.log(section)
-      // console.log()
-      console.log('inside', sections)
-    }
+    let minis = [...this.state.miniBoards]
+    minis[id] = [];
     this.setState({
-      hoveredSection: null,
-      draggedMap: null,
-      miniBoards: sections
+      miniBoards: minis
+    })
+    
+    setTimeout(()=>{
+      let sections = [...this.state.miniBoards]
+      if(this.state.draggedMap){
+        sections[id] = this.state.draggedMap
+      }
+      this.setState({
+        hoveredSection: null,
+        miniBoards: [...sections]
+      })
     })
   }
 
@@ -329,7 +351,7 @@ class MapMakerPage extends React.Component {
           }}
           >
             <button
-            onClick={() => {return console.log(this.state.loadedMap)}}
+            onClick={() => {return this.clearLoadedMap()}}
             style={{height: this.state.tileSize/2}}
             >Clear</button>
             <button
@@ -348,6 +370,7 @@ class MapMakerPage extends React.Component {
           <div className="filter-container" 
             style={{
               width: this.state.tileSize*3+'px',
+              height: this.state.tileSize*2,
               top: this.state.filterPanelOpen ? this.state.tileSize*2+'px' : 0
             }}
           >
@@ -387,7 +410,7 @@ class MapMakerPage extends React.Component {
                           
                           style={{
                             // height: (this.state.tileSize*3),
-                            height: '156px',
+                            height: this.state.tileSize*3,
                             boxSizing: 'border-box'
                           }}
                           onClick={() => {return this.loadMap(map.id)}}

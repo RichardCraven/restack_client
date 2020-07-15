@@ -3,28 +3,6 @@
 export function MapMaker(props){
     this.tiles = [];
     this.paletteTiles = [];
-    this.configurations = {
-        top: {
-            0: [],
-            1: [0],
-            2: [1],
-            3: [2],
-            4: [3],
-            5: [4],
-            6: [5],
-            7: [6],
-            8: [7],
-            9: [8],
-            10: [9],
-            11: [10],
-            12: [11],
-            13: [12],
-            14: [13],
-            15: [14],
-            16: [0,15],
-            17: []
-        }
-    }
     this.getIndexFromCoordinates = (coordinates) =>{
         let x = coordinates[0], y = coordinates[1];
         let row = x%15
@@ -161,6 +139,7 @@ export function MapMaker(props){
     }
     this.filterMapAdjacency = (map, mapIndex, boards) => {
         console.log(map, mapIndex, boards)
+        let config = map.config;
         switch(mapIndex){
             case 0: 
                 console.log('top left')
@@ -176,6 +155,32 @@ export function MapMaker(props){
             break;
             case 4: 
                 console.log('center')
+                boards.forEach((b, i) => {
+                    // SCANS TOP TO BOTTOM, LEFT TO RIGHT
+
+                    
+                    // top
+                    if(b.config[2][0]-211 === config[0][0]){
+                        console.log('top compatible: ', b)
+                    }
+
+                    // right
+                    if(b.config[3][0]+14 === config[1][0]){
+                        console.log('right compatible: ', b)
+                    }
+
+                    // bot
+                    if(b.config[0][0]+211 === config[2][0]){
+                        
+                        console.log('bot compatible: ', b)
+                    }
+
+                    // left
+                    if(b.config[1][0]-14 === config[3][0]){
+                        console.log('left compatible: ', b)
+                    }
+                })
+                // config[0]
             break;
             case 5: 
                 console.log('mid right')
