@@ -137,6 +137,12 @@ import oracle from '../assets/icons/staples/oracle.png'
 import ornate_potion from '../assets/icons/staples/potion.png'
 import treasure from '../assets/icons/staples/treasure.png'
 
+// misc
+import trash from '../assets/icons/misc/trash.png'
+import spawn_point from '../assets/icons/misc/spawn_point.png'
+import eye from '../assets/icons/misc/eye.png'
+import wide_skull from '../assets/icons/misc/wide_skull.png'
+
 export {
     monster,
     avatar,
@@ -259,5 +265,10 @@ export {
     moon_castle,
     gold,
     treasure,
-    oracle
+    oracle,
+
+    trash,
+    spawn_point,
+    wide_skull,
+    eye
 };

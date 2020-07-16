@@ -31,6 +31,7 @@ export function MapMaker(props){
         }
 
         const options = [
+            'delete',
             'void',
             'door',
             'pit',
@@ -53,6 +54,8 @@ export function MapMaker(props){
         ]
         function getPaletteImage(key){
             switch(key){
+                case 'delete':
+                    return 'trash'
                 case 'monster':
                     return 'monster'
                 case 'item':
@@ -138,6 +141,7 @@ export function MapMaker(props){
         return [topRow(), rightCol(), botRow(), leftCol()]
     }
     this.filterMapAdjacency = (map, mapIndex, boards) => {
+        // boards in this case means all other maps
         console.log(map, mapIndex, boards)
         let config = map.config;
         switch(mapIndex){
@@ -155,33 +159,100 @@ export function MapMaker(props){
             break;
             case 4: 
                 console.log('center')
+                let compatibilityMatrix = {
+                    top: [],
+                    right: [],
+                    bot: [],
+                    left: []
+                }
                 boards.forEach((b, i) => {
-                    // SCANS TOP TO BOTTOM, LEFT TO RIGHT
-
                     
+                    // if(b.id !== 10){
+                    //     return
+                    // }
+                    console.log('board: ', b)
+
+                    // SCANS TOP TO BOTTOM, LEFT TO RIGHT
+                    let leftCompatibleCount = 0,
+                        rightCompatibleCount = 0,
+                        topCompatibleCount = 0,
+                        botCompatibleCount = 0
+                        // leftCompatible = false,
+                        // rightCompatible = false,
+                        // topCompatible = false,
+                        // botCompatible = false;
+ 
                     // top
-                    if(b.config[2][0]-211 === config[0][0]){
-                        console.log('top compatible: ', b)
+                    console.log(b.config[2])
+                    console.log('vs ', config[0])
+                    for(let i = 0; i < config[0].length; i++){
+                        if(b.config[2].length !== config[0].length) return
+                        if(b.config[2][i] && b.config[2][i]-210 === config[0][i]){topCompatibleCount++}
                     }
+                    console.log('finally: ', topCompatibleCount, config[0].length)
+                    if(
+                        (topCompatibleCount > 0 && topCompatibleCount === config[0].length)
+                         || 
+                         (b.config[2].length === 0 && config[0].length === 0)
+                      ){
+                        console.log('TOP COMPATIBLE for board ', b)
+                        // topCompatible = true;
+                        compatibilityMatrix.top.push(b.id);
+                    }
+                    
 
                     // right
-                    if(b.config[3][0]+14 === config[1][0]){
-                        console.log('right compatible: ', b)
+                    for(let i = 0; i < config[1].length; i++){
+                        if(b.config[3].length !== config[1].length) return
+                        if(b.config[3][i] && b.config[3][i]+14 === config[1][i]){rightCompatibleCount++}
+                    }
+                    if(
+                        (rightCompatibleCount > 0 && rightCompatibleCount === config[1].length) 
+                        || 
+                        (b.config[3].length === 0 && config[1].length === 0)
+                      ){
+                        console.log('RIGHT COMPATIBLE for board ', b)
+                        // rightCompatible = true;
+                        compatibilityMatrix.right.push(b.id);
                     }
 
                     // bot
-                    if(b.config[0][0]+211 === config[2][0]){
-                        
-                        console.log('bot compatible: ', b)
+                    for(let i = 0; i < config[2].length; i++){
+                        if(b.config[0].length !== config[2].length) return
+                        if(b.config[0][i] && b.config[0][i]+211 === config[2][i]){botCompatibleCount++}
+                    }
+                    if(
+                        (botCompatibleCount > 0 && botCompatibleCount === config[2].length) 
+                        || 
+                        (b.config[0].length === 0 && config[2].length === 0)
+                      ){
+                        console.log('BOT COMPATIBLE for board ', b)
+                        // botCompatible = true;
+                        compatibilityMatrix.bot.push(b.id);
                     }
 
                     // left
-                    if(b.config[1][0]-14 === config[3][0]){
-                        console.log('left compatible: ', b)
+                    
+                    for(let i = 0; i < config[3].length; i++){
+                        if(b.config[1].length !== config[3].length) return
+                        if(b.config[1][i] && b.config[1][i]-14 === config[3][i]){leftCompatibleCount++}
                     }
+                    // console.log('finally: ', leftCompatibleCount, config[3].length)
+                    if(
+                        (leftCompatibleCount > 0 && leftCompatibleCount === config[3].length)
+                        || 
+                        (b.config[1].length === 0 && config[3].length === 0)
+                      ){
+                        console.log('LEFT COMPATIBLE for board ', b)
+                        // leftCompatible = true;
+                        compatibilityMatrix.left.push(b.id);
+                    }
+
+
                 })
+                return compatibilityMatrix;
                 // config[0]
-            break;
+            // break;
             case 5: 
                 console.log('mid right')
             break;

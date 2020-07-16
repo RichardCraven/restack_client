@@ -25,7 +25,8 @@ class MapMakerPage extends React.Component {
       filterPanelOpen: false,
       adjacencyFilterPressed: false,
       adjacencyHoverIdx: null,
-      adjacentTo: null
+      adjacentTo: null,
+      showDeleteMaps: false
     };
   }
 
@@ -142,7 +143,16 @@ class MapMakerPage extends React.Component {
         arr[tile.id].image = null;
         arr[tile.id].color = 'black'
         arr[tile.id].contains = 'void'
-        console.log(arr[tile.id])
+        this.setState({
+          tiles: arr,
+          hoveredTileIdx: null
+        })
+      } if(pinned && pinned.optionType === 'delete'){
+        console.log('delete')
+        let arr = [...this.state.tiles];
+        arr[tile.id].image = null;
+        arr[tile.id].color = null;
+        arr[tile.id].contains = null;
         this.setState({
           tiles: arr,
           hoveredTileIdx: null
@@ -256,6 +266,11 @@ class MapMakerPage extends React.Component {
       miniBoards
     })
   }
+  deleteMapToggle(){
+    this.setState((state, props) => {
+      return {showDeleteMaps: !state.showDeleteMaps}
+    })
+  }
   filterMapsClicked = () => {
     this.setState((state, props) => {
       return {filterPanelOpen: !state.filterPanelOpen}
@@ -276,7 +291,8 @@ class MapMakerPage extends React.Component {
   adjacencyFilter(board, index){
     // console.log('ok now filter off this board for adjacency: ', board)
     // console.log('maps to filter: ', this.state.maps)
-    this.props.mapMaker.filterMapAdjacency(board, index, this.state.maps)
+    let matrix = this.props.mapMaker.filterMapAdjacency(board, index, this.state.maps)
+    console.log('compatibility: ', matrix)
     this.setState({
       adjacencyFilterPressed: false,
       adjacencyHoverIdx: null
@@ -359,9 +375,9 @@ class MapMakerPage extends React.Component {
             style={{height: this.state.tileSize/2}}
             >Save</button>
             <button
-            onClick={() => {return this.loadMap()}}
+            onClick={() => {return this.deleteMapToggle()}}
             style={{height: this.state.tileSize/2}}
-            >Load</button>
+            >Delete</button>
             <button
             onClick={() => {return this.filterMapsClicked()}}
             style={{height: this.state.tileSize/2}}
@@ -382,14 +398,8 @@ class MapMakerPage extends React.Component {
             }}
             >Adjacent to...</button>
             <button
-            onClick={() => {return this.writeMap()}}
+            onClick={() => {return null}}
             >Other</button>
-            {/* <button
-            onClick={() => {return this.loadMap()}}
-            >3</button>
-            <button
-            onClick={() => {return this.filterMaps()}}
-            >4</button> */}
           </div>
           <div 
           className="previews-container"
@@ -400,16 +410,11 @@ class MapMakerPage extends React.Component {
             {this.state.maps && this.state.maps.map((map, i) => {
               return (<div 
                         key={i}
-                        style={{
-                          // marginBottom: '10px',
-                          // marginTop: '10px'
-                        }}
                       >
                         <div 
                           className="map-preview draggable" 
                           
                           style={{
-                            // height: (this.state.tileSize*3),
                             height: this.state.tileSize*3,
                             boxSizing: 'border-box'
                           }}
@@ -432,13 +437,6 @@ class MapMakerPage extends React.Component {
                                     }
                                     >
                                     </Tile>
-                                  // <div 
-                                  // key={i} 
-                                  // style={{
-                                  //   height: (tileSize*3)/15,
-                                  //   width: (tileSize*3)/15
-                                  // }} 
-                                  // className="mini-tile"></div>
                                   
                         })}
                         </div>
