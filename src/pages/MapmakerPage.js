@@ -11,6 +11,7 @@ class MapMakerPage extends React.Component {
       tileSize: 0,
       boardSize: 0,
       maps : [],
+      dungeons: [],
       miniBoards: [],
       loadedMap: null,
       hoveredTileIdx: null,
@@ -487,7 +488,7 @@ class MapMakerPage extends React.Component {
                                 height: (this.state.tileSize*15)/3-2+'px',
                                 width: (this.state.tileSize*15)/3-2+'px',
                                 backgroundColor: 
-                                this.state.hoveredSection === i ? 'lightgrey': 
+                                this.state.hoveredSection === i ? 'lightgoldenrodyellow': 
                                 (this.state.adjacencyHoverIdx === i ? 'lightgreen' : 'white')
                               }}
                               onDragOver={(event)=>this.onDragOver(event, i)}
@@ -589,6 +590,10 @@ class MapMakerPage extends React.Component {
                     </div>
                   </div>
                 )
+            })}
+            <div>DUNGEON BUTTONS</div>
+            {!this.state.mapView && this.state.dungeons.length && this.state.dungeons.map((dungeon, i)=>{
+              return <div>DUNGEON</div>
             })}
         </div>
       </div>
