@@ -53,6 +53,7 @@ export function MapMaker(props){
             'mordu_devil'
         ]
         function getPaletteImage(key){
+            //this switch case renames images so they can fit in a 2 tile space
             switch(key){
                 case 'delete':
                     return 'trash'
@@ -69,7 +70,9 @@ export function MapMaker(props){
                 case 'dream den':
                     return 'moon_castle'
                 case 'masterkey':
-                    return 'ornate_key'    
+                    return 'ornate_key'  
+                case 'mordu_devil':
+                    return 'devil'    
                 default:
                     return false
             }

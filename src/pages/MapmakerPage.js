@@ -2,7 +2,7 @@ import React from 'react'
 import '../styles/dungeon-board.scss'
 import '../styles/map-maker.scss'
 import Tile from '../components/tile'
-import {addMapRequest, loadMapRequest, loadAllMapsRequest, updateMapRequest} from '../utils/api-handler';
+import {addMapRequest, loadMapRequest, loadAllMapsRequest, updateMapRequest, deleteMapRequest, loadAllDungeonsRequest} from '../utils/api-handler';
 
 class MapMakerPage extends React.Component {
   constructor(props){
@@ -23,11 +23,18 @@ class MapMakerPage extends React.Component {
       mapView: true,
       hoveredSection: null,
       draggedMap: null,
+      showCoordinates: false,
       filterPanelOpen: false,
-      adjacencyFilterPressed: false,
+      adjacencyFilterOn: false,
+      nameFilterOn: false,
       adjacencyHoverIdx: null,
       adjacentTo: null,
-      showDeleteMaps: false
+      showDeleteMaps: false,
+      showMapInputs: true,
+      dungeonName: 'dungeon name',
+      mapName: 'map name',
+      nameFilterHover: false,
+      adjacencyFilterHover: false
     };
   }
 
@@ -50,6 +57,17 @@ class MapMakerPage extends React.Component {
         boardSize,
         tiles: props.mapMaker.tiles,
         miniBoards: arr
+      }
+    })
+  }
+  // componentDidUpdate(){
+  //   console.log('update')
+  //   console.log(this.state.showCoordinates)
+  // }
+  toggleCoords = () => {
+    this.setState((state) => {
+      return {
+        showCoordinates: !state.showDeleteMaps
       }
     })
   }
@@ -185,7 +203,7 @@ class MapMakerPage extends React.Component {
     const config = this.props.mapMaker.getMapConfiguration(this.state.tiles)
     if(this.state.loadedMap){
       let obj = {
-        name: this.state.loadedMap.name,
+        name: this.state.mapName,
         tiles: this.state.tiles,
         config
       }
@@ -193,11 +211,11 @@ class MapMakerPage extends React.Component {
       this.loadAllMaps(); 
       this.toast('Map Saved')
     } else {
-      let d = new Date()
-      let n = d.getTime();
-      let rand = n.toString().slice(3,7)
+      // let d = new Date()
+      // let n = d.getTime();
+      // let rand = n.toString().slice(3,7)
       let obj = {
-        name: 'map'+rand,
+        name: this.state.mapName,
         tiles: this.state.tiles,
         config
       }
@@ -230,6 +248,7 @@ class MapMakerPage extends React.Component {
     })
     this.setState({
       loadedMap: map,
+      mapName: map.name,
       tiles: map.tiles
     })
   }
@@ -245,6 +264,20 @@ class MapMakerPage extends React.Component {
     this.setState(() => {
       return {
         maps: maps
+      }
+    })
+  }
+  loadAllDungeons = async () => {
+    const val = await loadAllDungeonsRequest()
+    let dungeons = [];
+    val.data.forEach((e)=>{
+      let dungeon = JSON.parse(e.content)
+      dungeon.id = e.id;
+      dungeons.push(dungeon)
+    })
+    this.setState(() => {
+      return {
+        dungeons
       }
     })
   }
@@ -267,23 +300,55 @@ class MapMakerPage extends React.Component {
       miniBoards
     })
   }
-  deleteMapToggle(){
-    this.setState((state, props) => {
-      return {showDeleteMaps: !state.showDeleteMaps}
-    })
+  deleteMap = async () => {
+    if(this.state.loadedMap){
+      const res = await deleteMapRequest(this.state.loadedMap.id);
+      console.log('delete res is', res)
+      this.clearLoadedMap();
+      this.loadAllMaps(); 
+      this.toast('Map Deleted')
+    }
+    // this.setState((state, props) => {
+    //   return {showDeleteMaps: !state.showDeleteMaps}
+    // })
   }
   filterMapsClicked = () => {
     this.setState((state, props) => {
       return {filterPanelOpen: !state.filterPanelOpen}
     })
   }
-  adjacencyClicked(){
-    this.setState({
-      adjacencyFilterPressed: true
+  adjacencyFilterClicked = () => {
+    this.setState((state) => {
+      return {
+        adjacencyFilterOn: !state.adjacencyFilterOn
+      }
+    })
+  }
+  nameFilterClicked = () => {
+    let maps;
+    if(!this.state.nameFilterOn){
+    // ^ this is opposite because the sort would happen before the state change toggle
+    // alternatively this could have been put inside a setTimeout, but I'd prefer to have 
+    // only one setState in this function
+      maps = this.state.maps.sort(function(a,b){
+        return a.name > b.name ? 1 : -1
+      })
+    } else {
+      maps = this.state.maps.sort(function(a,b){
+        return a.id > b.id ? 1 : -1
+      })
+    }
+    
+    
+    this.setState((state) => {
+      return {
+        maps,
+        nameFilterOn: !this.state.nameFilterOn
+      }
     })
   }
   adjacencyHover(idx){
-    if(this.state.adjacencyFilterPressed){
+    if(this.state.adjacencyFilterOn){
       this.setState({
         adjacencyHoverIdx: idx
       })
@@ -295,7 +360,7 @@ class MapMakerPage extends React.Component {
     let matrix = this.props.mapMaker.filterMapAdjacency(board, index, this.state.maps)
     console.log('compatibility: ', matrix)
     this.setState({
-      adjacencyFilterPressed: false,
+      adjacencyFilterOn: false,
       adjacencyHoverIdx: null
     })
   }
@@ -337,6 +402,18 @@ class MapMakerPage extends React.Component {
     })
   }
 
+  handleInputChange = (e, inputType) => {
+    if(inputType === 'map-name'){
+      this.setState({
+        mapName: e.target.value
+      })
+    } else {
+      this.setState({
+        dungeonName: e.target.value
+      })
+    }
+  }
+
 
   render (){
     return (
@@ -347,12 +424,18 @@ class MapMakerPage extends React.Component {
         <button
             className="view-toggle-button"
             onClick={() => {
-              return this.setState((state, props) => {
+              return this.setState((state) => {
                 return {mapView: !state.mapView}
               })
             }}
             >{this.state.mapView === true ? 'Dungeon View' : 'Map View'}
         </button>
+        {this.state.showMapInputs && <div style={{
+            position: 'absolute',
+            top: '2%',
+            left: '20%',
+          }} className="map-inputs-pane">
+        </div>}
         <div 
         className="palette" 
         style={{
@@ -376,7 +459,7 @@ class MapMakerPage extends React.Component {
             style={{height: this.state.tileSize/2}}
             >Save</button>
             <button
-            onClick={() => {return this.deleteMapToggle()}}
+            onClick={() => {return this.deleteMap()}}
             style={{height: this.state.tileSize/2}}
             >Delete</button>
             <button
@@ -392,15 +475,24 @@ class MapMakerPage extends React.Component {
             }}
           >
             <button
-            onClick={() => {return this.adjacencyClicked()}}
+            onClick={() => {return this.adjacencyFilterClicked()}}
+            onMouseEnter={() => { return this.setState({adjacencyFilterHover: true})}}
+            onMouseLeave={() => { return this.setState({adjacencyFilterHover: false})}}
             style={{
               fontSize: '10px',
-              backgroundColor: this.state.adjacencyFilterPressed ? 'lightgreen' : 'inherit'
+              backgroundColor: this.state.adjacencyFilterOn ? 'lightgreen' : 
+              (this.state.adjacencyFilterHover ? 'lightblue' : 'inherit')
             }}
             >Adjacent to...</button>
             <button
-            onClick={() => {return null}}
-            >Other</button>
+            onClick={() => {return this.nameFilterClicked()}}
+            onMouseEnter={() => { return this.setState({nameFilterHover: true})}}
+            onMouseLeave={() => { return this.setState({nameFilterHover: false})}}
+            style = {{
+              backgroundColor: this.state.nameFilterOn ? 'lightgreen' : 
+              (this.state.nameFilterHover ? 'lightblue' : 'inherit')
+            }}
+            >Name</button>
           </div>
           <div 
           className="previews-container"
@@ -446,88 +538,100 @@ class MapMakerPage extends React.Component {
             })}
           </div>
         </div>
-  
-        <div 
-        className="board" 
-        style={{
-            width: this.state.boardSize+'px', height: this.state.boardSize+ 'px',
-            backgroundColor: 'white'
-        }}
-        onMouseLeave={() => {return this.setHover(null)}}
-        >
-            {this.state.mapView && this.state.tiles && this.state.tiles.map((tile, i) => {
-                return <Tile 
-                key={i}
-                id={tile.id}
-                index={tile.id}
-                tileSize={this.state.tileSize}
-                image={tile.image ? tile.image : null}
-                color={tile.color ? tile.color : 'lightgrey'}
-                coordinates={tile.coordinates}
-                showCoordinates={false}
-                editMode={true}
-                handleHover={this.handleHover}
-                handleClick={this.handleClick}
-                type={tile.type}
-                hovered={
-                  this.state.hoveredTileIdx === tile.id ?
-                  true :
-                  false
-                }
-                >
-                </Tile>
-            })}
+        <div className="board-container">
+          <div className="inputs-container">
+            {this.state.mapView && <input className="mapname-input"  type="text" placeholder={this.state.mapName} autoComplete="none" onChange={(e) => {this.handleInputChange(e, 'map-name')}} />}
+            {!this.state.mapView && <input className="dungeonname-input"  type="text" placeholder={this.state.dungeonName} onChange={(e) => {this.handleInputChange(e, 'dungeon-name')}}/>}
+            {this.state.mapView && <button
+            className="lightblueOnHover"
+             style={{
+               marginLeft: '35px'
+             }}
+             onClick={() => {return this.setState((state) => { return {showCoordinates: !state.showCoordinates}})}}
+            >Show Coordinates</button>}
+          </div>
+          <div 
+          className="board" 
+          style={{
+              width: this.state.boardSize+'px', height: this.state.boardSize+ 'px',
+              backgroundColor: 'white'
+          }}
+          onMouseLeave={() => {return this.setHover(null)}}
+          >
+              {this.state.mapView && this.state.tiles && this.state.tiles.map((tile, i) => {
+                  return <Tile 
+                  key={i}
+                  id={tile.id}
+                  index={tile.id}
+                  tileSize={this.state.tileSize}
+                  image={tile.image ? tile.image : null}
+                  color={tile.color ? tile.color : 'lightgrey'}
+                  coordinates={tile.coordinates}
+                  showCoordinates={this.state.showCoordinates}
+                  editMode={true}
+                  handleHover={this.handleHover}
+                  handleClick={this.handleClick}
+                  type={tile.type}
+                  hovered={
+                    this.state.hoveredTileIdx === tile.id ?
+                    true :
+                    false
+                  }
+                  >
+                  </Tile>
+              })}
 
-            {!this.state.mapView && 
-              <div className="mini-boards-container">
-                {this.state.miniBoards && this.state.miniBoards.map((board, i) => {
-                      return  <div 
-                              className="mini-board board" 
-                              key={i}
-                              style={{
-                                height: (this.state.tileSize*15)/3-2+'px',
-                                width: (this.state.tileSize*15)/3-2+'px',
-                                backgroundColor: 
-                                this.state.hoveredSection === i ? 'lightgoldenrodyellow': 
-                                (this.state.adjacencyHoverIdx === i ? 'lightgreen' : 'white')
-                              }}
-                              onDragOver={(event)=>this.onDragOver(event, i)}
-                              onDrop={(event)=>{this.onDrop(event, i)}}
-                              onMouseOver= {() => {
-                                this.adjacencyHover(i)
-                              }}
-                              onClick={() => {
-                                if(this.state.adjacencyHoverIdx === i && board.tiles){
-                                  this.adjacencyFilter(board, i)
-                                }
-                              }}
-                              >
-                                {board.tiles && board.tiles.map((tile, i) => {
-                                  return <Tile
-                                  key={i}
-                                  id={i}
-                                  tileSize={((this.state.tileSize*15)/3-2)/15}
-                                  image={tile.image ? tile.image : null}
-                                  color={tile.color ? tile.color : 'apricot'}
-                                  coordinates={tile.coordinates}
-                                  index={tile.id}
-                                  showCoordinates={false}
-                                  editMode={true}
-                                  handleHover={null}
-                                  handleClick={null}
-                                  type={tile.type}
-                                  hovered={
-                                    false
+              {!this.state.mapView && 
+                <div className="mini-boards-container">
+                  {this.state.miniBoards && this.state.miniBoards.map((board, i) => {
+                        return  <div 
+                                className="mini-board board" 
+                                key={i}
+                                style={{
+                                  height: (this.state.tileSize*15)/3-2+'px',
+                                  width: (this.state.tileSize*15)/3-2+'px',
+                                  backgroundColor: 
+                                  this.state.hoveredSection === i ? 'lightgoldenrodyellow': 
+                                  (this.state.adjacencyHoverIdx === i ? 'lightgreen' : 'white')
+                                }}
+                                onDragOver={(event)=>this.onDragOver(event, i)}
+                                onDrop={(event)=>{this.onDrop(event, i)}}
+                                onMouseOver= {() => {
+                                  this.adjacencyHover(i)
+                                }}
+                                onClick={() => {
+                                  if(this.state.adjacencyHoverIdx === i && board.tiles){
+                                    this.adjacencyFilter(board, i)
                                   }
-                                  />
-                                })}
-                              </div>
-                
-            
-                })}
-              </div>
-            }
+                                }}
+                                >
+                                  {board.tiles && board.tiles.map((tile, i) => {
+                                    return <Tile
+                                    key={i}
+                                    id={i}
+                                    tileSize={((this.state.tileSize*15)/3-2)/15}
+                                    image={tile.image ? tile.image : null}
+                                    color={tile.color ? tile.color : 'apricot'}
+                                    coordinates={tile.coordinates}
+                                    index={tile.id}
+                                    showCoordinates={false}
+                                    editMode={true}
+                                    handleHover={null}
+                                    handleClick={null}
+                                    type={tile.type}
+                                    hovered={
+                                      false
+                                    }
+                                    />
+                                  })}
+                                </div>
+                  
               
+                  })}
+                </div>
+              }
+                
+          </div>
         </div>
         <div className="palette" style={{
             width: this.state.tileSize*3+'px', height: this.state.boardSize+ 'px',
@@ -541,7 +645,7 @@ class MapMakerPage extends React.Component {
   
             }}
             >
-              {this.props.mapMaker.paletteTiles && this.props.mapMaker.paletteTiles.map((tile, i) => {
+              {this.state.mapView && this.props.mapMaker.paletteTiles && this.props.mapMaker.paletteTiles.map((tile, i) => {
                 return (
                   <div key={i} className="palette-options-pane">
                     <div className="palette-option-container"
@@ -591,7 +695,31 @@ class MapMakerPage extends React.Component {
                   </div>
                 )
             })}
-            <div>DUNGEON BUTTONS</div>
+            <div className="buttons-container-title">Dungeons</div>
+            <div className="buttons-container" 
+            style={{
+              width: this.state.tileSize*3+'px',
+              height: this.state.tileSize*2
+            }}
+            >
+              
+              <button
+              onClick={() => {return this.clearLoadedDungeon()}}
+              style={{height: this.state.tileSize/2}}
+              >Clear</button>
+              <button
+              onClick={() => {return this.writeDungeon()}}
+              style={{height: this.state.tileSize/2}}
+              >Save</button>
+              <button
+              onClick={() => {return this.deleteDungeon()}}
+              style={{height: this.state.tileSize/2}}
+              >Delete</button>
+              <button
+              onClick={() => {return this.filterDungeonsClicked()}}
+              style={{height: this.state.tileSize/2}}
+              >Filter</button>
+            </div>
             {!this.state.mapView && this.state.dungeons.length && this.state.dungeons.map((dungeon, i)=>{
               return <div>DUNGEON</div>
             })}
