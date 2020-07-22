@@ -34,7 +34,7 @@ export default function Tile(props) {
             }}
         >
            {props.showCoordinates && 
-                <div style={{color: 'blue'}}>
+                <div style={{color: 'blue', userSelect: 'none'}}>
                     {props.coordinates[0]},{props.coordinates[1]} <span style={{color: 'red'}}>{props.index}</span>
                </div>
             }

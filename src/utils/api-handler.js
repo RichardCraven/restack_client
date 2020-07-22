@@ -34,6 +34,8 @@ const loginRequest = (loginObj) => {
       })
 }
 
+// Map APIs --------------------------------------------------------
+
 const addMapRequest = (mapObj) => {
   return axios.post("http://localhost:5000/api/admin/maps", {map: JSON.stringify(mapObj)})
     .then(res=>{
@@ -83,21 +85,6 @@ const loadMapRequest = (id) => {
       return(err)
     })
 }
-
-const loadAllDungeonsRequest = (id) => {
-  return axios.get("http://localhost:5000/api/admin/dungeons")
-    .then(res=>{
-      console.log('get all dungeons req is ', res)
-      if(res.status === 200){
-        return(res)
-      }
-    })
-    .catch(err=> {
-      console.log(err)
-      return(err)
-    })
-}
-
 const loadAllMapsRequest = () => {
   // return axios.get("http://localhost:5000/api/admin/maps")
   return axios.get("http://localhost:5000/api/admin/allmaps/0")
@@ -112,6 +99,75 @@ const loadAllMapsRequest = () => {
       return(err)
     })
 }
+
+
+// Dungeon APIs --------------------------------------------------------
+
+const addDungeonRequest = (dungeonObj) => {
+  return axios.post("http://localhost:5000/api/admin/dungeons", {dungeon: JSON.stringify(dungeonObj)})
+    .then(res=>{
+      console.log('received res!: ', res)
+      if(res.status === 200 || res.status === 201){
+        return(res)
+      }
+    })
+    .catch(err=> {
+      console.log(err)
+      return(err)
+    })
+}
+const updateDungeonRequest = (id, dungeonObj) => {
+  return axios.put("http://localhost:5000/api/admin/dungeons/"+id, {dungeon: JSON.stringify(dungeonObj)})
+    .then(res=>{
+      if(res.status === 200){
+        return(res)
+      }
+    })
+    .catch(err=> {
+      console.log(err)
+      return(err)
+    })
+}
+const loadAllDungeonsRequest = (id) => {
+  return axios.get("http://localhost:5000/api/admin/dungeons/0")
+    .then(res=>{
+      console.log('get all dungeons req is ', res)
+      if(res.status === 200){
+        return(res)
+      }
+    })
+    .catch(err=> {
+      console.log(err)
+      return(err)
+    })
+}
+const loadDungeonRequest = (id) => {
+  return axios.get("http://localhost:5000/api/admin/dungeons/"+id)
+    .then(res=>{
+      console.log('get dungeon req is ', res)
+      if(res.status === 200){
+        return(res)
+      }
+    })
+    .catch(err=> {
+      console.log(err)
+      return(err)
+    })
+}
+const deleteDungeonRequest = (id) => {
+  return axios.delete("http://localhost:5000/api/admin/dungeons/"+id)
+    .then(res=>{
+      if(res.status === 200 || res.status === 201){
+        return(res)
+      }
+    })
+    .catch(err=> {
+      console.log(err)
+      return(err)
+    })
+}
+
+
 
 const loadAllUsersRequest = () => {
   console.log('getting users')
@@ -146,5 +202,9 @@ export {
   updateMapRequest,
   deleteMapRequest,
   loadAllUsersRequest,
-  loadAllDungeonsRequest
+  loadAllDungeonsRequest,
+  addDungeonRequest,
+  loadDungeonRequest,
+  updateDungeonRequest,
+  deleteDungeonRequest
 };

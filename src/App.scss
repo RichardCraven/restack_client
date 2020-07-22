@@ -127,11 +127,7 @@ button{
 
 
       &.map-maker:hover{
-        background-color: thistle;
-      }
-      &.user-manager:hover{
-        background-color: rgb(115, 145, 154);
-        color: white;
+        background-color: rosybrown;
       }
       &.user-data:hover{
         background-color: paleturquoise;
@@ -161,8 +157,8 @@ button{
         background-color: thistle;
       }
       &.user-manager:hover{
-        background-color: rgb(115, 145, 154);
-        color: white;
+        background-color: powderblue;
+        // color: white;
       }
     }
   }

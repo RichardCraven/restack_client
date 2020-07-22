@@ -1,7 +1,5 @@
 *{
-    // -webkit-backface-visibility: hidden;
     backface-visibility:hidden;
-    // background-clip: padding-box;
     -ms-overflow-style: none;
     &::-webkit-scrollbar{
         display: none;
@@ -25,8 +23,6 @@ button{
         flex-direction: row;
         .text-container{
             width: 64%;
-            // border: 1px solid blue;
-            // background-color: yellow;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -43,7 +39,6 @@ button{
     }
 }
 .previews-container{
-    // height: 100%;
     background-color: black;
     width: 100%;
     display: flex;
@@ -54,6 +49,18 @@ button{
         flex-flow: row wrap;
         align-content: flex-end;
     }
+    .dungeon-preview{
+        display: flex;
+        flex-flow: row wrap;
+        align-content: center;
+        justify-content: center;
+        &:hover{
+            cursor: pointer;
+        }
+        .micro-board{
+            border: 1px solid black;
+        }
+    }
     .map-title{
         background-color: ghostwhite;
     }
@@ -61,13 +68,14 @@ button{
 .container{
     .view-toggle-button{
         position: absolute;
-        left: 0px;
+        right: 0px;
         top: 10px;
         background-color: white;
         border: none;
         height: 30px;
         width: 100px;
         outline: none;
+        font-size: 11px;
         &:hover{
             background-color: lightblue
         }
@@ -108,7 +116,6 @@ button{
             padding: 5px;
             background-color: white;
             border-bottom: 2px solid black;
-            // position: relative;
             position: fixed;
             .buttons-container-title{
                 width: 100%;
@@ -156,11 +163,25 @@ button{
     align-content: center;
     justify-content: center;
     .mini-board{
-        border: 1px solid pink;
+        border: 1px solid black;
     }
+    
 }
 
 .lightblueOnHover:hover{
     background-color: lightblue !important;
     outline: none;
+}
+.compatibility-matrix-container{
+    .adjacency-filter-header{
+        color: white;
+        width: 100%;
+        display: inline-block;
+        border-bottom: 1px solid lightseagreen;
+        cursor: pointer;
+        &:hover{
+            background-color: paleturquoise;
+            color: black;
+        }
+    }
 }

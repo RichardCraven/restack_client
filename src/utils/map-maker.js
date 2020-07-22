@@ -186,10 +186,11 @@ export function MapMaker(props){
                         // botCompatible = false;
  
                     // top
-                    console.log(b.config[2])
-                    console.log('vs ', config[0])
+                    // console.log(b.config[2])
+                    // console.log('vs ', config[0])
+                    // console.log('wtf', b.config[2].length !== config[0].length)
                     for(let i = 0; i < config[0].length; i++){
-                        if(b.config[2].length !== config[0].length) return
+                        if(b.config[2].length !== config[0].length) break;
                         if(b.config[2][i] && b.config[2][i]-210 === config[0][i]){topCompatibleCount++}
                     }
                     console.log('finally: ', topCompatibleCount, config[0].length)
@@ -206,7 +207,7 @@ export function MapMaker(props){
 
                     // right
                     for(let i = 0; i < config[1].length; i++){
-                        if(b.config[3].length !== config[1].length) return
+                        if(b.config[3].length !== config[1].length) break;
                         if(b.config[3][i] && b.config[3][i]+14 === config[1][i]){rightCompatibleCount++}
                     }
                     if(
@@ -221,7 +222,7 @@ export function MapMaker(props){
 
                     // bot
                     for(let i = 0; i < config[2].length; i++){
-                        if(b.config[0].length !== config[2].length) return
+                        if(b.config[0].length !== config[2].length) break;
                         if(b.config[0][i] && b.config[0][i]+211 === config[2][i]){botCompatibleCount++}
                     }
                     if(
@@ -235,9 +236,10 @@ export function MapMaker(props){
                     }
 
                     // left
-                    
+                    console.log(b.config[1])
+                    console.log('vs ', config[3])
                     for(let i = 0; i < config[3].length; i++){
-                        if(b.config[1].length !== config[3].length) return
+                        if(b.config[1].length !== config[3].length) break;
                         if(b.config[1][i] && b.config[1][i]-14 === config[3][i]){leftCompatibleCount++}
                     }
                     // console.log('finally: ', leftCompatibleCount, config[3].length)
