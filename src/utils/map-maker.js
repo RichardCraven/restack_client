@@ -37,6 +37,7 @@ export function MapMaker(props){
             'pit',
             'stairs',
             'cloud',
+            'spawn',
             
             'monster',
             'item',
@@ -50,7 +51,7 @@ export function MapMaker(props){
             'oracle',
             'dream den',
 
-            'mordu_devil'
+            'devil'
         ]
         function getPaletteImage(key){
             //this switch case renames images so they can fit in a 2 tile space
@@ -71,8 +72,10 @@ export function MapMaker(props){
                     return 'moon_castle'
                 case 'masterkey':
                     return 'ornate_key'  
-                case 'mordu_devil':
-                    return 'devil'    
+                case 'devil':
+                    return 'mordu_devil'
+                case 'spawn':
+                    return 'spawn_point'    
                 default:
                     return false
             }
@@ -89,6 +92,7 @@ export function MapMaker(props){
                     id: i
                 })
             } else {
+                // console.log(key, getPaletteImage(key))
                 this.paletteTiles.push({
                     type: 'palette-tile',
                     image: getPaletteImage(key) ? getPaletteImage(key) : key,
@@ -147,131 +151,150 @@ export function MapMaker(props){
         // boards in this case means all other maps
         console.log(map, mapIndex, boards)
         let config = map.config;
-        switch(mapIndex){
-            case 0: 
-                console.log('top left')
-            break;
-            case 1: 
-                console.log('top mid')
-            break;
-            case 2: 
-                console.log('top right')
-            break;
-            case 3: 
-                console.log('mid left')
-            break;
-            case 4: 
-                console.log('center')
-                let compatibilityMatrix = {
-                    top: [],
-                    right: [],
-                    bot: [],
-                    left: []
-                }
+        let compatibilityMatrix = {
+            top: [],
+            right: [],
+            bot: [],
+            left: []
+        }
+        
+        // switch(mapIndex){
+        //     case 0: 
+        //         console.log('top left')
+        //     break;
+        //     case 1: 
+        //         console.log('top mid')
+        //     break;
+        //     case 2: 
+        //         console.log('top right')
+        //     break;
+        //     case 3: 
+        //         console.log('mid left')
+        //     break;
+        //     case 4: 
+        //         console.log('center')
                 boards.forEach((b, i) => {
-                    
-                    // if(b.id !== 10){
-                    //     return
-                    // }
-                    console.log('board: ', b)
+                    let leftCompatibleCount = 0,
+                    rightCompatibleCount = 0,
+                    topCompatibleCount = 0,
+                    botCompatibleCount = 0
 
                     // SCANS TOP TO BOTTOM, LEFT TO RIGHT
-                    let leftCompatibleCount = 0,
-                        rightCompatibleCount = 0,
-                        topCompatibleCount = 0,
-                        botCompatibleCount = 0
-                        // leftCompatible = false,
-                        // rightCompatible = false,
-                        // topCompatible = false,
-                        // botCompatible = false;
- 
-                    // top
-                    // console.log(b.config[2])
-                    // console.log('vs ', config[0])
-                    // console.log('wtf', b.config[2].length !== config[0].length)
-                    for(let i = 0; i < config[0].length; i++){
-                        if(b.config[2].length !== config[0].length) break;
-                        if(b.config[2][i] && b.config[2][i]-210 === config[0][i]){topCompatibleCount++}
-                    }
-                    console.log('finally: ', topCompatibleCount, config[0].length)
-                    if(
-                        (topCompatibleCount > 0 && topCompatibleCount === config[0].length)
-                         || 
-                         (b.config[2].length === 0 && config[0].length === 0)
-                      ){
-                        console.log('TOP COMPATIBLE for board ', b)
-                        // topCompatible = true;
-                        compatibilityMatrix.top.push(b.id);
-                    }
                     
+                    // top
+                    if(mapIndex > 2){
+                        for(let i = 0; i < config[0].length; i++){
+                            if(b.config[2].length !== config[0].length){
+                                break;
+                            }
+                            if(b.config[2][i] && b.config[2][i]-210 === config[0][i]){topCompatibleCount++}
+                        }
+                        if(
+                            (topCompatibleCount > 0 && topCompatibleCount === config[0].length)
+                             || 
+                             (b.config[2].length === 0 && config[0].length === 0)
+                          ){
+                            compatibilityMatrix.top.push(b.id);
+                        }
+                    }
+
+
 
                     // right
-                    for(let i = 0; i < config[1].length; i++){
-                        if(b.config[3].length !== config[1].length) break;
-                        if(b.config[3][i] && b.config[3][i]+14 === config[1][i]){rightCompatibleCount++}
-                    }
-                    if(
-                        (rightCompatibleCount > 0 && rightCompatibleCount === config[1].length) 
-                        || 
-                        (b.config[3].length === 0 && config[1].length === 0)
-                      ){
-                        console.log('RIGHT COMPATIBLE for board ', b)
-                        // rightCompatible = true;
-                        compatibilityMatrix.right.push(b.id);
+                    if(mapIndex !== 2 && mapIndex !== 5 && mapIndex !== 8){
+                        for(let i = 0; i < config[1].length; i++){
+                            if(b.config[3].length !== config[1].length){
+                                break;
+                            }
+                            if(b.config[3][i] && b.config[3][i]+14 === config[1][i]){rightCompatibleCount++}
+                        }
+                        
+                        if(
+                            (rightCompatibleCount > 0 && rightCompatibleCount === config[1].length) 
+                            || 
+                            (b.config[3].length === 0 && config[1].length === 0)
+                          ){
+                            compatibilityMatrix.right.push(b.id);
+                        }
                     }
 
                     // bot
-                    for(let i = 0; i < config[2].length; i++){
-                        if(b.config[0].length !== config[2].length) break;
-                        if(b.config[0][i] && b.config[0][i]+211 === config[2][i]){botCompatibleCount++}
-                    }
-                    if(
-                        (botCompatibleCount > 0 && botCompatibleCount === config[2].length) 
-                        || 
-                        (b.config[0].length === 0 && config[2].length === 0)
-                      ){
-                        console.log('BOT COMPATIBLE for board ', b)
-                        // botCompatible = true;
-                        compatibilityMatrix.bot.push(b.id);
+                    if(mapIndex < 6){
+                        console.log('should be in bot', b.name)
+                        console.log(config[2], b.config[0])
+                        for(let i = 0; i < config[2].length; i++){
+                            if(b.config[0].length !== config[2].length) break;
+                            if(b.config[0][i] && b.config[0][i]+210 === config[2][i]){botCompatibleCount++}
+                        }
+                        if(
+                            (botCompatibleCount > 0 && botCompatibleCount === config[2].length) 
+                            || 
+                            (b.config[0].length === 0 && config[2].length === 0)
+                          ){
+                            compatibilityMatrix.bot.push(b.id);
+                        }
                     }
 
                     // left
-                    console.log(b.config[1])
-                    console.log('vs ', config[3])
-                    for(let i = 0; i < config[3].length; i++){
-                        if(b.config[1].length !== config[3].length) break;
-                        if(b.config[1][i] && b.config[1][i]-14 === config[3][i]){leftCompatibleCount++}
+                    if(mapIndex !== 0 && mapIndex !== 3 && mapIndex !== 6){
+                        for(let i = 0; i < config[3].length; i++){
+                            if(b.config[1].length !== config[3].length) break;
+                            if(b.config[1][i] && b.config[1][i]-14 === config[3][i]){leftCompatibleCount++}
+                        }
+                        if(
+                            (leftCompatibleCount > 0 && leftCompatibleCount === config[3].length)
+                            || 
+                            (b.config[1].length === 0 && config[3].length === 0)
+                          ){
+                            compatibilityMatrix.left.push(b.id);
+                        }
                     }
-                    // console.log('finally: ', leftCompatibleCount, config[3].length)
-                    if(
-                        (leftCompatibleCount > 0 && leftCompatibleCount === config[3].length)
-                        || 
-                        (b.config[1].length === 0 && config[3].length === 0)
-                      ){
-                        console.log('LEFT COMPATIBLE for board ', b)
-                        // leftCompatible = true;
-                        compatibilityMatrix.left.push(b.id);
-                    }
-
 
                 })
                 return compatibilityMatrix;
-                // config[0]
+            // case 5: 
+            //     console.log('mid right')
             // break;
-            case 5: 
-                console.log('mid right')
-            break;
-            case 6: 
-                console.log('bot left')
-            break;
-            case 7: 
-                console.log('bot mid')
-            break;
-            case 8: 
-                console.log('bot right')
-            break;
-            default:
-            break;
+            // case 6: 
+            //     console.log('bot left')
+            // break;
+            // case 7: 
+            //     console.log('bot mid')
+            // break;
+            // case 8: 
+            //     console.log('bot right')
+            // break;
+            // default:
+            // break;
+        // }
+    }
+    this.getSpawnPoints = (miniboards) => {
+        let spawnPoints = []
+        console.log('checking spawn point ', miniboards)
+        for(let i = 0; i< miniboards.length; i++){
+            if(miniboards[i].tiles === undefined) return;
+            miniboards[i].tiles.forEach((t, tileIndex) => {
+                if(t.image === 'spawn_point' || t.contains === 'spawn_point'){
+                    spawnPoints.push({
+                        boardIndex: i,
+                        tileIndex: tileIndex
+                    })
+                }
+            })
         }
+        console.log('spawn points: ', spawnPoints)
+        return spawnPoints.length > 0 ? spawnPoints : null;
+    }
+    this.isValidDungeon = (miniboards) => {
+        console.log('checking validity of ', miniboards)
+        if(!this.getSpawnPoints(miniboards)){ 
+            console.log('uh oh')
+            return false
+        }
+        // let 
+        for(let b of miniboards){
+            if(b == []) return false
+        }
+        return true
     }
 }

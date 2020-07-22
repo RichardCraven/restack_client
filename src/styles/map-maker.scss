@@ -63,6 +63,22 @@ button{
     }
     .map-title{
         background-color: ghostwhite;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        .validity-indicator{
+            background-color: red;
+            height: 10px;
+            width: 10px;
+            border-radius: 10px;
+            display: inline-block;
+            // margin-left: -20px;
+            position: absolute;
+            left: 5%;
+            &.valid{
+                background-color: green;
+            }
+        }
     }
 }
 .container{

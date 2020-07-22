@@ -26,7 +26,6 @@ export default function Tile(props) {
             }}
             onMouseDown={() => {
                 if(props.handleClick){
-                    console.log('why', props)
                     return props.handleClick(props)
                 } else {
                     return null

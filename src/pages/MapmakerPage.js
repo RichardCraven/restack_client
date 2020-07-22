@@ -174,7 +174,6 @@ class MapMakerPage extends React.Component {
         pinned = this.props.mapMaker.paletteTiles[this.state.pinnedOption]
       }
       if(pinned && pinned.optionType === 'void'){
-        console.log('hmm')
         let arr = [...this.state.tiles];
         arr[tile.id].image = null;
         arr[tile.id].color = 'black'
@@ -184,7 +183,6 @@ class MapMakerPage extends React.Component {
           hoveredTileIdx: null
         })
       } if(pinned && pinned.optionType === 'delete'){
-        console.log('delete')
         let arr = [...this.state.tiles];
         arr[tile.id].image = null;
         arr[tile.id].color = null;
@@ -195,6 +193,7 @@ class MapMakerPage extends React.Component {
         })
       } else if(pinned){
         let arr = [...this.state.tiles];
+        arr[tile.id].contains = pinned.image
         arr[tile.id].image = pinned.image
         this.setState({
           tiles: arr,
@@ -339,10 +338,14 @@ class MapMakerPage extends React.Component {
   // Dungeon CRUD Methods
 
   writeDungeon = async () => {
+    console.log(1)
     if(this.state.loadedDungeon){
+      console.log(2)
       let obj = {
         name: this.state.dungeonName,
-        miniboards: this.state.miniboards
+        miniboards: this.state.miniboards,
+        spawnPoints: this.props.mapMaker.getSpawnPoints(this.state.miniboards),
+        valid: this.props.mapMaker.isValidDungeon(this.state.miniboards)
       }
       await updateDungeonRequest(this.state.loadedDungeon.id, obj);
       this.loadAllDungeons(); 
@@ -353,7 +356,9 @@ class MapMakerPage extends React.Component {
       let rand = n.toString().slice(3,7)
       let obj = {
         name: this.state.dungeonName === 'dungeon name' ? 'dungeon'+rand : this.state.dungeonName,
-        miniboards: this.state.miniboards
+        miniboards: this.state.miniboards,
+        spawnPoints: this.props.mapMaker.getSpawnPoints(this.state.miniboards),
+        valid: this.props.mapMaker.isValidDungeon(this.state.miniboards)
       }
       await addDungeonRequest(obj);
       this.toast('Dungeon Saved')
@@ -384,6 +389,7 @@ class MapMakerPage extends React.Component {
       dungeon.id = e.id;
       dungeons.push(dungeon)
     })
+    console.log('DUNGEONS:', dungeons)
     this.setState(() => {
       return {
         dungeons
@@ -463,6 +469,7 @@ class MapMakerPage extends React.Component {
   }
   adjacencyFilter(board, index){
     let matrix = this.props.mapMaker.filterMapAdjacency(board, index, this.state.maps)
+    console.log('pre set matrix: ', matrix)
     this.setState({
       compatibilityMatrix: matrix
     })
@@ -472,6 +479,7 @@ class MapMakerPage extends React.Component {
   }
   filterByAdjacency = () => {
     let left, right, top, bot;
+    console.log('umm, matrix is ', this.state.compatibilityMatrix)
     if(this.state.compatibilityMatrix.left.length > 0){
       left = [];
       this.state.compatibilityMatrix.left.forEach((id) => {
@@ -882,8 +890,8 @@ class MapMakerPage extends React.Component {
         </div>
         <div className="board-container">
           <div className="inputs-container">
-            {this.state.mapView && <input className="mapname-input"  type="text" placeholder={this.state.mapName} autoComplete="none" onChange={(e) => {this.handleInputChange(e, 'map-name')}} />}
-            {!this.state.mapView && <input className="dungeonname-input"  type="text" placeholder={this.state.dungeonName} onChange={(e) => {this.handleInputChange(e, 'dungeon-name')}}/>}
+            {this.state.mapView && <input className="mapname-input"  type="text" value={this.state.mapName} placeholder={this.state.mapName} autoComplete="none" onChange={(e) => {this.handleInputChange(e, 'map-name')}} />}
+            {!this.state.mapView && <input className="dungeonname-input"  type="text" value={this.state.dungeonName} placeholder={this.state.dungeonName} onChange={(e) => {this.handleInputChange(e, 'dungeon-name')}}/>}
             {this.state.mapView && <button
             className="lightblueOnHover"
              style={{
@@ -1108,7 +1116,7 @@ class MapMakerPage extends React.Component {
                                           </div>
                               })}
                             </div>
-                            <div className="map-title">{dungeon.name}</div>
+                            <div className="map-title"> <span className={`validity-indicator ${dungeon.valid && 'valid'}`}></span>  {dungeon.name}</div>
                         </div>)
                 })}
               </div>
