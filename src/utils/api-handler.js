@@ -117,9 +117,10 @@ const addDungeonRequest = (dungeonObj) => {
     })
 }
 const updateDungeonRequest = (id, dungeonObj) => {
+  console.log('dungeonObj: ', dungeonObj)
   return axios.put("http://localhost:5000/api/admin/dungeons/"+id, {dungeon: JSON.stringify(dungeonObj)})
     .then(res=>{
-      if(res.status === 200){
+      if(res.status === 200 || res.status === 201){
         return(res)
       }
     })
@@ -131,7 +132,6 @@ const updateDungeonRequest = (id, dungeonObj) => {
 const loadAllDungeonsRequest = (id) => {
   return axios.get("http://localhost:5000/api/admin/dungeons/0")
     .then(res=>{
-      console.log('get all dungeons req is ', res)
       if(res.status === 200){
         return(res)
       }

@@ -41,8 +41,8 @@ export default function LandingPage() {
           <div className="landing-button enter-dungeon" onClick={() => setNavDungeon(true)}>Enter</div>
           <div className="landing-button shop"  onClick={() => setNavShop(true)} >Crew</div>
           <div className="landing-button user-data" onClick={() => setNavUserProfile(true)}>Profile</div>
-          <div className="landing-button map-maker" onClick={() => setNavMapmaker(true)}>Dungeon Builder</div>
-          <div className="landing-button-last user-manager" onClick={() => setNavUsermanager(true)}>User Manager</div>
+          { isAdmin && <div className="landing-button map-maker" onClick={() => setNavMapmaker(true)}>Dungeon Builder</div>}
+          { isAdmin && <div className="landing-button-last user-manager" onClick={() => setNavUsermanager(true)}>User Manager</div>}
         </div>
          {/* { navToUserProfile && <Redirect to='/userProfilePage'/> }
          { navToShop && <Redirect to='/shop'/> }

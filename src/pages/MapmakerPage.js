@@ -58,7 +58,6 @@ class MapMakerPage extends React.Component {
   }
 
   componentDidMount(){
-    console.log('component did mount')
     let tileSize = this.getTileSize(),
         boardSize = tileSize*15;
     this.initializeListeners();
@@ -113,8 +112,7 @@ class MapMakerPage extends React.Component {
     if(this.state.mouseDown && this.props.mapMaker.paletteTiles[this.state.pinnedOption] && this.props.mapMaker.paletteTiles[this.state.pinnedOption].optionType === 'void'){
       let tile = this.props.mapMaker.tiles[id];
       let pinned = null;
-      if(this.props.mapMaker.paletteTiles[this.state.pinnedOption]){ 
-        console.log('money')
+      if(this.props.mapMaker.paletteTiles[this.state.pinnedOption]){
         pinned = this.props.mapMaker.paletteTiles[this.state.pinnedOption]
       }
       if(pinned && pinned.optionType === 'void'){
@@ -150,7 +148,6 @@ class MapMakerPage extends React.Component {
   }
   
   handleResize() {
-    console.log('resize this is ', this)
     const h = Math.floor((window.innerHeight/17));
     const w = Math.floor((window.innerWidth/17));
     let tsize = 0;
@@ -230,8 +227,24 @@ class MapMakerPage extends React.Component {
 
   // Map CRUD methods
   writeMap = async () => {
-    const config = this.props.mapMaker.getMapConfiguration(this.state.tiles)
+    let dungeonToUpdate;
+    let miniboards;
+    
+
+    const config = this.props.mapMaker.getMapConfiguration(this.state.tiles)    
     if(this.state.loadedMap){
+      if(this.state.dungeons.length > 0){
+        this.state.dungeons.forEach((d) => {
+          d.miniboards.forEach((b, index) => {
+            if(b.id === this.state.loadedMap.id){
+              dungeonToUpdate = d
+              miniboards = d.miniboards;
+              miniboards[index] = this.state.loadedMap;
+            } 
+          })
+        })
+      }
+
       let obj = {
         name: this.state.mapName,
         tiles: this.state.tiles,
@@ -252,6 +265,14 @@ class MapMakerPage extends React.Component {
       await addMapRequest(obj)
       this.loadAllMaps(); 
       this.toast('Map Saved')
+    }
+    if(dungeonToUpdate){
+      let obj = {
+        name: dungeonToUpdate.name,
+        miniboards: miniboards
+      }
+      await updateDungeonRequest(dungeonToUpdate.id, obj);
+      this.loadAllDungeons();
     }
     // writeRequest({message: JSON.stringify(obj)})
   }
@@ -307,8 +328,7 @@ class MapMakerPage extends React.Component {
   }
   deleteMap = async () => {
     if(this.state.loadedMap){
-      const res = await deleteMapRequest(this.state.loadedMap.id);
-      console.log('delete res is', res)
+      await deleteMapRequest(this.state.loadedMap.id);
       this.clearLoadedMap();
       this.loadAllMaps(); 
       this.toast('Map Deleted')
@@ -320,7 +340,6 @@ class MapMakerPage extends React.Component {
 
   writeDungeon = async () => {
     if(this.state.loadedDungeon){
-      console.log('im where I should be', this.state.dungeonName)
       let obj = {
         name: this.state.dungeonName,
         miniboards: this.state.miniboards
@@ -336,26 +355,10 @@ class MapMakerPage extends React.Component {
         name: this.state.dungeonName === 'dungeon name' ? 'dungeon'+rand : this.state.dungeonName,
         miniboards: this.state.miniboards
       }
-      const res = await addDungeonRequest(obj);
-      console.log('save dungeon res: ', res)
+      await addDungeonRequest(obj);
       this.toast('Dungeon Saved')
       this.loadAllDungeons(); 
     }
-  }
-  loadAllDungeons = async () => {
-    const val = await loadAllDungeonsRequest()
-    let dungeons = [];
-    val.data.forEach((e)=>{
-      let dungeon = JSON.parse(e.content)
-      dungeon.id = e.id;
-      dungeons.push(dungeon)
-    })
-    console.log('load all dungeons: ', dungeons)
-    this.setState(() => {
-      return {
-        dungeons: dungeons
-      }
-    })
   }
   loadDungeon = async (id) => {
     const val = await loadDungeonRequest(id)
@@ -363,7 +366,6 @@ class MapMakerPage extends React.Component {
     let dungeon = JSON.parse(e.content);
     
     dungeon.id = e.id;
-    console.log('loaded dungeon val is ', dungeon)
     let miniboards = [];
     dungeon.miniboards.forEach((miniboard)=>{
       miniboards.push(miniboard)
@@ -390,8 +392,7 @@ class MapMakerPage extends React.Component {
   }
   deleteDungeon = async () => {
     if(this.state.loadedDungeon){
-      const res = await deleteDungeonRequest(this.state.loadedDungeon.id);
-      console.log('delete res is', res)
+      await deleteDungeonRequest(this.state.loadedDungeon.id);
       this.clearLoadedDungeon();
       this.loadAllDungeons(); 
       this.toast('Dungeon Deleted')
@@ -462,10 +463,7 @@ class MapMakerPage extends React.Component {
   }
   adjacencyFilter(board, index){
     let matrix = this.props.mapMaker.filterMapAdjacency(board, index, this.state.maps)
-    console.log('compatibility: ', matrix)
     this.setState({
-      // adjacencyFilterOn: false,
-      // adjacencyHoverIdx: null
       compatibilityMatrix: matrix
     })
     setTimeout(()=> {
@@ -473,7 +471,6 @@ class MapMakerPage extends React.Component {
     })
   }
   filterByAdjacency = () => {
-    console.log('current compat matrix: ', this.state.compatibilityMatrix)
     let left, right, top, bot;
     if(this.state.compatibilityMatrix.left.length > 0){
       left = [];
@@ -552,13 +549,9 @@ class MapMakerPage extends React.Component {
     }
   }
 
-
-
   // Drag and Drop code
 
   onDragStart = (event, map) => {
-    console.log('dragstart on div: ', map);
-    // event.dataTransfer.setData("taskName", taskName);
     this.setState({
       draggedMap: map
     })
