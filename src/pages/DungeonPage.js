@@ -2,6 +2,12 @@ import React, {useState, useEffect} from 'react'
 import '../styles/dungeon-board.scss'
 import Tile from '../components/tile'
 import {useEventListener} from '../utils/useEventListener'
+import {
+    loadMapRequest, 
+    loadAllMapsRequest, 
+    loadAllDungeonsRequest,
+    loadDungeonRequest
+  } from '../utils/api-handler';
 
 export default function DungeonPage(props) {
 
@@ -39,7 +45,7 @@ export default function DungeonPage(props) {
         let mounted = true;
         if(mounted){
             window.addEventListener('resize', handleResize)
-
+            loadDungeon()
         }
         if(props.boardManager){
             props.boardManager.initializeTiles();
@@ -90,6 +96,32 @@ export default function DungeonPage(props) {
     //     console.log('clicked ', tile)
     // }
 
+    const loadDungeon = async () => {
+        const val = await loadAllDungeonsRequest()
+        console.log('val: ', val)
+        let dungeons = [],
+            spawnList = [],
+            spawnPoint;
+            
+        val.data.forEach((e, i) => {
+            let d = JSON.parse(e.content)
+            d.id = e.id
+            dungeons.push(d)
+        })
+        console.log('dungeons: ', dungeons)
+        dungeons.forEach((v, i)=>{
+            if(v.valid){
+                console.log('valid dungeon: ', v)
+                v.spawnPoints.forEach((s, i)=>{
+                    spawnList.push(s)
+                })
+                let idx = Math.floor(Math.random()*spawnList.length);
+                console.log('spawnPoints: ', spawnList, 'idx: ', idx)
+                spawnPoint = spawnList[idx]
+            }
+        })
+
+    }
     return (
     <div className="container">
         <div  className="board" style={{

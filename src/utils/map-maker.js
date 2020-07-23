@@ -270,7 +270,6 @@ export function MapMaker(props){
     }
     this.getSpawnPoints = (miniboards) => {
         let spawnPoints = []
-        console.log('checking spawn point ', miniboards)
         for(let i = 0; i< miniboards.length; i++){
             if(miniboards[i].tiles === undefined) return;
             miniboards[i].tiles.forEach((t, tileIndex) => {
@@ -282,18 +281,15 @@ export function MapMaker(props){
                 }
             })
         }
-        console.log('spawn points: ', spawnPoints)
         return spawnPoints.length > 0 ? spawnPoints : null;
     }
     this.isValidDungeon = (miniboards) => {
-        console.log('checking validity of ', miniboards)
         if(!this.getSpawnPoints(miniboards)){ 
-            console.log('uh oh')
             return false
         }
         // let 
         for(let b of miniboards){
-            if(b == []) return false
+            if(b.tiles === undefined) return false
         }
         return true
     }
