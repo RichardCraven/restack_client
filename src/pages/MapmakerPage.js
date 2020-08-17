@@ -195,6 +195,7 @@ class MapMakerPage extends React.Component {
         let arr = [...this.state.tiles];
         arr[tile.id].contains = pinned.image
         arr[tile.id].image = pinned.image
+        console.log(arr[tile.id].contains)
         this.setState({
           tiles: arr,
           hoveredTileIdx: null
@@ -232,6 +233,7 @@ class MapMakerPage extends React.Component {
 
     const config = this.props.mapMaker.getMapConfiguration(this.state.tiles)    
     if(this.state.loadedMap){
+      console.log('in write map, loaded map: ', this.state.loadedMap)
       if(this.state.dungeons.length > 0){
         this.state.dungeons.forEach((d) => {
           d.miniboards.forEach((b, index) => {
@@ -300,6 +302,7 @@ class MapMakerPage extends React.Component {
       map.id = e.id;
       maps.push(map)
     })
+    console.log('mapmaker maps: ', maps)
     this.setState(() => {
       return {
         maps: maps
@@ -340,7 +343,6 @@ class MapMakerPage extends React.Component {
   writeDungeon = async () => {
     console.log(1)
     if(this.state.loadedDungeon){
-      console.log(2)
       let obj = {
         name: this.state.dungeonName,
         miniboards: this.state.miniboards,

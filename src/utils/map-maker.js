@@ -2,6 +2,30 @@
 
 export function MapMaker(props){
     this.tiles = [];
+    this.options = [
+        'delete',
+        'void',
+        'door',
+        'pit',
+        'stairs',
+        'cloud',
+        'spawn',
+        
+        'monster',
+        'item',
+        'magic',
+        'key',
+        'masterkey',
+        
+        'gate',
+        'treasure',
+        'gold',
+        'oracle',
+        'dream den',
+
+        'devil'
+    ]
+
     this.paletteTiles = [];
     this.getIndexFromCoordinates = (coordinates) =>{
         let x = coordinates[0], y = coordinates[1];
@@ -29,60 +53,8 @@ export function MapMaker(props){
 
             }
         }
-
-        const options = [
-            'delete',
-            'void',
-            'door',
-            'pit',
-            'stairs',
-            'cloud',
-            'spawn',
-            
-            'monster',
-            'item',
-            'magic',
-            'key',
-            'masterkey',
-            
-            'gate',
-            'treasure',
-            'gold',
-            'oracle',
-            'dream den',
-
-            'devil'
-        ]
-        function getPaletteImage(key){
-            //this switch case renames images so they can fit in a 2 tile space
-            switch(key){
-                case 'delete':
-                    return 'trash'
-                case 'monster':
-                    return 'monster'
-                case 'item':
-                    return 'lantern'
-                case 'magic':
-                    return 'spell'
-                case 'stairs':
-                    return 'stairs_down'
-                case 'door':
-                    return 'closed_door'
-                case 'dream den':
-                    return 'moon_castle'
-                case 'masterkey':
-                    return 'ornate_key'  
-                case 'devil':
-                    return 'mordu_devil'
-                case 'spawn':
-                    return 'spawn_point'    
-                default:
-                    return false
-            }
-        }
-        
-        for(let i = 0; i < options.length; i++){
-            let key = options[i]
+        for(let i = 0; i < this.options.length; i++){
+            let key = this.options[i]
             if(key === 'void'){
                 this.paletteTiles.push({
                     type: 'palette-tile',
@@ -95,12 +67,15 @@ export function MapMaker(props){
                 // console.log(key, getPaletteImage(key))
                 this.paletteTiles.push({
                     type: 'palette-tile',
-                    image: getPaletteImage(key) ? getPaletteImage(key) : key,
+                    image: this.getPaletteImage(key) ? this.getPaletteImage(key) : key,
                     optionType: key,
                     id: i
                 })
             }
         }
+    }
+    this.initializeTilesWithInput = (input) => {
+        console.log('input: ', input)
     }
     this.getMapConfiguration = (tiles) => {
         // let xOffset = tiles[0].coordinates[0],
@@ -292,5 +267,33 @@ export function MapMaker(props){
             if(b.tiles === undefined) return false
         }
         return true
+    }
+
+    this.getPaletteImage = (key) => {
+        //this switch case renames images so they can fit in a 2 tile space
+        switch(key){
+            case 'delete':
+                return 'trash'
+            case 'monster':
+                return 'monster'
+            case 'item':
+                return 'lantern'
+            case 'magic':
+                return 'spell'
+            case 'stairs':
+                return 'stairs_down'
+            case 'door':
+                return 'closed_door'
+            case 'dream den':
+                return 'moon_castle'
+            case 'masterkey':
+                return 'ornate_key'  
+            case 'devil':
+                return 'mordu_devil'
+            case 'spawn':
+                return 'spawn_point'    
+            default:
+                return false
+        }
     }
 }
