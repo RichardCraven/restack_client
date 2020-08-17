@@ -27,7 +27,6 @@ export default function LoginPage(props) {
 
 
   useEffect(() => {
-    console.log('login page props are: ', props)
   }, [props])
 
   const handleChange = (e, type) => {
@@ -73,7 +72,16 @@ export default function LoginPage(props) {
         } else if(loginName.length > 0 && loginPass.length > 0){
             const response = await loginRequest({username: loginName, password: loginPass})
             if(response.status === 200){
-              storeToken(response.data.token, response.data.isAdmin)
+              console.log('raw response: ', response.data)
+              const loginres = {
+                userId: response.data.id,
+                token: response.data.token,
+                isAdmin: response.data.isAdmin,
+                metadata: JSON.parse(response.data.metadata),
+                // uptodate: true
+              }
+              console.log('LOGIN RESPONSE DATA IS ', loginres)
+              storeToken(loginres.userId, loginres.token, loginres.isAdmin, loginres.metadata, loginres.uptodate)
               props.login()
               setNav(true)
             } else {
@@ -99,13 +107,29 @@ export default function LoginPage(props) {
           if(registerPass1 !== registerPass2){
             alert('passwords must match')
           } else if(registerPass1.length > 0){
-            const response = await registerRequest({username: registerName, password: registerPass1})
-            if(response.status === 200){
-              storeToken(response.data.token)
+            const metadata = {
+              dungeonId: null,
+              mapIndex: null,
+              locationTileIndex: null,
+              crew: null,
+              inventory: null
+            }
+            const registerResponse = await registerRequest({username: registerName, password: registerPass1, metadata: JSON.stringify(metadata)})
+            if(registerResponse.status === 200){
+              console.log('raw register registerResponse: ', registerResponse.data)
+              const registerres = {
+                userId: registerResponse.data.id,
+                token: registerResponse.data.token,
+                isAdmin: registerResponse.data.isAdmin,
+                metadata: JSON.parse(registerResponse.data.metadata),
+                // uptodate: true
+              }
+              console.log('REGISTER RESPONSE DATA IS ', registerres)
+              storeToken(registerres.token)
               props.login()
               setNav(true)
             } else {
-              alert('something failed', response)
+              alert('something failed', registerResponse)
             }
           }
         }

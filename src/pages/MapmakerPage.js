@@ -182,7 +182,7 @@ class MapMakerPage extends React.Component {
           tiles: arr,
           hoveredTileIdx: null
         })
-      } if(pinned && pinned.optionType === 'delete'){
+      } else if(pinned && pinned.optionType === 'delete'){
         let arr = [...this.state.tiles];
         arr[tile.id].image = null;
         arr[tile.id].color = null;
@@ -195,7 +195,6 @@ class MapMakerPage extends React.Component {
         let arr = [...this.state.tiles];
         arr[tile.id].contains = pinned.image
         arr[tile.id].image = pinned.image
-        console.log(arr[tile.id].contains)
         this.setState({
           tiles: arr,
           hoveredTileIdx: null
@@ -233,7 +232,7 @@ class MapMakerPage extends React.Component {
 
     const config = this.props.mapMaker.getMapConfiguration(this.state.tiles)    
     if(this.state.loadedMap){
-      console.log('in write map, loaded map: ', this.state.loadedMap)
+      console.log('loaded map: ', this.state.loadedMap)
       if(this.state.dungeons.length > 0){
         this.state.dungeons.forEach((d) => {
           d.miniboards.forEach((b, index) => {
@@ -241,9 +240,13 @@ class MapMakerPage extends React.Component {
               dungeonToUpdate = d
               miniboards = d.miniboards;
               miniboards[index] = this.state.loadedMap;
+              miniboards[index].name = this.state.mapName;
+              miniboards[index].tiles = this.state.tiles;
+              miniboards[index].config = config;
             } 
           })
         })
+        console.log('okay now miniboards are: ', miniboards, 'but state.tiles is: ', this.state.tiles)
       }
 
       let obj = {
@@ -268,13 +271,18 @@ class MapMakerPage extends React.Component {
       this.toast('Map Saved')
     }
     if(dungeonToUpdate){
+      console.log('outgoing: ', miniboards)
       let obj = {
         name: dungeonToUpdate.name,
-        miniboards: miniboards
+        miniboards: miniboards,
+        spawnPoints: this.props.mapMaker.getSpawnPoints(miniboards),
+        valid: this.props.mapMaker.isValidDungeon(miniboards)
       }
+      
       await updateDungeonRequest(dungeonToUpdate.id, obj);
       this.loadAllDungeons();
     }
+
     // writeRequest({message: JSON.stringify(obj)})
   }
   
@@ -302,7 +310,6 @@ class MapMakerPage extends React.Component {
       map.id = e.id;
       maps.push(map)
     })
-    console.log('mapmaker maps: ', maps)
     this.setState(() => {
       return {
         maps: maps
@@ -391,7 +398,6 @@ class MapMakerPage extends React.Component {
       dungeon.id = e.id;
       dungeons.push(dungeon)
     })
-    console.log('DUNGEONS:', dungeons)
     this.setState(() => {
       return {
         dungeons
@@ -471,7 +477,6 @@ class MapMakerPage extends React.Component {
   }
   adjacencyFilter(board, index){
     let matrix = this.props.mapMaker.filterMapAdjacency(board, index, this.state.maps)
-    console.log('pre set matrix: ', matrix)
     this.setState({
       compatibilityMatrix: matrix
     })
@@ -481,7 +486,6 @@ class MapMakerPage extends React.Component {
   }
   filterByAdjacency = () => {
     let left, right, top, bot;
-    console.log('umm, matrix is ', this.state.compatibilityMatrix)
     if(this.state.compatibilityMatrix.left.length > 0){
       left = [];
       this.state.compatibilityMatrix.left.forEach((id) => {

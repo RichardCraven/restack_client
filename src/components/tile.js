@@ -3,8 +3,13 @@ import * as images from '../utils/images'
 
 
 export default function Tile(props) {
+    if(props.borderLeft){
+        console.log('eyy', props.borderLeft)
+    }
     return (
         <div style={{
+            boxSizing: 'border-box',
+            transition: 'background-color 0.25s',
             cursor: 'pointer',
             height: props.tileSize+'px',
             width: props.tileSize+'px',
@@ -15,7 +20,10 @@ export default function Tile(props) {
             fontSize: '0.7em',
             position: 'relative',
             borderLeft: (props.type === 'palette-tile' && !props.hovered) ? '2px solid transparent' : 
-            (props.type === 'palette-tile' && props.hovered ? '2px solid red' : 'none')
+            (props.type === 'palette-tile' && props.hovered ? '2px solid red' : ((props.borders && props.borders.left) ? props.borders.left : 'none')),
+            borderRight: (props.borders && props.borders.right) ? props.borders.right : 'none',
+            borderTop: (props.borders && props.borders.top) ? props.borders.top : 'none',
+            borderBottom: (props.borders && props.borders.bottom) ? props.borders.bottom : 'none'
             }}
             onMouseEnter={() => {
                 if(props.handleHover){

@@ -18,10 +18,10 @@ export default function LandingPage() {
       pathname: '/landing'
     })
     if(mounted){
+      // if(sessionStorage)
       if(JSON.parse(sessionStorage.getItem('isAdmin'))){
         setIsAdmin(true)
       }
-
     }
     return () => {
       mounted = false;

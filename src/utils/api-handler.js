@@ -34,6 +34,33 @@ const loginRequest = (loginObj) => {
       })
 }
 
+const deleteUserRequest = (userId) => {
+  return axios.delete("http://localhost:5000/api/admin/"+userId)
+    .then(res=>{
+      console.log('delete res is ', res)
+      if(res.status === 200){
+        return(res)
+      }
+    })
+    .catch(err=> {
+      console.log(err)
+      return(err)
+    })
+}
+
+const updateUserRequest = (userId, metadata) => {
+  return axios.put("http://localhost:5000/api/admin/"+userId, {metadata: JSON.stringify(metadata)})
+    .then(res=>{
+      if(res.status === 200){
+        return(res)
+      }
+    })
+    .catch(err=> {
+      console.log(err)
+      return(err)
+    })
+}
+
 // Map APIs --------------------------------------------------------
 
 const addMapRequest = (mapObj) => {
@@ -89,7 +116,6 @@ const loadAllMapsRequest = () => {
   // return axios.get("http://localhost:5000/api/admin/maps")
   return axios.get("http://localhost:5000/api/admin/allmaps/0")
     .then(res=>{
-      console.log('get all maps req is ', res)
       if(res.status === 200){
         return(res)
       }
@@ -117,7 +143,6 @@ const addDungeonRequest = (dungeonObj) => {
     })
 }
 const updateDungeonRequest = (id, dungeonObj) => {
-  console.log('dungeonObj: ', dungeonObj)
   return axios.put("http://localhost:5000/api/admin/dungeons/"+id, {dungeon: JSON.stringify(dungeonObj)})
     .then(res=>{
       if(res.status === 200 || res.status === 201){
@@ -144,7 +169,6 @@ const loadAllDungeonsRequest = (id) => {
 const loadDungeonRequest = (id) => {
   return axios.get("http://localhost:5000/api/admin/dungeons/"+id)
     .then(res=>{
-      console.log('get dungeon req is ', res)
       if(res.status === 200){
         return(res)
       }
@@ -194,6 +218,7 @@ const writeRequest = (messageObj) => {
 export {
   registerRequest,
   loginRequest, 
+  updateUserRequest,
   writeRequest, 
   ApiHandler, 
   addMapRequest, 
@@ -206,5 +231,6 @@ export {
   addDungeonRequest,
   loadDungeonRequest,
   updateDungeonRequest,
-  deleteDungeonRequest
+  deleteDungeonRequest,
+  deleteUserRequest
 };

@@ -11,6 +11,8 @@ import UserProfilePage from './pages/UserProfilePage'
 import { Route, Redirect} from "react-router-dom";
 import { useEffect } from 'react';
 
+import {updateUserRequest} from '../src/utils/api-handler'
+
 function App(props) {
 const [loggedIn, setLoggedIn] = useState(false)
 useEffect(() => {
@@ -20,13 +22,24 @@ useEffect(() => {
   }
 }, [])
 const logout = () => {
-  sessionStorage.removeItem('isAdmin')
-  sessionStorage.removeItem('token')
+  sessionStorage.clear()
   setLoggedIn(false)
   return <Redirect to="/login" />
 }
 const login = () => {
   setLoggedIn(true)
+}
+const save = async () => {
+  if(props.boardManager.mapIndex === null) return
+  if(!props.boardManager.dungeon.id) return
+  const location = props.boardManager.getIndexFromCoordinates(props.boardManager.playerTile.location) 
+  const meta = JSON.parse(sessionStorage.getItem('metadata'))
+  const userId = sessionStorage.getItem('userId')
+  meta.mapIndex = props.boardManager.playerTile.mapIndex
+  meta.locationTileIndex = location
+  meta.dungeonId = props.boardManager.dungeon.id
+  const res = await updateUserRequest(userId, meta)
+  sessionStorage.setItem('metadata', res.data.metadata)
 }
  return (
    <div className="fullpage">
@@ -34,7 +47,9 @@ const login = () => {
         {loggedIn && <button className="logout-button" onClick={logout}>
           Logout
         </button>}
-        
+        {loggedIn && <button className="save-button" onClick={save}>
+          Save
+        </button>}
         <Route exact path="/login" render={() => (
           <LoginPage {...props} login={login} />
         )}/>

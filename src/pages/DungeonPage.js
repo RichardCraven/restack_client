@@ -5,7 +5,8 @@ import {
     loadMapRequest, 
     loadAllMapsRequest, 
     loadAllDungeonsRequest,
-    loadDungeonRequest
+    loadDungeonRequest,
+    updateUserRequest
   } from '../utils/api-handler';
 
 class DungeonPage extends React.Component {
@@ -15,15 +16,18 @@ class DungeonPage extends React.Component {
             tileSize: 0,
             boardSize: 0,
             tiles: [],
-            spawn: {}
+            spawn: {},
+            showMessage: false,
+            showSaving: true,
+            intervalId: null
         }
     }
     
-    componentDidMount(){
-        console.log('dungeon props: ', this.props)
+    componentWillMount(){
         let tileSize = this.getTileSize(),
             boardSize = tileSize*15;
         this.initializeListeners();
+        this.startSaveInterval();
         if(this.props.mapMaker){
             this.props.mapMaker.initializeTiles();
         }
@@ -31,18 +35,31 @@ class DungeonPage extends React.Component {
         for(let i = 0; i < 9; i++){
             arr.push([])
         }
-        this.loadDungeon();
-        // this.props.boardManager.initializeTilesFromMap();
+        const meta = JSON.parse(sessionStorage.getItem('metadata'));
+        if(!meta.dungeonId){
+            this.loadNewDungeon();
+        } else {
+            this.loadExistingDungeon(meta.dungeonId)
+        }
         this.setState((state, props) => {
             return {
             tileSize,
-            boardSize,
-            // tiles: props.boardManager.tiles,
+            boardSize
             }
         })
     }
+    componentDidMount(){
+        window.addEventListener('beforeunload', this.componentCleanup)
+    }
     componentWillUnmount(){
-        this.destroyListeners()
+        this.componentCleanup();
+        window.removeEventListener('beforeunload', this.componentCleanup); 
+    }
+    
+    componentCleanup = () => {
+        window.removeEventListener('keydown', this.keyDownHandler)
+        window.removeEventListener('resize', this.handleResize.bind(this));
+        clearInterval(this.state.intervalId)
     }
     getTileSize(){
         const h = Math.floor((window.innerHeight/17));
@@ -54,59 +71,60 @@ class DungeonPage extends React.Component {
             tsize = w;
         }
         return tsize;
-      }
-
-    // const [tileSize, setTileSize] = useState(() => {
-    //     const h = Math.floor((window.innerHeight/17));
-    //     const w = Math.floor((window.innerWidth/17));
-    //     let tsize = 0;
-    //     if(h < w){
-    //         tsize = h;
-    //       } else {
-    //         tsize = w;
-    //     }
-    //     return tsize;
-    // })
-    // const [boardSize, setBoardSize] = useState(tileSize*15)
-
-    
-    // const [tiles, setTiles] = useState()
+    }
 
     handleResize() {
-        const h = Math.floor((window.innerHeight/17));
-        const w = Math.floor((window.innerWidth/17));
-        let tsize = 0;
-        if(h < w){
-            tsize = h;
-        } else {
-            tsize = w;
-        }
-        this.setTileSize(tsize)
-        this.setBoardSize(tsize*15)
-    }
-    
+        let tileSize = this.getTileSize(),
+            boardSize = tileSize*15;
 
-    // useEffect(() => {
-    //     let mounted = true;
-    //     if(mounted){
-    //         window.addEventListener('resize', handleResize)
-    //         loadDungeon()
-    //     }
-    //     if(props.boardManager){
-    //         props.boardManager.initializeTiles();
-    //         setTiles(props.boardManager.tiles)
-    //     }
-    //     return () => {
-    //         mounted = false
-    //     }
-    // },[props.boardManager])
+        this.setState((state, props) => {
+            return {
+            tileSize,
+            boardSize
+            }
+        })
+    }
+
     initializeListeners = () => {
         window.addEventListener('keydown', this.keyDownHandler);
         // window.addEventListener('mouseup', this.mouseUpHandler);
-        // window.addEventListener('resize', this.handleResize.bind(this));
+        window.addEventListener('resize', this.handleResize.bind(this));
     }
-    destroyListeners(){
-        window.removeEventListener('keydown', this.keyDownHandler)
+    startSaveInterval = () => {
+        let intervalId = setInterval( async () => {
+            this.setState(()=>{
+                return {
+                    showMessage : true
+                }
+            })
+            const location = this.props.boardManager.getIndexFromCoordinates(this.props.boardManager.playerTile.location) 
+            const meta = JSON.parse(sessionStorage.getItem('metadata'))
+            const userId = sessionStorage.getItem('userId')
+            meta.mapIndex = this.props.boardManager.playerTile.mapIndex
+            meta.locationTileIndex = location
+            meta.dungeonId = this.props.boardManager.dungeon.id
+            const res = await updateUserRequest(userId, meta)
+            sessionStorage.setItem('metadata', res.data.metadata)
+            
+            setTimeout(() => {
+                this.setState(()=>{
+                    return {
+                        showSaving: false
+                    }
+                })
+            },1000)
+            setTimeout(() => {
+                this.setState(()=>{
+                    return {
+                        showSaving: true,
+                        showMessage : false
+                    }
+                })
+            },1900)
+            
+
+        }, 15000); 
+        this.setState({intervalId: intervalId})
     }
 
 
@@ -156,15 +174,14 @@ class DungeonPage extends React.Component {
 
 
     handleHover = (id, type) => {
-        console.log('pp', id)
+        // console.log('pp', id)
     }
-    // const handleClick = (tile) => {
-    //     console.log('clicked ', tile)
-    // }
+    handleClick = (tile) => {
+        console.log('clicked ', tile)
+    }
 
-    loadDungeon = async () => {
+    loadNewDungeon = async () => {
         const val = await loadAllDungeonsRequest()
-        console.log('val: ', val)
         let dungeons = [],
             spawnList = [],
             selectedDungeon,
@@ -175,26 +192,26 @@ class DungeonPage extends React.Component {
             d.id = e.id
             dungeons.push(d)
         })
-        console.log('dungeons: ', dungeons)
         dungeons.forEach((v, i)=>{
-            console.log('in for each')
             if(v.valid){
-                console.log('valid dungeon: ', v)
                 v.spawnPoints.forEach((s, i)=>{
                     spawnList.push(s)
                 })
                 let idx = Math.floor(Math.random()*spawnList.length);
-                console.log('spawnPoints: ', spawnList, 'idx: ', idx)
                 spawnPoint = spawnList[idx]
                 selectedDungeon = v;
                 return
             }
         })
         if(spawnPoint){
-            console.log('in spawn point')
-            console.log(selectedDungeon.miniboards[spawnPoint.boardIndex], spawnPoint.boardIndex, dungeons)
+            const meta = JSON.parse(sessionStorage.getItem('metadata'))
+            const userId = sessionStorage.getItem('userId')
+            meta.dungeonId = selectedDungeon.id
+            meta.mapIndex = spawnPoint.boardIndex
+            meta.locationTileIndex = spawnPoint.tileIndex
+            const saveDungeon = await updateUserRequest(userId, meta)
             this.props.boardManager.setDungeon(selectedDungeon)
-            this.props.boardManager.initializeTilesFromMap(selectedDungeon.miniboards[spawnPoint.boardIndex], spawnPoint.tileIndex);
+            this.props.boardManager.initializeTilesFromMap(spawnPoint.boardIndex, spawnPoint.tileIndex);
             this.setState(()=>{
                 return {
                     spawn: spawnPoint,
@@ -205,9 +222,25 @@ class DungeonPage extends React.Component {
             alert('no valid dungeon!')
         }
     }
+    loadExistingDungeon = async (id) => {
+        const meta = JSON.parse(sessionStorage.getItem('metadata'))
+        const res = await loadDungeonRequest(meta.dungeonId)
+        const dungeon = JSON.parse(res.data[0].content)
+        dungeon.id = res.data[0].id
+
+        this.props.boardManager.setDungeon(dungeon)
+        this.props.boardManager.initializeTilesFromMap(meta.mapIndex, meta.locationTileIndex);
+        this.setState(()=>{
+            return {
+                spawn: meta.locationTileIndex,
+                tiles: this.props.boardManager.tiles,
+            }
+        })
+    }
     render(){
         return (
         <div className="container">
+            {this.state.showMessage && <div className="message-panel">{this.state.showSaving ? 'saving...' : 'saved'}</div>}
             <div  className="board" style={{
                 width: this.state.boardSize+'px', height: this.state.boardSize+ 'px',
                 backgroundColor: 'white'
@@ -217,13 +250,16 @@ class DungeonPage extends React.Component {
                     key={i}
                     tileSize={this.state.tileSize}
                     image={tile.image ? tile.image : null}
+                    contains={tile.contains}
                     color={tile.color ? tile.color : 'lightgrey'}
+                    borders={tile.borders}
                     coordinates={tile.coordinates}
                     index={tile.id}
                     showCoordinates={false}
                     editMode={false}
                     handleHover={this.handleHover}
                     type={tile.type}
+                    handleClick={this.handleClick}
                     >
                     </Tile>
                 })}

@@ -28,59 +28,17 @@ export function BoardManager(){
         'devil'
     ]
     this.playerTile = {
-        location: [0,0]
+        location: [0,0],
+        mapIndex: null
     }
     this.dungeon = {};
-
-
-
-    // const keyDownHandler = ({ key }) => {
-    //     // if (ESCAPE_KEYS.includes(String(key))) {
-    //     //   console.log('Escape key pressed!');
-    //     // }
-    //     const that = this;
-    //     console.log(key)
-    //     switch(key){
-    //         case 'ArrowUp':
-    //             that.moveUp();
-    //         break;
-    //         case 'ArrowDown':
-    //             that.moveDown();
-    //         break;
-    //         case 'ArrowLeft':
-    //             that.moveLeft();
-    //         break;
-    //         case 'ArrowRight':
-    //             that.moveRight();
-    //         break;
-    //     }
-    // }
-
-    // useEventListener('keydown', keyDownHandler);
-
-
-
-    // 45*45=2025
-
-    //225 per board, 9 boards
-
-    //first tile (top left) is 0,0
+    this.currentMap = {};
+    
     this.getCoordinatesFromIndex = (index) =>{
-        console.log('in get coordinates from index')
-        let row = Math.floor(index/15)
-        let col = index%15
-        let x = 15 + row
-        let y = 15 + col
-        console.log('col: ', col, 'row: ', row, x, y)
-        // let index = row*15 + col;
-        // let row = (index - col)/15
-
-
-        // let x = coordinates[0], y = coordinates[1];
-        // let row = x%15
-        // let col = y%15
-        // let index = row*15 + col;
-        // console.log('row: ', row, 'col: ', col)
+        let row = Math.floor(index/15);
+        let col = index%15;
+        let x = 15 + row;
+        let y = 15 + col;
         return [x, y]
     }
     this.getIndexFromCoordinates = (coordinates) =>{
@@ -88,19 +46,19 @@ export function BoardManager(){
         let row = x%15
         let col = y%15
         let index = row*15 + col;
-        console.log('getting index from coordinates: ', coordinates, 'row: ', row, 'col: ', col)
         return index
     }
     this.setDungeon = (dungeon) => {
         this.dungeon = dungeon;
     }
-    this.initializeTilesFromMap = (map, spawnTileIndex) => {
-        console.log('in board manager initialize Tiles', map, this.dungeon)
-        console.log('coordinates from index', spawnTileIndex, 'are: ', this.getCoordinatesFromIndex(spawnTileIndex))
+    this.initializeTilesFromMap = (mapIndex, spawnTileIndex) => {
         let spawnCoords = this.getCoordinatesFromIndex(spawnTileIndex);
+        let map = this.dungeon.miniboards[mapIndex]
+        this.currentMap = map;
         this.tiles = [];
         this.playerTile = {
-            location: spawnCoords
+            location: spawnCoords,
+            mapIndex: mapIndex
         }
         for(let i = 0; i< map.tiles.length; i++){
             let tile = map.tiles[i]
@@ -110,16 +68,19 @@ export function BoardManager(){
                 color: tile.color,
                 showCoordinates: false,
                 contains: tile.contains,
-                image: this.getImage(tile.contains) ? this.getImage(tile.contains) : tile.contains
+                image: this.getImage(tile.contains) ? this.getImage(tile.contains) : tile.contains,
+                borders: null
             })
         }
-        console.log('this.tiles: ', this.tiles)
         for(let j = 0; j < 15; j++){
             for(let p = 0; p<15; p++){
                 this.tiles[p+(15*j)].coordinates = [(j+1*15), p+1*15]
             }
         }
         this.placePlayer(this.playerTile.location)
+        this.handleFogOfWar(this.tiles[this.getIndexFromCoordinates(this.playerTile.location)])
+
+
         // for(let t = 0; t<this.tiles.length; t++){
         //     const tile = this.tiles[t];
         //     if(t%2 === 0){
@@ -139,14 +100,20 @@ export function BoardManager(){
     }
     this.moveUp = () => {
         let tile = this.tiles[this.getIndexFromCoordinates(this.playerTile.location)];
+        if(this.playerTile.location[0] === 15){
+            this.moveMapUp()
+            return
+        }
         let destinationCoords = [(this.playerTile.location[0]- 1),this.playerTile.location[1]];
         let destinationIndex = this.getIndexFromCoordinates(destinationCoords);
         // let playerTile = this.playerTile;
-        if(this.playerTile.location[0] === 15 || this.tiles[destinationIndex].contains === 'void') return
+        if(this.tiles[destinationIndex].contains === 'void') return
         //remove avatar from current tile
         tile.image = 
         this.getImage(tile.contains) ? this.getImage(tile.contains) : tile.contains;
         
+        this.handleFogOfWar(this.currentMap.tiles[destinationIndex])
+
         this.playerTile.location[0] = (this.playerTile.location[0]- 1)
 
         this.tiles[this.getIndexFromCoordinates(this.playerTile.location)].image = 'avatar'
@@ -154,25 +121,36 @@ export function BoardManager(){
     }
     this.moveDown = () => {
         let tile = this.tiles[this.getIndexFromCoordinates(this.playerTile.location)];
+        if(this.playerTile.location[0] === 29){
+            this.moveMapDown()
+            return
+        }
         let destinationCoords = [(this.playerTile.location[0]+ 1),this.playerTile.location[1]];
         let destinationIndex = this.getIndexFromCoordinates(destinationCoords);
-        if(this.playerTile.location[0] === 29 || this.tiles[destinationIndex].contains === 'void') return
+        if(this.tiles[destinationIndex].contains === 'void') return
         //remove avatar from current tile
         tile.image = 
         this.getImage(tile.contains) ? this.getImage(tile.contains) : tile.contains;
         
+        this.handleFogOfWar(this.currentMap.tiles[destinationIndex])
+
         this.playerTile.location[0] = (this.playerTile.location[0]+ 1)
 
         this.tiles[this.getIndexFromCoordinates(this.playerTile.location)].image = 'avatar'
     }
     this.moveLeft = () => {
         let tile = this.tiles[this.getIndexFromCoordinates(this.playerTile.location)];
+        if(this.playerTile.location[1] === 15){
+            this.moveMapLeft()
+            return
+        }
         let destinationCoords = [this.playerTile.location[0],(this.playerTile.location[1]- 1)];
         let destinationIndex = this.getIndexFromCoordinates(destinationCoords);
-        if(this.playerTile.location[1] === 15 || this.tiles[destinationIndex].contains === 'void') return
-        //remove avatar from current tile
+        if(this.tiles[destinationIndex].contains === 'void') return
         tile.image = 
         this.getImage(tile.contains) ? this.getImage(tile.contains) : tile.contains;
+        
+        this.handleFogOfWar(this.currentMap.tiles[destinationIndex])
         
         this.playerTile.location[1] = (this.playerTile.location[1]- 1)
 
@@ -180,16 +158,38 @@ export function BoardManager(){
     }
     this.moveRight = () => {
         let tile = this.tiles[this.getIndexFromCoordinates(this.playerTile.location)];
+        if(this.playerTile.location[1] === 29){
+            this.moveMapRight()
+            return
+        }
         let destinationCoords = [this.playerTile.location[0],(this.playerTile.location[1]+ 1)];
         let destinationIndex = this.getIndexFromCoordinates(destinationCoords);
-        if(this.playerTile.location[1] === 29 || this.tiles[destinationIndex].contains === 'void') return
+        if(this.tiles[destinationIndex].contains === 'void') return
         //remove avatar from current tile
         tile.image = 
         this.getImage(tile.contains) ? this.getImage(tile.contains) : tile.contains;
-        
+
+        this.handleFogOfWar(this.currentMap.tiles[destinationIndex])
+
         this.playerTile.location[1] = (this.playerTile.location[1]+ 1)
 
         this.tiles[this.getIndexFromCoordinates(this.playerTile.location)].image = 'avatar'
+    }
+    this.moveMapLeft = () => {
+        this.tiles = [];
+        this.initializeTilesFromMap(this.playerTile.mapIndex-1, this.getIndexFromCoordinates([this.playerTile.location[0], this.playerTile.location[1]+14]))
+    }
+    this.moveMapRight = () => {
+        this.tiles = [];
+        this.initializeTilesFromMap(this.playerTile.mapIndex+1, this.getIndexFromCoordinates([this.playerTile.location[0], this.playerTile.location[1]-14]))
+    }
+    this.moveMapUp = () => {
+        this.tiles = [];
+        this.initializeTilesFromMap(this.playerTile.mapIndex-3, this.getIndexFromCoordinates([this.playerTile.location[0]+14, this.playerTile.location[1]]))
+    }
+    this.moveMapDown = () => {
+        this.tiles = [];
+        this.initializeTilesFromMap(this.playerTile.mapIndex+3, this.getIndexFromCoordinates([this.playerTile.location[0]-14, this.playerTile.location[1]]))
     }
     this.getImage = (key) => {
         //this switch case renames images so they can fit in a 2 tile space
@@ -218,4 +218,90 @@ export function BoardManager(){
                 return false
         }
     } 
+    this.handleFogOfWar = (destinationTile) => {
+        this.tiles.forEach((e)=> {
+            e.color = 'black';
+            e.borders = null;
+        })
+        this.tiles.forEach((e)=> {
+            if(e.id > destinationTile.id - 3 && e.id < destinationTile.id + 3){
+                e.color = this.currentMap.tiles[e.id].color
+            } 
+            
+            if(e.id === destinationTile.id - 2 && this.tiles[destinationTile.id - 1].contains === 'void'){
+                e.color = 'black'
+            } 
+            if(e.id === destinationTile.id + 2 && this.tiles[destinationTile.id + 1].contains === 'void'){
+                e.color = 'black'
+            } 
+            // eslint-disable-next-line
+            if( e.id === destinationTile.id - 15 || 
+                // eslint-disable-next-line
+                e.id === destinationTile.id - 30 &&  this.tiles[destinationTile.id - 15].contains !== 'void' ||
+                // eslint-disable-next-line
+                e.id === destinationTile.id + 15 ||
+                // eslint-disable-next-line
+                e.id === destinationTile.id + 30 &&  this.tiles[destinationTile.id + 15].contains !== 'void') {
+                e.color = this.currentMap.tiles[e.id].color
+            }
+            // eslint-disable-next-line
+            if( (e.id === destinationTile.id - 14 && this.tiles[destinationTile.id - 15].contains !== 'void' && this.tiles[destinationTile.id + 1].contains !== 'void') || 
+                // eslint-disable-next-line
+                e.id === destinationTile.id - 16 && this.tiles[destinationTile.id - 15].contains !== 'void' && this.tiles[destinationTile.id - 1].contains !== 'void' ||
+                // eslint-disable-next-line
+                e.id === destinationTile.id + 14 && this.tiles[destinationTile.id + 15].contains !== 'void' && this.tiles[destinationTile.id - 1].contains !== 'void' ||
+                // eslint-disable-next-line
+                e.id === destinationTile.id + 16 && this.tiles[destinationTile.id + 15].contains !== 'void' && this.tiles[destinationTile.id + 1].contains !== 'void'){
+               e.color = this.currentMap.tiles[e.id].color
+            }
+            //handle left side mapscroll border
+            if(e.id === destinationTile.id - 1 && this.tiles[e.id].contains !== 'void' && this.getCoordinatesFromIndex(e.id)[0] !== this.getCoordinatesFromIndex(e.id-1)[0]){
+                e.borders = {left: '1px solid red'}
+                if(this.tiles[e.id - 15]) this.tiles[e.id - 15].borders = {left: '1px solid red'}
+                if(this.tiles[e.id + 15]) this.tiles[e.id + 15].borders = {left: '1px solid red'}
+            }
+            if(e.id === destinationTile.id &&  this.getCoordinatesFromIndex(e.id)[0] !== this.getCoordinatesFromIndex(e.id-1)[0]){
+                e.borders = {left: '1px solid red'}
+                if(this.tiles[e.id - 15]) this.tiles[e.id - 15].borders = {left: '1px solid red'}
+                if(this.tiles[e.id + 15]) this.tiles[e.id + 15].borders = {left: '1px solid red'}
+            } 
+
+            //handle right side mapscroll border
+            if(e.id === destinationTile.id + 1 && this.tiles[e.id].contains !== 'void' &&  this.getCoordinatesFromIndex(e.id)[0] !== this.getCoordinatesFromIndex(e.id+1)[0]){
+                e.borders = {right: '1px solid red'}
+                if(this.tiles[e.id - 15]) this.tiles[e.id - 15].borders = {right: '1px solid red'}
+                if(this.tiles[e.id + 15]) this.tiles[e.id + 15].borders = {right: '1px solid red'}
+            }
+            if(e.id === destinationTile.id &&  this.getCoordinatesFromIndex(e.id)[0] !== this.getCoordinatesFromIndex(e.id+1)[0]){
+                e.borders = {right: '1px solid red'}
+                if(this.tiles[e.id - 15]) this.tiles[e.id - 15].borders = {right: '1px solid red'}
+                if(this.tiles[e.id + 15]) this.tiles[e.id + 15].borders = {right: '1px solid red'}
+            } 
+
+            //handle top side mapscroll border
+            if(e.id === destinationTile.id - 15 && this.tiles[e.id].contains !== 'void' && !this.tiles[destinationTile.id - 30]){
+                e.borders = {top: '1px solid red'}
+                if(this.tiles[e.id - 1]) this.tiles[e.id - 1].borders = {top: '1px solid red'}
+                if(this.tiles[e.id + 1]) this.tiles[e.id + 1].borders = {top: '1px solid red'}
+            }
+            if(e.id === destinationTile.id && !this.tiles[destinationTile.id - 15]){
+                e.borders = {top: '1px solid red'}
+                if(this.tiles[e.id - 1]) this.tiles[e.id - 1].borders = {top: '1px solid red'}
+                if(this.tiles[e.id + 1]) this.tiles[e.id + 1].borders = {top: '1px solid red'}
+            } 
+            
+            //handle bottom side mapscroll border
+            if(e.id === destinationTile.id + 15 && this.tiles[e.id].contains !== 'void' && !this.tiles[destinationTile.id + 30]){
+                e.borders = {bottom: '1px solid red'}
+                if(this.tiles[e.id - 1]) this.tiles[e.id - 1].borders = {bottom: '1px solid red'}
+                if(this.tiles[e.id + 1]) this.tiles[e.id + 1].borders = {bottom: '1px solid red'}
+            }
+            if(e.id === destinationTile.id && !this.tiles[destinationTile.id + 15]){
+                e.borders = {bottom: '1px solid red'}
+                if(this.tiles[e.id - 1]) this.tiles[e.id - 1].borders = {bottom: '1px solid red'}
+                if(this.tiles[e.id + 1]) this.tiles[e.id + 1].borders = {bottom: '1px solid red'}
+            } 
+        })
+        return true
+    }
 }

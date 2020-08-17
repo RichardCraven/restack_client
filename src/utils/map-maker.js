@@ -262,9 +262,44 @@ export function MapMaker(props){
         if(!this.getSpawnPoints(miniboards)){ 
             return false
         }
-        // let 
         for(let b of miniboards){
             if(b.tiles === undefined) return false
+        }
+        //check top boards
+        for(let i = 0; i < 3; i++){
+            let board = miniboards[i];
+            for(let h = 0; h < 15; h++){
+                if(board.tiles[h].contains !== 'void'){
+                    return false
+                }
+            }
+        }
+        //check bot boards
+        for(let i = 6; i < 9; i++){
+            let board = miniboards[i];
+            for(let h = 210; h < 225; h++){
+                if(board.tiles[h].contains !== 'void'){
+                    return false
+                }
+            }
+        }
+        //check right boards
+        for(let i = 2; i < 9; i+=3){
+            let board = miniboards[i];
+            for(let h = 14; h < 225; h+=15){
+                if(board.tiles[h].contains !== 'void'){
+                    return false
+                }
+            }
+        }
+        //check left boards
+        for(let i = 0; i < 9; i+=3){
+            let board = miniboards[i];
+            for(let h = 0; h < 211; h+=15){
+                if(board.tiles[h].contains !== 'void'){
+                    return false
+                }
+            }
         }
         return true
     }

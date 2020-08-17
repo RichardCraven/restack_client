@@ -1,6 +1,6 @@
 import React from 'react'
 import '../styles/user-manager-page.scss'
-import {loadAllUsersRequest} from '../utils/api-handler';
+import {loadAllUsersRequest, deleteUserRequest} from '../utils/api-handler';
 
 class UserManagerPage extends React.Component {
   constructor(props){
@@ -22,6 +22,18 @@ class UserManagerPage extends React.Component {
   componentDidUpdate(){
     console.log('compomnent did update', this.state)
     
+  }
+  deleteUser = async (user) => {
+    console.log('delete user ', user)
+    const c = window.confirm("Are you sure you want to delete this user?")
+    if(c){
+      const response  = await deleteUserRequest(user.id)
+      console.log('response: ', response)
+      const final  = await loadAllUsersRequest()
+      this.setState((state, props) => {
+        return  {users: final.data}
+      })
+    }
   }
   // useEffect(()=> {
   //   let mounted = true;
@@ -55,6 +67,7 @@ class UserManagerPage extends React.Component {
                       <div className="data-node isadmin-header">{user.isAdmin ? 'true' : 'false'}</div>
                       <div className="data-node world-header">{user.metadata ? 'dig for data' : 'N/A'}</div>
                       <div className="data-node crew-header">{user.metadata ? 'dig for data' : 'N/A'}</div>
+                      <button onClick={() => {this.deleteUser(user)}}>X</button>
                   </div>
           })}
         </div>
