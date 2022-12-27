@@ -1,16 +1,27 @@
 import axios from 'axios';
 
-function ApiHandler(poo){
-    console.log('oh whaddup ', poo)
-}
+// function ApiHandler(poo){
+//     console.log('oh whaddup ', poo)
+// }
 // function doSomething(){
 
 // }
-
-const registerRequest = (regObj) => {
-    return axios.post("http://localhost:5000/api/admin/register", regObj)
+const getAllUsersRequest = () => {
+  return axios.get("http://localhost:5000/api/users")
       .then(res=>{
-        console.log('register res is ', res);
+        if(res.status === 200){
+            return(res)
+        }
+      })
+      .catch(err=> {
+        console.log(err)
+        return(err)
+      })
+}
+const registerRequest = (regObj) => {
+    // return axios.post("http://localhost:5000/api/register", regObj)
+    return axios.post("http://localhost:5000/api/users", regObj)
+      .then(res=>{
         if(res.status === 200){
             return(res)
         }
@@ -21,9 +32,8 @@ const registerRequest = (regObj) => {
       })
 }
 const loginRequest = (loginObj) => {
-    return axios.post("http://localhost:5000/api/admin/login", loginObj)
+    return axios.post("http://localhost:5000/api/login", loginObj)
       .then(res=>{
-        console.log('login res is ', res)
         if(res.status === 200){
           return(res)
         }
@@ -35,9 +45,8 @@ const loginRequest = (loginObj) => {
 }
 
 const deleteUserRequest = (userId) => {
-  return axios.delete("http://localhost:5000/api/admin/"+userId)
+  return axios.delete("http://localhost:5000/api/users/"+userId)
     .then(res=>{
-      console.log('delete res is ', res)
       if(res.status === 200){
         return(res)
       }
@@ -49,9 +58,10 @@ const deleteUserRequest = (userId) => {
 }
 
 const updateUserRequest = (userId, metadata) => {
-  return axios.put("http://localhost:5000/api/admin/"+userId, {metadata: JSON.stringify(metadata)})
+  return axios.put("http://localhost:5000/api/users/"+userId, {metadata: JSON.stringify(metadata)})
     .then(res=>{
       if(res.status === 200){
+        res.data.metadata = metadata
         return(res)
       }
     })
@@ -64,7 +74,8 @@ const updateUserRequest = (userId, metadata) => {
 // Map APIs --------------------------------------------------------
 
 const addMapRequest = (mapObj) => {
-  return axios.post("http://localhost:5000/api/admin/maps", {map: JSON.stringify(mapObj)})
+  console.log('adding map: ', mapObj);
+  return axios.post("http://localhost:5000/api/maps", {map: JSON.stringify(mapObj)})
     .then(res=>{
       if(res.status === 200){
         return(res)
@@ -76,7 +87,7 @@ const addMapRequest = (mapObj) => {
     })
 }
 const updateMapRequest = (id, mapObj) => {
-  return axios.put("http://localhost:5000/api/admin/maps/"+id, {map: JSON.stringify(mapObj)})
+  return axios.put("http://localhost:5000/api/maps/"+id, {map: JSON.stringify(mapObj)})
     .then(res=>{
       if(res.status === 200){
         return(res)
@@ -88,7 +99,7 @@ const updateMapRequest = (id, mapObj) => {
     })
 }
 const deleteMapRequest = (id) => {
-  return axios.delete("http://localhost:5000/api/admin/maps/"+id)
+  return axios.delete("http://localhost:5000/api/maps/"+id)
     .then(res=>{
       if(res.status === 200){
         return(res)
@@ -100,9 +111,8 @@ const deleteMapRequest = (id) => {
     })
 }
 const loadMapRequest = (id) => {
-  return axios.get("http://localhost:5000/api/admin/maps/"+id)
+  return axios.get("http://localhost:5000/api/maps/"+id)
     .then(res=>{
-      console.log('get map req is ', res)
       if(res.status === 200){
         return(res)
       }
@@ -113,8 +123,8 @@ const loadMapRequest = (id) => {
     })
 }
 const loadAllMapsRequest = () => {
-  // return axios.get("http://localhost:5000/api/admin/maps")
-  return axios.get("http://localhost:5000/api/admin/allmaps/0")
+  // return axios.get("http://localhost:5000/api/maps")
+  return axios.get("http://localhost:5000/api/maps")
     .then(res=>{
       if(res.status === 200){
         return(res)
@@ -130,9 +140,8 @@ const loadAllMapsRequest = () => {
 // Dungeon APIs --------------------------------------------------------
 
 const addDungeonRequest = (dungeonObj) => {
-  return axios.post("http://localhost:5000/api/admin/dungeons", {dungeon: JSON.stringify(dungeonObj)})
+  return axios.post("http://localhost:5000/api/dungeons", {dungeon: JSON.stringify(dungeonObj)})
     .then(res=>{
-      console.log('received res!: ', res)
       if(res.status === 200 || res.status === 201){
         return(res)
       }
@@ -143,7 +152,7 @@ const addDungeonRequest = (dungeonObj) => {
     })
 }
 const updateDungeonRequest = (id, dungeonObj) => {
-  return axios.put("http://localhost:5000/api/admin/dungeons/"+id, {dungeon: JSON.stringify(dungeonObj)})
+  return axios.put("http://localhost:5000/api/dungeons/"+id, {dungeon: JSON.stringify(dungeonObj)})
     .then(res=>{
       if(res.status === 200 || res.status === 201){
         return(res)
@@ -155,7 +164,7 @@ const updateDungeonRequest = (id, dungeonObj) => {
     })
 }
 const loadAllDungeonsRequest = (id) => {
-  return axios.get("http://localhost:5000/api/admin/dungeons/0")
+  return axios.get("http://localhost:5000/api/dungeons")
     .then(res=>{
       if(res.status === 200){
         return(res)
@@ -167,7 +176,7 @@ const loadAllDungeonsRequest = (id) => {
     })
 }
 const loadDungeonRequest = (id) => {
-  return axios.get("http://localhost:5000/api/admin/dungeons/"+id)
+  return axios.get("http://localhost:5000/api/dungeons/"+id)
     .then(res=>{
       if(res.status === 200){
         return(res)
@@ -179,7 +188,7 @@ const loadDungeonRequest = (id) => {
     })
 }
 const deleteDungeonRequest = (id) => {
-  return axios.delete("http://localhost:5000/api/admin/dungeons/"+id)
+  return axios.delete("http://localhost:5000/api/dungeons/"+id)
     .then(res=>{
       if(res.status === 200 || res.status === 201){
         return(res)
@@ -194,11 +203,8 @@ const deleteDungeonRequest = (id) => {
 
 
 const loadAllUsersRequest = () => {
-  console.log('getting users')
-  // return axios.get("http://localhost:5000/api/admin/maps")
-  return axios.get("http://localhost:5000/api/admin/users")
+  return axios.get("http://localhost:5000/api/users")
     .then(res=>{
-      console.log('get all users req is ', res)
       if(res.status === 200){
         return(res)
       }
@@ -210,7 +216,7 @@ const loadAllUsersRequest = () => {
 }
 
 const writeRequest = (messageObj) => {
-  return axios.post("http://localhost:5000/api/admin/write", messageObj)
+  return axios.post("http://localhost:5000/api/write", messageObj)
 }
 
 // const isAuthorized = ()
@@ -220,7 +226,6 @@ export {
   loginRequest, 
   updateUserRequest,
   writeRequest, 
-  ApiHandler, 
   addMapRequest, 
   loadMapRequest, 
   loadAllMapsRequest,
@@ -232,5 +237,6 @@ export {
   loadDungeonRequest,
   updateDungeonRequest,
   deleteDungeonRequest,
-  deleteUserRequest
+  deleteUserRequest,
+  getAllUsersRequest
 };

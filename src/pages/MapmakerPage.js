@@ -58,6 +58,7 @@ class MapMakerPage extends React.Component {
   }
 
   componentDidMount(){
+    console.log('mounted, props: ', this.props);
     let tileSize = this.getTileSize(),
         boardSize = tileSize*15;
     this.initializeListeners();
@@ -79,16 +80,8 @@ class MapMakerPage extends React.Component {
       }
     })
   }
-  // componentDidUpdate(){
-  //   console.log('update')
-  //   console.log(this.state.showCoordinates)
-  // }
-  toggleCoords = () => {
-    this.setState((state) => {
-      return {
-        showCoordinates: !state.showDeleteMaps
-      }
-    })
+  componentDidUpdate(){
+    console.log('updated, props: ', this.props);
   }
   getTileSize(){
     const h = Math.floor((window.innerHeight/17));
@@ -229,15 +222,19 @@ class MapMakerPage extends React.Component {
     let dungeonToUpdate;
     let miniboards;
     
+    console.log('write map');
 
     const config = this.props.mapMaker.getMapConfiguration(this.state.tiles)    
     if(this.state.loadedMap){
       console.log('loaded map: ', this.state.loadedMap)
       if(this.state.dungeons.length > 0){
+        console.log('state has dungeons', this.state.dungeons);
         this.state.dungeons.forEach((d) => {
           d.miniboards.forEach((b, index) => {
             if(b.id === this.state.loadedMap.id){
+              console.log('b.id, ', b.id, 'vs', this.state.loadedMap.id);
               dungeonToUpdate = d
+              console.log('DUNGEON TO UPDATE', d);
               miniboards = d.miniboards;
               miniboards[index] = this.state.loadedMap;
               miniboards[index].name = this.state.mapName;
@@ -254,10 +251,12 @@ class MapMakerPage extends React.Component {
         tiles: this.state.tiles,
         config
       }
+      console.log('about to update map');
       await updateMapRequest(this.state.loadedMap.id, obj);
       this.loadAllMaps(); 
       this.toast('Map Saved')
     } else {
+      console.log('BRAND NEW MAP');
       let d = new Date()
       let n = d.getTime();
       let rand = n.toString().slice(3,7)
@@ -266,12 +265,14 @@ class MapMakerPage extends React.Component {
         tiles: this.state.tiles,
         config
       }
-      await addMapRequest(obj)
+      const addedMap = await addMapRequest(obj)
+      console.log('addMapRequest complete:', addedMap);
       this.loadAllMaps(); 
       this.toast('Map Saved')
     }
     if(dungeonToUpdate){
       console.log('outgoing: ', miniboards)
+      console.log('VALID: ', this.props.mapMaker.isValidDungeon(miniboards));
       let obj = {
         name: dungeonToUpdate.name,
         miniboards: miniboards,
@@ -287,10 +288,12 @@ class MapMakerPage extends React.Component {
   }
   
   loadMap = async (id) => {
+    console.log('load map with id:', id);
     const val = await loadMapRequest(id)
     let e = val.data[0];
+    console.log('retrieved map:', val);
     let map = JSON.parse(e.content);
-    map.id = e.id;
+    map.id = e._id;
     map.tiles.forEach((t)=>{
       if(t.color === 'black'){
         t['contains'] = 'void'
@@ -304,12 +307,19 @@ class MapMakerPage extends React.Component {
   }
   loadAllMaps = async () => {
     const val = await loadAllMapsRequest()
+    console.log('maps: ', val);
     let maps = [];
+    if(val.data.length > 0){
+      console.log('load all maps content:', val);
+      // debugger
+    }
     val.data.forEach((e)=>{
       let map = JSON.parse(e.content)
-      map.id = e.id;
+      map.id = e._id;
+      console.log('pushing map', map)
       maps.push(map)
     })
+    console.log('final maps:',maps);
     this.setState(() => {
       return {
         maps: maps
@@ -348,7 +358,8 @@ class MapMakerPage extends React.Component {
   // Dungeon CRUD Methods
 
   writeDungeon = async () => {
-    console.log(1)
+    console.log('writing dungeon', this.state.loadedDungeon)
+    console.log('VALID: ', this.props.mapMaker.isValidDungeon(this.state.miniboards));
     if(this.state.loadedDungeon){
       let obj = {
         name: this.state.dungeonName,
@@ -375,11 +386,13 @@ class MapMakerPage extends React.Component {
     }
   }
   loadDungeon = async (id) => {
+    console.log('loading dungeon ', id);
     const val = await loadDungeonRequest(id)
+    console.log('loaded dungeon response:', val);
     let e = val.data[0];
     let dungeon = JSON.parse(e.content);
     
-    dungeon.id = e.id;
+    dungeon.id = e._id;
     let miniboards = [];
     dungeon.miniboards.forEach((miniboard)=>{
       miniboards.push(miniboard)
@@ -392,12 +405,14 @@ class MapMakerPage extends React.Component {
   }
   loadAllDungeons = async () => {
     const val = await loadAllDungeonsRequest()
+    console.log('all dungeons:', val);
     let dungeons = [];
     val.data.forEach((e)=>{
       let dungeon = JSON.parse(e.content)
-      dungeon.id = e.id;
+      dungeon.id = e._id;
       dungeons.push(dungeon)
     })
+    console.log('setting all dungeons:', dungeons);
     this.setState(() => {
       return {
         dungeons
@@ -897,14 +912,14 @@ class MapMakerPage extends React.Component {
         <div className="board-container">
           <div className="inputs-container">
             {this.state.mapView && <input className="mapname-input"  type="text" value={this.state.mapName} placeholder={this.state.mapName} autoComplete="none" onChange={(e) => {this.handleInputChange(e, 'map-name')}} />}
-            {!this.state.mapView && <input className="dungeonname-input"  type="text" value={this.state.dungeonName} placeholder={this.state.dungeonName} onChange={(e) => {this.handleInputChange(e, 'dungeon-name')}}/>}
-            {this.state.mapView && <button
+            {!this.state.mapView && <input className="dungeonname-input"  type="text" value={this.state.dungeonName || ''} placeholder={this.state.dungeonName || ''} onChange={(e) => {this.handleInputChange(e, 'dungeon-name')}}/>}
+            {/* {this.state.mapView && <button
             className="lightblueOnHover"
              style={{
                marginLeft: '35px'
              }}
              onClick={() => {return this.setState((state) => { return {showCoordinates: !state.showCoordinates}})}}
-            >Show Coordinates</button>}
+            >Show Coordinates</button>} */}
           </div>
           <div 
           className="board" 
@@ -923,7 +938,7 @@ class MapMakerPage extends React.Component {
                   image={tile.image ? tile.image : null}
                   color={tile.color ? tile.color : 'lightgrey'}
                   coordinates={tile.coordinates}
-                  showCoordinates={this.state.showCoordinates}
+                  showCoordinates={this.props.showCoordinates}
                   editMode={true}
                   handleHover={this.handleHover}
                   handleClick={this.handleClick}

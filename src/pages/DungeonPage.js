@@ -36,7 +36,7 @@ class DungeonPage extends React.Component {
             arr.push([])
         }
         const meta = JSON.parse(sessionStorage.getItem('metadata'));
-        if(!meta.dungeonId){
+        if(!meta || !meta.dungeonId){
             this.loadNewDungeon();
         } else {
             this.loadExistingDungeon(meta.dungeonId)
@@ -97,14 +97,7 @@ class DungeonPage extends React.Component {
                     showMessage : true
                 }
             })
-            const location = this.props.boardManager.getIndexFromCoordinates(this.props.boardManager.playerTile.location) 
-            const meta = JSON.parse(sessionStorage.getItem('metadata'))
-            const userId = sessionStorage.getItem('userId')
-            meta.mapIndex = this.props.boardManager.playerTile.mapIndex
-            meta.locationTileIndex = location
-            meta.dungeonId = this.props.boardManager.dungeon.id
-            const res = await updateUserRequest(userId, meta)
-            sessionStorage.setItem('metadata', res.data.metadata)
+            this.props.saveUserData()
             
             setTimeout(() => {
                 this.setState(()=>{
@@ -121,6 +114,7 @@ class DungeonPage extends React.Component {
                     }
                 })
             },1900)
+            // ^ why are you doing this
             
 
         }, 15000); 
@@ -181,15 +175,16 @@ class DungeonPage extends React.Component {
     }
 
     loadNewDungeon = async () => {
-        const val = await loadAllDungeonsRequest()
+        const allDungeons = await loadAllDungeonsRequest()
+
         let dungeons = [],
             spawnList = [],
             selectedDungeon,
             spawnPoint;
             
-        val.data.forEach((e, i) => {
+        allDungeons.data.forEach((e, i) => {
             let d = JSON.parse(e.content)
-            d.id = e.id
+            d.id = e._id
             dungeons.push(d)
         })
         dungeons.forEach((v, i)=>{
@@ -207,8 +202,8 @@ class DungeonPage extends React.Component {
             const meta = JSON.parse(sessionStorage.getItem('metadata'))
             const userId = sessionStorage.getItem('userId')
             meta.dungeonId = selectedDungeon.id
-            meta.mapIndex = spawnPoint.boardIndex
-            meta.locationTileIndex = spawnPoint.tileIndex
+            meta.boardIndex = spawnPoint.boardIndex
+            meta.tileIndex = spawnPoint.tileIndex
             const saveDungeon = await updateUserRequest(userId, meta)
             this.props.boardManager.setDungeon(selectedDungeon)
             this.props.boardManager.initializeTilesFromMap(spawnPoint.boardIndex, spawnPoint.tileIndex);
@@ -222,17 +217,16 @@ class DungeonPage extends React.Component {
             alert('no valid dungeon!')
         }
     }
-    loadExistingDungeon = async (id) => {
+    loadExistingDungeon = async (dungeonId) => {
         const meta = JSON.parse(sessionStorage.getItem('metadata'))
-        const res = await loadDungeonRequest(meta.dungeonId)
+        const res = await loadDungeonRequest(dungeonId)
         const dungeon = JSON.parse(res.data[0].content)
-        dungeon.id = res.data[0].id
-
+        dungeon.id = res.data[0]._id;
         this.props.boardManager.setDungeon(dungeon)
-        this.props.boardManager.initializeTilesFromMap(meta.mapIndex, meta.locationTileIndex);
+        this.props.boardManager.initializeTilesFromMap(meta.boardIndex, meta.tileIndex);
         this.setState(()=>{
             return {
-                spawn: meta.locationTileIndex,
+                spawn: meta.tileIndex,
                 tiles: this.props.boardManager.tiles,
             }
         })
@@ -255,7 +249,7 @@ class DungeonPage extends React.Component {
                     borders={tile.borders}
                     coordinates={tile.coordinates}
                     index={tile.id}
-                    showCoordinates={false}
+                    showCoordinates={this.props.showCoordinates}
                     editMode={false}
                     handleHover={this.handleHover}
                     type={tile.type}

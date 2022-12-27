@@ -3,12 +3,10 @@ function storeToken(id, token, isAdmin, metadata){
     if(parseInt(isAdmin, 10)){
         bool = true;
     }
-    console.log('in store token, isAdmin is ', isAdmin)
     sessionStorage.setItem('userId', id)
     sessionStorage.setItem('token', token)
-    sessionStorage.setItem('isAdmin', bool)
-    sessionStorage.setItem('metadata', JSON.stringify(metadata))
-    console.log('session storage is now: ', sessionStorage)
+    sessionStorage.setItem('isAdmin', isAdmin.toString())
+    sessionStorage.setItem('metadata', metadata)
 }
 
 export {storeToken};

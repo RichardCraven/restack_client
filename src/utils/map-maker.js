@@ -122,9 +122,9 @@ export function MapMaker(props){
             }
         return [topRow(), rightCol(), botRow(), leftCol()]
     }
-    this.filterMapAdjacency = (map, mapIndex, boards) => {
+    this.filterMapAdjacency = (map, boardIndex, boards) => {
         // boards in this case means all other maps
-        console.log(map, mapIndex, boards)
+        console.log(map, boardIndex, boards)
         let config = map.config;
         let compatibilityMatrix = {
             top: [],
@@ -133,7 +133,7 @@ export function MapMaker(props){
             left: []
         }
         
-        // switch(mapIndex){
+        // switch(boardIndex){
         //     case 0: 
         //         console.log('top left')
         //     break;
@@ -157,7 +157,7 @@ export function MapMaker(props){
                     // SCANS TOP TO BOTTOM, LEFT TO RIGHT
                     
                     // top
-                    if(mapIndex > 2){
+                    if(boardIndex > 2){
                         for(let i = 0; i < config[0].length; i++){
                             if(b.config[2].length !== config[0].length){
                                 break;
@@ -176,7 +176,7 @@ export function MapMaker(props){
 
 
                     // right
-                    if(mapIndex !== 2 && mapIndex !== 5 && mapIndex !== 8){
+                    if(boardIndex !== 2 && boardIndex !== 5 && boardIndex !== 8){
                         for(let i = 0; i < config[1].length; i++){
                             if(b.config[3].length !== config[1].length){
                                 break;
@@ -194,7 +194,7 @@ export function MapMaker(props){
                     }
 
                     // bot
-                    if(mapIndex < 6){
+                    if(boardIndex < 6){
                         console.log('should be in bot', b.name)
                         console.log(config[2], b.config[0])
                         for(let i = 0; i < config[2].length; i++){
@@ -211,7 +211,7 @@ export function MapMaker(props){
                     }
 
                     // left
-                    if(mapIndex !== 0 && mapIndex !== 3 && mapIndex !== 6){
+                    if(boardIndex !== 0 && boardIndex !== 3 && boardIndex !== 6){
                         for(let i = 0; i < config[3].length; i++){
                             if(b.config[1].length !== config[3].length) break;
                             if(b.config[1][i] && b.config[1][i]-14 === config[3][i]){leftCompatibleCount++}
@@ -259,17 +259,22 @@ export function MapMaker(props){
         return spawnPoints.length > 0 ? spawnPoints : null;
     }
     this.isValidDungeon = (miniboards) => {
+        console.log('spawnpoints: ', this.getSpawnPoints(miniboards));
         if(!this.getSpawnPoints(miniboards)){ 
             return false
         }
         for(let b of miniboards){
-            if(b.tiles === undefined) return false
+            if(b.tiles === undefined){
+                console.log('b.tiles undefined:', b);
+                return false
+            }
         }
         //check top boards
         for(let i = 0; i < 3; i++){
             let board = miniboards[i];
             for(let h = 0; h < 15; h++){
                 if(board.tiles[h].contains !== 'void'){
+                    console.log('BANG');
                     return false
                 }
             }
@@ -279,6 +284,7 @@ export function MapMaker(props){
             let board = miniboards[i];
             for(let h = 210; h < 225; h++){
                 if(board.tiles[h].contains !== 'void'){
+                    console.log('BANG');
                     return false
                 }
             }
@@ -288,6 +294,7 @@ export function MapMaker(props){
             let board = miniboards[i];
             for(let h = 14; h < 225; h+=15){
                 if(board.tiles[h].contains !== 'void'){
+                    console.log('BANG', board);
                     return false
                 }
             }
@@ -297,6 +304,7 @@ export function MapMaker(props){
             let board = miniboards[i];
             for(let h = 0; h < 211; h+=15){
                 if(board.tiles[h].contains !== 'void'){
+                    console.log('BANG');
                     return false
                 }
             }

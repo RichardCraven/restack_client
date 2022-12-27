@@ -48,7 +48,19 @@ button{
   }
   .save-button{
     position: absolute;
-    top: 50px;
+    top: 15px;
+    left: 92px;
+    cursor: pointer;
+  }
+  .go-home-button{
+    position: absolute;
+    top: 15px;
+    left: 149px;
+    cursor: pointer;
+  }
+  .show-coordinates-button{
+    position: absolute;
+    top: 51px;
     left: 25px;
     cursor: pointer;
   }

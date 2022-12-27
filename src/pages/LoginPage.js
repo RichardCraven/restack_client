@@ -21,11 +21,14 @@ export default function LoginPage(props) {
 
   const [loginInputPropsName, setLname] = useSpring(() => ({ x: '-200px', opacity: 0, config: { mass: 5, tension: 350, friction: 40 } }))
   const [loginInputPropsPass, setLpass] = useSpring(() => ({ x: '-200px', opacity: 0, config: { mass: 5, tension: 350, friction: 40 } }))
+  
   const [registrationInputPropsName, setRname] = useSpring(() => ({ x: '200px', opacity: 0, config: { mass: 3, tension: 350, friction: 40 } }))
   const [registrationInputPropsPass1, setRpass1] = useSpring(() => ({ x: '200px', opacity: 0, config: { mass: 6, tension: 350, friction: 40 } }))
   const [registrationInputPropsPass2, setRpass2] = useSpring(() => ({ x: '200px', opacity: 0, config: { mass: 5, tension: 250, friction: 40 } }))
+  
+  const [successConfirmation, setSuccessConfirmation] = useSpring(() => ({ x: '200px', opacity: 0, config: { mass: 5, tension: 350, friction: 40 } }))
 
-
+  const [validUser, setValidUser] = useState({})
   useEffect(() => {
   }, [props])
 
@@ -70,23 +73,15 @@ export default function LoginPage(props) {
 
           setPane('login')
         } else if(loginName.length > 0 && loginPass.length > 0){
-            const response = await loginRequest({username: loginName, password: loginPass})
-            if(response.status === 200){
-              console.log('raw response: ', response.data)
-              const loginres = {
-                userId: response.data.id,
-                token: response.data.token,
-                isAdmin: response.data.isAdmin,
-                metadata: JSON.parse(response.data.metadata),
-                // uptodate: true
-              }
-              console.log('LOGIN RESPONSE DATA IS ', loginres)
-              storeToken(loginres.userId, loginres.token, loginres.isAdmin, loginres.metadata, loginres.uptodate)
-              props.login()
-              setNav(true)
-            } else {
-              setInvalid(true)
-            }
+            // const response = await loginRequest({username: loginName, password: loginPass})
+            // if(response.status === 200){
+              // console.log('raw response: ', response.data)
+              // storeToken(loginres.userId, loginres.token, loginres.isAdmin, loginres.metadata, loginres.uptodate)
+              props.login({username: loginName, password:loginPass})
+              // setNav(true)
+            // } else {
+            //   setInvalid(true)
+            // }
         }
       break;
       case 'register':
@@ -109,27 +104,38 @@ export default function LoginPage(props) {
           } else if(registerPass1.length > 0){
             const metadata = {
               dungeonId: null,
-              mapIndex: null,
-              locationTileIndex: null,
+              boardIndex: null,
+              tileIndex: null,
               crew: null,
               inventory: null
             }
-            const registerResponse = await registerRequest({username: registerName, password: registerPass1, metadata: JSON.stringify(metadata)})
+            const registerResponse = await registerRequest({username: registerName, password: registerPass1, isAdmin: false, metadata: JSON.stringify(metadata)})
             if(registerResponse.status === 200){
               console.log('raw register registerResponse: ', registerResponse.data)
-              const registerres = {
-                userId: registerResponse.data.id,
-                token: registerResponse.data.token,
+
+              
+              
+              const registerRes = {
+                _id: registerResponse.data._id,
+                // token: registerResponse.data.token,
                 isAdmin: registerResponse.data.isAdmin,
-                metadata: JSON.parse(registerResponse.data.metadata),
-                // uptodate: true
+                metadata: registerResponse.data.metadata
               }
-              console.log('REGISTER RESPONSE DATA IS ', registerres)
-              storeToken(registerres.token)
-              props.login()
-              setNav(true)
+
+              setValidUser(registerRes)
+              // console.log('REGISTER RESPONSE DATA IS ', registerres)
+              // storeToken(registerres.token)
+              
+              
+              // props.login(registerRes)
+              // props.loginFrom
+              // setNav(true)
+              
+              showRegistrationConfirmation(registerRes)
+
             } else {
-              alert('something failed', registerResponse)
+              console.log('something failed', registerResponse)
+              // alert('something failed', registerResponse)
             }
           }
         }
@@ -137,6 +143,43 @@ export default function LoginPage(props) {
       default:
       break;
     }
+  }
+
+  const showRegistrationConfirmation = (registerRes) => {
+    // setInvalid(false);
+    
+
+    // setLname({x: '0px', opacity: 1})
+    // setTimeout(() => {
+    //   setLpass({x: '0px', opacity: 1})
+    // }, 90)
+
+    setSuccessConfirmation({x: '0px', opacity: 1})
+    setTimeout(() => {
+      setRname({x: '-200px', opacity: 0})
+      setRpass1({x: '-200px', opacity: 0})
+      setRpass2({x: '-200px', opacity: 0})
+
+      setPane('confirmation')
+    }, 90)
+
+    console.log('loginName', loginName, 'loginPass', 'validUser: ', validUser);
+    props.refreshAllUsers()
+    let scopedValidUser = validUser
+    setTimeout(()=>{
+      // setSuccessConfirmation({x: '200px', opacity: 0})
+
+      // setLname({x: '0px', opacity: 1})
+      //     setTimeout(() => {
+      //       setLpass({x: '0px', opacity: 1})
+      //     }, 90)
+      // props.login({username: registerName, password:registerPass1})
+      console.log('valid user', validUser);
+      console.log('scopedValidUser', scopedValidUser);
+      console.log('ok try this: ', registerRes);
+      props.loginFromRegister(registerRes)
+    },1500)
+
   }
   return (
     <div>
@@ -153,7 +196,7 @@ export default function LoginPage(props) {
             }
             <div className="inputs-container-row">
               <div className="absolute-wrapper" style={{
-                  pointerEvents: paneToggle === 'register' ? 'none' : 'auto'
+                  pointerEvents: paneToggle === 'login' ? 'auto' : 'none'
                 }}>
                 <form action="">
                   <div className="inputs-container">  
@@ -166,7 +209,7 @@ export default function LoginPage(props) {
                         </animated.div>
                         <animated.div style={{
                           transform: loginInputPropsPass.x.interpolate((x) => `translate3d(${x},0,0)`),
-                          opacity: loginInputPropsName.opacity,
+                          opacity: loginInputPropsPass.opacity,
                           transition: 'opacity 0.1s'
                           }}>
                           <input value={loginPass} autoComplete="current-password" type="password" placeholder="Password" onChange={(e) => {handleChange(e, 'login-password')}}/>
@@ -175,7 +218,7 @@ export default function LoginPage(props) {
                 </form>
               </div>
               <div className="absolute-wrapper" style={{
-                  pointerEvents: paneToggle === 'login' ? 'none' : 'auto'
+                  pointerEvents: paneToggle === 'register' ? 'auto' : 'none'
                 }}>
                 <form action="">
                   <div className="inputs-container">
@@ -203,6 +246,19 @@ export default function LoginPage(props) {
                   </div>   
                   
                 </form>
+              </div>
+              <div className="absolute-wrapper" style={{
+                  pointerEvents: paneToggle === 'confirmation' ? 'auto' : 'none'
+                }}>
+                <div className="confirmation-container">
+                  <animated.div style={{
+                      transform: successConfirmation.x.interpolate((x) => `translate3d(${x},0,0)`),
+                      opacity: successConfirmation.opacity,
+                      transition: 'opacity 0.1s'
+                      }}>
+                      <div>SUCCESS</div>
+                  </animated.div>
+                </div>  
               </div>
             </div>
             {invalidCredentials && 

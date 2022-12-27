@@ -29,7 +29,7 @@ export function BoardManager(){
     ]
     this.playerTile = {
         location: [0,0],
-        mapIndex: null
+        boardIndex: null
     }
     this.dungeon = {};
     this.currentMap = {};
@@ -49,16 +49,17 @@ export function BoardManager(){
         return index
     }
     this.setDungeon = (dungeon) => {
+        console.log('setting dungeon', dungeon);
         this.dungeon = dungeon;
     }
-    this.initializeTilesFromMap = (mapIndex, spawnTileIndex) => {
+    this.initializeTilesFromMap = (boardIndex, spawnTileIndex) => {
         let spawnCoords = this.getCoordinatesFromIndex(spawnTileIndex);
-        let map = this.dungeon.miniboards[mapIndex]
+        let map = this.dungeon.miniboards[boardIndex]
         this.currentMap = map;
         this.tiles = [];
         this.playerTile = {
             location: spawnCoords,
-            mapIndex: mapIndex
+            boardIndex: boardIndex
         }
         for(let i = 0; i< map.tiles.length; i++){
             let tile = map.tiles[i]
@@ -177,19 +178,19 @@ export function BoardManager(){
     }
     this.moveMapLeft = () => {
         this.tiles = [];
-        this.initializeTilesFromMap(this.playerTile.mapIndex-1, this.getIndexFromCoordinates([this.playerTile.location[0], this.playerTile.location[1]+14]))
+        this.initializeTilesFromMap(this.playerTile.boardIndex-1, this.getIndexFromCoordinates([this.playerTile.location[0], this.playerTile.location[1]+14]))
     }
     this.moveMapRight = () => {
         this.tiles = [];
-        this.initializeTilesFromMap(this.playerTile.mapIndex+1, this.getIndexFromCoordinates([this.playerTile.location[0], this.playerTile.location[1]-14]))
+        this.initializeTilesFromMap(this.playerTile.boardIndex+1, this.getIndexFromCoordinates([this.playerTile.location[0], this.playerTile.location[1]-14]))
     }
     this.moveMapUp = () => {
         this.tiles = [];
-        this.initializeTilesFromMap(this.playerTile.mapIndex-3, this.getIndexFromCoordinates([this.playerTile.location[0]+14, this.playerTile.location[1]]))
+        this.initializeTilesFromMap(this.playerTile.boardIndex-3, this.getIndexFromCoordinates([this.playerTile.location[0]+14, this.playerTile.location[1]]))
     }
     this.moveMapDown = () => {
         this.tiles = [];
-        this.initializeTilesFromMap(this.playerTile.mapIndex+3, this.getIndexFromCoordinates([this.playerTile.location[0]-14, this.playerTile.location[1]]))
+        this.initializeTilesFromMap(this.playerTile.boardIndex+3, this.getIndexFromCoordinates([this.playerTile.location[0]-14, this.playerTile.location[1]]))
     }
     this.getImage = (key) => {
         //this switch case renames images so they can fit in a 2 tile space
@@ -224,7 +225,12 @@ export function BoardManager(){
             e.borders = null;
         })
         this.tiles.forEach((e)=> {
-            if(e.id > destinationTile.id - 3 && e.id < destinationTile.id + 3){
+            function sameRow(){
+                return e.coordinates[0] === destinationTile.coordinates[0]
+            }
+            // console.log('avo ', e, destinationTile.id);
+            if(e.id > destinationTile.id - 3 && e.id < destinationTile.id + 3 ){
+                // console.log(e, 'vs ', destinationTile);
                 e.color = this.currentMap.tiles[e.id].color
             } 
             

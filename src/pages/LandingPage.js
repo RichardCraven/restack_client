@@ -18,7 +18,6 @@ export default function LandingPage() {
       pathname: '/landing'
     })
     if(mounted){
-      // if(sessionStorage)
       if(JSON.parse(sessionStorage.getItem('isAdmin'))){
         setIsAdmin(true)
       }
@@ -27,9 +26,6 @@ export default function LandingPage() {
       mounted = false;
     }
   },[history])
-  // const handleClick = (type) => {
-
-  // }
   return (
        <div className="landing-pane pane">
          { navToUserProfile && <Redirect to='/userProfilePage'/> }
