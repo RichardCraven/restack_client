@@ -27,6 +27,55 @@ export function BoardManager(){
 
         'devil'
     ]
+    this.monstersArr = [
+        'beholder',
+        'black_banshee',
+        'black_djinn',
+        'black_gorgon',
+        'black_kronos',
+        'black_minotaur',
+        'black_vampire',
+        'black_wraith',
+        'dragon',
+        'giant_scorpion',
+        'goblin',
+        'horror',
+        'imp',
+        'imp_overlord',
+        'manticore',
+        'mummy',
+        'naiad',
+        'ogre',
+        'skeleton',
+        'sphinx',
+        'troll',
+        'white_banshee',
+        'white_djinn',
+        'white_wraith',
+        'white_gorgon',
+        'white_vampire',
+        'white_kronos',
+        'white_minotaur',
+        'wyvern',
+        'wyvern_alt',
+        'goloth_devil',
+        'zul_devil',
+        'mordu_devil',
+        'vukular_devil',
+        'ishtar_devil',
+        'black_demon',
+        'dulu_demon',
+        'golden_demon',
+        'kabuki_demon',
+
+        // 'imp',
+        // 'imp_overlord',
+        // 'beholder','dragon','goblin','horror','ogre',
+        // 'sphinx','troll','slime_mold','black_vampire','black_gorgon',
+        // 'mummy','naiad','wyvern','skeleton','giant_scorpion','black_djinn','black_kronos',
+        // 'black_banshee','black_wraith', 'manticore','black_minotaur'
+    ];
+
     this.playerTile = {
         location: [0,0],
         boardIndex: null
@@ -53,6 +102,12 @@ export function BoardManager(){
         this.dungeon = dungeon;
     }
     this.initializeTilesFromMap = (boardIndex, spawnTileIndex) => {
+        const getRandomMonster = () => {
+            let idx = Math.floor(Math.random()*this.monstersArr.length);
+            const monster = this.monstersArr[idx]
+            // console.log('monster:', monster, this.getImage(monster));
+            return monster
+        }
         let spawnCoords = this.getCoordinatesFromIndex(spawnTileIndex);
         let map = this.dungeon.miniboards[boardIndex]
         this.currentMap = map;
@@ -61,8 +116,10 @@ export function BoardManager(){
             location: spawnCoords,
             boardIndex: boardIndex
         }
+        // console.log(map, 'map.tiles filtered:', map.tiles.filter(e=> e.contains !== 'void' && e.contains !== null));
         for(let i = 0; i< map.tiles.length; i++){
             let tile = map.tiles[i]
+            if(tile.contains === 'monster') tile.contains = getRandomMonster();
             this.tiles.push({
                 type: 'board-tile',
                 id: tile.id,
@@ -73,6 +130,7 @@ export function BoardManager(){
                 borders: null
             })
         }
+        // console.log('RILES: ', this.tiles.filter(e=> e.contains !== 'void' && e.contains !== null));
         for(let j = 0; j < 15; j++){
             for(let p = 0; p<15; p++){
                 this.tiles[p+(15*j)].coordinates = [(j+1*15), p+1*15]
@@ -194,11 +252,12 @@ export function BoardManager(){
     }
     this.getImage = (key) => {
         //this switch case renames images so they can fit in a 2 tile space
+        // console.log('key: ', key);
         switch(key){
             case 'delete':
                 return 'trash'
-            case 'monster':
-                return 'monster'
+            // case 'monster':
+            //     return 'monster'
             case 'item':
                 return 'lantern'
             case 'magic':
@@ -216,7 +275,7 @@ export function BoardManager(){
             case 'spawn':
                 return 'spawn_point'    
             default:
-                return false
+                return key
         }
     } 
     this.handleFogOfWar = (destinationTile) => {
