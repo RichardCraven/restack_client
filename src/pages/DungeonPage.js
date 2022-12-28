@@ -233,7 +233,7 @@ class DungeonPage extends React.Component {
     }
     render(){
         return (
-        <div className="container">
+        <div className="dungeon-container">
             {this.state.showMessage && <div className="message-panel">{this.state.showSaving ? 'saving...' : 'saved'}</div>}
             <div  className="board" style={{
                 width: this.state.boardSize+'px', height: this.state.boardSize+ 'px',

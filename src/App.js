@@ -133,16 +133,16 @@ const toggleShowCoordinates = () => {
  return (
    <div className="fullpage">
       <div  className="App">
-        {loggedIn && <button className="logout-button" onClick={logout}>
+        {loggedIn && <button className="menu-buttons logout-button" onClick={logout}>
           Logout
         </button>}
-        {loggedIn && <button className="save-button" onClick={saveUserData}>
+        {loggedIn && <button className="menu-buttons save-button" onClick={saveUserData}>
           Save
         </button>}
-        {loggedIn && <button className="go-home-button" onClick={goHome}>
+        {loggedIn && <button className="menu-buttons go-home-button" onClick={goHome}>
           Home
         </button>}    
-        {loggedIn && isAdmin && <button className="show-coordinates-button" onClick={toggleShowCoordinates}>
+        {loggedIn && isAdmin && <button className="menu-buttons show-coordinates-button" onClick={toggleShowCoordinates}>
           Show Coordinates
         </button>}  
 

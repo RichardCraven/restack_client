@@ -40,6 +40,9 @@ button{
   display: flex;
   align-items: center;
   justify-content: center;
+  .menu-buttons{
+    z-index: 1000;
+  }
   .logout-button{
     position: absolute;
     top: 15px;

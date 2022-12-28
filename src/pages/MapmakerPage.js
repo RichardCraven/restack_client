@@ -1,7 +1,13 @@
 import React from 'react'
+import '@coreui/coreui/dist/css/coreui.min.css'
 import '../styles/dungeon-board.scss'
 import '../styles/map-maker.scss'
 import Tile from '../components/tile'
+import JSZip from 'jszip';
+import { saveAs } from 'file-saver';
+import { CDropdown, CDropdownToggle, CDropdownMenu, CDropdownItem, CModal, CButton, CModalHeader, CModalTitle, CModalBody, CModalFooter } from '@coreui/react';
+// import { CModal } from '@coreui/components'
+// import CDropdown, {CDropdownToggle, CDropdownMenu, CDropdownItem} from '@coreui/react/components/dropdown/CDropdown'
 import {
   addMapRequest, 
   loadMapRequest, 
@@ -32,14 +38,14 @@ class MapMakerPage extends React.Component {
       mouseDown: false,
       toastMessage: null,
       mapView: true,
+      selectedView: 'board',
       hoveredSection: null,
       draggedMap: null,
       showCoordinates: false,
-      filterPanelOpen: false,
       adjacencyFilterOn: false,
       adjacencyFilterSet: false,
       adjacencyFilterHover: false,
-      nameFilterOn: false,
+      nameFilterOn: true,
       adjacencyHoverIdx: null,
       adjacentTo: null,
       showDeleteMaps: false,
@@ -53,7 +59,8 @@ class MapMakerPage extends React.Component {
         showRight: false,
         showTop: false,
         showBot: false
-      }
+      },
+      showModal: false
     };
   }
 
@@ -79,9 +86,10 @@ class MapMakerPage extends React.Component {
         miniboards: arr
       }
     })
+    this.nameFilterClicked()
   }
   componentDidUpdate(){
-    console.log('updated, props: ', this.props);
+    // console.log('updated, props: ', this.props);
   }
   getTileSize(){
     const h = Math.floor((window.innerHeight/17));
@@ -93,6 +101,26 @@ class MapMakerPage extends React.Component {
         tsize = w;
     }
     return tsize;
+  }
+
+  downloadDungeon(){
+    const dungeon = this.state.loadedDungeon
+    console.log('loaded dungeon: ', dungeon);
+    const zip = new JSZip();
+    let string = JSON.stringify(dungeon)
+    console.log('string:', string);
+    zip.file(`${dungeon.name}.dungeon.json`, string)
+    zip.generateAsync({type:'blob'})
+    .then((content) => {
+      console.log('content', content)
+        saveAs(content, `${dungeon.name}`.zip);
+    });
+  }
+  renameDungeon(){
+    this.setState({
+      showModal: true
+    })
+    
   }
 
   initializeListeners = () => {
@@ -157,6 +185,7 @@ class MapMakerPage extends React.Component {
   
   handleClick = (tile) => {
     if(tile.type === 'palette-tile'){
+      console.log('handle click, palette tile', tile)
       this.setState({
         optionClickedIdx: tile.id,
         pinnedOption: tile.id
@@ -316,7 +345,6 @@ class MapMakerPage extends React.Component {
     val.data.forEach((e)=>{
       let map = JSON.parse(e.content)
       map.id = e._id;
-      console.log('pushing map', map)
       maps.push(map)
     })
     console.log('final maps:',maps);
@@ -324,6 +352,11 @@ class MapMakerPage extends React.Component {
       return {
         maps: maps
       }
+    })
+  }
+  setMainView(view){
+    return this.setState((state) => {
+      return {selectedView: view}
     })
   }
   clearLoadedMap(){
@@ -438,20 +471,21 @@ class MapMakerPage extends React.Component {
       miniboards
     })
   }
-
-  // Filter methods
-
-  filterMapsClicked = () => {
-    this.setState((state, props) => {
-      return {filterPanelOpen: !state.filterPanelOpen}
-    })
-  }
   adjacencyFilterClicked = () => {
+    console.log('adjacency filter clicked');
     if(this.state.adjacencyFilterSet){
       this.setState((state) => {
         return {
-          adjacencyFilterOn: !state.adjacencyFilterOn,
-          adjacencyFilterSet: false
+          compatibilityMatrix: {
+            show: false,
+            showLeft: false,
+            showRight: false,
+            showTop: false,
+            showBot: false
+          },
+          adjacencyFilterOn: false,
+          adjacencyFilterSet: false,
+          adjacencyHoverIdx: null
         }
       })
     } else {
@@ -472,6 +506,7 @@ class MapMakerPage extends React.Component {
         return a.name > b.name ? 1 : -1
       })
     } else {
+      // filter by id
       maps = this.state.maps.sort(function(a,b){
         return a.id > b.id ? 1 : -1
       })
@@ -479,7 +514,17 @@ class MapMakerPage extends React.Component {
     this.setState((state) => {
       return {
         maps,
-        nameFilterOn: !this.state.nameFilterOn
+        nameFilterOn: !this.state.nameFilterOn,
+        compatibilityMatrix: {
+          show: false,
+          showLeft: false,
+          showRight: false,
+          showTop: false,
+          showBot: false
+        },
+        adjacencyFilterOn: false,
+        adjacencyFilterSet: false,
+        adjacencyHoverIdx: null
       }
     })
   }
@@ -569,7 +614,7 @@ class MapMakerPage extends React.Component {
       case 'bot':
         this.setState(state => ({
           compatibilityMatrix: {...state.compatibilityMatrix,
-            showTop: !state.compatibilityMatrix.showTop
+            showBot: !state.compatibilityMatrix.showBot
           }
         }))
       break;
@@ -615,7 +660,7 @@ class MapMakerPage extends React.Component {
   }
 
   handleInputChange = (e, inputType) => {
-    if(inputType === 'map-name'){
+    if(inputType === 'board-name'){
       this.setState({
         mapName: e.target.value
       })
@@ -625,92 +670,61 @@ class MapMakerPage extends React.Component {
       })
     }
   }
+  selectDungeon = (e) => {
+    console.log('dungeon selected: ', e);
+    this.loadDungeon(e.id)
+  }
 
   render (){
     return (
-      <div className="container">
+      <div className="mapmaker-container">
         {this.state.toastMessage && <div className="toast-pane">
           {this.state.toastMessage}
         </div>}
-        <button
-            className="view-toggle-button"
-            onClick={() => {
-              return this.setState((state) => {
-                return {mapView: !state.mapView}
-              })
-            }}
-            >{this.state.mapView === true ? 'Switch to Dungeon View' : 'Switch to Map View'}
-        </button>
-        {this.state.showMapInputs && <div style={{
-            position: 'absolute',
-            top: '2%',
-            left: '20%',
-          }} className="map-inputs-pane">
-        </div>}
+
+        <CButton onClick={() => {return this.setState((state) => { return {showModal: true}})}}>Vmodal</CButton>
+        <CModal alignment="center" visible={this.state.showModal} onClose={() => {return this.setState((state) => { return {showModal: false}})}}>
+          <CModalHeader>
+            <CModalTitle>Rename this dungeon</CModalTitle>
+          </CModalHeader>
+          <CModalBody>
+            <input className="dungeonname-input"  type="text" value={this.state.dungeonName || ''} placeholder={this.state.dungeonName || ''} onChange={(e) => {this.handleInputChange(e, 'dungeon-name')}}/>
+          </CModalBody>
+          <CModalFooter>
+            <CButton color="secondary" onClick={() => {return this.setState((state) => { return {showModal: false}})}}>
+              Close
+            </CButton>
+            <CButton color="primary">Save changes</CButton>
+          </CModalFooter>
+        </CModal>
         <div 
-        className="palette" 
-        style={{
-          width: this.state.tileSize*3+'px', height: this.state.boardSize+ 'px',
-          backgroundColor: 'white',
-          marginRight: '25px'
-        }}
+          className="palette boards-palette" 
+          style={{
+            width: this.state.tileSize*3+'px', height: this.state.boardSize+ 'px',
+            backgroundColor: 'white',
+            // marginRight: '25px'
+          }}
         > 
-          <div className="buttons-container" 
+          <div className="boards-title">Boards</div>
+          <div className="board-options-buttons-container" 
           style={{
             width: this.state.tileSize*3+'px',
-            height: this.state.tileSize*2
+            // height: this.state.tileSize*2
+            height: '38px'
           }}
           >
-            <button
-            onClick={() => {return this.clearLoadedMap()}}
-            style={{height: this.state.tileSize/2}}
-            >Clear</button>
-            <button
-            onClick={() => {return this.writeMap()}}
-            style={{height: this.state.tileSize/2}}
-            >Save</button>
-            <button
-            onClick={() => {return this.deleteMap()}}
-            style={{height: this.state.tileSize/2}}
-            >Delete</button>
-            <button
-            onClick={() => {return this.filterMapsClicked()}}
-            style={{height: this.state.tileSize/2}}
-            >Filter</button>
+            <CDropdown>
+              <CDropdownToggle color="secondary">Board Actions</CDropdownToggle>
+              <CDropdownMenu>
+                <CDropdownItem onClick={() => this.clearLoadedMap()}>Clear</CDropdownItem>
+                <CDropdownItem onClick={() => this.writeMap()}>Save</CDropdownItem>
+                <CDropdownItem onClick={() => this.deleteMap()}>Delete</CDropdownItem>
+                <CDropdownItem onClick={() => this.adjacencyFilterClicked()}>Filter: Adjacency</CDropdownItem>
+                <CDropdownItem onClick={() => this.nameFilterClicked()}>Filter: Name</CDropdownItem>
+              </CDropdownMenu>
+            </CDropdown>
           </div>
-          <div className="filter-container" 
-            style={{
-              width: this.state.tileSize*3+'px',
-              height: this.state.tileSize*2,
-              top: this.state.filterPanelOpen ? this.state.tileSize*2+'px' : 0
-            }}
-          >
-            <button
-            onClick={() => {return this.adjacencyFilterClicked()}}
-            onMouseEnter={() => { return this.setState({adjacencyFilterHover: true})}}
-            onMouseLeave={() => { return this.setState({adjacencyFilterHover: false})}}
-            style={{
-              fontSize: '10px',
-              backgroundColor: this.state.adjacencyFilterOn ? 'lightgreen' : 
-              (this.state.adjacencyFilterHover ? 'lightblue' : 'inherit')
-            }}
-            >Adjacent to...</button>
-            <button
-            onClick={() => {return this.nameFilterClicked()}}
-            onMouseEnter={() => { return this.setState({nameFilterHover: true})}}
-            onMouseLeave={() => { return this.setState({nameFilterHover: false})}}
-            style = {{
-              backgroundColor: this.state.nameFilterOn ? 'lightgreen' : 
-              (this.state.nameFilterHover ? 'lightblue' : 'inherit')
-            }}
-            >Name</button>
-          </div>
-          <div 
-          className="previews-container"
-          style={{
-            paddingTop: this.state.filterPanelOpen ? this.state.tileSize*2 : 0
-          }}
-          >
+          <div className="board-previews-container previews-container">
             {this.state.maps && this.state.compatibilityMatrix.show === false && this.state.maps.map((map, i) => {
               return (<div 
                         key={i}
@@ -723,7 +737,7 @@ class MapMakerPage extends React.Component {
                             boxSizing: 'border-box'
                           }}
                           onClick={() => {
-                            if(this.state.mapView){
+                            if(this.state.selectedView === 'board'){
                               return this.loadMap(map.id)
                             }
                           }}
@@ -791,15 +805,15 @@ class MapMakerPage extends React.Component {
                     </div>)
                  })}
                  </div>}
-               {this.state.compatibilityMatrix.right.length > 0 && <div className="right">
-               <span onClick={() => {return this.collapseFilterHeader('right')}} className="adjacency-filter-header">RIGHT</span> 
-                 {this.state.compatibilityMatrix.showRight && this.state.compatibilityMatrix.right.map((map,i)=>{
+               {this.state.compatibilityMatrix.right.length > 0 && 
+               <div className="right">
+                <span onClick={() => {return this.collapseFilterHeader('right')}} className="adjacency-filter-header">RIGHT</span> 
+                  {this.state.compatibilityMatrix.showRight && this.state.compatibilityMatrix.right.map((map,i)=>{
                    return (<div 
                     key={i}
                     >
                     <div 
                       className="map-preview draggable" 
-                      
                       style={{
                         height: this.state.tileSize*3,
                         boxSizing: 'border-box'
@@ -909,27 +923,46 @@ class MapMakerPage extends React.Component {
             }
           </div>
         </div>
-        <div className="board-container">
+        <div className="center-board-container">
           <div className="inputs-container">
-            {this.state.mapView && <input className="mapname-input"  type="text" value={this.state.mapName} placeholder={this.state.mapName} autoComplete="none" onChange={(e) => {this.handleInputChange(e, 'map-name')}} />}
-            {!this.state.mapView && <input className="dungeonname-input"  type="text" value={this.state.dungeonName || ''} placeholder={this.state.dungeonName || ''} onChange={(e) => {this.handleInputChange(e, 'dungeon-name')}}/>}
-            {/* {this.state.mapView && <button
-            className="lightblueOnHover"
-             style={{
-               marginLeft: '35px'
-             }}
-             onClick={() => {return this.setState((state) => { return {showCoordinates: !state.showCoordinates}})}}
-            >Show Coordinates</button>} */}
+            <CDropdown className='dungeon-selector'>
+              <CDropdownToggle color="secondary">Dungeon Selector</CDropdownToggle>
+              <CDropdownMenu>
+                {this.state.dungeons && this.state.dungeons.map((e, i)=>{
+                  return <CDropdownItem key={i} onClick={() => this.selectDungeon(e)}>{e.name}</CDropdownItem>
+                })}
+              </CDropdownMenu>
+            </CDropdown>
+
+            {/* {this.state.selectedView === 'board' && <input className="mapname-input"  type="text" value={this.state.mapName} placeholder={this.state.mapName} autoComplete="none" onChange={(e) => {this.handleInputChange(e, 'board-name')}} />} */}
+            {/* {this.state.selectedView === 'plane' && <input className="dungeonname-input"  type="text" value={this.state.dungeonName || ''} placeholder={this.state.dungeonName || ''} onChange={(e) => {this.handleInputChange(e, 'dungeon-name')}}/>} */}
+
+            <CDropdown className='view-selector'>
+              <CDropdownToggle color="secondary">View Selector</CDropdownToggle>
+              <CDropdownMenu>
+                <CDropdownItem onClick={() => this.setMainView('board')}>Board View</CDropdownItem>
+                <CDropdownItem onClick={() => this.setMainView('plane')}>Plane View</CDropdownItem>
+                <CDropdownItem onClick={() => this.setMainView('dungeon')}>Dungeon View</CDropdownItem>
+              </CDropdownMenu>
+            </CDropdown>
+
+            <CDropdown className='dungeon-actions-selector'>
+              <CDropdownToggle color="secondary">Dungeon Actions</CDropdownToggle>
+              <CDropdownMenu>
+                <CDropdownItem onClick={() => this.renameDungeon()}>Rename Dungeon</CDropdownItem>
+                <CDropdownItem onClick={() => this.downloadDungeon()}>Download Dungeon</CDropdownItem>
+              </CDropdownMenu>
+            </CDropdown>
           </div>
           <div 
-          className="board" 
+          className="board map-board" 
           style={{
               width: this.state.boardSize+'px', height: this.state.boardSize+ 'px',
               backgroundColor: 'white'
           }}
           onMouseLeave={() => {return this.setHover(null)}}
           >
-              {this.state.mapView && this.state.tiles && this.state.tiles.map((tile, i) => {
+              {this.state.selectedView === 'board' && this.state.tiles && this.state.tiles.map((tile, i) => {
                   return <Tile 
                   key={i}
                   id={tile.id}
@@ -952,7 +985,7 @@ class MapMakerPage extends React.Component {
                   </Tile>
               })}
 
-              {!this.state.mapView && 
+              {this.state.selectedView === 'plane' && 
                 <div className="mini-boards-container">
                   {this.state.miniboards && this.state.miniboards.map((board, i) => {
                         return  <div 
@@ -1002,19 +1035,19 @@ class MapMakerPage extends React.Component {
                 
           </div>
         </div>
-        <div className="palette" style={{
-            width: this.state.tileSize*3+'px', height: this.state.boardSize+ 'px',
-            backgroundColor: 'white',
-            marginLeft: '25px'
+        <div className="palette planes-palette" 
+            style={{
+              width: this.state.tileSize*3+'px', height: this.state.boardSize+ 'px',
+              backgroundColor: 'white',
+              marginLeft: '25px'
             }}
             onMouseLeave={() => {
               if(this.state.optionClickedIdx === null){
                 return this.setPaletteHover(null)
               }
-  
             }}
             >
-              {this.state.mapView && this.props.mapMaker.paletteTiles && this.props.mapMaker.paletteTiles.map((tile, i) => {
+              {this.state.selectedView === 'board' && this.props.mapMaker.paletteTiles && this.props.mapMaker.paletteTiles.map((tile, i) => {
                 return (
                   <div key={i} className="palette-options-pane">
                     <div className="palette-option-container"
@@ -1064,35 +1097,28 @@ class MapMakerPage extends React.Component {
                   </div>
                 )
             })}
-            <div className="buttons-container-title">Dungeons</div>
+            <div className="buttons-container-title">Planes</div>
             <div className="buttons-container" 
             style={{
               width: this.state.tileSize*3+'px',
               height: this.state.tileSize*2
             }}
             >
-              
-              <button
-              onClick={() => {return this.clearLoadedDungeon()}}
-              style={{height: this.state.tileSize/2}}
-              >Clear</button>
-              <button
-              onClick={() => {return this.writeDungeon()}}
-              style={{height: this.state.tileSize/2}}
-              >Save</button>
-              <button
-              onClick={() => {return this.deleteDungeon()}}
-              style={{height: this.state.tileSize/2}}
-              >Delete</button>
-              <button
-              onClick={() => {return this.filterDungeonsClicked()}}
-              style={{height: this.state.tileSize/2}}
-              >Filter</button>
+              <CDropdown>
+                <CDropdownToggle color="secondary">Board Actions</CDropdownToggle>
+                <CDropdownMenu>
+                  <CDropdownItem onClick={() => this.clearLoadedDungeon()}>Clear</CDropdownItem>
+                  <CDropdownItem onClick={() => this.writeDungeon()}>Save</CDropdownItem>
+                  <CDropdownItem onClick={() => this.deleteDungeon()}>Delete</CDropdownItem>
+                  <CDropdownItem onClick={() => this.filterDungeonsClicked()}>Filter</CDropdownItem>
+                </CDropdownMenu>
+              </CDropdown>
             </div>
-            {!this.state.mapView && 
-              <div className="previews-container">
+            {this.state.selectedView === 'plane' && 
+              <div className="plane-previews-container previews-container">
                 {this.state.dungeons && this.state.dungeons.map((dungeon, i) => {
                   return (<div 
+                            className='plane-previews-container'
                             key={i}
                           >
                             <div 
