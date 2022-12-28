@@ -1,11 +1,5 @@
 import axios from 'axios';
 
-// function ApiHandler(poo){
-//     console.log('oh whaddup ', poo)
-// }
-// function doSomething(){
-
-// }
 const getAllUsersRequest = () => {
   return axios.get("http://localhost:5000/api/users")
       .then(res=>{
@@ -98,7 +92,7 @@ const updateMapRequest = (id, mapObj) => {
       return(err)
     })
 }
-const deleteMapRequest = (id) => {
+const deleteBoardRequest = (id) => {
   return axios.delete("http://localhost:5000/api/maps/"+id)
     .then(res=>{
       if(res.status === 200){
@@ -136,6 +130,68 @@ const loadAllMapsRequest = () => {
     })
 }
 
+// Plane APIs --------------------------------------------------------
+
+const addPlaneRequest = (planeObj) => {
+  return axios.post("http://localhost:5000/api/planes", {plane: JSON.stringify(planeObj)})
+    .then(res=>{
+      if(res.status === 200 || res.status === 201){
+        return(res)
+      }
+    })
+    .catch(err=> {
+      console.log(err)
+      return(err)
+    })
+}
+const updatePlaneRequest = (id, planeObj) => {
+  return axios.put("http://localhost:5000/api/planes/"+id, {plane: JSON.stringify(planeObj)})
+    .then(res=>{
+      if(res.status === 200 || res.status === 201){
+        return(res)
+      }
+    })
+    .catch(err=> {
+      console.log(err)
+      return(err)
+    })
+}
+const loadAllPlanesRequest = (id) => {
+  return axios.get("http://localhost:5000/api/planes")
+    .then(res=>{
+      if(res.status === 200){
+        return(res)
+      }
+    })
+    .catch(err=> {
+      console.log(err)
+      return(err)
+    })
+}
+const loadPlaneRequest = (id) => {
+  return axios.get("http://localhost:5000/api/planes/"+id)
+    .then(res=>{
+      if(res.status === 200){
+        return(res)
+      }
+    })
+    .catch(err=> {
+      console.log(err)
+      return(err)
+    })
+}
+const deletePlaneRequest = (id) => {
+  return axios.delete("http://localhost:5000/api/planes/"+id)
+    .then(res=>{
+      if(res.status === 200 || res.status === 201){
+        return(res)
+      }
+    })
+    .catch(err=> {
+      console.log(err)
+      return(err)
+    })
+}
 
 // Dungeon APIs --------------------------------------------------------
 
@@ -215,9 +271,6 @@ const loadAllUsersRequest = () => {
     })
 }
 
-const writeRequest = (messageObj) => {
-  return axios.post("http://localhost:5000/api/write", messageObj)
-}
 
 // const isAuthorized = ()
 
@@ -225,12 +278,11 @@ export {
   registerRequest,
   loginRequest, 
   updateUserRequest,
-  writeRequest, 
   addMapRequest, 
   loadMapRequest, 
   loadAllMapsRequest,
   updateMapRequest,
-  deleteMapRequest,
+  deleteBoardRequest,
   loadAllUsersRequest,
   loadAllDungeonsRequest,
   addDungeonRequest,
@@ -238,5 +290,10 @@ export {
   updateDungeonRequest,
   deleteDungeonRequest,
   deleteUserRequest,
-  getAllUsersRequest
+  getAllUsersRequest,
+  addPlaneRequest,
+  deletePlaneRequest,
+  updatePlaneRequest,
+  loadAllPlanesRequest,
+  loadPlaneRequest
 };

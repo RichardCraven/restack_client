@@ -6,19 +6,22 @@ import Tile from '../components/tile'
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import { CDropdown, CDropdownToggle, CDropdownMenu, CDropdownItem, CModal, CButton, CModalHeader, CModalTitle, CModalBody, CModalFooter, CFormSelect} from '@coreui/react';
-// import { CModal } from '@coreui/components'
-// import CDropdown, {CDropdownToggle, CDropdownMenu, CDropdownItem} from '@coreui/react/components/dropdown/CDropdown'
 import {
   addMapRequest, 
   loadMapRequest, 
   loadAllMapsRequest, 
   updateMapRequest, 
-  deleteMapRequest, 
+  deleteBoardRequest, 
   loadAllDungeonsRequest,
   loadDungeonRequest,
   addDungeonRequest,
   deleteDungeonRequest,
-  updateDungeonRequest
+  updateDungeonRequest,
+  loadAllPlanesRequest,
+  loadPlaneRequest,
+  addPlaneRequest,
+  deletePlaneRequest,
+  updatePlaneRequest
 } from '../utils/api-handler';
 
 class MapMakerPage extends React.Component {
@@ -28,16 +31,17 @@ class MapMakerPage extends React.Component {
       tileSize: 0,
       boardSize: 0,
       maps : [],
+      planes: [],
       dungeons: [],
       miniboards: [],
-      loadedMap: null,
+      loadedBoard: null,
       hoveredTileIdx: null,
       hoveredPaletteTileIdx: null,
       optionClickedIdx: null,
       pinnedOption: null,
       mouseDown: false,
       toastMessage: null,
-      mapView: true,
+      // mapView: true,
       selectedView: 'plane',
       hoveredSection: null,
       draggedMap: null,
@@ -48,10 +52,10 @@ class MapMakerPage extends React.Component {
       nameFilterOn: true,
       adjacencyHoverIdx: null,
       adjacentTo: null,
-      showDeleteMaps: false,
       showMapInputs: true,
       dungeonName: 'dungeon name',
-      mapName: 'map name',
+      boardName: 'board name',
+      planeName: 'plane name',
       nameFilterHover: false,
       compatibilityMatrix: {
         show: false,
@@ -60,7 +64,8 @@ class MapMakerPage extends React.Component {
         showTop: false,
         showBot: false
       },
-      showModal: false
+      showModal: false,
+      modalType: 'rename dungeon'
     };
   }
 
@@ -78,6 +83,7 @@ class MapMakerPage extends React.Component {
     }
     this.loadAllMaps();
     this.loadAllDungeons();
+    this.loadAllPlanes();
     this.setState((state, props) => {
       return {
         tileSize,
@@ -118,9 +124,15 @@ class MapMakerPage extends React.Component {
   }
   renameDungeon(){
     this.setState({
-      showModal: true
+      showModal: true,
+      modalType: 'rename dungeon'
     })
-    
+  }
+  renameMap(){
+    this.setState({
+      showModal: true,
+      modalType: 'rename board'
+    })
   }
 
   initializeListeners = () => {
@@ -247,26 +259,26 @@ class MapMakerPage extends React.Component {
   }
 
   // Map CRUD methods
-  writeMap = async () => {
+  writeBoard = async () => {
     let dungeonToUpdate;
     let miniboards;
     
     console.log('write map');
 
     const config = this.props.mapMaker.getMapConfiguration(this.state.tiles)    
-    if(this.state.loadedMap){
-      console.log('loaded map: ', this.state.loadedMap)
+    if(this.state.loadedBoard){
+      console.log('loaded map: ', this.state.loadedBoard)
       if(this.state.dungeons.length > 0){
         console.log('state has dungeons', this.state.dungeons);
         this.state.dungeons.forEach((d) => {
           d.miniboards.forEach((b, index) => {
-            if(b.id === this.state.loadedMap.id){
-              console.log('b.id, ', b.id, 'vs', this.state.loadedMap.id);
+            if(b.id === this.state.loadedBoard.id){
+              console.log('b.id, ', b.id, 'vs', this.state.loadedBoard.id);
               dungeonToUpdate = d
               console.log('DUNGEON TO UPDATE', d);
               miniboards = d.miniboards;
-              miniboards[index] = this.state.loadedMap;
-              miniboards[index].name = this.state.mapName;
+              miniboards[index] = this.state.loadedBoard;
+              miniboards[index].name = this.state.boardName;
               miniboards[index].tiles = this.state.tiles;
               miniboards[index].config = config;
             } 
@@ -276,12 +288,12 @@ class MapMakerPage extends React.Component {
       }
 
       let obj = {
-        name: this.state.mapName,
+        name: this.state.boardName,
         tiles: this.state.tiles,
         config
       }
       console.log('about to update map');
-      await updateMapRequest(this.state.loadedMap.id, obj);
+      await updateMapRequest(this.state.loadedBoard.id, obj);
       this.loadAllMaps(); 
       this.toast('Map Saved')
     } else {
@@ -290,7 +302,7 @@ class MapMakerPage extends React.Component {
       let n = d.getTime();
       let rand = n.toString().slice(3,7)
       let obj = {
-        name: this.state.mapName === 'map name' ? 'map'+rand : this.state.mapName,
+        name: this.state.boardName === 'board name' ? 'map'+rand : this.state.boardName,
         tiles: this.state.tiles,
         config
       }
@@ -329,8 +341,8 @@ class MapMakerPage extends React.Component {
       }
     })
     this.setState({
-      loadedMap: map,
-      mapName: map.name,
+      loadedBoard: map,
+      boardName: map.name,
       tiles: map.tiles
     })
   }
@@ -359,7 +371,7 @@ class MapMakerPage extends React.Component {
       return {selectedView: view}
     })
   }
-  clearLoadedMap(){
+  clearLoadedBoard(){
     let arr = [...this.state.tiles]
     for(let t of arr){
       t.image = null;
@@ -373,17 +385,17 @@ class MapMakerPage extends React.Component {
     }
 
     this.setState({
-      loadedMap: null,
+      loadedBoard: null,
       tiles: arr,
       miniboards
     })
   }
-  deleteMap = async () => {
-    if(this.state.loadedMap){
-      await deleteMapRequest(this.state.loadedMap.id);
-      this.clearLoadedMap();
+  deleteBoard = async () => {
+    if(this.state.loadedBoard){
+      await deleteBoardRequest(this.state.loadedBoard.id);
+      this.clearLoadedBoard();
       this.loadAllMaps(); 
-      this.toast('Map Deleted')
+      this.toast('Board Deleted')
     }
   }
   
@@ -449,6 +461,22 @@ class MapMakerPage extends React.Component {
     this.setState(() => {
       return {
         dungeons
+      }
+    })
+  }
+  loadAllPlanes = async () => {
+    const val = await loadAllPlanesRequest()
+    console.log('all planes:', val);
+    let planes = [];
+    val.data.forEach((e)=>{
+      let plane = JSON.parse(e.content)
+      plane.id = e._id;
+      planes.push(plane)
+    })
+    console.log('setting all planes:', planes);
+    this.setState(() => {
+      return {
+        planes
       }
     })
   }
@@ -660,14 +688,22 @@ class MapMakerPage extends React.Component {
   }
 
   handleInputChange = (e, inputType) => {
-    if(inputType === 'board-name'){
-      this.setState({
-        mapName: e.target.value
-      })
-    } else {
-      this.setState({
-        dungeonName: e.target.value
-      })
+    switch(inputType){
+      case 'board-name':
+        this.setState({
+          boardName: e.target.value
+        })
+      break;
+      case 'plane-name':
+        this.setState({
+          planeName: e.target.value
+        })
+      break;
+      case 'dungeon-name':
+        this.setState({
+          dungeonName: e.target.value
+        })
+      break;
     }
   }
   selectDungeon = (e) => {
@@ -700,14 +736,19 @@ class MapMakerPage extends React.Component {
         {this.state.toastMessage && <div className="toast-pane">
           {this.state.toastMessage}
         </div>}
-
-        <CButton onClick={() => {return this.setState((state) => { return {showModal: true}})}}>Vmodal</CButton>
         <CModal alignment="center" visible={this.state.showModal} onClose={() => {return this.setState((state) => { return {showModal: false}})}}>
           <CModalHeader>
-            <CModalTitle>Rename this dungeon</CModalTitle>
+            {this.state.modalType === 'name dungeon' && <CModalTitle>Name this dungeon</CModalTitle>}
+            {this.state.modalType === 'rename dungeon' && <CModalTitle>Rename this dungeon</CModalTitle>}
+            {this.state.modalType === 'name plane' && <CModalTitle>Name this plane</CModalTitle>}
+            {this.state.modalType === 'rename plane' && <CModalTitle>Rename this plane</CModalTitle>}
+            {this.state.modalType === 'name board' && <CModalTitle>Name this board</CModalTitle>}
+            {this.state.modalType === 'rename board' && <CModalTitle>Rename this board</CModalTitle>}
           </CModalHeader>
           <CModalBody>
-            <input className="dungeonname-input"  type="text" value={this.state.dungeonName || ''} placeholder={this.state.dungeonName || ''} onChange={(e) => {this.handleInputChange(e, 'dungeon-name')}}/>
+            {(this.state.modalType === 'rename dungeon' || this.state.modalType === 'rename dungeon') && <input className="dungeonname-input"  type="text" value={this.state.dungeonName || ''} placeholder={this.state.dungeonName || ''} onChange={(e) => {this.handleInputChange(e, 'dungeon-name')}}/>}
+            
+            {(this.state.modalType === 'rename board' || this.state.modalType === 'rename board') && <input className="dungeonname-input"  type="text" value={this.state.boardName || ''} placeholder={this.state.boardName || ''} onChange={(e) => {this.handleInputChange(e, 'board-name')}}/>}
           </CModalBody>
           <CModalFooter>
             <CButton color="secondary" onClick={() => {return this.setState((state) => { return {showModal: false}})}}>
@@ -735,9 +776,10 @@ class MapMakerPage extends React.Component {
             <CDropdown>
               <CDropdownToggle color="secondary">Board Actions</CDropdownToggle>
               <CDropdownMenu>
-                <CDropdownItem onClick={() => this.clearLoadedMap()}>Clear</CDropdownItem>
-                <CDropdownItem onClick={() => this.writeMap()}>Save</CDropdownItem>
-                <CDropdownItem onClick={() => this.deleteMap()}>Delete</CDropdownItem>
+                <CDropdownItem onClick={() => this.clearLoadedBoard()}>Clear</CDropdownItem>
+                <CDropdownItem onClick={() => this.writeBoard()}>Save</CDropdownItem>
+                <CDropdownItem onClick={() => this.deleteBoard()}>Delete</CDropdownItem>
+                <CDropdownItem disabled={!this.state.loadedBoard} onClick={() => this.renameMap()}>Rename Current Map</CDropdownItem>
                 <CDropdownItem onClick={() => this.adjacencyFilterClicked()}>Filter: Adjacency</CDropdownItem>
                 <CDropdownItem onClick={() => this.nameFilterClicked()}>Filter: Name</CDropdownItem>
               </CDropdownMenu>
@@ -963,7 +1005,7 @@ class MapMakerPage extends React.Component {
               </CDropdownMenu>
             </CDropdown> */}
 
-            {/* {this.state.selectedView === 'board' && <input className="mapname-input"  type="text" value={this.state.mapName} placeholder={this.state.mapName} autoComplete="none" onChange={(e) => {this.handleInputChange(e, 'board-name')}} />} */}
+            {/* {this.state.selectedView === 'board' && <input className="boardname-input"  type="text" value={this.state.boardName} placeholder={this.state.boardName} autoComplete="none" onChange={(e) => {this.handleInputChange(e, 'board-name')}} />} */}
             {/* {this.state.selectedView === 'plane' && <input className="dungeonname-input"  type="text" value={this.state.dungeonName || ''} placeholder={this.state.dungeonName || ''} onChange={(e) => {this.handleInputChange(e, 'dungeon-name')}}/>} */}
 
             {/* <CDropdown className='view-selector'>
@@ -1142,8 +1184,8 @@ class MapMakerPage extends React.Component {
                   </div>
                 )
             })}
-            <div className="planes-title">Planes</div>
-            <div className="planes-options-buttons-container" 
+            {this.state.selectedView !== 'board' && <div className="planes-title">Planes</div>}
+            {this.state.selectedView !== 'board' && <div className="planes-options-buttons-container" 
             style={{
               width: this.state.tileSize*3+'px',
               // height: this.state.tileSize*2
@@ -1158,7 +1200,7 @@ class MapMakerPage extends React.Component {
                   <CDropdownItem onClick={() => this.filterDungeonsClicked()}>Filter</CDropdownItem>
                 </CDropdownMenu>
               </CDropdown>
-            </div>
+            </div>}
             {this.state.selectedView === 'plane' && 
               <div className="plane-previews-container previews-container">
                 {this.state.dungeons && this.state.dungeons.map((dungeon, i) => {
