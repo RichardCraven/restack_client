@@ -5,7 +5,7 @@ import '../styles/map-maker.scss'
 import Tile from '../components/tile'
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
-import { CDropdown, CDropdownToggle, CDropdownMenu, CDropdownItem, CModal, CButton, CModalHeader, CModalTitle, CModalBody, CModalFooter } from '@coreui/react';
+import { CDropdown, CDropdownToggle, CDropdownMenu, CDropdownItem, CModal, CButton, CModalHeader, CModalTitle, CModalBody, CModalFooter, CFormSelect} from '@coreui/react';
 // import { CModal } from '@coreui/components'
 // import CDropdown, {CDropdownToggle, CDropdownMenu, CDropdownItem} from '@coreui/react/components/dropdown/CDropdown'
 import {
@@ -38,7 +38,7 @@ class MapMakerPage extends React.Component {
       mouseDown: false,
       toastMessage: null,
       mapView: true,
-      selectedView: 'board',
+      selectedView: 'plane',
       hoveredSection: null,
       draggedMap: null,
       showCoordinates: false,
@@ -674,6 +674,25 @@ class MapMakerPage extends React.Component {
     console.log('dungeon selected: ', e);
     this.loadDungeon(e.id)
   }
+  dungeonSelectOnChange = (e) => {
+    console.log('d select on change: ', e.target.value);
+    const dungeon = this.state.dungeons.find(x=>x.name === e.target.value)
+    this.loadDungeon(dungeon.id)
+  }
+  viewSelectOnChange = (e) => {
+    switch(e.target.value){
+      case 'Board View': 
+        this.setMainView('board')
+      break;
+      case 'Plane View': 
+        this.setMainView('plane')
+      break;
+      case 'Dungeon View': 
+        this.setMainView('dungeon')
+      break;
+    }
+    console.log('view select on change: ', e.target.value);
+  }
 
   render (){
     return (
@@ -925,26 +944,51 @@ class MapMakerPage extends React.Component {
         </div>
         <div className="center-board-container">
           <div className="inputs-container">
-            <CDropdown className='dungeon-selector'>
+            <CFormSelect 
+              aria-label="Dungeon Selector"
+              options={
+              
+                ['Dungeon Selector'].concat(this.state.dungeons.map((e, i)=>{
+                  return { label: e.name, value: e.name}
+                }))
+              }
+              onChange={this.dungeonSelectOnChange}
+            />
+            {/* <CDropdown className='dungeon-selector'>
               <CDropdownToggle color="secondary">Dungeon Selector</CDropdownToggle>
               <CDropdownMenu>
                 {this.state.dungeons && this.state.dungeons.map((e, i)=>{
                   return <CDropdownItem key={i} onClick={() => this.selectDungeon(e)}>{e.name}</CDropdownItem>
                 })}
               </CDropdownMenu>
-            </CDropdown>
+            </CDropdown> */}
 
             {/* {this.state.selectedView === 'board' && <input className="mapname-input"  type="text" value={this.state.mapName} placeholder={this.state.mapName} autoComplete="none" onChange={(e) => {this.handleInputChange(e, 'board-name')}} />} */}
             {/* {this.state.selectedView === 'plane' && <input className="dungeonname-input"  type="text" value={this.state.dungeonName || ''} placeholder={this.state.dungeonName || ''} onChange={(e) => {this.handleInputChange(e, 'dungeon-name')}}/>} */}
 
-            <CDropdown className='view-selector'>
+            {/* <CDropdown className='view-selector'>
               <CDropdownToggle color="secondary">View Selector</CDropdownToggle>
               <CDropdownMenu>
                 <CDropdownItem onClick={() => this.setMainView('board')}>Board View</CDropdownItem>
                 <CDropdownItem onClick={() => this.setMainView('plane')}>Plane View</CDropdownItem>
                 <CDropdownItem onClick={() => this.setMainView('dungeon')}>Dungeon View</CDropdownItem>
               </CDropdownMenu>
-            </CDropdown>
+            </CDropdown> */}
+            <CFormSelect 
+              aria-label="Dungeon Selector"
+              options={
+                [
+                  'View Selector',
+                  'Board View',
+                  'Plane View',
+                  'Dungeon View'
+                ]
+                // ['View Selector'].concat(this.state.dungeons.map((e, i)=>{
+                //   return { label: e.name, value: e.name}
+                // }))
+              }
+              onChange={this.viewSelectOnChange}
+            />
 
             <CDropdown className='dungeon-actions-selector'>
               <CDropdownToggle color="secondary">Dungeon Actions</CDropdownToggle>
@@ -1035,11 +1079,11 @@ class MapMakerPage extends React.Component {
                 
           </div>
         </div>
-        <div className="palette planes-palette" 
+        <div className="palette right-palette" 
             style={{
               width: this.state.tileSize*3+'px', height: this.state.boardSize+ 'px',
               backgroundColor: 'white',
-              marginLeft: '25px'
+              // marginLeft: '25px'
             }}
             onMouseLeave={() => {
               if(this.state.optionClickedIdx === null){
@@ -1047,6 +1091,7 @@ class MapMakerPage extends React.Component {
               }
             }}
             >
+              {/* // the following is for board view only */}
               {this.state.selectedView === 'board' && this.props.mapMaker.paletteTiles && this.props.mapMaker.paletteTiles.map((tile, i) => {
                 return (
                   <div key={i} className="palette-options-pane">
@@ -1097,15 +1142,15 @@ class MapMakerPage extends React.Component {
                   </div>
                 )
             })}
-            <div className="buttons-container-title">Planes</div>
-            <div className="buttons-container" 
+            <div className="planes-title">Planes</div>
+            <div className="planes-options-buttons-container" 
             style={{
               width: this.state.tileSize*3+'px',
-              height: this.state.tileSize*2
+              // height: this.state.tileSize*2
             }}
             >
               <CDropdown>
-                <CDropdownToggle color="secondary">Board Actions</CDropdownToggle>
+                <CDropdownToggle color="secondary">Plane Actions</CDropdownToggle>
                 <CDropdownMenu>
                   <CDropdownItem onClick={() => this.clearLoadedDungeon()}>Clear</CDropdownItem>
                   <CDropdownItem onClick={() => this.writeDungeon()}>Save</CDropdownItem>
