@@ -84,7 +84,8 @@ class MapMakerPage extends React.Component {
       cachedOriginal: null,
       cachedincoming: null,
       boardsFolders: [],
-      visible: false
+      boardsFoldersExpanded : {},
+      visible: false,
     };
   }
   
@@ -207,8 +208,6 @@ class MapMakerPage extends React.Component {
         arr[tile.id].image = null;
         arr[tile.id].color = 'black';
         arr[tile.id].contains = 'void'
-
-        console.log(arr[tile.id])
         this.setState({
           hoveredTileIdx: null,
           tiles: arr
@@ -251,7 +250,7 @@ class MapMakerPage extends React.Component {
   
   handleClick = (tile) => {
     if(tile.type === 'palette-tile'){
-      console.log('handle click, palette tile', tile)
+      // console.log('handle click, palette tile', tile)
       this.setState({
         optionClickedIdx: tile.id,
         pinnedOption: tile.id
@@ -290,12 +289,12 @@ class MapMakerPage extends React.Component {
       }
     }
   }
-  setHover(id){
+  setHover = (id) => {
     this.setState({
       hoveredTileIdx: id
     })
   }
-  setPaletteHover(id){
+  setPaletteHover = (id) => {
     this.setState({
       hoveredPaletteTileIdx: id
     })
@@ -310,6 +309,29 @@ class MapMakerPage extends React.Component {
         toastMessage: null
       })
     }, 2000)
+  }
+
+  setViewState = (state) => {
+    let stateLabel;
+    switch(state){
+      case 'board':
+        stateLabel = 'Board View';
+      break;
+      case 'plane':
+        stateLabel = 'Plane View';
+      break;
+      case 'dungeon':
+        stateLabel = 'Dungeon View';
+      break;
+    }
+    this.state.mainViewSelectVal.current.value = stateLabel;
+    this.setState({selectedView: state})
+  }
+
+  expandCollapseBoardFolders= (folderTitle) => {
+    let matrix = this.state.boardsFoldersExpanded;
+    matrix[folderTitle] = !matrix[folderTitle];
+    this.setState(() => { return {boardsFoldersExpanded: matrix}})
   }
 
   // Board CRUD methods
@@ -449,7 +471,8 @@ class MapMakerPage extends React.Component {
   loadAllBoards = async () => {
     const val = await loadAllBoardsRequest();
     const boards = [],
-    boardsFolders = [];
+    boardsFolders = [],
+    boardsFoldersExpanded = {};
     if(val.data && val.data.length > 0){
       console.log('load all boards content:', val);
     }
@@ -473,11 +496,14 @@ class MapMakerPage extends React.Component {
         boards.push(board)
       }
     })
+    boardsFolders.map(e=>e.title).forEach(t=>boardsFoldersExpanded[t] = false)
     console.log('boards folders; ', boardsFolders);
+    console.log('boards folders matrix; ', boardsFoldersExpanded);
     this.setState(() => {
       return {
         boards,
-        boardsFolders
+        boardsFolders,
+        boardsFoldersExpanded
       }
     })
   }
@@ -1006,22 +1032,50 @@ class MapMakerPage extends React.Component {
             </CDropdown>
           </div>
           <div className="row-wrapper">
-            <div className="palette boards-palette" 
+            <BoardView
+              tileSize={this.state.tileSize}
+              boardSize={this.state.boardSize}
+              boardsFolders={this.state.boardsFolders}
+              boardsFoldersExpanded={this.state.boardsFoldersExpanded}
+              boards={this.state.boards}
+              tiles={this.state.tiles}
+              compatibilityMatrix={this.state.compatibilityMatrix}
+              pinnedOption={this.state.pinnedOption}
+              hoveredPaletteTileIdx={this.state.hoveredPaletteTileIdx}
+              hoveredTileIdx={this.state.hoveredTileIdx}
+              hoveredTileId={this.state.hoveredTileIdx}
+              optionClickedIdx={this.state.optionClickedIdx}
+              showCoordinates={this.state.showCoordinates}
+              mapMaker={this.props.mapMaker}
+
+              setViewState = {this.setViewState}
+              clearLoadedBoard= {this.clearLoadedBoard}
+              writeBoard = {this.writeBoard}
+              deleteBoard = {this.deleteBoard}
+              renameBoard = {this.renameBoard}
+              adjacencyFilterClicked = {this.adjacencyFilterClicked}
+              nameFilterClicked = {this.nameFilterClicked}
+              expandCollapseBoardFolders={this.expandCollapseBoardFolders}
+              onDragStart={this.onDragStart}
+              collapseFilterHeader={this.collapseFilterHeader}
+              setHover={this.setHover}
+              handleClick={this.handleClick}
+              handleHover={this.handleHover}
+              setPaletteHover={this.setPaletteHover}
+            ></BoardView>
+            {/* <div className="palette boards-palette" 
               style={{
                 width: this.state.tileSize*3+'px', height: this.state.boardSize+ 'px',
                 backgroundColor: 'white'
               }}
             > 
               <div className="boards-title" onClick={() => { 
-                console.log('washo : ', this.mainViewSelectVal);
-                // this.mainViewSelectVal.current.value = 'Board View' 
-                this.state.mainViewSelectVal.current.value = 'Board View'
-                return this.setState({selectedView: 'board'})}
+                this.setViewState('board')
+              }
             }>Boards</div>
               <div className="board-options-buttons-container" 
               style={{
                 width: this.state.tileSize*3+'px',
-                // height: this.state.tileSize*2
                 height: '38px'
               }}
               >
@@ -1041,17 +1095,15 @@ class MapMakerPage extends React.Component {
                   style={{
                 height: (this.state.boardSize - 78)+ 'px'
               }}>
-                {/* <span onClick={() => {return this.collapseFilterHeader('right')}} className="adjacency-filter-header">RIGHT</span> */}
                 {this.state.boardsFolders.length > 0 && this.state.boardsFolders.map((folder, i) => {
                   return  <div key={i}>
-                            {/* <CButton onClick={() => setVisible(!visible)}>Button</CButton> */}
-                            <div className="boards-folder-headline"  onClick={() => this.setState(() => { return {visible: !this.state.visible}})}> 
+                            <div className="boards-folder-headline"  onClick={() => this.expandCollapseBoardFolders(folder.title)}> 
                             <div className="icon-container">
-                              <CIcon icon={cilCaretRight} className={`expand-icon ${this.state.visible ? 'expanded' : ''}`} size="xl"/>
+                              <CIcon icon={cilCaretRight} className={`expand-icon ${this.state.boardsFoldersExpanded[folder.title] ? 'expanded' : ''}`} size="xl"/>
                             </div>
                               <div className="folder-headline-text">{folder.title}</div> 
                             </div>
-                            <CCollapse visible={this.state.visible}>
+                            <CCollapse visible={this.state.boardsFoldersExpanded[folder.title]}>
                                 {folder.contents.map((board, i) => {
                                   return (<div 
                                             key={i}
@@ -1292,8 +1344,9 @@ class MapMakerPage extends React.Component {
                 </div>
                 }
               </div>
-            </div>
-            <div className="center-board-container">
+            </div> */}
+
+            {/* <div className="center-board-container">
               <div 
               className="board map-board" 
               style={{
@@ -1374,8 +1427,9 @@ class MapMakerPage extends React.Component {
                   }
                     
               </div>
-            </div>
-            <div className="palette right-palette" 
+            </div> */}
+
+            {/* <div className="palette right-palette" 
                 style={{
                   width: this.state.tileSize*3+'px', height: this.state.boardSize+ 'px',
                   backgroundColor: 'white',
@@ -1514,7 +1568,7 @@ class MapMakerPage extends React.Component {
                     })}
                   </div>
                 }
-            </div>
+            </div> */}
           </div>
         </div>
       </div>

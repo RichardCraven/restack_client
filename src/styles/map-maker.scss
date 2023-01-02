@@ -7,6 +7,11 @@
     }
     box-sizing: content-box;
 }
+.board-view-container{
+    height: 100%;
+    width: 100%;
+    display: flex;
+}
 .mapmaker-container{
     // align-items: flex-end;
     // position: relative;

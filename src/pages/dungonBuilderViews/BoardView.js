@@ -3,13 +3,17 @@ import '@coreui/coreui/dist/css/coreui.min.css'
 import '../../styles/dungeon-board.scss'
 import '../../styles/map-maker.scss'
 import Tile from '../../components/tile'
-import { CDropdown, CDropdownToggle, CDropdownMenu, CDropdownItem, CModal, CButton, CModalHeader, CModalTitle, CModalBody, CModalFooter, CFormSelect} from '@coreui/react';
-
+import { CDropdown, CDropdownToggle, CDropdownMenu, CDropdownItem, CModal, CButton, CModalHeader, CModalTitle, CModalBody, CModalFooter, CFormSelect, CCard, CCardBody, CCollapse} from '@coreui/react';
+import  CIcon  from '@coreui/icons-react'
+import { cilCaretRight } from '@coreui/icons';
+import '../../styles/dungeon-board.scss'
+import '../../styles/map-maker.scss'
 
 class BoardView extends React.Component {
     constructor(props){
       super(props)
       this.state = {}
+      console.log('this.props:', this.props);
     }
     render (){
         return (
@@ -18,24 +22,26 @@ class BoardView extends React.Component {
                 width: this.props.tileSize*3+'px', 
                 height: this.props.boardSize+ 'px',
                 backgroundColor: 'white',
-                // marginRight: '25px'
                 }}>
+                    <div className="boards-title" onClick={() => { 
+                        this.props.setViewState('board')
+                    }
+                    }>Boards</div>
                     <div className="board-options-buttons-container" 
                     style={{
-                        width: this.state.tileSize*3+'px',
-                        // height: this.state.tileSize*2
+                        width: this.props.tileSize*3+'px',
                         height: '38px'
                     }}
                     >
                         <CDropdown>
                         <CDropdownToggle color="secondary">Actions</CDropdownToggle>
                         <CDropdownMenu>
-                            <CDropdownItem onClick={() => this.clearLoadedBoard()}>Clear</CDropdownItem>
-                            <CDropdownItem onClick={() => this.writeBoard()}>Save</CDropdownItem>
-                            <CDropdownItem onClick={() => this.deleteBoard()}>Delete</CDropdownItem>
-                            <CDropdownItem disabled={!this.state.loadedBoard} onClick={() => this.renameBoard()}>Rename Current Map</CDropdownItem>
-                            <CDropdownItem onClick={() => this.adjacencyFilterClicked()}>Filter: Adjacency</CDropdownItem>
-                            <CDropdownItem onClick={() => this.nameFilterClicked()}>Filter: Name</CDropdownItem>
+                            <CDropdownItem onClick={() => this.props.clearLoadedBoard()}>Clear</CDropdownItem>
+                            <CDropdownItem onClick={() => this.props.writeBoard()}>Save</CDropdownItem>
+                            <CDropdownItem onClick={() => this.props.deleteBoard()}>Delete</CDropdownItem>
+                            <CDropdownItem disabled={!this.props.loadedBoard} onClick={() => this.renameBoard()}>Rename Current Map</CDropdownItem>
+                            <CDropdownItem onClick={() => this.props.adjacencyFilterClicked()}>Filter: Adjacency</CDropdownItem>
+                            <CDropdownItem onClick={() => this.props.nameFilterClicked()}>Filter: Name</CDropdownItem>
                         </CDropdownMenu>
                         </CDropdown>
                     </div>
@@ -44,30 +50,71 @@ class BoardView extends React.Component {
                             height: (this.props.boardSize - 78)+ 'px'
                           }}
                     >
-                        {this.state.maps && this.state.compatibilityMatrix.show === false && this.state.maps.map((map, i) => {
-                        return (<div 
-                                    key={i}
-                                >
+                        {this.props.boardsFolders.length > 0 && this.props.boardsFolders.map((folder, i) => {
+                        return  <div key={i}>
+                                    <div className="boards-folder-headline"  onClick={() => this.props.expandCollapseBoardFolders(folder.title)}> 
+                                    <div className="icon-container">
+                                    <CIcon icon={cilCaretRight} className={`expand-icon ${this.props.boardsFoldersExpanded[folder.title] ? 'expanded' : ''}`} size="xl"/>
+                                    </div>
+                                    <div className="folder-headline-text">{folder.title}</div> 
+                                    </div>
+                                    <CCollapse visible={this.props.boardsFoldersExpanded[folder.title]}>
+                                        {folder.contents.map((board, i) => {
+                                        return (<div key={i}>
+                                                    <div 
+                                                    className="map-preview draggable" 
+                                                    onDragStart = {(event) => this.props.onDragStart(event, board)}
+                                                    draggable
+                                                    style={{
+                                                        height: this.props.tileSize*3,
+                                                        boxSizing: 'border-box'
+                                                    }}
+                                                    onClick={() => {
+                                                        if(this.props.selectedView === 'board'){
+                                                        return this.props.loadBoard(board)
+                                                        }
+                                                    }}>
+                                                    {board.tiles.map((tile, i) => {
+                                                    return    <Tile 
+                                                                key={i}
+                                                                id={tile.id}
+                                                                tileSize={(this.props.tileSize*3)/15}
+                                                                image={tile.image ? tile.image : null}
+                                                                color={tile.color ? tile.color : 'lightgrey'}
+                                                                index={tile.id}
+                                                                showCoordinates={false}
+                                                                type={tile.type}
+                                                                hovered={
+                                                                false
+                                                                }
+                                                                >
+                                                                </Tile>
+                                                            
+                                                    })}
+                                                    </div>
+                                                    <div className="map-title">{board.name}</div>
+                                                </div>)
+                                        })}
+                                    </CCollapse>
+                                </div>
+                        })}
+                        {this.props.boards && this.props.compatibilityMatrix.show === false && this.props.boards.map((board, i) => {
+                        return (<div key={i}>
                                     <div 
+                                    onDragStart = {(event) => this.props.onDragStart(event, board)}
+                                    draggable
                                     className="map-preview draggable" 
-                                    
                                     style={{
-                                        height: this.state.tileSize*3,
+                                        height: this.props.tileSize*3,
                                         boxSizing: 'border-box'
                                     }}
-                                    onClick={() => {
-                                        if(this.state.selectedView === 'board'){
-                                        return this.loadMap(map.id)
-                                        }
-                                    }}
-                                    onDragStart = {(event) => this.onDragStart(event, map)}
-                                    draggable
-                                    >
-                                    {map.tiles.map((tile, i) => {
+                                    onClick={() => {this.props.loadBoard(board)
+                                    }}>
+                                    {board.tiles.map((tile, i) => {
                                     return    <Tile 
                                                 key={i}
                                                 id={tile.id}
-                                                tileSize={(this.state.tileSize*3)/15}
+                                                tileSize={(this.props.tileSize*3)/15}
                                                 image={tile.image ? tile.image : null}
                                                 color={tile.color ? tile.color : 'lightgrey'}
                                                 index={tile.id}
@@ -81,147 +128,127 @@ class BoardView extends React.Component {
                                             
                                     })}
                                     </div>
-                                    <div className="map-title">{map.name}</div>
+                                    <div className="map-title">{board.name}</div>
                                 </div>)
                         })}
-                        {this.state.compatibilityMatrix && this.state.compatibilityMatrix.show === true && 
+                        {this.props.compatibilityMatrix && this.props.compatibilityMatrix.show === true && 
                         <div className="compatibility-matrix-container">
-                        {this.state.compatibilityMatrix.left.length > 0 && <div className="left">
-                            <span onClick={() => {return this.collapseFilterHeader('left')}} className="adjacency-filter-header">LEFT</span> 
-                            {this.state.compatibilityMatrix.showLeft && this.state.compatibilityMatrix.left.map((map,i)=>{
-                            return (<div 
-                                key={i}
-                                >
-                                <div 
-                                className="map-preview draggable" 
-                                
-                                style={{
-                                    height: this.state.tileSize*3,
-                                    boxSizing: 'border-box'
-                                }}
-                                onClick={() => {return this.loadMap(map.id)}}
-                                onDragStart = {(event) => this.onDragStart(event, map)}
-                                draggable
-                                >
-                                {map.tiles.map((tile, i) => {
-                                    return    <Tile 
+                        {this.props.compatibilityMatrix.left.length > 0 && <div className="left">
+                            <span onClick={() => {return this.props.collapseFilterHeader('left')}} className="adjacency-filter-header">LEFT</span> 
+                            {this.props.compatibilityMatrix.showLeft && this.props.compatibilityMatrix.left.map((board,i)=>{
+                            return (
+                                <div key={i}>
+                                    <div 
+                                    className="map-preview draggable" 
+                                    onClick={() => {return this.props.loadBoard(board)}}
+                                    onDragStart = {(event) => this.props.onDragStart(event, board)}
+                                    draggable
+                                    style={{
+                                        height: this.props.tileSize*3,
+                                        boxSizing: 'border-box'
+                                    }}>
+                                        {board.tiles.map((tile, i) => {
+                                    return  <Tile 
                                             key={i}
                                             id={tile.id}
-                                            tileSize={(this.state.tileSize*3)/15}
+                                            tileSize={(this.props.tileSize*3)/15}
                                             image={tile.image ? tile.image : null}
                                             color={tile.color ? tile.color : 'lightgrey'}
                                             index={tile.id}
                                             showCoordinates={false}
                                             type={tile.type}
-                                            hovered={
-                                                false
-                                            }
-                                            >
+                                            hovered={false}>
                                             </Tile>
-                                })}
-                                </div>
-                                <div className="map-title">{map.name}</div>
+                                        })}
+                                    </div>
+                                    <div className="map-title">{board.name}</div>
                                 </div>)
                             })}
                             </div>}
-                        {this.state.compatibilityMatrix.right.length > 0 && 
+                        {this.props.compatibilityMatrix.right.length > 0 && 
                         <div className="right">
-                            <span onClick={() => {return this.collapseFilterHeader('right')}} className="adjacency-filter-header">RIGHT</span> 
-                            {this.state.compatibilityMatrix.showRight && this.state.compatibilityMatrix.right.map((map,i)=>{
+                            <span onClick={() => {return this.props.collapseFilterHeader('right')}} className="adjacency-filter-header">RIGHT</span> 
+                            {this.props.compatibilityMatrix.showRight && this.props.compatibilityMatrix.right.map((board,i)=>{
                             return (<div 
                                 key={i}
                                 >
                                 <div 
                                 className="map-preview draggable" 
                                 style={{
-                                    height: this.state.tileSize*3,
+                                    height: this.props.tileSize*3,
                                     boxSizing: 'border-box'
                                 }}
-                                onClick={() => {return this.loadMap(map.id)}}
-                                onDragStart = {(event) => this.onDragStart(event, map)}
+                                onClick={() => {return this.props.loadBoard(board)}}
+                                onDragStart = {(event) => this.props.onDragStart(event, board)}
                                 draggable
                                 >
-                                {map.tiles.map((tile, i) => {
+                                {board.tiles.map((tile, i) => {
                                     return    <Tile 
                                             key={i}
                                             id={tile.id}
-                                            tileSize={(this.state.tileSize*3)/15}
+                                            tileSize={(this.props.tileSize*3)/15}
                                             image={tile.image ? tile.image : null}
                                             color={tile.color ? tile.color : 'lightgrey'}
                                             index={tile.id}
                                             showCoordinates={false}
                                             type={tile.type}
-                                            hovered={
-                                                false
-                                            }
-                                            >
+                                            hovered={false}>
                                             </Tile>
                                 })}
                                 </div>
-                                <div className="map-title">{map.name}</div>
+                                <div className="map-title">{board.name}</div>
                                 </div>)
                             })}
                         </div>}
-                        {this.state.compatibilityMatrix.top.length > 0 && <div className="top">
-                        <span onClick={() => {return this.collapseFilterHeader('top')}} className="adjacency-filter-header">TOP</span> 
-                            {this.state.compatibilityMatrix.showTop && this.state.compatibilityMatrix.top.map((map,i)=>{
-                            return (<div 
-                                key={i}
-                                >
+                        {this.props.compatibilityMatrix.top.length > 0 && <div className="top">
+                        <span onClick={() => {return this.props.collapseFilterHeader('top')}} className="adjacency-filter-header">TOP</span> 
+                            {this.props.compatibilityMatrix.showTop && this.props.compatibilityMatrix.top.map((board,i)=>{
+                            return (<div key={i}>
                                 <div 
                                 className="map-preview draggable" 
-                                
-                                style={{
-                                    height: this.state.tileSize*3,
-                                    boxSizing: 'border-box'
-                                }}
-                                onClick={() => {return this.loadMap(map.id)}}
-                                onDragStart = {(event) => this.onDragStart(event, map)}
+                                onClick={() => {return this.props.loadBoard(board)}}
+                                onDragStart = {(event) => this.props.onDragStart(event, board)}
                                 draggable
-                                >
-                                {map.tiles.map((tile, i) => {
-                                    return    <Tile 
-                                            key={i}
-                                            id={tile.id}
-                                            tileSize={(this.state.tileSize*3)/15}
-                                            image={tile.image ? tile.image : null}
-                                            color={tile.color ? tile.color : 'lightgrey'}
-                                            index={tile.id}
-                                            showCoordinates={false}
-                                            type={tile.type}
-                                            hovered={
-                                                false
-                                            }
-                                            >
-                                            </Tile>
+                                style={{
+                                    height: this.props.tileSize*3,
+                                    boxSizing: 'border-box'
+                                }}>
+                                {board.tiles.map((tile, i) => {
+                                return  <Tile 
+                                        key={i}
+                                        id={tile.id}
+                                        tileSize={(this.props.tileSize*3)/15}
+                                        image={tile.image ? tile.image : null}
+                                        color={tile.color ? tile.color : 'lightgrey'}
+                                        index={tile.id}
+                                        showCoordinates={false}
+                                        type={tile.type}
+                                        hovered={false}>
+                                        </Tile>
                                 })}
                                 </div>
-                                <div className="map-title">{map.name}</div>
+                                <div className="map-title">{board.name}</div>
                                 </div>)
                             })}
                         </div>}
-                        {this.state.compatibilityMatrix.bot.length > 0 && <div className="bot">
-                        <span onClick={() => {return this.collapseFilterHeader('bot')}} className="adjacency-filter-header">BOT</span> 
-                            {this.state.compatibilityMatrix.showBot && this.state.compatibilityMatrix.bot.map((map,i)=>{
-                            return (<div 
-                                key={i}
-                                >
+                        {this.props.compatibilityMatrix.bot.length > 0 && <div className="bot">
+                        <span onClick={() => {return this.props.collapseFilterHeader('bot')}} className="adjacency-filter-header">BOT</span> 
+                            {this.props.compatibilityMatrix.showBot && this.props.compatibilityMatrix.bot.map((board,i)=>{
+                            return (<div key={i}>
                                 <div 
                                 className="map-preview draggable" 
-                                
-                                style={{
-                                    height: this.state.tileSize*3,
-                                    boxSizing: 'border-box'
-                                }}
-                                onClick={() => {return this.loadMap(map.id)}}
-                                onDragStart = {(event) => this.onDragStart(event, map)}
+                                onClick={() => {return this.props.loadBoard(board)}}
+                                onDragStart = {(event) => this.props.onDragStart(event, board)}
                                 draggable
-                                >
-                                {map.tiles.map((tile, i) => {
+                                style={{
+                                    height: this.props.tileSize*3,
+                                    boxSizing: 'border-box'
+                                }} >
+                                {board.tiles.map((tile, i) => {
                                     return    <Tile 
                                             key={i}
                                             id={tile.id}
-                                            tileSize={(this.state.tileSize*3)/15}
+                                            tileSize={(this.props.tileSize*3)/15}
                                             image={tile.image ? tile.image : null}
                                             color={tile.color ? tile.color : 'lightgrey'}
                                             index={tile.id}
@@ -234,7 +261,7 @@ class BoardView extends React.Component {
                                             </Tile>
                                 })}
                                 </div>
-                                <div className="map-title">{map.name}</div>
+                                <div className="map-title">{board.name}</div>
                                 </div>)
                             })}
                         </div>}
@@ -244,30 +271,28 @@ class BoardView extends React.Component {
                 </div>
                 <div className="center-board-container">
                     <div className="board map-board" 
+                        onMouseLeave={() => {return this.props.setHover(null)}}
                         style={{
-                        width: this.state.boardSize+'px', height: this.state.boardSize+ 'px',
+                        width: this.props.boardSize+'px', height: this.props.boardSize+ 'px',
                         backgroundColor: 'white'
-                        }}
-                        onMouseLeave={() => {return this.setHover(null)}}
-                    >
-                        {this.state.selectedView === 'board' && this.state.tiles && this.state.tiles.map((tile, i) => {
+                        }}>
+                        {this.props.tiles && this.props.tiles.map((tile, i) => {
                             return <Tile 
                             key={i}
                             id={tile.id}
                             index={tile.id}
-                            tileSize={this.state.tileSize}
+                            tileSize={this.props.tileSize}
                             image={tile.image ? tile.image : null}
                             color={tile.color ? tile.color : 'lightgrey'}
                             coordinates={tile.coordinates}
                             showCoordinates={this.props.showCoordinates}
                             editMode={true}
-                            handleHover={this.handleHover}
-                            handleClick={this.handleClick}
+                            handleHover={this.props.handleHover}
+                            handleClick={this.props.handleClick}
                             type={tile.type}
                             hovered={
-                                this.state.hoveredTileIdx === tile.id ?
-                                true :
-                                false
+                                this.props.hoveredTileIdx === tile.id ?
+                                true : false
                             }
                             >
                             </Tile>
@@ -276,14 +301,14 @@ class BoardView extends React.Component {
                 </div>
                 <div className="palette right-palette" 
                     style={{
-                        width: this.state.tileSize*3+'px', height: this.state.boardSize+ 'px',
+                        width: this.props.tileSize*3+'px', height: this.props.boardSize+ 'px',
                         backgroundColor: 'white',
                         overflow: 'scroll'
                         // marginLeft: '25px'
                     }}
                     onMouseLeave={() => {
-                        if(this.state.optionClickedIdx === null){
-                            return this.setPaletteHover(null)
+                        if(this.props.optionClickedIdx === null){
+                            return this.props.setPaletteHover(null)
                         }
                     }}
                 >
@@ -292,19 +317,18 @@ class BoardView extends React.Component {
                         <div key={i} className="palette-options-pane">
                             <div className="palette-option-container"
                             style={{
-                                backgroundImage: this.state.optionClickedIdx === i ? 'linear-gradient(90deg, transparent, black)' : 'none'
+                                backgroundImage: this.props.optionClickedIdx === i ? 'linear-gradient(90deg, transparent, black)' : 'none'
                             }}
-                            onMouseOver={() => this.setPaletteHover(i)}
+                            onMouseOver={() => this.props.setPaletteHover(i)}
                             onClick={() => {
-                                this.handleClick({
+                                this.props.handleClick({
                                 type: 'palette-tile',
                                 id: i
-                                })
-                            }}
-                            >
+                                })}
+                            }>
                             <Tile 
                             id={tile.id}
-                            tileSize={this.state.tileSize}
+                            tileSize={this.props.tileSize}
                             image={tile.image ? tile.image : null}
                             color={tile.color ? tile.color : 'apricot'}
                             coordinates={tile.coordinates}
@@ -315,21 +339,20 @@ class BoardView extends React.Component {
                             handleClick={null}
                             type={tile.type}
                             hovered={
-                                this.state.hoveredPaletteTileIdx === tile.id ?
+                                this.props.hoveredPaletteTileIdx === tile.id ?
                                 true :
                                 false
-                            }
-                            >
+                            }>
                             </Tile>
                             <div className={`
                                 text-container
-                                ${this.state.hoveredPaletteTileIdx === tile.id ? 'hovered' : ''}
-                                ${this.state.pinnedOption === tile.id ? 'pinned' : ''}
+                                ${this.props.hoveredPaletteTileIdx === tile.id ? 'hovered' : ''}
+                                ${this.props.pinnedOption === tile.id ? 'pinned' : ''}
                                 `
                                 }>
                                 <span
                                 style={{
-                                color: this.state.optionClickedIdx === i ? 'white' : 'black'
+                                color: this.props.optionClickedIdx === i ? 'white' : 'black'
                                 }}
                                 >{tile.optionType}</span>
                             </div>
@@ -342,3 +365,5 @@ class BoardView extends React.Component {
         )
     }
 }
+
+export default BoardView;
