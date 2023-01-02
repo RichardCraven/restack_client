@@ -67,7 +67,7 @@ const updateUserRequest = (userId, metadata) => {
 
 // Map APIs --------------------------------------------------------
 
-const addMapRequest = (mapObj) => {
+const addBoardRequest = (mapObj) => {
   console.log('adding map: ', mapObj);
   return axios.post("http://localhost:5000/api/maps", {map: JSON.stringify(mapObj)})
     .then(res=>{
@@ -80,7 +80,7 @@ const addMapRequest = (mapObj) => {
       return(err)
     })
 }
-const updateMapRequest = (id, mapObj) => {
+const updateBoardRequest = (id, mapObj) => {
   return axios.put("http://localhost:5000/api/maps/"+id, {map: JSON.stringify(mapObj)})
     .then(res=>{
       if(res.status === 200){
@@ -104,7 +104,7 @@ const deleteBoardRequest = (id) => {
       return(err)
     })
 }
-const loadMapRequest = (id) => {
+const loadBoardRequest = (id) => {
   return axios.get("http://localhost:5000/api/maps/"+id)
     .then(res=>{
       if(res.status === 200){
@@ -116,7 +116,7 @@ const loadMapRequest = (id) => {
       return(err)
     })
 }
-const loadAllMapsRequest = () => {
+const loadAllBoardsRequest = () => {
   // return axios.get("http://localhost:5000/api/maps")
   return axios.get("http://localhost:5000/api/maps")
     .then(res=>{
@@ -146,6 +146,18 @@ const addPlaneRequest = (planeObj) => {
 }
 const updatePlaneRequest = (id, planeObj) => {
   return axios.put("http://localhost:5000/api/planes/"+id, {plane: JSON.stringify(planeObj)})
+    .then(res=>{
+      if(res.status === 200 || res.status === 201){
+        return(res)
+      }
+    })
+    .catch(err=> {
+      console.log(err)
+      return(err)
+    })
+}
+const updateManyPlanesRequest = (planesArray) => {
+  return axios.post("http://localhost:5000/api/planes/updateMany", {planesArray: JSON.stringify(planesArray)})
     .then(res=>{
       if(res.status === 200 || res.status === 201){
         return(res)
@@ -278,10 +290,10 @@ export {
   registerRequest,
   loginRequest, 
   updateUserRequest,
-  addMapRequest, 
-  loadMapRequest, 
-  loadAllMapsRequest,
-  updateMapRequest,
+  addBoardRequest, 
+  loadBoardRequest, 
+  loadAllBoardsRequest,
+  updateBoardRequest,
   deleteBoardRequest,
   loadAllUsersRequest,
   loadAllDungeonsRequest,
@@ -294,6 +306,7 @@ export {
   addPlaneRequest,
   deletePlaneRequest,
   updatePlaneRequest,
+  updateManyPlanesRequest,
   loadAllPlanesRequest,
   loadPlaneRequest
 };

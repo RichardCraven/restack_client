@@ -8,11 +8,36 @@
     box-sizing: content-box;
 }
 .mapmaker-container{
-    align-items: flex-end;
-    position: relative;
-    justify-content: center;
-    display: flex;
-    height: 100%;
+    // align-items: flex-end;
+    // position: relative;
+    // justify-content: center;
+    // display: flex;
+    // height: 100%;
+    .column-wrapper{
+        align-items: center;
+        position: relative;
+        justify-content: center;
+        display: flex;
+        height: 100%;
+        flex-direction: column;
+        .inputs-container{
+            display: flex;
+            justify-content: space-evenly;
+            padding-bottom: 5px;
+            input{
+                padding-left: 10px;
+                outline: none;
+            }
+        }
+        .row-wrapper{
+            // align-items: flex-end;
+            position: relative;
+            justify-content: center;
+            display: flex;
+            height: 100%;
+            flex-direction: row;
+        }
+    }
 }
 button{
     transition: all 0.35s;
@@ -89,6 +114,33 @@ ul.dropdown-menu.show{
 }
 .board-previews-container{
     padding-top: 0px;
+    .boards-folder-headline{
+        height: 38px;
+        width: 100%;
+        line-height: 38px;
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        cursor: pointer;
+        // padding-left: 10px;
+        .icon-container{
+            width: 40px;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            svg.expand-icon{
+                // margin-right: 10px;
+                transition: all 0.3s;
+                &.expanded{
+                    transform: rotate(90deg);
+                }
+            }
+        }
+        .folder-headline-text{
+            flex: auto;
+        }
+    }
 }
 
 .previews-container{
@@ -102,7 +154,7 @@ ul.dropdown-menu.show{
         flex-flow: row wrap;
         align-content: flex-end;
     }
-    .dungeon-preview{
+    .plane-preview{
         display: flex;
         flex-flow: row wrap;
         align-content: center;
@@ -114,6 +166,7 @@ ul.dropdown-menu.show{
             border: 1px solid black;
         }
     }
+    .dungeon-preview{}
     .map-title{
         background-color: ghostwhite;
         display: flex;
@@ -176,22 +229,28 @@ ul.dropdown-menu.show{
         justify-content: center;
     }
     .palette{
-        overflow: scroll;
+        // overflow: scroll;
+        overflow: visible;
         position: relative;
         .previews-container{
             // padding-top: 117px;
+            background-color: white;
+            // height: calc(100vh - 160px) !important;
+            overflow: scroll;
+            // this needs to be dynamic I think
             
             backface-visibility:hidden;
--webkit-backface-visibility:hidden; /* Chrome and Safari */
--moz-backface-visibility:hidden; /* Firefox */
+            -webkit-backface-visibility:hidden; /* Chrome and Safari */
+            -moz-backface-visibility:hidden; /* Firefox */
             transition: all 0.75s;
         }
         .boards-title, .planes-title{
             position: sticky;
             height: 40px;
             line-height: 40px;
-            width: 135px;
+            // width: 135px;
             top: 0px;
+            cursor: pointer;
             z-index: 2;
             background-color: white;
         }
@@ -200,8 +259,13 @@ ul.dropdown-menu.show{
             position: sticky;
             top: 40px;
             z-index: 2;
-            width: 135px;
+            // width: 135px;
             height: 38px;
+
+            border: 1px solid black;
+            .btn-group{
+                width: 100%;
+            }
             .dropdown-toggle{
                 border-radius: 0px;
             }
@@ -246,15 +310,7 @@ ul.dropdown-menu.show{
     }
     .center-board-container{
         position: relative;
-        .inputs-container{
-            display: flex;
-            justify-content: space-evenly;
-            padding-bottom: 5px;
-            input{
-                padding-left: 10px;
-                outline: none;
-            }
-        }
+        
     }
 }
 .mini-boards-container{
@@ -276,13 +332,14 @@ ul.dropdown-menu.show{
 }
 .compatibility-matrix-container{
     .adjacency-filter-header{
-        color: white;
+        color: black;
         width: 100%;
         display: inline-block;
         border-bottom: 1px solid lightseagreen;
+        background-color: paleturquoise;
         cursor: pointer;
         &:hover{
-            background-color: paleturquoise;
+            background-color: lightseagreen;
             color: black;
         }
     }

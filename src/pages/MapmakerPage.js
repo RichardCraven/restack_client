@@ -1,16 +1,23 @@
-import React from 'react'
+import React, {useRef} from 'react'
 import '@coreui/coreui/dist/css/coreui.min.css'
 import '../styles/dungeon-board.scss'
 import '../styles/map-maker.scss'
 import Tile from '../components/tile'
+import BoardView from './dungonBuilderViews/BoardView'
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
-import { CDropdown, CDropdownToggle, CDropdownMenu, CDropdownItem, CModal, CButton, CModalHeader, CModalTitle, CModalBody, CModalFooter, CFormSelect} from '@coreui/react';
+import { CDropdown, CDropdownToggle, CDropdownMenu, CDropdownItem, CModal, CButton, CModalHeader, CModalTitle, CModalBody, CModalFooter, CFormSelect, CCard, CCardBody, CCollapse} from '@coreui/react';
+// import { CIcon } from '@coreui/icons-react';
+import  CIcon  from '@coreui/icons-react'
+
+// import { CIcon } from '@coreui/icons-react';
+// import CIcon from '@coreui/icons-react/src/CIcon'
+import { cilList, cilCaretRight, cilCaretBottom } from '@coreui/icons';
 import {
-  addMapRequest, 
-  loadMapRequest, 
-  loadAllMapsRequest, 
-  updateMapRequest, 
+  addBoardRequest, 
+  loadBoardRequest, 
+  loadAllBoardsRequest, 
+  updateBoardRequest, 
   deleteBoardRequest, 
   loadAllDungeonsRequest,
   loadDungeonRequest,
@@ -21,7 +28,8 @@ import {
   loadPlaneRequest,
   addPlaneRequest,
   deletePlaneRequest,
-  updatePlaneRequest
+  updatePlaneRequest,
+  updateManyPlanesRequest
 } from '../utils/api-handler';
 
 class MapMakerPage extends React.Component {
@@ -30,7 +38,7 @@ class MapMakerPage extends React.Component {
     this.state = {
       tileSize: 0,
       boardSize: 0,
-      maps : [],
+      boards : [],
       planes: [],
       dungeons: [],
       miniboards: [],
@@ -53,9 +61,9 @@ class MapMakerPage extends React.Component {
       adjacencyHoverIdx: null,
       adjacentTo: null,
       showMapInputs: true,
-      dungeonName: 'dungeon name',
-      boardName: 'board name',
-      planeName: 'plane name',
+      // dungeonName: 'dungeon name',
+      // boardName: 'board name',
+      // planeName: 'plane name',
       nameFilterHover: false,
       compatibilityMatrix: {
         show: false,
@@ -65,9 +73,21 @@ class MapMakerPage extends React.Component {
         showBot: false
       },
       showModal: false,
-      modalType: 'rename dungeon'
+      modalType: 'rename dungeon',
+      inputValue: '',
+      dungeonNameInput : React.createRef(),
+      planeNameInput : React.createRef(),
+      boardNameInput : React.createRef(),
+
+      mainViewSelectVal : React.createRef(),
+
+      cachedOriginal: null,
+      cachedincoming: null,
+      boardsFolders: [],
+      visible: false
     };
   }
+  
 
   componentDidMount(){
     console.log('mounted, props: ', this.props);
@@ -81,9 +101,9 @@ class MapMakerPage extends React.Component {
     for(let i = 0; i < 9; i++){
       arr.push([])
     }
-    this.loadAllMaps();
-    this.loadAllDungeons();
+    this.loadAllBoards();
     this.loadAllPlanes();
+    this.loadAllDungeons();
     this.setState((state, props) => {
       return {
         tileSize,
@@ -108,8 +128,36 @@ class MapMakerPage extends React.Component {
     }
     return tsize;
   }
-
+  createNewDungeon(){
+    console.log('create new dungeon');
+    let d = new Date()
+    let n = d.getTime();
+    let rand = n.toString().slice(9,13)
+    console.log('n: ', n, 'rand: ', rand);
+    const dungeon = {
+      name: `dungeon${rand}`,
+      planes : [
+        {
+          'p0': {
+            'front': {},
+            'back': {}
+          }
+        }
+      ],
+      pocket_planes : {
+        'firmament': {},
+        'sheol': {},
+        'hyperspace': {}
+      }
+    }
+    this.setState({
+      showModal: true,
+      modalType: 'name dungeon',
+      loadedDungeon: dungeon
+    })
+  }
   downloadDungeon(){
+    // const dungeon = this.state.loadedPlane
     const dungeon = this.state.loadedDungeon
     console.log('loaded dungeon: ', dungeon);
     const zip = new JSZip();
@@ -128,10 +176,16 @@ class MapMakerPage extends React.Component {
       modalType: 'rename dungeon'
     })
   }
-  renameMap(){
+  renameBoard(){
     this.setState({
       showModal: true,
       modalType: 'rename board'
+    })
+  }
+  renamePlane(){
+    this.setState({
+      showModal: true,
+      modalType: 'rename plane'
     })
   }
 
@@ -258,111 +312,172 @@ class MapMakerPage extends React.Component {
     }, 2000)
   }
 
-  // Map CRUD methods
+  // Board CRUD methods
   writeBoard = async () => {
-    let dungeonToUpdate;
+    let planesToUpdate = [];
     let miniboards;
     
-    console.log('write map');
+    console.log('write board');
 
     const config = this.props.mapMaker.getMapConfiguration(this.state.tiles)    
     if(this.state.loadedBoard){
-      console.log('loaded map: ', this.state.loadedBoard)
-      if(this.state.dungeons.length > 0){
-        console.log('state has dungeons', this.state.dungeons);
-        this.state.dungeons.forEach((d) => {
+      console.log('loaded board: ', this.state.loadedBoard)
+      if(this.state.planes.length > 0){
+        console.log('state has planes', this.state.planes);
+        this.state.planes.forEach((d) => {
           d.miniboards.forEach((b, index) => {
             if(b.id === this.state.loadedBoard.id){
               console.log('b.id, ', b.id, 'vs', this.state.loadedBoard.id);
-              dungeonToUpdate = d
-              console.log('DUNGEON TO UPDATE', d);
               miniboards = d.miniboards;
               miniboards[index] = this.state.loadedBoard;
               miniboards[index].name = this.state.boardName;
               miniboards[index].tiles = this.state.tiles;
               miniboards[index].config = config;
+              d.valid = this.props.mapMaker.isValidPlane(d)
+              planesToUpdate.push(d)
             } 
           })
         })
         console.log('okay now miniboards are: ', miniboards, 'but state.tiles is: ', this.state.tiles)
       }
-
       let obj = {
-        name: this.state.boardName,
+        name: this.state.loadedBoard.name,
         tiles: this.state.tiles,
         config
       }
       console.log('about to update map');
-      await updateMapRequest(this.state.loadedBoard.id, obj);
-      this.loadAllMaps(); 
-      this.toast('Map Saved')
+      await updateBoardRequest(this.state.loadedBoard.id, obj);
+      this.loadAllBoards(); 
+      this.toast('Board Saved')
     } else {
-      console.log('BRAND NEW MAP');
+      console.log('BRAND NEW BOARD,  GIVE THEN AN OPTION TO NAME');
       let d = new Date()
       let n = d.getTime();
-      let rand = n.toString().slice(3,7)
-      let obj = {
-        name: this.state.boardName === 'board name' ? 'map'+rand : this.state.boardName,
+      let rand = n.toString().slice(9,13)
+      const newBoard = {
+        // name: this.state.boardName === 'board name' ? 'map'+rand : this.state.boardName,
+        name: `board${rand}`,
         tiles: this.state.tiles,
         config
       }
-      const addedMap = await addMapRequest(obj)
-      console.log('addMapRequest complete:', addedMap);
-      this.loadAllMaps(); 
-      this.toast('Map Saved')
+      const addedMap = await addBoardRequest(newBoard)
+      console.log('addBoardRequest complete:', addedMap);
+      newBoard.id = addedMap.data._id
+
+      // this.loadAllBoards(); 
+      this.loadBoard(newBoard)
+
+      this.toast('Board Saved')
     }
-    if(dungeonToUpdate){
+    if(planesToUpdate && planesToUpdate.legnth > 1){
       console.log('outgoing: ', miniboards)
-      console.log('VALID: ', this.props.mapMaker.isValidDungeon(miniboards));
-      let obj = {
-        name: dungeonToUpdate.name,
-        miniboards: miniboards,
-        spawnPoints: this.props.mapMaker.getSpawnPoints(miniboards),
-        valid: this.props.mapMaker.isValidDungeon(miniboards)
+      // console.log('VALID: ', this.props.mapMaker.isValidDungeon(miniboards));
+      const payload = planesToUpdate.map(p=> {
+        return {
+          name: p.name,
+          miniboards: p.miniboards,
+          spawnPoints: p.spawnPoints,
+          valid: p.valid
+        }
+      })
+
+      // const obj = {
+      //   name: planesToUpdate.name,
+      //   miniboards: miniboards,
+      //   spawnPoints: this.props.mapMaker.getSpawnPoints(miniboards),
+      //   valid: this.props.mapMaker.isValidDungeon(miniboards)
+      // }
+      console.log('update many payload: ', payload);
+      await updateManyPlanesRequest(payload);
+      this.loadAllPlanes();
+    } else if (planesToUpdate && planesToUpdate.length === 1){
+      let plane = planesToUpdate[0]
+      const obj = {
+        name: plane.name,
+        miniboards: plane.miniboards,
+        spawnPoints: plane.spawnPoints,
+        valid: plane.valid
       }
-      
-      await updateDungeonRequest(dungeonToUpdate.id, obj);
-      this.loadAllDungeons();
+      await updatePlaneRequest(plane.id, obj);
+      this.loadAllPlanes();
     }
 
     // writeRequest({message: JSON.stringify(obj)})
   }
   
-  loadMap = async (id) => {
-    console.log('load map with id:', id);
-    const val = await loadMapRequest(id)
-    let e = val.data[0];
-    console.log('retrieved map:', val);
-    let map = JSON.parse(e.content);
-    map.id = e._id;
-    map.tiles.forEach((t)=>{
-      if(t.color === 'black'){
-        t['contains'] = 'void'
-      }
-    })
+  // loadBoard = async (id) => {
+  //   console.log('load map with id:', id);
+  //   const val = await loadBoardRequest(id)
+  //   let e = val.data[0];
+  //   console.log('retrieved map:', val);
+  //   let map = JSON.parse(e.content);
+  //   map.id = e._id;
+  //   map.tiles.forEach((t)=>{
+  //     if(t.color === 'black'){
+  //       t['contains'] = 'void'
+  //     }
+  //   })
+  //   this.setState({
+  //     loadedBoard: map,
+  //     boardName: map.name,
+  //     tiles: map.tiles
+  //   })
+  //   setTimeout(()=>{
+  //     console.log('loaded board is now: ', this.state.loadedBoard);
+  //   })
+  // }
+  loadBoard = (board) => {
+    // console.log('load map with id:', id);
+    // const val = await loadBoardRequest(id)
+    // let e = val.data[0];
+    // console.log('retrieved map:', val);
+    // let map = JSON.parse(e.content);
+    // map.id = e._id;
+    // map.tiles.forEach((t)=>{
+    //   if(t.color === 'black'){
+    //     t['contains'] = 'void'
+    //   }
+    // })
     this.setState({
-      loadedBoard: map,
-      boardName: map.name,
-      tiles: map.tiles
+      loadedBoard: board,
+      tiles: board.tiles
+    })
+    setTimeout(()=>{
+      console.log('loaded board is now: ', this.state.loadedBoard);
     })
   }
-  loadAllMaps = async () => {
-    const val = await loadAllMapsRequest()
-    console.log('maps: ', val);
-    let maps = [];
-    if(val.data.length > 0){
-      console.log('load all maps content:', val);
-      // debugger
+  loadAllBoards = async () => {
+    const val = await loadAllBoardsRequest();
+    const boards = [],
+    boardsFolders = [];
+    if(val.data && val.data.length > 0){
+      console.log('load all boards content:', val);
     }
+    
     val.data.forEach((e)=>{
-      let map = JSON.parse(e.content)
-      map.id = e._id;
-      maps.push(map)
+      let board = JSON.parse(e.content)
+      board.id = e._id;
+      // console.log('board:', board);
+      if(board.name.includes('_')){
+        let title = board.name.split('_')[0];
+        if(!boardsFolders.map(e=>e.title).includes(title)){
+          boardsFolders.push({
+            title,
+            contents: [board],
+            expanded: false
+          })
+        } else {
+          boardsFolders.find(e=>e.title === title).contents.push(board)
+        }
+      } else {
+        boards.push(board)
+      }
     })
-    console.log('final maps:',maps);
+    console.log('boards folders; ', boardsFolders);
     this.setState(() => {
       return {
-        maps: maps
+        boards,
+        boardsFolders
       }
     })
   }
@@ -379,73 +494,103 @@ class MapMakerPage extends React.Component {
       t.color = null
     }
 
-    let miniboards = []
-    for(let i = 0; i < 9; i++){
-      miniboards.push([])
-    }
+    // let miniboards = []
+    // for(let i = 0; i < 9; i++){
+    //   miniboards.push([])
+    // }
 
     this.setState({
       loadedBoard: null,
       tiles: arr,
-      miniboards
+      // miniboards
     })
   }
   deleteBoard = async () => {
     if(this.state.loadedBoard){
       await deleteBoardRequest(this.state.loadedBoard.id);
       this.clearLoadedBoard();
-      this.loadAllMaps(); 
+      this.loadAllBoards(); 
       this.toast('Board Deleted')
     }
   }
   
 
   // Dungeon CRUD Methods
-
-  writeDungeon = async () => {
+  saveDungeon = async () => {
     console.log('writing dungeon', this.state.loadedDungeon)
-    console.log('VALID: ', this.props.mapMaker.isValidDungeon(this.state.miniboards));
     if(this.state.loadedDungeon){
       let obj = {
-        name: this.state.dungeonName,
+        name: this.state.loadedDungeon.name,
         miniboards: this.state.miniboards,
         spawnPoints: this.props.mapMaker.getSpawnPoints(this.state.miniboards),
-        valid: this.props.mapMaker.isValidDungeon(this.state.miniboards)
+        valid: this.props.mapMaker.isValidPlane(this.state.miniboards)
       }
-      await updateDungeonRequest(this.state.loadedDungeon.id, obj);
-      this.loadAllDungeons(); 
-      this.toast('Dungeon Saved')
+      await updatePlaneRequest(this.state.loadedDungeon.id, obj);
+      this.loadAllPlanes(); 
+      this.toast('Plane Saved')
     } else {
       let d = new Date()
       let n = d.getTime();
-      let rand = n.toString().slice(3,7)
+      let rand = n.toString().slice(9,13)
       let obj = {
-        name: this.state.dungeonName === 'dungeon name' ? 'dungeon'+rand : this.state.dungeonName,
+        name: this.state.loadedDungeon.name,
         miniboards: this.state.miniboards,
         spawnPoints: this.props.mapMaker.getSpawnPoints(this.state.miniboards),
-        valid: this.props.mapMaker.isValidDungeon(this.state.miniboards)
+        valid: this.props.mapMaker.isValidPlane(this.state.miniboards)
       }
-      await addDungeonRequest(obj);
-      this.toast('Dungeon Saved')
-      this.loadAllDungeons(); 
+      await addPlaneRequest(obj);
+      this.toast('Plane Saved')
+      this.loadAllPlanes(); 
     }
+  }
+  writePlane = async () => {
+    console.log('writing plane', this.state.loadedPlane)
+    if(this.state.loadedPlane && this.state.loadedPlane.id){
+      let obj = {
+        name: this.state.loadedPlane.name,
+        miniboards: this.state.miniboards,
+        spawnPoints: this.props.mapMaker.getSpawnPoints(this.state.miniboards),
+        valid: this.props.mapMaker.isValidPlane(this.state.miniboards)
+      }
+      await updatePlaneRequest(this.state.loadedPlane.id, obj);
+      this.loadAllPlanes(); 
+      this.toast('Plane Saved')
+    } else {
+      let newPlanePayload = {
+        name: this.state.loadedPlane.name,
+        miniboards: this.state.miniboards,
+        spawnPoints: this.props.mapMaker.getSpawnPoints(this.state.miniboards),
+        valid: this.props.mapMaker.isValidPlane(this.state.miniboards)
+      }
+      await addPlaneRequest(newPlanePayload);
+      this.toast('Plane Saved')
+      this.loadAllPlanes(); 
+    }
+  }
+  loadPlane = (plane) => {
+    let miniboards = [];
+    plane.miniboards.forEach((miniboard)=>{
+      miniboards.push(miniboard)
+    })
+    this.setState({
+      loadedPlane: plane,
+      miniboards: plane.miniboards
+    })
   }
   loadDungeon = async (id) => {
     console.log('loading dungeon ', id);
     const val = await loadDungeonRequest(id)
-    console.log('loaded dungeon response:', val);
     let e = val.data[0];
     let dungeon = JSON.parse(e.content);
+    console.log('loaded dungeon', dungeon);
     
-    dungeon.id = e._id;
-    let miniboards = [];
-    dungeon.miniboards.forEach((miniboard)=>{
-      miniboards.push(miniboard)
-    })
+    // dungeon.id = e._id;
+    // let miniboards = [];
+    // dungeon.miniboards.forEach((miniboard)=>{
+    //   miniboards.push(miniboard)
+    // })
     this.setState({
-      loadedDungeon: dungeon,
-      dungeonName: dungeon.name,
-      miniboards
+      loadedDungeon: dungeon
     })
   }
   loadAllDungeons = async () => {
@@ -458,6 +603,20 @@ class MapMakerPage extends React.Component {
       dungeons.push(dungeon)
     })
     console.log('setting all dungeons:', dungeons);
+    // console.log('about to save the very first plane');
+    // let plane = dungeons[0]
+    // let d = new Date()
+    //   let n = d.getTime();
+    //   let rand = n.toString().slice(9,13)
+    //   let obj = {
+    //     name: 'plane'+rand,
+    //     miniboards: plane.miniboards,
+    //     spawnPoints: plane.spawnPoints,
+    //     valid: plane.valid
+    //   }
+    //   addPlaneRequest(obj);
+    //   this.toast('Plane Saved')
+
     this.setState(() => {
       return {
         dungeons
@@ -480,22 +639,48 @@ class MapMakerPage extends React.Component {
       }
     })
   }
-  deleteDungeon = async () => {
-    if(this.state.loadedDungeon){
-      await deleteDungeonRequest(this.state.loadedDungeon.id);
-      this.clearLoadedDungeon();
-      this.loadAllDungeons(); 
-      this.toast('Dungeon Deleted')
+  addNewPlane(){
+    let d = new Date()
+    let n = d.getTime();
+    let rand = n.toString().slice(9,13)
+    console.log('n: ', n, 'rand: ', rand);
+
+    let newPlane = {
+        name: `plane${rand}`,
+        miniboards: [],
+        spawnPoints: null,
+        valid: false
+    }
+    this.setState({
+      loadedPlane: newPlane,
+    })
+    this.renamePlane();
+  }
+  deletePlane = async () => {
+    if(this.state.loadedPlane){
+      await deletePlaneRequest(this.state.loadedPlane.id);
+      this.clearLoadedPlane();
+      this.loadAllPlanes(); 
+      this.toast('Plane Deleted')
     }
   }
-  clearLoadedDungeon(){
+  clearLoadedPlane(){
     let miniboards = []
     for(let i = 0; i < 9; i++){
       miniboards.push([])
     }
     this.setState({
-      loadedDungeon: null,
-      dungeonName: null,
+      loadedPlane: null,
+      miniboards
+    })
+  }
+  resetLoadedPlane(){
+    const plane = this.state.loadedPlane;
+    let miniboards = [];
+    plane.miniboards.forEach((miniboard)=>{
+      miniboards.push(miniboard)
+    })
+    this.setState({
       miniboards
     })
   }
@@ -525,23 +710,23 @@ class MapMakerPage extends React.Component {
     }
   }
   nameFilterClicked = () => {
-    let maps;
+    let boards;
     if(!this.state.nameFilterOn){
     // ^ this is opposite because the sort would happen before the state change toggle
     // alternatively this could have been put inside a setTimeout, but I'd prefer to have 
     // only one setState in this function
-      maps = this.state.maps.sort(function(a,b){
+      boards = this.state.boards.sort(function(a,b){
         return a.name > b.name ? 1 : -1
       })
     } else {
       // filter by id
-      maps = this.state.maps.sort(function(a,b){
+      boards = this.state.boards.sort(function(a,b){
         return a.id > b.id ? 1 : -1
       })
     }
     this.setState((state) => {
       return {
-        maps,
+        boards,
         nameFilterOn: !this.state.nameFilterOn,
         compatibilityMatrix: {
           show: false,
@@ -564,7 +749,7 @@ class MapMakerPage extends React.Component {
     }
   }
   adjacencyFilter(board, index){
-    let matrix = this.props.mapMaker.filterMapAdjacency(board, index, this.state.maps)
+    let matrix = this.props.mapMaker.filterMapAdjacency(board, index, this.state.boards)
     this.setState({
       compatibilityMatrix: matrix
     })
@@ -577,25 +762,25 @@ class MapMakerPage extends React.Component {
     if(this.state.compatibilityMatrix.left.length > 0){
       left = [];
       this.state.compatibilityMatrix.left.forEach((id) => {
-        left.push(this.state.maps.find(e => e.id === id))
+        left.push(this.state.boards.find(e => e.id === id))
       })
     }
     if(this.state.compatibilityMatrix.right.length > 0){
       right = [];
       this.state.compatibilityMatrix.right.forEach((id) => {
-        right.push(this.state.maps.find(e => e.id === id))
+        right.push(this.state.boards.find(e => e.id === id))
       })
     }
     if(this.state.compatibilityMatrix.top.length > 0){
       top = [];
       this.state.compatibilityMatrix.top.forEach((id) => {
-        top.push(this.state.maps.find(e => e.id === id))
+        top.push(this.state.boards.find(e => e.id === id))
       })
     }
     if(this.state.compatibilityMatrix.bot.length > 0){
       bot = [];
       this.state.compatibilityMatrix.bot.forEach((id) => {
-        bot.push(this.state.maps.find(e => e.id === id))
+        bot.push(this.state.boards.find(e => e.id === id))
       })
     }
     const updatedMatrix = {
@@ -687,38 +872,56 @@ class MapMakerPage extends React.Component {
     })
   }
 
-  handleInputChange = (e, inputType) => {
-    switch(inputType){
-      case 'board-name':
+  modalSaveChanges = () => {
+    console.log('modal save changes, modal type:', this.state.modalType, this.state.modalType === ('name board' || 'rename board'));
+    let type = this.state.modalType.split(' ')[1]
+    switch(type){
+      case 'dungeon':
+        const dungeon = this.state.loadedDungeon;
+        dungeon.name = this.state.dungeonNameInput.current.value
         this.setState({
-          boardName: e.target.value
+          loadedDungeon: dungeon,
+          showModal: false
         })
       break;
-      case 'plane-name':
+      case 'plane':
+        const plane = this.state.loadedPlane;
+        plane.name = this.state.planeNameInput.current.value
         this.setState({
-          planeName: e.target.value
+          loadedPlane: plane,
+          showModal: false
+        })
+        setTimeout(()=>{
+          this.writePlane()
         })
       break;
-      case 'dungeon-name':
+      case 'board':
+        console.log('INSIDE');
+        const board = this.state.loadedBoard;
+        board.name = this.state.boardNameInput.current.value
         this.setState({
-          dungeonName: e.target.value
+          loadedBoard: board,
+          showModal: false
+        })
+        setTimeout(()=>{
+          this.writeBoard()
         })
       break;
     }
   }
-  selectDungeon = (e) => {
-    console.log('dungeon selected: ', e);
-    this.loadDungeon(e.id)
-  }
+
   dungeonSelectOnChange = (e) => {
     console.log('d select on change: ', e.target.value);
     const dungeon = this.state.dungeons.find(x=>x.name === e.target.value)
     this.loadDungeon(dungeon.id)
   }
   viewSelectOnChange = (e) => {
+    console.log('yo ', this.state.mainViewSelectVal);
     switch(e.target.value){
       case 'Board View': 
         this.setMainView('board')
+        console.log('pizlaes : ', this.mainViewSelectVal);
+        // this.mainViewSelectVal.current.value = 'Board View'
       break;
       case 'Plane View': 
         this.setMainView('plane')
@@ -728,6 +931,10 @@ class MapMakerPage extends React.Component {
       break;
     }
     console.log('view select on change: ', e.target.value);
+    // setTimeout(()=>{
+    //   this.state.mainViewSelectVal.current.value = 'Board View'
+    //   console.log('cur val:', this.state.mainViewSelectVal.current.value)
+    // }, 3000)
   }
 
   render (){
@@ -736,7 +943,8 @@ class MapMakerPage extends React.Component {
         {this.state.toastMessage && <div className="toast-pane">
           {this.state.toastMessage}
         </div>}
-        <CModal alignment="center" visible={this.state.showModal} onClose={() => {return this.setState((state) => { return {showModal: false}})}}>
+
+        <CModal alignment="center" visible={this.state.showModal} onClose={() => {return this.setState(() => { return {showModal: false}})}}>
           <CModalHeader>
             {this.state.modalType === 'name dungeon' && <CModalTitle>Name this dungeon</CModalTitle>}
             {this.state.modalType === 'rename dungeon' && <CModalTitle>Rename this dungeon</CModalTitle>}
@@ -746,246 +954,20 @@ class MapMakerPage extends React.Component {
             {this.state.modalType === 'rename board' && <CModalTitle>Rename this board</CModalTitle>}
           </CModalHeader>
           <CModalBody>
-            {(this.state.modalType === 'rename dungeon' || this.state.modalType === 'rename dungeon') && <input className="dungeonname-input"  type="text" value={this.state.dungeonName || ''} placeholder={this.state.dungeonName || ''} onChange={(e) => {this.handleInputChange(e, 'dungeon-name')}}/>}
-            
-            {(this.state.modalType === 'rename board' || this.state.modalType === 'rename board') && <input className="dungeonname-input"  type="text" value={this.state.boardName || ''} placeholder={this.state.boardName || ''} onChange={(e) => {this.handleInputChange(e, 'board-name')}}/>}
+            {(this.state.modalType === 'name dungeon' || this.state.modalType === 'rename dungeon') && <input ref={this.state.dungeonNameInput} className="dungeonname-input"  type="text" defaultValue={this.state.loadedDungeon?.name || ''} placeholder={this.state.loadedDungeon?.name || ''}/>}
+            {(this.state.modalType === 'name plane' || this.state.modalType === 'rename plane') && <input ref={this.state.planeNameInput} className="dungeonname-input"  type="text" defaultValue={this.state.loadedPlane?.name || ''} placeholder={this.state.loadedPlane?.name || ''}/>}
+            {(this.state.modalType === 'name board' || this.state.modalType === 'rename board') && <input ref={this.state.boardNameInput} className="dungeonname-input"  type="text" defaultValue={this.state.loadedBoard?.name || ''} placeholder={this.state.loadedBoard?.name || ''}/>}
           </CModalBody>
           <CModalFooter>
-            <CButton color="secondary" onClick={() => {return this.setState((state) => { return {showModal: false}})}}>
+            <CButton color="secondary" onClick={() => {return this.setState(() => { return {showModal: false}})}}>
               Close
             </CButton>
-            <CButton color="primary">Save changes</CButton>
+            <CButton color="primary" onClick={() => this.modalSaveChanges()}>Save changes</CButton>
           </CModalFooter>
         </CModal>
-        <div 
-          className="palette boards-palette" 
-          style={{
-            width: this.state.tileSize*3+'px', height: this.state.boardSize+ 'px',
-            backgroundColor: 'white',
-            // marginRight: '25px'
-          }}
-        > 
-          <div className="boards-title">Boards</div>
-          <div className="board-options-buttons-container" 
-          style={{
-            width: this.state.tileSize*3+'px',
-            // height: this.state.tileSize*2
-            height: '38px'
-          }}
-          >
-            <CDropdown>
-              <CDropdownToggle color="secondary">Board Actions</CDropdownToggle>
-              <CDropdownMenu>
-                <CDropdownItem onClick={() => this.clearLoadedBoard()}>Clear</CDropdownItem>
-                <CDropdownItem onClick={() => this.writeBoard()}>Save</CDropdownItem>
-                <CDropdownItem onClick={() => this.deleteBoard()}>Delete</CDropdownItem>
-                <CDropdownItem disabled={!this.state.loadedBoard} onClick={() => this.renameMap()}>Rename Current Map</CDropdownItem>
-                <CDropdownItem onClick={() => this.adjacencyFilterClicked()}>Filter: Adjacency</CDropdownItem>
-                <CDropdownItem onClick={() => this.nameFilterClicked()}>Filter: Name</CDropdownItem>
-              </CDropdownMenu>
-            </CDropdown>
-          </div>
-          <div className="board-previews-container previews-container">
-            {this.state.maps && this.state.compatibilityMatrix.show === false && this.state.maps.map((map, i) => {
-              return (<div 
-                        key={i}
-                      >
-                        <div 
-                          className="map-preview draggable" 
-                          
-                          style={{
-                            height: this.state.tileSize*3,
-                            boxSizing: 'border-box'
-                          }}
-                          onClick={() => {
-                            if(this.state.selectedView === 'board'){
-                              return this.loadMap(map.id)
-                            }
-                          }}
-                          onDragStart = {(event) => this.onDragStart(event, map)}
-                          draggable
-                        >
-                        {map.tiles.map((tile, i) => {
-                          return    <Tile 
-                                    key={i}
-                                    id={tile.id}
-                                    tileSize={(this.state.tileSize*3)/15}
-                                    image={tile.image ? tile.image : null}
-                                    color={tile.color ? tile.color : 'lightgrey'}
-                                    index={tile.id}
-                                    showCoordinates={false}
-                                    type={tile.type}
-                                    hovered={
-                                      false
-                                    }
-                                    >
-                                    </Tile>
-                                  
-                        })}
-                        </div>
-                        <div className="map-title">{map.name}</div>
-                    </div>)
-            })}
-            {this.state.compatibilityMatrix && this.state.compatibilityMatrix.show === true && 
-             <div className="compatibility-matrix-container">
-               {this.state.compatibilityMatrix.left.length > 0 && <div className="left">
-                 <span onClick={() => {return this.collapseFilterHeader('left')}} className="adjacency-filter-header">LEFT</span> 
-                 {this.state.compatibilityMatrix.showLeft && this.state.compatibilityMatrix.left.map((map,i)=>{
-                   return (<div 
-                    key={i}
-                    >
-                    <div 
-                      className="map-preview draggable" 
-                      
-                      style={{
-                        height: this.state.tileSize*3,
-                        boxSizing: 'border-box'
-                      }}
-                      onClick={() => {return this.loadMap(map.id)}}
-                      onDragStart = {(event) => this.onDragStart(event, map)}
-                      draggable
-                    >
-                      {map.tiles.map((tile, i) => {
-                        return    <Tile 
-                                  key={i}
-                                  id={tile.id}
-                                  tileSize={(this.state.tileSize*3)/15}
-                                  image={tile.image ? tile.image : null}
-                                  color={tile.color ? tile.color : 'lightgrey'}
-                                  index={tile.id}
-                                  showCoordinates={false}
-                                  type={tile.type}
-                                  hovered={
-                                    false
-                                  }
-                                  >
-                                  </Tile>
-                      })}
-                      </div>
-                      <div className="map-title">{map.name}</div>
-                    </div>)
-                 })}
-                 </div>}
-               {this.state.compatibilityMatrix.right.length > 0 && 
-               <div className="right">
-                <span onClick={() => {return this.collapseFilterHeader('right')}} className="adjacency-filter-header">RIGHT</span> 
-                  {this.state.compatibilityMatrix.showRight && this.state.compatibilityMatrix.right.map((map,i)=>{
-                   return (<div 
-                    key={i}
-                    >
-                    <div 
-                      className="map-preview draggable" 
-                      style={{
-                        height: this.state.tileSize*3,
-                        boxSizing: 'border-box'
-                      }}
-                      onClick={() => {return this.loadMap(map.id)}}
-                      onDragStart = {(event) => this.onDragStart(event, map)}
-                      draggable
-                    >
-                      {map.tiles.map((tile, i) => {
-                        return    <Tile 
-                                  key={i}
-                                  id={tile.id}
-                                  tileSize={(this.state.tileSize*3)/15}
-                                  image={tile.image ? tile.image : null}
-                                  color={tile.color ? tile.color : 'lightgrey'}
-                                  index={tile.id}
-                                  showCoordinates={false}
-                                  type={tile.type}
-                                  hovered={
-                                    false
-                                  }
-                                  >
-                                  </Tile>
-                      })}
-                      </div>
-                      <div className="map-title">{map.name}</div>
-                    </div>)
-                 })}
-              </div>}
-               {this.state.compatibilityMatrix.top.length > 0 && <div className="top">
-               <span onClick={() => {return this.collapseFilterHeader('top')}} className="adjacency-filter-header">TOP</span> 
-                 {this.state.compatibilityMatrix.showTop && this.state.compatibilityMatrix.top.map((map,i)=>{
-                   return (<div 
-                    key={i}
-                    >
-                    <div 
-                      className="map-preview draggable" 
-                      
-                      style={{
-                        height: this.state.tileSize*3,
-                        boxSizing: 'border-box'
-                      }}
-                      onClick={() => {return this.loadMap(map.id)}}
-                      onDragStart = {(event) => this.onDragStart(event, map)}
-                      draggable
-                    >
-                      {map.tiles.map((tile, i) => {
-                        return    <Tile 
-                                  key={i}
-                                  id={tile.id}
-                                  tileSize={(this.state.tileSize*3)/15}
-                                  image={tile.image ? tile.image : null}
-                                  color={tile.color ? tile.color : 'lightgrey'}
-                                  index={tile.id}
-                                  showCoordinates={false}
-                                  type={tile.type}
-                                  hovered={
-                                    false
-                                  }
-                                  >
-                                  </Tile>
-                      })}
-                      </div>
-                      <div className="map-title">{map.name}</div>
-                    </div>)
-                 })}
-               </div>}
-               {this.state.compatibilityMatrix.bot.length > 0 && <div className="bot">
-               <span onClick={() => {return this.collapseFilterHeader('bot')}} className="adjacency-filter-header">BOT</span> 
-                 {this.state.compatibilityMatrix.showBot && this.state.compatibilityMatrix.bot.map((map,i)=>{
-                   return (<div 
-                    key={i}
-                    >
-                    <div 
-                      className="map-preview draggable" 
-                      
-                      style={{
-                        height: this.state.tileSize*3,
-                        boxSizing: 'border-box'
-                      }}
-                      onClick={() => {return this.loadMap(map.id)}}
-                      onDragStart = {(event) => this.onDragStart(event, map)}
-                      draggable
-                    >
-                      {map.tiles.map((tile, i) => {
-                        return    <Tile 
-                                  key={i}
-                                  id={tile.id}
-                                  tileSize={(this.state.tileSize*3)/15}
-                                  image={tile.image ? tile.image : null}
-                                  color={tile.color ? tile.color : 'lightgrey'}
-                                  index={tile.id}
-                                  showCoordinates={false}
-                                  type={tile.type}
-                                  hovered={
-                                    false
-                                  }
-                                  >
-                                  </Tile>
-                      })}
-                      </div>
-                      <div className="map-title">{map.name}</div>
-                    </div>)
-                 })}
-              </div>}
-            </div>
-            }
-          </div>
-        </div>
-        <div className="center-board-container">
+        <div className="column-wrapper">
           <div className="inputs-container">
+            <CButton color="light" onClick={() => this.createNewDungeon()}>New</CButton>
             <CFormSelect 
               aria-label="Dungeon Selector"
               options={
@@ -996,28 +978,9 @@ class MapMakerPage extends React.Component {
               }
               onChange={this.dungeonSelectOnChange}
             />
-            {/* <CDropdown className='dungeon-selector'>
-              <CDropdownToggle color="secondary">Dungeon Selector</CDropdownToggle>
-              <CDropdownMenu>
-                {this.state.dungeons && this.state.dungeons.map((e, i)=>{
-                  return <CDropdownItem key={i} onClick={() => this.selectDungeon(e)}>{e.name}</CDropdownItem>
-                })}
-              </CDropdownMenu>
-            </CDropdown> */}
-
-            {/* {this.state.selectedView === 'board' && <input className="boardname-input"  type="text" value={this.state.boardName} placeholder={this.state.boardName} autoComplete="none" onChange={(e) => {this.handleInputChange(e, 'board-name')}} />} */}
-            {/* {this.state.selectedView === 'plane' && <input className="dungeonname-input"  type="text" value={this.state.dungeonName || ''} placeholder={this.state.dungeonName || ''} onChange={(e) => {this.handleInputChange(e, 'dungeon-name')}}/>} */}
-
-            {/* <CDropdown className='view-selector'>
-              <CDropdownToggle color="secondary">View Selector</CDropdownToggle>
-              <CDropdownMenu>
-                <CDropdownItem onClick={() => this.setMainView('board')}>Board View</CDropdownItem>
-                <CDropdownItem onClick={() => this.setMainView('plane')}>Plane View</CDropdownItem>
-                <CDropdownItem onClick={() => this.setMainView('dungeon')}>Dungeon View</CDropdownItem>
-              </CDropdownMenu>
-            </CDropdown> */}
             <CFormSelect 
               aria-label="Dungeon Selector"
+              ref={this.state.mainViewSelectVal}
               options={
                 [
                   'View Selector',
@@ -1029,232 +992,530 @@ class MapMakerPage extends React.Component {
                 //   return { label: e.name, value: e.name}
                 // }))
               }
+              // value={this.state.mainViewSelectVal}
               onChange={this.viewSelectOnChange}
             />
 
             <CDropdown className='dungeon-actions-selector'>
               <CDropdownToggle color="secondary">Dungeon Actions</CDropdownToggle>
               <CDropdownMenu>
+              <CDropdownItem onClick={() => this.saveDungeon()}>Save Dungeon</CDropdownItem>
                 <CDropdownItem onClick={() => this.renameDungeon()}>Rename Dungeon</CDropdownItem>
                 <CDropdownItem onClick={() => this.downloadDungeon()}>Download Dungeon</CDropdownItem>
               </CDropdownMenu>
             </CDropdown>
           </div>
-          <div 
-          className="board map-board" 
-          style={{
-              width: this.state.boardSize+'px', height: this.state.boardSize+ 'px',
-              backgroundColor: 'white'
-          }}
-          onMouseLeave={() => {return this.setHover(null)}}
-          >
-              {this.state.selectedView === 'board' && this.state.tiles && this.state.tiles.map((tile, i) => {
-                  return <Tile 
-                  key={i}
-                  id={tile.id}
-                  index={tile.id}
-                  tileSize={this.state.tileSize}
-                  image={tile.image ? tile.image : null}
-                  color={tile.color ? tile.color : 'lightgrey'}
-                  coordinates={tile.coordinates}
-                  showCoordinates={this.props.showCoordinates}
-                  editMode={true}
-                  handleHover={this.handleHover}
-                  handleClick={this.handleClick}
-                  type={tile.type}
-                  hovered={
-                    this.state.hoveredTileIdx === tile.id ?
-                    true :
-                    false
-                  }
-                  >
-                  </Tile>
-              })}
-
-              {this.state.selectedView === 'plane' && 
-                <div className="mini-boards-container">
-                  {this.state.miniboards && this.state.miniboards.map((board, i) => {
-                        return  <div 
-                                className="mini-board board" 
-                                key={i}
-                                style={{
-                                  height: (this.state.tileSize*15)/3-2+'px',
-                                  width: (this.state.tileSize*15)/3-2+'px',
-                                  backgroundColor: 
-                                  this.state.hoveredSection === i ? 'lightgoldenrodyellow': 
-                                  (this.state.adjacencyHoverIdx === i ? 'lightgreen' : 'white')
-                                }}
-                                onDragOver={(event)=>this.onDragOver(event, i)}
-                                onDrop={(event)=>{this.onDrop(event, i)}}
-                                onMouseOver= {() => {
-                                  this.adjacencyHover(i)
-                                }}
-                                onClick={() => {
-                                  if(this.state.adjacencyHoverIdx === i && board.tiles){
-                                    this.adjacencyFilter(board, i)
-                                  }
-                                }}
-                                >
-                                  {board.tiles && board.tiles.map((tile, i) => {
-                                    return <Tile
-                                    key={i}
-                                    id={i}
-                                    tileSize={((this.state.tileSize*15)/3-2)/15}
-                                    image={tile.image ? tile.image : null}
-                                    color={tile.color ? tile.color : 'apricot'}
-                                    coordinates={tile.coordinates}
-                                    index={tile.id}
-                                    showCoordinates={false}
-                                    editMode={true}
-                                    handleHover={null}
-                                    handleClick={null}
-                                    type={tile.type}
-                                    hovered={
-                                      false
-                                    }
-                                    />
-                                  })}
-                                </div>
-                  })}
+          <div className="row-wrapper">
+            <div className="palette boards-palette" 
+              style={{
+                width: this.state.tileSize*3+'px', height: this.state.boardSize+ 'px',
+                backgroundColor: 'white'
+              }}
+            > 
+              <div className="boards-title" onClick={() => { 
+                console.log('washo : ', this.mainViewSelectVal);
+                // this.mainViewSelectVal.current.value = 'Board View' 
+                this.state.mainViewSelectVal.current.value = 'Board View'
+                return this.setState({selectedView: 'board'})}
+            }>Boards</div>
+              <div className="board-options-buttons-container" 
+              style={{
+                width: this.state.tileSize*3+'px',
+                // height: this.state.tileSize*2
+                height: '38px'
+              }}
+              >
+                <CDropdown>
+                  <CDropdownToggle color="secondary">Actions</CDropdownToggle>
+                  <CDropdownMenu>
+                    <CDropdownItem onClick={() => this.clearLoadedBoard()}>Clear</CDropdownItem>
+                    <CDropdownItem onClick={() => this.writeBoard()}>Save</CDropdownItem>
+                    <CDropdownItem onClick={() => this.deleteBoard()}>Delete</CDropdownItem>
+                    <CDropdownItem disabled={!this.state.loadedBoard} onClick={() => this.renameBoard()}>Rename Current Map</CDropdownItem>
+                    <CDropdownItem onClick={() => this.adjacencyFilterClicked()}>Filter: Adjacency</CDropdownItem>
+                    <CDropdownItem onClick={() => this.nameFilterClicked()}>Filter: Name</CDropdownItem>
+                  </CDropdownMenu>
+                </CDropdown>
+              </div>
+              <div className="board-previews-container previews-container" 
+                  style={{
+                height: (this.state.boardSize - 78)+ 'px'
+              }}>
+                {/* <span onClick={() => {return this.collapseFilterHeader('right')}} className="adjacency-filter-header">RIGHT</span> */}
+                {this.state.boardsFolders.length > 0 && this.state.boardsFolders.map((folder, i) => {
+                  return  <div key={i}>
+                            {/* <CButton onClick={() => setVisible(!visible)}>Button</CButton> */}
+                            <div className="boards-folder-headline"  onClick={() => this.setState(() => { return {visible: !this.state.visible}})}> 
+                            <div className="icon-container">
+                              <CIcon icon={cilCaretRight} className={`expand-icon ${this.state.visible ? 'expanded' : ''}`} size="xl"/>
+                            </div>
+                              <div className="folder-headline-text">{folder.title}</div> 
+                            </div>
+                            <CCollapse visible={this.state.visible}>
+                                {folder.contents.map((board, i) => {
+                                  return (<div 
+                                            key={i}
+                                          >
+                                            <div 
+                                              className="map-preview draggable" 
+                                              
+                                              style={{
+                                                height: this.state.tileSize*3,
+                                                boxSizing: 'border-box'
+                                              }}
+                                              onClick={() => {
+                                                if(this.state.selectedView === 'board'){
+                                                  return this.loadBoard(board)
+                                                }
+                                              }}
+                                              onDragStart = {(event) => this.onDragStart(event, board)}
+                                              draggable
+                                            >
+                                            {board.tiles.map((tile, i) => {
+                                              return    <Tile 
+                                                        key={i}
+                                                        id={tile.id}
+                                                        tileSize={(this.state.tileSize*3)/15}
+                                                        image={tile.image ? tile.image : null}
+                                                        color={tile.color ? tile.color : 'lightgrey'}
+                                                        index={tile.id}
+                                                        showCoordinates={false}
+                                                        type={tile.type}
+                                                        hovered={
+                                                          false
+                                                        }
+                                                        >
+                                                        </Tile>
+                                                      
+                                            })}
+                                            </div>
+                                            <div className="map-title">{board.name}</div>
+                                        </div>)
+                                })}
+                            </CCollapse>
+                          </div>
+                })}
+                {this.state.boards && this.state.compatibilityMatrix.show === false && this.state.boards.map((board, i) => {
+                  return (<div 
+                            key={i}
+                          >
+                            <div 
+                              className="map-preview draggable" 
+                              
+                              style={{
+                                height: this.state.tileSize*3,
+                                boxSizing: 'border-box'
+                              }}
+                              onClick={() => {
+                                if(this.state.selectedView === 'board'){
+                                  return this.loadBoard(board)
+                                }
+                              }}
+                              onDragStart = {(event) => this.onDragStart(event, board)}
+                              draggable
+                            >
+                            {board.tiles.map((tile, i) => {
+                              return    <Tile 
+                                        key={i}
+                                        id={tile.id}
+                                        tileSize={(this.state.tileSize*3)/15}
+                                        image={tile.image ? tile.image : null}
+                                        color={tile.color ? tile.color : 'lightgrey'}
+                                        index={tile.id}
+                                        showCoordinates={false}
+                                        type={tile.type}
+                                        hovered={
+                                          false
+                                        }
+                                        >
+                                        </Tile>
+                                      
+                            })}
+                            </div>
+                            <div className="map-title">{board.name}</div>
+                        </div>)
+                })}
+                {this.state.compatibilityMatrix && this.state.compatibilityMatrix.show === true && 
+                <div className="compatibility-matrix-container">
+                  {this.state.compatibilityMatrix.left.length > 0 && <div className="left">
+                    <span onClick={() => {return this.collapseFilterHeader('left')}} className="adjacency-filter-header">LEFT</span> 
+                    {this.state.compatibilityMatrix.showLeft && this.state.compatibilityMatrix.left.map((board,i)=>{
+                      return (<div 
+                        key={i}
+                        >
+                        <div 
+                          className="map-preview draggable" 
+                          
+                          style={{
+                            height: this.state.tileSize*3,
+                            boxSizing: 'border-box'
+                          }}
+                          onClick={() => {return this.loadBoard(board)}}
+                          onDragStart = {(event) => this.onDragStart(event, board)}
+                          draggable
+                        >
+                          {board.tiles.map((tile, i) => {
+                            return    <Tile 
+                                      key={i}
+                                      id={tile.id}
+                                      tileSize={(this.state.tileSize*3)/15}
+                                      image={tile.image ? tile.image : null}
+                                      color={tile.color ? tile.color : 'lightgrey'}
+                                      index={tile.id}
+                                      showCoordinates={false}
+                                      type={tile.type}
+                                      hovered={
+                                        false
+                                      }
+                                      >
+                                      </Tile>
+                          })}
+                          </div>
+                          <div className="map-title">{board.name}</div>
+                        </div>)
+                    })}
+                    </div>}
+                  {this.state.compatibilityMatrix.right.length > 0 && 
+                  <div className="right">
+                    <span onClick={() => {return this.collapseFilterHeader('right')}} className="adjacency-filter-header">RIGHT</span> 
+                      {this.state.compatibilityMatrix.showRight && this.state.compatibilityMatrix.right.map((board,i)=>{
+                      return (<div 
+                        key={i}
+                        >
+                        <div 
+                          className="map-preview draggable" 
+                          style={{
+                            height: this.state.tileSize*3,
+                            boxSizing: 'border-box'
+                          }}
+                          onClick={() => {return this.loadBoard(board)}}
+                          onDragStart = {(event) => this.onDragStart(event, board)}
+                          draggable
+                        >
+                          {board.tiles.map((tile, i) => {
+                            return    <Tile 
+                                      key={i}
+                                      id={tile.id}
+                                      tileSize={(this.state.tileSize*3)/15}
+                                      image={tile.image ? tile.image : null}
+                                      color={tile.color ? tile.color : 'lightgrey'}
+                                      index={tile.id}
+                                      showCoordinates={false}
+                                      type={tile.type}
+                                      hovered={
+                                        false
+                                      }
+                                      >
+                                      </Tile>
+                          })}
+                          </div>
+                          <div className="map-title">{board.name}</div>
+                        </div>)
+                    })}
+                  </div>}
+                  {this.state.compatibilityMatrix.top.length > 0 && <div className="top">
+                  <span onClick={() => {return this.collapseFilterHeader('top')}} className="adjacency-filter-header">TOP</span> 
+                    {this.state.compatibilityMatrix.showTop && this.state.compatibilityMatrix.top.map((board,i)=>{
+                      return (<div 
+                        key={i}
+                        >
+                        <div 
+                          className="map-preview draggable" 
+                          
+                          style={{
+                            height: this.state.tileSize*3,
+                            boxSizing: 'border-box'
+                          }}
+                          onClick={() => {return this.loadBoard(board)}}
+                          onDragStart = {(event) => this.onDragStart(event, board)}
+                          draggable
+                        >
+                          {board.tiles.map((tile, i) => {
+                            return    <Tile 
+                                      key={i}
+                                      id={tile.id}
+                                      tileSize={(this.state.tileSize*3)/15}
+                                      image={tile.image ? tile.image : null}
+                                      color={tile.color ? tile.color : 'lightgrey'}
+                                      index={tile.id}
+                                      showCoordinates={false}
+                                      type={tile.type}
+                                      hovered={
+                                        false
+                                      }
+                                      >
+                                      </Tile>
+                          })}
+                          </div>
+                          <div className="map-title">{board.name}</div>
+                        </div>)
+                    })}
+                  </div>}
+                  {this.state.compatibilityMatrix.bot.length > 0 && <div className="bot">
+                  <span onClick={() => {return this.collapseFilterHeader('bot')}} className="adjacency-filter-header">BOT</span> 
+                    {this.state.compatibilityMatrix.showBot && this.state.compatibilityMatrix.bot.map((board,i)=>{
+                      return (<div 
+                        key={i}
+                        >
+                        <div 
+                          className="map-preview draggable" 
+                          
+                          style={{
+                            height: this.state.tileSize*3,
+                            boxSizing: 'border-box'
+                          }}
+                          onClick={() => {return this.loadBoard(board)}}
+                          onDragStart = {(event) => this.onDragStart(event, board)}
+                          draggable
+                        >
+                          {board.tiles.map((tile, i) => {
+                            return    <Tile 
+                                      key={i}
+                                      id={tile.id}
+                                      tileSize={(this.state.tileSize*3)/15}
+                                      image={tile.image ? tile.image : null}
+                                      color={tile.color ? tile.color : 'lightgrey'}
+                                      index={tile.id}
+                                      showCoordinates={false}
+                                      type={tile.type}
+                                      hovered={
+                                        false
+                                      }
+                                      >
+                                      </Tile>
+                          })}
+                          </div>
+                          <div className="map-title">{board.name}</div>
+                        </div>)
+                    })}
+                  </div>}
                 </div>
-              }
-                
-          </div>
-        </div>
-        <div className="palette right-palette" 
-            style={{
-              width: this.state.tileSize*3+'px', height: this.state.boardSize+ 'px',
-              backgroundColor: 'white',
-              // marginLeft: '25px'
-            }}
-            onMouseLeave={() => {
-              if(this.state.optionClickedIdx === null){
-                return this.setPaletteHover(null)
-              }
-            }}
-            >
-              {/* // the following is for board view only */}
-              {this.state.selectedView === 'board' && this.props.mapMaker.paletteTiles && this.props.mapMaker.paletteTiles.map((tile, i) => {
-                return (
-                  <div key={i} className="palette-options-pane">
-                    <div className="palette-option-container"
-                      style={{
-                        backgroundImage: this.state.optionClickedIdx === i ? 'linear-gradient(90deg, transparent, black)' : 'none'
-                      }}
-                      onMouseOver={() => this.setPaletteHover(i)}
-                      onClick={() => {
-                        this.handleClick({
-                          type: 'palette-tile',
-                          id: i
-                        })
-                      }}
-                    >
-                      <Tile 
+                }
+              </div>
+            </div>
+            <div className="center-board-container">
+              <div 
+              className="board map-board" 
+              style={{
+                  width: this.state.boardSize+'px', height: this.state.boardSize+ 'px',
+                  backgroundColor: 'white'
+              }}
+              onMouseLeave={() => {return this.setHover(null)}}
+              >
+                  {this.state.selectedView === 'board' && this.state.tiles && this.state.tiles.map((tile, i) => {
+                      return <Tile 
+                      key={i}
                       id={tile.id}
+                      index={tile.id}
                       tileSize={this.state.tileSize}
                       image={tile.image ? tile.image : null}
-                      color={tile.color ? tile.color : 'apricot'}
+                      color={tile.color ? tile.color : 'lightgrey'}
                       coordinates={tile.coordinates}
-                      index={tile.id}
-                      showCoordinates={false}
+                      showCoordinates={this.props.showCoordinates}
                       editMode={true}
-                      handleHover={null}
-                      handleClick={null}
+                      handleHover={this.handleHover}
+                      handleClick={this.handleClick}
                       type={tile.type}
                       hovered={
-                        this.state.hoveredPaletteTileIdx === tile.id ?
+                        this.state.hoveredTileIdx === tile.id ?
                         true :
                         false
                       }
                       >
                       </Tile>
-                      <div className={`
-                        text-container
-                        ${this.state.hoveredPaletteTileIdx === tile.id ? 'hovered' : ''}
-                        ${this.state.pinnedOption === tile.id ? 'pinned' : ''}
-                        `
-                        }>
-                        <span
-                        style={{
-                          color: this.state.optionClickedIdx === i ? 'white' : 'black'
-                        }}
-                        >{tile.optionType}</span>
-                      </div>
+                  })}
+
+                  {this.state.selectedView === 'plane' && 
+                    <div className="mini-boards-container">
+                      {this.state.miniboards && this.state.miniboards.map((board, i) => {
+                            return  <div 
+                                    className="mini-board board" 
+                                    key={i}
+                                    style={{
+                                      height: (this.state.tileSize*15)/3-2+'px',
+                                      width: (this.state.tileSize*15)/3-2+'px',
+                                      backgroundColor: 
+                                      this.state.hoveredSection === i ? 'lightgoldenrodyellow': 
+                                      (this.state.adjacencyHoverIdx === i ? 'lightgreen' : 'white')
+                                    }}
+                                    onDragOver={(event)=>this.onDragOver(event, i)}
+                                    onDrop={(event)=>{this.onDrop(event, i)}}
+                                    onMouseOver= {() => {
+                                      this.adjacencyHover(i)
+                                    }}
+                                    onClick={() => {
+                                      if(this.state.adjacencyHoverIdx === i && board.tiles){
+                                        this.adjacencyFilter(board, i)
+                                      }
+                                    }}
+                                    >
+                                      {board.tiles && board.tiles.map((tile, i) => {
+                                        return <Tile
+                                        key={i}
+                                        id={i}
+                                        tileSize={((this.state.tileSize*15)/3-2)/15}
+                                        image={tile.image ? tile.image : null}
+                                        color={tile.color ? tile.color : 'apricot'}
+                                        coordinates={tile.coordinates}
+                                        index={tile.id}
+                                        showCoordinates={false}
+                                        editMode={true}
+                                        handleHover={null}
+                                        handleClick={null}
+                                        type={tile.type}
+                                        hovered={
+                                          false
+                                        }
+                                        />
+                                      })}
+                                    </div>
+                      })}
                     </div>
-                  </div>
-                )
-            })}
-            {this.state.selectedView !== 'board' && <div className="planes-title">Planes</div>}
-            {this.state.selectedView !== 'board' && <div className="planes-options-buttons-container" 
-            style={{
-              width: this.state.tileSize*3+'px',
-              // height: this.state.tileSize*2
-            }}
-            >
-              <CDropdown>
-                <CDropdownToggle color="secondary">Plane Actions</CDropdownToggle>
-                <CDropdownMenu>
-                  <CDropdownItem onClick={() => this.clearLoadedDungeon()}>Clear</CDropdownItem>
-                  <CDropdownItem onClick={() => this.writeDungeon()}>Save</CDropdownItem>
-                  <CDropdownItem onClick={() => this.deleteDungeon()}>Delete</CDropdownItem>
-                  <CDropdownItem onClick={() => this.filterDungeonsClicked()}>Filter</CDropdownItem>
-                </CDropdownMenu>
-              </CDropdown>
-            </div>}
-            {this.state.selectedView === 'plane' && 
-              <div className="plane-previews-container previews-container">
-                {this.state.dungeons && this.state.dungeons.map((dungeon, i) => {
-                  return (<div 
-                            className='plane-previews-container'
-                            key={i}
-                          >
-                            <div 
-                              className="dungeon-preview" 
-                              style={{
-                                height: this.state.tileSize*3,
-                                width: this.state.tileSize*3,
-                                boxSizing: 'border-box'
-                              }}
-                              onClick={() => {
-                                  return this.loadDungeon(dungeon.id)
-                              }}
-                            >
-                              {dungeon.miniboards.map((board, i) => {
-                                return    <div 
-                                          className="micro-board board" 
-                                          key={i}
-                                          style={{
-                                            height: (this.state.tileSize*3)/3-2+'px',
-                                            width: (this.state.tileSize*3)/3-2+'px'
-                                          }}
-                                          > 
-                                            {board.tiles && board.tiles.map((tile, i) => {
-                                              return <Tile
-                                              key={i}
-                                              id={i}
-                                              tileSize={((this.state.tileSize*3)/3-2)/15}
-                                              image={tile.image ? tile.image : null}
-                                              color={tile.color ? tile.color : 'apricot'}
-                                              coordinates={tile.coordinates}
-                                              index={tile.id}
-                                              showCoordinates={false}
-                                              editMode={true}
-                                              handleHover={null}
-                                              handleClick={null}
-                                              type={tile.type}
-                                              hovered={
-                                                false
-                                              }
-                                              />
-                                            })}
-                                          </div>
-                              })}
-                            </div>
-                            <div className="map-title"> <span className={`validity-indicator ${dungeon.valid && 'valid'}`}></span>  {dungeon.name}</div>
-                        </div>)
-                })}
+                  }
+                    
               </div>
-            }
+            </div>
+            <div className="palette right-palette" 
+                style={{
+                  width: this.state.tileSize*3+'px', height: this.state.boardSize+ 'px',
+                  backgroundColor: 'white',
+                  overflow: 'scroll'
+                  // marginLeft: '25px'
+                }}
+                onMouseLeave={() => {
+                  if(this.state.optionClickedIdx === null){
+                    return this.setPaletteHover(null)
+                  }
+                }}
+                >
+                  {this.state.selectedView === 'board' && this.props.mapMaker.paletteTiles && this.props.mapMaker.paletteTiles.map((tile, i) => {
+                    return (
+                      <div key={i} className="palette-options-pane">
+                        <div className="palette-option-container"
+                          style={{
+                            backgroundImage: this.state.optionClickedIdx === i ? 'linear-gradient(90deg, transparent, black)' : 'none'
+                          }}
+                          onMouseOver={() => this.setPaletteHover(i)}
+                          onClick={() => {
+                            this.handleClick({
+                              type: 'palette-tile',
+                              id: i
+                            })
+                          }}
+                        >
+                          <Tile 
+                          id={tile.id}
+                          tileSize={this.state.tileSize}
+                          image={tile.image ? tile.image : null}
+                          color={tile.color ? tile.color : 'apricot'}
+                          coordinates={tile.coordinates}
+                          index={tile.id}
+                          showCoordinates={false}
+                          editMode={true}
+                          handleHover={null}
+                          handleClick={null}
+                          type={tile.type}
+                          hovered={
+                            this.state.hoveredPaletteTileIdx === tile.id ?
+                            true :
+                            false
+                          }
+                          >
+                          </Tile>
+                          <div className={`
+                            text-container
+                            ${this.state.hoveredPaletteTileIdx === tile.id ? 'hovered' : ''}
+                            ${this.state.pinnedOption === tile.id ? 'pinned' : ''}
+                            `
+                            }>
+                            <span
+                            style={{
+                              color: this.state.optionClickedIdx === i ? 'white' : 'black'
+                            }}
+                            >{tile.optionType}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                })}
+                {this.state.selectedView !== 'board' && <div className="planes-title">Planes</div>}
+                {this.state.selectedView !== 'board' && <div className="planes-options-buttons-container" 
+                style={{
+                  width: this.state.tileSize*3+'px',
+                  // height: this.state.tileSize*2
+                }}
+                >
+                  <CDropdown>
+                    <CDropdownToggle color="secondary">Actions</CDropdownToggle>
+                    <CDropdownMenu>
+                      <CDropdownItem onClick={() => this.addNewPlane()}>New</CDropdownItem>
+                      <CDropdownItem onClick={() => this.clearLoadedPlane()}>Clear</CDropdownItem>
+                      <CDropdownItem onClick={() => this.resetLoadedPlane()}>Reset</CDropdownItem>
+                      <CDropdownItem onClick={() => this.writePlane()}>Save</CDropdownItem>
+                      <CDropdownItem onClick={() => this.renamePlane()}>Rename</CDropdownItem>
+                      <CDropdownItem onClick={() => this.deletePlane()}>Delete</CDropdownItem>
+                      <CDropdownItem onClick={() => this.filterDungeonsClicked()}>Filter</CDropdownItem>
+                    </CDropdownMenu>
+                  </CDropdown>
+                </div>}
+                {this.state.selectedView !== 'board' && 
+                  <div className="plane-previews-container previews-container"
+                      style={{
+                        height: (this.state.boardSize - 78)+ 'px'
+                      }}
+                  >
+                    {this.state.planes && this.state.planes.map((plane, i) => {
+                      return (<div 
+                                className='plane-previews-container'
+                                key={i}
+                              >
+                                <div 
+                                  className="plane-preview" 
+                                  style={{
+                                    height: this.state.tileSize*3,
+                                    width: this.state.tileSize*3,
+                                    boxSizing: 'border-box'
+                                  }}
+                                  onClick={() => this.loadPlane(plane)}
+                                >
+                                  {plane.miniboards.map((board, i) => {
+                                    return    <div 
+                                              className="micro-board board" 
+                                              key={i}
+                                              style={{
+                                                height: (this.state.tileSize*3)/3-2+'px',
+                                                width: (this.state.tileSize*3)/3-2+'px'
+                                              }}
+                                              > 
+                                                {board.tiles && board.tiles.map((tile, i) => {
+                                                  return <Tile
+                                                  key={i}
+                                                  id={i}
+                                                  tileSize={((this.state.tileSize*3)/3-2)/15}
+                                                  image={tile.image ? tile.image : null}
+                                                  color={tile.color ? tile.color : 'apricot'}
+                                                  coordinates={tile.coordinates}
+                                                  index={tile.id}
+                                                  showCoordinates={false}
+                                                  editMode={true}
+                                                  handleHover={null}
+                                                  handleClick={null}
+                                                  type={tile.type}
+                                                  hovered={
+                                                    false
+                                                  }
+                                                  />
+                                                })}
+                                              </div>
+                                  })}
+                                </div>
+                                <div className="map-title"> <span className={`validity-indicator ${plane.valid && 'valid'}`}></span>  {plane.name}</div>
+                            </div>)
+                    })}
+                  </div>
+                }
+            </div>
+          </div>
         </div>
       </div>
     )

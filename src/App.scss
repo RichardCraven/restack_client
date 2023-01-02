@@ -40,31 +40,36 @@ button{
   display: flex;
   align-items: center;
   justify-content: center;
-  .menu-buttons{
-    z-index: 1000;
+  flex-direction: column;
+  .nav-buttons-container{
+    width: 100%;
+    height: 40px;
+    // border: 1px solid yellow;
+    position: fixed;
+    top: 0;
   }
+  // .menu-buttons{
+  //   z-index: 1000;
+  // }
   .logout-button{
-    position: absolute;
-    top: 15px;
-    left: 25px;
+    // position: absolute;
+    // top: 15px;
+    // left: 25px;
     cursor: pointer;
   }
   .save-button{
-    position: absolute;
-    top: 15px;
-    left: 92px;
+    // position: absolute;
+    // top: 15px;
+    // left: 92px;
     cursor: pointer;
   }
   .go-home-button{
-    position: absolute;
-    top: 15px;
-    left: 149px;
+    // position: absolute;
+    // top: 15px;
+    // left: 149px;
     cursor: pointer;
   }
   .show-coordinates-button{
-    position: absolute;
-    top: 51px;
-    left: 25px;
     cursor: pointer;
   }
   .pane{

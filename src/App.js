@@ -133,18 +133,20 @@ const toggleShowCoordinates = () => {
  return (
    <div className="fullpage">
       <div  className="App">
-        {loggedIn && <button className="menu-buttons logout-button" onClick={logout}>
-          Logout
-        </button>}
-        {loggedIn && <button className="menu-buttons save-button" onClick={saveUserData}>
-          Save
-        </button>}
-        {loggedIn && <button className="menu-buttons go-home-button" onClick={goHome}>
-          Home
-        </button>}    
-        {loggedIn && isAdmin && <button className="menu-buttons show-coordinates-button" onClick={toggleShowCoordinates}>
-          Show Coordinates
-        </button>}  
+        <div className="nav-buttons-container">
+          {loggedIn && <button className="menu-buttons logout-button" onClick={logout}>
+            Logout
+          </button>}
+          {loggedIn && <button className="menu-buttons save-button" onClick={saveUserData}>
+            Save
+          </button>}
+          {loggedIn && <button className="menu-buttons go-home-button" onClick={goHome}>
+            Home
+          </button>}    
+          {loggedIn && isAdmin && <button className="menu-buttons show-coordinates-button" onClick={toggleShowCoordinates}>
+            Show Coordinates
+          </button>}  
+        </div>
 
         <Route exact path="/login" render={() => (
           <LoginPage {...props} login={login} loginFromRegister={(e) => loginFromRegister(e)} refreshAllUsers={(e) => refreshAllUsers(e)}/>

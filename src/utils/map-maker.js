@@ -258,7 +258,10 @@ export function MapMaker(props){
         }
         return spawnPoints.length > 0 ? spawnPoints : null;
     }
-    this.isValidDungeon = (miniboards) => {
+    this.isValidDungeon = (dungeonObj) => {
+        console.log('need to write this function');
+    }
+    this.isValidPlane = (miniboards) => {
         console.log('spawnpoints: ', this.getSpawnPoints(miniboards));
         if(!this.getSpawnPoints(miniboards)){ 
             return false
