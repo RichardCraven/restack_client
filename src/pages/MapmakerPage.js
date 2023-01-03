@@ -1,35 +1,31 @@
-import React, {useRef} from 'react'
+import React from 'react'
 import '@coreui/coreui/dist/css/coreui.min.css'
 import '../styles/dungeon-board.scss'
 import '../styles/map-maker.scss'
-import Tile from '../components/tile'
 import BoardView from './dungonBuilderViews/BoardView'
+import PlaneView from './dungonBuilderViews/PlaneView'
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
-import { CDropdown, CDropdownToggle, CDropdownMenu, CDropdownItem, CModal, CButton, CModalHeader, CModalTitle, CModalBody, CModalFooter, CFormSelect, CCard, CCardBody, CCollapse} from '@coreui/react';
-// import { CIcon } from '@coreui/icons-react';
-import  CIcon  from '@coreui/icons-react'
-
-// import { CIcon } from '@coreui/icons-react';
-// import CIcon from '@coreui/icons-react/src/CIcon'
-import { cilList, cilCaretRight, cilCaretBottom } from '@coreui/icons';
+import { CDropdown, CDropdownToggle, CDropdownMenu, CDropdownItem, CModal, CButton, CModalHeader, CModalTitle, CModalBody, CModalFooter, CFormSelect} from '@coreui/react';
+// import  CIcon  from '@coreui/icons-react'
+// import { cilList, cilCaretRight, cilCaretBottom, cilGlobeAlt } from '@coreui/icons';
 import {
   addBoardRequest, 
-  loadBoardRequest, 
   loadAllBoardsRequest, 
   updateBoardRequest, 
   deleteBoardRequest, 
   loadAllDungeonsRequest,
   loadDungeonRequest,
-  addDungeonRequest,
-  deleteDungeonRequest,
-  updateDungeonRequest,
   loadAllPlanesRequest,
-  loadPlaneRequest,
   addPlaneRequest,
   deletePlaneRequest,
   updatePlaneRequest,
   updateManyPlanesRequest
+  // loadBoardRequest, 
+  // addDungeonRequest,
+  // deleteDungeonRequest,
+  // updateDungeonRequest,
+  // loadPlaneRequest,
 } from '../utils/api-handler';
 
 class MapMakerPage extends React.Component {
@@ -53,7 +49,6 @@ class MapMakerPage extends React.Component {
       selectedView: 'plane',
       hoveredSection: null,
       draggedMap: null,
-      showCoordinates: false,
       adjacencyFilterOn: false,
       adjacencyFilterSet: false,
       adjacencyFilterHover: false,
@@ -113,7 +108,8 @@ class MapMakerPage extends React.Component {
         miniboards: arr
       }
     })
-    this.nameFilterClicked()
+    this.nameFilterClicked();
+    this.setViewState('plane');
   }
   componentDidUpdate(){
     // console.log('updated, props: ', this.props);
@@ -171,19 +167,19 @@ class MapMakerPage extends React.Component {
         saveAs(content, `${dungeon.name}`.zip);
     });
   }
-  renameDungeon(){
+  renameDungeon = () => {
     this.setState({
       showModal: true,
       modalType: 'rename dungeon'
     })
   }
-  renameBoard(){
+  renameBoard = () => {
     this.setState({
       showModal: true,
       modalType: 'rename board'
     })
   }
-  renamePlane(){
+  renamePlane = () => {
     this.setState({
       showModal: true,
       modalType: 'rename plane'
@@ -323,9 +319,15 @@ class MapMakerPage extends React.Component {
       case 'dungeon':
         stateLabel = 'Dungeon View';
       break;
+      default:
+      return;
     }
-    this.state.mainViewSelectVal.current.value = stateLabel;
-    this.setState({selectedView: state})
+    let b = this.state.mainViewSelectVal
+    b.current.value = stateLabel;
+    this.setState({
+      selectedView: state,
+      mainViewSelectVal : b
+    })
   }
 
   expandCollapseBoardFolders= (folderTitle) => {
@@ -344,6 +346,7 @@ class MapMakerPage extends React.Component {
     const config = this.props.mapMaker.getMapConfiguration(this.state.tiles)    
     if(this.state.loadedBoard){
       console.log('loaded board: ', this.state.loadedBoard)
+      // debugger
       if(this.state.planes.length > 0){
         console.log('state has planes', this.state.planes);
         this.state.planes.forEach((d) => {
@@ -352,7 +355,7 @@ class MapMakerPage extends React.Component {
               console.log('b.id, ', b.id, 'vs', this.state.loadedBoard.id);
               miniboards = d.miniboards;
               miniboards[index] = this.state.loadedBoard;
-              miniboards[index].name = this.state.boardName;
+              miniboards[index].name = this.state.loadedBoard.name;
               miniboards[index].tiles = this.state.tiles;
               miniboards[index].config = config;
               d.valid = this.props.mapMaker.isValidPlane(d)
@@ -362,17 +365,21 @@ class MapMakerPage extends React.Component {
         })
         console.log('okay now miniboards are: ', miniboards, 'but state.tiles is: ', this.state.tiles)
       }
+      console.log('WTF, loaded board:', this.state.loadedBoard);
       let obj = {
         name: this.state.loadedBoard.name,
         tiles: this.state.tiles,
         config
       }
-      console.log('about to update map');
-      await updateBoardRequest(this.state.loadedBoard.id, obj);
+      console.log('about to update board request', this.state.loadedBoard, this.state.boards);
+      const res = await updateBoardRequest(this.state.loadedBoard.id, obj);
+      console.log('update res:', res);
+      // debugger
+      console.log('about to load all boards:', this.state.loadedBoard, this.state.boards);
       this.loadAllBoards(); 
       this.toast('Board Saved')
     } else {
-      console.log('BRAND NEW BOARD,  GIVE THEN AN OPTION TO NAME');
+      console.log('BRAND NEW BOARD,  loaded board: ', this.state.loadedBoard);
       let d = new Date()
       let n = d.getTime();
       let rand = n.toString().slice(9,13)
@@ -410,6 +417,7 @@ class MapMakerPage extends React.Component {
       //   valid: this.props.mapMaker.isValidDungeon(miniboards)
       // }
       console.log('update many payload: ', payload);
+      // debugger
       await updateManyPlanesRequest(payload);
       this.loadAllPlanes();
     } else if (planesToUpdate && planesToUpdate.length === 1){
@@ -449,6 +457,8 @@ class MapMakerPage extends React.Component {
   //   })
   // }
   loadBoard = (board) => {
+    console.log('LOADING BOARD!')
+    // debugger
     // console.log('load map with id:', id);
     // const val = await loadBoardRequest(id)
     // let e = val.data[0];
@@ -460,16 +470,17 @@ class MapMakerPage extends React.Component {
     //     t['contains'] = 'void'
     //   }
     // })
+    if(this.state.selectedView === 'plane'){
+      this.setViewState('board')
+    } 
     this.setState({
       loadedBoard: board,
       tiles: board.tiles
     })
-    setTimeout(()=>{
-      console.log('loaded board is now: ', this.state.loadedBoard);
-    })
   }
   loadAllBoards = async () => {
     const val = await loadAllBoardsRequest();
+    // console.log('load all boards request responded:', val);
     const boards = [],
     boardsFolders = [],
     boardsFoldersExpanded = {};
@@ -480,8 +491,11 @@ class MapMakerPage extends React.Component {
     val.data.forEach((e)=>{
       let board = JSON.parse(e.content)
       board.id = e._id;
-      // console.log('board:', board);
-      if(board.name.includes('_')){
+      console.log('board:', board);
+      if(!board.name){
+        console.log('WTF!!!!!!! why no name? ', board)
+      }
+      if(board.name && board.name.includes('_')){
         let title = board.name.split('_')[0];
         if(!boardsFolders.map(e=>e.title).includes(title)){
           boardsFolders.push({
@@ -507,12 +521,12 @@ class MapMakerPage extends React.Component {
       }
     })
   }
-  setMainView(view){
-    return this.setState((state) => {
-      return {selectedView: view}
-    })
-  }
-  clearLoadedBoard(){
+  // setMainView(view){
+  //   return this.setState(() => {
+  //     return {selectedView: view}
+  //   })
+  // }
+  clearLoadedBoard = () => {
     let arr = [...this.state.tiles]
     for(let t of arr){
       t.image = null;
@@ -555,9 +569,6 @@ class MapMakerPage extends React.Component {
       this.loadAllPlanes(); 
       this.toast('Plane Saved')
     } else {
-      let d = new Date()
-      let n = d.getTime();
-      let rand = n.toString().slice(9,13)
       let obj = {
         name: this.state.loadedDungeon.name,
         miniboards: this.state.miniboards,
@@ -584,11 +595,17 @@ class MapMakerPage extends React.Component {
     } else {
       let newPlanePayload = {
         name: this.state.loadedPlane.name,
-        miniboards: this.state.miniboards,
-        spawnPoints: this.props.mapMaker.getSpawnPoints(this.state.miniboards),
-        valid: this.props.mapMaker.isValidPlane(this.state.miniboards)
+        miniboards: this.state.loadedPlane.miniboards,
+        spawnPoints: this.state.loadedPlane.spawnPoints,
+        valid: false
       }
-      await addPlaneRequest(newPlanePayload);
+      const newPlaneRes = await addPlaneRequest(newPlanePayload);
+      let lp = this.state.loadedPlane
+      lp.id = newPlaneRes.data._id;
+      this.setState({
+        loadedPlane: lp,
+        miniboards: this.state.loadedPlane.miniboards
+      })
       this.toast('Plane Saved')
       this.loadAllPlanes(); 
     }
@@ -604,17 +621,9 @@ class MapMakerPage extends React.Component {
     })
   }
   loadDungeon = async (id) => {
-    console.log('loading dungeon ', id);
     const val = await loadDungeonRequest(id)
     let e = val.data[0];
     let dungeon = JSON.parse(e.content);
-    console.log('loaded dungeon', dungeon);
-    
-    // dungeon.id = e._id;
-    // let miniboards = [];
-    // dungeon.miniboards.forEach((miniboard)=>{
-    //   miniboards.push(miniboard)
-    // })
     this.setState({
       loadedDungeon: dungeon
     })
@@ -665,7 +674,7 @@ class MapMakerPage extends React.Component {
       }
     })
   }
-  addNewPlane(){
+  addNewPlane = async () => {
     let d = new Date()
     let n = d.getTime();
     let rand = n.toString().slice(9,13)
@@ -673,11 +682,12 @@ class MapMakerPage extends React.Component {
 
     let newPlane = {
         name: `plane${rand}`,
-        miniboards: [],
+        miniboards: [[],[],[],[],[],[],[],[],[]],
         spawnPoints: null,
         valid: false
     }
     this.setState({
+      miniboards: [],
       loadedPlane: newPlane,
     })
     this.renamePlane();
@@ -690,7 +700,7 @@ class MapMakerPage extends React.Component {
       this.toast('Plane Deleted')
     }
   }
-  clearLoadedPlane(){
+  clearLoadedPlane = () => {
     let miniboards = []
     for(let i = 0; i < 9; i++){
       miniboards.push([])
@@ -700,7 +710,7 @@ class MapMakerPage extends React.Component {
       miniboards
     })
   }
-  resetLoadedPlane(){
+  resetLoadedPlane = () => {
     const plane = this.state.loadedPlane;
     let miniboards = [];
     plane.miniboards.forEach((miniboard)=>{
@@ -767,14 +777,14 @@ class MapMakerPage extends React.Component {
       }
     })
   }
-  adjacencyHover(idx){
+  adjacencyHover = (idx) => {
     if(this.state.adjacencyFilterOn && this.state.adjacencyFilterSet === false){
       this.setState({
         adjacencyHoverIdx: idx
       })
     }
   }
-  adjacencyFilter(board, index){
+  adjacencyFilter = (board, index) => {
     let matrix = this.props.mapMaker.filterMapAdjacency(board, index, this.state.boards)
     this.setState({
       compatibilityMatrix: matrix
@@ -918,49 +928,49 @@ class MapMakerPage extends React.Component {
           showModal: false
         })
         setTimeout(()=>{
+          console.log('writing plane');
           this.writePlane()
         })
       break;
       case 'board':
-        console.log('INSIDE');
-        const board = this.state.loadedBoard;
+        console.log('INSIDE, this.state.boardNameInput.current.value: ', this.state.boardNameInput.current.value, this.state.loadedBoard);
+        let board = this.state.loadedBoard;
         board.name = this.state.boardNameInput.current.value
+        console.log('about to set loaded board to ', board);
+        // debugger
         this.setState({
           loadedBoard: board,
           showModal: false
         })
         setTimeout(()=>{
+          console.log('ok now loaded board is:', this.state.loadedBoard, 'abuot top write board');
+          // debugger
           this.writeBoard()
-        })
+        }, 1000)
+      break;
+      default:
+
       break;
     }
   }
 
   dungeonSelectOnChange = (e) => {
-    console.log('d select on change: ', e.target.value);
     const dungeon = this.state.dungeons.find(x=>x.name === e.target.value)
     this.loadDungeon(dungeon.id)
   }
   viewSelectOnChange = (e) => {
-    console.log('yo ', this.state.mainViewSelectVal);
     switch(e.target.value){
       case 'Board View': 
-        this.setMainView('board')
-        console.log('pizlaes : ', this.mainViewSelectVal);
-        // this.mainViewSelectVal.current.value = 'Board View'
+        this.setViewState('board');
       break;
       case 'Plane View': 
-        this.setMainView('plane')
+        this.setViewState('plane')
       break;
       case 'Dungeon View': 
-        this.setMainView('dungeon')
+        this.setViewState('dungeon')
       break;
-    }
-    console.log('view select on change: ', e.target.value);
-    // setTimeout(()=>{
-    //   this.state.mainViewSelectVal.current.value = 'Board View'
-    //   console.log('cur val:', this.state.mainViewSelectVal.current.value)
-    // }, 3000)
+      default: 
+      break;    }
   }
 
   render (){
@@ -1032,7 +1042,40 @@ class MapMakerPage extends React.Component {
             </CDropdown>
           </div>
           <div className="row-wrapper">
-            <BoardView
+            {this.state.selectedView === 'board' && <BoardView
+              tileSize={this.state.tileSize}
+              loadedBoard={this.state.loadedBoard}
+              boardSize={this.state.boardSize}
+              boardsFolders={this.state.boardsFolders}
+              boardsFoldersExpanded={this.state.boardsFoldersExpanded}
+              boards={this.state.boards}
+              tiles={this.state.tiles}
+              compatibilityMatrix={this.state.compatibilityMatrix}
+              pinnedOption={this.state.pinnedOption}
+              hoveredPaletteTileIdx={this.state.hoveredPaletteTileIdx}
+              hoveredTileIdx={this.state.hoveredTileIdx}
+              hoveredTileId={this.state.hoveredTileIdx}
+              optionClickedIdx={this.state.optionClickedIdx}
+              showCoordinates={this.props.showCoordinates}
+              mapMaker={this.props.mapMaker}
+
+              setViewState = {this.setViewState}
+              clearLoadedBoard= {this.clearLoadedBoard}
+              writeBoard = {this.writeBoard}
+              deleteBoard = {this.deleteBoard}
+              renameBoard = {this.renameBoard}
+              adjacencyFilterClicked = {this.adjacencyFilterClicked}
+              nameFilterClicked = {this.nameFilterClicked}
+              expandCollapseBoardFolders={this.expandCollapseBoardFolders}
+              collapseFilterHeader={this.collapseFilterHeader}
+              setHover={this.setHover}
+              handleClick={this.handleClick}
+              handleHover={this.handleHover}
+              setPaletteHover={this.setPaletteHover}
+              loadBoard={this.loadBoard}
+            ></BoardView>}
+
+            {this.state.selectedView === 'plane' && <PlaneView
               tileSize={this.state.tileSize}
               boardSize={this.state.boardSize}
               boardsFolders={this.state.boardsFolders}
@@ -1045,8 +1088,28 @@ class MapMakerPage extends React.Component {
               hoveredTileIdx={this.state.hoveredTileIdx}
               hoveredTileId={this.state.hoveredTileIdx}
               optionClickedIdx={this.state.optionClickedIdx}
-              showCoordinates={this.state.showCoordinates}
+              showCoordinates={this.props.showCoordinates}
               mapMaker={this.props.mapMaker}
+
+              loadedPlane={this.state.loadedPlane}
+              planes={this.state.planes}
+              miniboards={this.state.miniboards}
+              adjacencyHoverIdx={this.state.adjacencyHoverIdx}
+              hoveredSection={this.state.hoveredSection}
+              adjacencyHover = {this.adjacencyHover}
+              adjacencyFilter = {this.adacencyFilter}
+              loadPlane={this.loadPlane}
+              writePlane={this.writePlane}
+              clearLoadedPlane={this.clearLoadedPlane}
+              renamePlane={this.renamePlane}
+              deletePlane={this.deletePlane}
+              addNewPlane={this.addNewPlane}
+              onDragOver={this.onDragOver}
+              // filterDungeonsClicked={this.filterDungeonsClicked}
+              onDragStart={this.onDragStart}
+              onDrop={this.onDrop}
+//            plane specific ^
+
 
               setViewState = {this.setViewState}
               clearLoadedBoard= {this.clearLoadedBoard}
@@ -1056,13 +1119,14 @@ class MapMakerPage extends React.Component {
               adjacencyFilterClicked = {this.adjacencyFilterClicked}
               nameFilterClicked = {this.nameFilterClicked}
               expandCollapseBoardFolders={this.expandCollapseBoardFolders}
-              onDragStart={this.onDragStart}
               collapseFilterHeader={this.collapseFilterHeader}
               setHover={this.setHover}
               handleClick={this.handleClick}
               handleHover={this.handleHover}
               setPaletteHover={this.setPaletteHover}
-            ></BoardView>
+              loadBoard={this.loadBoard}
+//            board specific ^              
+            ></PlaneView>}
             {/* <div className="palette boards-palette" 
               style={{
                 width: this.state.tileSize*3+'px', height: this.state.boardSize+ 'px',

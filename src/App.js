@@ -19,7 +19,7 @@ import { useHistory } from "react-router";
 
 function App(props) {
 const [loggedIn, setLoggedIn] = useState(false)
-const [user, setUser] = useState(null);
+// const [user, setUser] = useState(null);
 const [isAdmin, setIsAdmin] = useState(sessionStorage.getItem('isAdmin') === 'true' ? true : false)
 const [showCoordinates, setShowCoordinates] = useState(false)
 const [allUsers, setAllUsers] = useState([])
@@ -47,7 +47,7 @@ const logout = () => {
   return <Redirect to="/login" />
 }
 const loginFromRegister = (user) => {
-  setUser(user)
+  // setUser(user)
   setTimeout(()=>{
     
     storeToken(user._id, user.token, user.isAdmin, user.metadata)
@@ -62,7 +62,7 @@ const login = (userCredentials) => {
       }
   })
   if(validUser){
-    setUser(validUser)
+    // setUser(validUser)
     setTimeout(()=>{
       storeToken(validUser._id, validUser.token, validUser.isAdmin, validUser.metadata)
       setLoggedIn(true)
@@ -88,13 +88,6 @@ const login = (userCredentials) => {
   }
 
   return
-  setUser(user)
-  // ^ can be replaced by state management
-
-  setTimeout(()=>{
-
-    setLoggedIn(true)
-  })
 }
 
 const refreshAllUsers = () => {

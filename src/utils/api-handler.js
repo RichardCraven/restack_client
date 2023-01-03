@@ -145,6 +145,7 @@ const addPlaneRequest = (planeObj) => {
     })
 }
 const updatePlaneRequest = (id, planeObj) => {
+  console.log('updating plane:', id, planeObj);
   return axios.put("http://localhost:5000/api/planes/"+id, {plane: JSON.stringify(planeObj)})
     .then(res=>{
       if(res.status === 200 || res.status === 201){

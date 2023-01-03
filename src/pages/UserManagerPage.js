@@ -52,7 +52,7 @@ class UserManagerPage extends React.Component {
   // },[history])
 
   render(){
-    return <div className="board">
+    return <div className="user-manager-board">
         <div className="table">
           <div className="row">
             <div className="username-header">Username</div>

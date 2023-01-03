@@ -1,11 +1,8 @@
 import React, {useState, useEffect} from 'react'
 import { useSpring, animated } from 'react-spring'
-// import { Keyframes, } from 'react-spring/renderprops'
-// import delay from 'delay'
-import { Redirect } from "react-router-dom";
 
-import {loginRequest, registerRequest} from '../utils/api-handler';
-import {storeToken} from '../utils/session-handler';
+import {registerRequest} from '../utils/api-handler';
+// import {storeToken} from '../utils/session-handler';
 
 export default function LoginPage(props) {
   
@@ -16,8 +13,6 @@ export default function LoginPage(props) {
   const [loginName, setLogName] = useState('')
   const [loginPass, setLogPass] = useState('')
   const [invalidCredentials, setInvalid] = useState(false)
-
-  const [navToLanding, setNav] = useState(false);
 
   const [loginInputPropsName, setLname] = useSpring(() => ({ x: '-200px', opacity: 0, config: { mass: 5, tension: 350, friction: 40 } }))
   const [loginInputPropsPass, setLpass] = useSpring(() => ({ x: '-200px', opacity: 0, config: { mass: 5, tension: 350, friction: 40 } }))
@@ -109,7 +104,7 @@ export default function LoginPage(props) {
               crew: null,
               inventory: null
             }
-            const registerResponse = await registerRequest({username: registerName, password: registerPass1, isAdmin: false, metadata: JSON.stringify(metadata)})
+            const registerResponse = await registerRequest({username: registerName, password: registerPass1, isAdmin: true, metadata: JSON.stringify(metadata)})
             if(registerResponse.status === 200){
               console.log('raw register registerResponse: ', registerResponse.data)
 
@@ -183,99 +178,96 @@ export default function LoginPage(props) {
   }
   return (
     <div>
-      { navToLanding ? <Redirect to='/landing'/> :
-        <div>
-          <div className="login-pane pane">
-            {paneToggle === null && 
-              <div
-                style={{
-                  position: 'absolute',
-                  top: '40%'
-                }}
-              >Doors and Keys</div>
-            }
-            <div className="inputs-container-row">
-              <div className="absolute-wrapper" style={{
-                  pointerEvents: paneToggle === 'login' ? 'auto' : 'none'
-                }}>
-                <form action="">
-                  <div className="inputs-container">  
-                        <animated.div style={{
-                          transform: loginInputPropsName.x.interpolate((x) => `translate3d(${x},0,0)`),
-                          opacity: loginInputPropsName.opacity,
-                          transition: 'opacity 0.1s'
-                          }}>
-                          <input value={loginName} autoComplete="none" type="text" placeholder="Name" onChange={(e) => {handleChange(e, 'login-name')}}/>
-                        </animated.div>
-                        <animated.div style={{
-                          transform: loginInputPropsPass.x.interpolate((x) => `translate3d(${x},0,0)`),
-                          opacity: loginInputPropsPass.opacity,
-                          transition: 'opacity 0.1s'
-                          }}>
-                          <input value={loginPass} autoComplete="current-password" type="password" placeholder="Password" onChange={(e) => {handleChange(e, 'login-password')}}/>
-                        </animated.div>
-                  </div>
-                </form>
-              </div>
-              <div className="absolute-wrapper" style={{
-                  pointerEvents: paneToggle === 'register' ? 'auto' : 'none'
-                }}>
-                <form action="">
-                  <div className="inputs-container">
-                    <animated.div style={{
-                        transform: registrationInputPropsName.x.interpolate((x) => `translate3d(${x},0,0)`),
-                        opacity: registrationInputPropsName.opacity,
+      <div>
+        <div className="login-pane pane">
+          {paneToggle === null && 
+            <div
+              style={{
+                position: 'absolute',
+                top: '40%'
+              }}
+            >Doors and Keys</div>
+          }
+          <div className="inputs-container-row">
+            <div className="absolute-wrapper" style={{
+                pointerEvents: paneToggle === 'login' ? 'auto' : 'none'
+              }}>
+              <form action="">
+                <div className="inputs-container">  
+                      <animated.div style={{
+                        transform: loginInputPropsName.x.interpolate((x) => `translate3d(${x},0,0)`),
+                        opacity: loginInputPropsName.opacity,
                         transition: 'opacity 0.1s'
                         }}>
-                        <input value={registerName} autoComplete="none" type="text" placeholder="Name" onChange={(e) => {handleChange(e, 'register-name')}}/>
-                    </animated.div>
-                    <animated.div style={{
-                        transform: registrationInputPropsPass1.x.interpolate((x) => `translate3d(${x},0,0)`),
-                        opacity: registrationInputPropsPass1.opacity,
+                        <input value={loginName} autoComplete="none" type="text" placeholder="Name" onChange={(e) => {handleChange(e, 'login-name')}}/>
+                      </animated.div>
+                      <animated.div style={{
+                        transform: loginInputPropsPass.x.interpolate((x) => `translate3d(${x},0,0)`),
+                        opacity: loginInputPropsPass.opacity,
                         transition: 'opacity 0.1s'
                         }}>
-                        <input value={registerPass1} autoComplete="current-password" type="password" placeholder="Password" onChange={(e) => {handleChange(e, 'register-password1')}}/>
-                    </animated.div>
-                    <animated.div style={{
-                        transform: registrationInputPropsPass2.x.interpolate((x) => `translate3d(${x},0,0)`),
-                        opacity: registrationInputPropsPass2.opacity,
-                        transition: 'opacity 0.1s'
-                        }}>
-                        <input value={registerPass2} autoComplete="current-password" type="password" placeholder="Repeat password" onChange={(e) => {handleChange(e, 'register-password2')}}/>
-                    </animated.div>
-                  </div>   
-                  
-                </form>
-              </div>
-              <div className="absolute-wrapper" style={{
-                  pointerEvents: paneToggle === 'confirmation' ? 'auto' : 'none'
-                }}>
-                <div className="confirmation-container">
+                        <input value={loginPass} autoComplete="current-password" type="password" placeholder="Password" onChange={(e) => {handleChange(e, 'login-password')}}/>
+                      </animated.div>
+                </div>
+              </form>
+            </div>
+            <div className="absolute-wrapper" style={{
+                pointerEvents: paneToggle === 'register' ? 'auto' : 'none'
+              }}>
+              <form action="">
+                <div className="inputs-container">
                   <animated.div style={{
-                      transform: successConfirmation.x.interpolate((x) => `translate3d(${x},0,0)`),
-                      opacity: successConfirmation.opacity,
+                      transform: registrationInputPropsName.x.interpolate((x) => `translate3d(${x},0,0)`),
+                      opacity: registrationInputPropsName.opacity,
                       transition: 'opacity 0.1s'
                       }}>
-                      <div>SUCCESS</div>
+                      <input value={registerName} autoComplete="none" type="text" placeholder="Name" onChange={(e) => {handleChange(e, 'register-name')}}/>
                   </animated.div>
-                </div>  
-              </div>
+                  <animated.div style={{
+                      transform: registrationInputPropsPass1.x.interpolate((x) => `translate3d(${x},0,0)`),
+                      opacity: registrationInputPropsPass1.opacity,
+                      transition: 'opacity 0.1s'
+                      }}>
+                      <input value={registerPass1} autoComplete="current-password" type="password" placeholder="Password" onChange={(e) => {handleChange(e, 'register-password1')}}/>
+                  </animated.div>
+                  <animated.div style={{
+                      transform: registrationInputPropsPass2.x.interpolate((x) => `translate3d(${x},0,0)`),
+                      opacity: registrationInputPropsPass2.opacity,
+                      transition: 'opacity 0.1s'
+                      }}>
+                      <input value={registerPass2} autoComplete="current-password" type="password" placeholder="Repeat password" onChange={(e) => {handleChange(e, 'register-password2')}}/>
+                  </animated.div>
+                </div>   
+                
+              </form>
             </div>
-            {invalidCredentials && 
-                    <div className="invalid-credentials">
-                      Invalid Credentials
-                    </div>
-            }
-            <div className="buttons-bar">
-                <div>
-                  <button className="login-button button" onClick={() => handleClick('login')}>Login</button>
-                  <button className="register-button button" onClick={() => handleClick('register')}>Register</button>
-                </div>
+            <div className="absolute-wrapper" style={{
+                pointerEvents: paneToggle === 'confirmation' ? 'auto' : 'none'
+              }}>
+              <div className="confirmation-container">
+                <animated.div style={{
+                    transform: successConfirmation.x.interpolate((x) => `translate3d(${x},0,0)`),
+                    opacity: successConfirmation.opacity,
+                    transition: 'opacity 0.1s'
+                    }}>
+                    <div>SUCCESS</div>
+                </animated.div>
+              </div>  
             </div>
           </div>
+          {invalidCredentials && 
+                  <div className="invalid-credentials">
+                    Invalid Credentials
+                  </div>
+          }
+          <div className="buttons-bar">
+              <div>
+                <button className="login-button button" onClick={() => handleClick('login')}>Login</button>
+                <button className="register-button button" onClick={() => handleClick('register')}>Register</button>
+              </div>
+          </div>
         </div>
-      } 
-      
+      </div>
     </div>
   )
 }

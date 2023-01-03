@@ -1,6 +1,3 @@
-import DungeonPage from "../pages/DungeonPage";
-
-// import {useEventListener} from '../utils/useEventListener'
 export function BoardManager(){
     console.log('creating board manager')
     this.tiles = [];
@@ -284,12 +281,11 @@ export function BoardManager(){
             e.borders = null;
         })
         this.tiles.forEach((e)=> {
-            function sameRow(){
-                return e.coordinates[0] === destinationTile.coordinates[0]
-            }
-            // console.log('avo ', e, destinationTile.id);
+            // function sameRow(){
+            //     return e.coordinates[0] === destinationTile.coordinates[0]
+            // }
+
             if(e.id > destinationTile.id - 3 && e.id < destinationTile.id + 3 ){
-                // console.log(e, 'vs ', destinationTile);
                 e.color = this.currentMap.tiles[e.id].color
             } 
             

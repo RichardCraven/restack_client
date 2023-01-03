@@ -3,7 +3,7 @@ import '@coreui/coreui/dist/css/coreui.min.css'
 import '../../styles/dungeon-board.scss'
 import '../../styles/map-maker.scss'
 import Tile from '../../components/tile'
-import { CDropdown, CDropdownToggle, CDropdownMenu, CDropdownItem, CModal, CButton, CModalHeader, CModalTitle, CModalBody, CModalFooter, CFormSelect, CCard, CCardBody, CCollapse} from '@coreui/react';
+import { CDropdown, CDropdownToggle, CDropdownMenu, CDropdownItem, CCollapse} from '@coreui/react';
 import  CIcon  from '@coreui/icons-react'
 import { cilCaretRight } from '@coreui/icons';
 import '../../styles/dungeon-board.scss'
@@ -20,26 +20,26 @@ class BoardView extends React.Component {
             <div className="board-view-container">
                 <div className="left-palette  palette boards-palette" style={{
                 width: this.props.tileSize*3+'px', 
-                height: this.props.boardSize+ 'px',
-                backgroundColor: 'white',
+                height: this.props.boardSize+ 'px'
                 }}>
-                    <div className="boards-title" onClick={() => { 
-                        this.props.setViewState('board')
-                    }
-                    }>Boards</div>
+                    <div className="boards-title" onClick={() => {this.props.setViewState('board')}}>
+                        <div className="color-line-blocker"></div>
+                        Boards
+                    </div>
                     <div className="board-options-buttons-container" 
                     style={{
                         width: this.props.tileSize*3+'px',
-                        height: '38px'
+                        height: '40px'
                     }}
                     >
+                        <div className="color-line-blocker"></div>
                         <CDropdown>
                         <CDropdownToggle color="secondary">Actions</CDropdownToggle>
                         <CDropdownMenu>
                             <CDropdownItem onClick={() => this.props.clearLoadedBoard()}>Clear</CDropdownItem>
                             <CDropdownItem onClick={() => this.props.writeBoard()}>Save</CDropdownItem>
                             <CDropdownItem onClick={() => this.props.deleteBoard()}>Delete</CDropdownItem>
-                            <CDropdownItem disabled={!this.props.loadedBoard} onClick={() => this.renameBoard()}>Rename Current Map</CDropdownItem>
+                            <CDropdownItem disabled={!this.props.loadedBoard} onClick={() => this.props.renameBoard()}>Rename Current Map</CDropdownItem>
                             <CDropdownItem onClick={() => this.props.adjacencyFilterClicked()}>Filter: Adjacency</CDropdownItem>
                             <CDropdownItem onClick={() => this.props.nameFilterClicked()}>Filter: Name</CDropdownItem>
                         </CDropdownMenu>
@@ -50,17 +50,19 @@ class BoardView extends React.Component {
                             height: (this.props.boardSize - 78)+ 'px'
                           }}
                     >
-                        {this.props.boardsFolders.length > 0 && this.props.boardsFolders.map((folder, i) => {
-                        return  <div key={i}>
+                        {this.props.boardsFolders.length > 0 && this.props.boardsFolders.map((folder, idx) => {
+                        return  <div key={idx}>
                                     <div className="boards-folder-headline"  onClick={() => this.props.expandCollapseBoardFolders(folder.title)}> 
-                                    <div className="icon-container">
-                                    <CIcon icon={cilCaretRight} className={`expand-icon ${this.props.boardsFoldersExpanded[folder.title] ? 'expanded' : ''}`} size="xl"/>
-                                    </div>
-                                    <div className="folder-headline-text">{folder.title}</div> 
+                                        <div className="folder-color-line" style={{backgroundColor: idx % 2 ? 'magenta' : 'aqua'}}></div>
+                                        <div className="icon-container">
+                                            <CIcon icon={cilCaretRight} className={`expand-icon ${this.props.boardsFoldersExpanded[folder.title] ? 'expanded' : ''}`} size="sm"/>
+                                        </div>
+                                        <div className="folder-headline-text">{folder.title}</div> 
                                     </div>
                                     <CCollapse visible={this.props.boardsFoldersExpanded[folder.title]}>
                                         {folder.contents.map((board, i) => {
-                                        return (<div key={i}>
+                                        return (<div key={i} className="board-preview-wrapper">
+                                                    <div className="folder-color-line" style={{backgroundColor: idx % 2 ? 'magenta' : 'aqua'}}></div>
                                                     <div 
                                                     className="map-preview draggable" 
                                                     onDragStart = {(event) => this.props.onDragStart(event, board)}
@@ -99,7 +101,7 @@ class BoardView extends React.Component {
                                 </div>
                         })}
                         {this.props.boards && this.props.compatibilityMatrix.show === false && this.props.boards.map((board, i) => {
-                        return (<div key={i}>
+                        return (<div key={i} className="board-preview-wrapper">
                                     <div 
                                     onDragStart = {(event) => this.props.onDragStart(event, board)}
                                     draggable
@@ -137,7 +139,7 @@ class BoardView extends React.Component {
                             <span onClick={() => {return this.props.collapseFilterHeader('left')}} className="adjacency-filter-header">LEFT</span> 
                             {this.props.compatibilityMatrix.showLeft && this.props.compatibilityMatrix.left.map((board,i)=>{
                             return (
-                                <div key={i}>
+                                <div key={i} className="board-preview-wrapper">
                                     <div 
                                     className="map-preview draggable" 
                                     onClick={() => {return this.props.loadBoard(board)}}
@@ -169,41 +171,39 @@ class BoardView extends React.Component {
                         <div className="right">
                             <span onClick={() => {return this.props.collapseFilterHeader('right')}} className="adjacency-filter-header">RIGHT</span> 
                             {this.props.compatibilityMatrix.showRight && this.props.compatibilityMatrix.right.map((board,i)=>{
-                            return (<div 
-                                key={i}
-                                >
-                                <div 
-                                className="map-preview draggable" 
-                                style={{
-                                    height: this.props.tileSize*3,
-                                    boxSizing: 'border-box'
-                                }}
-                                onClick={() => {return this.props.loadBoard(board)}}
-                                onDragStart = {(event) => this.props.onDragStart(event, board)}
-                                draggable
-                                >
-                                {board.tiles.map((tile, i) => {
-                                    return    <Tile 
-                                            key={i}
-                                            id={tile.id}
-                                            tileSize={(this.props.tileSize*3)/15}
-                                            image={tile.image ? tile.image : null}
-                                            color={tile.color ? tile.color : 'lightgrey'}
-                                            index={tile.id}
-                                            showCoordinates={false}
-                                            type={tile.type}
-                                            hovered={false}>
-                                            </Tile>
-                                })}
-                                </div>
-                                <div className="map-title">{board.name}</div>
-                                </div>)
+                            return (<div key={i} className="board-preview-wrapper">
+                                        <div 
+                                        className="map-preview draggable" 
+                                        style={{
+                                            height: this.props.tileSize*3,
+                                            boxSizing: 'border-box'
+                                        }}
+                                        onClick={() => {return this.props.loadBoard(board)}}
+                                        onDragStart = {(event) => this.props.onDragStart(event, board)}
+                                        draggable
+                                        >
+                                        {board.tiles.map((tile, i) => {
+                                            return    <Tile 
+                                                    key={i}
+                                                    id={tile.id}
+                                                    tileSize={(this.props.tileSize*3)/15}
+                                                    image={tile.image ? tile.image : null}
+                                                    color={tile.color ? tile.color : 'lightgrey'}
+                                                    index={tile.id}
+                                                    showCoordinates={false}
+                                                    type={tile.type}
+                                                    hovered={false}>
+                                                    </Tile>
+                                        })}
+                                        </div>
+                                        <div className="map-title">{board.name}</div>
+                                    </div>)
                             })}
                         </div>}
                         {this.props.compatibilityMatrix.top.length > 0 && <div className="top">
                         <span onClick={() => {return this.props.collapseFilterHeader('top')}} className="adjacency-filter-header">TOP</span> 
                             {this.props.compatibilityMatrix.showTop && this.props.compatibilityMatrix.top.map((board,i)=>{
-                            return (<div key={i}>
+                            return (<div key={i} className="board-preview-wrapper">
                                 <div 
                                 className="map-preview draggable" 
                                 onClick={() => {return this.props.loadBoard(board)}}
@@ -234,7 +234,7 @@ class BoardView extends React.Component {
                         {this.props.compatibilityMatrix.bot.length > 0 && <div className="bot">
                         <span onClick={() => {return this.props.collapseFilterHeader('bot')}} className="adjacency-filter-header">BOT</span> 
                             {this.props.compatibilityMatrix.showBot && this.props.compatibilityMatrix.bot.map((board,i)=>{
-                            return (<div key={i}>
+                            return (<div key={i} className="board-preview-wrapper">
                                 <div 
                                 className="map-preview draggable" 
                                 onClick={() => {return this.props.loadBoard(board)}}

@@ -2,8 +2,6 @@ import React from 'react'
 import '../styles/dungeon-board.scss'
 import Tile from '../components/tile'
 import {
-    loadMapRequest, 
-    loadAllMapsRequest, 
     loadAllDungeonsRequest,
     loadDungeonRequest,
     updateUserRequest
@@ -204,7 +202,7 @@ class DungeonPage extends React.Component {
             meta.dungeonId = selectedDungeon.id
             meta.boardIndex = spawnPoint.boardIndex
             meta.tileIndex = spawnPoint.tileIndex
-            const saveDungeon = await updateUserRequest(userId, meta)
+            await updateUserRequest(userId, meta)
             this.props.boardManager.setDungeon(selectedDungeon)
             this.props.boardManager.initializeTilesFromMap(spawnPoint.boardIndex, spawnPoint.tileIndex);
             this.setState(()=>{
