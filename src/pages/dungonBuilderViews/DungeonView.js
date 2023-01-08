@@ -16,20 +16,6 @@ class DungeonView extends React.Component {
       this.state = {
         hoveredPlane : null
       }
-      console.log('DUNGEONNNN this.props:', this.props);
-    }
-
-    componentDidMount(){
-        console.log('mounted, props: ', this.props);
-        // this.parseDungeonPlanes(this.props.loadedDungeon)
-    }
-    componentDidUpdate(){
-        // console.log('updated', this.props.dungeonOverlayOn);
-        // if(this.props.dungeonOverlayOn){
-        //     console.log('TOGGLE OVERLAY is active: ', this.props.dungeonOverlayOn, this.props.loadedDungeon.levels[0].front.miniboards[5].tiles.filter(t=>t.contains === 'way_up'));
-        //     let locationOfDoor = this.props.loadedDungeon.levels[0].front.miniboards[5].tiles.filter(t=>t.contains === 'way_up')
-        //     console.log('DOOR:', locationOfDoor);
-        // }
     }
 
 
@@ -78,22 +64,28 @@ class DungeonView extends React.Component {
 
             break;
             case 5:
-                let fillStyle = 'yellow'
-                if(this.props.overlayData && this.props.overlayData.color){
-                    fillStyle = this.props.overlayData.color
+                if(this.props.overlayData){
+                    // console.log(5, this.props);
+                    // console.log('yo', this.props.overlayData);
+                    // debugger
+                    let fillStyle = 'yellow'
+                    if(this.props.overlayData){
+                        fillStyle = this.props.overlayData.color
+                        // console.log('xy: ', this.props.overlayData.doors[0].x, this.props.overlayData.doors[0].y);
+                    }
+                    let planeSize = this.props.tileSize*2
+                    // planeSize/2
+                    let unit = planeSize/15;
+                    // '8 across 4 down is...'
+                    let x = unit*this.props.overlayData.doors[0].x + unit/2
+                    let y = unit*this.props.overlayData.doors[0].y + unit/2
+                    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
+                    ctx.fillStyle = fillStyle
+                    ctx.beginPath()
+                    // ctx.arc(50, 100, 20*Math.sin(frameCount*0.05)**2, 0, 2*Math.PI)
+                    ctx.arc(x, y, 20*Math.sin(0.4)**2, 0, 2*Math.PI)
+                    ctx.fill()  
                 }
-                let planeSize = this.props.tileSize*2
-                // planeSize/2
-                let unit = planeSize/15;
-                // '8 across 5 down is...'
-                let x = unit*8 + unit/2
-                let y = unit*4 + unit/2
-                ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
-                ctx.fillStyle = fillStyle
-                ctx.beginPath()
-                // ctx.arc(50, 100, 20*Math.sin(frameCount*0.05)**2, 0, 2*Math.PI)
-                ctx.arc(x, y, 20*Math.sin(0.4)**2, 0, 2*Math.PI)
-                ctx.fill()  
             break;
             case 6:
 
@@ -584,8 +576,7 @@ class DungeonView extends React.Component {
                                     <CIcon icon={cilLibraryAdd} size="lg"/> <CIcon className="add-level-up-icon" icon={cilLevelUp} size="lg"/>
                                 </div>
                                 {/* this.props.saveDungeonLevel() */}
-                                <div className="icon-container" onClick={() =>  this.draw
-                                }>
+                                <div className="icon-container" onClick={() =>  this.props.saveDungeonLevel()}>
                                     <CIcon icon={cilSave} size="lg"/>
                                 </div>
                                 {/* <div className="double-icon-container">

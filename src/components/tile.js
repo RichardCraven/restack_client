@@ -3,7 +3,6 @@ import * as images from '../utils/images'
 
 
 export default function Tile(props) {
-    console.log('tile props:', props);
     return (
         <div style={{
             boxSizing: 'border-box',
@@ -39,7 +38,7 @@ export default function Tile(props) {
             }}
         >
            {props.showCoordinates && 
-                <div style={{color: 'blue', userSelect: 'none'}}>
+                <div style={{color: 'yellow', userSelect: 'none'}}>
                     {props.coordinates[0]},{props.coordinates[1]} <span style={{color: 'red'}}>{props.index}</span>
                </div>
             }

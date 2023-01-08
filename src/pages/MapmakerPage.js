@@ -95,14 +95,11 @@ class MapMakerPage extends React.Component {
   
 
   componentDidMount(){
-    console.log('mounted, props: ', this.props);
     let tileSize = this.getTileSize(),
         boardSize = tileSize*15;
     this.initializeListeners();
     if(this.props.mapMaker){
       this.props.mapMaker.initializeTiles();
-      console.log(this.props.mapMaker.tiles);
-      // debugger
     }
     let arr = []
     for(let i = 0; i < 9; i++){
@@ -119,17 +116,8 @@ class MapMakerPage extends React.Component {
         miniboards: arr
       }
     })
-    setTimeout(()=>{
-      console.log('k now tiles are:', this.state.tiles);
-    })
     this.nameFilterClicked();
     this.setViewState('dungeon');
-    setTimeout(()=>{
-      console.log('wtffffff, loaded plane:', this.state.loadedPlane);
-    })
-  }
-  componentDidUpdate(){
-    // console.log('updated, props: ', this.props);
   }
   getTileSize(){
     const h = Math.floor((window.innerHeight/17));
@@ -143,11 +131,9 @@ class MapMakerPage extends React.Component {
     return tsize;
   }
   addNewDungeon(){
-    console.log('add new dungeon');
     let d = new Date()
     let n = d.getTime();
-    let rand = n.toString().slice(9,13)
-    console.log('n: ', n, 'rand: ', rand);
+    let rand = n.toString().slice(9,13);
     const dungeon = {
       name: `dungeon${rand}`,
       levels : [
@@ -170,16 +156,12 @@ class MapMakerPage extends React.Component {
     })
   }
   downloadDungeon(){
-    // const dungeon = this.state.loadedPlane
-    const dungeon = this.state.loadedDungeon
-    console.log('loaded dungeon: ', dungeon);
+    const dungeon = this.state.loadedDungeon;
     const zip = new JSZip();
     let string = JSON.stringify(dungeon)
-    console.log('string:', string);
     zip.file(`${dungeon.name}.dungeon.json`, string)
     zip.generateAsync({type:'blob'})
     .then((content) => {
-      console.log('content', content)
         saveAs(content, `${dungeon.name}`.zip);
     });
   }
@@ -190,7 +172,6 @@ class MapMakerPage extends React.Component {
     })
   }
   renameBoard = () => {
-    console.log('loaded board:', this.state.loadedBoard);
     this.setState({
       showModal: true,
       modalType: 'rename board'
@@ -263,7 +244,6 @@ class MapMakerPage extends React.Component {
   
   handleClick = (tile) => {
     if(tile.type === 'palette-tile'){
-      // console.log('handle click, palette tile', tile)
       this.setState({
         optionClickedIdx: tile.id,
         pinnedOption: tile.id
@@ -313,7 +293,6 @@ class MapMakerPage extends React.Component {
     })
   }
   toast(msg){
-    console.log('in toast')
     this.setState({
       toastMessage: msg
     })
@@ -357,19 +336,14 @@ class MapMakerPage extends React.Component {
   writeBoard = async () => {
     let planesToUpdate = [];
     let miniboards;
-    
-    console.log('write board');
 
     const config = this.props.mapMaker.getMapConfiguration(this.state.tiles)    
     if(this.state.loadedBoard && this.state.loadedBoard.id){
-      console.log('loaded board: ', this.state.loadedBoard)
       // debugger
       if(this.state.planes.length > 0){
-        console.log('state has planes', this.state.planes);
         this.state.planes.forEach((d) => {
           d.miniboards.forEach((b, index) => {
             if(b.id === this.state.loadedBoard.id){
-              console.log('b.id, ', b.id, 'vs', this.state.loadedBoard.id);
               miniboards = d.miniboards;
               miniboards[index] = this.state.loadedBoard;
               miniboards[index].name = this.state.loadedBoard.name;
@@ -380,34 +354,25 @@ class MapMakerPage extends React.Component {
             } 
           })
         })
-        console.log('okay now miniboards are: ', miniboards, 'but state.tiles is: ', this.state.tiles)
       }
-      console.log('WTF, loaded board:', this.state.loadedBoard);
       let obj = {
         name: this.state.loadedBoard.name,
         tiles: this.state.tiles,
         config
       }
-      console.log('about to update board request', this.state.loadedBoard, this.state.boards);
       const res = await updateBoardRequest(this.state.loadedBoard.id, obj);
-      console.log('update res:', res);
-      // debugger
-      console.log('about to load all boards:', this.state.loadedBoard, this.state.boards);
       this.loadAllBoards(); 
       this.toast('Board Saved')
     } else {
-      console.log('BRAND NEW BOARD,  loaded board: ', this.state.loadedBoard);
       let d = new Date()
       let n = d.getTime();
       let rand = n.toString().slice(9,13)
       const newBoard = {
-        // name: this.state.boardName === 'board name' ? 'map'+rand : this.state.boardName,
         name: this.state.loadedBoard.name,
         tiles: this.state.tiles,
         config
       }
       const addedMap = await addBoardRequest(newBoard)
-      console.log('addBoardRequest complete:', addedMap);
       newBoard.id = addedMap.data._id
 
       this.loadAllBoards(); 
@@ -416,8 +381,6 @@ class MapMakerPage extends React.Component {
       this.toast('Board Saved')
     }
     if(planesToUpdate && planesToUpdate.legnth > 1){
-      console.log('outgoing: ', miniboards)
-      // console.log('VALID: ', this.props.mapMaker.isValidDungeon(miniboards));
       const payload = planesToUpdate.map(p=> {
         return {
           name: p.name,
@@ -426,15 +389,6 @@ class MapMakerPage extends React.Component {
           valid: p.valid
         }
       })
-
-      // const obj = {
-      //   name: planesToUpdate.name,
-      //   miniboards: miniboards,
-      //   spawnPoints: this.props.mapMaker.getSpawnPoints(miniboards),
-      //   valid: this.props.mapMaker.isValidDungeon(miniboards)
-      // }
-      console.log('update many payload: ', payload);
-      // debugger
       await updateManyPlanesRequest(payload);
       this.loadAllPlanes();
     } else if (planesToUpdate && planesToUpdate.length === 1){
@@ -453,7 +407,6 @@ class MapMakerPage extends React.Component {
   }
 
   loadBoard = (board) => {
-    console.log('LOADING BOARD!')
     if(this.state.selectedView === 'plane'){
       this.setViewState('board')
     } 
@@ -478,13 +431,13 @@ class MapMakerPage extends React.Component {
     const boards = [],
     boardsFolders = [],
     boardsFoldersExpanded = {};
-    if(val.data && val.data.length > 0){
-      console.log('load all boards content:', val);
-    }
     
     val.data.forEach((e)=>{
       let board = JSON.parse(e.content)
       board.id = e._id;
+
+      // this.props.mapMaker.resetCoordinates(board.tiles)
+
       if(board.name && board.name.includes('_')){
         let obj, title = board.name.split('_')[0],
         subtitle = board.name.split('_').length > 2 ? board.name.split('_')[1] : null,
@@ -528,8 +481,6 @@ class MapMakerPage extends React.Component {
         boardsFoldersExpanded[title] = false;
       })
     })
-    console.log('final: ', boardsFolders);
-    console.log('boards folder sexpanded:', boardsFoldersExpanded);
     this.setState(() => {
       return {
         boards,
@@ -548,15 +499,13 @@ class MapMakerPage extends React.Component {
     this.clearLoadedBoard()
     let d = new Date()
     let n = d.getTime();
-    let rand = n.toString().slice(9,13)
-    console.log('n: ', n, 'rand: ', rand);
+    let rand = n.toString().slice(9,13);
 
     let newBoard = {
         name: `board${rand}`,
         config: [[],[],[],[]],
         tiles: []
     }
-    console.log('new board:', newBoard);
     this.setState({
       loadedBoard: newBoard
     })
@@ -569,14 +518,12 @@ class MapMakerPage extends React.Component {
     let d = new Date()
     let n = d.getTime();
     let rand = n.toString().slice(9,13)
-    console.log('n: ', n, 'rand: ', rand);
 
     let newBoard = {
         name: `board${rand}`,
         config: [[],[],[],[]],
         tiles: []
     }
-    console.log('new board:', newBoard);
     this.setState({
       loadedBoard: newBoard
     })
@@ -616,7 +563,6 @@ class MapMakerPage extends React.Component {
 
   // Dungeon CRUD Methods
   saveDungeon = async () => {
-    console.log('writing dungeon', this.state.loadedDungeon)
     if(this.state.loadedDungeon){
       let obj = {
         name: this.state.loadedDungeon.name,
@@ -640,7 +586,6 @@ class MapMakerPage extends React.Component {
     }
   }
   writePlane = async () => {
-    console.log('writing plane', this.state.loadedPlane)
     if(this.state.loadedPlane && this.state.loadedPlane.id){
       let obj = {
         name: this.state.loadedPlane.name,
@@ -648,7 +593,6 @@ class MapMakerPage extends React.Component {
         spawnPoints: this.props.mapMaker.getSpawnPoints(this.state.miniboards),
         valid: this.props.mapMaker.isValidPlane(this.state.miniboards)
       }
-      console.log('updating plane, is valid:', obj, obj.valid);
       await updatePlaneRequest(this.state.loadedPlane.id, obj);
       this.loadAllPlanes(); 
       this.toast('Plane Saved')
@@ -671,16 +615,7 @@ class MapMakerPage extends React.Component {
     }
   }
   writeDungeon = async () => {
-    console.log('writing dungeon', this.state.loadedDungeon)
     if(this.state.loadedDungeon && this.state.loadedDungeon.id){
-      console.log('updating dungeon, investigate this', this.state.loadedDungeon);
-      // let obj = {
-      //   name: this.state.loadedDungeon.name,
-      //   // miniboards: this.state.miniboards,
-      //   // spawnPoints: this.props.mapMaker.getSpawnPoints(this.state.miniboards),
-      //   // valid: this.props.mapMaker.isValidDungeon(this.state.miniboards)
-      // }
-      // console.log('updating Dungeon, is valid:', obj, obj.valid);
       await updateDungeonRequest(this.state.loadedDungeon.id, this.state.loadedDungeon);
       this.loadAllDungeons(); 
       this.toast('Dungeon Saved')
@@ -695,7 +630,6 @@ class MapMakerPage extends React.Component {
       const newDungeonRes = await addDungeonRequest(newDungeonPayload);
       let ld = this.state.loadedDungeon
       ld.id = newDungeonRes.data._id;
-      console.log('newDungeonRes:', newDungeonRes);
       this.setState({
         loadedDungeon: ld
         // miniboards: this.state.loadedDungeon.miniboards
@@ -710,7 +644,6 @@ class MapMakerPage extends React.Component {
     plane.miniboards.forEach((miniboard)=>{
       miniboards.push(miniboard)
     })
-    console.log('miniboards now:', miniboards);
     this.setState({
       loadedPlane: plane,
       miniboards: plane.miniboards
@@ -1123,11 +1056,18 @@ class MapMakerPage extends React.Component {
     let e = this.state.dungeonOverlayOn,
     overlayData = null;
     if(!e === true){
-      let locationOfDoor = this.state.loadedDungeon.levels[0].front.miniboards[5].tiles.filter(t=>t.contains === 'way_up')
-      console.log('location of door in board 5: ', locationOfDoor);
-      overlayData = {color: 'red'}
-      // this.props.overlayData{}
+      // console.log('board 5::: ',  this.state.loadedDungeon.levels[0].front.miniboards[5].tiles);
+      // let locationOfDoor = this.state.loadedDungeon.levels[0].front.miniboards[5].tiles.filter(t=>t.contains === 'way_up')
+      // console.log('location of door in board 5: ', locationOfDoor);
+      overlayData = {
+        color: 'red',
+        doors: [{x: 8, y: 4}]
+      }
 
+      overlayData= this.props.mapMaker.markPassages(this.state.loadedDungeon)
+      console.log('overlay data: ', overlayData);
+      // this.props.overlayData{}
+      return
     }
     this.setState({
       dungeonOverlayOn: !e,
@@ -1151,7 +1091,6 @@ class MapMakerPage extends React.Component {
   }
 
   modalSaveChanges = () => {
-    console.log('modal save changes, modal type:', this.state.modalType, this.state.modalType === ('name board' || 'rename board'));
     let type = this.state.modalType.split(' ')[1]
     switch(type){
       case 'dungeon':
@@ -1177,11 +1116,8 @@ class MapMakerPage extends React.Component {
         })
       break;
       case 'board':
-        console.log('INSIDE, this.state.boardNameInput.current.value: ', this.state.boardNameInput.current.value, this.state.loadedBoard);
         let board = this.state.loadedBoard;
-        board.name = this.state.boardNameInput.current.value
-        console.log('about to set loaded board to ', board);
-        // debugger
+        board.name = this.state.boardNameInput.current.value;
         this.setState({
           loadedBoard: board,
           showModal: false

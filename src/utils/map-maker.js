@@ -47,6 +47,21 @@ export function MapMaker(props){
         }
         return tiles
     }
+    this.markPassages = (dungeon) => {
+        let val = [];
+        dungeon.levels.forEach(l => {
+            console.log('level: ', l);
+            let miniboards = l.front?.miniboards
+            let filteredMiniboards = l.front?.miniboards.map(b=>b.tiles.filter(t=>t.contains==='way_up' || 
+            t.contains === 'wasy_down' || t.contains==='door'))
+            // tiles.filter(t=>t.contains==='way_up' || 
+            // t.contains === 'wasy_down' || t.contains==='door')
+            if(filteredMiniboards){
+                val.push({id: l.id, passages: filteredMiniboards})
+            }
+        })
+        return val
+    }
     this.initializeTiles = () => {
         this.tiles = [];
         this.paletteTiles = [];
