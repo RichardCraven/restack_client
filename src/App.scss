@@ -41,32 +41,27 @@ button{
   align-items: center;
   justify-content: center;
   flex-direction: column;
+  padding-top: 15;
   .nav-buttons-container{
     width: 100%;
-    height: 40px;
-    // border: 1px solid yellow;
+    height: 30px;
     position: fixed;
     top: 0;
+    z-index: 1000;
+    display: flex;
   }
-  // .menu-buttons{
-  //   z-index: 1000;
-  // }
-  .logout-button{
-    // position: absolute;
-    // top: 15px;
-    // left: 25px;
+  .menu-buttons{
     cursor: pointer;
   }
+  .logout-button{
+    &:hovered{
+      
+    }
+  }
   .save-button{
-    // position: absolute;
-    // top: 15px;
-    // left: 92px;
     cursor: pointer;
   }
   .go-home-button{
-    // position: absolute;
-    // top: 15px;
-    // left: 149px;
     cursor: pointer;
   }
   .show-coordinates-button{

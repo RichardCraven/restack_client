@@ -7,15 +7,17 @@ export function MapMaker(props){
         'void',
         'door',
         'pit',
-        'stairs',
+        'way up',
+        'way down',
         'cloud',
         'spawn',
         
         'monster',
         'item',
         'magic',
-        'key',
-        'masterkey',
+        'minor key',
+        'major key',
+        'master key',
         
         'gate',
         'treasure',
@@ -260,12 +262,20 @@ export function MapMaker(props){
     }
     this.isValidDungeon = (dungeonObj) => {
         console.log('need to write this function');
+
+        // console.log('spawnpoints: ', this.getSpawnPoints(miniboards));
+        // if(!this.getSpawnPoints(miniboards)){ 
+        //     return false
+        // }
+
+        // ^ make sure there are valid spawnpoints SOMEWHAERE in the dungeon
     }
     this.isValidPlane = (miniboards) => {
+        console.log('miniboards: ', miniboards);
         console.log('spawnpoints: ', this.getSpawnPoints(miniboards));
-        if(!this.getSpawnPoints(miniboards)){ 
-            return false
-        }
+        // if(!this.getSpawnPoints(miniboards)){ 
+        //     return false
+        // }
         for(let b of miniboards){
             if(b.tiles === undefined){
                 console.log('b.tiles undefined:', b);
@@ -318,6 +328,10 @@ export function MapMaker(props){
     this.getPaletteImage = (key) => {
         //this switch case renames images so they can fit in a 2 tile space
         switch(key){
+            case 'way up':
+                return 'way_up'
+            case 'way down':
+                return 'way_down'
             case 'delete':
                 return 'trash'
             case 'monster':
@@ -329,10 +343,14 @@ export function MapMaker(props){
             case 'stairs':
                 return 'stairs_down'
             case 'door':
-                return 'closed_door'
+                return 'door'
             case 'dream den':
                 return 'moon_castle'
-            case 'masterkey':
+            case 'major key':
+                return 'major_key'  
+            case 'minor key':
+                return 'minor_key'  
+            case 'master key':
                 return 'ornate_key'  
             case 'devil':
                 return 'mordu_devil'
@@ -341,5 +359,19 @@ export function MapMaker(props){
             default:
                 return false
         }
+    }
+
+    this.getFolderColors = (numberOfFolders) => {
+        const colors = {
+                'aqua' : ['#00ffff', '#13c2c2', '#199595', "#136565"],
+                // '#00ffff' -> aqua
+                // '#13c2c2' -> medium aqua
+                // '#199595' -> dark aqua
+                // "#136565" -> darkest aqua
+                'lavender': ''
+        }
+        
+
+        // numberOfFolders
     }
 }

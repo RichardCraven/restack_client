@@ -12,17 +12,40 @@ import '../../styles/map-maker.scss'
 class PlaneView extends React.Component {
     constructor(props){
       super(props)
-      this.state = {}
+      this.state = {
+        hoveredPlane : null
+      }
       console.log('this.props:', this.props);
     }
+    timer;
+    onClickHandler = event => {
+        clearTimeout(this.timer);
+
+        if (event.detail === 1) {
+            this.timer = setTimeout(this.props.onClick, 200)
+        } else if (event.detail === 2) {
+            this.props.onDoubleClick()
+        }
+    }
+    miniboardClicked(event, board, boardIndex){
+        console.log('miniboard clicked', event.detail);
+        if(this.props.adjacencyHoverIdx === boardIndex && board.tiles){
+            this.props.adjacencyFilter(board, boardIndex)
+        }
+        if (event.detail === 2) {
+            if(board.tiles){
+                this.props.loadBoard(board)
+            }
+        }
+    }
+
     render (){
         return (
             <div className="board-view-container">
                 <div className="left-palette  palette boards-palette" 
                     style={{
                         width: this.props.tileSize*3+'px', 
-                        height: this.props.boardSize+ 'px',
-                        // backgroundColor: 'white'
+                        height: this.props.boardSize+ 'px'
                     }}>
                     <div className="boards-title" onClick={() => { this.props.setViewState('board')}}>
                         <div className="color-line-blocker"></div>
@@ -55,13 +78,71 @@ class PlaneView extends React.Component {
                         {this.props.boardsFolders.length > 0 && this.props.boardsFolders.map((folder, idx) => {
                         return  <div key={idx}>
                                     <div className="boards-folder-headline"  onClick={() => this.props.expandCollapseBoardFolders(folder.title)}> 
-                                    <div className="folder-color-line" style={{backgroundColor: idx % 2 ? 'magenta' : 'aqua'}}></div>
-                                    <div className="icon-container">
-                                    <CIcon icon={cilCaretRight} className={`expand-icon ${this.props.boardsFoldersExpanded[folder.title] ? 'expanded' : ''}`} size="sm"/>
+                                        <div className="folder-color-line" style={{backgroundColor: idx % 2 ? 'magenta' : 'aqua'}}></div>
+                                        <div className="icon-container">
+                                            <CIcon icon={cilCaretRight} className={`expand-icon ${this.props.boardsFoldersExpanded[folder.title] ? 'expanded' : ''}`} size="sm"/>
+                                        </div>
+                                        <div className="folder-headline-text">{folder.title}</div> 
                                     </div>
-                                    <div className="folder-headline-text">{folder.title}</div> 
-                                    </div>
+{/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~// TOP LEVEL FOLDER // */}
                                     <CCollapse visible={this.props.boardsFoldersExpanded[folder.title]}>
+{/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~// SUBFOLDER HEADER //  */}
+                                        {folder.subfolders?.length > 0 && folder.subfolders.map((subfolder, i)=>{
+                                        return (
+                                            <div key={i} className="subfolder-wrapper">
+                                                <div className="boards-folder-headline"  onClick={() => this.props.expandCollapseBoardFolders(`${folder.title}_${subfolder.title}`)}> 
+                                                    <div className="folder-color-line" style={{backgroundColor: i % 2 ? '#199595' : '#13c2c2'}}></div>
+                                                    <div className="icon-container">
+                                                        <CIcon icon={cilCaretRight} className={`expand-icon ${this.props.boardsFoldersExpanded[`${folder.title}_${subfolder.title}`] ? 'expanded' : ''}`} size="sm"/>
+                                                    </div>
+                                                    <div className="folder-headline-text">{subfolder.title}</div> 
+                                                </div>
+{/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~// SUBFOLDER CONTENTS //  */}
+                                                <CCollapse visible={this.props.boardsFoldersExpanded[`${folder.title}_${subfolder.title}`]}>
+                                                    <div className="subfolder-contents-wrapper">
+                                                        {subfolder.contents.map((board, idx) => {
+                                                        return (<div key={idx} className="board-preview-wrapper">
+                                                                    <div className="folder-color-line" style={{backgroundColor: i % 2 ? '#199595' : '#13c2c2'}}></div>
+                                                                    <div 
+                                                                    className="map-preview draggable" 
+                                                                    onDragStart = {(event) => this.props.onDragStart(event, board)}
+                                                                    draggable
+                                                                    style={{
+                                                                        height: this.props.tileSize*3,
+                                                                        boxSizing: 'border-box'
+                                                                    }}
+                                                                    onClick={() => {
+                                                                        // console.log('hmm ', this.props.selectedView);
+                                                                        // if(this.props.selectedView === 'board'){
+                                                                        return this.props.loadBoard(board)
+                                                                        // }
+                                                                    }}>
+                                                                    {board.tiles.map((tile, i) => {
+                                                                    return    <Tile 
+                                                                                key={i}
+                                                                                id={tile.id}
+                                                                                tileSize={(this.props.tileSize*3)/15}
+                                                                                image={tile.image ? tile.image : null}
+                                                                                color={tile.color ? tile.color : 'lightgrey'}
+                                                                                index={tile.id}
+                                                                                showCoordinates={false}
+                                                                                type={tile.type}
+                                                                                hovered={
+                                                                                false
+                                                                                }
+                                                                                >
+                                                                                </Tile>
+                                                                            
+                                                                    })}
+                                                                    </div>
+                                                                    <div className="map-title">{board.name}</div>
+                                                                </div>)
+                                                        })}
+                                                    </div>
+                                                </CCollapse>
+                                            </div>
+                                        )})}
+{/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~// FOLDER CONTENTS //  */}                                        
                                         {folder.contents.map((board, i) => {
                                         return (<div key={i} className="board-preview-wrapper">
                                                     <div className="folder-color-line" style={{backgroundColor: idx % 2 ? 'magenta' : 'aqua'}}></div>
@@ -74,9 +155,9 @@ class PlaneView extends React.Component {
                                                         boxSizing: 'border-box'
                                                     }}
                                                     onClick={() => {
-                                                        if(this.props.selectedView === 'board'){
-                                                        return this.props.loadBoard(board)
-                                                        }
+                                                        // if(this.props.selectedView === 'board'){
+                                                            return this.props.loadBoard(board)
+                                                        // }
                                                     }}>
                                                     {board.tiles.map((tile, i) => {
                                                     return    <Tile 
@@ -90,8 +171,7 @@ class PlaneView extends React.Component {
                                                                 type={tile.type}
                                                                 hovered={
                                                                 false
-                                                                }
-                                                                >
+                                                                }>
                                                                 </Tile>
                                                             
                                                     })}
@@ -112,8 +192,7 @@ class PlaneView extends React.Component {
                                         height: this.props.tileSize*3,
                                         boxSizing: 'border-box'
                                     }}
-                                    onClick={() => {this.props.loadBoard(board)
-                                    }}>
+                                    onClick={() => {this.props.loadBoard(board)}}>
                                     {board.tiles.map((tile, i) => {
                                     return    <Tile 
                                                 key={i}
@@ -280,36 +359,39 @@ class PlaneView extends React.Component {
                         backgroundColor: 'white'
                     }}
                     >
+{/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~// CENTER BOARD //  */} 
                         <div className="mini-boards-container">
-                            {this.props.loadedPlane && this.props.miniboards && this.props.miniboards.map((board, i) => {
+                            {this.props.loadedPlane && this.props.miniboards && this.props.miniboards.map((board, boardIndex) => {
                                 return  <div 
                                         className="mini-board board" 
-                                        key={i}
+                                        key={boardIndex}
                                         style={{
                                         height: (this.props.tileSize*15)/3-2+'px',
                                         width: (this.props.tileSize*15)/3-2+'px',
                                         backgroundColor: 
-                                        this.props.hoveredSection === i ? 'lightgoldenrodyellow': 
-                                        (this.props.adjacencyHoverIdx === i ? 'lightgreen' : 'white')
+                                        this.props.hoveredSection === boardIndex ? 'lightgoldenrodyellow': 
+                                        (this.props.adjacencyHoverIdx === boardIndex ? 'lightgreen' : 'white')
                                         }}
-                                        onDragOver={(event)=>this.props.onDragOver(event, i)}
-                                        onDrop={(event)=>{this.props.onDrop(event, i)}}
+                                        onDragOver={(event)=>this.props.onDragOver(event, boardIndex)}
+                                        onDrop={(event)=>{this.props.onDrop(event, boardIndex)}}
                                         onMouseOver= {() => {
-                                        this.props.adjacencyHover(i)
+                                        this.props.adjacencyHover(boardIndex)
                                         }}
-                                        onClick={() => {
-                                        if(this.props.adjacencyHoverIdx === i && board.tiles){
-                                            this.props.adjacencyFilter(board, i)
-                                        }
+                                        onClick={(event) => {
+                                            this.miniboardClicked(event, board, boardIndex)
                                         }}
+
+                                        onDragStart = {(event) => this.props.onDragStart(event, board, boardIndex)}
+                                        draggable
                                         >
                                         {board.tiles && board.tiles.map((tile, i) => {
                                             return <Tile
                                             key={i}
                                             id={i}
+                                            // boardIndex={boardIndex}
                                             tileSize={((this.props.tileSize*15)/3-2)/15}
                                             image={tile.image ? tile.image : null}
-                                            color={tile.color ? tile.color : 'apricot'}
+                                            color={tile.color ? tile.color : 'white'}
                                             coordinates={tile.coordinates}
                                             index={tile.id}
                                             showCoordinates={false}
@@ -331,7 +413,7 @@ class PlaneView extends React.Component {
                         </div>
                     </div>
                 </div>
-
+{/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~// RIGHT PALETTE //  */} 
                 <div className="palette right-palette" 
                     style={{
                         width: this.props.tileSize*3+'px', height: this.props.boardSize+ 'px',
@@ -362,26 +444,34 @@ class PlaneView extends React.Component {
                             </CDropdownMenu>
                         </CDropdown>
                     </div>
-
                     
-                    <div className="plane-previews-container previews-container"
+                    <div className="previews-container"
                         style={{
                             height: (this.props.boardSize - 78)+ 'px'
                         }}
                     >
-                        {this.props.planes && this.props.planes.map((plane, i) => {
+                        {this.props.planes && this.props.planes.map((plane, planeIndex) => {
                         return (<div 
                                     className='plane-previews-container'
-                                    key={i}
+                                    key={planeIndex}
                                 >
                                     <div 
-                                    className="plane-preview" 
+                                    className={`plane-preview ${this.state.hoveredPlane === plane.id ? 'hovered' : ''}`}
                                     style={{
                                         height: this.props.tileSize*3,
                                         width: this.props.tileSize*3,
-                                        boxSizing: 'border-box'
+                                        // boxSizing: 'border-box',
                                     }}
-                                    onClick={() => this.props.loadPlane(plane)}
+                                    onClick={() => {
+                                        this.setState({hoveredPlane : null})
+                                        return this.props.loadPlane(plane)
+                                    }}
+                                    onMouseEnter={() => {
+                                        if(this.props.loadedPlane?.id !== plane.id){
+                                            return this.setState({hoveredPlane : plane.id})
+                                        }
+                                    }}
+                                    onMouseLeave={() => this.setState({hoveredPlane : null})}
                                     >
                                     {plane.miniboards.map((board, i) => {
                                         return    <div 
@@ -398,7 +488,7 @@ class PlaneView extends React.Component {
                                                     id={i}
                                                     tileSize={((this.props.tileSize*3)/3-2)/15}
                                                     image={tile.image ? tile.image : null}
-                                                    color={tile.color ? tile.color : 'apricot'}
+                                                    color={tile.color ? tile.color : 'white'}
                                                     coordinates={tile.coordinates}
                                                     index={tile.id}
                                                     showCoordinates={false}
@@ -414,62 +504,10 @@ class PlaneView extends React.Component {
                                                 </div>
                                     })}
                                     </div>
-                                    <div className={`map-title ${this.props.loadedPlane?.id === plane.id ? 'selected' : ''}`}> <span className={`validity-indicator ${plane.valid && 'valid'}`}></span>  {plane.name}</div>
+                                    <div className={`map-title ${this.props.loadedPlane?.id === plane.id ? 'selected' : ''} ${this.state.hoveredPlane === plane.id ? 'hovered' : ''}`}> <span className={`validity-indicator ${plane.valid && 'valid'}`}></span>  {plane.name}</div>
                                 </div>)
                         })}
                     </div>
-
-
-
-
-                    {/* {this.props.mapMaker.paletteTiles && this.props.mapMaker.paletteTiles.map((tile, i) => {
-                        return (
-                        <div key={i} className="palette-options-pane">
-                            <div className="palette-option-container"
-                            style={{
-                                backgroundImage: this.props.optionClickedIdx === i ? 'linear-gradient(90deg, transparent, black)' : 'none'
-                            }}
-                            onMouseOver={() => this.props.setPaletteHover(i)}
-                            onClick={() => {
-                                this.props.handleClick({
-                                type: 'palette-tile',
-                                id: i
-                                })}
-                            }>
-                            <Tile 
-                            id={tile.id}
-                            tileSize={this.props.tileSize}
-                            image={tile.image ? tile.image : null}
-                            color={tile.color ? tile.color : 'apricot'}
-                            coordinates={tile.coordinates}
-                            index={tile.id}
-                            showCoordinates={false}
-                            editMode={true}
-                            handleHover={null}
-                            handleClick={null}
-                            type={tile.type}
-                            hovered={
-                                this.props.hoveredPaletteTileIdx === tile.id ?
-                                true :
-                                false
-                            }>
-                            </Tile>
-                            <div className={`
-                                text-container
-                                ${this.props.hoveredPaletteTileIdx === tile.id ? 'hovered' : ''}
-                                ${this.props.pinnedOption === tile.id ? 'pinned' : ''}
-                                `
-                                }>
-                                <span
-                                style={{
-                                color: this.props.optionClickedIdx === i ? 'white' : 'black'
-                                }}
-                                >{tile.optionType}</span>
-                            </div>
-                            </div>
-                        </div>
-                        )
-                    })} */}
                 </div>
             </div>
         )

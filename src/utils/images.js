@@ -119,6 +119,9 @@ import open_door from '../assets/icons/portals/open_door.png';
 import pit from '../assets/icons/portals/pit.png';
 import stairs_down from '../assets/icons/portals/stairs_down.png';
 import cloud from '../assets/icons/portals/cloud.png';
+import way_down from '../assets/icons/portals/way_down.png';
+import way_up from '../assets/icons/portals/way_up.png';
+import door from '../assets/icons/portals/door.png';
 
 // magic
 import black_magic from '../assets/icons/magic/black_magic.png';
@@ -132,6 +135,8 @@ import white_magic from '../assets/icons/magic/white_magic.png';
 import gate from '../assets/icons/staples/gate.png'
 import gold from '../assets/icons/staples/gold.png'
 import ornate_key from '../assets/icons/staples/key.png'
+import minor_key from '../assets/icons/items/minor_key.png'
+import major_key from '../assets/icons/items/major_key.png'
 import moon_castle from '../assets/icons/staples/moon_castle.png'
 import oracle from '../assets/icons/staples/oracle.png'
 import ornate_potion from '../assets/icons/staples/potion.png'
@@ -251,6 +256,9 @@ export {
     pit,
     stairs_down,
     cloud,
+    way_down,
+    way_up,
+    door,
 
     black_magic,
     fireball,
@@ -259,6 +267,8 @@ export {
     spell,
     white_magic,
 
+    minor_key,
+    major_key,
     ornate_key,
     ornate_potion,
     gate,

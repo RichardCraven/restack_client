@@ -3,9 +3,6 @@ import * as images from '../utils/images'
 
 
 export default function Tile(props) {
-    if(props.borderLeft){
-        console.log('eyy', props.borderLeft)
-    }
     return (
         <div style={{
             boxSizing: 'border-box',
