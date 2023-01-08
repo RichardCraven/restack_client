@@ -8,6 +8,7 @@ import  CIcon  from '@coreui/icons-react'
 import { cilCaretRight, cilSave, cilQrCode, cilLevelDown, cilLevelUp, cilLibraryAdd, cilX, cilOptions } from '@coreui/icons';
 import '../../styles/dungeon-board.scss'
 import '../../styles/map-maker.scss'
+import Canvas from '../../components/Canvas/canvas'
 
 class DungeonView extends React.Component {
     constructor(props){
@@ -15,12 +16,20 @@ class DungeonView extends React.Component {
       this.state = {
         hoveredPlane : null
       }
-      console.log('this.props:', this.props);
+      console.log('DUNGEONNNN this.props:', this.props);
     }
 
     componentDidMount(){
         console.log('mounted, props: ', this.props);
         // this.parseDungeonPlanes(this.props.loadedDungeon)
+    }
+    componentDidUpdate(){
+        // console.log('updated', this.props.dungeonOverlayOn);
+        // if(this.props.dungeonOverlayOn){
+        //     console.log('TOGGLE OVERLAY is active: ', this.props.dungeonOverlayOn, this.props.loadedDungeon.levels[0].front.miniboards[5].tiles.filter(t=>t.contains === 'way_up'));
+        //     let locationOfDoor = this.props.loadedDungeon.levels[0].front.miniboards[5].tiles.filter(t=>t.contains === 'way_up')
+        //     console.log('DOOR:', locationOfDoor);
+        // }
     }
 
 
@@ -34,18 +43,72 @@ class DungeonView extends React.Component {
             this.props.onDoubleClick()
         }
     }
-    // parseDungeonPlanes(dungeon){
-    //     console.log('dungepn parsing');
-    //     let planes = [];
-    //     for(let key of Object.keys(dungeon.planes)){
-    //         console.log(key, dungeon.planes[key])
-    //         planes.push()
-    //         // if(key === 'planes'){
+    draw = (ctx, frameCount, data) => {
+        // console.log('YOOO DATA IS:', data);
+        let fillStyle = 'transparent'
+        if(this.props.overlayData && this.props.overlayData.color){
+            fillStyle = this.props.overlayData.color
+        }
+        let planeSize = this.props.tileSize*6
+        // planeSize/2
+        let unit = planeSize/15;
+        // '8 across 5 down is...'
+        let x = unit*8
+        let y = unit*4
+        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
+        ctx.fillStyle = fillStyle
+        ctx.beginPath()
+        // ctx.arc(50, 100, 20*Math.sin(frameCount*0.05)**2, 0, 2*Math.PI)
+        ctx.arc(x, y, 20*Math.sin(0.5)**2, 0, 2*Math.PI)
+        ctx.fill()
+        switch(data.index){
+            case 0:
 
-    //         // }    
-    //     }
-    //     return  planes
-    // }
+            break;
+            case 1:
+
+            break;
+            case 2:
+
+            break;
+            case 3:
+
+            break;
+            case 4:
+
+            break;
+            case 5:
+                let fillStyle = 'yellow'
+                if(this.props.overlayData && this.props.overlayData.color){
+                    fillStyle = this.props.overlayData.color
+                }
+                let planeSize = this.props.tileSize*2
+                // planeSize/2
+                let unit = planeSize/15;
+                // '8 across 5 down is...'
+                let x = unit*8 + unit/2
+                let y = unit*4 + unit/2
+                ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
+                ctx.fillStyle = fillStyle
+                ctx.beginPath()
+                // ctx.arc(50, 100, 20*Math.sin(frameCount*0.05)**2, 0, 2*Math.PI)
+                ctx.arc(x, y, 20*Math.sin(0.4)**2, 0, 2*Math.PI)
+                ctx.fill()  
+            break;
+            case 6:
+
+            break;
+            case 7:
+
+            break;
+            case 8:
+
+            break;
+            default:
+
+            break;
+        }
+    }
 
     render (){
         return (
@@ -368,11 +431,15 @@ class DungeonView extends React.Component {
                     }}
                     >
                         <div className="dungeon-planes-container">
-                            {this.props.loadedDungeon && <div className="loaded-dungeon-wrapper">
-                                { this.props.loadedDungeon.levels.map((level,levelIndex)=>{
+                            {this.props.loadedDungeon && <div className="loaded-dungeon-wrapper"
+                            style={{
+                                justifyContent: this.props.loadedDungeon.levels.length > 2 ? 'flex-start' : 'center'
+                            }}
+                            >
+                                { this.props.loadedDungeon.levels.sort((a,b) => b.id - a.id).map((level,levelIndex)=>{
                                      return <div key={levelIndex} className="level-wrapper">
                                         <div className="level-info">
-                                            <div className="level-readout">{`Lvl ${levelIndex}`}</div>
+                                            <div className="level-readout">{`Lvl ${level.id}`}</div>
                                         </div>
                                         <div className="plane-board-displays-wrapper">
                                             {level.front && <div className="front-plane plane-board-display">
@@ -383,6 +450,34 @@ class DungeonView extends React.Component {
                                                     width: this.props.tileSize*6
                                                 }}
                                                 >
+                                                <div 
+                                                className="canvas-overlay-container mini-boards-container"
+                                                style={{
+                                                    height: this.props.tileSize*6,
+                                                    width: this.props.tileSize*6
+                                                }}
+                                                >
+                                                    {[1,2,3,4,5,6,7,8,9].map((e,i)=>{
+                                                    return <Canvas 
+                                                        key={i}
+                                                        // id={`${level.id}F`} 
+                                                        size={this.props.tileSize*2} 
+                                                        draw={this.draw}
+                                                        data={{index: i}}
+                                                        />
+                                                    })}
+                                                   {/* <Canvas 
+                                                    id={`${level.id}F`} 
+                                                    size={this.props.tileSize*2} 
+                                                    draw={this.draw}
+                                                    /> */}
+                                                </div>
+                                                {/* <Canvas 
+                                                id={`${level.id}F`} 
+                                                size={this.props.tileSize*6} 
+                                                draw={this.draw}
+                                                // data={{index: }}
+                                                /> */}
                                                 {level.front.miniboards.map((board, i) => {
                                                 return    <div 
                                                         className="micro-board board" 
@@ -484,28 +579,30 @@ class DungeonView extends React.Component {
                                     </div>
                                 })}
                             </div>}
-                            <div className="level-buttons-container">
+                            {this.props.loadedDungeon && <div className="level-buttons-container">
                                 <div className="icon-container" onClick={() => this.props.addDungeonLevelUp()}>
                                     <CIcon icon={cilLibraryAdd} size="lg"/> <CIcon className="add-level-up-icon" icon={cilLevelUp} size="lg"/>
                                 </div>
-                                <div className="icon-container" onClick={() => this.props.saveDungeonLevel()}>
+                                {/* this.props.saveDungeonLevel() */}
+                                <div className="icon-container" onClick={() =>  this.draw
+                                }>
                                     <CIcon icon={cilSave} size="lg"/>
                                 </div>
-                                <div className="double-icon-container">
+                                {/* <div className="double-icon-container">
                                     <div className="icon-container">
                                         <CIcon onClick={() => this.props.clearFrontPlanePreview(levelIndex)} icon={cilX} size="lg"/>
                                     </div>
                                     <div className="icon-container">
                                         <CIcon onClick={() => this.props.clearBackPlanePreview(levelIndex)} icon={cilX} size="lg"/>
                                     </div>
-                                </div>
+                                </div> */}
                                 <div className="icon-container" onClick={() => this.props.toggleDungeonLevelOverlay()}>
                                     <CIcon icon={cilQrCode} size="lg"/>
                                 </div>
                                 <div className="icon-container" onClick={() => this.props.addDungeonLevelDown()}>
-                                    <CIcon icon={cilLibraryAdd} size="lg"/> <CIcon icon={cilLevelDown} size="lg"/>
+                                    <CIcon icon={cilLibraryAdd} size="lg"/> <CIcon className="add-level-down-icon" icon={cilLevelDown} size="lg"/>
                                 </div>
-                            </div>
+                            </div>}
 
                             {/* EMPTY STATE */}
                             {!this.props.loadedDungeon && <div className="empty-dungeons-container">

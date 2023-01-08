@@ -37,6 +37,16 @@ export function MapMaker(props){
         console.log('row: ', row, 'col: ', col)
         return index
     }
+    this.resetCoordinates = (tiles) => {
+        for(let row = 0; row < 15; row++){
+            for(let column = 0; column<15; column++){
+                // this.tiles[column+(15*row)].coordinates = [(row+1*15), column+1*15]
+                // this.tiles[column+(15*row)].coordinates = [(row), column]
+                tiles[column+(15*row)].coordinates = [column, row]
+            }
+        }
+        return tiles
+    }
     this.initializeTiles = () => {
         this.tiles = [];
         this.paletteTiles = [];
@@ -49,10 +59,11 @@ export function MapMaker(props){
                 contains: null
             })
         }
-        for(let j = 0; j < 15; j++){
-            for(let p = 0; p<15; p++){
-                this.tiles[p+(15*j)].coordinates = [(j+1*15), p+1*15]
-
+        for(let row = 0; row < 15; row++){
+            for(let column = 0; column<15; column++){
+                // this.tiles[column+(15*row)].coordinates = [(row+1*15), column+1*15]
+                // this.tiles[column+(15*row)].coordinates = [(row), column]
+                this.tiles[column+(15*row)].coordinates = [column, row]
             }
         }
         for(let i = 0; i < this.options.length; i++){

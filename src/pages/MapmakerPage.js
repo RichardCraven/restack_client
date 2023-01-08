@@ -87,7 +87,9 @@ class MapMakerPage extends React.Component {
       boardsFolders: [],
       boardsFoldersExpanded : {},
       visible: false,
-      activeDungeonLevel: 0
+      activeDungeonLevel: 0,
+      dungeonOverlayOn: false,
+      overlayData: null
     };
   }
   
@@ -99,6 +101,8 @@ class MapMakerPage extends React.Component {
     this.initializeListeners();
     if(this.props.mapMaker){
       this.props.mapMaker.initializeTiles();
+      console.log(this.props.mapMaker.tiles);
+      // debugger
     }
     let arr = []
     for(let i = 0; i < 9; i++){
@@ -114,6 +118,9 @@ class MapMakerPage extends React.Component {
         tiles: props.mapMaker.tiles,
         miniboards: arr
       }
+    })
+    setTimeout(()=>{
+      console.log('k now tiles are:', this.state.tiles);
     })
     this.nameFilterClicked();
     this.setViewState('dungeon');
@@ -1078,15 +1085,54 @@ class MapMakerPage extends React.Component {
     this.setState({
       loadedDungeon: dungeon
     })
-    setTimeout(()=>{
-      console.log('now dungeon is: ', this.state.loadedDungeon);
-    })
   }
   addDungeonLevelDown = () => {
-    
+    console.log('ADD DOWN');
+    let dungeon = this.state.loadedDungeon;
+    const levels = dungeon.levels
+    const upperLevels = dungeon.levels.filter(l=>l.id > 0).sort((a,b) => a.id - b.id),
+    lowerLevels = dungeon.levels.filter(l=>l.id < 0).sort((a,b) => a.id - b.id)
+    console.log('22 levels', levels, 'upper:', upperLevels, 'lower:', lowerLevels);
+    let newLevel;
+    if(lowerLevels.length === 0){
+      newLevel = {
+        id: -1,
+        front: null,
+        back: null
+      }
+      
+    }
+    else{
+      let lastLevel = lowerLevels[0],
+      lastId = lastLevel.id
+      console.log('upper levels:', upperLevels, lastLevel);
+      newLevel = {
+        id: lastId-1,
+        front: null,
+        back: null
+      }
+    }
+    dungeon.levels.push(newLevel)
+    console.log('now dungeon is:', dungeon);
+    this.setState({
+      loadedDungeon: dungeon
+    })
   }
   toggleDungeonLevelOverlay = () => {
-    console.log('toggle overlay');
+    console.log('toggle overlay activated');
+    let e = this.state.dungeonOverlayOn,
+    overlayData = null;
+    if(!e === true){
+      let locationOfDoor = this.state.loadedDungeon.levels[0].front.miniboards[5].tiles.filter(t=>t.contains === 'way_up')
+      console.log('location of door in board 5: ', locationOfDoor);
+      overlayData = {color: 'red'}
+      // this.props.overlayData{}
+
+    }
+    this.setState({
+      dungeonOverlayOn: !e,
+      overlayData
+    })
   }
   clearFrontPlanePreview = (levelIndex) => {
     let dungeon = this.state.loadedDungeon;
@@ -1395,6 +1441,8 @@ class MapMakerPage extends React.Component {
               clearFrontPlanePreview={this.clearFrontPlanePreview}
               clearBackPlanePreview={this.clearBackPlanePreview}
               activeDungeonLevel={this.state.activeDungeonLevel}
+              dungeonOverlayOn={this.state.dungeonOverlayOn}
+              overlayData={this.state.overlayData}
               ></DungeonView>}
           </div>
         </div>

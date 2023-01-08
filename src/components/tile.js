@@ -3,6 +3,7 @@ import * as images from '../utils/images'
 
 
 export default function Tile(props) {
+    console.log('tile props:', props);
     return (
         <div style={{
             boxSizing: 'border-box',
