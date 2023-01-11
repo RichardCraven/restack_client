@@ -509,6 +509,10 @@ ul.dropdown-menu.show{
                 flex: auto;
                 min-width: 70px;
             }
+            canvas.doublewide-canvas{
+                position: absolute;
+                z-index: 3;
+            }
             .plane-board-displays-wrapper{
                 display: flex;
                 .plane-board-display{

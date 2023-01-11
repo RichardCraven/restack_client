@@ -29,77 +29,197 @@ class DungeonView extends React.Component {
             this.props.onDoubleClick()
         }
     }
+    getPassageColors = (contains) => {
+        let val;
+        const matrix = {
+            'way_up': '#eb8560',
+            'way_down': '#7bb1db',
+            'door': '#c97cdc'
+        }
+        if(matrix[contains]) val=matrix[contains]
+        return val
+    }
     draw = (ctx, frameCount, data) => {
-        // console.log('YOOO DATA IS:', data);
-        let fillStyle = 'transparent'
-        if(this.props.overlayData && this.props.overlayData.color){
-            fillStyle = this.props.overlayData.color
-        }
-        let planeSize = this.props.tileSize*6
-        // planeSize/2
-        let unit = planeSize/15;
-        // '8 across 5 down is...'
-        let x = unit*8
-        let y = unit*4
-        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
-        ctx.fillStyle = fillStyle
-        ctx.beginPath()
-        // ctx.arc(50, 100, 20*Math.sin(frameCount*0.05)**2, 0, 2*Math.PI)
-        ctx.arc(x, y, 20*Math.sin(0.5)**2, 0, 2*Math.PI)
-        ctx.fill()
-        switch(data.index){
-            case 0:
+        // console.log('framecount:', frameCount);
+       // ctx.arc(50, 100, 20*Math.sin(frameCount*0.05)**2, 0, 2*Math.PI)
+    //    ^^^ animation
 
-            break;
-            case 1:
 
-            break;
-            case 2:
 
-            break;
-            case 3:
+    let levelData = this.props.overlayData?.find(x=>x.id === data.levelId)
+    let minVal = 1;
+                if(levelData){
 
-            break;
-            case 4:
+                    // orientation = data.orientation
 
-            break;
-            case 5:
-                if(this.props.overlayData){
-                    // console.log(5, this.props);
-                    // console.log('yo', this.props.overlayData);
-                    // debugger
-                    let fillStyle = 'yellow'
-                    if(this.props.overlayData){
-                        fillStyle = this.props.overlayData.color
-                        // console.log('xy: ', this.props.overlayData.doors[0].x, this.props.overlayData.doors[0].y);
-                    }
-                    let planeSize = this.props.tileSize*2
-                    // planeSize/2
+
+                    let planeSize = this.props.tileSize*2;
                     let unit = planeSize/15;
-                    // '8 across 4 down is...'
-                    let x = unit*this.props.overlayData.doors[0].x + unit/2
-                    let y = unit*this.props.overlayData.doors[0].y + unit/2
+                    let passages;
+                    if(data.orientation === 'front'){
+                        passages = levelData.frontPassages[data.index]
+                    } else if(data.orientation === 'back'){
+                        passages = levelData.backPassages[data.index]
+                    }
+
+                    if(data.orientation === 'doublewide'){
+                        let miniboardSize = this.props.tileSize*2;
+
+                        let planeWidth = this.props.tileSize*12;
+                        let planeHeight = this.props.tileSize*6;
+                        let unit = planeHeight/(this.props.tileSize*6);
+
+                        let leftPlaneSize = this.props.tileSize*6;
+                        let rightPlaneSize = this.props.tileSize*6;
+
+                        ctx.fillStyle = 'red'
+                        // let x = unit*p.coordinates[0] + unit/2
+                        // let y = unit*p.coordinates[1] + unit/2
+                        // let x = 15, y = 40;
+
+
+                        let x1 = unit*leftPlaneSize/2 + unit/2
+                        let y1 = unit*leftPlaneSize/2 + unit/2
+                        let x2 = (unit*leftPlaneSize/2)*3 + unit/2
+                        let y2 = (unit*leftPlaneSize/2) + unit/2
+
+                        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
+                        for(let miniboardIndex = 0; miniboardIndex < 9; miniboardIndex++){
+                            // let col = (i < 3) ? 1 : (i > 5 ? 3 : 2)
+                            // let col = i-1
+                            let cols = [1,2,3,1,2,3,1,2,3]
+                            let rows = [1,1,1,2,2,2,3,3,3]
+                            // let rows = {
+                            //     0: 1,
+                            //     1: 1,
+                            //     2: 1,
+                            //     3: 2,
+                            //     4: 2,
+                            //     5: 2,
+                            //     6: 3,
+                            //     7: 3,
+                            //     8: 3
+                            // }
+                            // let row = (i < 3) ? 1 : (i > 5 ? 3 : 2)
+                            let row = rows[miniboardIndex] 
+                            let col = cols[miniboardIndex] 
+                            let centerOfMiniboard = miniboardSize/2
+
+                            let originPointX = (miniboardSize * col) - miniboardSize
+                            let originPointX_back = ((3*miniboardSize) + miniboardSize * col) - miniboardSize
+                            let originPointY = (miniboardSize * row) - miniboardSize
+
+                            let microUnit = miniboardSize/15;
+                            if(levelData.frontPassages.length > 0){
+                                levelData.frontPassages[miniboardIndex].forEach(p=>{
+                                    let x = microUnit*p.coordinates[0] + unit/2
+                                    let y = microUnit*p.coordinates[1] + unit/2
+                                    ctx.beginPath()
+                                    let minVal = 3.5;
+                                    ctx.fillStyle = this.getPassageColors(p.contains)
+                                    ctx.arc((originPointX + x), (originPointY + y), 3.5*Math.sin(frameCount*0.03)**2 + minVal, 0, 2*Math.PI)
+                                    ctx.fill() 
+                                })
+                            }
+                            if(levelData.backPassages.length > 0){
+                                levelData.backPassages[miniboardIndex].forEach(p=>{
+                                    let x = microUnit*p.coordinates[0] + unit/2
+                                    let y = microUnit*p.coordinates[1] + unit/2
+                                    ctx.beginPath()
+                                    let minVal = 3.5;
+                                    ctx.fillStyle = this.getPassageColors(p.contains)
+                                    ctx.arc((originPointX_back + x), (originPointY + y), 3.5*Math.sin(frameCount*0.03)**2 + minVal, 0, 2*Math.PI)
+                                    ctx.fill() 
+                                })
+                            }
+                            if(levelData.connected.length > 0){
+                                // levelData.connected[0]
+                                let p = levelData.connected.find(e=>e.miniboardIndex === miniboardIndex)
+                                if(p){
+                                    let x = microUnit*p.coordinates[0] + unit/2
+                                    let y = microUnit*p.coordinates[1] + unit/2,
+                                    // miniboardIndex = levelData.connected[0].miniboardIndex
+                                    newOriginX = (originPointX + x),
+                                    newOriginY = (originPointY + y),
+                                    newEndX_back = (originPointX_back + x)
+                                    ctx.lineWidth = 3;
+                                    ctx.strokeStyle = 'red'
+                                    ctx.beginPath();
+                                    ctx.moveTo(newOriginX,newOriginY);
+                                    ctx.lineTo(newEndX_back,newOriginY);
+                                    ctx.stroke();
+                                }
+                            }
+                            
+                            // if(levelData.frontPassages)
+
+
+
+                            // let placementX = (miniboardSize * col) - (1/2 * miniboardSize)
+                            // let placementY = (miniboardSize * row) - (1/2 * miniboardSize)
+
+                            // let placementX = (miniboardSize * col) - miniboardSize
+                            // let placementX_back = ((3*miniboardSize) + miniboardSize * col) - miniboardSize
+                            // let placementY = (miniboardSize * row) - miniboardSize
+                            // ^ dot at top left of each board
+
+                            
+                            // let placementX = (centerOfMiniboard * col*2) - centerOfMiniboard
+                            // let placementY = (centerOfMiniboard * row*2) - centerOfMiniboard
+                            // ^ dot at center of each miniboard
+
+                            // console.log('x', placementX, 'y', placementY);
+                            
+
+                            // ctx.beginPath()
+                            // ctx.arc(placementX, placementY, 5.5*Math.sin(frameCount*0.03)**2 + minVal, 0, 2*Math.PI)
+                            // ctx.fill() 
+                        }
+
+                        // console.log('radius ', 5.5*Math.sin(frameCount*0.03)**2);
+                        // ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
+                        // let unit2 = miniboardSize/15;
+                        // let col = 3, row = 2
+                        // let originPointX = (miniboardSize * col) - miniboardSize
+                        // let originPointY = (miniboardSize * row) - miniboardSize
+                        // let placementX = originPointX + unit2*8
+                        // let placementY = originPointY + unit2*4
+                        // ctx.beginPath()
+                        // ctx.arc(placementX, placementY, 5.5*Math.sin(frameCount*0.03)**2 + minVal, 0, 2*Math.PI)
+                        // ctx.fill() 
+
+
+                        // ctx.beginPath()
+                        // ctx.arc(x1, y1, 5.5*Math.sin(frameCount*0.03)**2 + minVal, 0, 2*Math.PI)
+                        // ctx.fill() 
+
+                        // ctx.beginPath()
+                        // ctx.arc(x2, y2, 5.5*Math.sin(frameCount*0.03)**2 + minVal, 0, 2*Math.PI)
+                        // ctx.fill() 
+                        
+                        // return
+                    }
+                    if(!passages) return
+
+
+                    return 
+                    // ^ remove later
+
+                    let fillStyle = 'yellow'
+
                     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
-                    ctx.fillStyle = fillStyle
-                    ctx.beginPath()
-                    // ctx.arc(50, 100, 20*Math.sin(frameCount*0.05)**2, 0, 2*Math.PI)
-                    ctx.arc(x, y, 20*Math.sin(0.4)**2, 0, 2*Math.PI)
-                    ctx.fill()  
+                    passages.forEach((p, index)=>{
+                        ctx.fillStyle = fillStyle
+                        let x = unit*p.coordinates[0] + unit/2
+                        let y = unit*p.coordinates[1] + unit/2
+                        ctx.beginPath()
+                        let minVal = 3.5;
+                        ctx.fillStyle = this.getPassageColors(p.contains)
+                        ctx.arc(x, y, 3.5*Math.sin(frameCount*0.03 + index)**2 + minVal, 0, 2*Math.PI)
+                        ctx.fill()  
+                        // x ** 2 is the x squared
+                    }) 
                 }
-            break;
-            case 6:
-
-            break;
-            case 7:
-
-            break;
-            case 8:
-
-            break;
-            default:
-
-            break;
-        }
     }
 
     render (){
@@ -432,8 +552,24 @@ class DungeonView extends React.Component {
                                      return <div key={levelIndex} className="level-wrapper">
                                         <div className="level-info">
                                             <div className="level-readout">{`Lvl ${level.id}`}</div>
+                                            <div className="icon-container" onClick={() =>  this.props.clearDungeonLevel(level.id)}>
+                                                <CIcon icon={cilX} size="lg"/>
+                                            </div>
                                         </div>
                                         <div className="plane-board-displays-wrapper">
+                                            <div className="horizontal-connecting-canvas-wrapper">
+                                                <Canvas 
+                                                // key={i}
+                                                // id={`${level.id}F`} 
+
+                                                // size={this.props.tileSize*2} 
+                                                className="doublewide-canvas"
+                                                width={this.props.tileSize*12}
+                                                height={this.props.tileSize*6}
+                                                draw={this.draw}
+                                                data={{index: null, levelId: level.id, orientation: 'doublewide'}}
+                                                />
+                                            </div>
                                             {level.front && <div className="front-plane plane-board-display">
                                                 <div 
                                                 className={`plane-preview draggable`}
@@ -442,74 +578,85 @@ class DungeonView extends React.Component {
                                                     width: this.props.tileSize*6
                                                 }}
                                                 >
-                                                <div 
-                                                className="canvas-overlay-container mini-boards-container"
-                                                style={{
-                                                    height: this.props.tileSize*6,
-                                                    width: this.props.tileSize*6
-                                                }}
-                                                >
-                                                    {[1,2,3,4,5,6,7,8,9].map((e,i)=>{
-                                                    return <Canvas 
-                                                        key={i}
-                                                        // id={`${level.id}F`} 
-                                                        size={this.props.tileSize*2} 
-                                                        draw={this.draw}
-                                                        data={{index: i}}
-                                                        />
-                                                    })}
-                                                   {/* <Canvas 
-                                                    id={`${level.id}F`} 
-                                                    size={this.props.tileSize*2} 
-                                                    draw={this.draw}
-                                                    /> */}
-                                                </div>
-                                                {/* <Canvas 
-                                                id={`${level.id}F`} 
-                                                size={this.props.tileSize*6} 
-                                                draw={this.draw}
-                                                // data={{index: }}
-                                                /> */}
-                                                {level.front.miniboards.map((board, i) => {
-                                                return    <div 
-                                                        className="micro-board board" 
-                                                        key={i}
-                                                        style={{
-                                                            height: (this.props.tileSize*6)/3-2+'px',
-                                                            width: (this.props.tileSize*6)/3-2+'px'
-                                                        }}
-                                                        > 
-                                                            {board.tiles && board.tiles.map((tile, i) => {
-                                                            return <Tile
-                                                            key={i}
-                                                            id={i}
-                                                            tileSize={((this.props.tileSize*6)/3-2)/15}
-                                                            image={tile.image ? tile.image : null}
-                                                            color={tile.color ? tile.color : 'white'}
-                                                            coordinates={tile.coordinates}
-                                                            index={tile.id}
-                                                            showCoordinates={false}
-                                                            editMode={true}
-                                                            handleHover={null}
-                                                            handleClick={null}
-                                                            type={tile.type}
-                                                            hovered={
-                                                                false
-                                                            }
-                                                            />
-                                                            })}
-                                                        </div>
-                                                })}
-                                                </div>
-                                            </div>}
-                                            {level.back && <div className="back-plane plane-board-display">
-                                                <div 
-                                                    className={`plane-preview draggable`}
+                                                    <div 
+                                                    className="canvas-overlay-container mini-boards-container"
                                                     style={{
                                                         height: this.props.tileSize*6,
                                                         width: this.props.tileSize*6
                                                     }}
                                                     >
+                                                        {[1,2,3,4,5,6,7,8,9].map((e,i)=>{
+                                                        return <Canvas 
+                                                            key={i}
+                                                            // id={`${level.id}F`} 
+                                                            // size={this.props.tileSize*2} 
+
+                                                            width={this.props.tileSize*2}
+                                                            height={this.props.tileSize*2}
+
+                                                            draw={this.draw}
+                                                            data={{index: i, levelId: level.id, orientation: 'front'}}
+                                                            />
+                                                        })}
+                                                    </div>
+                                                    {level.front.miniboards.map((board, i) => {
+                                                    return    <div 
+                                                            className="micro-board board" 
+                                                            key={i}
+                                                            style={{
+                                                                height: (this.props.tileSize*6)/3-2+'px',
+                                                                width: (this.props.tileSize*6)/3-2+'px'
+                                                            }}
+                                                            > 
+                                                                {board.tiles && board.tiles.map((tile, i) => {
+                                                                return <Tile
+                                                                key={i}
+                                                                id={i}
+                                                                tileSize={((this.props.tileSize*6)/3-2)/15}
+                                                                image={tile.image ? tile.image : null}
+                                                                color={tile.color ? tile.color : 'white'}
+                                                                coordinates={tile.coordinates}
+                                                                index={tile.id}
+                                                                showCoordinates={false}
+                                                                editMode={true}
+                                                                handleHover={null}
+                                                                handleClick={null}
+                                                                type={tile.type}
+                                                                hovered={
+                                                                    false
+                                                                }
+                                                                />
+                                                                })}
+                                                            </div>
+                                                    })}
+                                                </div>
+                                            </div>}
+                                            {level.back && <div className="back-plane plane-board-display">
+                                                <div 
+                                                className={`plane-preview draggable`}
+                                                style={{
+                                                    height: this.props.tileSize*6,
+                                                    width: this.props.tileSize*6
+                                                }}
+                                                >
+                                                    <div 
+                                                    className="canvas-overlay-container mini-boards-container"
+                                                    style={{
+                                                        height: this.props.tileSize*6,
+                                                        width: this.props.tileSize*6
+                                                    }}
+                                                    >
+                                                        {[1,2,3,4,5,6,7,8,9].map((e,i)=>{
+                                                        return <Canvas 
+                                                            key={i}
+                                                            // id={`${level.id}F`} 
+                                                            width={this.props.tileSize*2}
+                                                            height={this.props.tileSize*2}
+                                                            draw={this.draw}
+                                                            data={{index: i, levelId: level.id, orientation: 'back'}}
+                                                            />
+                                                        })}
+                                                    </div>
                                                     {level.back.miniboards.map((board, i) => {
                                                     return    <div 
                                                             className="micro-board board" 

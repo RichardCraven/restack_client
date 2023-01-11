@@ -52,14 +52,36 @@ export function MapMaker(props){
         dungeon.levels.forEach(l => {
             console.log('level: ', l);
             let miniboards = l.front?.miniboards
-            let filteredMiniboards = l.front?.miniboards.map(b=>b.tiles.filter(t=>t.contains==='way_up' || 
-            t.contains === 'wasy_down' || t.contains==='door'))
-            // tiles.filter(t=>t.contains==='way_up' || 
-            // t.contains === 'wasy_down' || t.contains==='door')
-            if(filteredMiniboards){
-                val.push({id: l.id, passages: filteredMiniboards})
+            let frontFilteredMiniboards = l.front?.miniboards.map(b=>b.tiles.filter(t=>t.contains==='way_up' || 
+            t.contains === 'way_down' || t.contains==='door')) || []
+            let backFilteredMiniboards = l.back?.miniboards.map(b=>b.tiles.filter(t=>t.contains==='way_up' || 
+            t.contains === 'way_down' || t.contains==='door')) || []
+            
+            let connected = []
+            for(let i =0; i < 9; i++){
+                let front = frontFilteredMiniboards[i],
+                back = backFilteredMiniboards[i];
+                // console.log('front', front, 'back', back);
+                if(back && back.length > 0 && front && front.length > 0){
+                    back.forEach(b=>{
+                        // if(l.id === 0){
+                        //     // console.log('b:', b, 'front:', front);
+                        // }
+                        let match = front.find(j=>j.contains === b.contains && j.id === b.id)
+                        if(match){
+                            connected.push({miniboardIndex: i, type: b.contains, coordinates: b.coordinates})
+                        }
+                    })
+                    // if(back[i].contains === )
+                }
+
+            }
+            // console.log('finally, connected:', connected);
+            if(frontFilteredMiniboards || backFilteredMiniboards){
+                val.push({id: l.id, frontPassages: frontFilteredMiniboards, backPassages: backFilteredMiniboards, connected})
             }
         })
+        console.log('passages:', val);
         return val
     }
     this.initializeTiles = () => {

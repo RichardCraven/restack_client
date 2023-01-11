@@ -989,6 +989,15 @@ class MapMakerPage extends React.Component {
     console.log('save dungeon level');
     this.writeDungeon()
   }
+  clearDungeonLevel = (levelId) => {
+    let dungeon = this.state.loadedDungeon;
+    let level = dungeon.levels.find(l=>l.id === levelId)
+    level.front = null;
+    level.back = null;
+    this.setState({
+      loadedDungeon : dungeon
+    })
+  }
   addDungeonLevelUp = () => {
     let dungeon = this.state.loadedDungeon;
     const levels = dungeon.levels
@@ -1067,7 +1076,7 @@ class MapMakerPage extends React.Component {
       overlayData= this.props.mapMaker.markPassages(this.state.loadedDungeon)
       console.log('overlay data: ', overlayData);
       // this.props.overlayData{}
-      return
+      // return
     }
     this.setState({
       dungeonOverlayOn: !e,
@@ -1372,6 +1381,7 @@ class MapMakerPage extends React.Component {
               onDragStartDungeon={this.onDragStartDungeon}
               saveDungeonLevel={this.saveDungeonLevel}
               toggleDungeonLevelOverlay={this.toggleDungeonLevelOverlay}
+              clearDungeonLevel={this.clearDungeonLevel}
               addDungeonLevelUp={this.addDungeonLevelUp}
               addDungeonLevelDown={this.addDungeonLevelDown}
               clearFrontPlanePreview={this.clearFrontPlanePreview}
