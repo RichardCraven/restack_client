@@ -3,7 +3,7 @@ import '@coreui/coreui/dist/css/coreui.min.css'
 import '../../styles/dungeon-board.scss'
 import '../../styles/map-maker.scss'
 import Tile from '../../components/tile'
-import { CDropdown, CDropdownToggle, CDropdownMenu, CDropdownItem, CCollapse} from '@coreui/react';
+import { CDropdown, CDropdownToggle, CDropdownMenu, CDropdownItem, CCollapse, CSpinner, CFormSelect} from '@coreui/react';
 import  CIcon  from '@coreui/icons-react'
 import { cilCaretRight, cilSave, cilQrCode, cilLevelDown, cilLevelUp, cilLibraryAdd, cilX, cilOptions } from '@coreui/icons';
 import '../../styles/dungeon-board.scss'
@@ -85,68 +85,64 @@ class DungeonView extends React.Component {
 
                         ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
                         for(let miniboardIndex = 0; miniboardIndex < 9; miniboardIndex++){
-                            // let col = (i < 3) ? 1 : (i > 5 ? 3 : 2)
-                            // let col = i-1
                             let cols = [1,2,3,1,2,3,1,2,3]
                             let rows = [1,1,1,2,2,2,3,3,3]
-                            // let rows = {
-                            //     0: 1,
-                            //     1: 1,
-                            //     2: 1,
-                            //     3: 2,
-                            //     4: 2,
-                            //     5: 2,
-                            //     6: 3,
-                            //     7: 3,
-                            //     8: 3
-                            // }
-                            // let row = (i < 3) ? 1 : (i > 5 ? 3 : 2)
                             let row = rows[miniboardIndex] 
                             let col = cols[miniboardIndex] 
                             let centerOfMiniboard = miniboardSize/2
 
-                            let originPointX = (miniboardSize * col) - miniboardSize
-                            let originPointX_back = ((3*miniboardSize) + miniboardSize * col) - miniboardSize
-                            let originPointY = (miniboardSize * row) - miniboardSize
+                            let originPointX = (miniboardSize * col) - miniboardSize + (unit * 2)
+                            let originPointX_back = ((3*miniboardSize) + miniboardSize * col) - miniboardSize + (unit * 2) 
+                            let originPointY = (miniboardSize * row) - miniboardSize + (unit * 2)
 
                             let microUnit = miniboardSize/15;
-                            if(levelData.frontPassages.length > 0){
-                                levelData.frontPassages[miniboardIndex].forEach(p=>{
-                                    let x = microUnit*p.coordinates[0] + unit/2
-                                    let y = microUnit*p.coordinates[1] + unit/2
-                                    ctx.beginPath()
-                                    let minVal = 3.5;
-                                    ctx.fillStyle = this.getPassageColors(p.contains)
-                                    ctx.arc((originPointX + x), (originPointY + y), 3.5*Math.sin(frameCount*0.03)**2 + minVal, 0, 2*Math.PI)
-                                    ctx.fill() 
-                                })
-                            }
-                            if(levelData.backPassages.length > 0){
-                                levelData.backPassages[miniboardIndex].forEach(p=>{
-                                    let x = microUnit*p.coordinates[0] + unit/2
-                                    let y = microUnit*p.coordinates[1] + unit/2
-                                    ctx.beginPath()
-                                    let minVal = 3.5;
-                                    ctx.fillStyle = this.getPassageColors(p.contains)
-                                    ctx.arc((originPointX_back + x), (originPointY + y), 3.5*Math.sin(frameCount*0.03)**2 + minVal, 0, 2*Math.PI)
-                                    ctx.fill() 
-                                })
-                            }
+                            // if(levelData.frontPassages.length > 0){
+                            //     levelData.frontPassages[miniboardIndex].forEach(p=>{
+                            //         let x = microUnit*p.coordinates[0] + unit/2
+                            //         let y = microUnit*p.coordinates[1] + unit/2
+                            //         ctx.beginPath()
+                            //         let minVal = 3.5;
+                            //         ctx.fillStyle = this.getPassageColors(p.contains)
+                            //         ctx.arc((originPointX + x), (originPointY + y), 3.5*Math.sin(frameCount*0.03)**2 + minVal, 0, 2*Math.PI)
+                            //         ctx.fill() 
+                            //     })
+                            // }
+                            // if(levelData.backPassages.length > 0){
+                            //     levelData.backPassages[miniboardIndex].forEach(p=>{
+                            //         let x = microUnit*p.coordinates[0] + unit/2
+                            //         let y = microUnit*p.coordinates[1] + unit/2
+                            //         ctx.beginPath()
+                            //         let minVal = 3.5;
+                            //         ctx.fillStyle = this.getPassageColors(p.contains)
+                            //         ctx.arc((originPointX_back + x), (originPointY + y), 3.5*Math.sin(frameCount*0.03)**2 + minVal, 0, 2*Math.PI)
+                            //         ctx.fill() 
+                            //     })
+                            // }
                             if(levelData.connected.length > 0){
                                 // levelData.connected[0]
                                 let p = levelData.connected.find(e=>e.miniboardIndex === miniboardIndex)
                                 if(p){
-                                    let x = microUnit*p.coordinates[0] + unit/2
-                                    let y = microUnit*p.coordinates[1] + unit/2,
+                                    let x = microUnit*p.coordinates[0] + (unit * 2) 
+                                    let y = microUnit*p.coordinates[1] + (unit * 2) ,
                                     // miniboardIndex = levelData.connected[0].miniboardIndex
-                                    newOriginX = (originPointX + x),
-                                    newOriginY = (originPointY + y),
-                                    newEndX_back = (originPointX_back + x)
-                                    ctx.lineWidth = 3;
+                                    newOriginX = (originPointX + x) + (unit * 2) ,
+                                    newOriginY = (originPointY + y) + (unit * 2) ,
+                                    destinationX_back = (originPointX_back + x) + (unit * 4) ,
+                                    destinationY_back = (originPointY + y) + (unit * 4) 
+                                    ctx.lineWidth = 2;
                                     ctx.strokeStyle = 'red'
                                     ctx.beginPath();
                                     ctx.moveTo(newOriginX,newOriginY);
-                                    ctx.lineTo(newEndX_back,newOriginY);
+
+                                    let bezierControlPoint1 = {x: newOriginX, y: newOriginY + 100}
+                                    let bezierControlPoint2 = {x:destinationX_back, y: newOriginY + 100}
+
+
+
+                                    ctx.bezierCurveTo(bezierControlPoint1.x, bezierControlPoint1.y, bezierControlPoint2.x, bezierControlPoint2.y, destinationX_back, destinationY_back)
+
+
+                                    // ctx.lineTo(destinationX_back,newOriginY);
                                     ctx.stroke();
                                 }
                             }
@@ -202,7 +198,7 @@ class DungeonView extends React.Component {
                     if(!passages) return
 
 
-                    return 
+                    // return 
                     // ^ remove later
 
                     let fillStyle = 'yellow'
@@ -542,8 +538,37 @@ class DungeonView extends React.Component {
                         backgroundColor: 'white'
                     }}
                     >
+                        <div className="dungeon-info">
+                            <div className="dungeon-name">
+                                {/* {this.props.loadedDungeon?.name} */}
+                                <CFormSelect 
+                                aria-label="Dungeon Selector"
+                                ref={this.props.dungeonSelectVal}
+                                options={
+                                    ['Dungeon Selector'].concat(this.props.dungeons.map((e, i)=>{
+                                    return { label: e.name, value: e.name}
+                                    }))
+                                }
+                                onChange={this.props.dungeonSelectOnChange}
+                                />
+                            </div>
+                            {this.props.loadedDungeon && !this.props.loadingData && <div className="level-buttons-container">
+                            <div className="icon-container" onClick={() => this.props.addDungeonLevelUp()}>
+                                <CIcon icon={cilLibraryAdd} size="lg"/> <CIcon className="add-level-up-icon" icon={cilLevelUp} size="lg"/>
+                            </div>
+                            <div className="icon-container" onClick={() =>  this.props.saveDungeonLevel()}>
+                                <CIcon icon={cilSave} size="lg"/>
+                            </div>
+                            <div className="icon-container" onClick={() => this.props.toggleDungeonLevelOverlay()}>
+                                <CIcon icon={cilQrCode} size="lg"/>
+                            </div>
+                            <div className="icon-container" onClick={() => this.props.addDungeonLevelDown()}>
+                                <CIcon icon={cilLibraryAdd} size="lg"/> <CIcon className="add-level-down-icon" icon={cilLevelDown} size="lg"/>
+                            </div>
+                        </div>}
+                        </div>
                         <div className="dungeon-planes-container">
-                            {this.props.loadedDungeon && <div className="loaded-dungeon-wrapper"
+                            {this.props.loadedDungeon && !this.props.loadingData && <div className="loaded-dungeon-wrapper"
                             style={{
                                 justifyContent: this.props.loadedDungeon.levels.length > 2 ? 'flex-start' : 'center'
                             }}
@@ -588,9 +613,6 @@ class DungeonView extends React.Component {
                                                         {[1,2,3,4,5,6,7,8,9].map((e,i)=>{
                                                         return <Canvas 
                                                             key={i}
-                                                            // id={`${level.id}F`} 
-                                                            // size={this.props.tileSize*2} 
-
                                                             width={this.props.tileSize*2}
                                                             height={this.props.tileSize*2}
 
@@ -622,9 +644,7 @@ class DungeonView extends React.Component {
                                                                 handleHover={null}
                                                                 handleClick={null}
                                                                 type={tile.type}
-                                                                hovered={
-                                                                    false
-                                                                }
+                                                                hovered={false}
                                                                 />
                                                                 })}
                                                             </div>
@@ -718,33 +738,29 @@ class DungeonView extends React.Component {
                                     </div>
                                 })}
                             </div>}
-                            {this.props.loadedDungeon && <div className="level-buttons-container">
+                            {/* {this.props.loadedDungeon && !this.props.loadingData && <div className="level-buttons-container">
                                 <div className="icon-container" onClick={() => this.props.addDungeonLevelUp()}>
                                     <CIcon icon={cilLibraryAdd} size="lg"/> <CIcon className="add-level-up-icon" icon={cilLevelUp} size="lg"/>
                                 </div>
-                                {/* this.props.saveDungeonLevel() */}
                                 <div className="icon-container" onClick={() =>  this.props.saveDungeonLevel()}>
                                     <CIcon icon={cilSave} size="lg"/>
                                 </div>
-                                {/* <div className="double-icon-container">
-                                    <div className="icon-container">
-                                        <CIcon onClick={() => this.props.clearFrontPlanePreview(levelIndex)} icon={cilX} size="lg"/>
-                                    </div>
-                                    <div className="icon-container">
-                                        <CIcon onClick={() => this.props.clearBackPlanePreview(levelIndex)} icon={cilX} size="lg"/>
-                                    </div>
-                                </div> */}
                                 <div className="icon-container" onClick={() => this.props.toggleDungeonLevelOverlay()}>
                                     <CIcon icon={cilQrCode} size="lg"/>
                                 </div>
                                 <div className="icon-container" onClick={() => this.props.addDungeonLevelDown()}>
                                     <CIcon icon={cilLibraryAdd} size="lg"/> <CIcon className="add-level-down-icon" icon={cilLevelDown} size="lg"/>
                                 </div>
-                            </div>}
+                            </div>} */}
 
                             {/* EMPTY STATE */}
-                            {!this.props.loadedDungeon && <div className="empty-dungeons-container">
+                            {!this.props.loadedDungeon && !this.props.loadingData && <div className="empty-dungeons-container">
                                 Select a dungeon, or create a new one
+                            </div>}
+
+                            {/* LOADING STATE */}
+                            {this.props.loadingData && <div className="empty-dungeons-container">
+                                <CSpinner/>
                             </div>}
                         </div>
                     </div>

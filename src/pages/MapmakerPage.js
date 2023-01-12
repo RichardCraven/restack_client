@@ -2,6 +2,7 @@ import React from 'react'
 import '@coreui/coreui/dist/css/coreui.min.css'
 import '../styles/dungeon-board.scss'
 import '../styles/map-maker.scss'
+import {storeMeta, getMeta} from '../utils/session-handler'
 import BoardView from './dungonBuilderViews/BoardView'
 import PlaneView from './dungonBuilderViews/PlaneView'
 import DungeonView from './dungonBuilderViews/DungeonView'
@@ -27,6 +28,7 @@ import {
   deleteDungeonRequest,
   updateDungeonRequest,
   // loadPlaneRequest,
+  updateUserRequest
 } from '../utils/api-handler';
 
 class MapMakerPage extends React.Component {
@@ -81,6 +83,7 @@ class MapMakerPage extends React.Component {
       boardNameInput : React.createRef(),
 
       mainViewSelectVal : React.createRef(),
+      dungeonSelectVal : React.createRef(),
 
       cachedOriginal: null,
       cachedincoming: null,
@@ -89,7 +92,8 @@ class MapMakerPage extends React.Component {
       visible: false,
       activeDungeonLevel: 0,
       dungeonOverlayOn: false,
-      overlayData: null
+      overlayData: null,
+      loadingData: true
     };
   }
   
@@ -427,7 +431,6 @@ class MapMakerPage extends React.Component {
   // }
   loadAllBoards = async () => {
     const val = await loadAllBoardsRequest();
-    // console.log('load all boards request responded:', val);
     const boards = [],
     boardsFolders = [],
     boardsFoldersExpanded = {};
@@ -615,7 +618,9 @@ class MapMakerPage extends React.Component {
     }
   }
   writeDungeon = async () => {
+    console.log('loaded dungeon', this.state.loadedDungeon);
     if(this.state.loadedDungeon && this.state.loadedDungeon.id){
+      console.log('existing dungeon, update');
       await updateDungeonRequest(this.state.loadedDungeon.id, this.state.loadedDungeon);
       this.loadAllDungeons(); 
       this.toast('Dungeon Saved')
@@ -659,44 +664,43 @@ class MapMakerPage extends React.Component {
   }
   loadAllDungeons = async () => {
     const val = await loadAllDungeonsRequest()
-    console.log('all dungeons:', val);
     let dungeons = [];
     val.data.forEach((e)=>{
       let dungeon = JSON.parse(e.content)
+      console.log('DUNGEON:', dungeon);
       dungeon.id = e._id;
       dungeons.push(dungeon)
     })
-    console.log('setting all dungeons:', dungeons);
-    // console.log('about to save the very first plane');
-    // let plane = dungeons[0]
-    // let d = new Date()
-    //   let n = d.getTime();
-    //   let rand = n.toString().slice(9,13)
-    //   let obj = {
-    //     name: 'plane'+rand,
-    //     miniboards: plane.miniboards,
-    //     spawnPoints: plane.spawnPoints,
-    //     valid: plane.valid
-    //   }
-    //   addPlaneRequest(obj);
-    //   this.toast('Plane Saved')
-
-    this.setState(() => {
-      return {
-        dungeons
-      }
+    const meta = getMeta()
+    this.setState({
+        dungeons,
+        loadingData: false
     })
+    if(meta?.preferences?.editor?.loadedDungeon){
+      let dungeon = meta.preferences.editor.loadedDungeon;
+      this.setLoadedDungeonDropdownValue(dungeon.name)
+      this.setState({
+        loadedDungeon: dungeon
+      })
+    }
+  }
+  setLoadedDungeonDropdownValue = (name) => {
+    let b = this.state.dungeonSelectVal
+    if(b && b.current){ 
+      b.current.value = name;
+      this.setState({
+        dungeonSelectVal : b
+      })
+    }
   }
   loadAllPlanes = async () => {
     const val = await loadAllPlanesRequest()
-    console.log('all planes:', val);
     let planes = [];
     val.data.forEach((e)=>{
       let plane = JSON.parse(e.content)
       plane.id = e._id;
       planes.push(plane)
     })
-    console.log('setting all planes:', planes);
     this.setState(() => {
       return {
         planes
@@ -750,7 +754,6 @@ class MapMakerPage extends React.Component {
     })
   }
   adjacencyFilterClicked = () => {
-    console.log('adjacency filter clicked');
     if(this.state.adjacencyFilterSet){
       this.setState((state) => {
         return {
@@ -904,7 +907,6 @@ class MapMakerPage extends React.Component {
   // Drag and Drop code
 
   onDragStart = (event, board, origin = null) => {
-    console.log('drag start, origin: ', origin);
     this.setState({
       draggedBoard: board,
       draggedBoardOrigin: origin
@@ -944,16 +946,13 @@ class MapMakerPage extends React.Component {
 
   // DUNGEON drag and drop
   onDragStartDungeon = (plane) => {
-    console.log('drag start dungeon, plane: ', plane);
     this.setState({
       draggedPlane: plane
     })
   }
   onDragOverDungeon = (event, levelIndex, frontOrBack) => {
     const val = `${levelIndex}_${frontOrBack}`
-    
     if(this.state.hoveredDungeonSection !== val){
-      console.log('val: ', val)
       this.setState({
         hoveredDungeonSection: val
       })
@@ -962,21 +961,10 @@ class MapMakerPage extends React.Component {
   }
 
   onDropDungeon = (levelIndex, frontOrBack) => {
-    const dungeon = this.state.loadedDungeon
-
-    console.log('this.lodaded dungeon:', this.state.loadedDungeon);
+    const dungeon = this.state.loadedDungeon;
     let loadedDungeon = this.state.loadedDungeon;
-    console.log('state.planes:',  this.state.planes);
-    // const incomingPlane =  this.state.planes.find(p=>p.id === id);
-    console.log('incoming plane:', this.state.draggedPlane);
-    dungeon.levels[levelIndex][frontOrBack] = this.state.draggedPlane
-
-    console.log('now dungeon is', dungeon);
+    dungeon.levels[levelIndex][frontOrBack] = this.state.draggedPlane;
     setTimeout(()=>{
-      // let sections = [...this.state.miniboards]
-      // if(this.state.draggedBoard){
-      //   sections[index] = this.state.draggedBoard
-      // }
       this.setState({
         loadedDungeon: dungeon,
         draggedPlane: null,
@@ -1003,7 +991,6 @@ class MapMakerPage extends React.Component {
     const levels = dungeon.levels
     const upperLevels = dungeon.levels.filter(l=>l.id > 0).sort((a,b) => a.id - b.id),
     lowerLevels = dungeon.levels.filter(l=>l.id < 0).sort((a,b) => a.id - b.id)
-    console.log('levels', levels, 'upper:', upperLevels, 'lower:', lowerLevels);
     let newLevel;
     if(upperLevels.length === 0){
       newLevel = {
@@ -1015,8 +1002,7 @@ class MapMakerPage extends React.Component {
     }
     else{
       let lastLevel = upperLevels[upperLevels.length-1],
-      lastId = lastLevel.id
-      console.log('upper levels:', upperLevels, lastLevel);
+      lastId = lastLevel.id;
       newLevel = {
         id: lastId+1,
         front: null,
@@ -1029,12 +1015,10 @@ class MapMakerPage extends React.Component {
     })
   }
   addDungeonLevelDown = () => {
-    console.log('ADD DOWN');
     let dungeon = this.state.loadedDungeon;
     const levels = dungeon.levels
     const upperLevels = dungeon.levels.filter(l=>l.id > 0).sort((a,b) => a.id - b.id),
     lowerLevels = dungeon.levels.filter(l=>l.id < 0).sort((a,b) => a.id - b.id)
-    console.log('22 levels', levels, 'upper:', upperLevels, 'lower:', lowerLevels);
     let newLevel;
     if(lowerLevels.length === 0){
       newLevel = {
@@ -1047,36 +1031,26 @@ class MapMakerPage extends React.Component {
     else{
       let lastLevel = lowerLevels[0],
       lastId = lastLevel.id
-      console.log('upper levels:', upperLevels, lastLevel);
       newLevel = {
         id: lastId-1,
         front: null,
         back: null
       }
     }
-    dungeon.levels.push(newLevel)
-    console.log('now dungeon is:', dungeon);
+    dungeon.levels.push(newLevel);
     this.setState({
       loadedDungeon: dungeon
     })
   }
   toggleDungeonLevelOverlay = () => {
-    console.log('toggle overlay activated');
     let e = this.state.dungeonOverlayOn,
     overlayData = null;
     if(!e === true){
-      // console.log('board 5::: ',  this.state.loadedDungeon.levels[0].front.miniboards[5].tiles);
-      // let locationOfDoor = this.state.loadedDungeon.levels[0].front.miniboards[5].tiles.filter(t=>t.contains === 'way_up')
-      // console.log('location of door in board 5: ', locationOfDoor);
       overlayData = {
         color: 'red',
         doors: [{x: 8, y: 4}]
       }
-
-      overlayData= this.props.mapMaker.markPassages(this.state.loadedDungeon)
-      console.log('overlay data: ', overlayData);
-      // this.props.overlayData{}
-      // return
+      overlayData= this.props.mapMaker.markPassages(this.state.loadedDungeon);
     }
     this.setState({
       dungeonOverlayOn: !e,
@@ -1142,8 +1116,28 @@ class MapMakerPage extends React.Component {
   }
 
   dungeonSelectOnChange = (e) => {
-    const dungeon = this.state.dungeons.find(x=>x.name === e.target.value)
-    this.loadDungeon(dungeon.id)
+    let dungeon;
+    const meta = JSON.parse(sessionStorage.getItem('metadata'))
+    const userId = sessionStorage.getItem('userId')
+    if(e.target && e.target.value && e.target.value !== 'Dungeon Selector'){
+      dungeon = this.state.dungeons.find(x=>x.name === e.target.value)
+      this.loadDungeon(dungeon.id)
+    } else {
+      this.setState({
+        loadedDungeon: null
+      })
+    }
+    
+    // NEED TO ABSTRACT THIS INTO A USER SERVICE
+    if(meta.preferences && meta.preferences.editor){
+      meta.preferences.editor['loadedDungeon'] = dungeon;
+    } else {
+      meta.preferences = {
+        editor: { loadedDungeon: dungeon}
+      }
+    }
+    updateUserRequest(userId, meta)
+    storeMeta(meta);
   }
   viewSelectOnChange = (e) => {
     switch(e.target.value){
@@ -1191,16 +1185,16 @@ class MapMakerPage extends React.Component {
         <div className="column-wrapper">
           <div className="inputs-container">
             <CButton color="light" onClick={() => this.addNewDungeon()}>New</CButton>
-            <CFormSelect 
+            {/* <CFormSelect 
               aria-label="Dungeon Selector"
+              ref={this.state.dungeonSelectVal}
               options={
-              
                 ['Dungeon Selector'].concat(this.state.dungeons.map((e, i)=>{
                   return { label: e.name, value: e.name}
                 }))
               }
               onChange={this.dungeonSelectOnChange}
-            />
+            /> */}
             <CFormSelect 
               aria-label="Dungeon Selector"
               ref={this.state.mainViewSelectVal}
@@ -1320,12 +1314,14 @@ class MapMakerPage extends React.Component {
 //            board specific ^              
             ></PlaneView>}
 
-            {this.state.selectedView === 'dungeon' && <DungeonView
+            {this.state.selectedView === 'dungeon' && 
+            <DungeonView
               tileSize={this.state.tileSize}
               boardSize={this.state.boardSize}
               boardsFolders={this.state.boardsFolders}
               boardsFoldersExpanded={this.state.boardsFoldersExpanded}
               boards={this.state.boards}
+              dungeons={this.state.dungeons}
               tiles={this.state.tiles}
               compatibilityMatrix={this.state.compatibilityMatrix}
               pinnedOption={this.state.pinnedOption}
@@ -1389,6 +1385,9 @@ class MapMakerPage extends React.Component {
               activeDungeonLevel={this.state.activeDungeonLevel}
               dungeonOverlayOn={this.state.dungeonOverlayOn}
               overlayData={this.state.overlayData}
+              loadingData={this.state.loadingData}
+              dungeonSelectOnChange={this.dungeonSelectOnChange}
+              dungeonSelectVal={this.state.dungeonSelectVal}
               ></DungeonView>}
           </div>
         </div>

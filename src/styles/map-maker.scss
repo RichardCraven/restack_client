@@ -12,6 +12,12 @@
     align-items: center;
     display: flex;
 }
+.form-select{
+    width: fit-content;
+    :focus{
+        box-shadow: none;
+    }
+}
 .plane-preview{
     display: flex;
     flex-flow: row wrap;
@@ -29,6 +35,7 @@
     height: 100%;
     width: 100%;
     display: flex;
+    // overflow: hidden;
     .left-palette.boards-palette{
         background-color: transparent;
         padding-left: 8px;
@@ -441,14 +448,55 @@ ul.dropdown-menu.show{
 
 
 //  DUNGEON VIEW
+
+.dungeon-info{
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    // padding: 0px 15px;
+    padding: 0;
+    height: 40px;
+    .level-buttons-container{
+        display: flex;
+        min-width: 300px;
+        justify-content: space-around;
+        margin: 0px 20px;
+        // border: 1px solid red;
+        flex-direction: row;
+        min-height: 50%;
+        // background-color: slategrey;
+        .icon-container{
+            cursor: pointer;
+            display: flex;
+            &:hover{
+                // background-color: grey;
+                color: rgb(37, 192, 179);
+            }
+            .add-level-up-icon{
+                margin-left: -4px;
+                margin-top: -2px;
+            }
+            .add-level-down-icon{
+                margin-left: -4px;
+                margin-top: -3px;
+            }
+        }
+        .double-icon-container{
+            display: flex;
+        }
+    }
+}
 .dungeon-planes-container{
-    height: 100%;
+    height: calc(100% - 40px);
     width: 100%;
 
     display: flex;
     flex-direction: row;
     justify-content: center;
     // ^ ??
+
+    overflow: scroll;
 
     .empty-dungeons-container{
         display: flex;
@@ -457,38 +505,11 @@ ul.dropdown-menu.show{
         width: 100%;
         height: 100%;
     }
-    .level-buttons-container{
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        flex: auto;
-        // border: 1px solid red;
-        flex-direction: column;
-        min-height: 50%;
-        // background-color: slategrey;
-        .icon-container{
-            cursor: pointer;
-            margin: 15px 0px;
-            &:hover{
-                // background-color: grey;
-                color: rgb(37, 192, 179);
-            }
-            .add-level-up-icon{
-                margin-left: -9px;
-                margin-bottom: 7px;
-            }
-            .add-level-down-icon{
-                margin-left: -9px;
-                margin-bottom: -3px;
-            }
-        }
-        .double-icon-container{
-            display: flex;
-        }
-    }
+    
     .loaded-dungeon-wrapper{
         height: 100%;
         display: flex;
+        flex: auto;
         flex-direction: column;
         justify-content: center;
         justify-content: flex-start;
@@ -503,15 +524,14 @@ ul.dropdown-menu.show{
             width: 100%;
             .level-info{
                 display: flex;
-                justify-content: center;
+                justify-content: space-around;
                 align-items: center;
-                color: red;
-                flex: auto;
-                min-width: 70px;
+                min-width: 100px;;
             }
             canvas.doublewide-canvas{
                 position: absolute;
-                z-index: 3;
+                z-index: 1;
+                pointer-events: none;
             }
             .plane-board-displays-wrapper{
                 display: flex;
@@ -528,6 +548,8 @@ ul.dropdown-menu.show{
                         position: absolute;
                         z-index: 2;
                         display: flex;
+                        pointer-events: none;
+                        
                         // background-color: red;
                         canvas{
                             // border: 1px solid red;

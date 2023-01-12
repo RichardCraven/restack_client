@@ -6,7 +6,6 @@ const Canvas = props => {
     const canvasRef = useRef(null)
 
     useEffect(() => {
-        console.log('firing draw')
         const canvas = canvasRef.current
         const context = canvas.getContext('2d')
         let frameCount = 0

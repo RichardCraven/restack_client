@@ -4,9 +4,16 @@ function storeToken(id, token, isAdmin, metadata){
     //     bool = true;
     // }
     sessionStorage.setItem('userId', id)
-    sessionStorage.setItem('token', token)
+    // sessionStorage.setItem('token', token)
     sessionStorage.setItem('isAdmin', isAdmin.toString())
     sessionStorage.setItem('metadata', metadata)
 }
 
-export {storeToken};
+function storeMeta(metadata){
+    sessionStorage.setItem('metadata', JSON.stringify(metadata))
+}
+function getMeta(){
+    return JSON.parse(sessionStorage.getItem('metadata'))
+}
+
+export {storeToken, storeMeta, getMeta};

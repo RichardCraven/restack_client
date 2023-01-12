@@ -27,16 +27,24 @@ const history = useHistory();
 useEffect(() => {
 
   getAllUsersRequest().then((response)=>{
-    setAllUsers(response.data)
+    // setAllUsers(response.data)
   })
 
   const token = sessionStorage.getItem('token');
-  if(token){
+  console.log('token: ', token, typeof token, 'loggedIn:', loggedIn);
+  if(token !== undefined && token !== 'undefined'){
+    console.log('wait a minute...')
     setLoggedIn(true)
+  } else {
+    console.log('setting logged in to 44');
+    setLoggedIn(false)
   }
+  setTimeout(()=>{
+    console.log('wtaf, loggedIn??', loggedIn);
+  },1000)
 }, [])
 useEffect(()=>{
-  // console.log('all users changed', allUsers);
+  console.log('all users', allUsers);
 }, [allUsers])
 
 const logout = () => {
@@ -49,7 +57,7 @@ const logout = () => {
 const loginFromRegister = (user) => {
   // setUser(user)
   setTimeout(()=>{
-    
+    console.log('user token: ', user.token, typeof user.token);
     storeToken(user._id, user.token, user.isAdmin, user.metadata)
     setLoggedIn(true)
   })
@@ -64,6 +72,7 @@ const login = (userCredentials) => {
   if(validUser){
     // setUser(validUser)
     setTimeout(()=>{
+      console.log('valid user.metadata:', validUser.metadata);
       storeToken(validUser._id, validUser.token, validUser.isAdmin, validUser.metadata)
       setLoggedIn(true)
       setIsAdmin(JSON.parse(sessionStorage.getItem('isAdmin') === 'true' ))
@@ -92,10 +101,7 @@ const login = (userCredentials) => {
 
 const refreshAllUsers = () => {
   getAllUsersRequest().then((response)=>{
-    setAllUsers(response.data)
-    setTimeout(()=>{
-        console.log('now all users', allUsers);
-    },500)
+    setAllUsers(response.data);
   })
 }
 
@@ -107,14 +113,12 @@ const saveUserData = async () => {
   meta.planeIndex = props.boardManager.playerTile.planeIndex
   meta.boardIndex = props.boardManager.playerTile.boardIndex
   meta.tileIndex = props.boardManager.getIndexFromCoordinates(props.boardManager.playerTile.location) 
-  meta.dungeonId = props.boardManager.dungeon.id
-  // console.log('props.boardManager.dungeon: ', props.boardManager.dungeon);
-  // console.log('board manager: ', props.boardManager);
+  meta.dungeonId = props.boardManager.dungeon.id;
   await updateUserRequest(userId, meta)
   sessionStorage.setItem('metadata', JSON.stringify(meta))
 }
 const goHome = () => {
-  console.log('go home', 'wtf');
+  console.log('go home');
   saveUserData();
   history.push({
     pathname: '/landing'
@@ -126,9 +130,9 @@ const toggleShowCoordinates = () => {
  return (
    <div className="fullpage">
       <div  className="App">
-        <div className="nav-buttons-container">
+        {loggedIn === true && <div className="nav-buttons-container">
           {loggedIn && <button className="menu-buttons logout-button" onClick={logout}>
-            Logout
+            Logout?
           </button>}
           {loggedIn && <button className="menu-buttons save-button" onClick={saveUserData}>
             Save
@@ -139,7 +143,7 @@ const toggleShowCoordinates = () => {
           {loggedIn && isAdmin && <button className="menu-buttons show-coordinates-button" onClick={toggleShowCoordinates}>
             Show Coordinates
           </button>}  
-        </div>
+        </div> }
 
         <Route exact path="/login" render={() => (
           <LoginPage {...props} login={login} loginFromRegister={(e) => loginFromRegister(e)} refreshAllUsers={(e) => refreshAllUsers(e)}/>
