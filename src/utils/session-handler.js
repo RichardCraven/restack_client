@@ -15,5 +15,16 @@ function storeMeta(metadata){
 function getMeta(){
     return JSON.parse(sessionStorage.getItem('metadata'))
 }
+function getUserId(){
+    return sessionStorage.getItem('userId')
+}
+function setEditorPreference(key, val){
+    let meta = getMeta();
+    if(meta.preferences && meta.preferences.editor){
+        meta.preferences.editor[key] = val
+    }
+    storeMeta(meta)
+}
 
-export {storeToken, storeMeta, getMeta};
+
+export {storeToken, storeMeta, getMeta, getUserId, setEditorPreference};

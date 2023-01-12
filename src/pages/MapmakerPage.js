@@ -2,7 +2,7 @@ import React from 'react'
 import '@coreui/coreui/dist/css/coreui.min.css'
 import '../styles/dungeon-board.scss'
 import '../styles/map-maker.scss'
-import {storeMeta, getMeta} from '../utils/session-handler'
+import {storeMeta, getMeta, setEditorPreference} from '../utils/session-handler'
 import BoardView from './dungonBuilderViews/BoardView'
 import PlaneView from './dungonBuilderViews/PlaneView'
 import DungeonView from './dungonBuilderViews/DungeonView'
@@ -622,6 +622,7 @@ class MapMakerPage extends React.Component {
     if(this.state.loadedDungeon && this.state.loadedDungeon.id){
       console.log('existing dungeon, update');
       await updateDungeonRequest(this.state.loadedDungeon.id, this.state.loadedDungeon);
+      setEditorPreference('loadedDungeon', this.state.loadedDungeon)
       this.loadAllDungeons(); 
       this.toast('Dungeon Saved')
     } else {

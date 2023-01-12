@@ -8,41 +8,46 @@ import MapmakerPage from './pages/MapmakerPage'
 import UserManagerPage from './pages/UserManagerPage'
 import UserProfilePage from './pages/UserProfilePage'
 
-import { Route, Redirect} from "react-router-dom";
+import { BrowserRouter, Route, Switch, Redirect} from "react-router-dom";
 import { useEffect } from 'react';
 
 import {updateUserRequest} from '../src/utils/api-handler'
 
 import {getAllUsersRequest} from './utils/api-handler';
-import {storeToken} from './utils/session-handler';
+import {storeToken, getUserId} from './utils/session-handler';
 import { useHistory } from "react-router";
 
+
 function App(props) {
-const [loggedIn, setLoggedIn] = useState(false)
+const [loggedIn, setLoggedIn] = useState(!!getUserId())
 // const [user, setUser] = useState(null);
 const [isAdmin, setIsAdmin] = useState(sessionStorage.getItem('isAdmin') === 'true' ? true : false)
 const [showCoordinates, setShowCoordinates] = useState(false)
 const [allUsers, setAllUsers] = useState([])
 const history = useHistory();
 useEffect(() => {
-
+  console.log('history: ', history);
   getAllUsersRequest().then((response)=>{
-    // setAllUsers(response.data)
+    setAllUsers(response.data)
   })
 
   const token = sessionStorage.getItem('token');
   console.log('token: ', token, typeof token, 'loggedIn:', loggedIn);
-  if(token !== undefined && token !== 'undefined'){
-    console.log('wait a minute...')
+  if(getUserId()){
+    console.log('logged in')
     setLoggedIn(true)
+
   } else {
-    console.log('setting logged in to 44');
+    console.log('setting logged in to false');
     setLoggedIn(false)
   }
   setTimeout(()=>{
     console.log('wtaf, loggedIn??', loggedIn);
-  },1000)
+  },5000)
 }, [])
+useEffect(()=>{
+  console.log('loggedIn ::: ', loggedIn);
+}, [loggedIn])
 useEffect(()=>{
   console.log('all users', allUsers);
 }, [allUsers])
@@ -72,10 +77,18 @@ const login = (userCredentials) => {
   if(validUser){
     // setUser(validUser)
     setTimeout(()=>{
-      console.log('valid user.metadata:', validUser.metadata);
+      console.log('valid user.metadata:', JSON.parse(validUser.metadata));
       storeToken(validUser._id, validUser.token, validUser.isAdmin, validUser.metadata)
       setLoggedIn(true)
       setIsAdmin(JSON.parse(sessionStorage.getItem('isAdmin') === 'true' ))
+      history.push({
+        pathname: '/landing'
+      })
+      // setTimeout(()=>{
+
+      //   console.log('about to redirect to landing', loggedIn);
+      //   return <Redirect to="/landing" />
+      // })
     })
       // const userId = validUser.id;
 
@@ -144,8 +157,52 @@ const toggleShowCoordinates = () => {
             Show Coordinates
           </button>}  
         </div> }
+        {/* <Route path="/">
+          {!loggedIn ? <Redirect to="/login" /> : 
+          <Redirect to="/landing" />}
+        </Route> */}
+        {/* <BrowserRouter> */}
+        <Switch>
+          {/* <UnauthenticatedRoute
+            path="/login"
+            component={LoginPage}
+            appProps={{ loggedIn }}
+          /> */}
+          {/* <AuthenticatedRoute
+            path="/landing"
+            component={LandingPage}
+            appProps={{ loggedIn }}
+          /> */}
+          <Route exact path="/login" render={() => (
+            <LoginPage {...props} login={login} loginFromRegister={(e) => loginFromRegister(e)} refreshAllUsers={(e) => refreshAllUsers(e)}/>
+          )}/>
+          <Route exact path="/userProfilePage" render={() => (
+            <UserProfilePage {...props} />
+          )}/>
+          <Route exact path="/dungeon" render={() => (
+              <DungeonPage {...props} saveUserData={saveUserData} showCoordinates={showCoordinates}/>
+            )}/>
+          <Route exact path="/landing" component={LandingPage}>
+            {!loggedIn && <Redirect to="/login" /> }
+          </Route> 
+          <Route exact path="/usermanager" render={() => (
+            <UserManagerPage {...props} />
+            )}/>
+          <Route exact path="/mapmaker" render={() => (
+            !loggedIn ? <Redirect to="/login" /> :
+              <MapmakerPage {...props} showCoordinates={showCoordinates}  />
+          )}/>
+          <Route path="/">
+              {loggedIn ? <Redirect to="/landing" /> : 
+              <Redirect to="/login" />}
+          </Route>
 
-        <Route exact path="/login" render={() => (
+          {/* <LoginPage {...props} login={login} loginFromRegister={(e) => loginFromRegister(e)} refreshAllUsers={(e) => refreshAllUsers(e)}></LoginPage> */}
+          {/* <Route component={NotFound} /> */}
+        </Switch>
+        {/* </BrowserRouter> */}
+
+        {/* <Route exact path="/login" render={() => (
           <LoginPage {...props} login={login} loginFromRegister={(e) => loginFromRegister(e)} refreshAllUsers={(e) => refreshAllUsers(e)}/>
         )}/>
         <Route exact path="/userProfilePage" render={() => (
@@ -154,7 +211,7 @@ const toggleShowCoordinates = () => {
         <Route exact path="/dungeon" render={() => (
             <DungeonPage {...props} saveUserData={saveUserData} showCoordinates={showCoordinates}/>
           )}/>
-        <Route path="/landing" component={LandingPage}/>
+        <Route exact path="/landing" component={LandingPage}/>
         <Route exact path="/usermanager" render={() => (
           <UserManagerPage {...props} />
           )}/>
@@ -164,7 +221,9 @@ const toggleShowCoordinates = () => {
         <Route path="/">
           {loggedIn ? <Redirect to="/landing" /> : 
           <Redirect to="/login" />}
-        </Route>
+        </Route> */}
+
+        
       </div>
  </div>
  );
