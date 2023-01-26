@@ -2,7 +2,7 @@ import React, { useRef, useEffect } from 'react'
 
 const Canvas = props => {
   
-    const { draw, ...rest } = props
+    const { draw } = props
     const canvasRef = useRef(null)
 
     useEffect(() => {
@@ -22,9 +22,9 @@ const Canvas = props => {
         return () => {
         window.cancelAnimationFrame(animationFrameId)
         }
-    }, [draw])
+    }, [draw, props.data])
   
-    return <canvas height={props.height} width={props.width} ref={canvasRef} {...props}/>
+    return <canvas height={props.height} width={props.width} ref={canvasRef}/>
 }
 
 export default Canvas

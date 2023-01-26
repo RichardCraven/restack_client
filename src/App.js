@@ -8,7 +8,7 @@ import MapmakerPage from './pages/MapmakerPage'
 import UserManagerPage from './pages/UserManagerPage'
 import UserProfilePage from './pages/UserProfilePage'
 
-import { BrowserRouter, Route, Switch, Redirect} from "react-router-dom";
+import { Route, Switch, Redirect} from "react-router-dom";
 import { useEffect } from 'react';
 
 import {updateUserRequest} from '../src/utils/api-handler'
@@ -26,28 +26,15 @@ const [showCoordinates, setShowCoordinates] = useState(false)
 const [allUsers, setAllUsers] = useState([])
 const history = useHistory();
 useEffect(() => {
-  console.log('history: ', history);
   getAllUsersRequest().then((response)=>{
     setAllUsers(response.data)
   })
-
-  const token = sessionStorage.getItem('token');
-  console.log('token: ', token, typeof token, 'loggedIn:', loggedIn);
   if(getUserId()){
-    console.log('logged in')
     setLoggedIn(true)
-
   } else {
-    console.log('setting logged in to false');
     setLoggedIn(false)
   }
-  setTimeout(()=>{
-    console.log('wtaf, loggedIn??', loggedIn);
-  },5000)
 }, [])
-useEffect(()=>{
-  console.log('loggedIn ::: ', loggedIn);
-}, [loggedIn])
 useEffect(()=>{
   console.log('all users', allUsers);
 }, [allUsers])
@@ -145,7 +132,7 @@ const toggleShowCoordinates = () => {
       <div  className="App">
         {loggedIn === true && <div className="nav-buttons-container">
           {loggedIn && <button className="menu-buttons logout-button" onClick={logout}>
-            Logout?
+            Logout
           </button>}
           {loggedIn && <button className="menu-buttons save-button" onClick={saveUserData}>
             Save

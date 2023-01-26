@@ -454,7 +454,6 @@ ul.dropdown-menu.show{
     flex-direction: row;
     align-items: center;
     justify-content: flex-start;
-    // padding: 0px 15px;
     padding: 0;
     height: 40px;
     .level-buttons-container{
@@ -462,15 +461,13 @@ ul.dropdown-menu.show{
         min-width: 300px;
         justify-content: space-around;
         margin: 0px 20px;
-        // border: 1px solid red;
         flex-direction: row;
         min-height: 50%;
-        // background-color: slategrey;
+        align-items: center;
         .icon-container{
             cursor: pointer;
             display: flex;
             &:hover{
-                // background-color: grey;
                 color: rgb(37, 192, 179);
             }
             .add-level-up-icon{
@@ -535,6 +532,13 @@ ul.dropdown-menu.show{
             }
             .plane-board-displays-wrapper{
                 display: flex;
+                position: relative;
+                // horizontal-connecting-canvas-wrapper
+                .horizontal-connecting-canvas-wrapper{
+                    position: absolute;
+                    top: 0;
+                    z-index: 2;
+                }
                 .plane-board-display{
                     min-height: 250px;
                     min-width: 250px;
@@ -561,5 +565,20 @@ ul.dropdown-menu.show{
             }
             
         }
+    }
+}
+.view-state-radio-group{
+    label{
+        border-width: 2px;
+        // color: yellow;
+    }
+    label:hover{
+
+        border: 2px solid yellow !important;
+        color: yellow !important;
+    }
+    .btn-check:checked+.btn{
+        border-color: #9da5b1 !important;
+        color: rgba(44, 56, 74, 0.95) !important;
     }
 }

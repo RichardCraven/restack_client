@@ -51,7 +51,7 @@ export function MapMaker(props){
         let val = [];
         dungeon.levels.forEach(l => {
             console.log('level: ', l);
-            let miniboards = l.front?.miniboards
+            // let miniboards = l.front?.miniboards
             let frontFilteredMiniboards = l.front?.miniboards.map(b=>b.tiles.filter(t=>t.contains==='way_up' || 
             t.contains === 'way_down' || t.contains==='door')) || []
             let backFilteredMiniboards = l.back?.miniboards.map(b=>b.tiles.filter(t=>t.contains==='way_up' || 
@@ -410,14 +410,14 @@ export function MapMaker(props){
     }
 
     this.getFolderColors = (numberOfFolders) => {
-        const colors = {
-                'aqua' : ['#00ffff', '#13c2c2', '#199595', "#136565"],
-                // '#00ffff' -> aqua
-                // '#13c2c2' -> medium aqua
-                // '#199595' -> dark aqua
-                // "#136565" -> darkest aqua
-                'lavender': ''
-        }
+        // const colors = {
+        //         'aqua' : ['#00ffff', '#13c2c2', '#199595', "#136565"],
+        //         // '#00ffff' -> aqua
+        //         // '#13c2c2' -> medium aqua
+        //         // '#199595' -> dark aqua
+        //         // "#136565" -> darkest aqua
+        //         'lavender': ''
+        // }
         
 
         // numberOfFolders

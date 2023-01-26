@@ -5,7 +5,7 @@ import '../../styles/map-maker.scss'
 import Tile from '../../components/tile'
 import { CDropdown, CDropdownToggle, CDropdownMenu, CDropdownItem, CCollapse, CSpinner, CFormSelect} from '@coreui/react';
 import  CIcon  from '@coreui/icons-react'
-import { cilCaretRight, cilSave, cilQrCode, cilLevelDown, cilLevelUp, cilLibraryAdd, cilX, cilOptions } from '@coreui/icons';
+import { cilCaretRight, cilSave, cilQrCode, cilLevelDown, cilLevelUp, cilLibraryAdd, cilTrash, cilOptions, cilPlus } from '@coreui/icons';
 import '../../styles/dungeon-board.scss'
 import '../../styles/map-maker.scss'
 import Canvas from '../../components/Canvas/canvas'
@@ -47,7 +47,6 @@ class DungeonView extends React.Component {
 
 
     let levelData = this.props.overlayData?.find(x=>x.id === data.levelId)
-    let minVal = 1;
                 if(levelData){
 
                     // orientation = data.orientation
@@ -65,12 +64,12 @@ class DungeonView extends React.Component {
                     if(data.orientation === 'doublewide'){
                         let miniboardSize = this.props.tileSize*2;
 
-                        let planeWidth = this.props.tileSize*12;
+                        // let planeWidth = this.props.tileSize*12;
                         let planeHeight = this.props.tileSize*6;
                         let unit = planeHeight/(this.props.tileSize*6);
 
                         let leftPlaneSize = this.props.tileSize*6;
-                        let rightPlaneSize = this.props.tileSize*6;
+                        // let rightPlaneSize = this.props.tileSize*6;
 
                         ctx.fillStyle = 'red'
                         // let x = unit*p.coordinates[0] + unit/2
@@ -78,10 +77,10 @@ class DungeonView extends React.Component {
                         // let x = 15, y = 40;
 
 
-                        let x1 = unit*leftPlaneSize/2 + unit/2
-                        let y1 = unit*leftPlaneSize/2 + unit/2
-                        let x2 = (unit*leftPlaneSize/2)*3 + unit/2
-                        let y2 = (unit*leftPlaneSize/2) + unit/2
+                        // let x1 = unit*leftPlaneSize/2 + unit/2
+                        // let y1 = unit*leftPlaneSize/2 + unit/2
+                        // let x2 = (unit*leftPlaneSize/2)*3 + unit/2
+                        // let y2 = (unit*leftPlaneSize/2) + unit/2
 
                         ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
                         for(let miniboardIndex = 0; miniboardIndex < 9; miniboardIndex++){
@@ -89,7 +88,7 @@ class DungeonView extends React.Component {
                             let rows = [1,1,1,2,2,2,3,3,3]
                             let row = rows[miniboardIndex] 
                             let col = cols[miniboardIndex] 
-                            let centerOfMiniboard = miniboardSize/2
+                            // let centerOfMiniboard = miniboardSize/2
 
                             let originPointX = (miniboardSize * col) - miniboardSize + (unit * 2)
                             let originPointX_back = ((3*miniboardSize) + miniboardSize * col) - miniboardSize + (unit * 2) 
@@ -238,15 +237,18 @@ class DungeonView extends React.Component {
                     >
                         <div className="color-line-blocker"></div>
                         <CDropdown>
-                        <CDropdownToggle disabled color="secondary">Actions</CDropdownToggle>
-                        <CDropdownMenu>
-                            <CDropdownItem onClick={() => this.props.clearLoadedBoard()}>Clear</CDropdownItem>
-                            <CDropdownItem onClick={() => this.props.writeBoard()}>Save</CDropdownItem>
-                            <CDropdownItem onClick={() => this.props.deleteBoard()}>Delete</CDropdownItem>
-                            <CDropdownItem disabled={!this.props.loadedBoard} onClick={() => this.renameBoard()}>Rename Current Map</CDropdownItem>
-                            <CDropdownItem onClick={() => this.props.adjacencyFilterClicked()}>Filter: Adjacency</CDropdownItem>
-                            <CDropdownItem onClick={() => this.props.nameFilterClicked()}>Filter: Name</CDropdownItem>
-                        </CDropdownMenu>
+                            <CDropdownToggle disabled color="secondary">
+                                Actions
+                                {/* <CIcon icon={cilOptions} size="lg"/> */}
+                            </CDropdownToggle>
+                            <CDropdownMenu>
+                                <CDropdownItem onClick={() => this.props.clearLoadedBoard()}>Clear</CDropdownItem>
+                                <CDropdownItem onClick={() => this.props.writeBoard()}>Save</CDropdownItem>
+                                <CDropdownItem onClick={() => this.props.deleteBoard()}>Delete</CDropdownItem>
+                                <CDropdownItem disabled={!this.props.loadedBoard} onClick={() => this.renameBoard()}>Rename Current Map</CDropdownItem>
+                                <CDropdownItem onClick={() => this.props.adjacencyFilterClicked()}>Filter: Adjacency</CDropdownItem>
+                                <CDropdownItem onClick={() => this.props.nameFilterClicked()}>Filter: Name</CDropdownItem>
+                            </CDropdownMenu>
                         </CDropdown>
                     </div>
                     <div className="board-previews-container previews-container"
@@ -565,6 +567,36 @@ class DungeonView extends React.Component {
                             <div className="icon-container" onClick={() => this.props.addDungeonLevelDown()}>
                                 <CIcon icon={cilLibraryAdd} size="lg"/> <CIcon className="add-level-down-icon" icon={cilLevelDown} size="lg"/>
                             </div>
+                            <div className="icon-container" onClick={() => this.props.addNewDungeon()}>
+                                <CIcon icon={cilPlus} size="lg"/>
+                            </div>
+                            <div className="icon-container dungeon-options-container" >
+                            {/* <CButton type="submit" color="primary">
+                                <CIcon icon={cilOptions} size="lg"/>
+                            </CButton> */}
+                                <CDropdown>
+                                    <CDropdownToggle color="white">
+                                        <CIcon icon={cilOptions} size="lg"/>
+                                    </CDropdownToggle>
+                                    <CDropdownMenu>
+                                        <CDropdownItem onClick={() => this.props.clearLoadedBoard()}>Rename Dungeon</CDropdownItem>
+                                        <CDropdownItem onClick={() => this.props.writeBoard()}>Delete Dungeon</CDropdownItem>
+                                        <CDropdownItem onClick={() => this.props.writeBoard()}>Download Dungeon</CDropdownItem>
+                                        {/* <CDropdownItem onClick={() => this.props.deleteBoard()}>Delete</CDropdownItem>
+                                        <CDropdownItem disabled={!this.props.loadedBoard} onClick={() => this.renameBoard()}>Rename Current Map</CDropdownItem>
+                                        <CDropdownItem onClick={() => this.props.adjacencyFilterClicked()}>Filter: Adjacency</CDropdownItem>
+                                        <CDropdownItem onClick={() => this.props.nameFilterClicked()}>Filter: Name</CDropdownItem> */}
+                                    </CDropdownMenu>
+                                </CDropdown>
+                                {/* <select name="test" id="">
+                                    <option value="Mr">Mr</option>
+                                    <option value="Miss">Miss</option>
+                                    <option value="Mrs">Mrs</option>
+                                    <option value="Ms">Ms</option>
+                                </select> */}
+                            </div>
+
+                            
                         </div>}
                         </div>
                         <div className="dungeon-planes-container">
@@ -577,23 +609,19 @@ class DungeonView extends React.Component {
                                      return <div key={levelIndex} className="level-wrapper">
                                         <div className="level-info">
                                             <div className="level-readout">{`Lvl ${level.id}`}</div>
-                                            <div className="icon-container" onClick={() =>  this.props.clearDungeonLevel(level.id)}>
-                                                <CIcon icon={cilX} size="lg"/>
-                                            </div>
+                                            {level.id !== 0 && <div className="icon-container" onClick={() =>  this.props.clearDungeonLevel(level.id)}>
+                                                <CIcon icon={cilTrash} size="lg"/>
+                                            </div>}
                                         </div>
                                         <div className="plane-board-displays-wrapper">
                                             <div className="horizontal-connecting-canvas-wrapper">
-                                                <Canvas 
-                                                // key={i}
-                                                // id={`${level.id}F`} 
-
-                                                // size={this.props.tileSize*2} 
+                                               {<Canvas 
                                                 className="doublewide-canvas"
                                                 width={this.props.tileSize*12}
                                                 height={this.props.tileSize*6}
                                                 draw={this.draw}
                                                 data={{index: null, levelId: level.id, orientation: 'doublewide'}}
-                                                />
+                                                />}
                                             </div>
                                             {level.front && <div className="front-plane plane-board-display">
                                                 <div 
