@@ -48,40 +48,103 @@ export function MapMaker(props){
         return tiles
     }
     this.markPassages = (dungeon) => {
+        dungeon.levels.forEach(lvl => {
+            if(lvl.front) lvl.front.miniboards.forEach((mb, i) => {
+                mb.tiles.forEach(t=> {
+                    t.level = lvl.id
+                    t.locationCode = `${t.contains}_level-${lvl.id}_miniboard-${i}_F_[${t.coordinates}]`
+                })
+            })
+            if(lvl.back) lvl.back.miniboards.forEach((mb, i) => {
+                mb.tiles.forEach(t=> {
+                    t.level = lvl.id
+                    t.locationCode = `${t.contains}_level-${lvl.id}_miniboard-${i}_B_[${t.coordinates}]`
+                })
+            })
+        })
         let val = [];
-        dungeon.levels.forEach(l => {
-            console.log('level: ', l);
-            // let miniboards = l.front?.miniboards
-            let frontFilteredMiniboards = l.front?.miniboards.map(b=>b.tiles.filter(t=>t.contains==='way_up' || 
-            t.contains === 'way_down' || t.contains==='door')) || []
-            let backFilteredMiniboards = l.back?.miniboards.map(b=>b.tiles.filter(t=>t.contains==='way_up' || 
-            t.contains === 'way_down' || t.contains==='door')) || []
-            
+        dungeon.levels.forEach((l) => {
+            let frontFilteredMiniboards = (!!l.front && l.front.miniboards) ? l.front.miniboards.map(b=>b.tiles.filter(t=>t.contains==='way_up' || 
+            t.contains === 'way_down' || t.contains==='door')) : [];
+            let backFilteredMiniboards = (!!l.back && l.back.miniboards) ? l.back.miniboards.map(b=>b.tiles.filter(t=>t.contains==='way_up' || 
+            t.contains === 'way_down' || t.contains==='door')) : [];
+            let aboveLevel = dungeon.levels.find(lev => lev.id === l.id+1)
+            let belowLevel = dungeon.levels.find(lev => lev.id === l.id-1)
             let connected = []
             for(let i =0; i < 9; i++){
-                let front = frontFilteredMiniboards[i],
-                back = backFilteredMiniboards[i];
-                // console.log('front', front, 'back', back);
-                if(back && back.length > 0 && front && front.length > 0){
-                    back.forEach(b=>{
-                        // if(l.id === 0){
-                        //     // console.log('b:', b, 'front:', front);
-                        // }
-                        let match = front.find(j=>j.contains === b.contains && j.id === b.id)
-                        if(match){
-                            connected.push({miniboardIndex: i, type: b.contains, coordinates: b.coordinates})
+                const frontBoardPassages = frontFilteredMiniboards[i];
+                const backBoardPassages = backFilteredMiniboards[i];
+                const aboveFrontMiniboards = (aboveLevel && aboveLevel.front) ? aboveLevel.front.miniboards.map(b=>b.tiles.filter(t=>t.contains==='way_up' || 
+                t.contains === 'way_down' || t.contains==='door')) : null;
+                const aboveBackMiniboards = aboveLevel && aboveLevel.back ? aboveLevel.back.miniboards.map(b=>b.tiles.filter(t=>t.contains==='way_up' || 
+                t.contains === 'way_down' || t.contains==='door')) : null;
+                const belowFront = belowLevel && belowLevel.front ? belowLevel.front.miniboards.map(b=>b.tiles.filter(t=>t.contains==='way_up' || 
+                t.contains === 'way_down' || t.contains==='door')) : null,
+                belowBack = belowLevel && belowLevel.back ? belowLevel.back.miniboards.map(b=>b.tiles.filter(t=>t.contains==='way_up' || 
+                t.contains === 'way_down' || t.contains==='door')) : null;
+                if(frontBoardPassages && frontBoardPassages.length > 0){
+                    frontBoardPassages.forEach((f)=>{
+                        let backMatch = backBoardPassages ? backBoardPassages.find(b=>b.id === f.id) : null,
+                        aboveMatch = aboveFrontMiniboards ? aboveFrontMiniboards[i].find(aboveTile=>aboveTile.id === f.id) : null,
+                        belowMatch = belowFront ? belowFront[i].find(belowTile=>belowTile.id === f.id) : null;
+                        switch(f.contains){
+                            case 'way_up': 
+                                if(aboveMatch){
+                                    aboveMatch.miniboardIndex = i;
+                                    console.log('above match!', aboveMatch);
+                                    connected.push({locationCode: f.locationCode, miniboardIndex: i, type: f.contains, coordinates: f.coordinates, orientation: 'front', connectedTo: aboveMatch, level: f.level})
+                                }
+                            break;
+                            case 'way_down': 
+                                if(belowMatch){
+                                    belowMatch.miniboardIndex = i;
+                                    console.log('below match!', belowMatch);
+                                    connected.push({locationCode: f.locationCode, miniboardIndex: i, type: f.contains, coordinates: f.coordinates, orientation: 'front', connectedTo: belowMatch, level: f.level})
+                                }
+                            break;
+                            case 'door': 
+                                if(backMatch){
+                                    backMatch.miniboardIndex = i;
+                                    console.log('door match!', backMatch);
+                                    connected.push({locationCode: f.locationCode, miniboardIndex: i, type: f.contains, coordinates: f.coordinates, orientation: 'front', connectedTo: backMatch, level: f.level})
+                                }
+                            break;
+                            default:
+                                break;
                         }
                     })
-                    // if(back[i].contains === )
                 }
-
+                if(backBoardPassages && backBoardPassages.length > 0){
+                    backBoardPassages.forEach((b)=>{
+                        let frontMatch = frontBoardPassages ? frontBoardPassages.find(f=>f.id === b.id): null,
+                        aboveMatch = aboveBackMiniboards ? aboveBackMiniboards[i].find(above=>above.id === b.id) : null,
+                        belowMatch = belowBack ? belowBack[i].find(below=>below.id === b.id) : null
+                        switch(b.contains){
+                            case 'way_up': 
+                                if(aboveMatch){
+                                    connected.push({locationCode: b.locationCode, miniboardIndex: i, type: b.contains, coordinates: b.coordinates, orientation: 'back', connectedTo: aboveMatch, level: b.level})
+                                }
+                            break;
+                            case 'way_down': 
+                                if(belowMatch){
+                                    connected.push({locationCode: b.locationCode, miniboardIndex: i, type: b.contains, coordinates: b.coordinates, orientation: 'back', connectedTo: belowMatch, level: b.level})
+                                }
+                            break;
+                            case 'door': 
+                                if(frontMatch){
+                                    connected.push({locationCode: b.locationCode, miniboardIndex: i, type: b.contains, coordinates: b.coordinates, orientation: 'back', connectedTo: frontMatch, level: b.level})
+                                }
+                            break;
+                            default:
+                                break;
+                        }
+                    })
+                }
             }
-            // console.log('finally, connected:', connected);
             if(frontFilteredMiniboards || backFilteredMiniboards){
                 val.push({id: l.id, frontPassages: frontFilteredMiniboards, backPassages: backFilteredMiniboards, connected})
             }
         })
-        console.log('passages:', val);
         return val
     }
     this.initializeTiles = () => {
@@ -128,10 +191,6 @@ export function MapMaker(props){
         console.log('input: ', input)
     }
     this.getMapConfiguration = (tiles) => {
-        // let xOffset = tiles[0].coordinates[0],
-        //     yOffset = tiles[0].coordinates[1];
-        // console.log('wtf??? tiles are ', tiles)
-        // return null
             let topRow = function(){
                 let openings = []
                 for(let p = 0; p<15; p++){
@@ -182,116 +241,85 @@ export function MapMaker(props){
             bot: [],
             left: []
         }
-        
-        // switch(boardIndex){
-        //     case 0: 
-        //         console.log('top left')
-        //     break;
-        //     case 1: 
-        //         console.log('top mid')
-        //     break;
-        //     case 2: 
-        //         console.log('top right')
-        //     break;
-        //     case 3: 
-        //         console.log('mid left')
-        //     break;
-        //     case 4: 
-        //         console.log('center')
-                boards.forEach((b, i) => {
-                    let leftCompatibleCount = 0,
-                    rightCompatibleCount = 0,
-                    topCompatibleCount = 0,
-                    botCompatibleCount = 0
+        boards.forEach((b, i) => {
+            let leftCompatibleCount = 0,
+            rightCompatibleCount = 0,
+            topCompatibleCount = 0,
+            botCompatibleCount = 0
 
-                    // SCANS TOP TO BOTTOM, LEFT TO RIGHT
-                    
-                    // top
-                    if(boardIndex > 2){
-                        for(let i = 0; i < config[0].length; i++){
-                            if(b.config[2].length !== config[0].length){
-                                break;
-                            }
-                            if(b.config[2][i] && b.config[2][i]-210 === config[0][i]){topCompatibleCount++}
-                        }
-                        if(
-                            (topCompatibleCount > 0 && topCompatibleCount === config[0].length)
-                             || 
-                             (b.config[2].length === 0 && config[0].length === 0)
-                          ){
-                            compatibilityMatrix.top.push(b.id);
-                        }
+            // SCANS TOP TO BOTTOM, LEFT TO RIGHT
+            
+            // top
+            if(boardIndex > 2){
+                for(let i = 0; i < config[0].length; i++){
+                    if(b.config[2].length !== config[0].length){
+                        break;
                     }
+                    if(b.config[2][i] && b.config[2][i]-210 === config[0][i]){topCompatibleCount++}
+                }
+                if(
+                    (topCompatibleCount > 0 && topCompatibleCount === config[0].length)
+                        || 
+                        (b.config[2].length === 0 && config[0].length === 0)
+                    ){
+                    compatibilityMatrix.top.push(b.id);
+                }
+            }
 
 
 
-                    // right
-                    if(boardIndex !== 2 && boardIndex !== 5 && boardIndex !== 8){
-                        for(let i = 0; i < config[1].length; i++){
-                            if(b.config[3].length !== config[1].length){
-                                break;
-                            }
-                            if(b.config[3][i] && b.config[3][i]+14 === config[1][i]){rightCompatibleCount++}
-                        }
-                        
-                        if(
-                            (rightCompatibleCount > 0 && rightCompatibleCount === config[1].length) 
-                            || 
-                            (b.config[3].length === 0 && config[1].length === 0)
-                          ){
-                            compatibilityMatrix.right.push(b.id);
-                        }
+            // right
+            if(boardIndex !== 2 && boardIndex !== 5 && boardIndex !== 8){
+                for(let i = 0; i < config[1].length; i++){
+                    if(b.config[3].length !== config[1].length){
+                        break;
                     }
+                    if(b.config[3][i] && b.config[3][i]+14 === config[1][i]){rightCompatibleCount++}
+                }
+                
+                if(
+                    (rightCompatibleCount > 0 && rightCompatibleCount === config[1].length) 
+                    || 
+                    (b.config[3].length === 0 && config[1].length === 0)
+                    ){
+                    compatibilityMatrix.right.push(b.id);
+                }
+            }
 
-                    // bot
-                    if(boardIndex < 6){
-                        console.log('should be in bot', b.name)
-                        console.log(config[2], b.config[0])
-                        for(let i = 0; i < config[2].length; i++){
-                            if(b.config[0].length !== config[2].length) break;
-                            if(b.config[0][i] && b.config[0][i]+210 === config[2][i]){botCompatibleCount++}
-                        }
-                        if(
-                            (botCompatibleCount > 0 && botCompatibleCount === config[2].length) 
-                            || 
-                            (b.config[0].length === 0 && config[2].length === 0)
-                          ){
-                            compatibilityMatrix.bot.push(b.id);
-                        }
-                    }
+            // bot
+            if(boardIndex < 6){
+                console.log('should be in bot', b.name)
+                console.log(config[2], b.config[0])
+                for(let i = 0; i < config[2].length; i++){
+                    if(b.config[0].length !== config[2].length) break;
+                    if(b.config[0][i] && b.config[0][i]+210 === config[2][i]){botCompatibleCount++}
+                }
+                if(
+                    (botCompatibleCount > 0 && botCompatibleCount === config[2].length) 
+                    || 
+                    (b.config[0].length === 0 && config[2].length === 0)
+                    ){
+                    compatibilityMatrix.bot.push(b.id);
+                }
+            }
 
-                    // left
-                    if(boardIndex !== 0 && boardIndex !== 3 && boardIndex !== 6){
-                        for(let i = 0; i < config[3].length; i++){
-                            if(b.config[1].length !== config[3].length) break;
-                            if(b.config[1][i] && b.config[1][i]-14 === config[3][i]){leftCompatibleCount++}
-                        }
-                        if(
-                            (leftCompatibleCount > 0 && leftCompatibleCount === config[3].length)
-                            || 
-                            (b.config[1].length === 0 && config[3].length === 0)
-                          ){
-                            compatibilityMatrix.left.push(b.id);
-                        }
-                    }
+            // left
+            if(boardIndex !== 0 && boardIndex !== 3 && boardIndex !== 6){
+                for(let i = 0; i < config[3].length; i++){
+                    if(b.config[1].length !== config[3].length) break;
+                    if(b.config[1][i] && b.config[1][i]-14 === config[3][i]){leftCompatibleCount++}
+                }
+                if(
+                    (leftCompatibleCount > 0 && leftCompatibleCount === config[3].length)
+                    || 
+                    (b.config[1].length === 0 && config[3].length === 0)
+                    ){
+                    compatibilityMatrix.left.push(b.id);
+                }
+            }
 
-                })
-                return compatibilityMatrix;
-            // case 5: 
-            //     console.log('mid right')
-            // break;
-            // case 6: 
-            //     console.log('bot left')
-            // break;
-            // case 7: 
-            //     console.log('bot mid')
-            // break;
-            // case 8: 
-            //     console.log('bot right')
-            // break;
-            // default:
-            // break;
-        // }
+        })
+        return compatibilityMatrix;
     }
     this.getSpawnPoints = (miniboards) => {
         let spawnPoints = []
@@ -308,8 +336,40 @@ export function MapMaker(props){
         }
         return spawnPoints.length > 0 ? spawnPoints : null;
     }
-    this.isValidDungeon = (dungeonObj) => {
-        console.log('need to write this function');
+    this.formatDungeon = (dungeonObj) => {
+        let markedPassages = this.markPassages(dungeonObj)
+        let dungeonValid = true;
+        dungeonObj.levels.forEach((l)=>{
+            let valid = true;
+            let passages = markedPassages.find(p=>p.id === l.id)
+            passages.frontPassages.forEach(mb=>{
+                mb.forEach(passage=>{
+                    let connectedMatch = passages.connected.find(e=>e.locationCode === passage.locationCode)
+                    if(!connectedMatch){
+                        valid = false;
+                    }
+                })
+            })
+            passages.backPassages.forEach(mb=>{
+                mb.forEach(passage=>{
+                    let connectedMatch = passages.connected.find(e=>e.locationCode === passage.locationCode)
+                    if(!connectedMatch){
+                        valid = false;
+                    }
+                })
+            })
+            let upwardPassages = passages.connected.filter(e=>e.type==='way_up')
+            passages.upwardPassages = passages.connected.filter(e=>e.type==='way_up')
+            passages.downwardPassages = passages.connected.filter(e=>e.type==='way_down')
+            l.passages = passages;
+            l.valid = valid;
+            if(!valid) dungeonValid = false;
+        })
+        dungeonObj.valid = dungeonValid;
+        // dungeonObj.markedPassages = markedPassages;
+        return dungeonObj
+
+
 
         // console.log('spawnpoints: ', this.getSpawnPoints(miniboards));
         // if(!this.getSpawnPoints(miniboards)){ 
@@ -319,11 +379,6 @@ export function MapMaker(props){
         // ^ make sure there are valid spawnpoints SOMEWHAERE in the dungeon
     }
     this.isValidPlane = (miniboards) => {
-        console.log('miniboards: ', miniboards);
-        console.log('spawnpoints: ', this.getSpawnPoints(miniboards));
-        // if(!this.getSpawnPoints(miniboards)){ 
-        //     return false
-        // }
         for(let b of miniboards){
             if(b.tiles === undefined){
                 console.log('b.tiles undefined:', b);

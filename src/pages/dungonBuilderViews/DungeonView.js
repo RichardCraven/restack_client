@@ -46,175 +46,70 @@ class DungeonView extends React.Component {
 
 
 
-    let levelData = this.props.overlayData?.find(x=>x.id === data.levelId)
-                if(levelData){
+        const levelData = this.props.overlayData?.find(x=>x.id === data.levelId)
+        if(levelData){
+            let planeSize = this.props.tileSize*2;
+            let unit = planeSize/15;
+            let passages;
+            if(data.orientation === 'front'){
+                passages = levelData.frontPassages[data.index]
+            } else if(data.orientation === 'back'){
+                passages = levelData.backPassages[data.index]
+            }
 
-                    // orientation = data.orientation
+            if(data.orientation === 'doublewide'){
+                    
+                let miniboardSize = this.props.tileSize*2;
+                let planeHeight = this.props.tileSize*6;
+                let unit = planeHeight/(this.props.tileSize*6);
+                let leftPlaneSize = this.props.tileSize*6;
+                ctx.fillStyle = 'red'
+                ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
+                let cols = [1,2,3,1,2,3,1,2,3]
+                let rows = [1,1,1,2,2,2,3,3,3]
+                levelData.connected.forEach((lim)=>{
+                    let row = rows[lim.miniboardIndex] 
+                    let col = cols[lim.miniboardIndex] 
+                    let originPointX = (miniboardSize * col) - miniboardSize + (unit * 2)
+                    let originPointX_back = ((3*miniboardSize) + miniboardSize * col) - miniboardSize + (unit * 2) 
+                    let originPointY = (miniboardSize * row) - miniboardSize + (unit * 2);
+                    let microUnit = miniboardSize/15;
+                    let connectedTo = lim.connectedTo;
+                    if(connectedTo.level !== lim.level) return
+                    // doors only for now ^
 
+                    let x = microUnit*lim.coordinates[0] + (unit * 2) 
+                    let y = microUnit*lim.coordinates[1] + (unit * 2) ,
+                    newOriginX = (originPointX + x) + (unit * 2) ,
+                    newOriginY = (originPointY + y) + (unit * 2) ,
+                    destinationX_back = (originPointX_back + x) + (unit * 4) ,
+                    destinationY_back = (originPointY + y) + (unit * 4) 
+                    ctx.lineWidth = 2;
+                    ctx.strokeStyle = 'red'
+                    ctx.beginPath();
+                    ctx.moveTo(newOriginX,newOriginY);
+                    let bezierControlPoint1 = {x: newOriginX, y: newOriginY + 100}
+                    let bezierControlPoint2 = {x:destinationX_back, y: newOriginY + 100}
+                    ctx.bezierCurveTo(bezierControlPoint1.x, bezierControlPoint1.y, bezierControlPoint2.x, bezierControlPoint2.y, destinationX_back, destinationY_back)
+                    ctx.stroke();
+                })
+            }
+            if(!passages) return
+            let fillStyle = 'yellow'
 
-                    let planeSize = this.props.tileSize*2;
-                    let unit = planeSize/15;
-                    let passages;
-                    if(data.orientation === 'front'){
-                        passages = levelData.frontPassages[data.index]
-                    } else if(data.orientation === 'back'){
-                        passages = levelData.backPassages[data.index]
-                    }
-
-                    if(data.orientation === 'doublewide'){
-                        let miniboardSize = this.props.tileSize*2;
-
-                        // let planeWidth = this.props.tileSize*12;
-                        let planeHeight = this.props.tileSize*6;
-                        let unit = planeHeight/(this.props.tileSize*6);
-
-                        let leftPlaneSize = this.props.tileSize*6;
-                        // let rightPlaneSize = this.props.tileSize*6;
-
-                        ctx.fillStyle = 'red'
-                        // let x = unit*p.coordinates[0] + unit/2
-                        // let y = unit*p.coordinates[1] + unit/2
-                        // let x = 15, y = 40;
-
-
-                        // let x1 = unit*leftPlaneSize/2 + unit/2
-                        // let y1 = unit*leftPlaneSize/2 + unit/2
-                        // let x2 = (unit*leftPlaneSize/2)*3 + unit/2
-                        // let y2 = (unit*leftPlaneSize/2) + unit/2
-
-                        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
-                        for(let miniboardIndex = 0; miniboardIndex < 9; miniboardIndex++){
-                            let cols = [1,2,3,1,2,3,1,2,3]
-                            let rows = [1,1,1,2,2,2,3,3,3]
-                            let row = rows[miniboardIndex] 
-                            let col = cols[miniboardIndex] 
-                            // let centerOfMiniboard = miniboardSize/2
-
-                            let originPointX = (miniboardSize * col) - miniboardSize + (unit * 2)
-                            let originPointX_back = ((3*miniboardSize) + miniboardSize * col) - miniboardSize + (unit * 2) 
-                            let originPointY = (miniboardSize * row) - miniboardSize + (unit * 2)
-
-                            let microUnit = miniboardSize/15;
-                            // if(levelData.frontPassages.length > 0){
-                            //     levelData.frontPassages[miniboardIndex].forEach(p=>{
-                            //         let x = microUnit*p.coordinates[0] + unit/2
-                            //         let y = microUnit*p.coordinates[1] + unit/2
-                            //         ctx.beginPath()
-                            //         let minVal = 3.5;
-                            //         ctx.fillStyle = this.getPassageColors(p.contains)
-                            //         ctx.arc((originPointX + x), (originPointY + y), 3.5*Math.sin(frameCount*0.03)**2 + minVal, 0, 2*Math.PI)
-                            //         ctx.fill() 
-                            //     })
-                            // }
-                            // if(levelData.backPassages.length > 0){
-                            //     levelData.backPassages[miniboardIndex].forEach(p=>{
-                            //         let x = microUnit*p.coordinates[0] + unit/2
-                            //         let y = microUnit*p.coordinates[1] + unit/2
-                            //         ctx.beginPath()
-                            //         let minVal = 3.5;
-                            //         ctx.fillStyle = this.getPassageColors(p.contains)
-                            //         ctx.arc((originPointX_back + x), (originPointY + y), 3.5*Math.sin(frameCount*0.03)**2 + minVal, 0, 2*Math.PI)
-                            //         ctx.fill() 
-                            //     })
-                            // }
-                            if(levelData.connected.length > 0){
-                                // levelData.connected[0]
-                                let p = levelData.connected.find(e=>e.miniboardIndex === miniboardIndex)
-                                if(p){
-                                    let x = microUnit*p.coordinates[0] + (unit * 2) 
-                                    let y = microUnit*p.coordinates[1] + (unit * 2) ,
-                                    // miniboardIndex = levelData.connected[0].miniboardIndex
-                                    newOriginX = (originPointX + x) + (unit * 2) ,
-                                    newOriginY = (originPointY + y) + (unit * 2) ,
-                                    destinationX_back = (originPointX_back + x) + (unit * 4) ,
-                                    destinationY_back = (originPointY + y) + (unit * 4) 
-                                    ctx.lineWidth = 2;
-                                    ctx.strokeStyle = 'red'
-                                    ctx.beginPath();
-                                    ctx.moveTo(newOriginX,newOriginY);
-
-                                    let bezierControlPoint1 = {x: newOriginX, y: newOriginY + 100}
-                                    let bezierControlPoint2 = {x:destinationX_back, y: newOriginY + 100}
-
-
-
-                                    ctx.bezierCurveTo(bezierControlPoint1.x, bezierControlPoint1.y, bezierControlPoint2.x, bezierControlPoint2.y, destinationX_back, destinationY_back)
-
-
-                                    // ctx.lineTo(destinationX_back,newOriginY);
-                                    ctx.stroke();
-                                }
-                            }
-                            
-                            // if(levelData.frontPassages)
-
-
-
-                            // let placementX = (miniboardSize * col) - (1/2 * miniboardSize)
-                            // let placementY = (miniboardSize * row) - (1/2 * miniboardSize)
-
-                            // let placementX = (miniboardSize * col) - miniboardSize
-                            // let placementX_back = ((3*miniboardSize) + miniboardSize * col) - miniboardSize
-                            // let placementY = (miniboardSize * row) - miniboardSize
-                            // ^ dot at top left of each board
-
-                            
-                            // let placementX = (centerOfMiniboard * col*2) - centerOfMiniboard
-                            // let placementY = (centerOfMiniboard * row*2) - centerOfMiniboard
-                            // ^ dot at center of each miniboard
-
-                            // console.log('x', placementX, 'y', placementY);
-                            
-
-                            // ctx.beginPath()
-                            // ctx.arc(placementX, placementY, 5.5*Math.sin(frameCount*0.03)**2 + minVal, 0, 2*Math.PI)
-                            // ctx.fill() 
-                        }
-
-                        // console.log('radius ', 5.5*Math.sin(frameCount*0.03)**2);
-                        // ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
-                        // let unit2 = miniboardSize/15;
-                        // let col = 3, row = 2
-                        // let originPointX = (miniboardSize * col) - miniboardSize
-                        // let originPointY = (miniboardSize * row) - miniboardSize
-                        // let placementX = originPointX + unit2*8
-                        // let placementY = originPointY + unit2*4
-                        // ctx.beginPath()
-                        // ctx.arc(placementX, placementY, 5.5*Math.sin(frameCount*0.03)**2 + minVal, 0, 2*Math.PI)
-                        // ctx.fill() 
-
-
-                        // ctx.beginPath()
-                        // ctx.arc(x1, y1, 5.5*Math.sin(frameCount*0.03)**2 + minVal, 0, 2*Math.PI)
-                        // ctx.fill() 
-
-                        // ctx.beginPath()
-                        // ctx.arc(x2, y2, 5.5*Math.sin(frameCount*0.03)**2 + minVal, 0, 2*Math.PI)
-                        // ctx.fill() 
-                        
-                        // return
-                    }
-                    if(!passages) return
-
-
-                    // return 
-                    // ^ remove later
-
-                    let fillStyle = 'yellow'
-
-                    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
-                    passages.forEach((p, index)=>{
-                        ctx.fillStyle = fillStyle
-                        let x = unit*p.coordinates[0] + unit/2
-                        let y = unit*p.coordinates[1] + unit/2
-                        ctx.beginPath()
-                        let minVal = 3.5;
-                        ctx.fillStyle = this.getPassageColors(p.contains)
-                        ctx.arc(x, y, 3.5*Math.sin(frameCount*0.03 + index)**2 + minVal, 0, 2*Math.PI)
-                        ctx.fill()  
-                        // x ** 2 is the x squared
-                    }) 
-                }
+            ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
+            passages.forEach((p, index)=>{
+                ctx.fillStyle = fillStyle
+                let x = unit*p.coordinates[0] + unit/2
+                let y = unit*p.coordinates[1] + unit/2
+                ctx.beginPath()
+                let minVal = 3.5;
+                ctx.fillStyle = this.getPassageColors(p.contains)
+                ctx.arc(x, y, 3.5*Math.sin(frameCount*0.03 + index)**2 + minVal, 0, 2*Math.PI)
+                ctx.fill()  
+                // x ** 2 is the x squared
+            }) 
+        }
     }
 
     render (){
@@ -497,32 +392,29 @@ class DungeonView extends React.Component {
                         <span onClick={() => {return this.props.collapseFilterHeader('bot')}} className="adjacency-filter-header">BOT</span> 
                             {this.props.compatibilityMatrix.showBot && this.props.compatibilityMatrix.bot.map((board,i)=>{
                             return (<div key={i} className="board-preview-wrapper">
-                                <div 
-                                className="map-preview draggable" 
-                                onClick={() => {return this.props.loadBoard(board)}}
-                                onDragStart = {(event) => this.props.onDragStart(event, board)}
-                                draggable
-                                style={{
-                                    height: this.props.tileSize*3,
-                                    boxSizing: 'border-box'
-                                }} >
-                                {board.tiles.map((tile, i) => {
-                                    return    <Tile 
-                                            key={i}
-                                            id={tile.id}
-                                            tileSize={(this.props.tileSize*3)/15}
-                                            image={tile.image ? tile.image : null}
-                                            color={tile.color ? tile.color : 'lightgrey'}
-                                            index={tile.id}
-                                            showCoordinates={false}
-                                            type={tile.type}
-                                            hovered={
-                                                false
-                                            }
-                                            >
-                                            </Tile>
-                                })}
-                                </div>
+                                        <div 
+                                        className="map-preview draggable" 
+                                        onClick={() => {return this.props.loadBoard(board)}}
+                                        onDragStart = {(event) => this.props.onDragStart(event, board)}
+                                        draggable
+                                        style={{
+                                            height: this.props.tileSize*3,
+                                            boxSizing: 'border-box'
+                                        }} >
+                                        {board.tiles.map((tile, i) => {
+                                        return  <Tile 
+                                                key={i}
+                                                id={tile.id}
+                                                tileSize={(this.props.tileSize*3)/15}
+                                                image={tile.image ? tile.image : null}
+                                                color={tile.color ? tile.color : 'lightgrey'}
+                                                index={tile.id}
+                                                showCoordinates={false}
+                                                type={tile.type}
+                                                hovered={false}>
+                                                </Tile>
+                                        })}
+                                        </div>
                                 <div className="map-title">{board.name}</div>
                                 </div>)
                             })}
@@ -542,7 +434,6 @@ class DungeonView extends React.Component {
                     >
                         <div className="dungeon-info">
                             <div className="dungeon-name">
-                                {/* {this.props.loadedDungeon?.name} */}
                                 <CFormSelect 
                                 aria-label="Dungeon Selector"
                                 ref={this.props.dungeonSelectVal}
@@ -571,29 +462,16 @@ class DungeonView extends React.Component {
                                 <CIcon icon={cilPlus} size="lg"/>
                             </div>
                             <div className="icon-container dungeon-options-container" >
-                            {/* <CButton type="submit" color="primary">
-                                <CIcon icon={cilOptions} size="lg"/>
-                            </CButton> */}
                                 <CDropdown>
                                     <CDropdownToggle color="white">
                                         <CIcon icon={cilOptions} size="lg"/>
                                     </CDropdownToggle>
                                     <CDropdownMenu>
-                                        <CDropdownItem onClick={() => this.props.clearLoadedBoard()}>Rename Dungeon</CDropdownItem>
-                                        <CDropdownItem onClick={() => this.props.writeBoard()}>Delete Dungeon</CDropdownItem>
-                                        <CDropdownItem onClick={() => this.props.writeBoard()}>Download Dungeon</CDropdownItem>
-                                        {/* <CDropdownItem onClick={() => this.props.deleteBoard()}>Delete</CDropdownItem>
-                                        <CDropdownItem disabled={!this.props.loadedBoard} onClick={() => this.renameBoard()}>Rename Current Map</CDropdownItem>
-                                        <CDropdownItem onClick={() => this.props.adjacencyFilterClicked()}>Filter: Adjacency</CDropdownItem>
-                                        <CDropdownItem onClick={() => this.props.nameFilterClicked()}>Filter: Name</CDropdownItem> */}
+                                        <CDropdownItem onClick={() => this.props.renameDungeon()}>Rename Dungeon</CDropdownItem>
+                                        <CDropdownItem onClick={() => this.props.deleteDungeon()}>Delete Dungeon</CDropdownItem>
+                                        <CDropdownItem onClick={() => this.props.downloadDungeon()}>Download Dungeon</CDropdownItem>
                                     </CDropdownMenu>
                                 </CDropdown>
-                                {/* <select name="test" id="">
-                                    <option value="Mr">Mr</option>
-                                    <option value="Miss">Miss</option>
-                                    <option value="Mrs">Mrs</option>
-                                    <option value="Ms">Ms</option>
-                                </select> */}
                             </div>
 
                             
@@ -608,6 +486,7 @@ class DungeonView extends React.Component {
                                 { this.props.loadedDungeon.levels.sort((a,b) => b.id - a.id).map((level,levelIndex)=>{
                                      return <div key={levelIndex} className="level-wrapper">
                                         <div className="level-info">
+                                            <div className={`level-valid-indicator ${level.valid ? 'valid' : ''} ${level.valid === false ? 'invalid' : ''}`}></div>
                                             <div className="level-readout">{`Lvl ${level.id}`}</div>
                                             {level.id !== 0 && <div className="icon-container" onClick={() =>  this.props.clearDungeonLevel(level.id)}>
                                                 <CIcon icon={cilTrash} size="lg"/>

@@ -523,7 +523,19 @@ ul.dropdown-menu.show{
                 display: flex;
                 justify-content: space-around;
                 align-items: center;
-                min-width: 100px;;
+                min-width: 100px;
+                .level-valid-indicator{
+                    height: 8px;
+                    width: 8px;
+                    border-radius: 8px;
+                    background-color: grey;
+                    &.valid{
+                        background-color: #0ec30e;
+                    }
+                    &.invalid{
+                        background-color: red;
+                    }
+                }
             }
             canvas.doublewide-canvas{
                 position: absolute;
@@ -574,11 +586,12 @@ ul.dropdown-menu.show{
     }
     label:hover{
 
-        border: 2px solid yellow !important;
-        color: yellow !important;
+        border: 2px solid white !important;
+        color: white !important;
     }
     .btn-check:checked+.btn{
         border-color: #9da5b1 !important;
         color: rgba(44, 56, 74, 0.95) !important;
+        background-color: #97b0db;
     }
 }

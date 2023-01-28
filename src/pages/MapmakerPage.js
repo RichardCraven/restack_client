@@ -169,7 +169,8 @@ class MapMakerPage extends React.Component {
         {
           id: 0,
           front: null,
-          back: null
+          back: null,
+          valid: false
         }
       ],
       pocket_planes : [
@@ -185,13 +186,36 @@ class MapMakerPage extends React.Component {
     })
   }
   deleteDungeon = async () => {
-    console.log('delete dungeon ');
     // deleteActiveDungeon
     const dungeon = this.state.loadedDungeon;
+    console.log('delete dungeon ', dungeon);
+    console.log(dungeon.id);
     await deleteDungeonRequest(dungeon.id)
     console.log(`dungeon ${dungeon.id} deleted`);
+    this.setState({loadedDungeon: null})
+    this.loadAllDungeons();
+    this.setLoadedDungeonDropdownValue('Dungeon Selector');
+
+    // update user
+    const meta = JSON.parse(sessionStorage.getItem('metadata'))
+    const userId = sessionStorage.getItem('userId');
+    
+    // NEED TO ABSTRACT THIS INTO A USER SERVICE
+    if(meta.preferences && meta.preferences.editor){
+      meta.preferences.editor['loadedDungeon'] = null
+    } else {
+      meta.preferences = {
+        ...meta.prerences,
+        editor: { loadedDungeon: null}
+      }
+    }
+    console.log('about to update user with meta ', meta);
+    updateUserRequest(userId, meta)
+    storeMeta(meta);
+
+
   }
-  downloadDungeon(){
+  downloadDungeon = () => {
     const dungeon = this.state.loadedDungeon;
     const zip = new JSZip();
     let string = JSON.stringify(dungeon)
@@ -202,6 +226,7 @@ class MapMakerPage extends React.Component {
     });
   }
   renameDungeon = () => {
+    console.log('rename ndungeon');
     this.setState({
       showModal: true,
       modalType: 'rename dungeon'
@@ -360,9 +385,13 @@ class MapMakerPage extends React.Component {
     // let b = this.state.mainViewSelectVal
     // b.current.value = stateLabel;
     this.setState({
-      selectedView: state,
-      // mainViewSelectVal : b
+      selectedView: state
     })
+    // setTimeout(()=>{
+    //   console.log('loaded dungeon:', this.state.loadedDungeon);
+    //   console.log('dungeon name', this.state.loadedDungeon);
+    //   if(this.state.loadedDungeon) this.setLoadedDungeonDropdownValue(this.state.loadedDungeon.name)
+    // })
 
     // update user
     const meta = JSON.parse(sessionStorage.getItem('metadata'))
@@ -704,8 +733,10 @@ class MapMakerPage extends React.Component {
     const val = await loadDungeonRequest(id)
     let e = val.data[0];
     let dungeon = JSON.parse(e.content);
+    console.log('loaded dungeon: ', dungeon);
+    console.log('modified loaded dungeon:', this.mapMaker.formatDungeon(dungeon));
     this.setState({
-      loadedDungeon: dungeon
+      loadedDungeon: this.mapMaker.formatDungeon(dungeon)
     })
   }
   loadAllDungeons = async () => {
@@ -713,9 +744,12 @@ class MapMakerPage extends React.Component {
     let dungeons = [];
     val.data.forEach((e)=>{
       let dungeon = JSON.parse(e.content)
+      console.log('raw dungeon content ', JSON.parse(e.content));
       dungeon.id = e._id;
-      dungeons.push(dungeon)
+      dungeons.push(this.props.mapMaker.formatDungeon(dungeon))
     })
+    console.log('all dungeons:', dungeons);
+
     const meta = getMeta()
     this.setState({
         dungeons,
@@ -731,7 +765,8 @@ class MapMakerPage extends React.Component {
   }
   setLoadedDungeonDropdownValue = (name) => {
     let b = this.state.dungeonSelectVal
-    if(b && b.current){ 
+    console.log('name: ', name);
+    if(b && b.current && b.current.value !== name){ 
       b.current.value = name;
       this.setState({
         dungeonSelectVal : b
@@ -1143,6 +1178,7 @@ class MapMakerPage extends React.Component {
       }
       overlayData= this.props.mapMaker.markPassages(this.state.loadedDungeon);
     }
+    console.log('overlay data:', overlayData);
     this.setState({
       dungeonOverlayOn: !e,
       overlayData
@@ -1208,9 +1244,11 @@ class MapMakerPage extends React.Component {
 
   dungeonSelectOnChange = (e) => {
     let dungeon;
+    console.log('on select change ', e.target.value);
     const meta = JSON.parse(sessionStorage.getItem('metadata'))
     const userId = sessionStorage.getItem('userId')
     if(e.target && e.target.value && e.target.value !== 'Dungeon Selector'){
+      console.log('loading', e.target.value);
       dungeon = this.state.dungeons.find(x=>x.name === e.target.value)
       this.loadDungeon(dungeon.id)
     } else {
@@ -1308,8 +1346,6 @@ class MapMakerPage extends React.Component {
                 autoComplete="off"
                 label="Board View"
                 defaultChecked={this.state.selectedView === 'board'}
-                // checked={this.state.gender === 'pork'}
-                // onClick={() => this.test(1)}
               />
               <CFormCheck
                 type="radio"
@@ -1319,8 +1355,6 @@ class MapMakerPage extends React.Component {
                 autoComplete="off"
                 label="Plane View"
                 defaultChecked={this.state.selectedView === 'plane'}
-                // checked={this.state.gender === 'male'}
-                // onClick={() => this.test(2)}
               />
               <CFormCheck
                 type="radio"
@@ -1330,8 +1364,6 @@ class MapMakerPage extends React.Component {
                 autoComplete="off"
                 label="Dungeon View"
                 defaultChecked={this.state.selectedView === 'dungeon'}
-                // checked={this.state.gender === 'female'}
-                // onClick={() => this.test(3)}
               />
             </CButtonGroup>
 
