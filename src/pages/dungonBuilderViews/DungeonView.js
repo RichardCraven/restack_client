@@ -60,7 +60,6 @@ class DungeonView extends React.Component {
             }
 
             if(data.orientation === 'doublewide'){
-                    
                 let miniboardSize = this.props.tileSize*2;
                 let planeHeight = this.props.tileSize*6;
                 let unit = planeHeight/(this.props.tileSize*6);
@@ -93,6 +92,46 @@ class DungeonView extends React.Component {
                     let bezierControlPoint1 = {x: newOriginX, y: newOriginY + 100}
                     let bezierControlPoint2 = {x:destinationX_back, y: newOriginY + 100}
                     ctx.bezierCurveTo(bezierControlPoint1.x, bezierControlPoint1.y, bezierControlPoint2.x, bezierControlPoint2.y, destinationX_back, destinationY_back)
+                    ctx.stroke();
+                })
+            }
+            if(data.orientation === 'doubletall_F' || data.orientation === 'doubletall_B'){
+                const isFront = data.orientation.split('_')[1] === 'F'
+                const isBack = data.orientation.split('_')[1] === 'B'
+                let miniboardSize = this.props.tileSize*2;
+                let planeHeight = this.props.tileSize*6;
+                let unit = planeHeight/(this.props.tileSize*6);
+                ctx.fillStyle = 'red'
+                ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
+                let cols = [1,2,3,1,2,3,1,2,3]
+                let rows = [1,1,1,2,2,2,3,3,3]
+                // if(levelData.passages)
+                levelData.connected.filter(e=>e.type==='way_up').forEach((lim)=>{
+                    // console.log('upwards:', lim);
+                    let row = rows[lim.miniboardIndex] 
+                    let col = cols[lim.miniboardIndex] 
+                    let originPointX = (miniboardSize * col) - miniboardSize + (unit * 2)
+                    // let originPointX_back = ((3*miniboardSize) + miniboardSize * col) - miniboardSize + (unit * 2) 
+                    let originPointY = (miniboardSize * row) - miniboardSize + (unit * 2);
+                    let originPointY_up = ((3*miniboardSize) + miniboardSize * row) - miniboardSize + (unit * 2) 
+                    let microUnit = miniboardSize/15;
+                    let connectedTo = lim.connectedTo;
+                    // if(connectedTo.level !== lim.level) return
+                    // doors only for now ^
+
+                    let x = microUnit*lim.coordinates[0] + (unit * 2) 
+                    let y = microUnit*lim.coordinates[1] + (unit * 2) ,
+                    newOriginX = (originPointX + x)  ,
+                    newOriginY = (originPointY + y) + (unit * 2) ,
+                    destinationX_up = (originPointX + x)  ,
+                    destinationY_up = (originPointY_up + y) + (unit * 2) 
+                    ctx.lineWidth = 2;
+                    ctx.strokeStyle = '#4791f2'
+                    ctx.beginPath();
+                    ctx.moveTo(newOriginX,newOriginY);
+                    let bezierControlPoint1 = {x: newOriginX - 50, y: newOriginY}
+                    let bezierControlPoint2 = {x:newOriginX - 50, y: destinationY_up}
+                    ctx.bezierCurveTo(bezierControlPoint1.x, bezierControlPoint1.y, bezierControlPoint2.x, bezierControlPoint2.y, destinationX_up, destinationY_up)
                     ctx.stroke();
                 })
             }
@@ -495,6 +534,24 @@ class DungeonView extends React.Component {
                                             </div>}
                                         </div>
                                         <div className="plane-board-displays-wrapper">
+                                            {level.passages && level.passages.upwardPassages.filter(e=>e.orientation === 'front').length > 0 && <div className="front-upwards-connecting-canvas-wrapper">
+                                                <Canvas 
+                                                className="doubletall-canvas"
+                                                width={this.props.tileSize*6}
+                                                height={this.props.tileSize*12}
+                                                draw={this.draw}
+                                                data={{index: null, levelId: level.id, orientation: 'doubletall_F'}}
+                                                />
+                                            </div>}
+                                            {level.passages && level.passages.upwardPassages.filter(e=>e.orientation === 'back').length > 0 && <div className="back-upwards-connecting-canvas-wrapper">
+                                                <Canvas 
+                                                className="doubletall-canvas"
+                                                width={this.props.tileSize*6}
+                                                height={this.props.tileSize*12}
+                                                draw={this.draw}
+                                                data={{index: null, levelId: level.id, orientation: 'doubletall_B'}}
+                                                />
+                                            </div>}
                                             <div className="horizontal-connecting-canvas-wrapper">
                                                {<Canvas 
                                                 className="doublewide-canvas"

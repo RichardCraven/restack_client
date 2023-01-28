@@ -34,7 +34,6 @@ export function MapMaker(props){
         let row = x%15
         let col = y%15
         let index = row*15 + col;
-        console.log('row: ', row, 'col: ', col)
         return index
     }
     this.resetCoordinates = (tiles) => {
@@ -147,12 +146,10 @@ export function MapMaker(props){
             frontFilteredMiniboards.forEach((x,i)=>{
                 if(x.length > 0){
                     x.forEach(psg=>psg.miniboardIndex = i)
-                    console.log('x:', x);
                     newFFmb = newFFmb.concat(x)
 
                 }
             })
-            console.log('newFFmb:', newFFmb, 'vs ', frontFilteredMiniboards);
             let newBBmb = []
             backFilteredMiniboards.forEach((x,i)=>{
                 if(x.length > 0){
@@ -402,7 +399,6 @@ export function MapMaker(props){
     this.isValidPlane = (miniboards) => {
         for(let b of miniboards){
             if(b.tiles === undefined){
-                console.log('b.tiles undefined:', b);
                 return false
             }
         }
@@ -411,7 +407,6 @@ export function MapMaker(props){
             let board = miniboards[i];
             for(let h = 0; h < 15; h++){
                 if(board.tiles[h].contains !== 'void'){
-                    console.log('BANG');
                     return false
                 }
             }
@@ -421,7 +416,6 @@ export function MapMaker(props){
             let board = miniboards[i];
             for(let h = 210; h < 225; h++){
                 if(board.tiles[h].contains !== 'void'){
-                    console.log('BANG');
                     return false
                 }
             }

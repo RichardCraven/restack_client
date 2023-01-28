@@ -595,3 +595,28 @@ ul.dropdown-menu.show{
         background-color: #97b0db;
     }
 }
+.poop{
+    border: 3px solid red;
+    height: 514px;
+    width: 255px;
+    top: -265px;
+    /* margin-top: -261px; */
+    position: absolute;
+}
+.front-upwards-connecting-canvas-wrapper{
+    // border: 2px solid blueviolet;
+    position: absolute;
+    height: 200%;
+    width: 50%;
+    top: -100%;
+    z-index: 5;
+}
+.back-upwards-connecting-canvas-wrapper{
+    // border: 2px solid blueviolet;
+    position: absolute;
+    height: 200%;
+    width: 50%;
+    top: -100%;
+    left: 50%;
+    z-index: 5;
+}

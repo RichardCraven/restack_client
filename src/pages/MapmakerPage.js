@@ -734,9 +734,9 @@ class MapMakerPage extends React.Component {
     let e = val.data[0];
     let dungeon = JSON.parse(e.content);
     console.log('loaded dungeon: ', dungeon);
-    console.log('modified loaded dungeon:', this.mapMaker.formatDungeon(dungeon));
+    // console.log('modified loaded dungeon:', this.props.mapMaker.formatDungeon(dungeon));
     this.setState({
-      loadedDungeon: this.mapMaker.formatDungeon(dungeon)
+      loadedDungeon: this.props.mapMaker.formatDungeon(dungeon)
     })
   }
   loadAllDungeons = async () => {
