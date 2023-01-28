@@ -9,6 +9,8 @@ import { cilCaretRight, cilSave, cilQrCode, cilLevelDown, cilLevelUp, cilLibrary
 import '../../styles/dungeon-board.scss'
 import '../../styles/map-maker.scss'
 import Canvas from '../../components/Canvas/canvas'
+import arrowDown from '../../assets/graphics/arrow_down.png'
+import arrowUp from '../../assets/graphics/arrow_up.png'
 
 class DungeonView extends React.Component {
     constructor(props){
@@ -39,6 +41,14 @@ class DungeonView extends React.Component {
         if(matrix[contains]) val=matrix[contains]
         return val
     }
+    containsImages = (passagesArray) => {
+        let imageTypes = ['way_up', 'way_down']
+        return passagesArray.some(p=>imageTypes.includes(p.contains))
+    }
+    countImages = (passagesArray) => {
+        let imageTypes = ['way_up', 'way_down']
+        return passagesArray.filter(p=>imageTypes.includes(p.contains)).length
+    }
     draw = (ctx, frameCount, data) => {
         // console.log('framecount:', frameCount);
        // ctx.arc(50, 100, 20*Math.sin(frameCount*0.05)**2, 0, 2*Math.PI)
@@ -51,12 +61,110 @@ class DungeonView extends React.Component {
             let planeSize = this.props.tileSize*2;
             let unit = planeSize/15;
             let passages;
-            if(data.orientation === 'front'){
-                // passages = levelData.frontPassages[data.index]
-                passages = levelData.frontPassages.filter(p=>p.miniboardIndex === data.index)
-            } else if(data.orientation === 'back'){
-                // passages = levelData.backPassages[data.index]
-                passages = levelData.backPassages.filter(p=>p.miniboardIndex === data.index)
+            // if(data.orientation === 'front'){
+            //     // passages = levelData.frontPassages[data.index]
+            //     passages = levelData.frontPassages.filter(p=>p.miniboardIndex === data.index)
+            // } else if(data.orientation === 'back'){
+            //     // passages = levelData.backPassages[data.index]
+            //     passages = levelData.backPassages.filter(p=>p.miniboardIndex === data.index)
+            // }
+            passages = data.orientation === 'front' ? levelData.frontPassages.filter(p=>p.miniboardIndex === data.index) :
+                       (data.orientation === 'back' ? levelData.backPassages.filter(p=>p.miniboardIndex === data.index) : null)
+            if(passages){
+                const that = this
+                const process = function(images = null){
+                    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+                    passages.forEach((p, index)=>{
+                        // ctx.fillStyle = fillStyle
+                        let x = unit*p.coordinates[0] + unit/2
+                        let y = unit*p.coordinates[1] + unit/2
+    
+                        if(p.contains === 'way_up'){
+                            // let x = unit*p.coordinates[0] - unit/2
+                            // let y = unit*p.coordinates[1] - unit/2
+                            
+                            let x = unit*p.coordinates[0] - 1.5*unit - (Math.sin(frameCount * 0.04)**2 * 2)
+                            let y = unit*p.coordinates[1] - unit
+
+                            let size = 20 + Math.sin(frameCount * 0.04)**2 * 5
+                            
+                            // console.log('images:', images);
+                            // console.log('image way up: ', images['arrowUpImg']);
+                            // console.log('typeof way up: ', typeof images['arrowUpImg']);
+                            ctx.drawImage(images['arrowUpImg'], x, y, size, size);
+                            // debugger
+                            // let img = new Image()
+                            // img.src = arrowUp
+                            // // console.log('img:', img);
+                            // img.onload = function() {
+                            //     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
+                            //     ctx.drawImage(img, x, y, 500, 500);
+                            // }
+                        } else if(p.contains === 'way_down'){
+                            let x = unit*p.coordinates[0] - 1.5*unit - (Math.sin(frameCount * 0.04)**2 * 2)
+                            let y = unit*p.coordinates[1] - unit
+                            let size = 20 + Math.sin(frameCount * 0.04)**2 * 5
+                            // console.log(size);
+                            ctx.drawImage(images['arrowDownImg'], x, y, size, size);
+                        } else {
+                            ctx.beginPath()
+                            let minVal = 3.5;
+                            ctx.fillStyle = that.getPassageColors(p.contains)
+                            ctx.arc(x, y, 3.5*Math.sin(frameCount*0.03 + index)**2 + minVal, 0, 2*Math.PI)
+                            ctx.fill()  
+                            // x ** 2 is the x squared
+                        }
+                    }) 
+                }
+                
+                
+                if(this.containsImages(passages)){
+                    let images = {};
+                    let arrowUpImg = new Image()
+                    arrowUpImg.src = arrowUp
+                    arrowUpImg.onload = function(){
+                        images['arrowUpImg'] = arrowUpImg
+                        if(!!images['arrowDownImg'] && !!images['arrowUpImg']){
+                            // console.log('sending images as :', images);
+                            process(images)
+                        }
+                    }
+                    let arrowDownImg = new Image()
+                    arrowDownImg.src = arrowDown
+                    arrowDownImg.onload = function(){
+                        // images.push({arrowDownImg})
+                        images['arrowDownImg'] = arrowDownImg
+                        if(!!images['arrowDownImg'] && !!images['arrowUpImg']){
+                            process(images)
+                        }
+                    }
+                    
+                    // passages.forEach(p=>{
+                    //     if(p.type === 'way_up'){
+                    //         let img = new Image()
+                    //         img.src = arrowUp
+                    //         img.onload = function(){
+                    //             images.push(img)
+                    //             if(images.length === countImages(passages)){
+
+                    //             }
+                    //         }
+                    //     }
+                    //     if(p.type === 'way_down'){
+                    //         let img = new Image()
+                    //         img.src = arrowDown
+                    //         img.onload = function(){
+                    //             images.push(img)
+                    //             if(images.length === countImages(passages)){
+
+                    //             }
+                    //         }
+                    //     }
+                    // })
+                } else {
+                    process()
+                }
+                
             }
 
             if(data.orientation === 'doublewide'){
@@ -65,9 +173,18 @@ class DungeonView extends React.Component {
                 let unit = planeHeight/(this.props.tileSize*6);
                 let leftPlaneSize = this.props.tileSize*6;
                 ctx.fillStyle = 'red'
-                ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
+                // ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
                 let cols = [1,2,3,1,2,3,1,2,3]
                 let rows = [1,1,1,2,2,2,3,3,3]
+
+                // let img = new Image()
+                // img.src = arrowUp
+                // img.onload = function() {
+                //     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
+                //     ctx.drawImage(img, 0, 0, 50, 50);
+                // }
+
+
                 levelData.connected.forEach((lim)=>{
                     let row = rows[lim.miniboardIndex] 
                     let col = cols[lim.miniboardIndex] 
@@ -135,21 +252,9 @@ class DungeonView extends React.Component {
                     ctx.stroke();
                 })
             }
-            if(!passages) return
-            let fillStyle = 'yellow'
+            // if(!passages) return
 
-            ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
-            passages.forEach((p, index)=>{
-                ctx.fillStyle = fillStyle
-                let x = unit*p.coordinates[0] + unit/2
-                let y = unit*p.coordinates[1] + unit/2
-                ctx.beginPath()
-                let minVal = 3.5;
-                ctx.fillStyle = this.getPassageColors(p.contains)
-                ctx.arc(x, y, 3.5*Math.sin(frameCount*0.03 + index)**2 + minVal, 0, 2*Math.PI)
-                ctx.fill()  
-                // x ** 2 is the x squared
-            }) 
+            
         }
     }
 
@@ -527,6 +632,7 @@ class DungeonView extends React.Component {
                                 { this.props.loadedDungeon.levels.sort((a,b) => b.id - a.id).map((level,levelIndex)=>{
                                      return <div key={levelIndex} className="level-wrapper">
                                         <div className="level-info">
+                                            <img height={10} width={10} src={arrowUp} alt="" />
                                             <div className={`level-valid-indicator ${level.valid ? 'valid' : ''} ${level.valid === false ? 'invalid' : ''}`}></div>
                                             <div className="level-readout">{`Lvl ${level.id}`}</div>
                                             {level.id !== 0 && <div className="icon-container" onClick={() =>  this.props.clearDungeonLevel(level.id)}>

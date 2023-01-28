@@ -562,7 +562,7 @@ ul.dropdown-menu.show{
                     position: relative;
                     .canvas-overlay-container{
                         position: absolute;
-                        z-index: 2;
+                        z-index: 4;
                         display: flex;
                         pointer-events: none;
                         
@@ -609,7 +609,7 @@ ul.dropdown-menu.show{
     height: 200%;
     width: 50%;
     top: -100%;
-    z-index: 5;
+    z-index: 3;
 }
 .back-upwards-connecting-canvas-wrapper{
     // border: 2px solid blueviolet;
@@ -618,5 +618,5 @@ ul.dropdown-menu.show{
     width: 50%;
     top: -100%;
     left: 50%;
-    z-index: 5;
+    z-index: 3;
 }
