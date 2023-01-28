@@ -52,9 +52,11 @@ class DungeonView extends React.Component {
             let unit = planeSize/15;
             let passages;
             if(data.orientation === 'front'){
-                passages = levelData.frontPassages[data.index]
+                // passages = levelData.frontPassages[data.index]
+                passages = levelData.frontPassages.filter(p=>p.miniboardIndex === data.index)
             } else if(data.orientation === 'back'){
-                passages = levelData.backPassages[data.index]
+                // passages = levelData.backPassages[data.index]
+                passages = levelData.backPassages.filter(p=>p.miniboardIndex === data.index)
             }
 
             if(data.orientation === 'doublewide'){

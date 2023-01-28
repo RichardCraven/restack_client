@@ -64,6 +64,8 @@ export function MapMaker(props){
         })
         let val = [];
         dungeon.levels.forEach((l) => {
+            // let frontFilteredMiniboards = (!!l.front && l.front.miniboards) ? l.front.miniboards.map(b=>b.tiles.filter(t=>t.contains==='way_up' || 
+            // t.contains === 'way_down' || t.contains==='door')) : [];
             let frontFilteredMiniboards = (!!l.front && l.front.miniboards) ? l.front.miniboards.map(b=>b.tiles.filter(t=>t.contains==='way_up' || 
             t.contains === 'way_down' || t.contains==='door')) : [];
             let backFilteredMiniboards = (!!l.back && l.back.miniboards) ? l.back.miniboards.map(b=>b.tiles.filter(t=>t.contains==='way_up' || 
@@ -91,21 +93,18 @@ export function MapMaker(props){
                             case 'way_up': 
                                 if(aboveMatch){
                                     aboveMatch.miniboardIndex = i;
-                                    console.log('above match!', aboveMatch);
                                     connected.push({locationCode: f.locationCode, miniboardIndex: i, type: f.contains, coordinates: f.coordinates, orientation: 'front', connectedTo: aboveMatch, level: f.level})
                                 }
                             break;
                             case 'way_down': 
                                 if(belowMatch){
                                     belowMatch.miniboardIndex = i;
-                                    console.log('below match!', belowMatch);
                                     connected.push({locationCode: f.locationCode, miniboardIndex: i, type: f.contains, coordinates: f.coordinates, orientation: 'front', connectedTo: belowMatch, level: f.level})
                                 }
                             break;
                             case 'door': 
                                 if(backMatch){
                                     backMatch.miniboardIndex = i;
-                                    console.log('door match!', backMatch);
                                     connected.push({locationCode: f.locationCode, miniboardIndex: i, type: f.contains, coordinates: f.coordinates, orientation: 'front', connectedTo: backMatch, level: f.level})
                                 }
                             break;
@@ -122,16 +121,19 @@ export function MapMaker(props){
                         switch(b.contains){
                             case 'way_up': 
                                 if(aboveMatch){
+                                    aboveMatch.miniboardIndex = i;
                                     connected.push({locationCode: b.locationCode, miniboardIndex: i, type: b.contains, coordinates: b.coordinates, orientation: 'back', connectedTo: aboveMatch, level: b.level})
                                 }
                             break;
                             case 'way_down': 
                                 if(belowMatch){
+                                    belowMatch.miniboardIndex = i;
                                     connected.push({locationCode: b.locationCode, miniboardIndex: i, type: b.contains, coordinates: b.coordinates, orientation: 'back', connectedTo: belowMatch, level: b.level})
                                 }
                             break;
                             case 'door': 
                                 if(frontMatch){
+                                    frontMatch.miniboardIndex = i;
                                     connected.push({locationCode: b.locationCode, miniboardIndex: i, type: b.contains, coordinates: b.coordinates, orientation: 'back', connectedTo: frontMatch, level: b.level})
                                 }
                             break;
@@ -141,8 +143,27 @@ export function MapMaker(props){
                     })
                 }
             }
+            let newFFmb = []
+            frontFilteredMiniboards.forEach((x,i)=>{
+                if(x.length > 0){
+                    x.forEach(psg=>psg.miniboardIndex = i)
+                    console.log('x:', x);
+                    newFFmb = newFFmb.concat(x)
+
+                }
+            })
+            console.log('newFFmb:', newFFmb, 'vs ', frontFilteredMiniboards);
+            let newBBmb = []
+            backFilteredMiniboards.forEach((x,i)=>{
+                if(x.length > 0){
+                    x.forEach(psg=>psg.miniboardIndex = i)
+                    newBBmb = newBBmb.concat(x)
+                }
+            })
+
+            // let newBBmb = backFilteredMiniboards.filter(f=>f.length > 0)
             if(frontFilteredMiniboards || backFilteredMiniboards){
-                val.push({id: l.id, frontPassages: frontFilteredMiniboards, backPassages: backFilteredMiniboards, connected})
+                val.push({id: l.id, frontPassages: newFFmb, backPassages: newBBmb, connected})
             }
         })
         return val
@@ -342,23 +363,23 @@ export function MapMaker(props){
         dungeonObj.levels.forEach((l)=>{
             let valid = true;
             let passages = markedPassages.find(p=>p.id === l.id)
-            passages.frontPassages.forEach(mb=>{
-                mb.forEach(passage=>{
+            passages.frontPassages.forEach(passage=>{
+                // console.log('mb:', mb);
+                // mb.forEach(passage=>{
                     let connectedMatch = passages.connected.find(e=>e.locationCode === passage.locationCode)
                     if(!connectedMatch){
                         valid = false;
                     }
-                })
+                // })
             })
-            passages.backPassages.forEach(mb=>{
-                mb.forEach(passage=>{
+            passages.backPassages.forEach(passage=>{
+                // mb.forEach(passage=>{
                     let connectedMatch = passages.connected.find(e=>e.locationCode === passage.locationCode)
                     if(!connectedMatch){
                         valid = false;
                     }
-                })
+                // })
             })
-            let upwardPassages = passages.connected.filter(e=>e.type==='way_up')
             passages.upwardPassages = passages.connected.filter(e=>e.type==='way_up')
             passages.downwardPassages = passages.connected.filter(e=>e.type==='way_down')
             l.passages = passages;
