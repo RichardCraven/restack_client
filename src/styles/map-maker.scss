@@ -1,4 +1,8 @@
 // import '@coreui/coreui/dist/css/coreui.min.css'
+$apex-level-zIndex: 5; // interaction layer
+$top-level-zIndex: 4; // 9 panel miniboard overlay
+$mid-level-zIndex: 3; // doublewide canvas container
+$bot-level-zIndex: 2; // doubletall containers
 *{
     backface-visibility:hidden;
     -ms-overflow-style: none;
@@ -98,11 +102,6 @@
     }
 }
 .mapmaker-container{
-    // align-items: flex-end;
-    // position: relative;
-    // justify-content: center;
-    // display: flex;
-    // height: 100%;
     .column-wrapper{
         align-items: center;
         position: relative;
@@ -367,43 +366,6 @@ ul.dropdown-menu.show{
                 border-radius: 0px;
             }
         }
-        .buttons-container, .filter-container{
-            box-sizing: border-box;
-            display: flex;
-            flex-direction: column;
-            flex-flow: row wrap;
-            justify-content: space-evenly;
-            height: 100px;
-            margin-bottom: 5px;
-            z-index: 10;
-            padding: 5px;
-            background-color: white;
-            border-bottom: 2px solid black;
-            position: fixed;
-            .buttons-container-title{
-                width: 100%;
-                position: absolute;
-            }
-            &.filter-container{
-                z-index: 5;
-                transition: all 0.75s;
-                position: sticky;
-                margin-bottom: 0px;
-            }
-            button{
-                width: 40%;
-                margin: 5px;
-                outline: none;
-                border: 1px solid black;
-                border-radius: 8px;
-                &:hover{
-                    background-color: lightblue
-                }
-                &:active{
-                    background-color: lightgreen
-                }
-            }
-        }
     }
     .center-board-container{
         position: relative;
@@ -539,7 +501,7 @@ ul.dropdown-menu.show{
             }
             canvas.doublewide-canvas{
                 position: absolute;
-                z-index: 1;
+                z-index: $mid-level-zIndex;
                 pointer-events: none;
             }
             .plane-board-displays-wrapper{
@@ -549,7 +511,8 @@ ul.dropdown-menu.show{
                 .horizontal-connecting-canvas-wrapper{
                     position: absolute;
                     top: 0;
-                    z-index: 2;
+                    z-index: $mid-level-zIndex;
+                    pointer-events: none;
                 }
                 .plane-board-display{
                     min-height: 250px;
@@ -562,15 +525,25 @@ ul.dropdown-menu.show{
                     position: relative;
                     .canvas-overlay-container{
                         position: absolute;
-                        z-index: 4;
+                        z-index: $top-level-zIndex;
                         display: flex;
-                        pointer-events: none;
                         
                         // background-color: red;
                         canvas{
+                            pointer-events: none;
                             // border: 1px solid red;
                             // position: absolute;
                             // z-index: 2;
+                        }
+                    }
+                    .interaction-layer{
+                        z-index: $apex-level-zIndex;
+                        height: 100%;
+                        width: 100%;
+                        opacity: 0.25;
+                        position: absolute;
+                        &.active{
+                            background-color: lightyellow;
                         }
                     }
                 }
@@ -595,21 +568,14 @@ ul.dropdown-menu.show{
         background-color: #97b0db;
     }
 }
-.poop{
-    border: 3px solid red;
-    height: 514px;
-    width: 255px;
-    top: -265px;
-    /* margin-top: -261px; */
-    position: absolute;
-}
 .front-upwards-connecting-canvas-wrapper{
     // border: 2px solid blueviolet;
     position: absolute;
     height: 200%;
     width: 50%;
     top: -100%;
-    z-index: 3;
+    z-index: $bot-level-zIndex;
+    pointer-events: none;
 }
 .back-upwards-connecting-canvas-wrapper{
     // border: 2px solid blueviolet;
@@ -618,5 +584,6 @@ ul.dropdown-menu.show{
     width: 50%;
     top: -100%;
     left: 50%;
-    z-index: 3;
+    z-index: $bot-level-zIndex;
+    pointer-events: none;
 }

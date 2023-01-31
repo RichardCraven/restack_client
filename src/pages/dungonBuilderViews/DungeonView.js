@@ -11,6 +11,7 @@ import '../../styles/map-maker.scss'
 import Canvas from '../../components/Canvas/canvas'
 import arrowDown from '../../assets/graphics/arrow_down.png'
 import arrowUp from '../../assets/graphics/arrow_up.png'
+import arrowUpInvalid from '../../assets/graphics/arrow_up_invalid.png'
 
 class DungeonView extends React.Component {
     constructor(props){
@@ -72,40 +73,32 @@ class DungeonView extends React.Component {
                        (data.orientation === 'back' ? levelData.backPassages.filter(p=>p.miniboardIndex === data.index) : null)
             if(passages){
                 const that = this
-                const process = function(images = null){
+                // const process = function(){
                     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
                     passages.forEach((p, index)=>{
                         // ctx.fillStyle = fillStyle
                         let x = unit*p.coordinates[0] + unit/2
                         let y = unit*p.coordinates[1] + unit/2
-    
-                        if(p.contains === 'way_up'){
-                            // let x = unit*p.coordinates[0] - unit/2
-                            // let y = unit*p.coordinates[1] - unit/2
-                            
-                            let x = unit*p.coordinates[0] - 1.5*unit - (Math.sin(frameCount * 0.04)**2 * 2)
-                            let y = unit*p.coordinates[1] - unit
-
+                        let isConnected = levelData.connected.some(x => x.locationCode === p.locationCode)
+                        if(p.contains === 'door' && isConnected){
+                            let x = unit*p.coordinates[0] - 0.5*unit - (Math.sin(frameCount * 0.04)**2 * 2)
+                            let y = unit*p.coordinates[1]
                             let size = 20 + Math.sin(frameCount * 0.04)**2 * 5
-                            
-                            // console.log('images:', images);
-                            // console.log('image way up: ', images['arrowUpImg']);
-                            // console.log('typeof way up: ', typeof images['arrowUpImg']);
-                            ctx.drawImage(images['arrowUpImg'], x, y, size, size);
-                            // debugger
-                            // let img = new Image()
-                            // img.src = arrowUp
-                            // // console.log('img:', img);
-                            // img.onload = function() {
-                            //     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
-                            //     ctx.drawImage(img, x, y, 500, 500);
-                            // }
+                            let imageKey = 'doorImg'
+                            ctx.drawImage(this.props.imagesMatrix[imageKey], x, y, size, size);
+                        } else if(p.contains === 'way_up'){
+                            let x = unit*p.coordinates[0] - 0.5*unit - (Math.sin(frameCount * 0.04)**2 * 2)
+                            let y = unit*p.coordinates[1]
+                            let imageKey = isConnected ? 'arrowUpImg' : 'arrowUpImgInvalid'
+                            // console.log('way up ', 'connected: ', isConnected, imageKey);
+                            let size = 20 + Math.sin(frameCount * 0.04)**2 * 5;
+                            ctx.drawImage(this.props.imagesMatrix[imageKey], x, y, size, size);
                         } else if(p.contains === 'way_down'){
-                            let x = unit*p.coordinates[0] - 1.5*unit - (Math.sin(frameCount * 0.04)**2 * 2)
-                            let y = unit*p.coordinates[1] - unit
+                            let x = unit*p.coordinates[0] - 0.5*unit - (Math.sin(frameCount * 0.04)**2 * 2)
+                            let y = unit*p.coordinates[1]
                             let size = 20 + Math.sin(frameCount * 0.04)**2 * 5
-                            // console.log(size);
-                            ctx.drawImage(images['arrowDownImg'], x, y, size, size);
+                            let imageKey = isConnected ? 'arrowDownImg' : 'arrowDownImgInvalid'
+                            ctx.drawImage(this.props.imagesMatrix[imageKey], x, y, size, size);
                         } else {
                             ctx.beginPath()
                             let minVal = 3.5;
@@ -115,56 +108,6 @@ class DungeonView extends React.Component {
                             // x ** 2 is the x squared
                         }
                     }) 
-                }
-                
-                
-                if(this.containsImages(passages)){
-                    let images = {};
-                    let arrowUpImg = new Image()
-                    arrowUpImg.src = arrowUp
-                    arrowUpImg.onload = function(){
-                        images['arrowUpImg'] = arrowUpImg
-                        if(!!images['arrowDownImg'] && !!images['arrowUpImg']){
-                            // console.log('sending images as :', images);
-                            process(images)
-                        }
-                    }
-                    let arrowDownImg = new Image()
-                    arrowDownImg.src = arrowDown
-                    arrowDownImg.onload = function(){
-                        // images.push({arrowDownImg})
-                        images['arrowDownImg'] = arrowDownImg
-                        if(!!images['arrowDownImg'] && !!images['arrowUpImg']){
-                            process(images)
-                        }
-                    }
-                    
-                    // passages.forEach(p=>{
-                    //     if(p.type === 'way_up'){
-                    //         let img = new Image()
-                    //         img.src = arrowUp
-                    //         img.onload = function(){
-                    //             images.push(img)
-                    //             if(images.length === countImages(passages)){
-
-                    //             }
-                    //         }
-                    //     }
-                    //     if(p.type === 'way_down'){
-                    //         let img = new Image()
-                    //         img.src = arrowDown
-                    //         img.onload = function(){
-                    //             images.push(img)
-                    //             if(images.length === countImages(passages)){
-
-                    //             }
-                    //         }
-                    //     }
-                    // })
-                } else {
-                    process()
-                }
-                
             }
 
             if(data.orientation === 'doublewide'){
@@ -173,17 +116,9 @@ class DungeonView extends React.Component {
                 let unit = planeHeight/(this.props.tileSize*6);
                 let leftPlaneSize = this.props.tileSize*6;
                 ctx.fillStyle = 'red'
-                // ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
+                
                 let cols = [1,2,3,1,2,3,1,2,3]
                 let rows = [1,1,1,2,2,2,3,3,3]
-
-                // let img = new Image()
-                // img.src = arrowUp
-                // img.onload = function() {
-                //     ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
-                //     ctx.drawImage(img, 0, 0, 50, 50);
-                // }
-
 
                 levelData.connected.forEach((lim)=>{
                     let row = rows[lim.miniboardIndex] 
@@ -203,7 +138,7 @@ class DungeonView extends React.Component {
                     destinationX_back = (originPointX_back + x) + (unit * 4) ,
                     destinationY_back = (originPointY + y) + (unit * 4) 
                     ctx.lineWidth = 2;
-                    ctx.strokeStyle = 'red'
+                    ctx.strokeStyle = 'lightgreen'
                     ctx.beginPath();
                     ctx.moveTo(newOriginX,newOriginY);
                     let bezierControlPoint1 = {x: newOriginX, y: newOriginY + 100}
@@ -243,7 +178,7 @@ class DungeonView extends React.Component {
                     destinationX_up = (originPointX + x)  ,
                     destinationY_up = (originPointY_up + y) + (unit * 2) 
                     ctx.lineWidth = 2;
-                    ctx.strokeStyle = '#4791f2'
+                    ctx.strokeStyle = 'lightgreen'
                     ctx.beginPath();
                     ctx.moveTo(newOriginX,newOriginY);
                     let bezierControlPoint1 = {x: newOriginX - 50, y: newOriginY}
@@ -632,7 +567,6 @@ class DungeonView extends React.Component {
                                 { this.props.loadedDungeon.levels.sort((a,b) => b.id - a.id).map((level,levelIndex)=>{
                                      return <div key={levelIndex} className="level-wrapper">
                                         <div className="level-info">
-                                            <img height={10} width={10} src={arrowUp} alt="" />
                                             <div className={`level-valid-indicator ${level.valid ? 'valid' : ''} ${level.valid === false ? 'invalid' : ''}`}></div>
                                             <div className="level-readout">{`Lvl ${level.id}`}</div>
                                             {level.id !== 0 && <div className="icon-container" onClick={() =>  this.props.clearDungeonLevel(level.id)}>
@@ -674,7 +608,12 @@ class DungeonView extends React.Component {
                                                     height: this.props.tileSize*6,
                                                     width: this.props.tileSize*6
                                                 }}
+                                                onDrop={(event)=>{this.props.onDropDungeon(levelIndex, 'front')}}
                                                 >
+                                                    <div className={`interaction-layer ${this.props.hoveredDungeonSection === `${levelIndex}_front` ? 'active': ''}`}
+                                                        onDragOver={(event)=>this.props.onDragOverDungeon(event, levelIndex, 'front')}
+                                                        onDrop={(event)=>{this.props.onDropDungeon(levelIndex, 'front')}}
+                                                    ></div>
                                                     <div 
                                                     className="canvas-overlay-container mini-boards-container"
                                                     style={{
@@ -729,19 +668,22 @@ class DungeonView extends React.Component {
                                                 style={{
                                                     height: this.props.tileSize*6,
                                                     width: this.props.tileSize*6
-                                                }}
-                                                >
+                                                }}>
+                                                    <div className={`interaction-layer ${this.props.hoveredDungeonSection === `${levelIndex}_back` ? 'active': ''}`}
+                                                        onDragOver={(event)=>this.props.onDragOverDungeon(event, levelIndex, 'back')}
+                                                        onDrop={(event)=>{this.props.onDropDungeon(levelIndex, 'back')}}
+                                                    ></div>
                                                     <div 
                                                     className="canvas-overlay-container mini-boards-container"
                                                     style={{
                                                         height: this.props.tileSize*6,
                                                         width: this.props.tileSize*6
                                                     }}
+                                                    onDrop={(event)=>{this.props.onDropDungeon(levelIndex, 'front')}}
                                                     >
                                                         {[1,2,3,4,5,6,7,8,9].map((e,i)=>{
                                                         return <Canvas 
                                                             key={i}
-                                                            // id={`${level.id}F`} 
                                                             width={this.props.tileSize*2}
                                                             height={this.props.tileSize*2}
                                                             draw={this.draw}

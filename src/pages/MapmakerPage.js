@@ -9,6 +9,11 @@ import DungeonView from './dungonBuilderViews/DungeonView'
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import { CFormCheck, CButtonGroup, CModal, CButton, CModalHeader, CModalTitle, CModalBody, CModalFooter, CFormSelect} from '@coreui/react';
+import arrowDown from '../assets/graphics/arrow_down.png'
+import arrowUp from '../assets/graphics/arrow_up.png'
+import arrowDownInvalid from '../assets/graphics/arrow_down_invalid.png'
+import arrowUpInvalid from '../assets/graphics/arrow_up_invalid.png'
+import door from '../assets/icons//portals/closed_door.png'
 // import  CIcon  from '@coreui/icons-react'
 // import { cilList, cilCaretRight, cilCaretBottom, cilGlobeAlt } from '@coreui/icons';
 import {
@@ -104,12 +109,62 @@ class MapMakerPage extends React.Component {
       activeDungeonLevel: 0,
       dungeonOverlayOn: false,
       overlayData: null,
-      loadingData: true
+      loadingData: true,
+      imagesMatrix: {}
     };
   }
   
 
   componentDidMount(){
+    console.log('mounted');
+    const that = this;
+    let images = {};
+    function checkIfAllImagesHaveLoaded(){
+      if(
+        images.arrowUpImg &&
+        images.arrowUpImgInvalid &&
+        images.arrowDownImg &&
+        images.arrowDownImgInvalid &&
+        images.doorImg
+      ){
+        console.log('setting images matrix: ', images);
+        // debugger
+        that.setState({imagesMatrix : images})
+      }
+    }
+    
+    let arrowUpImg = new Image()
+    arrowUpImg.src = arrowUp
+    arrowUpImg.onload = function(){
+        images['arrowUpImg'] = arrowUpImg;
+        checkIfAllImagesHaveLoaded()
+    }
+    let arrowDownImg = new Image()
+    arrowDownImg.src = arrowDown
+    arrowDownImg.onload = function(){
+        images['arrowDownImg'] = arrowDownImg
+        checkIfAllImagesHaveLoaded()
+    }
+    let arrowUpImgInvalid = new Image()
+    arrowUpImgInvalid.src = arrowUpInvalid
+    arrowUpImgInvalid.onload = function(){
+        images['arrowUpImgInvalid'] = arrowUpImgInvalid
+        checkIfAllImagesHaveLoaded()
+    }
+    let arrowDownImgInvalid = new Image()
+    arrowDownImgInvalid.src = arrowDownInvalid
+    arrowDownImgInvalid.onload = function(){
+        images['arrowDownImgInvalid'] = arrowDownImgInvalid;
+        checkIfAllImagesHaveLoaded()
+    }
+    let doorImg = new Image()
+    doorImg.src = door
+    doorImg.onload = function(){
+        images['doorImg'] = doorImg;
+        checkIfAllImagesHaveLoaded()
+    }
+    
+
     let tileSize = this.getTileSize(),
         boardSize = tileSize*15;
     this.initializeListeners();
@@ -1045,7 +1100,7 @@ class MapMakerPage extends React.Component {
     })
   }
   onDragOverDungeon = (event, levelIndex, frontOrBack) => {
-    const val = `${levelIndex}_${frontOrBack}`
+    const val = `${levelIndex}_${frontOrBack}`;
     if(this.state.hoveredDungeonSection !== val){
       this.setState({
         hoveredDungeonSection: val
@@ -1055,6 +1110,7 @@ class MapMakerPage extends React.Component {
   }
 
   onDropDungeon = (levelIndex, frontOrBack) => {
+    console.log('on drop dungeon:', levelIndex, frontOrBack);
     const dungeon = this.state.loadedDungeon;
     // let loadedDungeon = this.state.loadedDungeon;
     dungeon.levels[levelIndex][frontOrBack] = this.state.draggedPlane;
@@ -1539,6 +1595,8 @@ class MapMakerPage extends React.Component {
               renameDungeon={this.renameDungeon}
               deleteDungeon={this.deleteDungeon}
               addNewDungeon={this.addNewDungeon}
+
+              imagesMatrix={this.state.imagesMatrix}
               ></DungeonView>}
           </div>
         </div>
