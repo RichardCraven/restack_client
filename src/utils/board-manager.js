@@ -208,6 +208,13 @@ export function BoardManager(){
         this.tiles = [];
         this.initializeTilesFromMap(this.playerTile.boardIndex, this.getIndexFromCoordinates([this.playerTile.location[0], this.playerTile.location[1]]))
     }
+    this.monterAdjacent = () => {
+
+    }
+    this.checkAdjacency = () => {
+        const adjacentObjects = [];
+        this.playerTile.location
+    }
     this.move = (destinationCoords, direction) => {
         const tile = this.tiles[this.getIndexFromCoordinates(this.playerTile.location)];
         const destinationIndex = this.getIndexFromCoordinates(destinationCoords),
@@ -237,7 +244,7 @@ export function BoardManager(){
             break;
         }
         this.tiles[this.getIndexFromCoordinates(this.playerTile.location)].image = 'avatar'
-        
+        this.checkAdjacency();
     }
     this.moveUp = () => {
         if(this.playerTile.location[0] === 15){
