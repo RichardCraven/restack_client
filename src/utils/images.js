@@ -84,7 +84,7 @@ import legionaire_helm from '../assets/icons/items/headgear/legionaire_helm.png'
 import cretan_helm from '../assets/icons/items/headgear/cretan_helm.png';
 
 import glindas_wand from '../assets/icons/items/wands/glindas_wand.png';
-import marlyns_rod from '../assets/icons/items/wands/maerlyns_rod.png';
+import maerlyns_rod from '../assets/icons/items/wands/maerlyns_rod.png';
 import volkas_wand from '../assets/icons/items/wands/volkas_wand.png';
 
 // weapons
@@ -226,7 +226,7 @@ export {
     cretan_helm,
 
     glindas_wand,
-    marlyns_rod,
+    maerlyns_rod,
     volkas_wand,
 
     axe,

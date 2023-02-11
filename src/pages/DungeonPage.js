@@ -6,7 +6,9 @@ import {
     loadDungeonRequest,
     updateUserRequest
   } from '../utils/api-handler';
-  import {storeMeta, getMeta, setEditorPreference} from '../utils/session-handler'
+  import {storeMeta, getMeta, setEditorPreference} from '../utils/session-handler';
+  import { cilCaretRight, cilCaretLeft} from '@coreui/icons';
+  import  CIcon  from '@coreui/icons-react'
 
 class DungeonPage extends React.Component {
     constructor(props){
@@ -20,7 +22,10 @@ class DungeonPage extends React.Component {
             showSaving: true,
             intervalId: null,
             showDarkMask: false,
-            currentBoard: 'test'
+            currentBoard: '',
+            leftPanelExpanded: false,
+            rightPanelExpanded: false,
+            // inventory: null
         }
     }
     
@@ -38,10 +43,15 @@ class DungeonPage extends React.Component {
         }
         const meta = JSON.parse(sessionStorage.getItem('metadata'));
         console.log('meta:' , meta)
+        // debugger
         // this.loadNewDungeon();
+        
+        this.props.boardManager.establishAvailableItems(this.props.inventoryManager.items)
         if(!meta || !meta.dungeonId){
             this.loadNewDungeon();
         } else {
+            // const sampleItems = ['volkas_wand', 'spartan_helm', 'sayan_amulet']
+            this.props.inventoryManager.initializeItems([])
             this.loadExistingDungeon(meta.dungeonId)
         }
         this.setState((state, props) => {
@@ -51,7 +61,15 @@ class DungeonPage extends React.Component {
             }
         })
     }
+    pickupItem = (tileContains) => {
+        
+        console.log('EYYY pickup item!', tileContains)
+        this.props.inventoryManager.addItem(tileContains)
+    }
     componentDidMount(){
+        const callbacks = [this.pickupItem]
+        // this.props.boardManager.establishCallbacks(callbacks)
+        this.props.boardManager.establishPickupItemCallback(this.pickupItem)
         window.addEventListener('beforeunload', this.componentCleanup)
     }
     componentWillUnmount(){
@@ -119,7 +137,7 @@ class DungeonPage extends React.Component {
             },1900)
             
 
-        }, 25000); 
+        }, 45000); 
         this.setState({intervalId: intervalId})
     }
 
@@ -178,6 +196,9 @@ class DungeonPage extends React.Component {
     }
     handleClick = (tile) => {
         console.log('clicked ', tile)
+    }
+    handleItemClick = (item) => {
+        console.log('item clicked:', item)
     }
 
     loadNewDungeon = async () => {
@@ -292,12 +313,55 @@ class DungeonPage extends React.Component {
             }
         })
     }
+    toggleLeftSidePanel = () => {
+        this.setState({leftPanelExpanded: !this.state.leftPanelExpanded})
+    }
+    toggleRightSidePanel = () => {
+        this.setState({rightPanelExpanded: !this.state.rightPanelExpanded})
+    }
     render(){
         return (
         <div className="dungeon-container">
             {this.state.showMessage && <div className="message-panel">{this.state.showSaving ? 'saving...' : 'saved'}</div>}
+            {!this.state.showMessage && <div className="message-panel">{this.props.boardManager.currentBoard.name}</div>}
             {this.props.boardManager.currentOrientation === 'B' && <div className="dark-mask"></div>}
-            {this.props.showCoordinates && this.state.currentBoard && <div className="info-panel">{this.props.boardManager.currentBoard.name}</div>}
+            <div className={`left-side-panel ${this.state.leftPanelExpanded ? 'expanded' : ''}`}>
+                <div className="expand-collapse-button icon-container" onClick={this.toggleLeftSidePanel}>
+                    <CIcon icon={cilCaretRight} className={`expand-icon ${this.state.leftPanelExpanded ? 'expanded' : ''}`} size="sm"/>
+                </div>
+                <div className="inventory">
+                    <div className="title">Inventory</div>
+                    {   this.props.inventoryManager &&
+                        this.props.inventoryManager.inventory.map((item, i) => {
+                            return <Tile 
+                            key={i}
+                            tileSize={this.state.tileSize}
+                            image={item.image ? item.image : null}
+                            contains={item.contains}
+                            color={item.color ? item.color : 'lightgrey'}
+                            // borders={item.borders}
+                            // coordinates={item.coordinates}
+                            // index={item.id}
+                            // showCoordinates={this.props.showCoordinates}
+                            editMode={false}
+                            handleHover={this.handleHover}
+                            type={item.type}
+                            handleClick={this.handleItemClick}
+                            >
+                            </Tile>
+                        })
+                    }
+                </div>
+                {/* <div className="party">
+
+                </div> */}
+            </div>
+            <div className={`right-side-panel ${this.state.rightPanelExpanded ? 'expanded' : ''}`}>
+                <div className="expand-collapse-button icon-container" onClick={this.toggleRightSidePanel}>
+                    <CIcon icon={cilCaretLeft} className={`expand-icon ${this.state.rightPanelExpanded ? 'expanded' : ''}`} size="sm"/>
+                </div>
+            </div>
+            {this.state.currentBoard && <div className="info-panel">{this.props.boardManager.currentBoard.name}</div>}
             <div  className="board" style={{
                 width: this.state.boardSize+'px', height: this.state.boardSize+ 'px',
                 backgroundColor: 'white'
@@ -305,6 +369,7 @@ class DungeonPage extends React.Component {
                 {this.state.tiles && this.state.tiles.map((tile, i) => {
                     return <Tile 
                     key={i}
+                    // className="tile"
                     tileSize={this.state.tileSize}
                     image={tile.image ? tile.image : null}
                     contains={tile.contains}

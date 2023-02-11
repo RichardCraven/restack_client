@@ -39,6 +39,7 @@ export default function Tile(props) {
                     return null
                 }
             }}
+            className="tile"
         >
            {props.showCoordinates && 
                 <div style={{color: 'yellow', userSelect: 'none'}}>

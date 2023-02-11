@@ -4,6 +4,85 @@
     justify-content: center;
     display: flex;
     height: 100%;
+    width: 100%;
+    .left-side-panel{
+        // padding-top: 70px;
+        height: 100%;
+        border: 1px solid transparent;
+        z-index: 3;
+        width: 0;
+        min-width: 0px;
+        transition: all 1s;
+        // background-color: white;
+        .icon-container{
+            position: absolute;
+            bottom: 10px;
+            color: white;
+            left: 10px;
+            cursor: pointer;
+            .expand-icon{
+                transition: all 1s;
+                &.expanded{
+                    transform: rotateZ(180deg);;
+                }
+            }
+        }
+        .inventory{
+            position: absolute;
+            left: -200px;
+            top: 50px;
+            transition: all 1s;
+            .title{
+                color: white;
+                margin-bottom: 10px;
+            }
+            .tile{
+                margin-bottom: 5px;
+            }
+        }
+
+        &.expanded{
+            border-right: 1px solid lightgrey;
+            min-width: 300px;
+            .inventory{
+                position: absolute;
+                left: 20px;
+            }
+        }
+        position: absolute;
+        left: 0;
+        
+    }
+    .right-side-panel{
+        height: 100%;
+        // padding-top: 70px;
+        border: 1px solid transparent;
+        z-index: 3;
+        width: 0;
+        min-width: 0px;
+        transition: all 1s;
+        // background-color: white;
+        &.expanded{
+            border-left: 1px solid lightgrey;
+            min-width: 300px;
+        }
+        position: absolute;
+        right: 0;
+        .icon-container{
+            position: absolute;
+            bottom: 10px;
+            color: white;
+            right: 10px;
+            cursor: pointer;
+            .expand-icon{
+                transition: all 1s;
+                &.expanded{
+                    // color: black;
+                    transform: rotateZ(-180deg);;
+                }
+            }
+        }
+    }
 }
 .dark-mask{
     height: 100vh;

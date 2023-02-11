@@ -72,6 +72,7 @@ export function BoardManager(){
         // 'mummy','naiad','wyvern','skeleton','giant_scorpion','black_djinn','black_kronos',
         // 'black_banshee','black_wraith', 'manticore','black_minotaur'
     ];
+    this.availableItems = [];
 
     this.playerTile = {
         location: [0,0],
@@ -89,6 +90,9 @@ export function BoardManager(){
         let x = 15 + row;
         let y = 15 + col;
         return [x, y]
+    }
+    this.establishAvailableItems = (items) => {
+        this.availableItems = items;
     }
     this.getBoardIndexFromBoard = (board) => {
         let v;
@@ -121,6 +125,7 @@ export function BoardManager(){
         this.currentOrientation = orientation;
     }
     this.initializeTilesFromMap = (boardIndex, spawnTileIndex) => {
+        console.log('initialize tiles')
     // this.initializeTilesFromMap = (spawnPoint, spawnTileIndex) => {
         
         // debugger
@@ -130,7 +135,14 @@ export function BoardManager(){
             // console.log('monster:', monster, this.getImage(monster));
             return monster
         }
+        const getRandomItem = () => {
+            const idx = Math.floor(Math.random()*this.availableItems.length),
+            item = this.availableItems[idx];
+            return item;
+        }
+        console.log('getting coords for index ', spawnTileIndex)
         let spawnCoords = this.getCoordinatesFromIndex(spawnTileIndex);
+        console.log('coords:', spawnCoords)
         let board = this.currentOrientation === 'F' ? this.currentLevel.front.miniboards[boardIndex] : this.currentLevel.back.miniboards[boardIndex]
         this.currentBoard = board;
         this.tiles = [];
@@ -142,6 +154,7 @@ export function BoardManager(){
         for(let i = 0; i< board.tiles.length; i++){
             let tile = board.tiles[i]
             if(tile.contains === 'monster') tile.contains = getRandomMonster();
+            if(tile.contains === 'lantern') tile.contains = getRandomItem();
             this.tiles.push({
                 type: 'board-tile',
                 id: tile.id,
@@ -182,18 +195,26 @@ export function BoardManager(){
     this.handleInteraction = (destinationTile) => {
         let val = destinationTile.contains
         if(this.monstersArr.includes(destinationTile.contains)) val = 'monster'
+        if(this.availableItems.includes(destinationTile.contains)) val = 'item'
         switch(val){
             case 'door':
-                this.handlePassingThroughDoor();
-                console.log('handle door!!!')
-            break;
+                return 'door';
+            case 'way_up':
+                return 'way_up';
+            case 'way_down':
+                return 'way_down';
             case 'monster':
                 console.log('HANDLE MONSTER INTERACTION')
-                return null;
+                // return 'impassable';
             break;
             case 'gate':
-                console.log('gate')
-                return null;
+                console.log('handle gate')
+                return 'impassable';
+            break;
+            case 'item':
+                console.log('handle item')
+                this.pickupItem(destinationTile.contains)
+                // return 'impassable';
             break;
             default:
                 break;
@@ -208,24 +229,61 @@ export function BoardManager(){
         this.tiles = [];
         this.initializeTilesFromMap(this.playerTile.boardIndex, this.getIndexFromCoordinates([this.playerTile.location[0], this.playerTile.location[1]]))
     }
-    this.monterAdjacent = () => {
-
+    // this.establishCallbacks = (callbacks) => {
+    //     console.log('callbacks: ', callbacks)
+    // }
+    this.establishPickupItemCallback = (callback) => {
+        console.log('callbacks: ', callback)
+        this.pickupItem = callback;
+    }
+    this.handlePassingThroughWayUp = () => {
+        const incomingLevel = this.dungeon.levels.find(l => l.id === this.currentLevel.id+1)
+        if(!incomingLevel){
+            alert('trying to travel to a level that doesnt exist!')
+            return
+        }
+        this.currentLevel = incomingLevel;
+        this.tiles = [];
+        this.initializeTilesFromMap(this.playerTile.boardIndex, this.getIndexFromCoordinates([this.playerTile.location[0], this.playerTile.location[1]]))
+    }
+    this.handlePassingThroughWayDown = () => {
+        const incomingLevel = this.dungeon.levels.find(l => l.id === this.currentLevel.id-1)
+        if(!incomingLevel){
+            alert('trying to travel to a level that doesnt exist!')
+            return
+        }
+        this.currentLevel = incomingLevel;
+        this.tiles = [];
+        this.initializeTilesFromMap(this.playerTile.boardIndex, this.getIndexFromCoordinates([this.playerTile.location[0], this.playerTile.location[1]]))
     }
     this.checkAdjacency = () => {
-        const adjacentObjects = [];
-        this.playerTile.location
+        const containsHighlightableObject = (tile) => {
+            return this.monstersArr.includes(tile.contains) || this.availableItems.includes(tile.contains)
+        }
+        const curIndex = this.getIndexFromCoordinates(this.playerTile.location);
+        const leftTile = this.tiles[curIndex-1];
+        const rightTile = this.tiles[curIndex+1];
+        const topRow = !!this.tiles[curIndex - 15] ? this.tiles.filter(t=>t.id >= curIndex-16 && t.id <= curIndex-14) : null
+        const bottomRow = !!this.tiles[curIndex + 15] ? this.tiles.filter(t=>t.id >= curIndex+14 && t.id <= curIndex+16) : null
+
+        if(leftTile && containsHighlightableObject(leftTile)) leftTile.color = 'lightyellow'
+        if(rightTile && containsHighlightableObject(rightTile)) rightTile.color = 'lightyellow';
+        if(topRow) topRow.forEach(t=>{ if(containsHighlightableObject(t)) t.color = 'lightyellow'})
+        if(bottomRow) bottomRow.forEach(t=>{if(containsHighlightableObject(t)) t.color = 'lightyellow'})
     }
     this.move = (destinationCoords, direction) => {
         const tile = this.tiles[this.getIndexFromCoordinates(this.playerTile.location)];
         const destinationIndex = this.getIndexFromCoordinates(destinationCoords),
         destinationTile = this.tiles[destinationIndex];
         if(destinationTile.contains === 'void') return
+        let interaction = '';
         if(destinationTile.contains){
-          let v = this.handleInteraction(destinationTile)
-          if(v === null) return;
-          // v is null if the destination contains in impassable object
+          interaction = this.handleInteraction(destinationTile)
         }
+        if(interaction === 'impassable') return
+       
         tile.image = this.getImage(tile.contains) ? this.getImage(tile.contains) : tile.contains;
+        
 
         this.handleFogOfWar(this.currentBoard.tiles[destinationIndex])
 
@@ -242,6 +300,15 @@ export function BoardManager(){
             case 'right':
                 this.playerTile.location[1] = (this.playerTile.location[1]+ 1)
             break;
+        }
+        if(interaction === 'door'){
+            this.handlePassingThroughDoor();
+        }
+        if(interaction === 'way_up'){
+            this.handlePassingThroughWayUp();
+        }
+        if(interaction === 'way_down'){
+            this.handlePassingThroughWayDown();
         }
         this.tiles[this.getIndexFromCoordinates(this.playerTile.location)].image = 'avatar'
         this.checkAdjacency();

@@ -112,11 +112,8 @@ const saveUserData = async () => {
   const meta = JSON.parse(sessionStorage.getItem('metadata'))
   const userId = sessionStorage.getItem('userId')
   
-  // meta.planeIndex = props.boardManager.playerTile.planeIndex
-  // meta.boardIndex = props.boardManager.playerTile.boardIndex
-  // meta.tileIndex = props.boardManager.getIndexFromCoordinates(props.boardManager.playerTile.location) 
-  console.log('player tile:', props.boardManager.playerTile)
-  console.log('props.boardManager', props.boardManager)
+  // console.log('player tile:', props.boardManager.playerTile)
+  // console.log('props.boardManager', props.boardManager)
 
   let boardIndex = props.boardManager.getBoardIndexFromBoard(props.boardManager.currentBoard)
   // return
@@ -126,6 +123,7 @@ const saveUserData = async () => {
     levelId: props.boardManager.currentLevel.id,
     orientation: props.boardManager.currentOrientation
   }
+  meta.inventory = props.inventoryManager.inventory;
   meta.dungeonId = props.boardManager.dungeon.id;
   await updateUserRequest(userId, meta)
   sessionStorage.setItem('metadata', JSON.stringify(meta))
