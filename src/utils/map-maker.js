@@ -63,15 +63,16 @@ export function MapMaker(props){
         })
         let val = [];
         dungeon.levels.forEach((l) => {
-            // let frontFilteredMiniboards = (!!l.front && l.front.miniboards) ? l.front.miniboards.map(b=>b.tiles.filter(t=>t.contains==='way_up' || 
-            // t.contains === 'way_down' || t.contains==='door')) : [];
             let frontFilteredMiniboards = (!!l.front && l.front.miniboards) ? l.front.miniboards.map(b=>b.tiles.filter(t=>t.contains==='way_up' || 
-            t.contains === 'way_down' || t.contains==='door')) : [];
+            t.contains === 'way_down' || t.contains==='door' || t.contains==='spawn_point')) : [];
             let backFilteredMiniboards = (!!l.back && l.back.miniboards) ? l.back.miniboards.map(b=>b.tiles.filter(t=>t.contains==='way_up' || 
-            t.contains === 'way_down' || t.contains==='door')) : [];
+            t.contains === 'way_down' || t.contains==='door' || t.contains==='spawn_point')) : [];
+
             let aboveLevel = dungeon.levels.find(lev => lev.id === l.id+1)
             let belowLevel = dungeon.levels.find(lev => lev.id === l.id-1)
-            let connected = []
+            let connected = [];
+
+            if(l.id === 0) console.log('frontFilteredMiniboards:' ,frontFilteredMiniboards)
             for(let i =0; i < 9; i++){
                 const frontBoardPassages = frontFilteredMiniboards[i];
                 const backBoardPassages = backFilteredMiniboards[i];
@@ -96,7 +97,7 @@ export function MapMaker(props){
                                 }
                             break;
                             case 'way_down': 
-                                if(belowMatch){
+                            if(belowMatch){
                                     belowMatch.miniboardIndex = i;
                                     connected.push({locationCode: f.locationCode, miniboardIndex: i, type: f.contains, coordinates: f.coordinates, orientation: 'front', connectedTo: belowMatch, level: f.level})
                                 }
@@ -179,8 +180,6 @@ export function MapMaker(props){
         }
         for(let row = 0; row < 15; row++){
             for(let column = 0; column<15; column++){
-                // this.tiles[column+(15*row)].coordinates = [(row+1*15), column+1*15]
-                // this.tiles[column+(15*row)].coordinates = [(row), column]
                 this.tiles[column+(15*row)].coordinates = [column, row]
             }
         }
@@ -355,35 +354,50 @@ export function MapMaker(props){
         return spawnPoints.length > 0 ? spawnPoints : null;
     }
     this.formatDungeon = (dungeonObj) => {
+        console.log('format dungeonObj: ', dungeonObj);
         let markedPassages = this.markPassages(dungeonObj)
         let dungeonValid = true;
+        let dungeonSpawns = [];
         dungeonObj.levels.forEach((l)=>{
             let valid = true;
             let passages = markedPassages.find(p=>p.id === l.id)
+            let spawns = []
+            console.log(l.id, 'passages: ', passages);
             passages.frontPassages.forEach(passage=>{
-                // console.log('mb:', mb);
-                // mb.forEach(passage=>{
+                if(passage.contains === 'spawn_point'){
+                    spawns.push(passage);
+                    dungeonSpawns.push(passage);
+                } else {
                     let connectedMatch = passages.connected.find(e=>e.locationCode === passage.locationCode)
                     if(!connectedMatch){
                         valid = false;
                     }
-                // })
+                }
             })
             passages.backPassages.forEach(passage=>{
                 // mb.forEach(passage=>{
+                if(passage.contains === 'spawn_point'){
+                    spawns.push(passage);
+                    dungeonSpawns.push(passage);
+                } else {
                     let connectedMatch = passages.connected.find(e=>e.locationCode === passage.locationCode)
                     if(!connectedMatch){
                         valid = false;
                     }
+                }
                 // })
             })
             passages.upwardPassages = passages.connected.filter(e=>e.type==='way_up')
             passages.downwardPassages = passages.connected.filter(e=>e.type==='way_down')
             l.passages = passages;
             l.valid = valid;
+            l.spawns = spawns;
             if(!valid) dungeonValid = false;
         })
         dungeonObj.valid = dungeonValid;
+        dungeonObj.spawn_points = dungeonSpawns;
+        if(dungeonObj.spawnPoints) delete dungeonObj.spawnPoints
+        console.log('*** DUBNGEON OBJ:', dungeonObj);
         // dungeonObj.markedPassages = markedPassages;
         return dungeonObj
 

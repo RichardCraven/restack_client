@@ -106,13 +106,26 @@ const refreshAllUsers = () => {
 }
 
 const saveUserData = async () => {
+  
   if(props.boardManager.boardIndex === null) return
   if(!props.boardManager.dungeon.id) return
   const meta = JSON.parse(sessionStorage.getItem('metadata'))
   const userId = sessionStorage.getItem('userId')
-  meta.planeIndex = props.boardManager.playerTile.planeIndex
-  meta.boardIndex = props.boardManager.playerTile.boardIndex
-  meta.tileIndex = props.boardManager.getIndexFromCoordinates(props.boardManager.playerTile.location) 
+  
+  // meta.planeIndex = props.boardManager.playerTile.planeIndex
+  // meta.boardIndex = props.boardManager.playerTile.boardIndex
+  // meta.tileIndex = props.boardManager.getIndexFromCoordinates(props.boardManager.playerTile.location) 
+  console.log('player tile:', props.boardManager.playerTile)
+  console.log('props.boardManager', props.boardManager)
+
+  let boardIndex = props.boardManager.getBoardIndexFromBoard(props.boardManager.currentBoard)
+  // return
+  meta.location = {
+    boardIndex,
+    tileIndex: props.boardManager.getIndexFromCoordinates(props.boardManager.playerTile.location) ,
+    levelId: props.boardManager.currentLevel.id,
+    orientation: props.boardManager.currentOrientation
+  }
   meta.dungeonId = props.boardManager.dungeon.id;
   await updateUserRequest(userId, meta)
   sessionStorage.setItem('metadata', JSON.stringify(meta))

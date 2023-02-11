@@ -75,10 +75,13 @@ export function BoardManager(){
 
     this.playerTile = {
         location: [0,0],
-        boardIndex: null
+        boardIndex: null,
+        levelId: 0
     }
     this.dungeon = {};
-    this.currentMap = {};
+    this.currentBoard = {};
+    this.currentOrientation = 'F'
+    this.currentLevel = {}
     
     this.getCoordinatesFromIndex = (index) =>{
         let row = Math.floor(index/15);
@@ -86,6 +89,19 @@ export function BoardManager(){
         let x = 15 + row;
         let y = 15 + col;
         return [x, y]
+    }
+    this.getBoardIndexFromBoard = (board) => {
+        let v;
+        if(this.currentLevel && this.currentOrientation){
+            if(this.currentOrientation === 'F'){
+                console.log('getting front', board.id, this.currentLevel.front.miniboards)
+                v = this.currentLevel.front.miniboards.findIndex(e=>e.id === board.id)
+                console.log('index:', v)
+            } else {
+                v = this.currentLevel.back.miniboards.findIndex(e=>e.id === board.id)
+            }
+        }
+        return v;
     }
     this.getIndexFromCoordinates = (coordinates) =>{
         let x = coordinates[0], y = coordinates[1];
@@ -98,7 +114,18 @@ export function BoardManager(){
         console.log('setting dungeon', dungeon);
         this.dungeon = dungeon;
     }
+    this.setCurrentLevel = (level) => {
+        console.log('setting level', level);
+        this.currentLevel = level;
+    }
+    this.setCurrentOrientation = (orientation) => {
+        console.log('setting orientation', orientation);
+        this.currentOrientation = orientation;
+    }
     this.initializeTilesFromMap = (boardIndex, spawnTileIndex) => {
+    // this.initializeTilesFromMap = (spawnPoint, spawnTileIndex) => {
+        
+        // debugger
         const getRandomMonster = () => {
             let idx = Math.floor(Math.random()*this.monstersArr.length);
             const monster = this.monstersArr[idx]
@@ -106,16 +133,19 @@ export function BoardManager(){
             return monster
         }
         let spawnCoords = this.getCoordinatesFromIndex(spawnTileIndex);
-        let map = this.dungeon.miniboards[boardIndex]
-        this.currentMap = map;
+        // debugger
+        console.log('current level: ', this.currentLevel)
+        let board = this.currentOrientation === 'F' ? this.currentLevel.front.miniboards[boardIndex] : this.currentLevel.back.miniboards[boardIndex]
+        console.log('board:' , board)
+        this.currentBoard = board;
         this.tiles = [];
         this.playerTile = {
             location: spawnCoords,
             boardIndex: boardIndex
         }
         // console.log(map, 'map.tiles filtered:', map.tiles.filter(e=> e.contains !== 'void' && e.contains !== null));
-        for(let i = 0; i< map.tiles.length; i++){
-            let tile = map.tiles[i]
+        for(let i = 0; i< board.tiles.length; i++){
+            let tile = board.tiles[i]
             if(tile.contains === 'monster') tile.contains = getRandomMonster();
             this.tiles.push({
                 type: 'board-tile',
@@ -157,7 +187,7 @@ export function BoardManager(){
     this.moveUp = () => {
         let tile = this.tiles[this.getIndexFromCoordinates(this.playerTile.location)];
         if(this.playerTile.location[0] === 15){
-            this.moveMapUp()
+            this.moveBoardUp()
             return
         }
         let destinationCoords = [(this.playerTile.location[0]- 1),this.playerTile.location[1]];
@@ -168,7 +198,7 @@ export function BoardManager(){
         tile.image = 
         this.getImage(tile.contains) ? this.getImage(tile.contains) : tile.contains;
         
-        this.handleFogOfWar(this.currentMap.tiles[destinationIndex])
+        this.handleFogOfWar(this.currentBoard.tiles[destinationIndex])
 
         this.playerTile.location[0] = (this.playerTile.location[0]- 1)
 
@@ -178,7 +208,7 @@ export function BoardManager(){
     this.moveDown = () => {
         let tile = this.tiles[this.getIndexFromCoordinates(this.playerTile.location)];
         if(this.playerTile.location[0] === 29){
-            this.moveMapDown()
+            this.moveBoardDown()
             return
         }
         let destinationCoords = [(this.playerTile.location[0]+ 1),this.playerTile.location[1]];
@@ -188,7 +218,7 @@ export function BoardManager(){
         tile.image = 
         this.getImage(tile.contains) ? this.getImage(tile.contains) : tile.contains;
         
-        this.handleFogOfWar(this.currentMap.tiles[destinationIndex])
+        this.handleFogOfWar(this.currentBoard.tiles[destinationIndex])
 
         this.playerTile.location[0] = (this.playerTile.location[0]+ 1)
 
@@ -197,7 +227,7 @@ export function BoardManager(){
     this.moveLeft = () => {
         let tile = this.tiles[this.getIndexFromCoordinates(this.playerTile.location)];
         if(this.playerTile.location[1] === 15){
-            this.moveMapLeft()
+            this.moveBoardLeft()
             return
         }
         let destinationCoords = [this.playerTile.location[0],(this.playerTile.location[1]- 1)];
@@ -206,7 +236,7 @@ export function BoardManager(){
         tile.image = 
         this.getImage(tile.contains) ? this.getImage(tile.contains) : tile.contains;
         
-        this.handleFogOfWar(this.currentMap.tiles[destinationIndex])
+        this.handleFogOfWar(this.currentBoard.tiles[destinationIndex])
         
         this.playerTile.location[1] = (this.playerTile.location[1]- 1)
 
@@ -215,7 +245,7 @@ export function BoardManager(){
     this.moveRight = () => {
         let tile = this.tiles[this.getIndexFromCoordinates(this.playerTile.location)];
         if(this.playerTile.location[1] === 29){
-            this.moveMapRight()
+            this.moveBoardRight()
             return
         }
         let destinationCoords = [this.playerTile.location[0],(this.playerTile.location[1]+ 1)];
@@ -225,26 +255,29 @@ export function BoardManager(){
         tile.image = 
         this.getImage(tile.contains) ? this.getImage(tile.contains) : tile.contains;
 
-        this.handleFogOfWar(this.currentMap.tiles[destinationIndex])
+        this.handleFogOfWar(this.currentBoard.tiles[destinationIndex])
 
         this.playerTile.location[1] = (this.playerTile.location[1]+ 1)
 
         this.tiles[this.getIndexFromCoordinates(this.playerTile.location)].image = 'avatar'
     }
-    this.moveMapLeft = () => {
+    this.moveBoardLeft = () => {
         this.tiles = [];
         this.initializeTilesFromMap(this.playerTile.boardIndex-1, this.getIndexFromCoordinates([this.playerTile.location[0], this.playerTile.location[1]+14]))
     }
-    this.moveMapRight = () => {
+    this.moveBoardRight = () => {
         this.tiles = [];
         this.initializeTilesFromMap(this.playerTile.boardIndex+1, this.getIndexFromCoordinates([this.playerTile.location[0], this.playerTile.location[1]-14]))
     }
-    this.moveMapUp = () => {
+    this.moveBoardUp = () => {
         this.tiles = [];
         this.initializeTilesFromMap(this.playerTile.boardIndex-3, this.getIndexFromCoordinates([this.playerTile.location[0]+14, this.playerTile.location[1]]))
     }
-    this.moveMapDown = () => {
+    this.moveBoardDown = () => {
         this.tiles = [];
+        console.log('player tile:', this.playerTile)
+        console.log('this.playerTile.location', this.playerTile.location)
+        console.log('this.getIndexFromCoordinates([this.playerTile.location[0]-14', this.getIndexFromCoordinates([this.playerTile.location[0]-14, this.playerTile.location[1]]))
         this.initializeTilesFromMap(this.playerTile.boardIndex+3, this.getIndexFromCoordinates([this.playerTile.location[0]-14, this.playerTile.location[1]]))
     }
     this.getImage = (key) => {
@@ -286,7 +319,7 @@ export function BoardManager(){
             // }
 
             if(e.id > destinationTile.id - 3 && e.id < destinationTile.id + 3 ){
-                e.color = this.currentMap.tiles[e.id].color
+                e.color = this.currentBoard.tiles[e.id].color
             } 
             
             if(e.id === destinationTile.id - 2 && this.tiles[destinationTile.id - 1].contains === 'void'){
@@ -303,7 +336,7 @@ export function BoardManager(){
                 e.id === destinationTile.id + 15 ||
                 // eslint-disable-next-line
                 e.id === destinationTile.id + 30 &&  this.tiles[destinationTile.id + 15].contains !== 'void') {
-                e.color = this.currentMap.tiles[e.id].color
+                e.color = this.currentBoard.tiles[e.id].color
             }
             // eslint-disable-next-line
             if( (e.id === destinationTile.id - 14 && this.tiles[destinationTile.id - 15].contains !== 'void' && this.tiles[destinationTile.id + 1].contains !== 'void') || 
@@ -313,7 +346,7 @@ export function BoardManager(){
                 e.id === destinationTile.id + 14 && this.tiles[destinationTile.id + 15].contains !== 'void' && this.tiles[destinationTile.id - 1].contains !== 'void' ||
                 // eslint-disable-next-line
                 e.id === destinationTile.id + 16 && this.tiles[destinationTile.id + 15].contains !== 'void' && this.tiles[destinationTile.id + 1].contains !== 'void'){
-               e.color = this.currentMap.tiles[e.id].color
+               e.color = this.currentBoard.tiles[e.id].color
             }
             //handle left side mapscroll border
             if(e.id === destinationTile.id - 1 && this.tiles[e.id].contains !== 'void' && this.getCoordinatesFromIndex(e.id)[0] !== this.getCoordinatesFromIndex(e.id-1)[0]){

@@ -6,6 +6,7 @@ import {
     loadDungeonRequest,
     updateUserRequest
   } from '../utils/api-handler';
+  import {storeMeta, getMeta, setEditorPreference} from '../utils/session-handler'
 
 class DungeonPage extends React.Component {
     constructor(props){
@@ -34,6 +35,8 @@ class DungeonPage extends React.Component {
             arr.push([])
         }
         const meta = JSON.parse(sessionStorage.getItem('metadata'));
+        console.log('meta:' , meta)
+        // this.loadNewDungeon();
         if(!meta || !meta.dungeonId){
             this.loadNewDungeon();
         } else {
@@ -174,7 +177,7 @@ class DungeonPage extends React.Component {
 
     loadNewDungeon = async () => {
         const allDungeons = await loadAllDungeonsRequest()
-
+        
         let dungeons = [],
             spawnList = [],
             selectedDungeon,
@@ -185,29 +188,79 @@ class DungeonPage extends React.Component {
             d.id = e._id
             dungeons.push(d)
         })
-        dungeons.forEach((v, i)=>{
-            if(v.valid){
-                v.spawnPoints.forEach((s, i)=>{
-                    spawnList.push(s)
-                })
-                let idx = Math.floor(Math.random()*spawnList.length);
-                spawnPoint = spawnList[idx]
-                selectedDungeon = v;
-                return
-            }
-        })
+        console.log('all dungeons:', dungeons);
+        selectedDungeon = dungeons.find(e=>e.name === 'Primari')
+        console.log('SELECTED DUNGEON:', );
+        spawnPoint = selectedDungeon.spawn_points[Math.floor(Math.random()*spawnList.length)]
+        console.log('spawn point: ', spawnPoint);
+        // dungeons.forEach((v, i)=>{
+        //     if(v.valid){
+        //         v.spawnPoints.forEach((s, i)=>{
+        //             spawnList.push(s)
+        //         })
+        //         let idx = Math.floor(Math.random()*spawnList.length);
+        //         spawnPoint = spawnList[idx]
+        //         selectedDungeon = v;
+        //         return
+        //     }
+        // })
         if(spawnPoint){
+            
+            this.props.boardManager.setDungeon(selectedDungeon)
+            // this.props.boardManager.initializeTilesFromMap(spawnPoint.boardIndex, spawnPoint.tileIndex);
+
+            // initializeTilesFromMap
+
+            console.log('initialize with spawn point:', spawnPoint);
+            let sp = spawnPoint.locationCode.split('_');
+            const levelId =  spawnPoint.level;
+            const level = selectedDungeon.levels.find(e=>e.id === levelId)
+            const miniboardIndex = spawnPoint.miniboardIndex
+            const orientation = sp[4];
+            const spawnTileIndex = spawnPoint.id;
+            console.log('levelId:', levelId, 'level', level, 'miniboard:', miniboardIndex, 'orientation:', orientation, 'tile id:', spawnTileIndex);
+            const board = orientation === 'F' ? level.front.miniboards[miniboardIndex] : (orientation === 'B' ? level.back.miniboards[miniboardIndex] : null)
+            if(board === null){
+                console.log('board is null, investigate');
+                debugger
+            }
+            console.log('board:', board);
+
             const meta = JSON.parse(sessionStorage.getItem('metadata'))
             const userId = sessionStorage.getItem('userId')
+
+            meta.location = {
+                boardIndex: spawnPoint.miniboardIndex,
+                tileIndex: spawnPoint.id,
+                levelId,
+                orientation
+            }
             meta.dungeonId = selectedDungeon.id
-            meta.boardIndex = spawnPoint.boardIndex
-            meta.tileIndex = spawnPoint.tileIndex
+
+            delete meta.tileIndex
+            delete meta.boardIndex
+            // meta.dungeonId = 
+            // meta.boardIndex = 
+            // meta.tileIndex = spawnPoint.id
+            // meta.levelId = levelId
+            // meta.orientation = orientation;
+
+            storeMeta(meta)
             await updateUserRequest(userId, meta)
-            this.props.boardManager.setDungeon(selectedDungeon)
-            this.props.boardManager.initializeTilesFromMap(spawnPoint.boardIndex, spawnPoint.tileIndex);
+
+
+            console.log('spawnPoint::: ', spawnPoint)
+            console.log('spawnPoint.boardIndex::: ', spawnPoint.boardIndex)
+            console.log('spawnPoint.tileIndex::: ', spawnPoint.tileIndex)
+            console.log('meta::: ', meta)
+
+
+            this.props.boardManager.setCurrentLevel(level);
+            this.props.boardManager.setCurrentOrientation(orientation);
+            this.props.boardManager.initializeTilesFromMap(miniboardIndex, spawnTileIndex);
             this.setState(()=>{
                 return {
-                    spawn: spawnPoint,
+                    // spawn: spawnPoint,
                     tiles: this.props.boardManager.tiles,
                 }
             })
@@ -216,15 +269,20 @@ class DungeonPage extends React.Component {
         }
     }
     loadExistingDungeon = async (dungeonId) => {
+        console.log('load existing dungeon');
         const meta = JSON.parse(sessionStorage.getItem('metadata'))
         const res = await loadDungeonRequest(dungeonId)
         const dungeon = JSON.parse(res.data[0].content)
         dungeon.id = res.data[0]._id;
+        console.log('meta:', meta)
         this.props.boardManager.setDungeon(dungeon)
-        this.props.boardManager.initializeTilesFromMap(meta.boardIndex, meta.tileIndex);
+        this.props.boardManager.setCurrentLevel(dungeon.levels.find(l=> l.id === meta.location.levelId));
+        this.props.boardManager.setCurrentOrientation(meta.location.orientation);
+        this.props.boardManager.initializeTilesFromMap(meta.location.boardIndex, meta.location.tileIndex);
+        
         this.setState(()=>{
             return {
-                spawn: meta.tileIndex,
+                spawn: meta.location.tileIndex,
                 tiles: this.props.boardManager.tiles,
             }
         })

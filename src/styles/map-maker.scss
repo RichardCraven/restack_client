@@ -18,6 +18,7 @@ $bot-level-zIndex: 2; // doubletall containers
 }
 .form-select{
     width: fit-content;
+    cursor: pointer;
     :focus{
         box-shadow: none;
     }
@@ -119,11 +120,11 @@ $bot-level-zIndex: 2; // doubletall containers
             }
         }
         .row-wrapper{
-            // align-items: flex-end;
             position: relative;
             justify-content: center;
             display: flex;
             height: 100%;
+            min-height: 660px;
             flex-direction: row;
         }
     }
@@ -418,6 +419,26 @@ ul.dropdown-menu.show{
     justify-content: flex-start;
     padding: 0;
     height: 40px;
+    .dungeon-name{
+        position: relative;
+        .dungeon-validity-indicator{
+            position: absolute;
+            height: 8px;
+            width: 8px;
+            border-radius: 8px;
+            top: calc(50% - 4px);
+            left: 8px;
+            &.valid{
+                background-color: lightgreen;
+            }
+            &.invalid{
+                background-color: red;
+            }
+        }
+        select{
+            padding-left: 22px;
+        }
+    }
     .level-buttons-container{
         display: flex;
         min-width: 300px;
@@ -485,7 +506,8 @@ ul.dropdown-menu.show{
                 display: flex;
                 justify-content: space-around;
                 align-items: center;
-                min-width: 100px;
+                min-width: 80px;
+                padding: 0px 4px;
                 .level-valid-indicator{
                     height: 8px;
                     width: 8px;
@@ -542,8 +564,15 @@ ul.dropdown-menu.show{
                         width: 100%;
                         opacity: 0.25;
                         position: absolute;
+                        display: flex;
+                            flex-wrap: wrap;
                         &.active{
                             background-color: lightyellow;
+                        }
+                        .interaction-section{
+                            &:hover{
+                                background-color: green;
+                            }
                         }
                     }
                 }

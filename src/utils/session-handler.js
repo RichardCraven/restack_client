@@ -10,7 +10,9 @@ function storeToken(id, token, isAdmin, metadata){
 }
 
 function storeMeta(metadata){
+    console.log('storing meta:', metadata)
     sessionStorage.setItem('metadata', JSON.stringify(metadata))
+    console.log(JSON.parse(sessionStorage.getItem('metadata')))
 }
 function getMeta(){
     return JSON.parse(sessionStorage.getItem('metadata'))

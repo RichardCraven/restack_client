@@ -11,10 +11,10 @@ const boardManager = new BoardManager();
 const mapMaker = new MapMaker();
 
 ReactDOM.render(
-  <React.StrictMode>
+  // <React.StrictMode>
     <BrowserRouter>
       <App boardManager={boardManager} mapMaker={mapMaker}/>
-    </BrowserRouter>
-  </React.StrictMode>,
+    </BrowserRouter>,
+  // </React.StrictMode>,
   document.getElementById('root')
 );

@@ -5,7 +5,7 @@ import '../../styles/map-maker.scss'
 import Tile from '../../components/tile'
 import { CDropdown, CDropdownToggle, CDropdownMenu, CDropdownItem, CCollapse, CSpinner, CFormSelect} from '@coreui/react';
 import  CIcon  from '@coreui/icons-react'
-import { cilCaretRight, cilSave, cilQrCode, cilLevelDown, cilLevelUp, cilLibraryAdd, cilTrash, cilOptions, cilPlus } from '@coreui/icons';
+import { cilCaretRight, cilSave, cilQrCode, cilLevelDown, cilLevelUp, cilLibraryAdd, cilTrash, cilOptions, cilPlus, cibTheMovieDatabase } from '@coreui/icons';
 import '../../styles/dungeon-board.scss'
 import '../../styles/map-maker.scss'
 import Canvas from '../../components/Canvas/canvas'
@@ -24,12 +24,15 @@ class DungeonView extends React.Component {
 
     timer;
     onClickHandler = event => {
+        console.log('evt');
         clearTimeout(this.timer);
 
         if (event.detail === 1) {
-            this.timer = setTimeout(this.props.onClick, 200)
+            console.log('SINGLE CLICK!');
+            // this.timer = setTimeout(this.props.onClick, 200)
         } else if (event.detail === 2) {
-            this.props.onDoubleClick()
+            // this.props.onDoubleClick()
+            console.log('DOUBLE CLICK!');
         }
     }
     getPassageColors = (contains) => {
@@ -51,63 +54,103 @@ class DungeonView extends React.Component {
         return passagesArray.filter(p=>imageTypes.includes(p.contains)).length
     }
     draw = (ctx, frameCount, data) => {
+        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
         // console.log('framecount:', frameCount);
        // ctx.arc(50, 100, 20*Math.sin(frameCount*0.05)**2, 0, 2*Math.PI)
     //    ^^^ animation
-
-
-
-        const levelData = this.props.overlayData?.find(x=>x.id === data.levelId)
+        const levelData = this.props.overlayData?.find(x=>x.id === data.levelId);
         if(levelData){
             let planeSize = this.props.tileSize*2;
             let unit = planeSize/15;
             let passages;
-            // if(data.orientation === 'front'){
-            //     // passages = levelData.frontPassages[data.index]
-            //     passages = levelData.frontPassages.filter(p=>p.miniboardIndex === data.index)
-            // } else if(data.orientation === 'back'){
-            //     // passages = levelData.backPassages[data.index]
-            //     passages = levelData.backPassages.filter(p=>p.miniboardIndex === data.index)
-            // }
             passages = data.orientation === 'front' ? levelData.frontPassages.filter(p=>p.miniboardIndex === data.index) :
-                       (data.orientation === 'back' ? levelData.backPassages.filter(p=>p.miniboardIndex === data.index) : null)
+            (data.orientation === 'back' ? levelData.backPassages.filter(p=>p.miniboardIndex === data.index) : null)
+            if(data.levelId === 1 && data.orientation === 'front' && data.index === 4){
+                // console.log('passages: ', passages, 'levelData.frontPassages', levelData.frontPassages);
+                // console.log('incorrect planeSize = ', planeSize);
+            }
+            if(data.levelId === 0 && data.orientation === 'front' && data.index === 4){
+                // console.log('passages: ', passages, 'levelData.frontPassages', levelData.frontPassages);
+                // console.log('correct planeSize = ', planeSize);
+            }
+            // if(data.levelId === 1 && data.orientation === 'front'){
+            //     console.log('data:', data, 'levelData: ', levelData, 'passages: ', passages);
+            // }
             if(passages){
-                const that = this
-                // const process = function(){
-                    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-                    passages.forEach((p, index)=>{
-                        // ctx.fillStyle = fillStyle
-                        let x = unit*p.coordinates[0] + unit/2
-                        let y = unit*p.coordinates[1] + unit/2
-                        let isConnected = levelData.connected.some(x => x.locationCode === p.locationCode)
-                        if(p.contains === 'door' && isConnected){
-                            let x = unit*p.coordinates[0] - 0.5*unit - (Math.sin(frameCount * 0.04)**2 * 2)
-                            let y = unit*p.coordinates[1]
-                            let size = 20 + Math.sin(frameCount * 0.04)**2 * 5
-                            let imageKey = 'doorImg'
-                            ctx.drawImage(this.props.imagesMatrix[imageKey], x, y, size, size);
-                        } else if(p.contains === 'way_up'){
-                            let x = unit*p.coordinates[0] - 0.5*unit - (Math.sin(frameCount * 0.04)**2 * 2)
-                            let y = unit*p.coordinates[1]
-                            let imageKey = isConnected ? 'arrowUpImg' : 'arrowUpImgInvalid'
-                            // console.log('way up ', 'connected: ', isConnected, imageKey);
-                            let size = 20 + Math.sin(frameCount * 0.04)**2 * 5;
-                            ctx.drawImage(this.props.imagesMatrix[imageKey], x, y, size, size);
-                        } else if(p.contains === 'way_down'){
-                            let x = unit*p.coordinates[0] - 0.5*unit - (Math.sin(frameCount * 0.04)**2 * 2)
-                            let y = unit*p.coordinates[1]
-                            let size = 20 + Math.sin(frameCount * 0.04)**2 * 5
-                            let imageKey = isConnected ? 'arrowDownImg' : 'arrowDownImgInvalid'
-                            ctx.drawImage(this.props.imagesMatrix[imageKey], x, y, size, size);
-                        } else {
-                            ctx.beginPath()
-                            let minVal = 3.5;
-                            ctx.fillStyle = that.getPassageColors(p.contains)
-                            ctx.arc(x, y, 3.5*Math.sin(frameCount*0.03 + index)**2 + minVal, 0, 2*Math.PI)
-                            ctx.fill()  
-                            // x ** 2 is the x squared
+                const that = this;
+                ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+                passages.forEach((p, index)=>{
+                    // if(data.levelId === 1 && data.orientation === 'front' && data.index === 4){
+                    //     // console.log('passages: ', passages, 'levelData.frontPassages', levelData.frontPassages);
+                    //     console.log('passage:', p);
+                    // }
+                    // ctx.fillStyle = fillStyle
+                    let x = unit*p.coordinates[0] + unit/2
+                    let y = unit*p.coordinates[1] + unit/2
+                    let isConnected = levelData.connected.some(x => x.locationCode === p.locationCode)
+                    if(p.contains === 'door' && isConnected){
+                        let x = unit*p.coordinates[0] - 0.5*unit - (Math.sin(frameCount * 0.04)**2 * 2)
+                        let y = unit*p.coordinates[1]
+                        let size = 20 + Math.sin(frameCount * 0.04)**2 * 5
+                        let imageKey = 'doorImg'
+                        ctx.drawImage(this.props.imagesMatrix[imageKey], x, y, size, size);
+                    } else if(p.contains === 'way_up'){
+                        let x = unit*p.coordinates[0] - 0.5*unit - (Math.sin(frameCount * 0.04)**2 * 2)
+                        let y = unit*p.coordinates[1]
+                        let imageKey = isConnected ? 'arrowUpImg' : 'arrowUpImgInvalid'
+
+                        
+
+                        // console.log('way up ', 'connected: ', isConnected, imageKey);
+                        let size = 20 + Math.sin(frameCount * 0.04)**2 * 5;
+                        if(data.levelId === 0 && data.orientation === 'front' && data.index === 4){
+                            // console.log('correct unit:', unit);
+                            // console.log('correct p.coordinates[0]', p.coordinates[0]);
+                            // console.log('passages: ', passages, 'levelData.frontPassages', levelData.frontPassages);
+                            // x = 10; y = 10
+                            // console.log('x y and size:', x, y, size);
+                            // ctx.drawImage(this.props.imagesMatrix[imageKey], 100, 100, size, size);
                         }
-                    }) 
+                        ctx.drawImage(this.props.imagesMatrix[imageKey], x, y, size, size);
+                    } else if(p.contains === 'way_down'){
+                        let x = unit*p.coordinates[0] - 0.5*unit - (Math.sin(frameCount * 0.04)**2 * 2)
+                        let y = unit*p.coordinates[1]
+                        let size = 20 + Math.sin(frameCount * 0.04)**2 * 5
+                        let imageKey = isConnected ? 'arrowDownImg' : 'arrowDownImgInvalid'
+                   
+                        if(data.levelId === 1 && data.orientation === 'front' && data.index === 4){
+                            // console.log('passages: ', passages, 'levelData.frontPassages', levelData.frontPassages);
+                            // x = 10; y = 10
+                            // console.log(' unit:', unit);
+                            // console.log('p.coordinates[0]', p.coordinates[0]);
+                            // console.log('x y:', x, y);
+                        }
+                        // ctx.drawImage(this.props.imagesMatrix[imageKey], 120, 120, size, size);
+                        ctx.drawImage(this.props.imagesMatrix[imageKey], x, y, size, size);
+                    } else if(p.contains === 'spawn_point'){
+                        let x = unit*p.coordinates[0] - 0.5*unit - (Math.sin(frameCount * 0.04)**2 * 2)
+                        let y = unit*p.coordinates[1]
+                        let size = 20 + Math.sin(frameCount * 0.04)**2 * 5
+                        let imageKey = 'spawnPointImg'
+                   
+                        if(data.levelId === 1 && data.orientation === 'front' && data.index === 4){
+                            // console.log('passages: ', passages, 'levelData.frontPassages', levelData.frontPassages);
+                            // x = 10; y = 10
+                            // console.log(' unit:', unit);
+                            // console.log('p.coordinates[0]', p.coordinates[0]);
+                            // console.log('x y:', x, y);
+                        }
+                        // ctx.drawImage(this.props.imagesMatrix[imageKey], 120, 120, size, size);
+                        ctx.drawImage(this.props.imagesMatrix[imageKey], x, y, size, size);
+                    } else {
+                        ctx.beginPath()
+                        let minVal = 3.5;
+                        ctx.fillStyle = that.getPassageColors(p.contains)
+                        ctx.arc(x, y, 3.5*Math.sin(frameCount*0.03 + index)**2 + minVal, 0, 2*Math.PI)
+                        ctx.fill()  
+                        // x ** 2 is the x squared
+                    }
+                }) 
             }
 
             if(data.orientation === 'doublewide'){
@@ -187,9 +230,6 @@ class DungeonView extends React.Component {
                     ctx.stroke();
                 })
             }
-            // if(!passages) return
-
-            
         }
     }
 
@@ -215,7 +255,6 @@ class DungeonView extends React.Component {
                         <CDropdown>
                             <CDropdownToggle disabled color="secondary">
                                 Actions
-                                {/* <CIcon icon={cilOptions} size="lg"/> */}
                             </CDropdownToggle>
                             <CDropdownMenu>
                                 <CDropdownItem onClick={() => this.props.clearLoadedBoard()}>Clear</CDropdownItem>
@@ -269,10 +308,7 @@ class DungeonView extends React.Component {
                                                                         boxSizing: 'border-box'
                                                                     }}
                                                                     onClick={() => {
-                                                                        // console.log('hmm ', this.props.selectedView);
-                                                                        // if(this.props.selectedView === 'board'){
                                                                         return this.props.loadBoard(board)
-                                                                        // }
                                                                     }}>
                                                                     {board.tiles.map((tile, i) => {
                                                                     return    <Tile 
@@ -312,9 +348,7 @@ class DungeonView extends React.Component {
                                                         boxSizing: 'border-box'
                                                     }}
                                                     onClick={() => {
-                                                        // if(this.props.selectedView === 'board'){
-                                                            return this.props.loadBoard(board)
-                                                        // }
+                                                        return this.props.loadBoard(board)
                                                     }}>
                                                     {board.tiles.map((tile, i) => {
                                                     return    <Tile 
@@ -330,7 +364,6 @@ class DungeonView extends React.Component {
                                                                 false
                                                                 }>
                                                                 </Tile>
-                                                            
                                                     })}
                                                     </div>
                                                     <div className="map-title">{board.name}</div>
@@ -365,7 +398,6 @@ class DungeonView extends React.Component {
                                                 }
                                                 >
                                                 </Tile>
-                                            
                                     })}
                                     </div>
                                     <div className="map-title">{board.name}</div>
@@ -515,6 +547,7 @@ class DungeonView extends React.Component {
                     >
                         <div className="dungeon-info">
                             <div className="dungeon-name">
+                                { this.props.loadedDungeon && <div className={`dungeon-validity-indicator ${this.props.loadedDungeon.valid ? 'valid' : 'invalid'}`}></div>}
                                 <CFormSelect 
                                 aria-label="Dungeon Selector"
                                 ref={this.props.dungeonSelectVal}
@@ -613,7 +646,19 @@ class DungeonView extends React.Component {
                                                     <div className={`interaction-layer ${this.props.hoveredDungeonSection === `${levelIndex}_front` ? 'active': ''}`}
                                                         onDragOver={(event)=>this.props.onDragOverDungeon(event, levelIndex, 'front')}
                                                         onDrop={(event)=>{this.props.onDropDungeon(levelIndex, 'front')}}
-                                                    ></div>
+                                                    >
+                                                        {[1,2,3,4,5,6,7,8,9].map((e,i)=>{
+                                                        return <div 
+                                                                    key={i}
+                                                                    style={{
+                                                                        height: this.props.tileSize*2,
+                                                                        width: this.props.tileSize*2
+                                                                    }}
+                                                                    className={`interaction-section`}
+                                                                    onClick={() => this.props.zoomIntoBoard(level.id, i, 'front')}
+                                                                ></div>
+                                                        })}
+                                                    </div>
                                                     <div 
                                                     className="canvas-overlay-container mini-boards-container"
                                                     style={{
@@ -664,15 +709,27 @@ class DungeonView extends React.Component {
                                             </div>}
                                             {level.back && <div className="back-plane plane-board-display">
                                                 <div 
-                                                className={`plane-preview draggable`}
-                                                style={{
-                                                    height: this.props.tileSize*6,
-                                                    width: this.props.tileSize*6
-                                                }}>
+                                                    className={`plane-preview draggable`}
+                                                    style={{
+                                                        height: this.props.tileSize*6,
+                                                        width: this.props.tileSize*6
+                                                    }}>
                                                     <div className={`interaction-layer ${this.props.hoveredDungeonSection === `${levelIndex}_back` ? 'active': ''}`}
                                                         onDragOver={(event)=>this.props.onDragOverDungeon(event, levelIndex, 'back')}
                                                         onDrop={(event)=>{this.props.onDropDungeon(levelIndex, 'back')}}
-                                                    ></div>
+                                                    >
+                                                        {[1,2,3,4,5,6,7,8,9].map((e,i)=>{
+                                                        return <div
+                                                                    key={i}
+                                                                    style={{
+                                                                        height: this.props.tileSize*2,
+                                                                        width: this.props.tileSize*2
+                                                                    }}
+                                                                    className={`interaction-section`}
+                                                                    onClick={() => this.props.zoomIntoBoard(level.id, i, 'back')}
+                                                                ></div>
+                                                        })}
+                                                    </div>
                                                     <div 
                                                     className="canvas-overlay-container mini-boards-container"
                                                     style={{
