@@ -18,7 +18,9 @@ class DungeonPage extends React.Component {
             spawn: {},
             showMessage: false,
             showSaving: true,
-            intervalId: null
+            intervalId: null,
+            showDarkMask: false,
+            currentBoard: 'test'
         }
     }
     
@@ -115,10 +117,9 @@ class DungeonPage extends React.Component {
                     }
                 })
             },1900)
-            // ^ why are you doing this
             
 
-        }, 15000); 
+        }, 25000); 
         this.setState({intervalId: intervalId})
     }
 
@@ -130,9 +131,10 @@ class DungeonPage extends React.Component {
         switch(key){
             case 'ArrowUp':
                 this.props.boardManager.moveUp();
-                 newTiles = [...this.props.boardManager.tiles]
+                newTiles = [...this.props.boardManager.tiles]
                 this.setState({
-                    tiles: newTiles
+                    tiles: newTiles,
+                    showDarkMask: this.props.boardManager.setCurrentOrientation === 'B'
                 })
                 
             break;
@@ -140,21 +142,24 @@ class DungeonPage extends React.Component {
                 this.props.boardManager.moveDown();
                 newTiles = [...this.props.boardManager.tiles]
                 this.setState({
-                    tiles: newTiles
+                    tiles: newTiles,
+                    showDarkMask: this.props.boardManager.setCurrentOrientation === 'B'
                 })
             break;
             case 'ArrowLeft':
                 this.props.boardManager.moveLeft();
                 newTiles = [...this.props.boardManager.tiles]
                 this.setState({
-                    tiles: newTiles
+                    tiles: newTiles,
+                    showDarkMask: this.props.boardManager.setCurrentOrientation === 'B'
                 })
             break;
             case 'ArrowRight':
                 this.props.boardManager.moveRight();
                 newTiles = [...this.props.boardManager.tiles]
                 this.setState({
-                    tiles: newTiles
+                    tiles: newTiles,
+                    showDarkMask: this.props.boardManager.setCurrentOrientation === 'B'
                 })
             break;
             default:
@@ -291,6 +296,8 @@ class DungeonPage extends React.Component {
         return (
         <div className="dungeon-container">
             {this.state.showMessage && <div className="message-panel">{this.state.showSaving ? 'saving...' : 'saved'}</div>}
+            {this.props.boardManager.currentOrientation === 'B' && <div className="dark-mask"></div>}
+            {this.props.showCoordinates && this.state.currentBoard && <div className="info-panel">{this.props.boardManager.currentBoard.name}</div>}
             <div  className="board" style={{
                 width: this.state.boardSize+'px', height: this.state.boardSize+ 'px',
                 backgroundColor: 'white'

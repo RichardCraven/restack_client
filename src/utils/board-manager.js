@@ -94,9 +94,7 @@ export function BoardManager(){
         let v;
         if(this.currentLevel && this.currentOrientation){
             if(this.currentOrientation === 'F'){
-                console.log('getting front', board.id, this.currentLevel.front.miniboards)
                 v = this.currentLevel.front.miniboards.findIndex(e=>e.id === board.id)
-                console.log('index:', v)
             } else {
                 v = this.currentLevel.back.miniboards.findIndex(e=>e.id === board.id)
             }
@@ -133,10 +131,7 @@ export function BoardManager(){
             return monster
         }
         let spawnCoords = this.getCoordinatesFromIndex(spawnTileIndex);
-        // debugger
-        console.log('current level: ', this.currentLevel)
         let board = this.currentOrientation === 'F' ? this.currentLevel.front.miniboards[boardIndex] : this.currentLevel.back.miniboards[boardIndex]
-        console.log('board:' , board)
         this.currentBoard = board;
         this.tiles = [];
         this.playerTile = {
@@ -184,82 +179,97 @@ export function BoardManager(){
         this.tiles[index].playerTile = true;
         this.tiles[index].image = 'avatar'
     }
+    this.handleInteraction = (destinationTile) => {
+        let val = destinationTile.contains
+        if(this.monstersArr.includes(destinationTile.contains)) val = 'monster'
+        switch(val){
+            case 'door':
+                this.handlePassingThroughDoor();
+                console.log('handle door!!!')
+            break;
+            case 'monster':
+                console.log('HANDLE MONSTER INTERACTION')
+                return null;
+            break;
+            case 'gate':
+                console.log('gate')
+                return null;
+            break;
+            default:
+                break;
+        }
+    }
+    this.handlePassingThroughDoor = () => {
+        if(this.currentOrientation === 'F'){
+            this.currentOrientation = 'B'
+        } else if(this.currentOrientation === 'B'){
+            this.currentOrientation = 'F'
+        }
+        this.tiles = [];
+        this.initializeTilesFromMap(this.playerTile.boardIndex, this.getIndexFromCoordinates([this.playerTile.location[0], this.playerTile.location[1]]))
+    }
+    this.move = (destinationCoords, direction) => {
+        const tile = this.tiles[this.getIndexFromCoordinates(this.playerTile.location)];
+        const destinationIndex = this.getIndexFromCoordinates(destinationCoords),
+        destinationTile = this.tiles[destinationIndex];
+        if(destinationTile.contains === 'void') return
+        if(destinationTile.contains){
+          let v = this.handleInteraction(destinationTile)
+          if(v === null) return;
+          // v is null if the destination contains in impassable object
+        }
+        tile.image = this.getImage(tile.contains) ? this.getImage(tile.contains) : tile.contains;
+
+        this.handleFogOfWar(this.currentBoard.tiles[destinationIndex])
+
+        switch(direction){
+            case 'up':
+                this.playerTile.location[0] = (this.playerTile.location[0]- 1)
+            break;
+            case 'down':
+                this.playerTile.location[0] = (this.playerTile.location[0]+ 1)
+            break;
+            case 'left':
+                this.playerTile.location[1] = (this.playerTile.location[1]- 1)
+            break;
+            case 'right':
+                this.playerTile.location[1] = (this.playerTile.location[1]+ 1)
+            break;
+        }
+        this.tiles[this.getIndexFromCoordinates(this.playerTile.location)].image = 'avatar'
+        
+    }
     this.moveUp = () => {
-        let tile = this.tiles[this.getIndexFromCoordinates(this.playerTile.location)];
         if(this.playerTile.location[0] === 15){
             this.moveBoardUp()
             return
         }
-        let destinationCoords = [(this.playerTile.location[0]- 1),this.playerTile.location[1]];
-        let destinationIndex = this.getIndexFromCoordinates(destinationCoords);
-        // let playerTile = this.playerTile;
-        if(this.tiles[destinationIndex].contains === 'void') return
-        //remove avatar from current tile
-        tile.image = 
-        this.getImage(tile.contains) ? this.getImage(tile.contains) : tile.contains;
-        
-        this.handleFogOfWar(this.currentBoard.tiles[destinationIndex])
-
-        this.playerTile.location[0] = (this.playerTile.location[0]- 1)
-
-        this.tiles[this.getIndexFromCoordinates(this.playerTile.location)].image = 'avatar'
-        // console.log('***** new location: ',this.playerTile.location[0], this.playerTile.location[1])
+        const destinationCoords = [(this.playerTile.location[0]- 1),this.playerTile.location[1]];
+        this.move(destinationCoords, 'up');
     }
     this.moveDown = () => {
-        let tile = this.tiles[this.getIndexFromCoordinates(this.playerTile.location)];
         if(this.playerTile.location[0] === 29){
             this.moveBoardDown()
             return
         }
-        let destinationCoords = [(this.playerTile.location[0]+ 1),this.playerTile.location[1]];
-        let destinationIndex = this.getIndexFromCoordinates(destinationCoords);
-        if(this.tiles[destinationIndex].contains === 'void') return
-        //remove avatar from current tile
-        tile.image = 
-        this.getImage(tile.contains) ? this.getImage(tile.contains) : tile.contains;
-        
-        this.handleFogOfWar(this.currentBoard.tiles[destinationIndex])
-
-        this.playerTile.location[0] = (this.playerTile.location[0]+ 1)
-
-        this.tiles[this.getIndexFromCoordinates(this.playerTile.location)].image = 'avatar'
+        const destinationCoords = [(this.playerTile.location[0]+ 1),this.playerTile.location[1]];
+        this.move(destinationCoords, 'down')
     }
     this.moveLeft = () => {
-        let tile = this.tiles[this.getIndexFromCoordinates(this.playerTile.location)];
         if(this.playerTile.location[1] === 15){
             this.moveBoardLeft()
             return
         }
-        let destinationCoords = [this.playerTile.location[0],(this.playerTile.location[1]- 1)];
-        let destinationIndex = this.getIndexFromCoordinates(destinationCoords);
-        if(this.tiles[destinationIndex].contains === 'void') return
-        tile.image = 
-        this.getImage(tile.contains) ? this.getImage(tile.contains) : tile.contains;
-        
-        this.handleFogOfWar(this.currentBoard.tiles[destinationIndex])
-        
-        this.playerTile.location[1] = (this.playerTile.location[1]- 1)
-
-        this.tiles[this.getIndexFromCoordinates(this.playerTile.location)].image = 'avatar'
+        const destinationCoords = [this.playerTile.location[0],(this.playerTile.location[1]- 1)];
+        this.move(destinationCoords, 'left')
     }
     this.moveRight = () => {
-        let tile = this.tiles[this.getIndexFromCoordinates(this.playerTile.location)];
         if(this.playerTile.location[1] === 29){
             this.moveBoardRight()
             return
         }
-        let destinationCoords = [this.playerTile.location[0],(this.playerTile.location[1]+ 1)];
-        let destinationIndex = this.getIndexFromCoordinates(destinationCoords);
-        if(this.tiles[destinationIndex].contains === 'void') return
-        //remove avatar from current tile
-        tile.image = 
-        this.getImage(tile.contains) ? this.getImage(tile.contains) : tile.contains;
-
-        this.handleFogOfWar(this.currentBoard.tiles[destinationIndex])
-
-        this.playerTile.location[1] = (this.playerTile.location[1]+ 1)
-
-        this.tiles[this.getIndexFromCoordinates(this.playerTile.location)].image = 'avatar'
+        const destinationCoords = [this.playerTile.location[0],(this.playerTile.location[1]+ 1)];
+        this.move(destinationCoords, 'right')
     }
     this.moveBoardLeft = () => {
         this.tiles = [];
@@ -275,9 +285,6 @@ export function BoardManager(){
     }
     this.moveBoardDown = () => {
         this.tiles = [];
-        console.log('player tile:', this.playerTile)
-        console.log('this.playerTile.location', this.playerTile.location)
-        console.log('this.getIndexFromCoordinates([this.playerTile.location[0]-14', this.getIndexFromCoordinates([this.playerTile.location[0]-14, this.playerTile.location[1]]))
         this.initializeTilesFromMap(this.playerTile.boardIndex+3, this.getIndexFromCoordinates([this.playerTile.location[0]-14, this.playerTile.location[1]]))
     }
     this.getImage = (key) => {

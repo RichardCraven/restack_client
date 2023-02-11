@@ -144,18 +144,19 @@ const toggleShowCoordinates = () => {
    <div className="fullpage">
       <div  className="App">
         {loggedIn === true && <div className="nav-buttons-container">
-          {loggedIn && <button className="menu-buttons logout-button" onClick={logout}>
+          {<button className="menu-buttons logout-button" onClick={logout}>
             Logout
           </button>}
-          {loggedIn && <button className="menu-buttons save-button" onClick={saveUserData}>
+          {<button className="menu-buttons save-button" onClick={saveUserData}>
             Save
           </button>}
-          {loggedIn && <button className="menu-buttons go-home-button" onClick={goHome}>
+          {<button className="menu-buttons go-home-button" onClick={goHome}>
             Home
           </button>}    
-          {loggedIn && isAdmin && <button className="menu-buttons show-coordinates-button" onClick={toggleShowCoordinates}>
+          {isAdmin && <button className="menu-buttons show-coordinates-button" onClick={toggleShowCoordinates}>
             Show Coordinates
-          </button>}  
+          </button>} 
+          {/* {showCoordinates && <div>{currentBoard}</div>} */}
         </div> }
         {/* <Route path="/">
           {!loggedIn ? <Redirect to="/login" /> : 

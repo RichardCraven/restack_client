@@ -12,7 +12,10 @@ export default function Tile(props) {
             width: props.tileSize+'px',
             backgroundImage: "url(" + images[props.image] + ")",
             backgroundColor: (props.hovered && props.type === 'board-tile') ? '#8080807a' : props.color,
-            backgroundSize: '100% 100%',
+            backgroundSize: props.image === 'avatar' ? '100% 80%' : '100% 100%',
+            backgroundPosition: props.image === 'avatar' ? 'center bottom' : 'inherit',
+            // background-size: 100% 80%;
+    // background-position: center bottom;
             backgroundRepeat: 'no-repeat',
             fontSize: '0.7em',
             position: 'relative',
