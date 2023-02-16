@@ -4,9 +4,11 @@ import Tile from '../components/tile'
 import {
     loadAllDungeonsRequest,
     loadDungeonRequest,
-    updateUserRequest
+    updateDungeonRequest,
+    updateUserRequest,
+    addDungeonRequest
   } from '../utils/api-handler';
-  import {storeMeta, getMeta, setEditorPreference} from '../utils/session-handler';
+  import {storeMeta, getMeta, getUserId, getUserName} from '../utils/session-handler';
   import { cilCaretRight, cilCaretLeft} from '@coreui/icons';
   import  CIcon  from '@coreui/icons-react'
 
@@ -19,6 +21,7 @@ class DungeonPage extends React.Component {
             tiles: [],
             spawn: {},
             showMessage: false,
+            messageToDisplay: '',
             showSaving: true,
             intervalId: null,
             showDarkMask: false,
@@ -41,35 +44,44 @@ class DungeonPage extends React.Component {
         for(let i = 0; i < 9; i++){
             arr.push([])
         }
-        const meta = JSON.parse(sessionStorage.getItem('metadata'));
+        const meta = getMeta();
         console.log('meta:' , meta)
         // debugger
         // this.loadNewDungeon();
         
         this.props.boardManager.establishAvailableItems(this.props.inventoryManager.items)
         if(!meta || !meta.dungeonId){
+            console.log('no dungeon id, make new dungeon')
             this.loadNewDungeon();
         } else {
             // const sampleItems = ['volkas_wand', 'spartan_helm', 'sayan_amulet']
-            this.props.inventoryManager.initializeItems([])
+            console.log('inventory to initialize: ', meta.inventory, !!meta.inventory)
+            this.props.inventoryManager.initializeItems(meta.inventory ? meta.inventory : [])
             this.loadExistingDungeon(meta.dungeonId)
         }
         this.setState((state, props) => {
             return {
-            tileSize,
-            boardSize
+                tileSize,
+                boardSize,
+                leftPanelExpanded: meta?.leftExpanded,
+                rightPanelExpanded: meta?.rightExpanded
             }
         })
     }
-    pickupItem = (tileContains) => {
-        
-        console.log('EYYY pickup item!', tileContains)
+    addItemToInventory = (tile) => {
+        const tileContains = tile.contains;
         this.props.inventoryManager.addItem(tileContains)
+        this.displayMessage(`You found a ${tileContains}!`)
+    }
+    updateDungeon = async (dungeon) => {
+        const res = await updateDungeonRequest(dungeon.id, dungeon);
+        console.log('update res:', res)
     }
     componentDidMount(){
-        const callbacks = [this.pickupItem]
+        const callbacks = [this.addItemToInventory]
         // this.props.boardManager.establishCallbacks(callbacks)
-        this.props.boardManager.establishPickupItemCallback(this.pickupItem)
+        this.props.boardManager.establishAddItemToInventoryCallback(this.addItemToInventory)
+        this.props.boardManager.establishUpdateDungeonCallback(this.updateDungeon)
         window.addEventListener('beforeunload', this.componentCleanup)
     }
     componentWillUnmount(){
@@ -119,26 +131,50 @@ class DungeonPage extends React.Component {
                 }
             })
             this.props.saveUserData()
-            
-            setTimeout(() => {
-                this.setState(()=>{
-                    return {
-                        showSaving: false
-                    }
-                })
-            },1000)
-            setTimeout(() => {
-                this.setState(()=>{
-                    return {
-                        showSaving: true,
-                        showMessage : false
-                    }
-                })
-            },1900)
+            this.displayMessage('saving...')
+            // setTimeout(() => {
+            //     this.setState(()=>{
+            //         return {
+            //             showSaving: false
+            //         }
+            //     })
+            // },1000)
+            // setTimeout(() => {
+            //     this.setState(()=>{
+            //         return {
+            //             showSaving: true,
+            //             showMessage : false
+            //         }
+            //     })
+            // },1900)
             
 
         }, 45000); 
         this.setState({intervalId: intervalId})
+    }
+    displayMessage = (message) => {
+        this.setState(()=>{
+            return {
+                showMessage : true,
+                messageToDisplay: message
+            }
+        })
+        
+        // setTimeout(() => {
+        //     this.setState(()=>{
+        //         return {
+        //             showSaving: false
+        //         }
+        //     })
+        // },1000)
+        setTimeout(() => {
+            this.setState(()=>{
+                return {
+                    showMessage : false,
+                    messageToDisplay: ''
+                }
+            })
+        },1900)
     }
 
 
@@ -195,13 +231,20 @@ class DungeonPage extends React.Component {
         // console.log('pp', id)
     }
     handleClick = (tile) => {
-        console.log('clicked ', tile)
+        console.log('clicked ', tile, 'DUNGEON:', this.props.boardManager.dungeon)
     }
     handleItemClick = (item) => {
         console.log('item clicked:', item)
     }
 
     loadNewDungeon = async () => {
+        const userId = getUserId(),
+              userName = getUserName();
+        console.log('user id:', userId)
+        console.log('username:', userName)
+        
+
+
         const allDungeons = await loadAllDungeonsRequest()
         
         let dungeons = [],
@@ -215,10 +258,41 @@ class DungeonPage extends React.Component {
             dungeons.push(d)
         })
         console.log('all dungeons:', dungeons);
+        // return
+
         selectedDungeon = dungeons.find(e=>e.name === 'Primari')
         console.log('SELECTED DUNGEON:', );
-        spawnPoint = selectedDungeon.spawn_points[Math.floor(Math.random()*spawnList.length)]
+        
         console.log('spawn point: ', spawnPoint);
+
+
+        // clone selected dungeon
+        let newDungeonPayload = {
+            name: `${selectedDungeon.name}_${userId}`,
+            levels: selectedDungeon.levels,
+            pocket_planes: selectedDungeon.pocket_planes,
+            descriptions: `${userName}'s dungeon`,
+            spawn_points: selectedDungeon.spawn_points,
+            valid: selectedDungeon.valid
+          }
+          console.log('??payload:', newDungeonPayload)
+        //   return
+        const newDungeonRes = await addDungeonRequest(newDungeonPayload);
+        selectedDungeon = JSON.parse(newDungeonRes.data.content);
+
+        selectedDungeon.id = newDungeonRes.data._id
+        console.log('console parsed:', JSON.parse(newDungeonRes.data.content))
+        //   console.log('newDungeonRes', newDungeonRes, 'data:', newDungeonRes.data.content)
+          console.log('!!!!selectedDungeon:', selectedDungeon)
+        //   return
+        spawnPoint = selectedDungeon.spawn_points[Math.floor(Math.random()*spawnList.length)]
+        console.log('spawn point:', spawnPoint)
+
+        // let loadedDungeon = this.state.loadedDungeon
+        // loadedDungeon.id = newDungeonRes.data._id;
+
+
+
         // dungeons.forEach((v, i)=>{
         //     if(v.valid){
         //         v.spawnPoints.forEach((s, i)=>{
@@ -252,8 +326,8 @@ class DungeonPage extends React.Component {
             }
             console.log('board:', board);
 
-            const meta = JSON.parse(sessionStorage.getItem('metadata'))
-            const userId = sessionStorage.getItem('userId')
+            const meta = getMeta()
+            const userId = getUserId()
 
             meta.location = {
                 boardIndex: spawnPoint.miniboardIndex,
@@ -263,8 +337,6 @@ class DungeonPage extends React.Component {
             }
             meta.dungeonId = selectedDungeon.id
 
-            delete meta.tileIndex
-            delete meta.boardIndex
             // meta.dungeonId = 
             // meta.boardIndex = 
             // meta.tileIndex = spawnPoint.id
@@ -313,16 +385,26 @@ class DungeonPage extends React.Component {
             }
         })
     }
-    toggleLeftSidePanel = () => {
-        this.setState({leftPanelExpanded: !this.state.leftPanelExpanded})
+    toggleLeftSidePanel = async () => {
+        const newVal = !this.state.leftPanelExpanded;
+        this.setState({leftPanelExpanded: newVal})
+        const meta = getMeta()
+        meta.leftExpanded = newVal
+        storeMeta(meta)
+        await updateUserRequest(getUserId(), meta)
     }
-    toggleRightSidePanel = () => {
-        this.setState({rightPanelExpanded: !this.state.rightPanelExpanded})
+    toggleRightSidePanel = async () => {
+        const newVal = !this.state.rightPanelExpanded
+        this.setState({rightPanelExpanded: newVal})
+        const meta = getMeta()
+        meta.rightExpanded = newVal
+        storeMeta(meta)
+        await updateUserRequest(getUserId(), meta)
     }
     render(){
         return (
         <div className="dungeon-container">
-            {this.state.showMessage && <div className="message-panel">{this.state.showSaving ? 'saving...' : 'saved'}</div>}
+            {this.state.showMessage && <div className="message-panel">{this.state.messageToDisplay}</div>}
             {!this.state.showMessage && <div className="message-panel">{this.props.boardManager.currentBoard.name}</div>}
             {this.props.boardManager.currentOrientation === 'B' && <div className="dark-mask"></div>}
             <div className={`left-side-panel ${this.state.leftPanelExpanded ? 'expanded' : ''}`}>

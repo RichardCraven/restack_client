@@ -1,24 +1,26 @@
-function storeToken(id, token, isAdmin, metadata){
+function storeSessionData(id, token, isAdmin, username, metadata){
     // let bool = false;
     // if(parseInt(isAdmin, 10)){
     //     bool = true;
     // }
+    console.log('token:', token, 'username', username)
     sessionStorage.setItem('userId', id)
-    // sessionStorage.setItem('token', token)
+    sessionStorage.setItem('userName', username)
     sessionStorage.setItem('isAdmin', isAdmin.toString())
     sessionStorage.setItem('metadata', metadata)
 }
 
 function storeMeta(metadata){
-    console.log('storing meta:', metadata)
     sessionStorage.setItem('metadata', JSON.stringify(metadata))
-    console.log(JSON.parse(sessionStorage.getItem('metadata')))
 }
 function getMeta(){
     return JSON.parse(sessionStorage.getItem('metadata'))
 }
 function getUserId(){
     return sessionStorage.getItem('userId')
+}
+function getUserName(){
+    return sessionStorage.getItem('userName')
 }
 function setEditorPreference(key, val){
     let meta = getMeta();
@@ -29,4 +31,4 @@ function setEditorPreference(key, val){
 }
 
 
-export {storeToken, storeMeta, getMeta, getUserId, setEditorPreference};
+export {storeSessionData, storeMeta, getMeta, getUserId, setEditorPreference, getUserName};

@@ -14,7 +14,7 @@ import { useEffect } from 'react';
 import {updateUserRequest} from '../src/utils/api-handler'
 
 import {getAllUsersRequest} from './utils/api-handler';
-import {storeToken, getUserId} from './utils/session-handler';
+import {storeSessionData, getUserId, getMeta} from './utils/session-handler';
 import { useHistory } from "react-router";
 
 
@@ -49,8 +49,9 @@ const logout = () => {
 const loginFromRegister = (user) => {
   // setUser(user)
   setTimeout(()=>{
-    console.log('user token: ', user.token, typeof user.token);
-    storeToken(user._id, user.token, user.isAdmin, user.metadata)
+    console.log('user: ', user, user.token, typeof user.token);
+    // return
+    storeSessionData(user._id, user.token, user.isAdmin, user.username, user.metadata)
     setLoggedIn(true)
   })
 }
@@ -64,8 +65,8 @@ const login = (userCredentials) => {
   if(validUser){
     // setUser(validUser)
     setTimeout(()=>{
-      console.log('valid user.metadata:', JSON.parse(validUser.metadata));
-      storeToken(validUser._id, validUser.token, validUser.isAdmin, validUser.metadata)
+      console.log('validUser: ', validUser);
+      storeSessionData(validUser._id, validUser.token, validUser.isAdmin, validUser.username, validUser.metadata)
       setLoggedIn(true)
       setIsAdmin(JSON.parse(sessionStorage.getItem('isAdmin') === 'true' ))
       history.push({
@@ -106,11 +107,11 @@ const refreshAllUsers = () => {
 }
 
 const saveUserData = async () => {
-  
+  console.log('SAVING USER DATA!')
   if(props.boardManager.boardIndex === null) return
   if(!props.boardManager.dungeon.id) return
-  const meta = JSON.parse(sessionStorage.getItem('metadata'))
-  const userId = sessionStorage.getItem('userId')
+  const meta = getMeta()
+  const userId = getUserId()
   
   // console.log('player tile:', props.boardManager.playerTile)
   // console.log('props.boardManager', props.boardManager)
@@ -124,6 +125,7 @@ const saveUserData = async () => {
     orientation: props.boardManager.currentOrientation
   }
   meta.inventory = props.inventoryManager.inventory;
+  console.log('meta.inventory:', meta.inventory)
   meta.dungeonId = props.boardManager.dungeon.id;
   await updateUserRequest(userId, meta)
   sessionStorage.setItem('metadata', JSON.stringify(meta))
@@ -179,8 +181,12 @@ const toggleShowCoordinates = () => {
             <UserProfilePage {...props} />
           )}/>
           <Route exact path="/dungeon" render={() => (
+            !loggedIn ? <Redirect to="/login" /> :
               <DungeonPage {...props} saveUserData={saveUserData} showCoordinates={showCoordinates}/>
             )}/>
+          {/* <Route exact path="/dungeon" {...props} saveUserData={saveUserData} showCoordinates={showCoordinates} component={LandingPage}>
+            {!loggedIn && <Redirect to="/login" /> }
+          </Route>  */}
           <Route exact path="/landing" component={LandingPage}>
             {!loggedIn && <Redirect to="/login" /> }
           </Route> 

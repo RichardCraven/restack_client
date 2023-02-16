@@ -74,6 +74,13 @@ export function BoardManager(){
     ];
     this.availableItems = [];
 
+    this.establishAddItemToInventoryCallback = (callback) => {
+        this.addItemToInventory = callback;
+    }
+    this.establishUpdateDungeonCallback = (callback) => {
+        this.updateDungeon = callback;
+    }
+
     this.playerTile = {
         location: [0,0],
         boardIndex: null,
@@ -113,22 +120,15 @@ export function BoardManager(){
         return index
     }
     this.setDungeon = (dungeon) => {
-        console.log('setting dungeon', dungeon);
         this.dungeon = dungeon;
     }
     this.setCurrentLevel = (level) => {
-        console.log('setting level', level);
         this.currentLevel = level;
     }
     this.setCurrentOrientation = (orientation) => {
-        console.log('setting orientation', orientation);
         this.currentOrientation = orientation;
     }
     this.initializeTilesFromMap = (boardIndex, spawnTileIndex) => {
-        console.log('initialize tiles')
-    // this.initializeTilesFromMap = (spawnPoint, spawnTileIndex) => {
-        
-        // debugger
         const getRandomMonster = () => {
             let idx = Math.floor(Math.random()*this.monstersArr.length);
             const monster = this.monstersArr[idx]
@@ -140,9 +140,7 @@ export function BoardManager(){
             item = this.availableItems[idx];
             return item;
         }
-        console.log('getting coords for index ', spawnTileIndex)
         let spawnCoords = this.getCoordinatesFromIndex(spawnTileIndex);
-        console.log('coords:', spawnCoords)
         let board = this.currentOrientation === 'F' ? this.currentLevel.front.miniboards[boardIndex] : this.currentLevel.back.miniboards[boardIndex]
         this.currentBoard = board;
         this.tiles = [];
@@ -150,7 +148,6 @@ export function BoardManager(){
             location: spawnCoords,
             boardIndex: boardIndex
         }
-        // console.log(map, 'map.tiles filtered:', map.tiles.filter(e=> e.contains !== 'void' && e.contains !== null));
         for(let i = 0; i< board.tiles.length; i++){
             let tile = board.tiles[i]
             if(tile.contains === 'monster') tile.contains = getRandomMonster();
@@ -165,7 +162,6 @@ export function BoardManager(){
                 borders: null
             })
         }
-        // console.log('RILES: ', this.tiles.filter(e=> e.contains !== 'void' && e.contains !== null));
         for(let j = 0; j < 15; j++){
             for(let p = 0; p<15; p++){
                 this.tiles[p+(15*j)].coordinates = [(j+1*15), p+1*15]
@@ -213,12 +209,25 @@ export function BoardManager(){
             break;
             case 'item':
                 console.log('handle item')
-                this.pickupItem(destinationTile.contains)
-                // return 'impassable';
+                // this.addItemToInventory(destinationTile)
+                // this.removeItemFromBoard(destinationTile)
+                return 'item';
             break;
             default:
                 break;
         }
+    }
+    this.removeItemFromBoard = (tile) => {
+        tile.contains = null;
+        tile.color = null; 
+        this.tiles[tile.id] = tile;
+        let level = this.dungeon.levels.find(e=>e.id === this.currentLevel.id);
+        if(this.currentOrientation === 'F'){
+            this.dungeon.levels.find(e=>e.id === this.currentLevel.id).front.miniboards.find(b=>b.id === this.currentBoard.id).tiles[tile.id].contains = null;
+        } else {
+            this.dungeon.levels.find(e=>e.id === this.currentLevel.id).back.miniboards.find(b=>b.id === this.currentBoard.id).tiles[tile.id].contains = null;
+        }
+        this.updateDungeon(this.dungeon)
     }
     this.handlePassingThroughDoor = () => {
         if(this.currentOrientation === 'F'){
@@ -229,13 +238,7 @@ export function BoardManager(){
         this.tiles = [];
         this.initializeTilesFromMap(this.playerTile.boardIndex, this.getIndexFromCoordinates([this.playerTile.location[0], this.playerTile.location[1]]))
     }
-    // this.establishCallbacks = (callbacks) => {
-    //     console.log('callbacks: ', callbacks)
-    // }
-    this.establishPickupItemCallback = (callback) => {
-        console.log('callbacks: ', callback)
-        this.pickupItem = callback;
-    }
+    
     this.handlePassingThroughWayUp = () => {
         const incomingLevel = this.dungeon.levels.find(l => l.id === this.currentLevel.id+1)
         if(!incomingLevel){
@@ -310,6 +313,10 @@ export function BoardManager(){
         if(interaction === 'way_down'){
             this.handlePassingThroughWayDown();
         }
+        if(interaction === 'item'){
+            this.addItemToInventory(destinationTile)
+            this.removeItemFromBoard(destinationTile)
+        }
         this.tiles[this.getIndexFromCoordinates(this.playerTile.location)].image = 'avatar'
         this.checkAdjacency();
     }
@@ -362,8 +369,6 @@ export function BoardManager(){
         this.initializeTilesFromMap(this.playerTile.boardIndex+3, this.getIndexFromCoordinates([this.playerTile.location[0]-14, this.playerTile.location[1]]))
     }
     this.getImage = (key) => {
-        //this switch case renames images so they can fit in a 2 tile space
-        // console.log('key: ', key);
         switch(key){
             case 'delete':
                 return 'trash'
@@ -391,14 +396,11 @@ export function BoardManager(){
     } 
     this.handleFogOfWar = (destinationTile) => {
         this.tiles.forEach((e)=> {
+            if(e.id === 175) console.log('setting to black')
             e.color = 'black';
             e.borders = null;
         })
         this.tiles.forEach((e)=> {
-            // function sameRow(){
-            //     return e.coordinates[0] === destinationTile.coordinates[0]
-            // }
-
             if(e.id > destinationTile.id - 3 && e.id < destinationTile.id + 3 ){
                 e.color = this.currentBoard.tiles[e.id].color
             } 

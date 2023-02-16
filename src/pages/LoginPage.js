@@ -2,7 +2,7 @@ import React, {useState, useEffect} from 'react'
 import { useSpring, animated } from 'react-spring'
 
 import {registerRequest} from '../utils/api-handler';
-// import {storeToken} from '../utils/session-handler';
+// import {storeSessionData} from '../utils/session-handler';
 
 export default function LoginPage(props) {
   
@@ -71,7 +71,7 @@ export default function LoginPage(props) {
             // const response = await loginRequest({username: loginName, password: loginPass})
             // if(response.status === 200){
               // console.log('raw response: ', response.data)
-              // storeToken(loginres.userId, loginres.token, loginres.isAdmin, loginres.metadata, loginres.uptodate)
+              // storeSessionData(loginres.userId, loginres.token, loginres.isAdmin, loginres.metadata, loginres.uptodate)
               props.login({username: loginName, password:loginPass})
               // setNav(true)
             // } else {
@@ -119,7 +119,7 @@ export default function LoginPage(props) {
 
               setValidUser(registerRes)
               // console.log('REGISTER RESPONSE DATA IS ', registerres)
-              // storeToken(registerres.token)
+              // storeSessionData(registerres.token)
               
               
               // props.login(registerRes)
