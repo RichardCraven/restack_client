@@ -28,7 +28,9 @@ class DungeonPage extends React.Component {
             currentBoard: '',
             leftPanelExpanded: false,
             rightPanelExpanded: false,
-            inventoryHoverMatrix: {}
+            inventoryHoverMatrix: {},
+            pending: null,
+            activeInventoryItem: null
         }
     }
     
@@ -37,18 +39,12 @@ class DungeonPage extends React.Component {
             boardSize = tileSize*15;
         this.initializeListeners();
         this.startSaveInterval();
-        if(this.props.mapMaker){
-            this.props.mapMaker.initializeTiles();
-        }
+        if(this.props.mapMaker) this.props.mapMaker.initializeTiles();
         let arr = []
         for(let i = 0; i < 9; i++){
             arr.push([])
         }
         const meta = getMeta();
-        console.log('meta:' , meta)
-        // debugger
-        // this.loadNewDungeon();
-        
         this.props.boardManager.establishAvailableItems(this.props.inventoryManager.items)
         let inv = {}
         if(!meta || !meta.dungeonId){
@@ -90,11 +86,15 @@ class DungeonPage extends React.Component {
     messaging = (message) => {
         this.displayMessageAndHold(message)
     }
+    setPending = (pendingState) => {
+        this.setState({pending: pendingState})
+    }
     componentDidMount(){
         const callbacks = [this.addItemToInventory]
         // this.props.boardManager.establishCallbacks(callbacks)
         this.props.boardManager.establishAddItemToInventoryCallback(this.addItemToInventory)
         this.props.boardManager.establishUpdateDungeonCallback(this.updateDungeon)
+        this.props.boardManager.establishPendingCallback(this.setPending)
         this.props.boardManager.establishMessagingCallback(this.messaging)
         window.addEventListener('beforeunload', this.componentCleanup)
     }
@@ -255,10 +255,41 @@ class DungeonPage extends React.Component {
         })
     }
     handleClick = (tile) => {
-        console.log('clicked ', tile, 'DUNGEON:', this.props.boardManager.dungeon)
+        console.log('HANDLE CLICK, SHOULD NOT GET HERE tile:', tile)
+        // switch(tile.contains){
+        //     case 'minor_key':
+        //         if(this.props.boardManager.pending) console.log(this.props.boardManager.pending)
+        //     break;
+        //     default:
+        //         console.log('clicked ', tile, 'DUNGEON:', this.props.boardManager.dungeon)
+        //     break;
+        // }
     }
     handleItemClick = (item) => {
-        console.log('item clicked:', item)
+        console.log('pending:', this.state.pending)
+        this.setState({
+            activeInventoryItem: item
+        })
+        setTimeout(()=>{
+            console.log('active invetnory item:', this.state.activeInventoryItem)
+        },200)
+        switch(item.contains){
+            case 'minor_key':
+                if(this.props.boardManager.pending && this.props.boardManager.pending.type === 'gate' && this.props.boardManager.pending.subtype === 'minor'){
+                    console.log(this.props.boardManager.pending)
+                    console.log('OPEN MINOR GATE')
+                }
+            break;
+            case 'ornate_key':
+                if(this.props.boardManager.pending && this.props.boardManager.pending.type === 'gate' && this.props.boardManager.pending.subtype === 'ornate'){
+                    console.log(this.props.boardManager.pending)
+                    console.log('OPEN ORNATE GATE')
+                }
+            break;
+            default:
+                console.log('clicked ', item, 'DUNGEON:', this.props.boardManager.dungeon)
+            break;
+        }
     }
 
     loadNewDungeon = async () => {
@@ -453,7 +484,8 @@ class DungeonPage extends React.Component {
                                         type={'inventory-tile'}
                                         handleClick={this.handleItemClick}
                                         handleHover={this.handleInventoryTileHover}
-                                        className={'inventory-tile'}
+                                        className={`inventory-tile ${this.state.activeInventoryItem?.id === i ? 'active' : ''}`}
+                                        isActiveInventory={this.state.activeInventoryItem?.id === i}
                                         >
                                         </Tile>
                                     </div>
@@ -490,7 +522,8 @@ class DungeonPage extends React.Component {
                 {this.state.tiles && this.state.tiles.map((tile, i) => {
                     return <Tile 
                     key={i}
-                    // className="tile"
+                    // isActiveInventory={this.state.activeInventoryItem?.id === i}
+                    // isActiveInventory={this.state.activeInventoryItem?.id === i}
                     tileSize={this.state.tileSize}
                     image={tile.image ? tile.image : null}
                     contains={tile.contains}

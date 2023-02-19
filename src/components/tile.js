@@ -11,7 +11,7 @@ export default function Tile(props) {
             height: props.tileSize+'px',
             width: props.tileSize+'px',
             backgroundImage: "url(" + images[props.image] + ")",
-            backgroundColor: (props.hovered && props.type === 'board-tile') ? '#8080807a' : props.color,
+            backgroundColor: (props.hovered && props.type === 'board-tile') ? '#8080807a' : (props.isActiveInventory && props.type === 'inventory-tile' ? 'lightgreen' : props.color),
             backgroundSize: props.image === 'avatar' ? '100% 80%' : '100% 100%',
             backgroundPosition: props.image === 'avatar' ? 'center bottom' : 'inherit',
             // background-size: 100% 80%;

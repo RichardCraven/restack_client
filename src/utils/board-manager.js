@@ -74,6 +74,7 @@ export function BoardManager(){
     ];
     this.availableItems = [];
     this.activeInteractionTile = null;
+    this.pending = null;
 
     this.establishAddItemToInventoryCallback = (callback) => {
         this.addItemToInventory = callback;
@@ -84,7 +85,9 @@ export function BoardManager(){
     this.establishMessagingCallback = (callback) => {
         this.messaging = callback;
     }
-
+    this.establishPendingCallback = (callback) => {
+        this.setPending = callback;
+    }
     this.playerTile = {
         location: [0,0],
         boardIndex: null,
@@ -236,8 +239,28 @@ export function BoardManager(){
     }
     this.handleGate = (tile) => {
         if(!this.activeInteractionTile) this.activeInteractionTile = tile;
-        tile.color = 'lightyellow'
-        this.messaging('This gate requires an ornate key')
+        console.log(this.pending)
+        if(this.pending && this.pending.type === 'gate'){
+            this.messaging('This gate requires a minor key')
+            console.log('check for key')
+            let hasKey = false
+            if(hasKey){
+                console.log('open gate')
+            } else {
+                tile.color = 'lightyellow'
+                this.pending = null;
+            }
+        } else if(this.pending === null){
+            tile.color = 'lightyellow'
+            this.messaging('This gate requires a minor key')
+            let p = {
+                type: 'gate',
+                subtype: 'minor'
+            }
+            this.pending = p;
+            this.setPending(p)
+        }
+
     }
     this.handlePassingThroughDoor = () => {
         if(this.currentOrientation === 'F'){
