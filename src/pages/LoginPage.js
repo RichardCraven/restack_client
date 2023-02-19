@@ -24,8 +24,23 @@ export default function LoginPage(props) {
   const [successConfirmation, setSuccessConfirmation] = useSpring(() => ({ x: '200px', opacity: 0, config: { mass: 5, tension: 350, friction: 40 } }))
 
   const [validUser, setValidUser] = useState({})
+
   useEffect(() => {
-  }, [props])
+    document.addEventListener("keydown", handleKey, false);
+    return () => {
+        document.removeEventListener("keydown", handleKey);
+    }
+  },[paneToggle, loginName, loginPass])
+
+  const handleKey = (e) => {
+    if(e.key && e.key.toLowerCase() === 'enter'){
+        if(loginName.length > 0 && loginPass.length > 0){
+            props.login({username: loginName, password:loginPass})
+      }
+    }
+  }
+
+
 
   const handleChange = (e, type) => {
     switch(type){
@@ -51,6 +66,7 @@ export default function LoginPage(props) {
 
   const handleClick = async (type) => {
     setInvalid(false);
+    console.log(type)
     switch(type){
       case 'login':
         if(paneToggle !== 'login'){
@@ -65,7 +81,7 @@ export default function LoginPage(props) {
 
             setRpass2({x: '200px', opacity: 0})
           }, 90)
-
+          console.log('setting pane to register')
           setPane('login')
         } else if(loginName.length > 0 && loginPass.length > 0){
             // const response = await loginRequest({username: loginName, password: loginPass})
@@ -92,6 +108,7 @@ export default function LoginPage(props) {
 
             setRpass2({x: '0px', opacity: 1})
           }, 90)
+          console.log('setting pane to register')
           setPane('register')
         } else {
           if(registerPass1 !== registerPass2){

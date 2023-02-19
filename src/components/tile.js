@@ -26,9 +26,11 @@ export default function Tile(props) {
             borderBottom: (props.borders && props.borders.bottom) ? props.borders.bottom : 'none'
             }}
             onMouseEnter={() => {
-                if(props.handleHover){
-                    return props.handleHover(props.id, props.type)
-                } else {
+                if(props.handleHover && props.type !== 'inventory-tile'){
+                    return props.handleHover(props.id, props.type, this)
+                } else if(props.handleHover && props.type === 'inventory-tile'){
+                    return props.handleHover(props)
+                } else{
                     return null
                 }
             }}
@@ -39,7 +41,7 @@ export default function Tile(props) {
                     return null
                 }
             }}
-            className="tile"
+            className={`tile ${props.className}`}
         >
            {props.showCoordinates && 
                 <div style={{color: 'yellow', userSelect: 'none'}}>

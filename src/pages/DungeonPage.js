@@ -28,7 +28,7 @@ class DungeonPage extends React.Component {
             currentBoard: '',
             leftPanelExpanded: false,
             rightPanelExpanded: false,
-            // inventory: null
+            inventoryHoverMatrix: {}
         }
     }
     
@@ -50,6 +50,7 @@ class DungeonPage extends React.Component {
         // this.loadNewDungeon();
         
         this.props.boardManager.establishAvailableItems(this.props.inventoryManager.items)
+        let inv = {}
         if(!meta || !meta.dungeonId){
             console.log('no dungeon id, make new dungeon')
             this.loadNewDungeon();
@@ -57,12 +58,18 @@ class DungeonPage extends React.Component {
             // const sampleItems = ['volkas_wand', 'spartan_helm', 'sayan_amulet']
             console.log('inventory to initialize: ', meta.inventory, !!meta.inventory)
             this.props.inventoryManager.initializeItems(meta.inventory ? meta.inventory : [])
+            
+            this.props.inventoryManager.inventory.forEach((e,i)=>{
+                inv[i]= ''
+            })
+
             this.loadExistingDungeon(meta.dungeonId)
         }
         this.setState((state, props) => {
             return {
                 tileSize,
                 boardSize,
+                inventoryHoverMatrix: inv,
                 leftPanelExpanded: meta?.leftExpanded,
                 rightPanelExpanded: meta?.rightExpanded
             }
@@ -71,17 +78,24 @@ class DungeonPage extends React.Component {
     addItemToInventory = (tile) => {
         const tileContains = tile.contains;
         this.props.inventoryManager.addItem(tileContains)
+        this.props.inventoryManager.inventory.forEach((e,i)=>{
+            this.inventoryHoverMatrix[i] = '';
+        })
         this.displayMessage(`You found a ${tileContains}!`)
     }
     updateDungeon = async (dungeon) => {
         const res = await updateDungeonRequest(dungeon.id, dungeon);
         console.log('update res:', res)
     }
+    messaging = (message) => {
+        this.displayMessageAndHold(message)
+    }
     componentDidMount(){
         const callbacks = [this.addItemToInventory]
         // this.props.boardManager.establishCallbacks(callbacks)
         this.props.boardManager.establishAddItemToInventoryCallback(this.addItemToInventory)
         this.props.boardManager.establishUpdateDungeonCallback(this.updateDungeon)
+        this.props.boardManager.establishMessagingCallback(this.messaging)
         window.addEventListener('beforeunload', this.componentCleanup)
     }
     componentWillUnmount(){
@@ -159,14 +173,6 @@ class DungeonPage extends React.Component {
                 messageToDisplay: message
             }
         })
-        
-        // setTimeout(() => {
-        //     this.setState(()=>{
-        //         return {
-        //             showSaving: false
-        //         }
-        //     })
-        // },1000)
         setTimeout(() => {
             this.setState(()=>{
                 return {
@@ -175,6 +181,14 @@ class DungeonPage extends React.Component {
                 }
             })
         },1900)
+    }
+    displayMessageAndHold = (message) => {
+        this.setState(()=>{
+            return {
+                showMessage : true,
+                messageToDisplay: message
+            }
+        })
     }
 
 
@@ -227,8 +241,18 @@ class DungeonPage extends React.Component {
     // useEventListener('keydown', this.keyDownHandler);
 
 
-    handleHover = (id, type) => {
-        // console.log('pp', id)
+    handleHover = (id, type, tile) => {
+        console.log('tile', tile)
+    }
+    handleInventoryTileHover = (tileProps) => {
+        let inv = this.state.inventoryHoverMatrix;
+        this.props.inventoryManager.inventory.forEach((e,i)=>{
+            inv[i] = '';
+        })
+        inv[tileProps.id] = tileProps.contains;
+        this.setState({
+            inventoryHoverMatrix: inv
+        })
     }
     handleClick = (tile) => {
         console.log('clicked ', tile, 'DUNGEON:', this.props.boardManager.dungeon)
@@ -413,26 +437,41 @@ class DungeonPage extends React.Component {
                 </div>
                 <div className="inventory">
                     <div className="title">Inventory</div>
+                    <div className="inventory-tile-container">
                     {   this.props.inventoryManager &&
                         this.props.inventoryManager.inventory.map((item, i) => {
-                            return <Tile 
-                            key={i}
-                            tileSize={this.state.tileSize}
-                            image={item.image ? item.image : null}
-                            contains={item.contains}
-                            color={item.color ? item.color : 'lightgrey'}
-                            // borders={item.borders}
-                            // coordinates={item.coordinates}
-                            // index={item.id}
-                            // showCoordinates={this.props.showCoordinates}
-                            editMode={false}
-                            handleHover={this.handleHover}
-                            type={item.type}
-                            handleClick={this.handleItemClick}
-                            >
-                            </Tile>
+                            return <div className="sub-container" key={i}>
+                                        { this.state.inventoryHoverMatrix[i] && <div className="hover-message">{this.state.inventoryHoverMatrix[i]}</div>}
+                                        <Tile 
+                                        key={i}
+                                        id={i}
+                                        tileSize={this.state.tileSize}
+                                        image={item.image ? item.image : null}
+                                        contains={item.contains}
+                                        color={item.color}
+                                        editMode={false}
+                                        type={'inventory-tile'}
+                                        handleClick={this.handleItemClick}
+                                        handleHover={this.handleInventoryTileHover}
+                                        className={'inventory-tile'}
+                                        >
+                                        </Tile>
+                                    </div>
+                            // return <Tile 
+                            // key={i}
+                            // tileSize={this.state.tileSize}
+                            // image={item.image ? item.image : null}
+                            // contains={item.contains}
+                            // color={item.color}
+                            // editMode={false}
+                            // type={'inventory-tile'}
+                            // handleClick={this.handleItemClick}
+                            // className={'inventory-tile'}
+                            // >
+                            // </Tile>
                         })
                     }
+                    </div>
                 </div>
                 {/* <div className="party">
 

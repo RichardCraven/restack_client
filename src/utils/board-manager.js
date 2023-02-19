@@ -73,12 +73,16 @@ export function BoardManager(){
         // 'black_banshee','black_wraith', 'manticore','black_minotaur'
     ];
     this.availableItems = [];
+    this.activeInteractionTile = null;
 
     this.establishAddItemToInventoryCallback = (callback) => {
         this.addItemToInventory = callback;
     }
     this.establishUpdateDungeonCallback = (callback) => {
         this.updateDungeon = callback;
+    }
+    this.establishMessagingCallback = (callback) => {
+        this.messaging = callback;
     }
 
     this.playerTile = {
@@ -205,6 +209,7 @@ export function BoardManager(){
             break;
             case 'gate':
                 console.log('handle gate')
+                this.handleGate(destinationTile);
                 return 'impassable';
             break;
             case 'item':
@@ -228,6 +233,11 @@ export function BoardManager(){
             this.dungeon.levels.find(e=>e.id === this.currentLevel.id).back.miniboards.find(b=>b.id === this.currentBoard.id).tiles[tile.id].contains = null;
         }
         this.updateDungeon(this.dungeon)
+    }
+    this.handleGate = (tile) => {
+        if(!this.activeInteractionTile) this.activeInteractionTile = tile;
+        tile.color = 'lightyellow'
+        this.messaging('This gate requires an ornate key')
     }
     this.handlePassingThroughDoor = () => {
         if(this.currentOrientation === 'F'){
@@ -260,8 +270,11 @@ export function BoardManager(){
         this.initializeTilesFromMap(this.playerTile.boardIndex, this.getIndexFromCoordinates([this.playerTile.location[0], this.playerTile.location[1]]))
     }
     this.checkAdjacency = () => {
-        const containsHighlightableObject = (tile) => {
-            return this.monstersArr.includes(tile.contains) || this.availableItems.includes(tile.contains)
+        const highlightColor = (tile) => {
+            let color = null;
+            if(this.monstersArr.includes(tile.contains)) color = '#ff000078'
+            if(this.availableItems.includes(tile.contains)) color = 'lightyellow'
+            return color;
         }
         const curIndex = this.getIndexFromCoordinates(this.playerTile.location);
         const leftTile = this.tiles[curIndex-1];
@@ -269,12 +282,13 @@ export function BoardManager(){
         const topRow = !!this.tiles[curIndex - 15] ? this.tiles.filter(t=>t.id >= curIndex-16 && t.id <= curIndex-14) : null
         const bottomRow = !!this.tiles[curIndex + 15] ? this.tiles.filter(t=>t.id >= curIndex+14 && t.id <= curIndex+16) : null
 
-        if(leftTile && containsHighlightableObject(leftTile)) leftTile.color = 'lightyellow'
-        if(rightTile && containsHighlightableObject(rightTile)) rightTile.color = 'lightyellow';
-        if(topRow) topRow.forEach(t=>{ if(containsHighlightableObject(t)) t.color = 'lightyellow'})
-        if(bottomRow) bottomRow.forEach(t=>{if(containsHighlightableObject(t)) t.color = 'lightyellow'})
+        if(leftTile && highlightColor(leftTile)) leftTile.color = highlightColor(leftTile)
+        if(rightTile && highlightColor(rightTile)) rightTile.color = highlightColor(rightTile);
+        if(topRow) topRow.forEach(t=>{ if(highlightColor(t))t.color = highlightColor(t)})
+        if(bottomRow) bottomRow.forEach(t=>{if(highlightColor(t)) t.color = highlightColor(t)})
     }
     this.move = (destinationCoords, direction) => {
+        this.messaging(null)
         const tile = this.tiles[this.getIndexFromCoordinates(this.playerTile.location)];
         const destinationIndex = this.getIndexFromCoordinates(destinationCoords),
         destinationTile = this.tiles[destinationIndex];
