@@ -19,6 +19,7 @@ class DungeonPage extends React.Component {
             tileSize: 0,
             boardSize: 0,
             tiles: [],
+            overlayTiles: [],
             spawn: {},
             showMessage: false,
             messageToDisplay: '',
@@ -74,8 +75,9 @@ class DungeonPage extends React.Component {
     addItemToInventory = (tile) => {
         const tileContains = tile.contains;
         this.props.inventoryManager.addItem(tileContains)
+        console.log('this.inventoryHoverMatrix: ', this.inventoryHoverMatrix)
         this.props.inventoryManager.inventory.forEach((e,i)=>{
-            this.inventoryHoverMatrix[i] = '';
+            this.state.inventoryHoverMatrix[i] = '';
         })
         this.displayMessage(`You found a ${tileContains}!`)
     }
@@ -89,6 +91,15 @@ class DungeonPage extends React.Component {
     setPending = (pendingState) => {
         this.setState({pending: pendingState})
     }
+    refreshTiles = () => {
+        let newTiles = this.props.boardManager.tiles,
+            newOverlayTiles = this.props.boardManager.overlayTiles
+        console.log('refreshing tiles')
+        this.setState({
+            tiles: newTiles,
+            overlayTiles: newOverlayTiles
+        })
+    }
     componentDidMount(){
         const callbacks = [this.addItemToInventory]
         // this.props.boardManager.establishCallbacks(callbacks)
@@ -96,6 +107,7 @@ class DungeonPage extends React.Component {
         this.props.boardManager.establishUpdateDungeonCallback(this.updateDungeon)
         this.props.boardManager.establishPendingCallback(this.setPending)
         this.props.boardManager.establishMessagingCallback(this.messaging)
+        this.props.boardManager.establishRefreshCallback(this.refreshTiles)
         window.addEventListener('beforeunload', this.componentCleanup)
     }
     componentWillUnmount(){
@@ -195,13 +207,15 @@ class DungeonPage extends React.Component {
     // transform: perspective(3cm) rotateX(16deg) rotateY(0deg) rotateZ(0deg)
 
     keyDownHandler = ({ key }) => {
-        let newTiles = [];
+        let newTiles = [], overlayTiles = [];
         switch(key){
             case 'ArrowUp':
                 this.props.boardManager.moveUp();
                 newTiles = [...this.props.boardManager.tiles]
+                overlayTiles = this.props.boardManager.overlayTiles;
                 this.setState({
                     tiles: newTiles,
+                    overlayTiles,
                     showDarkMask: this.props.boardManager.setCurrentOrientation === 'B'
                 })
                 
@@ -209,24 +223,30 @@ class DungeonPage extends React.Component {
             case 'ArrowDown':
                 this.props.boardManager.moveDown();
                 newTiles = [...this.props.boardManager.tiles]
+                overlayTiles = this.props.boardManager.overlayTiles;
                 this.setState({
                     tiles: newTiles,
+                    overlayTiles,
                     showDarkMask: this.props.boardManager.setCurrentOrientation === 'B'
                 })
             break;
             case 'ArrowLeft':
                 this.props.boardManager.moveLeft();
                 newTiles = [...this.props.boardManager.tiles]
+                overlayTiles = this.props.boardManager.overlayTiles;
                 this.setState({
                     tiles: newTiles,
+                    overlayTiles,
                     showDarkMask: this.props.boardManager.setCurrentOrientation === 'B'
                 })
             break;
             case 'ArrowRight':
                 this.props.boardManager.moveRight();
                 newTiles = [...this.props.boardManager.tiles]
+                overlayTiles = this.props.boardManager.overlayTiles;
                 this.setState({
                     tiles: newTiles,
+                    overlayTiles,
                     showDarkMask: this.props.boardManager.setCurrentOrientation === 'B'
                 })
             break;
@@ -270,14 +290,16 @@ class DungeonPage extends React.Component {
         this.setState({
             activeInventoryItem: item
         })
+        this.props.boardManager.setActiveInventoryItem(item)
         setTimeout(()=>{
             console.log('active invetnory item:', this.state.activeInventoryItem)
         },200)
         switch(item.contains){
             case 'minor_key':
-                if(this.props.boardManager.pending && this.props.boardManager.pending.type === 'gate' && this.props.boardManager.pending.subtype === 'minor'){
+                if(this.props.boardManager.pending && this.props.boardManager.pending.type === 'minor_gate'){
                     console.log(this.props.boardManager.pending)
                     console.log('OPEN MINOR GATE')
+                    // debugger
                 }
             break;
             case 'ornate_key':
@@ -342,23 +364,6 @@ class DungeonPage extends React.Component {
         //   return
         spawnPoint = selectedDungeon.spawn_points[Math.floor(Math.random()*spawnList.length)]
         console.log('spawn point:', spawnPoint)
-
-        // let loadedDungeon = this.state.loadedDungeon
-        // loadedDungeon.id = newDungeonRes.data._id;
-
-
-
-        // dungeons.forEach((v, i)=>{
-        //     if(v.valid){
-        //         v.spawnPoints.forEach((s, i)=>{
-        //             spawnList.push(s)
-        //         })
-        //         let idx = Math.floor(Math.random()*spawnList.length);
-        //         spawnPoint = spawnList[idx]
-        //         selectedDungeon = v;
-        //         return
-        //     }
-        // })
         if(spawnPoint){
             
             this.props.boardManager.setDungeon(selectedDungeon)
@@ -437,6 +442,7 @@ class DungeonPage extends React.Component {
             return {
                 spawn: meta.location.tileIndex,
                 tiles: this.props.boardManager.tiles,
+                overlayTiles: this.props.boardManager.overlayTiles
             }
         })
     }
@@ -515,6 +521,29 @@ class DungeonPage extends React.Component {
                 </div>
             </div>
             {this.state.currentBoard && <div className="info-panel">{this.props.boardManager.currentBoard.name}</div>}
+            <div  className="overlay-board" style={{
+                width: this.state.boardSize+'px', height: this.state.boardSize+ 'px',
+                backgroundColor: 'transparent'
+                }}>
+                {this.state.overlayTiles && this.state.overlayTiles.map((tile, i) => {
+                    return <Tile 
+                    key={i}
+                    tileSize={this.state.tileSize}
+                    image={tile.image ? tile.image : null}
+                    contains={tile.contains}
+                    color={tile.color ? tile.color : 'lightgrey'}
+                    borders={tile.borders}
+                    coordinates={tile.coordinates}
+                    index={tile.id}
+                    // showCoordinates={this.props.showCoordinates}
+                    editMode={false}
+                    handleHover={this.handleHover}
+                    type={'overlay-tile'}
+                    handleClick={this.handleClick}
+                    >
+                    </Tile>
+                })}
+            </div>
             <div  className="board" style={{
                 width: this.state.boardSize+'px', height: this.state.boardSize+ 'px',
                 backgroundColor: 'white'

@@ -132,6 +132,9 @@ import spell from '../assets/icons/magic/spell.png';
 import white_magic from '../assets/icons/magic/white_magic.png';
 
 // staples
+import minor_gate from '../assets/icons/staples/gate.png'
+import minor_gate_open from '../assets/icons/staples/gate_open.png'
+
 import gate from '../assets/icons/staples/gate.png'
 import gold from '../assets/icons/staples/gold.png'
 import ornate_key from '../assets/icons/staples/key.png'
@@ -272,6 +275,8 @@ export {
     ornate_key,
     ornate_potion,
     gate,
+    minor_gate,
+    minor_gate_open,
     moon_castle,
     gold,
     treasure,

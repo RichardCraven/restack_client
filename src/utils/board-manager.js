@@ -1,6 +1,7 @@
 export function BoardManager(){
     console.log('creating board manager')
     this.tiles = [];
+    this.overlayTiles = [];
     this.options = [
         'delete',
         'void',
@@ -88,6 +89,13 @@ export function BoardManager(){
     this.establishPendingCallback = (callback) => {
         this.setPending = callback;
     }
+    this.establishRefreshCallback = (callback) => {
+        this.refreshTiles = callback;
+    }
+    this.setActiveInventoryItem = (e) => {
+        console.log('setting avtive inv item:', e)
+        this.activeInventoryItem = e;
+    }
     this.playerTile = {
         location: [0,0],
         boardIndex: null,
@@ -151,6 +159,7 @@ export function BoardManager(){
         let board = this.currentOrientation === 'F' ? this.currentLevel.front.miniboards[boardIndex] : this.currentLevel.back.miniboards[boardIndex]
         this.currentBoard = board;
         this.tiles = [];
+        this.overlayTiles = [];
         this.playerTile = {
             location: spawnCoords,
             boardIndex: boardIndex
@@ -158,7 +167,7 @@ export function BoardManager(){
         for(let i = 0; i< board.tiles.length; i++){
             let tile = board.tiles[i]
             if(tile.contains === 'monster') tile.contains = getRandomMonster();
-            if(tile.contains === 'lantern') tile.contains = getRandomItem();
+            if(tile.contains === 'gate') tile.contains = 'minor_gate';
             this.tiles.push({
                 type: 'board-tile',
                 id: tile.id,
@@ -166,6 +175,13 @@ export function BoardManager(){
                 showCoordinates: false,
                 contains: tile.contains,
                 image: this.getImage(tile.contains) ? this.getImage(tile.contains) : tile.contains,
+                borders: null
+            })
+            this.overlayTiles.push({
+                type: 'board-tile',
+                id: tile.id,
+                color: null,
+                image: null,
                 borders: null
             })
         }
@@ -192,6 +208,7 @@ export function BoardManager(){
     }
     this.placePlayer = (coordinates) => {
         let index = this.getIndexFromCoordinates(coordinates)
+        this.overlayTiles[index].image = 'avatar'
         this.tiles[index].playerTile = true;
         this.tiles[index].image = 'avatar'
     }
@@ -210,17 +227,17 @@ export function BoardManager(){
                 console.log('HANDLE MONSTER INTERACTION')
                 // return 'impassable';
             break;
-            case 'gate':
+            case 'minor_gate':
                 console.log('handle gate')
                 this.handleGate(destinationTile);
                 return 'impassable';
-            break;
+            // break;
             case 'item':
                 console.log('handle item')
                 // this.addItemToInventory(destinationTile)
                 // this.removeItemFromBoard(destinationTile)
                 return 'item';
-            break;
+            // break;
             default:
                 break;
         }
@@ -239,23 +256,34 @@ export function BoardManager(){
     }
     this.handleGate = (tile) => {
         if(!this.activeInteractionTile) this.activeInteractionTile = tile;
-        console.log(this.pending)
-        if(this.pending && this.pending.type === 'gate'){
+        console.log('pending: ', this.pending)
+        if(this.pending && this.pending.type === 'minor_gate'){
             this.messaging('This gate requires a minor key')
             console.log('check for key')
             let hasKey = false
+            if(this.activeInventoryItem){
+                console.log('checking...', this.activeInventoryItem)
+                if(this.activeInventoryItem.contains === 'minor_key') hasKey = true;
+            }
             if(hasKey){
                 console.log('open gate')
+                this.messaging('Minor gate rattles open')
+                tile.contains = 'minor_gate_open'
+                tile.image = 'minor_gate_open'
+                this.activeInteractionTile = tile;
+                console.log('this.tiles: ', this.tiles)
+                // this.tiles[tile.index].contains = 'minor_gate_open';
+                this.refreshTiles()
+                // this.initializeTilesFromMap(this.playerTile.boardIndex, this.getIndexFromCoordinates([this.playerTile.location[0], this.playerTile.location[1]]))
             } else {
                 tile.color = 'lightyellow'
-                this.pending = null;
+                // this.pending = null;
             }
         } else if(this.pending === null){
             tile.color = 'lightyellow'
             this.messaging('This gate requires a minor key')
             let p = {
-                type: 'gate',
-                subtype: 'minor'
+                type: 'minor_gate'
             }
             this.pending = p;
             this.setPending(p)
@@ -354,7 +382,8 @@ export function BoardManager(){
             this.addItemToInventory(destinationTile)
             this.removeItemFromBoard(destinationTile)
         }
-        this.tiles[this.getIndexFromCoordinates(this.playerTile.location)].image = 'avatar'
+        this.overlayTiles.forEach(t=>t.image = null)
+        this.overlayTiles[this.getIndexFromCoordinates(this.playerTile.location)].image = 'avatar'
         this.checkAdjacency();
     }
     this.moveUp = () => {
@@ -433,13 +462,14 @@ export function BoardManager(){
     } 
     this.handleFogOfWar = (destinationTile) => {
         this.tiles.forEach((e)=> {
-            if(e.id === 175) console.log('setting to black')
+            // if(e.id === 175) console.log('setting to black')
             e.color = 'black';
             e.borders = null;
         })
         this.tiles.forEach((e)=> {
             if(e.id > destinationTile.id - 3 && e.id < destinationTile.id + 3 ){
-                e.color = this.currentBoard.tiles[e.id].color
+                let isWrapAroundTile = (e.id === destinationTile.id + 2 || e.id === destinationTile.id -2 || destinationTile.id + 1 || e.id === destinationTile.id - 1) && (this.getCoordinatesFromIndex(e.id)[0] !== this.getCoordinatesFromIndex(destinationTile.id)[0]);
+                if(!isWrapAroundTile) e.color = this.currentBoard.tiles[e.id].color;
             } 
             
             if(e.id === destinationTile.id - 2 && this.tiles[destinationTile.id - 1].contains === 'void'){

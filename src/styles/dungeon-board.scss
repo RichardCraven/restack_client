@@ -63,7 +63,7 @@
                             background-color: rgb(151, 176, 208) !important;
                         }
                         &.active{
-                            background-color: rgb(173, 168, 70) !important;
+                            background-color: #f9b115 !important;
                         }
                     }
                 }
@@ -126,6 +126,15 @@
     position: absolute;
     top: 12px;
     right: 76px;
+}
+.overlay-board{
+    position: absolute;
+    z-index: 10;
+    display: flex !important;
+    flex-flow: row wrap !important;
+    align-content: flex-end !important;
+    box-sizing: content-box;
+    pointer-events: none;
 }
 .board{
     // border: 1px solid black;
