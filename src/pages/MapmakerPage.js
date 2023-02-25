@@ -195,7 +195,7 @@ class MapMakerPage extends React.Component {
         tileSize,
         boardSize,
         tiles: props.mapMaker.tiles,
-        miniboards: arr
+        // miniboards: arr
       }
     })
     this.nameFilterClicked();
@@ -483,10 +483,14 @@ class MapMakerPage extends React.Component {
     let miniboards;
 
     const config = this.props.mapMaker.getMapConfiguration(this.state.tiles)    
+    console.log('config:', config)
+    
     if(this.state.loadedBoard && this.state.loadedBoard.id){
       // debugger
       if(this.state.planes.length > 0){
+        console.log('here we go----')
         this.state.planes.forEach((d) => {
+          console.log(d)
           d.miniboards.forEach((b, index) => {
             if(b.id === this.state.loadedBoard.id){
               miniboards = d.miniboards;
@@ -494,10 +498,11 @@ class MapMakerPage extends React.Component {
               miniboards[index].name = this.state.loadedBoard.name;
               miniboards[index].tiles = this.state.tiles;
               miniboards[index].config = config;
-              d.valid = this.props.mapMaker.isValidPlane(miniboards)
-              planesToUpdate.push(d)
             } 
           })
+          console.log('d.id:', d.id)
+          d.valid = this.props.mapMaker.isValidPlane(miniboards)
+          planesToUpdate.push(d)
         })
       }
       let obj = {
@@ -568,16 +573,20 @@ class MapMakerPage extends React.Component {
       this.toast('Board Saved')
     }
     if(planesToUpdate && planesToUpdate.length > 1){
+      // console.log('planes to update:', planesToUpdate)
       const payload = planesToUpdate.map(p=> {
         return {
           name: p.name,
           miniboards: p.miniboards,
           spawnPoints: p.spawnPoints,
-          valid: p.valid
+          valid: p.valid,
+          id: p.id
         }
       })
-      await updateManyPlanesRequest(payload);
-      this.loadAllPlanes();
+      // console.log('vs payload:', payload)
+      // debugger
+      // await updateManyPlanesRequest(payload);
+      // this.loadAllPlanes();
     } else if (planesToUpdate && planesToUpdate.length === 1){
       let plane = planesToUpdate[0]
       const obj = {
@@ -808,26 +817,28 @@ class MapMakerPage extends React.Component {
     if(this.state.loadedPlane && this.state.loadedPlane.id){
       let obj = {
         name: this.state.loadedPlane.name,
-        miniboards: this.state.miniboards,
-        spawnPoints: this.props.mapMaker.getSpawnPoints(this.state.miniboards),
-        valid: this.props.mapMaker.isValidPlane(this.state.miniboards)
+        miniboards: this.state.loadedPlane.miniboards,
+        spawnPoints: this.props.mapMaker.getSpawnPoints(this.state.loadedPlane.miniboards),
+        valid: this.props.mapMaker.isValidPlane(this.state.loadedPlane.miniboards)
       }
       await updatePlaneRequest(this.state.loadedPlane.id, obj);
       this.loadAllPlanes(); 
       this.toast('Plane Saved')
     } else {
+      console.log('brand new plane!')
       let newPlanePayload = {
         name: this.state.loadedPlane.name,
         miniboards: this.state.loadedPlane.miniboards,
         spawnPoints: this.state.loadedPlane.spawnPoints,
         valid: false
       }
+      console.log('adding new plane with payload:', newPlanePayload)
       const newPlaneRes = await addPlaneRequest(newPlanePayload);
       let lp = this.state.loadedPlane
       lp.id = newPlaneRes.data._id;
       this.setState({
         loadedPlane: lp,
-        miniboards: this.state.loadedPlane.miniboards
+        // miniboards: this.state.loadedPlane.miniboards
       })
       this.toast('Plane Saved')
       this.loadAllPlanes(); 
@@ -879,22 +890,87 @@ class MapMakerPage extends React.Component {
     updateUserRequest(userId, meta)
     storeMeta(meta);
   }
-
-  loadPlane = (plane) => {
-    let miniboards = [];
-    plane.miniboards.forEach((miniboard)=>{
-      miniboards.push(miniboard)
+  validatePlane = (plane) => {
+    plane.miniboards.forEach((b, i)=>{
+      b.processed = this.props.mapMaker.filterMapAdjacency(b, i, plane.miniboards);
+      if(i === 0){
+        b.valid = b.processed.right.includes(plane.miniboards[1].id) &&
+                  b.processed.bot.includes(plane.miniboards[3].id)
+      }
+      if(i === 1){
+       
+          b.valid = b.processed.left.includes(plane.miniboards[0].id) &&
+          b.processed.right.includes(plane.miniboards[2].id) &&
+          b.processed.bot.includes(plane.miniboards[4].id)
+      }
+      if(i === 2){
+          b.valid = b.processed.left.includes(plane.miniboards[1].id) &&
+          b.processed.bot.includes(plane.miniboards[5].id)
+      }
+      if(i === 3){
+          b.valid = b.processed.top.includes(plane.miniboards[0].id) &&
+          b.processed.right.includes(plane.miniboards[4].id) &&
+          b.processed.bot.includes(plane.miniboards[6].id)
+      }
+      if(i === 4){
+         b.valid = b.processed.left.includes(plane.miniboards[3].id) &&
+        b.processed.bot.includes(plane.miniboards[7].id) &&
+        b.processed.top.includes(plane.miniboards[1].id) &&
+        b.processed.right.includes(plane.miniboards[5].id)
+      }
+      if(i === 5){
+          b.valid = b.processed.left.includes(plane.miniboards[4].id) &&
+          b.processed.bot.includes(plane.miniboards[8].id)
+      }
+      if(i === 6){
+          b.valid = b.processed.top.includes(plane.miniboards[3].id) &&
+          b.processed.right.includes(plane.miniboards[7].id)
+        
+      }
+      if(i === 7){
+          b.valid = b.processed.top.includes(plane.miniboards[4].id) &&
+          b.processed.left.includes(plane.miniboards[6].id) &&
+          b.processed.right.includes(plane.miniboards[8].id)
+      }
+      if(i === 8){
+        b.valid = b.processed.top.includes(plane.miniboards[5].id) &&
+        b.processed.left.includes(plane.miniboards[7].id)
+      }
     })
+    if(plane.miniboards.some(e=>!e.valid)) plane.valid = false
+    console.log('validated plane:', plane)
+    return plane
+  }
+  loadPlane = (incomingPlane) => {
+    let plane = this.validatePlane(incomingPlane)
     this.setState({
-      loadedPlane: plane,
-      miniboards: plane.miniboards
+      loadedPlane: plane
+      // miniboards: plane.miniboards
     })
   }
   loadDungeon = async (id) => {
     const val = await loadDungeonRequest(id)
     let e = val.data[0];
-    let dungeon = JSON.parse(e.content);
-    console.log('loaded dungeon: ', dungeon);
+    let dungeon = JSON.parse(e.content), dungeonValid = true;
+    dungeon = this.props.mapMaker.formatDungeon(dungeon);
+    for(let key in dungeon.levels){
+      let level = dungeon.levels[key]
+      console.log('corncob level: ', dungeon.levels[key])
+      if(level.front){
+        level.front = this.validatePlane(level.front)
+        if(!level.front.valid){
+          dungeonValid = false;
+          console.log('level not valid!')
+        }
+      }
+      if(level.back){
+        level.back = this.validatePlane(level.back)
+        if(!level.back.valid) dungeonValid = false;
+      }
+    }
+    dungeon.valid = dungeonValid;
+    console.log('$$$ loaded dungeon: ', dungeon, 'is valid dungeon:', dungeonValid);
+    // debugger
     // console.log('modified loaded dungeon:', this.props.mapMaker.formatDungeon(dungeon));
     this.setState({
       loadedDungeon: this.props.mapMaker.formatDungeon(dungeon)
@@ -905,11 +981,21 @@ class MapMakerPage extends React.Component {
     let dungeons = [];
     val.data.forEach((e)=>{
       let dungeon = JSON.parse(e.content)
-      console.log('raw dungeon content ', JSON.parse(e.content));
+      // console.log('raw dungeon content ', JSON.parse(e.content));
       dungeon.id = e._id;
       dungeons.push(this.props.mapMaker.formatDungeon(dungeon))
     })
-    console.log('all dungeons:', dungeons);
+    // console.log('all dungeons:', dungeons);
+    // let primari = dungeons.find(e=>e.name==='Primari')
+    // const newPlane = primari.levels.find(e=>e.id === -1).front
+    // delete newPlane.id
+    // console.log('new plane:', newPlane)
+    // this.setState({
+    //   loadedPlane : newPlane
+    // })
+    // setTimeout(()=>{
+    //   this.writePlane()
+    // })
 
     const meta = getMeta()
     this.setState({
@@ -937,7 +1023,10 @@ class MapMakerPage extends React.Component {
   loadAllPlanes = async () => {
     const val = await loadAllPlanesRequest()
     let planes = [];
+    console.log('data', val.data)
     val.data.forEach((e)=>{
+      console.log('yoooooooo   e:', e)
+      if(!e.content) return
       let plane = JSON.parse(e.content)
       plane.id = e._id;
       planes.push(plane)
@@ -961,7 +1050,7 @@ class MapMakerPage extends React.Component {
         valid: false
     }
     this.setState({
-      miniboards: [],
+      // miniboards: [],
       loadedPlane: newPlane,
     })
     this.renamePlane();
@@ -1176,26 +1265,33 @@ class MapMakerPage extends React.Component {
   }
 
   onDrop = (event, index) => {
-    let minis = [...this.state.miniboards]
+    console.log('on drop:', index)
+    let minis = this.state.loadedPlane.miniboards
     minis[index] = [];
     if(this.state.draggedBoardOrigin !== null){
+      console.log('dragged board:', this.state.draggedBoard)
       minis[this.state.draggedBoardOrigin] = []
     }
-    this.setState({
-      miniboards: minis
-    })
+    // const loadedPlane = this.state.loadedPlane;
+    // loadedPlane.miniboards = minis
+    // this.setState({
+    //   loadedPlane
+    // })
     
-    setTimeout(()=>{
-      let sections = [...this.state.miniboards]
+    // setTimeout(()=>{
+      const loadedPlane = this.state.loadedPlane;
+      let sections = loadedPlane.miniboards
       if(this.state.draggedBoard){
+        console.log('SETTING TO dragged board:', this.state.draggedBoard)
         sections[index] = this.state.draggedBoard
       }
+      loadedPlane.miniboards = sections;
       this.setState({
         draggedBoard: null,
         hoveredSection: null,
-        miniboards: [...sections]
+        loadedPlane
       })
-    })
+    // })
   }
 
   // DUNGEON drag and drop
@@ -1566,7 +1662,7 @@ class MapMakerPage extends React.Component {
 
               loadedPlane={this.state.loadedPlane}
               planes={this.state.planes}
-              miniboards={this.state.miniboards}
+              miniboards={this.state.loadedPlane?.miniboards || [[],[],[],[],[],[],[],[],[]]}
               adjacencyHoverIdx={this.state.adjacencyHoverIdx}
               hoveredSection={this.state.hoveredSection}
               adjacencyHover = {this.adjacencyHover}
@@ -1623,7 +1719,7 @@ class MapMakerPage extends React.Component {
 
               loadedPlane={this.state.loadedPlane}
               planes={this.state.planes}
-              miniboards={this.state.miniboards}
+              miniboards={this.state.loadedPlane?.miniboards || [[],[],[],[],[],[],[],[],[]]}
               adjacencyHoverIdx={this.state.adjacencyHoverIdx}
               hoveredSection={this.state.hoveredSection}
               adjacencyHover = {this.adjacencyHover}

@@ -250,7 +250,7 @@ export function MapMaker(props){
     }
     this.filterMapAdjacency = (map, boardIndex, boards) => {
         // boards in this case means all other maps
-        console.log(map, boardIndex, boards)
+        // console.log(map, boardIndex, boards)
         let config = map.config;
         let compatibilityMatrix = {
             top: [],
@@ -305,8 +305,6 @@ export function MapMaker(props){
 
             // bot
             if(boardIndex < 6){
-                console.log('should be in bot', b.name)
-                console.log(config[2], b.config[0])
                 for(let i = 0; i < config[2].length; i++){
                     if(b.config[0].length !== config[2].length) break;
                     if(b.config[0][i] && b.config[0][i]+210 === config[2][i]){botCompatibleCount++}
@@ -354,7 +352,6 @@ export function MapMaker(props){
         return spawnPoints.length > 0 ? spawnPoints : null;
     }
     this.formatDungeon = (dungeonObj) => {
-        console.log('format dungeonObj: ', dungeonObj);
         let markedPassages = this.markPassages(dungeonObj)
         let dungeonValid = true;
         let dungeonSpawns = [];
@@ -362,7 +359,6 @@ export function MapMaker(props){
             let valid = true;
             let passages = markedPassages.find(p=>p.id === l.id)
             let spawns = []
-            console.log(l.id, 'passages: ', passages);
             passages.frontPassages.forEach(passage=>{
                 if(passage.contains === 'spawn_point'){
                     spawns.push(passage);
@@ -370,7 +366,7 @@ export function MapMaker(props){
                 } else {
                     let connectedMatch = passages.connected.find(e=>e.locationCode === passage.locationCode)
                     if(!connectedMatch){
-                        valid = false;
+                        l.valid = false;
                     }
                 }
             })
@@ -382,23 +378,23 @@ export function MapMaker(props){
                 } else {
                     let connectedMatch = passages.connected.find(e=>e.locationCode === passage.locationCode)
                     if(!connectedMatch){
-                        valid = false;
+                        l.valid = false;
                     }
                 }
                 // })
             })
+            if(l.front && l.front.valid === false) valid = false
+            if(l.back && l.back.valid === false) valid = false
             passages.upwardPassages = passages.connected.filter(e=>e.type==='way_up')
             passages.downwardPassages = passages.connected.filter(e=>e.type==='way_down')
             l.passages = passages;
             l.valid = valid;
             l.spawns = spawns;
-            if(!valid) dungeonValid = false;
+            if(!l.valid) dungeonValid = false;
         })
         dungeonObj.valid = dungeonValid;
         dungeonObj.spawn_points = dungeonSpawns;
         if(dungeonObj.spawnPoints) delete dungeonObj.spawnPoints
-        console.log('*** DUBNGEON OBJ:', dungeonObj);
-        // dungeonObj.markedPassages = markedPassages;
         return dungeonObj
 
 
@@ -411,6 +407,7 @@ export function MapMaker(props){
         // ^ make sure there are valid spawnpoints SOMEWHAERE in the dungeon
     }
     this.isValidPlane = (miniboards) => {
+        console.log('checking plane, miniboards: ', miniboards)
         for(let b of miniboards){
             if(b.tiles === undefined){
                 return false
