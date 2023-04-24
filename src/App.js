@@ -17,8 +17,39 @@ import {getAllUsersRequest} from './utils/api-handler';
 import {storeSessionData, getUserId, getMeta} from './utils/session-handler';
 import { useHistory } from "react-router";
 
+// import './App.css'
+// import './phaser/GameComponent'
+
+import Phaser from 'phaser'
+
+  import GameComponent from './phaser/GameComponent'
+
+
+// function App() {
+	// return <div id="phaser-container" className="App"></div>
+// }
+
+// export default App
+
 
 function App(props) {
+  const phaserConfig = {
+    initialize: true,
+    game: {
+    width: "100%",
+    height: "100%",
+    type: Phaser.AUTO
+    }
+  }
+  // initialize: true,
+  //           game: {
+  //           width: "100%",
+  //           height: "100%",
+  //           type: Phaser.AUTO,
+  //           // scene: {}
+  //           // scene: [ExampleScene]
+  //           }
+
 const [loggedIn, setLoggedIn] = useState(!!getUserId())
 // const [user, setUser] = useState(null);
 const [isAdmin, setIsAdmin] = useState(sessionStorage.getItem('isAdmin') === 'true' ? true : false)
@@ -182,7 +213,8 @@ const toggleShowCoordinates = () => {
           )}/>
           <Route exact path="/dungeon" render={() => (
             !loggedIn ? <Redirect to="/login" /> :
-              <DungeonPage {...props} saveUserData={saveUserData} showCoordinates={showCoordinates}/>
+              // <DungeonPage {...props} saveUserData={saveUserData} showCoordinates={showCoordinates}/>
+              <GameComponent/>
             )}/>
           {/* <Route exact path="/dungeon" {...props} saveUserData={saveUserData} showCoordinates={showCoordinates} component={LandingPage}>
             {!loggedIn && <Redirect to="/login" /> }

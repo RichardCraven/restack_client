@@ -2,6 +2,14 @@ html, body{
   height: 100%;
   width: 100%;
 }
+
+#phaser-game{
+  width: 700px;
+    height: 700px;
+    border: 1px solid white;
+}
+
+
 #root{
   height: 100%;
 }

@@ -12,6 +12,10 @@ import {
   import { cilCaretRight, cilCaretLeft} from '@coreui/icons';
   import  CIcon  from '@coreui/icons-react'
 
+  import { IonPhaser } from '@ion-phaser/react'
+  
+
+
 class DungeonPage extends React.Component {
     constructor(props){
         super(props)
@@ -31,7 +35,8 @@ class DungeonPage extends React.Component {
             rightPanelExpanded: false,
             inventoryHoverMatrix: {},
             pending: null,
-            activeInventoryItem: null
+            activeInventoryItem: null,
+            
         }
     }
     
@@ -462,7 +467,9 @@ class DungeonPage extends React.Component {
         storeMeta(meta)
         await updateUserRequest(getUserId(), meta)
     }
+    
     render(){
+        const { initialize, game } = this.state
         return (
         <div className="dungeon-container">
             {this.state.showMessage && <div className="message-panel">{this.state.messageToDisplay}</div>}
@@ -521,6 +528,8 @@ class DungeonPage extends React.Component {
                 </div>
             </div>
             {this.state.currentBoard && <div className="info-panel">{this.props.boardManager.currentBoard.name}</div>}
+            {/* <IonPhaser game={game} initialize={initialize} /> */}
+            {/* <GameComponent/> */}
             <div  className="overlay-board" style={{
                 width: this.state.boardSize+'px', height: this.state.boardSize+ 'px',
                 backgroundColor: 'transparent'
