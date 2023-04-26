@@ -90,9 +90,78 @@
         width: 0;
         min-width: 0px;
         transition: all 1s;
+
+        .crew{
+            // position: absolute;
+            right: -200px;
+            top: 29px;
+            transition: all 1s;
+            height: 50vh;
+            .title{
+                color: white;
+                position: sticky;
+                top: 0px;
+                background: black;
+                z-index: 100;
+                height: 40px;
+                line-height: 40px;
+                margin-bottom: 10px;
+            }
+            .crew-tile-container{
+                width: 170px;
+                display: flex;
+                flex-wrap: wrap;
+                .sub-container{
+                    position: relative;
+                    .hover-message{
+                        color: white;
+                        position: absolute;
+                        font-size: 9px;
+                        top: -7px;
+                        left: 5px;
+                    }
+                    .tile.crew-tile{
+                        margin: 5px;
+                        // border: 2px solid yellow !important;
+                        background-color: lightgrey;
+                        &:hover{
+                            background-color: rgb(151, 176, 208) !important;
+                        }
+                        &.active{
+                            background-color: #f9b115 !important;
+                        }
+                    }
+                }
+            }
+        }
+        .crew-info-section{
+            border: 1px solid white;
+            height: auto;
+            width: 100%;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 10px 0px;
+            .portrait{
+                height: 100px;
+                width: 100px;
+                background-color: white;
+                background-size: 100% 100%;
+            }
+            .name-line{
+                text-decoration-line: underline;
+            }
+        }
+
+
         &.expanded{
             border-left: 1px solid lightgrey;
             min-width: 200px;
+            .crew{
+                // right: 20px;
+            }
         }
         position: absolute;
         right: 0;
@@ -126,6 +195,8 @@
     position: absolute;
     top: 12px;
     right: 76px;
+
+
 }
 .overlay-board{
     position: absolute;
@@ -143,6 +214,26 @@
     align-content: flex-end !important;
     box-sizing: content-box;
 }
+// .monster-battle-board{
+//     border: 3px solid rgb(185, 15, 15);
+//     width: 66%;
+//     height: 500px;
+//     display: flex;
+//     flex-direction: row;
+//     justify-content: space-between;
+//     .mb-col{
+//         width: 200px;
+//         height: 100%;
+//     }
+//     .left-col{
+//         border-right: 1px solid yellow;
+//     }
+//     .right-col{
+//         border-left: 1px solid orange;
+
+//     }
+// }
+
 #myCanvas{
     height: 1504px; 
     width: 1504px;

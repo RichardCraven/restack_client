@@ -36,7 +36,6 @@ useEffect(() => {
   }
 }, [])
 useEffect(()=>{
-  console.log('all users', allUsers);
 }, [allUsers])
 
 const logout = () => {
@@ -47,10 +46,7 @@ const logout = () => {
   return <Redirect to="/login" />
 }
 const loginFromRegister = (user) => {
-  // setUser(user)
   setTimeout(()=>{
-    console.log('user: ', user, user.token, typeof user.token);
-    // return
     storeSessionData(user._id, user.token, user.isAdmin, user.username, user.metadata)
     setLoggedIn(true)
   })
@@ -65,7 +61,6 @@ const login = (userCredentials) => {
   if(validUser){
     // setUser(validUser)
     setTimeout(()=>{
-      console.log('validUser: ', validUser);
       storeSessionData(validUser._id, validUser.token, validUser.isAdmin, validUser.username, validUser.metadata)
       setLoggedIn(true)
       setIsAdmin(JSON.parse(sessionStorage.getItem('isAdmin') === 'true' ))
@@ -107,14 +102,10 @@ const refreshAllUsers = () => {
 }
 
 const saveUserData = async () => {
-  console.log('SAVING USER DATA!')
   if(props.boardManager.boardIndex === null) return
   if(!props.boardManager.dungeon.id) return
   const meta = getMeta()
-  const userId = getUserId()
-  
-  // console.log('player tile:', props.boardManager.playerTile)
-  // console.log('props.boardManager', props.boardManager)
+  const userId = getUserId();
 
   let boardIndex = props.boardManager.getBoardIndexFromBoard(props.boardManager.currentBoard)
   // return
@@ -125,13 +116,12 @@ const saveUserData = async () => {
     orientation: props.boardManager.currentOrientation
   }
   meta.inventory = props.inventoryManager.inventory;
-  console.log('meta.inventory:', meta.inventory)
+  meta.crew = props.crewManager.crew;
   meta.dungeonId = props.boardManager.dungeon.id;
   await updateUserRequest(userId, meta)
   sessionStorage.setItem('metadata', JSON.stringify(meta))
 }
 const goHome = () => {
-  console.log('go home');
   saveUserData();
   history.push({
     pathname: '/landing'

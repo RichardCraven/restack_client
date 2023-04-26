@@ -92,9 +92,15 @@ export function BoardManager(){
     this.establishRefreshCallback = (callback) => {
         this.refreshTiles = callback;
     }
+    this.establishLockKeysCallback = (callback) => {
+        this.lockKeys = callback;
+    }
     this.setActiveInventoryItem = (e) => {
         console.log('setting avtive inv item:', e)
         this.activeInventoryItem = e;
+    }
+    this.establishSetMonsterCallback = (callback) => {
+        this.setMonster = callback;
     }
     this.playerTile = {
         location: [0,0],
@@ -224,8 +230,10 @@ export function BoardManager(){
             case 'way_down':
                 return 'way_down';
             case 'monster':
-                console.log('HANDLE MONSTER INTERACTION')
+                console.log('HANDLE MONSTER INTERACTION', destinationTile)
                 // return 'impassable';
+                this.setMonster(destinationTile.contains)
+                this.lockKeys(true)
             break;
             case 'minor_gate':
                 console.log('handle gate')

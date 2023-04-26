@@ -1,6 +1,7 @@
 import React from 'react'
 import '../styles/dungeon-board.scss'
 import Tile from '../components/tile'
+import MonsterBattle from './sub-views/MonsterBattle';
 import {
     loadAllDungeonsRequest,
     loadDungeonRequest,
@@ -11,6 +12,7 @@ import {
   import {storeMeta, getMeta, getUserId, getUserName} from '../utils/session-handler';
   import { cilCaretRight, cilCaretLeft} from '@coreui/icons';
   import  CIcon  from '@coreui/icons-react'
+  import * as images from '../utils/images'
 
 class DungeonPage extends React.Component {
     constructor(props){
@@ -30,12 +32,17 @@ class DungeonPage extends React.Component {
             leftPanelExpanded: false,
             rightPanelExpanded: false,
             inventoryHoverMatrix: {},
+            crewHoverMatrix: {},
+            selectedCrewMember: {},
             pending: null,
-            activeInventoryItem: null
+            activeInventoryItem: null,
+            keysLocked: false,
+            monster: null
         }
     }
     
     componentWillMount(){
+        console.log('component will mount')
         let tileSize = this.getTileSize(),
             boardSize = tileSize*15;
         this.initializeListeners();
@@ -53,9 +60,133 @@ class DungeonPage extends React.Component {
             this.loadNewDungeon();
         } else {
             // const sampleItems = ['volkas_wand', 'spartan_helm', 'sayan_amulet']
-            console.log('inventory to initialize: ', meta.inventory, !!meta.inventory)
+            // meta.inventory = []
             this.props.inventoryManager.initializeItems(meta.inventory ? meta.inventory : [])
-            
+
+
+            meta.crew = [
+                // {
+                //     image: 'wizard', 
+                //     type: 'wizard',
+                    // name: 'Pendicus',
+                    // level: 1,
+                //     stats: {
+                //         str: 3,
+                //         int: 7,
+                //         dex: 5,
+                //         vit: 4,
+                //         fort: 7,
+                //         hp:10,
+                //         atk:12,
+                //         energy: 0
+                //     }, 
+                //     portrait: 'wizard_portrait',
+                //     inventory: []
+                // },
+                {
+                    image: 'soldier', 
+                    type: 'soldier',
+                    name: 'Greco',
+                    level: 1,
+                    stats: {
+                        str: 3,
+                        int: 7,
+                        dex: 5,
+                        vit: 4,
+                        fort: 7,
+                        hp: 15,
+                        atk: 8,
+                        energy: 0
+                    }, 
+                    leader: true,
+                    portrait: 'soldier_portrait',
+                    inventory: [],
+                    specials: ['shield-wall'],
+                    attacks: ['sword-swing', 'sword-thrust', 'shield-bash'],
+                    weaknesses: ['ice', 'electric', 'blood-magic'],
+                },
+                // {
+                //     image: 'monk', 
+                //     type: 'monk',
+                    // name: 'Yu',
+                    // level: 1,
+                //     stats: {
+                //         str: 3,
+                //         int: 7,
+                //         dex: 5,
+                //         vit: 4,
+                //         fort: 7,
+                //         hp: 13,
+                //         atk: 6,
+                        // energy: 0
+                //     }, 
+                //     portrait: 'monk_portrait',
+                //     inventory: []
+                // },
+                {
+                    image: 'sage', 
+                    type: 'sage',
+                    name: 'Loryastes',
+                    level: 1,
+                    stats: {
+                        str: 3,
+                        int: 7,
+                        dex: 3,
+                        vit: 4,
+                        fort: 7,
+                        hp: 9,
+                        atk: 4,
+                        energy: 0
+                    }, 
+                    portrait: 'sage_portrait',
+                    inventory: [],
+                    specials: ['healing-hymn', 'reveal-weakness'],
+                    attacks: ['meditate', 'cane-strike'],
+                    weaknesses: ['fire', 'electric', 'ice', 'blood-magic', 'crushing'],
+                },
+                {
+                    image: 'rogue', 
+                    type: 'rogue',
+                    name: 'Tyra',
+                    level: 1,
+                    stats: {
+                        str: 5,
+                        int: 5,
+                        dex: 8,
+                        vit: 6,
+                        fort: 3,
+                        hp: 12,
+                        atk: 6,
+                        energy: 0
+                    }, 
+                    portrait: 'rogue_portrait',
+                    inventory: [],
+                    specials: ['deadeye-shot'],
+                    attacks: ['fire-arrow', 'sword-thrust'],
+                    passives: ['nimble-dodge'],
+                    weaknesses: ['ice', 'curse', 'crushing'],
+                },
+                // {
+                //     image: 'barbarian', 
+                //     type: 'barbarian',
+                //     name: 'Ulaf',
+                //     stats: {
+                //         str: 8,
+                //         int: 3,
+                //         dex: 4,
+                //         vit: 6,
+                //         fort: 6,
+                //         hp: 16,
+                //         atk: 9,
+                        // energy: 0
+                //     }, 
+                //     portrait: 'barbarian_portrait',
+                //     inventory: []
+                // },
+            ]
+            this.props.crewManager.initializeCrew(meta.crew ? meta.crew : [])
+
+
             this.props.inventoryManager.inventory.forEach((e,i)=>{
                 inv[i]= ''
             })
@@ -75,7 +206,6 @@ class DungeonPage extends React.Component {
     addItemToInventory = (tile) => {
         const tileContains = tile.contains;
         this.props.inventoryManager.addItem(tileContains)
-        console.log('this.inventoryHoverMatrix: ', this.inventoryHoverMatrix)
         this.props.inventoryManager.inventory.forEach((e,i)=>{
             this.state.inventoryHoverMatrix[i] = '';
         })
@@ -83,7 +213,6 @@ class DungeonPage extends React.Component {
     }
     updateDungeon = async (dungeon) => {
         const res = await updateDungeonRequest(dungeon.id, dungeon);
-        console.log('update res:', res)
     }
     messaging = (message) => {
         this.displayMessageAndHold(message)
@@ -94,10 +223,20 @@ class DungeonPage extends React.Component {
     refreshTiles = () => {
         let newTiles = this.props.boardManager.tiles,
             newOverlayTiles = this.props.boardManager.overlayTiles
-        console.log('refreshing tiles')
         this.setState({
             tiles: newTiles,
             overlayTiles: newOverlayTiles
+        })
+    }
+    lockKeys = (bool) => {
+        this.setState({
+            keysLocked: bool
+        })
+    }
+    setMonster = (monster) => {
+        const monsterData = this.props.monsterManager.getMonster(monster)
+        this.setState({
+            monster: monsterData
         })
     }
     componentDidMount(){
@@ -108,6 +247,10 @@ class DungeonPage extends React.Component {
         this.props.boardManager.establishPendingCallback(this.setPending)
         this.props.boardManager.establishMessagingCallback(this.messaging)
         this.props.boardManager.establishRefreshCallback(this.refreshTiles)
+        this.props.boardManager.establishLockKeysCallback(this.lockKeys)
+        this.props.boardManager.establishSetMonsterCallback(this.setMonster)
+
+        this.props.monsterManager.check()
         window.addEventListener('beforeunload', this.componentCleanup)
     }
     componentWillUnmount(){
@@ -208,6 +351,7 @@ class DungeonPage extends React.Component {
 
     keyDownHandler = ({ key }) => {
         let newTiles = [], overlayTiles = [];
+        if(this.state.keysLocked) return
         switch(key){
             case 'ArrowUp':
                 this.props.boardManager.moveUp();
@@ -262,16 +406,27 @@ class DungeonPage extends React.Component {
 
 
     handleHover = (id, type, tile) => {
-        console.log('tile', tile)
+        // console.log('tile', tile)
     }
     handleInventoryTileHover = (tileProps) => {
         let inv = this.state.inventoryHoverMatrix;
         this.props.inventoryManager.inventory.forEach((e,i)=>{
             inv[i] = '';
         })
-        inv[tileProps.id] = tileProps.contains;
+        if(tileProps) inv[tileProps.id] = tileProps.contains;
         this.setState({
             inventoryHoverMatrix: inv
+        })
+    }
+    handleCrewTileHover = (tileProps) => {
+        let crew = this.state.crewHoverMatrix;
+        this.props.crewManager.crew.forEach((e,i)=>{
+            crew[i] = '';
+        })
+        console.log('tileProps', tileProps)
+        if(tileProps) crew[tileProps.id] = tileProps.contains;
+        this.setState({
+            crewHoverMatrix: crew
         })
     }
     handleClick = (tile) => {
@@ -284,6 +439,12 @@ class DungeonPage extends React.Component {
         //         console.log('clicked ', tile, 'DUNGEON:', this.props.boardManager.dungeon)
         //     break;
         // }
+    }
+    handleMemberClick = (member) => {
+        console.log('member clicked:', member.data)
+        this.setState({
+            selectedCrewMember: member.data
+        })
     }
     handleItemClick = (item) => {
         console.log('pending:', this.state.pending)
@@ -462,6 +623,9 @@ class DungeonPage extends React.Component {
         storeMeta(meta)
         await updateUserRequest(getUserId(), meta)
     }
+    uppercaseFirstLetter = (text) => {
+        return text.charAt(0).toUpperCase() + text.slice(1);
+    }
     render(){
         return (
         <div className="dungeon-container">
@@ -516,59 +680,123 @@ class DungeonPage extends React.Component {
                 </div> */}
             </div>
             <div className={`right-side-panel ${this.state.rightPanelExpanded ? 'expanded' : ''}`}>
+                <div className="crew">
+                    <div className="title">Crew</div>
+                    <div className="crew-tile-container">
+                        {   this.props.crewManager.crew &&
+                            this.props.crewManager.crew.map((member, i) => {
+                                return <div className="sub-container" key={i}>
+                                            { this.state.crewHoverMatrix[i] && <div className="hover-message">{this.state.crewHoverMatrix[i]}</div>}
+                                            <Tile 
+                                            key={i}
+                                            id={i}
+                                            tileSize={this.state.tileSize}
+                                            image={member.image ? member.image : null}
+                                            contains={member.type}
+                                            data={member}
+                                            color={member.color}
+                                            editMode={false}
+                                            type={'crew-tile'}
+                                            handleClick={this.handleMemberClick}
+                                            handleHover={this.handleCrewTileHover}
+                                            className={`crew-tile `}
+                                            // isActiveInventory={this.state.activeInventoryItem?.id === i}
+                                            >
+                                            </Tile>
+                                        </div>
+                            })
+                        }
+                    </div>
+                </div>
+                {this.state.selectedCrewMember.name && <div className="crew-info-section">
+                        {this.state.selectedCrewMember.portrait && <div className="portrait" style={{backgroundImage: "url(" + images[this.state.selectedCrewMember.portrait] + ")"}}></div>}
+                        <div className="name-line">{this.state.selectedCrewMember.name} the {this.uppercaseFirstLetter(this.state.selectedCrewMember.type)}</div>
+                        <div className="stat-line">Strength {this.state.selectedCrewMember.stats.str}</div>
+                        <div className="stat-line">Dexterity {this.state.selectedCrewMember.stats.dex}</div>
+                        <div className="stat-line">Intelligence {this.state.selectedCrewMember.stats.int}</div>
+                        <div className="stat-line">Vitality {this.state.selectedCrewMember.stats.vit}</div>
+                        <div className="stat-line">Fortitude {this.state.selectedCrewMember.stats.fort}</div>
+                </div>}
                 <div className="expand-collapse-button icon-container" onClick={this.toggleRightSidePanel}>
                     <CIcon icon={cilCaretLeft} className={`expand-icon ${this.state.rightPanelExpanded ? 'expanded' : ''}`} size="sm"/>
                 </div>
             </div>
             {this.state.currentBoard && <div className="info-panel">{this.props.boardManager.currentBoard.name}</div>}
-            <div  className="overlay-board" style={{
-                width: this.state.boardSize+'px', height: this.state.boardSize+ 'px',
-                backgroundColor: 'transparent'
-                }}>
-                {this.state.overlayTiles && this.state.overlayTiles.map((tile, i) => {
-                    return <Tile 
-                    key={i}
-                    tileSize={this.state.tileSize}
-                    image={tile.image ? tile.image : null}
-                    contains={tile.contains}
-                    color={tile.color ? tile.color : 'lightgrey'}
-                    borders={tile.borders}
-                    coordinates={tile.coordinates}
-                    index={tile.id}
-                    // showCoordinates={this.props.showCoordinates}
-                    editMode={false}
-                    handleHover={this.handleHover}
-                    type={'overlay-tile'}
-                    handleClick={this.handleClick}
-                    >
-                    </Tile>
-                })}
+            {!this.state.keysLocked && <div className="center-board-wrapper">
+                <div  className="overlay-board" style={{
+                    width: this.state.boardSize+'px', height: this.state.boardSize+ 'px',
+                    backgroundColor: 'transparent'
+                    }}>
+                    {this.state.overlayTiles && this.state.overlayTiles.map((tile, i) => {
+                        return <Tile 
+                        key={i}
+                        tileSize={this.state.tileSize}
+                        image={tile.image ? tile.image : null}
+                        contains={tile.contains}
+                        color={tile.color ? tile.color : 'lightgrey'}
+                        borders={tile.borders}
+                        coordinates={tile.coordinates}
+                        index={tile.id}
+                        // showCoordinates={this.props.showCoordinates}
+                        editMode={false}
+                        handleHover={this.handleHover}
+                        type={'overlay-tile'}
+                        handleClick={this.handleClick}
+                        >
+                        </Tile>
+                    })}
+                </div>
+                <div  className="board" style={{
+                    width: this.state.boardSize+'px', height: this.state.boardSize+ 'px',
+                    backgroundColor: 'white'
+                    }}>
+                    {this.state.tiles && this.state.tiles.map((tile, i) => {
+                        return <Tile 
+                        key={i}
+                        // isActiveInventory={this.state.activeInventoryItem?.id === i}
+                        // isActiveInventory={this.state.activeInventoryItem?.id === i}
+                        tileSize={this.state.tileSize}
+                        image={tile.image ? tile.image : null}
+                        contains={tile.contains}
+                        color={tile.color ? tile.color : 'lightgrey'}
+                        borders={tile.borders}
+                        coordinates={tile.coordinates}
+                        index={tile.id}
+                        showCoordinates={this.props.showCoordinates}
+                        editMode={false}
+                        handleHover={this.handleHover}
+                        type={tile.type}
+                        handleClick={this.handleClick}
+                        >
+                        </Tile>
+                    })}
+                </div>
+            </div>}
+            { this.state.keysLocked && 
+            <MonsterBattle
+                combatManager={this.props.combatManager}
+                crew={this.props.crewManager.crew}
+                monster={this.state.monster}
+            ></MonsterBattle>}
+            {/* { this.state.keysLocked && <div className="monster-battle-board">
+                <div className="mb-col left-col">
+                    <div className="fighter-portrait">
+
+                    </div>
+                    <div className="fighter-content">
+
+                    </div>
+                </div>
+                <div className="mb-col right-col">
+                    <div className="monster-portrait">
+
+                    </div>
+                    <div className="monster-content">
+
+                    </div>
+                </div>
             </div>
-            <div  className="board" style={{
-                width: this.state.boardSize+'px', height: this.state.boardSize+ 'px',
-                backgroundColor: 'white'
-                }}>
-                {this.state.tiles && this.state.tiles.map((tile, i) => {
-                    return <Tile 
-                    key={i}
-                    // isActiveInventory={this.state.activeInventoryItem?.id === i}
-                    // isActiveInventory={this.state.activeInventoryItem?.id === i}
-                    tileSize={this.state.tileSize}
-                    image={tile.image ? tile.image : null}
-                    contains={tile.contains}
-                    color={tile.color ? tile.color : 'lightgrey'}
-                    borders={tile.borders}
-                    coordinates={tile.coordinates}
-                    index={tile.id}
-                    showCoordinates={this.props.showCoordinates}
-                    editMode={false}
-                    handleHover={this.handleHover}
-                    type={tile.type}
-                    handleClick={this.handleClick}
-                    >
-                    </Tile>
-                })}
-            </div>
+            } */}
         </div>
         )
     }

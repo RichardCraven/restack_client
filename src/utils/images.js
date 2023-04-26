@@ -151,6 +151,39 @@ import spawn_point from '../assets/icons/misc/spawn_point.png'
 import eye from '../assets/icons/misc/eye.png'
 import wide_skull from '../assets/icons/misc/wide_skull.png'
 
+// crew
+import archer from '../assets/icons/crew_icons/archer.png'
+import barbarian from '../assets/icons/crew_icons/barbarian.png'
+import monk from '../assets/icons/crew_icons/monk.png'
+import soldier from '../assets/icons/crew_icons/soldier.png'
+import wizard from '../assets/icons/crew_icons/wizard.png'
+import rogue from '../assets/icons/crew_icons/rogue.png'
+import sage from '../assets/icons/crew_icons/sage.png'
+import sorceress from '../assets/icons/crew_icons/sorceress.png'
+
+import viking1 from '../assets/icons/crew_icons/viking1.png'
+import viking2 from '../assets/icons/crew_icons/viking2.png'
+import viking3 from '../assets/icons/crew_icons/viking3.png'
+
+import monk_portrait from '../assets/portraits/crew/monk/monk.png' 
+import sage_portrait from '../assets/portraits/crew/sage/sage.png'
+import wizard_portrait from '../assets/portraits/crew/wizard/wizard.png'
+import soldier_portrait from '../assets/portraits/crew/soldier/soldier.png'
+import rogue_portrait from '../assets/portraits/crew/rogue/rogue.png'
+import barbarian_portrait from '../assets/portraits/crew/barbarian/barbarian.png'
+
+import ogre_portrait from '../assets/portraits/monsters/ogre.png'
+import goblin_portrait from '../assets/portraits/monsters/goblin.png'
+import mummy_portrait from '../assets/portraits/monsters/mummy.png'
+import sphinx_portrait from '../assets/portraits/monsters/sphinx.png'
+import sphinx_portrait2 from '../assets/portraits/monsters/sphinx2.png'
+import wyvern_portrait from '../assets/portraits/monsters/wyvern.png'
+import wyvern_portrait2 from '../assets/portraits/monsters/wyvern2.png'
+import djinn_portrait from '../assets/portraits/monsters/djinn.png'
+import vampire_portrait from '../assets/portraits/monsters/vampire.png'
+import troll_portrait from '../assets/portraits/monsters/troll.png'
+import wraith_portrait from '../assets/portraits/monsters/wraith.png'
+
 export {
     monster,
     avatar,
@@ -285,5 +318,37 @@ export {
     trash,
     spawn_point,
     wide_skull,
-    eye
+    eye,
+
+    archer,
+    barbarian,
+    rogue,
+    sage,
+    wizard,
+    sorceress,
+    soldier,
+    monk,
+
+    viking1,
+    viking2,
+    viking3,
+
+    monk_portrait,
+    sage_portrait,
+    wizard_portrait,
+    rogue_portrait,
+    barbarian_portrait,
+    soldier_portrait,
+
+    ogre_portrait,
+    goblin_portrait,
+    mummy_portrait,
+    sphinx_portrait,
+    sphinx_portrait2,
+    wyvern_portrait,
+    wyvern_portrait2,
+    djinn_portrait,
+    vampire_portrait,
+    troll_portrait,
+    wraith_portrait,
 };
