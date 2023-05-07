@@ -5,7 +5,15 @@ export function CombatManager(){
     this.data = null;
     this.intervalReference = null;
     this.combatOver = false;
-    this.monsterHp = 0;
+
+    this.initialize = () => {
+        this.data = null;
+        this.intervalReference = null;
+        this.combatOver = false;
+    }
+
+    this.combatants = {};
+
     this.establishMessageCallback = (cb) => {
         this.setMessage = cb;
     }
@@ -15,165 +23,214 @@ export function CombatManager(){
     this.establishUpdateActorCallback = (cb) => {
         this.updateActor = cb
     }
+    this.establishUpdateDataCallback = (cb) => {
+        this.updateData = cb
+    }
+    this.establishGameOverCallback = (cb) => {
+        this.gameOver = cb
+    }
 
+    //factory functions
+    function createFighter(fighter, callbacks, ) {
+        const {acquireTarget, broadcastDataUpdate, pickRandom, hitsTarget, missesTarget, isCombatOver, getTarget} = callbacks;
+        return {
+            name: fighter.name,
+            id: fighter.id,
+            level: fighter.level,
+            hp: fighter.stats.hp,
+            energy: 1,
+            tempo: 1,
+            atk: fighter.stats.atk,
+            stats: {
+                str: fighter.stats.str,
+                vit: fighter.stats.vit,
+                fort: fighter.stats.fort,
+                dex: fighter.stats.dex,
+                vit: fighter.stats.vit,
+                int: fighter.stats.int
+            },
+            inventory: fighter.inventory,
+            specials: fighter.specials,
+            weaknesses: fighter.weaknesses,
+            nextTargetId: null,
+            position: fighter.position,
+            wounded: false,
+            active: false,
+            attacking: false,
+            talk: function () {
+                console.log('My name is ' 
+                + fighter.name + '!');
+            },
+            attack: function () {
+                let connects = pickRandom([true, false])
+                this.active = true;
+                this.attacking = true;
+                // console.log(this.name, 'attacks ', target.name, `, and ${connects ? 'hits' : 'misses'}!`)
+                if(connects){
+                    hitsTarget(this)
+                } else {
+                    missesTarget(this)
+                }
+                broadcastDataUpdate(this)
+            },
+            turnCycle: function(){
+                let count = 0;
+                let factor = (1/this.stats.dex * 25)
+                let timeToFill = factor * 1000;
+                let increment = (1 / factor)
+                // let increment = Math.floor(10);
+                //     if(this.level > 5) increment = 15
+                //     if(this.level > 10) increment = 20
+                //     if(this.level > 15) increment = 25
+                //     if(this.level > 20) increment = 30
+                
+                
+
+                /// monster target offsets monster by 110 * target index
+                
+                let interval = setInterval(()=>{
+                    count += increment
+                    
+                    this.tempo = Math.floor((count/100)*100);
+
+                    if(isCombatOver() || this.dead) clearInterval(interval)
+                    if(count > 50 && this.nextTargetId === null){
+                        // callbacks['acquireTargetCallback'](this);
+                        acquireTarget(this);
+                    }
+                    if(count >= 100){
+                        let target = getTarget(this.nextTargetId)
+                        if(this.isMonster){
+                            this.attack(target)
+                        }
+                        clearInterval(interval)
+                    }
+                    // callbacks['acquireTargetCallback'](this);
+                    broadcastDataUpdate(this)
+                }, 10)
+            }
+        };
+    }
+
+    this.getTarget = (id) => {
+        return Object.values(this.combatants).find(e=> e.id === id)
+    }
+
+
+    this.broadcastDataUpdate = (caller) => {
+        this.updateData(this.combatants)
+    }
+    this.acquireTarget = (caller) => {
+        let target;
+        if(caller.isMonster){
+            target = this.pickRandom(Object.values(this.combatants).filter(e=> (!e.isMonster && !e.dead)))
+            if(!target){
+                console.log('NO MORE TARGETS FOR MONSTER!')
+                this.combatOver = true;
+                return
+            }
+            let position = target.position
+            caller.position = position;
+        } else{
+            target = this.pickRandom(Object.values(this.combatants).filter(e=> (e.isMonster  && !e.dead)))
+            if(!target){
+                console.log('NO MORE TARGETS FOR FIGHTER!')
+                this.combatOver = true;
+                return
+            }
+            // targetIndex = Object.values(this.combatants).filter(e=> e.isMonster).indexOf(target)
+        }
+        // caller.nextTargetId = {target, targetIndex};
+        caller.nextTargetId = target.id;
+    }
+    this.initiateAttack = (id) => {
+        let combatant = this.combatants[id];
+        if(combatant.tempo === 100 && !combatant.dead){
+            combatant.attack()
+        }
+    }
+    this.hitsTarget = (caller) => {
+        let target = this.getTarget(caller.nextTargetId);
+        if(!target) return
+        target.wounded = true;
+        target.hp -= caller.atk;
+        caller.energy += caller.stats.fort * 3 + (1/2 * caller.level);
+        if(caller.energy > 100) caller.energy = 100;
+        if(target.hp <= 0){
+            target.hp = 0;
+            this.targetKilled(target)
+        }
+        // caller.tempo = 1;
+        setTimeout(()=>{
+            caller.active = false;
+            caller.attacking = false;
+            caller.tempo = 1;
+            caller.nextTargetId = null;
+            target.wounded = false;
+            caller.turnCycle();
+        }, 500)
+    }
+    this.missesTarget = (caller) => {
+        // let target = getTarget(caller.nextTargetId)
+        setTimeout(()=>{
+            caller.active = false;
+            caller.attacking = false;
+            caller.tempo = 1;
+            caller.nextTargetId = null;
+            caller.turnCycle();
+        }, 500)
+    }
+
+    this.targetKilled = (combatant) => {
+        combatant.dead = true;
+        const allMonstersDead = Object.values(this.combatants).filter(e=>e.isMonster && !e.dead).length === 0;
+        const allCrewDead = Object.values(this.combatants).filter(e=>!e.isMonster && !e.dead).length === 0;
+        if(allMonstersDead || allCrewDead){
+            console.log('COMBAT IS OVER')
+            this.combatOver = true;
+
+            setTimeout(()=>{
+                this.gameOver();
+            }, 6000)
+        }
+        
+    }
+    this.combatOverCheck = () => {
+        return this.combatOver;
+    }
     this.initializeCombat = (data) => {
-        console.log('initialize combat', data)
+        const callbacks = {
+            broadcastDataUpdate: this.broadcastDataUpdate,
+            acquireTarget: this.acquireTarget,
+            hitsTarget: this.hitsTarget,
+            pickRandom: this.pickRandom,
+            missesTarget: this.missesTarget,
+            // combatOver: this.combatOver
+            isCombatOver: this.combatOverCheck,
+            getTarget: this.getTarget
+        }
         this.data = data;
-        this.monsterHp = this.data.monster.stats.hp
-        this.data.turnCount = 0;;
-        this.data.turns = [];
-        this.determineTurnOrder();
-
-        // setTimeout(()=>{
-        //     this.beginCombat()
-        // }, 1000)
-        this.delay(0.5)
-        .then(()=>{
-        this.triggerMonsterGreeting()
-        .then(()=>{
-        this.triggerFighterGreeting()
-        .then(()=>{
-            this.beginCombat();
-        })})})
+        this.combatants = {};
+        console.log('initializing for data:', this.data)
+        this.data.crew.forEach((e, index) => {
+            e.position = index;
+            this.combatants[e.id] = createFighter(e, callbacks);
+        })
+        this.data.monster.position = 0;
+        let monster = createFighter(this.data.monster, callbacks);
+        monster.isMonster = true;
+        this.combatants[monster.id] = monster;
+        this.broadcastDataUpdate();
+        Object.values(this.combatants).forEach((combatant)=>{
+            combatant.turnCycle();
+        })
     }
     this.pickRandom = (array) => {
         let index = Math.floor(Math.random() * array.length)
-        console.log('index: ', index)
         return array[index]
     }
     this.uppercaseFirstLetter = (text) => {
         return text.charAt(0).toUpperCase() + text.slice(1);
-    }
-    this.processTurn = () => {
-        let current = this.data.lineup[0],
-        // let current = this.data.lineup.find(e=>e.isMonster),
-        attack, connects = false, damage;
-        
-        
-        this.data.turnCount++
-        console.log('Turn ', this.data.turnCount)
-        if(!current.isMonster){
-            let target = this.data.lineup.find(e=> e.isMonster),
-                level_difference = this.data.monster.level - current.level,
-                dex_difference = this.data.monster.stats.dex - current.stats.dex,
-                connect_variable = Math.random()*10 + (level_difference / 2) + dex_difference;
-                attack = this.pickRandom(current.attacks);
-                connects =  connect_variable > 5;
-                damage = current.stats.str
-                this.updateActor({actor: current, attackType: attack, target})
-            this.setMessage({message: `${current.name} attacks with ${attack}!`, source: !!current.leader ? 'fighter-leader' : 'fighter'})
-            if(connects){
-                console.log('connects for ', damage, ' damage')
-                this.delay(1)
-                .then(()=>{ 
-                    let toUpdate = this.matrix[target.type]
-                    toUpdate.hp -= damage;
-                    this.updateIndicatorsMatrix(this.matrix)
-                    this.setMessage({message: `${current.name} hits for ${damage} damage`, source: !!current.leader ? 'fighter-leader' : 'fighter'}) 
-                    this.delay(2)
-                    .then(()=> { this.setMessage({message: ``, source: null})})
-                })
-                this.data.monster.stats.hp-= damage;
-                console.log('monster is now at:', this.data.monster.stats.hp)
-                if(this.data.monster.stats.hp < 1){
-                    console.log('MONSTER IS KILLED')
-                    this.combatOver = true;
-                }
-            }
-            // ^ damage will factor in the weapon here ^
-        } else if (current.isMonster){
-            let target = this.pickRandom(this.data.lineup.filter(e=>!e.isMonster))
-            // let target = this.data.lineup.find(e=>e.leader)
-            let level_difference = current.level - target.level,
-                dex_difference = current.stats.dex - target.stats.dex,
-                connect_variable = Math.random()*10 + (level_difference) + dex_difference;
-                attack = this.pickRandom(current.attacks);
-                connects = connect_variable > 5;
-                console.log('monster is targetting ', target)
-                console.log('connect_variable: ', connect_variable, 'connects: ', connects)
-                damage = current.stats.str
-            this.updateActor({actor: current, attackType: attack, target})
-            this.setMessage({message: `${this.uppercaseFirstLetter(current.type)} attacks with ${attack}!`, source: 'monster'})
-            if(connects){
-                console.log('monster connects for ', damage, ' damage')
-                this.delay(1)
-                .then(()=>{ 
-                    let toUpdate = this.matrix[target.type]
-                    toUpdate.hp -= damage;
-                    this.updateIndicatorsMatrix(this.matrix)
-                    this.setMessage({message: `${this.uppercaseFirstLetter(current.type)} hits for ${damage} damage`, source: 'monster'}) 
-                    this.delay(2)
-                    .then(()=> { this.setMessage({message: ``, source: null})})
-                })
-                // this.data.monster.stats.hp-= damage;
-
-
-                // console.log('monster is now at:', this.data.monster.stats.hp)
-                if(this.data.lineup.filter(e=>!e.isMonster).some(e=>e.stats.hp < 1)){
-                    console.log('CREW IS KILLED')
-                    this.combatOver = true;
-                }
-            } else {
-                console.log('monster missed')
-                this.delay(1)
-                .then(()=>{ 
-                    this.setMessage({message: `${current.type} missed!`, source: 'monster'}) 
-                    this.delay(2)
-                    .then(()=> { this.setMessage({message: ``, source: null})})
-                })
-            }
-        }
-        this.data.lineup.push(this.data.lineup.shift())
-    }
-    this.beginCombat = () => {
-        console.log('this.data:', this.data)
-        const matrix = {}
-        this.data.lineup.forEach(e=>{
-            matrix[e.type] =  {
-                hp: e.stats.hp,
-                energy: 0
-            }
-        })
-        this.matrix = matrix;
-        this.updateIndicatorsMatrix(matrix)
-
-        this.processTurn();
-        
-        this.intervalReference = setInterval(()=>{
-            this.processTurn();
-            if(this.combatOver) clearInterval(this.intervalReference)
-        }, 3000)
-
-        
-
-            
-
-            // console.log('attacks!')
-
-        // }
-        // console.log('for')
-
-
-
-        // this.data.push(this.data.shift())
-    }
-    this.determineTurnOrder = () => {
-        this.data.monster.isMonster = true;
-
-        console.log('determining turn order...')
-        console.log('this.data:', this.data)
-        // let lineup = Array.from(this.data.crew);
-        // lineup.push(this.data.monster)
-        let lineup = this.data.crew.concat(JSON.parse(JSON.stringify(this.data.monster)));
-        
-        console.log('lineup: ', lineup)
-        // this.data.crew.push(this.data.monster)
-        lineup = lineup.sort(function(a,b){
-            return b.stats.dex - a.stats.dex
-        })
-        console.log('sorted lineup:', lineup)
-        // console.log('monjster dex:', this.data.monster)
-        this.data.lineup = lineup
     }
 
     this.delay = (numSeconds) => {

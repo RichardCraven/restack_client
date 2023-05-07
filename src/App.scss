@@ -250,3 +250,171 @@ button{
   background-color: #EEEEEE;
   border-right: 2px dotted red;
 }
+.user-profile-pane{
+  height: 60vh;
+  width: 70vw;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  flex-direction: column;
+  .content-container{
+    height: 50%;
+    width: 40%;
+    max-width: 300px;
+    border: 1px solid black;
+
+    display: flex;
+    align-items: flex-start;
+    flex-direction: column;
+    justify-content: center;
+
+    .landing-button{
+      cursor: pointer;
+      max-height: 100px;
+      height: 50px;
+      width: 100%;
+      border-bottom: 1px solid black;
+
+
+      max-height: 100px;
+      height: 50px;
+      width: 100%;
+      border-bottom: 1px solid black;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  }
+}
+.crewManager{
+  height: 60vh;
+  width: 70vw;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  flex-direction: column;
+  .content-container{
+    height: 100%;
+    width: 100%;
+    background-color: white;
+    display: flex;
+    flex-direction: column;
+    .title{
+      border: 1px solid green;
+    }
+    .crew-selector{
+      border: 1px solid red;
+      flex: auto;
+      display: flex;
+      flex-direction: column;
+      .crew-options{
+        width: 100%;
+        height: 100px;
+        display: flex;
+        flex-direction: row;
+        justify-content: space-around;
+        .portrait{
+          height: 100px;
+          width: 100px;
+          background-size: 100% 100%;
+          cursor: pointer;
+          &:hover{
+            filter: sepia(1);
+          }
+        }
+      }
+      .member-panel{
+        flex: auto;
+        border: 1px solid orange;
+        width: 100%;
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        // justify-content: space-around;
+        justify-content: flex-start;
+        
+        .giant-portrait{
+          height: 200px;
+          width: 200px;
+          min-width: 200px;
+          background-size: 100% 100%;
+          margin-right: 15px;
+          position: relative;
+          .add-button{
+            position: absolute;
+            bottom: 0;
+            left: 100px;
+            border-radius: 40px;
+
+            position: absolute;
+            bottom: -20px;
+            left: 85px;
+            height: 40px;
+            width: 40px;
+            border: 1px solid red;
+            background-color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            cursor: pointer;
+          }
+        }
+        .details-pane{
+          text-align: left;
+          margin-right: 15px;
+          .description{
+            max-width: 200px;
+            font-size: 14px;
+            text-align: left;
+          }
+        }
+        .stats-pane{
+          text-align: left;
+          margin-right: 15px;
+          min-width: 140px;
+        }
+        .abilities-pane{
+          font-size: 12px;
+          min-width: 200px;
+          max-width: 280px;
+          text-align: left;
+          margin-right: 15px;
+          .specials, .attacks, .weaknesses, .passives{
+            display: flex;
+            flex-wrap: wrap;
+          }
+        }
+        
+      }
+      .crew-tray{
+        width: 100%;
+        height: 100px;
+        display: flex;
+        flex-direction: row;
+        justify-content: space-around;
+        .selected-crew-portrait-wrapper{
+          height: 100px;
+          width: 100px;
+          border: 1px solid lightgrey;
+          // selected-crew-portrait-wrapper
+          &.empty{
+
+          }
+          &.locked{
+            
+            background-color: rgba(211, 211, 211, 0.605);
+          }
+          .portrait{
+            height: 100px;
+            width: 100px;
+            background-size: 100% 100%;
+          }
+        }
+      }
+    }
+    .button-row{
+      border: 1px solid blue;
+    } 
+  }
+}

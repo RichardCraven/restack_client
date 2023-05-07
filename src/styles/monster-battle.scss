@@ -5,7 +5,7 @@
     display: flex;
     flex-direction: row;
     justify-content: space-between;
-
+    position: relative;
 
 
     // linear-gradient(90deg,black, white 14%,black 30%)
@@ -17,7 +17,7 @@
 
     .fighterHitsAnimation
     {
-        background: linear-gradient(90deg,black, white 48%, black 51%);
+        background: linear-gradient(90deg,transparent, white 48%, transparent 51%);
         background-size: 200% 200%;
         -webkit-animation: FighterHits 1s ease ;
         -moz-animation: FighterHits 1s ease ;
@@ -43,30 +43,19 @@
 
     .monsterHitsAnimation
     {
-        background: linear-gradient(90deg,black, red 6%, black 51%);
+        background: linear-gradient(90deg,transparent, red 6%, transparent 51%);
         background-size: 200% 200%;
         -webkit-animation: MonsterHits 1s linear ;
         -moz-animation: MonsterHits 1s linear ;
         animation: MonsterHits 1s linear ;
-        // background-position:-110% -98%;
         background-position: 100% 100%;
     }
 
-    // @-webkit-keyframes MonsterHits {
-    //     0%{background-position:0% 100%}
-    //     50%{background-position:100% 0%}
-    //     100%{background-position:110% -98%}
-    // }
-    // @-moz-keyframes MonsterHits {
-    //     0%{background-position:100% 0%}
-    //     50%{background-position:0% 100%}
-    //     100%{background-position:110% -98%}
-    // }
-    // @keyframes MonsterHits { 
-    //     0%{background-position:100% 0%}
-    //     50%{background-position:0% 100%}
-    //     100%{background-position:110% -98%}
-    // }
+    .monsterWoundedAnimation{
+        background: linear-gradient(270deg, transparent, red 0%, transparent 2%);
+        background-size: 100% 100%;
+        background-position: 100% 100%;
+    }
     @-webkit-keyframes MonsterHits {
         0%{background-position:-100% 100%}
         50%{background-position:50% 100%}
@@ -83,6 +72,33 @@
         100%{background-position:100% 100%}
     }
 
+    .fighterDeadAnimation{
+        filter: blur(10px);
+        -webkit-animation: FighterDead 5s forwards ;
+        -moz-animation: FighterDead 5s forwards ;
+        animation: FighterDead 5s forwards ;
+    }
+    .monsterDeadAnimation{
+        filter: blur(10px);
+        -webkit-animation: FighterDead 5s forwards ;
+        -moz-animation: FighterDead 5s forwards ;
+        animation: FighterDead 5s forwards ;
+    }
+    @-webkit-keyframes FighterDead {
+        0%{filter: blur(1px);}
+        70%{filter: blur(2px);}
+        100%{filter: blur(13px);}
+    }
+    @-moz-keyframes FighterDead {
+        0%{filter: blur(1px);}
+        70%{filter: blur(2px);}
+        100%{filter: blur(13px);}
+    }
+    @keyframes FighterDead { 
+        0%{filter: blur(1px);}
+        70%{filter: blur(2px);}
+        100%{filter: blur(13px);}
+    }
     
 
     
@@ -93,22 +109,68 @@
         width: 200px;
         height: 100%;
     }
+    .portrait{
+        // filter: saturate(67.5);
+        // filter: saturate(37.5);
+        background-size: 100% 100%;
+        &.active{
+            filter: sepia(1);
+        }
+        &.dead{
+            filter: saturate(0);
+        }
+    }
+    .action-bar{
+        width: 100%;
+        height: 100px;
+    }
     .left-col{
+        // border: 1px solid yellow;
+        position: absolute;
+        width: 100%;
+        padding-top: 50px;
         .fighter-content{
             display: flex;
             flex-direction: column;
             align-items: flex-end;
         }
-        .fighter-portrait{
-            height: 100px;
-            width: 100px;
-            background-size: 100% 100%;
-            &.active{
-                filter: sepia(1);
+        .fighter-wrapper{
+            // border: 1px solid lightgrey;
+            width: 100%;
+            height: 110px;
+            height: fit-content;
+            display: flex;
+            &.leader-wrapper{
+                // height: 160px;
+            }
+            .portrait-wrapper{
+                .fighter-portrait{
+                    height: 100px;
+                    width: 100px;
+                    &.leader-portrait{
+                        // height: 150px;
+                        // width: 150px;
+                    }
+                }
+            }
+            .action-bar-wrapper{
+                height: 100px;
+                // width: 100%;
+                // width: calc(100% - 300px);
+                display: flex;
+                align-items: center;
             }
         }
     }
     .right-col{
+        position: absolute;
+        pointer-events: none;
+        // border: 1px solid red;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+        align-items: flex-end;
         // border-left: 1px solid orange;
         // .fighter-portrait{
         //     height: 100px;
@@ -118,16 +180,30 @@
         //         filter: sepia(1);
         //     }
         // }
-    }
-    
-    .monster-portrait, .fighter-portrait.leader{
-        height: 200px;
-        width: 200px;
-        background-size: 100% 100%;
-        &.active{
-            filter: sepia(1);
+        .monster-wrapper{
+            width: 100%;
+            display: flex;
+            flex-direction: row;
+            justify-content: flex-end;
+            align-items: center;
+            position: absolute;
+            transition: 1s;
+
+            // border: 1px solid green;
+            .monster-portrait{
+                height: 200px;
+                width: 200px;
+            }
+            .action-bar-wrapper{
+                height: 200px;
+                width: 100%;
+                display: flex;
+                align-items: center;
+            }
         }
     }
+    
+    
 
     .center-board{
         height: 100%;
@@ -222,24 +298,60 @@
             }
         }
     }
-    .monster-hp-bar{
+    .hp-bar, .energy-bar, .tempo-bar{
         height: 4px;
-        width: 200px;
-        
+        width: 100%;
     }
-    .leader-hp-bar{
-        height: 4px;
-        width: 200px;
+    // .monster-hp-bar{
+    //     width: 200px;
+    // }
+    // .leader-hp-bar{
+    //     height: 4px;
+    //     width: 150px;
         
-    }
-    .fighter-hp-bar{
-        height: 4px;
-        width: 100px;
-        
+    // }
+    // .fighter-hp-bar{
+    //     height: 4px;
+    //     width: 100px;
+    // }
+    // .leader-energy-bar{
+    //     height: 4px;
+    //     width: 100px;
+    // }
+    // .fighter-energy-bar{
+    //     height: 4px;
+    //     width: 100px;
+    // }
+    // .fighter-energy-bar{
+    //     height: 4px;
+    //     width: 100px;
+    // }
+    .tempo-bar{
+        position: relative;
+        .tempo-indicator{
+            height: 4px;
+            width: 4px;
+            border-radius: 4px;
+            background-color: white;
+            position: absolute;
+            transition: 0.1s;
+        }
     }
     .red-fill{
         background-color: red;
         height: 100%;
         // width: 80%;
+    }
+    .yellow-fill{
+        background-color: rgb(195, 195, 87);
+        height: 100%;
+
+        width: 100%;
+    }
+    .purple-fill{
+        background-color: rgb(126, 47, 222);
+        height: 100%;
+
+        width: 100%;
     }
 }

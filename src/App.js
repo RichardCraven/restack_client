@@ -7,6 +7,8 @@ import DungeonPage from './pages/DungeonPage'
 import MapmakerPage from './pages/MapmakerPage'
 import UserManagerPage from './pages/UserManagerPage'
 import UserProfilePage from './pages/UserProfilePage'
+import CrewManagerPage from './pages/CrewManagerPage'
+
 
 import { Route, Switch, Redirect} from "react-router-dom";
 import { useEffect } from 'react';
@@ -169,6 +171,9 @@ const toggleShowCoordinates = () => {
           )}/>
           <Route exact path="/userProfilePage" render={() => (
             <UserProfilePage {...props} />
+          )}/>
+          <Route exact path="/crewManager" render={() => (
+            <CrewManagerPage {...props} />
           )}/>
           <Route exact path="/dungeon" render={() => (
             !loggedIn ? <Redirect to="/login" /> :

@@ -63,127 +63,9 @@ class DungeonPage extends React.Component {
             // meta.inventory = []
             this.props.inventoryManager.initializeItems(meta.inventory ? meta.inventory : [])
 
+            console.log('meta:', meta.crew)
 
-            meta.crew = [
-                // {
-                //     image: 'wizard', 
-                //     type: 'wizard',
-                    // name: 'Pendicus',
-                    // level: 1,
-                //     stats: {
-                //         str: 3,
-                //         int: 7,
-                //         dex: 5,
-                //         vit: 4,
-                //         fort: 7,
-                //         hp:10,
-                //         atk:12,
-                //         energy: 0
-                //     }, 
-                //     portrait: 'wizard_portrait',
-                //     inventory: []
-                // },
-                {
-                    image: 'soldier', 
-                    type: 'soldier',
-                    name: 'Greco',
-                    level: 1,
-                    stats: {
-                        str: 3,
-                        int: 7,
-                        dex: 5,
-                        vit: 4,
-                        fort: 7,
-                        hp: 15,
-                        atk: 8,
-                        energy: 0
-                    }, 
-                    leader: true,
-                    portrait: 'soldier_portrait',
-                    inventory: [],
-                    specials: ['shield-wall'],
-                    attacks: ['sword-swing', 'sword-thrust', 'shield-bash'],
-                    weaknesses: ['ice', 'electric', 'blood-magic'],
-                },
-                // {
-                //     image: 'monk', 
-                //     type: 'monk',
-                    // name: 'Yu',
-                    // level: 1,
-                //     stats: {
-                //         str: 3,
-                //         int: 7,
-                //         dex: 5,
-                //         vit: 4,
-                //         fort: 7,
-                //         hp: 13,
-                //         atk: 6,
-                        // energy: 0
-                //     }, 
-                //     portrait: 'monk_portrait',
-                //     inventory: []
-                // },
-                {
-                    image: 'sage', 
-                    type: 'sage',
-                    name: 'Loryastes',
-                    level: 1,
-                    stats: {
-                        str: 3,
-                        int: 7,
-                        dex: 3,
-                        vit: 4,
-                        fort: 7,
-                        hp: 9,
-                        atk: 4,
-                        energy: 0
-                    }, 
-                    portrait: 'sage_portrait',
-                    inventory: [],
-                    specials: ['healing-hymn', 'reveal-weakness'],
-                    attacks: ['meditate', 'cane-strike'],
-                    weaknesses: ['fire', 'electric', 'ice', 'blood-magic', 'crushing'],
-                },
-                {
-                    image: 'rogue', 
-                    type: 'rogue',
-                    name: 'Tyra',
-                    level: 1,
-                    stats: {
-                        str: 5,
-                        int: 5,
-                        dex: 8,
-                        vit: 6,
-                        fort: 3,
-                        hp: 12,
-                        atk: 6,
-                        energy: 0
-                    }, 
-                    portrait: 'rogue_portrait',
-                    inventory: [],
-                    specials: ['deadeye-shot'],
-                    attacks: ['fire-arrow', 'sword-thrust'],
-                    passives: ['nimble-dodge'],
-                    weaknesses: ['ice', 'curse', 'crushing'],
-                },
-                // {
-                //     image: 'barbarian', 
-                //     type: 'barbarian',
-                //     name: 'Ulaf',
-                //     stats: {
-                //         str: 8,
-                //         int: 3,
-                //         dex: 4,
-                //         vit: 6,
-                //         fort: 6,
-                //         hp: 16,
-                //         atk: 9,
-                        // energy: 0
-                //     }, 
-                //     portrait: 'barbarian_portrait',
-                //     inventory: []
-                // },
-            ]
+            
             this.props.crewManager.initializeCrew(meta.crew ? meta.crew : [])
 
 
@@ -202,6 +84,10 @@ class DungeonPage extends React.Component {
                 rightPanelExpanded: meta?.rightExpanded
             }
         })
+    }
+    pickRandom = (array) => {
+        let index = Math.floor(Math.random() * array.length)
+        return array[index]
     }
     addItemToInventory = (tile) => {
         const tileContains = tile.contains;
@@ -234,7 +120,14 @@ class DungeonPage extends React.Component {
         })
     }
     setMonster = (monster) => {
-        const monsterData = this.props.monsterManager.getMonster(monster)
+        console.log('sert monster:', monster)
+        let monsterData = this.props.monsterManager.getMonster(monster)
+        if(!monsterData) monsterData = this.props.monsterManager.getRandomMonster()
+        let monsterName = this.pickRandom(monsterData.monster_names)
+        monsterData.name = monsterName
+        monsterData.inventory = [];
+        console.log('monster data:', monsterData)
+        
         this.setState({
             monster: monsterData
         })
@@ -589,7 +482,7 @@ class DungeonPage extends React.Component {
     }
     loadExistingDungeon = async (dungeonId) => {
         console.log('load existing dungeon');
-        const meta = JSON.parse(sessionStorage.getItem('metadata'))
+        const meta = getMeta();
         const res = await loadDungeonRequest(dungeonId)
         const dungeon = JSON.parse(res.data[0].content)
         dungeon.id = res.data[0]._id;
@@ -625,6 +518,11 @@ class DungeonPage extends React.Component {
     }
     uppercaseFirstLetter = (text) => {
         return text.charAt(0).toUpperCase() + text.slice(1);
+    }
+    battleOver = () => {
+        this.setState({
+            keysLocked : false
+        })
     }
     render(){
         return (
@@ -777,6 +675,7 @@ class DungeonPage extends React.Component {
                 combatManager={this.props.combatManager}
                 crew={this.props.crewManager.crew}
                 monster={this.state.monster}
+                battleOver={this.battleOver}
             ></MonsterBattle>}
             {/* { this.state.keysLocked && <div className="monster-battle-board">
                 <div className="mb-col left-col">

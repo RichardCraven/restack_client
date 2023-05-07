@@ -15,6 +15,8 @@ export function CrewManager(){
 
     
     this.initializeCrew = (crew) => {
+        console.log('initializing crew:', crew)
+        this.crew = [];
         crew.forEach(member=> { 
             if(this.memberTypes.includes(member.image)){
                 this.crew.push(member)
