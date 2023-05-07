@@ -1,6 +1,7 @@
 import React, {useState, useEffect} from 'react'
 import { Redirect } from "react-router-dom";
 import { useHistory } from "react-router";
+import {storeMeta, getMeta, getUserName} from '../utils/session-handler';
 
 export default function LandingPage() {
   const [navToUserProfile, setNavUserProfile] = useState(false);
@@ -9,6 +10,7 @@ export default function LandingPage() {
   const [navToUsermanager, setNavUsermanager] = useState(false);
   const [navToDungeon, setNavDungeon] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false)
+  const [showWarning, setShowWarning] = useState(false)
 
   const history = useHistory();
 
@@ -26,6 +28,14 @@ export default function LandingPage() {
       mounted = false;
     }
   },[history])
+  const checkForCrew = () => {
+    const user = getMeta()
+    console.log('user', user)
+    if(user.crew.length === 0){
+      setShowWarning(true)
+    }
+  }
+
   return (
        <div className="landing-pane pane">
          { navToUserProfile && <Redirect to='/userProfilePage'/> }
@@ -34,7 +44,8 @@ export default function LandingPage() {
          { navToDungeon && <Redirect to='/dungeon'/> }
          { navToUsermanager && <Redirect to='/usermanager'/> }
         <div className="landing-buttons-container">
-          <div className="landing-button enter-dungeon" onClick={() => setNavDungeon(true)}>Enter</div>
+         {showWarning && <span className="warning">Cannot enter dungeon without a crew</span>}
+          <div className={`landing-button enter-dungeon ${showWarning ? 'disabled' : ''}`} onMouseEnter={() => checkForCrew()} onMouseLeave={() => setShowWarning(false)} onClick={() => setNavDungeon(!showWarning)}>Enter</div>
           <div className="landing-button shop"  onClick={() => setNavCrew(true)} >Crew</div>
           <div className="landing-button user-data" onClick={() => setNavUserProfile(true)}>Profile</div>
           { isAdmin && <div className="landing-button map-maker" onClick={() => setNavMapmaker(true)}>Dungeon Builder</div>}

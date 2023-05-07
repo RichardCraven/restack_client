@@ -127,11 +127,18 @@ button{
   justify-content: space-around;
   align-items: center;
   flex-direction: column;
+  user-select: none;
   .landing-buttons-container{
-    // height: 50%;
+    position: relative;
     width: 40%;
     max-width: 300px;
     border: 1px solid black;
+    .warning{
+      position: absolute;
+      top: -35px;
+      width: 100%;
+      left: 0;
+    }
     .landing-button{
       cursor: pointer;
       max-height: 100px;
@@ -161,6 +168,10 @@ button{
       &.enter-dungeon:hover{
         background-color: black;
         color: red;
+        &.disabled{
+          background-color: lightgrey;
+          color: grey;
+        }
       }
     }
     .landing-button-last{

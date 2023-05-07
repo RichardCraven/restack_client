@@ -1,11 +1,8 @@
 import React from 'react'
-import {storeMeta, getMeta, getUserId, getUserName} from '../utils/session-handler';
+import {storeMeta, getMeta, getUserName} from '../utils/session-handler';
 import {
-  loadAllDungeonsRequest,
   loadDungeonRequest,
-  updateDungeonRequest,
-  updateUserRequest,
-  addDungeonRequest
+  deleteDungeonRequest
 } from '../utils/api-handler';
 class UserProfilePage extends React.Component{
   constructor(props){
@@ -25,7 +22,7 @@ class UserProfilePage extends React.Component{
 
   getDungeonDetails = async () => {
     const user = getMeta();
-    user.name = 'Henry'
+    user.name = getUserName();
     console.log('user:', user)
     
     if(!user.dungeonId){
@@ -36,7 +33,7 @@ class UserProfilePage extends React.Component{
     } else {
       const res = await loadDungeonRequest(user.dungeonId)
       console.log('res:', res)
-      const dungeon = JSON.parse(res.data[0].content)
+      const dungeon = res.data.length > 0 ? JSON.parse(res.data[0].content) : null
       console.log('dungeon:', dungeon)
       this.setState({
         user,
@@ -45,12 +42,26 @@ class UserProfilePage extends React.Component{
     }
     // console.log('state:', )
   }
-  clearDungeon = () => {
+  clearDungeon = async () => {
     console.log('clearing dungeon')
+    let user = getMeta();
     if(this.state.dungeon){
-      let user = getMeta();
+      
+      const res = await deleteDungeonRequest(user.dungeonId)
+      console.log('res:', res)
+
       user.dungeonId = null;
+      user.location = null
       storeMeta(user);
+      
+      setTimeout(()=>{
+        this.getDungeonDetails();
+      })
+    } else {
+      user.dungeonId = null;
+      user.location = null
+      storeMeta(user);
+      
       setTimeout(()=>{
         this.getDungeonDetails();
       })

@@ -11,9 +11,11 @@ function storeSessionData(id, token, isAdmin, username, metadata){
 }
 
 function storeMeta(metadata){
+    console.log('storing meta: ', metadata)
     sessionStorage.setItem('metadata', JSON.stringify(metadata))
 }
 function getMeta(){
+    console.log('getting meta, ss:', sessionStorage)
     return JSON.parse(sessionStorage.getItem('metadata'))
 }
 function getUserId(){

@@ -53,12 +53,14 @@ class DungeonPage extends React.Component {
             arr.push([])
         }
         const meta = getMeta();
+        console.log('meta:', meta)
         this.props.boardManager.establishAvailableItems(this.props.inventoryManager.items)
         let inv = {}
         if(!meta || !meta.dungeonId){
             console.log('no dungeon id, make new dungeon')
             this.loadNewDungeon();
         } else {
+            console.log('dunbgeon active')
             // const sampleItems = ['volkas_wand', 'spartan_helm', 'sayan_amulet']
             // meta.inventory = []
             this.props.inventoryManager.initializeItems(meta.inventory ? meta.inventory : [])
@@ -369,6 +371,7 @@ class DungeonPage extends React.Component {
     }
 
     loadNewDungeon = async () => {
+        console.log('load new dungeon')
         const userId = getUserId(),
               userName = getUserName();
         console.log('user id:', userId)
@@ -414,9 +417,13 @@ class DungeonPage extends React.Component {
         selectedDungeon.id = newDungeonRes.data._id
         console.log('console parsed:', JSON.parse(newDungeonRes.data.content))
         //   console.log('newDungeonRes', newDungeonRes, 'data:', newDungeonRes.data.content)
-          console.log('!!!!selectedDungeon:', selectedDungeon)
+          console.log('!!!!selectedDungeon:', selectedDungeon, 'spawn points: ', selectedDungeon.spawn_points)
         //   return
-        spawnPoint = selectedDungeon.spawn_points[Math.floor(Math.random()*spawnList.length)]
+        // debugger
+        // spawnPoint = selectedDungeon.spawn_points[Math.floor(Math.random()*spawnList.length)]
+        spawnPoint = selectedDungeon.spawn_points[1]
+
+        // spawn at index 18
         console.log('spawn point:', spawnPoint)
         if(spawnPoint){
             
@@ -481,7 +488,7 @@ class DungeonPage extends React.Component {
         }
     }
     loadExistingDungeon = async (dungeonId) => {
-        console.log('load existing dungeon');
+        console.log('load existing dungeon', dungeonId);
         const meta = getMeta();
         const res = await loadDungeonRequest(dungeonId)
         const dungeon = JSON.parse(res.data[0].content)
@@ -578,7 +585,7 @@ class DungeonPage extends React.Component {
                 </div> */}
             </div>
             <div className={`right-side-panel ${this.state.rightPanelExpanded ? 'expanded' : ''}`}>
-                <div className="crew">
+                <div className="crew" style={{height: getMeta().crew.length > 3 ? '175px' : '106px'}}>
                     <div className="title">Crew</div>
                     <div className="crew-tile-container">
                         {   this.props.crewManager.crew &&
