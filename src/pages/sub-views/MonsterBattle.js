@@ -127,19 +127,28 @@ class MonsterBattle extends React.Component {
         target = this.state.battleData[targetId],
         returnVal = 50;
         if(!target) return 0;
-        if(target.isMonster && target.wounded) returnVal = 300;
-        if(target.isMonster && !target.wounded) returnVal = 200;
-        if(!target.isMonster && target.wounded) return 300
+        // if(target.isMonster && target.wounded) returnVal = 300;
+        // if(target.isMonster && !target.wounded) returnVal = 200;
+        // if(!target.isMonster && target.wounded) return 300
+        if(target.isMonster){
+
+        }
         return returnVal;
     }
 
     render(){
         return (
             <div className="mb-board">
+                {/* /// FIGHTERS */}
                 <div className="mb-col left-col">
                     <div className="fighter-content">
                         {this.props.crew.map((fighter, i) => {
-                           return <div key={i} className={`fighter-wrapper ${fighter.isLeader ? 'leader-wrapper' : ''}`}>
+                           return <div key={i} className={`fighter-wrapper ${fighter.isLeader ? 'leader-wrapper' : ''}`} 
+                           style=
+                           {{
+                            top: `${this.state.battleData[fighter.id]?.position * 110}px`,
+                            left: `${this.state.battleData[fighter.id]?.depth * 100}px`
+                           }}>
                                     <div className="portrait-wrapper">
                                         <div 
                                         className={`portrait fighter-portrait ${fighter.isLeader ? 'leader-portrait' : ''} ${this.state.battleData[fighter.id]?.dead ? 'dead fighterDeadAnimation' : ''} ${this.state.battleData[fighter.id]?.active ? 'active' : ''}`} 
@@ -158,7 +167,8 @@ class MonsterBattle extends React.Component {
 
                                         </div>
                                     </div>
-                                    <div className={`action-bar-wrapper ${this.state.battleData[fighter.id]?.wounded ? 'fighterWoundedAnimation' : ''}`} style={{width: `calc(100% - ${this.getDistanceToTarget(fighter.id)}px)`}}>
+                                    {/* <div className={`action-bar-wrapper ${this.state.battleData[fighter.id]?.wounded ? 'fighterWoundedAnimation' : ''}`} style={{width: `calc(100% - ${this.getDistanceToTarget(fighter.id)}px)`}}> */}
+                                    <div className={`action-bar-wrapper ${this.state.battleData[fighter.id]?.wounded ? 'fighterWoundedAnimation' : ''}`} style={{width: this.state.battleData[fighter.id]?.distanceToTarget}}>
                                         <div className={`action-bar ${(this.state.battleData[fighter.id]?.attacking) ? 'fighterHitsAnimation' : ''}`}>
 
                                         </div>
@@ -168,9 +178,15 @@ class MonsterBattle extends React.Component {
                     </div>
                 </div>
                 
+                {/* /// MONSTERS */}
                 <div className="mb-col right-col">
-                    <div className="monster-wrapper" style={{top: `${this.state.battleData[this.props.monster.id]?.position * 110}px`}}>
-                        <div className={`action-bar-wrapper ${this.state.battleData[this.props.monster.id]?.wounded ? 'monsterWoundedAnimation' : ''}`}>
+                    <div className="monster-wrapper" 
+                    style=
+                    {{
+                        top: `${this.state.battleData[this.props.monster.id]?.position * 110}px`,
+                        right: `${this.state.battleData[this.props.monster.id]?.depth * 100}px`
+                    }}>
+                        <div className={`action-bar-wrapper ${this.state.battleData[this.props.monster.id]?.wounded ? 'monsterWoundedAnimation' : ''}`} style={{width: this.state.battleData[this.props.monster.id]?.distanceToTarget}}>
                             <div className={`action-bar ${this.state.battleData[this.props.monster.id]?.attacking ? 'monsterHitsAnimation' : ''}`}>
 
                             </div>

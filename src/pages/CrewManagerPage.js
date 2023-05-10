@@ -2,13 +2,13 @@ import React from 'react'
 import * as images from '../utils/images'
 import { Redirect } from "react-router-dom";
 import {storeMeta, getMeta, getUserId, getUserName} from '../utils/session-handler';
-// import {
+import {
 //   loadAllDungeonsRequest,
 //   loadDungeonRequest,
 //   updateDungeonRequest,
-//   updateUserRequest,
+  updateUserRequest,
 //   addDungeonRequest
-// } from '../utils/api-handler';
+} from '../utils/api-handler';
 class CrewManagerPage extends React.Component{
   constructor(props){
     super(props)
@@ -22,7 +22,7 @@ class CrewManagerPage extends React.Component{
     }
   }
 
-  componentWillMount(){
+  componentDidMount(){
     console.log('crew manager component mounted props:', this)
     // const userData = getMeta();
     
@@ -95,21 +95,31 @@ class CrewManagerPage extends React.Component{
 //       })
 //     }
 //   }
-submit = () => {
-    console.log('meta: ', getMeta())
-    const meta = getMeta();
-    meta.crew = this.state.selectedCrew.filter(e=> e !== null)
-    console.log('storing', meta)
-    storeMeta(meta)
+submit = async () => {
+    const user = getMeta();
+    user.crew = this.state.selectedCrew.filter(e=> e !== null)
+    await updateUserRequest(getUserId(), user)
+    storeMeta(user)
+    this.goBack()
+}
+clear = () => {
+    this.setState({
+        selectedCrew: [null, null, null, null, null]
+    })
+}
+goBack = () => {
     this.setState({
         navToLanding: true
     })
 }
   render(){
     return (
-      <div className="crewManager">
+      <div className="crew-manager">
         { this.state.navToLanding && <Redirect to='/'/> }
         <div className="content-container">
+        <div className="button-row-top">
+            <button onClick={() => this.submit()}>Back</button>
+          </div>
           <div className="title">Choose your crew</div>
           <div className="crew-selector">
             <div className="crew-options">
@@ -174,6 +184,9 @@ submit = () => {
                     }
                 )}
             </div>
+          </div>
+          <div className="button-row-bottom-left">
+            <button onClick={() => this.clear()}>Clear</button>
           </div>
           <div className="button-row">
             <button onClick={() => this.submit()}>Submit</button>

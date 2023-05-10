@@ -1,8 +1,9 @@
 import React from 'react'
-import {storeMeta, getMeta, getUserName} from '../utils/session-handler';
+import {storeMeta, getMeta, getUserName, getUserId} from '../utils/session-handler';
 import {
   loadDungeonRequest,
-  deleteDungeonRequest
+  deleteDungeonRequest,
+  updateUserRequest
 } from '../utils/api-handler';
 class UserProfilePage extends React.Component{
   constructor(props){
@@ -46,12 +47,10 @@ class UserProfilePage extends React.Component{
     console.log('clearing dungeon')
     let user = getMeta();
     if(this.state.dungeon){
-      
-      const res = await deleteDungeonRequest(user.dungeonId)
-      console.log('res:', res)
-
+      await deleteDungeonRequest(user.dungeonId)
       user.dungeonId = null;
       user.location = null
+      await updateUserRequest(getUserId(), user)
       storeMeta(user);
       
       setTimeout(()=>{
@@ -60,6 +59,7 @@ class UserProfilePage extends React.Component{
     } else {
       user.dungeonId = null;
       user.location = null
+      await updateUserRequest(getUserId(), user)
       storeMeta(user);
       
       setTimeout(()=>{

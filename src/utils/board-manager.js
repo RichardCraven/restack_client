@@ -156,11 +156,14 @@ export function BoardManager(){
             // console.log('monster:', monster, this.getImage(monster));
             return monster
         }
+        console.log('this.available items:', this.availableItems)
         const getRandomItem = () => {
             const idx = Math.floor(Math.random()*this.availableItems.length),
             item = this.availableItems[idx];
+            console.log('random idx:', idx)
             return item;
         }
+        console.log('random item: ', getRandomItem())
         let spawnCoords = this.getCoordinatesFromIndex(spawnTileIndex);
         let board = this.currentOrientation === 'F' ? this.currentLevel.front.miniboards[boardIndex] : this.currentLevel.back.miniboards[boardIndex]
         this.currentBoard = board;
@@ -170,10 +173,16 @@ export function BoardManager(){
             location: spawnCoords,
             boardIndex: boardIndex
         }
+        console.log('board.tiles:', board.tiles)
         for(let i = 0; i< board.tiles.length; i++){
             let tile = board.tiles[i]
             if(tile.contains === 'monster') tile.contains = getRandomMonster();
             if(tile.contains === 'gate') tile.contains = 'minor_gate';
+            if(tile.contains === 'lantern'){
+                console.log('yooooo')
+                tile.contains = getRandomItem();
+                console.log('now tile contains:', tile.contains)
+            }
             this.tiles.push({
                 type: 'board-tile',
                 id: tile.id,

@@ -58,8 +58,10 @@ export function InventoryManager(){
         'sword'
     ]
     this.items = this.weapons.concat(this.masks.concat(this.helms.concat(this.keys.concat(this.amulets.concat(this.charms.concat(this.wands.concat(this.misc.concat(this.shields))))))))
-    this.inventory = []
     this.initializeItems = (items) => {
+        this.inventory = []
+        console.log('items.length: ', items.length, 'inventory already:', this.inventory)
+        // debugger
         items.forEach(i=> {if(this.items.includes(i.contains)) this.inventory.push({image: i.image, contains: i.contains})})
     }
     this.addItem = (item) => {

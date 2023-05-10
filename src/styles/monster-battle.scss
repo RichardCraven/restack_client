@@ -125,10 +125,10 @@
         height: 100px;
     }
     .left-col{
-        // border: 1px solid yellow;
         position: absolute;
         width: 100%;
-        padding-top: 50px;
+        // padding-top: 50px;
+        top: 50px;
         .fighter-content{
             display: flex;
             flex-direction: column;
@@ -140,6 +140,8 @@
             height: 110px;
             height: fit-content;
             display: flex;
+            position: absolute;
+            transition: 1s;
             &.leader-wrapper{
                 // height: 160px;
             }

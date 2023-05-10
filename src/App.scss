@@ -297,13 +297,14 @@ button{
     }
   }
 }
-.crewManager{
+.crew-manager{
   height: 60vh;
   width: 70vw;
   display: flex;
   justify-content: space-around;
   align-items: center;
   flex-direction: column;
+  position: relative;
   .content-container{
     height: 100%;
     width: 100%;
@@ -311,10 +312,9 @@ button{
     display: flex;
     flex-direction: column;
     .title{
-      border: 1px solid green;
+      // border: 1px solid green;
     }
     .crew-selector{
-      border: 1px solid red;
       flex: auto;
       display: flex;
       flex-direction: column;
@@ -336,7 +336,6 @@ button{
       }
       .member-panel{
         flex: auto;
-        border: 1px solid orange;
         width: 100%;
         display: flex;
         flex-direction: row;
@@ -362,7 +361,6 @@ button{
             left: 85px;
             height: 40px;
             width: 40px;
-            border: 1px solid red;
             background-color: white;
             display: flex;
             align-items: center;
@@ -407,8 +405,6 @@ button{
         .selected-crew-portrait-wrapper{
           height: 100px;
           width: 100px;
-          border: 1px solid lightgrey;
-          // selected-crew-portrait-wrapper
           &.empty{
 
           }
@@ -425,7 +421,19 @@ button{
       }
     }
     .button-row{
-      border: 1px solid blue;
+      position: absolute;
+      bottom: -33px;
+      right: 0;
     } 
+    .button-row-bottom-left{
+      position: absolute;
+      bottom: -33px;
+      left: 0;
+    }
+    .button-row-top{
+      position: absolute;
+      top: -33px;
+      left: 0;
+    }
   }
 }

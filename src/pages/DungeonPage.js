@@ -37,7 +37,8 @@ class DungeonPage extends React.Component {
             pending: null,
             activeInventoryItem: null,
             keysLocked: false,
-            monster: null
+            monster: null,
+            crewSize: 0
         }
     }
     
@@ -60,10 +61,11 @@ class DungeonPage extends React.Component {
             console.log('no dungeon id, make new dungeon')
             this.loadNewDungeon();
         } else {
-            console.log('dunbgeon active')
+            console.log('dunbgeon active, user inventory:', meta.inventory)
             // const sampleItems = ['volkas_wand', 'spartan_helm', 'sayan_amulet']
             // meta.inventory = []
             this.props.inventoryManager.initializeItems(meta.inventory ? meta.inventory : [])
+            // this.props.inventoryManager.initializeItems([])
 
             console.log('meta:', meta.crew)
 
@@ -74,7 +76,8 @@ class DungeonPage extends React.Component {
             this.props.inventoryManager.inventory.forEach((e,i)=>{
                 inv[i]= ''
             })
-
+            console.log('ok right now, inventory: ', this.props.inventoryManager.inventory)
+            // debugger
             this.loadExistingDungeon(meta.dungeonId)
         }
         this.setState((state, props) => {
@@ -83,7 +86,8 @@ class DungeonPage extends React.Component {
                 boardSize,
                 inventoryHoverMatrix: inv,
                 leftPanelExpanded: meta?.leftExpanded,
-                rightPanelExpanded: meta?.rightExpanded
+                rightPanelExpanded: meta?.rightExpanded,
+                crewSize: meta.crew.length
             }
         })
     }
@@ -491,6 +495,7 @@ class DungeonPage extends React.Component {
         console.log('load existing dungeon', dungeonId);
         const meta = getMeta();
         const res = await loadDungeonRequest(dungeonId)
+        console.log('res:', res);
         const dungeon = JSON.parse(res.data[0].content)
         dungeon.id = res.data[0]._id;
         console.log('meta:', meta)
@@ -585,7 +590,7 @@ class DungeonPage extends React.Component {
                 </div> */}
             </div>
             <div className={`right-side-panel ${this.state.rightPanelExpanded ? 'expanded' : ''}`}>
-                <div className="crew" style={{height: getMeta().crew.length > 3 ? '175px' : '106px'}}>
+                <div className="crew" style={{height: this.state.crewSize > 3 ? '175px' : '106px'}}>
                     <div className="title">Crew</div>
                     <div className="crew-tile-container">
                         {   this.props.crewManager.crew &&

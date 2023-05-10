@@ -26,7 +26,7 @@ export function MonsterManager(){
             deathCries: ['Peace at last...'],
             specials: ['obliterate', 'flying', 'invisibility'],
             attacks: ['claws', 'bite'],
-            weaknesses: ['silver-weapon', 'holy-aura'],
+            weaknesses: ['arcane', 'holy-aura'],
 
         },
         ogre: {
@@ -68,7 +68,7 @@ export function MonsterManager(){
             greetings: ['*hissssss*', 'come to the silence'],
             deathCries: ['*screams*'],
             specials: ['banshee wail'],
-            attacks: ['grasp', 'energy drain'],
+            attacks: ['grasp', 'energy_drain'],
             weaknesses: ['holy', 'psionic']
         },
         dragon: {
@@ -78,7 +78,7 @@ export function MonsterManager(){
             stats: {
                 str: 10,
                 int:9,
-                dex:5,
+                dex:7,
                 vit:8,
                 fort:8,
                 hp: 155,
@@ -89,7 +89,7 @@ export function MonsterManager(){
             greetings: ['*roar*'],
             deathCries: ['*scream*'],
             specials: ['firestorm'],
-            attacks: ['claws', 'bite', 'fire-breath'],
+            attacks: ['claws', 'bite', 'fire_breath'],
             weaknesses: ['psionic']
         },
         djinn: {
@@ -110,8 +110,8 @@ export function MonsterManager(){
             greetings: ['your fate leads you here, now it will all end'],
             deathCries: ['it seems your fate has other plans'],
             specials: ['duplicate', 'meditate', 'tesseract'],
-            attacks: ['claws', 'void lance', 'fire-breath'],
-            weaknesses: []
+            attacks: ['claws', 'void_lance', 'fire_breath'],
+            weaknesses: ['arcane']
         },
         sphinx: {
             type: 'sphinx',
@@ -131,8 +131,8 @@ export function MonsterManager(){
             greetings: ['lets see if you are worthy of the secrets'],
             deathCries: ['you may pass'],
             specials: ['possess', 'tesseract'],
-            attacks: ['claws', 'induce madness', 'electricity'],
-            weaknesses: []
+            attacks: ['claws', 'induce_madness', 'lightning'],
+            weaknesses: ['arcane']
         }
     }
     let count = 15;

@@ -46,10 +46,10 @@ export function CrewManager(){
             }, 
             portrait: 'wizard_portrait',
             inventory: [],
-            specials: ['ice blast'],
-            attacks: ['magic missile'],
-            passives: ['magic affinity'],
-            weaknesses: ['ice', 'fire', 'electric', 'blood-magic'],
+            specials: ['ice_blast'],
+            attacks: ['magic_missile'],
+            passives: ['magic_affinity'],
+            weaknesses: ['ice', 'fire', 'electricity', 'blood_magic'],
             description: "Hailing from the magister's college, Pendicus was the dean of transmutation. A powerful magic user, he has been known to linger for long periods in the silent realm, searching for secret truths."
         },
         {
@@ -71,10 +71,10 @@ export function CrewManager(){
             isLeader: true,
             portrait: 'soldier_portrait',
             inventory: [],
-            passives: ['inspiring force'],
-            specials: ['shield-wall'],
-            attacks: ['sword-swing', 'sword-thrust', 'shield-bash'],
-            weaknesses: ['ice', 'electric', 'blood-magic'],
+            passives: ['inspiring_force'],
+            specials: ['shield_wall'],
+            attacks: ['sword_swing', 'sword_thrust', 'shield_bash'],
+            weaknesses: ['ice', 'electricity', 'blood_magic'],
             description: "Once the captain of the royal army's legendary vangard battalion, Greco has a reputation for fair leadership and honor."
         },
         {
@@ -95,10 +95,10 @@ export function CrewManager(){
             }, 
             portrait: 'monk_portrait',
             inventory: [],
-            passives: ['diamond skin'],
+            passives: ['diamond_skin'],
             specials: ['invisibility'],
-            attacks: ['meditate', 'dragon punch', 'flying lotus'],
-            weaknesses: ['fire', 'electric', 'ice', 'blood-magic', 'crushing'],
+            attacks: ['meditate', 'dragon_punch', 'flying_lotus'],
+            weaknesses: ['fire', 'electricity', 'ice', 'blood_magic', 'crushing'],
             description: "Yu was born into the dynastic order of the White Serpent, inheriting the secrets of absolute stillness and unyielding motion"
         },
         {
@@ -120,9 +120,9 @@ export function CrewManager(){
             portrait: 'sage_portrait',
             inventory: [],
             specials: ['healing-hymn', 'reveal-weakness'],
-            attacks: ['meditate', 'cane-strike'],
-            passives: ["owl's insight"],
-            weaknesses: ['fire', 'electric', 'ice', 'blood-magic', 'crushing'],
+            attacks: ['meditate', 'cane_strike'],
+            passives: ["owls_insight"],
+            weaknesses: ['fire', 'electricity', 'ice', 'blood_magic', 'crushing'],
             description: "Loryastes is the headmaster of Citadel library, chronicled the histories of three monarchies, and a pupil of The Great Scribe"
         },
         {
@@ -144,8 +144,8 @@ export function CrewManager(){
             portrait: 'rogue_portrait',
             inventory: [],
             specials: ['deadeye-shot'],
-            attacks: ['fire-arrow', 'sword-thrust'],
-            passives: ['nimble-dodge'],
+            attacks: ['fire_arrow'],
+            passives: ['nimble_dodge'],
             weaknesses: ['ice', 'curse', 'crushing'],
             description: "Tyra was born a slave, surviving and advancing through sheer cunning and a ruthless will"
         },
@@ -168,7 +168,7 @@ export function CrewManager(){
             portrait: 'barbarian_portrait',
             inventory: [],
             specials: ['berserker-rage'],
-            attacks: ['axe throw', 'axe swing', 'spear throw'],
+            attacks: ['axe_throw', 'axe_swing', 'spear_throw'],
             passives: ['fury'],
             weaknesses: ['ice', 'curse', 'psionic'],
             description: "Ulaf is the son of the chieftan of the Rootsnarl Clan. He is on a journey to prove his mettle and one day take his father's place"

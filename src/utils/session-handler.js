@@ -15,7 +15,7 @@ function storeMeta(metadata){
     sessionStorage.setItem('metadata', JSON.stringify(metadata))
 }
 function getMeta(){
-    console.log('getting meta, ss:', sessionStorage)
+    // console.log('getting meta, ss:', sessionStorage)
     return JSON.parse(sessionStorage.getItem('metadata'))
 }
 function getUserId(){
