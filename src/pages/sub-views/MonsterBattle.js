@@ -9,16 +9,21 @@ class MonsterBattle extends React.Component {
             message: '',
             source: null,
             indicatorsMatrix: {},
-            // currentActor: '',
             attackType: '',
             target: null,
             battleData: {},
-            catcher: null
+            catcher: null,
+            selectedFighter: null,
+            hoveredAttackTile: null,
+            hoveredSpecialTile: null,
+            showCrosshair: false,
+            portraitHoveredId: null
         }
     }
     componentDidMount(){
+        console.log('DID MOUNT');
         this.props.combatManager.initialize();
-        const crewLeader = this.props.crew.find(e=>e.isLeader)
+        // const crewLeader = this.props.crew.find(e=>e.isLeader)
         this.establishMessageCallback();
         this.establishUpdateMatrixCallback();
         this.establishUpdateActorCallback();
@@ -27,16 +32,26 @@ class MonsterBattle extends React.Component {
         this.props.combatManager.initializeCombat({
             crew: this.props.crew,
             leader: this.getCrewLeader(),
-            monster: this.props.monster
+            monster: this.props.monster,
+
         })
     }
+    componentDidUpdate(){
+        // console.log('did update')
+        // console.log('paused:', this.props.paused)
+    }
 
-    simulateAttack = (id) => {
-        this.props.combatManager.initiateAttack(id)
+    fighterClicked = (id) => {
+        const selectedFighter = this.state.battleData[id];
+        selectedFighter.portrait = this.props.crew.find(e=>e.id === id).portrait
+        
+        this.setState({
+            selectedFighter
+        })
 
 
 
-        // console.log('simulateAttack', id)
+        // console.log('fighterClicked', id)
         // this.setState({
         //     catcher: id
         // })
@@ -136,9 +151,54 @@ class MonsterBattle extends React.Component {
         return returnVal;
     }
 
+    attackTileClicked = (val) => {
+        // if(val !== null){
+        //     val = val.replace('_', ' ')
+        // }
+        console.log('val:', this.props.combatManager.attacksMatrix[val])
+        // this.setState({
+        //     hoveredAttackTile: val
+        // })
+        this.setState({
+            showCrosshair: true
+        })
+    }
+    attackTileHovered = (val) => {
+        if(val !== null){
+            val = val.replace('_', ' ')
+        }
+        this.setState({
+            hoveredAttackTile: val
+        })
+    }
+    specialTileClicked = (val) => {
+        if(val !== null){
+            val = val.replace('_', ' ')
+        }
+        console.log('val:', val)
+        // this.setState({
+        //     hoveredAttackTile: val
+        // })
+    }
+    specialTileHovered = (val) => {
+        if(val !== null){
+            val = val.replace('_', ' ')
+        }
+        this.setState({
+            hoveredSpecialTile: val
+        })
+    }
+    portraitHovered = (id) => {
+        this.setState({portraitHoveredId: id})
+    }
+    portraitClicked = (id) => {
+        this.setState({
+            showCrosshair: false
+        })
+    }
     render(){
         return (
-            <div className="mb-board">
+            <div className={`mb-board ${this.state.showCrosshair ? 'show-crosshair' : ''}`}>
                 {/* /// FIGHTERS */}
                 <div className="mb-col left-col">
                     <div className="fighter-content">
@@ -153,7 +213,7 @@ class MonsterBattle extends React.Component {
                                         <div 
                                         className={`portrait fighter-portrait ${fighter.isLeader ? 'leader-portrait' : ''} ${this.state.battleData[fighter.id]?.dead ? 'dead fighterDeadAnimation' : ''} ${this.state.battleData[fighter.id]?.active ? 'active' : ''}`} 
                                         style={{backgroundImage: "url(" + images[fighter.portrait] + ")", filter: `saturate(${(this.state.battleData[fighter.id]?.hp / fighter.stats.hp) * 100})`}} 
-                                        onClick={() => this.simulateAttack(fighter.id)}></div>
+                                        onClick={() => this.fighterClicked(fighter.id)}></div>
                                         <div className="hp-bar">
                                         {!this.state.battleData[fighter.id]?.dead && <div className="red-fill" 
                                             style={{width: `${(this.state.battleData[fighter.id]?.hp / fighter.stats.hp) * 100}%`}}
@@ -192,7 +252,27 @@ class MonsterBattle extends React.Component {
                             </div>
                         </div>
                         <div className="portrait-wrapper">
-                            <div className={`portrait monster-portrait ${this.state.battleData[this.props.monster.id]?.active ? 'active' : ''} ${this.state.battleData[this.props.monster.id]?.dead ? 'dead monsterDeadAnimation' : ''}`} style={{backgroundImage: "url(" + this.props.monster.portrait + ")", filter: `saturate(${(this.state.battleData[this.props.monster.id]?.hp / this.props.monster.stats.hp) * 100})`}}></div>
+                            <div 
+                            className={
+                                `portrait monster-portrait 
+                                ${this.state.battleData[this.props.monster.id]?.active ? 'active' : ''} 
+                                ${this.state.battleData[this.props.monster.id]?.dead ? 'dead monsterDeadAnimation' : ''}`
+                            } 
+                            style={{
+                                backgroundImage: "url(" + this.props.monster.portrait + ")", 
+                                filter: `saturate(${(this.state.battleData[this.props.monster.id]?.hp / this.props.monster.stats.hp) * 100}) 
+                                        sepia(${this.state.showCrosshair && this.state.portraitHoveredId === this.props.monster.id ? '2' : '0'})`
+                            }} 
+                            onMouseEnter={() => this.portraitHovered(this.props.monster.id)} 
+                            onMouseLeave={() => this.portraitHovered(null)}
+                            onClick={() => this.portraitClicked(this.props.monster.id)}
+                            >
+                                <div className="targetted-by-container">
+                                    {this.state.battleData[this.props.monster.id]?.targettedBy.map((e,i)=>{
+                                        return <div key={i} className='targetted-by-portrait' style={{backgroundImage: "url(" + images[this.state.battleData[e]?.portrait] + ")"}}></div>
+                                    })}
+                                </div>
+                            </div>
                             {<div className="indicators-wrapper">
                                 <div className="monster-hp-bar hp-bar">
                                     {!this.state.battleData[this.props.monster.id]?.dead && <div className="red-fill" style={{width: `${(this.state.battleData[this.props.monster.id]?.hp / this.props.monster.stats.hp) * 100}%`}}></div>}
@@ -204,6 +284,41 @@ class MonsterBattle extends React.Component {
                                     {!this.state.battleData[this.props.monster.id]?.dead && <div className="tempo-indicator" style={{right: `calc(${this.state.battleData[this.props.monster.id]?.tempo}% - 4px)`}}></div>}
                                 </div>
                             </div>}
+                        </div>
+                    </div>
+                </div>
+
+                {/* // INTERACTION PANE */}
+                <div className="mb-interaction-pane">
+                    <div className="header-row">
+                        <div className="portrait" style={{backgroundImage: "url(" + images[this.state.selectedFighter?.portrait] + ")"}}></div>
+                        <div className="title">
+                            {this.state.selectedFighter?.name}
+                            {this.props.paused && <span className="paused-marker">PAUSED</span>}
+                        </div>
+                    </div>
+                    <div className="interaction-row">
+                        <div className="specials-col">
+                            <div className="interaction-header">Specials</div>
+                            <div className="interaction-tooltip">{this.state.hoveredSpecialTile}</div>
+                            <div className="interaction-tile-container">
+                                {this.state.selectedFighter?.specials.map((a, i)=>{
+                                    return <div key={i} className='interaction-tile' onClick={() => this.specialTileClicked(a)} onMouseEnter={() => this.specialTileHovered(a)} onMouseLeave={() => this.specialTileHovered(null)}>
+                                        {/* {a} */}
+                                    </div>
+                                })}
+                        </div>
+                        </div>
+                        <div className="attacks-col">
+                            <div className="interaction-header">Attacks</div>
+                            <div className="interaction-tooltip">{this.state.hoveredAttackTile}</div>
+                            <div className="interaction-tile-container">
+                                    {this.state.selectedFighter?.attacks.map((a, i)=>{
+                                        return <div key={i} style={{backgroundImage: "url(" + images[this.props.combatManager.attacksMatrix[a].icon] + ")", cursor: this.state.showCrosshair ? 'crosshair' : ''}} className='interaction-tile' onClick={() => this.attackTileClicked(a)} onMouseEnter={() => this.attackTileHovered(a)} onMouseLeave={() => this.attackTileHovered(null)}>
+                                            {/* {a} */}
+                                        </div>
+                                    })}
+                            </div>
                         </div>
                     </div>
                 </div>

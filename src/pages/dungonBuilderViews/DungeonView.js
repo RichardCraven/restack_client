@@ -5,13 +5,13 @@ import '../../styles/map-maker.scss'
 import Tile from '../../components/tile'
 import { CDropdown, CDropdownToggle, CDropdownMenu, CDropdownItem, CCollapse, CSpinner, CFormSelect} from '@coreui/react';
 import  CIcon  from '@coreui/icons-react'
-import { cilCaretRight, cilSave, cilQrCode, cilLevelDown, cilLevelUp, cilLibraryAdd, cilTrash, cilOptions, cilPlus, cibTheMovieDatabase } from '@coreui/icons';
+import { cilCaretRight, cilSave, cilQrCode, cilLevelDown, cilLevelUp, cilLibraryAdd, cilTrash, cilOptions, cilPlus } from '@coreui/icons';
 import '../../styles/dungeon-board.scss'
 import '../../styles/map-maker.scss'
 import Canvas from '../../components/Canvas/canvas'
-import arrowDown from '../../assets/graphics/arrow_down.png'
-import arrowUp from '../../assets/graphics/arrow_up.png'
-import arrowUpInvalid from '../../assets/graphics/arrow_up_invalid.png'
+// import arrowDown from '../../assets/graphics/arrow_down.png'
+// import arrowUp from '../../assets/graphics/arrow_up.png'
+// import arrowUpInvalid from '../../assets/graphics/arrow_up_invalid.png'
 
 class DungeonView extends React.Component {
     constructor(props){
@@ -157,7 +157,6 @@ class DungeonView extends React.Component {
                 let miniboardSize = this.props.tileSize*2;
                 let planeHeight = this.props.tileSize*6;
                 let unit = planeHeight/(this.props.tileSize*6);
-                let leftPlaneSize = this.props.tileSize*6;
                 ctx.fillStyle = 'red'
                 
                 let cols = [1,2,3,1,2,3,1,2,3]
@@ -191,12 +190,12 @@ class DungeonView extends React.Component {
                 })
             }
             if(data.orientation === 'doubletall_F' || data.orientation === 'doubletall_B'){
-                const isFront = data.orientation.split('_')[1] === 'F'
-                const isBack = data.orientation.split('_')[1] === 'B'
+                // const isFront = data.orientation.split('_')[1] === 'F'
+                // const isBack = data.orientation.split('_')[1] === 'B'
                 let miniboardSize = this.props.tileSize*2;
                 let planeHeight = this.props.tileSize*6;
                 let unit = planeHeight/(this.props.tileSize*6);
-                ctx.fillStyle = 'red'
+                // ctx.fillStyle = 'red'
                 ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
                 let cols = [1,2,3,1,2,3,1,2,3]
                 let rows = [1,1,1,2,2,2,3,3,3]
@@ -210,8 +209,9 @@ class DungeonView extends React.Component {
                     let originPointY = (miniboardSize * row) - miniboardSize + (unit * 2);
                     let originPointY_up = ((3*miniboardSize) + miniboardSize * row) - miniboardSize + (unit * 2) 
                     let microUnit = miniboardSize/15;
-                    let connectedTo = lim.connectedTo;
+                    // let connectedTo = lim.connectedTo;
                     // if(connectedTo.level !== lim.level) return
+                    
                     // doors only for now ^
 
                     let x = microUnit*lim.coordinates[0] + (unit * 2) 

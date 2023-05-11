@@ -161,17 +161,17 @@ const updateManyPlanesRequest = (planesArray) => {
   console.log('updating many planes, planesArray: ', planesArray)
   console.log('CANCELLING THIS UNTIL INVESTIGATION.. LAST TIME YOU WIPED OUT ALL THE PLANES')
   return null
-  return axios.put("http://localhost:5000/api/planes/updateMany", {planesArray: JSON.stringify(planesArray)})
-    .then(res=>{
-      console.log('response:', res)
-      // if(res.status === 200 || res.status === 201){
-      //   return(res)
-      // }
-    })
-    .catch(err=> {
-      console.log(err)
-      return(err)
-    })
+  // return axios.put("http://localhost:5000/api/planes/updateMany", {planesArray: JSON.stringify(planesArray)})
+  //   .then(res=>{
+  //     console.log('response:', res)
+  //     // if(res.status === 200 || res.status === 201){
+  //     //   return(res)
+  //     // }
+  //   })
+  //   .catch(err=> {
+  //     console.log(err)
+  //     return(err)
+  //   })
 }
 const loadAllPlanesRequest = (id) => {
   return axios.get("http://localhost:5000/api/planes")

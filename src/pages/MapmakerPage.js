@@ -8,7 +8,7 @@ import PlaneView from './dungonBuilderViews/PlaneView'
 import DungeonView from './dungonBuilderViews/DungeonView'
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
-import { CFormCheck, CButtonGroup, CModal, CButton, CModalHeader, CModalTitle, CModalBody, CModalFooter, CFormSelect} from '@coreui/react';
+import { CFormCheck, CButtonGroup, CModal, CButton, CModalHeader, CModalTitle, CModalBody, CModalFooter} from '@coreui/react';
 import arrowDown from '../assets/graphics/arrow_down.png'
 import arrowUp from '../assets/graphics/arrow_up.png'
 import arrowDownInvalid from '../assets/graphics/arrow_down_invalid.png'
@@ -29,7 +29,6 @@ import {
   addPlaneRequest,
   deletePlaneRequest,
   updatePlaneRequest,
-  updateManyPlanesRequest,
   addDungeonRequest,
   deleteDungeonRequest,
   updateDungeonRequest,
@@ -431,23 +430,6 @@ class MapMakerPage extends React.Component {
   }
 
   setViewState = (state) => {
-    console.log('set view state: ', state);
-    let stateLabel;
-    switch(state){
-      case 'board':
-        stateLabel = 'Board View';
-      break;
-      case 'plane':
-        stateLabel = 'Plane View';
-      break;
-      case 'dungeon':
-        stateLabel = 'Dungeon View';
-      break;
-      default:
-      return;
-    }
-    // let b = this.state.mainViewSelectVal
-    // b.current.value = stateLabel;
     this.setState({
       selectedView: state,
       dungeonOverlayOn: false,
@@ -573,20 +555,17 @@ class MapMakerPage extends React.Component {
       this.toast('Board Saved')
     }
     if(planesToUpdate && planesToUpdate.length > 1){
-      // console.log('planes to update:', planesToUpdate)
-      const payload = planesToUpdate.map(p=> {
-        return {
-          name: p.name,
-          miniboards: p.miniboards,
-          spawnPoints: p.spawnPoints,
-          valid: p.valid,
-          id: p.id
-        }
-      })
-      // console.log('vs payload:', payload)
-      // debugger
-      // await updateManyPlanesRequest(payload);
-      // this.loadAllPlanes();
+      
+      // const payload = planesToUpdate.map(p=> {
+      //   return {
+      //     name: p.name,
+      //     miniboards: p.miniboards,
+      //     spawnPoints: p.spawnPoints,
+      //     valid: p.valid,
+      //     id: p.id
+      //   }
+      // })
+      
     } else if (planesToUpdate && planesToUpdate.length === 1){
       let plane = planesToUpdate[0]
       const obj = {
@@ -1210,6 +1189,8 @@ class MapMakerPage extends React.Component {
       case 'dungeon-view':
         this.setViewState('dungeon')
       break;
+      default:
+        break;
     }
   }
   collapseFilterHeader = (header) => {

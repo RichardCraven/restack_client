@@ -5,11 +5,6 @@ const Canvas = props => {
     const { draw } = props
     const canvasRef = useRef(null)
 
-    const tick = () => {
-        // ...
-        console.log('tick', tick);
-        // requestIdRef.current = requestAnimationFrame(tick);
-    };
 
     useEffect(() => {
         const canvas = canvasRef.current

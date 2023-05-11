@@ -15,7 +15,6 @@ export function CrewManager(){
 
     
     this.initializeCrew = (crew) => {
-        console.log('initializing crew:', crew)
         this.crew = [];
         crew.forEach(member=> { 
             if(this.memberTypes.includes(member.image)){
@@ -119,7 +118,7 @@ export function CrewManager(){
             }, 
             portrait: 'sage_portrait',
             inventory: [],
-            specials: ['healing-hymn', 'reveal-weakness'],
+            specials: ['healing_hymn', 'reveal_weakness'],
             attacks: ['meditate', 'cane_strike'],
             passives: ["owls_insight"],
             weaknesses: ['fire', 'electricity', 'ice', 'blood_magic', 'crushing'],
@@ -143,7 +142,7 @@ export function CrewManager(){
             }, 
             portrait: 'rogue_portrait',
             inventory: [],
-            specials: ['deadeye-shot'],
+            specials: ['deadeye_shot'],
             attacks: ['fire_arrow'],
             passives: ['nimble_dodge'],
             weaknesses: ['ice', 'curse', 'crushing'],
@@ -167,7 +166,7 @@ export function CrewManager(){
             }, 
             portrait: 'barbarian_portrait',
             inventory: [],
-            specials: ['berserker-rage'],
+            specials: ['berserker_rage'],
             attacks: ['axe_throw', 'axe_swing', 'spear_throw'],
             passives: ['fury'],
             weaknesses: ['ice', 'curse', 'psionic'],

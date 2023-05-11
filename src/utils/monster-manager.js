@@ -142,10 +142,6 @@ export function MonsterManager(){
         count++
     }
 
-    this.check = () => {
-        console.log('check!!!!!')
-    }
-
     this.getMonster = (monsterString) => {
         let match = null;
         for(let key in this.monsters){

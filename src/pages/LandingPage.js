@@ -1,7 +1,7 @@
 import React, {useState, useEffect} from 'react'
 import { Redirect } from "react-router-dom";
 import { useHistory } from "react-router";
-import {storeMeta, getMeta, getUserName} from '../utils/session-handler';
+import {getMeta} from '../utils/session-handler';
 
 export default function LandingPage() {
   const [navToUserProfile, setNavUserProfile] = useState(false);
@@ -29,8 +29,7 @@ export default function LandingPage() {
     }
   },[history])
   const checkForCrew = () => {
-    const user = getMeta()
-    console.log('user', user)
+    const user = getMeta();
     if(user.crew.length === 0){
       setShowWarning(true)
     }

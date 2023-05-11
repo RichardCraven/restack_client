@@ -26,19 +26,21 @@ export default function LoginPage(props) {
   const [validUser, setValidUser] = useState({})
 
   useEffect(() => {
+    const handleKey = (e) => {
+      if(e.key && e.key.toLowerCase() === 'enter'){
+          if(loginName.length > 0 && loginPass.length > 0){
+              props.login({username: loginName, password:loginPass})
+        }
+      }
+    }
+
     document.addEventListener("keydown", handleKey, false);
     return () => {
         document.removeEventListener("keydown", handleKey);
     }
-  },[paneToggle, loginName, loginPass])
+  },[paneToggle, loginName, loginPass, props])
 
-  const handleKey = (e) => {
-    if(e.key && e.key.toLowerCase() === 'enter'){
-        if(loginName.length > 0 && loginPass.length > 0){
-            props.login({username: loginName, password:loginPass})
-      }
-    }
-  }
+  
 
 
 
@@ -66,7 +68,6 @@ export default function LoginPage(props) {
 
   const handleClick = async (type) => {
     setInvalid(false);
-    console.log(type)
     switch(type){
       case 'login':
         if(paneToggle !== 'login'){
@@ -81,18 +82,9 @@ export default function LoginPage(props) {
 
             setRpass2({x: '200px', opacity: 0})
           }, 90)
-          console.log('setting pane to register')
           setPane('login')
         } else if(loginName.length > 0 && loginPass.length > 0){
-            // const response = await loginRequest({username: loginName, password: loginPass})
-            // if(response.status === 200){
-              // console.log('raw response: ', response.data)
-              // storeSessionData(loginres.userId, loginres.token, loginres.isAdmin, loginres.metadata, loginres.uptodate)
               props.login({username: loginName, password:loginPass})
-              // setNav(true)
-            // } else {
-            //   setInvalid(true)
-            // }
         }
       break;
       case 'register':
@@ -108,7 +100,6 @@ export default function LoginPage(props) {
 
             setRpass2({x: '0px', opacity: 1})
           }, 90)
-          console.log('setting pane to register')
           setPane('register')
         } else {
           if(registerPass1 !== registerPass2){
@@ -123,10 +114,6 @@ export default function LoginPage(props) {
             }
             const registerResponse = await registerRequest({username: registerName, password: registerPass1, isAdmin: true, metadata: JSON.stringify(metadata)})
             if(registerResponse.status === 200){
-              console.log('raw register registerResponse: ', registerResponse.data)
-
-              
-              
               const registerRes = {
                 _id: registerResponse.data._id,
                 // token: registerResponse.data.token,
@@ -135,14 +122,6 @@ export default function LoginPage(props) {
               }
 
               setValidUser(registerRes)
-              // console.log('REGISTER RESPONSE DATA IS ', registerres)
-              // storeSessionData(registerres.token)
-              
-              
-              // props.login(registerRes)
-              // props.loginFrom
-              // setNav(true)
-              
               showRegistrationConfirmation(registerRes)
 
             } else {

@@ -1,12 +1,17 @@
 // import * as images from '../utils/images'
 
 export function CombatManager(){
-    // this.current
-    const attackTypes = [
-        'psionic', 'crushing', 'cutting', 'electricity', 'fire', 'blood_magic', 'ice', 'curse', 'sickness', 'arcane', 'buff',
-        'holy', 
-    ]
-    const attacksMatrix = {
+    // const attackTypes = [
+    //     'psionic', 'crushing', 'cutting', 'electricity', 'fire', 'blood_magic', 'ice', 'curse', 'sickness', 'arcane', 'buff',
+    //     'holy', 
+    // ]
+    this.combatPaused = false;
+    this.pauseCombat = (val) => {
+        console.log('PAUSE COMBAT')
+        this.combatPaused = val
+        Object.values(this.combatants).forEach(e=>e.combatPaused = val)
+    }
+    this.attacksMatrix = {
         claws: {
             type: 'cutting',
             range: 'close'
@@ -53,45 +58,61 @@ export function CombatManager(){
         },
         sword_swing: {
             type: 'cutting',
-            range: 'close'
+            range: 'close',
+            icon: 'sword'
         },
         sword_thrust: {
             type: 'cutting',
-            range: 'close'
+            range: 'close',
+            icon: 'sword'
         },
         dragon_punch: {
             type: 'crushing',
-            range: 'close'
+            range: 'close',
+            icon: 'scepter'
         },
         meditate: {
             type: 'buff',
-            range: 'close'
+            range: 'close',
+            icon: 'scepter'
         },
         fire_arrow: {
             type: 'fire',
-            range: 'far'
+            range: 'far',
+            icon: 'scepter'
         },
         axe_throw: {
             type: 'cutting',
-            range: 'medium'
+            range: 'medium',
+            icon: 'axe'
         },
         axe_swing: {
             type: 'cutting',
-            range: 'close'
+            range: 'close',
+            icon: 'axe'
         },
         spear_throw: {
             type: 'cutting',
-            range: 'far'
+            range: 'far',
+            icon: 'spear'
         },
         flying_lotus: {
             type: 'crushing',
-            range: 'medium'
+            range: 'medium',
+            icon: 'scepter'
         },
         shield_bash: {
             type: 'crushing',
-            range: 'close'
+            range: 'close',
+            icon: 'basic_shield'
+        },
+        cane_strike: {
+            type: 'crushing',
+            range: 'close',
+            icon: 'basic_shield'
         }
     }
+    
     
     this.data = null;
     this.intervalReference = null;
@@ -123,10 +144,20 @@ export function CombatManager(){
 
     //factory functions
     function createFighter(fighter, callbacks, ) {
-        const {acquireTarget, broadcastDataUpdate, pickRandom, hitsTarget, missesTarget, isCombatOver, getTarget} = callbacks;
+        const {
+            acquireTarget, 
+            broadcastDataUpdate, 
+            pickRandom, 
+            hitsTarget, 
+            missesTarget, 
+            isCombatOver, 
+            getTarget,
+            combatPaused
+        } = callbacks;
         return {
             name: fighter.name,
             id: fighter.id,
+            portrait: fighter.portrait,
             level: fighter.level,
             hp: fighter.stats.hp,
             energy: 1,
@@ -137,7 +168,6 @@ export function CombatManager(){
                 vit: fighter.stats.vit,
                 fort: fighter.stats.fort,
                 dex: fighter.stats.dex,
-                vit: fighter.stats.vit,
                 int: fighter.stats.int
             },
             inventory: fighter.inventory,
@@ -151,6 +181,8 @@ export function CombatManager(){
             pendingAttack: null,
             attacking: false,
             attacks: fighter.attacks,
+            targettedBy: [],
+            combatPaused: false,
             talk: function () {
                 console.log('My name is ' 
                 + fighter.name + '!');
@@ -169,7 +201,7 @@ export function CombatManager(){
             turnCycle: function(){
                 let count = 0;
                 let factor = (1/this.stats.dex * 25)
-                let timeToFill = factor * 1000;
+                // let timeToFill = factor * 1000;
                 let increment = (1 / factor)
                 // let increment = Math.floor(10);
                 //     if(this.level > 5) increment = 15
@@ -181,12 +213,13 @@ export function CombatManager(){
 
                 /// monster target offsets monster by 110 * target index
                 
-                let interval = setInterval(()=>{
+                this.interval = setInterval(()=>{
+                    if(this.combatPaused) return
                     count += increment
                     
                     this.tempo = Math.floor((count/100)*100);
 
-                    if(isCombatOver() || this.dead) clearInterval(interval)
+                    if(isCombatOver() || this.dead) clearInterval(this.interval)
                     if(count > 10 && this.nextTargetId === null){
                         // callbacks['acquireTargetCallback'](this);
                         acquireTarget(this);
@@ -196,7 +229,7 @@ export function CombatManager(){
                         // if(this.isMonster){
                             this.attack(target)
                         // }
-                        clearInterval(interval)
+                        clearInterval(this.interval)
                     }
                     // callbacks['acquireTargetCallback'](this);
                     broadcastDataUpdate(this)
@@ -211,12 +244,14 @@ export function CombatManager(){
 
 
     this.broadcastDataUpdate = (caller) => {
+        // if(this.combatPaused) return
         this.updateData(this.combatants)
     }
     this.chooseAttackType = (caller, target) => {
         return this.pickRandom(caller.attacks)
     }
     this.acquireTarget = (caller) => {
+        // if(this.combatPaused) return
         const factor = caller.isMonster ? 100 : 100
         const getDistanceToTarget = (caller, target) => {
             let callerDepth, targetDepth;
@@ -259,7 +294,8 @@ export function CombatManager(){
                     let availableSlot = goDown ? caller.position + 1 : caller.position - 1;
                     let slotFound = false;
                     while(!slotFound && availableSlot ){
-                        if(teamates.some(t=>t.position === availableSlot)){
+                        let reference = availableSlot
+                        if(teamates.some(t=>t.position === reference)){
                             if(goDown){
                                 availableSlot++
                             } else if(!goDown){
@@ -275,11 +311,13 @@ export function CombatManager(){
             })
             // targetIndex = Object.values(this.combatants).filter(e=> e.isMonster).indexOf(target)
         }
-
+        this.clearTargetListById(caller.id)
+        target.targettedBy.push(caller.id)
+        // console.log('target: ', target, 'now combartants:', this.combatants)
         let attack = this.chooseAttackType(caller, target)
-        caller.pendingAttack = attacksMatrix[attack];
+        caller.pendingAttack = this.attacksMatrix[attack];
         let distanceToTarget = getDistanceToTarget(caller, target);
-        if(attacksMatrix[attack].range === 'close' && distanceToTarget < 500){
+        if(this.attacksMatrix[attack].range === 'close' && distanceToTarget < 500){
             while(distanceToTarget < 550){
                 caller.depth++
                 distanceToTarget = getDistanceToTarget(caller, target);
@@ -287,6 +325,12 @@ export function CombatManager(){
         }
         caller.distanceToTarget = `calc(100% - ${distanceToTarget}px)`
         caller.nextTargetId = target.id;
+    }
+    this.clearTargetListById = (targetId) => {
+        const enemies = Object.values(this.combatants).filter(e=>e.isMonster || e.isMinion )
+        enemies.forEach(e=>{
+            e.targettedBy = e.targettedBy.filter(id=> id !== targetId)
+        })
     }
     this.initiateAttack = (id) => {
         let combatant = this.combatants[id];
@@ -334,6 +378,8 @@ export function CombatManager(){
 
     this.targetKilled = (combatant) => {
         combatant.dead = true;
+        this.clearTargetListById(combatant.id)
+
         const allMonstersDead = Object.values(this.combatants).filter(e=>e.isMonster && !e.dead).length === 0;
         const allCrewDead = Object.values(this.combatants).filter(e=>!e.isMonster && !e.dead).length === 0;
         if(allMonstersDead || allCrewDead){
@@ -358,7 +404,8 @@ export function CombatManager(){
             missesTarget: this.missesTarget,
             // combatOver: this.combatOver
             isCombatOver: this.combatOverCheck,
-            getTarget: this.getTarget
+            getTarget: this.getTarget,
+            // combatPaused: this.combatPaused
         }
         this.data = data;
         this.combatants = {};
@@ -387,6 +434,7 @@ export function CombatManager(){
         // })
 
         this.combatants[monster.id] = monster;
+        console.log('combatants:', this.combatants)
         this.broadcastDataUpdate();
         Object.values(this.combatants).forEach((combatant)=>{
             combatant.turnCycle();

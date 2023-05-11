@@ -38,12 +38,12 @@ class DungeonPage extends React.Component {
             activeInventoryItem: null,
             keysLocked: false,
             monster: null,
-            crewSize: 0
+            crewSize: 0,
+            paused: false
         }
     }
     
     componentWillMount(){
-        console.log('component will mount')
         let tileSize = this.getTileSize(),
             boardSize = tileSize*15;
         this.initializeListeners();
@@ -54,29 +54,22 @@ class DungeonPage extends React.Component {
             arr.push([])
         }
         const meta = getMeta();
-        console.log('meta:', meta)
         this.props.boardManager.establishAvailableItems(this.props.inventoryManager.items)
         let inv = {}
         if(!meta || !meta.dungeonId){
             console.log('no dungeon id, make new dungeon')
             this.loadNewDungeon();
         } else {
-            console.log('dunbgeon active, user inventory:', meta.inventory)
-            // const sampleItems = ['volkas_wand', 'spartan_helm', 'sayan_amulet']
             // meta.inventory = []
             this.props.inventoryManager.initializeItems(meta.inventory ? meta.inventory : [])
             // this.props.inventoryManager.initializeItems([])
 
-            console.log('meta:', meta.crew)
-
-            
             this.props.crewManager.initializeCrew(meta.crew ? meta.crew : [])
 
 
             this.props.inventoryManager.inventory.forEach((e,i)=>{
                 inv[i]= ''
             })
-            console.log('ok right now, inventory: ', this.props.inventoryManager.inventory)
             // debugger
             this.loadExistingDungeon(meta.dungeonId)
         }
@@ -98,13 +91,17 @@ class DungeonPage extends React.Component {
     addItemToInventory = (tile) => {
         const tileContains = tile.contains;
         this.props.inventoryManager.addItem(tileContains)
+        const matrix = this.state.inventoryHoverMatrix;
         this.props.inventoryManager.inventory.forEach((e,i)=>{
-            this.state.inventoryHoverMatrix[i] = '';
+            matrix[i] = '';
         })
         this.displayMessage(`You found a ${tileContains}!`)
+        this.setState({
+            inventoryHoverMatrix: matrix
+        })
     }
     updateDungeon = async (dungeon) => {
-        const res = await updateDungeonRequest(dungeon.id, dungeon);
+        await updateDungeonRequest(dungeon.id, dungeon);
     }
     messaging = (message) => {
         this.displayMessageAndHold(message)
@@ -139,7 +136,7 @@ class DungeonPage extends React.Component {
         })
     }
     componentDidMount(){
-        const callbacks = [this.addItemToInventory]
+        // const callbacks = [this.addItemToInventory]
         // this.props.boardManager.establishCallbacks(callbacks)
         this.props.boardManager.establishAddItemToInventoryCallback(this.addItemToInventory)
         this.props.boardManager.establishUpdateDungeonCallback(this.updateDungeon)
@@ -149,7 +146,6 @@ class DungeonPage extends React.Component {
         this.props.boardManager.establishLockKeysCallback(this.lockKeys)
         this.props.boardManager.establishSetMonsterCallback(this.setMonster)
 
-        this.props.monsterManager.check()
         window.addEventListener('beforeunload', this.componentCleanup)
     }
     componentWillUnmount(){
@@ -248,9 +244,19 @@ class DungeonPage extends React.Component {
 
     // transform: perspective(3cm) rotateX(16deg) rotateY(0deg) rotateZ(0deg)
 
-    keyDownHandler = ({ key }) => {
+    keyDownHandler = ({ key, code }) => {
         let newTiles = [], overlayTiles = [];
+        if(code === 'Space'){
+            let paused = !this.state.paused;
+            // console.log('paused now:', paused)
+            this.props.combatManager.pauseCombat(paused)
+            this.setState({
+                paused
+            })
+
+        }
         if(this.state.keysLocked) return
+        console.log('key:', key, 'code:', code)
         switch(key){
             case 'ArrowUp':
                 this.props.boardManager.moveUp();
@@ -294,7 +300,7 @@ class DungeonPage extends React.Component {
                 })
             break;
             default:
-                console.log(key)
+                // console.log(key === ' ')
             break;
         }
     }
@@ -418,17 +424,11 @@ class DungeonPage extends React.Component {
         const newDungeonRes = await addDungeonRequest(newDungeonPayload);
         selectedDungeon = JSON.parse(newDungeonRes.data.content);
 
-        selectedDungeon.id = newDungeonRes.data._id
-        console.log('console parsed:', JSON.parse(newDungeonRes.data.content))
-        //   console.log('newDungeonRes', newDungeonRes, 'data:', newDungeonRes.data.content)
-          console.log('!!!!selectedDungeon:', selectedDungeon, 'spawn points: ', selectedDungeon.spawn_points)
-        //   return
-        // debugger
-        // spawnPoint = selectedDungeon.spawn_points[Math.floor(Math.random()*spawnList.length)]
+        selectedDungeon.id = newDungeonRes.data._id;
+        spawnPoint = selectedDungeon.spawn_points[Math.floor(Math.random()*spawnList.length)]
         spawnPoint = selectedDungeon.spawn_points[1]
-
-        // spawn at index 18
-        console.log('spawn point:', spawnPoint)
+        // ^ remove later
+        
         if(spawnPoint){
             
             this.props.boardManager.setDungeon(selectedDungeon)
@@ -436,20 +436,20 @@ class DungeonPage extends React.Component {
 
             // initializeTilesFromMap
 
-            console.log('initialize with spawn point:', spawnPoint);
+            // console.log('initialize with spawn point:', spawnPoint);
             let sp = spawnPoint.locationCode.split('_');
             const levelId =  spawnPoint.level;
             const level = selectedDungeon.levels.find(e=>e.id === levelId)
             const miniboardIndex = spawnPoint.miniboardIndex
             const orientation = sp[4];
             const spawnTileIndex = spawnPoint.id;
-            console.log('levelId:', levelId, 'level', level, 'miniboard:', miniboardIndex, 'orientation:', orientation, 'tile id:', spawnTileIndex);
+            // console.log('levelId:', levelId, 'level', level, 'miniboard:', miniboardIndex, 'orientation:', orientation, 'tile id:', spawnTileIndex);
             const board = orientation === 'F' ? level.front.miniboards[miniboardIndex] : (orientation === 'B' ? level.back.miniboards[miniboardIndex] : null)
             if(board === null){
                 console.log('board is null, investigate');
                 debugger
             }
-            console.log('board:', board);
+            // console.log('board:', board);
 
             const meta = getMeta()
             const userId = getUserId()
@@ -472,10 +472,6 @@ class DungeonPage extends React.Component {
             await updateUserRequest(userId, meta)
 
 
-            console.log('spawnPoint::: ', spawnPoint)
-            console.log('spawnPoint.boardIndex::: ', spawnPoint.boardIndex)
-            console.log('spawnPoint.tileIndex::: ', spawnPoint.tileIndex)
-            console.log('meta::: ', meta)
 
 
             this.props.boardManager.setCurrentLevel(level);
@@ -492,13 +488,10 @@ class DungeonPage extends React.Component {
         }
     }
     loadExistingDungeon = async (dungeonId) => {
-        console.log('load existing dungeon', dungeonId);
         const meta = getMeta();
-        const res = await loadDungeonRequest(dungeonId)
-        console.log('res:', res);
+        const res = await loadDungeonRequest(dungeonId);
         const dungeon = JSON.parse(res.data[0].content)
         dungeon.id = res.data[0]._id;
-        console.log('meta:', meta)
         this.props.boardManager.setDungeon(dungeon)
         this.props.boardManager.setCurrentLevel(dungeon.levels.find(l=> l.id === meta.location.levelId));
         this.props.boardManager.setCurrentOrientation(meta.location.orientation);
@@ -688,6 +681,7 @@ class DungeonPage extends React.Component {
                 crew={this.props.crewManager.crew}
                 monster={this.state.monster}
                 battleOver={this.battleOver}
+                paused={this.state.paused}
             ></MonsterBattle>}
             {/* { this.state.keysLocked && <div className="monster-battle-board">
                 <div className="mb-col left-col">

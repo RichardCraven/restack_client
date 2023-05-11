@@ -1,5 +1,4 @@
 export function BoardManager(){
-    console.log('creating board manager')
     this.tiles = [];
     this.overlayTiles = [];
     this.options = [
@@ -156,14 +155,14 @@ export function BoardManager(){
             // console.log('monster:', monster, this.getImage(monster));
             return monster
         }
-        console.log('this.available items:', this.availableItems)
+        // console.log('this.available items:', this.availableItems)
         const getRandomItem = () => {
             const idx = Math.floor(Math.random()*this.availableItems.length),
             item = this.availableItems[idx];
-            console.log('random idx:', idx)
+            // console.log('random idx:', idx)
             return item;
         }
-        console.log('random item: ', getRandomItem())
+        // console.log('random item: ', getRandomItem())
         let spawnCoords = this.getCoordinatesFromIndex(spawnTileIndex);
         let board = this.currentOrientation === 'F' ? this.currentLevel.front.miniboards[boardIndex] : this.currentLevel.back.miniboards[boardIndex]
         this.currentBoard = board;
@@ -173,15 +172,15 @@ export function BoardManager(){
             location: spawnCoords,
             boardIndex: boardIndex
         }
-        console.log('board.tiles:', board.tiles)
+        // console.log('board.tiles:', board.tiles)
         for(let i = 0; i< board.tiles.length; i++){
             let tile = board.tiles[i]
             if(tile.contains === 'monster') tile.contains = getRandomMonster();
             if(tile.contains === 'gate') tile.contains = 'minor_gate';
             if(tile.contains === 'lantern'){
-                console.log('yooooo')
+                // console.log('yooooo')
                 tile.contains = getRandomItem();
-                console.log('now tile contains:', tile.contains)
+                // console.log('now tile contains:', tile.contains)
             }
             this.tiles.push({
                 type: 'board-tile',
@@ -239,7 +238,7 @@ export function BoardManager(){
             case 'way_down':
                 return 'way_down';
             case 'monster':
-                console.log('HANDLE MONSTER INTERACTION', destinationTile)
+                // console.log('HANDLE MONSTER INTERACTION', destinationTile)
                 // return 'impassable';
                 this.setMonster(destinationTile.contains)
                 this.lockKeys(true)
@@ -263,7 +262,6 @@ export function BoardManager(){
         tile.contains = null;
         tile.color = null; 
         this.tiles[tile.id] = tile;
-        let level = this.dungeon.levels.find(e=>e.id === this.currentLevel.id);
         if(this.currentOrientation === 'F'){
             this.dungeon.levels.find(e=>e.id === this.currentLevel.id).front.miniboards.find(b=>b.id === this.currentBoard.id).tiles[tile.id].contains = null;
         } else {
@@ -384,6 +382,8 @@ export function BoardManager(){
             break;
             case 'right':
                 this.playerTile.location[1] = (this.playerTile.location[1]+ 1)
+            break;
+            default:
             break;
         }
         if(interaction === 'door'){
