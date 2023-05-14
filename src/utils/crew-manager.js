@@ -54,7 +54,7 @@ export function CrewManager(){
         {
             image: 'soldier', 
             type: 'soldier',
-            name: 'Greco',
+            name: 'Sardonis',
             id: 123,
             level: 1,
             stats: {
@@ -74,7 +74,7 @@ export function CrewManager(){
             specials: ['shield_wall'],
             attacks: ['sword_swing', 'sword_thrust', 'shield_bash'],
             weaknesses: ['ice', 'electricity', 'blood_magic'],
-            description: "Once the captain of the royal army's legendary vangard battalion, Greco has a reputation for fair leadership and honor."
+            description: "Once the captain of the royal army's legendary vangard battalion, Sardonis has a reputation for fair leadership and honor."
         },
         {
             image: 'monk', 

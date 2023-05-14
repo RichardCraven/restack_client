@@ -13,103 +13,169 @@ export function CombatManager(){
     }
     this.attacksMatrix = {
         claws: {
+            name: 'claws',
             type: 'cutting',
-            range: 'close'
+            range: 'close',
+            cooldown: 1,
+            damage: 2
         },
         bite: {
+            name: 'bite',
             type: 'cutting',
-            range: 'close'
+            range: 'close',
+            cooldown: 1,
+            damage: 2
         },
         crush: {
+            name: 'crush',
             type: 'crushing',
-            range: 'close'
+            range: 'close',
+            cooldown: 3,
+            damage: 3
         },
         tackle: {
+            name: 'tackle',
             type: 'crushing',
-            range: 'close'
+            range: 'close',
+            cooldown: 3,
+            damage: 2
         },
         grasp: {
+            name: 'grasp',
             type: 'crushing',
-            range: 'close'
+            range: 'close',
+            cooldown: 2,
+            damage: 2
         },
         energy_drain: {
+            name: 'energy drain',
             type: 'curse',
-            range: 'medium'
+            range: 'medium',
+            cooldown: 4,
+            damage: 2
         },
         fire_breath: {
+            name: 'fire breath',
             type: 'fire',
-            range: 'medium'
+            range: 'medium',
+            cooldown: 4,
+            damage: 4
         },
         void_lance: {
+            name: 'void lance',
             type: 'psionic',
-            range: 'medium'
+            range: 'medium',
+            cooldown: 4,
+            damage: 6
         },
         magic_missile: {
+            name: 'magic missile',
             type: 'arcane',
-            range: 'far'
+            range: 'far',
+            cooldown: 3,
+            damage: 3
         },
         induce_madness: {
+            name: 'induce weakness',
             type: 'psionic',
-            range: 'far'
+            range: 'far',
+            cooldown: 5,
+            damage: 0
         },
         lightning: {
+            name: 'lightning',
             type: 'electricity',
-            range: 'far'
+            range: 'far',
+            cooldown: 4,
+            damage: 5
         },
         sword_swing: {
+            name: 'sword swing',
             type: 'cutting',
             range: 'close',
-            icon: 'sword'
+            icon: 'sword',
+            cooldown: 3,
+            damage: 3
         },
         sword_thrust: {
+            name: 'sword thrust',
             type: 'cutting',
             range: 'close',
-            icon: 'sword'
+            icon: 'sword',
+            cooldown: 2.5,
+            damage: 2
         },
         dragon_punch: {
+            name: 'dragon punch',
             type: 'crushing',
             range: 'close',
-            icon: 'scepter'
+            icon: 'scepter',
+            cooldown: 3,
+            damage: 3
         },
         meditate: {
+            name: 'meditate',
             type: 'buff',
             range: 'close',
-            icon: 'scepter'
+            icon: 'scepter',
+            cooldown: 5.5,
+            damage: 0
         },
         fire_arrow: {
+            name: 'fire arrow',
             type: 'fire',
             range: 'far',
-            icon: 'scepter'
+            icon: 'scepter',
+            cooldown: 3,
+            damage: 3
         },
         axe_throw: {
+            name: 'axe throw',
             type: 'cutting',
             range: 'medium',
-            icon: 'axe'
+            icon: 'axe',
+            cooldown: 3,
+            damage: 2
         },
         axe_swing: {
+            name: 'axe swing',
             type: 'cutting',
             range: 'close',
-            icon: 'axe'
+            icon: 'axe',
+            cooldown: 3.5,
+            damage: 3
         },
         spear_throw: {
+            name: 'spear throw',
             type: 'cutting',
             range: 'far',
-            icon: 'spear'
+            icon: 'spear',
+            cooldown: 3.2,
+            damage: 4
         },
         flying_lotus: {
+            name: 'flying lotus',
             type: 'crushing',
             range: 'medium',
-            icon: 'scepter'
+            icon: 'scepter',
+            cooldown: 2.5,
+            damage: 4
         },
         shield_bash: {
+            name: 'shield bash',
             type: 'crushing',
             range: 'close',
-            icon: 'basic_shield'
+            icon: 'basic_shield',
+            cooldown: 2.5,
+            damage: 2
         },
         cane_strike: {
+            name: 'cane strike',
             type: 'crushing',
-            range: 'close',
-            icon: 'basic_shield'
+            range: 'far',
+            icon: 'basic_shield',
+            cooldown: 1,
+            damage: 1
         }
     }
     
@@ -142,6 +208,11 @@ export function CombatManager(){
         this.gameOver = cb
     }
 
+    this.formatAttacks = (stringArray) => {
+        return stringArray.map(e=>{
+            return this.attacksMatrix[e]
+        })
+    }
     //factory functions
     function createFighter(fighter, callbacks, ) {
         const {
@@ -152,7 +223,8 @@ export function CombatManager(){
             missesTarget, 
             isCombatOver, 
             getTarget,
-            combatPaused
+            combatPaused,
+            formatAttacks
         } = callbacks;
         return {
             name: fighter.name,
@@ -180,9 +252,10 @@ export function CombatManager(){
             active: false,
             pendingAttack: null,
             attacking: false,
-            attacks: fighter.attacks,
+            attacks: formatAttacks(fighter.attacks),
             targettedBy: [],
             combatPaused: false,
+            readout: '',
             talk: function () {
                 console.log('My name is ' 
                 + fighter.name + '!');
@@ -191,11 +264,12 @@ export function CombatManager(){
                 let connects = pickRandom([true, false])
                 this.active = true;
                 this.attacking = true;
-                if(connects){
+                this.readout = ` attacks with ${this.pendingAttack.name}`
+                // if(connects || this.isMonster){
                     hitsTarget(this)
-                } else {
-                    missesTarget(this)
-                }
+                // } else {
+                //     missesTarget(this)
+                // }
                 broadcastDataUpdate(this)
             },
             turnCycle: function(){
@@ -250,20 +324,32 @@ export function CombatManager(){
     this.chooseAttackType = (caller, target) => {
         return this.pickRandom(caller.attacks)
     }
+    this.getDistanceToTarget = (caller, targetId) => {
+        let callerDepth, targetDepth, target = this.combatants[targetId];
+        if(!target) return 0;
+        const factor = caller.isMonster ? 100 : 100
+        if(caller.isMonster || caller.isMinion){
+            callerDepth = (caller.depth+1) * factor;
+            targetDepth = (target.depth+1) * 100;
+        } else {
+            callerDepth = (caller.depth+1) * 100;
+            targetDepth = (target.depth+1) * factor;
+        }
+        return callerDepth + targetDepth;
+    }
+    this.getDistanceToTargetWidthString = (caller) => {
+        if(!caller) return '0px'
+        let distanceToTarget = this.getDistanceToTarget(caller, caller.nextTargetId),
+        isMonster = this.combatants[caller.nextTargetId].isMonster
+        // if(caller.name === 'Greco'){
+        //     console.log('distanceToTarget: ', distanceToTarget, 'isMonster:', isMonster, 'returning :',`calc(100% - ${distanceToTarget + 100}px)` )
+        // }
+        // return `calc(100% - ${distanceToTarget + (isMonster ? 200 : 100)}px)`
+        return `calc(100% - ${distanceToTarget + 100}px)`
+    }
     this.acquireTarget = (caller) => {
         // if(this.combatPaused) return
-        const factor = caller.isMonster ? 100 : 100
-        const getDistanceToTarget = (caller, target) => {
-            let callerDepth, targetDepth;
-            if(caller.isMonster || caller.isMinion){
-                callerDepth = (caller.depth+1) * factor;
-                targetDepth = (target.depth+1) * 100;
-            } else {
-                callerDepth = (caller.depth+1) * 100;
-                targetDepth = (target.depth+1) * factor;
-            }
-            return callerDepth + targetDepth;
-        }
+        
         let target;
         if(caller.isMonster || caller.isMinion){
             target = this.pickRandom(Object.values(this.combatants).filter(e=> (!e.isMonster && !e.dead)))
@@ -313,17 +399,21 @@ export function CombatManager(){
         }
         this.clearTargetListById(caller.id)
         target.targettedBy.push(caller.id)
-        // console.log('target: ', target, 'now combartants:', this.combatants)
         let attack = this.chooseAttackType(caller, target)
-        caller.pendingAttack = this.attacksMatrix[attack];
-        let distanceToTarget = getDistanceToTarget(caller, target);
-        if(this.attacksMatrix[attack].range === 'close' && distanceToTarget < 500){
+        if(caller.name === 'Sardonis' || caller.name === 'Greco'){
+
+            // console.log('attack: ', attack, 'target: ', target, 'now combartants:', this.combatants)
+        }
+        caller.pendingAttack = attack;
+        let distanceToTarget = this.getDistanceToTarget(caller, target.id);
+        // console.log('distance:', distanceToTarget)
+        if(attack.range === 'close' && distanceToTarget < 500){
             while(distanceToTarget < 550){
                 caller.depth++
-                distanceToTarget = getDistanceToTarget(caller, target);
+                distanceToTarget = this.getDistanceToTarget(caller, target.id);
             }
         }
-        caller.distanceToTarget = `calc(100% - ${distanceToTarget}px)`
+        // caller.distanceToTarget = `calc(100% - ${distanceToTarget + 100}px)`
         caller.nextTargetId = target.id;
     }
     this.clearTargetListById = (targetId) => {
@@ -356,14 +446,20 @@ export function CombatManager(){
         }
         if(target.depth > 0) target.depth--
         // caller.tempo = 1;
+        if(target.wounded){
+            
+            // console.log('target:', target)
+        }
         setTimeout(()=>{
             caller.active = false;
             caller.attacking = false;
             caller.tempo = 1;
             caller.nextTargetId = null;
-            target.wounded = false;
             caller.turnCycle();
         }, 500)
+        setTimeout(()=>{
+            target.wounded = false;
+        }, 1000)
     }
     this.missesTarget = (caller) => {
         // let target = getTarget(caller.nextTargetId)
@@ -405,6 +501,7 @@ export function CombatManager(){
             // combatOver: this.combatOver
             isCombatOver: this.combatOverCheck,
             getTarget: this.getTarget,
+            formatAttacks: this.formatAttacks
             // combatPaused: this.combatPaused
         }
         this.data = data;
@@ -413,13 +510,16 @@ export function CombatManager(){
         this.data.crew.forEach((e, index) => {
             e.position = index;
             e.depth = 0;
-            if(e.name === 'Ulaf'){
+            // if(e.name === 'Ulaf'){
+            //     e.stats.hp = 500
+            // }
+            // if(e.name === 'Yu'){
+            //     e.stats.hp = 100
+            // }
+            if(e.name === 'Greco'){
                 e.stats.hp = 500
+                this.combatants[e.id] = createFighter(e, callbacks);
             }
-            if(e.name === 'Yu'){
-                e.stats.hp = 100
-            }
-            this.combatants[e.id] = createFighter(e, callbacks);
         })
         this.data.monster.position = 0;
         this.data.monster.depth = 0;

@@ -53,6 +53,43 @@
         animation: MonsterHits 1s linear ;
         background-position: 100% 100%;
     }
+    @-webkit-keyframes MonsterHits {
+        0%{background-position:-100% 100%}
+        50%{background-position:50% 100%}
+        100%{background-position:100% 100%}
+    }
+    @-moz-keyframes MonsterHits {
+        0%{background-position:-100% 100%}
+        50%{background-position:50% 100%}
+        100%{background-position:100% 100%}
+    }
+    @keyframes MonsterHits { 
+        0%{background-position:-100% 100%}
+        50%{background-position:50% 100%}
+        100%{background-position:100% 100%}
+    }
+
+    .fighterWoundedAnimation{
+        // box-shadow: 0px 0px 0px red;
+        -webkit-animation: fighterWoundedAnimation 0.5s linear;
+        -moz-animation: fighterWoundedAnimation 0.5s linear;
+        animation: fighterWoundedAnimation 0.5s linear;
+    }
+    @-webkit-keyframes fighterWoundedAnimation{
+        0% {box-shadow: 0px 0px 0px red;}
+        50%{box-shadow: 0px 0px 40px red;}
+        100%{box-shadow: 0px 0px 10px red;}
+    }
+    @-moz-keyframes fighterWoundedAnimation {
+        0% {box-shadow: 0px 0px 0px red;}
+        50%{box-shadow: 0px 0px 40px red;}
+        100%{box-shadow: 0px 0px 10px red;}
+    }
+    @keyframes fighterWoundedAnimation { 
+        0% {box-shadow: 0px 0px 0px red;}
+        50%{box-shadow: 0px 0px 40px red;}
+        100%{box-shadow: 0px 0px 20px red;}
+    }
 
     .monsterWoundedAnimation{
         background: linear-gradient(270deg, transparent, red 0%, transparent 2%);
@@ -154,7 +191,14 @@
                 .fighter-portrait{
                     height: 100px;
                     width: 100px;
+                    border-radius: 100px;
                     cursor: pointer;
+                    // box-shadow: 0px 0px 5px transparent;
+                    // 0 - 40
+                    &.wounded{
+                        // box-shadow: 0px 0px 5px red;
+                        animation: fighterWoundedAnimation 3s ease;
+                    }
                     &.leader-portrait{
                         // height: 150px;
                         // width: 150px;
@@ -204,6 +248,7 @@
             .monster-portrait{
                 height: 200px;
                 width: 200px;
+                border-radius: 200px;
                 pointer-events: initial;
                 position: relative;
                 .targetted-by-container{
@@ -411,6 +456,12 @@
                 color: white;
                 padding-left: 15px;
                 position: relative;
+                .name{
+
+                }
+                .readout {
+                    margin-left: 6px;
+                }
                 .paused-marker{
                     position: absolute;
                     right: 20px;
