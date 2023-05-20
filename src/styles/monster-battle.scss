@@ -475,7 +475,7 @@
             height: 100%;
             flex: auto;
             border: 1px dashed white;
-            .specials-col, .attacks-col{
+            .inventory-col, .specials-col, .attacks-col, .target-col{
                 height: 100%;
                 width: 100px;
                 border: 1px solid maroon;
@@ -484,25 +484,59 @@
                     height: 25px;
                     width: 100%;
                     color: white;
-                    text-align: left;
+                    text-align: center;
                     border-bottom: 1px solid white;
                 }
                 .interaction-tooltip{
                     height: 25px;
                     font-size: 12px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
                 }
                 .interaction-tile-container{
                     height: 100%;
                     width: 100%;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: flex-start;
+                    align-items: center;
+                    .interaction-tile-wrapper{
+                        position: relative;
+                        height: 40px;
+                        width: 40px;
+                        margin-bottom: 5px;
+                    }
+                    .interaction-tile-overlay{
+                        position: absolute;
+                        left: 0;
+                        top: 0;
+                        height: 100%;
+                        // transition: 0.2s;
+                        // background-color: #fdf512;
+                        // background-color: rgb(255, 0, 166);
+                        background-color: green;
+                        opacity: 0.3;
+                        pointer-events: none;
+                        border-right: 1px solid black;
+                    }
                     .interaction-tile{
                         height: 40px;
                         width: 40px;
-                        background-color: lightgrey;
+                        // height: 100%;
+                        // width: 100%;
+                        background-color: whitesmoke;
                         margin-bottom: 3px;
-                        cursor: pointer;
+                        // cursor: pointer;
                         background-size: 100% 100%;
-                        &:hover{
+                        &.available:hover{
                             filter: sepia(1);
+                        }
+                        &.consumable:hover{
+                            filter: sepia(1)
+                        }
+                        &.special:hover{
+                            filter: sepia(1)
                         }
                     }
                 }

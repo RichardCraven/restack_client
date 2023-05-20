@@ -133,6 +133,90 @@ export function MonsterManager(){
             specials: ['possess', 'tesseract'],
             attacks: ['claws', 'induce_madness', 'lightning'],
             weaknesses: ['arcane']
+        },
+        goblin: {
+            type: 'goblin',
+            image_names: ['goblin'],
+            monster_names: ['Wiggit', 'Miggi'],
+            stats: {
+                str: 4,
+                int:2,
+                dex:6,
+                vit:4,
+                fort:3,
+                hp: 18,
+                atk: 3
+            },
+            level: 2,
+            portrait: images['goblin_portrait'],
+            greetings: ['bones for my master!'],
+            deathCries: ['nooooooo'],
+            specials: ['zealotry'],
+            attacks: ['claws', 'bite'],
+            weaknesses: ['crushing', 'cutting', 'fire', 'electricity']
+        },
+        mummy: {
+            type: 'mummy',
+            image_names: ['mummy'],
+            monster_names: ['Kufu', 'Razeset'],
+            stats: {
+                str: 8,
+                int:4,
+                dex:4,
+                vit:8,
+                fort:6,
+                hp: 40,
+                atk: 7
+            },
+            level: 6,
+            portrait: images['mummy_portrait'],
+            greetings: ['time is unending'],
+            deathCries: ['at last'],
+            specials: ['induce_fear'],
+            attacks: ['grasp', 'energy_drain'],
+            weaknesses: ['arcane', 'fire', 'electricity']
+        },
+        troll: {
+            type: 'troll',
+            image_names: ['troll'],
+            monster_names: ['Mundzungu', 'Wugum'],
+            stats: {
+                str: 6,
+                int:4,
+                dex:4,
+                vit:10,
+                fort:2,
+                hp: 58,
+                atk: 7
+            },
+            level: 6,
+            portrait: images['troll_portrait'],
+            greetings: ['you stink of fresh meat'],
+            deathCries: ['*gurgle*'],
+            specials: ['regenerate'],
+            attacks: ['crush', 'bite', 'tackle'],
+            weaknesses: ['fire']
+        },
+        skeleton: {
+            type: 'skeleton',
+            image_names: ['skeleton'],
+            monster_names: ['bones'],
+            stats: {
+                str: 4,
+                int:1,
+                dex:4,
+                vit:5,
+                fort:5,
+                hp: 20,
+                atk: 5
+            },
+            level: 3,
+            portrait: images['skeleton_portrait'],
+            greetings: ['*screech*'],
+            deathCries: ['*screech*'],
+            specials: ['induce_fear'],
+            attacks: ['crush', 'bite', 'tackle'],
+            weaknesses: ['fire']
         }
     }
     let count = 15;

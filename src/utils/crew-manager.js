@@ -18,6 +18,9 @@ export function CrewManager(){
         this.crew = [];
         crew.forEach(member=> { 
             if(this.memberTypes.includes(member.image)){
+                // member.inventory = [
+                //     'major_health_potion'
+                // ]
                 this.crew.push(member)
             }
         })
@@ -95,8 +98,8 @@ export function CrewManager(){
             portrait: 'monk_portrait',
             inventory: [],
             passives: ['diamond_skin'],
-            specials: ['invisibility'],
-            attacks: ['meditate', 'dragon_punch', 'flying_lotus'],
+            specials: ['flying_lotus'],
+            attacks: ['meditate', 'dragon_punch'],
             weaknesses: ['fire', 'electricity', 'ice', 'blood_magic', 'crushing'],
             description: "Yu was born into the dynastic order of the White Serpent, inheriting the secrets of absolute stillness and unyielding motion"
         },

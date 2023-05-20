@@ -183,6 +183,7 @@ import djinn_portrait from '../assets/portraits/monsters/djinn.png'
 import vampire_portrait from '../assets/portraits/monsters/vampire.png'
 import troll_portrait from '../assets/portraits/monsters/troll.png'
 import wraith_portrait from '../assets/portraits/monsters/wraith.png'
+import skeleton_portrait from '../assets/portraits/monsters/skeleton.png'
 
 export {
     monster,
@@ -351,4 +352,5 @@ export {
     vampire_portrait,
     troll_portrait,
     wraith_portrait,
+    skeleton_portrait 
 };

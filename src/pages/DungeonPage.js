@@ -61,7 +61,15 @@ class DungeonPage extends React.Component {
             this.loadNewDungeon();
         } else {
             // meta.inventory = []
-            this.props.inventoryManager.initializeItems(meta.inventory ? meta.inventory : [])
+            let inventory = []
+            let consumables = [{contains: 'minor_health_potion'}, {contains: 'minor_health_potion'}, {contains: 'flail'}, {contains: 'axe'}]
+            for(let i = 0; i < consumables.length; i++){
+                inventory.push(consumables[i])
+            }
+            console.log('inventory:', inventory)
+            // debugger
+            this.props.inventoryManager.initializeItems(inventory)
+            // this.props.inventoryManager.initializeItems(meta.inventory ? meta.inventory : [])
             // this.props.inventoryManager.initializeItems([])
 
             this.props.crewManager.initializeCrew(meta.crew ? meta.crew : [])
@@ -532,8 +540,8 @@ class DungeonPage extends React.Component {
     render(){
         return (
         <div className="dungeon-container">
-            {this.state.showMessage && <div className="message-panel">{this.state.messageToDisplay}</div>}
-            {!this.state.showMessage && <div className="message-panel">{this.props.boardManager.currentBoard.name}</div>}
+            {/* {this.state.showMessage && <div className="message-panel">{this.state.messageToDisplay}</div>} */}
+            {/* {!this.state.showMessage && <div className="message-panel">{this.props.boardManager.currentBoard.name}</div>} */}
             {this.props.boardManager.currentOrientation === 'B' && <div className="dark-mask"></div>}
             <div className={`left-side-panel ${this.state.leftPanelExpanded ? 'expanded' : ''}`}>
                 <div className="expand-collapse-button icon-container" onClick={this.toggleLeftSidePanel}>
@@ -550,7 +558,7 @@ class DungeonPage extends React.Component {
                                         key={i}
                                         id={i}
                                         tileSize={this.state.tileSize}
-                                        image={item.image ? item.image : null}
+                                        image={item.icon ? item.icon : null}
                                         contains={item.contains}
                                         color={item.color}
                                         editMode={false}
@@ -659,7 +667,7 @@ class DungeonPage extends React.Component {
                         // isActiveInventory={this.state.activeInventoryItem?.id === i}
                         // isActiveInventory={this.state.activeInventoryItem?.id === i}
                         tileSize={this.state.tileSize}
-                        image={tile.image ? tile.image : null}
+                        image={tile.image ? tile.image : (tile.icon ? tile.icon : null)}
                         contains={tile.contains}
                         color={tile.color ? tile.color : 'lightgrey'}
                         borders={tile.borders}
@@ -678,6 +686,7 @@ class DungeonPage extends React.Component {
             { this.state.keysLocked && 
             <MonsterBattle
                 combatManager={this.props.combatManager}
+                inventoryManager={this.props.inventoryManager}
                 crew={this.props.crewManager.crew}
                 monster={this.state.monster}
                 battleOver={this.battleOver}
