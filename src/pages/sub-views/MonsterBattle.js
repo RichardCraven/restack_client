@@ -187,6 +187,9 @@ class MonsterBattle extends React.Component {
         console.log('val:', val)
     }
     specialTileClicked = (val) => {
+        console.log('k...', Object.values(this.state.battleData).filter(e=>e.isMonster || e.isMinion));
+
+
         if(val !== null){
             val = val.replace('_', ' ')
         }
@@ -388,12 +391,21 @@ class MonsterBattle extends React.Component {
                             <div className="interaction-header">Target</div>
                             <div className="interaction-tooltip"> </div>
                             <div className="interaction-tile-container">
-                                    {/* {this.state.selectedFighter?.attacks.map((a, i)=>{
-                                        return <div key={i} style={{backgroundImage: "url(" + images[this.props.combatManager.attacksMatrix[a].icon] + ")", cursor: this.state.showCrosshair ? 'crosshair' : ''}} className='interaction-tile' onClick={() => this.attackTileClicked(a)} onMouseEnter={() => this.attackTileHovered(a)} onMouseLeave={() => this.attackTileHovered(null)}>
-                                        
-                                        </div>
-                                    })} */}
+                                {Object.values(this.state.battleData).filter(e=>e.isMonster || e.isMinion).map((a, i)=>{
+                                return <div 
+                                    key={i} 
+                                    style={{backgroundImage: "url(" + a.portrait + ")", cursor: 'pointer'}} 
+                                    className='interaction-tile special' 
+                                    // onClick={() => this.specialTileClicked(a)} 
+                                    // onMouseEnter={() => this.specialTileHovered(a)} 
+                                    // onMouseLeave={() => this.specialTileHovered(null)}
+                                    >
+                                    </div>
+                                })}
                             </div>
+                        </div>
+                        <div className="combo-col">
+
                         </div>
                     </div>
                 </div>
