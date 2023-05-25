@@ -170,7 +170,7 @@
         position: absolute;
         width: 100%;
         // padding-top: 50px;
-        top: 50px;
+        // top: 50px;
         .fighter-content{
             display: flex;
             flex-direction: column;
@@ -202,6 +202,9 @@
                     &.leader-portrait{
                         // height: 150px;
                         // width: 150px;
+                    }
+                    &.selected{
+                        border: 1px solid white;
                     }
                 }
             }
@@ -237,20 +240,35 @@
         // }
         .monster-wrapper{
             width: 100%;
-            display: flex;
+            // display: flex;
             flex-direction: row;
             justify-content: flex-end;
             align-items: center;
+            // position: relative;
             position: absolute;
             transition: 1s;
 
             // border: 1px solid green;
+            display: inline-flex;
+
+            .portrait-wrapper{
+                position: absolute;
+                width: 100px;
+                transition: 1s;
+            }
+
             .monster-portrait, .minion-portrait{
-                height: 200px;
-                width: 200px;
-                border-radius: 200px;
+                // height: 200px;
+                // width: 200px;
+                // border-radius: 200px;
+                height: 100px;
+                width: 100px;
+                border-radius: 100px;
                 pointer-events: initial;
                 position: relative;
+                &.targetted{
+                    border: 1px solid white;
+                }
                 .targetted-by-container{
                     position: absolute;
                     bottom: 0;
@@ -542,8 +560,9 @@
                         &.special:hover{
                             filter: sepia(1)
                         }
-                        &.target{
+                        &.target.targetted{
                             border: 1px solid rgba(255, 255, 255, 0.68);
+
                         }
                     }
                 }

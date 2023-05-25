@@ -22,7 +22,6 @@ class MonsterBattle extends React.Component {
         }
     }
     componentDidMount(){
-        console.log('DID MOUNT', this.props);
         this.props.combatManager.initialize();
         // const crewLeader = this.props.crew.find(e=>e.isLeader)
         this.establishMessageCallback();
@@ -37,33 +36,28 @@ class MonsterBattle extends React.Component {
             minions: this.props.minions
 
         })
-        console.log('cre:', this.props.crew, this.props.crew[0], this.props.crew[0].portrait);
-        // debugger
         setTimeout(()=>{
             this.fighterClicked(this.props.crew[0].id)
         })
     }
+    tabToFighter = () => {
+        let currentIndex = this.props.crew.findIndex(e=>e.id === this.state.selectedFighter.id);
+        let nextIndex = currentIndex === this.props.crew.length-1 ? 0 : currentIndex + 1
+        let nextId = this.props.crew[nextIndex].id
+        const selectedFighter = this.state.battleData[nextId];
+        selectedFighter.portrait = this.props.crew.find(e=>e.id === nextId).portrait
 
+        this.setState({
+            selectedFighter
+        })
+    }
     fighterClicked = (id) => {
-        console.log('battle data:', this.state.battleData, id)
         const selectedFighter = this.state.battleData[id];
         selectedFighter.portrait = this.props.crew.find(e=>e.id === id).portrait
         
         this.setState({
             selectedFighter
         })
-
-
-
-        // console.log('fighterClicked', id)
-        // this.setState({
-        //     catcher: id
-        // })
-        // setTimeout(() => {
-        //     this.setState({
-        //         catcher: null
-        //     })
-        // }, 1000)
     }
     pickRandom = (array) => {
         let index = Math.floor(Math.random() * array.length)
@@ -94,20 +88,8 @@ class MonsterBattle extends React.Component {
     //     })
     // }
     updateIndicatorsMatrix = (indicatorsMatrix) => {
-        console.log('updating indicators matrix', indicatorsMatrix)
         this.setState({
             indicatorsMatrix
-        })
-        console.log(this.state.indicatorsMatrix[this.props.monster.type].hp, '/', this.props.combatManager.monsterHp)
-        console.log('percent:', (this.state.indicatorsMatrix[this.props.monster.type].hp / this.props.combatManager.monsterHp) * 100)
-        setTimeout(()=>{
-            // console.log('this.state.indicatorsMatrix:', this.state.indicatorsMatrix)
-            // console.log('crew leader: ', this.getCrewLeader())
-            // console.log('type:', this.getCrewLeader().type)
-            // console.log(this.state.indicatorsMatrix[this.getCrewLeader().type])
-            // console.log('monster:', this.props.combatManager.data.monster)
-            // console.log('other monster:', this.props.monster, '< -- does this have hp')
-            
         })
     }
     updateBattleDate = (battleData) => {
@@ -237,7 +219,14 @@ class MonsterBattle extends React.Component {
                            }}>
                                     <div className="portrait-wrapper">
                                         <div 
-                                        className={`portrait fighter-portrait ${this.state.battleData[fighter.id]?.wounded ? 'fighterWoundedAnimation' : ''} ${fighter.isLeader ? 'leader-portrait' : ''} ${this.state.battleData[fighter.id]?.dead ? 'dead fighterDeadAnimation' : ''} ${this.state.battleData[fighter.id]?.active ? 'active' : ''}`} 
+                                        className={
+                                            `portrait fighter-portrait 
+                                            ${this.state.selectedFighter?.id === fighter.id ? 'selected' : ''}
+                                            ${this.state.battleData[fighter.id]?.wounded ? 'fighterWoundedAnimation' : ''} 
+                                            ${fighter.isLeader ? 'leader-portrait' : ''} 
+                                            ${this.state.battleData[fighter.id]?.dead ? 'dead fighterDeadAnimation' : ''} 
+                                            ${this.state.battleData[fighter.id]?.active ? 'active' : ''}`
+                                        } 
                                         style={{
                                             backgroundImage: "url(" + images[fighter.portrait] + ")", 
                                             filter: `saturate(${((this.state.battleData[fighter.id]?.hp / fighter.stats.hp) * 100) / 2}) 
@@ -278,7 +267,7 @@ class MonsterBattle extends React.Component {
                     style=
                     {{
                         top: `${this.state.battleData[this.props.monster.id]?.position * 110}px`,
-                        right: `${this.state.battleData[this.props.monster.id]?.depth * 100}px`
+                        left: `0`
                     }}>
                         <div className={`action-bar-wrapper}`} 
                              style={{width: this.state.battleData[this.props.monster.id]?.targetId ? this.props.combatManager.getDistanceToTargetWidthString(this.state.battleData[this.props.monster.id]) : '0px'}}>
@@ -286,13 +275,17 @@ class MonsterBattle extends React.Component {
 
                             </div>
                         </div>
-                        <div className="portrait-wrapper">
+                        <div 
+                        className="portrait-wrapper"
+                        style={{left: `${this.state.battleData[this.props.monster.id]?.depth * 100}px`,}}
+                        >
                             <div 
                             className={
                                 `portrait monster-portrait 
                                 ${this.state.battleData[this.props.monster.id]?.active ? 'active' : ''} 
                                 ${this.state.battleData[this.props.monster.id]?.dead ? 'dead monsterDeadAnimation' : ''}
-                                ${this.state.battleData[this.props.monster.id]?.wounded ? 'fighterWoundedAnimation' : ''}`
+                                ${this.state.battleData[this.props.monster.id]?.wounded ? 'fighterWoundedAnimation' : ''}
+                                ${this.state.selectedFighter?.targetId === this.props.monster.id ? 'targetted' : ''}`
                             } 
                             style={{
                                 backgroundImage: "url(" + this.props.monster.portrait + ")", 
@@ -329,7 +322,7 @@ class MonsterBattle extends React.Component {
                                 style=
                                 {{
                                     top: `${this.state.battleData[minion.id]?.position * 110}px`,
-                                    right: `${this.state.battleData[minion.id]?.depth * 100}px`
+                                    left: `0`
                                 }}>
                                     <div className={`action-bar-wrapper}`} 
                                         style={{width: this.state.battleData[minion.id]?.targetId ? this.props.combatManager.getDistanceToTargetWidthString(this.state.battleData[minion.id]) : '0px'}}>
@@ -337,13 +330,17 @@ class MonsterBattle extends React.Component {
                                             {/* {minion.id} */}
                                         </div>
                                     </div>
-                                    <div className="portrait-wrapper">
+                                    <div 
+                                    className="portrait-wrapper"
+                                    style={{left: `${this.state.battleData[minion.id]?.depth * 100}px`}}
+                                    >
                                         <div 
                                         className={
                                             `portrait minion-portrait 
                                             ${this.state.battleData[minion.id]?.active ? 'active' : ''} 
                                             ${this.state.battleData[minion.id]?.dead ? 'dead monsterDeadAnimation' : ''}
-                                            ${this.state.battleData[minion.id]?.wounded ? 'fighterWoundedAnimation' : ''}`
+                                            ${this.state.battleData[minion.id]?.wounded ? 'fighterWoundedAnimation' : ''}
+                                            ${this.state.selectedFighter?.targetId === minion.id ? 'targetted' : ''}`
                                         } 
                                         style={{
                                             backgroundImage: "url(" + minion.portrait + ")", 
@@ -457,7 +454,7 @@ class MonsterBattle extends React.Component {
                                 return <div 
                                     key={i} 
                                     style={{backgroundImage: "url(" + a.portrait + ")", cursor: this.state.showCrosshair ? 'crosshair' : ''}} 
-                                    className='interaction-tile target' 
+                                    className={`interaction-tile target ${this.state.selectedFighter?.targetId === a.id ? 'targetted' : ''}`} 
                                     onClick={() => this.targetTileClicked(a)} 
                                     // onMouseEnter={() => this.specialTileHovered(a)} 
                                     // onMouseLeave={() => this.specialTileHovered(null)}

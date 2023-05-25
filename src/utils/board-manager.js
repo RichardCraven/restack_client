@@ -91,8 +91,8 @@ export function BoardManager(){
     this.establishRefreshCallback = (callback) => {
         this.refreshTiles = callback;
     }
-    this.establishLockKeysCallback = (callback) => {
-        this.lockKeys = callback;
+    this.establishTriggerMonsterBattleCallback = (callback) => {
+        this.triggerMonsterBattle = callback;
     }
     this.setActiveInventoryItem = (e) => {
         console.log('setting avtive inv item:', e)
@@ -241,7 +241,7 @@ export function BoardManager(){
                 // console.log('HANDLE MONSTER INTERACTION', destinationTile)
                 // return 'impassable';
                 this.setMonster(destinationTile.contains)
-                this.lockKeys(true)
+                this.triggerMonsterBattle(true)
             break;
             case 'minor_gate':
                 console.log('handle gate')

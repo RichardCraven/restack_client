@@ -1,5 +1,5 @@
 // import * as images from '../utils/images'
-
+const MAX_DEPTH = 6
 export function CombatManager(){
     // const attackTypes = [
     //     'psionic', 'crushing', 'cutting', 'electricity', 'fire', 'blood_magic', 'ice', 'curse', 'sickness', 'arcane', 'buff',
@@ -295,7 +295,6 @@ export function CombatManager(){
         })
     }
     this.formatSpecials = (stringArray) => {
-        console.log( this.specialsMatrix, stringArray[0], 'special:', this.specialsMatrix[stringArray[0]])
         return stringArray.map(e=>{
             return this.specialsMatrix[e]
         })
@@ -386,7 +385,6 @@ export function CombatManager(){
                         // if(this.isMonster){
                             // }
                         if(this.pendingAttack.cooldown_position !== 100){
-                            console.log(this.name, 'ok wait for attack')
                             this.waitForAttack()
                         } else {
                             this.attack(target)
@@ -442,10 +440,7 @@ export function CombatManager(){
             // }
         })
         this.data.monster.position = 0;
-        this.data.monster.depth = 0;
-        // if(this.data.monster.closeRange)
-
-        console.log('data.monster:', this.data.monster)
+        this.data.monster.depth = MAX_DEPTH;
         let monster = createFighter(this.data.monster, callbacks);
         monster.isMonster = true;
         this.combatants[monster.id] = monster;
@@ -454,23 +449,15 @@ export function CombatManager(){
         if(this.data.minions){
             let position = 2;
             this.data.minions.forEach(e=>{
-                console.log('position: ', position, typeof position)
-                
                 e.position = position;
-                // let string = e.id.toString() + '00' + e.position.toString()
-                // console.log('string: ', string);
-                // e.id = Number(string)
                 position++
-                e.depth = 0;
-                console.log('creating minion with this data:', e)
+                e.depth = MAX_DEPTH;
                 let m = createFighter(e, callbacks)
                 m.isMinion = true;
                 this.combatants[m.id] = m;
             })
         }
 
-        
-        console.log('combatants:', this.combatants)
 
         Object.values(this.combatants).forEach((combatant)=>{
             combatant.attacks.forEach((a)=>{
@@ -478,6 +465,7 @@ export function CombatManager(){
             })
             combatant.turnCycle();
         })
+        // console.log('combatants: ', this.combatants);
         this.broadcastDataUpdate();
     }
 
@@ -537,15 +525,18 @@ export function CombatManager(){
         atk['cooldown_position'] = 0;
         // val = atk.cooldown
         let totalTime = atk.cooldown * 1000;
-        let scopeVar = 0;
+        let scopeVar = 0, that = this;
         const intervalRef = setInterval(()=>{
-            scopeVar += 100;
+            
+            let ratio = 0;
             // if(caller.name === 'Greco')console.log('scope var:', scopeVar)
             // if(caller.name === 'Greco') console.log('totalTime:', totalTime)
             // console.log('scopeVar / totalTime:', scopeVar / totalTime)
-            let ratio = Math.ceil((scopeVar / totalTime) * 100);
-
-            atk['cooldown_position'] = ratio;
+            if(!that.combatPaused){
+                scopeVar += 100;
+                ratio = Math.ceil((scopeVar / totalTime) * 100);
+                atk['cooldown_position'] = ratio;
+            }
             // if(caller.name === 'Greco')console.log('ratio:', ratio)
             if(ratio >= 100){
                 scopeVar = 0;
@@ -557,14 +548,22 @@ export function CombatManager(){
         let callerDepth, targetDepth, target = this.combatants[targetId];
         if(!target) return 0;
         const factor = caller.isMonster ? 100 : 100
-        if(caller.isMonster || caller.isMinion){
-            callerDepth = (caller.depth+1) * factor;
-            targetDepth = (target.depth+1) * 100;
-        } else {
-            callerDepth = (caller.depth+1) * 100;
-            targetDepth = (target.depth+1) * factor;
-        }
-        return callerDepth + targetDepth;
+
+        let d = Math.abs(caller.depth - target.depth) - 1
+        // if(caller.name === 'bones' && caller.id === 810){
+        //     console.log('bones, calculating distance, caller.depth: ', caller.depth, 'target.depth: ', target.depth)
+        //     console.log('target:', target, 'caller:', caller)
+        //     console.log('calculated to: ', d)
+        // }
+        return d
+        // if(caller.isMonster || caller.isMinion){
+        //     callerDepth = (caller.depth+1) * factor;
+        //     targetDepth = (target.depth+1) * 100;
+        // } else {
+        //     callerDepth = (caller.depth+1) * 100;
+        //     targetDepth = (target.depth+1) * factor;
+        // }
+        // return callerDepth + targetDepth;
     }
     this.getDistanceToTargetWidthString = (caller) => {
         if(!caller) return '0px'
@@ -578,11 +577,11 @@ export function CombatManager(){
     }
     this.acquireTarget = (caller) => {
         // if(this.combatPaused) return
-        
+        if(caller.dead) return;
         let target;
         if(caller.isMonster || caller.isMinion){
-            target = this.pickRandom(Object.values(this.combatants).filter(e=> (!e.isMonster && !e.dead)))
-            let sorted = Object.values(this.combatants).filter(e=> (!e.isMonster && !e.dead)).sort((a,b)=>b.depth - a.depth)
+            // target = this.pickRandom(Object.values(this.combatants).filter(e=> ((!e.isMonster && !e.isMinion) && !e.dead)))
+            let sorted = Object.values(this.combatants).filter(e=> ((!e.isMonster && !e.isMinion) && !e.dead)).sort((a,b)=>b.depth - a.depth)
             target = sorted[0]
             if(!target){
                 console.log('NO MORE TARGETS FOR MONSTER!')
@@ -651,6 +650,13 @@ export function CombatManager(){
             caller.position = position;
             teamates.forEach((e)=>{
                 if(e.position === caller.position){
+                    if(e.depth === caller.depth){
+                        if(caller.depth !== 0){
+                            caller.depth--
+                        } else {
+                            caller.depth++
+                        }
+                    }
                     let goDown = this.pickRandom([true,false])
                     let availableSlot = goDown ? caller.position + 1 : caller.position - 1;
                     let slotFound = false;
@@ -685,11 +691,25 @@ export function CombatManager(){
 
             // console.log('attack: ', attack, 'target: ', target, 'caller:', caller)
         }
-        if(attack.range === 'close' && distanceToTarget < 580){
-            while(distanceToTarget < 630){
-                caller.depth++
+        // if(caller.name === 'bones' && caller.id === 810){
+        //     console.log('PRE bones, distance to target: ', distanceToTarget)
+        // }
+        if(attack.range === 'close' && distanceToTarget > 2){
+            if(caller.name === 'bones' && caller.id === 810){
+                console.log('bones, distance to ', target.name, distanceToTarget)
+            }
+            while(distanceToTarget > 1){
+                if(caller.isMinion || caller.isMonster){
+                    caller.depth--
+
+                } else {
+                    caller.depth++
+                }
                 distanceToTarget = this.getDistanceToTarget(caller, target.id);
             }
+        }
+        if(caller.name === 'bones' && caller.id === 810){
+            console.log('bones, depth is nowt: ', caller.depth)
         }
         caller.targetId = target.id;
     }
@@ -721,12 +741,9 @@ export function CombatManager(){
             target.hp = 0;
             this.targetKilled(target)
         }
-        if(target.depth > 0) target.depth--
-        // caller.tempo = 1;
-        if(target.wounded){
-            
-            // console.log('target:', target)
-        }
+        if((target.isMinion || target.isMonster) && target.depth < MAX_DEPTH) target.depth++
+        if((!target.isMinion && !target.isMonster) && target.depth > 0) target.depth--
+        
         setTimeout(()=>{
             caller.active = false;
             caller.attacking = false;

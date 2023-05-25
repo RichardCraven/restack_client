@@ -14,9 +14,11 @@ import {
   import  CIcon  from '@coreui/icons-react'
   import * as images from '../utils/images'
 
+
 class DungeonPage extends React.Component {
     constructor(props){
         super(props)
+        this.monsterBattleComponentRef = React.createRef()
         this.state = {
             tileSize: 0,
             boardSize: 0,
@@ -37,6 +39,7 @@ class DungeonPage extends React.Component {
             pending: null,
             activeInventoryItem: null,
             keysLocked: false,
+            inMonsterBattle: false,
             monster: null,
             crewSize: 0,
             paused: false
@@ -125,9 +128,11 @@ class DungeonPage extends React.Component {
             overlayTiles: newOverlayTiles
         })
     }
-    lockKeys = (bool) => {
+    triggerMonsterBattle = (bool) => {
+        console.log('trigger monster battle')
         this.setState({
-            keysLocked: bool
+            keysLocked: bool,
+            inMonsterBattle: bool
         })
     }
     setMonster = (monsterString) => {
@@ -174,7 +179,7 @@ class DungeonPage extends React.Component {
         this.props.boardManager.establishPendingCallback(this.setPending)
         this.props.boardManager.establishMessagingCallback(this.messaging)
         this.props.boardManager.establishRefreshCallback(this.refreshTiles)
-        this.props.boardManager.establishLockKeysCallback(this.lockKeys)
+        this.props.boardManager.establishTriggerMonsterBattleCallback(this.triggerMonsterBattle)
         this.props.boardManager.establishSetMonsterCallback(this.setMonster)
 
         window.addEventListener('beforeunload', this.componentCleanup)
@@ -275,7 +280,8 @@ class DungeonPage extends React.Component {
 
     // transform: perspective(3cm) rotateX(16deg) rotateY(0deg) rotateZ(0deg)
 
-    keyDownHandler = ({ key, code }) => {
+    keyDownHandler = (event) => {
+        let key = event.key, code = event.code
         let newTiles = [], overlayTiles = [];
         if(code === 'Space'){
             let paused = !this.state.paused;
@@ -284,12 +290,15 @@ class DungeonPage extends React.Component {
             this.setState({
                 paused
             })
-
         }
-        if(this.state.keysLocked) return
-        console.log('key:', key, 'code:', code)
         switch(key){
+            case 'Tab':
+                event.preventDefault();
+
+                if(this.monsterBattleComponentRef.current) this.monsterBattleComponentRef.current.tabToFighter();
+            break;
             case 'ArrowUp':
+                if(this.state.keysLocked) return
                 this.props.boardManager.moveUp();
                 newTiles = [...this.props.boardManager.tiles]
                 overlayTiles = this.props.boardManager.overlayTiles;
@@ -301,6 +310,7 @@ class DungeonPage extends React.Component {
                 
             break;
             case 'ArrowDown':
+                if(this.state.keysLocked) return
                 this.props.boardManager.moveDown();
                 newTiles = [...this.props.boardManager.tiles]
                 overlayTiles = this.props.boardManager.overlayTiles;
@@ -311,6 +321,7 @@ class DungeonPage extends React.Component {
                 })
             break;
             case 'ArrowLeft':
+                if(this.state.keysLocked) return
                 this.props.boardManager.moveLeft();
                 newTiles = [...this.props.boardManager.tiles]
                 overlayTiles = this.props.boardManager.overlayTiles;
@@ -321,6 +332,7 @@ class DungeonPage extends React.Component {
                 })
             break;
             case 'ArrowRight':
+                if(this.state.keysLocked) return
                 this.props.boardManager.moveRight();
                 newTiles = [...this.props.boardManager.tiles]
                 overlayTiles = this.props.boardManager.overlayTiles;
@@ -359,7 +371,6 @@ class DungeonPage extends React.Component {
         this.props.crewManager.crew.forEach((e,i)=>{
             crew[i] = '';
         })
-        console.log('tileProps', tileProps)
         if(tileProps) crew[tileProps.id] = tileProps.contains;
         this.setState({
             crewHoverMatrix: crew
@@ -377,13 +388,11 @@ class DungeonPage extends React.Component {
         // }
     }
     handleMemberClick = (member) => {
-        console.log('member clicked:', member.data)
         this.setState({
             selectedCrewMember: member.data
         })
     }
     handleItemClick = (item) => {
-        console.log('pending:', this.state.pending)
         this.setState({
             activeInventoryItem: item
         })
@@ -708,6 +717,7 @@ class DungeonPage extends React.Component {
             </div>}
             { this.state.keysLocked && 
             <MonsterBattle
+                ref={this.monsterBattleComponentRef}
                 combatManager={this.props.combatManager}
                 inventoryManager={this.props.inventoryManager}
                 crew={this.props.crewManager.crew}

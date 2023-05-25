@@ -24,9 +24,8 @@ class DungeonView extends React.Component {
 
     timer;
     onClickHandler = event => {
-        console.log('evt');
         clearTimeout(this.timer);
-
+ 
         if (event.detail === 1) {
             console.log('SINGLE CLICK!');
             // this.timer = setTimeout(this.props.onClick, 200)
