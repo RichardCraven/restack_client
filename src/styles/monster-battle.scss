@@ -245,7 +245,7 @@
             transition: 1s;
 
             // border: 1px solid green;
-            .monster-portrait{
+            .monster-portrait, .minion-portrait{
                 height: 200px;
                 width: 200px;
                 border-radius: 200px;
@@ -267,6 +267,10 @@
                         width: 20px;
                         background-size: 100% 100%;
                     }
+                }
+                &.minion-portrait{
+                    height: 100px;
+                    width: 100px;
                 }
             }
             .action-bar-wrapper{
@@ -537,6 +541,9 @@
                         }
                         &.special:hover{
                             filter: sepia(1)
+                        }
+                        &.target{
+                            border: 1px solid rgba(255, 255, 255, 0.68);
                         }
                     }
                 }

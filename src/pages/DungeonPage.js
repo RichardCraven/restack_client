@@ -130,17 +130,40 @@ class DungeonPage extends React.Component {
             keysLocked: bool
         })
     }
-    setMonster = (monster) => {
-        console.log('sert monster:', monster)
-        let monsterData = this.props.monsterManager.getMonster(monster)
-        if(!monsterData) monsterData = this.props.monsterManager.getRandomMonster()
-        let monsterName = this.pickRandom(monsterData.monster_names)
-        monsterData.name = monsterName
-        monsterData.inventory = [];
-        console.log('monster data:', monsterData)
+    setMonster = (monsterString) => {
+        console.log('sert monster:', monsterString)
+        monsterString = 'mummy'
+        let monster = this.props.monsterManager.getMonster(monsterString), 
+        minions = null;
+
+        if(monster && monster.minions){
+            minions = [];
+            monster.minions.forEach((e,i)=>{
+                const minion = this.props.monsterManager.getMonster(e)
+                // let str = minion.id.toString()
+                // str += '00' + c.toString() 
+                minion.id = minion.id+i+700
+                let minionName = this.pickRandom(minion.monster_names)
+                minion.name = minionName
+                minion.inventory = [];
+
+                minions.push(minion)
+                // monions.forEach(m=>{
+                //     m.isMinion = true;
+                // })
+            })
+        }
+
+
+        if(!monster) monster = this.props.monsterManager.getRandomMonster()
+        let monsterName = this.pickRandom(monster.monster_names)
+        monster.name = monsterName
+        monster.inventory = [];
+        console.log('monster data:', monster)
         
         this.setState({
-            monster: monsterData
+            monster,
+            minions
         })
     }
     componentDidMount(){
@@ -689,6 +712,7 @@ class DungeonPage extends React.Component {
                 inventoryManager={this.props.inventoryManager}
                 crew={this.props.crewManager.crew}
                 monster={this.state.monster}
+                minions={this.state.minions}
                 battleOver={this.battleOver}
                 paused={this.state.paused}
             ></MonsterBattle>}

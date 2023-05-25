@@ -295,6 +295,7 @@ export function CombatManager(){
         })
     }
     this.formatSpecials = (stringArray) => {
+        console.log( this.specialsMatrix, stringArray[0], 'special:', this.specialsMatrix[stringArray[0]])
         return stringArray.map(e=>{
             return this.specialsMatrix[e]
         })
@@ -308,7 +309,7 @@ export function CombatManager(){
             hitsTarget, 
             missesTarget, 
             isCombatOver, 
-            getTarget,
+            getCombatant,
             combatPaused,
             formatAttacks,
             formatSpecials,
@@ -381,11 +382,12 @@ export function CombatManager(){
                     }
                     if(count >= 100){
                         clearInterval(this.interval)
-                        let target = getTarget(this.targetId)
+                        let target = getCombatant(this.targetId)
                         // if(this.isMonster){
                             // }
                         if(this.pendingAttack.cooldown_position !== 100){
-                            
+                            console.log(this.name, 'ok wait for attack')
+                            this.waitForAttack()
                         } else {
                             this.attack(target)
                         }
@@ -397,7 +399,7 @@ export function CombatManager(){
             waitForAttack: function(){
                 const waitInterval = setInterval(()=>{
                     if(this.pendingAttack.cooldown_position === 100){
-                        let target = getTarget(this.targetId)
+                        let target = getCombatant(this.targetId)
                         this.attack(target)
                         clearInterval(waitInterval)
                     }
@@ -415,7 +417,7 @@ export function CombatManager(){
             missesTarget: this.missesTarget,
             // combatOver: this.combatOver
             isCombatOver: this.combatOverCheck,
-            getTarget: this.getTarget,
+            getCombatant: this.getCombatant,
             formatAttacks: this.formatAttacks,
             formatSpecials: this.formatSpecials,
             initiateAttack: this.initiateAttack
@@ -433,24 +435,41 @@ export function CombatManager(){
             // if(e.name === 'Yu'){
             //     e.stats.hp = 100
             // }
-            if(e.name === 'Greco'){
-                e.stats.hp = 500
+
+            // if(e.name === 'Greco'){
+            //     e.stats.hp = 500
                 this.combatants[e.id] = createFighter(e, callbacks);
-            }
+            // }
         })
         this.data.monster.position = 0;
         this.data.monster.depth = 0;
         // if(this.data.monster.closeRange)
 
+        console.log('data.monster:', this.data.monster)
         let monster = createFighter(this.data.monster, callbacks);
         monster.isMonster = true;
-
-        // let minions = [];
-        // monions.forEach(m=>{
-        //     m.isMinion = true;
-        // })
-
         this.combatants[monster.id] = monster;
+
+        // debugger
+        if(this.data.minions){
+            let position = 2;
+            this.data.minions.forEach(e=>{
+                console.log('position: ', position, typeof position)
+                
+                e.position = position;
+                // let string = e.id.toString() + '00' + e.position.toString()
+                // console.log('string: ', string);
+                // e.id = Number(string)
+                position++
+                e.depth = 0;
+                console.log('creating minion with this data:', e)
+                let m = createFighter(e, callbacks)
+                m.isMinion = true;
+                this.combatants[m.id] = m;
+            })
+        }
+
+        
         console.log('combatants:', this.combatants)
 
         Object.values(this.combatants).forEach((combatant)=>{
@@ -462,8 +481,13 @@ export function CombatManager(){
         this.broadcastDataUpdate();
     }
 
-    this.getTarget = (id) => {
+    this.getCombatant = (id) => {
         return Object.values(this.combatants).find(e=> e.id === id)
+    }
+    this.setTargetFromClick = (callerId, targetId) => {
+        const caller = this.getCombatant(callerId)
+        console.log('set target for ', caller, 'to ', this.getCombatant(targetId))
+        caller.targetId = targetId
     }
 
 
@@ -565,11 +589,57 @@ export function CombatManager(){
                 this.combatOver = true;
                 return
             }
+
+            let teamates = Object.values(this.combatants).filter(e=> (e.isMonster || e.isMinion) && e.id !== caller.id);
             let position = target.position
+            const oldPosition = caller.position;
             caller.position = position;
+            // teamates.forEach((e)=>{
+            //     if(e.isMonster){
+            //         if((e.position === caller.position) || (e.position + 1 === caller.position)){
+            //             let goDown = this.pickRandom([true,false])
+            //             let availableSlot = goDown ? caller.position + 1 : caller.position - 1;
+            //             let slotFound = false;
+            //             while(!slotFound && availableSlot ){
+            //                 let reference = availableSlot
+            //                 if(teamates.some(t=>t.position === reference)){
+            //                     if(goDown){
+            //                         availableSlot++
+            //                     } else if(!goDown){
+            //                         availableSlot--
+            //                     }
+            //                 } else {
+            //                     slotFound = true;
+            //                 }
+            //             }
+            //             if(availableSlot < 0 || availableSlot > 4) availableSlot = oldPosition;
+            //             e.position = availableSlot;
+            //         }
+            //     } else {
+            //         if(e.position === caller.position){
+            //             let goDown = this.pickRandom([true,false])
+            //             let availableSlot = goDown ? caller.position + 1 : caller.position - 1;
+            //             let slotFound = false;
+            //             while(!slotFound && availableSlot ){
+            //                 let reference = availableSlot
+            //                 if(teamates.some(t=>t.position === reference)){
+            //                     if(goDown){
+            //                         availableSlot++
+            //                     } else if(!goDown){
+            //                         availableSlot--
+            //                     }
+            //                 } else {
+            //                     slotFound = true;
+            //                 }
+            //             }
+            //             if(availableSlot < 0 || availableSlot > 4) availableSlot = oldPosition;
+            //             e.position = availableSlot;
+            //         }
+            //     }
+            // })
 
         } else{
-            target = this.pickRandom(Object.values(this.combatants).filter(e=> (e.isMonster  && !e.dead)))
+            target = this.pickRandom(Object.values(this.combatants).filter(e=> ((e.isMonster || e.isMinion )  && !e.dead)))
             if(!target){
                 console.log('NO MORE TARGETS FOR FIGHTER!')
                 this.combatOver = true;
@@ -615,8 +685,8 @@ export function CombatManager(){
 
             // console.log('attack: ', attack, 'target: ', target, 'caller:', caller)
         }
-        if(attack.range === 'close' && distanceToTarget < 550){
-            while(distanceToTarget < 600){
+        if(attack.range === 'close' && distanceToTarget < 580){
+            while(distanceToTarget < 630){
                 caller.depth++
                 distanceToTarget = this.getDistanceToTarget(caller, target.id);
             }
@@ -636,7 +706,7 @@ export function CombatManager(){
     //     }
     // }
     this.hitsTarget = (caller) => {
-        let target = this.getTarget(caller.targetId);
+        let target = this.getCombatant(caller.targetId);
         if(!target) return
         target.wounded = true;
         let damage = caller.atk;
@@ -669,7 +739,7 @@ export function CombatManager(){
         }, 1000)
     }
     this.missesTarget = (caller) => {
-        // let target = getTarget(caller.targetId)
+        // let target = getCombatant(caller.targetId)
         setTimeout(()=>{
             caller.active = false;
             caller.attacking = false;
@@ -683,9 +753,11 @@ export function CombatManager(){
         combatant.dead = true;
         this.clearTargetListById(combatant.id)
 
-        const allMonstersDead = Object.values(this.combatants).filter(e=>e.isMonster && !e.dead).length === 0;
+        const allMonstersDead = Object.values(this.combatants).filter(e=> (e.isMonster || e.isMinion) && !e.dead).length === 0;
         const allCrewDead = Object.values(this.combatants).filter(e=>!e.isMonster && !e.dead).length === 0;
         if(allMonstersDead || allCrewDead){
+            console.log('all monsters dead:', allMonstersDead)
+            console.log('all crew dead:', allCrewDead)
             console.log('COMBAT IS OVER')
             this.combatOver = true;
 

@@ -132,7 +132,8 @@ export function MonsterManager(){
             deathCries: ['you may pass'],
             specials: ['possess', 'tesseract'],
             attacks: ['claws', 'induce_madness', 'lightning'],
-            weaknesses: ['arcane']
+            weaknesses: ['arcane'],
+            minions: ['djinn']
         },
         goblin: {
             type: 'goblin',
@@ -174,7 +175,8 @@ export function MonsterManager(){
             deathCries: ['at last'],
             specials: ['induce_fear'],
             attacks: ['grasp', 'energy_drain'],
-            weaknesses: ['arcane', 'fire', 'electricity']
+            weaknesses: ['arcane', 'fire', 'electricity'],
+            minions: ['skeleton', 'skeleton']
         },
         troll: {
             type: 'troll',
@@ -219,7 +221,7 @@ export function MonsterManager(){
             weaknesses: ['fire']
         }
     }
-    let count = 15;
+    let count = 100;
     for(let key in this.monsters){
         let m = this.monsters[key]
         m.id = count;
@@ -227,6 +229,7 @@ export function MonsterManager(){
     }
 
     this.getMonster = (monsterString) => {
+        console.log('get monster:', monsterString);
         let match = null;
         for(let key in this.monsters){
             let m = this.monsters[key]
@@ -234,8 +237,9 @@ export function MonsterManager(){
                 match = m
             }
         }
-        this.battleMonster = match;
-        return match;
+        // this.battleMonster = match;
+        console.log('match:', match);
+        return JSON.parse(JSON.stringify(match));
     }
     this.getRandomMonster = () => {
         return this.pickRandom(Object.values(this.monsters))
