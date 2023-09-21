@@ -2,6 +2,11 @@ import React from 'react'
 import '../../styles/monster-battle.scss'
 import * as images from '../../utils/images'
 
+const MAX_DEPTH = 8;
+const MAX_ROWS = 5;
+const TILE_SIZE = 100
+const SHOW_TILE_BORDERS = true;
+const SHOW_INTERACTION_PANE=false
 class MonsterBattle extends React.Component {
     constructor(props){
         super(props)
@@ -14,16 +19,31 @@ class MonsterBattle extends React.Component {
             battleData: {},
             catcher: null,
             selectedFighter: null,
+            selectedMonster: null,
             hoveredAttackTile: null,
             hoveredInventoryTile: null,
             hoveredSpecialTile: null,
             showCrosshair: false,
             portraitHoveredId: null,
-            greetingInProcess: true
+            greetingInProcess: true,
+            combatTiles: []
         }
     }
     componentDidMount(){
+        // const MAX_DEPTH = 8;
         this.props.combatManager.initialize();
+        let arr = [];
+        for(let i = 0; i < 5*MAX_DEPTH; i++){
+            let x = i%MAX_DEPTH,
+            y = Math.floor(i/MAX_DEPTH)
+            arr.push({
+                id: i,
+                x,
+                y 
+            })
+        }
+        console.log('arr:', arr);
+        this.setState({combatTiles: arr})
         // const crewLeader = this.props.crew.find(e=>e.isLeader)
         this.establishMessageCallback();
         this.establishUpdateMatrixCallback();
@@ -38,12 +58,13 @@ class MonsterBattle extends React.Component {
             minions: this.props.minions
 
         })
-        setTimeout(()=>{
-            this.fighterClicked(this.props.crew[0].id)
-        })
+        // setTimeout(()=>{
+        //     this.fighterClicked(this.props.crew[0].id)
+        // })
     }
     greetingComplete = () => {
         console.log('greeting complete');
+        this.fighterClicked(this.props.crew[0].id)
         this.setState({greetingInProcess: false})
     }
     tabToFighter = () => {
@@ -65,7 +86,8 @@ class MonsterBattle extends React.Component {
         selectedFighter.portrait = this.props.crew.find(e=>e.id === id).portrait
         
         this.setState({
-            selectedFighter
+            selectedFighter,
+            selectedMonster: null
         })
     }
     pickRandom = (array) => {
@@ -202,8 +224,18 @@ class MonsterBattle extends React.Component {
     portraitHovered = (id) => {
         this.setState({portraitHoveredId: id})
     }
+    monsterCombatPortraitClicked = (id) => {
+        const selectedMonster = this.state.battleData[id];
+        console.log('monster clicked: ', selectedMonster)
+        // selectedMonster.portrait = this.props.crew.find(e=>e.id === id).portrait
+        
+        this.setState({
+            selectedMonster,
+            selectedFighter: null
+        })
+    }
     portraitClicked = (id) => {
-        console.log('inventory manager:', this.props)
+        console.log('portrait clicked:', this.props)
         this.setState({
             showCrosshair: false
         })
@@ -216,19 +248,34 @@ class MonsterBattle extends React.Component {
             showCrosshair: false
         })
     }
+    
     render(){
         return (
-            <div className={`mb-board ${this.state.showCrosshair ? 'show-crosshair' : ''}`}>
+            <div className={`mb-board ${this.state.showCrosshair ? 'show-crosshair' : ''}`} 
+            style={{
+                width: TILE_SIZE * MAX_DEPTH + (SHOW_TILE_BORDERS ? MAX_DEPTH * 2 : 0) + 'px',
+                height: TILE_SIZE * MAX_ROWS + (SHOW_TILE_BORDERS ? MAX_ROWS * 2 : 0) + 'px'
+            }}
+            >
                 {/* /// FIGHTERS */}
-                <div className="mb-col left-col">
+                <div className="combat-grid" style={{width: TILE_SIZE * MAX_DEPTH + (SHOW_TILE_BORDERS ? MAX_DEPTH * 2 : 0) + 'px'}}>
+                    {this.state.combatTiles.map((t,i)=>{
+                        return <div key={i} className="combat-tile"></div>
+                    })}
+                </div>
+                <div className="mb-col fighter-pane">
                     <div className="fighter-content">
                         {this.props.crew.map((fighter, i) => {
-                    return  <div key={i}  className='lane-wrapper' style={{ top: `${this.state.battleData[fighter.id]?.position * 110}px`}}>
+                    return  <div key={i}  className='lane-wrapper' 
+                                style={{ 
+                                    top: `${this.state.battleData[fighter.id]?.position * TILE_SIZE + (SHOW_TILE_BORDERS ? this.state.battleData[fighter.id]?.position * 2 : 0)}px`,
+                                    height: `${TILE_SIZE}px`
+                                }}>
                                 <div 
                                 className={`fighter-wrapper ${fighter.isLeader ? 'leader-wrapper' : ''}`} 
                                 >
                                     <div className="portrait-wrapper"
-                                    style={{left: `${this.state.battleData[fighter.id]?.depth * 100}px`}}
+                                    style={{left: `${this.state.battleData[fighter.id]?.depth * 100 + (SHOW_TILE_BORDERS ? this.state.battleData[fighter.id]?.depth * 2 : 0)}px`}}
                                     >
                                         <div 
                                         className={
@@ -237,6 +284,7 @@ class MonsterBattle extends React.Component {
                                             ${this.state.battleData[fighter.id]?.wounded ? 'fighterWoundedAnimation' : ''} 
                                             ${fighter.isLeader ? 'leader-portrait' : ''} 
                                             ${this.state.battleData[fighter.id]?.dead ? 'dead fighterDeadAnimation' : ''} 
+                                            ${this.state.selectedMonster?.targetId === fighter.id ? 'targetted' : ''}
                                             ${this.state.battleData[fighter.id]?.active ? 'active' : ''}`
                                         } 
                                         style={{
@@ -274,9 +322,13 @@ class MonsterBattle extends React.Component {
                 </div>
                 
                 {/* /// MONSTERS & MINIONS */}
-                <div className="mb-col right-col">
+                <div className="mb-col monster-pane">
                     {/* // MONSTER // */}
-                    <div className='lane-wrapper'  style={{ top: `${this.state.battleData[this.props.monster.id]?.position * 110}px`}}>
+                    <div className='lane-wrapper'  
+                    style={{ 
+                        top: `${this.state.battleData[this.props.monster.id]?.position * TILE_SIZE + (SHOW_TILE_BORDERS ? this.state.battleData[this.props.monster.id]?.position * 2 : 0)}px`,
+                        height: `${TILE_SIZE}px`
+                    }}>
                         <div className="monster-wrapper">
                             <div className={`action-bar-wrapper`} 
                                 style={{
@@ -289,7 +341,7 @@ class MonsterBattle extends React.Component {
                             </div>
                             <div 
                             className="portrait-wrapper"
-                            style={{left: `${this.state.battleData[this.props.monster.id]?.depth * 100}px`,}}
+                            style={{left: `${this.state.battleData[this.props.monster.id]?.depth * 100 + (SHOW_TILE_BORDERS ? this.state.battleData[this.props.monster.id]?.depth * 2: 0)}px`,}}
                             >
                                 <div 
                                 className={
@@ -298,6 +350,7 @@ class MonsterBattle extends React.Component {
                                     ${this.state.battleData[this.props.monster.id]?.active ? 'active' : ''} 
                                     ${this.state.battleData[this.props.monster.id]?.dead ? 'dead monsterDeadAnimation' : ''}
                                     ${this.state.battleData[this.props.monster.id]?.wounded ? 'fighterWoundedAnimation' : ''}
+                                    ${this.state.selectedMonster?.id === this.props.monster.id ? 'selected' : ''}
                                     ${this.state.selectedFighter?.targetId === this.props.monster.id ? 'targetted' : ''}`
                                 } 
                                 style={{
@@ -307,7 +360,8 @@ class MonsterBattle extends React.Component {
                                 }} 
                                 onMouseEnter={() => this.portraitHovered(this.props.monster.id)} 
                                 onMouseLeave={() => this.portraitHovered(null)}
-                                onClick={() => this.portraitClicked(this.props.monster.id)}
+                                onClick={() => this.monsterCombatPortraitClicked(this.props.monster.id)}
+                                // onClick={() => this.fighterClicked(fighter.id)}
                                 >
                                     <div className="targetted-by-container">
                                         {this.state.battleData[this.props.monster.id]?.targettedBy.map((e,i)=>{
@@ -332,7 +386,12 @@ class MonsterBattle extends React.Component {
 
                     {/* // MINIONS // */}
                     {this.props.minions && this.props.minions.map((minion, i) => {
-                return <div key={i} className='lane-wrapper' style={{ top: `${this.state.battleData[minion.id]?.position * 110}px`}}> 
+                return <div key={i} className='lane-wrapper' 
+                style={{ 
+                    top: `${this.state.battleData[minion.id]?.position * TILE_SIZE + (SHOW_TILE_BORDERS ? this.state.battleData[minion.id]?.position * 2 : 0)}px`,
+                    height: `${TILE_SIZE}px`
+                }}
+                    > 
                             <div className="monster-wrapper">
                                 <div className={`action-bar-wrapper`} 
                                     style={{
@@ -345,7 +404,7 @@ class MonsterBattle extends React.Component {
                                 </div>
                                 <div 
                                 className="portrait-wrapper"
-                                style={{left: `${this.state.battleData[minion.id]?.depth * 100}px`}}
+                                style={{left: `${this.state.battleData[minion.id]?.depth * 100 + (SHOW_TILE_BORDERS ? this.state.battleData[minion.id]?.depth * 2 : 0)}px`}}
                                 >
                                     <div 
                                     className={
@@ -353,6 +412,7 @@ class MonsterBattle extends React.Component {
                                         ${this.state.battleData[minion.id]?.active ? 'active' : ''} 
                                         ${this.state.battleData[minion.id]?.dead ? 'dead monsterDeadAnimation' : ''}
                                         ${this.state.battleData[minion.id]?.wounded ? 'fighterWoundedAnimation' : ''}
+                                        ${this.state.selectedMonster?.id === minion.id ? 'selected' : ''}
                                         ${this.state.selectedFighter?.targetId === minion.id ? 'targetted' : ''}`
                                     } 
                                     style={{
@@ -362,7 +422,7 @@ class MonsterBattle extends React.Component {
                                     }} 
                                     onMouseEnter={() => this.portraitHovered(minion.id)} 
                                     onMouseLeave={() => this.portraitHovered(null)}
-                                    onClick={() => this.portraitClicked(minion.id)}
+                                    onClick={() => this.monsterCombatPortraitClicked(minion.id)}
                                     >
                                         <div className="targetted-by-container">
                                             {this.state.battleData[minion.id]?.targettedBy.map((e,i)=>{
@@ -388,7 +448,7 @@ class MonsterBattle extends React.Component {
                 </div>
 
                 {/* // INTERACTION PANE */}
-                <div className="mb-interaction-pane">
+                { SHOW_INTERACTION_PANE && <div className="mb-interaction-pane">
                     <div className="header-row">
                         <div className="portrait" style={{backgroundImage: "url(" + images[this.state.selectedFighter?.portrait] + ")"}}></div>
                         <div className="title">
@@ -481,7 +541,7 @@ class MonsterBattle extends React.Component {
 
                         </div>
                     </div>
-                </div>
+                </div>}
             </div>
         )
     }

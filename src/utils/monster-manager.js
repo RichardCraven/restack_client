@@ -229,7 +229,7 @@ export function MonsterManager(){
     }
 
     this.getMonster = (monsterString) => {
-        console.log('get monster:', monsterString);
+        // console.log('get monster:', monsterString);
         let match = null;
         for(let key in this.monsters){
             let m = this.monsters[key]
@@ -238,7 +238,7 @@ export function MonsterManager(){
             }
         }
         // this.battleMonster = match;
-        console.log('match:', match);
+        // console.log('match:', match);
         return JSON.parse(JSON.stringify(match));
     }
     this.getRandomMonster = () => {

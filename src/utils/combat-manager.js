@@ -1,6 +1,6 @@
 // import * as images from '../utils/images'
 const MAX_DEPTH = 7
-const FIGHT_INTERVAL = 30
+const FIGHT_INTERVAL = 10
 export function CombatManager(){
     // const attackTypes = [
     //     'psionic', 'crushing', 'cutting', 'electricity', 'fire', 'blood_magic', 'ice', 'curse', 'sickness', 'arcane', 'buff',
@@ -482,18 +482,20 @@ export function CombatManager(){
             })
         }
 
-
-        Object.values(this.combatants).forEach((combatant)=>{
-            combatant.attacks.forEach((a)=>{
-                a.cooldown_position = 100
-            })
-            combatant.turnCycle();
-        })
-        // console.log('combatants: ', this.combatants);
         this.broadcastDataUpdate();
+
         setTimeout(() => {
-            console.log('setting greeting complete');
             this.greetingComplete();
+            console.log('greeting complete');
+            setTimeout(()=>{
+                Object.values(this.combatants).forEach((combatant)=>{
+                    combatant.attacks.forEach((a)=>{
+                        a.cooldown_position = 100
+                    })
+                    combatant.turnCycle();
+                })
+                this.broadcastDataUpdate();
+            }, 1000)
         }, 1500);
     }
 
@@ -575,30 +577,21 @@ export function CombatManager(){
             }
         },100)
     }
-    this.getDistanceToTarget = (caller, targetId) => {
-        let callerDepth, targetDepth, target = this.combatants[targetId];
+    this.getLaneDifferenceToTarget = (caller, target) => {
         if(!target) return 0;
-        const factor = caller.isMonster ? 100 : 100
-
-        let d = Math.abs(caller.depth - target.depth) - 1
-        // if(caller.name === 'bones' && caller.id === 810){
-        //     console.log('bones, calculating distance, caller.depth: ', caller.depth, 'target.depth: ', target.depth)
-        //     console.log('target:', target, 'caller:', caller)
-        //     console.log('calculated to: ', d)
-        // }
+        console.log('caller: ', caller, 'target: ',  target);
+        let d = caller.position - target.position
         return d
-        // if(caller.isMonster || caller.isMinion){
-        //     callerDepth = (caller.depth+1) * factor;
-        //     targetDepth = (target.depth+1) * 100;
-        // } else {
-        //     callerDepth = (caller.depth+1) * 100;
-        //     targetDepth = (target.depth+1) * factor;
-        // }
-        // return callerDepth + targetDepth;
+    }
+    this.getDistanceToTarget = (caller, target) => {
+        // let callerDepth, targetDepth, target = this.combatants[targetId];
+        if(!target) return 0;
+        let d = Math.abs(caller.depth - target.depth) - 1
+        return d
     }
     this.getDistanceToTargetWidthString = (caller) => {
         if(!caller) return '0px'
-        let distanceToTarget = this.getDistanceToTarget(caller, caller.targetId),
+        let distanceToTarget = this.getDistanceToTarget(caller, this.combatants[caller.targetId]),
         isMonster = this.combatants[caller.targetId].isMonster
         // if(caller.name === 'Greco'){
         //     console.log('caller:', caller)
@@ -610,9 +603,9 @@ export function CombatManager(){
     }
     this.acquireTarget = (caller) => {
         // if(this.combatPaused) return
-        // if(caller.name === 'Greco'){
-        //     console.log('greco acquiring target');
-        // }
+        if(caller.name === 'Greco'){
+            console.log('greco acquiring target');
+        }
         let reposition = this.pickRandom([1,2,3,4,5,6,7,8,9,10]) < 4
         
         if(caller.dead) return;
@@ -645,57 +638,56 @@ export function CombatManager(){
             teamates = liveFighters.filter(e=> e.id !== caller.id);
         }
 
-        // if(caller.name === 'Greco' && reposition){
-        //     console.log('reposition? ', reposition)
-        //     let upDown = this.pickRandom(['up','down'])
-        //     console.log(upDown)
-        //     caller.position = upDown === 'up' ? caller.position - 1 : caller.position + 1
-        // } else {
-
-            position = target.position
-            // if(this.pickRandom([true,false])){
-            //     position += this.pickRandom([1,-1])
-            //     if(position < 0 || position > 4) position = this.pickRandom([0,1,2,3,4])
-            // }
-            caller.position = position;
-            // console.log(caller, 'setting caller position to ', position)
-        // }
         this.clearTargetListById(caller.id)
         target.targettedBy.push(caller.id)
         const attack = this.chooseAttackType(caller, target);
         caller.pendingAttack = attack;
-        let distanceToTarget = this.getDistanceToTarget(caller, target.id);
-        
-        // teamates.filter(e=>e.position === caller.position).forEach(e=>{
-        //     if(caller.isMonster || caller.isMinion){
-
-        //     }
-        // })
-
-            //figure out position and depth
-            // then
-
-        
-        
-        
+        const distanceToTarget = this.getDistanceToTarget(caller, target),
+        laneDiff = this.getLaneDifferenceToTarget(caller, target)
         if(!attack){
             console.log('attack is undefined', caller, attack)
             debugger
         }
-        if(attack.range === 'close' && distanceToTarget > 2){
-            if(caller.name === 'bones' && caller.id === 810){
-                // console.log('bones, distance to ', target.name, distanceToTarget)
+        if(caller.name === 'Greco'){
+            console.log('Greco', caller);
+            console.log('attack.range: ', attack.range, 'target:', target);
+            console.log('Grecos distance to target: ', distanceToTarget);
+            console.log('Grecos lane diff to target: ', laneDiff);
+            if(isNaN(laneDiff)){
+                console.log('investigate NaN');
+                debugger
             }
-            while(distanceToTarget > 1){
-                if(caller.isMinion || caller.isMonster){
-                    caller.depth--
-
-                } else {
-                    caller.depth++
-                }
-                distanceToTarget = this.getDistanceToTarget(caller, target.id);
-            }
+            // this.combatOver = true;
+            // debugger
         }
+        let newPosition, newDepth;
+        if(distanceToTarget > 0){
+            newDepth = (caller.isMinion || caller.isMonster) ? caller.depth - 1 : caller.depth + 1
+        }
+        if(laneDiff !== 0){
+            newPosition = laneDiff > 0 ? caller.position - 1 : caller.position + 1
+        }
+        if(newPosition) caller.position = newPosition;
+        if(newDepth) caller.depth = newDepth;
+        if(caller.position === undefined){
+            console.log('position undefined');
+            debugger
+        }
+
+        // if(attack.range === 'close' && distanceToTarget > 2){
+        //     if(caller.name === 'bones' && caller.id === 810){
+        //         // console.log('bones, distance to ', target.name, distanceToTarget)
+        //     }
+        //     while(distanceToTarget > 1){
+        //         if(caller.isMinion || caller.isMonster){
+        //             caller.depth--
+
+        //         } else {
+        //             caller.depth++
+        //         }
+        //         distanceToTarget = this.getDistanceToTarget(caller, target.id);
+        //     }
+        // }
         if(caller.name === 'bones' && caller.id === 810){
             // console.log('bones, depth is nowt: ', caller.depth)
         }
@@ -712,21 +704,21 @@ export function CombatManager(){
 
         const oldPosition = caller.position;
 
-        while(liveCombatants.some(e => e.position === caller.position && e.depth === caller.depth)){
-            if(caller.isMonster || caller.isMinion){
-                if(caller.depth === MAX_DEPTH){
-                    caller.position = caller.position + this.pickRandom([1,-1])
-                } else {
-                    caller.depth = caller.depth + 1
-                }
-            } else {
-                if(caller.depth === 0){
-                    caller.position = caller.position + this.pickRandom([1,-1])
-                } else {
-                    caller.depth = caller.depth - 1
-                }
-            }
-        }
+        // while(liveCombatants.some(e => e.position === caller.position && e.depth === caller.depth)){
+        //     if(caller.isMonster || caller.isMinion){
+        //         if(caller.depth === MAX_DEPTH){
+        //             caller.position = caller.position + this.pickRandom([1,-1])
+        //         } else {
+        //             caller.depth = caller.depth + 1
+        //         }
+        //     } else {
+        //         if(caller.depth === 0){
+        //             caller.position = caller.position + this.pickRandom([1,-1])
+        //         } else {
+        //             caller.depth = caller.depth - 1
+        //         }
+        //     }
+        // }
         
 
 
@@ -756,8 +748,8 @@ export function CombatManager(){
 
             liveCombatants.forEach(e=>{
                 if(caller.position === e.position && caller.depth === e.depth){
-                    // this.handleOverlap(e)
                     e.hasOverlap = true;
+                    this.handleOverlap(e)
                 }
             })
 
@@ -808,6 +800,7 @@ export function CombatManager(){
     this.checkOverlap = (combatant) => {
         const liveCombatants = Object.values(this.combatants).filter(e=> (e.id !== combatant.id && !e.dead));
         if(liveCombatants.some(e=>e.depth === combatant.depth && e.position === combatant.position)) combatant.hasOverlap = true;
+        if(combatant.hasOverlap) this.handleOverlap(combatant);
     }
     this.handleOverlap = (combatant) => {
         const liveCombatants = Object.values(this.combatants).filter(e=> (e.id !== combatant.id && !e.dead));
@@ -816,6 +809,7 @@ export function CombatManager(){
         let depth = combatant.depth;
 
         console.log('OVERLAP for ', combatant.name, combatant)
+        // debugger
 
         if(combatant.isMonster || combatant.isMinion){
             while(!depthAvailable){
@@ -848,7 +842,17 @@ export function CombatManager(){
                 if(liveCombatants.some(e=>e.depth === combatant.depth && e.position === combatant.position)){
                     console.log('OVERLAP for ', combatant.name)
                     depthAvailable = false;
-                    combatant.depth--
+                    if(combatant.depth > 0){
+                        combatant.depth--
+                    } else {
+                        console.log('ALREADY AT MAX!')
+                        if(combatant.position !== 0){
+                            combatant.position--
+                        } else {
+                            console.log('ALREADY AT POSITION ZERO!!!', combatant);
+                            combatant.position++ 
+                        }
+                    }
                 } else {
                     depthAvailable = true;
                 }

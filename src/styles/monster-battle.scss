@@ -1,6 +1,6 @@
 .mb-board{
     border: 1px solid rgb(185, 15, 15);
-    width: 66%;
+    // width: 66%;
     // height: 600px;
     height: calc(100% - 2px);
 
@@ -15,6 +15,19 @@
 
     // .animated 
 
+    .combat-grid{
+        display: flex;
+        flex-wrap: wrap;
+        // width: 100%;
+        height: fit-content;
+        align-items: flex-start;
+        justify-content: flex-start;
+        .combat-tile{
+            border: 1px solid #e8e880;
+            height: 100px;
+            width: 100px;
+        }
+    }
     
 
 
@@ -113,7 +126,7 @@
     }
 
     .fighterDeadAnimation{
-        filter: blur(10px);
+        filter: blur(20px);
         -webkit-animation: FighterDead 5s forwards ;
         -moz-animation: FighterDead 5s forwards ;
         animation: FighterDead 5s forwards ;
@@ -172,9 +185,10 @@
     .action-bar-wrapper{
         z-index: 0;
     }
-    .left-col{
+    .fighter-pane{
         position: absolute;
         width: 100%;
+        height: 100%;
         // padding-top: 50px;
         // top: 50px;
         .fighter-content{
@@ -184,7 +198,7 @@
             .lane-wrapper{
                 width: 100%;
                 position: absolute;
-                height: 110px;
+                // height: 110px;
                 transition: 1s;
                 .fighter-wrapper{
                     // border: 1px solid lightgrey;
@@ -200,6 +214,7 @@
                     .portrait-wrapper{
                         position: absolute;
                         transition: 1s;
+                        top: 0;
                         .fighter-portrait{
                             height: 100px;
                             width: 100px;
@@ -218,6 +233,9 @@
                             &.selected{
                                 border: 1px solid white;
                             }
+                            &.targetted{
+                                border: 1px solid yellow;
+                            }
                         }
                     }
                     .action-bar-wrapper{
@@ -234,7 +252,7 @@
             }
         }
     }
-    .right-col{
+    .monster-pane{
         position: absolute;
 
         pointer-events: none;
@@ -242,6 +260,7 @@
 
         // border: 1px solid red;
         width: 100%;
+        height: 100%;
         display: flex;
         flex-direction: column;
         justify-content: flex-start;
@@ -278,12 +297,15 @@
                     position: absolute;
                     width: 100px;
                     transition: 1s;
+                    top: 0;
                 }
     
                 .monster-portrait, .minion-portrait{
                     // height: 200px;
                     // width: 200px;
                     // border-radius: 200px;
+                    
+
                     height: 100px;
                     width: 100px;
                     transition: transform 1s;
@@ -295,6 +317,9 @@
                     position: relative;
                     &.targetted{
                         border: 1px solid white;
+                    }
+                    &.selected{
+                        border: 1px solid yellow;
                     }
                     .targetted-by-container{
                         position: absolute;
