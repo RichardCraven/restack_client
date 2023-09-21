@@ -1,5 +1,6 @@
 // import * as images from '../utils/images'
-const MAX_DEPTH = 6
+const MAX_DEPTH = 7
+const FIGHT_INTERVAL = 30
 export function CombatManager(){
     // const attackTypes = [
     //     'psionic', 'crushing', 'cutting', 'electricity', 'fire', 'blood_magic', 'ice', 'curse', 'sickness', 'arcane', 'buff',
@@ -288,6 +289,9 @@ export function CombatManager(){
     this.establishGameOverCallback = (cb) => {
         this.gameOver = cb
     }
+    this.establishGreetingCompleteCallback = (cb) => {
+        this.greetingComplete = cb
+    }
 
     this.formatAttacks = (stringArray) => {
         return stringArray.map(e=>{
@@ -312,7 +316,9 @@ export function CombatManager(){
             combatPaused,
             formatAttacks,
             formatSpecials,
-            initiateAttack
+            initiateAttack,
+            checkOverlap,
+            handleOverlap
         } = callbacks;
         return {
             name: fighter.name,
@@ -345,13 +351,24 @@ export function CombatManager(){
             targettedBy: [],
             combatPaused: false,
             readout: '',
+            hasOverlap: false,
             talk: function () {
                 console.log('My name is ' 
                 + fighter.name + '!');
             },
             attack: function () {
-                initiateAttack(this);
-                broadcastDataUpdate(this)
+                let target = getCombatant(this.targetId);
+                if(this.position === target.position){
+
+                    initiateAttack(this);
+                    broadcastDataUpdate(this)
+                } else {
+                    this.active = false;
+                    this.attacking = false;
+                    this.tempo = 1;
+                    this.targetId = null;
+                    this.turnCycle();
+                }
             },
             turnCycle: function(){
                 let count = 0;
@@ -367,7 +384,7 @@ export function CombatManager(){
                 
 
                 /// monster target offsets monster by 110 * target index
-                
+                if(this.hasOverlap) handleOverlap(this)
                 this.interval = setInterval(()=>{
                     if(this.combatPaused) return
                     count += increment
@@ -378,10 +395,15 @@ export function CombatManager(){
                     if(count > 10 && this.targetId === null){
                         // callbacks['acquireTargetCallback'](this);
                         acquireTarget(this);
+                        checkOverlap(this)
                     }
                     if(count >= 100){
                         clearInterval(this.interval)
                         let target = getCombatant(this.targetId)
+                        if(this.id === 107){
+
+                            // console.log('Mummy:', this);
+                        }
                         // if(this.isMonster){
                             // }
                         if(this.pendingAttack.cooldown_position !== 100){
@@ -392,7 +414,7 @@ export function CombatManager(){
                     }
                     // callbacks['acquireTargetCallback'](this);
                     broadcastDataUpdate(this)
-                }, 10)
+                }, FIGHT_INTERVAL)
             },
             waitForAttack: function(){
                 const waitInterval = setInterval(()=>{
@@ -418,7 +440,9 @@ export function CombatManager(){
             getCombatant: this.getCombatant,
             formatAttacks: this.formatAttacks,
             formatSpecials: this.formatSpecials,
-            initiateAttack: this.initiateAttack
+            initiateAttack: this.initiateAttack,
+            checkOverlap: this.checkOverlap,
+            handleOverlap: this.handleOverlap
             // combatPaused: this.combatPaused
         }
         this.data = data;
@@ -439,7 +463,7 @@ export function CombatManager(){
                 this.combatants[e.id] = createFighter(e, callbacks);
             // }
         })
-        this.data.monster.position = 0;
+        this.data.monster.position = 1;
         this.data.monster.depth = MAX_DEPTH;
         let monster = createFighter(this.data.monster, callbacks);
         monster.isMonster = true;
@@ -467,6 +491,10 @@ export function CombatManager(){
         })
         // console.log('combatants: ', this.combatants);
         this.broadcastDataUpdate();
+        setTimeout(() => {
+            console.log('setting greeting complete');
+            this.greetingComplete();
+        }, 1500);
     }
 
     this.getCombatant = (id) => {
@@ -474,13 +502,16 @@ export function CombatManager(){
     }
     this.setTargetFromClick = (callerId, targetId) => {
         const caller = this.getCombatant(callerId)
-        console.log('set target for ', caller, 'to ', this.getCombatant(targetId))
+        // console.log('set target for ', caller, 'to ', this.getCombatant(targetId))
         caller.targetId = targetId
     }
 
 
-    this.broadcastDataUpdate = (caller) => {
+    this.broadcastDataUpdate = (caller = null) => {
         // if(this.combatPaused) return
+        if(caller){
+            this.checkOverlap(caller)
+        }
         this.updateData(this.combatants)
     }
     this.chooseAttackType = (caller, target) => {
@@ -570,133 +601,90 @@ export function CombatManager(){
         let distanceToTarget = this.getDistanceToTarget(caller, caller.targetId),
         isMonster = this.combatants[caller.targetId].isMonster
         // if(caller.name === 'Greco'){
-        //     console.log('distanceToTarget: ', distanceToTarget, 'isMonster:', isMonster, 'returning :',`calc(100% - ${distanceToTarget + 100}px)` )
+        //     console.log('caller:', caller)
+        //     console.log('distanceToTarget: ', distanceToTarget, 'isMonster:', isMonster, 'returning :',`calc(100% - ${((distanceToTarget * 100) + 100)}px)` )
         // }
         // return `calc(100% - ${distanceToTarget + (isMonster ? 200 : 100)}px)`
-        return `calc(100% - ${distanceToTarget + 100}px)`
+        return ((distanceToTarget * 100) + 100)
+        // return `calc(100% - ${((distanceToTarget * 100) + 100)}px)`
     }
     this.acquireTarget = (caller) => {
         // if(this.combatPaused) return
+        // if(caller.name === 'Greco'){
+        //     console.log('greco acquiring target');
+        // }
+        let reposition = this.pickRandom([1,2,3,4,5,6,7,8,9,10]) < 4
+        
         if(caller.dead) return;
-        let target;
+        const liveMonsters = Object.values(this.combatants).filter(e=> ((e.isMonster || e.isMinion )  && !e.dead)),
+              liveFighters = Object.values(this.combatants).filter(e=> ((!e.isMonster && !e.isMinion) && !e.dead)),
+              liveCombatants = liveFighters.concat(liveMonsters).filter(e => e.id !== caller.id);
+        let target, teamates, position;
         if(caller.isMonster || caller.isMinion){
             // target = this.pickRandom(Object.values(this.combatants).filter(e=> ((!e.isMonster && !e.isMinion) && !e.dead)))
-            let sorted = Object.values(this.combatants).filter(e=> ((!e.isMonster && !e.isMinion) && !e.dead)).sort((a,b)=>b.depth - a.depth)
-            target = sorted[0]
-            if(!target){
-                console.log('NO MORE TARGETS FOR MONSTER!')
+            let sortedTargets = liveFighters.sort((a,b)=>b.depth - a.depth)
+            // target = sortedTargets[0]
+            target = this.pickRandom(sortedTargets)
+            if(caller.name === 'bones' && caller.id === 810){
+                // console.log('bones, depth is nowt: ', caller.depth)
+                console.log('*****bones targetting ', target)
+            }
+            if(!target && !reposition){
                 this.combatOver = true;
                 return
             }
-
-            let teamates = Object.values(this.combatants).filter(e=> (e.isMonster || e.isMinion) && e.id !== caller.id);
-            let position = target.position
-            const oldPosition = caller.position;
-            caller.position = position;
-            // teamates.forEach((e)=>{
-            //     if(e.isMonster){
-            //         if((e.position === caller.position) || (e.position + 1 === caller.position)){
-            //             let goDown = this.pickRandom([true,false])
-            //             let availableSlot = goDown ? caller.position + 1 : caller.position - 1;
-            //             let slotFound = false;
-            //             while(!slotFound && availableSlot ){
-            //                 let reference = availableSlot
-            //                 if(teamates.some(t=>t.position === reference)){
-            //                     if(goDown){
-            //                         availableSlot++
-            //                     } else if(!goDown){
-            //                         availableSlot--
-            //                     }
-            //                 } else {
-            //                     slotFound = true;
-            //                 }
-            //             }
-            //             if(availableSlot < 0 || availableSlot > 4) availableSlot = oldPosition;
-            //             e.position = availableSlot;
-            //         }
-            //     } else {
-            //         if(e.position === caller.position){
-            //             let goDown = this.pickRandom([true,false])
-            //             let availableSlot = goDown ? caller.position + 1 : caller.position - 1;
-            //             let slotFound = false;
-            //             while(!slotFound && availableSlot ){
-            //                 let reference = availableSlot
-            //                 if(teamates.some(t=>t.position === reference)){
-            //                     if(goDown){
-            //                         availableSlot++
-            //                     } else if(!goDown){
-            //                         availableSlot--
-            //                     }
-            //                 } else {
-            //                     slotFound = true;
-            //                 }
-            //             }
-            //             if(availableSlot < 0 || availableSlot > 4) availableSlot = oldPosition;
-            //             e.position = availableSlot;
-            //         }
-            //     }
-            // })
-
-        } else{
-            target = this.pickRandom(Object.values(this.combatants).filter(e=> ((e.isMonster || e.isMinion )  && !e.dead)))
-            if(!target){
-                console.log('NO MORE TARGETS FOR FIGHTER!')
+            teamates = liveMonsters.filter(e=> e.id !== caller.id);
+        } else {
+            
+            target = this.pickRandom(liveMonsters)
+            
+            if(!target && !reposition){
                 this.combatOver = true;
                 return
             }
-            let teamates = Object.values(this.combatants).filter(e=> !e.isMonster && e.id !== caller.id);
-            let position = target.position;
-            const oldPosition = caller.position;
-            caller.position = position;
-            teamates.forEach((e)=>{
-                if(e.position === caller.position){
-                    if(e.depth === caller.depth){
-                        if(caller.depth !== 0){
-                            caller.depth--
-                        } else {
-                            caller.depth++
-                        }
-                    }
-                    let goDown = this.pickRandom([true,false])
-                    let availableSlot = goDown ? caller.position + 1 : caller.position - 1;
-                    let slotFound = false;
-                    while(!slotFound && availableSlot ){
-                        let reference = availableSlot
-                        if(teamates.some(t=>t.position === reference)){
-                            if(goDown){
-                                availableSlot++
-                            } else if(!goDown){
-                                availableSlot--
-                            }
-                        } else {
-                            slotFound = true;
-                        }
-                    }
-                    if(availableSlot < 0 || availableSlot > 4) availableSlot = oldPosition;
-                    e.position = availableSlot;
-                }
-            })
-            // targetIndex = Object.values(this.combatants).filter(e=> e.isMonster).indexOf(target)
+            teamates = liveFighters.filter(e=> e.id !== caller.id);
         }
+
+        // if(caller.name === 'Greco' && reposition){
+        //     console.log('reposition? ', reposition)
+        //     let upDown = this.pickRandom(['up','down'])
+        //     console.log(upDown)
+        //     caller.position = upDown === 'up' ? caller.position - 1 : caller.position + 1
+        // } else {
+
+            position = target.position
+            // if(this.pickRandom([true,false])){
+            //     position += this.pickRandom([1,-1])
+            //     if(position < 0 || position > 4) position = this.pickRandom([0,1,2,3,4])
+            // }
+            caller.position = position;
+            // console.log(caller, 'setting caller position to ', position)
+        // }
         this.clearTargetListById(caller.id)
         target.targettedBy.push(caller.id)
-
-        
-
-
-        let attack = this.chooseAttackType(caller, target);
+        const attack = this.chooseAttackType(caller, target);
         caller.pendingAttack = attack;
         let distanceToTarget = this.getDistanceToTarget(caller, target.id);
-        if(caller.name === 'Sardonis' || caller.name === 'Greco'){
+        
+        // teamates.filter(e=>e.position === caller.position).forEach(e=>{
+        //     if(caller.isMonster || caller.isMinion){
 
-            // console.log('attack: ', attack, 'target: ', target, 'caller:', caller)
+        //     }
+        // })
+
+            //figure out position and depth
+            // then
+
+        
+        
+        
+        if(!attack){
+            console.log('attack is undefined', caller, attack)
+            debugger
         }
-        // if(caller.name === 'bones' && caller.id === 810){
-        //     console.log('PRE bones, distance to target: ', distanceToTarget)
-        // }
         if(attack.range === 'close' && distanceToTarget > 2){
             if(caller.name === 'bones' && caller.id === 810){
-                console.log('bones, distance to ', target.name, distanceToTarget)
+                // console.log('bones, distance to ', target.name, distanceToTarget)
             }
             while(distanceToTarget > 1){
                 if(caller.isMinion || caller.isMonster){
@@ -709,22 +697,172 @@ export function CombatManager(){
             }
         }
         if(caller.name === 'bones' && caller.id === 810){
-            console.log('bones, depth is nowt: ', caller.depth)
+            // console.log('bones, depth is nowt: ', caller.depth)
         }
         caller.targetId = target.id;
+
+
+
+
+
+
+
+
+
+
+        const oldPosition = caller.position;
+
+        while(liveCombatants.some(e => e.position === caller.position && e.depth === caller.depth)){
+            if(caller.isMonster || caller.isMinion){
+                if(caller.depth === MAX_DEPTH){
+                    caller.position = caller.position + this.pickRandom([1,-1])
+                } else {
+                    caller.depth = caller.depth + 1
+                }
+            } else {
+                if(caller.depth === 0){
+                    caller.position = caller.position + this.pickRandom([1,-1])
+                } else {
+                    caller.depth = caller.depth - 1
+                }
+            }
+        }
+        
+
+
+            // teamates.forEach((e)=>{
+            //         if((e.position === caller.position) && e.depth === caller.depth){
+            //             caller.depth = (caller.isMonster || caller.isMinion) ? e.depth - 1 : e.depth + 1
+            //             let goDown = this.pickRandom([true,false])
+            //             let availablePosition = goDown ? caller.position + 1 : caller.position - 1;
+            //             let availableDepth = (caller.isMonster || caller.isMinion) ? e.depth + 1 : e.depth - 1;
+            //             let slotFound = false;
+            //             while(!slotFound && availablePosition ){
+            //                 let reference = availablePosition
+            //                 if(teamates.some(t=>t.position === reference)){
+            //                     if(goDown){
+            //                         availablePosition++
+            //                     } else if(!goDown){
+            //                         availablePosition--
+            //                     }
+            //                 } else {
+            //                     slotFound = true;
+            //                 }
+            //             }
+            //             if(availablePosition < 0 || availablePosition > 4) availablePosition = oldPosition;
+            //             e.position = availablePosition;
+            //         }
+            // })
+
+            liveCombatants.forEach(e=>{
+                if(caller.position === e.position && caller.depth === e.depth){
+                    // this.handleOverlap(e)
+                    e.hasOverlap = true;
+                }
+            })
+
+
+         
+        // else{
+        //     target = this.pickRandom(Object.values(this.combatants).filter(e=> ((e.isMonster || e.isMinion )  && !e.dead)))
+        //     if(!target){
+        //         console.log('NO MORE TARGETS FOR FIGHTER!')
+        //         this.combatOver = true;
+        //         return
+        //     }
+        //     let teamates = Object.values(this.combatants).filter(e=> !e.isMonster && e.id !== caller.id);
+        //     let position = target.position;
+        //     const oldPosition = caller.position;
+        //     caller.position = position;
+        //     teamates.forEach((e)=>{
+        //         if(e.position === caller.position){
+        //             if(e.depth === caller.depth){
+        //                 if(caller.depth !== 0){
+        //                     caller.depth--
+        //                 } else {
+        //                     caller.depth++
+        //                 }
+        //             }
+        //             let goDown = this.pickRandom([true,false])
+        //             let availableSlot = goDown ? caller.position + 1 : caller.position - 1;
+        //             let slotFound = false;
+        //             while(!slotFound && availableSlot ){
+        //                 let reference = availableSlot
+        //                 if(teamates.some(t=>t.position === reference)){
+        //                     if(goDown){
+        //                         availableSlot++
+        //                     } else if(!goDown){
+        //                         availableSlot--
+        //                     }
+        //                 } else {
+        //                     slotFound = true;
+        //                 }
+        //             }
+        //             if(availableSlot < 0 || availableSlot > 4) availableSlot = oldPosition;
+        //             e.position = availableSlot;
+        //         }
+        //     })
+        // }
+        
+    }
+    this.checkOverlap = (combatant) => {
+        const liveCombatants = Object.values(this.combatants).filter(e=> (e.id !== combatant.id && !e.dead));
+        if(liveCombatants.some(e=>e.depth === combatant.depth && e.position === combatant.position)) combatant.hasOverlap = true;
+    }
+    this.handleOverlap = (combatant) => {
+        const liveCombatants = Object.values(this.combatants).filter(e=> (e.id !== combatant.id && !e.dead));
+        let target = this.getCombatant(combatant.targetId);
+        let depthAvailable = false;
+        let depth = combatant.depth;
+
+        console.log('OVERLAP for ', combatant.name, combatant)
+
+        if(combatant.isMonster || combatant.isMinion){
+            while(!depthAvailable){
+                if(liveCombatants.some(e=>e.depth === combatant.depth && e.position === combatant.position)){
+                    console.log('OVERLAP for ', combatant.name, combatant)
+                    console.log('live combatants:', liveCombatants);
+                    // debugger
+                    depthAvailable = false;
+                    if(combatant.depth !== MAX_DEPTH){
+                        combatant.depth ++
+                    } else {
+                        console.log('ALREADY AT MAX!')
+                        if(combatant.position !== 0){
+                            combatant.position--
+                        } else {
+                            console.log('ALREADY AT POSITION ZERO!!!', combatant);
+                            combatant.position++ 
+                            // setTimeout(()=>{
+                            //     console.log('uhhhhhh');
+                                // debugger
+                            // }, 1000)
+                        }
+                    }
+                } else {
+                    depthAvailable = true;
+                }
+            }
+        } else {
+            while(!depthAvailable){
+                if(liveCombatants.some(e=>e.depth === combatant.depth && e.position === combatant.position)){
+                    console.log('OVERLAP for ', combatant.name)
+                    depthAvailable = false;
+                    combatant.depth--
+                } else {
+                    depthAvailable = true;
+                }
+            }
+        }
+        combatant.hasOverlap = false;
+        this.broadcastDataUpdate();
     }
     this.clearTargetListById = (targetId) => {
-        const enemies = Object.values(this.combatants).filter(e=>e.isMonster || e.isMinion )
-        enemies.forEach(e=>{
+        const combatants = Object.values(this.combatants)
+        combatants.forEach(e=>{
             e.targettedBy = e.targettedBy.filter(id=> id !== targetId)
         })
     }
-    // this.initiateAttack = (id) => {
-    //     let combatant = this.combatants[id];
-    //     if(combatant.tempo === 100 && !combatant.dead){
-    //         combatant.attack()
-    //     }
-    // }
     this.hitsTarget = (caller) => {
         let target = this.getCombatant(caller.targetId);
         if(!target) return
@@ -743,6 +881,7 @@ export function CombatManager(){
         }
         if((target.isMinion || target.isMonster) && target.depth < MAX_DEPTH) target.depth++
         if((!target.isMinion && !target.isMonster) && target.depth > 0) target.depth--
+        this.checkOverlap(target)
         
         setTimeout(()=>{
             caller.active = false;
@@ -827,7 +966,4 @@ export function CombatManager(){
             })
         })
     }
-
-
-
 }

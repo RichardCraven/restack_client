@@ -166,6 +166,12 @@
         width: 100%;
         height: 100px;
     }
+    .portrait-wrapper{
+        z-index: 1;
+    }
+    .action-bar-wrapper{
+        z-index: 0;
+    }
     .left-col{
         position: absolute;
         width: 100%;
@@ -175,45 +181,56 @@
             display: flex;
             flex-direction: column;
             align-items: flex-end;
-        }
-        .fighter-wrapper{
-            // border: 1px solid lightgrey;
-            width: 100%;
-            height: 110px;
-            height: fit-content;
-            display: flex;
-            position: absolute;
-            transition: 1s;
-            &.leader-wrapper{
-                // height: 160px;
-            }
-            .portrait-wrapper{
-                .fighter-portrait{
-                    height: 100px;
-                    width: 100px;
-                    border-radius: 100px;
-                    cursor: pointer;
-                    // box-shadow: 0px 0px 5px transparent;
-                    // 0 - 40
-                    &.wounded{
-                        // box-shadow: 0px 0px 5px red;
-                        animation: fighterWoundedAnimation 3s ease;
+            .lane-wrapper{
+                width: 100%;
+                position: absolute;
+                height: 110px;
+                transition: 1s;
+                .fighter-wrapper{
+                    // border: 1px solid lightgrey;
+                    width: 100%;
+                    height: 110px;
+                    height: fit-content;
+                    display: flex;
+                    position: relative;
+                    transition: 1s;
+                    &.leader-wrapper{
+                        // height: 160px;
                     }
-                    &.leader-portrait{
-                        // height: 150px;
-                        // width: 150px;
+                    .portrait-wrapper{
+                        position: absolute;
+                        transition: 1s;
+                        .fighter-portrait{
+                            height: 100px;
+                            width: 100px;
+                            border-radius: 100px;
+                            cursor: pointer;
+                            // box-shadow: 0px 0px 5px transparent;
+                            // 0 - 40
+                            &.wounded{
+                                // box-shadow: 0px 0px 5px red;
+                                animation: fighterWoundedAnimation 3s ease;
+                            }
+                            &.leader-portrait{
+                                // height: 150px;
+                                // width: 150px;
+                            }
+                            &.selected{
+                                border: 1px solid white;
+                            }
+                        }
                     }
-                    &.selected{
-                        border: 1px solid white;
+                    .action-bar-wrapper{
+                        height: 100px;
+                        // width: 100%;
+                        // width: calc(100% - 300px);
+                        display: flex;
+                        align-items: center;
+                        position: absolute;
+                        // left: 0;
+                        // border: 1px dashed yellow;
                     }
                 }
-            }
-            .action-bar-wrapper{
-                height: 100px;
-                // width: 100%;
-                // width: calc(100% - 300px);
-                display: flex;
-                align-items: center;
             }
         }
     }
@@ -238,64 +255,78 @@
         //         filter: sepia(1);
         //     }
         // }
-        .monster-wrapper{
+        .lane-wrapper{
             width: 100%;
-            // display: flex;
-            flex-direction: row;
-            justify-content: flex-end;
-            align-items: center;
-            // position: relative;
             position: absolute;
+            height: 110px;
             transition: 1s;
-
-            // border: 1px solid green;
-            display: inline-flex;
-
-            .portrait-wrapper{
-                position: absolute;
-                width: 100px;
-                transition: 1s;
-            }
-
-            .monster-portrait, .minion-portrait{
-                // height: 200px;
-                // width: 200px;
-                // border-radius: 200px;
+            .monster-wrapper{
                 height: 100px;
-                width: 100px;
-                border-radius: 100px;
-                pointer-events: initial;
-                position: relative;
-                &.targetted{
-                    border: 1px solid white;
-                }
-                .targetted-by-container{
-                    position: absolute;
-                    bottom: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 20px;
-                    // border: 1px solid white;
-                    display: flex;
-                    align-items: center;
-                    justify-content: flex-start;
-                    flex-direction: row;
-                    .targetted-by-portrait{
-                        height: 20px;
-                        width: 20px;
-                        background-size: 100% 100%;
-                    }
-                }
-                &.minion-portrait{
-                    height: 100px;
-                    width: 100px;
-                }
-            }
-            .action-bar-wrapper{
-                height: 200px;
                 width: 100%;
                 display: flex;
+                flex-direction: row;
+                justify-content: flex-end;
                 align-items: center;
+                // position: relative;
+                position: relative;
+                transition: 1s;
+    
+                // border: 1px solid green;
+                // display: inline-flex;
+    
+                .portrait-wrapper{
+                    position: absolute;
+                    width: 100px;
+                    transition: 1s;
+                }
+    
+                .monster-portrait, .minion-portrait{
+                    // height: 200px;
+                    // width: 200px;
+                    // border-radius: 200px;
+                    height: 100px;
+                    width: 100px;
+                    transition: transform 1s;
+                    &.monster-portrait.enlarged{
+                        transform: scale(2);
+                    }
+                    border-radius: 100px;
+                    pointer-events: initial;
+                    position: relative;
+                    &.targetted{
+                        border: 1px solid white;
+                    }
+                    .targetted-by-container{
+                        position: absolute;
+                        bottom: 0;
+                        left: 0;
+                        width: 100%;
+                        height: 20px;
+                        // border: 1px solid white;
+                        display: flex;
+                        align-items: center;
+                        justify-content: flex-start;
+                        flex-direction: row;
+                        .targetted-by-portrait{
+                            height: 20px;
+                            width: 20px;
+                            background-size: 100% 100%;
+                        }
+                    }
+                    &.minion-portrait{
+                        height: 100px;
+                        width: 100px;
+                    }
+                }
+                .action-bar-wrapper{
+                    // height: 200px;
+                    width: 100%;
+                    display: flex;
+                    align-items: center;
+                    left: 0;
+                    // border: 1px dashed rgb(149, 13, 13);
+                    position: absolute;
+                }
             }
         }
     }
@@ -453,11 +484,15 @@
     }
 
     .mb-interaction-pane{
+        // display: none;
+
+
+
         height: 230px;
         width: 100%;
         position: absolute;
         bottom: 0;
-        border: 1px solid gold;
+        // border: 1px solid gold;
         .header-row{
             width: 100%;
             height: 40px;
