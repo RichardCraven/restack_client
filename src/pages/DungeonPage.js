@@ -59,6 +59,7 @@ class DungeonPage extends React.Component {
         const meta = getMeta();
         this.props.boardManager.establishAvailableItems(this.props.inventoryManager.items)
         let inv = {}
+        console.log('meta:', meta);
         if(!meta || !meta.dungeonId){
             console.log('no dungeon id, make new dungeon')
             this.loadNewDungeon();
@@ -74,7 +75,12 @@ class DungeonPage extends React.Component {
             this.props.inventoryManager.initializeItems(inventory)
             // this.props.inventoryManager.initializeItems(meta.inventory ? meta.inventory : [])
             // this.props.inventoryManager.initializeItems([])
-
+            let g  = meta.crew.find(e=>e.name==='Greco')
+            let idx = meta.crew.indexOf(g)
+            g.hp = 15;
+            meta[idx] = g;
+            // console.log('idx: ', idx);
+            console.log('initializing crew: ', meta.crew);
             this.props.crewManager.initializeCrew(meta.crew ? meta.crew : [])
 
 

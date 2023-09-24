@@ -6,7 +6,7 @@ const MAX_DEPTH = 8;
 const MAX_ROWS = 5;
 const TILE_SIZE = 100
 const SHOW_TILE_BORDERS = true;
-const SHOW_INTERACTION_PANE=false
+const SHOW_INTERACTION_PANE=true
 class MonsterBattle extends React.Component {
     constructor(props){
         super(props)
@@ -26,7 +26,9 @@ class MonsterBattle extends React.Component {
             showCrosshair: false,
             portraitHoveredId: null,
             greetingInProcess: true,
-            combatTiles: []
+            combatTiles: [],
+            draggedOverCombatTileId: null,
+            draggingFighter: null
         }
     }
     componentDidMount(){
@@ -248,7 +250,33 @@ class MonsterBattle extends React.Component {
             showCrosshair: false
         })
     }
-    
+    onDragStart = (fighter) => {
+        console.log('dragging fighter', fighter);
+        this.setState({
+            draggingFighter: fighter
+        })
+    }
+    onDragOver = (event, tileIndex) => {
+        event.preventDefault();
+        if(tileIndex === this.state.draggedOverCombatTileId) return
+        console.log('drag over', tileIndex);
+        this.setState({
+            draggedOverCombatTileId: tileIndex
+        })
+    }
+    onDrop = (tileIndex) => {
+        console.log('on drop:', tileIndex);
+        console.log('yams:', this.state.draggingFighter);
+        const selectedFighter = this.state.battleData[this.state.draggingFighter.id];
+        console.log('battle data fighter', selectedFighter, this.state.combatTiles);
+        const tile = this.state.combatTiles[tileIndex]
+        this.props.combatManager.setFighterDestination(selectedFighter.id, {x: tile.x, y: tile.y})
+        this.setState({
+            draggedOverCombatTileId: null,
+            draggingFighter: null
+        })
+        
+    }
     render(){
         return (
             <div className={`mb-board ${this.state.showCrosshair ? 'show-crosshair' : ''}`} 
@@ -260,7 +288,19 @@ class MonsterBattle extends React.Component {
                 {/* /// FIGHTERS */}
                 <div className="combat-grid" style={{width: TILE_SIZE * MAX_DEPTH + (SHOW_TILE_BORDERS ? MAX_DEPTH * 2 : 0) + 'px'}}>
                     {this.state.combatTiles.map((t,i)=>{
-                        return <div key={i} className="combat-tile"></div>
+                        return <div 
+                        key={i} 
+                        className="combat-tile"
+                        onDragOver={(event)=>this.onDragOver(event, i)}
+                        onDrop={()=>{this.onDrop(i)}}
+                        style={{
+                            backgroundColor: this.state.draggedOverCombatTileId === i ? '#cccca4c1' : 'inherit'
+                        }}
+                        >
+                            <div className="coord-container">
+                                {t.x}, {t.y}
+                            </div>
+                        </div>
                     })}
                 </div>
                 <div className="mb-col fighter-pane">
@@ -275,7 +315,10 @@ class MonsterBattle extends React.Component {
                                 className={`fighter-wrapper ${fighter.isLeader ? 'leader-wrapper' : ''}`} 
                                 >
                                     <div className="portrait-wrapper"
-                                    style={{left: `${this.state.battleData[fighter.id]?.depth * 100 + (SHOW_TILE_BORDERS ? this.state.battleData[fighter.id]?.depth * 2 : 0)}px`}}
+                                    style={{
+                                        left: `${this.state.battleData[fighter.id]?.depth * 100 + (SHOW_TILE_BORDERS ? this.state.battleData[fighter.id]?.depth * 2 : 0)}px`,
+                                        zIndex: `${this.state.battleData[fighter.id]?.dead ? '0' : '100'}`
+                                    }}
                                     >
                                         <div 
                                         className={
@@ -295,7 +338,13 @@ class MonsterBattle extends React.Component {
                                         onClick={() => this.fighterClicked(fighter.id)}
                                         onMouseEnter={() => this.portraitHovered(fighter.id)} 
                                         onMouseLeave={() => this.portraitHovered(null)}
-                                        ></div>
+                                        onDragStart = {(event) => this.onDragStart(fighter)}
+                                        draggable
+                                        >
+                                            <div className="coord">
+                                                {this.state.battleData[fighter.id]?.coordinates?.x},{this.state.battleData[fighter.id]?.coordinates?.y}
+                                            </div>
+                                        </div>
                                         <div className="hp-bar">
                                         {!this.state.battleData[fighter.id]?.dead && <div className="red-fill" 
                                             style={{width: `${(this.state.battleData[fighter.id]?.hp / fighter.stats.hp) * 100}%`}}
@@ -341,7 +390,10 @@ class MonsterBattle extends React.Component {
                             </div>
                             <div 
                             className="portrait-wrapper"
-                            style={{left: `${this.state.battleData[this.props.monster.id]?.depth * 100 + (SHOW_TILE_BORDERS ? this.state.battleData[this.props.monster.id]?.depth * 2: 0)}px`,}}
+                            style={{
+                                left: `${this.state.battleData[this.props.monster.id]?.depth * 100 + (SHOW_TILE_BORDERS ? this.state.battleData[this.props.monster.id]?.depth * 2: 0)}px`,
+                                zIndex: `${this.state.battleData[this.props.monster.id]?.dead ? '0' : '100'}`
+                            }}
                             >
                                 <div 
                                 className={
@@ -404,7 +456,10 @@ class MonsterBattle extends React.Component {
                                 </div>
                                 <div 
                                 className="portrait-wrapper"
-                                style={{left: `${this.state.battleData[minion.id]?.depth * 100 + (SHOW_TILE_BORDERS ? this.state.battleData[minion.id]?.depth * 2 : 0)}px`}}
+                                style={{
+                                    left: `${this.state.battleData[minion.id]?.depth * 100 + (SHOW_TILE_BORDERS ? this.state.battleData[minion.id]?.depth * 2 : 0)}px`,
+                                    zIndex: `${this.state.battleData[minion.id]?.dead ? '0' : '100'}`
+                                }}
                                 >
                                     <div 
                                     className={

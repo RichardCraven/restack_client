@@ -118,6 +118,7 @@ const saveUserData = async () => {
     orientation: props.boardManager.currentOrientation
   }
   meta.inventory = props.inventoryManager.inventory;
+  console.log('meta.crew:', meta.crew);
   meta.crew = props.crewManager.crew;
   meta.dungeonId = props.boardManager.dungeon.id;
   await updateUserRequest(userId, meta)
