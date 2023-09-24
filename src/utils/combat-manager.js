@@ -294,6 +294,9 @@ export function CombatManager(){
     this.establishGreetingCompleteCallback = (cb) => {
         this.greetingComplete = cb
     }
+    this.establishOnFighterMovedToDestinationCallback = (cb) => {
+        this.fighterMovedToDestination = cb;
+    }
 
     this.formatAttacks = (stringArray) => {
         return stringArray.map(e=>{
@@ -482,28 +485,19 @@ export function CombatManager(){
         instruction = action.instruction;
         switch(instruction.type){
             case 'move':
-                console.log('process movement');
                 // console.log('instruction.destination:', instruction.destinationCoordinates);
                 caller.destinationCoordinates = instruction.destinationCoordinates
-                caller.action_queue.shift();
                 this.goToDestination(caller);
             break;
             case 'attack':
-                // console.log('process attack');
-                console.log('instruction.target:', this.combatants[instruction.targetId]);
-                caller.targetId = instruction.targetId
-                // caller.pendingAttack = 
-                
-                // const attack = this.chooseAttackType(caller, target);
+                caller.targetId = instruction.targetId;
                 caller.pendingAttack = instruction.attackType;
-
-                caller.action_queue.shift();
-                // this.goToDestination(caller);
             break;
             default:
                 console.log('no valid action type sepcificied');
                 debugger
         }
+        caller.action_queue.shift();
     }
     this.initializeCombat = (data) => {
         const callbacks = {
@@ -595,16 +589,15 @@ export function CombatManager(){
         fighter.action_queue.push(action)
     }
     this.goToDestination = (caller) => {
-        console.log('go to destination:' , caller);
         caller.depth = caller.destinationCoordinates.x;
         caller.position = caller.destinationCoordinates.y;
+        this.fighterMovedToDestination(caller.destinationCoordinates);
         caller.destinationCoordinates = null;
         // caller.tempo = 1;
         // caller.targetId = null;
         caller.attacking = false;
         caller.destinationSickness = true;
         this.checkOverlap(caller)
-        // caller.turnCycle();
     }
     this.getCombatant = (id) => {
         return Object.values(this.combatants).find(e=> e.id === id)
@@ -653,13 +646,6 @@ export function CombatManager(){
             attack = chosenAttack;
         } else {
             attack = this.pickRandom(available);
-            // if(caller.name === 'Loryastes'){
-            //     console.log('Loryastes attK: ', attack);
-            // }
-            // if(attack.name === 'meditate'){
-            //     console.log('*****MEDITATE****');
-
-            // }
         }
         return attack
     }
@@ -757,20 +743,13 @@ export function CombatManager(){
         if(caller.isMonster || caller.isMinion){
             let sortedTargets = liveFighters.sort((a,b)=>b.depth - a.depth);
             target = this.pickRandom(sortedTargets);
-            if(!target && !reposition){
-                this.combatOver = true;
-                return
-            }
             // teamates = liveMonsters.filter(e=> e.id !== caller.id);
         } else {
-            
             target = this.pickRandom(liveMonsters)
-            
-            if(!target && !reposition){
-                this.combatOver = true;
-                return
-            }
-            // teamates = liveFighters.filter(e=> e.id !== caller.id);
+        }
+        if(!target){
+            this.combatOver = true;
+            return
         }
 
         this.clearTargetListById(caller.id)

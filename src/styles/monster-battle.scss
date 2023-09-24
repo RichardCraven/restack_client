@@ -1,27 +1,14 @@
 .mb-board{
-    // border: 1px solid rgb(185, 15, 15);
-    // width: 66%;
-    // height: 600px;
-    // height: calc(100% - 2px);
-
-    display: flex;
-    flex-direction: row;
-    justify-content: space-between;
-    position: relative;
-
+    z-index: 1;
+    background-color: black;
     display: flex;
     flex-direction: column;
     justify-content: center;
     position: relative;
-    
+    border: 1px solid rgb(91, 110, 91);
 
-    // linear-gradient(90deg,black, white 14%,black 30%)
-
-    // .animated 
     .combat-grid-container{
-        // height: calc(100% - 2px);
     height: fit-content;
-    border: 1px solid green;
 
     display: flex;
     flex-direction: row;
@@ -212,6 +199,16 @@
     .action-bar-wrapper{
         z-index: 0;
     }
+    .ghost-portrait{
+        height: 90px;
+        width: 90px;
+        border-radius: 90px;
+        position: relative;
+        background-size: 100% 100%;
+        filter: brightness(0.3);
+    }
+
+
     .fighter-pane{
         position: absolute;
         width: 100%;
@@ -243,20 +240,15 @@
                         transition: 1s;
                         top: 0;
                         .fighter-portrait{
-                            height: 100px;
-                            width: 100px;
-                            border-radius: 100px;
+                            height: 90px;
+                            width: 90px;
+                            border-radius: 90px;
                             position: relative;
                             cursor: pointer;
-                            // box-shadow: 0px 0px 5px transparent;
-                            // 0 - 40
                             &.wounded{
-                                // box-shadow: 0px 0px 5px red;
                                 animation: fighterWoundedAnimation 3s ease;
                             }
                             &.leader-portrait{
-                                // height: 150px;
-                                // width: 150px;
                             }
                             &.selected{
                                 border: 1px solid white;
@@ -342,13 +334,13 @@
                     // border-radius: 200px;
                     
 
-                    height: 100px;
-                    width: 100px;
+                    height: 90px;
+                    width: 90px;
                     transition: transform 1s;
                     &.monster-portrait.enlarged{
                         transform: scale(2);
                     }
-                    border-radius: 100px;
+                    border-radius: 90px;
                     pointer-events: initial;
                     position: relative;
                     &.targetted{
@@ -545,11 +537,14 @@
     }
 
     .mb-interaction-pane{
-        border: 1px solid yellow;
+        // border: 1px solid (91, 110, 91);;
+        height: 0px;
+        transition: all 0.75s;
+        overflow: hidden;
+        &.visible{
+            height: 230px;
+        }
 
-
-
-        height: 230px;
         width: 100%;
         // position: absolute;
         bottom: 0;
@@ -617,15 +612,7 @@
                     align-items: center;
                     justify-content: center;
                 }
-                // .queue-tile-container{
-                //     display: flex;
-                //     flex-direction: row;
-                //     justify-content: center;
-                //     align-items: center;
-                //     height: calc(100% - 26px);
-                // }
                 .interaction-tile-container, .queue-tile-container{
-                    // height: 100%;
                     height: calc(100% - 51px);
                     width: 100%;
                     display: flex;

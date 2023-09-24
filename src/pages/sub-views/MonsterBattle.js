@@ -29,13 +29,14 @@ class MonsterBattle extends React.Component {
             greetingInProcess: true,
             combatTiles: [],
             draggedOverCombatTileId: null,
-            draggingFighter: null
+            draggingFighter: null,
+            ghostPortraitMatrix: []
         }
     }
     componentDidMount(){
         // const MAX_DEPTH = 8;
         this.props.combatManager.initialize();
-        let arr = [];
+        let arr = [], ghostPortraitMatrix = [];
         for(let i = 0; i < 5*MAX_DEPTH; i++){
             let x = i%MAX_DEPTH,
             y = Math.floor(i/MAX_DEPTH)
@@ -44,9 +45,10 @@ class MonsterBattle extends React.Component {
                 x,
                 y 
             })
+            ghostPortraitMatrix.push(null)
         }
         console.log('arr:', arr, 'props.crew:', this.props.crew);
-        this.setState({combatTiles: arr})
+        this.setState({combatTiles: arr, ghostPortraitMatrix})
         // const crewLeader = this.props.crew.find(e=>e.isLeader)
         this.establishMessageCallback();
         this.establishUpdateMatrixCallback();
@@ -54,6 +56,7 @@ class MonsterBattle extends React.Component {
         this.establishUpdateDataCallback();
         this.establishGreetingCompleteCallback();
         this.establishGameOverCallback();
+        this.establishOnFighterMovedToDestinationCallback();
         this.props.combatManager.initializeCombat({
             crew: this.props.crew,
             leader: this.getCrewLeader(),
@@ -68,6 +71,7 @@ class MonsterBattle extends React.Component {
     greetingComplete = () => {
         console.log('greeting complete');
         this.fighterClicked(this.props.crew[0].id)
+        // debugger
         this.setState({greetingInProcess: false})
     }
     tabToFighter = () => {
@@ -155,6 +159,9 @@ class MonsterBattle extends React.Component {
     }
     establishGameOverCallback = () => {
         this.props.combatManager.establishGameOverCallback(this.gameOver)
+    }
+    establishOnFighterMovedToDestinationCallback = () => {
+        this.props.combatManager.establishOnFighterMovedToDestinationCallback(this.onFighterMovedToDestination)
     }
 
 
@@ -300,6 +307,14 @@ class MonsterBattle extends React.Component {
         //     draggedOverCombatTileId: tileIndex
         // })
     }
+    onFighterMovedToDestination = (coordinates) => {
+        const tile = this.state.combatTiles.find(t=> t.x === coordinates.x && t.y === coordinates.y)
+        let arr = this.state.ghostPortraitMatrix;
+        arr[tile.id] = null;
+        this.setState({
+            ghostPortraitMatrix: arr
+        })
+    }
     onDragStart = (fighter) => {
         console.log('dragging fighter', fighter);
         this.setState({
@@ -318,17 +333,20 @@ class MonsterBattle extends React.Component {
         const selectedFighter = this.state.battleData[this.state.draggingFighter.id];
         const tile = this.state.combatTiles[tileIndex]
         this.props.combatManager.setFighterDestination(selectedFighter.id, {x: tile.x, y: tile.y})
+        console.log('selected fighter: ', selectedFighter);
+        console.log('crew version ', this.props.crew);
+        let arr = this.state.ghostPortraitMatrix;
+        arr[tileIndex] = selectedFighter.portrait;
         this.setState({
             draggedOverCombatTileId: null,
-            draggingFighter: null
+            draggingFighter: null,
+            ghostPortraitMatrix: arr
         })
         
     }
     render(){
         return (
-            <div className={`mb-board ${this.state.showCrosshair ? 'show-crosshair' : ''}`} 
-            
-            >
+            <div className={`mb-board ${this.state.showCrosshair ? 'show-crosshair' : ''}`}>
                 <div className="combat-grid-container"
                 style={{
                     width: TILE_SIZE * MAX_DEPTH + (SHOW_TILE_BORDERS ? MAX_DEPTH * 2 : 0) + 'px',
@@ -346,9 +364,15 @@ class MonsterBattle extends React.Component {
                                 backgroundColor: this.state.draggedOverCombatTileId === i ? '#cccca4c1' : 'inherit'
                             }}
                             >
-                                <div className="coord-container">
+                                {/* <div className="coord-container">
                                     {t.x}, {t.y}
-                                </div>
+                                </div> */}
+                                {this.state.ghostPortraitMatrix[i] && <div className="ghost-portrait"
+                                style={{
+                                    backgroundImage: "url(" + images[this.state.ghostPortraitMatrix[i]] + ")"
+                                }}>
+                                    
+                                </div>}
                             </div>
                         })}
                     </div>
@@ -553,7 +577,7 @@ class MonsterBattle extends React.Component {
                 </div>
 
                 {/* // INTERACTION PANE */}
-                { SHOW_INTERACTION_PANE && <div className="mb-interaction-pane">
+                { SHOW_INTERACTION_PANE && <div className={`mb-interaction-pane ${!this.state.greetingInProcess ? 'visible' : ''} `}>
                     <div className="header-row">
                         <div className="portrait" style={{backgroundImage: "url(" + images[this.state.selectedFighter?.portrait] + ")"}}></div>
                         <div className="title">
