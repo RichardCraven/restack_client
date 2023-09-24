@@ -20,6 +20,7 @@ class MonsterBattle extends React.Component {
             catcher: null,
             selectedFighter: null,
             selectedMonster: null,
+            selectedAttack: null,
             hoveredAttackTile: null,
             hoveredInventoryTile: null,
             hoveredSpecialTile: null,
@@ -44,7 +45,7 @@ class MonsterBattle extends React.Component {
                 y 
             })
         }
-        console.log('arr:', arr);
+        console.log('arr:', arr, 'props.crew:', this.props.crew);
         this.setState({combatTiles: arr})
         // const crewLeader = this.props.crew.find(e=>e.isLeader)
         this.establishMessageCallback();
@@ -89,7 +90,8 @@ class MonsterBattle extends React.Component {
         
         this.setState({
             selectedFighter,
-            selectedMonster: null
+            selectedMonster: null,
+            selectedAttack: null
         })
     }
     pickRandom = (array) => {
@@ -180,12 +182,16 @@ class MonsterBattle extends React.Component {
         // if(val !== null){
         //     val = val.replace('_', ' ')
         // }
-        console.log('val:', this.props.combatManager.attacksMatrix[val])
+        console.log('val: ', val);
+        const formatted_val = val.name.replace(' ', '_')
+        console.log('this.props.combatManager.attacksMatrix[val]: ', this.props.combatManager.attacksMatrix[formatted_val]);
+        console.log('val:', this.props.combatManager.attacksMatrix)
         // this.setState({
         //     hoveredAttackTile: val
         // })
         this.setState({
-            showCrosshair: true
+            showCrosshair: true,
+            selectedAttack: this.props.combatManager.attacksMatrix[formatted_val]
         })
     }
     attackTileHovered = (val) => {
@@ -229,12 +235,21 @@ class MonsterBattle extends React.Component {
     monsterCombatPortraitClicked = (id) => {
         const selectedMonster = this.state.battleData[id];
         console.log('monster clicked: ', selectedMonster)
+        if(this.state.showCrosshair){
+            this.props.combatManager.queueAttackOn(this.state.selectedFighter.id, id, this.state.selectedAttack)
+            this.setState({
+                selectedAttack: null
+            })
+        } else {
+            this.setState({
+                selectedMonster,
+                selectedFighter: null,
+                selectedAttack: null
+            })
+        }
         // selectedMonster.portrait = this.props.crew.find(e=>e.id === id).portrait
         
-        this.setState({
-            selectedMonster,
-            selectedFighter: null
-        })
+        
     }
     portraitClicked = (id) => {
         console.log('portrait clicked:', this.props)
@@ -244,31 +259,63 @@ class MonsterBattle extends React.Component {
     }
     targetTileClicked = (tile) => {
         console.log('tile:', tile);
-        console.log('active gither: ', this.state.selectedFighter);
+        console.log('active fighter: ', this.state.selectedFighter);
+        console.log('selected attack: ', this.state.selectedAttack);
         this.props.combatManager.setTargetFromClick(this.state.selectedFighter.id, tile.id)
+        if(this.state.showCrosshair){
+            this.props.combatManager.queueAttackOn(this.state.selectedFighter.id, tile.id, this.state.selectedAttack)
+        }
         this.setState({
-            showCrosshair: false
+            showCrosshair: false,
+            selectedAttack: null
         })
+        // debugger
+    }
+    targetTileHovered = (tile) => {
+        console.log('hover ', tile);
+        this.setState({
+            portraitHoveredId: tile ? tile.id : null
+        })
+    }
+    queueTileHovered = (tile) => {
+        console.log('hover ', tile);
+        if(tile === null){
+            this.setState({
+                draggedOverCombatTileId: null
+            })
+            return
+        }
+        switch(tile.instruction.type){
+            case 'move':
+                let correspondingTile = this.state.combatTiles.find(e=> e.x === tile.instruction.destinationCoordinates.x && e.y === tile.instruction.destinationCoordinates.y)
+                console.log('corresponding tile:', correspondingTile);
+                this.setState({
+                    draggedOverCombatTileId: correspondingTile.id
+                })
+            break;
+            default:
+            break;
+        }
+        // this.setState({
+        //     draggedOverCombatTileId: tileIndex
+        // })
     }
     onDragStart = (fighter) => {
         console.log('dragging fighter', fighter);
         this.setState({
+            selectedFighter: this.state.battleData[fighter.id],
             draggingFighter: fighter
         })
     }
     onDragOver = (event, tileIndex) => {
         event.preventDefault();
         if(tileIndex === this.state.draggedOverCombatTileId) return
-        console.log('drag over', tileIndex);
         this.setState({
             draggedOverCombatTileId: tileIndex
         })
     }
     onDrop = (tileIndex) => {
-        console.log('on drop:', tileIndex);
-        console.log('yams:', this.state.draggingFighter);
         const selectedFighter = this.state.battleData[this.state.draggingFighter.id];
-        console.log('battle data fighter', selectedFighter, this.state.combatTiles);
         const tile = this.state.combatTiles[tileIndex]
         this.props.combatManager.setFighterDestination(selectedFighter.id, {x: tile.x, y: tile.y})
         this.setState({
@@ -280,226 +327,229 @@ class MonsterBattle extends React.Component {
     render(){
         return (
             <div className={`mb-board ${this.state.showCrosshair ? 'show-crosshair' : ''}`} 
-            style={{
-                width: TILE_SIZE * MAX_DEPTH + (SHOW_TILE_BORDERS ? MAX_DEPTH * 2 : 0) + 'px',
-                height: TILE_SIZE * MAX_ROWS + (SHOW_TILE_BORDERS ? MAX_ROWS * 2 : 0) + 'px'
-            }}
+            
             >
-                {/* /// FIGHTERS */}
-                <div className="combat-grid" style={{width: TILE_SIZE * MAX_DEPTH + (SHOW_TILE_BORDERS ? MAX_DEPTH * 2 : 0) + 'px'}}>
-                    {this.state.combatTiles.map((t,i)=>{
-                        return <div 
-                        key={i} 
-                        className="combat-tile"
-                        onDragOver={(event)=>this.onDragOver(event, i)}
-                        onDrop={()=>{this.onDrop(i)}}
-                        style={{
-                            backgroundColor: this.state.draggedOverCombatTileId === i ? '#cccca4c1' : 'inherit'
-                        }}
-                        >
-                            <div className="coord-container">
-                                {t.x}, {t.y}
-                            </div>
-                        </div>
-                    })}
-                </div>
-                <div className="mb-col fighter-pane">
-                    <div className="fighter-content">
-                        {this.props.crew.map((fighter, i) => {
-                    return  <div key={i}  className='lane-wrapper' 
-                                style={{ 
-                                    top: `${this.state.battleData[fighter.id]?.position * TILE_SIZE + (SHOW_TILE_BORDERS ? this.state.battleData[fighter.id]?.position * 2 : 0)}px`,
-                                    height: `${TILE_SIZE}px`
-                                }}>
-                                <div 
-                                className={`fighter-wrapper ${fighter.isLeader ? 'leader-wrapper' : ''}`} 
-                                >
-                                    <div className="portrait-wrapper"
-                                    style={{
-                                        left: `${this.state.battleData[fighter.id]?.depth * 100 + (SHOW_TILE_BORDERS ? this.state.battleData[fighter.id]?.depth * 2 : 0)}px`,
-                                        zIndex: `${this.state.battleData[fighter.id]?.dead ? '0' : '100'}`
-                                    }}
-                                    >
-                                        <div 
-                                        className={
-                                            `portrait fighter-portrait 
-                                            ${this.state.selectedFighter?.id === fighter.id ? 'selected' : ''}
-                                            ${this.state.battleData[fighter.id]?.wounded ? 'fighterWoundedAnimation' : ''} 
-                                            ${fighter.isLeader ? 'leader-portrait' : ''} 
-                                            ${this.state.battleData[fighter.id]?.dead ? 'dead fighterDeadAnimation' : ''} 
-                                            ${this.state.selectedMonster?.targetId === fighter.id ? 'targetted' : ''}
-                                            ${this.state.battleData[fighter.id]?.active ? 'active' : ''}`
-                                        } 
-                                        style={{
-                                            backgroundImage: "url(" + images[fighter.portrait] + ")", 
-                                            filter: `saturate(${((this.state.battleData[fighter.id]?.hp / fighter.stats.hp) * 100) / 2}) 
-                                                    sepia(${this.state.portraitHoveredId === fighter.id ? '2' : '0'})`
-                                        }} 
-                                        onClick={() => this.fighterClicked(fighter.id)}
-                                        onMouseEnter={() => this.portraitHovered(fighter.id)} 
-                                        onMouseLeave={() => this.portraitHovered(null)}
-                                        onDragStart = {(event) => this.onDragStart(fighter)}
-                                        draggable
-                                        >
-                                            <div className="coord">
-                                                {this.state.battleData[fighter.id]?.coordinates?.x},{this.state.battleData[fighter.id]?.coordinates?.y}
-                                            </div>
-                                        </div>
-                                        <div className="hp-bar">
-                                        {!this.state.battleData[fighter.id]?.dead && <div className="red-fill" 
-                                            style={{width: `${(this.state.battleData[fighter.id]?.hp / fighter.stats.hp) * 100}%`}}
-                                            ></div>}
-                                        </div>
-                                        <div className="energy-bar">
-                                            {!this.state.battleData[fighter.id]?.dead && <div className="yellow-fill" style={{width: `calc(${this.state.battleData[fighter.id]?.energy}%)`}}></div>}
-                                        </div>
-                                        <div className="tempo-bar">
-                                            {!this.state.battleData[fighter.id]?.dead &&  <div className="tempo-indicator" style={{left: `calc(${this.state.battleData[fighter.id]?.tempo}% - 4px)`}}></div>}
-
-                                        </div>
-                                    </div>
-                                    <div className={`action-bar-wrapper`} style={{
-                                        width: !!this.state.battleData[fighter.id]?.targetId ? `${this.props.combatManager.getDistanceToTargetWidthString(this.state.battleData[fighter.id])}px` : '5px',
-                                        left: `calc(100px * ${this.state.battleData[fighter.id]?.depth} + 50px)`
-                                        }}>
-                                        <div className={`action-bar ${(this.state.battleData[fighter.id]?.attacking) ? 'fighterHitsAnimation' : ''}`}></div>
-                                    </div>
-                                </div>
-                            </div>    
-                        })}
-                    </div>
-                </div>
-                
-                {/* /// MONSTERS & MINIONS */}
-                <div className="mb-col monster-pane">
-                    {/* // MONSTER // */}
-                    <div className='lane-wrapper'  
-                    style={{ 
-                        top: `${this.state.battleData[this.props.monster.id]?.position * TILE_SIZE + (SHOW_TILE_BORDERS ? this.state.battleData[this.props.monster.id]?.position * 2 : 0)}px`,
-                        height: `${TILE_SIZE}px`
-                    }}>
-                        <div className="monster-wrapper">
-                            <div className={`action-bar-wrapper`} 
-                                style={{
-                                    width: !!this.state.battleData[this.props.monster.id]?.targetId ? `${this.props.combatManager.getDistanceToTargetWidthString(this.state.battleData[this.props.monster.id])}px` : '5px',
-                                    left: `calc(100px * ${this.props.combatManager.getCombatant(this.state.battleData[this.props.monster.id]?.targetId)?.depth} + 50px)`
-                                    }}>
-                                <div className={`action-bar ${this.state.battleData[this.props.monster.id]?.attacking ? 'monsterHitsAnimation' : ''}`}>
-
-                                </div>
-                            </div>
-                            <div 
-                            className="portrait-wrapper"
+                <div className="combat-grid-container"
+                style={{
+                    width: TILE_SIZE * MAX_DEPTH + (SHOW_TILE_BORDERS ? MAX_DEPTH * 2 : 0) + 'px',
+                    height: TILE_SIZE * MAX_ROWS + (SHOW_TILE_BORDERS ? MAX_ROWS * 2 : 0) + 'px'
+                }}>
+                    {/* /// COMBAT GRID */}
+                    <div className="combat-grid" style={{width: TILE_SIZE * MAX_DEPTH + (SHOW_TILE_BORDERS ? MAX_DEPTH * 2 : 0) + 'px'}}>
+                        {this.state.combatTiles.map((t,i)=>{
+                            return <div 
+                            key={i} 
+                            className="combat-tile"
+                            onDragOver={(event)=>this.onDragOver(event, i)}
+                            onDrop={()=>{this.onDrop(i)}}
                             style={{
-                                left: `${this.state.battleData[this.props.monster.id]?.depth * 100 + (SHOW_TILE_BORDERS ? this.state.battleData[this.props.monster.id]?.depth * 2: 0)}px`,
-                                zIndex: `${this.state.battleData[this.props.monster.id]?.dead ? '0' : '100'}`
+                                backgroundColor: this.state.draggedOverCombatTileId === i ? '#cccca4c1' : 'inherit'
                             }}
                             >
-                                <div 
-                                className={
-                                    `portrait monster-portrait 
-                                    ${this.state.greetingInProcess ? 'enlarged' : ''} 
-                                    ${this.state.battleData[this.props.monster.id]?.active ? 'active' : ''} 
-                                    ${this.state.battleData[this.props.monster.id]?.dead ? 'dead monsterDeadAnimation' : ''}
-                                    ${this.state.battleData[this.props.monster.id]?.wounded ? 'fighterWoundedAnimation' : ''}
-                                    ${this.state.selectedMonster?.id === this.props.monster.id ? 'selected' : ''}
-                                    ${this.state.selectedFighter?.targetId === this.props.monster.id ? 'targetted' : ''}`
-                                } 
-                                style={{
-                                    backgroundImage: "url(" + this.props.monster.portrait + ")", 
-                                    filter: `saturate(${((this.state.battleData[this.props.monster.id]?.hp / this.props.monster.stats.hp) * 100) / 2}) 
-                                            sepia(${this.state.showCrosshair && this.state.portraitHoveredId === this.props.monster.id ? '2' : '0'})`
-                                }} 
-                                onMouseEnter={() => this.portraitHovered(this.props.monster.id)} 
-                                onMouseLeave={() => this.portraitHovered(null)}
-                                onClick={() => this.monsterCombatPortraitClicked(this.props.monster.id)}
-                                // onClick={() => this.fighterClicked(fighter.id)}
-                                >
-                                    <div className="targetted-by-container">
-                                        {this.state.battleData[this.props.monster.id]?.targettedBy.map((e,i)=>{
-                                            return <div key={i} className='targetted-by-portrait' style={{backgroundImage: "url(" + images[this.state.battleData[e]?.portrait] + ")"}}></div>
-                                        })}
-                                    </div>
+                                <div className="coord-container">
+                                    {t.x}, {t.y}
                                 </div>
-                                {<div className="indicators-wrapper">
-                                    <div className="monster-hp-bar hp-bar">
-                                        {!this.state.battleData[this.props.monster.id]?.dead && <div className="red-fill" style={{width: `${(this.state.battleData[this.props.monster.id]?.hp / this.props.monster.stats.hp) * 100}%`}}></div>}
-                                    </div>
-                                    <div className="monster-energy-bar energy-bar">
-                                        {!this.state.battleData[this.props.monster.id]?.dead && <div className="yellow-fill" style={{width: `calc(${this.state.battleData[this.props.monster.id]?.energy}%)`}}></div>}
-                                    </div>
-                                    <div className="tempo-bar">
-                                        {!this.state.battleData[this.props.monster.id]?.dead && <div className="tempo-indicator" style={{right: `calc(${this.state.battleData[this.props.monster.id]?.tempo}% - 4px)`}}></div>}
-                                    </div>
-                                </div>}
                             </div>
+                        })}
+                    </div>
+                    {/* /// FIGHTERS */}
+                    <div className="mb-col fighter-pane">
+                        <div className="fighter-content">
+                            {this.props.crew.map((fighter, i) => {
+                        return  <div key={i}  className='lane-wrapper' 
+                                    style={{ 
+                                        top: `${this.state.battleData[fighter.id]?.position * TILE_SIZE + (SHOW_TILE_BORDERS ? this.state.battleData[fighter.id]?.position * 2 : 0)}px`,
+                                        height: `${TILE_SIZE}px`
+                                    }}>
+                                    <div 
+                                    className={`fighter-wrapper ${fighter.isLeader ? 'leader-wrapper' : ''}`} 
+                                    >
+                                        <div className="portrait-wrapper"
+                                        style={{
+                                            left: `${this.state.battleData[fighter.id]?.depth * 100 + (SHOW_TILE_BORDERS ? this.state.battleData[fighter.id]?.depth * 2 : 0)}px`,
+                                            zIndex: `${this.state.battleData[fighter.id]?.dead ? '0' : '100'}`
+                                        }}
+                                        >
+                                            <div 
+                                            className={
+                                                `portrait fighter-portrait 
+                                                ${this.state.selectedFighter?.id === fighter.id ? 'selected' : ''}
+                                                ${this.state.battleData[fighter.id]?.wounded ? 'fighterWoundedAnimation' : ''} 
+                                                ${fighter.isLeader ? 'leader-portrait' : ''} 
+                                                ${this.state.battleData[fighter.id]?.dead ? 'dead fighterDeadAnimation' : ''} 
+                                                ${this.state.selectedMonster?.targetId === fighter.id ? 'targetted' : ''}
+                                                ${this.state.battleData[fighter.id]?.active ? 'active' : ''}`
+                                            } 
+                                            style={{
+                                                backgroundImage: "url(" + images[fighter.portrait] + ")", 
+                                                filter: `saturate(${((this.state.battleData[fighter.id]?.hp / fighter.stats.hp) * 100) / 2}) 
+                                                        sepia(${this.state.portraitHoveredId === fighter.id ? '2' : '0'})`
+                                            }} 
+                                            onClick={() => this.fighterClicked(fighter.id)}
+                                            onMouseEnter={() => this.portraitHovered(fighter.id)} 
+                                            onMouseLeave={() => this.portraitHovered(null)}
+                                            onDragStart = {(event) => this.onDragStart(fighter)}
+                                            draggable
+                                            >
+                                                <div className="coord">
+                                                    {this.state.battleData[fighter.id]?.coordinates?.x},{this.state.battleData[fighter.id]?.coordinates?.y}
+                                                </div>
+                                            </div>
+                                            <div className="hp-bar">
+                                            {!this.state.battleData[fighter.id]?.dead && <div className="red-fill" 
+                                                style={{width: `${(this.state.battleData[fighter.id]?.hp / fighter.stats.hp) * 100}%`}}
+                                                ></div>}
+                                            </div>
+                                            <div className="energy-bar">
+                                                {!this.state.battleData[fighter.id]?.dead && <div className="yellow-fill" style={{width: `calc(${this.state.battleData[fighter.id]?.energy}%)`}}></div>}
+                                            </div>
+                                            <div className="tempo-bar">
+                                                {!this.state.battleData[fighter.id]?.dead &&  <div className="tempo-indicator" style={{left: `calc(${this.state.battleData[fighter.id]?.tempo}% - 4px)`}}></div>}
+
+                                            </div>
+                                        </div>
+                                        <div className={`action-bar-wrapper`} style={{
+                                            width: !!this.state.battleData[fighter.id]?.targetId ? `${this.props.combatManager.getDistanceToTargetWidthString(this.state.battleData[fighter.id])}px` : '5px',
+                                            left: `calc(100px * ${this.state.battleData[fighter.id]?.depth} + 50px)`
+                                            }}>
+                                            <div className={`action-bar ${(this.state.battleData[fighter.id]?.attacking) ? 'fighterHitsAnimation' : ''}`}></div>
+                                        </div>
+                                    </div>
+                                </div>    
+                            })}
                         </div>
                     </div>
-
-                    {/* // MINIONS // */}
-                    {this.props.minions && this.props.minions.map((minion, i) => {
-                return <div key={i} className='lane-wrapper' 
-                style={{ 
-                    top: `${this.state.battleData[minion.id]?.position * TILE_SIZE + (SHOW_TILE_BORDERS ? this.state.battleData[minion.id]?.position * 2 : 0)}px`,
-                    height: `${TILE_SIZE}px`
-                }}
-                    > 
+                    
+                    {/* /// MONSTERS & MINIONS */}
+                    <div className="mb-col monster-pane">
+                        {/* // MONSTER // */}
+                        <div className='lane-wrapper'  
+                        style={{ 
+                            top: `${this.state.battleData[this.props.monster.id]?.position * TILE_SIZE + (SHOW_TILE_BORDERS ? this.state.battleData[this.props.monster.id]?.position * 2 : 0)}px`,
+                            height: `${TILE_SIZE}px`
+                        }}>
                             <div className="monster-wrapper">
                                 <div className={`action-bar-wrapper`} 
                                     style={{
-                                        width: !!this.state.battleData[minion.id]?.targetId ? `${this.props.combatManager.getDistanceToTargetWidthString(this.state.battleData[minion.id])}px` : '5px',
-                                        left: `calc(100px * ${this.props.combatManager.getCombatant(this.state.battleData[minion.id]?.targetId)?.depth} + 50px)`
+                                        width: !!this.state.battleData[this.props.monster.id]?.targetId ? `${this.props.combatManager.getDistanceToTargetWidthString(this.state.battleData[this.props.monster.id])}px` : '5px',
+                                        left: `calc(100px * ${this.props.combatManager.getCombatant(this.state.battleData[this.props.monster.id]?.targetId)?.depth} + 50px)`
                                         }}>
-                                    <div className={`action-bar ${this.state.battleData[minion.id]?.attacking ? 'monsterHitsAnimation' : ''}`}>
-                                        {/* {minion.id} */}
+                                    <div className={`action-bar ${this.state.battleData[this.props.monster.id]?.attacking ? 'monsterHitsAnimation' : ''}`}>
+
                                     </div>
                                 </div>
                                 <div 
                                 className="portrait-wrapper"
                                 style={{
-                                    left: `${this.state.battleData[minion.id]?.depth * 100 + (SHOW_TILE_BORDERS ? this.state.battleData[minion.id]?.depth * 2 : 0)}px`,
-                                    zIndex: `${this.state.battleData[minion.id]?.dead ? '0' : '100'}`
+                                    left: `${this.state.battleData[this.props.monster.id]?.depth * 100 + (SHOW_TILE_BORDERS ? this.state.battleData[this.props.monster.id]?.depth * 2: 0)}px`,
+                                    zIndex: `${this.state.battleData[this.props.monster.id]?.dead ? '0' : '100'}`
                                 }}
                                 >
                                     <div 
                                     className={
-                                        `portrait minion-portrait 
-                                        ${this.state.battleData[minion.id]?.active ? 'active' : ''} 
-                                        ${this.state.battleData[minion.id]?.dead ? 'dead monsterDeadAnimation' : ''}
-                                        ${this.state.battleData[minion.id]?.wounded ? 'fighterWoundedAnimation' : ''}
-                                        ${this.state.selectedMonster?.id === minion.id ? 'selected' : ''}
-                                        ${this.state.selectedFighter?.targetId === minion.id ? 'targetted' : ''}`
+                                        `portrait monster-portrait 
+                                        ${this.state.greetingInProcess ? 'enlarged' : ''} 
+                                        ${this.state.battleData[this.props.monster.id]?.active ? 'active' : ''} 
+                                        ${this.state.battleData[this.props.monster.id]?.dead ? 'dead monsterDeadAnimation' : ''}
+                                        ${this.state.battleData[this.props.monster.id]?.wounded ? 'fighterWoundedAnimation' : ''}
+                                        ${this.state.selectedMonster?.id === this.props.monster.id ? 'selected' : ''}
+                                        ${this.state.selectedFighter?.targetId === this.props.monster.id ? 'targetted' : ''}`
                                     } 
                                     style={{
-                                        backgroundImage: "url(" + minion.portrait + ")", 
-                                        filter: `saturate(${((this.state.battleData[minion.id]?.hp / minion.stats.hp) * 100) / 2}) 
-                                                sepia(${this.state.showCrosshair && this.state.portraitHoveredId === minion.id ? '2' : '0'})`
+                                        backgroundImage: "url(" + this.props.monster.portrait + ")", 
+                                        filter: `saturate(${((this.state.battleData[this.props.monster.id]?.hp / this.props.monster.stats.hp) * 100) / 2}) 
+                                                sepia(${this.state.portraitHoveredId === this.props.monster.id ? '2' : '0'})`
                                     }} 
-                                    onMouseEnter={() => this.portraitHovered(minion.id)} 
+                                    onMouseEnter={() => this.portraitHovered(this.props.monster.id)} 
                                     onMouseLeave={() => this.portraitHovered(null)}
-                                    onClick={() => this.monsterCombatPortraitClicked(minion.id)}
+                                    onClick={() => this.monsterCombatPortraitClicked(this.props.monster.id)}
                                     >
                                         <div className="targetted-by-container">
-                                            {this.state.battleData[minion.id]?.targettedBy.map((e,i)=>{
+                                            {this.state.battleData[this.props.monster.id]?.targettedBy.map((e,i)=>{
                                                 return <div key={i} className='targetted-by-portrait' style={{backgroundImage: "url(" + images[this.state.battleData[e]?.portrait] + ")"}}></div>
                                             })}
                                         </div>
                                     </div>
                                     {<div className="indicators-wrapper">
                                         <div className="monster-hp-bar hp-bar">
-                                            {!this.state.battleData[minion.id]?.dead && <div className="red-fill" style={{width: `${(this.state.battleData[minion.id]?.hp / minion.stats.hp) * 100}%`}}></div>}
+                                            {!this.state.battleData[this.props.monster.id]?.dead && <div className="red-fill" style={{width: `${(this.state.battleData[this.props.monster.id]?.hp / this.props.monster.stats.hp) * 100}%`}}></div>}
                                         </div>
                                         <div className="monster-energy-bar energy-bar">
-                                            {!this.state.battleData[minion.id]?.dead && <div className="yellow-fill" style={{width: `calc(${this.state.battleData[minion.id]?.energy}%)`}}></div>}
+                                            {!this.state.battleData[this.props.monster.id]?.dead && <div className="yellow-fill" style={{width: `calc(${this.state.battleData[this.props.monster.id]?.energy}%)`}}></div>}
                                         </div>
                                         <div className="tempo-bar">
-                                            {!this.state.battleData[minion.id]?.dead && <div className="tempo-indicator" style={{right: `calc(${this.state.battleData[minion.id]?.tempo}% - 4px)`}}></div>}
+                                            {!this.state.battleData[this.props.monster.id]?.dead && <div className="tempo-indicator" style={{right: `calc(${this.state.battleData[this.props.monster.id]?.tempo}% - 4px)`}}></div>}
                                         </div>
                                     </div>}
                                 </div>
                             </div>
                         </div>
-                    })}
+
+                        {/* // MINIONS // */}
+                        {this.props.minions && this.props.minions.map((minion, i) => {
+                    return <div key={i} className='lane-wrapper' 
+                    style={{ 
+                        top: `${this.state.battleData[minion.id]?.position * TILE_SIZE + (SHOW_TILE_BORDERS ? this.state.battleData[minion.id]?.position * 2 : 0)}px`,
+                        height: `${TILE_SIZE}px`
+                    }}
+                        > 
+                                <div className="monster-wrapper">
+                                    <div className={`action-bar-wrapper`} 
+                                        style={{
+                                            width: !!this.state.battleData[minion.id]?.targetId ? `${this.props.combatManager.getDistanceToTargetWidthString(this.state.battleData[minion.id])}px` : '5px',
+                                            left: `calc(100px * ${this.props.combatManager.getCombatant(this.state.battleData[minion.id]?.targetId)?.depth} + 50px)`
+                                            }}>
+                                        <div className={`action-bar ${this.state.battleData[minion.id]?.attacking ? 'monsterHitsAnimation' : ''}`}>
+                                            {/* {minion.id} */}
+                                        </div>
+                                    </div>
+                                    <div 
+                                    className="portrait-wrapper"
+                                    style={{
+                                        left: `${this.state.battleData[minion.id]?.depth * 100 + (SHOW_TILE_BORDERS ? this.state.battleData[minion.id]?.depth * 2 : 0)}px`,
+                                        zIndex: `${this.state.battleData[minion.id]?.dead ? '0' : '100'}`
+                                    }}
+                                    >
+                                        <div 
+                                        className={
+                                            `portrait minion-portrait 
+                                            ${this.state.battleData[minion.id]?.active ? 'active' : ''} 
+                                            ${this.state.battleData[minion.id]?.dead ? 'dead monsterDeadAnimation' : ''}
+                                            ${this.state.battleData[minion.id]?.wounded ? 'fighterWoundedAnimation' : ''}
+                                            ${this.state.selectedMonster?.id === minion.id ? 'selected' : ''}
+                                            ${this.state.selectedFighter?.targetId === minion.id ? 'targetted' : ''}`
+                                        } 
+                                        style={{
+                                            backgroundImage: "url(" + minion.portrait + ")", 
+                                            filter: `saturate(${((this.state.battleData[minion.id]?.hp / minion.stats.hp) * 100) / 2}) 
+                                                    sepia(${this.state.portraitHoveredId === minion.id ? '2' : '0'})`
+                                        }} 
+                                        onMouseEnter={() => this.portraitHovered(minion.id)} 
+                                        onMouseLeave={() => this.portraitHovered(null)}
+                                        onClick={() => this.monsterCombatPortraitClicked(minion.id)}
+                                        >
+                                            <div className="targetted-by-container">
+                                                {this.state.battleData[minion.id]?.targettedBy.map((e,i)=>{
+                                                    return <div key={i} className='targetted-by-portrait' style={{backgroundImage: "url(" + images[this.state.battleData[e]?.portrait] + ")"}}></div>
+                                                })}
+                                            </div>
+                                        </div>
+                                        {<div className="indicators-wrapper">
+                                            <div className="monster-hp-bar hp-bar">
+                                                {!this.state.battleData[minion.id]?.dead && <div className="red-fill" style={{width: `${(this.state.battleData[minion.id]?.hp / minion.stats.hp) * 100}%`}}></div>}
+                                            </div>
+                                            <div className="monster-energy-bar energy-bar">
+                                                {!this.state.battleData[minion.id]?.dead && <div className="yellow-fill" style={{width: `calc(${this.state.battleData[minion.id]?.energy}%)`}}></div>}
+                                            </div>
+                                            <div className="tempo-bar">
+                                                {!this.state.battleData[minion.id]?.dead && <div className="tempo-indicator" style={{right: `calc(${this.state.battleData[minion.id]?.tempo}% - 4px)`}}></div>}
+                                            </div>
+                                        </div>}
+                                    </div>
+                                </div>
+                            </div>
+                        })}
+                    </div>
                 </div>
 
                 {/* // INTERACTION PANE */}
@@ -579,14 +629,14 @@ class MonsterBattle extends React.Component {
                             <div className="interaction-header">Target</div>
                             <div className="interaction-tooltip"> </div>
                             <div className="interaction-tile-container">
-                                {Object.values(this.state.battleData).filter(e=>e.isMonster || e.isMinion).map((a, i)=>{
+                                {Object.values(this.state.battleData).filter(e=>e.isMonster || e.isMinion && !e.dead).map((a, i)=>{
                                 return <div 
                                     key={i} 
                                     style={{backgroundImage: "url(" + a.portrait + ")", cursor: this.state.showCrosshair ? 'crosshair' : ''}} 
                                     className={`interaction-tile target ${this.state.selectedFighter?.targetId === a.id ? 'targetted' : ''}`} 
                                     onClick={() => this.targetTileClicked(a)} 
-                                    // onMouseEnter={() => this.specialTileHovered(a)} 
-                                    // onMouseLeave={() => this.specialTileHovered(null)}
+                                    onMouseEnter={() => this.targetTileHovered(a)} 
+                                    onMouseLeave={() => this.targetTileHovered(null)}
                                     >
                                     </div>
                                 })}
@@ -594,6 +644,22 @@ class MonsterBattle extends React.Component {
                         </div>
                         <div className="combo-col">
 
+                        </div>
+                        <div className="queue-col">
+                            <div className="interaction-header">Queue</div>
+                            <div className="queue-tile-container">
+                                {this.state.selectedFighter?.action_queue.map((action, i)=>{
+                                    return <div 
+                                    key={i} 
+                                    style={{backgroundImage: "url(" + images[action.icon] + ")", cursor: 'pointer'}} 
+                                    className='interaction-tile action' 
+                                    onMouseEnter={() => this.queueTileHovered(action)} 
+                                    onMouseLeave={() => this.queueTileHovered(null)}
+                                    >
+                                        {/* {a} */}
+                                    </div>
+                                })}
+                            </div>
                         </div>
                     </div>
                 </div>}

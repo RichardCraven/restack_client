@@ -2,6 +2,7 @@
 const MAX_DEPTH = 7
 const MAX_LANES = 5
 const FIGHT_INTERVAL = 10
+const DEBUG_STEPS = false;
 export function CombatManager(){
     // const attackTypes = [
     //     'psionic', 'crushing', 'cutting', 'electricity', 'fire', 'blood_magic', 'ice', 'curse', 'sickness', 'arcane', 'buff',
@@ -119,7 +120,7 @@ export function CombatManager(){
             name: 'meditate',
             type: 'buff',
             range: 'close',
-            icon: 'scepter',
+            icon: 'basic_shield',
             cooldown: 5.5,
             damage: 0
         },
@@ -175,7 +176,7 @@ export function CombatManager(){
             name: 'cane strike',
             type: 'crushing',
             range: 'far',
-            icon: 'basic_shield',
+            icon: 'scepter',
             cooldown: 3,
             damage: 2
         }
@@ -320,7 +321,9 @@ export function CombatManager(){
             initiateAttack,
             checkOverlap,
             handleOverlap,
-            goToDestination
+            goToDestination,
+            processActionQueue,
+            processMove
         } = callbacks;
         return {
             name: fighter.name,
@@ -357,26 +360,36 @@ export function CombatManager(){
             coordinates: fighter.coordinates,
             destinationCoordinates: null,
             destinationSickness: false,
+            action_queue: [],
             talk: function () {
                 console.log('My name is ' 
                 + fighter.name + '!');
             },
-            attack: function () {
+            attack: function(){
                 let target = getCombatant(this.targetId);
                 if(this.position === target.position){
-
+                    if(this.name === "Tyra"  && DEBUG_STEPS === true){
+                        console.log('tyra attack called');
+                    }
                     initiateAttack(this);
                     broadcastDataUpdate(this)
                 } else {
                     this.active = false;
                     this.attacking = false;
                     this.tempo = 1;
-                    this.targetId = null;
+                    // this.targetId = null;
                     this.turnCycle();
                 }
             },
+            move: function(){
+                processMove(this);
+            },
             turnCycle: function(){
-                let count = 0;
+                if(this.name === "Tyra"  && DEBUG_STEPS === true){
+                    console.log('tyra turn cycle start');
+                }
+                let count = 0,
+                hasMoved = false;
                 let factor = (1/this.stats.dex * 25)
                 // let timeToFill = factor * 1000;
                 let increment = (1 / factor)
@@ -393,29 +406,59 @@ export function CombatManager(){
                 this.interval = setInterval(()=>{
                     if(this.combatPaused) return
                     count += increment
-                    
+                    // if(this.name === "Tyra"){
+                    //     console.log('count', count);
+                    // }
                     this.tempo = Math.floor((count/100)*100);
-
+                    if(this.tempo < 1) return;
+                    if(this.name === "Tyra"  && DEBUG_STEPS === true){
+                        console.log('tempo', this.tempo);
+                    }
                     if(isCombatOver() || this.dead) clearInterval(this.interval)
-                    if(count > 10 && this.targetId === null && this.destinationSickness === false){
+                    if(this.tempo === 5 && this.targetId === null && this.destinationSickness === false){
+                        if(this.name === "Tyra"  && DEBUG_STEPS === true){
+                            console.log('tyra acquiring target');
+                        }
                         acquireTarget(this);
                         checkOverlap(this)
                     }
+                    if(this.tempo === 10 && this.tempo < 20 && this.targetId !== null && !hasMoved && this.destinationSickness === false){
+                        if(this.name === "Tyra"  && DEBUG_STEPS === true){
+                            console.log('tyra moving', this);
+                        }
+                        this.move();
+                        hasMoved = true;
+                    }
                     if(count >= 100){
+                        if(this.name === "Tyra"  && DEBUG_STEPS === true){
+                            console.log('tyra [turn] count = 100');
+                        }
                         clearInterval(this.interval)
+                        if(this.action_queue.length > 0){
+                            processActionQueue(this)
+                            clearInterval(this.interval)
+                        }
                         let target = getCombatant(this.targetId)
                         if(this.destinationCoordinates){
                             console.log(this.name, 'has a destination:', this.destinationCoordinates);
                             goToDestination(this);
                         } else if(this.destinationSickness){
-                            this.destinationSickness = false;
+                            if(this.name=== 'Tyra' && DEBUG_STEPS === true){
+                                console.log('Tyra setting dest sick to false')
+                            }
                             this.tempo = 1;
                             clearInterval(this.interval)
+                            
                             this.turnCycle();
-                            // acquireTarget(this)
-                        } else if(this.pendingAttack.cooldown_position !== 100){
+
+                            
+                            this.destinationSickness = false;
+                        } else if(this.pendingAttack && this.pendingAttack.cooldown_position !== 100){
                             this.waitForAttack()
                         } else {
+                            if(this.name === "Tyra"  && DEBUG_STEPS === true  && DEBUG_STEPS === true){
+                                console.log('tyra [IN TURN CYCLE] about to call attack');
+                            }
                             this.attack(target)
                         }
                     }
@@ -433,6 +476,35 @@ export function CombatManager(){
             }
         };
     }
+    this.processActionQueue = (caller) => {
+        // console.log('processing action queue for ', caller);
+        const action = caller.action_queue[0],
+        instruction = action.instruction;
+        switch(instruction.type){
+            case 'move':
+                console.log('process movement');
+                // console.log('instruction.destination:', instruction.destinationCoordinates);
+                caller.destinationCoordinates = instruction.destinationCoordinates
+                caller.action_queue.shift();
+                this.goToDestination(caller);
+            break;
+            case 'attack':
+                // console.log('process attack');
+                console.log('instruction.target:', this.combatants[instruction.targetId]);
+                caller.targetId = instruction.targetId
+                // caller.pendingAttack = 
+                
+                // const attack = this.chooseAttackType(caller, target);
+                caller.pendingAttack = instruction.attackType;
+
+                caller.action_queue.shift();
+                // this.goToDestination(caller);
+            break;
+            default:
+                console.log('no valid action type sepcificied');
+                debugger
+        }
+    }
     this.initializeCombat = (data) => {
         const callbacks = {
             broadcastDataUpdate: this.broadcastDataUpdate,
@@ -448,7 +520,9 @@ export function CombatManager(){
             initiateAttack: this.initiateAttack,
             checkOverlap: this.checkOverlap,
             handleOverlap: this.handleOverlap,
-            goToDestination: this.goToDestination
+            goToDestination: this.goToDestination,
+            processActionQueue: this.processActionQueue,
+            processMove: this.processMove
             // combatPaused: this.combatPaused
         }
         this.data = data;
@@ -508,26 +582,49 @@ export function CombatManager(){
     this.setFighterDestination = (id, coordinates) => {
         const fighter = this.combatants[id];
         console.log('battle fighter: ', fighter);
-        fighter.destinationCoordinates = coordinates;
         fighter.targetId = null;
+        // this.clearFighterProps
+        const action = {
+            name: 'Move to',
+            icon: 'basic_shield',
+            instruction: {
+                type: 'move',
+                destinationCoordinates: coordinates
+            } 
+        }
+        fighter.action_queue.push(action)
     }
     this.goToDestination = (caller) => {
         console.log('go to destination:' , caller);
         caller.depth = caller.destinationCoordinates.x;
         caller.position = caller.destinationCoordinates.y;
         caller.destinationCoordinates = null;
-        caller.tempo = 1;
-        caller.targetId = null;
+        // caller.tempo = 1;
+        // caller.targetId = null;
         caller.attacking = false;
         caller.destinationSickness = true;
-        caller.turnCycle();
+        this.checkOverlap(caller)
+        // caller.turnCycle();
     }
     this.getCombatant = (id) => {
         return Object.values(this.combatants).find(e=> e.id === id)
     }
+    this.queueAttackOn = (callerId, targetId, attackType) => {
+        const caller = this.getCombatant(callerId)
+        // console.log('attack type!!!!: ', attackType);
+        const action = {
+            name: 'Attack',
+            icon: 'scepter',
+            instruction: {
+                type: 'attack',
+                attackType,
+                targetId
+            } 
+        }
+        caller.action_queue.push(action)
+    }
     this.setTargetFromClick = (callerId, targetId) => {
         const caller = this.getCombatant(callerId)
-        // console.log('set target for ', caller, 'to ', this.getCombatant(targetId))
         caller.targetId = targetId
     }
     this.broadcastDataUpdate = (caller = null) => {
@@ -540,6 +637,10 @@ export function CombatManager(){
     }
     this.chooseAttackType = (caller, target) => {
         let attack, available = caller.attacks.filter(e=>e.cooldown_position === 100)
+        if(caller.name === "Tyra"){
+            console.log('tyra choosing attack type: ', caller.attacks);
+            console.log('available:' , available);
+        }
         if(available.length === 0){
             let percentCooledDown = 0,
             chosenAttack;
@@ -552,13 +653,13 @@ export function CombatManager(){
             attack = chosenAttack;
         } else {
             attack = this.pickRandom(available);
-            if(caller.name === 'Loryastes'){
-                console.log('Loryastes attK: ', attack);
-            }
-            if(attack.name === 'meditate'){
-                console.log('*****MEDITATE****');
+            // if(caller.name === 'Loryastes'){
+            //     console.log('Loryastes attK: ', attack);
+            // }
+            // if(attack.name === 'meditate'){
+            //     console.log('*****MEDITATE****');
 
-            }
+            // }
         }
         return attack
     }
@@ -579,6 +680,7 @@ export function CombatManager(){
         target = this.combatants[caller.targetId];
         if(!caller.pendingAttack){
             console.log('WHOOA there. someone is trying to attack with nothing');
+            return
         }
         caller.active = true;
         caller.attacking = true;
@@ -644,32 +746,22 @@ export function CombatManager(){
         caller.coordinates = {x: caller.depth, y: caller.position}
     }
     this.acquireTarget = (caller) => {
-        // if(this.combatPaused) return
-        console.log('ACQUIRING TARGET');
-        if(caller.name === 'Greco'){
-            console.log('greco acquiring target');
-        }
+        if(this.combatPaused) return;
         let reposition = this.pickRandom([1,2,3,4,5,6,7,8,9,10]) < 4
         
         if(caller.dead) return;
         const liveMonsters = Object.values(this.combatants).filter(e=> ((e.isMonster || e.isMinion )  && !e.dead)),
               liveFighters = Object.values(this.combatants).filter(e=> ((!e.isMonster && !e.isMinion) && !e.dead)),
               liveCombatants = liveFighters.concat(liveMonsters).filter(e => e.id !== caller.id);
-        let target, teamates, position;
+        let target;
         if(caller.isMonster || caller.isMinion){
-            // target = this.pickRandom(Object.values(this.combatants).filter(e=> ((!e.isMonster && !e.isMinion) && !e.dead)))
-            let sortedTargets = liveFighters.sort((a,b)=>b.depth - a.depth)
-            // target = sortedTargets[0]
-            target = this.pickRandom(sortedTargets)
-            if(caller.name === 'bones' && caller.id === 810){
-                // console.log('bones, depth is nowt: ', caller.depth)
-                console.log('*****bones targetting ', target)
-            }
+            let sortedTargets = liveFighters.sort((a,b)=>b.depth - a.depth);
+            target = this.pickRandom(sortedTargets);
             if(!target && !reposition){
                 this.combatOver = true;
                 return
             }
-            teamates = liveMonsters.filter(e=> e.id !== caller.id);
+            // teamates = liveMonsters.filter(e=> e.id !== caller.id);
         } else {
             
             target = this.pickRandom(liveMonsters)
@@ -678,31 +770,27 @@ export function CombatManager(){
                 this.combatOver = true;
                 return
             }
-            teamates = liveFighters.filter(e=> e.id !== caller.id);
+            // teamates = liveFighters.filter(e=> e.id !== caller.id);
         }
 
         this.clearTargetListById(caller.id)
         target.targettedBy.push(caller.id)
         const attack = this.chooseAttackType(caller, target);
+        caller.targetId = target.id
         caller.pendingAttack = attack;
+
+        if(caller.name === "Tyra"){
+            console.log('tyra acquired target: ', caller.targetId);
+            console.log('pending attack:', caller.pendingAttack);
+        }
+    }
+    this.processMove = (caller) => {
+        // console.log('object');
+        
+        const liveCombatants = Object.values(this.combatants).filter(e=> (!e.dead && e.id !== caller.id));
+        const target = this.combatants[caller.targetId]
         const distanceToTarget = this.getDistanceToTarget(caller, target),
         laneDiff = this.getLaneDifferenceToTarget(caller, target)
-        if(!attack){
-            console.log('attack is undefined', caller, attack)
-            debugger
-        }
-        if(caller.name === 'Greco'){
-            console.log('Greco', caller);
-            console.log('attack.range: ', attack.range, 'target:', target);
-            console.log('Grecos distance to target: ', distanceToTarget);
-            console.log('Grecos lane diff to target: ', laneDiff);
-            if(isNaN(laneDiff)){
-                console.log('investigate NaN');
-                debugger
-            }
-            // this.combatOver = true;
-            // debugger
-        }
         let newPosition, newDepth;
         if(distanceToTarget > 0){
             newDepth = (caller.isMinion || caller.isMonster) ? caller.depth - 1 : caller.depth + 1
@@ -716,131 +804,14 @@ export function CombatManager(){
             console.log('position undefined');
             debugger
         }
-        this.updateCoordinates(caller)
-
-
-        // if(attack.range === 'close' && distanceToTarget > 2){
-        //     if(caller.name === 'bones' && caller.id === 810){
-        //         // console.log('bones, distance to ', target.name, distanceToTarget)
-        //     }
-        //     while(distanceToTarget > 1){
-        //         if(caller.isMinion || caller.isMonster){
-        //             caller.depth--
-
-        //         } else {
-        //             caller.depth++
-        //         }
-        //         distanceToTarget = this.getDistanceToTarget(caller, target.id);
-        //     }
-        // }
-        if(caller.name === 'bones' && caller.id === 810){
-            // console.log('bones, depth is nowt: ', caller.depth)
-        }
+        this.updateCoordinates(caller);
         caller.targetId = target.id;
-
-
-
-
-
-
-
-
-
-
-        const oldPosition = caller.position;
-
-        // while(liveCombatants.some(e => e.position === caller.position && e.depth === caller.depth)){
-        //     if(caller.isMonster || caller.isMinion){
-        //         if(caller.depth === MAX_DEPTH){
-        //             caller.position = caller.position + this.pickRandom([1,-1])
-        //         } else {
-        //             caller.depth = caller.depth + 1
-        //         }
-        //     } else {
-        //         if(caller.depth === 0){
-        //             caller.position = caller.position + this.pickRandom([1,-1])
-        //         } else {
-        //             caller.depth = caller.depth - 1
-        //         }
-        //     }
-        // }
-        
-
-
-            // teamates.forEach((e)=>{
-            //         if((e.position === caller.position) && e.depth === caller.depth){
-            //             caller.depth = (caller.isMonster || caller.isMinion) ? e.depth - 1 : e.depth + 1
-            //             let goDown = this.pickRandom([true,false])
-            //             let availablePosition = goDown ? caller.position + 1 : caller.position - 1;
-            //             let availableDepth = (caller.isMonster || caller.isMinion) ? e.depth + 1 : e.depth - 1;
-            //             let slotFound = false;
-            //             while(!slotFound && availablePosition ){
-            //                 let reference = availablePosition
-            //                 if(teamates.some(t=>t.position === reference)){
-            //                     if(goDown){
-            //                         availablePosition++
-            //                     } else if(!goDown){
-            //                         availablePosition--
-            //                     }
-            //                 } else {
-            //                     slotFound = true;
-            //                 }
-            //             }
-            //             if(availablePosition < 0 || availablePosition > 4) availablePosition = oldPosition;
-            //             e.position = availablePosition;
-            //         }
-            // })
-
-            liveCombatants.forEach(e=>{
-                if(caller.position === e.position && caller.depth === e.depth){
-                    e.hasOverlap = true;
-                    this.handleOverlap(e)
-                }
-            })
-
-
-         
-        // else{
-        //     target = this.pickRandom(Object.values(this.combatants).filter(e=> ((e.isMonster || e.isMinion )  && !e.dead)))
-        //     if(!target){
-        //         console.log('NO MORE TARGETS FOR FIGHTER!')
-        //         this.combatOver = true;
-        //         return
-        //     }
-        //     let teamates = Object.values(this.combatants).filter(e=> !e.isMonster && e.id !== caller.id);
-        //     let position = target.position;
-        //     const oldPosition = caller.position;
-        //     caller.position = position;
-        //     teamates.forEach((e)=>{
-        //         if(e.position === caller.position){
-        //             if(e.depth === caller.depth){
-        //                 if(caller.depth !== 0){
-        //                     caller.depth--
-        //                 } else {
-        //                     caller.depth++
-        //                 }
-        //             }
-        //             let goDown = this.pickRandom([true,false])
-        //             let availableSlot = goDown ? caller.position + 1 : caller.position - 1;
-        //             let slotFound = false;
-        //             while(!slotFound && availableSlot ){
-        //                 let reference = availableSlot
-        //                 if(teamates.some(t=>t.position === reference)){
-        //                     if(goDown){
-        //                         availableSlot++
-        //                     } else if(!goDown){
-        //                         availableSlot--
-        //                     }
-        //                 } else {
-        //                     slotFound = true;
-        //                 }
-        //             }
-        //             if(availableSlot < 0 || availableSlot > 4) availableSlot = oldPosition;
-        //             e.position = availableSlot;
-        //         }
-        //     })
-        // }
-        
+        liveCombatants.forEach(e=>{
+            if(caller.position === e.position && caller.depth === e.depth){
+                e.hasOverlap = true;
+                this.handleOverlap(e)
+            }
+        })
     }
     this.checkOverlap = (combatant) => {
         const liveCombatants = Object.values(this.combatants).filter(e=> (e.id !== combatant.id && !e.dead));
@@ -934,6 +905,7 @@ export function CombatManager(){
         if(caller.energy > 100) caller.energy = 100;
         if(target.hp <= 0){
             target.hp = 0;
+            caller.targetId = null;
             this.targetKilled(target)
         }
         if((target.isMinion || target.isMonster) && target.depth < MAX_DEPTH) target.depth++
@@ -944,7 +916,7 @@ export function CombatManager(){
             caller.active = false;
             caller.attacking = false;
             caller.tempo = 1;
-            caller.targetId = null;
+            // caller.targetId = null;
             caller.turnCycle();
         }, 500)
         setTimeout(()=>{
@@ -957,7 +929,7 @@ export function CombatManager(){
             caller.active = false;
             caller.attacking = false;
             caller.tempo = 1;
-            caller.targetId = null;
+            // caller.targetId = null;
             caller.turnCycle();
         }, 500)
     }

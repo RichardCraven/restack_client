@@ -1,20 +1,33 @@
 .mb-board{
-    border: 1px solid rgb(185, 15, 15);
+    // border: 1px solid rgb(185, 15, 15);
     // width: 66%;
     // height: 600px;
-    height: calc(100% - 2px);
+    // height: calc(100% - 2px);
 
     display: flex;
     flex-direction: row;
     justify-content: space-between;
     position: relative;
 
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    position: relative;
     
 
     // linear-gradient(90deg,black, white 14%,black 30%)
 
     // .animated 
+    .combat-grid-container{
+        // height: calc(100% - 2px);
+    height: fit-content;
+    border: 1px solid green;
 
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    position: relative;
+    }
     .combat-grid{
         display: flex;
         flex-wrap: wrap;
@@ -532,15 +545,20 @@
     }
 
     .mb-interaction-pane{
-        // display: none;
+        border: 1px solid yellow;
 
 
 
         height: 230px;
         width: 100%;
-        position: absolute;
+        // position: absolute;
         bottom: 0;
         // border: 1px solid gold;
+
+        .queue-col{
+            flex: auto;
+        }
+
         .header-row{
             width: 100%;
             height: 40px;
@@ -550,7 +568,7 @@
             .portrait{
                 height: 40px;
                 width: 40px;
-                border: 1px solid white;
+                // border: 1px solid white;
                 background-size: 100% 100%;
             }
             .title{
@@ -577,20 +595,20 @@
             display: flex;
             flex-direction: row;
             width: 100%;
-            height: 100%;
+            height: calc(100% - 40px);
             flex: auto;
-            border: 1px dashed white;
-            .inventory-col, .specials-col, .attacks-col, .target-col{
+            // border: 1px dashed white;
+            .inventory-col, .specials-col, .attacks-col, .target-col, .queue-col{
                 height: 100%;
                 width: 100px;
-                border: 1px solid maroon;
+                border: 1px solid #ffffff5c;
                 color: white;
                 .interaction-header{
                     height: 25px;
                     width: 100%;
                     color: white;
                     text-align: center;
-                    border-bottom: 1px solid white;
+                    border-bottom: 1px solid #ffffff5c;
                 }
                 .interaction-tooltip{
                     height: 25px;
@@ -599,13 +617,29 @@
                     align-items: center;
                     justify-content: center;
                 }
-                .interaction-tile-container{
-                    height: 100%;
+                // .queue-tile-container{
+                //     display: flex;
+                //     flex-direction: row;
+                //     justify-content: center;
+                //     align-items: center;
+                //     height: calc(100% - 26px);
+                // }
+                .interaction-tile-container, .queue-tile-container{
+                    // height: 100%;
+                    height: calc(100% - 51px);
                     width: 100%;
                     display: flex;
                     flex-direction: column;
                     justify-content: flex-start;
                     align-items: center;
+                    &.queue-tile-container{
+                        height: calc(100% - 26px);
+                        justify-content: center;
+                        flex-direction: row;
+                        .interaction-tile{
+                            margin-right: 5px;
+                        }
+                    }
                     .interaction-tile-wrapper{
                         position: relative;
                         height: 40px;
@@ -628,11 +662,9 @@
                     .interaction-tile{
                         height: 40px;
                         width: 40px;
-                        // height: 100%;
-                        // width: 100%;
+                        cursor: pointer;
                         background-color: whitesmoke;
                         margin-bottom: 3px;
-                        // cursor: pointer;
                         background-size: 100% 100%;
                         &.available:hover{
                             filter: sepia(1);

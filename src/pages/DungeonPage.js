@@ -77,12 +77,13 @@ class DungeonPage extends React.Component {
             // this.props.inventoryManager.initializeItems([])
             let g  = meta.crew.find(e=>e.name==='Greco')
             let idx = meta.crew.indexOf(g)
-            g.hp = 15;
+            // g.hp = 15;
+            g.stats.hp = 15;
             meta[idx] = g;
             // console.log('idx: ', idx);
             console.log('initializing crew: ', meta.crew);
             this.props.crewManager.initializeCrew(meta.crew ? meta.crew : [])
-
+            console.log('this.props.crewManager', this.props.crewManager);
 
             this.props.inventoryManager.inventory.forEach((e,i)=>{
                 inv[i]= ''
@@ -135,7 +136,8 @@ class DungeonPage extends React.Component {
         })
     }
     triggerMonsterBattle = (bool) => {
-        // console.log('trigger monster battle')
+        console.log('trigger monster battle')
+        console.log('.......this.props.crewManager', this.props.crewManager);
         this.setState({
             keysLocked: bool,
             inMonsterBattle: bool
