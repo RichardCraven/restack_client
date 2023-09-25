@@ -7,13 +7,23 @@
     position: relative;
     border: 1px solid rgb(91, 110, 91);
 
+    
     .combat-grid-container{
-    height: fit-content;
-
-    display: flex;
-    flex-direction: row;
-    justify-content: space-between;
-    position: relative;
+        height: fit-content;
+        display: flex;
+        flex-direction: row;
+        justify-content: space-between;
+        position: relative;
+        .message-container{
+            position: absolute;
+            top: 34%;
+            // left: 41%;
+            left: 0;
+            width: 454px;
+            color: white;
+            text-align: right;
+            // border: 1px solid yellow;
+        }
     }
     .combat-grid{
         display: flex;
@@ -327,20 +337,28 @@
                     top: 0;
                     z-index: 100;
                 }
-    
-                .monster-portrait, .minion-portrait{
-                    // height: 200px;
-                    // width: 200px;
-                    // border-radius: 200px;
-                    
-
-                    height: 90px;
-                    width: 90px;
-                    transition: transform 1s;
-                    &.monster-portrait.enlarged{
-                        transform: scale(2);
+                .indicators-wrapper{
+                    opacity: 1;
+                    transition: opacity 1s;
+                    &.hidden{
+                        opacity: 0;
                     }
-                    border-radius: 90px;
+                }
+                .monster-portrait, .minion-portrait{
+                    height: 100px;
+                    width: 100px;
+                    border-radius: 100px;
+                    transition: transform 1s;
+                    &.minion-portrait{
+                        height: 90px;
+                        width: 90px;
+                        border-radius: 90px;
+                    }
+                    &.monster-portrait.enlarged{
+                        transform: scale(4);
+                        transform-origin: 86px 68px;
+                    }
+                    
                     pointer-events: initial;
                     position: relative;
                     &.targetted{

@@ -297,6 +297,9 @@ export function CombatManager(){
     this.establishOnFighterMovedToDestinationCallback = (cb) => {
         this.fighterMovedToDestination = cb;
     }
+    this.establishOnFighterDeathCallback = (cb) => {
+        this.onFighterDeath = cb;
+    }
 
     this.formatAttacks = (stringArray) => {
         return stringArray.map(e=>{
@@ -480,12 +483,10 @@ export function CombatManager(){
         };
     }
     this.processActionQueue = (caller) => {
-        // console.log('processing action queue for ', caller);
         const action = caller.action_queue[0],
         instruction = action.instruction;
         switch(instruction.type){
             case 'move':
-                // console.log('instruction.destination:', instruction.destinationCoordinates);
                 caller.destinationCoordinates = instruction.destinationCoordinates
                 this.goToDestination(caller);
             break;
@@ -526,24 +527,16 @@ export function CombatManager(){
             e.position = index;
             e.depth = 0;
             e.coordinates = {x:0, y:index}
-            // if(e.name === 'Ulaf'){
-            //     e.stats.hp = 500
-            // }
-            // if(e.name === 'Yu'){
-            //     e.stats.hp = 100
-            // }
-
-            // if(e.name === 'Greco'){
-            //     e.stats.hp = 500
-                this.combatants[e.id] = createFighter(e, callbacks);
-            // }
+            this.combatants[e.id] = createFighter(e, callbacks);
         })
-        this.data.monster.position = 1;
+        this.data.monster.position = 2;
         this.data.monster.depth = MAX_DEPTH;
         this.data.monster.coordinates = {x:MAX_DEPTH, y:1}
         let monster = createFighter(this.data.monster, callbacks);
         monster.isMonster = true;
         this.combatants[monster.id] = monster;
+
+
         if(this.data.minions){
             let position = 2;
             this.data.minions.forEach(e=>{
@@ -559,19 +552,25 @@ export function CombatManager(){
 
         this.broadcastDataUpdate();
 
-        setTimeout(() => {
+        this.beginGreeting()
+    }
+    this.getLiveFighters = () => {
+        return Object.values(this.combatants).filter(e=> !e.isMonster && !e.isMinion && !e.dead)
+    }
+    this.beginGreeting = () => {
+        this.triggerMonsterGreeting().then(e=>{
             this.greetingComplete();
-            console.log('greeting complete');
-            setTimeout(()=>{
-                Object.values(this.combatants).forEach((combatant)=>{
-                    combatant.attacks.forEach((a)=>{
-                        a.cooldown_position = 100
-                    })
-                    combatant.turnCycle();
-                })
-                this.broadcastDataUpdate();
-            }, 1000)
-        }, 1500);
+            this.kickOffTurnCycles();
+            this.broadcastDataUpdate();
+        })
+    }
+    this.kickOffTurnCycles = () => {
+        Object.values(this.combatants).forEach((combatant)=>{
+            combatant.attacks.forEach((a)=>{
+                a.cooldown_position = 100
+            })
+            combatant.turnCycle();
+        })
     }
     this.setFighterDestination = (id, coordinates) => {
         const fighter = this.combatants[id];
@@ -653,13 +652,21 @@ export function CombatManager(){
         const specials = ['meditate']
         return specials.includes(attackType)
     }
+    this.handleSpecialAction = (caller) => {
+        console.log('pending', caller.pendingAttack);
+        // switch(caller.pendingAttack)
+        debugger
+    }
     this.initiateAttack = (caller) => {
         if(caller.name === 'Loryastes'){
 
-            console.log('Lory attacking: ', caller);
+            console.log('Lory attacking: ', caller.name, 'with ', caller.pendingAttack);
         }
         if(this.isSpecialAttack(caller.pendingAttack)){
             console.log('handle special', caller.pendingAttack);
+            caller.readout = ` invokes ${caller.pendingAttack.name}`
+            this.handleSpecialAction(caller)
+            return
 
         }
         let connects = this.pickRandom([true, true, false]),
@@ -916,15 +923,17 @@ export function CombatManager(){
     this.targetKilled = (combatant) => {
         combatant.dead = true;
         this.clearTargetListById(combatant.id)
-
         const allMonstersDead = Object.values(this.combatants).filter(e=> (e.isMonster || e.isMinion) && !e.dead).length === 0;
         const allCrewDead = Object.values(this.combatants).filter(e=>!e.isMonster && !e.dead).length === 0;
-        if(allMonstersDead || allCrewDead){
-            console.log('all monsters dead:', allMonstersDead)
-            console.log('all crew dead:', allCrewDead)
-            console.log('COMBAT IS OVER')
+        this.onFighterDeath(combatant.id);
+        if(allMonstersDead || allCrewDead)
+            {
             this.combatOver = true;
-
+            if(allMonstersDead){
+                this.onFighterDeath('all enemies dead');
+            } else {
+                this.onFighterDeath('all fighters dead');
+            }
             setTimeout(()=>{
                 this.gameOver();
             }, 6000)

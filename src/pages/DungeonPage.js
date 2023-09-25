@@ -138,14 +138,15 @@ class DungeonPage extends React.Component {
     triggerMonsterBattle = (bool) => {
         console.log('trigger monster battle')
         console.log('.......this.props.crewManager', this.props.crewManager);
+        console.log('props.minions: ', this.state.minions)
         this.setState({
             keysLocked: bool,
             inMonsterBattle: bool
         })
     }
     setMonster = (monsterString) => {
-        // console.log('sert monster:', monsterString)
-        monsterString = 'mummy'
+        console.log('sert monster:', monsterString)
+        // monsterString = 'mummy'
         let monster = this.props.monsterManager.getMonster(monsterString), 
         minions = null;
 
@@ -153,17 +154,12 @@ class DungeonPage extends React.Component {
             minions = [];
             monster.minions.forEach((e,i)=>{
                 const minion = this.props.monsterManager.getMonster(e)
-                // let str = minion.id.toString()
-                // str += '00' + c.toString() 
                 minion.id = minion.id+i+700
                 let minionName = this.pickRandom(minion.monster_names)
                 minion.name = minionName
                 minion.inventory = [];
 
                 minions.push(minion)
-                // monions.forEach(m=>{
-                //     m.isMinion = true;
-                // })
             })
         }
 
