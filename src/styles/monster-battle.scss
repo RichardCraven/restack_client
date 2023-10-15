@@ -57,7 +57,35 @@
 
     .fighterHitsAnimation
     {
+        z-index: 1001;
         background: linear-gradient(90deg,transparent, white 48%, transparent 51%);
+        background-size: 200% 200%;
+        -webkit-animation: FighterHits 1s ease ;
+        -moz-animation: FighterHits 1s ease ;
+        animation: FighterHits 1s ease ;
+        background-position:-98% 110%;
+    }
+
+    @-webkit-keyframes FighterHits {
+        0%{background-position:100% 0%}
+        50%{background-position:0% 100%}
+        100%{background-position:-98% 110%}
+    }
+    @-moz-keyframes FighterHits {
+        0%{background-position:100% 0%}
+        50%{background-position:0% 100%}
+        100%{background-position:-98% 110%}
+    }
+    @keyframes FighterHits { 
+        0%{background-position:100% 0%}
+        50%{background-position:0% 100%}
+        100%{background-position:-98% 110%}
+    }
+
+    .fighterHealsAnimation
+    {
+        z-index: 1001;
+        background: linear-gradient(90deg,transparent, rgb(68, 200, 132) 48%, transparent 51%);
         background-size: 200% 200%;
         -webkit-animation: FighterHits 1s ease ;
         -moz-animation: FighterHits 1s ease ;
@@ -83,6 +111,7 @@
 
     .monsterHitsAnimation
     {
+        z-index: 1001;
         background: linear-gradient(90deg,transparent, red 6%, transparent 51%);
         background-size: 200% 200%;
         -webkit-animation: MonsterHits 1s linear ;
@@ -255,6 +284,10 @@
                             border-radius: 90px;
                             position: relative;
                             cursor: pointer;
+                            transition: transform 1s;
+                            &.missed{
+                                transform: scaleY(-1);
+                            }
                             &.wounded{
                                 animation: fighterWoundedAnimation 3s ease;
                             }
@@ -349,6 +382,9 @@
                     width: 100px;
                     border-radius: 100px;
                     transition: transform 1s;
+                    &.missed{
+                        transform: scaleY(-1);
+                    }
                     &.minion-portrait{
                         height: 90px;
                         width: 90px;
@@ -362,10 +398,10 @@
                     pointer-events: initial;
                     position: relative;
                     &.targetted{
-                        border: 1px solid white;
+                        border: 1px solid yellow;
                     }
                     &.selected{
-                        border: 1px solid yellow;
+                        border: 1px solid white;
                     }
                     .targetted-by-container{
                         position: absolute;

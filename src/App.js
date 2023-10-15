@@ -29,6 +29,7 @@ const [allUsers, setAllUsers] = useState([])
 const history = useHistory();
 useEffect(() => {
   getAllUsersRequest().then((response)=>{
+    console.log('all users:', response);
     setAllUsers(response.data)
   })
   if(getUserId()){

@@ -75,11 +75,12 @@ class DungeonPage extends React.Component {
             this.props.inventoryManager.initializeItems(inventory)
             // this.props.inventoryManager.initializeItems(meta.inventory ? meta.inventory : [])
             // this.props.inventoryManager.initializeItems([])
-            let g  = meta.crew.find(e=>e.name==='Greco')
+            meta.crew.forEach(e=>e.stats.baseDef = 10)
+            let g  = meta.crew.find(e=>e.name==='Loryastes')
             let idx = meta.crew.indexOf(g)
             // g.hp = 15;
-            g.stats.hp = 15;
-            meta[idx] = g;
+            g.stats.dex = 6;
+            meta.crew[idx] = g;
             // console.log('idx: ', idx);
             console.log('initializing crew: ', meta.crew);
             this.props.crewManager.initializeCrew(meta.crew ? meta.crew : [])
@@ -136,20 +137,14 @@ class DungeonPage extends React.Component {
         })
     }
     triggerMonsterBattle = (bool) => {
-        console.log('trigger monster battle')
-        console.log('.......this.props.crewManager', this.props.crewManager);
-        console.log('props.minions: ', this.state.minions)
         this.setState({
             keysLocked: bool,
             inMonsterBattle: bool
         })
     }
     setMonster = (monsterString) => {
-        console.log('sert monster:', monsterString)
-        // monsterString = 'mummy'
         let monster = this.props.monsterManager.getMonster(monsterString), 
         minions = null;
-
         if(monster && monster.minions){
             minions = [];
             monster.minions.forEach((e,i)=>{
@@ -168,8 +163,6 @@ class DungeonPage extends React.Component {
         let monsterName = this.pickRandom(monster.monster_names)
         monster.name = monsterName
         monster.inventory = [];
-        // console.log('monster data:', monster)
-        
         this.setState({
             monster,
             minions
@@ -381,7 +374,8 @@ class DungeonPage extends React.Component {
         })
     }
     handleClick = (tile) => {
-        console.log('HANDLE CLICK, SHOULD NOT GET HERE tile:', tile)
+        // console.log('HANDLE CLICK, SHOULD NOT GET HERE tile:', tile)
+
         // switch(tile.contains){
         //     case 'minor_key':
         //         if(this.props.boardManager.pending) console.log(this.props.boardManager.pending)

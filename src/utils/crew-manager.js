@@ -11,8 +11,6 @@ export function CrewManager(){
         'soldier'
     ]
     this.crew = [];
-
-
     
     this.initializeCrew = (crew) => {
         this.crew = [];
@@ -44,6 +42,7 @@ export function CrewManager(){
                 fort: 7,
                 hp:10,
                 atk:12,
+                baseDef: 9,
                 energy: 0
             }, 
             portrait: 'wizard_portrait',
@@ -68,6 +67,7 @@ export function CrewManager(){
                 fort: 7,
                 hp: 15,
                 atk: 8,
+                baseDef: 12,
                 energy: 0
             }, 
             isLeader: true,
@@ -93,6 +93,7 @@ export function CrewManager(){
                 fort: 7,
                 hp: 13,
                 atk: 6,
+                baseDef: 11,
                 energy: 0
             }, 
             portrait: 'monk_portrait',
@@ -112,11 +113,12 @@ export function CrewManager(){
             stats: {
                 str: 3,
                 int: 7,
-                dex: 4,
+                dex: 5,
                 vit: 4,
                 fort: 7,
                 hp: 9,
                 atk: 4,
+                baseDef: 5,
                 energy: 0
             }, 
             portrait: 'sage_portrait',
@@ -141,12 +143,13 @@ export function CrewManager(){
                 fort: 3,
                 hp: 12,
                 atk: 6,
+                baseDef: 10,
                 energy: 0
             }, 
             portrait: 'rogue_portrait',
             inventory: [],
             specials: ['deadeye_shot'],
-            attacks: ['fire_arrow'],
+            attacks: ['fire_arrow', 'dagger_stab'],
             passives: ['nimble_dodge'],
             weaknesses: ['ice', 'curse', 'crushing'],
             description: "Tyra was born a slave, surviving and advancing through sheer cunning and a ruthless will"
@@ -165,6 +168,7 @@ export function CrewManager(){
                 fort: 6,
                 hp: 16,
                 atk: 9,
+                baseDef: 12,
                 energy: 0
             }, 
             portrait: 'barbarian_portrait',

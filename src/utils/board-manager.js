@@ -238,8 +238,6 @@ export function BoardManager(){
             case 'way_down':
                 return 'way_down';
             case 'monster':
-                console.log('HANDLE MONSTER INTERACTION', destinationTile)
-                // return 'impassable';
                 this.setMonster(destinationTile.contains)
                 this.triggerMonsterBattle(true)
             break;
