@@ -51,6 +51,10 @@ export const MovementMethods = {
         const friendlyTarget = Object.values(combatants).find(e=>e.id === caller.targetId)
         const distanceToTarget = Methods.getDistanceToTarget(caller, friendlyTarget),
         laneDiff = Methods.getLaneDifferenceToTarget(caller, friendlyTarget)
+
+        console.log('NO friendly target for ', caller);
+        if(!friendlyTarget) return
+
         const finalize = () => {
             if(newPosition < 0) newPosition = 0
             if(newPosition > MAX_LANES) newPosition = MAX_LANES;

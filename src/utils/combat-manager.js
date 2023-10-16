@@ -1,7 +1,8 @@
 // import * as images from '../utils/images'
 
 import { FighterAI } from './fighter-ai/fighter-ai'
-import {Methods} from './fighter-ai/methods/basic-methods'
+import {MovementMethods} from './fighter-ai/methods/movement-methods'
+// import {MovementMethods} from './methods/movement-methods';
 
 const MAX_DEPTH = 7
 const MAX_LANES = 5
@@ -10,6 +11,7 @@ const DEBUG_STEPS = true;
 
 export function CombatManager(){
     this.fighterAI = new FighterAI(MAX_DEPTH, MAX_LANES, FIGHT_INTERVAL);
+    this.movementMethods = MovementMethods;
     // const attackTypes = [
     //     'psionic', 'crushing', 'cutting', 'electricity', 'fire', 'blood_magic', 'ice', 'curse', 'sickness', 'arcane', 'buff',
     //     'holy', 
@@ -84,11 +86,11 @@ export function CombatManager(){
             damage: 3
         },
         induce_madness: {
-            name: 'induce weakness',
+            name: 'induce madness',
             type: 'psionic',
             range: 'far',
             cooldown: 5,
-            damage: 0
+            damage: 3
         },
         lightning: {
             name: 'lightning',
@@ -569,6 +571,7 @@ export function CombatManager(){
             // combatPaused: this.combatPaused
         }
         this.data = data;
+        console.log('this.data: ', this.data);
         this.combatants = {};
         
         this.data.crew.forEach((e, index) => {
@@ -601,6 +604,7 @@ export function CombatManager(){
         this.broadcastDataUpdate();
 
         this.beginGreeting()
+        console.log('COMBATANTS:', this.combatants);
     }
     this.targetInRange = (caller) => {
         
@@ -684,14 +688,15 @@ export function CombatManager(){
     this.getCombatant = (id) => {
         return Object.values(this.combatants).find(e=> e.id === id)
     }
-    this.queueAttackOn = (callerId, targetId, attackType) => {
+    this.queueAction = (callerId, targetId, selectedAction) => {
         const caller = this.getCombatant(callerId)
+        console.log('selectedAction: ', selectedAction);
         const action = {
             name: 'Attack',
-            icon: 'scepter',
+            icon: selectedAction.icon,
             instruction: {
                 type: 'attack',
-                attackType,
+                selectedAction,
                 targetId
             } 
         }
@@ -754,6 +759,7 @@ export function CombatManager(){
         debugger
     }
     this.initiateAttack = (caller) => {
+        if(caller.dead) return;
         if(this.fighterAI.roster[caller.name]){
             this.fighterAI.roster[caller.name].initiateAttack(caller, this.combatants, this.hitsTarget, this.missesTarget);
             return
@@ -889,9 +895,12 @@ export function CombatManager(){
         switch(caller.pendingAttack.range){
             case 'close':
                 if(caller.isMonster || caller.isMinion){
+
+                    
                     if(distanceToTarget < -1){
-                        newDepth = caller.depth - 1;
+                        console.log('monster distance: ', distanceToTarget);
                     }
+                    this.movementMethods.moveTowardsCloseEnemyTarget(caller, liveCombatants);
                     
                     if(distanceToTarget === -1 && laneDiff === 0){
                         if(caller.targetId === null){

@@ -1,3 +1,5 @@
+import * as images from '../utils/images'
+
 export function CrewManager(){
     // this.tiles = [];
     this.memberTypes = [
@@ -45,7 +47,7 @@ export function CrewManager(){
                 baseDef: 9,
                 energy: 0
             }, 
-            portrait: 'wizard_portrait',
+            portrait: images['wizard_portrait'],
             inventory: [],
             specials: ['ice_blast'],
             attacks: ['magic_missile'],
@@ -71,7 +73,7 @@ export function CrewManager(){
                 energy: 0
             }, 
             isLeader: true,
-            portrait: 'soldier_portrait',
+            portrait: images['soldier_portrait'],
             inventory: [],
             passives: ['inspiring_force'],
             specials: ['shield_wall'],
@@ -96,7 +98,7 @@ export function CrewManager(){
                 baseDef: 11,
                 energy: 0
             }, 
-            portrait: 'monk_portrait',
+            portrait: images['monk_portrait'],
             inventory: [],
             passives: ['diamond_skin'],
             specials: ['flying_lotus'],
@@ -121,10 +123,10 @@ export function CrewManager(){
                 baseDef: 5,
                 energy: 0
             }, 
-            portrait: 'sage_portrait',
+            portrait: images['sage_portrait'],
             inventory: [],
-            specials: ['healing_hymn', 'reveal_weakness'],
-            attacks: ['meditate', 'cane_strike'],
+            specials: ['healing_hymn'],
+            attacks: ['meditate', 'heal'],
             passives: ["owls_insight"],
             weaknesses: ['fire', 'electricity', 'ice', 'blood_magic', 'crushing'],
             description: "Loryastes is the headmaster of Citadel library, chronicled the histories of three monarchies, and a pupil of The Great Scribe"
@@ -146,7 +148,7 @@ export function CrewManager(){
                 baseDef: 10,
                 energy: 0
             }, 
-            portrait: 'rogue_portrait',
+            portrait: images['rogue_portrait'],
             inventory: [],
             specials: ['deadeye_shot'],
             attacks: ['fire_arrow', 'dagger_stab'],
@@ -171,7 +173,7 @@ export function CrewManager(){
                 baseDef: 12,
                 energy: 0
             }, 
-            portrait: 'barbarian_portrait',
+            portrait: images['barbarian_portrait'],
             inventory: [],
             specials: ['berserker_rage'],
             attacks: ['axe_throw', 'axe_swing', 'spear_throw'],

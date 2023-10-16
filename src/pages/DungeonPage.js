@@ -76,6 +76,9 @@ class DungeonPage extends React.Component {
             // this.props.inventoryManager.initializeItems(meta.inventory ? meta.inventory : [])
             // this.props.inventoryManager.initializeItems([])
             meta.crew.forEach(e=>e.stats.baseDef = 10)
+
+            // meta.crew.forEach(e=>e.portrait = images[e.portrait])
+
             let g  = meta.crew.find(e=>e.name==='Loryastes')
             let idx = meta.crew.indexOf(g)
             // g.hp = 15;

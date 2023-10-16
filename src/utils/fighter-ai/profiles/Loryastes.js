@@ -15,6 +15,10 @@ export function Loryastes(data){
             }
         }
     this.processMove = (caller, combatants) => {
+            if(!caller.pendingAttack){
+                console.log('no pending attack ', caller);
+                // debugger
+            }
             if(caller.pendingAttack.name === 'meditate'){
                 data.methods.moveTowardsCloseFriendlyTarget(caller, combatants)
             } else if(caller.pendingAttack.name === 'cane_strike'){
@@ -29,7 +33,7 @@ export function Loryastes(data){
             if(target.isMonster || target.isMinion){
                 hitsTarget(caller);
             } else {
-                if(distanceToTarget === 1 && laneDiff === 0){
+                if(distanceToTarget === 1 && laneDiff === 0){ 
                     caller.healing = true
                     target.hp += 10;
                     if(target.hp > target.starting_hp) target.hp = target.starting_hp;
@@ -44,7 +48,19 @@ export function Loryastes(data){
                     // debugger
                 } else if(distanceToTarget === 0 && (laneDiff === 1 || laneDiff === -1)){
                     console.log('LORYASTES: adjacent heal');
-                    debugger
+                    caller.position = target.position;
+                    caller.depth = target.depth - 1
+                    setTimeout(()=>{
+                        caller.healing = true
+                        target.hp += 10;
+                        if(target.hp > target.starting_hp) target.hp = target.starting_hp;
+                    }, 300)
+                    setTimeout(()=>{
+                        caller.healing = false
+                        caller.active = false;
+                        caller.tempo = 1;
+                        caller.turnCycle();
+                    }, this.INTERVAL_TIME * 50)
                 } else if(distanceToTarget === 1 && (laneDiff === 1 || laneDiff === -1)){
                     missesTarget(caller)
                     // caller.position = (laneDiff === 1) ? caller.position -1 : caller.position + 1;
