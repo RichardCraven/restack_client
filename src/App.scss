@@ -50,7 +50,8 @@ button{
     position: fixed;
     top: 0;
     // z-index: 1000;
-    z-index: 0;
+    // z-index: 0;
+    z-index: 4;
     display: flex;
   }
   .menu-buttons{

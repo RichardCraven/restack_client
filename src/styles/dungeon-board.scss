@@ -91,13 +91,17 @@
         width: 0;
         min-width: 0px;
         transition: all 1s;
-
-        .crew{
+        .minimap-container{
+            height: 198px;
+            width: 198px;
+            border: 1px solid white;
+        }
+        .crew-container{
             // position: absolute;
             right: -200px;
             top: 29px;
             transition: all 1s;
-            height: 106px;
+            // height: 106px;
             .title{
                 color: white;
                 position: sticky;

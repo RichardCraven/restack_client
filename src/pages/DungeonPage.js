@@ -42,7 +42,8 @@ class DungeonPage extends React.Component {
             inMonsterBattle: false,
             monster: null,
             crewSize: 0,
-            paused: false
+            paused: false,
+            minimap: {}
         }
     }
     
@@ -624,7 +625,10 @@ class DungeonPage extends React.Component {
                 </div> */}
             </div>
             <div className={`right-side-panel ${this.state.rightPanelExpanded ? 'expanded' : ''}`}>
-                <div className="crew" style={{height: this.state.crewSize > 3 ? '175px' : '106px'}}>
+                <div className="minimap-container">
+
+                </div>
+                <div className="crew-container">
                     <div className="title">Crew</div>
                     <div className="crew-tile-container">
                         {   this.props.crewManager.crew &&
@@ -681,7 +685,6 @@ class DungeonPage extends React.Component {
                         borders={tile.borders}
                         coordinates={tile.coordinates}
                         index={tile.id}
-                        // showCoordinates={this.props.showCoordinates}
                         editMode={false}
                         handleHover={this.handleHover}
                         type={'overlay-tile'}
@@ -697,8 +700,6 @@ class DungeonPage extends React.Component {
                     {this.state.tiles && this.state.tiles.map((tile, i) => {
                         return <Tile 
                         key={i}
-                        // isActiveInventory={this.state.activeInventoryItem?.id === i}
-                        // isActiveInventory={this.state.activeInventoryItem?.id === i}
                         tileSize={this.state.tileSize}
                         image={tile.image ? tile.image : (tile.icon ? tile.icon : null)}
                         contains={tile.contains}
@@ -727,25 +728,6 @@ class DungeonPage extends React.Component {
                 battleOver={this.battleOver}
                 paused={this.state.paused}
             ></MonsterBattle>}
-            {/* { this.state.keysLocked && <div className="monster-battle-board">
-                <div className="mb-col left-col">
-                    <div className="fighter-portrait">
-
-                    </div>
-                    <div className="fighter-content">
-
-                    </div>
-                </div>
-                <div className="mb-col right-col">
-                    <div className="monster-portrait">
-
-                    </div>
-                    <div className="monster-content">
-
-                    </div>
-                </div>
-            </div>
-            } */}
         </div>
         )
     }

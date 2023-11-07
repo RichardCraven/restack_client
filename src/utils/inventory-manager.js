@@ -188,6 +188,6 @@ export function InventoryManager(){
         console.log('adding: ', item)
         this.inventory.push({image: item, contains: item})
         console.log('this.inventory: ', this.inventory)
-        debugger
+        // debugger
     }
 }
