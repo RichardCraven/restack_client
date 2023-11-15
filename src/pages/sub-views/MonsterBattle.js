@@ -30,7 +30,11 @@ class MonsterBattle extends React.Component {
             combatTiles: [],
             draggedOverCombatTileId: null,
             draggingFighter: null,
-            ghostPortraitMatrix: []
+            ghostPortraitMatrix: [],
+            showSummaryPanel: false,
+            summaryMessage: '',
+            experienceGained: null,
+            goldGained: null
         }
     }
     componentDidMount(){
@@ -129,9 +133,33 @@ class MonsterBattle extends React.Component {
             battleData
         })
     }
-    gameOver = () => {
-        console.log('****GEM OVER****')
+    confirmClicked = () => {
         this.props.battleOver()
+    }
+    gameOver = (outcome) => {
+        console.log('****GEM OVER****')
+        let experienceGained,
+            goldGained, 
+            crewWins = outcome === 'crewWins',
+            summaryMessage;
+        if(crewWins){
+            summaryMessage = 'The enemy is no more!'
+            console.log('monster was ', this.props.monster);
+            experienceGained = this.props.monster.level * 10;
+            goldGained = Math.floor(Math.random() * experienceGained);
+        } else {
+            summaryMessage = 'Death has come for you and yours.'
+        }
+
+        this.setState({
+            showSummaryPanel: true,
+            goldGained,
+            experienceGained,
+            summaryMessage
+        })
+    }
+    summaryConfirmed = () => {
+        this.props.battleOver();
     }
     establishUpdateActorCallback = () => {
         this.props.combatManager.establishUpdateActorCallback(this.updateCurrentActor)
@@ -218,13 +246,16 @@ class MonsterBattle extends React.Component {
         })
     }
     inventoryTileHovered = (val) => {
-        console.log('val:', val)
         this.setState({
             hoveredInventoryTile: val
         })
     }
     inventoryTileClicked = (val) => {
         console.log('val:', val)
+        this.props.combatManager.itemUsed(val, this.state.selectedFighter)
+        const itemIndex  = this.props.inventoryManager.inventory.findIndex(item => item.name === val.name)
+        // console.log('*** item: ', item);
+        this.props.inventoryManager.inventory.splice(itemIndex, 1)
     }
     specialTileClicked = (val) => {
         console.log('k...', Object.values(this.state.battleData).filter(e=>e.isMonster || e.isMinion));
@@ -354,6 +385,25 @@ class MonsterBattle extends React.Component {
                     width: TILE_SIZE * MAX_DEPTH + (SHOW_TILE_BORDERS ? MAX_DEPTH * 2 : 0) + 'px',
                     height: TILE_SIZE * MAX_ROWS + (SHOW_TILE_BORDERS ? MAX_ROWS * 2 : 0) + 'px'
                 }}>
+                    {this.state.showSummaryPanel && <div className='summary-panel'>
+                        <div className="content-container">
+                            <div className="message-container">
+                                {this.state.summaryMessage}
+                            </div>
+                            {this.state.goldGained && 
+                            <div className="experience-container">
+                                You found {this.state.goldGained} gold
+                            </div>} 
+                            {this.state.experienceGained && 
+                            <div className="experience-container">
+                                Each crew member has earned {this.state.experienceGained} experience
+                            </div>} 
+                        </div>
+                        <div className="button-row">
+
+                        <div className="confirm-button" onClick={() => this.confirmClicked()}>OK</div>
+                        </div>
+                    </div>}
                     {(this.state.message) &&<div className="message-container">
                         {this.state.message}
                     </div>}

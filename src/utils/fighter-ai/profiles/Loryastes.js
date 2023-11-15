@@ -18,6 +18,7 @@ export function Loryastes(data){
             if(!caller.pendingAttack){
                 console.log('no pending attack ', caller);
                 // debugger
+                return
             }
             if(caller.pendingAttack.name === 'meditate'){
                 data.methods.moveTowardsCloseFriendlyTarget(caller, combatants)

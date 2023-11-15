@@ -252,7 +252,8 @@ export function MonsterManager(){
         return JSON.parse(JSON.stringify(match));
     }
     this.getRandomMonster = () => {
-        return this.pickRandom(Object.values(this.monsters))
+        return this.monsters['sphinx']
+        // return this.pickRandom(Object.values(this.monsters))
     }
     
 

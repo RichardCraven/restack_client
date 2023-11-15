@@ -7,7 +7,7 @@ import {MovementMethods} from './fighter-ai/methods/movement-methods'
 const MAX_DEPTH = 7
 const MAX_LANES = 5
 const FIGHT_INTERVAL = 10
-const DEBUG_STEPS = true;
+const DEBUG_STEPS = false;
 
 export function CombatManager(){
     this.fighterAI = new FighterAI(MAX_DEPTH, MAX_LANES, FIGHT_INTERVAL);
@@ -443,13 +443,16 @@ export function CombatManager(){
                         acquireTarget(this);
                         checkOverlap(this)
                     }
+                    if(this.tempo > 5 && this.tempo < 10 && this.isMonster){
+                        console.log('monster is at move stage. hasMoved =', hasMoved);
+                    }
                     if(this.tempo > 5 && this.tempo < 10 && this.targetId !== null && !hasMoved && !this.destinationSickness){
                         this.move();
                         hasMoved = true;
                     }
                     if(count >= 100){
                         clearInterval(this.interval)
-
+                        if(this.isMonster) console.log('monster at 100')
 
                         if(this.name === "Loryastes"  && DEBUG_STEPS === true){
                             console.log('Loryastes [turn] count = 100.. sickness = ', this.destinationSickness);
@@ -480,25 +483,31 @@ export function CombatManager(){
                         //     //destination dickness still not working
                         // } else 
                         if(this.pendingAttack && this.pendingAttack.cooldown_position === 100){
+                            if(this.isMonster) console.log('monster at 100, in deepest block')
+
+
                             if(this.name === "Loryastes"  && DEBUG_STEPS === true){
                                 console.log('Loryastes [IN TURN CYCLE] about to call attack');
                             }
                             const target = getCombatant(this.targetId);
-                            if(this.name === 'Loryastes'){
+                            if(this.name === 'Loryastes' && this.DEBUG_STEPS){
                                 console.log('Loryastes endcycle, target: ', target);
                             }
                             
                             if(!target){
                                 this.skip();
-                                if(this.name === 'Loryastes'){
+                                if(this.name === 'Loryastes'  && DEBUG_STEPS === true){
                                     console.log('Loryastes skipping');
                                 }
                                 return
                             }
                             let inRange = targetInRange(this);
+                            if(this.isMonster) console.log('monster at 100, inrange: ', inRange)
                             if(inRange){
+                                if(this.isMonster) console.log('monster at 100, attack')
                                 this.attack(target)
                             } else {
+                                if(this.isMonster) console.log('monster at 100, else, turnskips at ', this.turnSkips)
                                 if((this.isMonster || this.isMinion) && this.turnSkips >= 2){
                                     acquireTarget(this);
                                     this.turnSkips = 0;
@@ -511,8 +520,11 @@ export function CombatManager(){
                             }
                             this.waitForAttack()
                         } else {
-                            console.log('uhhhhh how');
-                            debugger
+
+                            console.log('uhhhhh no pending');
+                            // acquireTarget(this);
+                            this.skip();
+                            // debugger
                         }
                     }
                     broadcastDataUpdate(this)
@@ -607,29 +619,33 @@ export function CombatManager(){
         console.log('COMBATANTS:', this.combatants);
     }
     this.targetInRange = (caller) => {
-        
         const target = this.combatants[caller.targetId];
+        if(caller.isMonster) console.log('monster target in range check, target: ', target, 'and monster is ', caller)
         if(!target){
             console.log('no target for ', caller.name, caller);
             debugger
             return
         }
         const differential = Math.abs(caller.depth - target.depth);
+        // 1 means target is right in front of you
+
         const distanceToTarget = this.getDistanceToTarget(caller, target)
         let res;
+        if(caller.isMonster) console.log('differential: ', differential, 'distance: ', distanceToTarget)
         switch(caller.pendingAttack.range){
             case 'close':
                 if(caller.name === "LORYASTES" && DEBUG_STEPS){
                     console.log('differential: ', differential);
                     console.log('vs distance to target: ', distanceToTarget);
                 }
-                res = Math.abs(distanceToTarget) === 1;
+                res = differential === 1;
             break;
             case 'medium':
-                res = Math.abs(distanceToTarget) <= 2;
+                res = differential <= 2;
             break;
             case 'far':
-                res = Math.abs(distanceToTarget) <= 4 && Math.abs(distanceToTarget) > 0;
+                res = differential <= 4 && differential > 1;
+                if(caller.isMonster) console.log('in far block, in range res is ', res)
             break;
             default:
                 console.log('somehow attack had no range');
@@ -641,6 +657,23 @@ export function CombatManager(){
     this.getLiveFighters = () => {
         return Object.values(this.combatants).filter(e=> !e.isMonster && !e.isMinion && !e.dead)
     }
+    this.itemUsed = (item, userInput) => {
+        const user = this.combatants[userInput.id]
+        console.log('item used: ', item, 'used by ', user);
+        console.log('local version of fighter: ', user);
+        switch(item.effect){
+            case 'health gain': 
+                const healthGain = Math.ceil(user.starting_hp * 0.01 * item.amount)
+                console.log('health gain: ', healthGain);
+                user.hp += healthGain
+                if(user.hp > user.starting_hp) user.hp = user.starting_hp
+                // this needs to change to 'MAX HP, not starting
+            break;
+            default:
+                console.log('CONSUMABLE USED THAT HAS NO .EFFECT');
+        }
+    }
+
     this.beginGreeting = () => {
         this.triggerMonsterGreeting().then(e=>{
             this.greetingComplete();
@@ -871,6 +904,7 @@ export function CombatManager(){
     }
     this.processMove = (caller) => {
         if(caller.dead) return;
+        if(caller.isMonster) console.log('monster in process move')
         const liveCombatants = Object.values(this.combatants).filter(e=> (!e.dead && e.id !== caller.id));
         if(this.fighterAI.roster[caller.name]){
             this.fighterAI.roster[caller.name].processMove(caller, this.combatants);
@@ -892,54 +926,59 @@ export function CombatManager(){
         laneDiff = this.getLaneDifferenceToTarget(caller, target)
         let newPosition, newDepth;
 
-        switch(caller.pendingAttack.range){
-            case 'close':
-                if(caller.isMonster || caller.isMinion){
+        const targetInRange = this.targetInRange(caller)
 
-                    
-                    if(distanceToTarget < -1){
-                        console.log('monster distance: ', distanceToTarget);
-                    }
-                    this.movementMethods.moveTowardsCloseEnemyTarget(caller, liveCombatants);
-                    
-                    if(distanceToTarget === -1 && laneDiff === 0){
-                        if(caller.targetId === null){
-                            console.log('wtf monster has no target');
-                        }
-                    }
-                } else{
-                    if(distanceToTarget > 1){
-                        newDepth = caller.depth + 1;
-                    }
-                }
-            break;
-            case 'medium':
-                if(caller.isMonster || caller.isMinion){
-                    if(distanceToTarget < 3){
-                        newDepth = caller.depth - 1;
-                    }
-                } else{
-                    if(distanceToTarget > 3){
-                        newDepth = caller.depth+1;
-                    }
-                }
-            break;
-            case 'far':
-                if(caller.isMonster || caller.isMinion){
-                    if(distanceToTarget < -5){  
-                        newDepth = caller.depth - 1;
-                    }
-                } else{
-                    if(distanceToTarget > 5){
-                        newDepth = caller.depth+1;
-                    }
-                }
-            break;
-            default:
-                console.log('somehow attack had no range');
-                debugger
-            break;
+        if(!targetInRange){
+            newDepth = caller.isMonster || caller.isMinion ? caller.depth-1 : caller.depth+1
         }
+
+        // switch(caller.pendingAttack.range){
+        //     case 'close':
+        //         if(caller.isMonster || caller.isMinion){
+        //             if(distanceToTarget < -1){
+        //                 console.log('monster distance: ', distanceToTarget);
+        //             }
+        //             this.movementMethods.moveTowardsCloseEnemyTarget(caller, liveCombatants);
+                    
+        //             if(distanceToTarget === -1 && laneDiff === 0){
+        //                 if(caller.targetId === null){
+        //                     console.log('wtf monster has no target');
+        //                 }
+        //             }
+        //         } else{
+        //             if(distanceToTarget > 1){
+        //                 newDepth = caller.depth + 1;
+        //             }
+        //         }
+        //     break;
+        //     case 'medium':
+        //         if(caller.isMonster || caller.isMinion){
+        //             if(distanceToTarget < 3){
+        //                 newDepth = caller.depth - 1;
+        //             }
+        //         } else{
+        //             if(distanceToTarget > 3){
+        //                 newDepth = caller.depth+1;
+        //             }
+        //         }
+        //     break;
+        //     case 'far':
+        //         if(caller.isMonster || caller.isMinion){
+        //             console.log('monster in far block...');
+        //             if(!targetInRange){  
+        //                 newDepth = caller.depth - 1;
+        //             }
+        //         } else{
+        //             if(!targetInRange){
+        //                 newDepth = caller.depth+1;
+        //             }
+        //         }
+        //     break;
+        //     default:
+        //         console.log('somehow attack had no range');
+        //         debugger
+        //     break;
+        // }
 
         // RE-POSITION
         if(laneDiff < 0){
@@ -1123,17 +1162,15 @@ export function CombatManager(){
         const allMonstersDead = Object.values(this.combatants).filter(e=> (e.isMonster || e.isMinion) && !e.dead).length === 0;
         const allCrewDead = Object.values(this.combatants).filter(e=>!e.isMonster && !e.dead).length === 0;
         this.onFighterDeath(combatant.id);
-        if(allMonstersDead || allCrewDead)
-            {
-            this.combatOver = true;
-            if(allMonstersDead){
-                this.onFighterDeath('all enemies dead');
-            } else {
-                this.onFighterDeath('all fighters dead');
-            }
-            setTimeout(()=>{
-                this.gameOver();
-            }, 4000)
+        if(allMonstersDead || allCrewDead){
+
+            let outcome = allMonstersDead ? 'crewWins' : 'monstersWin';
+    
+                // this.onFighterDeath(outcome);
+                this.combatOver = true;
+                setTimeout(()=>{
+                    this.gameOver(outcome)
+                }, 2000)
         }
         
     }

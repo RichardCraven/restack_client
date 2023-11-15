@@ -147,6 +147,7 @@ class DungeonPage extends React.Component {
         })
     }
     setMonster = (monsterString) => {
+        console.log('monster was supposed to be ', monsterString);
         let monster = this.props.monsterManager.getMonster(monsterString), 
         minions = null;
         if(monster && monster.minions){
@@ -164,6 +165,7 @@ class DungeonPage extends React.Component {
 
 
         if(!monster) monster = this.props.monsterManager.getRandomMonster()
+        console.log('ok replacement monster is ', monster);
         let monsterName = this.pickRandom(monster.monster_names)
         monster.name = monsterName
         monster.inventory = [];

@@ -67,14 +67,14 @@ export function InventoryManager(){
     this.consumables = {
         minor_health_potion: {
             effect: 'health gain',
-            amount: 25,
+            amount: 55,
             icon: 'potion',
             type: 'consumable',
             name: 'minor health potion'
         },
         major_health_potion: {
             effect: 'health gain',
-            amount: 50,
+            amount: 80,
             icon: 'potion',
             type: 'consumable',
             name: 'major health potion'
