@@ -140,11 +140,22 @@ class MonsterBattle extends React.Component {
         console.log('****GEM OVER****')
         let experienceGained,
             goldGained, 
+            itemsGained,
             crewWins = outcome === 'crewWins',
             summaryMessage;
         if(crewWins){
             summaryMessage = 'The enemy is no more!'
             console.log('monster was ', this.props.monster);
+            console.log('monster drops: ', this.props.monster.drops);
+            if(this.props.monster.drops){
+                itemsGained = [];
+                this.props.monster.drops.forEach(e=>{
+                    let d = Math.random();
+                    if(d < e.percentChance*.01) itemsGained.push(e.item)
+                    console.log('calculations for ', e.item, 'd: ', d, 'vs ', e.percentChance*.01);
+                })
+                console.log('items gained: ', itemsGained);
+            }
             experienceGained = this.props.monster.level * 10;
             goldGained = Math.floor(Math.random() * experienceGained);
         } else {
@@ -155,6 +166,7 @@ class MonsterBattle extends React.Component {
             showSummaryPanel: true,
             goldGained,
             experienceGained,
+            itemsGained,
             summaryMessage
         })
     }
@@ -234,7 +246,7 @@ class MonsterBattle extends React.Component {
 
     attackTileClicked = (val) => {
         if(val.cooldown_position !== 100) return;
-        const formatted_val = val.name.replace(' ', '_');
+        const formatted_val = val.name.replaceAll(' ', '_');
         this.setState({
             showCrosshair: true,
             selectedAttack: this.props.combatManager.attacksMatrix[formatted_val]
@@ -262,7 +274,7 @@ class MonsterBattle extends React.Component {
 
 
         if(val !== null){
-            val = val.replace('_', ' ')
+            val = val.replaceAll('_', ' ')
         }
         console.log('val:', val)
         // this.setState({
@@ -387,6 +399,10 @@ class MonsterBattle extends React.Component {
                 }}>
                     {this.state.showSummaryPanel && <div className='summary-panel'>
                         <div className="content-container">
+                            {this.state.itemsGained && 
+                            <div className="experience-container">
+                                You found {this.state.itemsGained.map(e=> e.replaceAll('_',' ')).join(', ')}
+                            </div>} 
                             <div className="message-container">
                                 {this.state.summaryMessage}
                             </div>

@@ -28,7 +28,10 @@ export function MonsterManager(){
             specials: ['obliterate', 'flying', 'invisibility'],
             attacks: ['claws', 'bite'],
             weaknesses: ['arcane', 'holy-aura'],
-
+            drops: [
+                {item: 'court_mask', percentChance: 35},
+                {item: 'minor_health_potion', percentChance: 55},
+            ]
         },
         ogre: {
             type: 'ogre',
@@ -50,7 +53,10 @@ export function MonsterManager(){
             deathCries: ['*gurgle*'],
             specials: ['berserk'],
             attacks: ['crush', 'bite', 'tackle'],
-            weaknesses: ['fire', 'psionic']
+            weaknesses: ['fire', 'psionic'],
+            drops: [
+                {item: 'minor_health_potion', percentChance: 55},
+            ]
         },
         wraith: {
             type: 'wraith',
@@ -72,7 +78,10 @@ export function MonsterManager(){
             deathCries: ['*screams*'],
             specials: ['banshee wail'],
             attacks: ['grasp', 'energy_drain'],
-            weaknesses: ['holy', 'psionic']
+            weaknesses: ['holy', 'psionic'],
+            drops: [
+                {item: 'lundi_amulet', percentChance: 25}
+            ]
         },
         dragon: {
             type: 'dragon',
@@ -94,7 +103,12 @@ export function MonsterManager(){
             deathCries: ['*scream*'],
             specials: ['firestorm'],
             attacks: ['claws', 'bite', 'fire_breath'],
-            weaknesses: ['psionic']
+            weaknesses: ['psionic'],
+            drops: [
+                {item: 'major_key', percentChance: 45},
+                {item: 'glindas_wand', percentChance: 25},
+                {item: 'major_health_potion', percentChance: 75},
+            ]
         },
         djinn: {
             type: 'djinn',
@@ -116,7 +130,12 @@ export function MonsterManager(){
             deathCries: ['it seems your fate has other plans'],
             specials: ['duplicate', 'meditate', 'tesseract'],
             attacks: ['claws', 'void_lance', 'fire_breath'],
-            weaknesses: ['arcane']
+            weaknesses: ['arcane'],
+            drops: [
+                {item: 'minor_key', percentChance: 35},
+                {item: 'bundu_mask', percentChance: 55},
+                {item: 'major_health_potion', percentChance: 75}
+            ]
         },
         sphinx: {
             type: 'sphinx',
@@ -139,7 +158,12 @@ export function MonsterManager(){
             specials: ['possess', 'tesseract'],
             attacks: ['claws', 'induce_madness', 'lightning'],
             weaknesses: ['arcane'],
-            minions: ['djinn']
+            minions: ['djinn'],
+            drops: [
+                {item: 'scarab_charm', percentChance: 85},
+                {item: 'nukta_amulet', percentChance: 35},
+                {item: 'major_health_potion', percentChance: 75}
+            ]
         },
         goblin: {
             type: 'goblin',
@@ -161,7 +185,10 @@ export function MonsterManager(){
             deathCries: ['nooooooo'],
             specials: ['zealotry'],
             attacks: ['claws', 'bite'],
-            weaknesses: ['crushing', 'cutting', 'fire', 'electricity']
+            weaknesses: ['crushing', 'cutting', 'fire', 'electricity'],
+            drops: [
+                {item: 'minor_health_potion', percentChance: 45}
+            ]
         },
         mummy: {
             type: 'mummy',
@@ -184,7 +211,11 @@ export function MonsterManager(){
             specials: ['induce_fear'],
             attacks: ['grasp', 'energy_drain'],
             weaknesses: ['arcane', 'fire', 'electricity'],
-            minions: ['skeleton', 'skeleton']
+            minions: ['skeleton', 'skeleton'],
+            drops: [
+                {item: 'scarab_charm', percentChance: 55},
+                {item: 'minor_health_potion', percentChance: 55}
+            ]
         },
         troll: {
             type: 'troll',
@@ -206,7 +237,11 @@ export function MonsterManager(){
             deathCries: ['*gurgle*'],
             specials: ['regenerate'],
             attacks: ['crush', 'bite', 'tackle'],
-            weaknesses: ['fire']
+            weaknesses: ['fire'],
+            drops: [
+                {item: 'zul_mask', percentChance: 15},
+                {item: 'minor_health_potion', percentChance: 55}
+            ]
         },
         skeleton: {
             type: 'skeleton',
@@ -228,7 +263,10 @@ export function MonsterManager(){
             deathCries: ['*screech*'],
             specials: ['induce_fear'],
             attacks: ['crush', 'bite', 'tackle'],
-            weaknesses: ['fire']
+            weaknesses: ['fire'],
+            drops: [
+                {item: 'minor_health_potion', percentChance: 55}
+            ]
         }
     }
     let count = 100;
@@ -252,8 +290,8 @@ export function MonsterManager(){
         return JSON.parse(JSON.stringify(match));
     }
     this.getRandomMonster = () => {
-        return this.monsters['sphinx']
-        // return this.pickRandom(Object.values(this.monsters))
+        // return this.monsters['sphinx']
+        return this.pickRandom(Object.values(this.monsters))
     }
     
 
