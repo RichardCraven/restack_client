@@ -66,12 +66,80 @@ class DungeonPage extends React.Component {
             this.loadNewDungeon();
         } else {
             // meta.inventory = []
+            // let inventory = meta.inventory
             let inventory = []
-            let consumables = [{contains: 'minor_health_potion'}, {contains: 'minor_health_potion'}, {contains: 'flail'}, {contains: 'axe'}]
+            let consumables = [
+                {
+                    effect: 'health gain',
+                    amount: 55,
+                    icon: 'potion',
+                    type: 'consumable',
+                    name: 'minor health potion',
+                    equippedBy: null
+                }, 
+                {
+                    effect: 'health gain',
+                    amount: 55,
+                    icon: 'potion',
+                    type: 'consumable',
+                    name: 'minor health potion',
+                    equippedBy: null
+                }, 
+                {
+                    damage: 3,
+                    icon: 'flail',
+                    type: 'weapon',
+                    subtype: 'crushing',
+                    name: 'flail',
+                    equippedBy: null
+                }, 
+                {
+                    damage: 3,
+                    icon: 'axe',
+                    type: 'weapon',
+                    subtype: 'cutting',
+                    name: 'axe',
+                    equippedBy: null
+                },
+                {
+                    power: 2,
+                    icon: 'zul_mask',
+                    type: 'ornament',
+                    name: 'zul mask', 
+                    equippedBy: null
+                }
+                
+            ]
             for(let i = 0; i < consumables.length; i++){
                 inventory.push(consumables[i])
             }
             console.log('inventory:', inventory)
+
+            inventory.push(
+                {
+                    type: 'magical',
+                    icon: 'glindas_wand',
+                    name: 'glindas wand',
+                    equippedBy: null,
+                }
+            )
+            inventory.push(
+                {
+                    type: 'magical',
+                    icon: 'volkas_wand',
+                    name: 'volkas wand',
+                    equippedBy: null,
+                }
+            )
+            inventory.push(
+                {
+                    type: 'magical',
+                    icon: 'maerlyns_rod',
+                    name: 'maerlyns rod',
+                    equippedBy: null,
+                }
+            )
+
             // debugger
             this.props.inventoryManager.initializeItems(inventory)
             // this.props.inventoryManager.initializeItems(meta.inventory ? meta.inventory : [])
@@ -86,13 +154,37 @@ class DungeonPage extends React.Component {
             g.stats.dex = 6;
             meta.crew[idx] = g;
             // console.log('idx: ', idx);
+
+
+            // console.log('');
             console.log('initializing crew: ', meta.crew);
+            console.log('initializing inventory: ', inventory);
             this.props.crewManager.initializeCrew(meta.crew ? meta.crew : [])
             console.log('this.props.crewManager', this.props.crewManager);
 
-            this.props.inventoryManager.inventory.forEach((e,i)=>{
-                inv[i]= ''
-            })
+
+            // setTimeout(()=>{
+            //     console.log('in set timouet');
+            //     this.props.inventoryManager.addItem('major_key')
+            //     this.props.inventoryManager.addItem('ornate_key')
+            //     setTimeout(()=> {
+            //         console.log('current inventory: ', this.props.inventoryManager.inventory)
+            //     },1000)
+            // },1000)
+
+
+
+            // this.props.inventoryManager.inventory.forEach((e,i)=>{
+            //     inv[i]= ''
+            // })
+
+            // ^ wtf is this
+
+
+
+
+
+
             // debugger
             this.loadExistingDungeon(meta.dungeonId)
         }
@@ -392,18 +484,31 @@ class DungeonPage extends React.Component {
         // }
     }
     handleMemberClick = (member) => {
+        console.log('selected member: ', member.data);
+        console.log('crew: ', this.props.crewManager.crew);
         this.setState({
             selectedCrewMember: member.data
         })
     }
     handleItemClick = (item) => {
+        const equipTypes = ['weapon', 'ornament', 'protection', 'magical']
+        console.log(this.props.inventoryManager.inventory)
+        console.log('***CLICKED ITEM: ', item);
+        console.log('selected member? ', this.state.selectedCrewMember);
+        let selectedCrewMember = {};
+        if(this.state.selectedCrewMember.inventory){
+            console.log('ADD EQUIPABLE ITEM TO INVENTORY');
+            selectedCrewMember = this.state.selectedCrewMember;
+            selectedCrewMember.inventory.push(item)
+        }
         this.setState({
-            activeInventoryItem: item
+            activeInventoryItem: item,
+            selectedCrewMember
         })
         this.props.boardManager.setActiveInventoryItem(item)
-        setTimeout(()=>{
-            console.log('active invetnory item:', this.state.activeInventoryItem)
-        },200)
+        // setTimeout(()=>{
+        //     console.log('active invetnory item:', this.state.activeInventoryItem)
+        // },200)
         switch(item.contains){
             case 'minor_key':
                 if(this.props.boardManager.pending && this.props.boardManager.pending.type === 'minor_gate'){
@@ -419,7 +524,7 @@ class DungeonPage extends React.Component {
                 }
             break;
             default:
-                console.log('clicked ', item, 'DUNGEON:', this.props.boardManager.dungeon)
+                // console.log('clicked ', item, 'DUNGEON:', this.props.boardManager.dungeon)
             break;
         }
     }
@@ -583,7 +688,10 @@ class DungeonPage extends React.Component {
                 <div className="expand-collapse-button icon-container" onClick={this.toggleLeftSidePanel}>
                     <CIcon icon={cilCaretRight} className={`expand-icon ${this.state.leftPanelExpanded ? 'expanded' : ''}`} size="sm"/>
                 </div>
-                <div className="inventory">
+                <div className="minimap-container">
+
+                </div>
+                {/* <div className="inventory">
                     <div className="title">Inventory</div>
                     <div className="inventory-tile-container">
                     {   this.props.inventoryManager &&
@@ -606,30 +714,10 @@ class DungeonPage extends React.Component {
                                         >
                                         </Tile>
                                     </div>
-                            // return <Tile 
-                            // key={i}
-                            // tileSize={this.state.tileSize}
-                            // image={item.image ? item.image : null}
-                            // contains={item.contains}
-                            // color={item.color}
-                            // editMode={false}
-                            // type={'inventory-tile'}
-                            // handleClick={this.handleItemClick}
-                            // className={'inventory-tile'}
-                            // >
-                            // </Tile>
                         })
                     }
                     </div>
-                </div>
-                {/* <div className="party">
-
                 </div> */}
-            </div>
-            <div className={`right-side-panel ${this.state.rightPanelExpanded ? 'expanded' : ''}`}>
-                <div className="minimap-container">
-
-                </div>
                 <div className="crew-container">
                     <div className="title">Crew</div>
                     <div className="crew-tile-container">
@@ -650,7 +738,6 @@ class DungeonPage extends React.Component {
                                             handleClick={this.handleMemberClick}
                                             handleHover={this.handleCrewTileHover}
                                             className={`crew-tile `}
-                                            // isActiveInventory={this.state.activeInventoryItem?.id === i}
                                             >
                                             </Tile>
                                         </div>
@@ -659,14 +746,71 @@ class DungeonPage extends React.Component {
                     </div>
                 </div>
                 {this.state.selectedCrewMember.name && <div className="crew-info-section">
-                        {this.state.selectedCrewMember.portrait && <div className="portrait" style={{backgroundImage: "url(" + images[this.state.selectedCrewMember.portrait] + ")"}}></div>}
+                        {this.state.selectedCrewMember.portrait && <div className="portrait" style={{backgroundImage: "url(" + this.state.selectedCrewMember.portrait + ")"}}></div>}
                         <div className="name-line">{this.state.selectedCrewMember.name} the {this.uppercaseFirstLetter(this.state.selectedCrewMember.type)}</div>
                         <div className="stat-line">Strength {this.state.selectedCrewMember.stats.str}</div>
                         <div className="stat-line">Dexterity {this.state.selectedCrewMember.stats.dex}</div>
                         <div className="stat-line">Intelligence {this.state.selectedCrewMember.stats.int}</div>
                         <div className="stat-line">Vitality {this.state.selectedCrewMember.stats.vit}</div>
                         <div className="stat-line">Fortitude {this.state.selectedCrewMember.stats.fort}</div>
+                        <div className="equipment-panel">
+                            <div className="equipment-line">
+                                Weapon 
+                                <div className="equipment-icon">
+                                    <Tile 
+                                    tileSize={this.state.tileSize}
+                                    image={this.state.selectedCrewMember.inventory.find(e=> e.type === 'weapon').icon ? this.state.selectedCrewMember.inventory.find(e=> e.type === 'weapon').icon : null}
+                                    contains={null}
+                                    color={null}
+                                    editMode={false}
+                                    type={'inventory-tile'}
+                                    handleClick={() => this.handleItemClick(this.state.selectedCrewMember.inventory.find(e=> e.type === 'weapon'))}
+                                    handleHover={this.handleInventoryTileHover}
+                                    className={`inventory-tile equipment`}
+                                    >
+                                    </Tile>
+                                </div> 
+                            </div>
+                            <div className="equipment-line">
+                                Armor
+                                <div className="equipment-icon"></div> 
+                            </div>
+                            <div className="equipment-line">
+                                Ancillary
+                                <div className="equipment-icon"></div> 
+                            </div>
+                            {/* <div className="equipment-line"></div> */}
+                        </div>
                 </div>}
+            </div>
+            <div className={`right-side-panel ${this.state.rightPanelExpanded ? 'expanded' : ''}`}>
+                <div className="inventory">
+                    <div className="title">Inventory</div>
+                    <div className="inventory-tile-container">
+                    {   this.props.inventoryManager &&
+                        this.props.inventoryManager.inventory.map((item, i) => {
+                            return <div className="sub-container" key={i}>
+                                        { this.state.inventoryHoverMatrix[i] && <div className="hover-message">{this.state.inventoryHoverMatrix[i]}</div>}
+                                        <Tile 
+                                        key={i}
+                                        id={i}
+                                        tileSize={this.state.tileSize}
+                                        image={item.icon ? item.icon : null}
+                                        contains={item.contains}
+                                        color={item.color}
+                                        editMode={false}
+                                        type={'inventory-tile'}
+                                        handleClick={() => this.handleItemClick(item)}
+                                        handleHover={this.handleInventoryTileHover}
+                                        className={`inventory-tile ${this.state.activeInventoryItem?.id === i ? 'active' : ''}`}
+                                        isActiveInventory={this.state.activeInventoryItem?.id === i}
+                                        >
+                                        </Tile>
+                                    </div>
+                        })
+                    }
+                    </div>
+                </div>
                 <div className="expand-collapse-button icon-container" onClick={this.toggleRightSidePanel}>
                     <CIcon icon={cilCaretLeft} className={`expand-icon ${this.state.rightPanelExpanded ? 'expanded' : ''}`} size="sm"/>
                 </div>

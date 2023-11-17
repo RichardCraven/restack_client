@@ -95,7 +95,7 @@ export function BoardManager(){
         this.triggerMonsterBattle = callback;
     }
     this.setActiveInventoryItem = (e) => {
-        console.log('setting avtive inv item:', e)
+        console.log('setting avtive inv item:', e, 'is this necessary???')
         this.activeInventoryItem = e;
     }
     this.establishSetMonsterCallback = (callback) => {
