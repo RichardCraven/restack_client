@@ -262,7 +262,7 @@ class MonsterBattle extends React.Component {
             hoveredInventoryTile: val
         })
     }
-    inventoryTileClicked = (val) => {
+    combayInventoryTileClicked = (val) => {
         console.log('val:', val)
         this.props.combatManager.itemUsed(val, this.state.selectedFighter)
         const itemIndex  = this.props.inventoryManager.inventory.findIndex(item => item.name === val.name)
@@ -682,7 +682,7 @@ class MonsterBattle extends React.Component {
                                                     <div 
                                                     className={`interaction-tile consumable`} 
                                                     style={{backgroundImage: "url(" + images[a.icon] + ")", cursor: 'pointer'}} 
-                                                    onClick={() => this.inventoryTileClicked(a)} 
+                                                    onClick={() => this.combayInventoryTileClicked(a)} 
                                                     onMouseEnter={() => this.inventoryTileHovered(a.name)} 
                                                     onMouseLeave={() => this.inventoryTileHovered(null)}
                                                     >

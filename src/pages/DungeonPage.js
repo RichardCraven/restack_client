@@ -59,7 +59,7 @@ class DungeonPage extends React.Component {
         }
         const meta = getMeta();
         this.props.boardManager.establishAvailableItems(this.props.inventoryManager.items)
-        let inv = {}
+        // let inv = {}
         console.log('meta:', meta);
         if(!meta || !meta.dungeonId){
             console.log('no dungeon id, make new dungeon')
@@ -99,6 +99,7 @@ class DungeonPage extends React.Component {
                     type: 'weapon',
                     subtype: 'cutting',
                     name: 'axe',
+                    // equippedBy: 123
                     equippedBy: null
                 },
                 {
@@ -155,6 +156,8 @@ class DungeonPage extends React.Component {
             meta.crew[idx] = g;
             // console.log('idx: ', idx);
 
+            delete meta.crew[0].intentory
+            meta.crew[0].inventory = []
 
             // console.log('');
             console.log('initializing crew: ', meta.crew);
@@ -192,7 +195,7 @@ class DungeonPage extends React.Component {
             return {
                 tileSize,
                 boardSize,
-                inventoryHoverMatrix: inv,
+                inventoryHoverMatrix: {},
                 leftPanelExpanded: meta?.leftExpanded,
                 rightPanelExpanded: meta?.rightExpanded,
                 crewSize: meta.crew.length
@@ -490,16 +493,31 @@ class DungeonPage extends React.Component {
             selectedCrewMember: member.data
         })
     }
-    handleItemClick = (item) => {
-        const equipTypes = ['weapon', 'ornament', 'protection', 'magical']
+    handleEquipmentItemClick = (item) => {
+        if(!item)return
+        console.log('equipment clicked: ', item);
+        const selectedCrewMember = this.state.selectedCrewMember;
+        const itemIndex = selectedCrewMember.inventory.findIndex(e=>e===item);
+        console.log('itemIndex: ', itemIndex);
+        item.equippedBy = null;
+        this.props.inventoryManager.addItem(item)
+        selectedCrewMember.inventory.splice(itemIndex,1);
+        this.setState({
+            selectedCrewMember
+        })
+    }
+    handleItemClick = (item, index) => {
+        const equipTypes = ['weapon', 'armor', 'ancillary', 'magical']
         console.log(this.props.inventoryManager.inventory)
         console.log('***CLICKED ITEM: ', item);
         console.log('selected member? ', this.state.selectedCrewMember);
-        let selectedCrewMember = {};
-        if(this.state.selectedCrewMember.inventory){
+        let selectedCrewMember = this.state.selectedCrewMember;
+        if(selectedCrewMember && this.state.selectedCrewMember.inventory && equipTypes.includes(item.type) && !this.state.selectedCrewMember.inventory.map(e=>e.type).includes(item.type)){
             console.log('ADD EQUIPABLE ITEM TO INVENTORY');
             selectedCrewMember = this.state.selectedCrewMember;
+            item.equippedBy = selectedCrewMember.id;
             selectedCrewMember.inventory.push(item)
+            this.props.inventoryManager.removeItemByIndex(index)
         }
         this.setState({
             activeInventoryItem: item,
@@ -757,29 +775,103 @@ class DungeonPage extends React.Component {
                             <div className="equipment-line">
                                 Weapon 
                                 <div className="equipment-icon">
+                                    <div className="equipment-name">
+                                        {this.state.selectedCrewMember.inventory.find(e=> e.type === 'weapon')?.name}
+                                    </div>
                                     <Tile 
                                     tileSize={this.state.tileSize}
-                                    image={this.state.selectedCrewMember.inventory.find(e=> e.type === 'weapon').icon ? this.state.selectedCrewMember.inventory.find(e=> e.type === 'weapon').icon : null}
+                                    image={
+                                        this.state.selectedCrewMember.inventory.find(e=> e.type === 'weapon') && 
+                                        this.state.selectedCrewMember.inventory.find(e=> e.type === 'weapon').icon ? 
+                                        this.state.selectedCrewMember.inventory.find(e=> e.type === 'weapon').icon : 
+                                        null
+                                    }
                                     contains={null}
                                     color={null}
                                     editMode={false}
                                     type={'inventory-tile'}
-                                    handleClick={() => this.handleItemClick(this.state.selectedCrewMember.inventory.find(e=> e.type === 'weapon'))}
+                                    handleClick={() => this.handleEquipmentItemClick(this.state.selectedCrewMember.inventory.find(e=> e.type === 'weapon'))}
                                     handleHover={this.handleInventoryTileHover}
-                                    className={`inventory-tile equipment`}
+                                    className={`inventory-tile equipment ${!this.state.selectedCrewMember.inventory.find(e=> e.type === 'weapon') ? 'empty' : ''}`}
                                     >
                                     </Tile>
                                 </div> 
                             </div>
                             <div className="equipment-line">
                                 Armor
-                                <div className="equipment-icon"></div> 
+                                <div className="equipment-icon">
+                                    <div className="equipment-name">
+                                        {this.state.selectedCrewMember.inventory.find(e=> e.type === 'armor')?.name}
+                                    </div>
+                                    <Tile 
+                                        tileSize={this.state.tileSize}
+                                        image={
+                                            this.state.selectedCrewMember.inventory.find(e=> e.type === 'armor') && 
+                                            this.state.selectedCrewMember.inventory.find(e=> e.type === 'armor').icon ? 
+                                            this.state.selectedCrewMember.inventory.find(e=> e.type === 'armor').icon : 
+                                            null
+                                        }
+                                        contains={null}
+                                        color={null}
+                                        editMode={false}
+                                        type={'inventory-tile'}
+                                        handleClick={() => this.handleEquipmentItemClick(this.state.selectedCrewMember.inventory.find(e=> e.type === 'armor'))}
+                                        handleHover={this.handleInventoryTileHover}
+                                        className={`inventory-tile equipment ${!this.state.selectedCrewMember.inventory.find(e=> e.type === 'armor') ? 'empty' : ''}`}
+                                        >
+                                    </Tile>
+                                </div> 
                             </div>
                             <div className="equipment-line">
                                 Ancillary
-                                <div className="equipment-icon"></div> 
+                                <div className="equipment-icon">
+                                    <div className="equipment-name">
+                                        {this.state.selectedCrewMember.inventory.find(e=> e.type === 'ancillary')?.name}
+                                    </div>
+                                    <Tile 
+                                        tileSize={this.state.tileSize}
+                                        image={
+                                            this.state.selectedCrewMember.inventory.find(e=> e.type === 'ancillary') && 
+                                            this.state.selectedCrewMember.inventory.find(e=> e.type === 'ancillary').icon ? 
+                                            this.state.selectedCrewMember.inventory.find(e=> e.type === 'ancillary').icon : 
+                                            null
+                                        }
+                                        contains={null}
+                                        color={null}
+                                        editMode={false}
+                                        type={'inventory-tile'}
+                                        handleClick={() => this.handleEquipmentItemClick(this.state.selectedCrewMember.inventory.find(e=> e.type === 'ancillary'))}
+                                        handleHover={this.handleInventoryTileHover}
+                                        className={`inventory-tile equipment ${!this.state.selectedCrewMember.inventory.find(e=> e.type === 'ancillary') ? 'empty' : ''}`}
+                                        >
+                                    </Tile>
+                                </div>
                             </div>
-                            {/* <div className="equipment-line"></div> */}
+                            <div className="equipment-line">
+                                Magical
+                                <div className="equipment-icon">
+                                    <div className="equipment-name">
+                                        {this.state.selectedCrewMember.inventory.find(e=> e.type === 'magical')?.name}
+                                    </div>
+                                    <Tile 
+                                        tileSize={this.state.tileSize}
+                                        image={
+                                            this.state.selectedCrewMember.inventory.find(e=> e.type === 'magical') && 
+                                            this.state.selectedCrewMember.inventory.find(e=> e.type === 'magical').icon ? 
+                                            this.state.selectedCrewMember.inventory.find(e=> e.type === 'magical').icon : 
+                                            null
+                                        }
+                                        contains={null}
+                                        color={null}
+                                        editMode={false}
+                                        type={'inventory-tile'}
+                                        handleClick={() => this.handleEquipmentItemClick(this.state.selectedCrewMember.inventory.find(e=> e.type === 'magical'))}
+                                        handleHover={this.handleInventoryTileHover}
+                                        className={`inventory-tile equipment ${!this.state.selectedCrewMember.inventory.find(e=> e.type === 'magical') ? 'empty' : ''}`}
+                                        >
+                                    </Tile>
+                                </div>
+                            </div>
                         </div>
                 </div>}
             </div>
@@ -790,17 +882,23 @@ class DungeonPage extends React.Component {
                     {   this.props.inventoryManager &&
                         this.props.inventoryManager.inventory.map((item, i) => {
                             return <div className="sub-container" key={i}>
-                                        { this.state.inventoryHoverMatrix[i] && <div className="hover-message">{this.state.inventoryHoverMatrix[i]}</div>}
+                                        { this.state.inventoryHoverMatrix[i] && 
+                                            <div className="hover-message-container">
+                                                <div className="hover-message">{this.state.inventoryHoverMatrix[i].replaceAll('_', ' ')}</div>
+                                                {/* <div className="hover-message">yesy</div> */}
+                                            </div>
+                                        }
                                         <Tile 
                                         key={i}
                                         id={i}
+                                        data={item}
                                         tileSize={this.state.tileSize}
                                         image={item.icon ? item.icon : null}
-                                        contains={item.contains}
+                                        contains={item.name.replace(' ', '_')}
                                         color={item.color}
                                         editMode={false}
                                         type={'inventory-tile'}
-                                        handleClick={() => this.handleItemClick(item)}
+                                        handleClick={() => this.handleItemClick(item, i)}
                                         handleHover={this.handleInventoryTileHover}
                                         className={`inventory-tile ${this.state.activeInventoryItem?.id === i ? 'active' : ''}`}
                                         isActiveInventory={this.state.activeInventoryItem?.id === i}

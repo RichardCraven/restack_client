@@ -6,7 +6,26 @@
     display: flex;
     height: 100%;
     width: 100%;
-    // .left-side-panel{
+    
+    .tile.inventory-tile{
+        margin: 5px;
+        background-color: lightgrey;
+        
+        &:hover{
+            background-color: rgb(151, 176, 208) !important;
+        }
+        &.active{
+            background-color: #f9b115 !important;
+        }
+    }
+    .tile.inventory-tile.equipment{
+        background-color: white;
+        margin: 0;
+        &.empty{
+            background-color: transparent;
+        }
+    }
+
     .right-side-panel{
         overflow: hidden;
         height: 100%;
@@ -51,25 +70,33 @@
                 
                 .sub-container{
                     position: relative;
+                    margin-bottom: 8px;
+                    .hover-message-container{
+                        position: absolute;
+                        top: -11px;
+                        left: 5px;
+                        width: 54px;
+                    }
                     .hover-message{
                         color: white;
-                        position: absolute;
+                        text-align: center;
                         font-size: 9px;
-                        top: -7px;
-                        left: 5px;
-                    }
-                    .tile.inventory-tile{
-                        margin: 5px;
-                        // border: 2px solid yellow !important;
-                        background-color: lightgrey;
+                        display: flex;
+                        justify-content: center;
+                        white-space: nowrap;
                         
-                        &:hover{
-                            background-color: rgb(151, 176, 208) !important;
-                        }
-                        &.active{
-                            background-color: #f9b115 !important;
-                        }
                     }
+                    // .tile.inventory-tile{
+                    //     margin: 5px;
+                    //     background-color: lightgrey;
+                        
+                    //     &:hover{
+                    //         background-color: rgb(151, 176, 208) !important;
+                    //     }
+                    //     &.active{
+                    //         background-color: #f9b115 !important;
+                    //     }
+                    // }
                 }
             }
         }
@@ -87,9 +114,6 @@
         
     }
     .left-side-panel{
-        .tile.inventory-tile.equipment{
-            background-color: white;
-        }
         height: 100%;
         overflow: hidden;
         border: 1px solid transparent;
@@ -146,7 +170,7 @@
             }
         }
         .crew-info-section{
-            border: 1px solid white;
+            // border: 1px solid white;
             height: auto;
             width: 100%;
             color: white;
@@ -154,7 +178,7 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            padding: 10px 0px;
+            // padding: 25px 0px;
             .portrait{
                 height: 100px;
                 width: 100px;
@@ -165,9 +189,8 @@
                 text-decoration-line: underline;
             }
             .equipment-panel{
-                height: 250px;
                 width: 100%;
-                margin-top: 10px;
+                margin-top: 15px;
                 display: flex;
                 flex-direction: column;
                 .equipment-line{
@@ -176,11 +199,21 @@
                     flex-direction: row;
                     justify-content: space-between;
                     padding: 0 25px;
-                    margin: 5px 0;
+                    margin-bottom: 18px;
                     .equipment-icon{
+                        position: relative;
                         height: 54px;
                         width: 54px;
                         border: 1px solid white;
+                        .equipment-name{
+                            position: absolute;
+                            height: 12px;
+                            width: 100%;
+                            top: -15px;
+                            // border: 1px solid yellow;
+                            font-size: 10px;
+                            line-height: 12px;
+                        }
                     }
                 }
             }

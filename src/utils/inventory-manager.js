@@ -142,8 +142,42 @@ export function InventoryManager(){
             equippedBy: null
         }
     }
-    this.protection= {
-
+    this.armor= {
+        basic_helm: {
+            armor: 3,
+            type: 'armor',
+            icon: 'basic_helm',
+            name: 'basic helm',
+            equippedBy: null,
+        },
+        cretan_helm: {
+            armor: 4,
+            type: 'armor',
+            icon: 'cretan_helm',
+            name: 'cretan helm',
+            equippedBy: null,
+        },
+        knight_helm: {
+            armor: 5,
+            type: 'armor',
+            icon: 'knight_helm',
+            name: 'knight helm',
+            equippedBy: null,
+        },
+        legionaire_helm: {
+            armor: 6,
+            type: 'armor',
+            icon: 'legionaire_helm',
+            name: 'legionaire helm',
+            equippedBy: null,
+        },
+        spartan_helm: {
+            armor: 7,
+            type: 'armor',
+            icon: 'spartan_helm',
+            name: 'spartan helm',
+            equippedBy: null,
+        },
     }
     this.magical = {
         glindas_wand: {
@@ -169,42 +203,42 @@ export function InventoryManager(){
         zul_mask: {
             power: 2,
             icon: 'zul_mask',
-            type: 'ornament',
+            type: 'ancillary',
             name: 'zul mask',
             equippedBy: null
         },
         bundu_mask: {
             power: 2,
             icon: 'bundu_mask',
-            type: 'ornament',
+            type: 'ancillary',
             name: 'bundu mask',
             equippedBy: null
         },
         court_mask: {
             power: 1,
             icon: 'court_mask',
-            type: 'ornament',
+            type: 'ancillary',
             name: 'court mask',
             equippedBy: null
         },
         solomon_mask: {
             power: 3,
             icon: 'solomon_mask',
-            type: 'ornament',
+            type: 'ancillary',
             name: 'solomon mask',
             equippedBy: null
         },
         lundi_mask: {
             power: 1,
             icon: 'lundi_mask',
-            type: 'ornament',
+            type: 'ancillary',
             name: 'lundi mask',
             equippedBy: null
         },
         mardi_mask: {
             power: 0,
             icon: 'mardi_mask',
-            type: 'ornament',
+            type: 'ancillary',
             name: 'mardi mask',
             equippedBy: null
         }
@@ -218,8 +252,8 @@ export function InventoryManager(){
         for(let key in this.ornaments){
             this.allItems[key] = this.ornaments[key]
         }
-        for(let key in this.protection){
-            this.allItems[key] = this.protection[key]
+        for(let key in this.armor){
+            this.allItems[key] = this.armor[key]
         }
         for(let key in this.magical){
             this.allItems[key] = this.magical[key]
@@ -228,23 +262,38 @@ export function InventoryManager(){
             this.allItems[key] = this.weapons[key]
         }
         this.inventory = [];
-        console.log('initialized with items:', items)
+        // console.log('initialized with items:', items)
         let newItems = items.map(e=> {
-            if(this.weapons_names.includes(e.name.replaceAll(' ', '_'))){
-                return this.allItems[e.name.replaceAll(' ', '_')]
+            const equippedBy = e.equippedBy
+            if(this.allItems[(e.name.replaceAll(' ', '_'))]){
+                let v = this.allItems[e.name.replaceAll(' ', '_')];
+                v.equippedBy = equippedBy;
+                return v;
             }
-            if(this.masks_names.includes(e.name.replaceAll(' ', '_'))){
-                return this.allItems[e.name.replaceAll(' ', '_')]
-            }
-            if(this.potions_names.includes(e.name.replaceAll(' ', '_'))){
-                return this.allItems[e.name.replaceAll(' ', '_')]
-            }
-            if(this.keys_names.includes(e.name.replaceAll(' ', '_'))){
-                return this.allItems[e.name.replaceAll(' ', '_')]
-            }
-            if(this.wands_names.includes(e.name.replaceAll(' ', '_'))){
-                return this.allItems[e.name.replaceAll(' ', '_')]
-            }
+            // if(this.masks_names.includes(e.name.replaceAll(' ', '_'))){
+            //     return this.allItems[e.name.replaceAll(' ', '_')]
+            //     let v = this.allItems[e.name.replaceAll(' ', '_')];
+            //     v.equippedBy = equippedBy;
+            //     return v;
+            // }
+            // if(this.potions_names.includes(e.name.replaceAll(' ', '_'))){
+            //     return this.allItems[e.name.replaceAll(' ', '_')]
+            //     let v = this.allItems[e.name.replaceAll(' ', '_')];
+            //     v.equippedBy = equippedBy;
+            //     return v;
+            // }
+            // if(this.keys_names.includes(e.name.replaceAll(' ', '_'))){
+            //     return this.allItems[e.name.replaceAll(' ', '_')]
+            //     let v = this.allItems[e.name.replaceAll(' ', '_')];
+            //     v.equippedBy = equippedBy;
+            //     return v;
+            // }
+            // if(this.wands_names.includes(e.name.replaceAll(' ', '_'))){
+            //     return this.allItems[e.name.replaceAll(' ', '_')]
+            //     let v = this.allItems[e.name.replaceAll(' ', '_')];
+            //     v.equippedBy = equippedBy;
+            //     return v;
+            // }
         })
         console.log('now items:', newItems)
         // items.forEach(i=> {
@@ -252,12 +301,16 @@ export function InventoryManager(){
         // })
         this.inventory = newItems
         console.log('final items:', this.inventory)
+        // debugger
     }
     this.addItem = (item) => {
         console.log('adding: ', item)
-        console.log('all items version', this.allItems[item]);
-        this.inventory.push(this.allItems[item])
+        // console.log('all items version', this.allItems[item]);
+        this.inventory.push(item)
         console.log('this.inventory: ', this.inventory)
         // debugger
+    }
+    this.removeItemByIndex = (index) => {
+        this.inventory.splice(index, 1)
     }
 }
