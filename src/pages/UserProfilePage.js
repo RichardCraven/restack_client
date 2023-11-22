@@ -44,26 +44,36 @@ class UserProfilePage extends React.Component{
     // console.log('state:', )
   }
   clearDungeon = async () => {
-    console.log('clearing dungeon')
-    let user = getMeta();
+    console.log('clearing dungeon', this.state.dungeon)
+    let meta = getMeta();
     if(this.state.dungeon){
-      await deleteDungeonRequest(user.dungeonId)
-      user.dungeonId = null;
-      user.location = null
-      await updateUserRequest(getUserId(), user)
-      storeMeta(user);
+      console.log('state dungeon eists, first block, dungeon ID: ', meta.dungeonId);
+      // debugger
+      await deleteDungeonRequest(meta.dungeonId)
+
+      this.props.boardManager.dungeon.id = null;
+      this.props.inventoryManager.inventory = [];
+
+      meta.dungeonId = null;
+      meta.location = null
+      meta.inventory = []
+      await updateUserRequest(getUserId(), meta)
+      storeMeta(meta);
       
       setTimeout(()=>{
         this.getDungeonDetails();
       })
     } else {
-      user.dungeonId = null;
-      user.location = null
-      await updateUserRequest(getUserId(), user)
-      storeMeta(user);
+      console.log('no state dungeon, second block');
+      meta.dungeonId = null;
+      meta.location = null
+      meta.inventory = []
+      await updateUserRequest(getUserId(), meta)
+      storeMeta(meta);
       
       setTimeout(()=>{
         this.getDungeonDetails();
+        console.log('meta: ', getMeta());
       })
     }
   }

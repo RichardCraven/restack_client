@@ -30,7 +30,8 @@ export default function LandingPage() {
   },[history])
   const checkForCrew = () => {
     const user = getMeta();
-    if(user.crew.length === 0){
+    console.log('meta: ', user);
+    if(!user.crew || user.crew.length === 0){
       setShowWarning(true)
     }
   }

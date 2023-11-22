@@ -280,7 +280,7 @@ button{
     align-items: flex-start;
     flex-direction: column;
     justify-content: center;
-
+    
     .landing-button{
       cursor: pointer;
       max-height: 100px;
@@ -310,10 +310,12 @@ button{
   .content-container{
     height: 100%;
     width: 100%;
-    background-color: white;
+    // background-color: white;
     display: flex;
     flex-direction: column;
+    padding-bottom: 20px;
     .title{
+      color: white;
       // border: 1px solid green;
     }
     .crew-selector{
@@ -342,7 +344,7 @@ button{
         display: flex;
         flex-direction: row;
         align-items: center;
-        // justify-content: space-around;
+        color: white;
         justify-content: flex-start;
         
         .giant-portrait{
@@ -404,6 +406,46 @@ button{
         display: flex;
         flex-direction: row;
         justify-content: space-around;
+        .selected-crew-portrait-container{
+          height: 101px;
+          width: 101px;
+          border: 1px solid white;
+          position: relative;
+          &.closed{
+            border: 1px solid rgb(124, 122, 122);
+          }
+          .portrait{
+            height: 100%;
+            background-size: 100% 100%;
+          }
+          .add-button{
+            position: absolute;
+            color: #8e8c8c;
+            top: -48px;
+            left: 34px;
+            font-size: 35px;
+            cursor: pointer;
+            &:hover{
+              color: white;
+            }
+            &.disabled{
+              color: #8e8c8c !important;
+              cursor:default;
+            }
+            // border: 1px solid white;
+            // width: 20px;
+            // height: 20px;
+            // border-radius: 20px;
+
+            // width:20px;
+            // height:20px;
+            // border-radius:100%;
+            // position:relative;
+            // margin:4px;
+            // display:inline-block;
+            // vertical-align:middle;
+          }
+        }
         .selected-crew-portrait-wrapper{
           height: 100px;
           width: 100px;

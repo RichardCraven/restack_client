@@ -247,9 +247,9 @@ export function BoardManager(){
                 return 'impassable';
             // break;
             case 'item':
-                console.log('handle item')
-                // this.addItemToInventory(destinationTile)
-                // this.removeItemFromBoard(destinationTile)
+                console.log('handle item', destinationTile)
+                this.addItemToInventory(destinationTile)
+                this.removeItemFromBoard(destinationTile)
                 return 'item';
             // break;
             default:
@@ -257,6 +257,8 @@ export function BoardManager(){
         }
     }
     this.removeItemFromBoard = (tile) => {
+        console.log('removing item from board');
+        tile.image = null;
         tile.contains = null;
         tile.color = null; 
         this.tiles[tile.id] = tile;
@@ -266,6 +268,7 @@ export function BoardManager(){
             this.dungeon.levels.find(e=>e.id === this.currentLevel.id).back.miniboards.find(b=>b.id === this.currentBoard.id).tiles[tile.id].contains = null;
         }
         this.updateDungeon(this.dungeon)
+        console.log('updated?');
     }
     this.handleGate = (tile) => {
         if(!this.activeInteractionTile) this.activeInteractionTile = tile;
@@ -359,6 +362,8 @@ export function BoardManager(){
         if(destinationTile.contains === 'void') return
         let interaction = '';
         if(destinationTile.contains){
+
+            console.log('destinationTile: ', destinationTile);
           interaction = this.handleInteraction(destinationTile)
         }
         if(interaction === 'impassable') return
@@ -381,6 +386,12 @@ export function BoardManager(){
             case 'right':
                 this.playerTile.location[1] = (this.playerTile.location[1]+ 1)
             break;
+            case 'item':
+                console.log('please work')
+                // this.addItemToInventory(destinationTile)
+                this.removeItemFromBoard(destinationTile)
+                // return 'item';
+            break;
             default:
             break;
         }
@@ -392,10 +403,6 @@ export function BoardManager(){
         }
         if(interaction === 'way_down'){
             this.handlePassingThroughWayDown();
-        }
-        if(interaction === 'item'){
-            this.addItemToInventory(destinationTile)
-            this.removeItemFromBoard(destinationTile)
         }
         this.overlayTiles.forEach(t=>t.image = null)
         this.overlayTiles[this.getIndexFromCoordinates(this.playerTile.location)].image = 'avatar'

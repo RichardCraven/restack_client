@@ -140,8 +140,25 @@ export function InventoryManager(){
             subtype: 'cutting',
             name: 'sword',
             equippedBy: null
+        },
+        scimitar: {
+            damage: 3,
+            icon: 'scimitar',
+            type: 'weapon',
+            subtype: 'cutting',
+            name: 'scimitar',
+            equippedBy: null
+        },
+        scepter: {
+            damage: 3,
+            icon: 'scepter',
+            type: 'weapon',
+            subtype: 'crushing',
+            name: 'scepter',
+            equippedBy: null
         }
     }
+    
     this.armor= {
         basic_helm: {
             armor: 3,
@@ -149,6 +166,7 @@ export function InventoryManager(){
             icon: 'basic_helm',
             name: 'basic helm',
             equippedBy: null,
+            subtype: 'helm'
         },
         cretan_helm: {
             armor: 4,
@@ -156,6 +174,7 @@ export function InventoryManager(){
             icon: 'cretan_helm',
             name: 'cretan helm',
             equippedBy: null,
+            subtype: 'helm'
         },
         knight_helm: {
             armor: 5,
@@ -163,6 +182,7 @@ export function InventoryManager(){
             icon: 'knight_helm',
             name: 'knight helm',
             equippedBy: null,
+            subtype: 'helm'
         },
         legionaire_helm: {
             armor: 6,
@@ -170,6 +190,7 @@ export function InventoryManager(){
             icon: 'legionaire_helm',
             name: 'legionaire helm',
             equippedBy: null,
+            subtype: 'helm'
         },
         spartan_helm: {
             armor: 7,
@@ -177,28 +198,144 @@ export function InventoryManager(){
             icon: 'spartan_helm',
             name: 'spartan helm',
             equippedBy: null,
+            subtype: 'helm'
         },
+        // shield
+        basic_shield: {
+            armor: 4,
+            type: 'armor',
+            subtype: 'shield',
+            icon: 'basic_shield',
+            name: 'basic shield',
+            equippedBy: null,
+        },
+        seeing_shield: {
+            armor: 6,
+            type: 'armor',
+            subtype: 'shield',
+            icon: 'seeing_shield',
+            name: 'seeing shield',
+            equippedBy: null,
+        }
     }
+    
     this.magical = {
         glindas_wand: {
             type: 'magical',
             icon: 'glindas_wand',
             name: 'glindas wand',
             equippedBy: null,
+            subtype: 'wand',
+            power: 4
         },
         volkas_wand: {
             type: 'magical',
             icon: 'volkas_wand',
             name: 'volkas wand',
-            equippedBy: null
+            equippedBy: null,
+            subtype: 'wand',
+            power: 6
         },
         maerlyns_rod: {
             type: 'magical',
             icon: 'maerlyns_rod',
             name: 'maerlyns rod',
-            equippedBy: null
+            equippedBy: null,
+            subtype: 'wand',
+            power: 10
+        },
+        //charms
+        beetle_charm: {
+            type: 'magical',
+            icon: 'beetle_charm',
+            name: 'beetle charm',
+            equippedBy: null,
+            subtype: 'charm',
+            power: 2
+        },
+        evilai_charm: {
+            type: 'magical',
+            icon: 'evilai_charm',
+            name: 'evilai charm',
+            equippedBy: null,
+            subtype: 'charm',
+            power: 4
+        },
+        nukta_charm: {
+            type: 'magical',
+            icon: 'nukta_charm',
+            name: 'nukta charm',
+            equippedBy: null,
+            subtype: 'charm',
+            power: 6
+        },
+        lundi_charm: {
+            type: 'magical',
+            icon: 'lundi_charm',
+            name: 'lundi charm',
+            equippedBy: null,
+            subtype: 'charm',
+            power: 8
+        },
+        hamsa_charm: {
+            type: 'magical',
+            icon: 'hamsa_charm',
+            name: 'hamsa charm',
+            equippedBy: null,
+            subtype: 'charm',
+            power: 9
+        },
+        scarab_charm: {
+            type: 'magical',
+            icon: 'scarab_charm',
+            name: 'scarab charm',
+            equippedBy: null,
+            subtype: 'charm',
+            power: 10
+        },
+        demonskull_charm: {
+            type: 'magical',
+            icon: 'demonskull_charm',
+            name: 'demonskull charm',
+            equippedBy: null,
+            subtype: 'charm',
+            power: 12
+        },
+        //amulets
+        lundi_amulet: {
+            type: 'magical',
+            icon: 'lundi_amulet',
+            name: 'lundi amulet',
+            equippedBy: null,
+            subtype: 'amulet',
+            power: 3
+        },
+        sayan_amulet: {
+            type: 'magical',
+            icon: 'sayan_amulet',
+            name: 'sayan amulet',
+            equippedBy: null,
+            subtype: 'amulet',
+            power: 5
+        },
+        nukta_amulet: {
+            type: 'magical',
+            icon: 'nukta_amulet',
+            name: 'nukta amulet',
+            equippedBy: null,
+            subtype: 'amulet',
+            power: 7
+        },
+        evilai_amulet: {
+            type: 'magical',
+            icon: 'evilai_amulet',
+            name: 'evilai amulet',
+            equippedBy: null,
+            subtype: 'amulet',
+            power: 9
         }
     }
+
     this.ornaments = {
         zul_mask: {
             power: 2,
@@ -243,6 +380,38 @@ export function InventoryManager(){
             equippedBy: null
         }
     }
+    this.misc = {
+        ornate_key: {
+            icon: 'ornate_key',
+            type: 'key',
+            name: 'ornate key',
+            equippedBy: null
+        },
+        minor_key: {
+            icon: 'minor_key',
+            type: 'key',
+            name: 'minor key',
+            equippedBy: null
+        },
+        major_key: {
+            icon: 'major_key',
+            type: 'key',
+            name: 'major key',
+            equippedBy: null
+        },
+        crown: {
+            icon: 'crown',
+            type: 'crown',
+            name: 'crown',
+            equippedBy: null
+        },
+        lanern: {
+            icon: 'lantern',
+            type: 'lantern',
+            name: 'lantern',
+            equippedBy: null
+        }
+    }
     this.allItems = {};
     this.items = this.weapons_names.concat(this.masks_names.concat(this.helms_names.concat(this.keys_names.concat(this.amulets_names.concat(this.charms_names.concat(this.wands_names.concat(this.misc_names.concat(this.shields_names))))))))
     this.initializeItems = (items) => {
@@ -261,56 +430,60 @@ export function InventoryManager(){
         for(let key in this.weapons){
             this.allItems[key] = this.weapons[key]
         }
+        for(let key in this.misc){
+            this.allItems[key] = this.misc[key]
+        }
         this.inventory = [];
-        // console.log('initialized with items:', items)
-        let newItems = items.map(e=> {
-            const equippedBy = e.equippedBy
-            if(this.allItems[(e.name.replaceAll(' ', '_'))]){
-                let v = this.allItems[e.name.replaceAll(' ', '_')];
-                v.equippedBy = equippedBy;
-                return v;
-            }
-            // if(this.masks_names.includes(e.name.replaceAll(' ', '_'))){
-            //     return this.allItems[e.name.replaceAll(' ', '_')]
-            //     let v = this.allItems[e.name.replaceAll(' ', '_')];
-            //     v.equippedBy = equippedBy;
-            //     return v;
-            // }
-            // if(this.potions_names.includes(e.name.replaceAll(' ', '_'))){
-            //     return this.allItems[e.name.replaceAll(' ', '_')]
-            //     let v = this.allItems[e.name.replaceAll(' ', '_')];
-            //     v.equippedBy = equippedBy;
-            //     return v;
-            // }
-            // if(this.keys_names.includes(e.name.replaceAll(' ', '_'))){
-            //     return this.allItems[e.name.replaceAll(' ', '_')]
-            //     let v = this.allItems[e.name.replaceAll(' ', '_')];
-            //     v.equippedBy = equippedBy;
-            //     return v;
-            // }
-            // if(this.wands_names.includes(e.name.replaceAll(' ', '_'))){
-            //     return this.allItems[e.name.replaceAll(' ', '_')]
-            //     let v = this.allItems[e.name.replaceAll(' ', '_')];
-            //     v.equippedBy = equippedBy;
-            //     return v;
-            // }
-        })
-        console.log('now items:', newItems)
-        // items.forEach(i=> {
-        //     if(this.items.includes(i.icon)) this.inventory.push({image: i.image, contains: i.contains})
-        // })
-        this.inventory = newItems
-        console.log('final items:', this.inventory)
-        // debugger
+        console.log('initialized with items:', items)
+        console.log('all items $$$$$$', this.allItems);
+        if(items === null){
+            this.inventory = this.getStarterPack();
+        } else {
+            this.inventory = items.map(e=> {
+                const equippedBy = e.equippedBy
+                if(this.allItems[(e.name.replaceAll(' ', '_'))]){
+                    let v = this.allItems[e.name.replaceAll(' ', '_')];
+                    v.equippedBy = equippedBy;
+                    return v;
+                }
+            })
+        }
     }
     this.addItem = (item) => {
-        console.log('adding: ', item)
+        console.log('adding: ', item, 'this.inventory: ', this.inventory)
+        // if(typeof item === 'string'){
+        //     // handle item coming from board tile
+        //     this.inventory.push(this.allItems[item.contains])
+        // } else {
+            this.inventory.push(item)
+        // }
+
+
         // console.log('all items version', this.allItems[item]);
-        this.inventory.push(item)
         console.log('this.inventory: ', this.inventory)
         // debugger
     }
     this.removeItemByIndex = (index) => {
         this.inventory.splice(index, 1)
+    }
+    this.getStarterPack = () => {
+        return [
+            {
+                effect: 'health gain',
+                amount: 55,
+                icon: 'potion',
+                type: 'consumable',
+                name: 'minor health potion',
+                equippedBy: null
+            },
+            {
+                effect: 'health gain',
+                amount: 55,
+                icon: 'potion',
+                type: 'consumable',
+                name: 'minor health potion',
+                equippedBy: null
+            }
+        ]
     }
 }

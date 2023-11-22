@@ -48,6 +48,7 @@ class DungeonPage extends React.Component {
     }
     
     componentWillMount(){
+        console.log('DUNGEON PAGE MOUNTED');
         let tileSize = this.getTileSize(),
             boardSize = tileSize*15;
         this.initializeListeners();
@@ -66,80 +67,128 @@ class DungeonPage extends React.Component {
             this.loadNewDungeon();
         } else {
             // meta.inventory = []
-            // let inventory = meta.inventory
-            let inventory = []
-            let consumables = [
-                {
-                    effect: 'health gain',
-                    amount: 55,
-                    icon: 'potion',
-                    type: 'consumable',
-                    name: 'minor health potion',
-                    equippedBy: null
-                }, 
-                {
-                    effect: 'health gain',
-                    amount: 55,
-                    icon: 'potion',
-                    type: 'consumable',
-                    name: 'minor health potion',
-                    equippedBy: null
-                }, 
-                {
-                    damage: 3,
-                    icon: 'flail',
-                    type: 'weapon',
-                    subtype: 'crushing',
-                    name: 'flail',
-                    equippedBy: null
-                }, 
-                {
-                    damage: 3,
-                    icon: 'axe',
-                    type: 'weapon',
-                    subtype: 'cutting',
-                    name: 'axe',
-                    // equippedBy: 123
-                    equippedBy: null
-                },
-                {
-                    power: 2,
-                    icon: 'zul_mask',
-                    type: 'ornament',
-                    name: 'zul mask', 
-                    equippedBy: null
-                }
+            let inventory = meta.inventory
+            // let inventory = []
+            // let consumables = [
+            //     {
+            //         effect: 'health gain',
+            //         amount: 55,
+            //         icon: 'potion',
+            //         type: 'consumable',
+            //         name: 'minor health potion',
+            //         equippedBy: null
+            //     }, 
+            //     {
+            //         effect: 'health gain',
+            //         amount: 55,
+            //         icon: 'potion',
+            //         type: 'consumable',
+            //         name: 'minor health potion',
+            //         equippedBy: null
+            //     }, 
+            //     {
+            //         damage: 3,
+            //         icon: 'flail',
+            //         type: 'weapon',
+            //         subtype: 'crushing',
+            //         name: 'flail',
+            //         equippedBy: null
+            //     }, 
+            //     {
+            //         damage: 3,
+            //         icon: 'axe',
+            //         type: 'weapon',
+            //         subtype: 'cutting',
+            //         name: 'axe',
+            //         // equippedBy: 123
+            //         equippedBy: null
+            //     },
+            //     {
+            //         power: 2,
+            //         icon: 'zul_mask',
+            //         type: 'ornament',
+            //         name: 'zul mask', 
+            //         equippedBy: null
+            //     }
                 
-            ]
-            for(let i = 0; i < consumables.length; i++){
-                inventory.push(consumables[i])
-            }
+            // ]
+            // for(let i = 0; i < consumables.length; i++){
+            //     inventory.push(consumables[i])
+            // }
             console.log('inventory:', inventory)
 
-            inventory.push(
-                {
-                    type: 'magical',
-                    icon: 'glindas_wand',
-                    name: 'glindas wand',
-                    equippedBy: null,
-                }
-            )
-            inventory.push(
-                {
-                    type: 'magical',
-                    icon: 'volkas_wand',
-                    name: 'volkas wand',
-                    equippedBy: null,
-                }
-            )
-            inventory.push(
-                {
-                    type: 'magical',
-                    icon: 'maerlyns_rod',
-                    name: 'maerlyns rod',
-                    equippedBy: null,
-                }
-            )
+            // inventory.push(
+            //     {
+            //         type: 'magical',
+            //         icon: 'glindas_wand',
+            //         name: 'glindas wand',
+            //         equippedBy: null,
+            //     }
+            // )
+            // inventory.push(
+            //     {
+            //         type: 'magical',
+            //         icon: 'volkas_wand',
+            //         name: 'volkas wand',
+            //         equippedBy: null,
+            //     }
+            // )
+            // inventory.push(
+            //     {
+            //         type: 'magical',
+            //         icon: 'maerlyns_rod',
+            //         name: 'maerlyns rod',
+            //         equippedBy: null,
+            //     }
+            // )
+
+            //
+
+            // inventory.push(
+            //     {
+            //         armor: 3,
+            //         type: 'armor',
+            //         icon: 'basic_helm',
+            //         name: 'basic helm',
+            //         equippedBy: null,
+            //     }
+            // )
+            // inventory.push(
+            //     {
+            //         armor: 4,
+            //         type: 'armor',
+            //         icon: 'cretan_helm',
+            //         name: 'cretan helm',
+            //         equippedBy: null,
+            //     }
+            // )
+            // inventory.push(
+            //     {
+            //         armor: 5,
+            //         type: 'armor',
+            //         icon: 'knight_helm',
+            //         name: 'knight helm',
+            //         equippedBy: null,
+            //     }
+            // )
+            // inventory.push(
+            //     {
+            //         armor: 6,
+            //         type: 'armor',
+            //         icon: 'legionaire_helm',
+            //         name: 'legionaire helm',
+            //         equippedBy: null,
+            //     }
+            // )
+            // inventory.push(
+            //     {
+            //         armor: 7,
+            //         type: 'armor',
+            //         icon: 'spartan_helm',
+            //         name: 'spartan helm',
+            //         equippedBy: null,
+            //     }
+            // )
 
             // debugger
             this.props.inventoryManager.initializeItems(inventory)
@@ -149,15 +198,13 @@ class DungeonPage extends React.Component {
 
             // meta.crew.forEach(e=>e.portrait = images[e.portrait])
 
-            let g  = meta.crew.find(e=>e.name==='Loryastes')
-            let idx = meta.crew.indexOf(g)
-            // g.hp = 15;
-            g.stats.dex = 6;
-            meta.crew[idx] = g;
-            // console.log('idx: ', idx);
-
-            delete meta.crew[0].intentory
-            meta.crew[0].inventory = []
+            // let g  = meta.crew.find(e=>e.name==='Loryastes')
+            // let idx = meta.crew.indexOf(g)
+            // // g.hp = 15;
+            // g.stats.dex = 6;
+            // meta.crew[idx] = g;
+            
+            // meta.crew[0].inventory = []
 
             // console.log('');
             console.log('initializing crew: ', meta.crew);
@@ -207,8 +254,11 @@ class DungeonPage extends React.Component {
         return array[index]
     }
     addItemToInventory = (tile) => {
+        //this is coming from a board tile
         const tileContains = tile.contains;
-        this.props.inventoryManager.addItem(tileContains)
+        console.log('allItems: ', this.props.inventoryManager.allItems);
+        console.log('this.props.inventoryManager.allItems[tileContains]: ', this.props.inventoryManager.allItems[tileContains]);
+        this.props.inventoryManager.addItem(this.props.inventoryManager.allItems[tileContains])
         const matrix = this.state.inventoryHoverMatrix;
         this.props.inventoryManager.inventory.forEach((e,i)=>{
             matrix[i] = '';
@@ -475,7 +525,7 @@ class DungeonPage extends React.Component {
         })
     }
     handleClick = (tile) => {
-        // console.log('HANDLE CLICK, SHOULD NOT GET HERE tile:', tile)
+        console.log('HANDLE CLICK, SHOULD NOT GET HERE tile:', tile)
 
         // switch(tile.contains){
         //     case 'minor_key':
@@ -596,6 +646,109 @@ class DungeonPage extends React.Component {
         spawnPoint = selectedDungeon.spawn_points[1]
         // ^ remove later
         
+
+        let inventory = [
+            {
+                effect: 'health gain',
+                amount: 55,
+                icon: 'potion',
+                type: 'consumable',
+                name: 'minor health potion',
+                equippedBy: null
+            }, 
+            {
+                effect: 'health gain',
+                amount: 55,
+                icon: 'potion',
+                type: 'consumable',
+                name: 'minor health potion',
+                equippedBy: null
+            }, 
+            {
+                damage: 3,
+                icon: 'flail',
+                type: 'weapon',
+                subtype: 'crushing',
+                name: 'flail',
+                equippedBy: null
+            }, 
+            {
+                damage: 3,
+                icon: 'axe',
+                type: 'weapon',
+                subtype: 'cutting',
+                name: 'axe',
+                // equippedBy: 123
+                equippedBy: null
+            },
+            {
+                power: 2,
+                icon: 'zul_mask',
+                type: 'ornament',
+                name: 'zul mask', 
+                equippedBy: null
+            }
+            
+        ]
+
+        inventory.push(
+            {
+                type: 'magical',
+                icon: 'glindas_wand',
+                name: 'glindas wand',
+                equippedBy: null,
+            },
+            // {
+            //     type: 'magical',
+            //     icon: 'volkas_wand',
+            //     name: 'volkas wand',
+            //     equippedBy: null,
+            // },
+            // {
+            //     type: 'magical',
+            //     icon: 'maerlyns_rod',
+            //     name: 'maerlyns rod',
+            //     equippedBy: null,
+            // },
+            // {
+            //     armor: 3,
+            //     type: 'armor',
+            //     icon: 'basic_helm',
+            //     name: 'basic helm',
+            //     equippedBy: null,
+            // },
+            // {
+            //     armor: 4,
+            //     type: 'armor',
+            //     icon: 'cretan_helm',
+            //     name: 'cretan helm',
+            //     equippedBy: null,
+            // },
+            // {
+            //     armor: 5,
+            //     type: 'armor',
+            //     icon: 'knight_helm',
+            //     name: 'knight helm',
+            //     equippedBy: null,
+            // },
+            // {
+            //     armor: 6,
+            //     type: 'armor',
+            //     icon: 'legionaire_helm',
+            //     name: 'legionaire helm',
+            //     equippedBy: null,
+            // },
+            // {
+            //     armor: 7,
+            //     type: 'armor',
+            //     icon: 'spartan_helm',
+            //     name: 'spartan helm',
+            //     equippedBy: null,
+            // }
+        )
+        console.log('initializing with inventory: ', inventory);
+        this.props.inventoryManager.initializeItems(inventory)
+
         if(spawnPoint){
             
             this.props.boardManager.setDungeon(selectedDungeon)
@@ -657,6 +810,8 @@ class DungeonPage extends React.Component {
     loadExistingDungeon = async (dungeonId) => {
         const meta = getMeta();
         const res = await loadDungeonRequest(dungeonId);
+        console.log('meta: ', meta, 'dungeonId:', dungeonId);
+        console.log('res: ', res);
         const dungeon = JSON.parse(res.data[0].content)
         dungeon.id = res.data[0]._id;
         this.props.boardManager.setDungeon(dungeon)
@@ -879,7 +1034,7 @@ class DungeonPage extends React.Component {
                 <div className="inventory">
                     <div className="title">Inventory</div>
                     <div className="inventory-tile-container">
-                    {   this.props.inventoryManager &&
+                    {   this.props.inventoryManager && this.props.inventoryManager.inventory &&
                         this.props.inventoryManager.inventory.map((item, i) => {
                             return <div className="sub-container" key={i}>
                                         { this.state.inventoryHoverMatrix[i] && 

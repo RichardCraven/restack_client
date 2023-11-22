@@ -21,6 +21,8 @@
     .tile.inventory-tile.equipment{
         background-color: white;
         margin: 0;
+        // height: 55px;
+        // width: 55px;
         &.empty{
             background-color: transparent;
         }
@@ -182,7 +184,7 @@
             .portrait{
                 height: 100px;
                 width: 100px;
-                background-color: white;
+                // background-color: white;
                 background-size: 100% 100%;
             }
             .name-line{
@@ -202,8 +204,8 @@
                     margin-bottom: 18px;
                     .equipment-icon{
                         position: relative;
-                        height: 54px;
-                        width: 54px;
+                        // height: 54px;
+                        // width: 54px;
                         border: 1px solid white;
                         .equipment-name{
                             position: absolute;

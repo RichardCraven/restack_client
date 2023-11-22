@@ -122,10 +122,13 @@ const saveUserData = async () => {
   console.log('meta.crew:', meta.crew);
   meta.crew = props.crewManager.crew;
   meta.dungeonId = props.boardManager.dungeon.id;
+  console.log('setting dungeonId: ', props.boardManager.dungeon.id);
   await updateUserRequest(userId, meta)
   sessionStorage.setItem('metadata', JSON.stringify(meta))
+  console.log('meta stored');
 }
 const goHome = () => {
+  console.log('go home');
   saveUserData();
   history.push({
     pathname: '/landing'
