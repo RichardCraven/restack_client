@@ -1,7 +1,7 @@
 export function InventoryManager(){
     this.tiles = [];
     this.gold = 0;
-    this.shimmeringDust = 0;
+    this.shimmering_dust = 0;
     this.totems = 0;
 
     this.amulets_names = [
@@ -369,14 +369,14 @@ export function InventoryManager(){
             equippedBy: null
         },
         lundi_mask: {
-            power: 1,
+            power: 4,
             icon: 'lundi_mask',
             type: 'ancillary',
             name: 'lundi mask',
             equippedBy: null
         },
         mardi_mask: {
-            power: 0,
+            power: 1,
             icon: 'mardi_mask',
             type: 'ancillary',
             name: 'mardi mask',
@@ -408,7 +408,7 @@ export function InventoryManager(){
             name: 'crown',
             equippedBy: null
         },
-        lanern: {
+        lantern: {
             icon: 'lantern',
             type: 'lantern',
             name: 'lantern',
@@ -417,8 +417,7 @@ export function InventoryManager(){
     }
     this.allItems = {};
     this.items = this.weapons_names.concat(this.masks_names.concat(this.helms_names.concat(this.keys_names.concat(this.amulets_names.concat(this.charms_names.concat(this.wands_names.concat(this.misc_names.concat(this.shields_names))))))))
-    this.initializeItems = (data) => {
-        console.log('items: ', this.items, 'vs all items: ', this.allItems);
+    this.initializeItems = (data = null) => {
         for(let key in this.consumables){
             this.allItems[key] = this.consumables[key]
         }
@@ -438,14 +437,12 @@ export function InventoryManager(){
             this.allItems[key] = this.misc[key]
         }
         this.inventory = [];
-        if(!data){
+        if(!data || !data.length){
             this.inventory = this.getStarterPack();
             this.gold = 0
-            this.shimmeringDust = 0
+            this.shimmering_dust = 0
             this.totems = 0
         } else {
-            console.log('initialized with items:', data.items)
-            // console.log('all items $$$$$$', this.allItems);
             this.inventory = data.items.map(e=> {
                 const equippedBy = e.equippedBy
                 if(this.allItems[(e.name.replaceAll(' ', '_'))]){
@@ -455,36 +452,22 @@ export function InventoryManager(){
                 }
             })
             this.gold = data.gold;
-            this.shimmeringDust = data.shimmeringDust;
+            this.shimmering_dust = data.shimmering_dust;
             this.totems = data.totems;
         }
-        
     }
     this.addItemsByName = (items) => {
         let arr = [];
         items.forEach(e=>{
             arr.push(this.allItems[e])
         })
-        console.log('concatting ', arr);
-        this.inventory = this.inventory.concat(arr)
-        console.log('inventory is now', this.inventory);
+        this.inventory = this.inventory.concat(arr);
     }
     this.addItems = (items) => {
         this.inventory.concat(items)
     }
     this.addItem = (item) => {
-        console.log('adding: ', item, 'this.inventory: ', this.inventory)
-        // if(typeof item === 'string'){
-        //     // handle item coming from board tile
-        //     this.inventory.push(this.allItems[item.contains])
-        // } else {
-            this.inventory.push(item)
-        // }
-
-
-        // console.log('all items version', this.allItems[item]);
-        console.log('this.inventory: ', this.inventory)
-        // debugger
+        this.inventory.push(item);
     }
     this.removeItemByIndex = (index) => {
         this.inventory.splice(index, 1)
@@ -494,8 +477,11 @@ export function InventoryManager(){
             case 'gold':
             this.gold += data.amount;
             break;
-            case 'shimmeringDust':
-            this.shimmeringDust += data.amount;
+            case 'shimmering_dust':
+            this.shimmering_dust += data.amount;
+            break;
+            case 'shimmering dust':
+            this.shimmering_dust += data.amount;
             break;
             case 'totems':
             this.totems += data.amount;

@@ -29,7 +29,6 @@ const [allUsers, setAllUsers] = useState([])
 const history = useHistory();
 useEffect(() => {
   getAllUsersRequest().then((response)=>{
-    console.log('all users:', response);
     setAllUsers(response.data)
   })
   if(getUserId()){
@@ -70,31 +69,10 @@ const login = (userCredentials) => {
       history.push({
         pathname: '/landing'
       })
-      // setTimeout(()=>{
-
-      //   console.log('about to redirect to landing', loggedIn);
-      //   return <Redirect to="/landing" />
-      // })
     })
-      // const userId = validUser.id;
-
-      // ProjectDataService.get(userId)
-      // .then(res => {
-      //     applyProjectData(res.data);
-      // })
-
-      // UserDataService.getImg(userId)
-      // .then(res => {
-      //     if(res.data) validUser.picture = res.data[0].data_string;
-      //     dispatchUser(validUser)
-      // })
-      // .catch(() => {
-      //     dispatchUser(validUser)
-      // });
   } else {
       console.log('INVALID')
   }
-
   return
 }
 
@@ -121,20 +99,15 @@ const saveUserData = async () => {
   meta.inventory = { 
     items: props.inventoryManager.inventory, 
     gold: props.inventoryManager.gold,
-    shimmeringDust: props.inventoryManager.shimmeringDust,
+    shimmering_dust: props.inventoryManager.shimmering_dust,
     totems: props.inventoryManager.totems
   }
-  console.log('inventory: ', meta.inventory);
-  console.log('meta.crew:', meta.crew);
   meta.crew = props.crewManager.crew;
   meta.dungeonId = props.boardManager.dungeon.id;
-  console.log('setting dungeonId: ', props.boardManager.dungeon.id);
   await updateUserRequest(userId, meta)
-  sessionStorage.setItem('metadata', JSON.stringify(meta))
-  console.log('meta stored', meta);
+  sessionStorage.setItem('metadata', JSON.stringify(meta));
 }
 const goHome = () => {
-  console.log('go home');
   saveUserData();
   history.push({
     pathname: '/landing'

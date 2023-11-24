@@ -146,7 +146,7 @@ class MonsterBattle extends React.Component {
     gameOver = (outcome) => {
         let experienceGained,
             goldGained, 
-            shimmeringDustGained,
+            shimmering_dustGained,
             totemsGains,
             itemsGained,
             crewWins = outcome === 'crewWins',

@@ -1,4 +1,8 @@
 export function BoardManager(){
+    this.pickRandom = (array) => {
+        let index = Math.floor(Math.random() * array.length)
+        return array[index]
+    }
     this.tiles = [];
     this.overlayTiles = [];
     this.options = [
@@ -76,6 +80,9 @@ export function BoardManager(){
     this.activeInteractionTile = null;
     this.pending = null;
 
+    this.establishAddTreasureToInventoryCallback = (callback) => {
+        this.addTreasureToInventory = callback;
+    }
     this.establishAddItemToInventoryCallback = (callback) => {
         this.addItemToInventory = callback;
     }
@@ -98,7 +105,6 @@ export function BoardManager(){
         this.triggerMonsterBattle = callback;
     }
     this.setActiveInventoryItem = (e) => {
-        console.log('setting avtive inv item:', e, 'is this necessary???')
         this.activeInventoryItem = e;
     }
     this.establishSetMonsterCallback = (callback) => {
@@ -123,7 +129,6 @@ export function BoardManager(){
     }
     this.establishAvailableItems = (items) => {
         this.availableItems = items;
-        console.log('board manager available items: ', this.availableItems);
     }
     this.getBoardIndexFromBoard = (board) => {
         let v;
@@ -155,18 +160,14 @@ export function BoardManager(){
     this.initializeTilesFromMap = (boardIndex, spawnTileIndex) => {
         const getRandomMonster = () => {
             let idx = Math.floor(Math.random()*this.monstersArr.length);
-            const monster = this.monstersArr[idx]
-            // console.log('monster:', monster, this.getImage(monster));
+            const monster = this.monstersArr[idx];
             return monster
         }
-        // console.log('this.available items:', this.availableItems)
         const getRandomItem = () => {
             const idx = Math.floor(Math.random()*this.availableItems.length),
             item = this.availableItems[idx];
-            // console.log('random idx:', idx)
             return item;
         }
-        // console.log('random item: ', getRandomItem())
         let spawnCoords = this.getCoordinatesFromIndex(spawnTileIndex);
         let board = this.currentOrientation === 'F' ? this.currentLevel.front.miniboards[boardIndex] : this.currentLevel.back.miniboards[boardIndex]
         this.currentBoard = board;
@@ -176,15 +177,12 @@ export function BoardManager(){
             location: spawnCoords,
             boardIndex: boardIndex
         }
-        // console.log('board.tiles:', board.tiles)
         for(let i = 0; i< board.tiles.length; i++){
             let tile = board.tiles[i]
             if(tile.contains === 'monster') tile.contains = getRandomMonster();
             if(tile.contains === 'gate') tile.contains = 'minor_gate';
             if(tile.contains === 'lantern'){
-                // console.log('yooooo')
                 tile.contains = getRandomItem();
-                // console.log('now tile contains:', tile.contains)
             }
             this.tiles.push({
                 type: 'board-tile',
@@ -210,19 +208,6 @@ export function BoardManager(){
         }
         this.placePlayer(this.playerTile.location)
         this.handleFogOfWar(this.tiles[this.getIndexFromCoordinates(this.playerTile.location)])
-
-
-        // for(let t = 0; t<this.tiles.length; t++){
-        //     const tile = this.tiles[t];
-        //     if(t%2 === 0){
-        //         tile.color = 'lightcoral'
-        //         tile.color = 'lightseagreen'
-        //         tile.color = 'lightsteelblue'
-        //     }
-        //     if(t%2 !== 0){
-        //         tile.color = 'lightsalmon'
-        //     }
-        // }
     }
     this.placePlayer = (coordinates) => {
         let index = this.getIndexFromCoordinates(coordinates)
@@ -250,7 +235,6 @@ export function BoardManager(){
                 this.handleGate(destinationTile);
                 return 'impassable';
             case 'item':
-                console.log('handle item', destinationTile)
                 this.addItemToInventory(destinationTile)
                 this.removeTileFromBoard(destinationTile)
                 return 'item';
@@ -265,9 +249,7 @@ export function BoardManager(){
                 } else{
                     factor = 50
                 }
-                console.log('factor: ', factor);
                 const amount = Math.floor(Math.random() * factor);
-                console.log('found gold: ', amount);
                 this.addCurrencyToInventory({
                     type: 'gold',
                     amount
@@ -286,13 +268,50 @@ export function BoardManager(){
                     treasureFactor = 1
                 }
                 console.log('treasureFactor: ', treasureFactor);
-                // const amount = Math.floor(Math.random() * factor);
-                // console.log('found gold: ', amount);
-                // this.addCurrencyToInventory({
-                //     type: 'gold',
-                //     amount
-                // })
-                // this.removeTileFromBoard(destinationTile)
+                let treasureItems;
+                switch (treasureFactor){
+                    case 4:
+                        treasureItems = ['sayan_amulet', 'solomon_mask', 'major_key', 'nukta_charm', 'scepter', 'grand_health_potion']
+                        this.addTreasureToInventory({
+                            item: this.pickRandom(treasureItems),
+                            currency: {
+                                type: 'shimmering dust',
+                                amount: Math.floor(Math.random() * 30)
+                            }
+                        })
+                    break;
+                    case 3:
+                        treasureItems = ['glindas_wand', 'knight_helm', 'hamsa_charm', 'grand_health_potion']
+                        this.addTreasureToInventory({
+                            item: this.pickRandom(treasureItems),
+                            currency: {
+                                type: 'shimmering dust',
+                                amount: Math.floor(Math.random() * 10)
+                            }
+                        })
+                    break;
+                    case 2:
+                        treasureItems = ['minor_key', 'scimitar', 'cretan_helm', 'major_health_potion']
+                        this.addTreasureToInventory({
+                            item: this.pickRandom(treasureItems),
+                            currency: {
+                                type: 'gold',
+                                amount: Math.floor(Math.random() * 250)
+                            }
+                        })
+                    break;
+                    case 1:
+                        treasureItems = ['seeing_shield', 'court_mask', 'mardi_mask', 'basic_helm', 'axe', 'minor_health_potion']
+                        this.addTreasureToInventory({
+                            item: this.pickRandom(treasureItems),
+                            currency: {
+                                type: 'gold',
+                                amount: Math.floor(Math.random() * 100)
+                            }
+                        })
+                    break;
+                }
+                this.removeTileFromBoard(destinationTile)
             break;
             default:
                 break;
@@ -303,7 +322,6 @@ export function BoardManager(){
         this.removeTileFromBoard(tile);
     }
     this.removeTileFromBoard = (tile) => {
-        console.log('removing item from board');
         tile.image = null;
         tile.contains = null;
         tile.color = null; 
@@ -313,33 +331,24 @@ export function BoardManager(){
         } else {
             this.dungeon.levels.find(e=>e.id === this.currentLevel.id).back.miniboards.find(b=>b.id === this.currentBoard.id).tiles[tile.id].contains = null;
         }
-        this.updateDungeon(this.dungeon)
-        console.log('updated?');
+        this.updateDungeon(this.dungeon);
     }
     this.handleGate = (tile) => {
         if(!this.activeInteractionTile) this.activeInteractionTile = tile;
-        console.log('pending: ', this.pending)
         if(this.pending && this.pending.type === 'minor_gate'){
-            this.messaging('This gate requires a minor key')
-            console.log('check for key')
+            this.messaging('This gate requires a minor key');
             let hasKey = false
             if(this.activeInventoryItem){
-                console.log('checking...', this.activeInventoryItem)
                 if(this.activeInventoryItem.contains === 'minor_key') hasKey = true;
             }
             if(hasKey){
-                console.log('open gate')
                 this.messaging('Minor gate rattles open')
                 tile.contains = 'minor_gate_open'
                 tile.image = 'minor_gate_open'
                 this.activeInteractionTile = tile;
-                console.log('this.tiles: ', this.tiles)
-                // this.tiles[tile.index].contains = 'minor_gate_open';
                 this.refreshTiles()
-                // this.initializeTilesFromMap(this.playerTile.boardIndex, this.getIndexFromCoordinates([this.playerTile.location[0], this.playerTile.location[1]]))
             } else {
-                tile.color = 'lightyellow'
-                // this.pending = null;
+                tile.color = 'lightyellow';
             }
         } else if(this.pending === null){
             tile.color = 'lightyellow'
@@ -408,8 +417,6 @@ export function BoardManager(){
         if(destinationTile.contains === 'void') return
         let interaction = '';
         if(destinationTile.contains){
-
-            console.log('destinationTile: ', destinationTile);
           interaction = this.handleInteraction(destinationTile)
         }
         if(interaction === 'impassable') return
@@ -432,12 +439,6 @@ export function BoardManager(){
             case 'right':
                 this.playerTile.location[1] = (this.playerTile.location[1]+ 1)
             break;
-            // case 'item':
-            //     console.log('please work')
-            //     // this.addItemToInventory(destinationTile)
-            //     this.removeTileFromBoard(destinationTile)
-            //     // return 'item';
-            // break;
             default:
             break;
         }
@@ -530,7 +531,6 @@ export function BoardManager(){
     } 
     this.handleFogOfWar = (destinationTile) => {
         this.tiles.forEach((e)=> {
-            // if(e.id === 175) console.log('setting to black')
             e.color = 'black';
             e.image = null;
             e.borders = null;
