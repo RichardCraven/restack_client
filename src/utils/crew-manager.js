@@ -43,7 +43,7 @@ export function CrewManager(){
                 vit: 4,
                 fort: 7,
                 hp:10,
-                atk:12,
+                atk:120,
                 baseDef: 9,
                 energy: 0
             }, 

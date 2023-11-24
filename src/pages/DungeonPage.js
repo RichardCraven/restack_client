@@ -63,179 +63,10 @@ class DungeonPage extends React.Component {
         // let inv = {}
         console.log('meta:', meta);
         if(!meta || !meta.dungeonId){
-            console.log('no dungeon id, make new dungeon')
             this.loadNewDungeon();
         } else {
-            // meta.inventory = []
-            let inventory = meta.inventory
-            // let inventory = []
-            // let consumables = [
-            //     {
-            //         effect: 'health gain',
-            //         amount: 55,
-            //         icon: 'potion',
-            //         type: 'consumable',
-            //         name: 'minor health potion',
-            //         equippedBy: null
-            //     }, 
-            //     {
-            //         effect: 'health gain',
-            //         amount: 55,
-            //         icon: 'potion',
-            //         type: 'consumable',
-            //         name: 'minor health potion',
-            //         equippedBy: null
-            //     }, 
-            //     {
-            //         damage: 3,
-            //         icon: 'flail',
-            //         type: 'weapon',
-            //         subtype: 'crushing',
-            //         name: 'flail',
-            //         equippedBy: null
-            //     }, 
-            //     {
-            //         damage: 3,
-            //         icon: 'axe',
-            //         type: 'weapon',
-            //         subtype: 'cutting',
-            //         name: 'axe',
-            //         // equippedBy: 123
-            //         equippedBy: null
-            //     },
-            //     {
-            //         power: 2,
-            //         icon: 'zul_mask',
-            //         type: 'ornament',
-            //         name: 'zul mask', 
-            //         equippedBy: null
-            //     }
-                
-            // ]
-            // for(let i = 0; i < consumables.length; i++){
-            //     inventory.push(consumables[i])
-            // }
-            console.log('inventory:', inventory)
-
-            // inventory.push(
-            //     {
-            //         type: 'magical',
-            //         icon: 'glindas_wand',
-            //         name: 'glindas wand',
-            //         equippedBy: null,
-            //     }
-            // )
-            // inventory.push(
-            //     {
-            //         type: 'magical',
-            //         icon: 'volkas_wand',
-            //         name: 'volkas wand',
-            //         equippedBy: null,
-            //     }
-            // )
-            // inventory.push(
-            //     {
-            //         type: 'magical',
-            //         icon: 'maerlyns_rod',
-            //         name: 'maerlyns rod',
-            //         equippedBy: null,
-            //     }
-            // )
-
-            //
-
-            // inventory.push(
-            //     {
-            //         armor: 3,
-            //         type: 'armor',
-            //         icon: 'basic_helm',
-            //         name: 'basic helm',
-            //         equippedBy: null,
-            //     }
-            // )
-            // inventory.push(
-            //     {
-            //         armor: 4,
-            //         type: 'armor',
-            //         icon: 'cretan_helm',
-            //         name: 'cretan helm',
-            //         equippedBy: null,
-            //     }
-            // )
-            // inventory.push(
-            //     {
-            //         armor: 5,
-            //         type: 'armor',
-            //         icon: 'knight_helm',
-            //         name: 'knight helm',
-            //         equippedBy: null,
-            //     }
-            // )
-            // inventory.push(
-            //     {
-            //         armor: 6,
-            //         type: 'armor',
-            //         icon: 'legionaire_helm',
-            //         name: 'legionaire helm',
-            //         equippedBy: null,
-            //     }
-            // )
-            // inventory.push(
-            //     {
-            //         armor: 7,
-            //         type: 'armor',
-            //         icon: 'spartan_helm',
-            //         name: 'spartan helm',
-            //         equippedBy: null,
-            //     }
-            // )
-
-            // debugger
-            this.props.inventoryManager.initializeItems(inventory)
-            // this.props.inventoryManager.initializeItems(meta.inventory ? meta.inventory : [])
-            // this.props.inventoryManager.initializeItems([])
-            meta.crew.forEach(e=>e.stats.baseDef = 10)
-
-            // meta.crew.forEach(e=>e.portrait = images[e.portrait])
-
-            // let g  = meta.crew.find(e=>e.name==='Loryastes')
-            // let idx = meta.crew.indexOf(g)
-            // // g.hp = 15;
-            // g.stats.dex = 6;
-            // meta.crew[idx] = g;
-            
-            // meta.crew[0].inventory = []
-
-            // console.log('');
-            console.log('initializing crew: ', meta.crew);
-            console.log('initializing inventory: ', inventory);
-            this.props.crewManager.initializeCrew(meta.crew ? meta.crew : [])
-            console.log('this.props.crewManager', this.props.crewManager);
-
-
-            // setTimeout(()=>{
-            //     console.log('in set timouet');
-            //     this.props.inventoryManager.addItem('major_key')
-            //     this.props.inventoryManager.addItem('ornate_key')
-            //     setTimeout(()=> {
-            //         console.log('current inventory: ', this.props.inventoryManager.inventory)
-            //     },1000)
-            // },1000)
-
-
-
-            // this.props.inventoryManager.inventory.forEach((e,i)=>{
-            //     inv[i]= ''
-            // })
-
-            // ^ wtf is this
-
-
-
-
-
-
-            // debugger
+            this.props.inventoryManager.initializeItems(meta.inventory);
+            this.props.crewManager.initializeCrew(meta.crew);
             this.loadExistingDungeon(meta.dungeonId)
         }
         this.setState((state, props) => {
@@ -252,6 +83,22 @@ class DungeonPage extends React.Component {
     pickRandom = (array) => {
         let index = Math.floor(Math.random() * array.length)
         return array[index]
+    }
+    addCurrencyToInventory = (data) => {
+        let type;
+        switch(data.type){
+            case 'gold':
+                type = 'gold';
+            break;
+            case 'shimmeringDust':
+                type = 'shimmering dust'
+            break;
+            case 'totems':
+                type = data.amount > 1 ? 'totems' : 'totem'
+            break;
+        }
+        this.displayMessage(`You found ${data.amount} ${type}!`)
+        this.props.inventoryManager.addCurrency(data)
     }
     addItemToInventory = (tile) => {
         //this is coming from a board tile
@@ -293,6 +140,7 @@ class DungeonPage extends React.Component {
     }
     setMonster = (monsterString) => {
         console.log('monster was supposed to be ', monsterString);
+        monsterString = 'goat_demon'
         let monster = this.props.monsterManager.getMonster(monsterString), 
         minions = null;
         if(monster && monster.minions){
@@ -323,6 +171,7 @@ class DungeonPage extends React.Component {
         // const callbacks = [this.addItemToInventory]
         // this.props.boardManager.establishCallbacks(callbacks)
         this.props.boardManager.establishAddItemToInventoryCallback(this.addItemToInventory)
+        this.props.boardManager.establishAddCurrencyToInventoryCallback(this.addCurrencyToInventory)
         this.props.boardManager.establishUpdateDungeonCallback(this.updateDungeon)
         this.props.boardManager.establishPendingCallback(this.setPending)
         this.props.boardManager.establishMessagingCallback(this.messaging)
@@ -380,27 +229,11 @@ class DungeonPage extends React.Component {
             })
             this.props.saveUserData()
             this.displayMessage('saving...')
-            // setTimeout(() => {
-            //     this.setState(()=>{
-            //         return {
-            //             showSaving: false
-            //         }
-            //     })
-            // },1000)
-            // setTimeout(() => {
-            //     this.setState(()=>{
-            //         return {
-            //             showSaving: true,
-            //             showMessage : false
-            //         }
-            //     })
-            // },1900)
-            
-
         }, 45000); 
         this.setState({intervalId: intervalId})
     }
     displayMessage = (message) => {
+        console.log('display message', message);
         this.setState(()=>{
             return {
                 showMessage : true,
@@ -408,6 +241,7 @@ class DungeonPage extends React.Component {
             }
         })
         setTimeout(() => {
+            console.log('hide message');
             this.setState(()=>{
                 return {
                     showMessage : false,
@@ -417,6 +251,7 @@ class DungeonPage extends React.Component {
         },1900)
     }
     displayMessageAndHold = (message) => {
+        console.log('message and hold', message);
         this.setState(()=>{
             return {
                 showMessage : true,
@@ -446,6 +281,7 @@ class DungeonPage extends React.Component {
                 if(this.monsterBattleComponentRef.current) this.monsterBattleComponentRef.current.tabToFighter();
             break;
             case 'ArrowUp':
+                console.log('up');
                 if(this.state.keysLocked) return
                 this.props.boardManager.moveUp();
                 newTiles = [...this.props.boardManager.tiles]
@@ -458,6 +294,7 @@ class DungeonPage extends React.Component {
                 
             break;
             case 'ArrowDown':
+                console.log('down');
                 if(this.state.keysLocked) return
                 this.props.boardManager.moveDown();
                 newTiles = [...this.props.boardManager.tiles]
@@ -469,6 +306,7 @@ class DungeonPage extends React.Component {
                 })
             break;
             case 'ArrowLeft':
+                console.log('left');
                 if(this.state.keysLocked) return
                 this.props.boardManager.moveLeft();
                 newTiles = [...this.props.boardManager.tiles]
@@ -480,6 +318,7 @@ class DungeonPage extends React.Component {
                 })
             break;
             case 'ArrowRight':
+                console.log('right');
                 if(this.state.keysLocked) return
                 this.props.boardManager.moveRight();
                 newTiles = [...this.props.boardManager.tiles]
@@ -646,108 +485,8 @@ class DungeonPage extends React.Component {
         spawnPoint = selectedDungeon.spawn_points[1]
         // ^ remove later
         
-
-        let inventory = [
-            {
-                effect: 'health gain',
-                amount: 55,
-                icon: 'potion',
-                type: 'consumable',
-                name: 'minor health potion',
-                equippedBy: null
-            }, 
-            {
-                effect: 'health gain',
-                amount: 55,
-                icon: 'potion',
-                type: 'consumable',
-                name: 'minor health potion',
-                equippedBy: null
-            }, 
-            {
-                damage: 3,
-                icon: 'flail',
-                type: 'weapon',
-                subtype: 'crushing',
-                name: 'flail',
-                equippedBy: null
-            }, 
-            {
-                damage: 3,
-                icon: 'axe',
-                type: 'weapon',
-                subtype: 'cutting',
-                name: 'axe',
-                // equippedBy: 123
-                equippedBy: null
-            },
-            {
-                power: 2,
-                icon: 'zul_mask',
-                type: 'ornament',
-                name: 'zul mask', 
-                equippedBy: null
-            }
-            
-        ]
-
-        inventory.push(
-            {
-                type: 'magical',
-                icon: 'glindas_wand',
-                name: 'glindas wand',
-                equippedBy: null,
-            },
-            // {
-            //     type: 'magical',
-            //     icon: 'volkas_wand',
-            //     name: 'volkas wand',
-            //     equippedBy: null,
-            // },
-            // {
-            //     type: 'magical',
-            //     icon: 'maerlyns_rod',
-            //     name: 'maerlyns rod',
-            //     equippedBy: null,
-            // },
-            // {
-            //     armor: 3,
-            //     type: 'armor',
-            //     icon: 'basic_helm',
-            //     name: 'basic helm',
-            //     equippedBy: null,
-            // },
-            // {
-            //     armor: 4,
-            //     type: 'armor',
-            //     icon: 'cretan_helm',
-            //     name: 'cretan helm',
-            //     equippedBy: null,
-            // },
-            // {
-            //     armor: 5,
-            //     type: 'armor',
-            //     icon: 'knight_helm',
-            //     name: 'knight helm',
-            //     equippedBy: null,
-            // },
-            // {
-            //     armor: 6,
-            //     type: 'armor',
-            //     icon: 'legionaire_helm',
-            //     name: 'legionaire helm',
-            //     equippedBy: null,
-            // },
-            // {
-            //     armor: 7,
-            //     type: 'armor',
-            //     icon: 'spartan_helm',
-            //     name: 'spartan helm',
-            //     equippedBy: null,
-            // }
-        )
-        console.log('initializing with inventory: ', inventory);
-        this.props.inventoryManager.initializeItems(inventory)
+        
+        this.props.inventoryManager.initializeItems()
 
         if(spawnPoint){
             
@@ -846,7 +585,12 @@ class DungeonPage extends React.Component {
     uppercaseFirstLetter = (text) => {
         return text.charAt(0).toUpperCase() + text.slice(1);
     }
-    battleOver = () => {
+    battleOver = (result) => {
+        console.log('result: ', result);
+        if(result === 'win'){
+            console.log('win result passed');
+            this.props.boardManager.removeDefeatedMonsterTile()
+        }
         this.setState({
             keysLocked : false
         })
@@ -1033,6 +777,9 @@ class DungeonPage extends React.Component {
             <div className={`right-side-panel ${this.state.rightPanelExpanded ? 'expanded' : ''}`}>
                 <div className="inventory">
                     <div className="title">Inventory</div>
+                    <div className="currency-container">
+                        {this.props.inventoryManager.gold && <div className='gold-readout'>Gold: {this.props.inventoryManager.gold}</div>}
+                    </div>
                     <div className="inventory-tile-container">
                     {   this.props.inventoryManager && this.props.inventoryManager.inventory &&
                         this.props.inventoryManager.inventory.map((item, i) => {
@@ -1070,6 +817,9 @@ class DungeonPage extends React.Component {
             </div>
             {this.state.currentBoard && <div className="info-panel">{this.props.boardManager.currentBoard.name}</div>}
             {!this.state.keysLocked && <div className="center-board-wrapper">
+                <div className="message-container">
+                    {this.state.messageToDisplay}
+                </div>
                 <div  className="overlay-board" style={{
                     width: this.state.boardSize+'px', height: this.state.boardSize+ 'px',
                     backgroundColor: 'transparent'

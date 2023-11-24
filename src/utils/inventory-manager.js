@@ -1,5 +1,9 @@
 export function InventoryManager(){
     this.tiles = [];
+    this.gold = 0;
+    this.shimmeringDust = 0;
+    this.totems = 0;
+
     this.amulets_names = [
         'evilai_amulet',
         'lundi_amulet',
@@ -41,7 +45,6 @@ export function InventoryManager(){
     ]
     this.misc_names = [
         'crown',
-        'potion',
         'lantern'
     ]
     this.keys_names = [
@@ -414,7 +417,8 @@ export function InventoryManager(){
     }
     this.allItems = {};
     this.items = this.weapons_names.concat(this.masks_names.concat(this.helms_names.concat(this.keys_names.concat(this.amulets_names.concat(this.charms_names.concat(this.wands_names.concat(this.misc_names.concat(this.shields_names))))))))
-    this.initializeItems = (items) => {
+    this.initializeItems = (data) => {
+        console.log('items: ', this.items, 'vs all items: ', this.allItems);
         for(let key in this.consumables){
             this.allItems[key] = this.consumables[key]
         }
@@ -434,12 +438,15 @@ export function InventoryManager(){
             this.allItems[key] = this.misc[key]
         }
         this.inventory = [];
-        console.log('initialized with items:', items)
-        console.log('all items $$$$$$', this.allItems);
-        if(items === null){
+        if(!data){
             this.inventory = this.getStarterPack();
+            this.gold = 0
+            this.shimmeringDust = 0
+            this.totems = 0
         } else {
-            this.inventory = items.map(e=> {
+            console.log('initialized with items:', data.items)
+            // console.log('all items $$$$$$', this.allItems);
+            this.inventory = data.items.map(e=> {
                 const equippedBy = e.equippedBy
                 if(this.allItems[(e.name.replaceAll(' ', '_'))]){
                     let v = this.allItems[e.name.replaceAll(' ', '_')];
@@ -447,7 +454,23 @@ export function InventoryManager(){
                     return v;
                 }
             })
+            this.gold = data.gold;
+            this.shimmeringDust = data.shimmeringDust;
+            this.totems = data.totems;
         }
+        
+    }
+    this.addItemsByName = (items) => {
+        let arr = [];
+        items.forEach(e=>{
+            arr.push(this.allItems[e])
+        })
+        console.log('concatting ', arr);
+        this.inventory = this.inventory.concat(arr)
+        console.log('inventory is now', this.inventory);
+    }
+    this.addItems = (items) => {
+        this.inventory.concat(items)
     }
     this.addItem = (item) => {
         console.log('adding: ', item, 'this.inventory: ', this.inventory)
@@ -466,6 +489,19 @@ export function InventoryManager(){
     this.removeItemByIndex = (index) => {
         this.inventory.splice(index, 1)
     }
+    this.addCurrency = (data) => {
+        switch(data.type){
+            case 'gold':
+            this.gold += data.amount;
+            break;
+            case 'shimmeringDust':
+            this.shimmeringDust += data.amount;
+            break;
+            case 'totems':
+            this.totems += data.amount;
+            break;
+        }
+    }
     this.getStarterPack = () => {
         return [
             {
@@ -475,7 +511,7 @@ export function InventoryManager(){
                 type: 'consumable',
                 name: 'minor health potion',
                 equippedBy: null
-            },
+            }, 
             {
                 effect: 'health gain',
                 amount: 55,
@@ -483,7 +519,7 @@ export function InventoryManager(){
                 type: 'consumable',
                 name: 'minor health potion',
                 equippedBy: null
-            }
+            },
         ]
     }
 }

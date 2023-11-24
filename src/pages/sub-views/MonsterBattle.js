@@ -7,11 +7,13 @@ const MAX_ROWS = 5;
 const TILE_SIZE = 100
 const SHOW_TILE_BORDERS = true;
 const SHOW_INTERACTION_PANE=true
+const SHOW_BORDERS = false;
 class MonsterBattle extends React.Component {
     constructor(props){
         super(props)
         this.state = {
             message: '',
+            combatStarted : false,
             source: null,
             indicatorsMatrix: {},
             attackType: '',
@@ -34,7 +36,8 @@ class MonsterBattle extends React.Component {
             showSummaryPanel: false,
             summaryMessage: '',
             experienceGained: null,
-            goldGained: null
+            goldGained: null,
+            battleResult: null
         }
     }
     componentDidMount(){
@@ -73,8 +76,7 @@ class MonsterBattle extends React.Component {
         // })
     }
     greetingComplete = () => {
-        console.log('greeting complete');
-        // this.fighterPortraitClicked(this.props.crew[0].id)
+        this.combatBegins()
         this.setState({greetingInProcess: false})
     }
     tabToFighter = () => {
@@ -134,19 +136,24 @@ class MonsterBattle extends React.Component {
         })
     }
     confirmClicked = () => {
-        this.props.battleOver()
+        this.props.battleOver(this.state.battleResult)
+    }
+    combatBegins = () => {
+        this.setState({
+            combatStarted: true
+        })
     }
     gameOver = (outcome) => {
-        console.log('****GEM OVER****')
         let experienceGained,
             goldGained, 
+            shimmeringDustGained,
+            totemsGains,
             itemsGained,
             crewWins = outcome === 'crewWins',
-            summaryMessage;
+            summaryMessage, battleResult;
         if(crewWins){
-            summaryMessage = 'The enemy is no more!'
-            console.log('monster was ', this.props.monster);
-            console.log('monster drops: ', this.props.monster.drops);
+            battleResult = 'win';
+            summaryMessage = 'The enemy is no more!';
             if(this.props.monster.drops){
                 itemsGained = [];
                 this.props.monster.drops.forEach(e=>{
@@ -154,11 +161,18 @@ class MonsterBattle extends React.Component {
                     if(d < e.percentChance*.01) itemsGained.push(e.item)
                     console.log('calculations for ', e.item, 'd: ', d, 'vs ', e.percentChance*.01);
                 })
+
+
+                // itemsGained = ['scarab_charm', 'major_health_potion', 'scepter', 'solomon_mask', 'minor_health_potion']
+
                 console.log('items gained: ', itemsGained);
+                this.props.inventoryManager.addItemsByName(itemsGained)
             }
             experienceGained = this.props.monster.level * 10;
             goldGained = Math.floor(Math.random() * experienceGained);
+            this.props.inventoryManager.addCurrency({type: 'gold', amount: goldGained})
         } else {
+            battleResult = 'loss'
             summaryMessage = 'Death has come for you and yours.'
         }
 
@@ -167,11 +181,9 @@ class MonsterBattle extends React.Component {
             goldGained,
             experienceGained,
             itemsGained,
-            summaryMessage
+            summaryMessage,
+            battleResult
         })
-    }
-    summaryConfirmed = () => {
-        this.props.battleOver();
     }
     establishUpdateActorCallback = () => {
         this.props.combatManager.establishUpdateActorCallback(this.updateCurrentActor)
@@ -340,7 +352,6 @@ class MonsterBattle extends React.Component {
         switch(tile.instruction.type){
             case 'move':
                 let correspondingTile = this.state.combatTiles.find(e=> e.x === tile.instruction.destinationCoordinates.x && e.y === tile.instruction.destinationCoordinates.y)
-                console.log('corresponding tile:', correspondingTile);
                 this.setState({
                     draggedOverCombatTileId: correspondingTile.id
                 })
@@ -361,7 +372,6 @@ class MonsterBattle extends React.Component {
         })
     }
     onDragStart = (fighter) => {
-        console.log('dragging fighter', fighter);
         this.setState({
             selectedFighter: this.state.battleData[fighter.id],
             draggingFighter: fighter
@@ -377,9 +387,7 @@ class MonsterBattle extends React.Component {
     onDrop = (tileIndex) => {
         const selectedFighter = this.state.battleData[this.state.draggingFighter.id];
         const tile = this.state.combatTiles[tileIndex]
-        this.props.combatManager.setFighterDestination(selectedFighter.id, {x: tile.x, y: tile.y})
-        console.log('selected fighter: ', selectedFighter);
-        console.log('crew version ', this.props.crew);
+        this.props.combatManager.setFighterDestination(selectedFighter.id, {x: tile.x, y: tile.y});
         let arr = this.state.ghostPortraitMatrix;
         arr[tileIndex] = selectedFighter.portrait;
         this.setState({
@@ -432,7 +440,8 @@ class MonsterBattle extends React.Component {
                             onDragOver={(event)=>this.onDragOver(event, i)}
                             onDrop={()=>{this.onDrop(i)}}
                             style={{
-                                backgroundColor: this.state.draggedOverCombatTileId === i ? '#cccca4c1' : 'inherit'
+                                backgroundColor: this.state.draggedOverCombatTileId === i ? '#cccca4c1' : 'inherit',
+                                border: SHOW_BORDERS ? '1px solid #e8e880' : '1px solid transparent'
                             }}
                             >
                                 {/* <div className="coord-container">
@@ -558,7 +567,8 @@ class MonsterBattle extends React.Component {
                                     } 
                                     style={{
                                         backgroundImage: "url(" + this.props.monster.portrait + ")", 
-                                        filter: `saturate(${((this.state.battleData[this.props.monster.id]?.hp / this.props.monster.stats.hp) * 100) / 2}) 
+                                        filter: this.state.battleData[this.props.monster.id] && this.state.battleData[this.props.monster.id].type === 'demon' ? `` 
+                                        : `saturate(${((this.state.battleData[this.props.monster.id]?.hp / this.props.monster.stats.hp) * 100) / 2}) 
                                                 sepia(${this.state.portraitHoveredId === this.props.monster.id ? '2' : '0'})`
                                     }} 
                                     onMouseEnter={() => this.portraitHovered(this.props.monster.id)} 
@@ -639,7 +649,7 @@ class MonsterBattle extends React.Component {
                                             </div>
                                             {<div className="indicators-wrapper">
                                                 <div className="monster-hp-bar hp-bar">
-                                                    {!this.state.battleData[minion.id]?.dead && <div className="red-fill" style={{width: `${(this.state.battleData[minion.id]?.hp / minion.stats.hp) * 100}%`}}></div>}
+                                                    {!this.state.battleData[minion.id]?.dead && this.state.combatStarted && <div className="red-fill" style={{width: `${(this.state.battleData[minion.id]?.hp / minion.stats.hp) * 100}%`}}></div>}
                                                 </div>
                                                 <div className="monster-energy-bar energy-bar">
                                                     {!this.state.battleData[minion.id]?.dead && <div className="yellow-fill" style={{width: `calc(${this.state.battleData[minion.id]?.energy}%)`}}></div>}

@@ -19,17 +19,20 @@ import imp from '../assets/icons/monsters/imp.png'
 import manticore from '../assets/icons/monsters/manticore.png'
 import mummy from '../assets/icons/monsters/mummy.png'
 import naiad from '../assets/icons/monsters/naiad.png'
-import ogre from '../assets/icons/monsters/ogre.png'
+
+// import ogre from '../assets/icons/monsters/ogre.png'
+import ogre from '../assets/portraits/monsters/ogre.png'
+
 import skeleton from '../assets/icons/monsters/skeleton.png'
 import sphinx from '../assets/icons/monsters/sphinx.png'
 import troll from '../assets/icons/monsters/troll.png'
-import white_banshee from '../assets/icons/monsters/white_banshee.png'
-import white_djinn from '../assets/icons/monsters/white_djinn.png'
-import white_gorgon from '../assets/icons/monsters/white_gorgon.png'
-import white_kronos from '../assets/icons/monsters/white_kronos.png'
-import white_minotaur from '../assets/icons/monsters/white_minotaur.png'
-import white_wraith from '../assets/icons/monsters/white_wraith.png'
-import white_vampire from '../assets/icons/monsters/white_vampire.png'
+// import white_banshee from '../assets/icons/monsters/white_banshee.png'
+// import white_djinn from '../assets/icons/monsters/white_djinn.png'
+// import white_gorgon from '../assets/icons/monsters/white_gorgon.png'
+// import white_kronos from '../assets/icons/monsters/white_kronos.png'
+// import white_minotaur from '../assets/icons/monsters/white_minotaur.png'
+// import white_wraith from '../assets/icons/monsters/white_wraith.png'
+// import white_vampire from '../assets/icons/monsters/white_vampire.png'
 import wyvern from '../assets/icons/monsters/wyvern.png'
 import wyvern_alt from '../assets/icons/monsters/wyvern_alt.png'
 
@@ -42,9 +45,11 @@ import zul_devil from '../assets/icons/monsters/devils/zul_devil.png'
 
 // demons
 import black_demon from '../assets/icons/monsters/demons/black_demon.png'
-import dulu_demon from '../assets/icons/monsters/demons/dulu_demon.png'
+
 import golden_demon from '../assets/icons/monsters/demons/golden_demon.png'
 import kabuki_demon from '../assets/icons/monsters/demons/kabuki_demon.png'
+
+
 
 // ------------------------------------------------------------------------------------------------
 
@@ -185,6 +190,15 @@ import troll_portrait from '../assets/portraits/monsters/troll.png'
 import wraith_portrait from '../assets/portraits/monsters/wraith.png'
 import skeleton_portrait from '../assets/portraits/monsters/skeleton.png'
 
+
+//MID JOURNEY
+import goat_demon from '../assets/icons/monsters/mj_icons/goat_demon.png'
+import gorgon from '../assets/icons/monsters/mj_icons/gorgon.png'
+
+import gorgon_portrait from '../assets/portraits/monsters/gorgon.png'
+import goat_demon_portrait from '../assets/portraits/monsters/goat_demon.png'
+
+
 export {
     monster,
     avatar,
@@ -210,13 +224,13 @@ export {
     skeleton,
     sphinx,
     troll,
-    white_banshee,
-    white_djinn,
-    white_wraith,
-    white_gorgon,
-    white_vampire,
-    white_kronos,
-    white_minotaur,
+    // white_banshee,
+    // white_djinn,
+    // white_wraith,
+    // white_gorgon,
+    // white_vampire,
+    // white_kronos,
+    // white_minotaur,
     wyvern,
     wyvern_alt,
     goloth_devil,
@@ -225,7 +239,6 @@ export {
     vukular_devil,
     ishtar_devil,
     black_demon,
-    dulu_demon,
     golden_demon,
     kabuki_demon,
 
@@ -352,5 +365,11 @@ export {
     vampire_portrait,
     troll_portrait,
     wraith_portrait,
-    skeleton_portrait 
+    skeleton_portrait, 
+
+
+    goat_demon,
+    goat_demon_portrait,
+    gorgon,
+    gorgon_portrait
 };

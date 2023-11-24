@@ -118,14 +118,20 @@ const saveUserData = async () => {
     levelId: props.boardManager.currentLevel.id,
     orientation: props.boardManager.currentOrientation
   }
-  meta.inventory = props.inventoryManager.inventory;
+  meta.inventory = { 
+    items: props.inventoryManager.inventory, 
+    gold: props.inventoryManager.gold,
+    shimmeringDust: props.inventoryManager.shimmeringDust,
+    totems: props.inventoryManager.totems
+  }
+  console.log('inventory: ', meta.inventory);
   console.log('meta.crew:', meta.crew);
   meta.crew = props.crewManager.crew;
   meta.dungeonId = props.boardManager.dungeon.id;
   console.log('setting dungeonId: ', props.boardManager.dungeon.id);
   await updateUserRequest(userId, meta)
   sessionStorage.setItem('metadata', JSON.stringify(meta))
-  console.log('meta stored');
+  console.log('meta stored', meta);
 }
 const goHome = () => {
   console.log('go home');

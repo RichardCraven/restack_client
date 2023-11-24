@@ -46,13 +46,13 @@ export function BoardManager(){
         'skeleton',
         'sphinx',
         'troll',
-        'white_banshee',
-        'white_djinn',
-        'white_wraith',
-        'white_gorgon',
-        'white_vampire',
-        'white_kronos',
-        'white_minotaur',
+        // 'white_banshee',
+        // 'white_djinn',
+        // 'white_wraith',
+        // 'white_gorgon',
+        // 'white_vampire',
+        // 'white_kronos',
+        // 'white_minotaur',
         'wyvern',
         'wyvern_alt',
         'goloth_devil',
@@ -61,7 +61,7 @@ export function BoardManager(){
         'vukular_devil',
         'ishtar_devil',
         'black_demon',
-        'dulu_demon',
+        'goat_demon',
         'golden_demon',
         'kabuki_demon',
 
@@ -78,6 +78,9 @@ export function BoardManager(){
 
     this.establishAddItemToInventoryCallback = (callback) => {
         this.addItemToInventory = callback;
+    }
+    this.establishAddCurrencyToInventoryCallback = (callback) => {
+        this.addCurrencyToInventory = callback
     }
     this.establishUpdateDungeonCallback = (callback) => {
         this.updateDungeon = callback;
@@ -120,6 +123,7 @@ export function BoardManager(){
     }
     this.establishAvailableItems = (items) => {
         this.availableItems = items;
+        console.log('board manager available items: ', this.availableItems);
     }
     this.getBoardIndexFromBoard = (board) => {
         let v;
@@ -245,18 +249,60 @@ export function BoardManager(){
                 console.log('handle gate')
                 this.handleGate(destinationTile);
                 return 'impassable';
-            // break;
             case 'item':
                 console.log('handle item', destinationTile)
                 this.addItemToInventory(destinationTile)
-                this.removeItemFromBoard(destinationTile)
+                this.removeTileFromBoard(destinationTile)
                 return 'item';
-            // break;
+            case 'gold':
+                let factor, num = Math.random();
+                if(num > .85){
+                    factor = 500
+                } else if(num > .60){
+                    factor = 250
+                } else if(num > .35){
+                    factor = 100
+                } else{
+                    factor = 50
+                }
+                console.log('factor: ', factor);
+                const amount = Math.floor(Math.random() * factor);
+                console.log('found gold: ', amount);
+                this.addCurrencyToInventory({
+                    type: 'gold',
+                    amount
+                })
+                this.removeTileFromBoard(destinationTile)
+            break;
+            case 'treasure':
+                let treasureFactor, treasureNum = Math.random();
+                if(treasureNum > .85){
+                    treasureFactor = 4
+                } else if(treasureNum > .60){
+                    treasureFactor = 3
+                } else if(treasureNum > .35){
+                    treasureFactor = 2
+                } else{
+                    treasureFactor = 1
+                }
+                console.log('treasureFactor: ', treasureFactor);
+                // const amount = Math.floor(Math.random() * factor);
+                // console.log('found gold: ', amount);
+                // this.addCurrencyToInventory({
+                //     type: 'gold',
+                //     amount
+                // })
+                // this.removeTileFromBoard(destinationTile)
+            break;
             default:
                 break;
         }
     }
-    this.removeItemFromBoard = (tile) => {
+    this.removeDefeatedMonsterTile = () => {
+        const tile = this.tiles[this.getIndexFromCoordinates(this.playerTile.location)];
+        this.removeTileFromBoard(tile);
+    }
+    this.removeTileFromBoard = (tile) => {
         console.log('removing item from board');
         tile.image = null;
         tile.contains = null;
@@ -355,7 +401,7 @@ export function BoardManager(){
         if(bottomRow) bottomRow.forEach(t=>{if(highlightColor(t)) t.color = highlightColor(t)})
     }
     this.move = (destinationCoords, direction) => {
-        this.messaging(null)
+        // this.messaging(null)
         const tile = this.tiles[this.getIndexFromCoordinates(this.playerTile.location)];
         const destinationIndex = this.getIndexFromCoordinates(destinationCoords),
         destinationTile = this.tiles[destinationIndex];
@@ -386,12 +432,12 @@ export function BoardManager(){
             case 'right':
                 this.playerTile.location[1] = (this.playerTile.location[1]+ 1)
             break;
-            case 'item':
-                console.log('please work')
-                // this.addItemToInventory(destinationTile)
-                this.removeItemFromBoard(destinationTile)
-                // return 'item';
-            break;
+            // case 'item':
+            //     console.log('please work')
+            //     // this.addItemToInventory(destinationTile)
+            //     this.removeTileFromBoard(destinationTile)
+            //     // return 'item';
+            // break;
             default:
             break;
         }
@@ -486,12 +532,16 @@ export function BoardManager(){
         this.tiles.forEach((e)=> {
             // if(e.id === 175) console.log('setting to black')
             e.color = 'black';
+            e.image = null;
             e.borders = null;
         })
         this.tiles.forEach((e)=> {
             if(e.id > destinationTile.id - 3 && e.id < destinationTile.id + 3 ){
                 let isWrapAroundTile = (e.id === destinationTile.id + 2 || e.id === destinationTile.id -2 || destinationTile.id + 1 || e.id === destinationTile.id - 1) && (this.getCoordinatesFromIndex(e.id)[0] !== this.getCoordinatesFromIndex(destinationTile.id)[0]);
-                if(!isWrapAroundTile) e.color = this.currentBoard.tiles[e.id].color;
+                if(!isWrapAroundTile){
+                    e.color = this.currentBoard.tiles[e.id].color;
+                    e.image = e.contains;
+                }
             } 
             
             if(e.id === destinationTile.id - 2 && this.tiles[destinationTile.id - 1].contains === 'void'){
@@ -509,6 +559,7 @@ export function BoardManager(){
                 // eslint-disable-next-line
                 e.id === destinationTile.id + 30 &&  this.tiles[destinationTile.id + 15].contains !== 'void') {
                 e.color = this.currentBoard.tiles[e.id].color
+                e.image = e.contains;
             }
             // eslint-disable-next-line
             if( (e.id === destinationTile.id - 14 && this.tiles[destinationTile.id - 15].contains !== 'void' && this.tiles[destinationTile.id + 1].contains !== 'void') || 
@@ -519,6 +570,7 @@ export function BoardManager(){
                 // eslint-disable-next-line
                 e.id === destinationTile.id + 16 && this.tiles[destinationTile.id + 15].contains !== 'void' && this.tiles[destinationTile.id + 1].contains !== 'void'){
                e.color = this.currentBoard.tiles[e.id].color
+               e.image = e.contains;
             }
             //handle left side mapscroll border
             if(e.id === destinationTile.id - 1 && this.tiles[e.id].contains !== 'void' && this.getCoordinatesFromIndex(e.id)[0] !== this.getCoordinatesFromIndex(e.id-1)[0]){

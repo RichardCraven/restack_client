@@ -27,7 +27,20 @@
             background-color: transparent;
         }
     }
-
+    .center-board-wrapper{
+        position: relative;
+        .message-container{
+            position: absolute;
+            // border: 1px solid yellow;
+            height: 50px;
+            width: 100%;
+            top: -52px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+    }
     .right-side-panel{
         overflow: hidden;
         height: 100%;
@@ -65,11 +78,16 @@
                 line-height: 40px;
                 margin-bottom: 10px;
             }
+            .gold-readout{
+                color: white;
+
+            }
             .inventory-tile-container{
                 width: 170px;
                 display: flex;
                 flex-wrap: wrap;
-                
+                align-items: center;
+                justify-content: center;
                 .sub-container{
                     position: relative;
                     margin-bottom: 8px;

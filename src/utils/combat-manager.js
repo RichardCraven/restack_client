@@ -6,7 +6,7 @@ import {MovementMethods} from './fighter-ai/methods/movement-methods'
 
 const MAX_DEPTH = 7
 const MAX_LANES = 5
-const FIGHT_INTERVAL = 10
+const FIGHT_INTERVAL = 5
 const DEBUG_STEPS = false;
 
 export function CombatManager(){
@@ -194,6 +194,14 @@ export function CombatManager(){
             icon: 'sword',
             cooldown: 2,
             damage: 2
+        },
+        snake_strike: {
+            name: 'snake_strike',
+            type: 'cutting',
+            range: 'medium',
+            icon: 'sword',
+            cooldown: 2,
+            damage: 5
         }
     }
 
@@ -345,10 +353,11 @@ export function CombatManager(){
             goToDestination,
             processActionQueue,
             processMove,
-            targetInRange
+            targetInRange,
         } = callbacks;
         return {
             name: fighter.name,
+            type: fighter.type,
             id: fighter.id,
             portrait: fighter.portrait,
             level: fighter.level,
@@ -595,16 +604,17 @@ export function CombatManager(){
         this.data.monster.position = 2;
         this.data.monster.depth = MAX_DEPTH;
         this.data.monster.coordinates = {x:MAX_DEPTH, y:1}
+        console.log('data.monster: ', this.data.monster);
         let monster = createFighter(this.data.monster, callbacks);
         monster.isMonster = true;
         this.combatants[monster.id] = monster;
 
 
         if(this.data.minions){
-            let position = 2;
+            let position = MAX_LANES-1;
             this.data.minions.forEach(e=>{
                 e.position = position;
-                position++
+                position--
                 e.depth = MAX_DEPTH;
                 e.coordinates = {x:MAX_DEPTH, y:position}
                 let m = createFighter(e, callbacks)
@@ -923,8 +933,19 @@ export function CombatManager(){
 
         const targetInRange = this.targetInRange(caller)
 
+        if(caller.name === 'Yu'){
+            console.log('Yu target in range: ', targetInRange, 'distance to target:' , distanceToTarget);
+        }
+
         if(!targetInRange){
-            newDepth = caller.isMonster || caller.isMinion ? caller.depth-1 : caller.depth+1
+            // if(caller.name === 'Yu'){
+            //     console.log('Yu in range: ', targetInRange);
+            // }
+            newDepth = caller.isMonster || caller.isMinion ? 
+            (distanceToTarget > 0 ? caller.depth+1 : caller.depth-1) : 
+            (distanceToTarget < 0 ? caller.depth-1 : caller.depth+1)
+        } else {
+            newDepth = caller.depth
         }
 
         // RE-POSITION
@@ -932,20 +953,45 @@ export function CombatManager(){
             newPosition = caller.position - 1
         } else if(laneDiff > 0){
             newPosition = caller.position + 1
+        } else {
+            newPosition = caller.position
         }
 
-
+        // if(caller.name === 'Sardonis'){
+        //     let targetPosition = {x: newDepth, y: newPosition};
+        //     console.log('sardonis moving, target tile: ', targetPosition);
+        //     console.log('liveCombatants:', JSON.parse(JSON.stringify(liveCombatants)));
+        // }
         if(liveCombatants.some(e=>e.position === newPosition && e.depth === newDepth)){
             let targetPosition = {x: newDepth, y: newPosition};
+            const occupier = liveCombatants.find(e=>e.depth === targetPosition.x && e.position === targetPosition.y)
+            console.log('occupier: ', JSON.parse(JSON.stringify(occupier)));
+            let downspace = targetPosition.y + 1;
+            let upspace = targetPosition.y - 1
             let upSpaceOccupied = liveCombatants.some(e=>e.depth === targetPosition.x && e.position === targetPosition.y - 1);
             let downSpaceOccupied = liveCombatants.some(e=>e.depth === targetPosition.x && e.position === targetPosition.y + 1);
-            if(!upSpaceOccupied){
-                newPosition = targetPosition.y-1;
-            } else if(!downSpaceOccupied){
-                newPosition = targetPosition.y+1;
+            // if(caller.name === 'Sardonis'){
+            //     console.log('sardonis moving, space occupied. upSpaceOccupied: ', upSpaceOccupied, 'downSpaceOccupied:', downSpaceOccupied);
+            // }
+            let upPref = this.pickRandom([false, true])
+            if(upPref){
+                if(!upSpaceOccupied && upspace >= 0){
+                    newPosition = targetPosition.y-1;
+                } else if(!downSpaceOccupied && downspace <= MAX_LANES-1){
+                    newPosition = targetPosition.y+1;
+                } else {
+                    newPosition = caller.position;
+                    newDepth = caller.depth;
+                }
             } else {
-                newPosition = caller.position;
-                newDepth = caller.depth;
+                if(!downSpaceOccupied && downspace <= MAX_LANES-1){
+                    newPosition = targetPosition.y+1;
+                } else if(!upSpaceOccupied && upspace >= 0){
+                    newPosition = targetPosition.y-1;
+                } else {
+                    newPosition = caller.position;
+                    newDepth = caller.depth;
+                }
             }
         }
 
@@ -956,6 +1002,9 @@ export function CombatManager(){
 
         //set new values
         if(newDepth !== undefined) caller.depth = newDepth;
+        // if(caller.name === 'Sardonis'){
+        //     console.log('actual setting of new position: ', newPosition);
+        // }
         if(newPosition !== undefined) caller.position = newPosition;
 
         if(caller.position === undefined){

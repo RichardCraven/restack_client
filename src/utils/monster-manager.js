@@ -9,7 +9,7 @@ export function MonsterManager(){
     this.monsters = {
         vampire: {
             type: 'vampire',
-            image_names: ['white_vampire', 'black_vampire'],
+            image_names: ['black_vampire'],
             monster_names: ['Vukodlak', 'Morias', 'Roterach'],
             stats: {
                 str: 7,
@@ -56,6 +56,59 @@ export function MonsterManager(){
             weaknesses: ['fire', 'psionic'],
             drops: [
                 {item: 'minor_health_potion', percentChance: 55},
+            ]
+        },
+        gorgon: {
+            type: 'gorgon',
+            image_names: ['gorgon'],
+            monster_names: ['Lithios', 'Merkaba', 'Axolus'],
+            stats: {
+                str: 8,
+                int:5,
+                dex:4,
+                vit:5,
+                fort:7,
+                hp: 42,
+                atk: 8,
+                baseDef: 9
+            },
+            level: 9,
+            portrait: images['gorgon_portrait'],
+            greetings: ['Ssssurrenderrrr', 'Be ssstill'],
+            deathCries: ['Arrrghhh!'],
+            specials: ['petrify'],
+            attacks: ['snake_strike', 'bite'],
+            weaknesses: ['ice', 'psionic'],
+            drops: [
+                {item: 'minor_health_potion', percentChance: 55},
+                {item: 'lundi_amulet', percentChance: 25}
+            ]
+        },
+        goat_demon: {
+            type: 'demon',
+            image_names: ['goat_demon'],
+            monster_names: ['ur-Xulu', 'ur-Baba', 'ur-Zuzu'],
+            stats: {
+                str: 9,
+                int:6,
+                dex:2,
+                vit:9,
+                fort:8,
+                hp: 82,
+                atk: 11,
+                baseDef: 11
+            },
+            level: 11,
+            portrait: images['goat_demon_portrait'],
+            greetings: ['Ssssurrenderrrr', 'Be ssstill'],
+            deathCries: ['Arrrghhh!'],
+            specials: ['petrify'],
+            attacks: ['snake_strike', 'bite'],
+            weaknesses: ['ice', 'psionic'],
+            minions: ['goblin', 'goblin'],
+            drops: [
+                {item: 'minor_health_potion', percentChance: 55},
+                {item: 'lundi_amulet', percentChance: 25}
             ]
         },
         wraith: {
