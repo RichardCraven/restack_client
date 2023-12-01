@@ -7,6 +7,135 @@ export function MonsterManager(){
     }
     this.battleMonster = null;
     this.monsters = {
+        witch: {
+            type: 'witch',
+            image_names: ['witch_p1_1'],
+            monster_names: ['Rhea', 'Eundu'],
+            stats: {
+                str: 10,
+                int:12,
+                dex:5,
+                vit:7,
+                fort:5,
+                hp: 60,
+                atk: 13,
+                baseDef: 8
+            },
+            level: 12,
+            portrait: images['witch_p1_1'],
+            greetings: ['Thy blood is quickening'],
+            deathCries: ['Mercy'],
+            specials: ['obliterate', 'flying', 'invisibility'],
+            attacks: ['void_lance', 'magic_missile'],
+            weaknesses: ['arcane', 'holy-aura'],
+            drops: [
+                {item: 'volkas_wand', percentChance: 35},
+                {item: 'maerlyns_rod', percentChance: 35},
+                {item: 'evilai_charm', percentChance: 35}
+            ]
+        },
+        beholder: {
+            type: 'beholder',
+            image_names: ['beholder'],
+            monster_names: ['Nirnuceks', 'Adalak', 'Vemrindon'],
+            stats: {
+                str: 10,
+                int: 10,
+                dex:6,
+                vit:9,
+                fort:5,
+                hp: 110,
+                atk: 15,
+                baseDef: 5
+            },
+            level: 14,
+            portrait: images['beholder_portrait'],
+            greetings: ['Vukudaj kolo gurdu'],
+            deathCries: ['Urdu meklak milnaurku...'],
+            specials: ['obliterate', 'flying', 'invisibility'],
+            attacks: ['void_lance', 'magic_missile'],
+            weaknesses: ['arcane', 'holy-aura'],
+            minions: ['beholder_minion', 'beholder_minion'],
+            drops: [
+                {item: 'volkas_wand', percentChance: 35},
+                {item: 'maerlyns_rod', percentChance: 35},
+                {item: 'evilai_charm', percentChance: 35}
+            ]
+        },
+        beholder_minion: {
+            type: 'beholder_minion',
+            image_names: ['beholder_minion'],
+            monster_names: ['Nirnuceks', 'Adalak', 'Vemrindon'],
+            stats: {
+                str: 5,
+                int: 5,
+                dex:3,
+                vit:3,
+                fort:2,
+                hp: 40,
+                atk: 7,
+                baseDef: 2
+            },
+            level: 5,
+            portrait: images['beholder_minion_portrait'],
+            greetings: ['Vukdaj kolo gurdu'],
+            deathCries: ['Urdu meklak milnaurku...'],
+            specials: ['obliterate', 'flying', 'invisibility'],
+            attacks: ['void_lance', 'magic_missile'],
+            weaknesses: ['arcane', 'holy-aura'],
+            drops: []
+        },
+        kabuki_demon: {
+            type: 'demon',
+            image_names: ['kabuki_demon'],
+            monster_names: ['Ikiro', 'Jimbu'],
+            stats: {
+                str: 13,
+                int: 12,
+                dex:8,
+                vit:8,
+                fort:7,
+                hp: 120,
+                atk: 13,
+                baseDef: 3
+            },
+            level: 15,
+            portrait: images['kabuki_demon'],
+            greetings: ['Assaaa'],
+            deathCries: ['No! Impossible!'],
+            specials: ['obliterate', 'flying', 'invisibility'],
+            attacks: ['void_lance', 'magic_missile'],
+            weaknesses: ['arcane', 'holy-aura'],
+            minions: ['kabuki_demon_minion', 'kabuki_demon_minion'],
+            drops: [
+                {item: 'volkas_wand', percentChance: 35},
+                {item: 'maerlyns_rod', percentChance: 35},
+                {item: 'evilai_charm', percentChance: 35}
+            ]
+        },
+        kabuki_demon_minion: {
+            type: 'demon',
+            image_names: ['kabuki_demon_minion'],
+            monster_names: ['Ikiro', 'Jimbu'],
+            stats: {
+                str: 6,
+                int: 2,
+                dex:4,
+                vit:4,
+                fort:3,
+                hp: 20,
+                atk: 5,
+                baseDef: 3
+            },
+            level: 4,
+            portrait: images['kabuki_demon_minion_portrait'],
+            greetings: ['Assaaa'],
+            deathCries: ['No! Impossible!'],
+            specials: ['obliterate', 'flying', 'invisibility'],
+            attacks: ['void_lance', 'magic_missile'],
+            weaknesses: ['arcane', 'holy-aura'],
+            drops: []
+        },
         vampire: {
             type: 'vampire',
             image_names: ['black_vampire'],
@@ -330,17 +459,20 @@ export function MonsterManager(){
     }
 
     this.getMonster = (monsterString) => {
-        // console.log('get monster:', monsterString);
+        console.log('get monster:', monsterString);
         let match = null;
-        for(let key in this.monsters){
-            let m = this.monsters[key]
-            if(m.image_names.includes(monsterString)){
-                match = m
-            }
-        }
+        console.log('this.monsters', this.monsters);
+        match = this.monsters[monsterString]
+        // for(let key in this.monsters){
+        //     match = this.monsters[key]
+        //     // console.log('m', m);
+        //     // if(m.image_names.includes(monsterString)){
+        //     //     match = m
+        //     // }
+        // }
         // this.battleMonster = match;
-        // console.log('match:', match);
-        return JSON.parse(JSON.stringify(match));
+        console.log('match:', match);
+        return match ? JSON.parse(JSON.stringify(match)) : null;
     }
     this.getRandomMonster = () => {
         // return this.monsters['sphinx']

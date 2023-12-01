@@ -24,6 +24,19 @@ class CrewManagerPage extends React.Component{
     }
   }
 
+    timer = null
+
+    // onClickHandler = event => {
+    //     clearTimeout(this.timer);
+
+    //     if (event.detail === 1) {
+    //         this.timer = setTimeout(this.props.onClick, 200)
+    //     } else if (event.detail === 2) {
+    //         console.log('double click!');
+    //         // this.props.onDoubleClick()
+    //     }
+    // }
+
   componentDidMount(){
     console.log('crew manager component mounted props:', this)
     // const userData = getMeta();
@@ -32,11 +45,11 @@ class CrewManagerPage extends React.Component{
     console.log('this.props:', this.props)
     let options = this.props.crewManager.adventurers;
     console.log('options:', options);
-    const user = getMeta();
+    const meta = getMeta();
     let selectedCrew = [];
-    console.log('meta: ', user);
-    if(user.crew && user.crew.length){
-        user.crew.forEach((e,i)=>selectedCrew[i] = e)
+    console.log('meta: ', meta);
+    if(meta && meta.crew && meta.crew.length){
+        meta.crew.forEach((e,i)=>selectedCrew[i] = e)
     }
     this.setState({
         options,
@@ -66,11 +79,27 @@ class CrewManagerPage extends React.Component{
     //   })
     // }
   }
-  selectCrewMember = (e) => {
-    console.log('select crew memeber: ', e)
-
+  singleClick = (crewMember) => {
     this.setState({
-        selectedCrewMember: e
+        selectedCrewMember: crewMember
+    })
+  }
+  selectCrewMember = (event, crewMember) => {
+    console.log('select crew memeber: ', crewMember)
+    clearTimeout(this.timer);
+    if (event.detail === 1) {
+        this.timer = setTimeout(this.singleClick(crewMember), 200)
+    } else if (event.detail === 2) {
+        let crew = this.state.selectedCrew;
+        console.log('double click!', crewMember);
+        if(crew.length === 3 && !this.state.advancedUser) return
+        if(!crew.includes(crewMember)) crew.push(crewMember)
+        this.setState({
+            selectedCrew: crew
+        })
+    }
+    this.setState({
+        selectedCrewMember: crewMember
     })
 
   }
@@ -105,15 +134,19 @@ submit = async () => {
     meta.crew = this.state.selectedCrew.filter(e=> e !== null)
     await updateUserRequest(getUserId(), meta)
     console.log('updated meta: ', meta);
-    if(meta.dungeonId){
-        console.log('wtf');
-        debugger
-    }
+    // if(meta.dungeonId){
+    //     console.log('wtf');
+    //     debugger
+    // }
     // return
     storeMeta(meta)
     this.goBack()
 }
 clear = () => {
+    const meta = getMeta();
+    console.log('meta: ', meta);
+    meta.crew = [];
+    storeMeta(meta);
     this.setState({
         selectedCrew: []
     })
@@ -137,7 +170,7 @@ goBack = () => {
                     {this.state.options.map((e,i)=> {
                         return <div className='portrait' key={i}
                         style={{backgroundImage: "url(" + e.portrait + ")"}}
-                        onClick={() => this.selectCrewMember(e)}
+                        onClick={(event) => this.selectCrewMember(event, e)}
                         ></div>
                         }
                     )}

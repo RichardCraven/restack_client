@@ -2,6 +2,7 @@ import React from 'react'
 import '../../styles/monster-battle.scss'
 import * as images from '../../utils/images'
 
+
 const MAX_DEPTH = 8;
 const MAX_ROWS = 5;
 const TILE_SIZE = 100
@@ -37,7 +38,8 @@ class MonsterBattle extends React.Component {
             summaryMessage: '',
             experienceGained: null,
             goldGained: null,
-            battleResult: null
+            battleResult: null,
+            monsterPortrait: ''
         }
     }
     componentDidMount(){
@@ -54,12 +56,16 @@ class MonsterBattle extends React.Component {
             })
             ghostPortraitMatrix.push(null)
         }
-        this.setState({combatTiles: arr, ghostPortraitMatrix})
+        this.setState({
+            combatTiles: arr, ghostPortraitMatrix,
+            monsterPortrait: this.props.monster.portrait
+        })
         // const crewLeader = this.props.crew.find(e=>e.isLeader)
         this.establishMessageCallback();
         this.establishUpdateMatrixCallback();
         this.establishUpdateActorCallback();
         this.establishUpdateDataCallback();
+        this.establishMorphPortraitCallback();
         this.establishGreetingCompleteCallback();
         this.establishGameOverCallback();
         this.establishOnFighterMovedToDestinationCallback();
@@ -74,6 +80,29 @@ class MonsterBattle extends React.Component {
         // setTimeout(()=>{
         //     this.fighterPortraitClicked(this.props.crew[0].id)
         // })
+    }
+    milliDelay = (numMilliseconds) => {
+        return new Promise((resolve) => {
+            setTimeout(()=>{
+                resolve(numMilliseconds, ' complete')
+            }, numMilliseconds)
+        })
+    }
+    morphPortrait = () => {
+        const monster = this.props.monster;
+        // console.log('MORPH monster: ', monster);
+        let stringBase = 'witch_p1_', count = 1, string;
+        const morphInterval = setInterval(()=>{
+            string = stringBase+count;
+            console.log('string: ', string);
+            this.setState({
+                monsterPortrait: images[string]
+            })
+            count++
+            if(count > 8) clearInterval(morphInterval)
+        }, 300)
+        // this.milliDelay(100).then()
+        // monster.portrait = images['witch_p1_2']
     }
     greetingComplete = () => {
         this.combatBegins()
@@ -159,7 +188,7 @@ class MonsterBattle extends React.Component {
                 this.props.monster.drops.forEach(e=>{
                     let d = Math.random();
                     if(d < e.percentChance*.01) itemsGained.push(e.item)
-                    console.log('calculations for ', e.item, 'd: ', d, 'vs ', e.percentChance*.01);
+                    // console.log('calculations for ', e.item, 'd: ', d, 'vs ', e.percentChance*.01);
                 })
 
 
@@ -170,6 +199,7 @@ class MonsterBattle extends React.Component {
             }
             experienceGained = this.props.monster.level * 10;
             goldGained = Math.floor(Math.random() * experienceGained);
+            console.log('gold gained: ', goldGained);
             this.props.inventoryManager.addCurrency({type: 'gold', amount: goldGained})
         } else {
             battleResult = 'loss'
@@ -196,6 +226,9 @@ class MonsterBattle extends React.Component {
     }
     establishUpdateDataCallback = () => {
         this.props.combatManager.establishUpdateDataCallback(this.updateBattleData)
+    }
+    establishMorphPortraitCallback = () => {
+        this.props.combatManager.establishMorphPortraitCallback(this.morphPortrait)
     }
     establishGreetingCompleteCallback = () => {
         this.props.combatManager.establishGreetingCompleteCallback(this.greetingComplete)
@@ -274,7 +307,7 @@ class MonsterBattle extends React.Component {
             hoveredInventoryTile: val
         })
     }
-    combayInventoryTileClicked = (val) => {
+    combatInventoryTileClicked = (val) => {
         console.log('val:', val)
         this.props.combatManager.itemUsed(val, this.state.selectedFighter)
         const itemIndex  = this.props.inventoryManager.inventory.findIndex(item => item.name === val.name)
@@ -407,25 +440,25 @@ class MonsterBattle extends React.Component {
                 }}>
                     {this.state.showSummaryPanel && <div className='summary-panel'>
                         <div className="content-container">
-                            {this.state.itemsGained && 
-                            <div className="experience-container">
-                                You found {this.state.itemsGained.map(e=> e.replaceAll('_',' ')).join(', ')}
-                            </div>} 
                             <div className="message-container">
                                 {this.state.summaryMessage}
                             </div>
+                            {this.state.itemsGained && 
+                            <div className="experience-container">
+                                You found a {this.state.itemsGained.map(e=> e.replaceAll('_',' ')).join(', ')}
+                            </div>} 
                             {this.state.goldGained && 
                             <div className="experience-container">
                                 You found {this.state.goldGained} gold
-                            </div>} 
+                            </div>
+                            } 
                             {this.state.experienceGained && 
                             <div className="experience-container">
                                 Each crew member has earned {this.state.experienceGained} experience
                             </div>} 
                         </div>
                         <div className="button-row">
-
-                        <div className="confirm-button" onClick={() => this.confirmClicked()}>OK</div>
+                            <div className="confirm-button" onClick={() => this.confirmClicked()}>OK</div>
                         </div>
                     </div>}
                     {(this.state.message) &&<div className="message-container">
@@ -566,8 +599,10 @@ class MonsterBattle extends React.Component {
                                         ${this.state.selectedFighter?.targetId === this.props.monster.id ? 'targetted' : ''}`
                                     } 
                                     style={{
-                                        backgroundImage: "url(" + this.props.monster.portrait + ")", 
-                                        filter: this.state.battleData[this.props.monster.id] && this.state.battleData[this.props.monster.id].type === 'demon' ? `` 
+                                        backgroundImage: "url(" + this.state.monsterPortrait + ")", 
+                                        filter: this.state.battleData[this.props.monster.id] && 
+                                        (this.state.battleData[this.props.monster.id].type === 'demon' ||
+                                        this.state.battleData[this.props.monster.id].type === 'witch') ? `` 
                                         : `saturate(${((this.state.battleData[this.props.monster.id]?.hp / this.props.monster.stats.hp) * 100) / 2}) 
                                                 sepia(${this.state.portraitHoveredId === this.props.monster.id ? '2' : '0'})`
                                     }} 
@@ -692,7 +727,7 @@ class MonsterBattle extends React.Component {
                                                     <div 
                                                     className={`interaction-tile consumable`} 
                                                     style={{backgroundImage: "url(" + images[a.icon] + ")", cursor: 'pointer'}} 
-                                                    onClick={() => this.combayInventoryTileClicked(a)} 
+                                                    onClick={() => this.combatInventoryTileClicked(a)} 
                                                     onMouseEnter={() => this.inventoryTileHovered(a.name)} 
                                                     onMouseLeave={() => this.inventoryTileHovered(null)}
                                                     >

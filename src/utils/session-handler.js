@@ -15,8 +15,17 @@ function storeMeta(metadata){
     sessionStorage.setItem('metadata', JSON.stringify(metadata))
 }
 function getMeta(){
-    // console.log('getting meta, ss:', sessionStorage)
-    return JSON.parse(sessionStorage.getItem('metadata'))
+    if(sessionStorage.getItem('metadata')){
+        return JSON.parse(sessionStorage.getItem('metadata'))
+    } else {
+        return {
+            dungeonId: null,
+            boardIndex: null,
+            tileIndex: null,
+            crew: null,
+            inventory: null
+        }
+    }
 }
 function getUserId(){
     return sessionStorage.getItem('userId')

@@ -6,9 +6,8 @@ export function CrewManager(){
         'monk',
         'barbarian',
         'wizard',
-        'sorceress',
+        // 'sorceress',
         'rogue',
-        'archer',
         'sage',
         'soldier'
     ]
@@ -43,7 +42,7 @@ export function CrewManager(){
                 vit: 4,
                 fort: 7,
                 hp:10,
-                atk:120,
+                atk:12,
                 baseDef: 9,
                 energy: 0
             }, 
@@ -102,7 +101,7 @@ export function CrewManager(){
             inventory: [],
             passives: ['diamond_skin'],
             specials: ['flying_lotus'],
-            attacks: ['meditate', 'dragon_punch'],
+            attacks: ['dragon_punch'],
             weaknesses: ['fire', 'electricity', 'ice', 'blood_magic', 'crushing'],
             description: "Yu was born into the dynastic order of the White Serpent, inheriting the secrets of absolute stillness and unyielding motion"
         },

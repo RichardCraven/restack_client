@@ -56,7 +56,12 @@ class UserProfilePage extends React.Component{
 
       meta.dungeonId = null;
       meta.location = null
-      meta.inventory = []
+      meta.inventory = { 
+        items: [], 
+        gold: 0,
+        shimmering_dust: 0,
+        totems: 0
+      }
       await updateUserRequest(getUserId(), meta)
       storeMeta(meta);
       
@@ -67,7 +72,12 @@ class UserProfilePage extends React.Component{
       console.log('no state dungeon, second block');
       meta.dungeonId = null;
       meta.location = null
-      meta.inventory = []
+      meta.inventory = { 
+        items: [], 
+        gold: 0,
+        shimmering_dust: 0,
+        totems: 0
+      }
       await updateUserRequest(getUserId(), meta)
       storeMeta(meta);
       

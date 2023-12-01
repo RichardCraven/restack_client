@@ -126,6 +126,14 @@ export function CombatManager(){
         meditate: {
             name: 'meditate',
             type: 'buff',
+            range: 'self',
+            icon: 'basic_shield',
+            cooldown: 5.5,
+            damage: 0
+        },
+        heal: {
+            name: 'heal',
+            type: 'buff',
             range: 'close',
             icon: 'basic_shield',
             cooldown: 5.5,
@@ -323,6 +331,9 @@ export function CombatManager(){
     this.establishOnFighterDeathCallback = (cb) => {
         this.onFighterDeath = cb;
     }
+    this.establishMorphPortraitCallback = (cb) => {
+        this.morphPortrait = cb;
+    }
 
     this.formatAttacks = (stringArray) => {
         return stringArray.map(e=>{
@@ -492,21 +503,21 @@ export function CombatManager(){
                         //     //destination dickness still not working
                         // } else 
                         if(this.pendingAttack && this.pendingAttack.cooldown_position === 100){
-                            if(this.isMonster) console.log('monster at 100, in deepest block')
+                            // if(this.isMonster) console.log('monster at 100, in deepest block')
 
 
                             if(this.name === "Loryastes"  && DEBUG_STEPS === true){
-                                console.log('Loryastes [IN TURN CYCLE] about to call attack');
+                                // console.log('Loryastes [IN TURN CYCLE] about to call attack');
                             }
                             const target = getCombatant(this.targetId);
                             if(this.name === 'Loryastes' && this.DEBUG_STEPS){
-                                console.log('Loryastes endcycle, target: ', target);
+                                // console.log('Loryastes endcycle, target: ', target);
                             }
                             
                             if(!target){
                                 this.skip();
                                 if(this.name === 'Loryastes'  && DEBUG_STEPS === true){
-                                    console.log('Loryastes skipping');
+                                    // console.log('Loryastes skipping');
                                 }
                                 return
                             }
@@ -555,14 +566,12 @@ export function CombatManager(){
         instruction = action.instruction;
         switch(instruction.type){
             case 'move':
-                console.log('Lory queued move');
                 caller.destinationCoordinates = instruction.destinationCoordinates
                 this.goToDestination(caller);
             break;
             case 'attack':
                 caller.targetId = instruction.targetId;
                 caller.pendingAttack = instruction.selectedAction;
-                console.log('process queued attack, target id: ', caller.targetId, 'pending attack: ', caller.pendingAttack, 'ins', instruction);
                 caller.attack();
             break;
             default:
@@ -604,7 +613,6 @@ export function CombatManager(){
         this.data.monster.position = 2;
         this.data.monster.depth = MAX_DEPTH;
         this.data.monster.coordinates = {x:MAX_DEPTH, y:1}
-        console.log('data.monster: ', this.data.monster);
         let monster = createFighter(this.data.monster, callbacks);
         monster.isMonster = true;
         this.combatants[monster.id] = monster;
@@ -628,6 +636,7 @@ export function CombatManager(){
         this.beginGreeting()
     }
     this.targetInRange = (caller) => {
+        if(!caller.pendingAttack) return false
         const target = this.combatants[caller.targetId];
         // if(caller.isMonster) console.log('monster target in range check, target: ', target, 'and monster is ', caller)
         if(!target){
@@ -639,9 +648,14 @@ export function CombatManager(){
         // 1 means target is right in front of you
 
         const distanceToTarget = this.getDistanceToTarget(caller, target)
+
+
         let res;
         // if(caller.isMonster) console.log('differential: ', differential, 'distance: ', distanceToTarget)
         switch(caller.pendingAttack.range){
+            case 'self':
+                res = true;
+            break;
             case 'close':
                 if(caller.name === "LORYASTES" && DEBUG_STEPS){
                     console.log('differential: ', differential);
@@ -650,7 +664,9 @@ export function CombatManager(){
                 res = differential === 1;
             break;
             case 'medium':
-                res = differential <= 2;
+                if(caller.isMonster) console.log('wiotch differential: ', differential, 'distance: ', distanceToTarget)
+
+                res = differential <= 3;
             break;
             case 'far':
                 res = differential <= 4 && differential > 1;
@@ -728,7 +744,6 @@ export function CombatManager(){
     }
     this.queueAction = (callerId, targetId, selectedAction) => {
         const caller = this.getCombatant(callerId);
-        console.log('queued action: ', selectedAction);
         const action = {
             name: 'Attack',
             icon: selectedAction.icon,
@@ -930,20 +945,16 @@ export function CombatManager(){
         const distanceToTarget = this.getDistanceToTarget(caller, target),
         laneDiff = this.getLaneDifferenceToTarget(caller, target)
         let newPosition, newDepth;
-
         const targetInRange = this.targetInRange(caller)
-
-        if(caller.name === 'Yu'){
-            console.log('Yu target in range: ', targetInRange, 'distance to target:' , distanceToTarget);
-        }
-
         if(!targetInRange){
-            // if(caller.name === 'Yu'){
-            //     console.log('Yu in range: ', targetInRange);
+            let moveBackLots = caller.pendingAttack.range === 'far' && distanceToTarget < 2
+            // if(caller.name === 'Tyra'){
+            //     console.log('move back lots: ', moveBackLots);
             // }
             newDepth = caller.isMonster || caller.isMinion ? 
-            (distanceToTarget > 0 ? caller.depth+1 : caller.depth-1) : 
-            (distanceToTarget < 0 ? caller.depth-1 : caller.depth+1)
+            (distanceToTarget > -1 ? caller.depth+1 : caller.depth-1) : 
+            (moveBackLots ? caller.depth-3 :
+            (distanceToTarget < 1 ? caller.depth-1 : caller.depth+1))
         } else {
             newDepth = caller.depth
         }
@@ -965,7 +976,7 @@ export function CombatManager(){
         if(liveCombatants.some(e=>e.position === newPosition && e.depth === newDepth)){
             let targetPosition = {x: newDepth, y: newPosition};
             const occupier = liveCombatants.find(e=>e.depth === targetPosition.x && e.position === targetPosition.y)
-            console.log('occupier: ', JSON.parse(JSON.stringify(occupier)));
+            // console.log('occupier: ', JSON.parse(JSON.stringify(occupier)));
             let downspace = targetPosition.y + 1;
             let upspace = targetPosition.y - 1
             let upSpaceOccupied = liveCombatants.some(e=>e.depth === targetPosition.x && e.position === targetPosition.y - 1);
@@ -1191,16 +1202,32 @@ export function CombatManager(){
     }
 
     this.triggerMonsterGreeting = () => {
+        // morphPortrait
         return new Promise((resolve, reject) => {
-            this.delay(0.5).then(()=>{
-                this.setMessage({message: this.data.monster.greetings[0], source: 'monster'})
-                this.delay(2).then(()=>{
-                    this.setMessage({message: '', source: null})
-                        this.delay(0.5).then(()=>{
-                            resolve()
-                        })
+            if(this.data.monster.type === 'witch'){
+                this.delay(0.5).then(()=>{
+                    this.setMessage({message: this.data.monster.greetings[0], source: 'monster'})
+                    this.delay(2).then(()=>{
+                        this.morphPortrait();
+                    })
+                    this.delay(5).then(()=>{
+                        this.setMessage({message: '', source: null})
+                            this.delay(0.5).then(()=>{
+                                resolve()
+                            })
+                    })
                 })
-            })
+            } else {
+                this.delay(0.5).then(()=>{
+                    this.setMessage({message: this.data.monster.greetings[0], source: 'monster'})
+                    this.delay(2).then(()=>{
+                        this.setMessage({message: '', source: null})
+                            this.delay(0.5).then(()=>{
+                                resolve()
+                            })
+                    })
+                })
+            }
         })
     }
 

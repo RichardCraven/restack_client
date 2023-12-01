@@ -129,9 +129,9 @@ const toggleShowCoordinates = () => {
           {<button className="menu-buttons go-home-button" onClick={goHome}>
             Home
           </button>}    
-          {/* {isAdmin && <button className="menu-buttons show-coordinates-button" onClick={toggleShowCoordinates}>
+          {isAdmin && <button className="menu-buttons show-coordinates-button" onClick={toggleShowCoordinates}>
             Show Coordinates
-          </button>}  */}
+          </button>} 
 
 
           

@@ -50,9 +50,7 @@ export const MovementMethods = {
         let liveCombatants = Object.values(combatants).filter(e=>!e.dead)
         const friendlyTarget = Object.values(combatants).find(e=>e.id === caller.targetId)
         const distanceToTarget = Methods.getDistanceToTarget(caller, friendlyTarget),
-        laneDiff = Methods.getLaneDifferenceToTarget(caller, friendlyTarget)
-
-        console.log('NO friendly target for ', caller);
+        laneDiff = Methods.getLaneDifferenceToTarget(caller, friendlyTarget);
         if(!friendlyTarget) return
 
         const finalize = () => {

@@ -44,29 +44,49 @@
     .right-side-panel{
         overflow: hidden;
         height: 100%;
-        border: 1px solid transparent;
+        padding-top: 25px;
+        // border: 1px solid transparent;
+        border: 1px solid lightgrey;
         z-index: 3;
         width: 0;
-        min-width: 0px;
+        // min-width: 0px;
+        min-width: 200px;
         transition: all 1s;
         overflow: scroll;
+        &.expanded{
+            right: -202px;
+            border-left: 1px solid lightgrey;
+            min-width: 200px;
+            .inventory{
+                position: absolute;
+                left: 20px;
+            }
+        }
+        position: absolute;
+        right: 0;
         .icon-container{
             position: fixed;
             bottom: 10px;
             color: white;
             right: 10px;
             cursor: pointer;
+            transform: rotateZ(180deg);;
             .expand-icon{
                 transition: all 1s;
                 &.expanded{
-                    transform: rotateZ(180deg);;
+                    transform: none;
                 }
             }
         }
         .inventory{
-            position: absolute;
-            left: -200px;
-            top: 29px;
+            padding-top: 5px;
+            // position: absolute;
+            // left: -200px;
+            // top: 29px;
+            align-items: center;
+            display: flex;
+            flex-direction: column;
+
             transition: all 1s;
             .title{
                 color: white;
@@ -90,6 +110,7 @@
                 justify-content: center;
                 max-height: 820px;
                 overflow: scroll;
+                padding-top: 10px;
                 .sub-container{
                     position: relative;
                     margin-bottom: 8px;
@@ -123,31 +144,46 @@
             }
         }
 
-        &.expanded{
-            border-left: 1px solid lightgrey;
-            min-width: 200px;
-            .inventory{
-                position: absolute;
-                left: 20px;
+        
+        
+    }
+    .minimap-container{
+        // height: 198px;
+        height: 155px;
+        width: 198px;
+        // border: 1px solid white;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        .minimap-tile{
+            border: 1px solid #212121;
+            height: 50px;
+            width: 50px;
+            &.active{
+                border: 1px solid rgba(138, 2, 2, 0.523);
             }
         }
-        position: absolute;
-        right: 0;
-        
+
     }
     .left-side-panel{
         height: 100%;
         overflow: hidden;
         border: 1px solid transparent;
         z-index: 3;
-        width: 0;
-        min-width: 0px;
+        width: 200px;
+        // min-width: 0px;
         transition: all 1s;
-        .minimap-container{
-            height: 198px;
-            width: 198px;
-            border: 1px solid white;
+        position: absolute;
+        left: -202px;
+        &.expanded{
+            left: 0;
+            border-right: 1px solid lightgrey;
+            // min-width: 200px;
+            .crew{
+                // right: 20px;
+            }
         }
+        
         .crew-container{
             // position: absolute;
             right: -200px;
@@ -240,18 +276,6 @@
                 }
             }
         }
-
-
-        &.expanded{
-            border-right: 1px solid lightgrey;
-            min-width: 200px;
-            .crew{
-                // right: 20px;
-            }
-        }
-        position: absolute;
-        // right: 0;
-        left: 0;
         .icon-container{
             position: fixed;
             bottom: 10px;

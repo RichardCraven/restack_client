@@ -29,16 +29,17 @@ export function BoardManager(){
         'devil'
     ]
     this.monstersArr = [
+        'witch',
         'beholder',
-        'black_banshee',
-        'black_djinn',
-        'black_gorgon',
-        'black_kronos',
-        'black_minotaur',
-        'black_vampire',
-        'black_wraith',
+        // 'black_banshee',
+        // 'black_djinn',
+        // 'black_gorgon',
+        // 'black_kronos',
+        // 'black_minotaur',
+        // 'black_vampire',
+        // 'black_wraith',
         'dragon',
-        'giant_scorpion',
+        // 'giant_scorpion',
         'goblin',
         'horror',
         'imp',
@@ -80,6 +81,9 @@ export function BoardManager(){
     this.activeInteractionTile = null;
     this.pending = null;
 
+    this.establishBoardTransitionCallback = (cb) => {
+        this.boardTransition = cb;
+    }
     this.establishAddTreasureToInventoryCallback = (callback) => {
         this.addTreasureToInventory = callback;
     }
@@ -106,6 +110,9 @@ export function BoardManager(){
     }
     this.setActiveInventoryItem = (e) => {
         this.activeInventoryItem = e;
+    }
+    this.establishGetCurrentInventoryCallback = (callback) => {
+        this.getCurrentInventory = callback
     }
     this.establishSetMonsterCallback = (callback) => {
         this.setMonster = callback;
@@ -159,6 +166,9 @@ export function BoardManager(){
     }
     this.initializeTilesFromMap = (boardIndex, spawnTileIndex) => {
         const getRandomMonster = () => {
+            // return this.monstersArr[0]
+
+
             let idx = Math.floor(Math.random()*this.monstersArr.length);
             const monster = this.monstersArr[idx];
             return monster
@@ -179,7 +189,10 @@ export function BoardManager(){
         }
         for(let i = 0; i< board.tiles.length; i++){
             let tile = board.tiles[i]
-            if(tile.contains === 'monster') tile.contains = getRandomMonster();
+            if(tile.contains === 'monster'){
+                tile.contains = getRandomMonster();
+                console.log('tile.contains: ', tile);
+            }
             if(tile.contains === 'gate') tile.contains = 'minor_gate';
             if(tile.contains === 'lantern'){
                 tile.contains = getRandomItem();
@@ -210,6 +223,7 @@ export function BoardManager(){
         this.handleFogOfWar(this.tiles[this.getIndexFromCoordinates(this.playerTile.location)])
     }
     this.placePlayer = (coordinates) => {
+        console.log('placing player ', coordinates);
         let index = this.getIndexFromCoordinates(coordinates)
         this.overlayTiles[index].image = 'avatar'
         this.tiles[index].playerTile = true;
@@ -338,8 +352,9 @@ export function BoardManager(){
         if(this.pending && this.pending.type === 'minor_gate'){
             this.messaging('This gate requires a minor key');
             let hasKey = false
-            if(this.activeInventoryItem){
-                if(this.activeInventoryItem.contains === 'minor_key') hasKey = true;
+            console.log('inventory: ', this.getCurrentInventory(), this.getCurrentInventory().find(e=>e.name==='minor key'));
+            if(this.getCurrentInventory().find(e=>e.name==='minor key')){
+                hasKey = true;
             }
             if(hasKey){
                 this.messaging('Minor gate rattles open')
@@ -488,18 +503,22 @@ export function BoardManager(){
         this.move(destinationCoords, 'right')
     }
     this.moveBoardLeft = () => {
+        this.boardTransition('left')
         this.tiles = [];
         this.initializeTilesFromMap(this.playerTile.boardIndex-1, this.getIndexFromCoordinates([this.playerTile.location[0], this.playerTile.location[1]+14]))
     }
     this.moveBoardRight = () => {
+        this.boardTransition('right')
         this.tiles = [];
         this.initializeTilesFromMap(this.playerTile.boardIndex+1, this.getIndexFromCoordinates([this.playerTile.location[0], this.playerTile.location[1]-14]))
     }
     this.moveBoardUp = () => {
+        this.boardTransition('up')
         this.tiles = [];
         this.initializeTilesFromMap(this.playerTile.boardIndex-3, this.getIndexFromCoordinates([this.playerTile.location[0]+14, this.playerTile.location[1]]))
     }
     this.moveBoardDown = () => {
+        this.boardTransition('down')
         this.tiles = [];
         this.initializeTilesFromMap(this.playerTile.boardIndex+3, this.getIndexFromCoordinates([this.playerTile.location[0]-14, this.playerTile.location[1]]))
     }
@@ -545,10 +564,14 @@ export function BoardManager(){
             } 
             
             if(e.id === destinationTile.id - 2 && this.tiles[destinationTile.id - 1].contains === 'void'){
+                //prevent seeing past walls
                 e.color = 'black'
+                e.image = null;
             } 
             if(e.id === destinationTile.id + 2 && this.tiles[destinationTile.id + 1].contains === 'void'){
+                //prevent seeing past walls
                 e.color = 'black'
+                e.image = null;
             } 
             // eslint-disable-next-line
             if( e.id === destinationTile.id - 15 || 
@@ -558,10 +581,10 @@ export function BoardManager(){
                 e.id === destinationTile.id + 15 ||
                 // eslint-disable-next-line
                 e.id === destinationTile.id + 30 &&  this.tiles[destinationTile.id + 15].contains !== 'void') {
+                    // console.log('here', e.id);
                 e.color = this.currentBoard.tiles[e.id].color
                 e.image = e.contains;
             }
-            // eslint-disable-next-line
             if( (e.id === destinationTile.id - 14 && this.tiles[destinationTile.id - 15].contains !== 'void' && this.tiles[destinationTile.id + 1].contains !== 'void') || 
                 // eslint-disable-next-line
                 e.id === destinationTile.id - 16 && this.tiles[destinationTile.id - 15].contains !== 'void' && this.tiles[destinationTile.id - 1].contains !== 'void' ||

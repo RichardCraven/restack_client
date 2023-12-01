@@ -427,6 +427,7 @@
                     width: 100px;
                     border-radius: 100px;
                     transition: transform 1s;
+                    transition: background-image 0.5s;
                     &.missed{
                         transform: scaleY(-1);
                     }

@@ -58,7 +58,8 @@ export function InventoryManager(){
         'scepter',
         'scimitar',
         'spear',
-        'sword'
+        'sword',
+        'longbow'
     ]
     this.potions_names = [
         'minor_health_potion',
@@ -118,6 +119,7 @@ export function InventoryManager(){
             type: 'weapon',
             subtype: 'cutting',
             name: 'axe',
+            range: 'close',
             equippedBy: null
         },
         flail: {
@@ -126,6 +128,7 @@ export function InventoryManager(){
             type: 'weapon',
             subtype: 'crushing',
             name: 'flail',
+            range: 'close',
             equippedBy: null
         },
         spear: {
@@ -134,6 +137,7 @@ export function InventoryManager(){
             type: 'weapon',
             subtype: 'cutting',
             name: 'spear',
+            range: 'medium',
             equippedBy: null
         },
         sword: {
@@ -142,6 +146,7 @@ export function InventoryManager(){
             type: 'weapon',
             subtype: 'cutting',
             name: 'sword',
+            range: 'close',
             equippedBy: null
         },
         scimitar: {
@@ -150,6 +155,7 @@ export function InventoryManager(){
             type: 'weapon',
             subtype: 'cutting',
             name: 'scimitar',
+            range: 'close',
             equippedBy: null
         },
         scepter: {
@@ -158,6 +164,16 @@ export function InventoryManager(){
             type: 'weapon',
             subtype: 'crushing',
             name: 'scepter',
+            range: 'close',
+            equippedBy: null
+        },
+        longbow: {
+            damage: 3,
+            icon: 'longbow',
+            type: 'weapon',
+            subtype: 'cutting',
+            name: 'longbow',
+            range: 'far',
             equippedBy: null
         }
     }
@@ -418,6 +434,7 @@ export function InventoryManager(){
     this.allItems = {};
     this.items = this.weapons_names.concat(this.masks_names.concat(this.helms_names.concat(this.keys_names.concat(this.amulets_names.concat(this.charms_names.concat(this.wands_names.concat(this.misc_names.concat(this.shields_names))))))))
     this.initializeItems = (data = null) => {
+        console.log('initializing items with data', data);
         for(let key in this.consumables){
             this.allItems[key] = this.consumables[key]
         }
@@ -437,12 +454,13 @@ export function InventoryManager(){
             this.allItems[key] = this.misc[key]
         }
         this.inventory = [];
-        if(!data || !data.length){
+        if(!data){
             this.inventory = this.getStarterPack();
             this.gold = 0
             this.shimmering_dust = 0
             this.totems = 0
         } else {
+            console.log('data.: ', data);
             this.inventory = data.items.map(e=> {
                 const equippedBy = e.equippedBy
                 if(this.allItems[(e.name.replaceAll(' ', '_'))]){

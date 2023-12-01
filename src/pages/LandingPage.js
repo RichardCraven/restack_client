@@ -29,9 +29,9 @@ export default function LandingPage() {
     }
   },[history])
   const checkForCrew = () => {
-    const user = getMeta();
-    console.log('meta: ', user);
-    if(!user.crew || user.crew.length === 0){
+    const meta = getMeta();
+    console.log('meta: ', meta);
+    if(!meta || !meta.crew || meta.crew.length === 0){
       setShowWarning(true)
     }
   }

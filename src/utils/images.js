@@ -48,6 +48,8 @@ import black_demon from '../assets/icons/monsters/demons/black_demon.png'
 
 import golden_demon from '../assets/icons/monsters/demons/golden_demon.png'
 import kabuki_demon from '../assets/icons/monsters/demons/kabuki_demon.png'
+import kabuki_demon_portrait from '../assets/portraits/monsters/variations/kabuki_demon/kabuki_demon1.png'
+import kabuki_demon_minion_portrait from '../assets/portraits/monsters/variations/kabuki_demon/kabuki_demon_minion.png'
 
 
 
@@ -97,6 +99,7 @@ import axe_upright_white from '../assets/icons/items/weapons/axe_upright_white.p
 import axe_upright from '../assets/icons/items/weapons/axe_upright.png'
 import axe_white from '../assets/icons/items/weapons/axe_white.png'
 import axe from '../assets/icons/items/weapons/axe.png'
+import longbow from '../assets/icons/items/weapons/longbow.png'
 import flail_upright_white from '../assets/icons/items/weapons/flail_upright_white.png'
 import flail_upright from '../assets/icons/items/weapons/flail_upright.png'
 import flail_white from '../assets/icons/items/weapons/flail_white.png'
@@ -198,12 +201,43 @@ import gorgon from '../assets/icons/monsters/mj_icons/gorgon.png'
 import gorgon_portrait from '../assets/portraits/monsters/gorgon.png'
 import goat_demon_portrait from '../assets/portraits/monsters/goat_demon.png'
 
+import witch from '../assets/icons/monsters/mj_icons/witch.png';
+import witch_p1_1 from '../assets/portraits/monsters/variations/witch/type1/witch1.png';
+import witch_p1_2 from '../assets/portraits/monsters/variations/witch/type1/witch2.png';
+import witch_p1_3 from '../assets/portraits/monsters/variations/witch/type1/witch3.png';
+import witch_p1_4 from '../assets/portraits/monsters/variations/witch/type1/witch4.png';
+import witch_p1_5 from '../assets/portraits/monsters/variations/witch/type1/witch5.png';
+import witch_p1_6 from '../assets/portraits/monsters/variations/witch/type1/witch6.png';
+import witch_p1_7 from '../assets/portraits/monsters/variations/witch/type1/witch7.png';
+import witch_p1_8 from '../assets/portraits/monsters/variations/witch/type1/witch8.png';
+
+import witch_p2_1 from '../assets/portraits/monsters/variations/witch/type2/witch1.png';
+import witch_p2_2 from '../assets/portraits/monsters/variations/witch/type2/witch2.png';
+import witch_p2_3 from '../assets/portraits/monsters/variations/witch/type2/witch3.png';
+import witch_p2_4 from '../assets/portraits/monsters/variations/witch/type2/witch4.png';
+import witch_p2_5 from '../assets/portraits/monsters/variations/witch/type2/witch5.png';
+import witch_p2_6 from '../assets/portraits/monsters/variations/witch/type2/witch6.png';
+import witch_p2_7 from '../assets/portraits/monsters/variations/witch/type2/witch7.png';
+import witch_p2_8 from '../assets/portraits/monsters/variations/witch/type2/witch8.png';
+import witch_p2_9 from '../assets/portraits/monsters/variations/witch/type2/witch9.png';
+
+import witch_p3_1 from '../assets/portraits/monsters/variations/witch/type3/witch1.png';
+import witch_p3_2 from '../assets/portraits/monsters/variations/witch/type3/witch2.png';
+import witch_p3_3 from '../assets/portraits/monsters/variations/witch/type3/witch3.png';
+import witch_p3_4 from '../assets/portraits/monsters/variations/witch/type3/witch4.png';
+import witch_p3_5 from '../assets/portraits/monsters/variations/witch/type3/witch5.png';
+import witch_p3_6 from '../assets/portraits/monsters/variations/witch/type3/witch6.png';
+
+import beholder_portrait from '../assets/portraits/monsters/beholder.png'
+import beholder_minion_portrait from '../assets/portraits/monsters/beholder_minion.png'
 
 export {
     monster,
     avatar,
     avatar_white,
     beholder,
+    beholder_portrait,
+    beholder_minion_portrait,
     black_banshee,
     black_djinn,
     black_gorgon,
@@ -283,6 +317,7 @@ export {
     axe_upright,
     axe_white,
     axe_upright_white,
+    longbow,
     flail,
     flail_upright,
     flail_upright_white,
@@ -371,5 +406,19 @@ export {
     goat_demon,
     goat_demon_portrait,
     gorgon,
-    gorgon_portrait
+    gorgon_portrait,
+
+    witch,
+    witch_p1_1,
+    witch_p1_2,
+    witch_p1_3,
+    witch_p1_4,
+    witch_p1_5,
+    witch_p1_6,
+    witch_p1_7,
+    witch_p1_8,
+
+    kabuki_demon_portrait,
+    kabuki_demon_minion_portrait,
+
 };
