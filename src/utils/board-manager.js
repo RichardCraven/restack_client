@@ -368,7 +368,6 @@ export function BoardManager(){
                 tile.contains = 'minor_gate_open'
                 tile.image = 'minor_gate_open'
                 this.activeInteractionTile = tile;
-                console.log('okay key is: ', key);
                 this.broadcastUseConsumableFromInventory(key)
                 this.refreshTiles();
 
@@ -442,8 +441,30 @@ export function BoardManager(){
 
         if(leftTile && highlightColor(leftTile)) leftTile.color = highlightColor(leftTile)
         if(rightTile && highlightColor(rightTile)) rightTile.color = highlightColor(rightTile);
-        if(topRow) topRow.forEach(t=>{ if(highlightColor(t))t.color = highlightColor(t)})
-        if(bottomRow) bottomRow.forEach(t=>{if(highlightColor(t)) t.color = highlightColor(t)})
+        if(topRow) topRow.forEach((t, i)=>{ 
+            if(i === 0){
+                // console.log('top left', t)
+                if(topRow[1].contains === 'void' && leftTile.contains === 'void') return
+            }
+            if(i === 2){
+                // console.log('top right', t)
+                if(topRow[1].contains === 'void' && rightTile.contains === 'void') return
+            }
+            if(highlightColor(t))t.color = highlightColor(t)
+        })
+        if(bottomRow) bottomRow.forEach((t, i)=>{if(highlightColor(t)){
+            if(i === 0){
+                // console.log('bot left', t)
+                if(bottomRow[1].contains === 'void' && leftTile.contains === 'void') return
+            }
+            if(i === 2){
+                // console.log('bot right', t)
+                if(bottomRow[1].contains === 'void' && rightTile.contains === 'void') return
+            }
+            t.color = highlightColor(t)}
+        })
+
+
     }
     this.move = (destinationCoords, direction) => {
         // this.messaging(null)
@@ -613,6 +634,7 @@ export function BoardManager(){
                 e.id === destinationTile.id + 14 && this.tiles[destinationTile.id + 15].contains !== 'void' && this.tiles[destinationTile.id - 1].contains !== 'void' ||
                 // eslint-disable-next-line
                 e.id === destinationTile.id + 16 && this.tiles[destinationTile.id + 15].contains !== 'void' && this.tiles[destinationTile.id + 1].contains !== 'void'){
+                console.log('tile: ', e);    
                e.color = this.currentBoard.tiles[e.id].color
                e.image = e.contains;
             }

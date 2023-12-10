@@ -641,6 +641,7 @@ export function CombatManager(){
         // if(caller.isMonster) console.log('monster target in range check, target: ', target, 'and monster is ', caller)
         if(!target){
             console.log('no target for ', caller.name, caller);
+            console.log('combatants: ', this.combatants);
             debugger
             return
         }

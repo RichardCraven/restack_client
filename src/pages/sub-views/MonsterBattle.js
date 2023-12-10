@@ -443,7 +443,7 @@ class MonsterBattle extends React.Component {
                             <div className="message-container">
                                 {this.state.summaryMessage}
                             </div>
-                            {this.state.itemsGained && 
+                            {this.state.itemsGained && this.state.itemsGained.length > 0 &&
                             <div className="experience-container">
                                 You found a {this.state.itemsGained.map(e=> e.replaceAll('_',' ')).join(', ')}
                             </div>} 

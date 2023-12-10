@@ -73,7 +73,7 @@ class DungeonPage extends React.Component {
             console.log('meta: ', meta);
             this.props.inventoryManager.initializeItems(meta.inventory);
 
-            this.props.inventoryManager.addItem(this.props.inventoryManager.allItems['minor_key'])
+            // this.props.inventoryManager.addItem(this.props.inventoryManager.allItems['minor_key'])
 
             this.props.crewManager.initializeCrew(meta.crew);
             this.loadExistingDungeon(meta.dungeonId)
@@ -554,7 +554,7 @@ class DungeonPage extends React.Component {
         })
         selectedDungeon = dungeons.find(e=>e.name === 'Primari');
         let newDungeonPayload = {
-            name: `${selectedDungeon.name}_${userId}`,
+            name: `${selectedDungeon.name}_${userName}_${userId.slice(userId.length-4)}`,
             levels: selectedDungeon.levels,
             pocket_planes: selectedDungeon.pocket_planes,
             descriptions: `${userName}'s dungeon`,
@@ -600,10 +600,17 @@ class DungeonPage extends React.Component {
             this.props.boardManager.setCurrentLevel(level);
             this.props.boardManager.setCurrentOrientation(orientation);
             this.props.boardManager.initializeTilesFromMap(miniboardIndex, spawnTileIndex);
+            const levelTracker = this.state.levelTracker;
+            const minimap = this.state.minimap;
+            minimap[miniboardIndex].active = true;
+            let foundLevel = levelTracker.find(e=>e.id === levelId)
+            foundLevel.active = true;
             this.setState(()=>{
                 return {
                     overlayTiles: this.props.boardManager.overlayTiles,
                     tiles: this.props.boardManager.tiles,
+                    minimap,
+                    levelTracker
                 }
             })
         } else {
@@ -654,6 +661,7 @@ class DungeonPage extends React.Component {
         this.setState({rightPanelExpanded: newVal})
         const meta = getMeta()
         meta.rightExpanded = newVal
+        console.log('right sight expanded: ', newVal);
         storeMeta(meta)
         await updateUserRequest(getUserId(), meta)
     }
