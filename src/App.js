@@ -83,6 +83,7 @@ const refreshAllUsers = () => {
 }
 
 const saveUserData = async () => {
+  console.log('SAVING');
   if(props.boardManager.boardIndex === null) return
   if(!props.boardManager.dungeon.id) return
   const meta = getMeta()

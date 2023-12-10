@@ -120,6 +120,9 @@ export function BoardManager(){
     this.establishLevelChangeCallback = (callback) => {
         this.broadcastLevelChange = callback;
     }
+    this.establishUseConsumableFromInventoryCallback = (callback) => {
+        this.broadcastUseConsumableFromInventory = callback;
+    }
     this.playerTile = {
         location: [0,0],
         boardIndex: null,
@@ -354,17 +357,30 @@ export function BoardManager(){
         if(!this.activeInteractionTile) this.activeInteractionTile = tile;
         if(this.pending && this.pending.type === 'minor_gate'){
             this.messaging('This gate requires a minor key');
-            let hasKey = false
+            let hasKey = false, key;
             console.log('inventory: ', this.getCurrentInventory(), this.getCurrentInventory().find(e=>e.name==='minor key'));
             if(this.getCurrentInventory().find(e=>e.name==='minor key')){
                 hasKey = true;
+                key = this.getCurrentInventory().find(e=>e.name==='minor key');
             }
             if(hasKey){
                 this.messaging('Minor gate rattles open')
                 tile.contains = 'minor_gate_open'
                 tile.image = 'minor_gate_open'
                 this.activeInteractionTile = tile;
-                this.refreshTiles()
+                console.log('okay key is: ', key);
+                this.broadcastUseConsumableFromInventory(key)
+                this.refreshTiles();
+
+                console.log('tile: ', tile);
+                this.tiles[tile.id] = tile;
+                console.log('now tiles are ', this.tiles);
+                if(this.currentOrientation === 'F'){
+                    this.dungeon.levels.find(e=>e.id === this.currentLevel.id).front.miniboards.find(b=>b.id === this.currentBoard.id).tiles[tile.id].contains = tile.contains;
+                } else {
+                    this.dungeon.levels.find(e=>e.id === this.currentLevel.id).back.miniboards.find(b=>b.id === this.currentBoard.id).tiles[tile.id].contains = tile.contains;
+                }
+                this.updateDungeon(this.dungeon);
             } else {
                 tile.color = 'lightyellow';
             }

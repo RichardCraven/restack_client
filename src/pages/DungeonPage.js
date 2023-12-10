@@ -72,6 +72,9 @@ class DungeonPage extends React.Component {
         } else {
             console.log('meta: ', meta);
             this.props.inventoryManager.initializeItems(meta.inventory);
+
+            this.props.inventoryManager.addItem(this.props.inventoryManager.allItems['minor_key'])
+
             this.props.crewManager.initializeCrew(meta.crew);
             this.loadExistingDungeon(meta.dungeonId)
         }
@@ -135,6 +138,21 @@ class DungeonPage extends React.Component {
         this.displayMessage(message);
         this.props.inventoryManager.addItem(this.props.inventoryManager.allItems[treasure.item])
         this.props.inventoryManager.addCurrency(treasure.currency);
+    }
+    useConsumableFromInventory = (item) => {
+        console.log('consumable used: ', item);
+        console.log('inventory; ', this.props.inventoryManager.inventory);
+        let foundItem = this.props.inventoryManager.inventory.find(e=> e.name === item.name),
+        foundIndex = this.props.inventoryManager.inventory.findIndex(e=> e.name === item.name);
+        console.log('inventory equivalent: ', foundItem, 'foundIndex: ', foundIndex);
+        console.log('found item index: ', this.props.inventoryManager.inventory.findIndex(e=> e.name === item.name));
+        foundItem.animation = 'consumed';
+        setTimeout(()=>{
+            console.log('remove item index ', foundIndex);
+            this.props.inventoryManager.removeItemByIndex(foundIndex)
+            this.forceUpdate();
+            this.props.saveUserData();
+        }, 1000)
     }
     updateDungeon = async (dungeon) => {
         await updateDungeonRequest(dungeon.id, dungeon);
@@ -209,6 +227,7 @@ class DungeonPage extends React.Component {
 
         this.props.boardManager.establishBoardTransitionCallback(this.boardTransition)
         this.props.boardManager.establishLevelChangeCallback(this.handleLevelChange)
+        this.props.boardManager.establishUseConsumableFromInventoryCallback(this.useConsumableFromInventory)
 
         window.addEventListener('beforeunload', this.componentCleanup)
     }
@@ -224,10 +243,8 @@ class DungeonPage extends React.Component {
     }
     handleLevelChange = (newLevelId) => {
         const levelTracker = this.state.levelTracker;
-        // level = levelTracker.find()
-        console.log('in handle level change! new level: ', newLevelId, 'existing levels: ', levelTracker);
         levelTracker.forEach(e=>e.active = false)
-        let level = levelTracker.find(e=>e.id === newLevelId);
+        const level = levelTracker.find(e=>e.id === newLevelId);
         if(!level){
             console.log('new level doesnt exist in dungeon page, initialize better!');
             debugger
@@ -239,11 +256,9 @@ class DungeonPage extends React.Component {
 
     }
     boardTransition = (direction) => {
-        console.log('transition direction: ', direction);
         const minimap = this.state.minimap;
         const currentIndex = minimap.findIndex(e=>e.active === true);
         let newIndex;
-        console.log('current index: ', currentIndex);
         minimap.forEach(e=>e.active = false)
         switch(direction){
             case 'left': 
@@ -625,10 +640,6 @@ class DungeonPage extends React.Component {
                 levelTracker: levels
             }
         })
-        setTimeout(()=>{
-
-            console.log('ok now minimap: ', this.state.minimap);
-        }, 1000)
     }
     toggleLeftSidePanel = async () => {
         const newVal = !this.state.leftPanelExpanded;
@@ -835,7 +846,7 @@ class DungeonPage extends React.Component {
                     <div className="inventory-tile-container">
                     {   this.props.inventoryManager && this.props.inventoryManager.inventory &&
                         this.props.inventoryManager.inventory.map((item, i) => {
-                            return <div className="sub-container" key={i}>
+                            return <div className={`sub-container ${item.animation === 'consumed' ? 'consumed' : ''}`} key={i}>
                                         { this.state.inventoryHoverMatrix[i] && 
                                             <div className="hover-message-container">
                                                 <div className="hover-message">{this.state.inventoryHoverMatrix[i].replaceAll('_', ' ')}</div>

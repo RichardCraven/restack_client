@@ -114,6 +114,10 @@
                 .sub-container{
                     position: relative;
                     margin-bottom: 8px;
+                    transition: filter 1s;
+                    &.consumed{
+                        filter: blur(20px);
+                    }
                     .hover-message-container{
                         position: absolute;
                         top: -11px;

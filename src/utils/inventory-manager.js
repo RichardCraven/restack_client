@@ -75,7 +75,8 @@ export function InventoryManager(){
             icon: 'potion',
             type: 'consumable',
             name: 'minor health potion',
-            equippedBy: null
+            equippedBy: null,
+            animation: null
         },
         major_health_potion: {
             effect: 'health gain',
@@ -83,7 +84,8 @@ export function InventoryManager(){
             icon: 'potion',
             type: 'consumable',
             name: 'major health potion',
-            equippedBy: null
+            equippedBy: null,
+            animation: null
         },
         grand_health_potion: {
             effect: 'health gain',
@@ -91,25 +93,29 @@ export function InventoryManager(){
             icon: 'potion',
             type: 'consumable',
             name: 'grand health potion',
-            equippedBy: null
+            equippedBy: null,
+            animation: null
         },
         minor_key: {
             effect: 'key',
             type: 'key',
             icon: 'minor_key',
-            name: 'minor key'
+            name: 'minor key',
+            animation: null
         },
         major_key: {
             effect: 'key',
             type: 'key',
             icon: 'major_key',
-            name: 'major key'
+            name: 'major key',
+            animation: null
         },
         ornate_key: {
             effect: 'key',
             type: 'key',
             icon: 'ornate_key',
-            name: 'ornate key'
+            name: 'ornate key',
+            animation: null
         },
     }
     this.weapons = {
@@ -120,7 +126,8 @@ export function InventoryManager(){
             subtype: 'cutting',
             name: 'axe',
             range: 'close',
-            equippedBy: null
+            equippedBy: null,
+            animation: null
         },
         flail: {
             damage: 3,
@@ -129,7 +136,8 @@ export function InventoryManager(){
             subtype: 'crushing',
             name: 'flail',
             range: 'close',
-            equippedBy: null
+            equippedBy: null,
+            animation: null
         },
         spear: {
             damage: 3,
@@ -138,7 +146,8 @@ export function InventoryManager(){
             subtype: 'cutting',
             name: 'spear',
             range: 'medium',
-            equippedBy: null
+            equippedBy: null,
+            animation: null
         },
         sword: {
             damage: 3,
@@ -147,7 +156,8 @@ export function InventoryManager(){
             subtype: 'cutting',
             name: 'sword',
             range: 'close',
-            equippedBy: null
+            equippedBy: null,
+            animation: null
         },
         scimitar: {
             damage: 3,
@@ -156,7 +166,8 @@ export function InventoryManager(){
             subtype: 'cutting',
             name: 'scimitar',
             range: 'close',
-            equippedBy: null
+            equippedBy: null,
+            animation: null
         },
         scepter: {
             damage: 3,
@@ -165,7 +176,8 @@ export function InventoryManager(){
             subtype: 'crushing',
             name: 'scepter',
             range: 'close',
-            equippedBy: null
+            equippedBy: null,
+            animation: null
         },
         longbow: {
             damage: 3,
@@ -174,7 +186,8 @@ export function InventoryManager(){
             subtype: 'cutting',
             name: 'longbow',
             range: 'far',
-            equippedBy: null
+            equippedBy: null,
+            animation: null
         }
     }
     
@@ -185,7 +198,8 @@ export function InventoryManager(){
             icon: 'basic_helm',
             name: 'basic helm',
             equippedBy: null,
-            subtype: 'helm'
+            subtype: 'helm',
+            animation: null
         },
         cretan_helm: {
             armor: 4,
@@ -193,7 +207,8 @@ export function InventoryManager(){
             icon: 'cretan_helm',
             name: 'cretan helm',
             equippedBy: null,
-            subtype: 'helm'
+            subtype: 'helm',
+            animation: null
         },
         knight_helm: {
             armor: 5,
@@ -201,7 +216,8 @@ export function InventoryManager(){
             icon: 'knight_helm',
             name: 'knight helm',
             equippedBy: null,
-            subtype: 'helm'
+            subtype: 'helm',
+            animation: null
         },
         legionaire_helm: {
             armor: 6,
@@ -209,7 +225,8 @@ export function InventoryManager(){
             icon: 'legionaire_helm',
             name: 'legionaire helm',
             equippedBy: null,
-            subtype: 'helm'
+            subtype: 'helm',
+            animation: null
         },
         spartan_helm: {
             armor: 7,
@@ -217,6 +234,7 @@ export function InventoryManager(){
             icon: 'spartan_helm',
             name: 'spartan helm',
             equippedBy: null,
+            animation: null,
             subtype: 'helm'
         },
         // shield
@@ -227,6 +245,7 @@ export function InventoryManager(){
             icon: 'basic_shield',
             name: 'basic shield',
             equippedBy: null,
+            animation: null
         },
         seeing_shield: {
             armor: 6,
@@ -235,6 +254,7 @@ export function InventoryManager(){
             icon: 'seeing_shield',
             name: 'seeing shield',
             equippedBy: null,
+            animation: null
         }
     }
     
@@ -245,7 +265,8 @@ export function InventoryManager(){
             name: 'glindas wand',
             equippedBy: null,
             subtype: 'wand',
-            power: 4
+            power: 4,
+            animation: null
         },
         volkas_wand: {
             type: 'magical',
@@ -253,7 +274,8 @@ export function InventoryManager(){
             name: 'volkas wand',
             equippedBy: null,
             subtype: 'wand',
-            power: 6
+            power: 6,
+            animation: null
         },
         maerlyns_rod: {
             type: 'magical',
@@ -261,7 +283,8 @@ export function InventoryManager(){
             name: 'maerlyns rod',
             equippedBy: null,
             subtype: 'wand',
-            power: 10
+            power: 10,
+            animation: null
         },
         //charms
         beetle_charm: {
@@ -270,7 +293,8 @@ export function InventoryManager(){
             name: 'beetle charm',
             equippedBy: null,
             subtype: 'charm',
-            power: 2
+            power: 2,
+            animation: null
         },
         evilai_charm: {
             type: 'magical',
@@ -278,7 +302,8 @@ export function InventoryManager(){
             name: 'evilai charm',
             equippedBy: null,
             subtype: 'charm',
-            power: 4
+            power: 4,
+            animation: null
         },
         nukta_charm: {
             type: 'magical',
@@ -286,7 +311,8 @@ export function InventoryManager(){
             name: 'nukta charm',
             equippedBy: null,
             subtype: 'charm',
-            power: 6
+            power: 6,
+            animation: null
         },
         lundi_charm: {
             type: 'magical',
@@ -294,7 +320,8 @@ export function InventoryManager(){
             name: 'lundi charm',
             equippedBy: null,
             subtype: 'charm',
-            power: 8
+            power: 8,
+            animation: null
         },
         hamsa_charm: {
             type: 'magical',
@@ -302,7 +329,8 @@ export function InventoryManager(){
             name: 'hamsa charm',
             equippedBy: null,
             subtype: 'charm',
-            power: 9
+            power: 9,
+            animation: null
         },
         scarab_charm: {
             type: 'magical',
@@ -310,7 +338,8 @@ export function InventoryManager(){
             name: 'scarab charm',
             equippedBy: null,
             subtype: 'charm',
-            power: 10
+            power: 10,
+            animation: null
         },
         demonskull_charm: {
             type: 'magical',
@@ -318,7 +347,8 @@ export function InventoryManager(){
             name: 'demonskull charm',
             equippedBy: null,
             subtype: 'charm',
-            power: 12
+            power: 12,
+            animation: null
         },
         //amulets
         lundi_amulet: {
@@ -327,7 +357,8 @@ export function InventoryManager(){
             name: 'lundi amulet',
             equippedBy: null,
             subtype: 'amulet',
-            power: 3
+            power: 3,
+            animation: null
         },
         sayan_amulet: {
             type: 'magical',
@@ -335,7 +366,8 @@ export function InventoryManager(){
             name: 'sayan amulet',
             equippedBy: null,
             subtype: 'amulet',
-            power: 5
+            power: 5,
+            animation: null
         },
         nukta_amulet: {
             type: 'magical',
@@ -343,7 +375,8 @@ export function InventoryManager(){
             name: 'nukta amulet',
             equippedBy: null,
             subtype: 'amulet',
-            power: 7
+            power: 7,
+            animation: null
         },
         evilai_amulet: {
             type: 'magical',
@@ -351,7 +384,8 @@ export function InventoryManager(){
             name: 'evilai amulet',
             equippedBy: null,
             subtype: 'amulet',
-            power: 9
+            power: 9,
+            animation: null
         }
     }
 
@@ -361,42 +395,48 @@ export function InventoryManager(){
             icon: 'zul_mask',
             type: 'ancillary',
             name: 'zul mask',
-            equippedBy: null
+            equippedBy: null,
+            animation: null
         },
         bundu_mask: {
             power: 2,
             icon: 'bundu_mask',
             type: 'ancillary',
             name: 'bundu mask',
-            equippedBy: null
+            equippedBy: null,
+            animation: null
         },
         court_mask: {
             power: 1,
             icon: 'court_mask',
             type: 'ancillary',
             name: 'court mask',
-            equippedBy: null
+            equippedBy: null,
+            animation: null
         },
         solomon_mask: {
             power: 3,
             icon: 'solomon_mask',
             type: 'ancillary',
             name: 'solomon mask',
-            equippedBy: null
+            equippedBy: null,
+            animation: null
         },
         lundi_mask: {
             power: 4,
             icon: 'lundi_mask',
             type: 'ancillary',
             name: 'lundi mask',
-            equippedBy: null
+            equippedBy: null,
+            animation: null
         },
         mardi_mask: {
             power: 1,
             icon: 'mardi_mask',
             type: 'ancillary',
             name: 'mardi mask',
-            equippedBy: null
+            equippedBy: null,
+            animation: null
         }
     }
     this.misc = {
@@ -404,31 +444,36 @@ export function InventoryManager(){
             icon: 'ornate_key',
             type: 'key',
             name: 'ornate key',
-            equippedBy: null
+            equippedBy: null,
+            animation: null
         },
         minor_key: {
             icon: 'minor_key',
             type: 'key',
             name: 'minor key',
-            equippedBy: null
+            equippedBy: null,
+            animation: null
         },
         major_key: {
             icon: 'major_key',
             type: 'key',
             name: 'major key',
-            equippedBy: null
+            equippedBy: null,
+            animation: null
         },
         crown: {
             icon: 'crown',
             type: 'crown',
             name: 'crown',
-            equippedBy: null
+            equippedBy: null,
+            animation: null
         },
         lantern: {
             icon: 'lantern',
             type: 'lantern',
             name: 'lantern',
-            equippedBy: null
+            equippedBy: null,
+            animation: null
         }
     }
     this.allItems = {};
@@ -489,6 +534,7 @@ export function InventoryManager(){
     }
     this.removeItemByIndex = (index) => {
         this.inventory.splice(index, 1)
+        console.log('ok now inventory is: ', this.inventory);
     }
     this.addCurrency = (data) => {
         switch(data.type){
