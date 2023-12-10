@@ -117,6 +117,9 @@ export function BoardManager(){
     this.establishSetMonsterCallback = (callback) => {
         this.setMonster = callback;
     }
+    this.establishLevelChangeCallback = (callback) => {
+        this.broadcastLevelChange = callback;
+    }
     this.playerTile = {
         location: [0,0],
         boardIndex: null,
@@ -395,6 +398,7 @@ export function BoardManager(){
         this.currentLevel = incomingLevel;
         this.tiles = [];
         this.initializeTilesFromMap(this.playerTile.boardIndex, this.getIndexFromCoordinates([this.playerTile.location[0], this.playerTile.location[1]]))
+        this.broadcastLevelChange(this.currentLevel.id)
     }
     this.handlePassingThroughWayDown = () => {
         const incomingLevel = this.dungeon.levels.find(l => l.id === this.currentLevel.id-1)
@@ -405,6 +409,7 @@ export function BoardManager(){
         this.currentLevel = incomingLevel;
         this.tiles = [];
         this.initializeTilesFromMap(this.playerTile.boardIndex, this.getIndexFromCoordinates([this.playerTile.location[0], this.playerTile.location[1]]))
+        this.broadcastLevelChange(this.currentLevel.id)
     }
     this.checkAdjacency = () => {
         const highlightColor = (tile) => {

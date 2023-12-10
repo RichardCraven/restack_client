@@ -43,7 +43,14 @@ class DungeonPage extends React.Component {
             monster: null,
             crewSize: 0,
             paused: false,
-            minimap: []
+            minimap: [],
+            levelTracker: [
+                {id: 2, active: false},
+                {id: 1, active: false},
+                {id: 0, active: false},
+                {id: -1, active: false},
+                {id: -2, active: false},
+            ]
         }
     }
     
@@ -201,6 +208,7 @@ class DungeonPage extends React.Component {
         this.props.boardManager.establishGetCurrentInventoryCallback(this.getCurrentInventory)
 
         this.props.boardManager.establishBoardTransitionCallback(this.boardTransition)
+        this.props.boardManager.establishLevelChangeCallback(this.handleLevelChange)
 
         window.addEventListener('beforeunload', this.componentCleanup)
     }
@@ -213,6 +221,22 @@ class DungeonPage extends React.Component {
         window.removeEventListener('keydown', this.keyDownHandler)
         window.removeEventListener('resize', this.handleResize.bind(this));
         clearInterval(this.state.intervalId)
+    }
+    handleLevelChange = (newLevelId) => {
+        const levelTracker = this.state.levelTracker;
+        // level = levelTracker.find()
+        console.log('in handle level change! new level: ', newLevelId, 'existing levels: ', levelTracker);
+        levelTracker.forEach(e=>e.active = false)
+        let level = levelTracker.find(e=>e.id === newLevelId);
+        if(!level){
+            console.log('new level doesnt exist in dungeon page, initialize better!');
+            debugger
+        }
+        level.active = true;
+        this.setState({
+            levelTracker
+        })
+
     }
     boardTransition = (direction) => {
         console.log('transition direction: ', direction);
@@ -548,7 +572,7 @@ class DungeonPage extends React.Component {
                 debugger
             }
             
-
+            console.log('HANDLE MINIMAP FOR NEW DUNGEON');
             meta.location = {
                 boardIndex: spawnPoint.miniboardIndex,
                 tileIndex: spawnPoint.id,
@@ -585,14 +609,20 @@ class DungeonPage extends React.Component {
         console.log('meta.location.boardIndex: ', meta.location.boardIndex, 'meta.location.tileIndex', meta.location.tileIndex);
         this.props.boardManager.setCurrentOrientation(meta.location.orientation);
         this.props.boardManager.initializeTilesFromMap(meta.location.boardIndex, meta.location.tileIndex);
-        const minimap = this.state.minimap;
+        const minimap = this.state.minimap,
+        levels = this.state.levelTracker;
+        let level = levels.find(e => e.id === meta.location.levelId)
+        console.log('location meta: ', meta.location, 'found level', level);
+        levels.forEach(e=>e.active = false)
+        level.active = true;
         minimap[meta.location.boardIndex].active = true;
         this.setState(()=>{
             return {
                 spawn: meta.location.tileIndex,
                 tiles: this.props.boardManager.tiles,
                 overlayTiles: this.props.boardManager.overlayTiles,
-                minimap
+                minimap,
+                levelTracker: levels
             }
         })
         setTimeout(()=>{
@@ -780,6 +810,11 @@ class DungeonPage extends React.Component {
             </div>
             <div className={`right-side-panel ${this.state.rightPanelExpanded ? 'expanded' : ''}`}>
                 <div className="minimap-container">
+                    <div className="level-indicator">
+                        {this.state.levelTracker && this.state.levelTracker.map((e,i)=>{
+                            return <div key={i} className={`floor-level ${e.active ? 'active' : ''} `}></div>
+                        })}
+                    </div>
                     {this.state.minimap.map((e,i)=>{
                         return <div className={`minimap-tile ${this.state.minimap[i].active ? 'active' : ''}`} key={i}>
                             
