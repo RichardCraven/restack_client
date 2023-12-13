@@ -231,6 +231,9 @@ import witch_p3_6 from '../assets/portraits/monsters/variations/witch/type3/witc
 import beholder_portrait from '../assets/portraits/monsters/beholder.png'
 import beholder_minion_portrait from '../assets/portraits/monsters/beholder_minion.png'
 
+//combat images
+import bow_and_arrow from '../assets/icons/items/combat-icons/bow_arrow.png'
+
 export {
     monster,
     avatar,
@@ -421,4 +424,6 @@ export {
     kabuki_demon_portrait,
     kabuki_demon_minion_portrait,
 
+
+    bow_and_arrow
 };

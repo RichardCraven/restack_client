@@ -37,7 +37,7 @@ export function MonsterManager(){
         beholder: {
             type: 'beholder',
             image_names: ['beholder'],
-            monster_names: ['Nirnuceks', 'Adalak', 'Vemrindon'],
+            monster_names: ['Nirnuceks', 'Adalak', 'Vemrindon', 'Sardaresh'],
             stats: {
                 str: 10,
                 int: 10,
