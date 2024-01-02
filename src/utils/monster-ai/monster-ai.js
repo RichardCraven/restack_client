@@ -1,15 +1,16 @@
-import { Loryastes } from './profiles/Loryastes'
+import { Djinn } from './profiles/Djinn'
 import {Methods} from './methods/basic-methods';
-import {MovementMethods} from './methods/movement-methods';
+import {MonsterMovementMethods} from './methods/movement-methods';
 
-export function FighterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
+export function MonsterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
     this.MAX_DEPTH = MAX_DEPTH;
     this.MAX_LANES = MAX_LANES;
     this.INTERVAL_TIME = INTERVAL_TIME
 
+
     this.methods = {
         ...Methods,
-        ...MovementMethods
+        ...MonsterMovementMethods
     }
 
     //UTILS
@@ -269,14 +270,13 @@ export function FighterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
     const data = {
         methods: {
             ...Methods,
-            ...MovementMethods
+            ...MonsterMovementMethods
         },
         MAX_DEPTH: this.MAX_DEPTH,
         MAX_Lanes: this.MAX_LANES,
         INTERVAL_TIME: this.INTERVAL_TIME
     }
     this.roster = {
-        Loryastes: new Loryastes(data),
-        Greco
+        djinn: new Djinn(data)
     }
 }

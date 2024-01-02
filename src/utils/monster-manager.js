@@ -87,7 +87,7 @@ export function MonsterManager(){
         },
         kabuki_demon: {
             type: 'demon',
-            image_names: ['kabuki_demon'],
+            image_names: ['kabuki_demon_portrait'],
             monster_names: ['Ikiro', 'Jimbu'],
             stats: {
                 str: 13,
@@ -100,7 +100,7 @@ export function MonsterManager(){
                 baseDef: 3
             },
             level: 15,
-            portrait: images['kabuki_demon'],
+            portrait: images['kabuki_demon_portrait'],
             greetings: ['Assaaa'],
             deathCries: ['No! Impossible!'],
             specials: ['obliterate', 'flying', 'invisibility'],

@@ -72,13 +72,131 @@
             // border: 1px solid yellow;
         }
     }
-    .combat-grid{
+    .combat-grid, .animation-grid{
         display: flex;
         flex-wrap: wrap;
-        // width: 100%;
         height: fit-content;
         align-items: flex-start;
         justify-content: flex-start;
+    }
+    .animation-grid{
+        z-index: 1000;
+        position: absolute;
+        top: 0;
+        left: 0;
+
+        // pointer-events: none;
+        // ^ may need to be dynamic 
+
+
+        .animation-tile{
+            height: 100px;
+            width: 100px;
+            position: relative;
+            user-select: none;
+            
+            &.white-fade{
+                @-webkit-keyframes TileAnimationWhiteFade {
+                    0%{background-color:rgba(186, 182, 189, 0.416)}
+                    20%{background-color:rgba(209, 209, 209, 0.799)}
+                    60%{background-color:rgba(251, 251, 251, 0.936)}
+                    100%{background-color:transparent}
+                }
+                @-moz-keyframes TileAnimationWhiteFade {
+                    0%{background-color:rgba(186, 182, 189, 0.416)}
+                    20%{background-color:rgba(209, 209, 209, 0.799)}
+                    60%{background-color:rgba(251, 251, 251, 0.936)}
+                    100%{background-color:transparent}
+                }
+                @keyframes TileAnimationWhiteFade { 
+                    0%{background-color:rgba(186, 182, 189, 0.416)}
+                    20%{background-color:rgba(209, 209, 209, 0.799)}
+                    60%{background-color:rgba(251, 251, 251, 0.936)}
+                    100%{background-color:transparent}
+                }
+
+                -webkit-animation: TileAnimationWhiteFade 0.9s ease ;
+                -moz-animation: TileAnimationWhiteFade 0.9s ease ;
+                animation: TileAnimationWhiteFade 0.9s ease ;
+            }
+
+            &.red-fade{
+                @-webkit-keyframes TileAnimationRedFade {
+                    0%{background-color:rgba(128, 71, 71, 0.416)}
+                    20%{background-color:rgba(255, 0, 0, 0.663)}
+                    60%{background-color:rgba(208, 113, 113, 0.792)}
+                    100%{background-color:transparent}
+                }
+                @-moz-keyframes TileAnimationRedFade {
+                    0%{background-color:rgba(128, 71, 71, 0.416)}
+                    20%{background-color:rgba(255, 0, 0, 0.663)}
+                    60%{background-color:rgba(208, 113, 113, 0.792)}
+                    100%{background-color:transparent}
+                }
+                @keyframes TileAnimationRedFade { 
+                    0%{background-color:rgba(128, 71, 71, 0.416)}
+                    20%{background-color:rgba(255, 0, 0, 0.663)}
+                    60%{background-color:rgba(208, 113, 113, 0.792)}
+                    100%{background-color:transparent}
+                }
+
+                -webkit-animation: TileAnimationRedFade 0.9s ease ;
+                -moz-animation: TileAnimationRedFade 0.9s ease ;
+                animation: TileAnimationRedFade 0.9s ease ;
+            }
+
+            &.purple-fade{
+                @-webkit-keyframes TileAnimationPurpleFade {
+                    0%{background-color:rgba(103, 71, 128, 0.416)}
+                    20%{background-color:rgba(112, 36, 198, 0.799)}
+                    60%{background-color:rgba(87, 0, 150, 0.905)}
+                    100%{background-color:transparent}
+                }
+                @-moz-keyframes TileAnimationPurpleFade {
+                    0%{background-color:rgba(103, 71, 128, 0.416)}
+                    20%{background-color:rgba(112, 36, 198, 0.799)}
+                    60%{background-color:rgba(87, 0, 150, 0.905)}
+                    100%{background-color:transparent}
+                }
+                @keyframes TileAnimationPurpleFade { 
+                    0%{background-color:rgba(103, 71, 128, 0.416)}
+                    20%{background-color:rgba(112, 36, 198, 0.799)}
+                    60%{background-color:rgba(87, 0, 150, 0.905)}
+                    100%{background-color:transparent}
+                }
+
+                -webkit-animation: TileAnimationPurpleFade 0.9s ease ;
+                -moz-animation: TileAnimationPurpleFade 0.9s ease ;
+                animation: TileAnimationPurpleFade 0.9s ease ;
+            }
+
+            &.green-fade{
+                @-webkit-keyframes TileAnimationGreenFade {
+                    0%{background-color:rgba(169, 226, 160, 0.416)}
+                    20%{background-color:rgba(43, 142, 43, 0.753)}
+                    60%{background-color:rgba(26, 110, 0, 0.841)}
+                    100%{background-color:transparent}
+                }
+                @-moz-keyframes TileAnimationGreenFade {
+                    0%{background-color:rgba(169, 226, 160, 0.416)}
+                    20%{background-color:rgba(43, 142, 43, 0.753)}
+                    60%{background-color:rgba(26, 110, 0, 0.841)}
+                    100%{background-color:transparent}
+                }
+                @keyframes TileAnimationGreenFade { 
+                    0%{background-color:rgba(169, 226, 160, 0.416)}
+                    20%{background-color:rgba(43, 142, 43, 0.753)}
+                    60%{background-color:rgba(26, 110, 0, 0.841)}
+                    100%{background-color:transparent}
+                }
+
+                -webkit-animation: TileAnimationGreenFade 0.9s ease ;
+                -moz-animation: TileAnimationGreenFade 0.9s ease ;
+                animation: TileAnimationGreenFade 0.9s ease ;
+            }
+        }
+    }
+    .combat-grid{
         z-index: 1;
         .combat-tile{
             height: 100px;
@@ -311,8 +429,9 @@
                 .fighter-wrapper{
                     // border: 1px solid lightgrey;
                     width: 100%;
-                    height: 110px;
-                    height: fit-content;
+                    // height: 110px;
+                    // height: fit-content;
+                    height: 100%;
                     display: flex;
                     position: relative;
                     transition: 1s;
@@ -351,6 +470,46 @@
                                 top: 38%;
                                 left: 5px;
                             }
+                        }
+                    }
+                    .weapon-wrapper{
+                        position: absolute;
+                        z-index: 101;
+                        height: 90px;
+                        width: 90px;
+                        background-size: 100% 100%;
+                        filter: invert(100%);
+                        transition: all 0.25s;
+                        opacity: 0;
+                        @keyframes WeaponSwings { 
+                            0%{
+                                transform: rotate(-20deg);
+                                opacity: 1
+                            }
+                            50%{transform: rotate(40deg)}
+                            100%{transform: rotate(180deg)}
+                        }
+                        @keyframes WeaponShoots { 
+                            0%{
+                                transform: rotate(0deg);
+                                transform: scaleX(2);
+                                opacity: 1
+                            }
+                            50%{transform: scaleX(1.5)}
+                            100%{transform: scaleX(1)}
+                        }
+                        &.aiming{
+                            opacity: 1;
+                        }
+                        &.swinging{
+                            -webkit-animation: WeaponSwings 0.5s linear ;
+                            -moz-animation: WeaponSwings 0.5s linear ;
+                            animation: WeaponSwings 0.5s linear ;
+                        }
+                        &.shooting{
+                            -webkit-animation: WeaponShoots 0.5s linear ;
+                            -moz-animation: WeaponShoots 0.5s linear ;
+                            animation: WeaponShoots 0.5s linear ;
                         }
                     }
                     .action-bar-wrapper{
@@ -414,6 +573,46 @@
                     transition: 1s;
                     top: 0;
                     z-index: 100;
+                }
+                .weapon-wrapper{
+                    position: absolute;
+                    z-index: 101;
+                    height: 90px;
+                    width: 90px;
+                    background-size: 100% 100%;
+                    filter: invert(100%);
+                    transition: all 0.25s;
+                    opacity: 0;
+                    @keyframes WeaponSwings { 
+                        0%{
+                            transform: rotate(-20deg);
+                            opacity: 1
+                        }
+                        50%{transform: rotate(40deg)}
+                        100%{transform: rotate(180deg)}
+                    }
+                    @keyframes WeaponShoots { 
+                        0%{
+                            transform: rotate(0deg);
+                            transform: scaleX(2);
+                            opacity: 1
+                        }
+                        50%{transform: scaleX(1.5)}
+                        100%{transform: scaleX(1)}
+                    }
+                    &.aiming{
+                        opacity: 1;
+                    }
+                    &.swinging{
+                        -webkit-animation: WeaponSwings 0.5s linear ;
+                        -moz-animation: WeaponSwings 0.5s linear ;
+                        animation: WeaponSwings 0.5s linear ;
+                    }
+                    &.shooting{
+                        -webkit-animation: WeaponShoots 0.5s linear ;
+                        -moz-animation: WeaponShoots 0.5s linear ;
+                        animation: WeaponShoots 0.5s linear ;
+                    }
                 }
                 .indicators-wrapper{
                     opacity: 1;
@@ -582,6 +781,7 @@
     .hp-bar, .energy-bar, .tempo-bar{
         height: 4px;
         width: 100%;
+
     }
     // .monster-hp-bar{
     //     width: 200px;
@@ -621,7 +821,7 @@
     .red-fill{
         background-color: red;
         height: 100%;
-        // width: 80%;
+        transition: all 0.5s;
     }
     .yellow-fill{
         background-color: rgb(195, 195, 87);

@@ -9,11 +9,16 @@ import {
     updateUserRequest,
     addDungeonRequest
   } from '../utils/api-handler';
-  import {storeMeta, getMeta, getUserId, getUserName} from '../utils/session-handler';
-  import { cilCaretRight, cilCaretLeft} from '@coreui/icons';
-  import  CIcon  from '@coreui/icons-react'
-  import * as images from '../utils/images'
+import {storeMeta, getMeta, getUserId, getUserName} from '../utils/session-handler';
+import { cilCaretRight, cilCaretLeft} from '@coreui/icons';
+import  CIcon  from '@coreui/icons-react'
+import * as images from '../utils/images'
+// import AnimationGrid from '../components/animation-grid';
 
+const MAX_DEPTH = 8;
+const MAX_ROWS = 5;
+const TILE_SIZE = 100;
+const SHOW_TILE_BORDERS = true;
 
 class DungeonPage extends React.Component {
     constructor(props){
@@ -67,6 +72,8 @@ class DungeonPage extends React.Component {
         const meta = getMeta();
         // const meta = null
         this.props.boardManager.establishAvailableItems(this.props.inventoryManager.items);
+
+        
         if(!meta || !meta.dungeonId){
             this.loadNewDungeon();
         } else {
@@ -82,6 +89,7 @@ class DungeonPage extends React.Component {
         for(let i = 0; i<9; i++){
             minimap.push({active: false})
         }
+        console.log('this.props.crewManager.crew', this.props.crewManager.crew);
         console.log('minimap is now: ', minimap);
         this.setState((state, props) => {
             return {
@@ -118,6 +126,9 @@ class DungeonPage extends React.Component {
         }
         this.displayMessage(`You found ${data.amount} ${type}!`)
         this.props.inventoryManager.addCurrency(data)
+    }
+    establishAnimationCallback = () => {
+        this.props.animationManager.establishAnimationCallback(this.renderAnimation)
     }
     addItemToInventory = (tile) => {
         //this is coming from a board tile
@@ -700,6 +711,7 @@ class DungeonPage extends React.Component {
                                             id={i}
                                             tileSize={this.state.tileSize}
                                             image={member.image ? member.image : null}
+                                            imageOverride={member.portrait ? member.portrait : null}
                                             contains={member.type}
                                             data={member}
                                             color={member.color}
@@ -937,11 +949,28 @@ class DungeonPage extends React.Component {
                     })}
                 </div>
             </div>}
+            
+            
+            {/* /// ANIMATION GRID ///  */}
+            {/* { this.state.keysLocked && 
+                <AnimationGrid
+                        animationManager={this.props.animationManager}
+                        tileProps={{
+                            TILE_SIZE,
+                            MAX_DEPTH,
+                            SHOW_TILE_BORDERS,
+                            MAX_ROWS
+                        }}
+                ></AnimationGrid>
+            } */}
+
+
             { this.state.keysLocked && 
             <MonsterBattle
                 ref={this.monsterBattleComponentRef}
                 combatManager={this.props.combatManager}
                 inventoryManager={this.props.inventoryManager}
+                animationManager={this.props.animationManager}
                 crew={this.props.crewManager.crew}
                 monster={this.state.monster}
                 minions={this.state.minions}

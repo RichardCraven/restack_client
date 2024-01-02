@@ -10,7 +10,7 @@ export default function Tile(props) {
             cursor: 'pointer',
             height: props.tileSize+'px',
             width: props.tileSize+'px',
-            backgroundImage: "url(" + images[props.image] + ")",
+            backgroundImage: props.imageOverride ? "url(" + props.imageOverride + ")" : "url(" + images[props.image] + ")",
             backgroundColor: 
                 (props.hovered && props.type === 'board-tile') ? 
                 '#8080807a' : 

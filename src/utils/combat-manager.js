@@ -1,6 +1,7 @@
-// import * as images from '../utils/images'
+import * as images from '../utils/images'
 
 import { FighterAI } from './fighter-ai/fighter-ai'
+import { MonsterAI } from './monster-ai/monster-ai'
 import {MovementMethods} from './fighter-ai/methods/movement-methods'
 // import {MovementMethods} from './methods/movement-methods';
 
@@ -11,6 +12,7 @@ const DEBUG_STEPS = false;
 
 export function CombatManager(){
     this.fighterAI = new FighterAI(MAX_DEPTH, MAX_LANES, FIGHT_INTERVAL);
+    this.monsterAI = new MonsterAI(MAX_DEPTH, MAX_LANES, FIGHT_INTERVAL)
     this.movementMethods = MovementMethods;
     // const attackTypes = [
     //     'psionic', 'crushing', 'cutting', 'electricity', 'fire', 'blood_magic', 'ice', 'curse', 'sickness', 'arcane', 'buff',
@@ -18,6 +20,7 @@ export function CombatManager(){
     // ]
     this.combatPaused = false;
     this.pauseCombat = (val) => {
+        console.log('pause combt');
         this.combatPaused = val
         Object.values(this.combatants).forEach(e=>e.combatPaused = val)
     }
@@ -26,12 +29,14 @@ export function CombatManager(){
             name: 'claws',
             type: 'cutting',
             range: 'close',
+            icon: images['claws'],
             cooldown: 3,
             damage: 2
         },
         bite: {
             name: 'bite',
             type: 'cutting',
+            icon: images['bite'],
             range: 'close',
             cooldown: 3,
             damage: 2
@@ -39,6 +44,7 @@ export function CombatManager(){
         crush: {
             name: 'crush',
             type: 'crushing',
+            icon: images['crushing'],
             range: 'close',
             cooldown: 5,
             damage: 3
@@ -67,12 +73,14 @@ export function CombatManager(){
         fire_breath: {
             name: 'fire breath',
             type: 'fire',
+            icon: images['fire_breath'],
             range: 'medium',
             cooldown: 6,
             damage: 4
         },
         void_lance: {
             name: 'void lance',
+            icon: images['void_lance'],
             type: 'psionic',
             range: 'medium',
             cooldown: 6,
@@ -95,6 +103,7 @@ export function CombatManager(){
         lightning: {
             name: 'lightning',
             type: 'electricity',
+            icon: images['lightning'],
             range: 'far',
             cooldown: 6,
             damage: 5
@@ -103,7 +112,7 @@ export function CombatManager(){
             name: 'sword swing',
             type: 'cutting',
             range: 'close',
-            icon: 'sword',
+            icon: images['sword'],
             cooldown: 5,
             damage: 3
         },
@@ -111,7 +120,7 @@ export function CombatManager(){
             name: 'sword thrust',
             type: 'cutting',
             range: 'close',
-            icon: 'sword',
+            icon: images['sword'],
             cooldown: 4.5,
             damage: 2
         },
@@ -119,7 +128,7 @@ export function CombatManager(){
             name: 'dragon punch',
             type: 'crushing',
             range: 'close',
-            icon: 'scepter',
+            icon: images['scepter'],
             cooldown: 5,
             damage: 3
         },
@@ -127,7 +136,7 @@ export function CombatManager(){
             name: 'meditate',
             type: 'buff',
             range: 'self',
-            icon: 'basic_shield',
+            icon: images['basic_shield'],
             cooldown: 5.5,
             damage: 0
         },
@@ -135,7 +144,7 @@ export function CombatManager(){
             name: 'heal',
             type: 'buff',
             range: 'close',
-            icon: 'basic_shield',
+            icon: images['basic_shield'],
             cooldown: 5.5,
             damage: 0
         },
@@ -143,7 +152,7 @@ export function CombatManager(){
             name: 'fire arrow',
             type: 'fire',
             range: 'far',
-            icon: 'scepter',
+            icon: images['bow_and_arrow'],
             cooldown: 5,
             damage: 3
         },
@@ -151,7 +160,7 @@ export function CombatManager(){
             name: 'axe throw',
             type: 'cutting',
             range: 'medium',
-            icon: 'axe',
+            icon: images['axe'],
             cooldown: 5,
             damage: 2
         },
@@ -159,7 +168,7 @@ export function CombatManager(){
             name: 'axe swing',
             type: 'cutting',
             range: 'close',
-            icon: 'axe',
+            icon: images['axe'],
             cooldown: 3.5,
             damage: 3
         },
@@ -167,7 +176,7 @@ export function CombatManager(){
             name: 'spear throw',
             type: 'cutting',
             range: 'far',
-            icon: 'spear',
+            icon: images['spear'],
             cooldown: 3.2,
             damage: 4
         },
@@ -175,7 +184,7 @@ export function CombatManager(){
             name: 'flying lotus',
             type: 'crushing',
             range: 'medium',
-            icon: 'scepter',
+            icon: images['scepter'],
             cooldown: 4.5,
             damage: 4
         },
@@ -183,7 +192,7 @@ export function CombatManager(){
             name: 'shield bash',
             type: 'crushing',
             range: 'close',
-            icon: 'basic_shield',
+            icon: images['basic_shield'],
             cooldown: 4.5,
             damage: 2
         },
@@ -191,7 +200,7 @@ export function CombatManager(){
             name: 'cane strike',
             type: 'crushing',
             range: 'far',
-            icon: 'scepter',
+            icon: images['scepter'],
             cooldown: 3,
             damage: 2
         },
@@ -199,7 +208,7 @@ export function CombatManager(){
             name: 'dagger_stab',
             type: 'cutting',
             range: 'close',
-            icon: 'sword',
+            icon: images['sword'],
             cooldown: 2,
             damage: 2
         },
@@ -207,7 +216,7 @@ export function CombatManager(){
             name: 'snake_strike',
             type: 'cutting',
             range: 'medium',
-            icon: 'sword',
+            icon: images['sword'],
             cooldown: 2,
             damage: 5
         }
@@ -217,7 +226,7 @@ export function CombatManager(){
         deadeye_shot: {
             name: 'deadeye shot',
             type: 'special',
-            icon: 'evilai_charm',
+            icon: images['evilai_charm'],
             cooldown: 10,
             damage: 10,
             effect: ['damage_single_target'],
@@ -225,7 +234,7 @@ export function CombatManager(){
         berserker_rage: {
             name: 'berserker rage',
             type: 'special',
-            icon: 'demonskull_charm',
+            icon: images['demonskull_charm'],
             cooldown: 10,
             effect: ['buff_self', 'nerf_self'],
             duration: 18,
@@ -249,7 +258,7 @@ export function CombatManager(){
         healing_hymn: {
             name: 'healing hymn',
             type: 'special',
-            icon: 'lundi_charm',
+            icon: images['lundi_charm'],
             effect: ['buff_all_friendly'],
             buff: {
                 heal: {
@@ -261,7 +270,7 @@ export function CombatManager(){
         reveal_weakness: {
             name: 'reveal weakness',
             type: 'special',
-            icon: 'hamsa_charm',
+            icon: images['hamsa_charm'],
             cooldown: 12,
             effect: ['special'],
             special_instructions: 'reveal all monsters weaknesses'
@@ -269,7 +278,7 @@ export function CombatManager(){
         flying_lotus: {
             name: 'flying lotus',
             type: 'special',
-            icon: 'lundi_charm',
+            icon: images['lundi_charm'],
             cooldown: 11,
             damage: 15,
             effect: ['damage_single_target', 'special'],
@@ -278,7 +287,7 @@ export function CombatManager(){
         shield_wall: {
             name: 'shield wall',
             type: 'special',
-            icon: 'beetle_charm',
+            icon: images['beetle_charm'],
             cooldown: 11,
             effect: ['special'],
             special_instructions: 'shield all members for three hits'
@@ -286,7 +295,7 @@ export function CombatManager(){
         ice_blast: {
             name: 'ice blast',
             type: 'special',
-            icon: 'beetle_charm',
+            icon: images['beetle_charm'],
             cooldown: 11,
             damage: 8,
             effect: ['damage_multi_target', 'special'],
@@ -394,6 +403,7 @@ export function CombatManager(){
             wounded: false,
             active: false,
             pendingAttack: null,
+            aiming: false,
             attacking: false,
             healing: false,
             missed: false,
@@ -450,6 +460,10 @@ export function CombatManager(){
                     if(this.combatPaused || this.dead) return
                     count += increment;
 
+                    // if(this.type === 'djinn'){
+                    //     console.log('djinn couint ', count, 'turnscips ', this.turnSkips, 'tempo: ', this.tempo);
+                    // }
+
                     this.tempo = Math.floor((count/100)*100);
                     if(this.tempo < 1) return;
                     if(isCombatOver() || this.dead){
@@ -460,6 +474,7 @@ export function CombatManager(){
                         // console.log('yoooo WTFFFF');
                     }
                     if((this.tempo > 2 && this.tempo < 8) && this.targetId === null && !this.destinationSickness){
+                        this.aiming = false;
                         acquireTarget(this);
                         checkOverlap(this)
                     }
@@ -467,12 +482,20 @@ export function CombatManager(){
                         // console.log('monster is at move stage. hasMoved =', hasMoved);
                     }
                     if(this.tempo > 5 && this.tempo < 10 && this.targetId !== null && !hasMoved && !this.destinationSickness){
+                        this.aiming = false;
                         this.move();
                         hasMoved = true;
                     }
+
+                    if(count >= 90 && this.pendingAttack && targetInRange(this) && this.pendingAttack.cooldown_position > 80){
+                        this.aiming = true;
+                    }
                     if(count >= 100){
+                        if(this.type === 'djinn'){
+                            console.log('djinn at 100, CLEARING INTERVAL ');
+                        }
                         clearInterval(this.interval)
-                        // if(this.isMonster) console.log('monster at 100')
+                        // this.aiming = false;
 
                         if(this.name === "Loryastes"  && DEBUG_STEPS === true){
                             console.log('Loryastes [turn] count = 100.. sickness = ', this.destinationSickness);
@@ -523,20 +546,40 @@ export function CombatManager(){
                             }
                             let inRange = targetInRange(this);
                             // if(this.isMonster) console.log('monster at 100, inrange: ', inRange)
+                            if(this.type === 'djinn'){
+                                console.log('djinn turnSkips: ', this.turnSkips, 'inRange: ', inRange);
+                            }
                             if(inRange){
                                 // if(this.isMonster) console.log('monster at 100, attack')
                                 this.attack(target)
                             } else {
                                 // if(this.isMonster) console.log('monster at 100, else, turnskips at ', this.turnSkips)
-                                if((this.isMonster || this.isMinion) && this.turnSkips >= 2){
-                                    acquireTarget(this);
+                                
+                                if((this.isMonster || this.isMinion) && this.turnSkips >= 1){
+                                    if(this.type === 'djinn'){
+                                        console.log('in skip block, resetting for ', this);
+                                    }
+                                    acquireTarget(this, target);
                                     this.turnSkips = 0;
+                                    this.tempo = 1
+                                    this.turnCycle();
+                                } else {
+                                    if(this.type === 'djinn'){
+                                        console.log('djinn skipping ', this);
+                                    }
+                                    this.turnSkips++
+                                    this.skip();
+                                    if(this.type === 'djinn'){
+                                        console.log('djinn his.turnSkips: ', this.turnSkips, 'incrementeing turnskips');
+                                    }
                                 }
-                                this.skip();
-                                this.turnSkips++
+                                
                             }
                         } else if(this.pendingAttack && this.pendingAttack.cooldown_position !== 100){
                             if(this.name === "Loryastes"  && DEBUG_STEPS === true){
+                            }
+                            if(this.isMonster ||  this.isMinion){
+                                console.log(this, 'monster minion waiting for attck');
                             }
                             this.waitForAttack()
                         } else {
@@ -551,8 +594,15 @@ export function CombatManager(){
                 }, FIGHT_INTERVAL)
             },
             waitForAttack: function(){
+                this.aiming = true;
                 const waitInterval = setInterval(()=>{
+                    if(this.type === 'djinn'){
+                        console.log('in WAIT block');
+                    }
                     if(this.pendingAttack.cooldown_position === 100){
+                        if(this.type === 'djinn'){
+                            console.log('in ATTACK block');
+                        }
                         const target = getCombatant(this.targetId)
                         this.attack(target)
                         clearInterval(waitInterval)
@@ -640,9 +690,7 @@ export function CombatManager(){
         const target = this.combatants[caller.targetId];
         // if(caller.isMonster) console.log('monster target in range check, target: ', target, 'and monster is ', caller)
         if(!target){
-            console.log('no target for ', caller.name, caller);
-            console.log('combatants: ', this.combatants);
-            debugger
+            // debugger
             return
         }
         const differential = Math.abs(caller.depth - target.depth);
@@ -819,6 +867,11 @@ export function CombatManager(){
             return
         }
 
+        if(this.monsterAI.roster[caller.type]){
+            this.monsterAI.roster[caller.type].initiateAttack(caller, this.combatants, this.hitsTarget, this.missesTarget);
+            return
+        }
+
         let target = this.combatants[caller.targetId];
         let defenseFactor = target.stats.dex ** 2 + target.stats.baseDef;
         if(defenseFactor > 99) defenseFactor = 90;
@@ -887,11 +940,16 @@ export function CombatManager(){
     this.updateCoordinates = (caller) => {
         caller.coordinates = {x: caller.depth, y: caller.position}
     }
-    this.acquireTarget = (caller) => {
+    this.acquireTarget = (caller, targetToAvoid = null) => {
         if(this.combatPaused || caller.dead) return;
 
         if(this.fighterAI.roster[caller.name]){
             this.fighterAI.roster[caller.name].acquireTarget(caller, this.combatants)
+            return
+        }
+
+        if(this.monsterAI.roster[caller.type]){
+            this.monsterAI.roster[caller.type].acquireTarget(caller, this.combatants);
             return
         }
 
@@ -902,7 +960,12 @@ export function CombatManager(){
               liveCombatants = liveFighters.concat(liveMonsters).filter(e => e.id !== caller.id);
         let target;
         if(caller.isMonster || caller.isMinion){
-            let sortedTargets = liveFighters.sort((a,b)=>b.depth - a.depth);
+            let sortedTargets = targetToAvoid && liveFighters.length > 1 ? liveFighters.filter(e => e.id !== targetToAvoid.id).sort((a,b)=>b.depth - a.depth) : liveFighters.sort((a,b)=>b.depth - a.depth);
+            console.log('target to avoid: ', targetToAvoid);
+            if(caller.type === 'djinn'){
+                console.log('sorted Targets: ', sortedTargets)
+            }
+            
             // target = this.pickRandom(sortedTargets);
 
 
@@ -912,7 +975,7 @@ export function CombatManager(){
             target = sortedTargets.length > 1 ? sortedTargets[0] : sortedTargets[0];
             // teamates = liveMonsters.filter(e=> e.id !== caller.id);
         } else {
-            target = this.pickRandom(liveMonsters)
+            target = targetToAvoid ? this.pickRandom(liveMonsters.filter(e => e.id !== targetToAvoid.id).sort((a,b)=>b.depth - a.depth)) : this.pickRandom(liveMonsters) 
         }
         if(!target){
             this.combatOver = true;
@@ -947,7 +1010,7 @@ export function CombatManager(){
         laneDiff = this.getLaneDifferenceToTarget(caller, target)
         let newPosition, newDepth;
         const targetInRange = this.targetInRange(caller)
-        if(!targetInRange){
+        if(!targetInRange && caller.pendingAttack){
             let moveBackLots = caller.pendingAttack.range === 'far' && distanceToTarget < 2
             // if(caller.name === 'Tyra'){
             //     console.log('move back lots: ', moveBackLots);
@@ -1121,11 +1184,11 @@ export function CombatManager(){
         if(caller.energy > 100) caller.energy = 100;
         if(target.hp <= 0){
             target.hp = 0;
-            target.dead = true;
-            setTimeout(()=>{
-                this.targetKilled(target);
-                caller.targetId = null;
-            }, 750)
+            // target.dead = true;
+            caller.targetId = null;
+            this.targetKilled(target);
+            // setTimeout(()=>{
+            // }, 750)
         } else {
             if((target.isMinion || target.isMonster) && target.depth < MAX_DEPTH && caller.pendingAttack.range !== 'far') target.depth++
             if((!target.isMinion && !target.isMonster) && target.depth > 0 && caller.pendingAttack.range !== 'far') target.depth--
@@ -1170,6 +1233,7 @@ export function CombatManager(){
         const allMonstersDead = Object.values(this.combatants).filter(e=> (e.isMonster || e.isMinion) && !e.dead).length === 0;
         const allCrewDead = Object.values(this.combatants).filter(e=>!e.isMonster && !e.dead).length === 0;
         this.onFighterDeath(combatant.id);
+        console.log('target killed, GO check: allMonstersDead, ', allMonstersDead, 'allCrewDead', allCrewDead, 'all combatants: ', this.combatants);
         if(allMonstersDead || allCrewDead){
 
             let outcome = allMonstersDead ? 'crewWins' : 'monstersWin';

@@ -233,6 +233,14 @@ import beholder_minion_portrait from '../assets/portraits/monsters/beholder_mini
 
 //combat images
 import bow_and_arrow from '../assets/icons/items/combat-icons/bow_arrow.png'
+import claws from '../assets/icons/combat-icons/monster-attacks/claws.png'
+import bite from '../assets/icons/combat-icons/monster-attacks/bite.png'
+import crushing from '../assets/icons/combat-icons/monster-attacks/crushing.png'
+import tackle from '../assets/icons/combat-icons/monster-attacks/tackle.png'
+import void_lance from '../assets/icons/combat-icons/monster-attacks/void_lance.png'
+import fire_breath from '../assets/icons/combat-icons/monster-attacks/fire_breath.png'
+import lightning from '../assets/icons/combat-icons/monster-attacks/lightning.png'
+
 
 export {
     monster,
@@ -425,5 +433,11 @@ export {
     kabuki_demon_minion_portrait,
 
 
-    bow_and_arrow
+    bow_and_arrow,
+    claws,
+    bite,
+    crushing,
+    fire_breath,
+    void_lance,
+    lightning
 };
