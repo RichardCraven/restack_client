@@ -621,13 +621,13 @@ class MonsterBattle extends React.Component {
 
                                             </div>
                                         </div>
-                                        { this.state.battleData[fighter.id] && this.state.battleData[fighter.id].pendingAttack && <div className={`weapon-wrapper 
+                                        { this.state.battleData[fighter.id] && this.state.battleData[fighter.id].pendingAttack && !this.state.battleData[fighter.id].dead && <div className={`weapon-wrapper 
                                         ${this.state.battleData[fighter.id]?.aiming ? 'aiming' : ''}
                                         ${(this.state.battleData[fighter.id]?.attacking && this.state.battleData[fighter.id]?.pendingAttack.range === 'close') ? 'swinging' 
                                         : (this.state.battleData[fighter.id]?.attacking && this.state.battleData[fighter.id]?.pendingAttack.range === 'far' ? 'shooting' : 
                                         '')}`}
                                         style={{
-                                            left: `${this.state.battleData[fighter.id]?.depth * 100 + 45 + (SHOW_TILE_BORDERS ? this.state.battleData[fighter.id]?.depth * 2 : 0)}px`,
+                                            left: `${this.state.battleData[fighter.id]?.depth * 100 + 45 + (this.state.battleData[fighter.id]?.depth * 2)}px`,
                                             backgroundImage: "url(" + this.state.battleData[fighter.id].pendingAttack.icon + ")"
                                         }}
                                         ></div>}
@@ -666,19 +666,22 @@ class MonsterBattle extends React.Component {
                                     </div>
                                 </div>
                                 { this.state.battleData[this.props.monster.id] && this.state.battleData[this.props.monster.id].pendingAttack && <div className={`weapon-wrapper 
+                                ${this.state.battleData[this.props.monster.id]?.attackingReverse ? 'attackingReverse' : ''}
                                 ${this.state.battleData[this.props.monster.id]?.aiming ? 'aiming' : ''}
                                 ${(this.state.battleData[this.props.monster.id]?.attacking && this.state.battleData[this.props.monster.id]?.pendingAttack.range === 'close') ? 'swinging' 
                                 : (this.state.battleData[this.props.monster.id]?.attacking && this.state.battleData[this.props.monster.id]?.pendingAttack.range === 'far' ? 'shooting' : 
                                 '')}`}
                                 style={{
-                                    left: `${this.state.battleData[this.props.monster.id]?.depth * 100 - 45 + (SHOW_TILE_BORDERS ? this.state.battleData[this.props.monster.id]?.depth * 2 : 0)}px`,
+                                    left: this.state.battleData[this.props.monster.id]?.attackingReverse ? 
+                                    `${this.state.battleData[this.props.monster.id]?.depth * 100 + 65 + (this.state.battleData[this.props.monster.id]?.depth * 2)}px` :
+                                    `${this.state.battleData[this.props.monster.id]?.depth * 100 - 45 + (this.state.battleData[this.props.monster.id]?.depth * 2)}px`,
                                     backgroundImage: "url(" + this.state.battleData[this.props.monster.id].pendingAttack.icon + ")"
                                 }}
                                 ></div>}
                                 <div 
                                 className="portrait-wrapper"
                                 style={{
-                                    left: `${this.state.battleData[this.props.monster.id]?.depth * 100 + (SHOW_TILE_BORDERS ? this.state.battleData[this.props.monster.id]?.depth * 2: 0)}px`,
+                                    left: `${this.state.battleData[this.props.monster.id]?.depth * 100 + (this.state.battleData[this.props.monster.id]?.depth * 2)}px`,
                                     zIndex: `${this.state.battleData[this.props.monster.id]?.dead ? '0' : '100'}`
                                 }}
                                 >
@@ -732,7 +735,7 @@ class MonsterBattle extends React.Component {
                                 key={i} 
                                 className='lane-wrapper' 
                                 style={{ 
-                                    top: `${this.state.battleData[minion.id]?.position * TILE_SIZE + (SHOW_TILE_BORDERS ? this.state.battleData[minion.id]?.position * 2 : 0)}px`,
+                                    top: `${this.state.battleData[minion.id]?.position * TILE_SIZE + (this.state.battleData[minion.id]?.position * 2)}px`,
                                     height: `${TILE_SIZE}px`
                                 }}> 
                                     <div className="monster-wrapper">
@@ -745,12 +748,16 @@ class MonsterBattle extends React.Component {
                                                 {/* {minion.id} */}
                                             </div>
                                         </div>
-                                        { this.state.battleData[minion.id] && this.state.battleData[minion.id].pendingAttack && <div className={`weapon-wrapper ${this.getMonsterWeaponAnimation(this.state.battleData[minion.id])}
+                                        { this.state.battleData[minion.id] && this.state.battleData[minion.id].pendingAttack && <div className={`weapon-wrapper 
+                                        ${this.getMonsterWeaponAnimation(this.state.battleData[minion.id])}
+                                        ${this.state.battleData[minion.id]?.attackingReverse ? 'attackingReverse' : ''}
                                         ${this.state.battleData[minion.id]?.aiming ? 'aiming' : ''}
                                         
                                         `}
                                         style={{
-                                            left: `${this.state.battleData[minion.id]?.depth * 100 - 45 + (SHOW_TILE_BORDERS ? this.state.battleData[minion.id]?.depth * 2 : 0)}px`,
+                                            left:this.state.battleData[minion.id]?.attackingReverse ? 
+                                            `${this.state.battleData[minion.id]?.depth * 100 + 65 + (this.state.battleData[minion.id]?.depth * 2)}px` :
+                                            `${this.state.battleData[minion.id]?.depth * 100 - 45 + (this.state.battleData[minion.id]?.depth * 2)}px`,
                                             backgroundImage: "url(" + this.state.battleData[minion.id].pendingAttack.icon + ")"
                                         }}
                                         ></div>}

@@ -62,14 +62,12 @@ export function AnimationManager(){
 
 
     this.triggerTileAnimation = (tileId, color = null) => {
-        console.log('triggerTileAnimation color: ', color)
         this.tileOn(tileId, color)
         setTimeout(()=>{
             this.tileOff(tileId)
         }, 1000)
     }
     this.tileOn = (tileId, color = null) => {
-        console.log('tileOn color: ', color)
         let animationType = color ? `${color}-fade` : 'red-fade'
         // console.log('ANIMATION TYPE', animationType);
         const storedTile = this.tiles.find(e=>e.id === tileId)
@@ -101,10 +99,7 @@ export function AnimationManager(){
             e.y === storedTile.y - 1 ||
             e.y === storedTile.y + 1
             )) 
-        console.log('ANIMATION on tileId: ', tileId, this.tiles);
-        console.log('leftSide: ', leftSide);
-        console.log('rightSide: ', rightSide);
-        console.log('topAndBottom: ', topAndBottom);
+     
         const animate = () => {
             leftSide.forEach((e) => {
                 this.triggerTileAnimation(e.id, color)

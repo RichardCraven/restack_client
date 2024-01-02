@@ -412,6 +412,7 @@ export function CombatManager(){
             pendingAttack: null,
             aiming: false,
             attacking: false,
+            attackingReverse: false,
             healing: false,
             missed: false,
             attacks: formatAttacks(fighter.attacks),
@@ -440,6 +441,9 @@ export function CombatManager(){
                     broadcastDataUpdate(this);
                     return 
                 }
+                if(this.type === 'djinn'){
+                    console.log('djinn initiate attack, this.position === target.position: ', this.position === target.position);
+                }
                 if(this.position === target.position){
                     initiateAttack(this);
                     broadcastDataUpdate(this)
@@ -450,7 +454,7 @@ export function CombatManager(){
             },
             skip: function(){
                 this.active = false;
-                this.attacking = false;
+                this.attacking = this.attackingReverse = false;
                 this.tempo = 1;
                 this.turnCycle();
             },
@@ -574,11 +578,11 @@ export function CombatManager(){
                                     if(this.type === 'djinn'){
                                         console.log('djinn skipping ', this);
                                     }
+                                    if(this.type === 'djinn'){
+                                        console.log('djinn current turnSkips: ', this.turnSkips, 'incrementeing turnskips');
+                                    }
                                     this.turnSkips++
                                     this.skip();
-                                    if(this.type === 'djinn'){
-                                        console.log('djinn his.turnSkips: ', this.turnSkips, 'incrementeing turnskips');
-                                    }
                                 }
                                 
                             }
@@ -789,7 +793,7 @@ export function CombatManager(){
         caller.coordinates = {x: caller.destinationCoordinates.x, y: caller.destinationCoordinates.y}
         this.fighterMovedToDestination(caller.destinationCoordinates);
         caller.destinationCoordinates = null;
-        caller.attacking = false;
+        caller.attacking = caller.attackingReverse = false;
         caller.destinationSickness = true;
         this.checkOverlap(caller)
 
@@ -1208,6 +1212,9 @@ export function CombatManager(){
         if(target.weaknesses.includes[caller.pendingAttack.type]){
             damage += Math.floor(damage/2)
         }
+        // if(caller.type==='sphinx'){
+        //     console.log(`---------Sphinx hits ${target.name} for ${damage} damage, target: `, target, target.hp);
+        // }
         caller.readout.result = `hits ${target.name} for ${damage} damage`
         target.hp -= damage;
         caller.energy += caller.stats.fort * 3 + (1/2 * caller.level);
@@ -1231,7 +1238,7 @@ export function CombatManager(){
             caller.turnCycle();
         }, FIGHT_INTERVAL * 50)
         setTimeout(()=>{
-            caller.attacking = false;
+            caller.attacking = caller.attackingReverse = false;
             target.wounded = false;
         }, FIGHT_INTERVAL * 100)
         setTimeout(()=>{
@@ -1245,7 +1252,7 @@ export function CombatManager(){
         caller.readout.result = `misses`
         setTimeout(()=>{
             caller.active = false;
-            caller.attacking = false;
+            caller.attacking = caller.attackingReverse = false;
             caller.missed = false;
             caller.tempo = 1;
             caller.turnCycle();
@@ -1261,7 +1268,7 @@ export function CombatManager(){
         combatant.dead = true;
         this.clearTargetListById(combatant.id)
         const allMonstersDead = Object.values(this.combatants).filter(e=> (e.isMonster || e.isMinion) && !e.dead).length === 0;
-        const allCrewDead = Object.values(this.combatants).filter(e=>!e.isMonster && !e.dead).length === 0;
+        const allCrewDead = Object.values(this.combatants).filter(e=>!e.isMonster && !e.isMinion).every(e=>e.dead)
         this.onFighterDeath(combatant.id);
         console.log('target killed, GO check: allMonstersDead, ', allMonstersDead, 'allCrewDead', allCrewDead, 'all combatants: ', this.combatants);
         if(allMonstersDead || allCrewDead){

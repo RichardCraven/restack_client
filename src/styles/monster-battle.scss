@@ -97,21 +97,21 @@
             
             &.white-fade{
                 @-webkit-keyframes TileAnimationWhiteFade {
-                    0%{background-color:rgba(186, 182, 189, 0.416)}
-                    20%{background-color:rgba(209, 209, 209, 0.799)}
-                    60%{background-color:rgba(253, 252, 216, 0.936)}
+                    0%{background-color:rgba(186, 182, 189, 0.216)}
+                    20%{background-color:rgba(209, 209, 209, 0.499)}
+                    60%{background-color:rgba(253, 252, 216, 0.636)}
                     100%{background-color:transparent}
                 }
                 @-moz-keyframes TileAnimationWhiteFade {
-                    0%{background-color:rgba(186, 182, 189, 0.416)}
-                    20%{background-color:rgba(209, 209, 209, 0.799)}
-                    60%{background-color:rgba(253, 252, 216, 0.936)}
+                    0%{background-color:rgba(186, 182, 189, 0.216)}
+                    20%{background-color:rgba(209, 209, 209, 0.499)}
+                    60%{background-color:rgba(253, 252, 216, 0.636)}
                     100%{background-color:transparent}
                 }
                 @keyframes TileAnimationWhiteFade { 
-                    0%{background-color:rgba(186, 182, 189, 0.416)}
-                    20%{background-color:rgba(209, 209, 209, 0.799)}
-                    60%{background-color:rgba(253, 252, 216, 0.936)}
+                    0%{background-color:rgba(186, 182, 189, 0.216)}
+                    20%{background-color:rgba(209, 209, 209, 0.499)}
+                    60%{background-color:rgba(253, 252, 216, 0.636)}
                     100%{background-color:transparent}
                 }
 
