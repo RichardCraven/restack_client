@@ -1,4 +1,4 @@
-export function Djinn(data, animationManager){
+export function Sphinx(data, animationManager){
     this.MAX_DEPTH = data.MAX_DEPTH;
     this.MAX_LANES = data.MAX_LANES;
     this.INTERVAL_TIME = data.INTERVAL_TIME
@@ -30,38 +30,99 @@ export function Djinn(data, animationManager){
     }
     this.processMove = (caller, combatants) => {
             if(!caller.pendingAttack){
+                // console.log('no pending attack ', caller);
+                // debugger
                 return
             }
-            data.methods.moveTowardsCloseEnemyTarget(caller, combatants)
+            console.log('SPHIUNX PROCESS MOVE');
+            switch(caller.pendingAttack.name){
+                case 'induce madness':
+                    console.log('---INDUCE MADNESSS MOVE---');
+
+                    data.methods.stayInColumn(6, caller, combatants)
+                
+                break;
+                case 'claws':
+                    console.log('CLAWS');
+                    debugger
+
+                break;
+                case 'lightning':
+                    console.log('LIGHTNING');
+                    debugger
+                break;
+
+            }
+            // if(caller.pendingAttack.name === 'meditate'){
+            //     data.methods.moveTowardsCloseFriendlyTarget(caller, combatants)
+            // }
         }
-    this.triggerVoidLance = (coords) => {
-        const tileId = this.animationManager.getTileIdByCoords(coords)
-        // console.log('tileId: ', tileId);
-        if(tileId !== null){
-            this.animationManager.rippleAnimation(tileId, 'red')
+    this.triggerInduceMadness = (callerCoords, targetCoords) => {
+        const targetTileId = this.animationManager.getTileIdByCoords(targetCoords)
+        const sourceTileId = this.animationManager.getTileIdByCoords(callerCoords)
+        
+        if(targetTileId !== null && sourceTileId !== null){
+            this.animationManager.zapBurstAnimation(targetTileId, sourceTileId, 'white')
         }
     }
     this.initiateAttack = (caller, combatants, hitsTarget, missesTarget) => {
             
-        // console.log('DJINN INITIATE ATTACK', caller.pendingAttack);
+        console.log('SPHINX INITIATE ATTACK', caller.pendingAttack);
         
 
         caller.attacking = true;
         const target = combatants[caller.targetId];
 
         
-        // console.log('DJINN SWING', caller, 'target: ', target);
-        
+        console.log('SPHINX SWING', caller, 'target: ', target);
+        // this.triggerVoidLance(target.coordinates);
 
+        
 
         const distanceToTarget = data.methods.getDistanceToTarget(caller, target),
         laneDiff = data.methods.getLaneDifferenceToTarget(caller, target);
-        if(distanceToTarget === 1 && laneDiff === 0){
-            this.triggerVoidLance(target.coordinates);
-            hitsTarget(caller)
-        } else {
-            missesTarget(caller);
+
+
+        switch(caller.pendingAttack.name){
+            case 'induce madness':
+                console.log('INDUCE MADNESSS!!!!!!');
+                console.log('caller.coordinates', caller.coordinates);
+                if(laneDiff === 0){
+                    console.log('LANE DIFF IS ', laneDiff);
+                    this.triggerInduceMadness(caller.coordinates, target.coordinates)
+                    console.log('induce madness hits');
+                    hitsTarget(caller)
+                } else {
+                    missesTarget(caller);
+                }
+            break;
+            case 'claws':
+                console.log('CLAWS');
+
+                if(distanceToTarget === 1 && laneDiff === 0){
+                    console.log('claws hits');
+                    hitsTarget(caller)
+                } else {
+                    missesTarget(caller);
+                }
+
+
+            break;
+            case 'lightning':
+                console.log('LIGHTNING');
+
+                if(laneDiff === 0){
+                    console.log('lightning hits');
+                    hitsTarget(caller)
+                } else {
+                    missesTarget(caller);
+                }
+            break;
         }
+
+
+
+        
     }
     this.chooseAttackType = (caller, target) => {
         let attack, available = caller.attacks.filter(e=>e.cooldown_position === 100);

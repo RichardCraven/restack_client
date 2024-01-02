@@ -85,7 +85,7 @@
         top: 0;
         left: 0;
 
-        // pointer-events: none;
+        pointer-events: none;
         // ^ may need to be dynamic 
 
 
@@ -99,19 +99,19 @@
                 @-webkit-keyframes TileAnimationWhiteFade {
                     0%{background-color:rgba(186, 182, 189, 0.416)}
                     20%{background-color:rgba(209, 209, 209, 0.799)}
-                    60%{background-color:rgba(251, 251, 251, 0.936)}
+                    60%{background-color:rgba(253, 252, 216, 0.936)}
                     100%{background-color:transparent}
                 }
                 @-moz-keyframes TileAnimationWhiteFade {
                     0%{background-color:rgba(186, 182, 189, 0.416)}
                     20%{background-color:rgba(209, 209, 209, 0.799)}
-                    60%{background-color:rgba(251, 251, 251, 0.936)}
+                    60%{background-color:rgba(253, 252, 216, 0.936)}
                     100%{background-color:transparent}
                 }
                 @keyframes TileAnimationWhiteFade { 
                     0%{background-color:rgba(186, 182, 189, 0.416)}
                     20%{background-color:rgba(209, 209, 209, 0.799)}
-                    60%{background-color:rgba(251, 251, 251, 0.936)}
+                    60%{background-color:rgba(253, 252, 216, 0.936)}
                     100%{background-color:transparent}
                 }
 
@@ -148,20 +148,20 @@
             &.purple-fade{
                 @-webkit-keyframes TileAnimationPurpleFade {
                     0%{background-color:rgba(103, 71, 128, 0.416)}
-                    20%{background-color:rgba(112, 36, 198, 0.799)}
-                    60%{background-color:rgba(87, 0, 150, 0.905)}
+                    20%{background-color:rgba(112, 36, 198, 0.558)}
+                    60%{background-color:rgba(87, 0, 150, 0.512)}
                     100%{background-color:transparent}
                 }
                 @-moz-keyframes TileAnimationPurpleFade {
                     0%{background-color:rgba(103, 71, 128, 0.416)}
-                    20%{background-color:rgba(112, 36, 198, 0.799)}
-                    60%{background-color:rgba(87, 0, 150, 0.905)}
+                    20%{background-color:rgba(112, 36, 198, 0.558)}
+                    60%{background-color:rgba(87, 0, 150, 0.512)}
                     100%{background-color:transparent}
                 }
                 @keyframes TileAnimationPurpleFade { 
                     0%{background-color:rgba(103, 71, 128, 0.416)}
-                    20%{background-color:rgba(112, 36, 198, 0.799)}
-                    60%{background-color:rgba(87, 0, 150, 0.905)}
+                    20%{background-color:rgba(112, 36, 198, 0.558)}
+                    60%{background-color:rgba(87, 0, 150, 0.512)}
                     100%{background-color:transparent}
                 }
 

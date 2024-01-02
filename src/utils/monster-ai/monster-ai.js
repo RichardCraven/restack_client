@@ -1,4 +1,5 @@
 import { Djinn } from './profiles/Djinn'
+import { Sphinx } from './profiles/Sphinx'
 import {Methods} from './methods/basic-methods';
 import {MonsterMovementMethods} from './methods/movement-methods';
 
@@ -7,6 +8,32 @@ export function MonsterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
     this.MAX_LANES = MAX_LANES;
     this.INTERVAL_TIME = INTERVAL_TIME
 
+    const data = {
+        methods: {
+            ...Methods,
+            ...MonsterMovementMethods
+        },
+        MAX_DEPTH: this.MAX_DEPTH,
+        MAX_Lanes: this.MAX_LANES,
+        INTERVAL_TIME: this.INTERVAL_TIME
+    }
+
+    // this.roster = {
+    //     djinn: new Djinn(data)
+    // }
+
+    this.connectAnimationManager = (instance) => {
+        console.log('in monster AI, connecting animation manager', instance);
+        this.initializeRoster(instance)
+    }
+
+    this.initializeRoster = (animationManager) => {
+        console.log('initializing roster');
+        this.roster = {
+            djinn: new Djinn(data, animationManager),
+            sphinx: new Sphinx(data, animationManager)
+        }
+    }
 
     this.methods = {
         ...Methods,
@@ -173,110 +200,5 @@ export function MonsterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
         distanceToTarget = this.methods.getDistanceToTarget(caller, target),
         laneDiff = this.methods.getLaneDifferenceToTarget(caller, target);
         let newPosition, newDepth;
-    }
-
-    // const Loryastes = {
-    //     acquireTarget: (caller, combatants) => {
-    //         console.log('Loryastes acquiring Target');
-    //         if(this.isAnEnemyDirectlyInFrontOfMe(caller, combatants)){
-    //             console.log('ENEMY DIRECTLY IN FRONT OF LORY:', this.isAnEnemyDirectlyInFrontOfMe());
-    //             caller.targetId = this.isAnEnemyDirectlyInFrontOfMe().id;
-    //             caller.pendingAttack = caller.attacks.find(e=>e.name === 'meditate')
-    //         } else {
-    //             const protectee = this.pickRandom(Object.values(combatants).filter(e=>!e.isMonster && !e.isMinion && !e.dead && e.id !== caller.id))
-    //             caller.targetId = protectee.id;
-    //             caller.pendingAttack = caller.attacks.find(e=>e.name === 'meditate')
-    //             console.log('Loryastes has a new target ', protectee);
-    //         }
-    //     },
-    //     processMove: (caller, combatants) => {
-    //         console.log('Loryastes process move');
-    //         if(caller.pendingAttack.name === 'meditate'){
-    //             this.moveTowardsCloseFriendlyTarget(caller, combatants)
-    //         } else if(caller.pendingAttack.name === 'cane_strike'){
-    //             console.log('MAFUCKIN CAAAANNNEEE STRIKE!');
-    //             debugger
-    //         }
-    //     },
-    //     initiateAttack: (caller, combatants, hitsTarget, missesTarget) => {
-    //         const target = combatants[caller.targetId];
-    //         console.log('---------------------Loryastes initiate attack, target is: ', target);
-    //         const distanceToTarget = this.getDistanceToTarget(caller, target),
-    //         laneDiff = this.getLaneDifferenceToTarget(caller, target);
-    //         if(target.isMonster || target.isMinion){
-    //             hitsTarget(caller);
-    //         } else {
-    //             console.log('LORYASTES: check if protectee is in range');
-    //             console.log('LORYASTES: distanceToTarget: ', distanceToTarget, 'lane diff: ', laneDiff)
-    //             if(distanceToTarget === 1 && laneDiff === 0){
-    //                 console.log('heal from behind, starting hp: ', target.starting_hp);
-    //                 target.hp += 10;
-    //                 if(target.hp > target.starting_hp) target.hp = target.starting_hp;
-    //                 setTimeout(()=>{
-    //                     caller.active = false;
-    //                     caller.tempo = 1;
-    //                     caller.turnCycle();
-    //                 }, 500)
-    //             } else if(distanceToTarget === 0 && (laneDiff === 1 || laneDiff === -1)){
-    //                 console.log('LORYASTES: adjacent heal');
-    //                 debugger
-    //             } else if(distanceToTarget === 1 && (laneDiff === 1 || laneDiff === -1)){
-    //                 console.log('LORYASTES: go behind adjacent to target');
-    //                 caller.position = (laneDiff === 1) ? caller.position -1 : caller.position + 1;
-    //                 setTimeout(()=>{
-    //                     caller.tempo = 1;
-    //                     caller.turnCycle();
-    //                 }, 500)
-    //             } else {
-    //                 missesTarget(caller)
-    //             }
-    //         }
-    //     }
-    // }
-
-    const Greco = {
-        processMove: (caller, combatants) => {
-            // console.log('Greco process move');
-            this.methods.moveTowardsCloseEnemyTarget(caller, combatants);
-        },
-        acquireTarget: (caller, combatants) => {
-            const liveEnemies = Object.values(combatants).filter(e=>!e.dead && (e.isMonster || e.isMinion));
-            const sorted = liveEnemies.sort((a,b)=>a.depth - b.depth);
-            const target = sorted[0];
-            // console.log('Grecos target: ', target);
-
-            caller.pendingAttack = this.chooseAttackType(caller, target);
-            caller.targetId = target.id;
-        },
-        initiateAttack: (caller, combatants, hitsTarget, missesTarget) => {
-            caller.attacking = true;
-            const target = combatants[caller.targetId];
-            const distanceToTarget = this.getDistanceToTarget(caller, target),
-            laneDiff = this.methods.getLaneDifferenceToTarget(caller, target);
-            if(distanceToTarget === 1 && laneDiff === 0){
-                console.log('SWING!!!! (Greco always hits)');
-                hitsTarget(caller)
-            } else {
-                missesTarget(caller);
-            }
-        }
-    }
-
-    const Tyra = (caller, target, allLiveCombatants) => {
-        console.log('in Tyra, caller: ', caller, 'target:', target, 'all combatants: ', allLiveCombatants)
-
-    }
-
-    const data = {
-        methods: {
-            ...Methods,
-            ...MonsterMovementMethods
-        },
-        MAX_DEPTH: this.MAX_DEPTH,
-        MAX_Lanes: this.MAX_LANES,
-        INTERVAL_TIME: this.INTERVAL_TIME
-    }
-    this.roster = {
-        djinn: new Djinn(data)
     }
 }

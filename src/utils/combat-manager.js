@@ -7,7 +7,7 @@ import {MovementMethods} from './fighter-ai/methods/movement-methods'
 
 const MAX_DEPTH = 7
 const MAX_LANES = 5
-const FIGHT_INTERVAL = 5
+const FIGHT_INTERVAL = 10
 const DEBUG_STEPS = false;
 
 export function CombatManager(){
@@ -315,6 +315,13 @@ export function CombatManager(){
     }
 
     this.combatants = {};
+
+    this.connectAnimationManager = (instance) => {
+        console.log('connecting animation manager, instance: ', instance);
+        console.log('monster AI: ', this.monsterAI);
+        // this.animationManager = instance;
+        this.monsterAI.connectAnimationManager(instance)
+    }
 
     this.establishMessageCallback = (cb) => {
         this.setMessage = cb;
@@ -779,6 +786,7 @@ export function CombatManager(){
     this.goToDestination = (caller) => {
         caller.depth = caller.destinationCoordinates.x;
         caller.position = caller.destinationCoordinates.y;
+        caller.coordinates = {x: caller.destinationCoordinates.x, y: caller.destinationCoordinates.y}
         this.fighterMovedToDestination(caller.destinationCoordinates);
         caller.destinationCoordinates = null;
         caller.attacking = false;
@@ -866,8 +874,9 @@ export function CombatManager(){
             this.fighterAI.roster[caller.name].initiateAttack(caller, this.combatants, this.hitsTarget, this.missesTarget);
             return
         }
-
+        // console.log('caller.type: ', caller.type)
         if(this.monsterAI.roster[caller.type]){
+            // console.log('roster found for', caller.type)
             this.monsterAI.roster[caller.type].initiateAttack(caller, this.combatants, this.hitsTarget, this.missesTarget);
             return
         }
@@ -988,6 +997,19 @@ export function CombatManager(){
     }
     this.processMove = (caller) => {
         if(caller.dead) return;
+
+        if(this.fighterAI.roster[caller.name]){
+            this.fighterAI.roster[caller.name].processMove(caller, this.combatants, this.hitsTarget, this.missesTarget);
+            return
+        }
+        // console.log('caller.type: ', caller.type)
+        if(this.monsterAI.roster[caller.type]){
+            // console.log('roster found for', caller.type)
+            this.monsterAI.roster[caller.type].processMove(caller, this.combatants, this.hitsTarget, this.missesTarget);
+            return
+        }
+
+
         // if(caller.isMonster) console.log('monster in process move')
         const liveCombatants = Object.values(this.combatants).filter(e=> (!e.dead && e.id !== caller.id));
         if(this.fighterAI.roster[caller.name]){
@@ -1082,6 +1104,8 @@ export function CombatManager(){
         // }
         if(newPosition !== undefined) caller.position = newPosition;
 
+        caller.coordinates = {x: newDepth, y: newPosition}
+
         if(caller.position === undefined){
             console.log('position undefined');
             debugger
@@ -1108,6 +1132,7 @@ export function CombatManager(){
                 if(liveCombatants.some(e=>e.depth === combatant.depth && e.position === combatant.position)){
                     depthAvailable = false;
                     if(combatant.depth !== MAX_DEPTH){
+                        combatant.coordinates.x = combatant.depth + 1
                         combatant.depth ++
                     } else {
                         const goUp = this.pickRandom([true, false])
@@ -1115,12 +1140,14 @@ export function CombatManager(){
                             if(liveCombatants.some(e=>e.depth === combatant.depth && e.position === combatant.position - 1)){
                                 depthAvailable = true;
                             } else {
+                                combatant.coordinates.y = combatant.position - 1
                                 combatant.position--
                             }
                         } else if(!goUp && combatant.position !== MAX_LANES-1){
                             if(liveCombatants.some(e=>e.depth === combatant.depth && e.position === combatant.position + 1)){
                                 depthAvailable = true;
                             } else {
+                                combatant.coordinates.y = combatant.position + 1
                                 combatant.position++
                             }
                         } else {
@@ -1136,6 +1163,7 @@ export function CombatManager(){
                 if(liveCombatants.some(e=>e.depth === combatant.depth && e.position === combatant.position)){
                     depthAvailable = false;
                     if(combatant.depth > 0){
+                        combatant.coordinates.x = combatant.depth - 1
                         combatant.depth--
                     } else {
                         const goUp = this.pickRandom([true, false])
@@ -1143,12 +1171,14 @@ export function CombatManager(){
                             if(liveCombatants.some(e=>e.depth === combatant.depth && e.position === combatant.position - 1)){
                                 depthAvailable = true;
                             } else {
+                                combatant.coordinates.y = combatant.position - 1
                                 combatant.position--
                             }
                         } else if(!goUp && combatant.position !== MAX_LANES-1){
                             if(liveCombatants.some(e=>e.depth === combatant.depth && e.position === combatant.position + 1)){
                                 depthAvailable = true;
                             } else {
+                                combatant.coordinates.x = combatant.depth + 1
                                 combatant.position++
                             }
                         } else {

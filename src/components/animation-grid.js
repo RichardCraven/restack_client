@@ -17,11 +17,9 @@ const AnimationGrid = ({
     tileProps
 }) => {
     useEffect(() => {
-        console.log('animationData changed', animationData);
     }, [animationData])
 
     const handleClickWrapper = (tile) => {
-        console.log('tile: ', tile);
         animationManager.handleTileClick(tile.id)
     }
     return (

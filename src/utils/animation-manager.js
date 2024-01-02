@@ -22,6 +22,13 @@ export function AnimationManager(){
         // const {tileAnimated} = callBacks;
         this.updateAnimationData = callBack;
     }
+
+    this.getTileIdByCoords = (coords) => {
+        let tile = this.tiles.find(e=>e.x === coords.x && e.y === coords.y)
+        return tile ? tile.id : null
+    }
+
+
     this.initialize = (MAX_DEPTH, MAX_ROWS) => {
         console.log('animation manager initialized, MAX_DEPTH:', MAX_DEPTH, 'MAX_ROWS: ', MAX_ROWS)
         let arr = [];
@@ -113,7 +120,45 @@ export function AnimationManager(){
             animate();
         },100)
     }
+    this.straightLineTo = (targetTileId, sourceTileId, color = null) => {
+        const sourceTile = this.tiles.find(e=>e.id === sourceTileId)
+        const destinationTile = this.tiles.find(e=>e.id === targetTileId)
+        console.log('in STRAIGHT LINE TO sourceTile: ', sourceTile, 'destinationTile: ', destinationTile);
+        let isOnSamePlane = sourceTile.y === destinationTile.y
+        console.log('is on same plane', isOnSamePlane);
+        // debugger
 
+        return new Promise((resolve, reject) => {
+            if(isOnSamePlane){
+                let distanceAway = Math.abs(sourceTile.x - destinationTile.x)
+                console.log('distance away: ', distanceAway);
+    
+                if(sourceTile.x > destinationTile.x){
+                    console.log('GO LEFT');
+                    let sourceX = sourceTile.x
+                    let idArray = [];
+                    for(let i = sourceX -1; i > destinationTile.x; i--){
+                        let id = this.getTileIdByCoords({x: i, y: destinationTile.y})
+                        idArray.push(id)
+                    }
+                    console.log('idArray is now ', idArray);
+                    const lineInterval = setInterval(()=>{
+                        if(idArray.length === 0){
+                            clearInterval(lineInterval);
+                            console.log('interval cleared');
+                            resolve();
+                        } else {
+                            let id = idArray.shift();
+                            this.triggerTileAnimation(id, color);
+                        }
+                    }, 100 + (distanceAway * 20))
+                    // idArray.
+                    // this.triggerTileAnimation(id, color)
+                }
+                // debugger
+            }
+        })
+    }
     this.cross = (tileId, color = null) => {
         const storedTile = this.tiles.find(e=>e.id === tileId)
         let leftSide, rightSide, topAndBottom;
@@ -183,6 +228,8 @@ export function AnimationManager(){
         
     }
 
+    
+
 
     // ANIMATION WRAPPERS
     this.rippleAnimation = (tileId, color = null) => {
@@ -197,7 +244,13 @@ export function AnimationManager(){
         this.triggerTileAnimation(tileId, color)
         this.cross(tileId, color)
     }
+    this.zapBurstAnimation = async (targetTileId, sourceTileId, color = null) => {
+        await this.straightLineTo(targetTileId, sourceTileId, color)
+        this.crossAnimation(targetTileId, color)
+    }
 
+
+    // UTILS
     this.pickRandom = (array) => {
         let index = Math.floor(Math.random() * array.length)
         return array[index]

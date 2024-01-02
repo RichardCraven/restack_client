@@ -48,7 +48,7 @@ class MonsterBattle extends React.Component {
     componentDidMount(){
         // const MAX_DEPTH = 8;
         this.props.combatManager.initialize();
-
+        this.props.combatManager.connectAnimationManager(this.props.animationManager);
         let arr = [], ghostPortraitMatrix = [];
         for(let i = 0; i < 5*MAX_DEPTH; i++){
             let x = i%MAX_DEPTH,
@@ -183,7 +183,6 @@ class MonsterBattle extends React.Component {
         })
     }
     updateAnimationData = (animationData) => {
-        console.log('updating animation data');
         this.setState({
             animationData
         })

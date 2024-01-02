@@ -5,6 +5,22 @@ const MAX_DEPTH = 7
 const MAX_LANES = 5
 
 export const MonsterMovementMethods = {
+    stayInColumn: (columnNum, caller, combatants) => {
+        const enemyTarget = Object.values(combatants).find(e=>e.id === caller.targetId),
+        laneDiff = Methods.getLaneDifferenceToTarget(caller, enemyTarget)
+        
+        console.log('in stay in column', columnNum);
+        console.log('caller: ', caller);
+        console.log('combatants: ', combatants)
+        console.log('lane diff: ', laneDiff);
+        if(laneDiff < 0){
+            caller.position--
+        } else if(laneDiff > 0){
+            caller.position++
+        }
+        caller.depth = columnNum
+        caller.coordinates = {x: columnNum, y: caller.position}
+    },
     moveTowardsCloseEnemyTarget: (caller, combatants) => {
         const enemyTarget = Object.values(combatants).find(e=>e.id === caller.targetId)
         const distanceToTarget = Methods.getDistanceToTarget(caller, enemyTarget),
@@ -44,6 +60,8 @@ export const MonsterMovementMethods = {
         } else if(distanceToTarget > 2){
             caller.depth += 2
         }
+
+        caller.coordinates = {x: caller.depth, y: caller.position}
     },
     moveTowardsCloseFriendlyTarget: (caller, combatants) => {
         let newPosition, newDepth;
@@ -62,6 +80,7 @@ export const MonsterMovementMethods = {
             //set new values
             if(newDepth !== undefined) caller.depth = newDepth;
             if(newPosition !== undefined) caller.position = newPosition;
+            caller.coordinates = {x: caller.depth, y: caller.position}
         }
 
         if((laneDiff === 1 || laneDiff === -1 || laneDiff === 0) && Math.abs(distanceToTarget) < 2){

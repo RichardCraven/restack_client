@@ -69,9 +69,9 @@ export default function AnimationTile(props) {
             ${props.animationType}
             `}
         >
-           {/* <div style={{color: 'yellow', userSelect: 'none'}}>
+           <div style={{color: 'yellow', userSelect: 'none'}}>
                     {props.x},{props.y} <span style={{color: 'red'}}>{props.index}</span>
-            </div> */}
+            </div>
         </div>
     )
 }
