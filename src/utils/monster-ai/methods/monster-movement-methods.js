@@ -7,12 +7,8 @@ const MAX_LANES = 5
 export const MonsterMovementMethods = {
     stayInColumn: (columnNum, caller, combatants) => {
         const enemyTarget = Object.values(combatants).find(e=>e.id === caller.targetId),
-        laneDiff = Methods.getLaneDifferenceToTarget(caller, enemyTarget)
-        
-        console.log('in stay in column', columnNum);
-        console.log('caller: ', caller);
-        console.log('combatants: ', combatants)
-        console.log('lane diff: ', laneDiff);
+        laneDiff = Methods.getLaneDifferenceToTarget(caller, enemyTarget);
+
         if(laneDiff < 0){
             caller.position--
         } else if(laneDiff > 0){
@@ -50,7 +46,7 @@ export const MonsterMovementMethods = {
         // now handle depth
 
 
-        if(distanceToTarget < 0 && laneDiff !== 0 ||  
+        if((distanceToTarget < 0 && laneDiff !== 0) ||  
         (distanceToTarget < -1 && laneDiff === 0 && caller.depth > 1)){
             caller.depth--
         }else if(distanceToTarget === -1 && laneDiff === 0){
@@ -96,7 +92,7 @@ export const MonsterMovementMethods = {
             console.log('LORYASTES: BEHIND ADJACENT!');
             // newPosition = caller.position - 1
         }
-        if(distanceToTarget < 0 && laneDiff !== 0 ||  
+        if((distanceToTarget < 0 && laneDiff !== 0) ||  
         (distanceToTarget < -1 && laneDiff === 0 && caller.depth > 1)){
             newDepth = caller.depth - 1
         } else if(distanceToTarget > 1){

@@ -1,5 +1,4 @@
 import React from 'react';
-import * as images from '../utils/images'
 
 
 export default function AnimationTile(props) {

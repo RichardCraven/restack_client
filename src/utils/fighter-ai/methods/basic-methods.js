@@ -43,7 +43,7 @@ export const Methods = {
     },
     isAnEnemyDirectlyInFrontOfMe: (caller, combatants) => {
         if(!combatants) return false
-        const liveEnemies = Object.values(combatants).filter(e=>e.isMonster || e.isMinion && !e.dead),
+        const liveEnemies = Object.values(combatants).filter(e=>e.isMonster || (e.isMinion && !e.dead)),
         directlyInFront = liveEnemies.some(e=>e.depth === caller.depth + 1 && e.position === caller.position);
         return directlyInFront ? liveEnemies.find(e=>e.depth === caller.depth + 1 && e.position === caller.position) : null;
     }

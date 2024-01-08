@@ -10,7 +10,7 @@ const TILE_SIZE = 100;
 const SHOW_TILE_BORDERS = true;
 const SHOW_COMBAT_BORDER_COLORS = false;
 const SHOW_INTERACTION_PANE=true
-const SHOW_BORDERS = true;
+// const SHOW_BORDERS = true;
 class MonsterBattle extends React.Component {
     constructor(props){
         super(props)
@@ -103,7 +103,7 @@ class MonsterBattle extends React.Component {
         })
     }
     morphPortrait = () => {
-        const monster = this.props.monster;
+        // const monster = this.props.monster;
         // console.log('MORPH monster: ', monster);
         let stringBase = 'witch_p1_', count = 1, string;
         const morphInterval = setInterval(()=>{
@@ -197,9 +197,7 @@ class MonsterBattle extends React.Component {
     }
     gameOver = (outcome) => {
         let experienceGained,
-            goldGained, 
-            shimmering_dustGained,
-            totemsGains,
+            goldGained,
             itemsGained,
             crewWins = outcome === 'crewWins',
             summaryMessage, battleResult;
@@ -472,7 +470,9 @@ class MonsterBattle extends React.Component {
             case 'medium':
                 return 'lift-and-shoot'
             case 'far':
-                return 'shooting'
+                return 'shooting';
+            default:
+            break;
         }
     }
 
@@ -888,7 +888,7 @@ class MonsterBattle extends React.Component {
                             <div className="interaction-header">Target</div>
                             <div className="interaction-tooltip"> </div>
                             <div className="interaction-tile-container">
-                                {this.state.selectedFighter && this.state.selectedFighter.name !== 'Loryastes' && Object.values(this.state.battleData).filter(e=>e.isMonster || e.isMinion && !e.dead).map((a, i)=>{
+                                {this.state.selectedFighter && this.state.selectedFighter.name !== 'Loryastes' && Object.values(this.state.battleData).filter(e=>e.isMonster || (e.isMinion && !e.dead)).map((a, i)=>{
                                 return <div 
                                     key={i} 
                                     style={{backgroundImage: "url(" + a.portrait + ")", cursor: this.state.showCrosshair ? 'crosshair' : ''}} 

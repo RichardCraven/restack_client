@@ -1,15 +1,3 @@
-import * as images from '../utils/images'
-
-import { FighterAI } from './fighter-ai/fighter-ai'
-import { MonsterAI } from './monster-ai/monster-ai'
-import {MovementMethods} from './fighter-ai/methods/movement-methods'
-// import {MovementMethods} from './methods/movement-methods';
-
-const MAX_DEPTH = 7
-const MAX_LANES = 5
-const FIGHT_INTERVAL = 5
-const DEBUG_STEPS = false;
-
 export function AnimationManager(){
     this.tiles = [];
     // this.establishAnimationCallbck = (callBack) => {
@@ -68,8 +56,7 @@ export function AnimationManager(){
         }, 1000)
     }
     this.tileOn = (tileId, color = null) => {
-        let animationType = color ? `${color}-fade` : 'red-fade'
-        // console.log('ANIMATION TYPE', animationType);
+        // let animationType = color ? `${color}-fade` : 'red-fade';
         const storedTile = this.tiles.find(e=>e.id === tileId)
         storedTile.animationOn = true;
         storedTile.animationType = color ? `${color}-fade` : 'red-fade';

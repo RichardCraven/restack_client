@@ -34,7 +34,7 @@ export const MovementMethods = {
         // now handle depth
 
 
-        if(distanceToTarget < 0 && laneDiff !== 0 ||  
+        if((distanceToTarget < 0 && laneDiff) !== 0 ||  
         (distanceToTarget < -1 && laneDiff === 0 && caller.depth > 1)){
             caller.depth--
         }else if(distanceToTarget === -1 && laneDiff === 0){
@@ -77,7 +77,7 @@ export const MovementMethods = {
             console.log('LORYASTES: BEHIND ADJACENT!');
             // newPosition = caller.position - 1
         }
-        if(distanceToTarget < 0 && laneDiff !== 0 ||  
+        if((distanceToTarget < 0 && laneDiff !== 0) ||  
         (distanceToTarget < -1 && laneDiff === 0 && caller.depth > 1)){
             newDepth = caller.depth - 1
         } else if(distanceToTarget > 1){

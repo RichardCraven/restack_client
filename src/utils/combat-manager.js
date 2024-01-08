@@ -2,7 +2,7 @@ import * as images from '../utils/images'
 
 import { FighterAI } from './fighter-ai/fighter-ai'
 import { MonsterAI } from './monster-ai/monster-ai'
-import {MovementMethods} from './fighter-ai/methods/movement-methods'
+import {MovementMethods} from './fighter-ai/methods/fighter-movement-methods'
 // import {MovementMethods} from './methods/movement-methods';
 
 const MAX_DEPTH = 7
@@ -366,18 +366,18 @@ export function CombatManager(){
         const {
             acquireTarget, 
             broadcastDataUpdate, 
-            pickRandom, 
-            hitsTarget, 
-            missesTarget, 
+            // pickRandom, 
+            // hitsTarget, 
+            // missesTarget, 
             isCombatOver, 
             getCombatant,
-            combatPaused,
+            // combatPaused,
             formatAttacks,
             formatSpecials,
             initiateAttack,
             checkOverlap,
             handleOverlap,
-            goToDestination,
+            // goToDestination,
             processActionQueue,
             processMove,
             targetInRange,
@@ -402,7 +402,6 @@ export function CombatManager(){
                 baseDef: fighter.stats.baseDef
             },
             inventory: fighter.inventory,
-            specials: fighter.specials,
             weaknesses: fighter.weaknesses,
             targetId: null,
             position: fighter.position,
@@ -830,8 +829,7 @@ export function CombatManager(){
     }
     this.chooseAttackType = (caller, target) => {
         let attack, available = caller.attacks.filter(e=>e.cooldown_position === 100);
-        const distanceToTarget = this.getDistanceToTarget(caller, target),
-        laneDiff = this.getLaneDifferenceToTarget(caller, target);
+        const distanceToTarget = this.getDistanceToTarget(caller, target);
         let percentCooledDown = 0,
             chosenAttack;
 
@@ -966,11 +964,10 @@ export function CombatManager(){
             return
         }
 
-        let reposition = this.pickRandom([1,2,3,4,5,6,7,8,9,10]) < 4
+        // let reposition = this.pickRandom([1,2,3,4,5,6,7,8,9,10]) < 4
         
         const liveMonsters = Object.values(this.combatants).filter(e=> ((e.isMonster || e.isMinion )  && !e.dead)),
-              liveFighters = Object.values(this.combatants).filter(e=> ((!e.isMonster && !e.isMinion) && !e.dead)),
-              liveCombatants = liveFighters.concat(liveMonsters).filter(e => e.id !== caller.id);
+              liveFighters = Object.values(this.combatants).filter(e=> ((!e.isMonster && !e.isMinion) && !e.dead));
         let target;
         if(caller.isMonster || caller.isMinion){
             let sortedTargets = targetToAvoid && liveFighters.length > 1 ? liveFighters.filter(e => e.id !== targetToAvoid.id).sort((a,b)=>b.depth - a.depth) : liveFighters.sort((a,b)=>b.depth - a.depth);
@@ -1028,9 +1025,6 @@ export function CombatManager(){
             return
         }
 
-
-        const liveFighters = liveCombatants.filter(e=> !e.isMinion && !e.isMonster);
-        const liveMonsters = liveCombatants.filter(e=> e.isMinion || e.isMonster)
         const target = this.combatants[caller.targetId]
         const distanceToTarget = this.getDistanceToTarget(caller, target),
         laneDiff = this.getLaneDifferenceToTarget(caller, target)
@@ -1038,9 +1032,6 @@ export function CombatManager(){
         const targetInRange = this.targetInRange(caller)
         if(!targetInRange && caller.pendingAttack){
             let moveBackLots = caller.pendingAttack.range === 'far' && distanceToTarget < 2
-            // if(caller.name === 'Tyra'){
-            //     console.log('move back lots: ', moveBackLots);
-            // }
             newDepth = caller.isMonster || caller.isMinion ? 
             (distanceToTarget > -1 ? caller.depth+1 : caller.depth-1) : 
             (moveBackLots ? caller.depth-3 :
@@ -1058,22 +1049,12 @@ export function CombatManager(){
             newPosition = caller.position
         }
 
-        // if(caller.name === 'Sardonis'){
-        //     let targetPosition = {x: newDepth, y: newPosition};
-        //     console.log('sardonis moving, target tile: ', targetPosition);
-        //     console.log('liveCombatants:', JSON.parse(JSON.stringify(liveCombatants)));
-        // }
         if(liveCombatants.some(e=>e.position === newPosition && e.depth === newDepth)){
             let targetPosition = {x: newDepth, y: newPosition};
-            const occupier = liveCombatants.find(e=>e.depth === targetPosition.x && e.position === targetPosition.y)
-            // console.log('occupier: ', JSON.parse(JSON.stringify(occupier)));
             let downspace = targetPosition.y + 1;
             let upspace = targetPosition.y - 1
             let upSpaceOccupied = liveCombatants.some(e=>e.depth === targetPosition.x && e.position === targetPosition.y - 1);
             let downSpaceOccupied = liveCombatants.some(e=>e.depth === targetPosition.x && e.position === targetPosition.y + 1);
-            // if(caller.name === 'Sardonis'){
-            //     console.log('sardonis moving, space occupied. upSpaceOccupied: ', upSpaceOccupied, 'downSpaceOccupied:', downSpaceOccupied);
-            // }
             let upPref = this.pickRandom([false, true])
             if(upPref){
                 if(!upSpaceOccupied && upspace >= 0){

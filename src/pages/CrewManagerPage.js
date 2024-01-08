@@ -1,5 +1,4 @@
 import React from 'react'
-import * as images from '../utils/images'
 import { Redirect } from "react-router-dom";
 import {storeMeta, getMeta, getUserId} from '../utils/session-handler';
 import {

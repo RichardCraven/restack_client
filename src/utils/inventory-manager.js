@@ -479,7 +479,6 @@ export function InventoryManager(){
     this.allItems = {};
     this.items = this.weapons_names.concat(this.masks_names.concat(this.helms_names.concat(this.keys_names.concat(this.amulets_names.concat(this.charms_names.concat(this.wands_names.concat(this.misc_names.concat(this.shields_names))))))))
     this.initializeItems = (data = null) => {
-        console.log('initializing items with data', data);
         for(let key in this.consumables){
             this.allItems[key] = this.consumables[key]
         }
@@ -505,14 +504,14 @@ export function InventoryManager(){
             this.shimmering_dust = 0
             this.totems = 0
         } else {
-            console.log('data.: ', data);
             this.inventory = data.items.map(e=> {
-                const equippedBy = e.equippedBy
+                const equippedBy = e.equippedBy;
+                let v;
                 if(this.allItems[(e.name.replaceAll(' ', '_'))]){
-                    let v = this.allItems[e.name.replaceAll(' ', '_')];
+                    v = this.allItems[e.name.replaceAll(' ', '_')];
                     v.equippedBy = equippedBy;
-                    return v;
                 }
+                return v;
             })
             this.gold = data.gold;
             this.shimmering_dust = data.shimmering_dust;
@@ -534,7 +533,6 @@ export function InventoryManager(){
     }
     this.removeItemByIndex = (index) => {
         this.inventory.splice(index, 1)
-        console.log('ok now inventory is: ', this.inventory);
     }
     this.addCurrency = (data) => {
         switch(data.type){
@@ -550,6 +548,8 @@ export function InventoryManager(){
             case 'totems':
             this.totems += data.amount;
             break;
+            default:
+                break;
         }
     }
     this.getStarterPack = () => {

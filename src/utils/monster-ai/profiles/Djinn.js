@@ -99,8 +99,7 @@ export function Djinn(data, animationManager){
 
         // console.log('djinn available attacks', available, 'caller.attacks', caller.attacks)
 
-        const distanceToTarget = data.methods.getDistanceToTarget(caller, target),
-        laneDiff = data.methods.getLaneDifferenceToTarget(caller, target);
+        const distanceToTarget = data.methods.getDistanceToTarget(caller, target);
 
         if(distanceToTarget === 1 && available.find(e=>e.range === 'close')){
             attack = available.find(e=>e.range === 'close');

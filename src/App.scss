@@ -45,7 +45,8 @@ button{
   overflow: hidden;
   position: relative;
   .nav-buttons-container{
-    width: 100%;
+    width: fit-content;
+    
     height: 30px;
     position: fixed;
     top: 0;

@@ -138,6 +138,8 @@ export function BoardManager(){
         let col = index%15;
         let x = 15 + row;
         let y = 15 + col;
+        // let x = row;
+        // let y = col;
         return [x, y]
     }
     this.establishAvailableItems = (items) => {
@@ -229,7 +231,6 @@ export function BoardManager(){
         this.handleFogOfWar(this.tiles[this.getIndexFromCoordinates(this.playerTile.location)])
     }
     this.placePlayer = (coordinates) => {
-        console.log('placing player ', coordinates);
         let index = this.getIndexFromCoordinates(coordinates)
         this.overlayTiles[index].image = 'avatar'
         this.tiles[index].playerTile = true;
@@ -329,6 +330,9 @@ export function BoardManager(){
                                 amount: Math.floor(Math.random() * 100)
                             }
                         })
+                    break;
+                    default:
+
                     break;
                 }
                 this.removeTileFromBoard(destinationTile)
@@ -623,20 +627,20 @@ export function BoardManager(){
                 e.id === destinationTile.id + 15 ||
                 // eslint-disable-next-line
                 e.id === destinationTile.id + 30 &&  this.tiles[destinationTile.id + 15].contains !== 'void') {
-                    // console.log('here', e.id);
+                    
                 e.color = this.currentBoard.tiles[e.id].color
                 e.image = e.contains;
             }
             if( (e.id === destinationTile.id - 14 && this.tiles[destinationTile.id - 15].contains !== 'void' && this.tiles[destinationTile.id + 1].contains !== 'void') || 
                 // eslint-disable-next-line
-                e.id === destinationTile.id - 16 && this.tiles[destinationTile.id - 15].contains !== 'void' && this.tiles[destinationTile.id - 1].contains !== 'void' ||
+                (e.id === destinationTile.id - 16 && this.tiles[destinationTile.id - 15].contains !== 'void' && this.tiles[destinationTile.id - 1].contains !== 'void') ||
                 // eslint-disable-next-line
-                e.id === destinationTile.id + 14 && this.tiles[destinationTile.id + 15].contains !== 'void' && this.tiles[destinationTile.id - 1].contains !== 'void' ||
+                (e.id === destinationTile.id + 14 && this.tiles[destinationTile.id + 15].contains !== 'void' && this.tiles[destinationTile.id - 1].contains !== 'void') ||
                 // eslint-disable-next-line
-                e.id === destinationTile.id + 16 && this.tiles[destinationTile.id + 15].contains !== 'void' && this.tiles[destinationTile.id + 1].contains !== 'void'){
-                console.log('tile: ', e);    
-               e.color = this.currentBoard.tiles[e.id].color
-               e.image = e.contains;
+                e.id === destinationTile.id + 16 && this.tiles[destinationTile.id + 15].contains !== 'void' && this.tiles[destinationTile.id + 1].contains !== 'void'){   
+
+                e.color = this.currentBoard.tiles[e.id].color
+                e.image = e.contains;
             }
             //handle left side mapscroll border
             if(e.id === destinationTile.id - 1 && this.tiles[e.id].contains !== 'void' && this.getCoordinatesFromIndex(e.id)[0] !== this.getCoordinatesFromIndex(e.id-1)[0]){

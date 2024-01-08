@@ -7,11 +7,12 @@ export default function Tile(props) {
         <div style={{
             boxSizing: 'border-box',
             transition: 'background-color 0.25s',
-            cursor: 'pointer',
+            cursor: props.cursor ? props.cursor : 'pointer',
             height: props.tileSize+'px',
             width: props.tileSize+'px',
             backgroundImage: props.imageOverride ? "url(" + props.imageOverride + ")" : "url(" + images[props.image] + ")",
             backgroundColor: 
+                props.backgroundColor ? props.backgroundColor :
                 (props.hovered && props.type === 'board-tile') ? 
                 '#8080807a' : 
                 ( props.type === 'overlay-tile' ? 
@@ -33,11 +34,15 @@ export default function Tile(props) {
             onMouseEnter={() => {
                 if(props.type === 'crew-tile'){
                     return props.handleHover(props)
-                } else if(props.handleHover && props.type !== 'inventory-tile'){
+                } else if(props.handleHover && props.type === 'overlay-tile'){
+                    return props.handleHover(props.id)
+                }  else if(props.handleHover && props.type !== 'inventory-tile'){
                     return props.handleHover(props.id, props.type, this)
                 } else if(props.handleHover && props.type === 'inventory-tile'){
                     return props.handleHover(props)
                 } else{
+                    // console.log('returning props.key: ', props.key);
+                    // return props.handleHover(props.key)
                     return null
                 }
             }}

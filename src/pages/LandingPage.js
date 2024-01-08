@@ -36,6 +36,16 @@ export default function LandingPage() {
     }
   }
 
+  const enterClicked = () => {
+    const meta = getMeta();
+    console.log('enter clicked, meta: ', meta);
+    if(meta.dungeonId){
+      setNavDungeon(!showWarning)
+    } else {  
+      console.log('show intro sequence');
+    }
+  }
+
   return (
        <div className="landing-pane pane">
          { navToUserProfile && <Redirect to='/userProfilePage'/> }
@@ -45,7 +55,7 @@ export default function LandingPage() {
          { navToUsermanager && <Redirect to='/usermanager'/> }
         <div className="landing-buttons-container">
          {showWarning && <span className="warning">Cannot enter dungeon without a crew</span>}
-          <div className={`landing-button enter-dungeon ${showWarning ? 'disabled' : ''}`} onMouseEnter={() => checkForCrew()} onMouseLeave={() => setShowWarning(false)} onClick={() => setNavDungeon(!showWarning)}>Enter</div>
+          <div className={`landing-button enter-dungeon ${showWarning ? 'disabled' : ''}`} onMouseEnter={() => checkForCrew()} onMouseLeave={() => setShowWarning(false)} onClick={() => enterClicked()}>Enter</div>
           <div className="landing-button shop"  onClick={() => setNavCrew(true)} >Crew</div>
           <div className="landing-button user-data" onClick={() => setNavUserProfile(true)}>Profile</div>
           { isAdmin && <div className="landing-button map-maker" onClick={() => setNavMapmaker(true)}>Dungeon Builder</div>}

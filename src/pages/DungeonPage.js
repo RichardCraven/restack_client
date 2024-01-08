@@ -11,14 +11,23 @@ import {
   } from '../utils/api-handler';
 import {storeMeta, getMeta, getUserId, getUserName} from '../utils/session-handler';
 import { cilCaretRight, cilCaretLeft} from '@coreui/icons';
-import  CIcon  from '@coreui/icons-react'
-import * as images from '../utils/images'
-// import AnimationGrid from '../components/animation-grid';
+import  CIcon  from '@coreui/icons-react';
 
-const MAX_DEPTH = 8;
-const MAX_ROWS = 5;
-const TILE_SIZE = 100;
-const SHOW_TILE_BORDERS = true;
+import { CButton, CFormSelect, CFormInput} from '@coreui/react';
+
+// const MAX_DEPTH = 8;
+// const MAX_ROWS = 5;
+// const TILE_SIZE = 100;
+// const SHOW_TILE_BORDERS = true;
+
+const MARKER_TYPES = [
+    'enemy',
+    'gate',
+    'merchant',
+    'stairs',
+    'misc',
+    'custom'
+]
 
 class DungeonPage extends React.Component {
     constructor(props){
@@ -49,13 +58,22 @@ class DungeonPage extends React.Component {
             crewSize: 0,
             paused: false,
             minimap: [],
+            minimapZoomedTile: null,
+            minimapMarkerTrayOpen: false,
+            minimapPlaceMapMarkerStarted: false,
+            minimapIndicators: [],
+            overlayHoveredTileId: null,
+            mapMarkerInput: React.createRef(),
+            markerSelectVal: React.createRef(),
             levelTracker: [
                 {id: 2, active: false},
                 {id: 1, active: false},
                 {id: 0, active: false},
                 {id: -1, active: false},
                 {id: -2, active: false},
-            ]
+            ],
+            markerName: '',
+            markerType: ''
         }
     }
     
@@ -63,7 +81,7 @@ class DungeonPage extends React.Component {
         let tileSize = this.getTileSize(),
             boardSize = tileSize*15;
         this.initializeListeners();
-        this.startSaveInterval();
+        // this.startSaveInterval();
         if(this.props.mapMaker) this.props.mapMaker.initializeTiles();
         let arr = []
         for(let i = 0; i < 9; i++){
@@ -77,7 +95,6 @@ class DungeonPage extends React.Component {
         if(!meta || !meta.dungeonId){
             this.loadNewDungeon();
         } else {
-            console.log('meta: ', meta);
             this.props.inventoryManager.initializeItems(meta.inventory);
 
             // this.props.inventoryManager.addItem(this.props.inventoryManager.allItems['minor_key'])
@@ -89,8 +106,6 @@ class DungeonPage extends React.Component {
         for(let i = 0; i<9; i++){
             minimap.push({active: false})
         }
-        console.log('this.props.crewManager.crew', this.props.crewManager.crew);
-        console.log('minimap is now: ', minimap);
         this.setState((state, props) => {
             return {
                 tileSize,
@@ -103,9 +118,37 @@ class DungeonPage extends React.Component {
             }
         })
     }
+    componentDidMount(){
+        this.props.boardManager.establishAddItemToInventoryCallback(this.addItemToInventory)
+        this.props.boardManager.establishAddTreasureToInventoryCallback(this.addTreasureToInventory)
+        this.props.boardManager.establishAddCurrencyToInventoryCallback(this.addCurrencyToInventory)
+        this.props.boardManager.establishUpdateDungeonCallback(this.updateDungeon)
+        this.props.boardManager.establishPendingCallback(this.setPending)
+        this.props.boardManager.establishMessagingCallback(this.messaging)
+        this.props.boardManager.establishRefreshCallback(this.refreshTiles)
+        this.props.boardManager.establishTriggerMonsterBattleCallback(this.triggerMonsterBattle)
+        this.props.boardManager.establishSetMonsterCallback(this.setMonster)
+        this.props.boardManager.establishGetCurrentInventoryCallback(this.getCurrentInventory)
+
+        this.props.boardManager.establishBoardTransitionCallback(this.boardTransition)
+        this.props.boardManager.establishLevelChangeCallback(this.handleLevelChange)
+        this.props.boardManager.establishUseConsumableFromInventoryCallback(this.useConsumableFromInventory)
+
+        window.addEventListener('beforeunload', this.componentCleanup);
+    }
+    componentWillUnmount(){
+        this.componentCleanup();
+        window.removeEventListener('beforeunload', this.componentCleanup); 
+    }
+    
+    componentCleanup = () => {
+        window.removeEventListener('keydown', this.keyDownHandler)
+        window.removeEventListener('resize', this.handleResize.bind(this));
+        clearInterval(this.state.intervalId)
+    }
     logMeta = () => {
         const meta = getMeta();
-        console.log('meta:', meta)
+        console.log('meta: ', meta);
     }
     pickRandom = (array) => {
         let index = Math.floor(Math.random() * array.length)
@@ -122,6 +165,8 @@ class DungeonPage extends React.Component {
             break;
             case 'totems':
                 type = data.amount > 1 ? 'totems' : 'totem'
+            break;
+            default:
             break;
         }
         this.displayMessage(`You found ${data.amount} ${type}!`)
@@ -151,15 +196,10 @@ class DungeonPage extends React.Component {
         this.props.inventoryManager.addCurrency(treasure.currency);
     }
     useConsumableFromInventory = (item) => {
-        console.log('consumable used: ', item);
-        console.log('inventory; ', this.props.inventoryManager.inventory);
         let foundItem = this.props.inventoryManager.inventory.find(e=> e.name === item.name),
         foundIndex = this.props.inventoryManager.inventory.findIndex(e=> e.name === item.name);
-        console.log('inventory equivalent: ', foundItem, 'foundIndex: ', foundIndex);
-        console.log('found item index: ', this.props.inventoryManager.inventory.findIndex(e=> e.name === item.name));
         foundItem.animation = 'consumed';
         setTimeout(()=>{
-            console.log('remove item index ', foundIndex);
             this.props.inventoryManager.removeItemByIndex(foundIndex)
             this.forceUpdate();
             this.props.saveUserData();
@@ -175,7 +215,6 @@ class DungeonPage extends React.Component {
         this.setState({pending: pendingState})
     }
     refreshTiles = () => {
-        console.log('refresh');
         let newTiles = this.props.boardManager.tiles,
             newOverlayTiles = this.props.boardManager.overlayTiles
         this.setState({
@@ -219,39 +258,9 @@ class DungeonPage extends React.Component {
         })
     }
     getCurrentInventory = () => {
-        console.log('get it');
         return this.props.inventoryManager.inventory;
     }
-    componentDidMount(){
-        // const callbacks = [this.addItemToInventory]
-        // this.props.boardManager.establishCallbacks(callbacks)
-        this.props.boardManager.establishAddItemToInventoryCallback(this.addItemToInventory)
-        this.props.boardManager.establishAddTreasureToInventoryCallback(this.addTreasureToInventory)
-        this.props.boardManager.establishAddCurrencyToInventoryCallback(this.addCurrencyToInventory)
-        this.props.boardManager.establishUpdateDungeonCallback(this.updateDungeon)
-        this.props.boardManager.establishPendingCallback(this.setPending)
-        this.props.boardManager.establishMessagingCallback(this.messaging)
-        this.props.boardManager.establishRefreshCallback(this.refreshTiles)
-        this.props.boardManager.establishTriggerMonsterBattleCallback(this.triggerMonsterBattle)
-        this.props.boardManager.establishSetMonsterCallback(this.setMonster)
-        this.props.boardManager.establishGetCurrentInventoryCallback(this.getCurrentInventory)
-
-        this.props.boardManager.establishBoardTransitionCallback(this.boardTransition)
-        this.props.boardManager.establishLevelChangeCallback(this.handleLevelChange)
-        this.props.boardManager.establishUseConsumableFromInventoryCallback(this.useConsumableFromInventory)
-
-        window.addEventListener('beforeunload', this.componentCleanup)
-    }
-    componentWillUnmount(){
-        this.componentCleanup();
-        window.removeEventListener('beforeunload', this.componentCleanup); 
-    }
     
-    componentCleanup = () => {
-        window.removeEventListener('keydown', this.keyDownHandler)
-        window.removeEventListener('resize', this.handleResize.bind(this));
-        clearInterval(this.state.intervalId)
-    }
     handleLevelChange = (newLevelId) => {
         const levelTracker = this.state.levelTracker;
         levelTracker.forEach(e=>e.active = false)
@@ -261,8 +270,42 @@ class DungeonPage extends React.Component {
             debugger
         }
         level.active = true;
+
+
+        const meta = getMeta();
+        let orientation = this.props.boardManager.currentOrientation;
+        let indicatorsGroup = meta.minimapIndicators.find(e=>e.level === level.id && e.orientation === orientation)
+        
+
+        
+
+        if(!indicatorsGroup){
+            let newIndicators = []
+            for(let i = 0; i < 9; i++){
+                newIndicators.push({
+                    enemies: [],
+                    gates: [],
+                    merchant: [],
+                    stairs: [],
+                    misc: [],
+                    custom: []
+                })
+            }
+            indicatorsGroup = {
+                level: level.id,
+                orientation,
+                indicators: newIndicators
+            }
+            meta.minimapIndicators.push(indicatorsGroup)
+            storeMeta(meta)
+        }
+
+        console.log('indicators group: ', indicatorsGroup);
+
         this.setState({
-            levelTracker
+            levelTracker,
+            minimapZoomedTile: null,
+            minimapIndicators: indicatorsGroup.indicators
         })
 
     }
@@ -284,10 +327,17 @@ class DungeonPage extends React.Component {
             case 'down':
                 newIndex = currentIndex+3;
             break;
+            default:
+                break;
+        }
+        let zoomed = null;
+        if(this.state.minimapZoomedTile !== null){
+            zoomed = newIndex;
         }
         minimap[newIndex].active = true;
         this.setState({
-            minimap
+            minimap,
+            minimapZoomedTile: zoomed
         })
     }
     getTileSize(){
@@ -433,6 +483,12 @@ class DungeonPage extends React.Component {
     handleHover = (id, type, tile) => {
         // console.log('tile', tile)
     }
+    handleOverlayHover = (id, type, tile) => {
+        // console.log('tile id', id)
+        this.setState({
+            overlayHoveredTileId: id
+        })
+    }
     handleInventoryTileHover = (tileProps) => {
         let inv = this.state.inventoryHoverMatrix;
         this.props.inventoryManager.inventory.forEach((e,i)=>{
@@ -455,6 +511,58 @@ class DungeonPage extends React.Component {
     }
     handleClick = (tile) => {
         console.log('HANDLE CLICK, SHOULD NOT GET HERE tile:', tile);
+    }
+    handleOverlayClick = (tile) => {
+        console.log('meta: ', getMeta());
+        if(!this.state.minimapPlaceMapMarkerStarted) return
+        // this is for marking the minimap
+        
+        let minimapIndicators = this.state.minimapIndicators,
+        activeMinimapIndex = this.state.minimap.findIndex(e=>e.active),
+        indicatorContainer = minimapIndicators[activeMinimapIndex],
+        inputElement = this.state.mapMarkerInput.current
+        console.log('activeMinimapIndex', activeMinimapIndex)
+        console.log('this.state.minimap', this.state.minimap)
+        console.log('minimap indicators: ', this.state.minimapIndicators);
+        console.log('minimap indicators: ', this.state.minimapIndicators, activeMinimapIndex, '->', this.state.minimapIndicators[activeMinimapIndex]);
+        console.log('indicator container: ', indicatorContainer);
+        // debugger
+        switch(this.state.markerType){
+            case 'enemy':
+                indicatorContainer.enemies.push({
+                    type: this.props.boardManager.tiles[tile.id].contains,
+                    tileId: tile.id
+                })
+                inputElement.value = this.props.boardManager.tiles[tile.id].contains
+            break;
+            case 'merchant':
+                console.log('merchant marker not set up yet');
+            break;
+            case 'gate':
+                console.log('IN GATE');
+                indicatorContainer.gates.push({
+                    type: this.props.boardManager.tiles[tile.id].contains,
+                    tileId: tile.id
+                })
+                inputElement.value = this.props.boardManager.tiles[tile.id].contains;
+            break;
+            case 'stairs':
+                indicatorContainer.stairs.push({
+                    type: this.props.boardManager.tiles[tile.id].contains,
+                    tileId: tile.id
+                })
+                inputElement.value = this.props.boardManager.tiles[tile.id].contains;
+            break;
+            case 'custom':
+                console.log('custom marker not set up yet');
+            break;
+            default:
+                break;
+        }
+        this.setState({
+            minimapIndicators,
+            minimapPlaceMapMarkerStarted: false
+        })
     }
     handleMemberClick = (member) => {
         this.setState({
@@ -539,11 +647,14 @@ class DungeonPage extends React.Component {
                     weapon = this.props.inventoryManager.allItems['axe']
                     c.inventory.push(weapon);
                 break;
+                default:
+                    break;
             }
         })
 
     }
     loadNewDungeon = async () => {
+        console.log('load new dungeon');
         const meta = getMeta(),
               userId = getUserId(),
               userName = getUserName();
@@ -591,14 +702,12 @@ class DungeonPage extends React.Component {
             const miniboardIndex = spawnPoint.miniboardIndex
             const orientation = sp[4];
             const spawnTileIndex = spawnPoint.id;
-            // console.log('levelId:', levelId, 'level', level, 'miniboard:', miniboardIndex, 'orientation:', orientation, 'tile id:', spawnTileIndex);
             const board = orientation === 'F' ? level.front.miniboards[miniboardIndex] : (orientation === 'B' ? level.back.miniboards[miniboardIndex] : null)
             if(board === null){
                 console.log('board is null, investigate');
                 debugger
             }
             
-            console.log('HANDLE MINIMAP FOR NEW DUNGEON');
             meta.location = {
                 boardIndex: spawnPoint.miniboardIndex,
                 tileIndex: spawnPoint.id,
@@ -616,12 +725,39 @@ class DungeonPage extends React.Component {
             minimap[miniboardIndex].active = true;
             let foundLevel = levelTracker.find(e=>e.id === levelId)
             foundLevel.active = true;
+
+            let newIndicators = []
+            for(let i = 0; i < 9; i++){
+                newIndicators.push({
+                    enemies: [],
+                    gates: [],
+                    merchant: [],
+                    stairs: [],
+                    misc: [],
+                    custom: []
+                })
+            }
+
+            meta.minimapIndicators = {
+                indicators: newIndicators,
+                orientation,
+                level: level.id
+            }
+
+            storeMeta(meta);
+
             this.setState(()=>{
                 return {
                     overlayTiles: this.props.boardManager.overlayTiles,
                     tiles: this.props.boardManager.tiles,
                     minimap,
-                    levelTracker
+                    levelTracker,
+                    minimapZoomedTile: null,
+                    minimapIndicators: {
+                        level: foundLevel.id,
+                        orientation,
+                        indicators: newIndicators
+                    }
                 }
             })
         } else {
@@ -630,31 +766,54 @@ class DungeonPage extends React.Component {
     }
     loadExistingDungeon = async (dungeonId) => {
         const meta = getMeta();
-        console.log('meta: ', meta);
+        
         const res = await loadDungeonRequest(dungeonId);
         const dungeon = JSON.parse(res.data[0].content)
         dungeon.id = res.data[0]._id;
-        console.log('dungeon::: ', dungeon);
         this.props.boardManager.setDungeon(dungeon)
         this.props.boardManager.setCurrentLevel(dungeon.levels.find(l=> l.id === meta.location.levelId));
-        console.log('meta.location: ', meta.location);
-        console.log('meta.location.orientation', meta.location.orientation);
-        console.log('meta.location.boardIndex: ', meta.location.boardIndex, 'meta.location.tileIndex', meta.location.tileIndex);
         this.props.boardManager.setCurrentOrientation(meta.location.orientation);
         this.props.boardManager.initializeTilesFromMap(meta.location.boardIndex, meta.location.tileIndex);
         const minimap = this.state.minimap,
         levels = this.state.levelTracker;
-        let level = levels.find(e => e.id === meta.location.levelId)
-        console.log('location meta: ', meta.location, 'found level', level);
+        let level = levels.find(e => e.id === meta.location.levelId);
         levels.forEach(e=>e.active = false)
         level.active = true;
         minimap[meta.location.boardIndex].active = true;
+        
+        let orientation = this.props.boardManager.currentOrientation;
+        let indicatorsGroup = meta.minimapIndicators && meta.minimapIndicators.find(e=>e.level === level.id && e.orientation === orientation);
+
+        // console.log('CODE STOPPED, TO DIAGNOSE FLOW');
+        // return
+        if(!indicatorsGroup){
+            let newIndicators = []
+            for(let i = 0; i < 9; i++){
+                newIndicators.push({
+                    enemies: [],
+                    gates: [],
+                    merchant: [],
+                    stairs: [],
+                    misc: [],
+                    custom: []
+                })
+            }
+            indicatorsGroup = {
+                level: level.id,
+                orientation,
+                indicators: newIndicators
+            }
+            meta.minimapIndicators.push(indicatorsGroup)
+            storeMeta(meta)
+        }
+
         this.setState(()=>{
             return {
                 spawn: meta.location.tileIndex,
                 tiles: this.props.boardManager.tiles,
                 overlayTiles: this.props.boardManager.overlayTiles,
                 minimap,
+                minimapIndicators: indicatorsGroup.indicators,
                 levelTracker: levels
             }
         })
@@ -671,8 +830,7 @@ class DungeonPage extends React.Component {
         const newVal = !this.state.rightPanelExpanded
         this.setState({rightPanelExpanded: newVal})
         const meta = getMeta()
-        meta.rightExpanded = newVal
-        console.log('right sight expanded: ', newVal);
+        meta.rightExpanded = newVal;
         storeMeta(meta)
         await updateUserRequest(getUserId(), meta)
     }
@@ -688,6 +846,107 @@ class DungeonPage extends React.Component {
             keysLocked : false
         })
     }
+    minimapTileClicked = (index) => {
+        this.setState({
+            minimapZoomedTile: index
+        })
+    }
+    calcPlayerIndicatorTop = () => {
+        let formattedCoords = {x: this.props.boardManager.playerTile.location[0]-15, y: this.props.boardManager.playerTile.location[1]-15};
+        let fromTop = formattedCoords.x
+        return `${fromTop / 14 * 100}%`
+    }
+    calcPlayerIndicatorLeft = () => {
+        let formattedCoords = {x: this.props.boardManager.playerTile.location[0]-15, y: this.props.boardManager.playerTile.location[1]-15}
+        let fromLeft = formattedCoords.y;
+        return `${fromLeft / 14 * 100}%`
+    }
+    calcIndicator = (tileId) => {
+        let coords = this.props.boardManager.getCoordinatesFromIndex(tileId);
+        return {
+            left: `${(coords[1]-15) / 14 * 100}%`,
+            top: `${(coords[0]-15) / 14 * 100}%`
+        }
+    }
+    clearAllMarkers = () => {
+        let meta = getMeta();
+        meta.minimapIndicators = []
+        storeMeta(meta)
+
+        let newIndicators = []
+        for(let i = 0; i < 9; i++){
+            newIndicators.push({
+                enemies: [],
+                gates: [],
+                merchant: [],
+                stairs: [],
+                misc: [],
+                custom: []
+            })
+        }
+        
+        this.setState({
+            minimapIndicators: newIndicators
+        })
+    }
+    beginMarkingMap = () => {
+        console.log('MARK MAP');
+        let current = this.state.minimapMarkerTrayOpen;
+        this.setState({
+            minimapMarkerTrayOpen: !current
+        })
+    }
+    placeMapMarkerStart = () => {
+        console.log('place map marker start, meta: ', getMeta());
+        this.setState({
+            minimapPlaceMapMarkerStarted: true
+        })
+
+    }
+    submitMarkers = () => {
+        let meta = getMeta();
+        console.log('minimap indicators: ', this.state.minimapIndicators);
+        console.log('submitting marker, meta: ', meta)
+        // debugger
+        console.log('level data', this.props.boardManager);
+        let indicators = this.state.minimapIndicators;
+        let orientation = this.props.boardManager.currentOrientation;
+        let levelId = this.props.boardManager.currentLevel.id
+        let obj = {
+            level: levelId,
+            orientation,
+            indicators
+        }
+        if(!meta['minimapIndicators']){
+            meta['minimapIndicators'] = [obj]
+        } else if(meta.minimapIndicators.find(e=>e.level === levelId && e.orientation === orientation)){
+            let existing = meta.minimapIndicators.find(e=>e.level === levelId && e.orientation === orientation);
+            existing.indicators = indicators;
+        } else {
+            meta.minimapIndicators.push(obj)
+        }
+        
+        console.log('meta is now ', meta);
+        storeMeta(meta)
+        // this.state.mapMarkerInput.current.value = null;
+        // this.state.markerSelectVal.current.value = 'Marker Type';
+        this.setState({
+            minimapMarkerTrayOpen: false,
+            minimapPlaceMapMarkerStarted: false,
+            markerName: '',
+            markerType: 'Marker Type'
+        })
+    }
+    onMarkerNameInputChange = (markerName) => {
+        this.setState({
+            markerName
+        })
+    }
+    onMarkerTypeDropdownChange = (markerType) => {
+        this.setState({
+            markerType
+        })
+    }
     render(){
         return (
         <div className="dungeon-container">
@@ -699,8 +958,8 @@ class DungeonPage extends React.Component {
                 {/* <div className="minimap-container">
 
                 </div> */}
-                <div className="crew-container" onClick={() => this.logMeta()}>
-                    <div className="title">Crew</div>
+                <div className="crew-container">
+                    <div className="title" onClick={() => this.logMeta()}>Crew</div>
                     <div className="crew-tile-container">
                         {   this.props.crewManager.crew &&
                             this.props.crewManager.crew.map((member, i) => {
@@ -841,18 +1100,102 @@ class DungeonPage extends React.Component {
             </div>
             <div className={`right-side-panel ${this.state.rightPanelExpanded ? 'expanded' : ''}`}>
                 <div className="minimap-container">
-                    <div className="level-indicator">
-                        {this.state.levelTracker && this.state.levelTracker.map((e,i)=>{
-                            return <div key={i} className={`floor-level ${e.active ? 'active' : ''} `}></div>
+                    <div className="map-wrapper">
+                        <div className="level-indicator">
+                            {this.state.levelTracker && this.state.levelTracker.map((e,i)=>{
+                                return <div key={i} className={`floor-level ${e.active ? 'active' : ''} `}></div>
+                            })}
+                        </div>
+                        {this.state.minimap.map((e,i)=>{
+                            return <div className={`minimap-tile 
+                            ${this.state.minimap[i].active ? 'active' : ''}
+                            ${this.state.minimapZoomedTile === i ? 'zoomed' : ''}
+                            ${this.state.minimapZoomedTile === i && i === 0 ? 'topLeft' : ''}
+                            ${this.state.minimapZoomedTile === i && i === 1 ? 'topMid' : ''}
+                            ${this.state.minimapZoomedTile === i && i === 2 ? 'topRight' : ''}
+                            ${this.state.minimapZoomedTile === i && i === 3 ? 'midLeft' : ''}
+                            ${this.state.minimapZoomedTile === i && i === 5 ? 'midRight' : ''}
+                            ${this.state.minimapZoomedTile === i && i === 6 ? 'botLeft' : ''}
+                            ${this.state.minimapZoomedTile === i && i === 7 ? 'botMid' : ''}
+                            ${this.state.minimapZoomedTile === i && i === 8 ? 'botRight' : ''}
+                            `} key={i} onClick={() => this.minimapTileClicked(i)}>
+                                
+                                {/* // player // */}
+                                {this.state.minimap[i].active && <div className="player-position-indicator"
+                                style={{
+                                    left: this.calcPlayerIndicatorLeft(),
+                                    top: this.calcPlayerIndicatorTop()
+                                }}></div>}
+
+                                {/* // enemies // */}
+                                {this.state.minimapIndicators[i] && this.state.minimapIndicators[i].enemies.map((indicator,idx)=>{
+                                    return <div key={idx} className={`minimap-indicator enemy`}
+                                    style={{
+                                        left: this.calcIndicator(indicator.tileId).left,
+                                        top: this.calcIndicator(indicator.tileId).top
+                                    }}>
+                                    </div>
+                                })}
+
+                                {/* // stairs // */}
+                                {this.state.minimapIndicators[i] && this.state.minimapIndicators[i].stairs.map((indicator,idx)=>{
+                                    return <div key={idx} className={`minimap-indicator stairs`}
+                                    style={{
+                                        left: this.calcIndicator(indicator.tileId).left,
+                                        top: this.calcIndicator(indicator.tileId).top
+                                    }}>
+                                    </div>
+                                })}
+
+                                {/* // gates // */}
+                                {this.state.minimapIndicators[i] && this.state.minimapIndicators[i].gates.map((indicator,idx)=>{
+                                    return <div key={idx} className={`minimap-indicator gate`}
+                                    style={{
+                                        left: this.calcIndicator(indicator.tileId).left,
+                                        top: this.calcIndicator(indicator.tileId).top
+                                    }}>
+                                    </div>
+                                })}
+
+                            </div>
                         })}
                     </div>
-                    {this.state.minimap.map((e,i)=>{
-                        return <div className={`minimap-tile ${this.state.minimap[i].active ? 'active' : ''}`} key={i}>
-                            
-                        </div>
-                    })
+                    <div className={`tray-wrapper ${this.state.minimapZoomedTile !== null ? (this.state.minimapMarkerTrayOpen ? 'double-expanded' : 'expanded') : ''}`}>
+                        {/* <button className="one" onClick={() => this.setState({minimapZoomedTile: null, minimapMarkerTrayOpen: false})}>Zoom Out</button> */}
+                        {/* <button className="one" onClick={() => this.beginMarkingMap()}>Mark Map</button> */}
+                        <CButton onClick={() => this.setState({minimapZoomedTile: null, minimapMarkerTrayOpen: false})}>Zoom Out</CButton>
+                        <CButton onClick={() => this.beginMarkingMap()}>Mark Map</CButton>
 
-                    }
+
+                        {/* <button className="one">three</button> */}
+                        <div className={`mark-map-tray ${this.state.minimapMarkerTrayOpen ? 'expanded' : ''}`}>
+                            <CFormSelect 
+                                aria-label="Marker Selector"
+                                // ref={this.state.markerSelectVal}
+                                options={
+                                    ['Marker Type'].concat(MARKER_TYPES.map((e, i)=>{
+                                    return e
+                                    }))
+                                }
+                                value={this.state.markerType}
+                                
+                                onChange={e => this.onMarkerTypeDropdownChange(e.target.value)}
+                                // onChange={this.props.dungeonSelectOnChange}
+                            />
+                            <CFormInput
+                                type="text"
+                                // ref={this.state.mapMarkerInput}
+                                value={this.state.markerName}
+                                onChange={e => this.onMarkerNameInputChange(e.target.value)}
+                                placeholder="marker name"
+                                aria-describedby="marker name"
+                            ></CFormInput>
+                            <CButton onClick={() => this.placeMapMarkerStart()} className='place-marker-button' component="a" color="light" href="#" role="button">Place Marker</CButton>
+                            <CButton onClick={() => this.submitMarkers()} component="a" color="light" href="#" role="button">Submit</CButton>
+
+                        </div>
+                        <CButton className='clear-all-markers' onClick={() => this.clearAllMarkers()} color="danger">Clear All Markers</CButton>
+                    </div>
                 </div>
                 <div className="inventory">
                     <div className="title">Inventory</div>
@@ -899,7 +1242,7 @@ class DungeonPage extends React.Component {
                 </div>
             </div>
             {this.state.currentBoard && <div className="info-panel">{this.props.boardManager.currentBoard.name}</div>}
-            {!this.state.keysLocked && <div className="center-board-wrapper">
+            {!this.state.keysLocked && <div className={`center-board-wrapper ${this.state.minimapPlaceMapMarkerStarted ? 'show-map-marker-cursor' : ''}`}>
                 <div className="message-container">
                     {this.state.messageToDisplay}
                 </div>
@@ -910,6 +1253,8 @@ class DungeonPage extends React.Component {
                     {this.state.overlayTiles && this.state.overlayTiles.map((tile, i) => {
                         return <Tile 
                         key={i}
+                        id={i}
+                        cursor={this.state.minimapPlaceMapMarkerStarted ? 'crosshair' : 'default'}
                         tileSize={this.state.tileSize}
                         image={tile.image ? tile.image : null}
                         contains={tile.contains}
@@ -918,9 +1263,10 @@ class DungeonPage extends React.Component {
                         coordinates={tile.coordinates}
                         index={tile.id}
                         editMode={false}
-                        handleHover={this.handleHover}
+                        handleHover={this.handleOverlayHover}
                         type={'overlay-tile'}
-                        handleClick={this.handleClick}
+                        handleClick={this.handleOverlayClick}
+                        backgroundColor={this.state.overlayHoveredTileId === i && this.state.minimapPlaceMapMarkerStarted ? 'rgba(100, 100, 38, 0.272)' : 'transparent'}
                         >
                         </Tile>
                     })}
@@ -932,6 +1278,7 @@ class DungeonPage extends React.Component {
                     {this.state.tiles && this.state.tiles.map((tile, i) => {
                         return <Tile 
                         key={i}
+                        cursor={this.state.minimapPlaceMapMarkerStarted ? 'crosshair' : 'default'}
                         tileSize={this.state.tileSize}
                         image={tile.image ? tile.image : (tile.icon ? tile.icon : null)}
                         contains={tile.contains}

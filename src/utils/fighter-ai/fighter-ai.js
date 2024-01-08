@@ -1,6 +1,6 @@
 import { Loryastes } from './profiles/Loryastes'
 import {Methods} from './methods/basic-methods';
-import {MovementMethods} from './methods/movement-methods';
+import {MovementMethods} from './methods/fighter-movement-methods';
 
 export function FighterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
     this.MAX_DEPTH = MAX_DEPTH;
@@ -34,8 +34,7 @@ export function FighterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
         let attack, available = caller.attacks.filter(e=>e.cooldown_position === 100);
         let percentCooledDown = 0,
             chosenAttack;
-        const distanceToTarget = this.methods.getDistanceToTarget(caller, target),
-        laneDiff = this.methods.getLaneDifferenceToTarget(caller, target);
+        const distanceToTarget = this.methods.getDistanceToTarget(caller, target);
 
         if(distanceToTarget === 1 && available.find(e=>e.range === 'close')){
             attack = available.find(e=>e.range === 'close');
@@ -70,7 +69,7 @@ export function FighterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
     }
     this.isAnEnemyDirectlyInFrontOfMe = function(caller, combatants){
         if(!combatants) return false
-        const liveEnemies = Object.values(combatants).filter(e=>e.isMonster || e.isMinion && !e.dead),
+        const liveEnemies = Object.values(combatants).filter(e=>e.isMonster || (e.isMinion && !e.dead)),
         directlyInFront = liveEnemies.some(e=>e.depth === caller.depth + 1 && e.position === caller.position);
         return directlyInFront ? liveEnemies.find(e=>e.depth === caller.depth + 1 && e.position === caller.position) : null;
     }
@@ -95,7 +94,7 @@ export function FighterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
             console.log('LORYASTES: BEHIND ADJACENT!');
             newPosition = caller.position - 1
         }
-        if(distanceToTarget < 0 && laneDiff !== 0 ||  
+        if((distanceToTarget < 0 && laneDiff !== 0) ||  
         (distanceToTarget < -1 && laneDiff === 0 && caller.depth > 1)){
             caller.depth--
         } else if(distanceToTarget > 1){
@@ -156,7 +155,7 @@ export function FighterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
 
         // now handle depth
 
-        if(distanceToTarget < 0 && laneDiff !== 0 ||  
+        if((distanceToTarget < 0 && laneDiff !== 0) ||  
         (distanceToTarget < -1 && laneDiff === 0 && caller.depth > 1)){
             caller.depth--
         }else if(distanceToTarget === -1 && laneDiff === 0){
@@ -168,10 +167,7 @@ export function FighterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
     }
 
     this.defaultAquireTarget = (caller, combatants) => {
-        const target = combatants[caller.targetId],
-        distanceToTarget = this.methods.getDistanceToTarget(caller, target),
-        laneDiff = this.methods.getLaneDifferenceToTarget(caller, target);
-        let newPosition, newDepth;
+        // const target = combatants[caller.targetId];
     }
 
     // const Loryastes = {
@@ -259,11 +255,6 @@ export function FighterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
                 missesTarget(caller);
             }
         }
-    }
-
-    const Tyra = (caller, target, allLiveCombatants) => {
-        console.log('in Tyra, caller: ', caller, 'target:', target, 'all combatants: ', allLiveCombatants)
-
     }
 
     const data = {

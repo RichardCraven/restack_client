@@ -51,6 +51,8 @@ export function Sphinx(data, animationManager){
                     console.log('LIGHTNING');
                     debugger
                 break;
+                default:
+                    break;
 
             }
             // if(caller.pendingAttack.name === 'meditate'){
@@ -118,6 +120,8 @@ export function Sphinx(data, animationManager){
                     missesTarget(caller);
                 }
             break;
+            default:
+                break;
         }
 
 
@@ -131,8 +135,7 @@ export function Sphinx(data, animationManager){
 
         // console.log('djinn available attacks', available, 'caller.attacks', caller.attacks)
 
-        const distanceToTarget = data.methods.getDistanceToTarget(caller, target),
-        laneDiff = data.methods.getLaneDifferenceToTarget(caller, target);
+        const distanceToTarget = data.methods.getDistanceToTarget(caller, target);
 
         if(distanceToTarget === 1 && available.find(e=>e.range === 'close')){
             attack = available.find(e=>e.range === 'close');

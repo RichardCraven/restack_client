@@ -211,22 +211,22 @@ import witch_p1_6 from '../assets/portraits/monsters/variations/witch/type1/witc
 import witch_p1_7 from '../assets/portraits/monsters/variations/witch/type1/witch7.png';
 import witch_p1_8 from '../assets/portraits/monsters/variations/witch/type1/witch8.png';
 
-import witch_p2_1 from '../assets/portraits/monsters/variations/witch/type2/witch1.png';
-import witch_p2_2 from '../assets/portraits/monsters/variations/witch/type2/witch2.png';
-import witch_p2_3 from '../assets/portraits/monsters/variations/witch/type2/witch3.png';
-import witch_p2_4 from '../assets/portraits/monsters/variations/witch/type2/witch4.png';
-import witch_p2_5 from '../assets/portraits/monsters/variations/witch/type2/witch5.png';
-import witch_p2_6 from '../assets/portraits/monsters/variations/witch/type2/witch6.png';
-import witch_p2_7 from '../assets/portraits/monsters/variations/witch/type2/witch7.png';
-import witch_p2_8 from '../assets/portraits/monsters/variations/witch/type2/witch8.png';
-import witch_p2_9 from '../assets/portraits/monsters/variations/witch/type2/witch9.png';
+// import witch_p2_1 from '../assets/portraits/monsters/variations/witch/type2/witch1.png';
+// import witch_p2_2 from '../assets/portraits/monsters/variations/witch/type2/witch2.png';
+// import witch_p2_3 from '../assets/portraits/monsters/variations/witch/type2/witch3.png';
+// import witch_p2_4 from '../assets/portraits/monsters/variations/witch/type2/witch4.png';
+// import witch_p2_5 from '../assets/portraits/monsters/variations/witch/type2/witch5.png';
+// import witch_p2_6 from '../assets/portraits/monsters/variations/witch/type2/witch6.png';
+// import witch_p2_7 from '../assets/portraits/monsters/variations/witch/type2/witch7.png';
+// import witch_p2_8 from '../assets/portraits/monsters/variations/witch/type2/witch8.png';
+// import witch_p2_9 from '../assets/portraits/monsters/variations/witch/type2/witch9.png';
 
-import witch_p3_1 from '../assets/portraits/monsters/variations/witch/type3/witch1.png';
-import witch_p3_2 from '../assets/portraits/monsters/variations/witch/type3/witch2.png';
-import witch_p3_3 from '../assets/portraits/monsters/variations/witch/type3/witch3.png';
-import witch_p3_4 from '../assets/portraits/monsters/variations/witch/type3/witch4.png';
-import witch_p3_5 from '../assets/portraits/monsters/variations/witch/type3/witch5.png';
-import witch_p3_6 from '../assets/portraits/monsters/variations/witch/type3/witch6.png';
+// import witch_p3_1 from '../assets/portraits/monsters/variations/witch/type3/witch1.png';
+// import witch_p3_2 from '../assets/portraits/monsters/variations/witch/type3/witch2.png';
+// import witch_p3_3 from '../assets/portraits/monsters/variations/witch/type3/witch3.png';
+// import witch_p3_4 from '../assets/portraits/monsters/variations/witch/type3/witch4.png';
+// import witch_p3_5 from '../assets/portraits/monsters/variations/witch/type3/witch5.png';
+// import witch_p3_6 from '../assets/portraits/monsters/variations/witch/type3/witch6.png';
 
 import beholder_portrait from '../assets/portraits/monsters/beholder.png'
 import beholder_minion_portrait from '../assets/portraits/monsters/beholder_minion.png'
@@ -439,5 +439,6 @@ export {
     crushing,
     fire_breath,
     void_lance,
-    lightning
+    lightning,
+    tackle
 };
