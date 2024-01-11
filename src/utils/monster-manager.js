@@ -9,6 +9,7 @@ export function MonsterManager(){
     this.monsters = {
         witch: {
             type: 'witch',
+            key: 'witch',
             image_names: ['witch_p1_1'],
             monster_names: ['Rhea', 'Eundu'],
             stats: {
@@ -36,6 +37,7 @@ export function MonsterManager(){
         },
         beholder: {
             type: 'beholder',
+            key: 'beholder',
             image_names: ['beholder'],
             monster_names: ['Nirnuceks', 'Adalak', 'Vemrindon', 'Sardaresh'],
             stats: {
@@ -64,6 +66,7 @@ export function MonsterManager(){
         },
         beholder_minion: {
             type: 'beholder_minion',
+            key: 'beholder_minion',
             image_names: ['beholder_minion'],
             monster_names: ['Nirnuceks', 'Adalak', 'Vemrindon'],
             stats: {
@@ -87,6 +90,7 @@ export function MonsterManager(){
         },
         kabuki_demon: {
             type: 'demon',
+            key: 'kabuki_demon',
             image_names: ['kabuki_demon_portrait'],
             monster_names: ['Ikiro', 'Jimbu'],
             stats: {
@@ -115,6 +119,7 @@ export function MonsterManager(){
         },
         kabuki_demon_minion: {
             type: 'demon',
+            key: 'kabuki_demon_minion',
             image_names: ['kabuki_demon_minion'],
             monster_names: ['Ikiro', 'Jimbu'],
             stats: {
@@ -138,6 +143,7 @@ export function MonsterManager(){
         },
         vampire: {
             type: 'vampire',
+            key: 'vampire',
             image_names: ['black_vampire'],
             monster_names: ['Vukodlak', 'Morias', 'Roterach'],
             stats: {
@@ -164,6 +170,7 @@ export function MonsterManager(){
         },
         ogre: {
             type: 'ogre',
+            key: 'ogre',
             image_names: ['ogre'],
             monster_names: ['Uggo', 'Tubodu', 'Gumluk'],
             stats: {
@@ -189,6 +196,7 @@ export function MonsterManager(){
         },
         gorgon: {
             type: 'gorgon',
+            key: 'gorgon',
             image_names: ['gorgon'],
             monster_names: ['Lithios', 'Merkaba', 'Axolus'],
             stats: {
@@ -215,6 +223,7 @@ export function MonsterManager(){
         },
         goat_demon: {
             type: 'demon',
+            key: 'goat_demon',
             image_names: ['goat_demon'],
             monster_names: ['ur-Xulu', 'ur-Baba', 'ur-Zuzu'],
             stats: {
@@ -242,6 +251,7 @@ export function MonsterManager(){
         },
         wraith: {
             type: 'wraith',
+            key: 'wraith',
             image_names: ['wraith'],
             monster_names: ['Sicirath', 'Olnuk', 'Ygra'],
             stats: {
@@ -267,6 +277,7 @@ export function MonsterManager(){
         },
         dragon: {
             type: 'dragon',
+            key: 'dragon',
             image_names: ['dragon'],
             monster_names: ['Theraxes', 'Daedron', 'Kykerod'],
             stats: {
@@ -294,6 +305,7 @@ export function MonsterManager(){
         },
         djinn: {
             type: 'djinn',
+            key: 'djinn',
             image_names: ['djinn'],
             monster_names: ['Murmeros', 'Ixcalot', 'il Hagan'],
             stats: {
@@ -321,6 +333,7 @@ export function MonsterManager(){
         },
         sphinx: {
             type: 'sphinx',
+            key: 'sphinx',
             image_names: ['sphinx'],
             monster_names: ['Nunufet', 'Ipalot', 'Vizieros'],
             stats: {
@@ -349,6 +362,7 @@ export function MonsterManager(){
         },
         goblin: {
             type: 'goblin',
+            key: 'goblin',
             image_names: ['goblin'],
             monster_names: ['Wiggit', 'Miggi'],
             stats: {
@@ -374,6 +388,7 @@ export function MonsterManager(){
         },
         mummy: {
             type: 'mummy',
+            key: 'mummy',
             image_names: ['mummy'],
             monster_names: ['Kufu', 'Razeset'],
             stats: {
@@ -401,6 +416,7 @@ export function MonsterManager(){
         },
         troll: {
             type: 'troll',
+            key: 'troll',
             image_names: ['troll'],
             monster_names: ['Mundzungu', 'Wugum'],
             stats: {
@@ -427,6 +443,7 @@ export function MonsterManager(){
         },
         skeleton: {
             type: 'skeleton',
+            key: 'skeleton',
             image_names: ['skeleton'],
             monster_names: ['bones'],
             stats: {
@@ -445,6 +462,7 @@ export function MonsterManager(){
             deathCries: ['*screech*'],
             specials: ['induce_fear'],
             attacks: ['crush', 'bite', 'tackle'],
+            minions: ['skeleton', 'skeleton'],
             weaknesses: ['fire'],
             drops: [
                 {item: 'minor_health_potion', percentChance: 55}

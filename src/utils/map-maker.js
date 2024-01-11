@@ -72,7 +72,6 @@ export function MapMaker(props){
             let belowLevel = dungeon.levels.find(lev => lev.id === l.id-1)
             let connected = [];
 
-            if(l.id === 0) console.log('frontFilteredMiniboards:' ,frontFilteredMiniboards)
             for(let i =0; i < 9; i++){
                 const frontBoardPassages = frontFilteredMiniboards[i];
                 const backBoardPassages = backFilteredMiniboards[i];
@@ -408,6 +407,7 @@ export function MapMaker(props){
     }
     this.isValidPlane = (miniboards) => {
         console.log('checking plane, miniboards: ', miniboards)
+        if(!miniboards) return false;
         for(let b of miniboards){
             if(b.tiles === undefined){
                 return false

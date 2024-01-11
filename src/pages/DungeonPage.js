@@ -93,6 +93,7 @@ class DungeonPage extends React.Component {
 
         
         if(!meta || !meta.dungeonId){
+            this.props.crewManager.initializeCrew(meta.crew);
             this.loadNewDungeon();
         } else {
             this.props.inventoryManager.initializeItems(meta.inventory);
@@ -738,11 +739,11 @@ class DungeonPage extends React.Component {
                 })
             }
 
-            meta.minimapIndicators = {
+            meta.minimapIndicators = [{
                 indicators: newIndicators,
                 orientation,
                 level: level.id
-            }
+            }]
 
             storeMeta(meta);
 

@@ -242,6 +242,18 @@ import fire_breath from '../assets/icons/combat-icons/monster-attacks/fire_breat
 import lightning from '../assets/icons/combat-icons/monster-attacks/lightning.png'
 
 
+// mj_icons
+import archway from '../assets/mj_icons/portals/archway.png'
+import bat_gate from '../assets/mj_icons/portals/bat_gate.png'
+import bat_gate_opened from '../assets/mj_icons/portals/bat_gate_opened.png'
+import gryphon_gate from '../assets/mj_icons/portals/gryphon_gate.png'
+import gryphon_gate_opened from '../assets/mj_icons/portals/gryphon_gate_opened.png'
+import evil_gate from '../assets/mj_icons/portals/evil_gate.png'
+import evil_gate_opened from '../assets/mj_icons/portals/evil_gate_opened.png'
+import dungeon_door from '../assets/mj_icons/portals/dungeon_door.png'
+import dungeon_door_opened from '../assets/mj_icons/portals/dungeon_door_opened.png'
+
+
 export {
     monster,
     avatar,
@@ -440,5 +452,15 @@ export {
     fire_breath,
     void_lance,
     lightning,
-    tackle
+    tackle,
+
+    archway,
+    bat_gate,
+    bat_gate_opened,
+    gryphon_gate,
+    gryphon_gate_opened,
+    evil_gate,
+    evil_gate_opened,
+    dungeon_door,
+    dungeon_door_opened
 };

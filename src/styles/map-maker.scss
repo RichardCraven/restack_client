@@ -178,6 +178,33 @@ ul.dropdown-menu.show{
     flex-direction: column;
     justify-content: flex-start;
     align-items: flex-start;
+    overflow: hidden;
+    // transition: all 2.5s;
+    .palette-option-expandable-container{
+        max-height: 0px;
+        transition: all 0.5s;
+        overflow: scroll;
+        width: 100%;
+        &.expanded{
+            max-height: 500px;
+        }
+        .palette-option-subcontainer{
+            cursor: pointer;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            flex-direction: row;
+            
+            .text-container{
+                // width: 64%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex: auto;
+            }
+        }
+    }
     .palette-option-container{
         cursor: pointer;
         width: 100%;
@@ -256,7 +283,7 @@ ul.dropdown-menu.show{
     }
     .folder-headline-text{
         flex: auto;
-        max-width: calc(100% - 80px);
+        max-width: calc(100% - 60px);
     }
 }
 .mapmaker-container{

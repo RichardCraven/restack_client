@@ -8,13 +8,19 @@ import  CIcon  from '@coreui/icons-react'
 import { cilCaretRight } from '@coreui/icons';
 import '../../styles/dungeon-board.scss'
 import '../../styles/map-maker.scss'
+import * as images from '../../utils/images'
+
 
 class BoardView extends React.Component {
     constructor(props){
       super(props)
       this.state = {}
-      console.log('this.props:', this.props);
+    //   console.log('this.props:', this.props);
+    //   console.log('monsters: ', this.props.monsterManager.monsters);
+    //   console.log('goblin: ', this.props.monsterManager.monsters['goblin']);
+      console.log('***this.props.tiles***', this.props.tiles);
     }
+    
     render (){
         return (
             <div className="board-view-container">
@@ -338,6 +344,7 @@ class BoardView extends React.Component {
                             index={tile.id}
                             tileSize={this.props.tileSize}
                             image={tile.image ? tile.image : null}
+                            imageOverride={tile.image && tile.image.includes('/') ? tile.image : null}
                             color={tile.color ? tile.color : 'lightgrey'}
                             coordinates={tile.coordinates}
                             showCoordinates={this.props.showCoordinates}
@@ -381,37 +388,106 @@ class BoardView extends React.Component {
                                 id: i
                                 })}
                             }>
-                            <Tile 
-                            id={tile.id}
-                            tileSize={this.props.tileSize}
-                            image={tile.image ? tile.image : null}
-                            color={tile.color ? tile.color : 'white'}
-                            coordinates={tile.coordinates}
-                            index={tile.id}
-                            showCoordinates={false}
-                            editMode={true}
-                            handleHover={null}
-                            handleClick={null}
-                            type={tile.type}
-                            hovered={
-                                this.props.hoveredPaletteTileIdx === tile.id ?
-                                true :
-                                false
-                            }>
-                            </Tile>
-                            <div className={`
-                                text-container
-                                ${this.props.hoveredPaletteTileIdx === tile.id ? 'hovered' : ''}
-                                ${this.props.pinnedOption === tile.id ? 'pinned' : ''}
-                                `
+                                <Tile 
+                                id={tile.id}
+                                tileSize={this.props.tileSize}
+                                image={tile.image ? tile.image : null}
+                                color={tile.color ? tile.color : 'white'}
+                                coordinates={tile.coordinates}
+                                index={tile.id}
+                                showCoordinates={false}
+                                editMode={true}
+                                handleHover={null}
+                                handleClick={null}
+                                type={tile.type}
+                                hovered={
+                                    this.props.hoveredPaletteTileIdx === tile.id ?
+                                    true :
+                                    false
                                 }>
-                                <span
-                                style={{
-                                color: this.props.optionClickedIdx === i ? 'white' : 'black'
-                                }}
-                                >{tile.optionType}</span>
+                                </Tile>
+                                <div className={`
+                                    text-container
+                                    ${this.props.hoveredPaletteTileIdx === tile.id ? 'hovered' : ''}
+                                    ${this.props.pinnedOption && this.props.pinnedOption.id === tile.id ? 'pinned' : ''}
+                                    `
+                                    }>
+                                    <span
+                                    style={{
+                                    color: this.props.optionClickedIdx === i ? 'white' : 'black'
+                                    }}
+                                    >{tile.optionType}</span>
+                                </div>
                             </div>
-                            </div>
+                            {tile.optionType === 'monster' && <div className={`palette-option-expandable-container ${this.props.optionClickedIdx === i ? 'expanded' : ''}`}>
+                                {Object.values(this.props.monsterManager.monsters).map((monster,i)=>{
+                                    return <div 
+                                    key={i} 
+                                    className={`palette-option-subcontainer`}
+                                    onClick={() => {
+                                        this.props.handleClick({
+                                        type: 'monster-tile',
+                                        id: i
+                                        })}
+                                    }
+                                    >
+                                        <div className="text-container">
+                                            {monster.key.replaceAll('_', ' ')}
+                                        </div>
+                                        <Tile 
+                                        id={monster.id}
+                                        tileSize={this.props.tileSize}
+                                        image={monster.portrait}
+                                        // color={monster.color ? monster.color : 'white'}
+                                        // coordinates={monster.coordinates}
+                                        index={monster.id}
+                                        // showCoordinates={false}
+                                        // editMode={true}
+                                        imageOverride={monster.portrait}
+                                        handleHover={null}
+                                        handleClick={null}
+                                        type={monster.type}
+                                        hovered={
+                                            this.props.hoveredPaletteTileIdx === monster.id ?
+                                            true :
+                                            false
+                                        }>
+                                        </Tile>
+                                        
+                                    </div> 
+                                })}
+                            </div>}
+                            {tile.optionType === 'gate' && <div className={`palette-option-expandable-container ${this.props.optionClickedIdx === i ? 'expanded' : ''}`}>
+                                {this.props.gates.map((gate,i)=>{
+                                    return <div 
+                                    key={i} 
+                                    className={`palette-option-subcontainer`}
+                                    onClick={() => {
+                                        this.props.handleClick({
+                                        type: 'gate-tile',
+                                        id: i
+                                        })}
+                                    }
+                                    >
+                                        <div className="text-container">
+                                            {gate.key.replace('_', ' ')}
+                                        </div>
+                                        <Tile 
+                                        id={i}
+                                        tileSize={this.props.tileSize}
+                                        index={gate.id}
+                                        image={images[gate.key]}
+                                        // showCoordinates={false}
+                                        // editMode={true}
+                                        imageOverride={images[gate.key]}
+                                        handleHover={null}
+                                        handleClick={null}
+                                        type={'gate'}>
+                                        </Tile>
+                                        
+                                    </div> 
+                                })}
+                            </div>}
                         </div>
                         )
                     })}

@@ -35,6 +35,31 @@ import {
   updateUserRequest
 } from '../utils/api-handler';
 
+import * as images from '../utils/images'
+
+const GATES = [
+  {
+      key: 'archway',
+      requires: ''
+  },
+  {
+      key: 'dungeon_door',
+      requires: 'minor_key'
+  },
+  {
+      key: 'gryphon_gate',
+      requires: 'major_key'
+  },
+  {
+      key: 'bat_gate',
+      requires: 'major_key'
+  },
+  {
+      key: 'evil_gate',
+      requires: 'ornate_key'
+  }
+]
+
 class MapMakerPage extends React.Component {
   constructor(props){
     super(props)
@@ -42,7 +67,6 @@ class MapMakerPage extends React.Component {
     meta = getMeta();
 
     if(meta?.preferences?.editor?.selectedView){
-      console.log('viewState!!!', meta.preferences.editor.selectedView);
       viewStateFromPrefs = meta.preferences.editor.selectedView
       // debugger
       // let dungeon = meta.preferences.editor.loadedDungeon;
@@ -117,7 +141,6 @@ class MapMakerPage extends React.Component {
   
 
   componentDidMount(){
-    console.log('mounted');
     const that = this;
     let images = {};
     function checkIfAllImagesHaveLoaded(){
@@ -129,7 +152,6 @@ class MapMakerPage extends React.Component {
         images.doorImg &&
         images.spawnPointImg
       ){
-        console.log('setting images matrix: ', images);
         // debugger
         that.setState({imagesMatrix : images})
       }
@@ -315,11 +337,11 @@ class MapMakerPage extends React.Component {
   }
 
   handleHover = (id, type) => {
-    if(this.state.mouseDown && this.props.mapMaker.paletteTiles[this.state.pinnedOption] && this.props.mapMaker.paletteTiles[this.state.pinnedOption].optionType === 'void'){
+    if(this.state.mouseDown && this.props.mapMaker.paletteTiles[this.state.pinnedOption.id] && this.props.mapMaker.paletteTiles[this.state.pinnedOption].optionType === 'void'){
       let tile = this.props.mapMaker.tiles[id];
       let pinned = null;
-      if(this.props.mapMaker.paletteTiles[this.state.pinnedOption]){
-        pinned = this.props.mapMaker.paletteTiles[this.state.pinnedOption]
+      if(this.props.mapMaker.paletteTiles[this.state.pinnedOption.id]){
+        pinned = this.props.mapMaker.paletteTiles[this.state.pinnedOption.id]
       }
       if(pinned && pinned.optionType === 'void'){
         let arr = [...this.state.tiles]
@@ -369,16 +391,68 @@ class MapMakerPage extends React.Component {
   }
   
   handleClick = (tile) => {
+    console.log('tile clicked: ', tile);
     if(tile.type === 'palette-tile'){
-      this.setState({
-        optionClickedIdx: tile.id,
-        pinnedOption: tile.id
-      })
-    } else if(tile.type === 'board-tile'){
-      let pinned = null;
-      if(this.props.mapMaker.paletteTiles[this.state.pinnedOption]){ 
-        pinned = this.props.mapMaker.paletteTiles[this.state.pinnedOption]
+      console.log('palette tile clicked');
+      if(this.state.optionClickedIdx === tile.id){
+        console.log('option already open');
+        this.setState({
+          optionClickedIdx: null,
+          pinnedOption: null
+        })
+      } else {
+        this.setState({
+          optionClickedIdx: tile.id,
+          pinnedOption: tile
+        })
       }
+      
+    } else if(tile.type === 'monster-tile' || tile.type === 'gate-tile'){
+      console.log('MONSTER/GATE TILE');
+      this.setState({
+        pinnedOption: tile
+      })
+      setTimeout(()=>{
+        console.log('pinnedoption: ', this.state.pinnedOption);
+      },500)
+    } else if(tile.type === 'board-tile'){
+      let pinned = null, monster, gate;
+      if(this.state.pinnedOption && this.state.pinnedOption.type === 'monster-tile'){
+        monster = Object.values(this.props.monsterManager.monsters)[this.state.pinnedOption.id];
+      };
+      if(this.state.pinnedOption && this.state.pinnedOption.type === 'gate-tile'){
+        console.log('id: ', this.state.pinnedOption.id);
+        gate = GATES[this.state.pinnedOption.id];
+      };
+      if(monster){
+        console.log('monster get here');
+        let arr = [...this.state.tiles];
+        arr[tile.id].contains = monster.key
+        arr[tile.id].image = monster.portrait
+        console.log('arr[tile.id]:', arr[tile.id]);
+        console.log('tiles now ', arr);
+        this.setState({
+          tiles: arr,
+          hoveredTileIdx: null
+        })
+        return
+      } else if(gate){
+        console.log('gate get here');
+        let arr = [...this.state.tiles];
+        arr[tile.id].contains = gate.key
+        arr[tile.id].image = images[gate.key]
+        console.log('arr[tile.id]:', arr[tile.id]);
+        console.log('tiles now ', arr);
+        this.setState({
+          tiles: arr,
+          hoveredTileIdx: null
+        })
+        return
+      } else if(this.props.mapMaker.paletteTiles[this.state.pinnedOption.id]){ 
+        pinned = this.props.mapMaker.paletteTiles[this.state.pinnedOption.id]
+      }
+      console.log('pinned: ', pinned);
+      console.log('this.props.mapMaker.paletteTiles', this.props.mapMaker.paletteTiles);
       if(pinned && pinned.optionType === 'void'){
         let arr = [...this.state.tiles];
         arr[tile.id].image = null;
@@ -990,8 +1064,7 @@ class MapMakerPage extends React.Component {
     }
   }
   setLoadedDungeonDropdownValue = (name) => {
-    let b = this.state.dungeonSelectVal
-    console.log('name: ', name);
+    let b = this.state.dungeonSelectVal;
     if(b && b.current && b.current.value !== name){ 
       b.current.value = name;
       this.setState({
@@ -1002,9 +1075,7 @@ class MapMakerPage extends React.Component {
   loadAllPlanes = async () => {
     const val = await loadAllPlanesRequest()
     let planes = [];
-    console.log('data', val.data)
     val.data.forEach((e)=>{
-      console.log('yoooooooo   e:', e)
       if(!e.content) return
       let plane = JSON.parse(e.content)
       plane.id = e._id;
@@ -1020,7 +1091,6 @@ class MapMakerPage extends React.Component {
     let d = new Date()
     let n = d.getTime();
     let rand = n.toString().slice(9,13)
-    console.log('n: ', n, 'rand: ', rand);
 
     let newPlane = {
         name: `plane${rand}`,
@@ -1246,11 +1316,9 @@ class MapMakerPage extends React.Component {
   }
 
   onDrop = (event, index) => {
-    console.log('on drop:', index)
     let minis = this.state.loadedPlane.miniboards
     minis[index] = [];
     if(this.state.draggedBoardOrigin !== null){
-      console.log('dragged board:', this.state.draggedBoard)
       minis[this.state.draggedBoardOrigin] = []
     }
     // const loadedPlane = this.state.loadedPlane;
@@ -1263,7 +1331,6 @@ class MapMakerPage extends React.Component {
       const loadedPlane = this.state.loadedPlane;
       let sections = loadedPlane.miniboards
       if(this.state.draggedBoard){
-        console.log('SETTING TO dragged board:', this.state.draggedBoard)
         sections[index] = this.state.draggedBoard
       }
       loadedPlane.miniboards = sections;
@@ -1292,7 +1359,6 @@ class MapMakerPage extends React.Component {
   }
 
   onDropDungeon = (levelIndex, frontOrBack) => {
-    console.log('on drop dungeon:', levelIndex, frontOrBack);
     const dungeon = this.state.loadedDungeon;
     // let loadedDungeon = this.state.loadedDungeon;
     dungeon.levels[levelIndex][frontOrBack] = this.state.draggedPlane;
@@ -1313,32 +1379,25 @@ class MapMakerPage extends React.Component {
     let dungeon = this.state.loadedDungeon;
     let level = dungeon.levels.find(l=>l.id === levelId)
     if(level.front === null && level.back === null){
-      console.log('both empty, clear level', levelId);
       // clear upper level
       if(levelId > 0){
-        console.log('upper');
         if(!!dungeon.levels.find(l=>l.id === levelId+1)){
-          console.log('wtf');
           alert('CANT DELETE THIS LEVEL BECAUSE THERE IS ONE ABOVE IT')
           return
         } else {
           dungeon.levels = dungeon.levels.filter(e=>e.id!==levelId)
-          console.log('now dungeon is :', dungeon);
         }
 
       }
       //clear lower level
       if(levelId < 0){
-        console.log('lower');
         if(!!dungeon.levels.find(l=>l.id === levelId-1)){
           alert('CANT DELETE THIS LEVEL BECAUSE THERE IS ONE BELOW IT')
           return
         } else {
           dungeon.levels = dungeon.levels.filter(e=>e.id!==levelId)
-          console.log('now dungeon is :', dungeon);
         }
       }
-      console.log('setting state');
       this.setState({
         loadedDungeon : this.props.mapMaker.formatDungeon(dungeon)
       })
@@ -1409,12 +1468,9 @@ class MapMakerPage extends React.Component {
   toggleDungeonLevelOverlay = () => {
     let e = this.state.dungeonOverlayOn,
     overlayData = null;
-    console.log('overlay on:', e);
     if(!e === true){
       overlayData= this.props.mapMaker.markPassages(this.state.loadedDungeon);
     }
-    console.log('overlay data:', overlayData);
-    console.log('setting show overlay to ', !e);
     this.setState({
       dungeonOverlayOn: !e,
       overlayData
@@ -1480,11 +1536,9 @@ class MapMakerPage extends React.Component {
 
   dungeonSelectOnChange = (e) => {
     let dungeon;
-    console.log('on select change ', e.target.value);
     const meta = JSON.parse(sessionStorage.getItem('metadata'))
     const userId = sessionStorage.getItem('userId')
     if(e.target && e.target.value && e.target.value !== 'Dungeon Selector'){
-      console.log('loading', e.target.value);
       dungeon = this.state.dungeons.find(x=>x.name === e.target.value)
       this.setState({
         dungeonOverlayOn: false,
@@ -1622,6 +1676,8 @@ class MapMakerPage extends React.Component {
               handleHover={this.handleHover}
               setPaletteHover={this.setPaletteHover}
               loadBoard={this.loadBoard}
+              monsterManager={this.props.monsterManager}
+              gates={GATES}
             ></BoardView>}
 
             {this.state.selectedView === 'plane' && <PlaneView
@@ -1632,7 +1688,6 @@ class MapMakerPage extends React.Component {
               boards={this.state.boards}
               tiles={this.state.tiles}
               compatibilityMatrix={this.state.compatibilityMatrix}
-              pinnedOption={this.state.pinnedOption}
               hoveredPaletteTileIdx={this.state.hoveredPaletteTileIdx}
               hoveredTileIdx={this.state.hoveredTileIdx}
               hoveredTileId={this.state.hoveredTileIdx}
@@ -1689,7 +1744,6 @@ class MapMakerPage extends React.Component {
               dungeons={this.state.dungeons}
               tiles={this.state.tiles}
               compatibilityMatrix={this.state.compatibilityMatrix}
-              pinnedOption={this.state.pinnedOption}
               hoveredPaletteTileIdx={this.state.hoveredPaletteTileIdx}
               hoveredTileIdx={this.state.hoveredTileIdx}
               hoveredTileId={this.state.hoveredTileIdx}

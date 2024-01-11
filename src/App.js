@@ -2,6 +2,7 @@ import React, {useState} from 'react';
 import './App.scss';
 import LoginPage from './pages/LoginPage'
 
+import NarrativeSequence from './pages/NarrativeSequence'
 import LandingPage from './pages/LandingPage'
 import DungeonPage from './pages/DungeonPage'
 import MapmakerPage from './pages/MapmakerPage'
@@ -26,6 +27,7 @@ const [loggedIn, setLoggedIn] = useState(!!getUserId())
 const [isAdmin, setIsAdmin] = useState(sessionStorage.getItem('isAdmin') === 'true' ? true : false)
 const [showCoordinates, setShowCoordinates] = useState(false)
 const [allUsers, setAllUsers] = useState([])
+const [showToolbar, setShowToolbar] = useState(true)
 const history = useHistory();
 useEffect(() => {
   getAllUsersRequest().then((response)=>{
@@ -103,6 +105,12 @@ const saveUserData = async () => {
     shimmering_dust: props.inventoryManager.shimmering_dust,
     totems: props.inventoryManager.totems
   }
+  console.log('props.crewManager: ', props.crewManager);
+  console.log('about to save crew as ', props.crewManager.crew);
+  if(props.crewManager.crew.length === 0){
+    console.log('wtf');
+    debugger
+  }
   meta.crew = props.crewManager.crew;
   meta.dungeonId = props.boardManager.dungeon.id;
   await updateUserRequest(userId, meta)
@@ -117,10 +125,18 @@ const goHome = () => {
 const toggleShowCoordinates = () => {
   setShowCoordinates(!showCoordinates)
 }
+const beginIntroSequence = () => {
+  console.log('begin intro sequence');
+  setShowToolbar(false);
+}
+const endIntroSequence = () => {
+  console.log('begin intro sequence');
+  setShowToolbar(true);
+}
  return (
    <div className="fullpage">
-      <div  className="App">
-        {loggedIn === true && <div className="nav-buttons-container">
+      <div className="App">
+        {loggedIn === true && showToolbar === true && <div className="nav-buttons-container">
           {<button className="menu-buttons logout-button" onClick={logout}>
             Logout
           </button>}
@@ -132,48 +148,33 @@ const toggleShowCoordinates = () => {
           </button>}    
           {isAdmin && <button className="menu-buttons show-coordinates-button" onClick={toggleShowCoordinates}>
             Show Coordinates
-          </button>} 
-
-
-          
-          {/* {showCoordinates && <div>{currentBoard}</div>} */}
+          </button>}
         </div> }
-        {/* <Route path="/">
-          {!loggedIn ? <Redirect to="/login" /> : 
-          <Redirect to="/landing" />}
-        </Route> */}
-        {/* <BrowserRouter> */}
         <Switch>
-          {/* <UnauthenticatedRoute
-            path="/login"
-            component={LoginPage}
-            appProps={{ loggedIn }}
-          /> */}
-          {/* <AuthenticatedRoute
-            path="/landing"
-            component={LandingPage}
-            appProps={{ loggedIn }}
-          /> */}
           <Route exact path="/login" render={() => (
             <LoginPage {...props} login={login} loginFromRegister={(e) => loginFromRegister(e)} refreshAllUsers={(e) => refreshAllUsers(e)}/>
           )}/>
+          <Route exact path="/intro" render={() => (
+            !loggedIn ? <Redirect to="/login" /> :
+            <NarrativeSequence {...props} beginIntroSequence={beginIntroSequence} endIntroSequence={endIntroSequence}/>
+          )}/>
           <Route exact path="/userProfilePage" render={() => (
+            !loggedIn ? <Redirect to="/login" /> :
             <UserProfilePage {...props} />
           )}/>
           <Route exact path="/crewManager" render={() => (
+            !loggedIn ? <Redirect to="/login" /> :
             <CrewManagerPage {...props} />
           )}/>
           <Route exact path="/dungeon" render={() => (
             !loggedIn ? <Redirect to="/login" /> :
               <DungeonPage {...props} saveUserData={saveUserData} showCoordinates={showCoordinates}/>
             )}/>
-          {/* <Route exact path="/dungeon" {...props} saveUserData={saveUserData} showCoordinates={showCoordinates} component={LandingPage}>
-            {!loggedIn && <Redirect to="/login" /> }
-          </Route>  */}
           <Route exact path="/landing" component={LandingPage}>
             {!loggedIn && <Redirect to="/login" /> }
           </Route> 
           <Route exact path="/usermanager" render={() => (
+            !loggedIn ? <Redirect to="/login" /> :
             <UserManagerPage {...props} />
             )}/>
           <Route exact path="/mapmaker" render={() => (
@@ -184,34 +185,7 @@ const toggleShowCoordinates = () => {
               {loggedIn ? <Redirect to="/landing" /> : 
               <Redirect to="/login" />}
           </Route>
-
-          {/* <LoginPage {...props} login={login} loginFromRegister={(e) => loginFromRegister(e)} refreshAllUsers={(e) => refreshAllUsers(e)}></LoginPage> */}
-          {/* <Route component={NotFound} /> */}
         </Switch>
-        {/* </BrowserRouter> */}
-
-        {/* <Route exact path="/login" render={() => (
-          <LoginPage {...props} login={login} loginFromRegister={(e) => loginFromRegister(e)} refreshAllUsers={(e) => refreshAllUsers(e)}/>
-        )}/>
-        <Route exact path="/userProfilePage" render={() => (
-            <UserProfilePage {...props} />
-        )}/>
-        <Route exact path="/dungeon" render={() => (
-            <DungeonPage {...props} saveUserData={saveUserData} showCoordinates={showCoordinates}/>
-          )}/>
-        <Route exact path="/landing" component={LandingPage}/>
-        <Route exact path="/usermanager" render={() => (
-          <UserManagerPage {...props} />
-          )}/>
-        <Route exact path="/mapmaker" render={() => (
-            <MapmakerPage {...props} showCoordinates={showCoordinates}  />
-        )}/>
-        <Route path="/">
-          {loggedIn ? <Redirect to="/landing" /> : 
-          <Redirect to="/login" />}
-        </Route> */}
-
-        
       </div>
  </div>
  );

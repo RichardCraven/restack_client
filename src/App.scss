@@ -122,7 +122,53 @@ button{
   will-change: transform;
   border: 15px solid white;
 }
-
+.intro-pane{
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  flex-direction: column;
+  user-select: none;
+  background-color: black !important;
+  padding: 40px 0px;
+  
+  .intro-image{
+    // height: 80%;
+    // width: 80%;
+    height: 80vh;
+    width: 90vh;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    position: absolute;
+    transition: all 1.5s;
+    // &.obscured:before {
+    //   content: ' ';
+    //   display: block;
+    //   position: absolute;
+    //   left: 0;
+    //   top: 0;
+    //   width: 100%;
+    //   height: 100%;
+    //   opacity: 0.6;
+    //   background-color: black;
+    //   background-repeat: no-repeat;
+    //   background-position: 50% 0;
+    //   background-size: cover;
+    // }
+  }
+  .text-container{
+    height: 10%;
+    width: 100%;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    bottom: 0;
+  }
+}
 .landing-pane{
   height: 60vh;
   width: 70vw;
