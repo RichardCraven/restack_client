@@ -58,7 +58,88 @@ import ancientDoorway8 from '../assets/high_res_images/mj_graphics/intro/6_an an
 import ancientDoorway9 from '../assets/high_res_images/mj_graphics/intro/6_an ancient doorway/ancient doorway 4.png'
 import ancientDoorway10 from '../assets/high_res_images/mj_graphics/intro/6_an ancient doorway/ancient doorway 5.png'
 
-// INTRO scene 7
+
+// DEATH scene 1
+import deathScene1 from '../assets/high_res_images/mj_graphics/death/death_1.jpg'
+import deathScene2 from '../assets/high_res_images/mj_graphics/death/death_2.jpg'
+import deathScene3 from '../assets/high_res_images/mj_graphics/death/death_3.jpg'
+import deathScene4 from '../assets/high_res_images/mj_graphics/death/death_4.jpg'
+import deathScene5 from '../assets/high_res_images/mj_graphics/death/death_5.jpg'
+import deathScene6 from '../assets/high_res_images/mj_graphics/death/death_6.jpg'
+import deathScene7 from '../assets/high_res_images/mj_graphics/death/death_7.jpg'
+import deathScene8 from '../assets/high_res_images/mj_graphics/death/death_8.jpg'
+import deathScene9 from '../assets/high_res_images/mj_graphics/death/death_9.jpg'
+import deathScene10 from '../assets/high_res_images/mj_graphics/death/death_10.jpg'
+import deathScene11 from '../assets/high_res_images/mj_graphics/death/death_11.jpg'
+import deathScene12 from '../assets/high_res_images/mj_graphics/death/death_12.jpg'
+import deathScene13 from '../assets/high_res_images/mj_graphics/death/death_13.jpg'
+import deathScene14 from '../assets/high_res_images/mj_graphics/death/death_14.jpg'
+import deathScene15 from '../assets/high_res_images/mj_graphics/death/death_15.jpg'
+import deathScene16 from '../assets/high_res_images/mj_graphics/death/death_16.jpg'
+import deathScene17 from '../assets/high_res_images/mj_graphics/death/death_17.jpg'
+import deathScene18 from '../assets/high_res_images/mj_graphics/death/death_18.jpg'
+import deathScene19 from '../assets/high_res_images/mj_graphics/death/death_19.jpg'
+import deathScene20 from '../assets/high_res_images/mj_graphics/death/death_20.jpg'
+import deathScene21 from '../assets/high_res_images/mj_graphics/death/death_21.jpg'
+import deathScene22 from '../assets/high_res_images/mj_graphics/death/death_22.jpg'
+import deathScene23 from '../assets/high_res_images/mj_graphics/death/death_23.jpg'
+import deathScene24 from '../assets/high_res_images/mj_graphics/death/death_24.jpg'
+import deathScene25 from '../assets/high_res_images/mj_graphics/death/death_25.jpg'
+import deathScene26 from '../assets/high_res_images/mj_graphics/death/death_26.jpg'
+import deathScene27 from '../assets/high_res_images/mj_graphics/death/death_27.jpg'
+import deathScene28 from '../assets/high_res_images/mj_graphics/death/death_28.jpg'
+import deathScene29 from '../assets/high_res_images/mj_graphics/death/death_29.jpg'
+import deathScene30 from '../assets/high_res_images/mj_graphics/death/death_30.jpg'
+import deathScene31 from '../assets/high_res_images/mj_graphics/death/death_31.jpg'
+import deathScene32 from '../assets/high_res_images/mj_graphics/death/death_32.jpg'
+import deathScene33 from '../assets/high_res_images/mj_graphics/death/death_33.jpg'
+import deathScene34 from '../assets/high_res_images/mj_graphics/death/death_34.jpg'
+import deathScene35 from '../assets/high_res_images/mj_graphics/death/death_35.jpg'
+import deathScene36 from '../assets/high_res_images/mj_graphics/death/death_36.jpg'
+import deathScene37 from '../assets/high_res_images/mj_graphics/death/death_37.jpg'
+import deathScene38 from '../assets/high_res_images/mj_graphics/death/death_38.jpg'
+import deathScene39 from '../assets/high_res_images/mj_graphics/death/death_39.jpg'
+import deathScene40 from '../assets/high_res_images/mj_graphics/death/death_40.jpg'
+import deathScene41 from '../assets/high_res_images/mj_graphics/death/death_41.jpg'
+import deathScene42 from '../assets/high_res_images/mj_graphics/death/death_42.jpg'
+import deathScene43 from '../assets/high_res_images/mj_graphics/death/death_43.jpg'
+import deathScene44 from '../assets/high_res_images/mj_graphics/death/death_44.jpg'
+import deathScene45 from '../assets/high_res_images/mj_graphics/death/death_45.jpg'
+import deathScene46 from '../assets/high_res_images/mj_graphics/death/death_46.jpg'
+import deathScene47 from '../assets/high_res_images/mj_graphics/death/death_47.jpg'
+import deathScene48 from '../assets/high_res_images/mj_graphics/death/death_48.jpg'
+import deathScene49 from '../assets/high_res_images/mj_graphics/death/death_49.jpg'
+import deathScene50 from '../assets/high_res_images/mj_graphics/death/death_50.jpg'
+import deathScene51 from '../assets/high_res_images/mj_graphics/death/death_51.jpg'
+import deathScene52 from '../assets/high_res_images/mj_graphics/death/death_52.jpg'
+import deathScene53 from '../assets/high_res_images/mj_graphics/death/death_53.jpg'
+import deathScene54 from '../assets/high_res_images/mj_graphics/death/death_54.jpg'
+import deathScene55 from '../assets/high_res_images/mj_graphics/death/death_55.jpg'
+import deathScene56 from '../assets/high_res_images/mj_graphics/death/death_56.jpg'
+import deathScene57 from '../assets/high_res_images/mj_graphics/death/death_57.jpg'
+import deathScene58 from '../assets/high_res_images/mj_graphics/death/death_58.jpg'
+import deathScene59 from '../assets/high_res_images/mj_graphics/death/death_59.jpg'
+import deathScene60 from '../assets/high_res_images/mj_graphics/death/death_60.jpg'
+import deathScene61 from '../assets/high_res_images/mj_graphics/death/death_61.jpg'
+import deathScene63 from '../assets/high_res_images/mj_graphics/death/death_63.jpg'
+import deathScene64 from '../assets/high_res_images/mj_graphics/death/death_64.jpg'
+import deathScene65 from '../assets/high_res_images/mj_graphics/death/death_65.jpg'
+import deathScene66 from '../assets/high_res_images/mj_graphics/death/death_66.jpg'
+import deathScene67 from '../assets/high_res_images/mj_graphics/death/death_67.jpg'
+import deathScene68 from '../assets/high_res_images/mj_graphics/death/death_68.jpg'
+import deathScene69 from '../assets/high_res_images/mj_graphics/death/death_69.jpg'
+import deathScene70 from '../assets/high_res_images/mj_graphics/death/death_70.jpg'
+import deathScene71 from '../assets/high_res_images/mj_graphics/death/death_71.jpg'
+import deathScene72 from '../assets/high_res_images/mj_graphics/death/death_72.jpg'
+import deathScene73 from '../assets/high_res_images/mj_graphics/death/death_73.jpg'
+import deathScene74 from '../assets/high_res_images/mj_graphics/death/death_74.jpg'
+import deathScene75 from '../assets/high_res_images/mj_graphics/death/death_75.jpg'
+import deathScene76 from '../assets/high_res_images/mj_graphics/death/death_76.jpg'
+import deathScene77 from '../assets/high_res_images/mj_graphics/death/death_77.jpg'
+import deathScene78 from '../assets/high_res_images/mj_graphics/death/death_78.jpg'
+import deathScene79 from '../assets/high_res_images/mj_graphics/death/death_79.jpg'
+import deathScene80 from '../assets/high_res_images/mj_graphics/death/death_80.jpg'
+import deathScene81 from '../assets/high_res_images/mj_graphics/death/death_81.jpg'
 
 export default function NarrativeSequence(props) {
 
@@ -67,7 +148,9 @@ export default function NarrativeSequence(props) {
         return array[index]
     }
     const [fadeInFirstFrame, setFadeInFirstFrame] = useState(false)
+    const [fadeOutLastFrame, setFadeOutLastFrame] = useState(false)
     const [navToDungeon, setNavToDungeon] = useState(false)
+    const [navToLanding, setNavToLanding] = useState(false)
     const [currentSequence, setCurrentSequence] = useState(null)
 
     const [currentOddSequence, setCurrentOddSequence] = useState(null)
@@ -99,6 +182,90 @@ export default function NarrativeSequence(props) {
         ancientDoorway8, 
         ancientDoorway9, 
         ancientDoorway10
+    ]
+
+    const deathScene = [
+        deathScene1, 
+        deathScene2, 
+        deathScene3, 
+        deathScene4, 
+        deathScene5, 
+        deathScene6, 
+        deathScene7, 
+        deathScene8, 
+        deathScene9, 
+        deathScene10,
+        deathScene11, 
+        deathScene12, 
+        deathScene13, 
+        deathScene14, 
+        deathScene15, 
+        deathScene16, 
+        deathScene17, 
+        deathScene18, 
+        deathScene19, 
+        deathScene20,
+        deathScene21, 
+        deathScene22, 
+        deathScene23, 
+        deathScene24, 
+        deathScene25, 
+        deathScene26, 
+        deathScene27, 
+        deathScene28, 
+        deathScene29, 
+        deathScene30,
+        deathScene31, 
+        deathScene32, 
+        deathScene33, 
+        deathScene34, 
+        deathScene35, 
+        deathScene36, 
+        deathScene37, 
+        deathScene38, 
+        deathScene39, 
+        deathScene40,
+        deathScene41, 
+        deathScene42, 
+        deathScene43, 
+        deathScene44, 
+        deathScene45, 
+        deathScene46, 
+        deathScene47, 
+        deathScene48, 
+        deathScene49, 
+        deathScene50,
+        deathScene51, 
+        deathScene52, 
+        deathScene53, 
+        deathScene54, 
+        deathScene55, 
+        deathScene56, 
+        deathScene57, 
+        deathScene58, 
+        deathScene59, 
+        deathScene60,
+        deathScene61, 
+        deathScene63, 
+        deathScene64, 
+        deathScene65, 
+        deathScene66, 
+        deathScene67, 
+        deathScene68, 
+        deathScene69, 
+        deathScene70,
+        deathScene71,
+        deathScene71, 
+        deathScene72, 
+        deathScene73, 
+        deathScene74, 
+        deathScene75, 
+        deathScene76, 
+        deathScene77, 
+        deathScene78, 
+        deathScene79, 
+        deathScene80,
+        deathScene81  
     ]
 
     const introSequence = [
@@ -134,6 +301,14 @@ export default function NarrativeSequence(props) {
         }
     ]
 
+    const deathSequence = [
+        {
+            image: pickRandom(deathScene),
+            text: 'Death has come for you',
+            id: 1
+        }
+    ]
+
     const delay = (numSeconds) => {
         return new Promise((resolve) => {
             setTimeout(()=>{
@@ -143,36 +318,70 @@ export default function NarrativeSequence(props) {
     }
 
   useEffect(()=> {
-    console.log('commence intro sequence');
+    console.log('in use effect');
+    switch(props.sequenceType){
+        case 'intro':
+            setCurrentOddSequence(introSequence[0])
+            setCurrentEvenSequence(introSequence[1])
 
-    setCurrentOddSequence(introSequence[0])
-    setCurrentEvenSequence(introSequence[1])
+            delay(1).then(()=>{
+                setFadeInFirstFrame(true);
+                runSequence('intro');
+            })
+            props.beginIntroSequence();
+            console.log('commence intro sequence');
+        break;
+        case 'death':
+            setCurrentOddSequence(deathSequence[0])
+            // setCurrentEvenSequence(deathSequence[0])
 
-    delay(1).then(()=>{
-        setFadeInFirstFrame(true);
-        runSequence();
-    })
-    props.beginIntroSequence();
+            delay(1).then(()=>{
+                setFadeInFirstFrame(true);
+                runSequence('death');
+            })
+            props.beginDeathSequence();
+            console.log('commence death sequence');
+        break;
+        default:
+
+        break;
+    }
+
+    
+
+    
   }, [])
 
   useEffect(()=> {
-    console.log('NOW current sequence: ', currentSequence);
+    console.log('NOW current sequence: ', currentSequence, 'props: ', props.sequenceType);
   }, [currentSequence])
-  const runSequence = () => {
+  const runSequence = (type) => {
 
     // setCurrentOddSequence(introSequence[0])
     // setCurrentEvenSequence(introSequence[1])
 
     console.log('in sequence');
 
-    let introSequenceClone = Array.from(introSequence)
+    let cloneArray;
+    switch(type){
+        case 'intro':
+            cloneArray =  Array.from(introSequence);
+        break;
+        case 'death': 
+        cloneArray =  Array.from(deathSequence);
+        break;
+        default:
+            console.log('NO TYPE'); return
+            break;
+    }
 
     // console.log('arr:', arr);
 
     let counter;
     const fireItOff = () => {
+        if(!cloneArray) return; 
         // let sequence = counter % 2 === 1 ? introSequenceOdd.shift() : introSequenceEven.shift()
-        let sequence = introSequenceClone.shift()
+        let sequence = cloneArray.shift()
         
         console.log('sequence: ', sequence);
         if(sequence.id % 2 === 1){
@@ -183,7 +392,7 @@ export default function NarrativeSequence(props) {
         setCurrentSequence(sequence);
         counter = sequence.id;
 
-        let nextSequence = introSequenceClone.find(e=>e.id === counter + 1)
+        let nextSequence = cloneArray.find(e=>e.id === counter + 1)
         if(counter % 2 === 0 && nextSequence){
             delay(1.5).then(()=>{
                 setCurrentOddSequence(nextSequence)
@@ -198,19 +407,44 @@ export default function NarrativeSequence(props) {
             console.log('go');
             // console.log('current: ', sequence);
             // console.log('but current sequence: ', currentSequence);
-            if(introSequenceClone.length){
-                console.log('arr.length: ', introSequenceClone.length);
+            if(cloneArray.length){
+                console.log('arr.length: ', cloneArray.length);
                 fireItOff();
             } else {
-                endSequence();
-                props.endIntroSequence();
+                switch(type){
+                    case 'intro':
+                        props.endIntroSequence();
+                    break;
+                    case 'death': 
+                        props.endDeathSequence();
+                    break;
+                    default:
+                        console.log('NO TYPE'); return
+                        break;
+                }
+                endSequenceAndNav();
             }
         })
     }
     fireItOff();
-    const endSequence = () => {
+    const endSequenceAndNav = () => {
         console.log('end sequence');
-        setNavToDungeon(true)
+        switch(type){
+            case 'intro':
+                props.endIntroSequence();
+                setNavToDungeon(true)
+            break;
+            case 'death': 
+                setFadeOutLastFrame(true);
+                setTimeout(()=>{
+                    props.endDeathSequence();
+                    setNavToLanding(true)
+                }, 1000)
+            break;
+            default:
+                console.log('NO TYPE'); return
+                break;
+        }
     }
   }
 
@@ -219,13 +453,14 @@ export default function NarrativeSequence(props) {
         {currentOddSequence && <img 
          className="intro-image"
          src={currentOddSequence.image}
-         style={{opacity: currentSequence && currentSequence.id%2===1 ? 1 : 0}}  
+         style={{opacity: currentSequence && currentSequence.id%2===1 ? 1 : (fadeOutLastFrame ? 0 : 0)}}  
          />}
 
          {currentEvenSequence && <img 
          className="intro-image"
          src={currentEvenSequence.image}
-         style={{opacity: currentSequence && currentSequence.id%2===0 && fadeInFirstFrame ? 1 : 0}}  
+         style={{opacity: currentSequence && currentSequence.id%2===0 && fadeInFirstFrame ? 1 : 
+            0}}  
          />}
 
          {currentSequence && currentSequence.id%2===0 && <div 
@@ -238,6 +473,7 @@ export default function NarrativeSequence(props) {
             <Typewriter text={currentSequence.text} delay={40}></Typewriter>
          </div>}
          { navToDungeon && <Redirect to='/dungeon'/> }
+         { navToLanding && <Redirect to='/landing'/> }
     </div>
   )
 }

@@ -23,6 +23,7 @@ export function CrewManager(){
                 this.crew.push(member)
             }
         })
+        console.log('crew: ', this.crew);
     }
     this.addCrewMember = (member) => {
         this.crew.push(member)

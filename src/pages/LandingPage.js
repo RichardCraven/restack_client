@@ -3,7 +3,7 @@ import { Redirect } from "react-router-dom";
 import { useHistory } from "react-router";
 import {getMeta} from '../utils/session-handler';
 
-export default function LandingPage() {
+export default function LandingPage(props) {
   const [navToUserProfile, setNavUserProfile] = useState(false);
   const [navToCrew, setNavCrew] = useState(false);
   const [navToPortal, setNavMapmaker] = useState(false);
@@ -45,6 +45,12 @@ export default function LandingPage() {
       setNavDungeon(!showWarning)
     } else {  
       console.log('show intro sequence');
+
+
+
+
+      props.setNarrativeSequence('intro')
+      
       setNavToIntro(true)
     }
   }

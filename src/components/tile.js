@@ -39,6 +39,7 @@ export default function Tile(props) {
                 }  else if(props.handleHover && props.type !== 'inventory-tile'){
                     return props.handleHover(props.id, props.type, this)
                 } else if(props.handleHover && props.type === 'inventory-tile'){
+                    console.log('PROPS: ', props);
                     return props.handleHover(props)
                 } else{
                     // console.log('returning props.key: ', props.key);

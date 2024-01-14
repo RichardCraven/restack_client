@@ -3,6 +3,7 @@ import '../../styles/monster-battle.scss'
 import * as images from '../../utils/images'
 // import AnimationTile from '../../components/animation-tile';
 import AnimationGrid from '../../components/animation-grid';
+import { Redirect } from "react-router-dom";
 
 const MAX_DEPTH = 8;
 const MAX_ROWS = 5;
@@ -42,7 +43,8 @@ class MonsterBattle extends React.Component {
             experienceGained: null,
             goldGained: null,
             battleResult: null,
-            monsterPortrait: ''
+            monsterPortrait: '',
+            navToDeathScene: false
         }
     }
     componentDidMount(){
@@ -225,6 +227,7 @@ class MonsterBattle extends React.Component {
         } else {
             battleResult = 'loss'
             summaryMessage = 'Death has come for you and yours.'
+            this.launchDeathSequence();
         }
 
         this.setState({
@@ -235,6 +238,14 @@ class MonsterBattle extends React.Component {
             summaryMessage,
             battleResult
         })
+    }
+    launchDeathSequence = () => {
+        console.log('launching death sequence');
+        console.log('props: ', this.props);
+            this.props.setNarrativeSequence('death')
+            this.setState({
+                navToDeathScene: true
+            })
     }
     establishAnimationCallback = () => {
         this.props.animationManager.establishAnimationCallback(this.renderAnimation)
@@ -479,6 +490,7 @@ class MonsterBattle extends React.Component {
     render(){
         return (
             <div className={`mb-board ${this.state.showCrosshair ? 'show-crosshair' : ''}`}>
+                { this.state.navToDeathScene && <Redirect to='/death'/>}
                 <div className="combat-grid-container"
                 style={{
                     width: TILE_SIZE * MAX_DEPTH + (SHOW_TILE_BORDERS ? MAX_DEPTH * 2 : 0) + 'px',
@@ -917,7 +929,7 @@ class MonsterBattle extends React.Component {
 
                         </div>
                         <div className="queue-col">
-                            <div className="interaction-header">Queue</div>
+                            <div className="interaction-header" onClick={()=>{this.launchDeathSequence()}}>Queue</div>
                             <div className="queue-tile-container">
                                 {this.state.selectedFighter?.action_queue.map((action, i)=>{
                                     return <div 

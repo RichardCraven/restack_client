@@ -73,7 +73,8 @@ class DungeonPage extends React.Component {
                 {id: -2, active: false},
             ],
             markerName: '',
-            markerType: ''
+            markerType: '',
+            descriptionText: ''
         }
     }
     
@@ -491,15 +492,30 @@ class DungeonPage extends React.Component {
         })
     }
     handleInventoryTileHover = (tileProps) => {
-        let inv = this.state.inventoryHoverMatrix;
+        console.log('tileProps: ', tileProps);
+        let inv = this.state.inventoryHoverMatrix,
+        descriptionText = '';
         this.props.inventoryManager.inventory.forEach((e,i)=>{
             inv[i] = '';
         })
-        if(tileProps) inv[tileProps.id] = tileProps.contains;
+        if(tileProps){
+            inv[tileProps.id] = tileProps.contains;
+            descriptionText = tileProps.description
+            // switch(tileProps.image){
+            //     case 'bundu_mask': 
+            //         descriptionText = 'testing all bozos'
+            //     break;
+            //     default:
+            //     break;
+            // }
+        }
+
         this.setState({
-            inventoryHoverMatrix: inv
+            inventoryHoverMatrix: inv,
+            descriptionText
         })
     }
+    
     handleCrewTileHover = (tileProps) => {
         let crew = this.state.crewHoverMatrix;
         this.props.crewManager.crew.forEach((e,i)=>{
@@ -1017,6 +1033,7 @@ class DungeonPage extends React.Component {
                                     handleClick={() => this.handleEquipmentItemClick(this.state.selectedCrewMember.inventory.find(e=> e.type === 'weapon'))}
                                     handleHover={this.handleInventoryTileHover}
                                     className={`inventory-tile equipment ${!this.state.selectedCrewMember.inventory.find(e=> e.type === 'weapon') ? 'empty' : ''}`}
+                                    description={this.state.selectedCrewMember.inventory.find(e=> e.type === 'weapon')?.description}
                                     >
                                     </Tile>
                                 </div> 
@@ -1042,6 +1059,7 @@ class DungeonPage extends React.Component {
                                         handleClick={() => this.handleEquipmentItemClick(this.state.selectedCrewMember.inventory.find(e=> e.type === 'armor'))}
                                         handleHover={this.handleInventoryTileHover}
                                         className={`inventory-tile equipment ${!this.state.selectedCrewMember.inventory.find(e=> e.type === 'armor') ? 'empty' : ''}`}
+                                        description={this.state.selectedCrewMember.inventory.find(e=> e.type === 'armor')?.description}
                                         >
                                     </Tile>
                                 </div> 
@@ -1067,6 +1085,7 @@ class DungeonPage extends React.Component {
                                         handleClick={() => this.handleEquipmentItemClick(this.state.selectedCrewMember.inventory.find(e=> e.type === 'ancillary'))}
                                         handleHover={this.handleInventoryTileHover}
                                         className={`inventory-tile equipment ${!this.state.selectedCrewMember.inventory.find(e=> e.type === 'ancillary') ? 'empty' : ''}`}
+                                        description={this.state.selectedCrewMember.inventory.find(e=> e.type === 'ancillary')?.description}
                                         >
                                     </Tile>
                                 </div>
@@ -1092,10 +1111,14 @@ class DungeonPage extends React.Component {
                                         handleClick={() => this.handleEquipmentItemClick(this.state.selectedCrewMember.inventory.find(e=> e.type === 'magical'))}
                                         handleHover={this.handleInventoryTileHover}
                                         className={`inventory-tile equipment ${!this.state.selectedCrewMember.inventory.find(e=> e.type === 'magical') ? 'empty' : ''}`}
+                                        description={this.state.selectedCrewMember.inventory.find(e=> e.type === 'magical')?.description}
                                         >
                                     </Tile>
                                 </div>
                             </div>
+                        </div>
+                        <div className="description-panel">
+                            {this.state.descriptionText}
                         </div>
                 </div>}
             </div>
@@ -1243,7 +1266,10 @@ class DungeonPage extends React.Component {
                 </div>
             </div>
             {this.state.currentBoard && <div className="info-panel">{this.props.boardManager.currentBoard.name}</div>}
-            {!this.state.keysLocked && <div className={`center-board-wrapper ${this.state.minimapPlaceMapMarkerStarted ? 'show-map-marker-cursor' : ''}`}>
+            {!this.state.keysLocked && <div style={{
+                    opacity: this.state.tiles.length > 0 ? 1 : 0,
+                    transition: 'opacity 1s'
+                    }} className={`center-board-wrapper ${this.state.minimapPlaceMapMarkerStarted ? 'show-map-marker-cursor' : ''}`}>
                 <div className="message-container">
                     {this.state.messageToDisplay}
                 </div>
@@ -1324,6 +1350,7 @@ class DungeonPage extends React.Component {
                 minions={this.state.minions}
                 battleOver={this.battleOver}
                 paused={this.state.paused}
+                setNarrativeSequence={this.props.setNarrativeSequence}
             ></MonsterBattle>}
         </div>
         )

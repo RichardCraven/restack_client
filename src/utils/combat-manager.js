@@ -11,6 +11,7 @@ const FIGHT_INTERVAL = 10
 const DEBUG_STEPS = false;
 
 export function CombatManager(){
+    this.gameIsOver = true;
     this.fighterAI = new FighterAI(MAX_DEPTH, MAX_LANES, FIGHT_INTERVAL);
     this.monsterAI = new MonsterAI(MAX_DEPTH, MAX_LANES, FIGHT_INTERVAL)
     this.movementMethods = MovementMethods;
@@ -696,7 +697,7 @@ export function CombatManager(){
         this.beginGreeting()
     }
     this.targetInRange = (caller) => {
-        if(!caller.pendingAttack) return false
+        if(!caller.pendingAttack || this.combatOver) return false
         const target = this.combatants[caller.targetId];
         // if(caller.isMonster) console.log('monster target in range check, target: ', target, 'and monster is ', caller)
         if(!target){
@@ -997,7 +998,7 @@ export function CombatManager(){
         caller.pendingAttack = attack;
     }
     this.processMove = (caller) => {
-        if(caller.dead) return;
+        if(caller.dead || this.combatOver) return;
 
         if(this.fighterAI.roster[caller.name]){
             this.fighterAI.roster[caller.name].processMove(caller, this.combatants, this.hitsTarget, this.missesTarget);

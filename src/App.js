@@ -28,6 +28,7 @@ const [isAdmin, setIsAdmin] = useState(sessionStorage.getItem('isAdmin') === 'tr
 const [showCoordinates, setShowCoordinates] = useState(false)
 const [allUsers, setAllUsers] = useState([])
 const [showToolbar, setShowToolbar] = useState(true)
+const [narrativeSequenceType, setNarrativeSequenceType] = useState('')
 const history = useHistory();
 useEffect(() => {
   getAllUsersRequest().then((response)=>{
@@ -125,12 +126,27 @@ const goHome = () => {
 const toggleShowCoordinates = () => {
   setShowCoordinates(!showCoordinates)
 }
+const setNarrativeSequence = (type) => {
+  console.log('setting narrative sequence: ', type);
+  setNarrativeSequenceType(type)
+  if(type === 'death'){
+    beginIntroSequence()
+  }
+}
 const beginIntroSequence = () => {
   console.log('begin intro sequence');
   setShowToolbar(false);
 }
 const endIntroSequence = () => {
-  console.log('begin intro sequence');
+  console.log('end intro sequence');
+  setShowToolbar(true);
+}
+const beginDeathSequence = () => {
+  console.log('begin Death sequence');
+  setShowToolbar(false);
+}
+const endDeathSequence = () => {
+  console.log('end death sequence');
   setShowToolbar(true);
 }
  return (
@@ -156,7 +172,11 @@ const endIntroSequence = () => {
           )}/>
           <Route exact path="/intro" render={() => (
             !loggedIn ? <Redirect to="/login" /> :
-            <NarrativeSequence {...props} beginIntroSequence={beginIntroSequence} endIntroSequence={endIntroSequence}/>
+            <NarrativeSequence {...props} sequenceType={narrativeSequenceType} beginIntroSequence={beginIntroSequence} endIntroSequence={endIntroSequence}/>
+          )}/>
+          <Route exact path="/death" render={() => (
+            !loggedIn ? <Redirect to="/login" /> :
+            <NarrativeSequence {...props} sequenceType={narrativeSequenceType} beginDeathSequence={beginDeathSequence} endDeathSequence={endDeathSequence}/>
           )}/>
           <Route exact path="/userProfilePage" render={() => (
             !loggedIn ? <Redirect to="/login" /> :
@@ -168,11 +188,21 @@ const endIntroSequence = () => {
           )}/>
           <Route exact path="/dungeon" render={() => (
             !loggedIn ? <Redirect to="/login" /> :
-              <DungeonPage {...props} saveUserData={saveUserData} showCoordinates={showCoordinates}/>
+              <DungeonPage {...props} saveUserData={saveUserData} setNarrativeSequence={setNarrativeSequence} showCoordinates={showCoordinates}/>
             )}/>
-          <Route exact path="/landing" component={LandingPage}>
+
+
+          <Route exact path="/landing" render={() => (
+            !loggedIn ? <Redirect to="/login" /> :
+            <LandingPage {...props} setNarrativeSequence={setNarrativeSequence} beginIntroSequence={beginIntroSequence} endIntroSequence={endIntroSequence}/>
+          )}/>
+
+          {/* <Route exact path="/landing" component={LandingPage}>
             {!loggedIn && <Redirect to="/login" /> }
-          </Route> 
+          </Route>  */}
+
+
+          
           <Route exact path="/usermanager" render={() => (
             !loggedIn ? <Redirect to="/login" /> :
             <UserManagerPage {...props} />
