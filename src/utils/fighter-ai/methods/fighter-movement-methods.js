@@ -11,6 +11,7 @@ export const MovementMethods = {
         laneDiff = Methods.getLaneDifferenceToTarget(caller, enemyTarget)
 
         // handle position
+        console.log('SOMEONE MOVING TOWARDS: ', caller.name);
 
         if(laneDiff === 1 || laneDiff === -1){
             if(distanceToTarget === 0){
@@ -31,19 +32,64 @@ export const MovementMethods = {
             return
         }
 
-        // now handle depth
-
 
         if((distanceToTarget < 0 && laneDiff) !== 0 ||  
         (distanceToTarget < -1 && laneDiff === 0 && caller.depth > 1)){
-            caller.depth--
-        }else if(distanceToTarget === -1 && laneDiff === 0){
-            if(caller.depth > 1) caller.depth -= 2
-        } else if(distanceToTarget === 2){
             caller.depth++
+        }else if(distanceToTarget === -1 && laneDiff === 0){
+            if(caller.depth > 1) caller.depth += 2
+        } else if(distanceToTarget === 2){
+            caller.depth--
         } else if(distanceToTarget > 2){
-            caller.depth += 2
+            caller.depth -= 2
         }
+    },
+    stayOnBackRow: (caller, combatants) => {
+        const enemyTarget = Object.values(combatants).find(e=>e.id === caller.targetId)
+        const distanceToTarget = Methods.getDistanceToTarget(caller, enemyTarget),
+        laneDiff = Methods.getLaneDifferenceToTarget(caller, enemyTarget)
+
+        // handle position
+        console.log('STAY ON BACK ROW: ', caller.name, 'lanediff: ', laneDiff);
+
+        if(laneDiff === 1 || laneDiff === -1){
+            caller.position = enemyTarget.position;
+        } else if(laneDiff < -1){
+            caller.position-= 2
+        } else if(laneDiff > 1){
+            caller.position+= 2
+        } else if(laneDiff === 0 && distanceToTarget === 1){
+            console.log('********enemy right in front, dont move!')
+            return
+        }
+        caller.depth = 0;
+
+        caller.coordinates.y = caller.position
+        caller.coordinates.x = caller.depth
+    },
+    stayOnX1: (caller, combatants) => {
+        console.log(caller.name, 'staying on x1');
+        const enemyTarget = Object.values(combatants).find(e=>e.id === caller.targetId)
+        const distanceToTarget = Methods.getDistanceToTarget(caller, enemyTarget),
+        laneDiff = Methods.getLaneDifferenceToTarget(caller, enemyTarget)
+
+        // handle position
+        console.log('STAY ON X1: ', caller.name, 'lanediff: ', laneDiff);
+
+        if(laneDiff === 1 || laneDiff === -1){
+            caller.position = enemyTarget.position;
+        } else if(laneDiff < -1){
+            caller.position-= 2
+        } else if(laneDiff > 1){
+            caller.position+= 2
+        } else if(laneDiff === 0 && distanceToTarget === 1){
+            console.log('********enemy right in front, dont move!')
+            return
+        }
+        caller.depth = 1;
+        console.log('Tyra depth is now ', caller.depth);
+        caller.coordinates.y = caller.position
+        caller.coordinates.x = caller.depth
     },
     moveTowardsCloseFriendlyTarget: (caller, combatants) => {
         let newPosition, newDepth;

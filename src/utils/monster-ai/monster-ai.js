@@ -23,12 +23,10 @@ export function MonsterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
     // }
 
     this.connectAnimationManager = (instance) => {
-        console.log('in monster AI, connecting animation manager', instance);
         this.initializeRoster(instance)
     }
 
     this.initializeRoster = (animationManager) => {
-        console.log('initializing roster');
         this.roster = {
             djinn: new Djinn(data, animationManager),
             sphinx: new Sphinx(data, animationManager)

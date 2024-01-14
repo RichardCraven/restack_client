@@ -17,29 +17,14 @@ export function Djinn(data, animationManager){
         }
         caller.pendingAttack = this.chooseAttackType(caller, target);
         caller.targetId = target.id;
-
-
-        // 
-
-
-
-            // if(data.methods.isAnEnemyDirectlyInFrontOfMe(caller, combatants)){
-            //     caller.targetId = data.methods.isAnEnemyDirectlyInFrontOfMe().id;
-            //     caller.pendingAttack = caller.attacks.find(e=>e.name === 'meditate')
-            // } else {
-            //     const protectee = data.methods.pickRandom(Object.values(combatants).filter(e=>!e.isMonster && !e.isMinion && !e.dead && e.id !== caller.id))
-            //     if(!protectee) return
-            //     caller.targetId = protectee.id;
-            //     caller.pendingAttack = caller.attacks.find(e=>e.name === 'meditate');
-            // }
     }
     this.processMove = (caller, combatants) => {
-            if(!caller.pendingAttack){
-                return
-            }
-            caller.energy+=5
-            data.methods.moveTowardsCloseEnemyTarget(caller, combatants)
+        if(!caller.pendingAttack){
+            return
         }
+        caller.energy+=5
+        data.methods.moveTowardsCloseEnemyTarget(caller, combatants)
+    }
     this.triggerVoidLance = (coords) => {
         const tileId = this.animationManager.getTileIdByCoords(coords)
         // console.log('tileId: ', tileId);
@@ -96,8 +81,6 @@ export function Djinn(data, animationManager){
         let attack, available = caller.attacks.filter(e=>e.cooldown_position === 100);
         let percentCooledDown = 0,
             chosenAttack;
-
-        // console.log('djinn available attacks', available, 'caller.attacks', caller.attacks)
 
         const distanceToTarget = data.methods.getDistanceToTarget(caller, target);
 

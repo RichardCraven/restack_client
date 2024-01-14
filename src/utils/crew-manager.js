@@ -33,7 +33,7 @@ export function CrewManager(){
         {
             image: 'wizard', 
             type: 'wizard',
-            name: 'Pendicus',
+            name: 'Zildjikan',
             level: 1,
             id: 33344,
             stats: {
@@ -53,7 +53,7 @@ export function CrewManager(){
             attacks: ['magic_missile'],
             passives: ['magic_affinity'],
             weaknesses: ['ice', 'fire', 'electricity', 'blood_magic'],
-            description: "Hailing from the magister's college, Pendicus was the dean of transmutation. A powerful magic user, he has been known to linger for long periods in the silent realm, searching for secret truths."
+            description: "Hailing from the magister's college, Zildjikan was the dean of transmutation. A powerful magic user, he has been known to linger for long periods in the silent realm, searching for secret truths."
         },
         {
             image: 'soldier', 

@@ -65,7 +65,7 @@ export default function AnimationTile(props) {
             // className={`animation-tile ${props.animationOn ? 'animated' : ''}`}
             className={`animation-tile 
             ${props.animationOn ? 'animated' : ''}
-            ${props.animationType}
+            ${props.animationType ? props.animationType+'-'+props.transitionType : ''}
             `}
         >
            {/* <div style={{color: 'yellow', userSelect: 'none'}}>

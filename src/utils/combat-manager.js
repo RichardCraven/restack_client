@@ -318,10 +318,9 @@ export function CombatManager(){
     this.combatants = {};
 
     this.connectAnimationManager = (instance) => {
-        console.log('connecting animation manager, instance: ', instance);
-        console.log('monster AI: ', this.monsterAI);
         // this.animationManager = instance;
         this.monsterAI.connectAnimationManager(instance)
+        this.fighterAI.connectAnimationManager(instance)
     }
 
     this.establishMessageCallback = (cb) => {
@@ -697,8 +696,9 @@ export function CombatManager(){
         this.beginGreeting()
     }
     this.targetInRange = (caller) => {
-        if(!caller.pendingAttack || this.combatOver) return false
         const target = this.combatants[caller.targetId];
+        if(!caller.pendingAttack || this.combatOver) return false
+        
         // if(caller.isMonster) console.log('monster target in range check, target: ', target, 'and monster is ', caller)
         if(!target){
             // debugger
@@ -708,7 +708,6 @@ export function CombatManager(){
         // 1 means target is right in front of you
 
         const distanceToTarget = this.getDistanceToTarget(caller, target)
-
 
         let res;
         // if(caller.isMonster) console.log('differential: ', differential, 'distance: ', distanceToTarget)
@@ -724,13 +723,14 @@ export function CombatManager(){
                 res = differential === 1;
             break;
             case 'medium':
-                if(caller.isMonster) console.log('wiotch differential: ', differential, 'distance: ', distanceToTarget)
+                // if(caller.isMonster) console.log('wiotch differential: ', differential, 'distance: ', distanceToTarget)
 
                 res = differential <= 3;
             break;
             case 'far':
-                res = differential <= 4 && differential > 1;
-                // if(caller.isMonster) console.log('in far block, in range res is ', res)
+                // console.log('is withiin far range: ', differential <= 4 && differential > 1);
+                // res = differential <= 4 && differential > 1;
+                res = true;
             break;
             default:
                 console.log('somehow attack had no range');
@@ -873,11 +873,17 @@ export function CombatManager(){
     }
     this.initiateAttack = (caller) => {
         if(caller.dead) return;
+        console.log('caller.type: ', caller.type)
         if(this.fighterAI.roster[caller.name]){
             this.fighterAI.roster[caller.name].initiateAttack(caller, this.combatants, this.hitsTarget, this.missesTarget);
             return
         }
-        // console.log('caller.type: ', caller.type)
+        // if(this.fighterAI.roster[caller.type])
+        if(this.fighterAI.roster[caller.type]){
+            this.fighterAI.roster[caller.type].initiateAttack(caller, this.combatants, this.hitsTarget, this.missesTarget);
+            return
+        }
+
         if(this.monsterAI.roster[caller.type]){
             // console.log('roster found for', caller.type)
             this.monsterAI.roster[caller.type].initiateAttack(caller, this.combatants, this.hitsTarget, this.missesTarget);
@@ -959,6 +965,10 @@ export function CombatManager(){
             this.fighterAI.roster[caller.name].acquireTarget(caller, this.combatants)
             return
         }
+        if(this.fighterAI.roster[caller.type]){
+            this.fighterAI.roster[caller.type].acquireTarget(caller, this.combatants)
+            return
+        }
 
         if(this.monsterAI.roster[caller.type]){
             this.monsterAI.roster[caller.type].acquireTarget(caller, this.combatants);
@@ -972,17 +982,7 @@ export function CombatManager(){
         let target;
         if(caller.isMonster || caller.isMinion){
             let sortedTargets = targetToAvoid && liveFighters.length > 1 ? liveFighters.filter(e => e.id !== targetToAvoid.id).sort((a,b)=>b.depth - a.depth) : liveFighters.sort((a,b)=>b.depth - a.depth);
-            console.log('target to avoid: ', targetToAvoid);
-            if(caller.type === 'djinn'){
-                console.log('sorted Targets: ', sortedTargets)
-            }
-            
-            // target = this.pickRandom(sortedTargets);
 
-
-
-            // this.pickRandom(sortedTargets.slice(0,2))
-            
             target = sortedTargets.length > 1 ? sortedTargets[0] : sortedTargets[0];
             // teamates = liveMonsters.filter(e=> e.id !== caller.id);
         } else {
@@ -998,10 +998,14 @@ export function CombatManager(){
         caller.pendingAttack = attack;
     }
     this.processMove = (caller) => {
-        if(caller.dead || this.combatOver) return;
+        if(caller.dead) return;
 
         if(this.fighterAI.roster[caller.name]){
             this.fighterAI.roster[caller.name].processMove(caller, this.combatants, this.hitsTarget, this.missesTarget);
+            return
+        }
+        if(this.fighterAI.roster[caller.type]){
+            this.fighterAI.roster[caller.type].processMove(caller, this.combatants, this.hitsTarget, this.missesTarget);
             return
         }
         // console.log('caller.type: ', caller.type)
@@ -1014,17 +1018,17 @@ export function CombatManager(){
 
         // if(caller.isMonster) console.log('monster in process move')
         const liveCombatants = Object.values(this.combatants).filter(e=> (!e.dead && e.id !== caller.id));
-        if(this.fighterAI.roster[caller.name]){
-            this.fighterAI.roster[caller.name].processMove(caller, this.combatants);
-            this.updateCoordinates(caller);
-            liveCombatants.forEach(e=>{
-                if(caller.position === e.position && caller.depth === e.depth){
-                    e.hasOverlap = true;
-                    this.handleOverlap(e)
-                }
-            });
-            return
-        }
+        // if(this.fighterAI.roster[caller.name]){
+        //     this.fighterAI.roster[caller.name].processMove(caller, this.combatants);
+        //     this.updateCoordinates(caller);
+        //     liveCombatants.forEach(e=>{
+        //         if(caller.position === e.position && caller.depth === e.depth){
+        //             e.hasOverlap = true;
+        //             this.handleOverlap(e)
+        //         }
+        //     });
+        //     return
+        // }
 
         const target = this.combatants[caller.targetId]
         const distanceToTarget = this.getDistanceToTarget(caller, target),
@@ -1101,6 +1105,7 @@ export function CombatManager(){
         liveCombatants.forEach(e=>{
             if(caller.position === e.position && caller.depth === e.depth){
                 e.hasOverlap = true;
+                console.log('about to send overlap for ', e.name);
                 this.handleOverlap(e)
             }
         })
@@ -1108,9 +1113,13 @@ export function CombatManager(){
     this.checkOverlap = (combatant) => {
         const liveCombatants = Object.values(this.combatants).filter(e=> (e.id !== combatant.id && !e.dead));
         if(liveCombatants.some(e=>e.depth === combatant.depth && e.position === combatant.position)) combatant.hasOverlap = true;
-        if(combatant.hasOverlap) this.handleOverlap(combatant);
+        if(combatant.hasOverlap){
+            console.log('in check overlap for: ', combatant.name);
+            this.handleOverlap(combatant);
+        }
     }
     this.handleOverlap = (combatant) => {
+        console.log('handle overlap for ', combatant);
         const liveCombatants = Object.values(this.combatants).filter(e=> (e.id !== combatant.id && !e.dead));
         let depthAvailable = false;
         if(combatant.isMonster || combatant.isMinion){
@@ -1147,7 +1156,25 @@ export function CombatManager(){
         } else {
             while(!depthAvailable){
                 if(liveCombatants.some(e=>e.depth === combatant.depth && e.position === combatant.position)){
+                    let blockerCombatant = liveCombatants.find(e=>e.depth === combatant.depth && e.position === combatant.position)
+                    let blockerDistanceToTarget = this.getDistanceToTarget(blockerCombatant, this.combatants[blockerCombatant.targetId])
+                    console.log(combatant.name, 'someones in my space!', blockerCombatant, 'blocker distance to target: ', blockerDistanceToTarget);
                     depthAvailable = false;
+                    switch(combatant.type){
+                        case 'rogue':
+                            console.log('rogueeeee', blockerCombatant.pendingAttack.range === 'close', blockerDistanceToTarget > 2);
+                            if(blockerCombatant.pendingAttack.range === 'close' && blockerDistanceToTarget > 2){
+                                // console.log('rogue pushes melee fighter closer');
+                                // move blocker forward 1
+                                console.log('move blocker closer');
+                                combatant.depth = 2;
+                                blockerCombatant.depth++
+                                console.log('now combatant depth = ', combatant.depth);
+                            }
+                        break;
+                        default:
+                            break;
+                    }
                     if(combatant.depth > 0){
                         combatant.coordinates.x = combatant.depth - 1
                         combatant.depth--
@@ -1252,18 +1279,14 @@ export function CombatManager(){
         const allMonstersDead = Object.values(this.combatants).filter(e=> (e.isMonster || e.isMinion) && !e.dead).length === 0;
         const allCrewDead = Object.values(this.combatants).filter(e=>!e.isMonster && !e.isMinion).every(e=>e.dead)
         this.onFighterDeath(combatant.id);
-        console.log('target killed, GO check: allMonstersDead, ', allMonstersDead, 'allCrewDead', allCrewDead, 'all combatants: ', this.combatants);
-        if(allMonstersDead || allCrewDead){
 
+        if(allMonstersDead || allCrewDead){
             let outcome = allMonstersDead ? 'crewWins' : 'monstersWin';
-    
-                // this.onFighterDeath(outcome);
-                this.combatOver = true;
-                setTimeout(()=>{
-                    this.gameOver(outcome)
-                }, 2000)
+            this.combatOver = true;
+            setTimeout(()=>{
+                this.gameOver(outcome)
+            }, 2000)
         }
-        
     }
     this.combatOverCheck = () => {
         return this.combatOver;

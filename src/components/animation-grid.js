@@ -32,10 +32,11 @@ const AnimationGrid = ({
                     y={t.y}
                     animationOn = {t.animationOn}
                     animationType = {t.animationType}
+                    transitionType = {t.transitionType}
                     handleClick={handleClickWrapper}
                     tileSize={tileProps.TILE_SIZE}
 
-                ></AnimationTile>
+                >  </AnimationTile>
             })}
         </div>
     )

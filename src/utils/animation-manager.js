@@ -6,8 +6,6 @@ export function AnimationManager(){
     //     this.tileAnimated = callBack;
     // }
     this.establishUpdateAnimationDataCallback = (callBack) => {
-        console.log('establishAnimationDataCallback', callBack);
-        // const {tileAnimated} = callBacks;
         this.updateAnimationData = callBack;
     }
 
@@ -18,7 +16,6 @@ export function AnimationManager(){
 
 
     this.initialize = (MAX_DEPTH, MAX_ROWS) => {
-        console.log('animation manager initialized, MAX_DEPTH:', MAX_DEPTH, 'MAX_ROWS: ', MAX_ROWS)
         let arr = [];
         for(let i = 0; i < MAX_ROWS*MAX_DEPTH; i++){
             let x = i%MAX_DEPTH,
@@ -29,11 +26,10 @@ export function AnimationManager(){
                 y,
                 animationOn: false,
                 animationType: '',
+                animationtransitionType: '',
                 handleClick: this.handleTileClick 
             })
-            // ghostPortraitMatrix.push(null)
         }
-        console.log('animation tiles; ', arr);
         this.tiles = arr;
         this.updateAnimationData({tiles: this.tiles})
     }
@@ -50,21 +46,37 @@ export function AnimationManager(){
 
 
     this.triggerTileAnimation = (tileId, color = null) => {
-        this.tileOn(tileId, color)
+        this.tileOn(tileId, 'solid', color)
+        // setTimeout(()=>{
+            console.log('should see color:', color);
+            // debugger
+        // }, 500)
         setTimeout(()=>{
             this.tileOff(tileId)
         }, 1000)
     }
-    this.tileOn = (tileId, color = null) => {
+    this.triggerTileAnimation_line = (tileId, color = null) => {
+        let tile = this.tiles.find(e=>e.id === tileId)
+        console.log('triggering tile',tile.animationType, tile.transitionType, `${tile.animationType}-${tile.transitionType}`);
+        this.tileOn(tileId, 'line', color)
+        
+        setTimeout(()=>{
+            this.tileOff(tileId)
+        }, 1000)
+    }
+    this.tileOn = (tileId, animationType, color = null) => {
         // let animationType = color ? `${color}-fade` : 'red-fade';
         const storedTile = this.tiles.find(e=>e.id === tileId)
         storedTile.animationOn = true;
-        storedTile.animationType = color ? `${color}-fade` : 'red-fade';
+        // stpredTile
+        storedTile.animationType = animationType;
+        storedTile.transitionType = color ? `${color}-fade` : 'red-fade';
         this.updateAnimationData({tiles: this.tiles})
     }
     this.tileOff = (tileId) => {
         const storedTile = this.tiles.find(e=>e.id === tileId)
         storedTile.animationOn = false;
+        storedTile.transitionType = ''
         storedTile.animationType = ''
         this.updateAnimationData({tiles: this.tiles})
     }
@@ -102,28 +114,25 @@ export function AnimationManager(){
             animate();
         },100)
     }
-    this.straightLineTo = (targetTileId, sourceTileId, color = null) => {
+    this.straightBeamTo = (targetTileId, sourceTileId, color = null) => {
         const sourceTile = this.tiles.find(e=>e.id === sourceTileId)
         const destinationTile = this.tiles.find(e=>e.id === targetTileId)
-        console.log('in STRAIGHT LINE TO sourceTile: ', sourceTile, 'destinationTile: ', destinationTile);
-        let isOnSamePlane = sourceTile.y === destinationTile.y
-        console.log('is on same plane', isOnSamePlane);
-        // debugger
-
+        let isOnSamePlane = sourceTile.y === destinationTile.y;
+        let direction = sourceTile.x > destinationTile.x ? 'rightToLeft' : 'leftToRight'
+        
+        console.log('in straight beam');
         return new Promise((resolve, reject) => {
             if(isOnSamePlane){
                 let distanceAway = Math.abs(sourceTile.x - destinationTile.x)
-                console.log('distance away: ', distanceAway);
-    
-                if(sourceTile.x > destinationTile.x){
-                    console.log('GO LEFT');
+
+                if(sourceTile.x > destinationTile.x && direction === 'rightToLeft'){
                     let sourceX = sourceTile.x
                     let idArray = [];
                     for(let i = sourceX -1; i > destinationTile.x; i--){
                         let id = this.getTileIdByCoords({x: i, y: destinationTile.y})
                         idArray.push(id)
                     }
-                    console.log('idArray is now ', idArray);
+                    
                     const lineInterval = setInterval(()=>{
                         if(idArray.length === 0){
                             clearInterval(lineInterval);
@@ -137,6 +146,146 @@ export function AnimationManager(){
                     // idArray.
                     // this.triggerTileAnimation(id, color)
                 }
+                if(sourceTile.x < destinationTile.x && direction === 'leftToRight'){
+                    let sourceX = sourceTile.x
+                    let idArray = [];
+                    for(let i = sourceX + 1; i < destinationTile.x; i++){
+                        let id = this.getTileIdByCoords({x: i, y: destinationTile.y})
+                        idArray.push(id)
+                    }
+                    
+                    const lineInterval = setInterval(()=>{
+                        if(idArray.length === 0){
+                            clearInterval(lineInterval);
+                            console.log('interval cleared');
+                            resolve();
+                        } else {
+                            let id = idArray.shift();
+                            this.triggerTileAnimation(id, color);
+                        }
+                    }, 10 + (distanceAway * 10))
+                    // idArray.
+                    // this.triggerTileAnimation(id, color)
+                }
+                
+                // debugger
+            }
+        })
+    }
+    this.straightNarrowBeamTo = (targetTileId, sourceTileId, color = null) => {
+        console.log('IN STRAIGHT NARROW BEAM TO');
+        const sourceTile = this.tiles.find(e=>e.id === sourceTileId)
+        const destinationTile = this.tiles.find(e=>e.id === targetTileId)
+        let isOnSamePlane = sourceTile.y === destinationTile.y;
+        let direction = sourceTile.x > destinationTile.x ? 'rightToLeft' : 'leftToRight'
+        
+        return new Promise((resolve, reject) => {
+            if(isOnSamePlane){
+                let distanceAway = Math.abs(sourceTile.x - destinationTile.x)
+
+                if(sourceTile.x > destinationTile.x && direction === 'rightToLeft'){
+                    let sourceX = sourceTile.x
+                    let idArray = [];
+                    for(let i = sourceX -1; i > destinationTile.x; i--){
+                        let id = this.getTileIdByCoords({x: i, y: destinationTile.y})
+                        idArray.push(id)
+                    }
+                    
+                    const lineInterval = setInterval(()=>{
+                        if(idArray.length === 0){
+                            clearInterval(lineInterval);
+                            console.log('interval cleared');
+                            resolve();
+                        } else {
+                            let id = idArray.shift();
+                            this.triggerTileAnimation_line(id, color);
+                        }
+                    }, 100 + (distanceAway * 20))
+                    // idArray.
+                    // this.triggerTileAnimation(id, color)
+                }
+                if(sourceTile.x < destinationTile.x && direction === 'leftToRight'){
+                    let sourceX = sourceTile.x
+                    let idArray = [];
+                    console.log('left to right');
+                    for(let i = sourceX + 1; i < destinationTile.x; i++){
+                        let id = this.getTileIdByCoords({x: i, y: destinationTile.y})
+                        idArray.push(id)
+                    }
+                    
+                    const lineInterval = setInterval(()=>{
+                        if(idArray.length === 0){
+                            clearInterval(lineInterval);
+                            console.log('interval cleared');
+                            resolve();
+                        } else {
+                            let id = idArray.shift();
+                            // this.triggerTileAnimation(id, color);
+                            this.triggerTileAnimation_line(id, color)
+                        }
+                    }, 10 + (distanceAway * 10))
+                    // idArray.
+                    // this.triggerTileAnimation(id, color)
+                }
+                
+                // debugger
+            }
+        })
+    }
+    this.straightLineTo = (targetTileId, sourceTileId, color = null) => {
+        const sourceTile = this.tiles.find(e=>e.id === sourceTileId)
+        const destinationTile = this.tiles.find(e=>e.id === targetTileId)
+        let isOnSamePlane = sourceTile.y === destinationTile.y;
+        let direction = sourceTile.x > destinationTile.x ? 'rightToLeft' : 'leftToRight'
+        
+        console.log('in straight line');
+        return new Promise((resolve, reject) => {
+            if(isOnSamePlane){
+                let distanceAway = Math.abs(sourceTile.x - destinationTile.x)
+
+                if(sourceTile.x > destinationTile.x && direction === 'rightToLeft'){
+                    let sourceX = sourceTile.x
+                    let idArray = [];
+                    for(let i = sourceX -1; i > destinationTile.x; i--){
+                        let id = this.getTileIdByCoords({x: i, y: destinationTile.y})
+                        idArray.push(id)
+                    }
+                    
+                    const lineInterval = setInterval(()=>{
+                        if(idArray.length === 0){
+                            clearInterval(lineInterval);
+                            console.log('interval cleared');
+                            resolve();
+                        } else {
+                            let id = idArray.shift();
+                            this.triggerTileAnimation(id, color);
+                        }
+                    }, 100 + (distanceAway * 20))
+                    // idArray.
+                    // this.triggerTileAnimation(id, color)
+                }
+                if(sourceTile.x < destinationTile.x && direction === 'leftToRight'){
+                    let sourceX = sourceTile.x
+                    let idArray = [];
+                    for(let i = sourceX + 1; i < destinationTile.x; i++){
+                        let id = this.getTileIdByCoords({x: i, y: destinationTile.y})
+                        idArray.push(id)
+                    }
+                    
+                    const lineInterval = setInterval(()=>{
+                        if(idArray.length === 0){
+                            clearInterval(lineInterval);
+                            console.log('interval cleared');
+                            resolve();
+                        } else {
+                            let id = idArray.shift();
+                            this.triggerTileAnimation(id, color);
+                        }
+                    }, 100 + (distanceAway * 20))
+                    // idArray.
+                    // this.triggerTileAnimation(id, color)
+                }
+                
                 // debugger
             }
         })
@@ -229,6 +378,17 @@ export function AnimationManager(){
     this.zapBurstAnimation = async (targetTileId, sourceTileId, color = null) => {
         await this.straightLineTo(targetTileId, sourceTileId, color)
         this.crossAnimation(targetTileId, color)
+    }
+    this.zapAnimation = async (targetTileId, sourceTileId, color = null) => {
+        await this.straightLineTo(targetTileId, sourceTileId, color)
+        // this.crossAnimation(targetTileId, color)
+    }
+    this.beamAnimation = async (targetTileId, sourceTileId, color = null) => {
+        await this.straightBeamTo(targetTileId, sourceTileId, color)
+        // this.crossAnimation(targetTileId, color)
+    }
+    this.narrowBeamAnimation = async (targetTileId, sourceTileId, color = null) => {
+        await this.straightNarrowBeamTo(targetTileId, sourceTileId, color)
     }
 
 

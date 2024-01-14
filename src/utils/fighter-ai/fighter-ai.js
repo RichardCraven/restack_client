@@ -1,4 +1,6 @@
 import { Loryastes } from './profiles/Loryastes'
+import { Zildjikan } from './profiles/Zildjikan'
+import { Rogue } from './profiles/Rogue'
 import {Methods} from './methods/basic-methods';
 import {MovementMethods} from './methods/fighter-movement-methods';
 
@@ -10,6 +12,18 @@ export function FighterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
     this.methods = {
         ...Methods,
         ...MovementMethods
+    }
+
+    this.connectAnimationManager = (instance) => {
+        this.initializeRoster(instance)
+    }
+    this.initializeRoster = (animationManager) => {
+        this.roster = {
+            Loryastes: new Loryastes(data, animationManager),
+            Zildjikan: new Zildjikan(data, animationManager),
+            Greco,
+            rogue: new Rogue(data, animationManager)
+        }
     }
 
     //UTILS
@@ -265,9 +279,5 @@ export function FighterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
         MAX_DEPTH: this.MAX_DEPTH,
         MAX_Lanes: this.MAX_LANES,
         INTERVAL_TIME: this.INTERVAL_TIME
-    }
-    this.roster = {
-        Loryastes: new Loryastes(data),
-        Greco
     }
 }

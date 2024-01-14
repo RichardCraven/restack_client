@@ -46,5 +46,22 @@ export const Methods = {
         const liveEnemies = Object.values(combatants).filter(e=>e.isMonster || (e.isMinion && !e.dead)),
         directlyInFront = liveEnemies.some(e=>e.depth === caller.depth + 1 && e.position === caller.position);
         return directlyInFront ? liveEnemies.find(e=>e.depth === caller.depth + 1 && e.position === caller.position) : null;
-    }
+    },
+    isFriendly: (e) => {
+        return !e.isMonster && !e.isMinion;
+    },
+    getFriendlies: (caller, combatants) => {
+        return Object.values(combatants).filter(e=>!e.isMonster && !e.isMinion && e.name !== caller.name);
+    },
+    isEnemy: (e) => {
+        return e.isMonster|| e.isMinion;
+    },
+    getEnemies: (combatants) => {
+        return Object.values(combatants).filter(e=>e.isMonster|| e.isMinion);
+    },
+    isFriendlyAtCoordinates: (coords, friendlies) => {
+        // console.log('coords: ', coords, 'friendlies: ', friendlies, 'blocked: ', friendlies.some(e=>e.coordinates.x === coords.x && e.coordinates.y === coords.y));
+        // console.log('friendlies: ', friendlies);
+        return friendlies.some(e=>e.coordinates.x === coords.x && e.coordinates.y === coords.y)
+    },
 }
