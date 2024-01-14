@@ -321,41 +321,41 @@ export function AnimationManager(){
             },100)
         }
 
-        const secondLayer = () => {
-            leftSide = this.tiles.filter(e=>e.x === storedTile.x - 2 && (
-                e.y === storedTile.y
-                ))  
-            rightSide = this.tiles.filter(e=>e.x === storedTile.x + 2 && (
-                e.y === storedTile.y
-                ))  
-            topAndBottom = this.tiles.filter(e=>e.x === storedTile.x && (
-                e.y === storedTile.y - 2 ||
-                e.y === storedTile.y + 2
-                )) 
-            console.log('2nd layer ANIMATION on tileId: ', tileId, this.tiles);
-            console.log('leftSide: ', leftSide);
-            console.log('rightSide: ', rightSide);
-            console.log('topAndBottom: ', topAndBottom);
-            const animate = () => {
-                leftSide.forEach((e) => {
-                    this.triggerTileAnimation(e.id, color)
-                })
-                rightSide.forEach((e) => {
-                    this.triggerTileAnimation(e.id, color)
-                })
-                topAndBottom.forEach((e) => {
-                    this.triggerTileAnimation(e.id, color)
-                }) 
-            }
-            setTimeout(()=>{
-                animate();
-            },100)
-        }
+        // const secondLayer = () => {
+        //     leftSide = this.tiles.filter(e=>e.x === storedTile.x - 2 && (
+        //         e.y === storedTile.y
+        //         ))  
+        //     rightSide = this.tiles.filter(e=>e.x === storedTile.x + 2 && (
+        //         e.y === storedTile.y
+        //         ))  
+        //     topAndBottom = this.tiles.filter(e=>e.x === storedTile.x && (
+        //         e.y === storedTile.y - 2 ||
+        //         e.y === storedTile.y + 2
+        //         )) 
+        //     console.log('2nd layer ANIMATION on tileId: ', tileId, this.tiles);
+        //     console.log('leftSide: ', leftSide);
+        //     console.log('rightSide: ', rightSide);
+        //     console.log('topAndBottom: ', topAndBottom);
+        //     const animate = () => {
+        //         leftSide.forEach((e) => {
+        //             this.triggerTileAnimation(e.id, color)
+        //         })
+        //         rightSide.forEach((e) => {
+        //             this.triggerTileAnimation(e.id, color)
+        //         })
+        //         topAndBottom.forEach((e) => {
+        //             this.triggerTileAnimation(e.id, color)
+        //         }) 
+        //     }
+        //     setTimeout(()=>{
+        //         animate();
+        //     },100)
+        // }
 
         firstLayer()
-        setTimeout(()=>{
-            secondLayer()
-        }, 100)
+        // setTimeout(()=>{
+        //     secondLayer()
+        // }, 100)
         
     }
 

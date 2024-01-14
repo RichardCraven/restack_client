@@ -1,5 +1,10 @@
 import * as images from '../utils/images'
 
+Date.prototype.addHours= function(h){
+    this.setHours(this.getHours()+h);
+    return this;
+}
+
 export function CrewManager(){
     // this.tiles = [];
     this.memberTypes = [
@@ -28,6 +33,34 @@ export function CrewManager(){
     this.addCrewMember = (member) => {
         this.crew.push(member)
     }
+    this.beginSpecialAction = (member, actionType, actionSubtype) => {
+        console.log('member: ', member, 'action: ', actionType, 'subtype: ', actionSubtype);
+        const startDate = new Date();
+        let endDate;
+        switch(actionType.type){
+            case 'glyph':
+                switch(actionSubtype.type){
+                    case 'magic missile':
+                        // endDate = new Date().addHours(4);
+                        endDate = new Date().addHours(1);
+
+                        console.log('MAGIC MISSILE BEGIN!');
+                        console.log('date + 4 hrs:', new Date().addHours(4));
+                        member.specialActions.push({
+                            actionType,
+                            actionSubtype,
+                            startDate,
+                            endDate
+                        })
+                    break;
+                    default:
+                        break;
+                }
+            break;
+            default:
+                break;
+        }
+    }
 
     this.adventurers = [
         {
@@ -53,7 +86,8 @@ export function CrewManager(){
             attacks: ['magic_missile'],
             passives: ['magic_affinity'],
             weaknesses: ['ice', 'fire', 'electricity', 'blood_magic'],
-            description: "Hailing from the magister's college, Zildjikan was the dean of transmutation. A powerful magic user, he has been known to linger for long periods in the silent realm, searching for secret truths."
+            description: "Hailing from the magister's college, Zildjikan was the dean of transmutation. A powerful magic user, he has been known to linger for long periods in the silent realm, searching for secret truths.",
+            specialActions: []
         },
         {
             image: 'soldier', 
@@ -79,7 +113,8 @@ export function CrewManager(){
             specials: ['shield_wall'],
             attacks: ['sword_swing', 'sword_thrust', 'shield_bash'],
             weaknesses: ['ice', 'electricity', 'blood_magic'],
-            description: "Once the captain of the royal army's legendary vangard battalion, Sardonis has a reputation for fair leadership and honor."
+            description: "Once the captain of the royal army's legendary vangard battalion, Sardonis has a reputation for fair leadership and honor.",
+            specialActions: []
         },
         {
             image: 'monk', 
@@ -104,7 +139,8 @@ export function CrewManager(){
             specials: ['flying_lotus'],
             attacks: ['dragon_punch'],
             weaknesses: ['fire', 'electricity', 'ice', 'blood_magic', 'crushing'],
-            description: "Yu was born into the dynastic order of the White Serpent, inheriting the secrets of absolute stillness and unyielding motion"
+            description: "Yu was born into the dynastic order of the White Serpent, inheriting the secrets of absolute stillness and unyielding motion",
+            specialActions: []
         },
         {
             image: 'sage', 
@@ -129,7 +165,8 @@ export function CrewManager(){
             attacks: ['meditate', 'heal'],
             passives: ["owls_insight"],
             weaknesses: ['fire', 'electricity', 'ice', 'blood_magic', 'crushing'],
-            description: "Loryastes is the headmaster of Citadel library, chronicled the histories of three monarchies, and a pupil of The Great Scribe"
+            description: "Loryastes is the headmaster of Citadel library, chronicled the histories of three monarchies, and a pupil of The Great Scribe",
+            specialActions: []
         },
         {
             image: 'rogue', 
@@ -154,7 +191,8 @@ export function CrewManager(){
             attacks: ['fire_arrow', 'dagger_stab'],
             passives: ['nimble_dodge'],
             weaknesses: ['ice', 'curse', 'crushing'],
-            description: "Tyra was born a slave, surviving and advancing through sheer cunning and a ruthless will"
+            description: "Tyra was born a slave, surviving and advancing through sheer cunning and a ruthless will",
+            specialActions: []
         },
         {
             image: 'barbarian', 
@@ -179,7 +217,8 @@ export function CrewManager(){
             attacks: ['axe_throw', 'axe_swing', 'spear_throw'],
             passives: ['fury'],
             weaknesses: ['ice', 'curse', 'psionic'],
-            description: "Ulaf is the son of the chieftan of the Rootsnarl Clan. He is on a journey to prove his mettle and one day take his father's place"
+            description: "Ulaf is the son of the chieftan of the Rootsnarl Clan. He is on a journey to prove his mettle and one day take his father's place",
+            specialActions: []
         },
     ]
 }

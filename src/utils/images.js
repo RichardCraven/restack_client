@@ -254,6 +254,11 @@ import dungeon_door from '../assets/mj_icons/portals/dungeon_door.png'
 import dungeon_door_opened from '../assets/mj_icons/portals/dungeon_door_opened.png'
 
 
+
+// noun project icons
+import glyph from '../assets/icons/magic/glyph_inverted.png'
+import info from '../assets/icons/menu/info_inverted.png'
+
 export {
     monster,
     avatar,
@@ -462,5 +467,8 @@ export {
     evil_gate,
     evil_gate_opened,
     dungeon_door,
-    dungeon_door_opened
+    dungeon_door_opened,
+
+    glyph,
+    info
 };

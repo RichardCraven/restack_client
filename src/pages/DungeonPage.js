@@ -10,10 +10,11 @@ import {
     addDungeonRequest
   } from '../utils/api-handler';
 import {storeMeta, getMeta, getUserId, getUserName} from '../utils/session-handler';
-import { cilCaretRight, cilCaretLeft} from '@coreui/icons';
+import { cilCaretRight, cilCaretLeft, cilMenu} from '@coreui/icons';
 import  CIcon  from '@coreui/icons-react';
 
 import { CButton, CFormSelect, CFormInput} from '@coreui/react';
+import * as images from '../utils/images'
 
 // const MAX_DEPTH = 8;
 // const MAX_ROWS = 5;
@@ -74,7 +75,9 @@ class DungeonPage extends React.Component {
             ],
             markerName: '',
             markerType: '',
-            descriptionText: ''
+            descriptionText: '',
+            actionsTrayExpanded: false,
+            actionMenuExpanded: ''
         }
     }
     
@@ -851,6 +854,10 @@ class DungeonPage extends React.Component {
         storeMeta(meta)
         await updateUserRequest(getUserId(), meta)
     }
+    toggleActionsTray = () => {
+        const newVal = !this.state.actionsTrayExpanded
+        this.setState({actionsTrayExpanded: newVal})
+    }
     uppercaseFirstLetter = (text) => {
         return text.charAt(0).toUpperCase() + text.slice(1);
     }
@@ -964,6 +971,113 @@ class DungeonPage extends React.Component {
             markerType
         })
     }
+    handleActionClick = (action) => {
+        console.log('action clicked: ', action.type);
+        let val = this.state.actionMenuTypeExpanded === action.type ? '' : action.type
+        this.setState({
+            actionMenuTypeExpanded: val
+        })
+    }
+    handleActionSubtypeClick = (action, subType) => {
+        console.log('subType clicked: ', subType);
+        console.log('current character: ', this.state.selectedCrewMember, 'crew: ', this.props.crewManager.crew);
+        let characterFromCrew = this.props.crewManager.crew.find(e=> e.id === this.state.selectedCrewMember.id)
+        console.log('found character: ', characterFromCrew);
+        this.props.crewManager.beginSpecialAction(characterFromCrew, action, subType)
+        const meta = getMeta();
+        meta.crew = this.props.crewManager.crew;
+
+        console.log('meta: ', meta);
+        storeMeta(meta);
+        this.props.saveUserData();
+    }
+    getActionCooldownPercentage = (action) => {
+        const startDate = new Date(action.startDate),
+        endDate = new Date(action.endDate);
+        let diffInMilli = endDate - startDate,
+        diffInMinutes = diffInMilli / (1000 * 60),
+        diffInHours = diffInMinutes / (60)
+        let currentTime = new Date()
+        let minutesElapsed = (currentTime - startDate) / (1000 * 60)
+        let percentageComplete = Math.ceil(minutesElapsed/diffInMinutes*100);
+        if(percentageComplete > 100) percentageComplete = 100;
+        return percentageComplete
+    }
+    getRotateDegreesRight = (percentage) => {
+        let deg = Math.floor(percentage / 100 * 360)
+        if(percentage >= 50) deg = 180;
+        return deg
+    }
+    getRotateDegreesLeft = (percentage) => {
+        let deg = Math.floor(percentage / 100 * 360)
+        return deg
+    }
+    getCharacterActions = (character) => {
+        let actions = [];
+        switch(character.type){
+            case 'wizard':
+                actions.push({
+                    text: 'Etch Glyph', 
+                    icon_url: images['glyph'], 
+                    type: 'glyph',
+                    subTypes: [
+                        {
+                            type: 'magic missile',
+                            available: true
+                        }, 
+                        {
+                            type: 'doppleganger',
+                            available: false
+                        }, 
+                        {
+                            type: 'yawning rift',
+                            available: false
+                        }
+                    ]
+                })
+                // actions.push({text: 'Etch Glyph', icon_url: images['glyph']})
+                // actions.push({text: 'Etch Glyph', icon_url: images['glyph']})
+            break;
+            default:
+                break;
+        }
+        return <div className='actions-container'>
+            {actions.map((action,i)=>{
+                return  <div className="action-wrapper" key={i}>
+                            <div className='action-hover-wrapper' onClick={() => this.handleActionClick(action)} style={{
+                                    border: `${this.state.selectedCrewMember.specialActions.find(e=>e.actionType.type === action.type) ? '1px solid #635b4a' : ''}`
+                                    }}>
+                                <div className="progress-overlay" style={{
+                                    width: `${this.getActionCooldownPercentage(this.state.selectedCrewMember.specialActions.find(e=>e.actionType.type === action.type))}%`,
+                                    }}></div>
+                                <div className='action-icon' style={{backgroundImage: `url(${action.icon_url})`}}></div>
+                                <div className="action-text">{action.text}</div>
+                            </div>
+                            <div className="info-icon" style={{backgroundImage: `url(${images['info']})`}}></div>
+                            <div className={`action-sub-menu ${this.state.actionMenuTypeExpanded === action.type ? 'expanded' : ''}`}>
+                                {action.subTypes.map((subType,i)=>{
+                                    return <div key={i} onClick={() => this.handleActionSubtypeClick(action, subType)} 
+                                    className={`action-subtype ${!subType.available ? 'disabled' : (this.state.selectedCrewMember.specialActions.find(e=>e.actionType.type === action.type).actionSubtype.type === subType.type ? 'in-progress' : '')}`}>
+                                        {subType.type}
+                                    </div>
+                                })}
+                            </div>
+                        </div>
+            })}
+            {/* {actions.map((e,i)=>{
+                return <div className='action-wrapper' key={i}>
+                            <div className='action-icon' style={{backgroundImage: `url(${e.icon_url})`}}></div>
+                            <div className="action-text">{e.text}</div>
+                        </div>
+            })}
+            {actions.map((e,i)=>{
+                return <div className='action-wrapper' key={i}>
+                            <div className='action-icon' style={{backgroundImage: `url(${e.icon_url})`}}></div>
+                            <div className="action-text">{e.text}</div>
+                        </div>
+            })} */}
+        </div>
+    }
     render(){
         return (
         <div className="dungeon-container">
@@ -1004,13 +1118,34 @@ class DungeonPage extends React.Component {
                     </div>
                 </div>
                 {this.state.selectedCrewMember.name && <div className="crew-info-section">
-                        {this.state.selectedCrewMember.portrait && <div className="portrait" style={{backgroundImage: "url(" + this.state.selectedCrewMember.portrait + ")"}}></div>}
+                        <div className="portrait-wrapper">
+                            <div className="portrait" style={{backgroundImage: "url(" + this.state.selectedCrewMember.portrait + ")"}}></div>
+                            <div className="cooldowns-container">
+                                {this.state.selectedCrewMember.specialActions.map((action, i)=>{
+                                    return <div key={i}
+                                    className="special-action-wrapper">
+                                        <div className="special-action-icon" style={{backgroundImage: `url(${action.actionType.icon_url})`}}></div>
+                                        {this.getActionCooldownPercentage(action) < 50 && <div className="progress-overlay"></div>}
+                                        <div className="left" style={{transform: `rotate(${this.getRotateDegreesLeft(this.getActionCooldownPercentage(action))}deg)`}}></div>
+                                        <div className="right" style={{transform: `rotate(${this.getRotateDegreesRight(this.getActionCooldownPercentage(action))}deg)`}}></div>
+                                    </div>
+                                })}
+                            </div>
+                        </div>
                         <div className="name-line">{this.state.selectedCrewMember.name} the {this.uppercaseFirstLetter(this.state.selectedCrewMember.type)}</div>
-                        <div className="stat-line">Strength {this.state.selectedCrewMember.stats.str}</div>
-                        <div className="stat-line">Dexterity {this.state.selectedCrewMember.stats.dex}</div>
-                        <div className="stat-line">Intelligence {this.state.selectedCrewMember.stats.int}</div>
-                        <div className="stat-line">Vitality {this.state.selectedCrewMember.stats.vit}</div>
-                        <div className="stat-line">Fortitude {this.state.selectedCrewMember.stats.fort}</div>
+                        <div className="stat-line"> <span className="stat-name">Strength</span>  <span className='stat-value'>{this.state.selectedCrewMember.stats.str} </span> </div>
+                        <div className="stat-line">Dexterity <span className='stat-value'> {this.state.selectedCrewMember.stats.dex} </span></div>
+                        <div className="stat-line">Intelligence <span className='stat-value'>{this.state.selectedCrewMember.stats.int} </span></div>
+                        <div className="stat-line">Vitality <span className='stat-value'>{this.state.selectedCrewMember.stats.vit} </span></div>
+                        <div className="stat-line">Fortitude <span className='stat-value'> {this.state.selectedCrewMember.stats.fort} </span></div>
+                        <div className="icon-container menu" onClick={this.toggleActionsTray}>
+                            <CIcon icon={cilMenu} className={`menu-icon ${this.state.leftPanelExpanded ? 'expanded' : ''}`} size="sm"/>
+                            Actions
+                        </div>
+                        <div className={`actions-tray ${this.state.actionsTrayExpanded && this.state.actionMenuTypeExpanded ? 'double-expanded' : 
+                        (this.state.actionsTrayExpanded ? 'expanded' : '')}`}>
+                            {this.getCharacterActions(this.state.selectedCrewMember)}
+                        </div>
                         <div className="equipment-panel">
                             <div className="equipment-line">
                                 Weapon 
