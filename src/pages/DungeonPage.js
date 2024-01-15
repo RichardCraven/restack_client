@@ -13,7 +13,7 @@ import {storeMeta, getMeta, getUserId, getUserName} from '../utils/session-handl
 import { cilCaretRight, cilCaretLeft, cilMenu} from '@coreui/icons';
 import  CIcon  from '@coreui/icons-react';
 
-import { CButton, CFormSelect, CFormInput} from '@coreui/react';
+import { CButton, CFormSelect, CFormInput, CModal, CModalHeader, CModalTitle, CModalBody, CModalFooter} from '@coreui/react';
 import * as images from '../utils/images'
 
 // const MAX_DEPTH = 8;
@@ -77,7 +77,10 @@ class DungeonPage extends React.Component {
             markerType: '',
             descriptionText: '',
             actionsTrayExpanded: false,
-            actionMenuExpanded: ''
+            actionMenuExpanded: '',
+            modalType: 'Updates',
+            showModal: false,
+            updates: []
         }
     }
     
@@ -111,6 +114,21 @@ class DungeonPage extends React.Component {
         for(let i = 0; i<9; i++){
             minimap.push({active: false})
         }
+        
+        let updates = []
+        meta.crew.forEach(member=>{
+            member.specialActions.forEach(a=>{
+                let end = new Date(a.endDate),
+                now = new Date();
+                if(end - now < 0 && !a.notified){
+                    updates.push({
+                        text: `${member.name} has finished ${a.actionType.text}`,
+                        owner: `${member.name}`,
+                        actionType: a.actionType.type
+                    })
+                }
+            })
+        })
         this.setState((state, props) => {
             return {
                 tileSize,
@@ -119,7 +137,9 @@ class DungeonPage extends React.Component {
                 leftPanelExpanded: meta?.leftExpanded,
                 rightPanelExpanded: meta?.rightExpanded,
                 crewSize: meta.crew.length,
-                minimap
+                minimap,
+                updates,
+                showModal: updates.length > 0
             }
         })
     }
@@ -1041,6 +1061,7 @@ class DungeonPage extends React.Component {
             default:
                 break;
         }
+    
         return <div className='actions-container'>
             {actions.map((action,i)=>{
                 return  <div className="action-wrapper" key={i}>
@@ -1078,9 +1099,48 @@ class DungeonPage extends React.Component {
             })} */}
         </div>
     }
+    onUpdateModalClosed = () => {
+        const meta = getMeta();
+        let updates = this.state.updates;
+        let crew = meta.crew;
+        crew.forEach(c=>{
+            if(updates.some(e=>e.owner === c.name)){
+                // console.log('update found');
+                let update = updates.find(e=>e.owner === c.name)
+                let ref = c.specialActions.find(e=> e.actionType.type === update.actionType)
+                ref.notified = true;
+            }
+        })
+        // console.log('NOW crew is ', crew);
+        meta.crew = crew;
+        this.props.crewManager.crew = crew;
+        storeMeta(meta);
+        this.props.saveUserData();
+        this.setState(() => { return {showModal: false}})
+    }
     render(){
         return (
         <div className="dungeon-container">
+            <CModal alignment="center" visible={this.state.showModal} onClose={() => this.onUpdateModalClosed()}>
+                <CModalHeader>
+                    {this.state.modalType === 'Updates' && <CModalTitle>Since your last visit...</CModalTitle>}
+                </CModalHeader>
+                <CModalBody>
+                    {this.state.modalType === 'Updates' && <div>
+                        {this.state.updates.map((update, i)=>{
+                            return <div key={i}>
+                                {update.text}
+                            </div>
+                        })}
+                    </div>}
+                </CModalBody>
+                {/* <CModalFooter>
+                    <CButton color="secondary" onClick={() => {return this.setState(() => { return {showModal: false}})}}>
+                    Close
+                    </CButton>
+                    <CButton color="primary" onClick={() => this.modalSaveChanges()}>Save changes</CButton>
+                </CModalFooter> */}
+            </CModal>
             {this.props.boardManager.currentOrientation === 'B' && <div className="dark-mask"></div>}
             <div className={`left-side-panel ${this.state.leftPanelExpanded ? 'expanded' : ''}`}>
                 <div className="expand-collapse-button icon-container" onClick={this.toggleLeftSidePanel}>
