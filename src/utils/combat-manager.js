@@ -462,7 +462,7 @@ export function CombatManager(){
             },
             turnCycle: function(){
                 let count = 0,
-                hasMoved = false;
+                hasMoved = false, hasMovedSecondTime = false;
                 let factor = (1/this.stats.dex * 25)
                 let increment = (1 / factor)
                 if(this.hasOverlap) handleOverlap(this)
@@ -495,6 +495,11 @@ export function CombatManager(){
                         this.aiming = false;
                         this.move();
                         hasMoved = true;
+                    }
+                    if(this.tempo > 65 && this.tempo < 75 && this.targetId !== null && !hasMovedSecondTime && !this.destinationSickness){
+                        this.aiming = false;
+                        this.move();
+                        hasMovedSecondTime = true;
                     }
 
                     if(count >= 90 && this.pendingAttack && targetInRange(this) && this.pendingAttack.cooldown_position > 80){

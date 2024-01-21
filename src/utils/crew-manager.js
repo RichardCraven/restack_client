@@ -21,6 +21,16 @@ export function CrewManager(){
     this.initializeCrew = (crew) => {
         this.crew = [];
         crew.forEach(member=> { 
+            member.specialActions.forEach(a=>{
+                let end = new Date(a.endDate),
+                now = new Date();
+                console.log('end: ', end, 'now: ',now);
+                if(end - now < 0){
+                    a.available = true;
+                }
+            })
+
+            console.log('member:', member);
             if(this.memberTypes.includes(member.image)){
                 // member.inventory = [
                 //     'major_health_potion'
@@ -30,9 +40,11 @@ export function CrewManager(){
         })
         console.log('crew: ', this.crew);
     }
+
     this.addCrewMember = (member) => {
         this.crew.push(member)
     }
+
     this.beginSpecialAction = (member, actionType, actionSubtype) => {
         console.log('member: ', member, 'action: ', actionType, 'subtype: ', actionSubtype);
         const startDate = new Date();
@@ -50,7 +62,9 @@ export function CrewManager(){
                             actionType,
                             actionSubtype,
                             startDate,
-                            endDate
+                            endDate,
+                            available: false,
+                            notified: false,
                         })
                     break;
                     default:

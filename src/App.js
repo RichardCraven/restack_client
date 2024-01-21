@@ -19,11 +19,12 @@ import {updateUserRequest} from '../src/utils/api-handler'
 import {getAllUsersRequest} from './utils/api-handler';
 import {storeSessionData, getUserId, getMeta} from './utils/session-handler';
 import { useHistory } from "react-router";
+import * as images from '../src/utils/images'
 
 
 function App(props) {
 const [loggedIn, setLoggedIn] = useState(!!getUserId())
-// const [user, setUser] = useState(null);
+const [menuTrayExpanded, setMenuTrayExpanded] = useState(false)
 const [isAdmin, setIsAdmin] = useState(sessionStorage.getItem('isAdmin') === 'true' ? true : false)
 const [showCoordinates, setShowCoordinates] = useState(false)
 const [allUsers, setAllUsers] = useState([])
@@ -149,22 +150,32 @@ const endDeathSequence = () => {
   console.log('end death sequence');
   setShowToolbar(true);
 }
+const toggleMenuTray = () => {
+  let expanded = menuTrayExpanded;
+  setMenuTrayExpanded(!expanded)
+}
  return (
    <div className="fullpage">
       <div className="App">
         {loggedIn === true && showToolbar === true && <div className="nav-buttons-container">
-          {<button className="menu-buttons logout-button" onClick={logout}>
-            Logout
-          </button>}
-          {<button className="menu-buttons save-button" onClick={saveUserData}>
-            Save
-          </button>}
-          {<button className="menu-buttons go-home-button" onClick={goHome}>
-            Home
-          </button>}    
-          {isAdmin && <button className="menu-buttons show-coordinates-button" onClick={toggleShowCoordinates}>
-            Show Coordinates
-          </button>}
+          <div className="hamburger-button" style={{backgroundImage: `url(${images['hamburger']})`}} onClick={() => toggleMenuTray()}></div>
+          <div className="menu-tray" style={{
+            height: menuTrayExpanded ? '126px' : '0px',
+            border: menuTrayExpanded ? '1px solid lightgrey' : 'none'
+          }}>
+            {<button className="menu-buttons logout-button" onClick={logout}>
+              Logout
+            </button>}
+            {<button className="menu-buttons save-button" onClick={saveUserData}>
+              Save
+            </button>}
+            {<button className="menu-buttons go-home-button" onClick={goHome}>
+              Home
+            </button>}    
+            {/* {isAdmin && <button className="menu-buttons show-coordinates-button" onClick={toggleShowCoordinates}>
+              Show Coordinates
+            </button>} */}
+          </div>
         </div> }
         <Switch>
           <Route exact path="/login" render={() => (

@@ -121,6 +121,7 @@ class DungeonPage extends React.Component {
                 let end = new Date(a.endDate),
                 now = new Date();
                 if(end - now < 0 && !a.notified){
+                    console.log('pushing update: ', a);
                     updates.push({
                         text: `${member.name} has finished ${a.actionType.text}`,
                         owner: `${member.name}`,
@@ -605,6 +606,7 @@ class DungeonPage extends React.Component {
         })
     }
     handleMemberClick = (member) => {
+        console.log('setting selected crew member: ', member.data.specialActions.filter(e=>e.available));
         this.setState({
             selectedCrewMember: member.data
         })
@@ -993,13 +995,31 @@ class DungeonPage extends React.Component {
     }
     handleActionClick = (action) => {
         console.log('action clicked: ', action.type);
+        let e = this.state.selectedCrewMember.specialActions
+        console.log('special actions: ', e);
         let val = this.state.actionMenuTypeExpanded === action.type ? '' : action.type
         this.setState({
             actionMenuTypeExpanded: val
         })
     }
+    getSubtypeClass = (subtype, maxReached) => {
+        if(!subtype.available) return 'disabled'
+        if(maxReached) return 'max-reached'
+        if(this.state.selectedCrewMember.specialActions.some(a=> {
+            let end = new Date(a.endDate);
+            let now = new Date()
+            return end > now
+        })) return 'in-progress'
+    }
+    getSubtypeCountElement = (subtype) => {
+        let numeral;
+        let arr = ['zero','one','two','three','four','five','six','seven','eight','nine']
+        
+        return <div className="numeral" style={{backgroundImage: `url(${images[arr[subtype.count]]})`}}></div>
+    }
     handleActionSubtypeClick = (action, subType) => {
         console.log('subType clicked: ', subType);
+        // debugger
         console.log('current character: ', this.state.selectedCrewMember, 'crew: ', this.props.crewManager.crew);
         let characterFromCrew = this.props.crewManager.crew.find(e=> e.id === this.state.selectedCrewMember.id)
         console.log('found character: ', characterFromCrew);
@@ -1012,6 +1032,7 @@ class DungeonPage extends React.Component {
         this.props.saveUserData();
     }
     getActionCooldownPercentage = (action) => {
+        if(!action) return;
         const startDate = new Date(action.startDate),
         endDate = new Date(action.endDate);
         let diffInMilli = endDate - startDate,
@@ -1021,6 +1042,7 @@ class DungeonPage extends React.Component {
         let minutesElapsed = (currentTime - startDate) / (1000 * 60)
         let percentageComplete = Math.ceil(minutesElapsed/diffInMinutes*100);
         if(percentageComplete > 100) percentageComplete = 100;
+        // console.log('action', action, 'percentage comp[lete: ', percentageComplete);
         return percentageComplete
     }
     getRotateDegreesRight = (percentage) => {
@@ -1034,6 +1056,7 @@ class DungeonPage extends React.Component {
     }
     getCharacterActions = (character) => {
         let actions = [];
+        // console.log('character: ', character);
         switch(character.type){
             case 'wizard':
                 actions.push({
@@ -1043,15 +1066,18 @@ class DungeonPage extends React.Component {
                     subTypes: [
                         {
                             type: 'magic missile',
-                            available: true
+                            available: true,
+                            count: character.specialActions.filter(a=>a.available).length
                         }, 
                         {
                             type: 'doppleganger',
-                            available: false
+                            available: false,
+                            count: 0
                         }, 
                         {
                             type: 'yawning rift',
-                            available: false
+                            available: false,
+                            count: 0
                         }
                     ]
                 })
@@ -1061,25 +1087,35 @@ class DungeonPage extends React.Component {
             default:
                 break;
         }
-    
+        let count = 0;
+        actions.forEach(a=>{
+            a.subTypes.forEach(s=>{
+                count += s.count
+            })
+        })
+        console.log('count: ', count);
+        let maximumReached = count >= 3;
         return <div className='actions-container'>
             {actions.map((action,i)=>{
                 return  <div className="action-wrapper" key={i}>
                             <div className='action-hover-wrapper' onClick={() => this.handleActionClick(action)} style={{
-                                    border: `${this.state.selectedCrewMember.specialActions.find(e=>e.actionType.type === action.type) ? '1px solid #635b4a' : ''}`
+                                    border: `${this.getActionCooldownPercentage() && this.state.selectedCrewMember.specialActions.find(e=>e.actionType.type === action.type) ? '1px solid #635b4a' : ''}`
                                     }}>
-                                <div className="progress-overlay" style={{
-                                    width: `${this.getActionCooldownPercentage(this.state.selectedCrewMember.specialActions.find(e=>e.actionType.type === action.type))}%`,
-                                    }}></div>
+                                {this.state.selectedCrewMember.specialActions.some(action=> this.getActionCooldownPercentage(action) < 100) && <div className="progress-overlay" style={{
+                                    width: `${this.getActionCooldownPercentage(this.state.selectedCrewMember.specialActions.find(action=>this.getActionCooldownPercentage(action) < 100) )}%`,
+                                    }}></div>}
                                 <div className='action-icon' style={{backgroundImage: `url(${action.icon_url})`}}></div>
                                 <div className="action-text">{action.text}</div>
                             </div>
                             <div className="info-icon" style={{backgroundImage: `url(${images['info']})`}}></div>
                             <div className={`action-sub-menu ${this.state.actionMenuTypeExpanded === action.type ? 'expanded' : ''}`}>
+                                {maximumReached && <div className='max-reached'>maximum reached</div>}
                                 {action.subTypes.map((subType,i)=>{
                                     return <div key={i} onClick={() => this.handleActionSubtypeClick(action, subType)} 
-                                    className={`action-subtype ${!subType.available ? 'disabled' : (this.state.selectedCrewMember.specialActions.find(e=>e.actionType.type === action.type).actionSubtype.type === subType.type ? 'in-progress' : '')}`}>
-                                        {subType.type}
+                                    className={`action-subtype ${this.getSubtypeClass(subType, maximumReached)} 
+                                    `}>
+                                        {/* ${!subType.available ? 'disabled' : (this.state.selectedCrewMember.specialActions.find(e=>e.actionType.type === action.type).actionSubtype.type === subType.type ? 'in-progress' : '')} */}
+                                        {subType.type} {subType.count !== 0 && this.getSubtypeCountElement(subType)}
                                     </div>
                                 })}
                             </div>
@@ -1103,11 +1139,13 @@ class DungeonPage extends React.Component {
         const meta = getMeta();
         let updates = this.state.updates;
         let crew = meta.crew;
+        console.log('modal closed, updates:', updates);
         crew.forEach(c=>{
+            console.log('crew memeber: ', c);
             if(updates.some(e=>e.owner === c.name)){
-                // console.log('update found');
+                console.log('update found');
                 let update = updates.find(e=>e.owner === c.name)
-                let ref = c.specialActions.find(e=> e.actionType.type === update.actionType)
+                let ref = c.specialActions.find(e=> e.actionType.type === update.actionType && !e.notified)
                 ref.notified = true;
             }
         })

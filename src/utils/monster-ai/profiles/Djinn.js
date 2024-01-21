@@ -22,6 +22,7 @@ export function Djinn(data, animationManager){
         if(!caller.pendingAttack){
             return
         }
+        // console.log('Djinn energy');
         caller.energy+=5
         data.methods.moveTowardsCloseEnemyTarget(caller, combatants)
     }

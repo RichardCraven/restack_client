@@ -82,12 +82,14 @@ export function Rogue(data, animationManager){
         const distanceToTarget = data.methods.getDistanceToTarget(caller, enemyTarget),
         laneDiff = data.methods.getLaneDifferenceToTarget(caller, enemyTarget)
 
-        console.log('Rogue process move, pending attack: ', caller.pendingAttack);
+        // console.log('Rogue process move, pending attack: ', caller.pendingAttack);
         if(!caller.pendingAttack){
             console.log('no pending attack ', caller);
             return
         }
+        console.log('Rogue energy at', caller.energy);
         caller.energy+=5
+
         // data.methods.moveTowardsCloseEnemyTarget(caller, combatants)
 
         if(

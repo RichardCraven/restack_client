@@ -256,8 +256,21 @@ import dungeon_door_opened from '../assets/mj_icons/portals/dungeon_door_opened.
 
 
 // noun project icons
+import zero from '../assets/icons/numbers/inverted/zero.png'
+import one from '../assets/icons/numbers/inverted/one.png'
+import two from '../assets/icons/numbers/inverted/two.png'
+import three from '../assets/icons/numbers/inverted/three.png'
+import four from '../assets/icons/numbers/inverted/four.png'
+import five from '../assets/icons/numbers/inverted/five.png'
+import six from '../assets/icons/numbers/inverted/six.png'
+import seven from '../assets/icons/numbers/inverted/seven.png'
+import eight from '../assets/icons/numbers/inverted/eight.png'
+import nine from '../assets/icons/numbers/inverted/nine.png'
+// import ten from '../assets/icons/numbers/inverted/ten.png'
+
 import glyph from '../assets/icons/magic/glyph_inverted.png'
 import info from '../assets/icons/menu/info_inverted.png'
+import hamburger from '../assets/icons/menu/hamburger.png'
 
 export {
     monster,
@@ -470,5 +483,16 @@ export {
     dungeon_door_opened,
 
     glyph,
-    info
+    info,
+    hamburger,
+    zero,
+    one,
+    two,
+    three,
+    four,
+    five,
+    six,
+    seven,
+    eight,
+    nine
 };

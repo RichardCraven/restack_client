@@ -521,12 +521,13 @@
                     justify-content: center;
                     .action-wrapper{
                         position: relative;
+                        width: 100%;
                         .info-icon{
                             position: absolute;
                             // top: 11px;
                             // right: 7px;
                             top: 5px;
-                            right: -27px;
+                            right: -10px;
                             height: 25px;
                             width: 25px;
                             background-size: 100% 100%;
@@ -537,6 +538,7 @@
                             }
                         }
                         .action-hover-wrapper{
+                            width: calc(100% - 40px);
                             display: flex;
                             flex-direction: row;
                             justify-content: center;
@@ -575,18 +577,44 @@
                             align-items: flex-start;
                             padding-left: 10px;
                             justify-content: center;
+                            .max-reached{
+                                color: rgb(97, 57, 57);
+                            }
                             &.expanded{
-                                min-height: 80px;
+                                // min-height: 80px;
+                                min-height: 100px;
                             }
                             .action-subtype{
                                 cursor: pointer;
                                 user-select: none;
-                                &:hover{
-                                    color: #f9b115;
+                                display: flex;
+                                align-items: center;
+                                justify-content: space-between;
+                                width: 100%;
+                                padding-right: 10px;
+                                .numeral{
+                                    height: 10px;
+                                    width: 10px;
+                                    background-size: 100% 100%;
+                                    margin-right: 30px;
+                                    margin-top: 3px;
+                                    &.yellow-filter{
+                                        filter: sepia(100%) hue-rotate(360deg) saturate(400%)
+                                    }
                                 }
                                 &.in-progress{
-                                    color: #f9b115;
+                                    color: #f9b115e3;
                                     pointer-events: none;
+                                    &:hover{
+                                        color: #f9b115;
+                                    }
+                                }
+                                &.max-reached{
+                                    color: white;
+                                    pointer-events: none;
+                                }
+                                &:hover{
+                                    color: #f9b115;
                                 }
                                 &.disabled{
                                     cursor:default;
@@ -617,7 +645,7 @@
                         position: relative;
                         // height: 54px;
                         // width: 54px;
-                        border: 1px solid white;
+                        border: 1px solid #2d2c2c;
                         .equipment-name{
                             position: absolute;
                             height: 12px;

@@ -95,6 +95,8 @@ export function Zildjikan(data, animationManager){
             debugger
         }
         caller.energy+=5
+
+
         // data.methods.moveTowardsCloseEnemyTarget(caller, combatants)
 
         if(
@@ -124,20 +126,20 @@ export function Zildjikan(data, animationManager){
     }
     this.triggerBeamAttack = (callerCoords, targetCoords) => {
         console.log('beam attack!');
-        // const targetTileId = this.animationManager.getTileIdByCoords(targetCoords)
-        // const sourceTileId = this.animationManager.getTileIdByCoords(callerCoords)
+        const targetTileId = this.animationManager.getTileIdByCoords(targetCoords)
+        const sourceTileId = this.animationManager.getTileIdByCoords(callerCoords)
         // console.log('targetTileId: ', targetTileId, 'sourceTileId:', sourceTileId);
-        // if(targetTileId !== null && sourceTileId !== null){
-        //     // console.log('GOGOGOGOGOGO');
-        //     this.animationManager.beamAnimation(targetTileId, sourceTileId, 'purple')
-        // }
+        if(targetTileId !== null && sourceTileId !== null){
+            // console.log('GOGOGOGOGOGO');
+            this.animationManager.beamAnimation(targetTileId, sourceTileId, 'purple')
+        }
     }
     this.initiateAttack = (caller, combatants, hitsTarget, missesTarget) => {
-        // console.log('Zildjikan initiate attack!!!!!!!!!', caller.pendingAttack);
+        console.log('Zildjikan initiate attack!!!!!!!!!', caller.pendingAttack);
             const target = combatants[caller.targetId];
             const distanceToTarget = data.methods.getDistanceToTarget(caller, target),
             laneDiff = data.methods.getLaneDifferenceToTarget(caller, target);
-        return
+        // return
             switch(caller.pendingAttack.name){
                 case 'induce madness':
                     console.log('INDUCE MADNESSS!!!!!!');

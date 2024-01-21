@@ -46,17 +46,44 @@ button{
   position: relative;
   .nav-buttons-container{
     width: fit-content;
-    
-    height: 30px;
+    flex-direction: column;
+    // height: 30px;
     position: fixed;
     top: 0;
+    left: 0;
     // z-index: 1000;
     // z-index: 0;
     z-index: 4;
     display: flex;
+    .hamburger-button{
+      background-size: 100% 100%;
+      width: 50px;
+      height: 50px;
+      cursor: pointer;
+    }
+    .menu-tray{
+      height: 200px;
+      width: 189px;
+      // border: 1px solid yellow;
+      flex-direction: column;
+      justify-content: space-around;
+      display: flex;
+      overflow: hidden;
+      transition: all 1s ease-in-out;
+      align-items: flex-start;
+      padding-left: 10px;
+      background-color: black;
+    }
   }
   .menu-buttons{
     cursor: pointer;
+    background-color: transparent;
+    color: white;
+    box-shadow: none;
+    border: none;
+    &:hover{
+      color: rgb(79, 206, 245);
+    }
   }
   .logout-button{
     &:hovered{
