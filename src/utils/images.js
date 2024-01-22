@@ -51,7 +51,8 @@ import kabuki_demon from '../assets/icons/monsters/demons/kabuki_demon.png'
 import kabuki_demon_portrait from '../assets/portraits/monsters/variations/kabuki_demon/kabuki_demon1.png'
 import kabuki_demon_minion_portrait from '../assets/portraits/monsters/variations/kabuki_demon/kabuki_demon_minion.png'
 
-
+import arrowUp from '../assets/graphics/arrow_up.png'
+import arrowDown from '../assets/graphics/arrow_down.png'
 
 // ------------------------------------------------------------------------------------------------
 
@@ -268,9 +269,12 @@ import eight from '../assets/icons/numbers/inverted/eight.png'
 import nine from '../assets/icons/numbers/inverted/nine.png'
 // import ten from '../assets/icons/numbers/inverted/ten.png'
 
-import glyph from '../assets/icons/magic/glyph_inverted.png'
+import glyph_inverted from '../assets/icons/magic/glyph_inverted.png'
+import glyph from '../assets/icons/magic/glyph.png'
 import info from '../assets/icons/menu/info_inverted.png'
 import hamburger from '../assets/icons/menu/hamburger.png'
+
+import magic_missile from '../assets/icons/misc/cycle.png'
 
 export {
     monster,
@@ -483,6 +487,7 @@ export {
     dungeon_door_opened,
 
     glyph,
+    glyph_inverted,
     info,
     hamburger,
     zero,
@@ -494,5 +499,11 @@ export {
     six,
     seven,
     eight,
-    nine
+    nine,
+
+    magic_missile,
+
+    arrowUp,
+    arrowDown
+
 };

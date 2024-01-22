@@ -39,6 +39,7 @@ export default function LandingPage(props) {
   }
 
   const enterClicked = () => {
+    if(showWarning) return
     const meta = getMeta();
     console.log('enter clicked, meta: ', meta);
     if(meta.dungeonId){

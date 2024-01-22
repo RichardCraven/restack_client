@@ -54,9 +54,6 @@ class DungeonView extends React.Component {
     }
     draw = (ctx, frameCount, data) => {
         ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
-        // console.log('framecount:', frameCount);
-       // ctx.arc(50, 100, 20*Math.sin(frameCount*0.05)**2, 0, 2*Math.PI)
-    //    ^^^ animation
         const levelData = this.props.overlayData?.find(x=>x.id === data.levelId);
         if(levelData){
             let planeSize = this.props.tileSize*2;

@@ -88,6 +88,7 @@ const refreshAllUsers = () => {
 
 const saveUserData = async () => {
   console.log('SAVING');
+  setMenuTrayExpanded(false);
   if(props.boardManager.boardIndex === null) return
   if(!props.boardManager.dungeon.id) return
   const meta = getMeta()
@@ -119,19 +120,21 @@ const saveUserData = async () => {
   sessionStorage.setItem('metadata', JSON.stringify(meta));
 }
 const goHome = () => {
+  setMenuTrayExpanded(false);
   saveUserData();
   history.push({
     pathname: '/landing'
   })
 }
 const toggleShowCoordinates = () => {
+  setMenuTrayExpanded(false);
   setShowCoordinates(!showCoordinates)
 }
 const setNarrativeSequence = (type) => {
   console.log('setting narrative sequence: ', type);
   setNarrativeSequenceType(type)
   if(type === 'death'){
-    beginIntroSequence()
+    beginDeathSequence()
   }
 }
 const beginIntroSequence = () => {
@@ -187,6 +190,7 @@ const toggleMenuTray = () => {
           )}/>
           <Route exact path="/death" render={() => (
             !loggedIn ? <Redirect to="/login" /> :
+            narrativeSequenceType !== 'death' ? <Redirect to="/landing" /> :
             <NarrativeSequence {...props} sequenceType={narrativeSequenceType} beginDeathSequence={beginDeathSequence} endDeathSequence={endDeathSequence}/>
           )}/>
           <Route exact path="/userProfilePage" render={() => (
@@ -200,7 +204,8 @@ const toggleMenuTray = () => {
           <Route exact path="/dungeon" render={() => (
             !loggedIn ? <Redirect to="/login" /> :
               <DungeonPage {...props} saveUserData={saveUserData} setNarrativeSequence={setNarrativeSequence} showCoordinates={showCoordinates}/>
-            )}/>
+          )
+          }/>
 
 
           <Route exact path="/landing" render={() => (

@@ -4,6 +4,11 @@ import * as images from '../../utils/images'
 // import AnimationTile from '../../components/animation-tile';
 import AnimationGrid from '../../components/animation-grid';
 import { Redirect } from "react-router-dom";
+import {storeMeta, getMeta, getUserId, getUserName} from '../../utils/session-handler';
+import {
+    updateUserRequest
+  } from '../../utils/api-handler';
+import Canvas from '../../components/Canvas/canvas'
 
 const MAX_DEPTH = 8;
 const MAX_ROWS = 5;
@@ -44,7 +49,9 @@ class MonsterBattle extends React.Component {
             goldGained: null,
             battleResult: null,
             monsterPortrait: '',
-            navToDeathScene: false
+            navToDeathScene: false,
+            glyphTrayExpanded: false,
+            arrowUpImage: null
         }
     }
     componentDidMount(){
@@ -93,9 +100,14 @@ class MonsterBattle extends React.Component {
             monsterPortrait: this.props.monster.portrait
         })
 
-        // setTimeout(()=>{
-        //     this.fighterPortraitClicked(this.props.crew[0].id)
-        // })
+        let arrowUp = new Image()
+        arrowUp.src = images['arrowUp']
+        let that = this;
+        arrowUp.onload = function(){
+            that.setState({
+                arrowUpImage: arrowUp
+            })
+        }
     }
     milliDelay = (numMilliseconds) => {
         return new Promise((resolve) => {
@@ -126,13 +138,14 @@ class MonsterBattle extends React.Component {
     }
     tabToFighter = () => {
         const liveCrew = Object.values(this.state.battleData).filter(e=>(!e.isMonster && !e.isMinion) && !e.dead)
+        console.log('live crew: ', Object.values(this.state.battleData).filter(e=>!e.dead && !e.isMinion && !e.isMonster));
         if(liveCrew.length === 0) return
         const currentIndex = this.state.selectedFighter ? liveCrew.findIndex(e=>e.id === this.state.selectedFighter.id) : -1;
         const nextIndex = currentIndex === liveCrew.length-1 ? 0 : currentIndex + 1
         // let nextId = this.props.crew[nextIndex].id
         const selectedFighter = liveCrew[nextIndex];
         // selectedFighter.portrait = this.props.crew.find(e=>e.id === nextId).portrait
-
+        console.log('selected fighter: ', selectedFighter);
         this.setState({
             selectedFighter
         })
@@ -202,7 +215,7 @@ class MonsterBattle extends React.Component {
             goldGained,
             itemsGained,
             crewWins = outcome === 'crewWins',
-            summaryMessage, battleResult;
+            summaryMessage, battleResult, liveCrew = Object.values(this.state.battleData).filter(e=>!e.dead && !e.isMinion && !e.isMonster);
         if(crewWins){
             battleResult = 'win';
             summaryMessage = 'The enemy is no more!';
@@ -222,8 +235,20 @@ class MonsterBattle extends React.Component {
             }
             experienceGained = this.props.monster.level * 10;
             goldGained = Math.floor(Math.random() * experienceGained);
-            console.log('gold gained: ', goldGained);
             this.props.inventoryManager.addCurrency({type: 'gold', amount: goldGained})
+
+            console.log('live crew: ', Object.values(this.state.battleData).filter(e=>!e.dead && !e.isMinion && !e.isMonster));
+            setTimeout(()=>{
+                this.props.crewManager.addExperience(liveCrew, experienceGained);
+                console.log('now crew is: ', this.props.crewManager.crew);
+                let meta = getMeta();
+                meta.crew = this.props.crewManager.crew;
+                storeMeta(meta)
+                updateUserRequest();
+                this.forceUpdate();
+            },1000)
+
+            
         } else {
             battleResult = 'loss'
             summaryMessage = 'Death has come for you and yours.'
@@ -282,7 +307,6 @@ class MonsterBattle extends React.Component {
     }
 
     handleFighterDeath = (id) => {
-        console.log('on fighter death!! ', id, 'selected fifghter: ', this.state.selectedFighter);
         if(id === 'all enemies dead'){
             this.setState({
                 selectedFighter: null
@@ -348,22 +372,30 @@ class MonsterBattle extends React.Component {
     combatInventoryTileClicked = (val) => {
         console.log('val:', val)
         this.props.combatManager.itemUsed(val, this.state.selectedFighter)
-        const itemIndex  = this.props.inventoryManager.inventory.findIndex(item => item.name === val.name)
-        // console.log('*** item: ', item);
-        this.props.inventoryManager.inventory.splice(itemIndex, 1)
+        this.props.useConsumableFromInventory(val)
+        // const itemIndex  = this.props.inventoryManager.inventory.findIndex(item => item.name === val.name)
+        // console.log('*** item: ', itemIndex);
+        // this.props.inventoryManager.inventory.splice(itemIndex, 1)
+        // console.log('now inventory: ', this.props.inventoryManager.inventory);
     }
     specialTileClicked = (val) => {
+        let finalVal;
         console.log('k...', Object.values(this.state.battleData).filter(e=>e.isMonster || e.isMinion));
 
 
-        if(val !== null){
+        if(val !== null && typeof val === 'string'){
             console.log('val: ', val);
             val = val.replaceAll('_', ' ')
         }
         console.log('val:', val)
-        // this.setState({
-        //     hoveredAttackTile: val
-        // })
+
+        if(val === 'glyph'){
+            console.log('GLYPH CLICKED');
+            finalVal = !this.state.glyphTrayExpanded
+        }
+        this.setState({
+            glyphTrayExpanded: finalVal
+        })
     }
     specialTileHovered = (val) => {
         // console.log('sepcial tile hovered:', val)
@@ -487,6 +519,19 @@ class MonsterBattle extends React.Component {
         }
     }
 
+    draw = (ctx, frameCount, data) => {
+        let that = this;
+        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
+                // let x = unit*p.coordinates[0] - 0.5*unit - (Math.sin(frameCount * 0.04)**2 * 2)
+                // let y = unit*p.coordinates[1]
+                // let imageKey = isConnected ? 'arrowUpImg' : 'arrowUpImgInvalid'
+
+                let size = 20 + Math.sin(frameCount * 0.04)**2 * 5;
+                
+                ctx.drawImage(that.state.arrowUpImage, 5, 5, size, size);
+
+    }
+
     render(){
         return (
             <div className={`mb-board ${this.state.showCrosshair ? 'show-crosshair' : ''}`}>
@@ -505,22 +550,38 @@ class MonsterBattle extends React.Component {
                             <div className="experience-container">
                                 You found a {this.state.itemsGained.map(e=> e.replaceAll('_',' ')).join(', ')}
                             </div>} 
-                            {this.state.goldGained && 
+                            {this.state.goldGained > 0 && 
                             <div className="experience-container">
                                 You found {this.state.goldGained} gold
                             </div>
                             } 
-                            {this.state.experienceGained && 
+                            {this.state.experienceGained > 0 && 
                             <div className="experience-container">
                                 Each crew member has earned {this.state.experienceGained} experience
                             </div>} 
+                            <div className="portraits-container">
+                                {Object.values(this.state.battleData).filter(e=>!e.dead && !e.isMonster && !e.isMinion).map((crewMember, i) => {
+                                    return <div key={i} className="single-portrait-container">
+                                        <div className="portrait" style={{backgroundImage: `url(${crewMember.portrait})`}}></div>
+                                        {this.props.crewManager.calculateExpPercentage(crewMember) >= 100 && <Canvas 
+                                        className="level-up-canvas"
+                                        width={80}
+                                        height={80}
+                                        draw={this.draw}
+                                        />}
+                                        <div className="experience-bar-container">
+                                            <div className="experience-bar" style={{width: `${this.props.crewManager.calculateExpPercentage(crewMember)}%`}}></div>
+                                        </div>
+                                    </div>
+                                })}
+                            </div>
+                            {(this.state.message) &&<div className="message-container">
+                                {this.state.message}
+                            </div>}
                         </div>
                         <div className="button-row">
                             <div className="confirm-button" onClick={() => this.confirmClicked()}>OK</div>
                         </div>
-                    </div>}
-                    {(this.state.message) &&<div className="message-container">
-                        {this.state.message}
                     </div>}
 
                     {/* /// ANIMATION GRID ///  */}
@@ -875,7 +936,34 @@ class MonsterBattle extends React.Component {
                                         {/* {a} */}
                                     </div>
                                 })}
+                                {this.state.selectedFighter?.specialActions.some(a=>a.actionType.type === 'glyph') &&
+                                this.state.selectedFighter?.specialActions.some(a=>a.available) &&
+                                    <div 
+                                    style={{backgroundImage: "url(" + images['glyph'] + ")", cursor: 'pointer'}} 
+                                    className='interaction-tile special' 
+                                    onClick={() => this.specialTileClicked('glyph')} 
+                                    onMouseEnter={() => this.specialTileHovered('glyph')} 
+                                    onMouseLeave={() => this.specialTileHovered(null)}>
+                                        {/* {a} */}
+                                    </div>
+                                }
                             </div>
+                        </div>
+                        <div className="glyphs-col" style={{width: this.state.glyphTrayExpanded ? '100px' : '0px'}}>
+                            <div className="interaction-header">Glyphs</div>
+                            {/* <div className="interaction-tooltip">{this.state.hoveredSpecialTile}</div>
+                            <div className="interaction-tile-container">
+                                {this.state.selectedFighter?.specials.map((a, i)=>{
+                                    return <div 
+                                    key={i} 
+                                    style={{backgroundImage: "url(" + a.icon + ")", cursor: 'pointer'}} 
+                                    className='interaction-tile special' 
+                                    onClick={() => this.specialTileClicked(a)} 
+                                    onMouseEnter={() => this.specialTileHovered(a)} 
+                                    onMouseLeave={() => this.specialTileHovered(null)}>
+                                    </div>
+                                })}
+                            </div> */}
                         </div>
                         <div className="attacks-col">
                             <div className="interaction-header">Attacks</div>
@@ -929,7 +1017,7 @@ class MonsterBattle extends React.Component {
 
                         </div>
                         <div className="queue-col">
-                            <div className="interaction-header" onClick={()=>{this.launchDeathSequence()}}>Queue</div>
+                            <div className="interaction-header">Queue</div>
                             <div className="queue-tile-container">
                                 {this.state.selectedFighter?.action_queue.map((action, i)=>{
                                     return <div 

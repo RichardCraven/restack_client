@@ -587,11 +587,9 @@ export function InventoryManager(){
         this.inventory = this.inventory.concat(arr);
     }
     this.addItems = (items) => {
-        console.log('adding items: ', items);
         this.inventory.concat(items)
     }
     this.addItem = (item) => {
-        console.log('adding item: ', item);
         this.inventory.push(item);
     }
     this.removeItemByIndex = (index) => {

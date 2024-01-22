@@ -5,6 +5,16 @@ Date.prototype.addHours= function(h){
     return this;
 }
 
+const EXP_TABLE = [
+    0,
+    120,
+    300,
+    700,
+    1500,
+    3200,
+    7000
+]
+
 export function CrewManager(){
     // this.tiles = [];
     this.memberTypes = [
@@ -21,32 +31,56 @@ export function CrewManager(){
     this.initializeCrew = (crew) => {
         this.crew = [];
         crew.forEach(member=> { 
+            if(!member.specialActions) return
             member.specialActions.forEach(a=>{
                 let end = new Date(a.endDate),
                 now = new Date();
-                console.log('end: ', end, 'now: ',now);
                 if(end - now < 0){
                     a.available = true;
                 }
             })
-
-            console.log('member:', member);
             if(this.memberTypes.includes(member.image)){
-                // member.inventory = [
-                //     'major_health_potion'
-                // ]
                 this.crew.push(member)
             }
         })
-        console.log('crew: ', this.crew);
+        this.checkForLevelUp(this.crew)
     }
 
     this.addCrewMember = (member) => {
         this.crew.push(member)
     }
 
+    this.addExperience = (memberArray, experienceValue) => {
+        memberArray.forEach(m=>{
+            let nextLevelExp = EXP_TABLE[m.level]
+            let member = this.crew.find(c=>c.type === m.type)
+            member.stats.experience += experienceValue
+        })
+    }
+
+    this.checkForLevelUp = (memberArray) => {
+        memberArray.forEach(m=>{
+            let nextLevelExp = EXP_TABLE[m.level]
+            let member = this.crew.find(c=>c.type === m.type)
+            if(member.stats.experience >= nextLevelExp){
+                this.levelUp(member)
+            }
+        })
+    }
+
+    this.levelUp = (crewMember) => {
+        crewMember.level++
+    }
+
+    this.calculateExpPercentage = (crewMember) => {
+        let foundMember = this.crew.find(e=>e.name === crewMember.name)
+        let nextLevelExp = EXP_TABLE[foundMember.level]
+        let percentage = Math.ceil(((foundMember.stats.experience - EXP_TABLE[foundMember.level-1]) / (nextLevelExp - EXP_TABLE[foundMember.level-1])) * 100);
+        if(percentage > 100) percentage = 100;
+        return percentage;
+    }
+
     this.beginSpecialAction = (member, actionType, actionSubtype) => {
-        console.log('member: ', member, 'action: ', actionType, 'subtype: ', actionSubtype);
         const startDate = new Date();
         let endDate;
         switch(actionType.type){
@@ -92,16 +126,19 @@ export function CrewManager(){
                 hp:10,
                 atk:12,
                 baseDef: 9,
-                energy: 0
+                energy: 0,
+                experience: 0
             }, 
             portrait: images['wizard_portrait'],
             inventory: [],
             specials: ['ice_blast'],
-            attacks: ['magic_missile'],
+            attacks: ['energy_blast'],
             passives: ['magic_affinity'],
             weaknesses: ['ice', 'fire', 'electricity', 'blood_magic'],
             description: "Hailing from the magister's college, Zildjikan was the dean of transmutation. A powerful magic user, he has been known to linger for long periods in the silent realm, searching for secret truths.",
-            specialActions: []
+            specialActions: [],
+            actionsTrayExpanded: false,
+            actionMenuTypeExpanded: false
         },
         {
             image: 'soldier', 
@@ -118,7 +155,8 @@ export function CrewManager(){
                 hp: 15,
                 atk: 8,
                 baseDef: 12,
-                energy: 0
+                energy: 0,
+                experience: 0
             }, 
             isLeader: true,
             portrait: images['soldier_portrait'],
@@ -128,7 +166,9 @@ export function CrewManager(){
             attacks: ['sword_swing', 'sword_thrust', 'shield_bash'],
             weaknesses: ['ice', 'electricity', 'blood_magic'],
             description: "Once the captain of the royal army's legendary vangard battalion, Sardonis has a reputation for fair leadership and honor.",
-            specialActions: []
+            specialActions: [],
+            actionsTrayExpanded: false,
+            actionMenuTypeExpanded: false
         },
         {
             image: 'monk', 
@@ -145,7 +185,8 @@ export function CrewManager(){
                 hp: 13,
                 atk: 6,
                 baseDef: 11,
-                energy: 0
+                energy: 0,
+                experience: 0
             }, 
             portrait: images['monk_portrait'],
             inventory: [],
@@ -154,7 +195,9 @@ export function CrewManager(){
             attacks: ['dragon_punch'],
             weaknesses: ['fire', 'electricity', 'ice', 'blood_magic', 'crushing'],
             description: "Yu was born into the dynastic order of the White Serpent, inheriting the secrets of absolute stillness and unyielding motion",
-            specialActions: []
+            specialActions: [],
+            actionsTrayExpanded: false,
+            actionMenuTypeExpanded: false
         },
         {
             image: 'sage', 
@@ -171,7 +214,8 @@ export function CrewManager(){
                 hp: 9,
                 atk: 4,
                 baseDef: 5,
-                energy: 0
+                energy: 0,
+                experience: 0
             }, 
             portrait: images['sage_portrait'],
             inventory: [],
@@ -180,7 +224,9 @@ export function CrewManager(){
             passives: ["owls_insight"],
             weaknesses: ['fire', 'electricity', 'ice', 'blood_magic', 'crushing'],
             description: "Loryastes is the headmaster of Citadel library, chronicled the histories of three monarchies, and a pupil of The Great Scribe",
-            specialActions: []
+            specialActions: [],
+            actionsTrayExpanded: false,
+            actionMenuTypeExpanded: false
         },
         {
             image: 'rogue', 
@@ -197,7 +243,8 @@ export function CrewManager(){
                 hp: 12,
                 atk: 6,
                 baseDef: 10,
-                energy: 0
+                energy: 0,
+                experience: 0
             }, 
             portrait: images['rogue_portrait'],
             inventory: [],
@@ -206,7 +253,9 @@ export function CrewManager(){
             passives: ['nimble_dodge'],
             weaknesses: ['ice', 'curse', 'crushing'],
             description: "Tyra was born a slave, surviving and advancing through sheer cunning and a ruthless will",
-            specialActions: []
+            specialActions: [],
+            actionsTrayExpanded: false,
+            actionMenuTypeExpanded: false
         },
         {
             image: 'barbarian', 
@@ -223,7 +272,8 @@ export function CrewManager(){
                 hp: 16,
                 atk: 9,
                 baseDef: 12,
-                energy: 0
+                energy: 0,
+                experience: 0
             }, 
             portrait: images['barbarian_portrait'],
             inventory: [],
@@ -232,7 +282,9 @@ export function CrewManager(){
             passives: ['fury'],
             weaknesses: ['ice', 'curse', 'psionic'],
             description: "Ulaf is the son of the chieftan of the Rootsnarl Clan. He is on a journey to prove his mettle and one day take his father's place",
-            specialActions: []
+            specialActions: [],
+            actionsTrayExpanded: false,
+            actionMenuTypeExpanded: false
         },
     ]
 }

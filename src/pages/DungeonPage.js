@@ -80,7 +80,8 @@ class DungeonPage extends React.Component {
             actionMenuExpanded: '',
             modalType: 'Updates',
             showModal: false,
-            updates: []
+            updates: [],
+            // inventoryState: []
         }
     }
     
@@ -145,7 +146,12 @@ class DungeonPage extends React.Component {
         })
     }
     componentDidMount(){
+        this.props.crewManager.crew.forEach(c=>{
+            console.log('perc: ', this.props.crewManager.calculateExpPercentage(c))
+        })
         this.props.boardManager.establishAddItemToInventoryCallback(this.addItemToInventory)
+        // this.props.boardManager.establishItemRemovedFromInventoryCallback(this.addItemToInventory)
+
         this.props.boardManager.establishAddTreasureToInventoryCallback(this.addTreasureToInventory)
         this.props.boardManager.establishAddCurrencyToInventoryCallback(this.addCurrencyToInventory)
         this.props.boardManager.establishUpdateDungeonCallback(this.updateDungeon)
@@ -158,7 +164,9 @@ class DungeonPage extends React.Component {
 
         this.props.boardManager.establishBoardTransitionCallback(this.boardTransition)
         this.props.boardManager.establishLevelChangeCallback(this.handleLevelChange)
+
         this.props.boardManager.establishUseConsumableFromInventoryCallback(this.useConsumableFromInventory)
+        // this.props.inventoryManager.establishUseConsumableFromInventoryCallback(this.useConsumableFromInventory)
 
         window.addEventListener('beforeunload', this.componentCleanup);
     }
@@ -224,12 +232,27 @@ class DungeonPage extends React.Component {
     useConsumableFromInventory = (item) => {
         let foundItem = this.props.inventoryManager.inventory.find(e=> e.name === item.name),
         foundIndex = this.props.inventoryManager.inventory.findIndex(e=> e.name === item.name);
+        console.log('found item ', foundItem, 'found index: ', foundIndex);
+        // debugger
         foundItem.animation = 'consumed';
-        setTimeout(()=>{
-            this.props.inventoryManager.removeItemByIndex(foundIndex)
-            this.forceUpdate();
-            this.props.saveUserData();
-        }, 1000)
+        this.forceUpdate();
+        // this.setState()
+        // if(item.type === 'key'){
+            setTimeout(()=>{
+                this.props.inventoryManager.removeItemByIndex(foundIndex)
+                console.log('about to force update');
+                // foundItem.animation = ''
+                this.forceUpdate();
+                this.props.saveUserData();
+            }, 500)
+        // } else {
+        //     this.props.inventoryManager.removeItemByIndex(foundIndex)
+        //     console.log('about to force update');
+        //     // foundItem.animation = ''
+        //     this.forceUpdate();
+        //     this.props.saveUserData();
+        // }
+        
     }
     updateDungeon = async (dungeon) => {
         await updateDungeonRequest(dungeon.id, dungeon);
@@ -516,7 +539,6 @@ class DungeonPage extends React.Component {
         })
     }
     handleInventoryTileHover = (tileProps) => {
-        console.log('tileProps: ', tileProps);
         let inv = this.state.inventoryHoverMatrix,
         descriptionText = '';
         this.props.inventoryManager.inventory.forEach((e,i)=>{
@@ -606,9 +628,27 @@ class DungeonPage extends React.Component {
         })
     }
     handleMemberClick = (member) => {
-        console.log('setting selected crew member: ', member.data.specialActions.filter(e=>e.available));
+        let meta = getMeta(), val;
+        let foundMember = this.props.crewManager.crew.find(e=>e.type === member.data.type);
+        if(foundMember){
+            this.props.crewManager.crew.forEach(c=>{
+                c.selected = false;
+            })
+            foundMember.selected = true;
+            meta.crew = this.props.crewManager.crew;
+            storeMeta(meta);
+            this.props.saveUserData();
+        }
+        if(this.state.selectedCrewMember && this.state.selectedCrewMember.type === member.data.type){
+            val = {};
+        } else {
+            val = member.data;
+        }
+        
         this.setState({
-            selectedCrewMember: member.data
+            selectedCrewMember: val,
+            actionsTrayExpanded: foundMember.actionsTrayExpanded,
+            actionMenuTypeExpanded: foundMember.actionMenuTypeExpanded
         })
     }
     handleEquipmentItemClick = (item) => {
@@ -636,9 +676,6 @@ class DungeonPage extends React.Component {
             selectedCrewMember
         })
         this.props.boardManager.setActiveInventoryItem(item)
-        // setTimeout(()=>{
-        //     console.log('active invetnory item:', this.state.activeInventoryItem)
-        // },200)
         switch(item.contains){
             case 'minor_key':
                 if(this.props.boardManager.pending && this.props.boardManager.pending.type === 'minor_gate'){
@@ -665,7 +702,6 @@ class DungeonPage extends React.Component {
             let weapon;
             switch(c.type){
                 case 'rogue':
-                    console.log('rogue');
                     weapon = this.props.inventoryManager.allItems['longbow']
                     c.inventory.push(weapon);
                 break;
@@ -696,15 +732,10 @@ class DungeonPage extends React.Component {
 
     }
     loadNewDungeon = async () => {
-        console.log('load new dungeon');
         const meta = getMeta(),
               userId = getUserId(),
               userName = getUserName();
-        const allDungeons = await loadAllDungeonsRequest()
-
-
-        console.log('new dungoen, crew: ', meta.crew);
-
+        const allDungeons = await loadAllDungeonsRequest();
         
         let dungeons = [],
             spawnList = [],
@@ -826,8 +857,6 @@ class DungeonPage extends React.Component {
         let orientation = this.props.boardManager.currentOrientation;
         let indicatorsGroup = meta.minimapIndicators && meta.minimapIndicators.find(e=>e.level === level.id && e.orientation === orientation);
 
-        // console.log('CODE STOPPED, TO DIAGNOSE FLOW');
-        // return
         if(!indicatorsGroup){
             let newIndicators = []
             for(let i = 0; i < 9; i++){
@@ -848,7 +877,7 @@ class DungeonPage extends React.Component {
             meta.minimapIndicators.push(indicatorsGroup)
             storeMeta(meta)
         }
-
+        let selectedCrewMember = this.props.crewManager.crew.find(c=>c.selected) || {};
         this.setState(()=>{
             return {
                 spawn: meta.location.tileIndex,
@@ -856,7 +885,10 @@ class DungeonPage extends React.Component {
                 overlayTiles: this.props.boardManager.overlayTiles,
                 minimap,
                 minimapIndicators: indicatorsGroup.indicators,
-                levelTracker: levels
+                levelTracker: levels,
+                selectedCrewMember,
+                actionsTrayExpanded: selectedCrewMember ? selectedCrewMember.actionsTrayExpanded : false,
+                actionMenuTypeExpanded: selectedCrewMember ? selectedCrewMember.actionMenuTypeExpanded: false
             }
         })
     }
@@ -878,6 +910,15 @@ class DungeonPage extends React.Component {
     }
     toggleActionsTray = () => {
         const newVal = !this.state.actionsTrayExpanded
+
+        let foundMember = this.props.crewManager.crew.find(c=>c.selected);
+        foundMember.actionsTrayExpanded = newVal;
+        let meta = getMeta();
+        meta.crew = this.props.crewManager.crew;
+        storeMeta(meta);
+        this.props.saveUserData();
+
+
         this.setState({actionsTrayExpanded: newVal})
     }
     uppercaseFirstLetter = (text) => {
@@ -887,6 +928,11 @@ class DungeonPage extends React.Component {
         if(result === 'win'){
             console.log('win result passed');
             this.props.boardManager.removeDefeatedMonsterTile()
+            this.props.crewManager.checkForLevelUp(this.props.crewManager.crew)
+            let meta = getMeta()
+            meta.crew = this.props.crewManager.crew;
+            storeMeta(meta)
+            this.props.saveUserData()
         }
         this.setState({
             keysLocked : false
@@ -936,14 +982,12 @@ class DungeonPage extends React.Component {
         })
     }
     beginMarkingMap = () => {
-        console.log('MARK MAP');
         let current = this.state.minimapMarkerTrayOpen;
         this.setState({
             minimapMarkerTrayOpen: !current
         })
     }
     placeMapMarkerStart = () => {
-        console.log('place map marker start, meta: ', getMeta());
         this.setState({
             minimapPlaceMapMarkerStarted: true
         })
@@ -951,10 +995,6 @@ class DungeonPage extends React.Component {
     }
     submitMarkers = () => {
         let meta = getMeta();
-        console.log('minimap indicators: ', this.state.minimapIndicators);
-        console.log('submitting marker, meta: ', meta)
-        // debugger
-        console.log('level data', this.props.boardManager);
         let indicators = this.state.minimapIndicators;
         let orientation = this.props.boardManager.currentOrientation;
         let levelId = this.props.boardManager.currentLevel.id
@@ -971,8 +1011,6 @@ class DungeonPage extends React.Component {
         } else {
             meta.minimapIndicators.push(obj)
         }
-        
-        console.log('meta is now ', meta);
         storeMeta(meta)
         // this.state.mapMarkerInput.current.value = null;
         // this.state.markerSelectVal.current.value = 'Marker Type';
@@ -994,10 +1032,18 @@ class DungeonPage extends React.Component {
         })
     }
     handleActionClick = (action) => {
-        console.log('action clicked: ', action.type);
-        let e = this.state.selectedCrewMember.specialActions
-        console.log('special actions: ', e);
         let val = this.state.actionMenuTypeExpanded === action.type ? '' : action.type
+
+        let foundMember = this.props.crewManager.crew.find(c=>c.selected);
+        if(foundMember.actionMenuExpanded){
+            delete foundMember.actionMenuExpanded
+        }
+        foundMember.actionMenuTypeExpanded = val;
+        let meta = getMeta();
+        meta.crew = this.props.crewManager.crew;
+        storeMeta(meta);
+        this.props.saveUserData();
+
         this.setState({
             actionMenuTypeExpanded: val
         })
@@ -1018,16 +1064,10 @@ class DungeonPage extends React.Component {
         return <div className="numeral" style={{backgroundImage: `url(${images[arr[subtype.count]]})`}}></div>
     }
     handleActionSubtypeClick = (action, subType) => {
-        console.log('subType clicked: ', subType);
-        // debugger
-        console.log('current character: ', this.state.selectedCrewMember, 'crew: ', this.props.crewManager.crew);
         let characterFromCrew = this.props.crewManager.crew.find(e=> e.id === this.state.selectedCrewMember.id)
-        console.log('found character: ', characterFromCrew);
         this.props.crewManager.beginSpecialAction(characterFromCrew, action, subType)
         const meta = getMeta();
         meta.crew = this.props.crewManager.crew;
-
-        console.log('meta: ', meta);
         storeMeta(meta);
         this.props.saveUserData();
     }
@@ -1042,7 +1082,6 @@ class DungeonPage extends React.Component {
         let minutesElapsed = (currentTime - startDate) / (1000 * 60)
         let percentageComplete = Math.ceil(minutesElapsed/diffInMinutes*100);
         if(percentageComplete > 100) percentageComplete = 100;
-        // console.log('action', action, 'percentage comp[lete: ', percentageComplete);
         return percentageComplete
     }
     getRotateDegreesRight = (percentage) => {
@@ -1056,16 +1095,16 @@ class DungeonPage extends React.Component {
     }
     getCharacterActions = (character) => {
         let actions = [];
-        // console.log('character: ', character);
         switch(character.type){
             case 'wizard':
                 actions.push({
                     text: 'Etch Glyph', 
-                    icon_url: images['glyph'], 
+                    icon_url: images['glyph_inverted'], 
                     type: 'glyph',
                     subTypes: [
                         {
-                            type: 'magic missile',
+                            type: 'magic missile', 
+                            icon_url: images['magic_missile'],
                             available: true,
                             count: character.specialActions.filter(a=>a.available).length
                         }, 
@@ -1093,7 +1132,6 @@ class DungeonPage extends React.Component {
                 count += s.count
             })
         })
-        console.log('count: ', count);
         let maximumReached = count >= 3;
         return <div className='actions-container'>
             {actions.map((action,i)=>{
@@ -1139,17 +1177,13 @@ class DungeonPage extends React.Component {
         const meta = getMeta();
         let updates = this.state.updates;
         let crew = meta.crew;
-        console.log('modal closed, updates:', updates);
         crew.forEach(c=>{
-            console.log('crew memeber: ', c);
             if(updates.some(e=>e.owner === c.name)){
-                console.log('update found');
                 let update = updates.find(e=>e.owner === c.name)
                 let ref = c.specialActions.find(e=> e.actionType.type === update.actionType && !e.notified)
                 ref.notified = true;
             }
         })
-        // console.log('NOW crew is ', crew);
         meta.crew = crew;
         this.props.crewManager.crew = crew;
         storeMeta(meta);
@@ -1217,6 +1251,9 @@ class DungeonPage extends React.Component {
                 </div>
                 {this.state.selectedCrewMember.name && <div className="crew-info-section">
                         <div className="portrait-wrapper">
+                            <div className="status-container">
+                                <div className="member-level-indicator">Lvl {this.state.selectedCrewMember.level}</div>
+                            </div>
                             <div className="portrait" style={{backgroundImage: "url(" + this.state.selectedCrewMember.portrait + ")"}}></div>
                             <div className="cooldowns-container">
                                 {this.state.selectedCrewMember.specialActions.map((action, i)=>{
@@ -1231,6 +1268,9 @@ class DungeonPage extends React.Component {
                             </div>
                         </div>
                         <div className="name-line">{this.state.selectedCrewMember.name} the {this.uppercaseFirstLetter(this.state.selectedCrewMember.type)}</div>
+                        <div className="experience-line-container">
+                            <div className="experience-line" style={{width: `${this.props.crewManager.calculateExpPercentage(this.state.selectedCrewMember)}%`}}></div>
+                        </div>
                         <div className="stat-line"> <span className="stat-name">Strength</span>  <span className='stat-value'>{this.state.selectedCrewMember.stats.str} </span> </div>
                         <div className="stat-line">Dexterity <span className='stat-value'> {this.state.selectedCrewMember.stats.dex} </span></div>
                         <div className="stat-line">Intelligence <span className='stat-value'>{this.state.selectedCrewMember.stats.int} </span></div>
@@ -1470,7 +1510,6 @@ class DungeonPage extends React.Component {
                                         { this.state.inventoryHoverMatrix[i] && 
                                             <div className="hover-message-container">
                                                 <div className="hover-message">{this.state.inventoryHoverMatrix[i].replaceAll('_', ' ')}</div>
-                                                {/* <div className="hover-message">yesy</div> */}
                                             </div>
                                         }
                                         <Tile 
@@ -1578,12 +1617,14 @@ class DungeonPage extends React.Component {
                 combatManager={this.props.combatManager}
                 inventoryManager={this.props.inventoryManager}
                 animationManager={this.props.animationManager}
+                crewManager={this.props.crewManager}
                 crew={this.props.crewManager.crew}
                 monster={this.state.monster}
                 minions={this.state.minions}
                 battleOver={this.battleOver}
                 paused={this.state.paused}
                 setNarrativeSequence={this.props.setNarrativeSequence}
+                useConsumableFromInventory={this.useConsumableFromInventory}
             ></MonsterBattle>}
         </div>
         )

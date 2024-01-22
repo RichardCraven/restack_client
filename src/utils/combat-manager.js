@@ -87,6 +87,14 @@ export function CombatManager(){
             cooldown: 6,
             damage: 6
         },
+        energy_blast: {
+            name: 'energy blast',
+            type: 'arcane',
+            range: 'far',
+            icon: images['void_lance'],
+            cooldown: 3,
+            damage: 3
+        },
         magic_missile: {
             name: 'magic missile',
             type: 'arcane',
@@ -416,6 +424,7 @@ export function CombatManager(){
             missed: false,
             attacks: formatAttacks(fighter.attacks),
             specials: formatSpecials(fighter.specials),
+            specialActions: fighter.specialActions,
             targettedBy: [],
             combatPaused: false,
             readout: {action:'', result: ''},
@@ -594,12 +603,12 @@ export function CombatManager(){
                             if(this.name === "Loryastes"  && DEBUG_STEPS === true){
                             }
                             if(this.isMonster ||  this.isMinion){
-                                console.log(this, 'monster minion waiting for attck');
+                                // console.log(this, 'monster minion waiting for attck');
                             }
                             this.waitForAttack()
                         } else {
 
-                            console.log('uhhhhh no pending');
+                            // console.log('uhhhhh no pending');
                             // acquireTarget(this);
                             this.skip();
                             // debugger
@@ -609,7 +618,7 @@ export function CombatManager(){
                 }, FIGHT_INTERVAL)
             },
             waitForAttack: function(){
-                this.aiming = true;
+                // this.aiming = true;
                 const waitInterval = setInterval(()=>{
                     if(this.type === 'djinn'){
                         console.log('in WAIT block');
@@ -669,6 +678,7 @@ export function CombatManager(){
         this.data = data;
         this.combatants = {};
         
+        console.log('initializing with crew: ', this.data.crew);
         this.data.crew.forEach((e, index) => {
             e.position = index;
             e.depth = 0;
@@ -878,19 +888,16 @@ export function CombatManager(){
     }
     this.initiateAttack = (caller) => {
         if(caller.dead) return;
-        console.log('caller.type: ', caller.type)
         if(this.fighterAI.roster[caller.name]){
             this.fighterAI.roster[caller.name].initiateAttack(caller, this.combatants, this.hitsTarget, this.missesTarget);
             return
         }
-        // if(this.fighterAI.roster[caller.type])
         if(this.fighterAI.roster[caller.type]){
             this.fighterAI.roster[caller.type].initiateAttack(caller, this.combatants, this.hitsTarget, this.missesTarget);
             return
         }
 
         if(this.monsterAI.roster[caller.type]){
-            // console.log('roster found for', caller.type)
             this.monsterAI.roster[caller.type].initiateAttack(caller, this.combatants, this.hitsTarget, this.missesTarget);
             return
         }
@@ -1013,27 +1020,12 @@ export function CombatManager(){
             this.fighterAI.roster[caller.type].processMove(caller, this.combatants, this.hitsTarget, this.missesTarget);
             return
         }
-        // console.log('caller.type: ', caller.type)
         if(this.monsterAI.roster[caller.type]){
-            // console.log('roster found for', caller.type)
             this.monsterAI.roster[caller.type].processMove(caller, this.combatants, this.hitsTarget, this.missesTarget);
             return
         }
 
-
-        // if(caller.isMonster) console.log('monster in process move')
         const liveCombatants = Object.values(this.combatants).filter(e=> (!e.dead && e.id !== caller.id));
-        // if(this.fighterAI.roster[caller.name]){
-        //     this.fighterAI.roster[caller.name].processMove(caller, this.combatants);
-        //     this.updateCoordinates(caller);
-        //     liveCombatants.forEach(e=>{
-        //         if(caller.position === e.position && caller.depth === e.depth){
-        //             e.hasOverlap = true;
-        //             this.handleOverlap(e)
-        //         }
-        //     });
-        //     return
-        // }
 
         const target = this.combatants[caller.targetId]
         const distanceToTarget = this.getDistanceToTarget(caller, target),
@@ -1094,9 +1086,6 @@ export function CombatManager(){
 
         //set new values
         if(newDepth !== undefined) caller.depth = newDepth;
-        // if(caller.name === 'Sardonis'){
-        //     console.log('actual setting of new position: ', newPosition);
-        // }
         if(newPosition !== undefined) caller.position = newPosition;
 
         caller.coordinates = {x: newDepth, y: newPosition}
@@ -1110,7 +1099,6 @@ export function CombatManager(){
         liveCombatants.forEach(e=>{
             if(caller.position === e.position && caller.depth === e.depth){
                 e.hasOverlap = true;
-                console.log('about to send overlap for ', e.name);
                 this.handleOverlap(e)
             }
         })
@@ -1119,12 +1107,10 @@ export function CombatManager(){
         const liveCombatants = Object.values(this.combatants).filter(e=> (e.id !== combatant.id && !e.dead));
         if(liveCombatants.some(e=>e.depth === combatant.depth && e.position === combatant.position)) combatant.hasOverlap = true;
         if(combatant.hasOverlap){
-            console.log('in check overlap for: ', combatant.name);
             this.handleOverlap(combatant);
         }
     }
     this.handleOverlap = (combatant) => {
-        console.log('handle overlap for ', combatant);
         const liveCombatants = Object.values(this.combatants).filter(e=> (e.id !== combatant.id && !e.dead));
         let depthAvailable = false;
         if(combatant.isMonster || combatant.isMinion){
@@ -1163,18 +1149,12 @@ export function CombatManager(){
                 if(liveCombatants.some(e=>e.depth === combatant.depth && e.position === combatant.position)){
                     let blockerCombatant = liveCombatants.find(e=>e.depth === combatant.depth && e.position === combatant.position)
                     let blockerDistanceToTarget = this.getDistanceToTarget(blockerCombatant, this.combatants[blockerCombatant.targetId])
-                    console.log(combatant.name, 'someones in my space!', blockerCombatant, 'blocker distance to target: ', blockerDistanceToTarget);
                     depthAvailable = false;
                     switch(combatant.type){
                         case 'rogue':
-                            console.log('rogueeeee', blockerCombatant.pendingAttack.range === 'close', blockerDistanceToTarget > 2);
                             if(blockerCombatant.pendingAttack.range === 'close' && blockerDistanceToTarget > 2){
-                                // console.log('rogue pushes melee fighter closer');
-                                // move blocker forward 1
-                                console.log('move blocker closer');
                                 combatant.depth = 2;
                                 blockerCombatant.depth++
-                                console.log('now combatant depth = ', combatant.depth);
                             }
                         break;
                         default:
@@ -1226,9 +1206,6 @@ export function CombatManager(){
         if(target.weaknesses.includes[caller.pendingAttack.type]){
             damage += Math.floor(damage/2)
         }
-        // if(caller.type==='sphinx'){
-        //     console.log(`---------Sphinx hits ${target.name} for ${damage} damage, target: `, target, target.hp);
-        // }
         caller.readout.result = `hits ${target.name} for ${damage} damage`
         target.hp -= damage;
         caller.energy += caller.stats.fort * 3 + (1/2 * caller.level);
@@ -1279,6 +1256,7 @@ export function CombatManager(){
     }
 
     this.targetKilled = (combatant) => {
+        combatant.aiming = false;
         combatant.dead = true;
         this.clearTargetListById(combatant.id)
         const allMonstersDead = Object.values(this.combatants).filter(e=> (e.isMonster || e.isMinion) && !e.dead).length === 0;
@@ -1287,6 +1265,9 @@ export function CombatManager(){
 
         if(allMonstersDead || allCrewDead){
             let outcome = allMonstersDead ? 'crewWins' : 'monstersWin';
+            Object.values(this.combatants).forEach(e=>{
+                e.aiming = false
+            })
             this.combatOver = true;
             setTimeout(()=>{
                 this.gameOver(outcome)

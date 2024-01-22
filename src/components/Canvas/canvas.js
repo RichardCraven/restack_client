@@ -15,7 +15,11 @@ const Canvas = props => {
         //Our draw came here
         const render = () => {
         frameCount++
-        draw(context, frameCount, props.data)
+        if(props.data){
+            draw(context, frameCount, props.data)
+        } else {
+            draw(context, frameCount)
+        }
         animationFrameId = window.requestAnimationFrame(render)
         }
         render()

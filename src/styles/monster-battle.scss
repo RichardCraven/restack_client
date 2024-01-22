@@ -30,6 +30,41 @@
             color: white;
             margin-bottom: 40px;
             text-align: left;
+            .portraits-container{
+                height: 200px;
+                width: 100%;
+                display: flex;
+                flex-direction: row;
+                margin-top: 20px;
+                .single-portrait-container{
+                    height: 80px;
+                    width: 80px;
+                    // border: 1px solid red;
+                    margin-right: 20px;
+                    display: flex;
+                    flex-direction: column;
+                    .portrait{
+                        height: 100%;
+                        width: 100%;
+                        background-size: 100% 100%;
+                    }
+                    .level-up-canvas{
+                        position: absolute;
+                    }
+                    canvas{
+                        position: absolute;
+                    }
+                    .experience-bar-container{
+                        width: 100%;
+                        height: 3px;
+                        .experience-bar{
+                            height: 100%;
+                            background-color: #f9b115e3;;
+                            transition: all 2.5s ease-in-out;
+                        }
+                    }
+                }
+            }
         }
         .button-row{
             width: 100%;
@@ -62,14 +97,9 @@
         justify-content: space-between;
         position: relative;
         .message-container{
-            position: absolute;
-            top: 34%;
-            // left: 41%;
-            left: 0;
-            width: 454px;
+            width: 100%;
             color: white;
-            text-align: right;
-            // border: 1px solid yellow;
+            text-align: center;
         }
     }
     .combat-grid, .animation-grid{
@@ -940,12 +970,19 @@
             width: 100%;
             height: calc(100% - 40px);
             flex: auto;
-            // border: 1px dashed white;
-            .inventory-col, .specials-col, .attacks-col, .target-col, .queue-col{
+            
+            .inventory-col, .specials-col, .attacks-col, .target-col, .queue-col, .glyphs-col{
                 height: 100%;
                 width: 100px;
                 border: 1px solid #ffffff5c;
                 color: white;
+                &.glyphs-col{
+                    height: 100%;
+                    border: 1px solid #ffffff5c;
+                    color: white;
+                    overflow: hidden;
+                    transition: all 1s ease-in-out;
+                }
                 .interaction-header{
                     height: 25px;
                     width: 100%;

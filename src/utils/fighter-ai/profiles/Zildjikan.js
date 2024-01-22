@@ -70,7 +70,7 @@ export function Zildjikan(data, animationManager){
                     }
                 })
                 attack = chosenAttack;
-                caller.aiming = true;
+                // caller.aiming = true;
             } else {
                 attack = data.methods.pickRandom(available);
             }
@@ -82,20 +82,14 @@ export function Zildjikan(data, animationManager){
         const enemyTarget = Object.values(combatants).find(e=>e.id === caller.targetId)
         const distanceToTarget = data.methods.getDistanceToTarget(caller, enemyTarget),
         laneDiff = data.methods.getLaneDifferenceToTarget(caller, enemyTarget)
-
-        // console.log('Zildjikan process move, pending attack: ', caller.pendingAttack);
         if(!caller.pendingAttack){
-            console.log('no pending attack ', caller);
             return
         }
         if(caller.pendingAttack.name === 'meditate'){
             data.methods.moveTowardsCloseFriendlyTarget(caller, combatants)
         } else if(caller.pendingAttack.name === 'cane_strike'){
-            console.log('MAFUCKIN CAAAANNNEEE STRIKE!');
             debugger
         }
-        caller.energy+=5
-
 
         // data.methods.moveTowardsCloseEnemyTarget(caller, combatants)
 
@@ -104,11 +98,8 @@ export function Zildjikan(data, animationManager){
             // laneDiff === 1 && this.friendlies(combatants).some(e=>e.position === caller.position+1)
             data.methods.isFriendlyAtCoordinates({x: caller.coordinates.x, y: caller.coordinates.y}, data.methods.getFriendlies(caller, combatants))
         ){
-            console.log('POSITION BLOCKED', 'lane diff: ', laneDiff);
-            debugger
             caller.position = 2
         } else {
-            console.log('stay on back row');
             data.methods.stayOnBackRow(caller,combatants)
         }
 
@@ -117,38 +108,30 @@ export function Zildjikan(data, animationManager){
         caller.coordinates.x = caller.depth
     }
     this.triggerMagicMissile = (coords) => {
-        console.log('magic missile animation!');
-        const tileId = this.animationManager.getTileIdByCoords(coords)
-        // console.log('tileId: ', tileId);
+        const tileId = this.animationManager.getTileIdByCoords(coords);
         if(tileId !== null){
             this.animationManager.rippleAnimation(tileId, 'red')
         }
     }
     this.triggerBeamAttack = (callerCoords, targetCoords) => {
-        console.log('beam attack!');
         const targetTileId = this.animationManager.getTileIdByCoords(targetCoords)
         const sourceTileId = this.animationManager.getTileIdByCoords(callerCoords)
-        // console.log('targetTileId: ', targetTileId, 'sourceTileId:', sourceTileId);
-        if(targetTileId !== null && sourceTileId !== null){
-            // console.log('GOGOGOGOGOGO');
-            this.animationManager.beamAnimation(targetTileId, sourceTileId, 'purple')
-        }
+        return new Promise((resolve) => {
+            if(targetTileId !== null && sourceTileId !== null){
+                this.animationManager.beamAnimation(targetTileId, sourceTileId, 'purple', resolve)
+            }
+        })
     }
-    this.initiateAttack = (caller, combatants, hitsTarget, missesTarget) => {
-        console.log('Zildjikan initiate attack!!!!!!!!!', caller.pendingAttack);
+    this.initiateAttack = async (caller, combatants, hitsTarget, missesTarget) => {
             const target = combatants[caller.targetId];
             const distanceToTarget = data.methods.getDistanceToTarget(caller, target),
             laneDiff = data.methods.getLaneDifferenceToTarget(caller, target);
         // return
             switch(caller.pendingAttack.name){
-                case 'induce madness':
-                    console.log('INDUCE MADNESSS!!!!!!');
-                    console.log('caller.coordinates', caller.coordinates);
+                case 'energy blast':
                     if(laneDiff === 0){
-                        console.log('LANE DIFF IS ', laneDiff);
-                        // this.triggerInduceMadness(caller.coordinates, target.coordinates)
-                        this.triggerBeamAttack(caller.coordinates, target.coordinates)
-                        console.log('induce madness hits');
+                        await this.triggerBeamAttack(caller.coordinates, target.coordinates)
+                        // console.log('energy blast hits');
                         hitsTarget(caller)
                     } else {
                         missesTarget(caller);
@@ -159,8 +142,8 @@ export function Zildjikan(data, animationManager){
                     // console.log('caller.coordinates', caller.coordinates);
                     // console.log('LANE DIFF IS ', laneDiff);
                     if(laneDiff === 0){
-                        this.triggerBeamAttack(caller.coordinates, target.coordinates)
-                        console.log('magic missile hits');
+                        await this.triggerBeamAttack(caller.coordinates, target.coordinates)
+                        // console.log('magic missile hits');
                         hitsTarget(caller)
                     } else {
                         missesTarget(caller);

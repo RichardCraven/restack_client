@@ -477,19 +477,10 @@ export function MonsterManager(){
     }
 
     this.getMonster = (monsterString) => {
-        console.log('get monster:', monsterString);
+        // console.log('get monster:', monsterString);
         let match = null;
-        console.log('this.monsters', this.monsters);
-        match = this.monsters[monsterString]
-        // for(let key in this.monsters){
-        //     match = this.monsters[key]
-        //     // console.log('m', m);
-        //     // if(m.image_names.includes(monsterString)){
-        //     //     match = m
-        //     // }
-        // }
-        // this.battleMonster = match;
-        console.log('match:', match);
+        // console.log('this.monsters', this.monsters);
+        match = this.monsters[monsterString];
         return match ? JSON.parse(JSON.stringify(match)) : null;
     }
     this.getRandomMonster = () => {

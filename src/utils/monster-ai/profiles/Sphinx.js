@@ -59,50 +59,37 @@ export function Sphinx(data, animationManager){
             //     data.methods.moveTowardsCloseFriendlyTarget(caller, combatants)
             // }
         }
+        // return new Promise((resolve) => {
+        //     setTimeout(()=>{
+        //         resolve(numSeconds, ' complete')
+        //     }, numSeconds * 1000)
+        // })
     this.triggerInduceMadness = (callerCoords, targetCoords) => {
         const targetTileId = this.animationManager.getTileIdByCoords(targetCoords)
-        const sourceTileId = this.animationManager.getTileIdByCoords(callerCoords)
-        
-        if(targetTileId !== null && sourceTileId !== null){
-            this.animationManager.zapBurstAnimation(targetTileId, sourceTileId, 'white')
-        }
+        const sourceTileId = this.animationManager.getTileIdByCoords(callerCoords);
+        return new Promise((resolve) => {
+            if(targetTileId !== null && sourceTileId !== null){
+                this.animationManager.zapBurstAnimation(targetTileId, sourceTileId, 'white', resolve)
+            }
+        })
     }
-    this.initiateAttack = (caller, combatants, hitsTarget, missesTarget) => {
-            
-        console.log('SPHINX INITIATE ATTACK', caller.pendingAttack);
-        
-
+    this.initiateAttack = async (caller, combatants, hitsTarget, missesTarget) => {
         caller.attacking = true;
         const target = combatants[caller.targetId];
-
-        
-        console.log('SPHINX SWING', caller, 'target: ', target);
-        // this.triggerVoidLance(target.coordinates);
-
-        
-
         const distanceToTarget = data.methods.getDistanceToTarget(caller, target),
         laneDiff = data.methods.getLaneDifferenceToTarget(caller, target);
 
-
         switch(caller.pendingAttack.name){
             case 'induce madness':
-                console.log('INDUCE MADNESSS!!!!!!');
-                console.log('caller.coordinates', caller.coordinates);
                 if(laneDiff === 0){
-                    console.log('LANE DIFF IS ', laneDiff);
-                    this.triggerInduceMadness(caller.coordinates, target.coordinates)
-                    console.log('induce madness hits');
+                    await this.triggerInduceMadness(caller.coordinates, target.coordinates)
                     hitsTarget(caller)
                 } else {
                     missesTarget(caller);
                 }
             break;
             case 'claws':
-                console.log('CLAWS');
-
                 if(distanceToTarget === 1 && laneDiff === 0){
-                    console.log('claws hits');
                     hitsTarget(caller)
                 } else {
                     missesTarget(caller);
@@ -164,7 +151,6 @@ export function Sphinx(data, animationManager){
                     }
                 })
                 attack = chosenAttack;
-                caller.aiming = true;
             } else {
                 attack = data.methods.pickRandom(available);
             }

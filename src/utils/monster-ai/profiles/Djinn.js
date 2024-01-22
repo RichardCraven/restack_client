@@ -8,11 +8,11 @@ export function Djinn(data, animationManager){
     this.acquireTarget = (caller, combatants) => {
         const liveEnemies = Object.values(combatants).filter(e=>!e.dead && (!e.isMonster && !e.isMinion));
         const sorted = liveEnemies.sort((a,b)=>b.depth - a.depth);
-        console.log('djinn sorted targets: ', sorted);
+        // console.log('djinn sorted targets: ', sorted);
         let target = sorted.length ? sorted[0] : null;
         if(!target) return
         if(Object.values(combatants).filter(e=>e.isMonster||e.isMinion).some(e=>e.targetId === target.targetId) && sorted.length > 1){
-            console.log('SAME target! find new target');
+            // console.log('SAME target! find new target');
             target = sorted[1]
         }
         caller.pendingAttack = this.chooseAttackType(caller, target);
@@ -34,14 +34,14 @@ export function Djinn(data, animationManager){
         }
     }
     this.goBehindAndAttack = (caller, target, hitsTarget, missesTarget) => {
-        console.log('go behind attack');
+        // console.log('go behind attack');
         caller.depth = target.depth-1;
         caller.position = target.position;
         caller.coordinates = {x : caller.depth, y: caller.position};
         this.initiateReverseAttack(caller, target, hitsTarget, missesTarget)
     }
     this.initiateReverseAttack = (caller, target, hitsTarget, missesTarget) => {
-        console.log('reverse attack');
+        // console.log('reverse attack');
         caller.attacking = caller.attackingReverse = true;
         hitsTarget(caller);
         // console.log('caller: ', caller);
@@ -61,13 +61,13 @@ export function Djinn(data, animationManager){
         
         const distanceToTarget = data.methods.getDistanceToTarget(caller, target),
         laneDiff = data.methods.getLaneDifferenceToTarget(caller, target);
-        console.log('DJINN INITIATE ATTACK',caller,  caller.pendingAttack, 'hits? ', distanceToTarget === 1 && laneDiff === 0);
-        console.log('distance: ', distanceToTarget, 'laneDiff: ', laneDiff);
+        // console.log('DJINN INITIATE ATTACK',caller,  caller.pendingAttack, 'hits? ', distanceToTarget === 1 && laneDiff === 0);
+        // console.log('distance: ', distanceToTarget, 'laneDiff: ', laneDiff);
         if(caller.energy > 50){
             caller.energy -= 80;
             this.triggerVoidLance(target.coordinates);
             hitsTarget(caller)
-            console.log('TRIGGER VOID LANCE');
+            // console.log('TRIGGER VOID LANCE');
             
         } else if(distanceToTarget > 0){
             this.goBehindAndAttack(caller, target, hitsTarget, missesTarget)
@@ -112,7 +112,6 @@ export function Djinn(data, animationManager){
                     }
                 })
                 attack = chosenAttack;
-                caller.aiming = true;
             } else {
                 attack = data.methods.pickRandom(available);
             }
