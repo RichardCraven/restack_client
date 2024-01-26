@@ -332,6 +332,7 @@ export function CombatManager(){
     }
 
     this.establishMessageCallback = (cb) => {
+        console.log('setting message clalback: ', cb);
         this.setMessage = cb;
     }
     this.establishUpdateMatrixCallback = (cb) => {
@@ -1312,6 +1313,7 @@ export function CombatManager(){
                 })
             } else {
                 this.delay(0.5).then(()=>{
+                    console.log('setting greeting to ', this.data.monster.greetings[0]);
                     this.setMessage({message: this.data.monster.greetings[0], source: 'monster'})
                     this.delay(2).then(()=>{
                         this.setMessage({message: '', source: null})

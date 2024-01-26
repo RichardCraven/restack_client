@@ -133,6 +133,7 @@ class MonsterBattle extends React.Component {
         // monster.portrait = images['witch_p1_2']
     }
     greetingComplete = () => {
+        console.log('blocking greeting complete');
         this.combatBegins()
         this.setState({greetingInProcess: false})
     }
@@ -179,10 +180,14 @@ class MonsterBattle extends React.Component {
 
     setMessage = (messageData) => {
         const {message, source} = messageData;
+        console.log('set message: ', message);
         this.setState({
             message,
             source
         })
+        setTimeout(()=>{
+            console.log('message is: ', this.state.message);
+        },1000)
     }
     renderAnimation = () => {
         console.log('render');
@@ -575,7 +580,7 @@ class MonsterBattle extends React.Component {
                                     </div>
                                 })}
                             </div>
-                            {(this.state.message) &&<div className="message-container">
+                            {(this.state.message) && <div className="message-container">
                                 {this.state.message}
                             </div>}
                         </div>

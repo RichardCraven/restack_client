@@ -184,6 +184,17 @@ button{
     //   background-position: 50% 0;
     //   background-size: cover;
     // }
+    &.wrecked{
+      filter: invert(1) saturate(35.5);
+      transform: perspective(350px) translateX(-3px) translateZ(130px) rotate(40deg)
+      scaleX(1.2) scaleY(0.9) skewX(10deg) skewY(35deg);
+    }
+    &.more-wrecked{
+      transition: transform 2s;
+      filter: invert(1) saturate(35.5);
+      transform: perspective(350px) translateX(-3px) translateZ(306px) rotate(40deg)
+      scaleX(1.2) scaleY(0.9) skewX(10deg) skewY(35deg);
+    }
   }
   .text-container{
     height: 10%;

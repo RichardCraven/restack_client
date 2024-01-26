@@ -156,6 +156,9 @@ export default function NarrativeSequence(props) {
     const [currentOddSequence, setCurrentOddSequence] = useState(null)
     const [currentEvenSequence, setCurrentEvenSequence] = useState(null)
 
+    const [wreckImage, setWreckImage] = useState(false)
+    const [moreWrecked, setMoreWrecked] = useState(false)
+
     // in the deep of a starless night
     const darkForest = [darkForest1, darkForest2, darkForest3, darkForest4, darkForest5, darkForest6]
     // an old map was found
@@ -435,11 +438,18 @@ export default function NarrativeSequence(props) {
                 setNavToDungeon(true)
             break;
             case 'death': 
-                setFadeOutLastFrame(true);
-                setTimeout(()=>{
-                    props.endDeathSequence();
-                    setNavToLanding(true)
-                }, 1000)
+                setWreckImage(true)
+                delay(0.85).then(()=>{
+                    setMoreWrecked(true)
+                    delay(1).then(()=>{
+
+                        setFadeOutLastFrame(true);
+                        setTimeout(()=>{
+                            props.endDeathSequence();
+                            setNavToLanding(true)
+                        }, 1000)
+                    })
+                })
             break;
             default:
                 console.log('NO TYPE'); return
@@ -451,13 +461,13 @@ export default function NarrativeSequence(props) {
   return (
     <div className="intro-pane pane">
         {currentOddSequence && <img 
-         className="intro-image"
+         className={`intro-image ${wreckImage ? 'wrecked' : ''} ${moreWrecked ? 'more-wrecked' : ''}`}
          src={currentOddSequence.image}
          style={{opacity: currentSequence && currentSequence.id%2===1 ? 1 : (fadeOutLastFrame ? 0 : 0)}}  
          />}
 
          {currentEvenSequence && <img 
-         className="intro-image"
+         className={`intro-image ${wreckImage ? 'wrecked' : ''} ${moreWrecked ? 'more-wrecked' : ''}`}
          src={currentEvenSequence.image}
          style={{opacity: currentSequence && currentSequence.id%2===0 && fadeInFirstFrame ? 1 : 
             0}}  
