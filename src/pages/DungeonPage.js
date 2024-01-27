@@ -16,6 +16,33 @@ import  CIcon  from '@coreui/icons-react';
 import { CButton, CFormSelect, CFormInput, CModal, CModalHeader, CModalTitle, CModalBody, CModalFooter} from '@coreui/react';
 import * as images from '../utils/images'
 
+Date.prototype.addHours= function(h){
+    this.setHours(this.getHours()+h);
+    return this;
+}
+Date.prototype.addMinutes= function(minutes){
+    this.setMinutes(this.getMinutes()+minutes);
+    return this;
+}
+Date.prototype.addSeconds= function(s){
+    this.setSeconds(this.getSeconds()+s);
+    return this;
+}
+Date.prototype.addMinutes= function(minutes){
+    this.setMinutes(this.getMinutes()+minutes);
+    return this;
+}
+function diff_minutes(dt2, dt1){
+  var diff =(dt2.getTime() - dt1.getTime()) / 1000;
+  diff /= 60;
+  return Math.round(diff);
+}
+function diff_seconds(dt2,dt1){
+    var diff =(dt2.getTime() - dt1.getTime()) / 1000;
+    // diff /= 60;
+    return Math.round(diff);
+}
+
 // const MAX_DEPTH = 8;
 // const MAX_ROWS = 5;
 // const TILE_SIZE = 100;
@@ -81,7 +108,8 @@ class DungeonPage extends React.Component {
             modalType: 'Updates',
             showModal: false,
             updates: [],
-            // inventoryState: []
+            timeToRespawn: '',
+            respawnUpdateInterval: null
         }
     }
     
@@ -169,6 +197,81 @@ class DungeonPage extends React.Component {
         // this.props.inventoryManager.establishUseConsumableFromInventoryCallback(this.useConsumableFromInventory)
 
         window.addEventListener('beforeunload', this.componentCleanup);
+
+        let now = new Date();
+        // meta.respawnDate = null
+        
+        let respawnInterval = setInterval(()=>{
+            // let meta = getMeta();
+            // let respawn = new Date(meta.respawnDate);
+            // if()
+            // if()
+            this.handleRespawnTime();
+        }, 1000)
+        this.setState({
+            respawnUpdateInterval: respawnInterval
+        })
+
+        
+        this.checkDungeon()
+    }
+    checkDungeon = async () => {
+        const allDungeons = await loadAllDungeonsRequest();
+        
+        let dungeons = [],
+            selectedDungeon
+            
+        allDungeons.data.forEach((e, i) => {
+            let d = JSON.parse(e.content)
+            d.id = e._id
+            dungeons.push(d)
+        })
+        console.log('dungones', dungeons);
+        selectedDungeon = dungeons.find(e=>e.name === 'Primari');
+
+        console.log('check dungeon: ', selectedDungeon);
+    }
+    handleRespawnTime = () => {
+        let meta = getMeta();
+        if(!meta.respawnDate){
+            this.setNewRespawnDate();
+        } else {
+            let respawn = new Date(meta.respawnDate);
+            let now = new Date();
+            let diffInMinutes = diff_minutes(respawn, now)
+            let diffInSeconds = diff_seconds(respawn, now)
+            let respawnString = ''
+            if(diffInMinutes > 1){
+                respawnString = `${diffInMinutes} m`
+            } else if(diffInMinutes < 2 && diffInSeconds > 1){
+                respawnString = `${diffInSeconds} s`
+            } else {
+                this.respawnMonsters();
+                respawnString = ''
+                this.setNewRespawnDate();
+                return
+            }
+            this.setState({
+                timeToRespawn: respawnString,
+            })
+        }
+    }
+    respawnMonsters = async () => {
+        let dungeons = [],
+        spawnList = [],
+        selectedDungeon,
+        spawnPoint;
+        
+        const allDungeons = await loadAllDungeonsRequest();
+
+        allDungeons.data.forEach((e, i) => {
+            let d = JSON.parse(e.content)
+            d.id = e._id
+            dungeons.push(d)
+        })
+        selectedDungeon = JSON.parse(JSON.stringify(dungeons.find(e=>e.name === 'Primari')));
+
+        this.props.boardManager.respawnMonsters(selectedDungeon)
     }
     componentWillUnmount(){
         this.componentCleanup();
@@ -183,6 +286,26 @@ class DungeonPage extends React.Component {
     logMeta = () => {
         const meta = getMeta();
         console.log('meta: ', meta);
+    }
+    setNewRespawnDate = () => {
+        console.log('creating respawn date');
+        let soon = new Date().addMinutes(10)
+        let meta = getMeta();
+        meta.respawnDate = soon;
+        storeMeta(meta)
+
+
+        let respawn = new Date(soon);
+        let now = new Date();
+        let diffInMinutes = diff_minutes(respawn, now)
+        let diffInSeconds = diff_seconds(respawn, now)
+
+
+        let respawnString = `${diffInMinutes} m`
+
+        this.setState({
+            timeToRespawn: respawnString,
+        })
     }
     pickRandom = (array) => {
         let index = Math.floor(Math.random() * array.length)
@@ -459,9 +582,21 @@ class DungeonPage extends React.Component {
     // transform: perspective(3cm) rotateX(16deg) rotateY(0deg) rotateZ(0deg)
 
     keyDownHandler = (event) => {
+        if(this.state.keysLocked){
+            this.combatKeyDownHandler(event);
+            return
+        }
         let key = event.key, code = event.code
         let newTiles = [], overlayTiles = [];
-        if(code === 'Space'){
+        // if(code === 'Space'){
+        //     let paused = !this.state.paused;
+        //     this.props.combatManager.pauseCombat(paused)
+        //     this.setState({
+        //         paused
+        //     })
+        // }
+        if(code === 'p'){
+            console.log('go!!');
             let paused = !this.state.paused;
             this.props.combatManager.pauseCombat(paused)
             this.setState({
@@ -523,7 +658,43 @@ class DungeonPage extends React.Component {
             break;
         }
     }
-
+    combatKeyDownHandler = (event) => {
+        let key = event.key, code = event.code
+        let newTiles = [], overlayTiles = [];
+        if(code === 'Space'){
+            // console.log('space');
+            this.props.combatManager.fighterManualAttack()
+        }
+        // console.log('key: ', key, key === 'p');
+        if(key === 'p'){
+            let paused = !this.state.paused;
+            this.props.combatManager.pauseCombat(paused)
+            this.setState({
+                paused
+            })
+        }
+        switch(key){
+            case 'Tab':
+                event.preventDefault();
+                if(this.monsterBattleComponentRef.current) this.monsterBattleComponentRef.current.tabToFighter();
+            break;
+            case 'ArrowUp':
+                if(this.state.selectedCrewMember) this.props.combatManager.moveFighterOneSpace('up');
+            break;
+            case 'ArrowDown':
+                if(this.state.selectedCrewMember) this.props.combatManager.moveFighterOneSpace('down');
+            break;
+            case 'ArrowLeft':
+                if(this.state.selectedCrewMember) this.props.combatManager.moveFighterOneSpace('left');
+            break;
+            case 'ArrowRight':
+                if(this.state.selectedCrewMember) this.props.combatManager.moveFighterOneSpace('right');
+            break;
+            default:
+                // console.log(key === ' ')
+            break;
+        }
+    }
 
     //might need to put this function somewhere else so it doesnt fire on every rerender
     // useEventListener('keydown', this.keyDownHandler);
@@ -574,9 +745,13 @@ class DungeonPage extends React.Component {
     }
     handleClick = (tile) => {
         console.log('HANDLE CLICK, SHOULD NOT GET HERE tile:', tile);
+        console.log('tile: ', tile);
+        console.log('is monster: ', this.props.boardManager.isMonster(tile));
     }
-    handleOverlayClick = (tile) => {
-        console.log('meta: ', getMeta());
+    handleOverlayClick = (tile, event) => {
+        // event.preventDefault();
+        // console.log('meta: ', getMeta());
+        console.log('tile: ', tile);
         if(!this.state.minimapPlaceMapMarkerStarted) return
         // this is for marking the minimap
         
@@ -1206,12 +1381,6 @@ class DungeonPage extends React.Component {
                         })}
                     </div>}
                 </CModalBody>
-                {/* <CModalFooter>
-                    <CButton color="secondary" onClick={() => {return this.setState(() => { return {showModal: false}})}}>
-                    Close
-                    </CButton>
-                    <CButton color="primary" onClick={() => this.modalSaveChanges()}>Save changes</CButton>
-                </CModalFooter> */}
             </CModal>
             {this.props.boardManager.currentOrientation === 'B' && <div className="dark-mask"></div>}
             <div className={`left-side-panel ${this.state.leftPanelExpanded ? 'expanded' : ''}`}>
@@ -1545,6 +1714,11 @@ class DungeonPage extends React.Component {
                 <div className="message-container">
                     {this.state.messageToDisplay}
                 </div>
+                <div className="respawn-message-container">
+                    <div className="hourglass-icon" style={{
+                        backgroundImage: `url(${images['hourglass1']})`
+                    }}></div>{this.state.timeToRespawn}
+                </div>
                 <div  className="overlay-board" style={{
                     width: this.state.boardSize+'px', height: this.state.boardSize+ 'px',
                     backgroundColor: 'transparent'
@@ -1564,7 +1738,8 @@ class DungeonPage extends React.Component {
                         editMode={false}
                         handleHover={this.handleOverlayHover}
                         type={'overlay-tile'}
-                        handleClick={this.handleOverlayClick}
+                        passThrough={!this.state.minimapPlaceMapMarkerStarted}
+                        handleClick={(e)=>this.handleOverlayClick}
                         backgroundColor={this.state.overlayHoveredTileId === i && this.state.minimapPlaceMapMarkerStarted ? 'rgba(100, 100, 38, 0.272)' : 'transparent'}
                         >
                         </Tile>

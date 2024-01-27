@@ -15,10 +15,7 @@ export function CombatManager(){
     this.fighterAI = new FighterAI(MAX_DEPTH, MAX_LANES, FIGHT_INTERVAL);
     this.monsterAI = new MonsterAI(MAX_DEPTH, MAX_LANES, FIGHT_INTERVAL)
     this.movementMethods = MovementMethods;
-    // const attackTypes = [
-    //     'psionic', 'crushing', 'cutting', 'electricity', 'fire', 'blood_magic', 'ice', 'curse', 'sickness', 'arcane', 'buff',
-    //     'holy', 
-    // ]
+    this.selectedFighter = null;
     this.combatPaused = false;
     this.pauseCombat = (val) => {
         console.log('pause combt');
@@ -332,8 +329,10 @@ export function CombatManager(){
     }
 
     this.establishMessageCallback = (cb) => {
-        console.log('setting message clalback: ', cb);
         this.setMessage = cb;
+    }
+    this.setSelectedFighter = (selectedFighter) => {
+        this.selectedFighter = selectedFighter;
     }
     this.establishUpdateMatrixCallback = (cb) => {
         this.updateIndicatorsMatrix = cb;
@@ -436,6 +435,10 @@ export function CombatManager(){
             destinationSickness: false,
             action_queue: [],
             turnSkips: 0,
+            isOnManualMoveCooldown: false,
+            manualCount: 0,
+            timeAhead: null,
+            flagB: null,
             attack: function(){
                 const target = getCombatant(this.targetId);
                 if(!target){
@@ -460,6 +463,30 @@ export function CombatManager(){
                 } else {
                     this.skip();
                 }
+            },
+            manualAttack: function(){
+                this.attack();
+                this.tempo = 1
+            },
+            manualMoveCooldown: function(){
+                function addSeconds(date, seconds) {
+                    date.setSeconds(date.getSeconds() + seconds);
+                    return date;
+                }
+                // 12:00:00 AM on April 17, 2022
+                const now = new Date();
+                // 12:00:20 AM on April 17, 2022
+                const newDate = addSeconds(now, 3).getTime();
+                this.timeAhead = newDate;
+                this.isOnManualMoveCooldown = true;
+                let interval = setTimeout(()=>{
+                    let now = new Date() 
+                    let time = now.getTime();
+                    if(time > this.timeAhead){
+                        this.isOnManualMoveCooldown = false;
+                        clearInterval(interval)
+                    }
+                },3000)
             },
             skip: function(){
                 this.active = false;
@@ -486,6 +513,10 @@ export function CombatManager(){
 
                     this.tempo = Math.floor((count/100)*100);
                     if(this.tempo < 1) return;
+                    if(this.isOnManualMoveCooldown){
+                        if(this.tempo > 100) this.tempo = 100;
+                        return
+                    }
                     if(isCombatOver() || this.dead){
                         clearInterval(this.interval)
                         return
@@ -771,7 +802,12 @@ export function CombatManager(){
                 console.log('CONSUMABLE USED THAT HAS NO .EFFECT');
         }
     }
-
+    this.fighterManualAttack = () =>{
+        if(!this.selectedFighter) return 
+        const fighter = this.combatants[this.selectedFighter.id]
+        console.log('fighter to attack', fighter);
+        fighter.manualAttack();
+    }
     this.beginGreeting = () => {
         this.triggerMonsterGreeting().then(e=>{
             this.greetingComplete();
@@ -886,6 +922,36 @@ export function CombatManager(){
         console.log('pending', caller.pendingAttack);
         // switch(caller.pendingAttack)
         debugger
+    }
+    this.moveFighterOneSpace = (direction) => {
+        console.log('this.selectedFighter', this.selectedFighter);
+        if(!this.selectedFighter) return 
+        const fighter = this.combatants[this.selectedFighter.id]
+        switch(direction){
+            case 'up':
+                fighter.position--
+                fighter.coordinates.y--
+                fighter.manualMoveCooldown()
+            break;
+            case 'down':
+                fighter.position++
+                fighter.coordinates.y++
+                fighter.manualMoveCooldown()
+            break;
+            case 'right':
+                fighter.depth++
+                fighter.coordinates.x++
+                fighter.manualMoveCooldown()
+            break;
+            case 'left':
+                fighter.depth--
+                fighter.coordinates.x--
+                fighter.manualMoveCooldown()
+            break;
+            default:
+            break;
+        }
+        console.log('in combat manager move ', fighter.name, direction);
     }
     this.initiateAttack = (caller) => {
         if(caller.dead) return;

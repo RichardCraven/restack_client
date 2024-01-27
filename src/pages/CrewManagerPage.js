@@ -84,7 +84,6 @@ class CrewManagerPage extends React.Component{
     })
   }
   selectCrewMember = (event, crewMember) => {
-    console.log('select crew memeber: ', crewMember)
     clearTimeout(this.timer);
     if (event.detail === 1) {
         this.timer = setTimeout(this.singleClick(crewMember), 200)
@@ -105,13 +104,7 @@ class CrewManagerPage extends React.Component{
   addMember = (index) => {
     let member = this.state.selectedCrewMember
     let crew = this.state.selectedCrew
-    console.log('add member this.state.selectedCrewMember', member, 'this.state.selectedCrew', crew);
     let idx  = crew.findIndex((e, i)=> e === null && i < 3)
-    console.log('...', member, crew, idx)
-    // if(idx !== -1){
-    //     console.log('idx: ', idx)
-    //     crew[idx] = member
-    // }
     if(!crew.includes(member)) crew.push(member)
     this.setState({
         selectedCrew: crew

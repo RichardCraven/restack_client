@@ -447,7 +447,7 @@ export default function NarrativeSequence(props) {
                         setTimeout(()=>{
                             props.endDeathSequence();
                             setNavToLanding(true)
-                        }, 1000)
+                        }, 700)
                     })
                 })
             break;
@@ -463,14 +463,17 @@ export default function NarrativeSequence(props) {
         {currentOddSequence && <img 
          className={`intro-image ${wreckImage ? 'wrecked' : ''} ${moreWrecked ? 'more-wrecked' : ''}`}
          src={currentOddSequence.image}
-         style={{opacity: currentSequence && currentSequence.id%2===1 ? 1 : (fadeOutLastFrame ? 0 : 0)}}  
+         style={{opacity: moreWrecked ? 0 : 
+            (currentSequence && currentSequence.id%2===1 ? 1 : (fadeOutLastFrame ? 0 : 0))}}  
          />}
 
          {currentEvenSequence && <img 
          className={`intro-image ${wreckImage ? 'wrecked' : ''} ${moreWrecked ? 'more-wrecked' : ''}`}
          src={currentEvenSequence.image}
-         style={{opacity: currentSequence && currentSequence.id%2===0 && fadeInFirstFrame ? 1 : 
-            0}}  
+         style={{opacity: 
+            moreWrecked ? 0 :
+            (currentSequence && currentSequence.id%2===0 && fadeInFirstFrame ? 1 : 0)
+        }}  
          />}
 
          {currentSequence && currentSequence.id%2===0 && <div 

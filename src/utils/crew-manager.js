@@ -69,7 +69,28 @@ export function CrewManager(){
     }
 
     this.levelUp = (crewMember) => {
+        switch(crewMember.type){
+            case 'wizard':
+                crewMember.stats.int++
+            break;
+            case 'rogue':
+                crewMember.stats.dex++
+            break;
+            case 'sage':
+                crewMember.stats.vit++
+            break;
+            case 'monk':
+                crewMember.stats.dex++
+            break;
+            case 'soldier':
+                crewMember.stats.str++
+            break;
+            case 'barbarian':
+                crewMember.stats.str++
+            break;
+        }
         crewMember.level++
+
     }
 
     this.calculateExpPercentage = (crewMember) => {

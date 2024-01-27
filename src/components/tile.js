@@ -5,6 +5,7 @@ import * as images from '../utils/images'
 export default function Tile(props) {
     return (
         <div style={{
+            pointerEvents: props.passThrough ? 'none' : 'inherit',
             boxSizing: 'border-box',
             transition: 'background-color 0.25s',
             cursor: props.cursor ? props.cursor : 'pointer',

@@ -47,6 +47,12 @@
                         height: 100%;
                         width: 100%;
                         background-size: 100% 100%;
+                        filter: saturate(50) sepia(0);
+                    }
+                    &.dead-member{
+                        .portrait{
+                            filter: none;
+                        }
                     }
                     .level-up-canvas{
                         position: absolute;
@@ -98,8 +104,23 @@
         position: relative;
         .message-container{
             width: 100%;
+            height: 100%;
+            color: white;
+            position: absolute;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 101;
+        }
+        .summary-message-container{
+            width: 100%;
+            height: 100px;
             color: white;
             text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
     }
     .combat-grid, .animation-grid{
@@ -546,47 +567,6 @@
                                 top: 38%;
                                 left: 5px;
                             }
-                        }
-                    }
-                    .weapon-wrapper{
-                        position: absolute;
-                        z-index: 101;
-                        height: 90px;
-                        width: 90px;
-                        background-size: 100% 100%;
-                        filter: invert(100%);
-                        transition: all 0.25s;
-                        opacity: 0;
-                        pointer-events: none;
-                        @keyframes WeaponSwings { 
-                            0%{
-                                transform: rotate(-20deg);
-                                opacity: 1
-                            }
-                            50%{transform: rotate(40deg)}
-                            100%{transform: rotate(180deg)}
-                        }
-                        @keyframes WeaponShoots { 
-                            0%{
-                                transform: rotate(0deg);
-                                transform: scaleX(2);
-                                opacity: 1
-                            }
-                            50%{transform: scaleX(1.5)}
-                            100%{transform: scaleX(1)}
-                        }
-                        &.aiming{
-                            opacity: 1;
-                        }
-                        &.swinging{
-                            -webkit-animation: WeaponSwings 0.5s linear ;
-                            -moz-animation: WeaponSwings 0.5s linear ;
-                            animation: WeaponSwings 0.5s linear ;
-                        }
-                        &.shooting{
-                            -webkit-animation: WeaponShoots 0.5s linear ;
-                            -moz-animation: WeaponShoots 0.5s linear ;
-                            animation: WeaponShoots 0.5s linear ;
                         }
                     }
                     .action-bar-wrapper{
@@ -1058,5 +1038,61 @@
     }
     &.show-crosshair{
         cursor: crosshair !important;
+    }
+
+    // COMBAT ANIMATIONS //
+    .weapon-wrapper{
+        position: absolute;
+        z-index: 101;
+        height: 90px;
+        width: 90px;
+        background-size: 100% 100%;
+        filter: invert(100%);
+        transition: all 0.25s;
+        opacity: 0;
+        pointer-events: none;
+        @keyframes WeaponSwings { 
+            0%{
+                transform: rotate(-20deg);
+                opacity: 1
+            }
+            50%{transform: rotate(40deg)}
+            100%{transform: rotate(180deg)}
+        }
+        @keyframes WeaponSwingsLeft { 
+            0%{
+                transform: rotate(20deg);
+                opacity: 1
+            }
+            50%{transform: rotate(-40deg)}
+            100%{transform: rotate(-180deg)}
+        }
+        @keyframes WeaponShoots { 
+            0%{
+                transform: rotate(0deg);
+                transform: scaleX(2);
+                opacity: 1
+            }
+            50%{transform: scaleX(1.5)}
+            100%{transform: scaleX(1)}
+        }
+        &.aiming{
+            opacity: 1;
+        }
+        &.swinging-right{
+            -webkit-animation: WeaponSwings 0.5s linear ;
+            -moz-animation: WeaponSwings 0.5s linear ;
+            animation: WeaponSwings 0.5s linear ;
+        }
+        &.swinging-left{
+            -webkit-animation: WeaponSwingsLeft 0.5s linear ;
+            -moz-animation: WeaponSwingsLeft 0.5s linear ;
+            animation: WeaponSwingsLeft 0.5s linear ;
+        }
+        &.shooting{
+            -webkit-animation: WeaponShoots 0.5s linear ;
+            -moz-animation: WeaponShoots 0.5s linear ;
+            animation: WeaponShoots 0.5s linear ;
+        }
     }
 }

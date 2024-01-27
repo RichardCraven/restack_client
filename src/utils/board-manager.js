@@ -128,10 +128,24 @@ export function BoardManager(){
         boardIndex: null,
         levelId: 0
     }
+    this.getRandomMonster = () => {
+        // return this.monstersArr[0]
+
+
+        let idx = Math.floor(Math.random()*this.monstersArr.length);
+        const monster = this.monstersArr[idx];
+        return monster
+    }
     this.dungeon = {};
     this.currentBoard = {};
     this.currentOrientation = 'F'
     this.currentLevel = {}
+    
+    this.getActiveDungeon = () => {
+        console.log('get active dungeon');
+        
+        console.log('this.dungeon: ', this.dungeon)
+    }
     
     this.getCoordinatesFromIndex = (index) =>{
         let row = Math.floor(index/15);
@@ -164,6 +178,7 @@ export function BoardManager(){
         return index
     }
     this.setDungeon = (dungeon) => {
+        console.log('setting dungeon', dungeon);
         this.dungeon = dungeon;
     }
     this.setCurrentLevel = (level) => {
@@ -172,15 +187,70 @@ export function BoardManager(){
     this.setCurrentOrientation = (orientation) => {
         this.currentOrientation = orientation;
     }
+    this.respawnMonsters = (template) => {
+        console.log('board manager respawning from template');
+        console.log('template: ', template);
+        // console.log('this. miniboard: ', this.currentBoard);
+        let currentOrientation = this.currentOrientation
+        let currentLevel = currentOrientation === 'F' ? this.currentLevel.front : this.currentLevel.back
+        console.log('current level: ', currentLevel);
+        console.log('current lebel.miniboards: ', currentLevel.miniboards);
+
+        let foundPlane;
+        template.levels.forEach((templateLevel, templateIndex)=>{
+            let front = templateLevel.front
+            let back = templateLevel.back
+            let relevantPlane = currentOrientation === 'F' ? front : back
+            if(relevantPlane.name === currentLevel.name){
+                console.log('FOUND!');
+                foundPlane = relevantPlane
+            }
+            // if(currentLevel.id === templateLevel.id){
+                
+            //     if(front.name === currentLevel.name){
+            //         console.log('found front! ', front, currentLevel);
+            //     }
+            //     if(back.name === currentLevel.name){
+            //         console.log('found back! ', back, currentLevel);
+            //     }
+            //     console.log('found for id ', templateLevel.id);
+            //     this.currentLevel.miniboards.forEach((e,i)=>{
+            //         let equivalent = currentOrientation === 'F' ? front : back
+            //         equivalent.tiles.forEach(t=>{
+            //             console.log('tile', t);
+            //         })
+            //         // e.tiles.forEach()
+            //     })
+            // }
+        })
+        console.log('found plane: ', foundPlane);
+        foundPlane.miniboards.forEach((templateMiniBoard, i) => {
+            templateMiniBoard.tiles.forEach(t=>{
+                // if(t.contains !== 'void' && t.contains !== null){
+                //     console.log('t: ', t,  t.contains);
+                // }
+                let livePlane = currentLevel;
+                let equivalentTile = livePlane.miniboards[i].tiles.find(tile=> tile.id === t.id)
+                // && )
+                if(t.contains === 'monster' && !this.isMonster(equivalentTile)) {
+                    
+                    equivalentTile.contains = this.getRandomMonster()
+                    // getRandomMonster()
+                }
+            })
+        })
+        this.updateDungeon(this.dungeon);
+        this.refreshTiles()
+    }
     this.initializeTilesFromMap = (boardIndex, spawnTileIndex) => {
-        const getRandomMonster = () => {
-            // return this.monstersArr[0]
+        // const getRandomMonster = () => {
+        //     // return this.monstersArr[0]
 
 
-            let idx = Math.floor(Math.random()*this.monstersArr.length);
-            const monster = this.monstersArr[idx];
-            return monster
-        }
+        //     let idx = Math.floor(Math.random()*this.monstersArr.length);
+        //     const monster = this.monstersArr[idx];
+        //     return monster
+        // }
         const getRandomItem = () => {
             const idx = Math.floor(Math.random()*this.availableItems.length),
             item = this.availableItems[idx];
@@ -188,6 +258,7 @@ export function BoardManager(){
         }
         let spawnCoords = this.getCoordinatesFromIndex(spawnTileIndex);
         let board = this.currentOrientation === 'F' ? this.currentLevel.front.miniboards[boardIndex] : this.currentLevel.back.miniboards[boardIndex]
+
         this.currentBoard = board;
         this.tiles = [];
         this.overlayTiles = [];
@@ -198,7 +269,7 @@ export function BoardManager(){
         for(let i = 0; i< board.tiles.length; i++){
             let tile = board.tiles[i]
             if(tile.contains === 'monster'){
-                tile.contains = getRandomMonster();
+                tile.contains = this.getRandomMonster();
                 console.log('tile.contains: ', tile);
             }
             if(tile.contains === 'gate') tile.contains = 'minor_gate';
@@ -236,6 +307,9 @@ export function BoardManager(){
         this.tiles[index].playerTile = true;
         this.tiles[index].image = 'avatar'
     }
+    this.isMonster = (tile => {
+        return this.monstersArr.includes(tile.contains)
+    })
     this.handleInteraction = (destinationTile) => {
         let val = destinationTile.contains
         if(this.monstersArr.includes(destinationTile.contains)) val = 'monster'

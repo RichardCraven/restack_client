@@ -229,7 +229,7 @@ export function MonsterManager(){
             stats: {
                 str: 9,
                 int:6,
-                dex:2,
+                dex:5,
                 vit:9,
                 fort:8,
                 hp: 82,
@@ -238,7 +238,7 @@ export function MonsterManager(){
             },
             level: 11,
             portrait: images['goat_demon_portrait'],
-            greetings: ['Ssssurrenderrrr', 'Be ssstill'],
+            greetings: ['More ingredients for my ritual..'],
             deathCries: ['Arrrghhh!'],
             specials: ['petrify'],
             attacks: ['snake_strike', 'bite'],

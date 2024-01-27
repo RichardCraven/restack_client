@@ -448,7 +448,7 @@ class MapMakerPage extends React.Component {
           hoveredTileIdx: null
         })
         return
-      } else if(this.props.mapMaker.paletteTiles[this.state.pinnedOption.id]){ 
+      } else if(this.state.pinnedOption && this.props.mapMaker.paletteTiles[this.state.pinnedOption.id]){ 
         pinned = this.props.mapMaker.paletteTiles[this.state.pinnedOption.id]
       }
       console.log('pinned: ', pinned);

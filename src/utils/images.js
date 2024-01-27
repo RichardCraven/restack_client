@@ -276,6 +276,9 @@ import hamburger from '../assets/icons/menu/hamburger.png'
 
 import magic_missile from '../assets/icons/misc/cycle.png'
 
+import hourglass1 from '../assets/icons/menu/hourglass-1_inverted.png'
+import hourglass2 from '../assets/icons/menu/hourglass-2_inverted.png'
+
 export {
     monster,
     avatar,
@@ -504,6 +507,8 @@ export {
     magic_missile,
 
     arrowUp,
-    arrowDown
+    arrowDown,
 
+    hourglass1,
+    hourglass2,
 };

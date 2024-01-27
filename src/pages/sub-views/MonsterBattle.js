@@ -147,6 +147,7 @@ class MonsterBattle extends React.Component {
         const selectedFighter = liveCrew[nextIndex];
         // selectedFighter.portrait = this.props.crew.find(e=>e.id === nextId).portrait
         console.log('selected fighter: ', selectedFighter);
+        this.props.combatManager.setSelectedFighter(selectedFighter)
         this.setState({
             selectedFighter
         })
@@ -506,15 +507,11 @@ class MonsterBattle extends React.Component {
         })
         
     }
-
-    // ${(this.state.battleData[minion.id]?.attacking && this.state.battleData[minion.id]?.pendingAttack.range === 'close') ? 'swinging' 
-    //                                     : (this.state.battleData[minion.id]?.attacking && this.state.battleData[minion.id]?.pendingAttack.range === 'far' ? 'shooting' : 
-    //                                     '')}
     getMonsterWeaponAnimation = (monster) => {
         if(!monster.attacking) return ''
         switch(monster.pendingAttack.range){
             case 'close':
-                return 'swinging'
+                return 'swinging-left'
             case 'medium':
                 return 'lift-and-shoot'
             case 'far':
@@ -548,7 +545,7 @@ class MonsterBattle extends React.Component {
                 }}>
                     {this.state.showSummaryPanel && <div className='summary-panel'>
                         <div className="content-container">
-                            <div className="message-container">
+                            <div className="summary-message-container">
                                 {this.state.summaryMessage}
                             </div>
                             {this.state.itemsGained && this.state.itemsGained.length > 0 &&
@@ -579,14 +576,20 @@ class MonsterBattle extends React.Component {
                                         </div>
                                     </div>
                                 })}
+                                {Object.values(this.state.battleData).filter(e=>e.dead && !e.isMonster && !e.isMinion).map((crewMember, i) => {
+                                    return <div key={i} className="single-portrait-container dead-member">
+                                        <div className="portrait" style={{backgroundImage: `url(${crewMember.portrait})`}}></div>
+                                    </div>
+                                })}
                             </div>
-                            {(this.state.message) && <div className="message-container">
-                                {this.state.message}
-                            </div>}
                         </div>
                         <div className="button-row">
                             <div className="confirm-button" onClick={() => this.confirmClicked()}>OK</div>
                         </div>
+                    </div>}
+
+                    {(this.state.message) && <div className="message-container">
+                                {this.state.message}
                     </div>}
 
                     {/* /// ANIMATION GRID ///  */}
@@ -699,16 +702,17 @@ class MonsterBattle extends React.Component {
 
                                             </div>
                                         </div>
-                                        { this.state.battleData[fighter.id] && this.state.battleData[fighter.id].pendingAttack && !this.state.battleData[fighter.id].dead && <div className={`weapon-wrapper 
-                                        ${this.state.battleData[fighter.id]?.aiming ? 'aiming' : ''}
-                                        ${(this.state.battleData[fighter.id]?.attacking && this.state.battleData[fighter.id]?.pendingAttack.range === 'close') ? 'swinging' 
-                                        : (this.state.battleData[fighter.id]?.attacking && this.state.battleData[fighter.id]?.pendingAttack.range === 'far' ? 'shooting' : 
-                                        '')}`}
-                                        style={{
+                                        { this.state.battleData[fighter.id] && this.state.battleData[fighter.id].pendingAttack && !this.state.battleData[fighter.id].dead && 
+                                        <div className={`weapon-wrapper 
+                                            ${this.state.battleData[fighter.id]?.aiming ? 'aiming' : ''}
+                                            ${(this.state.battleData[fighter.id]?.attacking && this.state.battleData[fighter.id]?.pendingAttack.range === 'close') ? 'swinging-right' 
+                                            : (this.state.battleData[fighter.id]?.attacking && this.state.battleData[fighter.id]?.pendingAttack.range === 'far' ? 'shooting' : 
+                                            '')}`}
+                                            style={{
                                             left: `${this.state.battleData[fighter.id]?.depth * 100 + 45 + (this.state.battleData[fighter.id]?.depth * 2)}px`,
                                             backgroundImage: "url(" + this.state.battleData[fighter.id].pendingAttack.icon + ")"
-                                        }}
-                                        ></div>}
+                                            }}>
+                                        </div>}
                                         <div className={`action-bar-wrapper`} style={{
                                             width: !!this.state.battleData[fighter.id]?.targetId ? `${this.props.combatManager.getDistanceToTargetWidthString(this.state.battleData[fighter.id])}px` : '5px',
                                             left: `calc(100px * ${this.state.battleData[fighter.id]?.depth} + 50px)`
@@ -744,9 +748,10 @@ class MonsterBattle extends React.Component {
                                     </div>
                                 </div>
                                 { this.state.battleData[this.props.monster.id] && this.state.battleData[this.props.monster.id].pendingAttack && <div className={`weapon-wrapper 
+                                ${this.getMonsterWeaponAnimation(this.state.battleData[this.props.monster.id])}
                                 ${this.state.battleData[this.props.monster.id]?.attackingReverse ? 'attackingReverse' : ''}
                                 ${this.state.battleData[this.props.monster.id]?.aiming ? 'aiming' : ''}
-                                ${(this.state.battleData[this.props.monster.id]?.attacking && this.state.battleData[this.props.monster.id]?.pendingAttack.range === 'close') ? 'swinging' 
+                                ${(this.state.battleData[this.props.monster.id]?.attacking && this.state.battleData[this.props.monster.id]?.pendingAttack.range === 'close') ? 'swinging-left' 
                                 : (this.state.battleData[this.props.monster.id]?.attacking && this.state.battleData[this.props.monster.id]?.pendingAttack.range === 'far' ? 'shooting' : 
                                 '')}`}
                                 style={{
