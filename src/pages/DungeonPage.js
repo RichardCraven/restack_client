@@ -109,7 +109,8 @@ class DungeonPage extends React.Component {
             showModal: false,
             updates: [],
             timeToRespawn: '',
-            respawnUpdateInterval: null
+            respawnUpdateInterval: null,
+            monsterBattleTileId: null
         }
     }
     
@@ -269,6 +270,10 @@ class DungeonPage extends React.Component {
             d.id = e._id
             dungeons.push(d)
         })
+        console.log('all dungeons: ', allDungeons);
+        let meta = getMeta()
+        console.log('selected dungeon: meta', meta);
+        console.log('in respawn monsters, original dungeon: ');
         selectedDungeon = JSON.parse(JSON.stringify(dungeons.find(e=>e.name === 'Primari')));
 
         this.props.boardManager.respawnMonsters(selectedDungeon)
@@ -289,7 +294,7 @@ class DungeonPage extends React.Component {
     }
     setNewRespawnDate = () => {
         console.log('creating respawn date');
-        let soon = new Date().addMinutes(10)
+        let soon = new Date().addMinutes(1)
         let meta = getMeta();
         meta.respawnDate = soon;
         storeMeta(meta)
@@ -357,11 +362,15 @@ class DungeonPage extends React.Component {
         foundIndex = this.props.inventoryManager.inventory.findIndex(e=> e.name === item.name);
         console.log('found item ', foundItem, 'found index: ', foundIndex);
         // debugger
+        console.log('found item, to apply animation class: ', foundItem);
         foundItem.animation = 'consumed';
+        console.log('now: ', this.props.inventoryManager.inventory);
         this.forceUpdate();
+        // debugger
         // this.setState()
         // if(item.type === 'key'){
             setTimeout(()=>{
+                foundItem.animation = '';
                 this.props.inventoryManager.removeItemByIndex(foundIndex)
                 console.log('about to force update');
                 // foundItem.animation = ''
@@ -387,6 +396,7 @@ class DungeonPage extends React.Component {
         this.setState({pending: pendingState})
     }
     refreshTiles = () => {
+        console.log('received call to refresh tiles from board manager');
         let newTiles = this.props.boardManager.tiles,
             newOverlayTiles = this.props.boardManager.overlayTiles
         this.setState({
@@ -394,10 +404,12 @@ class DungeonPage extends React.Component {
             overlayTiles: newOverlayTiles
         })
     }
-    triggerMonsterBattle = (bool) => {
+    triggerMonsterBattle = (bool, tileId) => {
+        console.log('trigger monster battle, bool', bool, 'tileId: ', tileId);
         this.setState({
             keysLocked: bool,
-            inMonsterBattle: bool
+            inMonsterBattle: bool,
+            monsterBattleTileId: tileId
         })
     }
     setMonster = (monsterString) => {
@@ -1102,7 +1114,7 @@ class DungeonPage extends React.Component {
     battleOver = (result) => {
         if(result === 'win'){
             console.log('win result passed');
-            this.props.boardManager.removeDefeatedMonsterTile()
+            this.props.boardManager.removeDefeatedMonsterTile(this.state.monsterBattleTileId)
             this.props.crewManager.checkForLevelUp(this.props.crewManager.crew)
             let meta = getMeta()
             meta.crew = this.props.crewManager.crew;

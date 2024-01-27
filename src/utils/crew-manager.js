@@ -112,7 +112,7 @@ export function CrewManager(){
                         endDate = new Date().addHours(1);
 
                         console.log('MAGIC MISSILE BEGIN!');
-                        console.log('date + 4 hrs:', new Date().addHours(4));
+                        console.log('date + 1 hrs:', new Date().addHours(1));
                         member.specialActions.push({
                             actionType,
                             actionSubtype,

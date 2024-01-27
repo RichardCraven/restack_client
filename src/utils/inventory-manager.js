@@ -581,8 +581,11 @@ export function InventoryManager(){
     }
     this.addItemsByName = (items) => {
         let arr = [];
+        function copy(item){
+            return JSON.parse(JSON.stringify(item))
+        }
         items.forEach(e=>{
-            arr.push(this.allItems[e])
+            arr.push(copy(this.allItems[e]))
         })
         this.inventory = this.inventory.concat(arr);
     }

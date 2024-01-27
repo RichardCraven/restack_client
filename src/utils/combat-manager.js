@@ -465,8 +465,13 @@ export function CombatManager(){
                 }
             },
             manualAttack: function(){
-                this.attack();
-                this.tempo = 1
+                if(this.name === 'Sardonis'){
+                    console.log('sardonis manual attack, clearing interval ', this.interval);
+                }
+                clearInterval(this.interval)
+                // this.tempo = 1;
+                initiateAttack(this);
+                // this.turnCycle();
             },
             manualMoveCooldown: function(){
                 function addSeconds(date, seconds) {
@@ -551,7 +556,6 @@ export function CombatManager(){
                             console.log('djinn at 100, CLEARING INTERVAL ');
                         }
                         clearInterval(this.interval)
-                        // this.aiming = false;
 
                         if(this.name === "Loryastes"  && DEBUG_STEPS === true){
                             console.log('Loryastes [turn] count = 100.. sickness = ', this.destinationSickness);
@@ -805,7 +809,7 @@ export function CombatManager(){
     this.fighterManualAttack = () =>{
         if(!this.selectedFighter) return 
         const fighter = this.combatants[this.selectedFighter.id]
-        console.log('fighter to attack', fighter);
+        // console.log('fighter to attack', fighter);
         fighter.manualAttack();
     }
     this.beginGreeting = () => {
@@ -924,7 +928,7 @@ export function CombatManager(){
         debugger
     }
     this.moveFighterOneSpace = (direction) => {
-        console.log('this.selectedFighter', this.selectedFighter);
+        // console.log('this.selectedFighter', this.selectedFighter);
         if(!this.selectedFighter) return 
         const fighter = this.combatants[this.selectedFighter.id]
         switch(direction){
@@ -951,7 +955,7 @@ export function CombatManager(){
             default:
             break;
         }
-        console.log('in combat manager move ', fighter.name, direction);
+        // console.log('in combat manager move ', fighter.name, direction);
     }
     this.initiateAttack = (caller) => {
         if(caller.dead) return;

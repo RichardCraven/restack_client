@@ -178,7 +178,6 @@ export function BoardManager(){
         return index
     }
     this.setDungeon = (dungeon) => {
-        console.log('setting dungeon', dungeon);
         this.dungeon = dungeon;
     }
     this.setCurrentLevel = (level) => {
@@ -188,6 +187,8 @@ export function BoardManager(){
         this.currentOrientation = orientation;
     }
     this.respawnMonsters = (template) => {
+        // console.log('respawn BLOCKED');
+        // return
         console.log('board manager respawning from template');
         console.log('template: ', template);
         // console.log('this. miniboard: ', this.currentBoard);
@@ -232,13 +233,21 @@ export function BoardManager(){
                 let livePlane = currentLevel;
                 let equivalentTile = livePlane.miniboards[i].tiles.find(tile=> tile.id === t.id)
                 // && )
-                if(t.contains === 'monster' && !this.isMonster(equivalentTile)) {
+                if(t.contains === 'monster' && !this.isMonster(equivalentTile) && this.getIndexFromCoordinates(this.playerTile.location) !== t.id) {
                     
                     equivalentTile.contains = this.getRandomMonster()
+                    equivalentTile.image = this.getImage(equivalentTile.contains) ? this.getImage(equivalentTile.contains) : equivalentTile.contains
+                    this.tiles[t.id] = equivalentTile;
                     // getRandomMonster()
                 }
             })
         })
+        console.log('new tiles: ', currentLevel.miniboards[this.playerTile.boardIndex].tiles);
+        // this.tiles = currentLevel.miniboards[this.playerTile.boardIndex].tiles;
+
+        // this.placePlayer(this.playerTile.location)
+        // this.handleFogOfWar(this.tiles[this.getIndexFromCoordinates(this.playerTile.location)])
+
         this.updateDungeon(this.dungeon);
         this.refreshTiles()
     }
@@ -311,9 +320,11 @@ export function BoardManager(){
         return this.monstersArr.includes(tile.contains)
     })
     this.handleInteraction = (destinationTile) => {
+        console.log('in handle interaction, destination', destinationTile);
         let val = destinationTile.contains
         if(this.monstersArr.includes(destinationTile.contains)) val = 'monster'
         if(this.availableItems.includes(destinationTile.contains)) val = 'item'
+        console.log('val: ', val);
         switch(val){
             case 'door':
                 return 'door';
@@ -323,7 +334,9 @@ export function BoardManager(){
                 return 'way_down';
             case 'monster':
                 this.setMonster(destinationTile.contains)
-                this.triggerMonsterBattle(true)
+                this.triggerMonsterBattle(true, destinationTile.id)
+                return 'impassable';
+
             break;
             case 'minor_gate':
                 console.log('handle gate')
@@ -415,8 +428,8 @@ export function BoardManager(){
                 break;
         }
     }
-    this.removeDefeatedMonsterTile = () => {
-        const tile = this.tiles[this.getIndexFromCoordinates(this.playerTile.location)];
+    this.removeDefeatedMonsterTile = (tileId) => {
+        const tile = this.tiles[tileId];
         this.removeTileFromBoard(tile);
     }
     this.removeTileFromBoard = (tile) => {
@@ -545,7 +558,6 @@ export function BoardManager(){
 
     }
     this.move = (destinationCoords, direction) => {
-        // this.messaging(null)
         const tile = this.tiles[this.getIndexFromCoordinates(this.playerTile.location)];
         const destinationIndex = this.getIndexFromCoordinates(destinationCoords),
         destinationTile = this.tiles[destinationIndex];
@@ -701,7 +713,6 @@ export function BoardManager(){
                 e.id === destinationTile.id + 15 ||
                 // eslint-disable-next-line
                 e.id === destinationTile.id + 30 &&  this.tiles[destinationTile.id + 15].contains !== 'void') {
-                    
                 e.color = this.currentBoard.tiles[e.id].color
                 e.image = e.contains;
             }
@@ -712,7 +723,6 @@ export function BoardManager(){
                 (e.id === destinationTile.id + 14 && this.tiles[destinationTile.id + 15].contains !== 'void' && this.tiles[destinationTile.id - 1].contains !== 'void') ||
                 // eslint-disable-next-line
                 e.id === destinationTile.id + 16 && this.tiles[destinationTile.id + 15].contains !== 'void' && this.tiles[destinationTile.id + 1].contains !== 'void'){   
-
                 e.color = this.currentBoard.tiles[e.id].color
                 e.image = e.contains;
             }
