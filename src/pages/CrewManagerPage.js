@@ -103,8 +103,7 @@ class CrewManagerPage extends React.Component{
   }
   addMember = (index) => {
     let member = this.state.selectedCrewMember
-    let crew = this.state.selectedCrew
-    let idx  = crew.findIndex((e, i)=> e === null && i < 3)
+    let crew = this.state.selectedCrew;
     if(!crew.includes(member)) crew.push(member)
     this.setState({
         selectedCrew: crew
@@ -171,6 +170,7 @@ goBack = () => {
                     {this.state.selectedCrewMember && <div className='giant-portrait' 
                     style={{backgroundImage: "url(" + this.state.selectedCrewMember.portrait + ")"}}>
                         {/* <div className="add-button" onClick={()=>this.addMember()}>+</div> */}
+                        <div className="name">{this.state.selectedCrewMember.name}</div>
                     </div>}
                     {this.state.selectedCrewMember && <div className="details-pane">
                         <div className="description">

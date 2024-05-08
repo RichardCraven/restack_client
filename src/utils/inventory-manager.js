@@ -1,3 +1,7 @@
+function copy(item){
+    return JSON.parse(JSON.stringify(item))
+}
+
 export function InventoryManager(){
     this.tiles = [];
     this.gold = 0;
@@ -338,7 +342,7 @@ export function InventoryManager(){
             subtype: 'charm',
             power: 2,
             animation: null,
-            description: `Beetle charms have a power of 2 and a 60% chance to cast a minor boon on use. <br/> Passive: +2 damage absorbtion for the user and all adjacent allies`
+            description: `Beetle charms have a power of 2 and a 60% chance to cast a minor boon on use. Passive: +2 damage absorbtion for the user and all adjacent allies`
         },
         evilai_charm: {
             type: 'magical',
@@ -348,7 +352,7 @@ export function InventoryManager(){
             subtype: 'charm',
             power: 4,
             animation: null,
-            description: `Evilai charms have a power of 4 and a 100% chance to cast a 2 minor boons and 1 minor curse on use. <br/> Passive: +3 damage and for the user and all adjacent allies & every time user is hit, 35% chance of casting minor curse on wearer`
+            description: `Evilai charms have a power of 4 and a 100% chance to cast 2 minor boons and 1 minor curse on use. Passive: +3 damage for the user and all adjacent allies & every time user is hit, 20% chance of casting minor curse on wearer`
         },
         nukta_charm: {
             type: 'magical',
@@ -358,7 +362,7 @@ export function InventoryManager(){
             subtype: 'charm',
             power: 6,
             animation: null,
-            description: `Nukta charms have a power of 6 and a 50% chance to cast a 1 major boon. <br/> Passive: +4 dexterity for entire crew.`
+            description: `Nukta charms have a power of 6 and a 50% chance to cast a 1 major boon. Passive: +4 dexterity for entire crew.`
         },
         lundi_charm: {
             type: 'magical',
@@ -368,7 +372,7 @@ export function InventoryManager(){
             subtype: 'charm',
             power: 8,
             animation: null,
-            description: `Lundi charms have a power of 8. <br/>  On Use: 4x(70% chance to cast minor boon) <br/> Passive: +4 dexterity for entire crew.`
+            description: `Lundi charms have a power of 8.  On Use: 4x(70% chance to cast minor boon) Passive: +4 dexterity for entire crew.`
         },
         hamsa_charm: {
             type: 'magical',
@@ -378,7 +382,7 @@ export function InventoryManager(){
             subtype: 'charm',
             power: 9,
             animation: null,
-            description: `Hamsa charms have a power of 9. <br/>  On Use: Summon 2 spirit warriors to fight for you <br/> Passive: On being hit, 20% to negate and teleport back 1 space, applies to entire crew.`
+            description: `Hamsa charms have a power of 9.  On Use: Summon 2 spirit warriors to fight for you Passive: On being hit, 20% to negate and teleport back 1 space, applies to entire crew.`
         },
         scarab_charm: {
             type: 'magical',
@@ -388,7 +392,7 @@ export function InventoryManager(){
             subtype: 'charm',
             power: 10,
             animation: null,
-            description: `Scarab charms have a power of 10. <br/>  On Use: Summon 1 djinn to fight for you <br/> Passive: On hit, 20% to cast minor boon, 5% chance cast major boon.`
+            description: `Scarab charms have a power of 10.  On Use: Summon 1 djinn to fight for you Passive: On hit, 20% to cast minor boon, 5% chance cast major boon.`
         },
         demonskull_charm: {
             type: 'magical',
@@ -398,7 +402,7 @@ export function InventoryManager(){
             subtype: 'charm',
             power: 12,
             animation: null,
-            description: `Demonskull charms have a power of 12. <br/>  On Use: Cast 2 random eldritch spells <br/> Passive: Skill cooldowns are doubled, -1 to all stats for wearer.`
+            description: `Demonskull charms have a power of 12.  On Use: Cast 2 random eldritch spells Passive: Skill cooldowns are doubled, -1 to all stats for wearer.`
         },
         //amulets
         lundi_amulet: {
@@ -568,12 +572,11 @@ export function InventoryManager(){
                 const equippedBy = e.equippedBy;
                 let v;
                 if(this.allItems[(e.name.replaceAll(' ', '_'))]){
-                    v = this.allItems[e.name.replaceAll(' ', '_')];
+                    v = copy(this.allItems[e.name.replaceAll(' ', '_')]);
                     v.equippedBy = equippedBy;
                 }
                 return v;
             })
-            console.log('inventory: ', this.inventory   );
             this.gold = data.gold;
             this.shimmering_dust = data.shimmering_dust;
             this.totems = data.totems;
@@ -581,17 +584,15 @@ export function InventoryManager(){
     }
     this.addItemsByName = (items) => {
         let arr = [];
-        function copy(item){
-            return JSON.parse(JSON.stringify(item))
-        }
+        
         items.forEach(e=>{
             arr.push(copy(this.allItems[e]))
         })
         this.inventory = this.inventory.concat(arr);
     }
-    this.addItems = (items) => {
-        this.inventory.concat(items)
-    }
+    // this.addItems = (items) => {
+    //     this.inventory.concat(items)
+    // }
     this.addItem = (item) => {
         this.inventory.push(item);
     }

@@ -13,7 +13,7 @@ import {storeMeta, getMeta, getUserId, getUserName} from '../utils/session-handl
 import { cilCaretRight, cilCaretLeft, cilMenu} from '@coreui/icons';
 import  CIcon  from '@coreui/icons-react';
 
-import { CButton, CFormSelect, CFormInput, CModal, CModalHeader, CModalTitle, CModalBody, CModalFooter} from '@coreui/react';
+import { CButton, CFormSelect, CFormInput, CModal, CModalHeader, CModalTitle, CModalBody} from '@coreui/react';
 import * as images from '../utils/images'
 
 Date.prototype.addHours= function(h){
@@ -151,7 +151,6 @@ class DungeonPage extends React.Component {
                 let end = new Date(a.endDate),
                 now = new Date();
                 if(end - now < 0 && !a.notified){
-                    console.log('pushing update: ', a);
                     updates.push({
                         text: `${member.name} has finished ${a.actionType.text}`,
                         owner: `${member.name}`,
@@ -175,12 +174,7 @@ class DungeonPage extends React.Component {
         })
     }
     componentDidMount(){
-        this.props.crewManager.crew.forEach(c=>{
-            console.log('perc: ', this.props.crewManager.calculateExpPercentage(c))
-        })
         this.props.boardManager.establishAddItemToInventoryCallback(this.addItemToInventory)
-        // this.props.boardManager.establishItemRemovedFromInventoryCallback(this.addItemToInventory)
-
         this.props.boardManager.establishAddTreasureToInventoryCallback(this.addTreasureToInventory)
         this.props.boardManager.establishAddCurrencyToInventoryCallback(this.addCurrencyToInventory)
         this.props.boardManager.establishUpdateDungeonCallback(this.updateDungeon)
@@ -198,9 +192,6 @@ class DungeonPage extends React.Component {
         // this.props.inventoryManager.establishUseConsumableFromInventoryCallback(this.useConsumableFromInventory)
 
         window.addEventListener('beforeunload', this.componentCleanup);
-
-        let now = new Date();
-        // meta.respawnDate = null
         
         let respawnInterval = setInterval(()=>{
             // let meta = getMeta();
@@ -219,18 +210,14 @@ class DungeonPage extends React.Component {
     checkDungeon = async () => {
         const allDungeons = await loadAllDungeonsRequest();
         
-        let dungeons = [],
-            selectedDungeon
+        let dungeons = [];
             
         allDungeons.data.forEach((e, i) => {
             let d = JSON.parse(e.content)
             d.id = e._id
             dungeons.push(d)
         })
-        console.log('dungones', dungeons);
-        selectedDungeon = dungeons.find(e=>e.name === 'Primari');
-
-        console.log('check dungeon: ', selectedDungeon);
+        // const selectedDungeon = dungeons.find(e=>e.name === 'Primari');
     }
     handleRespawnTime = () => {
         let meta = getMeta();
@@ -259,9 +246,7 @@ class DungeonPage extends React.Component {
     }
     respawnMonsters = async () => {
         let dungeons = [],
-        spawnList = [],
-        selectedDungeon,
-        spawnPoint;
+        selectedDungeon;
         
         const allDungeons = await loadAllDungeonsRequest();
 
@@ -270,12 +255,7 @@ class DungeonPage extends React.Component {
             d.id = e._id
             dungeons.push(d)
         })
-        console.log('all dungeons: ', allDungeons);
-        let meta = getMeta()
-        console.log('selected dungeon: meta', meta);
-        console.log('in respawn monsters, original dungeon: ');
         selectedDungeon = JSON.parse(JSON.stringify(dungeons.find(e=>e.name === 'Primari')));
-
         this.props.boardManager.respawnMonsters(selectedDungeon)
     }
     componentWillUnmount(){
@@ -293,8 +273,7 @@ class DungeonPage extends React.Component {
         console.log('meta: ', meta);
     }
     setNewRespawnDate = () => {
-        console.log('creating respawn date');
-        let soon = new Date().addMinutes(1)
+        let soon = new Date().addMinutes(10)
         let meta = getMeta();
         meta.respawnDate = soon;
         storeMeta(meta)
@@ -302,8 +281,7 @@ class DungeonPage extends React.Component {
 
         let respawn = new Date(soon);
         let now = new Date();
-        let diffInMinutes = diff_minutes(respawn, now)
-        let diffInSeconds = diff_seconds(respawn, now)
+        let diffInMinutes = diff_minutes(respawn, now);
 
 
         let respawnString = `${diffInMinutes} m`
@@ -360,31 +338,14 @@ class DungeonPage extends React.Component {
     useConsumableFromInventory = (item) => {
         let foundItem = this.props.inventoryManager.inventory.find(e=> e.name === item.name),
         foundIndex = this.props.inventoryManager.inventory.findIndex(e=> e.name === item.name);
-        console.log('found item ', foundItem, 'found index: ', foundIndex);
-        // debugger
-        console.log('found item, to apply animation class: ', foundItem);
         foundItem.animation = 'consumed';
-        console.log('now: ', this.props.inventoryManager.inventory);
         this.forceUpdate();
-        // debugger
-        // this.setState()
-        // if(item.type === 'key'){
-            setTimeout(()=>{
-                foundItem.animation = '';
-                this.props.inventoryManager.removeItemByIndex(foundIndex)
-                console.log('about to force update');
-                // foundItem.animation = ''
-                this.forceUpdate();
-                this.props.saveUserData();
-            }, 500)
-        // } else {
-        //     this.props.inventoryManager.removeItemByIndex(foundIndex)
-        //     console.log('about to force update');
-        //     // foundItem.animation = ''
-        //     this.forceUpdate();
-        //     this.props.saveUserData();
-        // }
-        
+        setTimeout(()=>{
+            foundItem.animation = '';
+            this.props.inventoryManager.removeItemByIndex(foundIndex)
+            this.forceUpdate();
+            this.props.saveUserData();
+        }, 500)
     }
     updateDungeon = async (dungeon) => {
         await updateDungeonRequest(dungeon.id, dungeon);
@@ -396,7 +357,6 @@ class DungeonPage extends React.Component {
         this.setState({pending: pendingState})
     }
     refreshTiles = () => {
-        console.log('received call to refresh tiles from board manager');
         let newTiles = this.props.boardManager.tiles,
             newOverlayTiles = this.props.boardManager.overlayTiles
         this.setState({
@@ -405,7 +365,6 @@ class DungeonPage extends React.Component {
         })
     }
     triggerMonsterBattle = (bool, tileId) => {
-        console.log('trigger monster battle, bool', bool, 'tileId: ', tileId);
         this.setState({
             keysLocked: bool,
             inMonsterBattle: bool,
@@ -416,8 +375,6 @@ class DungeonPage extends React.Component {
         // monsterString = 'beholder'
         let monster = this.props.monsterManager.getMonster(monsterString), 
         minions = null;
-        console.log('monster supposed to be', monsterString);
-        console.log('monster set to ', monster);
         if(monster && monster.minions){
             minions = [];
             monster.minions.forEach((e,i)=>{
@@ -483,9 +440,6 @@ class DungeonPage extends React.Component {
             meta.minimapIndicators.push(indicatorsGroup)
             storeMeta(meta)
         }
-
-        console.log('indicators group: ', indicatorsGroup);
-
         this.setState({
             levelTracker,
             minimapZoomedTile: null,
@@ -608,7 +562,6 @@ class DungeonPage extends React.Component {
         //     })
         // }
         if(code === 'p'){
-            console.log('go!!');
             let paused = !this.state.paused;
             this.props.combatManager.pauseCombat(paused)
             this.setState({
@@ -666,18 +619,15 @@ class DungeonPage extends React.Component {
                 })
             break;
             default:
-                // console.log(key === ' ')
+                // nathin
             break;
         }
     }
     combatKeyDownHandler = (event) => {
-        let key = event.key, code = event.code
-        let newTiles = [], overlayTiles = [];
+        let key = event.key, code = event.code;
         if(code === 'Space'){
-            // console.log('space');
             this.props.combatManager.fighterManualAttack()
         }
-        // console.log('key: ', key, key === 'p');
         if(key === 'p'){
             let paused = !this.state.paused;
             this.props.combatManager.pauseCombat(paused)
@@ -703,7 +653,7 @@ class DungeonPage extends React.Component {
                 if(this.state.selectedCrewMember) this.props.combatManager.moveFighterOneSpace('right');
             break;
             default:
-                // console.log(key === ' ')
+                // nuttin
             break;
         }
     }
@@ -713,10 +663,8 @@ class DungeonPage extends React.Component {
 
 
     handleHover = (id, type, tile) => {
-        // console.log('tile', tile)
     }
     handleOverlayHover = (id, type, tile) => {
-        // console.log('tile id', id)
         this.setState({
             overlayHoveredTileId: id
         })
@@ -756,27 +704,16 @@ class DungeonPage extends React.Component {
         })
     }
     handleClick = (tile) => {
-        console.log('HANDLE CLICK, SHOULD NOT GET HERE tile:', tile);
-        console.log('tile: ', tile);
-        console.log('is monster: ', this.props.boardManager.isMonster(tile));
+        // nothing
     }
     handleOverlayClick = (tile, event) => {
-        // event.preventDefault();
-        // console.log('meta: ', getMeta());
-        console.log('tile: ', tile);
         if(!this.state.minimapPlaceMapMarkerStarted) return
         // this is for marking the minimap
         
         let minimapIndicators = this.state.minimapIndicators,
         activeMinimapIndex = this.state.minimap.findIndex(e=>e.active),
         indicatorContainer = minimapIndicators[activeMinimapIndex],
-        inputElement = this.state.mapMarkerInput.current
-        console.log('activeMinimapIndex', activeMinimapIndex)
-        console.log('this.state.minimap', this.state.minimap)
-        console.log('minimap indicators: ', this.state.minimapIndicators);
-        console.log('minimap indicators: ', this.state.minimapIndicators, activeMinimapIndex, '->', this.state.minimapIndicators[activeMinimapIndex]);
-        console.log('indicator container: ', indicatorContainer);
-        // debugger
+        inputElement = this.state.mapMarkerInput.current;
         switch(this.state.markerType){
             case 'enemy':
                 indicatorContainer.enemies.push({
@@ -789,7 +726,6 @@ class DungeonPage extends React.Component {
                 console.log('merchant marker not set up yet');
             break;
             case 'gate':
-                console.log('IN GATE');
                 indicatorContainer.gates.push({
                     type: this.props.boardManager.tiles[tile.id].contains,
                     tileId: tile.id
@@ -816,6 +752,9 @@ class DungeonPage extends React.Component {
     }
     handleMemberClick = (member) => {
         let meta = getMeta(), val;
+        if(!member.data){
+            return
+        }
         let foundMember = this.props.crewManager.crew.find(e=>e.type === member.data.type);
         if(foundMember){
             this.props.crewManager.crew.forEach(c=>{
@@ -866,19 +805,16 @@ class DungeonPage extends React.Component {
         switch(item.contains){
             case 'minor_key':
                 if(this.props.boardManager.pending && this.props.boardManager.pending.type === 'minor_gate'){
-                    console.log(this.props.boardManager.pending)
-                    console.log('OPEN MINOR GATE')
-                    // debugger
+                    // nothing
                 }
             break;
             case 'ornate_key':
                 if(this.props.boardManager.pending && this.props.boardManager.pending.type === 'gate' && this.props.boardManager.pending.subtype === 'ornate'){
-                    console.log(this.props.boardManager.pending)
-                    console.log('OPEN ORNATE GATE')
+                    // nothing
                 }
             break;
             default:
-                // console.log('clicked ', item, 'DUNGEON:', this.props.boardManager.dungeon)
+                // nothin
             break;
         }
     }
@@ -1020,6 +956,12 @@ class DungeonPage extends React.Component {
                     }
                 }
             })
+            const firstCrewMember = this.props.crewManager.crew[0];
+            this.handleMemberClick({data:firstCrewMember})
+            setTimeout(()=>{
+                this.toggleLeftSidePanel();
+                this.toggleRightSidePanel();
+            }, 1000)
         } else {
             alert('no valid dungeon!')
         }
@@ -1113,7 +1055,6 @@ class DungeonPage extends React.Component {
     }
     battleOver = (result) => {
         if(result === 'win'){
-            console.log('win result passed');
             this.props.boardManager.removeDefeatedMonsterTile(this.state.monsterBattleTileId)
             this.props.crewManager.checkForLevelUp(this.props.crewManager.crew)
             let meta = getMeta()
@@ -1245,7 +1186,6 @@ class DungeonPage extends React.Component {
         })) return 'in-progress'
     }
     getSubtypeCountElement = (subtype) => {
-        let numeral;
         let arr = ['zero','one','two','three','four','five','six','seven','eight','nine']
         
         return <div className="numeral" style={{backgroundImage: `url(${images[arr[subtype.count]]})`}}></div>
@@ -1263,8 +1203,8 @@ class DungeonPage extends React.Component {
         const startDate = new Date(action.startDate),
         endDate = new Date(action.endDate);
         let diffInMilli = endDate - startDate,
-        diffInMinutes = diffInMilli / (1000 * 60),
-        diffInHours = diffInMinutes / (60)
+        diffInMinutes = diffInMilli / (1000 * 60);
+        // diffInHours = diffInMinutes / (60)
         let currentTime = new Date()
         let minutesElapsed = (currentTime - startDate) / (1000 * 60)
         let percentageComplete = Math.ceil(minutesElapsed/diffInMinutes*100);
@@ -1733,7 +1673,8 @@ class DungeonPage extends React.Component {
                 </div>
                 <div  className="overlay-board" style={{
                     width: this.state.boardSize+'px', height: this.state.boardSize+ 'px',
-                    backgroundColor: 'transparent'
+                    backgroundColor: 'transparent',
+                    pointerEvents: this.state.minimapPlaceMapMarkerStarted ? 'auto' : 'none'
                     }}>
                     {this.state.overlayTiles && this.state.overlayTiles.map((tile, i) => {
                         return <Tile 

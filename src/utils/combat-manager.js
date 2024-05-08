@@ -931,6 +931,7 @@ export function CombatManager(){
         // console.log('this.selectedFighter', this.selectedFighter);
         if(!this.selectedFighter) return 
         const fighter = this.combatants[this.selectedFighter.id]
+        if(fighter.dead) return
         switch(direction){
             case 'up':
                 fighter.position--
@@ -958,7 +959,7 @@ export function CombatManager(){
         // console.log('in combat manager move ', fighter.name, direction);
     }
     this.initiateAttack = (caller) => {
-        if(caller.dead) return;
+        if(caller.dead || !caller.targetId) return;
         if(this.fighterAI.roster[caller.name]){
             this.fighterAI.roster[caller.name].initiateAttack(caller, this.combatants, this.hitsTarget, this.missesTarget);
             return

@@ -2,14 +2,12 @@ import React, {useState, useEffect} from 'react'
 
 import { Redirect } from "react-router-dom";
 
-// import crudeMap from "../assets/high_res_images/mj_graphics/crude_map.png";
-import schematic from "../assets/high_res_images/mj_graphics/schematics/schematic 1.png";
-import doorSequence1 from "../assets/high_res_images/mj_graphics/doorway/d1.png";
-import doorSequence2 from "../assets/high_res_images/mj_graphics/doorway/d2.png";
-import doorSequence3 from "../assets/high_res_images/mj_graphics/doorway/d3.png";
+// import schematic from "../assets/high_res_images/mj_graphics/schematics/schematic 1.png";
+// import doorSequence1 from "../assets/high_res_images/mj_graphics/doorway/d1.png";
+// import doorSequence2 from "../assets/high_res_images/mj_graphics/doorway/d2.png";
+// import doorSequence3 from "../assets/high_res_images/mj_graphics/doorway/d3.png";
 
 import Typewriter from "../utils/typewriter";
-// import crudeMap from "../assets/high_res_images/mj_graphics/crude_map.png";
 
 // INTRO scene 1
 import darkForest1 from '../assets/high_res_images/mj_graphics/intro/1_in a dark forest/darkForest1.png'
@@ -21,7 +19,6 @@ import darkForest6 from '../assets/high_res_images/mj_graphics/intro/1_in a dark
 
 // INTRO scene 2
 import crudeMap1 from '../assets/high_res_images/mj_graphics/intro/2_a map was found/crude map 1.png'
-import crudeMap2 from '../assets/high_res_images/mj_graphics/intro/2_a map was found/crude map 2.png'
 import crudeMap3 from '../assets/high_res_images/mj_graphics/intro/2_a map was found/crude map 3.png'
 
 // INTRO scene 3
@@ -35,7 +32,6 @@ import braveSouls5 from '../assets/high_res_images/mj_graphics/intro/3_brave sou
 import encounter1 from '../assets/high_res_images/mj_graphics/intro/4_encounter a tower/encounter 1.png'
 import encounter2 from '../assets/high_res_images/mj_graphics/intro/4_encounter a tower/encounter 2.png'
 import encounter3 from '../assets/high_res_images/mj_graphics/intro/4_encounter a tower/encounter 3.png'
-// import encounter4 from '../assets/high_res_images/mj_graphics/intro/4_encounter a tower/encounter 4.png'
 
 // INTRO scene 5
 import passage1 from '../assets/high_res_images/mj_graphics/intro/5_a passage down/passage down 1.png'
@@ -320,8 +316,88 @@ export default function NarrativeSequence(props) {
         })
     }
 
+    const runSequence = (type) => {
+        let cloneArray;
+        switch(type){
+            case 'intro':
+                cloneArray =  Array.from(introSequence);
+            break;
+            case 'death': 
+            cloneArray =  Array.from(deathSequence);
+            break;
+            default:
+                console.log('NO TYPE'); return
+        }
+    
+        let counter;
+        const fireItOff = () => {
+            if(!cloneArray) return; 
+            // let sequence = counter % 2 === 1 ? introSequenceOdd.shift() : introSequenceEven.shift()
+            let sequence = cloneArray.shift();
+            if(sequence.id % 2 === 1){
+                setCurrentOddSequence(sequence)
+            } else {
+                setCurrentEvenSequence(sequence)
+            }
+            setCurrentSequence(sequence);
+            counter = sequence.id;
+    
+            let nextSequence = cloneArray.find(e=>e.id === counter + 1)
+            if(counter % 2 === 0 && nextSequence){
+                delay(1.5).then(()=>{
+                    setCurrentOddSequence(nextSequence)
+                })
+            } else if(counter > 1 && nextSequence){
+                delay(1.5).then(()=>{
+                    setCurrentEvenSequence(nextSequence)
+                })
+            }
+    
+            delay(4).then(()=>{
+                if(cloneArray.length){
+                    fireItOff();
+                } else {
+                    switch(type){
+                        case 'intro':
+                            props.endIntroSequence();
+                        break;
+                        case 'death': 
+                            props.endDeathSequence();
+                        break;
+                        default:
+                            console.log('NO TYPE'); return
+                    }
+                    endSequenceAndNav();
+                }
+            })
+        }
+        fireItOff();
+        const endSequenceAndNav = () => {
+            switch(type){
+                case 'intro':
+                    props.endIntroSequence();
+                    setNavToDungeon(true)
+                break;
+                case 'death': 
+                    setWreckImage(true)
+                    delay(0.85).then(()=>{
+                        setMoreWrecked(true)
+                        delay(1).then(()=>{
+    
+                            setFadeOutLastFrame(true);
+                            setTimeout(()=>{
+                                props.endDeathSequence();
+                                setNavToLanding(true)
+                            }, 700)
+                        })
+                    })
+                break;
+                default:
+                    console.log('NO TYPE'); return
+            }
+        }
+    }
   useEffect(()=> {
-    console.log('in use effect');
     switch(props.sequenceType){
         case 'intro':
             setCurrentOddSequence(introSequence[0])
@@ -332,131 +408,19 @@ export default function NarrativeSequence(props) {
                 runSequence('intro');
             })
             props.beginIntroSequence();
-            console.log('commence intro sequence');
         break;
         case 'death':
             setCurrentOddSequence(deathSequence[0])
-            // setCurrentEvenSequence(deathSequence[0])
-
             delay(1).then(()=>{
                 setFadeInFirstFrame(true);
                 runSequence('death');
             })
             props.beginDeathSequence();
-            console.log('commence death sequence');
         break;
         default:
-
         break;
     }
-
-    
-
-    
-  }, [])
-
-  useEffect(()=> {
-    console.log('NOW current sequence: ', currentSequence, 'props: ', props.sequenceType);
-  }, [currentSequence])
-  const runSequence = (type) => {
-
-    // setCurrentOddSequence(introSequence[0])
-    // setCurrentEvenSequence(introSequence[1])
-
-    console.log('in sequence');
-
-    let cloneArray;
-    switch(type){
-        case 'intro':
-            cloneArray =  Array.from(introSequence);
-        break;
-        case 'death': 
-        cloneArray =  Array.from(deathSequence);
-        break;
-        default:
-            console.log('NO TYPE'); return
-            break;
-    }
-
-    // console.log('arr:', arr);
-
-    let counter;
-    const fireItOff = () => {
-        if(!cloneArray) return; 
-        // let sequence = counter % 2 === 1 ? introSequenceOdd.shift() : introSequenceEven.shift()
-        let sequence = cloneArray.shift()
-        
-        console.log('sequence: ', sequence);
-        if(sequence.id % 2 === 1){
-            setCurrentOddSequence(sequence)
-        } else {
-            setCurrentEvenSequence(sequence)
-        }
-        setCurrentSequence(sequence);
-        counter = sequence.id;
-
-        let nextSequence = cloneArray.find(e=>e.id === counter + 1)
-        if(counter % 2 === 0 && nextSequence){
-            delay(1.5).then(()=>{
-                setCurrentOddSequence(nextSequence)
-            })
-        } else if(counter > 1 && nextSequence){
-            delay(1.5).then(()=>{
-                setCurrentEvenSequence(nextSequence)
-            })
-        }
-
-        delay(4).then(()=>{
-            console.log('go');
-            // console.log('current: ', sequence);
-            // console.log('but current sequence: ', currentSequence);
-            if(cloneArray.length){
-                console.log('arr.length: ', cloneArray.length);
-                fireItOff();
-            } else {
-                switch(type){
-                    case 'intro':
-                        props.endIntroSequence();
-                    break;
-                    case 'death': 
-                        props.endDeathSequence();
-                    break;
-                    default:
-                        console.log('NO TYPE'); return
-                        break;
-                }
-                endSequenceAndNav();
-            }
-        })
-    }
-    fireItOff();
-    const endSequenceAndNav = () => {
-        console.log('end sequence');
-        switch(type){
-            case 'intro':
-                props.endIntroSequence();
-                setNavToDungeon(true)
-            break;
-            case 'death': 
-                setWreckImage(true)
-                delay(0.85).then(()=>{
-                    setMoreWrecked(true)
-                    delay(1).then(()=>{
-
-                        setFadeOutLastFrame(true);
-                        setTimeout(()=>{
-                            props.endDeathSequence();
-                            setNavToLanding(true)
-                        }, 700)
-                    })
-                })
-            break;
-            default:
-                console.log('NO TYPE'); return
-                break;
-        }
-    }
-  }
+  }, [deathSequence, introSequence, props])
 
   return (
     <div className="intro-pane pane">

@@ -118,7 +118,9 @@ export default function LoginPage(props) {
                 _id: registerResponse.data._id,
                 // token: registerResponse.data.token,
                 isAdmin: registerResponse.data.isAdmin,
-                metadata: registerResponse.data.metadata
+                metadata: registerResponse.data.metadata,
+                username: registerName,
+                password: registerPass1
               }
 
               setValidUser(registerRes)
@@ -130,6 +132,16 @@ export default function LoginPage(props) {
             }
           }
         }
+      break;
+      case null:
+        setLname({x: '-200px', opacity: 0})
+        setLpass({x: '-200px', opacity: 0})
+
+        setRname({x: '200px', opacity: 0})
+        setRpass1({x: '200px', opacity: 0})
+        setRpass2({x: '200px', opacity: 0})
+
+        setPane(null)
       break;
       default:
       break;
@@ -155,9 +167,11 @@ export default function LoginPage(props) {
     }, 90)
 
     console.log('loginName', loginName, 'loginPass', 'validUser: ', validUser);
+    console.log('ok but registername: ', registerName, 'registerPass: ', registerPass1);
     props.refreshAllUsers()
     let scopedValidUser = validUser
     setTimeout(()=>{
+      console.log('barnacle baily');
       // setSuccessConfirmation({x: '200px', opacity: 0})
 
       // setLname({x: '0px', opacity: 1})
@@ -165,7 +179,7 @@ export default function LoginPage(props) {
       //       setLpass({x: '0px', opacity: 1})
       //     }, 90)
       // props.login({username: registerName, password:registerPass1})
-      console.log('valid user', validUser);
+      console.log('valid user',   );
       console.log('scopedValidUser', scopedValidUser);
       console.log('ok try this: ', registerRes);
       props.loginFromRegister(registerRes)
@@ -257,10 +271,30 @@ export default function LoginPage(props) {
                   </div>
           }
           <div className="buttons-bar">
-              <div>
+              {paneToggle === null && <div className="space-around">
                 <button className="login-button button" onClick={() => handleClick('login')}>Login</button>
                 <button className="register-button button" onClick={() => handleClick('register')}>Register</button>
-              </div>
+              </div>}
+              {paneToggle === 'login' && 
+                <animated.div className="space-around" style={{
+                transform: loginInputPropsName.x.interpolate((x) => `translate3d(${x},0,0)`),
+                opacity: loginInputPropsName.opacity,
+                transition: 'opacity 0.1s'
+                }}>
+                  <button className="back-button button" onClick={() => handleClick(null)}>Back</button>
+                  <button className="login-button button" onClick={() => handleClick('login')}>Submit</button>
+                </animated.div>
+              }
+              {paneToggle === 'register' && 
+                <animated.div className="space-around" style={{
+                  transform: registrationInputPropsName.x.interpolate((x) => `translate3d(${x},0,0)`),
+                  opacity: registrationInputPropsName.opacity,
+                  transition: 'opacity 0.1s'
+                  }}>
+                  <button className="back-button button" onClick={() => handleClick(null)}>Back</button>
+                  <button className="register-button button" onClick={() => handleClick('register')}>Submit</button>
+                </animated.div>
+              }
           </div>
         </div>
       </div>

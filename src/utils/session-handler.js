@@ -1,9 +1,4 @@
 function storeSessionData(id, token, isAdmin, username, metadata){
-    // let bool = false;
-    // if(parseInt(isAdmin, 10)){
-    //     bool = true;
-    // }
-    console.log('token:', token, 'username', username)
     sessionStorage.setItem('userId', id)
     sessionStorage.setItem('userName', username)
     sessionStorage.setItem('isAdmin', isAdmin.toString())
@@ -11,7 +6,6 @@ function storeSessionData(id, token, isAdmin, username, metadata){
 }
 
 function storeMeta(metadata){
-    console.log('storing meta: ', metadata)
     sessionStorage.setItem('metadata', JSON.stringify(metadata))
 }
 function getMeta(){

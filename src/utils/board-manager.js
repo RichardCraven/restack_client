@@ -142,9 +142,7 @@ export function BoardManager(){
     this.currentLevel = {}
     
     this.getActiveDungeon = () => {
-        console.log('get active dungeon');
-        
-        console.log('this.dungeon: ', this.dungeon)
+        // nothin
     }
     
     this.getCoordinatesFromIndex = (index) =>{
@@ -187,79 +185,31 @@ export function BoardManager(){
         this.currentOrientation = orientation;
     }
     this.respawnMonsters = (template) => {
-        // console.log('respawn BLOCKED');
-        // return
-        console.log('board manager respawning from template');
-        console.log('template: ', template);
-        // console.log('this. miniboard: ', this.currentBoard);
         let currentOrientation = this.currentOrientation
         let currentLevel = currentOrientation === 'F' ? this.currentLevel.front : this.currentLevel.back
-        console.log('current level: ', currentLevel);
-        console.log('current lebel.miniboards: ', currentLevel.miniboards);
-
-        let foundPlane;
+        let foundTemplatePlane;
         template.levels.forEach((templateLevel, templateIndex)=>{
             let front = templateLevel.front
             let back = templateLevel.back
             let relevantPlane = currentOrientation === 'F' ? front : back
             if(relevantPlane.name === currentLevel.name){
-                console.log('FOUND!');
-                foundPlane = relevantPlane
+                foundTemplatePlane = relevantPlane
             }
-            // if(currentLevel.id === templateLevel.id){
+        })
+        let templateBoard = foundTemplatePlane.miniboards[this.playerTile.boardIndex]
+        templateBoard.tiles.forEach(templateTile=>{
+            let equivalentTile = currentLevel.miniboards[this.playerTile.boardIndex].tiles.find(tile=> tile.id === templateTile.id)
+            if(templateTile.contains === 'monster' && !this.isMonster(equivalentTile) && this.getIndexFromCoordinates(this.playerTile.location) !== templateTile.id) {
                 
-            //     if(front.name === currentLevel.name){
-            //         console.log('found front! ', front, currentLevel);
-            //     }
-            //     if(back.name === currentLevel.name){
-            //         console.log('found back! ', back, currentLevel);
-            //     }
-            //     console.log('found for id ', templateLevel.id);
-            //     this.currentLevel.miniboards.forEach((e,i)=>{
-            //         let equivalent = currentOrientation === 'F' ? front : back
-            //         equivalent.tiles.forEach(t=>{
-            //             console.log('tile', t);
-            //         })
-            //         // e.tiles.forEach()
-            //     })
-            // }
+                equivalentTile.contains = this.getRandomMonster()
+                equivalentTile.image = this.getImage(equivalentTile.contains) ? this.getImage(equivalentTile.contains) : equivalentTile.contains
+                this.tiles[templateTile.id] = equivalentTile;
+            }
         })
-        console.log('found plane: ', foundPlane);
-        foundPlane.miniboards.forEach((templateMiniBoard, i) => {
-            templateMiniBoard.tiles.forEach(t=>{
-                // if(t.contains !== 'void' && t.contains !== null){
-                //     console.log('t: ', t,  t.contains);
-                // }
-                let livePlane = currentLevel;
-                let equivalentTile = livePlane.miniboards[i].tiles.find(tile=> tile.id === t.id)
-                // && )
-                if(t.contains === 'monster' && !this.isMonster(equivalentTile) && this.getIndexFromCoordinates(this.playerTile.location) !== t.id) {
-                    
-                    equivalentTile.contains = this.getRandomMonster()
-                    equivalentTile.image = this.getImage(equivalentTile.contains) ? this.getImage(equivalentTile.contains) : equivalentTile.contains
-                    this.tiles[t.id] = equivalentTile;
-                    // getRandomMonster()
-                }
-            })
-        })
-        console.log('new tiles: ', currentLevel.miniboards[this.playerTile.boardIndex].tiles);
-        // this.tiles = currentLevel.miniboards[this.playerTile.boardIndex].tiles;
-
-        // this.placePlayer(this.playerTile.location)
-        // this.handleFogOfWar(this.tiles[this.getIndexFromCoordinates(this.playerTile.location)])
-
         this.updateDungeon(this.dungeon);
         this.refreshTiles()
     }
     this.initializeTilesFromMap = (boardIndex, spawnTileIndex) => {
-        // const getRandomMonster = () => {
-        //     // return this.monstersArr[0]
-
-
-        //     let idx = Math.floor(Math.random()*this.monstersArr.length);
-        //     const monster = this.monstersArr[idx];
-        //     return monster
-        // }
         const getRandomItem = () => {
             const idx = Math.floor(Math.random()*this.availableItems.length),
             item = this.availableItems[idx];
@@ -279,7 +229,6 @@ export function BoardManager(){
             let tile = board.tiles[i]
             if(tile.contains === 'monster'){
                 tile.contains = this.getRandomMonster();
-                console.log('tile.contains: ', tile);
             }
             if(tile.contains === 'gate') tile.contains = 'minor_gate';
             if(tile.contains === 'lantern'){
@@ -320,11 +269,9 @@ export function BoardManager(){
         return this.monstersArr.includes(tile.contains)
     })
     this.handleInteraction = (destinationTile) => {
-        console.log('in handle interaction, destination', destinationTile);
         let val = destinationTile.contains
         if(this.monstersArr.includes(destinationTile.contains)) val = 'monster'
         if(this.availableItems.includes(destinationTile.contains)) val = 'item'
-        console.log('val: ', val);
         switch(val){
             case 'door':
                 return 'door';
@@ -336,10 +283,7 @@ export function BoardManager(){
                 this.setMonster(destinationTile.contains)
                 this.triggerMonsterBattle(true, destinationTile.id)
                 return 'impassable';
-
-            break;
             case 'minor_gate':
-                console.log('handle gate')
                 this.handleGate(destinationTile);
                 return 'impassable';
             case 'item':
@@ -375,7 +319,6 @@ export function BoardManager(){
                 } else{
                     treasureFactor = 1
                 }
-                console.log('treasureFactor: ', treasureFactor);
                 let treasureItems;
                 switch (treasureFactor){
                     case 4:
@@ -442,14 +385,15 @@ export function BoardManager(){
         } else {
             this.dungeon.levels.find(e=>e.id === this.currentLevel.id).back.miniboards.find(b=>b.id === this.currentBoard.id).tiles[tile.id].contains = null;
         }
+        // debugger
         this.updateDungeon(this.dungeon);
+        this.refreshTiles();
     }
     this.handleGate = (tile) => {
         if(!this.activeInteractionTile) this.activeInteractionTile = tile;
         if(this.pending && this.pending.type === 'minor_gate'){
             this.messaging('This gate requires a minor key');
             let hasKey = false, key;
-            console.log('inventory: ', this.getCurrentInventory(), this.getCurrentInventory().find(e=>e.name==='minor key'));
             if(this.getCurrentInventory().find(e=>e.name==='minor key')){
                 hasKey = true;
                 key = this.getCurrentInventory().find(e=>e.name==='minor key');
@@ -461,10 +405,7 @@ export function BoardManager(){
                 this.activeInteractionTile = tile;
                 this.broadcastUseConsumableFromInventory(key)
                 this.refreshTiles();
-
-                console.log('tile: ', tile);
                 this.tiles[tile.id] = tile;
-                console.log('now tiles are ', this.tiles);
                 if(this.currentOrientation === 'F'){
                     this.dungeon.levels.find(e=>e.id === this.currentLevel.id).front.miniboards.find(b=>b.id === this.currentBoard.id).tiles[tile.id].contains = tile.contains;
                 } else {
@@ -534,22 +475,18 @@ export function BoardManager(){
         if(rightTile && highlightColor(rightTile)) rightTile.color = highlightColor(rightTile);
         if(topRow) topRow.forEach((t, i)=>{ 
             if(i === 0){
-                // console.log('top left', t)
                 if(topRow[1].contains === 'void' && leftTile.contains === 'void') return
             }
             if(i === 2){
-                // console.log('top right', t)
                 if(topRow[1].contains === 'void' && rightTile.contains === 'void') return
             }
             if(highlightColor(t))t.color = highlightColor(t)
         })
         if(bottomRow) bottomRow.forEach((t, i)=>{if(highlightColor(t)){
             if(i === 0){
-                // console.log('bot left', t)
                 if(bottomRow[1].contains === 'void' && leftTile.contains === 'void') return
             }
             if(i === 2){
-                // console.log('bot right', t)
                 if(bottomRow[1].contains === 'void' && rightTile.contains === 'void') return
             }
             t.color = highlightColor(t)}

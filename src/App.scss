@@ -120,6 +120,23 @@ button{
       top: 25px;
       width: 200%;
     }
+    .space-around{
+      justify-content: space-around;
+      display: flex;
+    }
+    .buttons-bar{
+      width: 200px;
+      // border: 1px solid red;
+      .back-button{
+        border: none;
+        background: none;
+        display: flex;
+        justify-content: space-around;
+        &:hover{
+          color: blue;
+        }
+      }
+    }
   }
   .login-button{
     margin-right: 30px;
@@ -440,6 +457,13 @@ button{
           background-size: 100% 100%;
           margin-right: 15px;
           position: relative;
+          .name{
+            position: absolute;
+            bottom: -50px;
+            left: 0;
+            font-size: 20px;
+            width: 100%;
+          }
           .add-button{
             position: absolute;
             bottom: 0;

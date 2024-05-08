@@ -52,7 +52,6 @@ export function AnimationManager(){
         }, 1000)
     }
     this.triggerTileAnimation_line = (tileId, color = null) => {
-        let tile = this.tiles.find(e=>e.id === tileId)
         this.tileOn(tileId, 'line', color);
         setTimeout(()=>{
             this.tileOff(tileId)

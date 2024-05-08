@@ -25,7 +25,7 @@ import * as images from '../src/utils/images'
 function App(props) {
 const [loggedIn, setLoggedIn] = useState(!!getUserId())
 const [menuTrayExpanded, setMenuTrayExpanded] = useState(false)
-const [isAdmin, setIsAdmin] = useState(sessionStorage.getItem('isAdmin') === 'true' ? true : false)
+// const [isAdmin, setIsAdmin] = useState(sessionStorage.getItem('isAdmin') === 'true' ? true : false)
 const [showCoordinates, setShowCoordinates] = useState(false)
 const [allUsers, setAllUsers] = useState([])
 const [showToolbar, setShowToolbar] = useState(true)
@@ -52,10 +52,17 @@ const logout = () => {
   return <Redirect to="/login" />
 }
 const loginFromRegister = (user) => {
+  console.log('in loginFromRegister (APP) user: ', user);
+  console.log('user metadata: ', JSON.parse(user.metadata));
   setTimeout(()=>{
+    console.log('in timeout');
     storeSessionData(user._id, user.token, user.isAdmin, user.username, user.metadata)
     setLoggedIn(true)
-  })
+    // setIsAdmin(JSON.parse(sessionStorage.getItem('isAdmin') === 'true' ))
+    history.push({
+      pathname: '/landing'
+    })
+  }, 500)
 }
 const login = (userCredentials) => {
   let validUser = null;
@@ -69,7 +76,7 @@ const login = (userCredentials) => {
     setTimeout(()=>{
       storeSessionData(validUser._id, validUser.token, validUser.isAdmin, validUser.username, validUser.metadata)
       setLoggedIn(true)
-      setIsAdmin(JSON.parse(sessionStorage.getItem('isAdmin') === 'true' ))
+      // setIsAdmin(JSON.parse(sessionStorage.getItem('isAdmin') === 'true' ))
       history.push({
         pathname: '/landing'
       })
@@ -108,8 +115,6 @@ const saveUserData = async () => {
     shimmering_dust: props.inventoryManager.shimmering_dust,
     totems: props.inventoryManager.totems
   }
-  console.log('props.crewManager: ', props.crewManager);
-  console.log('about to save crew as ', props.crewManager.crew);
   if(props.crewManager.crew.length === 0){
     console.log('wtf');
     debugger
@@ -126,31 +131,26 @@ const goHome = () => {
     pathname: '/landing'
   })
 }
-const toggleShowCoordinates = () => {
-  setMenuTrayExpanded(false);
-  setShowCoordinates(!showCoordinates)
-}
+// const toggleShowCoordinates = () => {
+//   setMenuTrayExpanded(false);
+//   setShowCoordinates(!showCoordinates)
+// }
 const setNarrativeSequence = (type) => {
-  console.log('setting narrative sequence: ', type);
   setNarrativeSequenceType(type)
   if(type === 'death'){
     beginDeathSequence()
   }
 }
 const beginIntroSequence = () => {
-  console.log('begin intro sequence');
   setShowToolbar(false);
 }
 const endIntroSequence = () => {
-  console.log('end intro sequence');
   setShowToolbar(true);
 }
 const beginDeathSequence = () => {
-  console.log('begin Death sequence');
   setShowToolbar(false);
 }
 const endDeathSequence = () => {
-  console.log('end death sequence');
   setShowToolbar(true);
 }
 const toggleMenuTray = () => {
