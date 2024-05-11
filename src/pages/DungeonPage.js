@@ -2,6 +2,7 @@ import React from 'react'
 import '../styles/dungeon-board.scss'
 import Tile from '../components/tile'
 import MonsterBattle from './sub-views/MonsterBattle';
+import ExpositionPane from './sub-views/ExpositionPane';
 import {
     loadAllDungeonsRequest,
     loadDungeonRequest,
@@ -13,7 +14,7 @@ import {storeMeta, getMeta, getUserId, getUserName} from '../utils/session-handl
 import { cilCaretRight, cilCaretLeft, cilMenu} from '@coreui/icons';
 import  CIcon  from '@coreui/icons-react';
 
-import { CButton, CFormSelect, CFormInput, CModal, CModalHeader, CModalTitle, CModalBody} from '@coreui/react';
+import { CButton, CFormSelect, CFormInput, CModal, CModalHeader, CModalTitle, CModalBody, CTabPane, CTabContent} from '@coreui/react';
 import * as images from '../utils/images'
 
 Date.prototype.addHours= function(h){
@@ -105,12 +106,14 @@ class DungeonPage extends React.Component {
             descriptionText: '',
             actionsTrayExpanded: false,
             actionMenuExpanded: '',
-            modalType: 'Updates',
+            modalType: '',
             showModal: false,
             updates: [],
             timeToRespawn: '',
             respawnUpdateInterval: null,
-            monsterBattleTileId: null
+            monsterBattleTileId: null,
+            setMemberRitualOptions: null,
+            ritualWrecked: false
         }
     }
     
@@ -169,6 +172,7 @@ class DungeonPage extends React.Component {
                 crewSize: meta.crew.length,
                 minimap,
                 updates,
+                modalType: updates.length > 0 ? 'Updates' : '',
                 showModal: updates.length > 0
             }
         })
@@ -184,6 +188,7 @@ class DungeonPage extends React.Component {
         this.props.boardManager.establishTriggerMonsterBattleCallback(this.triggerMonsterBattle)
         this.props.boardManager.establishSetMonsterCallback(this.setMonster)
         this.props.boardManager.establishGetCurrentInventoryCallback(this.getCurrentInventory)
+        this.props.boardManager.establishRitualEncounterCallback(this.triggerRitualEncounter)
 
         this.props.boardManager.establishBoardTransitionCallback(this.boardTransition)
         this.props.boardManager.establishLevelChangeCallback(this.handleLevelChange)
@@ -548,10 +553,14 @@ class DungeonPage extends React.Component {
     // transform: perspective(3cm) rotateX(16deg) rotateY(0deg) rotateZ(0deg)
 
     keyDownHandler = (event) => {
-        if(this.state.keysLocked){
+        console.log('event: ', event,  'keys locked: ', this.state.keysLocked);
+        if(this.state.keysLocked && this.state.inMonsterBattle){
             this.combatKeyDownHandler(event);
             return
         }
+
+        if(this.state.keysLocked) return
+        console.log('chi');
         let key = event.key, code = event.code
         let newTiles = [], overlayTiles = [];
         // if(code === 'Space'){
@@ -568,7 +577,15 @@ class DungeonPage extends React.Component {
                 paused
             })
         }
+        if(code === 'Space'){
+            console.log('SPACEEE');
+            // console.log('key: ', key);
+            this.checkWhichSideOfBoard();
+        }
         switch(key){
+            case 'Space':
+            console.log('billy jessup');
+            break;
             case 'Tab':
                 event.preventDefault();
                 if(this.monsterBattleComponentRef.current) this.monsterBattleComponentRef.current.tabToFighter();
@@ -705,6 +722,7 @@ class DungeonPage extends React.Component {
     }
     handleClick = (tile) => {
         // nothing
+        console.log('tile: ', tile);
     }
     handleOverlayClick = (tile, event) => {
         if(!this.state.minimapPlaceMapMarkerStarted) return
@@ -749,6 +767,23 @@ class DungeonPage extends React.Component {
             minimapIndicators,
             minimapPlaceMapMarkerStarted: false
         })
+    }
+
+    handleMemberClickRitual = (member) => {
+        console.log('member: ', member);
+        this.setState({
+            setMemberRitualOptions: member.data
+        })
+        setTimeout(()=>{
+            console.log('equal? ', member === this.state.setMemberRitualOptions);
+        }, 1000)
+    }
+    learnNewRitual = (magicUser) => {
+        console.log(magicUser.name, 'learns a new ritual');
+        this.setState({ritualWrecked: true})
+        setTimeout(()=>{
+            this.setState({ritualWrecked: false}) 
+        }, 1500)
     }
     handleMemberClick = (member) => {
         let meta = getMeta(), val;
@@ -1301,28 +1336,49 @@ class DungeonPage extends React.Component {
         </div>
     }
     onUpdateModalClosed = () => {
-        const meta = getMeta();
-        let updates = this.state.updates;
-        let crew = meta.crew;
-        crew.forEach(c=>{
-            if(updates.some(e=>e.owner === c.name)){
-                let update = updates.find(e=>e.owner === c.name)
-                let ref = c.specialActions.find(e=> e.actionType.type === update.actionType && !e.notified)
-                ref.notified = true;
-            }
+        switch(this.state.modalType){
+            case 'Updates':
+                const meta = getMeta();
+                let updates = this.state.updates;
+                let crew = meta.crew;
+                crew.forEach(c=>{
+                    if(updates.some(e=>e.owner === c.name)){
+                        let update = updates.find(e=>e.owner === c.name)
+                        let ref = c.specialActions.find(e=> e.actionType.type === update.actionType && !e.notified)
+                        ref.notified = true;
+                    }
+                })
+                meta.crew = crew;
+                this.props.crewManager.crew = crew;
+                storeMeta(meta);
+                this.props.saveUserData();
+                this.setState({showModal: false})
+            break;
+            case 'Magic':
+                this.setState({keysLocked: false})
+            break;
+        }
+    }
+    checkWhichSideOfBoard = () => {
+        let side = this.props.boardManager.playerTile.location[0] < 22 ? 'top' : 'bottom'
+        // console.log('side of board: ', side);
+        return side
+    }
+    triggerRitualEncounter = () => {
+        console.log('trigger ritual encounter');
+        this.setState({
+            keysLocked: true,
+            modalType: 'Magic',
+            showModal: true
         })
-        meta.crew = crew;
-        this.props.crewManager.crew = crew;
-        storeMeta(meta);
-        this.props.saveUserData();
-        this.setState(() => { return {showModal: false}})
     }
     render(){
         return (
-        <div className="dungeon-container">
+        <div className={`dungeon-container ${this.state.ritualWrecked ? 'wrecked' : ''}`}>
             <CModal alignment="center" visible={this.state.showModal} onClose={() => this.onUpdateModalClosed()}>
                 <CModalHeader>
                     {this.state.modalType === 'Updates' && <CModalTitle>Since your last visit...</CModalTitle>}
+                    {this.state.modalType === 'Magic' && <CModalTitle>You encounter a magic field...</CModalTitle>}
                 </CModalHeader>
                 <CModalBody>
                     {this.state.modalType === 'Updates' && <div>
@@ -1332,8 +1388,49 @@ class DungeonPage extends React.Component {
                             </div>
                         })}
                     </div>}
+                    {this.state.modalType === 'Magic' && <div>
+                        <p>
+                        If you have a magic user in your crew you may begin a known ritual with 3x effect or learn a new one.
+                        </p>
+                        <div className="modal-zone">
+                            {/* <CTabPane>
+                                <CTabContent>
+                                    tab content
+                                </CTabContent>
+                            </CTabPane> */}
+                            {this.props.crewManager.crew.filter(e=> e.type === 'wizard' || e.type === 'sage').map((magicUser, i)=>{
+                                return <div className="options-row" key={i}>
+                                    <Tile 
+                                    
+                                    id={i}
+                                    tileSize={this.state.tileSize}
+                                    image={magicUser.image ? magicUser.image : null}
+                                    imageOverride={magicUser.portrait ? magicUser.portrait : null}
+                                    contains={magicUser.type}
+                                    data={magicUser}
+                                    color={magicUser.color}
+                                    editMode={false}
+                                    type={'crew-tile'}
+                                    handleClick={this.handleMemberClickRitual}
+                                    handleHover={this.handleCrewTileHover}
+                                    className={`crew-tile `}> </Tile>
+                                    {/* <div className="options-zone">
+                                        OPTIONS
+                                        {this.state.setMemberRitualOptions === null && 'yeee'}
+                                        {this.state.setMemberRitualOptions?.name}
+                                    </div> */}
+                                    {this.state.setMemberRitualOptions === magicUser && <div className="options-zone">
+                                        <div className="option" onClick={()=> this.learnNewRitual(magicUser)}>Learn</div>
+                                        <div className={`option ${magicUser.specialActions.filter(e=>e.actionType.type === 'ritual').length === 0 ? 'disabled' : ''}`}>Perform ritual 3x</div>
+                                    </div>}
+                                </div>
+                                
+                            })}
+                        </div>
+                    </div>}
                 </CModalBody>
             </CModal>
+            {/* <ExpositionPane></ExpositionPane> */}
             {this.props.boardManager.currentOrientation === 'B' && <div className="dark-mask"></div>}
             <div className={`left-side-panel ${this.state.leftPanelExpanded ? 'expanded' : ''}`}>
                 <div className="expand-collapse-button icon-container" onClick={this.toggleLeftSidePanel}>
@@ -1659,7 +1756,7 @@ class DungeonPage extends React.Component {
                 </div>
             </div>
             {this.state.currentBoard && <div className="info-panel">{this.props.boardManager.currentBoard.name}</div>}
-            {!this.state.keysLocked && <div style={{
+            {this.state.inMonsterBattle === false && <div style={{
                     opacity: this.state.tiles.length > 0 ? 1 : 0,
                     transition: 'opacity 1s'
                     }} className={`center-board-wrapper ${this.state.minimapPlaceMapMarkerStarted ? 'show-map-marker-cursor' : ''}`}>
@@ -1739,7 +1836,7 @@ class DungeonPage extends React.Component {
             } */}
 
 
-            { this.state.keysLocked && 
+            { this.state.keysLocked && this.state.inMonsterBattle &&
             <MonsterBattle
                 ref={this.monsterBattleComponentRef}
                 combatManager={this.props.combatManager}

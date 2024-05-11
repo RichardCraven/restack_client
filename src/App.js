@@ -26,6 +26,7 @@ function App(props) {
 const [loggedIn, setLoggedIn] = useState(!!getUserId())
 const [menuTrayExpanded, setMenuTrayExpanded] = useState(false)
 // const [isAdmin, setIsAdmin] = useState(sessionStorage.getItem('isAdmin') === 'true' ? true : false)
+const [isAdmin, setIsAdmin] = useState(sessionStorage.getItem('isAdmin') === 'true' ? true : true)
 const [showCoordinates, setShowCoordinates] = useState(false)
 const [allUsers, setAllUsers] = useState([])
 const [showToolbar, setShowToolbar] = useState(true)
@@ -58,7 +59,7 @@ const loginFromRegister = (user) => {
     console.log('in timeout');
     storeSessionData(user._id, user.token, user.isAdmin, user.username, user.metadata)
     setLoggedIn(true)
-    // setIsAdmin(JSON.parse(sessionStorage.getItem('isAdmin') === 'true' ))
+    setIsAdmin(JSON.parse(sessionStorage.getItem('isAdmin') === 'true' ))
     history.push({
       pathname: '/landing'
     })
@@ -76,7 +77,7 @@ const login = (userCredentials) => {
     setTimeout(()=>{
       storeSessionData(validUser._id, validUser.token, validUser.isAdmin, validUser.username, validUser.metadata)
       setLoggedIn(true)
-      // setIsAdmin(JSON.parse(sessionStorage.getItem('isAdmin') === 'true' ))
+      setIsAdmin(JSON.parse(sessionStorage.getItem('isAdmin') === 'true' ))
       history.push({
         pathname: '/landing'
       })
@@ -131,10 +132,10 @@ const goHome = () => {
     pathname: '/landing'
   })
 }
-// const toggleShowCoordinates = () => {
-//   setMenuTrayExpanded(false);
-//   setShowCoordinates(!showCoordinates)
-// }
+const toggleShowCoordinates = () => {
+  setMenuTrayExpanded(false);
+  setShowCoordinates(!showCoordinates)
+}
 const setNarrativeSequence = (type) => {
   setNarrativeSequenceType(type)
   if(type === 'death'){
@@ -175,9 +176,9 @@ const toggleMenuTray = () => {
             {<button className="menu-buttons go-home-button" onClick={goHome}>
               Home
             </button>}    
-            {/* {isAdmin && <button className="menu-buttons show-coordinates-button" onClick={toggleShowCoordinates}>
+            {isAdmin && <button className="menu-buttons show-coordinates-button" onClick={toggleShowCoordinates}>
               Show Coordinates
-            </button>} */}
+            </button>}
           </div>
         </div> }
         <Switch>

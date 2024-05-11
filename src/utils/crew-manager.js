@@ -31,6 +31,7 @@ export function CrewManager(){
     this.initializeCrew = (crew) => {
         this.crew = [];
         crew.forEach(member=> { 
+            console.log('special actions: ', member.specialActions);
             if(!member.specialActions) return
             member.specialActions.forEach(a=>{
                 let end = new Date(a.endDate),
@@ -77,7 +78,7 @@ export function CrewManager(){
                 crewMember.stats.dex++
             break;
             case 'sage':
-                crewMember.stats.vit++
+                crewMember.stats.int++
             break;
             case 'monk':
                 crewMember.stats.dex++

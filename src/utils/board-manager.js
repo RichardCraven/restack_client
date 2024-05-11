@@ -114,6 +114,9 @@ export function BoardManager(){
     this.establishGetCurrentInventoryCallback = (callback) => {
         this.getCurrentInventory = callback
     }
+    this.establishRitualEncounterCallback = (callback) => {
+        this.triggerRitualEncounter = callback
+    }
     this.establishSetMonsterCallback = (callback) => {
         this.setMonster = callback;
     }
@@ -290,6 +293,9 @@ export function BoardManager(){
                 this.addItemToInventory(destinationTile)
                 this.removeTileFromBoard(destinationTile)
                 return 'item';
+            case 'spell':
+                this.triggerRitualEncounter();
+            break;
             case 'gold':
                 let factor, num = Math.random();
                 if(num > .85){

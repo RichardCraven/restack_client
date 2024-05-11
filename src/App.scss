@@ -366,6 +366,13 @@ button{
   background-color: #EEEEEE;
   border-right: 2px dotted red;
 }
+.exposition-pane{
+  height: 350px;
+  width: 500px;
+  border-top: 2px solid lavender;
+  border-radius: 5px;
+  background-color: aliceblue;
+}
 .user-profile-pane{
   height: 60vh;
   width: 70vw;
@@ -588,6 +595,30 @@ button{
       position: absolute;
       top: -33px;
       left: 0;
+    }
+  }
+}
+.modal-body{
+  .modal-zone{
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    .options-row{
+      display: flex;
+      flex-direction: row;
+      .options-zone{
+        .option{
+          width: fit-content;
+          cursor: pointer;
+          &:hover{
+            color: blue;
+          }
+          &.disabled{
+            color: lightgray;
+            pointer-events: none;
+          }
+        }
+      }
     }
   }
 }
