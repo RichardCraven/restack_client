@@ -555,7 +555,8 @@ class DungeonView extends React.Component {
                                 onChange={this.props.dungeonSelectOnChange}
                                 />
                             </div>
-                            {this.props.loadedDungeon && !this.props.loadingData && <div className="level-buttons-container">
+                            {/* this.props.loadedDungeon && !this.props.loadingData && */}
+                            { <div className="level-buttons-container">
                             <div className="icon-container" onClick={() => this.props.addDungeonLevelUp()}>
                                 <CIcon icon={cilLibraryAdd} size="lg"/> <CIcon className="add-level-up-icon" icon={cilLevelUp} size="lg"/>
                             </div>

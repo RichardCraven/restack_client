@@ -16,6 +16,8 @@ import arrowUpInvalid from '../assets/graphics/arrow_up_invalid.png'
 import spawnPoint from '../assets/graphics/location.png'
 import door from '../assets/icons//portals/closed_door_browner.png'
 
+import { CDropdown, CDropdownToggle, CDropdownMenu, CDropdownItem, CCollapse} from '@coreui/react';
+
 // import  CIcon  from '@coreui/icons-react'
 // import { cilList, cilCaretRight, cilCaretBottom, cilGlobeAlt } from '@coreui/icons';
 import {
@@ -65,7 +67,7 @@ class MapMakerPage extends React.Component {
     super(props)
     let viewStateFromPrefs,
     meta = getMeta();
-
+    console.log('map maker props: ', props);
     if(meta?.preferences?.editor?.selectedView){
       viewStateFromPrefs = meta.preferences.editor.selectedView
       // debugger
@@ -135,7 +137,8 @@ class MapMakerPage extends React.Component {
       dungeonOverlayOn: false,
       overlayData: null,
       loadingData: true,
-      imagesMatrix: {}
+      imagesMatrix: {},
+      selectedThingTitle: 'default'
     };
   }
   
@@ -143,6 +146,8 @@ class MapMakerPage extends React.Component {
   componentDidMount(){
     const that = this;
     let images = {};
+    console.log('mounted: ', this.props);
+    console.log('ok, this is: ', this);
     function checkIfAllImagesHaveLoaded(){
       if(
         images.arrowUpImg &&
@@ -244,7 +249,11 @@ class MapMakerPage extends React.Component {
     }
     return tsize;
   }
-  addNewDungeon(){
+  // addNewPlane = async () =>
+  addNewDungeon = () => {
+    console.log('add new dungeon');
+    // console.log('');
+    // console.log('this.setState', this.setState);
     let d = new Date()
     let n = d.getTime();
     let rand = n.toString().slice(9,13);
@@ -264,6 +273,7 @@ class MapMakerPage extends React.Component {
         {hyperspace: null}
       ]
     }
+    console.log('uhhh, this is ', this);
     this.setState({
       showModal: true,
       modalType: 'name dungeon',
@@ -337,7 +347,10 @@ class MapMakerPage extends React.Component {
   }
 
   handleHover = (id, type) => {
-    if(this.state.mouseDown && this.props.mapMaker.paletteTiles[this.state.pinnedOption.id] && this.props.mapMaker.paletteTiles[this.state.pinnedOption].optionType === 'void'){
+    console.log('this.state: ', this.state);
+    console.log('this.props: ', this.props);
+    console.log('this.state.pinnedOption', this.state.pinnedOption);
+    if(this.state.mouseDown && this.state.pinnedOption && this.props.mapMaker.paletteTiles[this.state.pinnedOption.id] && this.props.mapMaker.paletteTiles[this.state.pinnedOption.id].optionType === 'void'){
       let tile = this.props.mapMaker.tiles[id];
       let pinned = null;
       if(this.props.mapMaker.paletteTiles[this.state.pinnedOption.id]){
@@ -504,10 +517,27 @@ class MapMakerPage extends React.Component {
   }
 
   setViewState = (state) => {
+    let title = '';
+    console.log('state: ', state);
+    console.log('hmmm, this: ', this);
+    console.log('this.setState', this.setState);
+    switch(state){
+      case 'plane':
+        console.log('plane...');
+        if(this.state.loadedPlane) title = `Plane: ${this.state.loadedPlane.name}`
+      break;
+      case 'board':
+        if(this.state.loadedBoard) title = `Board: ${this.state.loadedBoard.name}`
+      break;
+      case 'dungeon':
+        if(this.state.loadedDungeon) title = `Dungeon: ${this.state.loadedDungeon.name}`
+      break;
+    }
     this.setState({
       selectedView: state,
       dungeonOverlayOn: false,
-      overlayData: null
+      overlayData: null,
+      selectedThingTitle: title
     })
 
     // update user
@@ -540,7 +570,7 @@ class MapMakerPage extends React.Component {
 
     const config = this.props.mapMaker.getMapConfiguration(this.state.tiles)    
     console.log('config:', config)
-    
+    console.log('this.state: ', this.state);
     if(this.state.loadedBoard && this.state.loadedBoard.id){
       // debugger
       if(this.state.planes.length > 0){
@@ -656,12 +686,14 @@ class MapMakerPage extends React.Component {
   }
 
   loadBoard = (board) => {
+    console.log('load board: ', board);
     if(this.state.selectedView === 'plane'){
       this.setViewState('board')
     } 
     this.setState({
       loadedBoard: board,
-      tiles: board.tiles
+      tiles: board.tiles,
+      selectedThingTitle: `Board: ${board.name}`
     })
   }
   zoomIntoBoard = (levelId, miniboardIndex, frontOrBack) => {
@@ -694,42 +726,103 @@ class MapMakerPage extends React.Component {
     const boards = [],
     boardsFolders = [],
     boardsFoldersExpanded = {};
-    
+    console.log('load all boards');
     val.data.forEach((e)=>{
       let board = JSON.parse(e.content)
       board.id = e._id;
       if(board.name && board.name.includes('_')){
         let title = board.name.split('_')[0],
         subtitle = board.name.split('_').length > 2 ? board.name.split('_')[1] : null,
+        deeptitle = subtitle && board.name.split('_').length > 3 ? board.name.split('_')[2] : null,
         folderExists = boardsFolders.map(e=>e.title).includes(title),
-        existingSubfolder = boardsFolders.find(e=>e.title === title)?.subfolders.find(e=>e.title === subtitle)
-        if(!folderExists && !existingSubfolder && !subtitle){
-          boardsFolders.push({
-            title,
-            contents: [board],
-            subfolders: [],
-            expanded: false
-          })
-        } else if(!folderExists && !existingSubfolder && subtitle){
+        existingSubfolder = boardsFolders.find(e=>e.title === title)?.subfolders.find(e=>e.title === subtitle),
+        existingDeepfolder = boardsFolders.find(e=>e.title === title)?.subfolders.find(e=>e.title === subtitle)?.deepfolders.find(e=>e.title === deeptitle)
+
+        console.log('board title', title);
+        console.log('board subtitle: ', subtitle);
+        console.log('board deeptitle: ', deeptitle);
+
+        if(!folderExists){
           boardsFolders.push({
             title,
             contents: [],
-            subfolders: [{
-              title: subtitle,
-              contents: [board]
-            }],
+            subfolders: [],
             expanded: false
           })
-        } else if(folderExists && !existingSubfolder && !subtitle){
-          boardsFolders.find(e=>e.title === title).contents.push(board)
-        } else if(folderExists && !existingSubfolder && subtitle){
+        }
+        if(!existingSubfolder && subtitle){
           boardsFolders.find(e=>e.title === title).subfolders.push({
             title: subtitle,
-            contents: [board]
+            contents: [],
+            deepfolders: []
           })
-        } else if(existingSubfolder){
-          existingSubfolder.contents.push(board)
         }
+        if(!existingDeepfolder && deeptitle){
+          boardsFolders.find(e=>e.title === title).subfolders.find(e=>e.title === subtitle).deepfolders.push({
+            title: deeptitle,
+            contents: []
+          })
+        }
+
+        if(!subtitle){
+          boardsFolders.find(e=>e.title === title).contents.push(board)
+        }
+        if(subtitle && !deeptitle){
+          boardsFolders.find(e=>e.title === title).subfolders.find(e=>e.title === subtitle).contents.push(board)
+        }
+        if(deeptitle){
+          boardsFolders.find(e=>e.title === title).subfolders.find(e=>e.title === subtitle).deepfolders.find(e=>e.title === deeptitle).contents.push(board)
+        }
+
+
+
+        // if(!folderExists && !subtitle){
+        //   boardsFolders.push({
+        //     title,
+        //     contents: [board],
+        //     subfolders: [],
+        //     expanded: false
+        //   })
+        // } else if(!folderExists && !existingSubfolder && subtitle && !deeptitle){
+        //   boardsFolders.push({
+        //     title,
+        //     contents: [],
+        //     subfolders: [{
+        //       title: subtitle,
+        //       contents: [board],
+        //       deepfolders: []
+        //     }],
+        //     expanded: false
+        //   })
+        // } else if(!folderExists && !existingSubfolder && !existingDeepfolder && subtitle && deeptitle){
+        //   boardsFolders.push({
+        //     title,
+        //     contents: [],
+        //     subfolders: [{
+        //       title: subtitle,
+        //       contents: [],
+        //       deepfolders: [{
+        //         title: deeptitle,
+        //         contents: [board]
+        //       }]
+        //     }],
+        //     expanded: false
+        //   })
+        // } else if(folderExists && !existingSubfolder && !subtitle){
+        //   boardsFolders.find(e=>e.title === title).contents.push(board)
+        // } else if(folderExists && !existingSubfolder && subtitle && !deeptitle){
+        //   boardsFolders.find(e=>e.title === title).subfolders.push({
+        //     title: subtitle,
+        //     contents: [board]
+        //   })
+        // } else if(existingSubfolder && !deeptitle){
+        //   existingSubfolder.contents.push(board)
+        // }
+        //   else if(folderExists && existingSubfolder && existingDeepfolder && subtitle && deeptitle){
+        //   existingDeepfolder.contents.push(board)
+        // } else if(existingSubfolder){
+        //   existingSubfolder.contents.push(board)
+        // }
       } else {
         boards.push(board)
       }
@@ -946,6 +1039,9 @@ class MapMakerPage extends React.Component {
   validatePlane = (plane) => {
     plane.miniboards.forEach((b, i)=>{
       b.processed = this.props.mapMaker.filterMapAdjacency(b, i, plane.miniboards);
+      console.log('b.processed: ', b.processed);
+      if(!b.processed) return;
+
       if(i === 0){
         b.valid = b.processed.right.includes(plane.miniboards[1].id) &&
                   b.processed.bot.includes(plane.miniboards[3].id)
@@ -997,7 +1093,8 @@ class MapMakerPage extends React.Component {
   loadPlane = (incomingPlane) => {
     let plane = this.validatePlane(incomingPlane)
     this.setState({
-      loadedPlane: plane
+      loadedPlane: plane,
+      selectedThingTitle: `Plane: ${plane.name}`
       // miniboards: plane.miniboards
     })
   }
@@ -1091,7 +1188,7 @@ class MapMakerPage extends React.Component {
     let d = new Date()
     let n = d.getTime();
     let rand = n.toString().slice(9,13)
-
+    console.log('ahhh');
     let newPlane = {
         name: `plane${rand}`,
         miniboards: [[],[],[],[],[],[],[],[],[]],
@@ -1117,8 +1214,14 @@ class MapMakerPage extends React.Component {
     for(let i = 0; i < 9; i++){
       miniboards.push([])
     }
+    console.log('currently loaded plane: ', this.state.loadedPlane);
+    console.log('current planes ', this.state.planes);
+    let planes = Array.from(this.state.planes)
+    let loaded = planes.find(e=> e.id === this.state.loadedPlane.id)
+    loaded.miniboards = miniboards
     this.setState({
-      loadedPlane: null,
+      loadedPlane: loaded,
+      planes,
       miniboards
     })
   }
@@ -1301,6 +1404,8 @@ class MapMakerPage extends React.Component {
   // Drag and Drop code
 
   onDragStart = (event, board, origin = null) => {
+    // event.preventDefault()
+    console.log('on drag start');
     this.setState({
       draggedBoard: board,
       draggedBoardOrigin: origin
@@ -1607,6 +1712,35 @@ class MapMakerPage extends React.Component {
         </CModal>
         <div className="column-wrapper">
           <div className="inputs-container">
+            {/* <div className="left-menus">
+              abc
+            </div> */}
+            <div className="board-options-buttons-container" 
+              style={{
+                  width: this.state.tileSize*3+'px',
+                  height: '40px'
+              }}
+              >
+              {/* <div className="color-line-blocker"></div> */}
+              <CDropdown>
+              <CDropdownToggle color="secondary">Actions</CDropdownToggle>
+              <CDropdownMenu style={{width: '100%'}}>
+                  <CDropdownItem onClick={() => this.addNewBoard()}>New</CDropdownItem>
+                  <CDropdownItem onClick={() => this.cloneBoard()}>Clone</CDropdownItem>
+                  <CDropdownItem onClick={() => this.writeBoard()}>Save</CDropdownItem>
+                  <CDropdownItem onClick={() => this.clearLoadedBoard()}>Clear</CDropdownItem>
+                  <CDropdownItem onClick={() => this.deleteBoard()}>Delete</CDropdownItem>
+                  <CDropdownItem disabled={!this.state.loadedBoard} onClick={() => this.renameBoard()}>Rename Current Map</CDropdownItem>
+                  <CDropdownItem onClick={() => this.adjacencyFilterClicked()}>Filter: Adjacency</CDropdownItem>
+                  <CDropdownItem onClick={() => this.nameFilterClicked()}>Filter: Name</CDropdownItem>
+              </CDropdownMenu>
+              </CDropdown>
+            </div>
+
+            <div className="left-text-readout title">
+              {this.state.selectedThingTitle}
+            </div>
+
             <CButtonGroup className='view-state-radio-group' role="group" aria-label="Basic checkbox toggle button group" >
               <CFormCheck
                 type="radio"
@@ -1640,6 +1774,13 @@ class MapMakerPage extends React.Component {
               />
             </CButtonGroup>
 
+            <div className="right-text-readout title">
+              
+            </div>
+
+            <div className="right-menus">
+              {/* def */}
+            </div>
           </div>
           <div className="row-wrapper">
             {this.state.selectedView === 'board' && <BoardView

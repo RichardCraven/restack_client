@@ -257,6 +257,9 @@ export function MapMaker(props){
             bot: [],
             left: []
         }
+
+        console.log('map:', map, 'config: ', config);
+        if(!config) return
         boards.forEach((b, i) => {
             let leftCompatibleCount = 0,
             rightCompatibleCount = 0,
@@ -266,6 +269,8 @@ export function MapMaker(props){
             // SCANS TOP TO BOTTOM, LEFT TO RIGHT
             
             // top
+            console.log('b', b, 'b.config', b.config);
+            if(!b.config) return
             if(boardIndex > 2){
                 for(let i = 0; i < config[0].length; i++){
                     if(b.config[2].length !== config[0].length){

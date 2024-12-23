@@ -75,10 +75,12 @@ $bot-level-zIndex: 2; // doubletall containers
             }
             .dungeon-preview{}
             .map-title{
-                background-color: ghostwhite;
+                // background-color: ghostwhite;
                 display: flex;
                 align-items: center;
                 justify-content: center;
+                background-color: black;
+                color: white;
                 &.selected{
                     background-color: turquoise;
                 }
@@ -111,12 +113,32 @@ $bot-level-zIndex: 2; // doubletall containers
         height: 100%;
         flex-direction: column;
         .inputs-container{
+            width: 100%;
             display: flex;
-            justify-content: space-evenly;
+            justify-content: space-between;
             padding-bottom: 5px;
             input{
                 padding-left: 10px;
                 outline: none;
+            }
+            .left-menus,.right-menus{
+                width: 200px;
+                border: 1px solid white;
+                border-radius: 3px;
+                height: 100%;
+                // .btn-group-vertical>.btn, .btn-group>.btn{
+                //     background-color: red;
+                // }
+                color: white;
+            }
+            .board-options-buttons-container{
+                .btn-group{
+                    width: 100%;
+                }
+            }
+            .title{
+                color: white;
+                width: 220px;
             }
         }
         .row-wrapper{
@@ -242,6 +264,9 @@ ul.dropdown-menu.show{
         position: relative;
         border-bottom: 1px solid slategray;
         background-color: white;
+        &.subfolder-headline{
+            justify-content: flex-end;
+        }
     }
     .subfolder-wrapper{
         position: relative;
@@ -284,6 +309,14 @@ ul.dropdown-menu.show{
     .folder-headline-text{
         flex: auto;
         max-width: calc(100% - 60px);
+    }
+    .subfolder-headline-text{
+        flex: auto;
+        max-width: calc(100% - 60px);
+    }
+    .deepfolder-headline-text{
+        flex: auto;
+        max-width: calc(100% - 80px);
     }
 }
 .mapmaker-container{
@@ -384,6 +417,7 @@ ul.dropdown-menu.show{
             }
             .btn-group{
                 width: 100%;
+                // border: 2px solid yellow;
                 .btn.disabled{
                     background-color: lightgrey;
                     color: grey;
