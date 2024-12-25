@@ -4,6 +4,7 @@ import '../styles/dungeon-board.scss'
 import '../styles/map-maker.scss'
 import {storeMeta, getMeta, setEditorPreference} from '../utils/session-handler'
 import BoardView from './dungonBuilderViews/BoardView'
+import BoardsPanel from './dungonBuilderViews/BoardsPanel'
 import PlaneView from './dungonBuilderViews/PlaneView'
 import DungeonView from './dungonBuilderViews/DungeonView'
 import JSZip from 'jszip';
@@ -38,6 +39,7 @@ import {
 } from '../utils/api-handler';
 
 import * as images from '../utils/images'
+import BoardsPalette from './dungonBuilderViews/BoardsPalette'
 
 const GATES = [
   {
@@ -138,7 +140,7 @@ class MapMakerPage extends React.Component {
       overlayData: null,
       loadingData: true,
       imagesMatrix: {},
-      selectedThingTitle: 'default'
+      selectedThingTitle: ''
     };
   }
   
@@ -347,9 +349,6 @@ class MapMakerPage extends React.Component {
   }
 
   handleHover = (id, type) => {
-    console.log('this.state: ', this.state);
-    console.log('this.props: ', this.props);
-    console.log('this.state.pinnedOption', this.state.pinnedOption);
     if(this.state.mouseDown && this.state.pinnedOption && this.props.mapMaker.paletteTiles[this.state.pinnedOption.id] && this.props.mapMaker.paletteTiles[this.state.pinnedOption.id].optionType === 'void'){
       let tile = this.props.mapMaker.tiles[id];
       let pinned = null;
@@ -475,6 +474,17 @@ class MapMakerPage extends React.Component {
           tiles: arr,
           hoveredTileIdx: null
         })
+      } else if(pinned && pinned.optionType === 'voidfill'){
+        let arr = [...this.state.tiles];
+        arr.forEach(e=>{
+          e.image = null;
+          e.color = 'black'
+          e.contains = 'void'
+        })
+        this.setState({
+          tiles: arr,
+          hoveredTileIdx: null
+        })
       } else if(pinned && pinned.optionType === 'delete'){
         let arr = [...this.state.tiles];
         arr[tile.id].image = null;
@@ -576,7 +586,6 @@ class MapMakerPage extends React.Component {
       if(this.state.planes.length > 0){
         console.log('here we go----')
         this.state.planes.forEach((d) => {
-          console.log(d)
           d.miniboards.forEach((b, index) => {
             if(b.id === this.state.loadedBoard.id){
               miniboards = d.miniboards;
@@ -598,7 +607,10 @@ class MapMakerPage extends React.Component {
       }
       
       await updateBoardRequest(this.state.loadedBoard.id, obj);
-      this.loadAllBoards(); 
+      console.log('LOAD ALL BOARDS BYPASSED');
+      // this.loadAllBoards();
+      // ^ this is only needed to update board to board BoardsPanel. instead, just directly add it!
+
       let boardMatch;
       if(this.state.loadedDungeon){
         this.state.loadedDungeon.levels.forEach(l=> {
@@ -637,14 +649,14 @@ class MapMakerPage extends React.Component {
         if(boardMatch.orientation === 'back'){
           level.back.miniboards[boardMatch.miniboardIndex] = this.state.loadedBoard
         }
-        // const board = boardMatch.orientation === 'front' ? level.front.miniboards[frontMatch.miniboardIndex] : level.back.miniboards[frontMatch.miniboardIndex]
-        // debugger
         console.log('dungeon:', dungeon, 'level:', level, boardMatch);
         this.setState({loadedDungeon: dungeon})
         // this.loadedDungeon
       }
+
       this.toast('Board Saved')
     } else {
+      console.log('RENAME SHOULD NOT GET HERE');
       const newBoard = {
         name: this.state.loadedBoard.name,
         tiles: this.state.tiles,
@@ -653,7 +665,11 @@ class MapMakerPage extends React.Component {
       const addedMap = await addBoardRequest(newBoard)
       newBoard.id = addedMap.data._id
 
-      this.loadAllBoards(); 
+      console.log('LOAD ALL BOARDS BYPASSED 2');
+      // this.loadAllBoards(); 
+      this.insertNewBoardIntoPanel(newBoard)
+      // ^ this is only needed to add board to board BoardsPanel. instead, just directly add it!
+
       this.loadBoard(newBoard)
 
       this.toast('Board Saved')
@@ -721,12 +737,225 @@ class MapMakerPage extends React.Component {
   //     tiles: board.tiles
   //   })
   // }
+  updateLoadedBoardInPanel = (board) => {
+
+    // THIS IS TO UPDATE A BOARD FOLDER LOCATION ONLY (renaming is already handled)
+
+    console.log('update board in panel: ', board);
+    const loadedBoard = this.state.loadedBoard;
+    const boards = this.state.boards,
+    boardsFolders = this.state.boardsFolders;
+    console.log('boardsFolders: ', boardsFolders);
+
+    let b = boards.find(e=>e.id === loadedBoard.id),
+    b_main, b_sub, b_deep, boardFound; 
+    if(b) b = loadedBoard;
+    // const clone = (obj) => {
+    //   return JSON.parse(JSON.stringify(obj))
+    // }
+    this.state.boardsFolders.forEach(folder=>{
+      let found = folder.contents.find(x=>x.id === loadedBoard.id)
+      if(found){
+        folder.contents = folder.contents.filter(r=>r!==found)
+        boardFound = found;
+      }
+
+      // if(folder.subfolders){
+        folder.subfolders.forEach(subfolder=>{
+          let found2 = subfolder.contents.find(x=>x.id === loadedBoard.id)
+          if(found2){
+            subfolder.contents = subfolder.contents.filter(r=>r!==found2)
+            boardFound = found2;
+          }
+
+          // if(subfolder.deepfolders){
+            subfolder.deepfolders.forEach(deepfolder=>{
+              let found3 = deepfolder.contents.find(x=>x.id === loadedBoard.id)
+              if(found3){
+                deepfolder.contents = deepfolder.contents.filter(r=>r!==found3)
+                boardFound = found3;
+              }
+            })
+          // }
+        })
+      // }
+      if(!boardFound){
+        console.log('...how?');
+        debugger
+      }
+      console.log('finally.... insert board found', boardFound);
+      this.insertNewBoardIntoPanel(boardFound)
+      console.log('b: ', b, 'b_main:', b_main, 'b_sub:', b_sub, 'b_deep:', b_deep);
+    })
+
+
+    // if(board.name && board.name.includes('_')){
+    //   let title = board.name.split('_')[0],
+    //   subtitle = board.name.split('_').length > 2 ? board.name.split('_')[1] : null,
+    //   deeptitle = subtitle && board.name.split('_').length > 3 ? board.name.split('_')[2] : null,
+    //   existingSubfolder = boardsFolders.find(e=>e.title === title)?.subfolders.find(e=>e.title === subtitle),
+    //   existingDeepfolder = boardsFolders.find(e=>e.title === title)?.subfolders.find(e=>e.title === subtitle)?.deepfolders.find(e=>e.title === deeptitle)
+
+    //   if(existingDeepfolder){
+    //     let found = existingDeepfolder.contents.find(e=>e.name === board.name)
+    //     // existingDeepfolder.contents = existingDeepfolder.contents.filter(e=> e.name !== board.name)
+    //   }
+    //   if(existingSubfolder){
+    //     let found = existingSubfolder.contents.find(e=>e.name === board.name)
+    //     // existingSubfolder.contents = existingSubfolder.contents.filter(e=> e.name !== board.name)
+    //   }
+    // } else {
+    //   let found = boards.find(e=>e.name === board.name)
+    //   // boards = boards.filter(e=> e.name !== board.name)
+    // }
+
+    // this.setState(() => {
+    //   return {
+    //     boards,
+    //     boardsFolders
+    //   }
+    // })
+  }
+  isInSameFolder = (firstName, secondName) => {
+    let title = firstName.split('_')[0],
+      subfolder = firstName.split('_').length > 2 ? firstName.split('_')[1] : null,
+      deepfolder = subfolder && firstName.split('_').length > 3 ? firstName.split('_')[2] : null
+
+    let title2 = secondName.split('_')[0],
+      subfolder2 = secondName.split('_').length > 2 ? secondName.split('_')[1] : null,
+      deepfolder2 = subfolder2 && secondName.split('_').length > 3 ? secondName.split('_')[2] : null
+
+    if(deepfolder) return deepfolder === deepfolder2
+    if(subfolder) return subfolder === subfolder2
+    if(title) return title === title2
+    return false
+    // const boardsFolders = this.state.boardsFolders;
+    // let title_first = first.name.split('_')[0],
+    //   subtitle_first = first.name.split('_').length > 2 ? first.name.split('_')[1] : null,
+    //   deeptitle_first = subtitle_first && first.name.split('_').length > 3 ? first.name.split('_')[2] : null,
+    //   folderExists_first = boardsFolders.map(e=>e.title).includes(title_first),
+    //   existingSubfolder_first = boardsFolders.find(e=>e.title === title_first)?.subfolders.find(e=>e.title === subtitle_first),
+    //   existingDeepfolder_first = boardsFolders.find(e=>e.title === title_first)?.subfolders.find(e=>e.title === subtitle_first)?.deepfolders.find(e=>e.title === deeptitle_first);
+
+    // let title_second = second.name.split('_')[0],
+    //   subtitle_second = second.name.split('_').length > 2 ? second.name.split('_')[1] : null,
+    //   deeptitle_second = subtitle_second && second.name.split('_').length > 3 ? second.name.split('_')[2] : null,
+    //   folderExists_second = boardsFolders.map(e=>e.title).includes(title_second),
+    //   existingSubfolder_second = boardsFolders.find(e=>e.title === title_second)?.subfolders.find(e=>e.title === subtitle_second),
+    //   existingDeepfolder_second = boardsFolders.find(e=>e.title === title_second)?.subfolders.find(e=>e.title === subtitle_second)?.deepfolders.find(e=>e.title === deeptitle_second);
+
+    //   console.log('first', first.name, 'second', second.name);
+    // console.log('title_first', title_first);
+    // console.log('title_second', title_second);
+    // console.log('subtitle_first', subtitle_first);
+    // console.log('subtitle_second', subtitle_second);
+    // console.log('deeptitle_first', deeptitle_first);
+    // console.log('deeptitle_second', deeptitle_second);
+
+    //   console.log('existingSubfolder_first', existingSubfolder_first);
+    //   console.log('existingSubfolder_second', existingSubfolder_second);
+    //   console.log('existingDeepfolder_first', existingDeepfolder_first);
+    //   console.log('existingDeepfolder_second', existingDeepfolder_second);
+    //   if(folderExists_first === folderExists_second && existingSubfolder_first === existingSubfolder_second && existingDeepfolder_first === existingDeepfolder_second) return true
+    //   return false
+  }
+  insertNewBoardIntoPanel = (board) => {
+    const boards = this.state.boards,
+    boardsFolders = this.state.boardsFolders;
+    // boardsFoldersExpanded = this.state.boardsFoldersExpanded;
+    
+    console.log('in insertNewBoardIntoPanel board: ', board, 'boards', boards, 'boardsFolders', boardsFolders);
+    
+
+    if(board.name && board.name.includes('_')){
+      let title = board.name.split('_')[0],
+      subtitle = board.name.split('_').length > 2 ? board.name.split('_')[1] : null,
+      deeptitle = subtitle && board.name.split('_').length > 3 ? board.name.split('_')[2] : null,
+      folderExists = boardsFolders.map(e=>e.title).includes(title),
+      existingSubfolder = boardsFolders.find(e=>e.title === title)?.subfolders.find(e=>e.title === subtitle),
+      existingDeepfolder = boardsFolders.find(e=>e.title === title)?.subfolders.find(e=>e.title === subtitle)?.deepfolders.find(e=>e.title === deeptitle)
+
+      console.log('board title', title);
+      console.log('board subtitle: ', subtitle);
+      console.log('board deeptitle: ', deeptitle);
+
+      if(!folderExists){
+        boardsFolders.push({
+          title,
+          contents: [],
+          subfolders: [],
+          expanded: false
+        })
+      }
+      if(!existingSubfolder && subtitle){
+        boardsFolders.find(e=>e.title === title).subfolders.push({
+          title: subtitle,
+          contents: [],
+          deepfolders: []
+        })
+      }
+      if(!existingDeepfolder && deeptitle){
+        boardsFolders.find(e=>e.title === title).subfolders.find(e=>e.title === subtitle).deepfolders.push({
+          title: deeptitle,
+          contents: []
+        })
+      }
+
+      if(!subtitle){
+        boardsFolders.find(e=>e.title === title).contents.push(board)
+      }
+      if(subtitle && !deeptitle){
+        boardsFolders.find(e=>e.title === title).subfolders.find(e=>e.title === subtitle).contents.push(board)
+      }
+      if(deeptitle){
+        boardsFolders.find(e=>e.title === title).subfolders.find(e=>e.title === subtitle).deepfolders.find(e=>e.title === deeptitle).contents.push(board)
+      }
+    } else {
+      boards.push(board)
+    }
+
+    this.setState(() => {
+      return {
+        boards,
+        boardsFolders
+      }
+    })
+  }
+  removeBoardFromPanel = (board) => {
+    let boards = this.state.boards,
+    boardsFolders = this.state.boardsFolders;
+
+    if(board.name && board.name.includes('_')){
+      let title = board.name.split('_')[0],
+      subtitle = board.name.split('_').length > 2 ? board.name.split('_')[1] : null,
+      deeptitle = subtitle && board.name.split('_').length > 3 ? board.name.split('_')[2] : null,
+      existingSubfolder = boardsFolders.find(e=>e.title === title)?.subfolders.find(e=>e.title === subtitle),
+      existingDeepfolder = boardsFolders.find(e=>e.title === title)?.subfolders.find(e=>e.title === subtitle)?.deepfolders.find(e=>e.title === deeptitle)
+
+      if(existingDeepfolder){
+        // let found = existingDeepfolder.contents.find(e=>e.name === board.name)
+        existingDeepfolder.contents = existingDeepfolder.contents.filter(e=> e.name !== board.name)
+      }
+      if(existingSubfolder){
+        // let found = existingSubfolder.contents.find(e=>e.name === board.name)
+        existingSubfolder.contents = existingSubfolder.contents.filter(e=> e.name !== board.name)
+      }
+    } else {
+      boards = boards.filter(e=> e.name !== board.name)
+    }
+
+    this.setState(() => {
+      return {
+        boards,
+        boardsFolders
+      }
+    })
+  }
   loadAllBoards = async () => {
     const val = await loadAllBoardsRequest();
     const boards = [],
     boardsFolders = [],
     boardsFoldersExpanded = {};
-    console.log('load all boards');
     val.data.forEach((e)=>{
       let board = JSON.parse(e.content)
       board.id = e._id;
@@ -737,10 +966,6 @@ class MapMakerPage extends React.Component {
         folderExists = boardsFolders.map(e=>e.title).includes(title),
         existingSubfolder = boardsFolders.find(e=>e.title === title)?.subfolders.find(e=>e.title === subtitle),
         existingDeepfolder = boardsFolders.find(e=>e.title === title)?.subfolders.find(e=>e.title === subtitle)?.deepfolders.find(e=>e.title === deeptitle)
-
-        console.log('board title', title);
-        console.log('board subtitle: ', subtitle);
-        console.log('board deeptitle: ', deeptitle);
 
         if(!folderExists){
           boardsFolders.push({
@@ -773,56 +998,6 @@ class MapMakerPage extends React.Component {
         if(deeptitle){
           boardsFolders.find(e=>e.title === title).subfolders.find(e=>e.title === subtitle).deepfolders.find(e=>e.title === deeptitle).contents.push(board)
         }
-
-
-
-        // if(!folderExists && !subtitle){
-        //   boardsFolders.push({
-        //     title,
-        //     contents: [board],
-        //     subfolders: [],
-        //     expanded: false
-        //   })
-        // } else if(!folderExists && !existingSubfolder && subtitle && !deeptitle){
-        //   boardsFolders.push({
-        //     title,
-        //     contents: [],
-        //     subfolders: [{
-        //       title: subtitle,
-        //       contents: [board],
-        //       deepfolders: []
-        //     }],
-        //     expanded: false
-        //   })
-        // } else if(!folderExists && !existingSubfolder && !existingDeepfolder && subtitle && deeptitle){
-        //   boardsFolders.push({
-        //     title,
-        //     contents: [],
-        //     subfolders: [{
-        //       title: subtitle,
-        //       contents: [],
-        //       deepfolders: [{
-        //         title: deeptitle,
-        //         contents: [board]
-        //       }]
-        //     }],
-        //     expanded: false
-        //   })
-        // } else if(folderExists && !existingSubfolder && !subtitle){
-        //   boardsFolders.find(e=>e.title === title).contents.push(board)
-        // } else if(folderExists && !existingSubfolder && subtitle && !deeptitle){
-        //   boardsFolders.find(e=>e.title === title).subfolders.push({
-        //     title: subtitle,
-        //     contents: [board]
-        //   })
-        // } else if(existingSubfolder && !deeptitle){
-        //   existingSubfolder.contents.push(board)
-        // }
-        //   else if(folderExists && existingSubfolder && existingDeepfolder && subtitle && deeptitle){
-        //   existingDeepfolder.contents.push(board)
-        // } else if(existingSubfolder){
-        //   existingSubfolder.contents.push(board)
-        // }
       } else {
         boards.push(board)
       }
@@ -842,11 +1017,6 @@ class MapMakerPage extends React.Component {
       }
     })
   }
-  // setMainView(view){
-  //   return this.setState(() => {
-  //     return {selectedView: view}
-  //   })
-  // }
 
   addNewBoard = () => {
     this.clearLoadedBoard()
@@ -906,9 +1076,11 @@ class MapMakerPage extends React.Component {
   }
   deleteBoard = async () => {
     if(this.state.loadedBoard){
+      let board = this.state.loadedBoard;
+      this.removeBoardFromPanel(board)
       await deleteBoardRequest(this.state.loadedBoard.id);
       this.clearLoadedBoard();
-      this.loadAllBoards(); 
+      // this.loadAllBoards(); 
       this.toast('Board Deleted')
     }
   }
@@ -1624,6 +1796,11 @@ class MapMakerPage extends React.Component {
       break;
       case 'board':
         let board = this.state.loadedBoard;
+        console.log('this.state.loadedBoard.name: ', this.state.loadedBoard.name, 'vs ', this.state.boardNameInput.current.value);
+        console.log('same folder: ', this.isInSameFolder(this.state.loadedBoard.name, this.state.boardNameInput.current.value))
+
+        const needsFolderUpdate = !this.isInSameFolder(this.state.loadedBoard.name, this.state.boardNameInput.current.value);
+
         board.name = this.state.boardNameInput.current.value;
         this.setState({
           loadedBoard: board,
@@ -1631,6 +1808,7 @@ class MapMakerPage extends React.Component {
         })
         setTimeout(()=>{
           this.writeBoard()
+          if(needsFolderUpdate) this.updateLoadedBoardInPanel()
         })
       break;
       default:
@@ -1682,6 +1860,14 @@ class MapMakerPage extends React.Component {
       break;    }
   }
 
+  closeModal = () => {
+    // {return this.setState(() => { return {showModal: false}})}
+    console.log('close modal!!!');
+    this.setState({
+      showModal: false
+    })
+  }
+
   render (){
     return (
       <div className="mapmaker-container">
@@ -1689,7 +1875,9 @@ class MapMakerPage extends React.Component {
           {this.state.toastMessage}
         </div>}
 
-        <CModal alignment="center" visible={this.state.showModal} onClose={() => {return this.setState(() => { return {showModal: false}})}}>
+        <CModal alignment="center" visible={this.state.showModal} onClose={
+          () => this.closeModal()
+          }>
           <CModalHeader>
             {this.state.modalType === 'name dungeon' && <CModalTitle>Name this dungeon</CModalTitle>}
             {this.state.modalType === 'rename dungeon' && <CModalTitle>Rename this dungeon</CModalTitle>}
@@ -1704,7 +1892,7 @@ class MapMakerPage extends React.Component {
             {(this.state.modalType === 'name board' || this.state.modalType === 'rename board') && <input ref={this.state.boardNameInput} className="dungeonname-input"  type="text" defaultValue={this.state.loadedBoard?.name || ''} placeholder={this.state.loadedBoard?.name || ''}/>}
           </CModalBody>
           <CModalFooter>
-            <CButton color="secondary" onClick={() => {return this.setState(() => { return {showModal: false}})}}>
+            <CButton color="secondary" onClose={() => this.closeModal()}>
               Close
             </CButton>
             <CButton color="primary" onClick={() => this.modalSaveChanges()}>Save changes</CButton>
@@ -1712,16 +1900,12 @@ class MapMakerPage extends React.Component {
         </CModal>
         <div className="column-wrapper">
           <div className="inputs-container">
-            {/* <div className="left-menus">
-              abc
-            </div> */}
             <div className="board-options-buttons-container" 
               style={{
                   width: this.state.tileSize*3+'px',
                   height: '40px'
               }}
               >
-              {/* <div className="color-line-blocker"></div> */}
               <CDropdown>
               <CDropdownToggle color="secondary">Actions</CDropdownToggle>
               <CDropdownMenu style={{width: '100%'}}>
@@ -1779,10 +1963,50 @@ class MapMakerPage extends React.Component {
             </div>
 
             <div className="right-menus">
-              {/* def */}
             </div>
           </div>
           <div className="row-wrapper">
+
+            <BoardsPanel
+              tileSize={this.state.tileSize}
+              loadedBoard={this.state.loadedBoard}
+              boardSize={this.state.boardSize}
+              boardsFolders={this.state.boardsFolders}
+              boardsFoldersExpanded={this.state.boardsFoldersExpanded}
+              boards={this.state.boards}
+              tiles={this.state.tiles}
+              compatibilityMatrix={this.state.compatibilityMatrix}
+              pinnedOption={this.state.pinnedOption}
+              hoveredPaletteTileIdx={this.state.hoveredPaletteTileIdx}
+              hoveredTileIdx={this.state.hoveredTileIdx}
+              hoveredTileId={this.state.hoveredTileIdx}
+              optionClickedIdx={this.state.optionClickedIdx}
+              selectedView={this.state.selectedView}
+              showCoordinates={this.props.showCoordinates}
+              mapMaker={this.props.mapMaker}
+
+              setViewState = {this.setViewState}
+              addNewBoard = {this.addNewBoard}
+              cloneBoard = {this.cloneBoard}
+              clearLoadedBoard= {this.clearLoadedBoard}
+              writeBoard = {this.writeBoard}
+              deleteBoard = {this.deleteBoard}
+              renameBoard = {this.renameBoard}
+              adjacencyFilterClicked = {this.adjacencyFilterClicked}
+              nameFilterClicked = {this.nameFilterClicked}
+              expandCollapseBoardFolders={this.expandCollapseBoardFolders}
+              collapseFilterHeader={this.collapseFilterHeader}
+              setHover={this.setHover}
+              handleClick={this.handleClick}
+              handleHover={this.handleHover}
+              setPaletteHover={this.setPaletteHover}
+              loadBoard={this.loadBoard}
+              monsterManager={this.props.monsterManager}
+              gates={GATES}
+              onDragStart={this.onDragStart}
+            >
+            </BoardsPanel>
+
             {this.state.selectedView === 'board' && <BoardView
               tileSize={this.state.tileSize}
               loadedBoard={this.state.loadedBoard}
@@ -1820,6 +2044,46 @@ class MapMakerPage extends React.Component {
               monsterManager={this.props.monsterManager}
               gates={GATES}
             ></BoardView>}
+
+            {this.state.selectedView === 'board' && <BoardsPalette
+              tileSize={this.state.tileSize}
+              loadedBoard={this.state.loadedBoard}
+              boardSize={this.state.boardSize}
+              boardsFolders={this.state.boardsFolders}
+              boardsFoldersExpanded={this.state.boardsFoldersExpanded}
+              boards={this.state.boards}
+              tiles={this.state.tiles}
+              compatibilityMatrix={this.state.compatibilityMatrix}
+              pinnedOption={this.state.pinnedOption}
+              hoveredPaletteTileIdx={this.state.hoveredPaletteTileIdx}
+              hoveredTileIdx={this.state.hoveredTileIdx}
+              hoveredTileId={this.state.hoveredTileIdx}
+              optionClickedIdx={this.state.optionClickedIdx}
+              selectedView={this.state.selectedView}
+              showCoordinates={this.props.showCoordinates}
+              mapMaker={this.props.mapMaker}
+
+              setViewState = {this.setViewState}
+              addNewBoard = {this.addNewBoard}
+              cloneBoard = {this.cloneBoard}
+              clearLoadedBoard= {this.clearLoadedBoard}
+              writeBoard = {this.writeBoard}
+              deleteBoard = {this.deleteBoard}
+              renameBoard = {this.renameBoard}
+              adjacencyFilterClicked = {this.adjacencyFilterClicked}
+              nameFilterClicked = {this.nameFilterClicked}
+              expandCollapseBoardFolders={this.expandCollapseBoardFolders}
+              collapseFilterHeader={this.collapseFilterHeader}
+              setHover={this.setHover}
+              handleClick={this.handleClick}
+              handleHover={this.handleHover}
+              setPaletteHover={this.setPaletteHover}
+              loadBoard={this.loadBoard}
+              monsterManager={this.props.monsterManager}
+              gates={GATES}
+            >
+            </BoardsPalette>}
+
 
             {this.state.selectedView === 'plane' && <PlaneView
               tileSize={this.state.tileSize}

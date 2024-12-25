@@ -232,7 +232,7 @@ class DungeonView extends React.Component {
     render (){
         return (
             <div className="board-view-container">
-                <div className="left-palette  palette boards-palette" 
+                {/* <div className="left-palette  palette boards-palette" 
                     style={{
                         width: this.props.tileSize*3+'px', 
                         height: this.props.boardSize+ 'px'
@@ -276,9 +276,7 @@ class DungeonView extends React.Component {
                                         </div>
                                         <div className="folder-headline-text">{folder.title}</div> 
                                     </div>
-{/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~// TOP LEVEL FOLDER // */}
                                     <CCollapse visible={this.props.boardsFoldersExpanded[folder.title]}>
-{/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~// SUBFOLDER HEADER //  */}
                                         {folder.subfolders?.length > 0 && folder.subfolders.map((subfolder, i)=>{
                                         return (
                                             <div key={i} className="subfolder-wrapper">
@@ -289,7 +287,6 @@ class DungeonView extends React.Component {
                                                     </div>
                                                     <div className="folder-headline-text">{subfolder.title}</div> 
                                                 </div>
-{/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~// SUBFOLDER CONTENTS //  */}
                                                 <CCollapse visible={this.props.boardsFoldersExpanded[`${folder.title}_${subfolder.title}`]}>
                                                     <div className="subfolder-contents-wrapper">
                                                         {subfolder.contents.map((board, idx) => {
@@ -330,8 +327,7 @@ class DungeonView extends React.Component {
                                                     </div>
                                                 </CCollapse>
                                             </div>
-                                        )})}
-{/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~// FOLDER CONTENTS //  */}                                        
+                                        )})}                                  
                                         {folder.contents.map((board, i) => {
                                         return (<div key={i} className="board-preview-wrapper">
                                                     <div className="folder-color-line" style={{backgroundColor: idx % 2 ? 'magenta' : 'aqua'}}></div>
@@ -531,7 +527,7 @@ class DungeonView extends React.Component {
                         </div>
                         }
                     </div>
-                </div>
+                </div> */}
                 <div className="center-board-container">
                     <div 
                     onMouseLeave={() => {return this.props.setHover(null)}}
@@ -806,27 +802,10 @@ class DungeonView extends React.Component {
                                     </div>
                                 })}
                             </div>}
-                            {/* {this.props.loadedDungeon && !this.props.loadingData && <div className="level-buttons-container">
-                                <div className="icon-container" onClick={() => this.props.addDungeonLevelUp()}>
-                                    <CIcon icon={cilLibraryAdd} size="lg"/> <CIcon className="add-level-up-icon" icon={cilLevelUp} size="lg"/>
-                                </div>
-                                <div className="icon-container" onClick={() =>  this.props.saveDungeonLevel()}>
-                                    <CIcon icon={cilSave} size="lg"/>
-                                </div>
-                                <div className="icon-container" onClick={() => this.props.toggleDungeonLevelOverlay()}>
-                                    <CIcon icon={cilQrCode} size="lg"/>
-                                </div>
-                                <div className="icon-container" onClick={() => this.props.addDungeonLevelDown()}>
-                                    <CIcon icon={cilLibraryAdd} size="lg"/> <CIcon className="add-level-down-icon" icon={cilLevelDown} size="lg"/>
-                                </div>
-                            </div>} */}
-
-                            {/* EMPTY STATE */}
                             {!this.props.loadedDungeon && !this.props.loadingData && <div className="empty-dungeons-container">
                                 Select a dungeon, or create a new one
                             </div>}
 
-                            {/* LOADING STATE */}
                             {this.props.loadingData && <div className="empty-dungeons-container">
                                 <CSpinner/>
                             </div>}
@@ -859,8 +838,6 @@ class DungeonView extends React.Component {
                                 <CDropdownItem onClick={() => this.props.writePlane()}>Save</CDropdownItem>
                                 <CDropdownItem onClick={() => this.props.renamePlane()}>Rename</CDropdownItem>
                                 <CDropdownItem onClick={() => this.props.deletePlane()}>Delete</CDropdownItem>
-                                {/* <CDropdownItem onClick={() => this.props.filterDungeonsClicked()}>Filter</CDropdownItem> */}
-                                {/* gonna need a filterPlanes feature................... */}
                             </CDropdownMenu>
                         </CDropdown>
                     </div>
@@ -878,10 +855,7 @@ class DungeonView extends React.Component {
                                     <div 
                                     className={`plane-preview draggable ${this.state.hoveredPlane === planeIndex ? 'hovered' : ''}`}
                                     draggable
-                                    
                                     onDragStart = {() => this.props.onDragStartDungeon(plane)}
-
-
                                     style={{
                                         height: this.props.tileSize*3,
                                         width: this.props.tileSize*3

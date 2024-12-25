@@ -279,6 +279,8 @@ import magic_missile from '../assets/icons/misc/cycle.png'
 import hourglass1 from '../assets/icons/menu/hourglass-1_inverted.png'
 import hourglass2 from '../assets/icons/menu/hourglass-2_inverted.png'
 
+import voidfill from '../assets/icons/menu/actions_inverted.png'
+
 export {
     monster,
     avatar,
@@ -511,4 +513,6 @@ export {
 
     hourglass1,
     hourglass2,
+
+    voidfill
 };

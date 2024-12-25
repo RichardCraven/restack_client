@@ -3,6 +3,9 @@ import * as images from '../utils/images'
 
 
 export default function Tile(props) {
+    if(props.image === 'void_fill'){
+        console.log('void fill ', images[props.image]);
+    }
     return (
         <div style={{
             pointerEvents: props.passThrough ? 'none' : 'inherit',

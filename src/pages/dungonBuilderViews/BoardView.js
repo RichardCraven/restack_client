@@ -25,7 +25,7 @@ class BoardView extends React.Component {
     render (){
         return (
             <div className="board-view-container">
-                <div className="left-palette  palette boards-palette" style={{
+                {/* <div className="left-palette  palette boards-palette" style={{
                 width: this.props.tileSize*3+'px', 
                 height: this.props.boardSize+ 'px'
                 }}>
@@ -68,9 +68,7 @@ class BoardView extends React.Component {
                                         </div>
                                         <div className="folder-headline-text">{folder.title}</div> 
                                     </div>
-{/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~// TOP LEVEL FOLDER // */}
                                     <CCollapse visible={this.props.boardsFoldersExpanded[folder.title]}>
-{/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~// SUBFOLDER HEADER //  */}
                                         {folder.subfolders?.length > 0 && folder.subfolders.map((subfolder, i)=>{
                                         return (
                                             <div key={i} className="subfolder-wrapper">
@@ -81,7 +79,6 @@ class BoardView extends React.Component {
                                                     </div>
                                                     <div className="subfolder-headline-text">{subfolder.title}</div> 
                                                 </div>
-{/* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~// SUBFOLDER CONTENTS //  */}
                                                 <CCollapse visible={this.props.boardsFoldersExpanded[`${folder.title}_${subfolder.title}`]}>
                                                     {subfolder.deepfolders?.length > 0 && subfolder.deepfolders.map((deepfolder, i)=>{
                                                         return (
@@ -383,7 +380,7 @@ class BoardView extends React.Component {
                         </div>
                         }
                     </div>
-                </div>
+                </div> */}
                 <div className="center-board-container">
                     <div className="board map-board" 
                         onMouseLeave={() => {return this.props.setHover(null)}}
@@ -415,7 +412,7 @@ class BoardView extends React.Component {
                         })}
                     </div>
                 </div>
-                <div className="palette right-palette" 
+                {/* <div className="palette right-palette" 
                     style={{
                         width: this.props.tileSize*3+'px', height: this.props.boardSize+ 'px',
                         backgroundColor: 'white',
@@ -545,7 +542,7 @@ class BoardView extends React.Component {
                         </div>
                         )
                     })}
-                </div>
+                </div> */}
             </div>
         )
     }

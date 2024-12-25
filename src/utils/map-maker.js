@@ -4,6 +4,7 @@ export function MapMaker(props){
     this.tiles = [];
     this.options = [
         'delete',
+        'void fill',
         'void',
         'door',
         'pit',
@@ -192,6 +193,14 @@ export function MapMaker(props){
                     color: 'black',
                     id: i
                 })
+            } else if(key === 'void fill'){
+                this.paletteTiles.push({
+                    type: 'palette-tile',
+                    optionType: 'voidfill',
+                    image: 'voidfill',
+                    color: 'black',
+                    id: i
+                })
             } else {
                 // console.log(key, getPaletteImage(key))
                 this.paletteTiles.push({
@@ -202,6 +211,7 @@ export function MapMaker(props){
                 })
             }
         }
+        console.log('this.palette tiles: ', this.paletteTiles);
     }
     this.initializeTilesWithInput = (input) => {
         console.log('input: ', input)
