@@ -50,12 +50,14 @@ export function MapMaker(props){
     this.markPassages = (dungeon) => {
         dungeon.levels.forEach(lvl => {
             if(lvl.front) lvl.front.miniboards.forEach((mb, i) => {
+                if(!mb|| !mb.tiles) return
                 mb.tiles.forEach(t=> {
                     t.level = lvl.id
                     t.locationCode = `${t.contains}_level-${lvl.id}_miniboard-${i}_F_[${t.coordinates}]`
                 })
             })
             if(lvl.back) lvl.back.miniboards.forEach((mb, i) => {
+                if(!mb|| !mb.tiles) return
                 mb.tiles.forEach(t=> {
                     t.level = lvl.id
                     t.locationCode = `${t.contains}_level-${lvl.id}_miniboard-${i}_B_[${t.coordinates}]`
@@ -64,9 +66,9 @@ export function MapMaker(props){
         })
         let val = [];
         dungeon.levels.forEach((l) => {
-            let frontFilteredMiniboards = (!!l.front && l.front.miniboards) ? l.front.miniboards.map(b=>b.tiles.filter(t=>t.contains==='way_up' || 
+            let frontFilteredMiniboards = (!!l.front && l.front.miniboards && l.front.miniboards.filter(e=>e.id).length === 9) ? l.front.miniboards.map(b=> b.tiles.filter(t=>t.contains==='way_up' || 
             t.contains === 'way_down' || t.contains==='door' || t.contains==='spawn_point')) : [];
-            let backFilteredMiniboards = (!!l.back && l.back.miniboards) ? l.back.miniboards.map(b=>b.tiles.filter(t=>t.contains==='way_up' || 
+            let backFilteredMiniboards = (!!l.back && l.back.miniboards && l.back.miniboards.filter(e=>e.id).length === 9) ? l.back.miniboards.map(b=>b.tiles.filter(t=>t.contains==='way_up' || 
             t.contains === 'way_down' || t.contains==='door' || t.contains==='spawn_point')) : [];
 
             let aboveLevel = dungeon.levels.find(lev => lev.id === l.id+1)
@@ -76,13 +78,13 @@ export function MapMaker(props){
             for(let i =0; i < 9; i++){
                 const frontBoardPassages = frontFilteredMiniboards[i];
                 const backBoardPassages = backFilteredMiniboards[i];
-                const aboveFrontMiniboards = (aboveLevel && aboveLevel.front) ? aboveLevel.front.miniboards.map(b=>b.tiles.filter(t=>t.contains==='way_up' || 
+                const aboveFrontMiniboards = (aboveLevel && aboveLevel.front && aboveLevel.front.miniboards.filter(e=>e.id).length === 9) ? aboveLevel.front.miniboards.map(b=>b.tiles.filter(t=>t.contains==='way_up' || 
                 t.contains === 'way_down' || t.contains==='door')) : null;
-                const aboveBackMiniboards = aboveLevel && aboveLevel.back ? aboveLevel.back.miniboards.map(b=>b.tiles.filter(t=>t.contains==='way_up' || 
+                const aboveBackMiniboards = aboveLevel && aboveLevel.back && aboveLevel.back && aboveLevel.back.miniboards.filter(e=>e.id).length === 9 ? aboveLevel.back.miniboards.map(b=>b.tiles.filter(t=>t.contains==='way_up' || 
                 t.contains === 'way_down' || t.contains==='door')) : null;
-                const belowFront = belowLevel && belowLevel.front ? belowLevel.front.miniboards.map(b=>b.tiles.filter(t=>t.contains==='way_up' || 
+                const belowFront = belowLevel && belowLevel.front && belowLevel.front && belowLevel.front.miniboards.filter(e=>e.id).length === 9 ? belowLevel.front.miniboards.map(b=>b.tiles.filter(t=>t.contains==='way_up' || 
                 t.contains === 'way_down' || t.contains==='door')) : null,
-                belowBack = belowLevel && belowLevel.back ? belowLevel.back.miniboards.map(b=>b.tiles.filter(t=>t.contains==='way_up' || 
+                belowBack = belowLevel && belowLevel.back && belowLevel.back && belowLevel.back.miniboards.filter(e=>e.id).length === 9 ? belowLevel.back.miniboards.map(b=>b.tiles.filter(t=>t.contains==='way_up' || 
                 t.contains === 'way_down' || t.contains==='door')) : null;
                 if(frontBoardPassages && frontBoardPassages.length > 0){
                     frontBoardPassages.forEach((f)=>{
@@ -366,6 +368,7 @@ export function MapMaker(props){
         return spawnPoints.length > 0 ? spawnPoints : null;
     }
     this.formatDungeon = (dungeonObj) => {
+        console.log('format dungeon ', dungeonObj);
         let markedPassages = this.markPassages(dungeonObj)
         let dungeonValid = true;
         let dungeonSpawns = [];
@@ -373,6 +376,7 @@ export function MapMaker(props){
             let valid = true;
             let passages = markedPassages.find(p=>p.id === l.id)
             let spawns = []
+            console.log('passages.frontPassages', passages.frontPassages);
             passages.frontPassages.forEach(passage=>{
                 if(passage.contains === 'spawn_point'){
                     spawns.push(passage);
@@ -403,9 +407,11 @@ export function MapMaker(props){
             passages.downwardPassages = passages.connected.filter(e=>e.type==='way_down')
             l.passages = passages;
             l.valid = valid;
+            console.log('spawns: ', spawns);
             l.spawns = spawns;
             if(!l.valid) dungeonValid = false;
         })
+        console.log('dungeonSpawns', dungeonSpawns);
         dungeonObj.valid = dungeonValid;
         dungeonObj.spawn_points = dungeonSpawns;
         if(dungeonObj.spawnPoints) delete dungeonObj.spawnPoints

@@ -5,6 +5,7 @@ import '../styles/map-maker.scss'
 import {storeMeta, getMeta, setEditorPreference} from '../utils/session-handler'
 import BoardView from './dungonBuilderViews/BoardView'
 import BoardsPanel from './dungonBuilderViews/BoardsPanel'
+import PlanesPanel from './dungonBuilderViews/PlanesPanel'
 import PlaneView from './dungonBuilderViews/PlaneView'
 import DungeonView from './dungonBuilderViews/DungeonView'
 import JSZip from 'jszip';
@@ -69,7 +70,6 @@ class MapMakerPage extends React.Component {
     super(props)
     let viewStateFromPrefs,
     meta = getMeta();
-    console.log('map maker props: ', props);
     if(meta?.preferences?.editor?.selectedView){
       viewStateFromPrefs = meta.preferences.editor.selectedView
       // debugger
@@ -140,7 +140,8 @@ class MapMakerPage extends React.Component {
       overlayData: null,
       loadingData: true,
       imagesMatrix: {},
-      selectedThingTitle: ''
+      selectedThingTitle: '',
+      showPlanesNames: false
     };
   }
   
@@ -349,7 +350,7 @@ class MapMakerPage extends React.Component {
   }
 
   handleHover = (id, type) => {
-    if(this.state.mouseDown && this.state.pinnedOption && this.props.mapMaker.paletteTiles[this.state.pinnedOption.id] && this.props.mapMaker.paletteTiles[this.state.pinnedOption.id].optionType === 'void'){
+    if(this.state.mouseDown && this.state.pinnedOption && this.props.mapMaker.paletteTiles[this.state.pinnedOption.id]){
       let tile = this.props.mapMaker.tiles[id];
       let pinned = null;
       if(this.props.mapMaker.paletteTiles[this.state.pinnedOption.id]){
@@ -364,6 +365,17 @@ class MapMakerPage extends React.Component {
           hoveredTileIdx: null,
           tiles: arr
         })
+      } 
+      if(pinned && pinned.optionType === 'delete'){
+        let arr = [...this.state.tiles];
+        arr[tile.id].image = null;
+        arr[tile.id].color = null;
+        arr[tile.id].contains = null;
+        this.setState({
+          tiles: arr,
+          hoveredTileIdx: null
+        })
+
       } 
     }else{
       if(type === 'palette-tile'){
@@ -656,11 +668,15 @@ class MapMakerPage extends React.Component {
 
       this.toast('Board Saved')
     } else {
-      console.log('RENAME SHOULD NOT GET HERE');
+      
+      console.log('CLONE PATH, RENAME SHOULD NOT GET HERE');
+      const clone = (thing) => {
+        return JSON.parse(JSON.stringify(thing))
+      }
       const newBoard = {
-        name: this.state.loadedBoard.name,
-        tiles: this.state.tiles,
-        config
+        name: clone(this.state.loadedBoard.name),
+        tiles: clone(this.state.tiles),
+        config: clone(config)
       }
       const addedMap = await addBoardRequest(newBoard)
       newBoard.id = addedMap.data._id
@@ -780,8 +796,8 @@ class MapMakerPage extends React.Component {
         })
       // }
       if(!boardFound){
-        console.log('...how?');
-        debugger
+        console.log('this flow is from the rename of a brand new board');
+        return
       }
       console.log('finally.... insert board found', boardFound);
       this.insertNewBoardIntoPanel(boardFound)
@@ -1019,7 +1035,8 @@ class MapMakerPage extends React.Component {
   }
 
   addNewBoard = () => {
-    this.clearLoadedBoard()
+    if(this.state.loadedBoard) this.clearLoadedBoard();
+    
     let d = new Date()
     let n = d.getTime();
     let rand = n.toString().slice(9,13);
@@ -1054,25 +1071,55 @@ class MapMakerPage extends React.Component {
       this.renameBoard();
     })
   }
-
-  clearLoadedBoard = () => {
-    let arr = [...this.state.tiles]
-    for(let t of arr){
-      t.image = null;
-      t.contains = null;
-      t.color = null
+  freezeSelectedPanelBoardBeforeClearing = () => {
+    let loadedBoard = this.state.loadedBoard;
+    let foundBoard;
+    console.log('loadedBoard.id', loadedBoard.id);
+    this.state.boardsFolders.forEach((folder)=>{
+      let f = folder.contents.find(b=>b.id === loadedBoard.id)
+      if(f) foundBoard = f;
+      folder.subfolders.forEach((subfolder) => {
+        let s = subfolder.contents.find(b=>b.id === loadedBoard.id)
+        if(s) foundBoard = s;
+        subfolder.deepfolders.forEach((deepfolder)=>{
+          deepfolder.contents.forEach(e=>{
+            console.log('deep board.id', e.id, 'vs ', loadedBoard.id);
+            // if(e.id === loadedBoard.id) foundbo
+          })
+          let d = deepfolder.contents.find(b=>b.id === loadedBoard.id)
+          if(d) foundBoard = d;
+        })
+      })
+    })
+    console.log('foundBoard: ', foundBoard);
+    if(foundBoard){
+      foundBoard.tiles = JSON.parse(JSON.stringify(loadedBoard.tiles))
+      foundBoard = JSON.parse(JSON.stringify(loadedBoard))
     }
-
+  }
+  clearLoadedBoard = () => {
+    if(this.state.loadedBoard) this.freezeSelectedPanelBoardBeforeClearing()
+    
+    
     // let miniboards = []
     // for(let i = 0; i < 9; i++){
-    //   miniboards.push([])
-    // }
-
-    this.setState({
-      loadedBoard: null,
-      tiles: arr,
-      // miniboards
-    })
+      //   miniboards.push([])
+      // }
+      
+      
+    setTimeout(()=>{
+      let arr = [...this.state.tiles]
+      for(let t of arr){
+        t.image = null;
+        t.contains = null;
+        t.color = null
+      }
+      this.setState({
+        loadedBoard: null,
+        tiles: arr,
+        // miniboards
+      })
+    }, 0)
   }
   deleteBoard = async () => {
     if(this.state.loadedBoard){
@@ -1132,6 +1179,7 @@ class MapMakerPage extends React.Component {
   //   storeMeta(meta);
   // }
   writePlane = async () => {
+    if(this.state.selectedView !== 'plane') return
     if(this.state.loadedPlane && this.state.loadedPlane.id){
       let obj = {
         name: this.state.loadedPlane.name,
@@ -1271,10 +1319,15 @@ class MapMakerPage extends React.Component {
     })
   }
   loadDungeon = async (id) => {
+    console.log('load dungein: ', id);
     const val = await loadDungeonRequest(id)
     let e = val.data[0];
+    console.log('e: ', e);
     let dungeon = JSON.parse(e.content), dungeonValid = true;
+    console.log('dungeon before formatting:  ', dungeon);
+    // debugger
     dungeon = this.props.mapMaker.formatDungeon(dungeon);
+    console.log('dungeon after formattingL: ', dungeon);
     for(let key in dungeon.levels){
       let level = dungeon.levels[key]
       console.log('corncob level: ', dungeon.levels[key])
@@ -1307,7 +1360,7 @@ class MapMakerPage extends React.Component {
       dungeon.id = e._id;
       dungeons.push(this.props.mapMaker.formatDungeon(dungeon))
     })
-    // console.log('all dungeons:', dungeons);
+    console.log('all dungeons:', dungeons);
     // let primari = dungeons.find(e=>e.name==='Primari')
     // const newPlane = primari.levels.find(e=>e.id === -1).front
     // delete newPlane.id
@@ -1524,6 +1577,7 @@ class MapMakerPage extends React.Component {
     })
   }
   viewSelectorChange = (val) => {
+    console.log('this.state', this.state);
     switch(val.target.id){
       case 'board-view':
         this.setViewState('board')
@@ -1796,11 +1850,12 @@ class MapMakerPage extends React.Component {
       break;
       case 'board':
         let board = this.state.loadedBoard;
-        console.log('this.state.loadedBoard.name: ', this.state.loadedBoard.name, 'vs ', this.state.boardNameInput.current.value);
-        console.log('same folder: ', this.isInSameFolder(this.state.loadedBoard.name, this.state.boardNameInput.current.value))
+        // console.log('loaded board', this.state.loadedBoard);
+        // console.log('this.state.loadedBoard.name: ', this.state.loadedBoard.name, 'vs ', this.state.boardNameInput.current.value);
+        // console.log('same folder: ', this.isInSameFolder(this.state.loadedBoard.name, this.state.boardNameInput.current.value))
 
         const needsFolderUpdate = !this.isInSameFolder(this.state.loadedBoard.name, this.state.boardNameInput.current.value);
-
+        console.log('needs folder update? (not in same folder)', needsFolderUpdate);
         board.name = this.state.boardNameInput.current.value;
         this.setState({
           loadedBoard: board,
@@ -1827,6 +1882,7 @@ class MapMakerPage extends React.Component {
         dungeonOverlayOn: false,
         overlayData: null
       })
+      console.log('dungeonId: ', dungeon.id);
       this.loadDungeon(dungeon.id)
     } else {
       this.setState({
@@ -1865,6 +1921,14 @@ class MapMakerPage extends React.Component {
     console.log('close modal!!!');
     this.setState({
       showModal: false
+    })
+  }
+
+  toggleShowPlaneNames = () => {
+    let currentVal = this.state.showPlanesNames
+    console.log('toggle show planes names, current val: ', currentVal);
+    this.setState({
+      showPlanesNames: !currentVal
     })
   }
 
@@ -2136,6 +2200,7 @@ class MapMakerPage extends React.Component {
               handleHover={this.handleHover}
               setPaletteHover={this.setPaletteHover}
               loadBoard={this.loadBoard}
+              showPlanesNames={this.state.showPlanesNames}
 //            board specific ^              
             ></PlaneView>}
 
@@ -2221,6 +2286,70 @@ class MapMakerPage extends React.Component {
               imagesMatrix={this.state.imagesMatrix}
               zoomIntoBoard={this.zoomIntoBoard}
               ></DungeonView>}
+
+          {(this.state.selectedView === 'plane' || 
+           this.state.selectedView === 'dungeon') 
+          && <PlanesPanel
+              tileSize={this.state.tileSize}
+              boardSize={this.state.boardSize}
+              boardsFolders={this.state.boardsFolders}
+              boardsFoldersExpanded={this.state.boardsFoldersExpanded}
+              boards={this.state.boards}
+              tiles={this.state.tiles}
+              compatibilityMatrix={this.state.compatibilityMatrix}
+              hoveredPaletteTileIdx={this.state.hoveredPaletteTileIdx}
+              hoveredTileIdx={this.state.hoveredTileIdx}
+              hoveredTileId={this.state.hoveredTileIdx}
+              optionClickedIdx={this.state.optionClickedIdx}
+              selectedView={this.state.selectedView}
+              showCoordinates={this.props.showCoordinates}
+              mapMaker={this.props.mapMaker}
+
+              loadedPlane={this.state.loadedPlane}
+              planes={this.state.planes}
+              miniboards={this.state.loadedPlane?.miniboards || [[],[],[],[],[],[],[],[],[]]}
+              adjacencyHoverIdx={this.state.adjacencyHoverIdx}
+              hoveredSection={this.state.hoveredSection}
+              adjacencyHover = {this.adjacencyHover}
+              adjacencyFilter = {this.adacencyFilter}
+              loadPlane={this.loadPlane}
+              writePlane={this.writePlane}
+              clearLoadedPlane={this.clearLoadedPlane}
+              renamePlane={this.renamePlane}
+              deletePlane={this.deletePlane}
+              addNewPlane={this.addNewPlane}
+              onDragOver={this.onDragOver}
+              // filterDungeonsClicked={this.filterDungeonsClicked}
+              onDragStart={this.onDragStart}
+              onDrop={this.onDrop}
+              resetLoadedPlane={this.resetLoadedPlane}
+//            plane specific ^
+
+
+              setViewState = {this.setViewState}
+              clearLoadedBoard= {this.clearLoadedBoard}
+              writeBoard = {this.writeBoard}
+              deleteBoard = {this.deleteBoard}
+              renameBoard = {this.renameBoard}
+              adjacencyFilterClicked = {this.adjacencyFilterClicked}
+              nameFilterClicked = {this.nameFilterClicked}
+              expandCollapseBoardFolders={this.expandCollapseBoardFolders}
+              collapseFilterHeader={this.collapseFilterHeader}
+              setHover={this.setHover}
+              handleClick={this.handleClick}
+              handleHover={this.handleHover}
+              setPaletteHover={this.setPaletteHover}
+              loadBoard={this.loadBoard}
+//            board specific ^   
+              imagesMatrix={this.state.imagesMatrix}
+              zoomIntoBoard={this.zoomIntoBoard}
+              onDragOverDungeon={this.onDragOverDungeon}
+              onDropDungeon={this.onDropDungeon}
+              onDragStartDungeon={this.onDragStartDungeon}
+
+              toggleShowPlaneNames={this.toggleShowPlaneNames}
+            ></PlanesPanel>}
+
           </div>
         </div>
       </div>

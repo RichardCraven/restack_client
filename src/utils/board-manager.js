@@ -188,6 +188,8 @@ export function BoardManager(){
         this.currentOrientation = orientation;
     }
     this.respawnMonsters = (template) => {
+        console.log('respawn monsters, template: ', template);
+        if(!template || !template.levels) return
         let currentOrientation = this.currentOrientation
         let currentLevel = currentOrientation === 'F' ? this.currentLevel.front : this.currentLevel.back
         let foundTemplatePlane;
@@ -378,6 +380,7 @@ export function BoardManager(){
         }
     }
     this.removeDefeatedMonsterTile = (tileId) => {
+        console.log('remove monster tile', tileId);
         const tile = this.tiles[tileId];
         this.removeTileFromBoard(tile);
     }

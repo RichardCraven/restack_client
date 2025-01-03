@@ -250,6 +250,7 @@ class DungeonPage extends React.Component {
         }
     }
     respawnMonsters = async () => {
+        console.log('respawn')
         let dungeons = [],
         selectedDungeon;
         
@@ -260,7 +261,7 @@ class DungeonPage extends React.Component {
             d.id = e._id
             dungeons.push(d)
         })
-        selectedDungeon = JSON.parse(JSON.stringify(dungeons.find(e=>e.name === 'Primari')));
+        selectedDungeon = allDungeons[0];
         this.props.boardManager.respawnMonsters(selectedDungeon)
     }
     componentWillUnmount(){
@@ -370,6 +371,7 @@ class DungeonPage extends React.Component {
         })
     }
     triggerMonsterBattle = (bool, tileId) => {
+        console.log('trigger monster battle', bool);
         this.setState({
             keysLocked: bool,
             inMonsterBattle: bool,
@@ -553,7 +555,7 @@ class DungeonPage extends React.Component {
     // transform: perspective(3cm) rotateX(16deg) rotateY(0deg) rotateZ(0deg)
 
     keyDownHandler = (event) => {
-        console.log('event: ', event,  'keys locked: ', this.state.keysLocked);
+        console.log('keys locked: ', this.state.keysLocked);
         if(this.state.keysLocked && this.state.inMonsterBattle){
             this.combatKeyDownHandler(event);
             return
@@ -905,7 +907,9 @@ class DungeonPage extends React.Component {
             d.id = e._id
             dungeons.push(d)
         })
-        selectedDungeon = dungeons.find(e=>e.name === 'Primari');
+        console.log('dungeons: ', dungeons);
+        selectedDungeon = dungeons[0]
+        // selectedDungeon = dungeons.find(e=>e.name === 'Primari');
         let newDungeonPayload = {
             name: `${selectedDungeon.name}_${userName}_${userId.slice(userId.length-4)}`,
             levels: selectedDungeon.levels,
@@ -914,18 +918,22 @@ class DungeonPage extends React.Component {
             spawn_points: selectedDungeon.spawn_points,
             valid: selectedDungeon.valid
           }
+          console.log('adding new dungeon with payload: ', newDungeonPayload);
         const newDungeonRes = await addDungeonRequest(newDungeonPayload);
+        console.log('new dungeon res', newDungeonRes);
         selectedDungeon = JSON.parse(newDungeonRes.data.content);
-
+          console.log('selected dungeon: ', selectedDungeon);
         selectedDungeon.id = newDungeonRes.data._id;
-        spawnPoint = selectedDungeon.spawn_points[Math.floor(Math.random()*spawnList.length)]
-        spawnPoint = selectedDungeon.spawn_points[1]
-        // ^ remove later
-        
+        // spawnPoint = selectedDungeon.spawn_points[Math.floor(Math.random()*spawnList.length)]
+        // ^ need to populate spawnList
+        spawnPoint = selectedDungeon.spawn_points[0]
+        console.log('spawn point', spawnPoint);
         
         this.props.inventoryManager.initializeItems()
-
+        
         if(spawnPoint){
+            console.log('eyyyy spawnpoint!');
+            // return
             this.props.boardManager.setDungeon(selectedDungeon);
             let sp = spawnPoint.locationCode.split('_');
             const levelId =  spawnPoint.level;
@@ -998,7 +1006,8 @@ class DungeonPage extends React.Component {
                 this.toggleRightSidePanel();
             }, 1000)
         } else {
-            alert('no valid dungeon!')
+            console.log('uhhhh', 'NO VALID DUNGEON!?');
+            // alert('no valid dungeon!')
         }
     }
     loadExistingDungeon = async (dungeonId) => {
@@ -1089,6 +1098,7 @@ class DungeonPage extends React.Component {
         return text.charAt(0).toUpperCase() + text.slice(1);
     }
     battleOver = (result) => {
+        console.log('battle over result: ', result);
         if(result === 'win'){
             this.props.boardManager.removeDefeatedMonsterTile(this.state.monsterBattleTileId)
             this.props.crewManager.checkForLevelUp(this.props.crewManager.crew)
@@ -1098,7 +1108,8 @@ class DungeonPage extends React.Component {
             this.props.saveUserData()
         }
         this.setState({
-            keysLocked : false
+            keysLocked : false,
+            inMonsterBattle: false
         })
     }
     minimapTileClicked = (index) => {
@@ -1336,6 +1347,7 @@ class DungeonPage extends React.Component {
         </div>
     }
     onUpdateModalClosed = () => {
+        console.log('on update modal closed');
         switch(this.state.modalType){
             case 'Updates':
                 const meta = getMeta();

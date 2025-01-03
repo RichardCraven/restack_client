@@ -81,7 +81,7 @@ class BoardsPanel extends React.Component {
                                                                 <div className="boards-folder-headline subfolder-headline"  onClick={() => this.props.expandCollapseBoardFolders(`${folder.title}_${subfolder.title}_${deepfolder.title}`)}> 
                                                                     <div className="folder-color-line" style={{backgroundColor: i % 2 ? '#199595' : '#13c2c2'}}></div>
                                                                     <div className="icon-container">
-                                                                        <CIcon icon={cilCaretRight} className={`expand-icon ${this.props.boardsFoldersExpanded[`${folder.title}_${subfolder.title}`] ? 'expanded' : ''}`} size="sm"/>
+                                                                        <CIcon icon={cilCaretRight} className={`expand-icon ${this.props.boardsFoldersExpanded[`${folder.title}_${subfolder.title}_${deepfolder.title}`] ? 'expanded' : ''}`} size="sm"/>
                                                                     </div>
                                                                     <div className="deepfolder-headline-text">{deepfolder.title}</div> 
                                                                 </div>
@@ -96,7 +96,8 @@ class BoardsPanel extends React.Component {
                                                                                         draggable
                                                                                         style={{
                                                                                             height: this.props.tileSize*3,
-                                                                                            boxSizing: 'border-box'
+                                                                                            boxSizing: 'border-box',
+                                                                                            filter: this.props.loadedBoard && board.id === this.props.loadedBoard.id ? 'sepia(1)' : ''
                                                                                         }}
                                                                                         onClick={() => {
                                                                                             return this.props.loadBoard(board)
@@ -137,7 +138,8 @@ class BoardsPanel extends React.Component {
                                                                     draggable
                                                                     style={{
                                                                         height: this.props.tileSize*3,
-                                                                        boxSizing: 'border-box'
+                                                                        boxSizing: 'border-box',
+                                                                        filter: this.props.loadedBoard && board.id === this.props.loadedBoard.id ? 'sepia(1)' : ''
                                                                     }}
                                                                     onClick={() => {
                                                                         return this.props.loadBoard(board)
@@ -176,7 +178,8 @@ class BoardsPanel extends React.Component {
                                                     draggable
                                                     style={{
                                                         height: this.props.tileSize*3,
-                                                        boxSizing: 'border-box'
+                                                        boxSizing: 'border-box',
+                                                        filter: this.props.loadedBoard && board.id === this.props.loadedBoard.id ? 'sepia(1)' : ''
                                                     }}
                                                     onClick={() => {
                                                         return this.props.loadBoard(board)
@@ -214,7 +217,8 @@ class BoardsPanel extends React.Component {
                                     className="map-preview draggable" 
                                     style={{
                                         height: this.props.tileSize*3,
-                                        boxSizing: 'border-box'
+                                        boxSizing: 'border-box',
+                                        filter: this.props.loadedBoard && board.id === this.props.loadedBoard.id ? 'sepia(1)' : ''   
                                     }}
                                     onClick={() => {this.props.loadBoard(board)
                                     }}>

@@ -146,6 +146,7 @@ const beginIntroSequence = () => {
   setShowToolbar(false);
 }
 const endIntroSequence = () => {
+  console.log('dnd intro');
   setShowToolbar(true);
 }
 const beginDeathSequence = () => {

@@ -281,6 +281,8 @@ import hourglass2 from '../assets/icons/menu/hourglass-2_inverted.png'
 
 import voidfill from '../assets/icons/menu/actions_inverted.png'
 
+import whiteskull from '../assets/icons/misc/white_skull.png'
+
 export {
     monster,
     avatar,
@@ -514,5 +516,6 @@ export {
     hourglass1,
     hourglass2,
 
-    voidfill
+    voidfill,
+    whiteskull
 };

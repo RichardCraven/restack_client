@@ -30,10 +30,10 @@ export default function Tile(props) {
             fontSize: '0.7em',
             position: 'relative',
             borderLeft: (props.type === 'palette-tile' && !props.hovered) ? '2px solid transparent' : 
-            (props.type === 'palette-tile' && props.hovered ? '2px solid red' : ((props.borders && props.borders.left) ? props.borders.left : 'none')),
-            borderRight: (props.borders && props.borders.right) ? props.borders.right : 'none',
-            borderTop: (props.borders && props.borders.top) ? props.borders.top : 'none',
-            borderBottom: (props.borders && props.borders.bottom) ? props.borders.bottom : 'none'
+            (props.type === 'palette-tile' && props.hovered ? '2px solid red' : ((props.borders && props.borders.left) ? props.borders.left : '1px solid transparent')),
+            borderRight: (props.borders && props.borders.right) ? props.borders.right : '1px solid transparent',
+            borderTop: (props.borders && props.borders.top) ? props.borders.top : '1px solid transparent',
+            borderBottom: (props.borders && props.borders.bottom) ? props.borders.bottom : '1px solid transparent'
             }}
             onMouseEnter={() => {
                 if(props.type === 'crew-tile'){

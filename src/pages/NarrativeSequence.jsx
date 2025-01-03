@@ -318,7 +318,8 @@ export default function NarrativeSequence(props) {
 
     const runSequence = (type) => {
         let cloneArray;
-        console.log('type: ', type);
+        console.log('run sequence type: ', type);
+
         switch(type){
             case 'intro':
                 console.log('in intro');
@@ -377,19 +378,18 @@ export default function NarrativeSequence(props) {
                 }
             })
         }
-        fireItOff();
         const endSequenceAndNav = () => {
             switch(type){
                 case 'intro':
                     props.endIntroSequence();
                     setNavToDungeon(true)
-                break;
-                case 'death': 
+                    break;
+                    case 'death': 
                     setWreckImage(true)
                     delay(0.85).then(()=>{
                         setMoreWrecked(true)
                         delay(1).then(()=>{
-    
+                            
                             setFadeOutLastFrame(true);
                             setTimeout(()=>{
                                 props.endDeathSequence();
@@ -397,11 +397,15 @@ export default function NarrativeSequence(props) {
                             }, 700)
                         })
                     })
-                break;
-                default:
-                    console.log('NO TYPE'); return
-            }
-        }
+                    break;
+                    default:
+                        console.log('NO TYPE'); return
+                    }
+                }
+                props.endIntroSequence();
+                endSequenceAndNav();
+                return
+        fireItOff();
     }
   useEffect(()=> {
     console.log('in use effect, props', props);

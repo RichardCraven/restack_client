@@ -60,6 +60,7 @@ export function CrewManager(){
     }
 
     this.checkForLevelUp = (memberArray) => {
+        console.log('crew, check for level up', memberArray);
         memberArray.forEach(m=>{
             let nextLevelExp = EXP_TABLE[m.level]
             let member = this.crew.find(c=>c.type === m.type)

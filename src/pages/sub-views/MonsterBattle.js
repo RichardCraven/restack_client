@@ -203,6 +203,7 @@ class MonsterBattle extends React.Component {
         })
     }
     gameOver = (outcome) => {
+        console.log('outcome', outcome);
         let experienceGained,
             goldGained,
             itemsGained,
@@ -223,6 +224,7 @@ class MonsterBattle extends React.Component {
             goldGained = Math.floor(Math.random() * experienceGained);
             this.props.inventoryManager.addCurrency({type: 'gold', amount: goldGained})
             setTimeout(()=>{
+                console.log('timeout triggered');
                 this.props.crewManager.addExperience(liveCrew, experienceGained);
                 let meta = getMeta();
                 meta.crew = this.props.crewManager.crew;
@@ -528,7 +530,9 @@ class MonsterBattle extends React.Component {
                                 })}
                                 {Object.values(this.state.battleData).filter(e=>e.dead && !e.isMonster && !e.isMinion).map((crewMember, i) => {
                                     return <div key={i} className="single-portrait-container dead-member">
-                                        <div className="portrait" style={{backgroundImage: `url(${crewMember.portrait})`}}></div>
+                                        <div className="portrait" style={{backgroundImage: `url(${crewMember.portrait})`}}>
+                                            <div className="skull-image" style={{backgroundImage: `url(${images['whiteskull']})`}}></div>
+                                        </div>
                                     </div>
                                 })}
                             </div>

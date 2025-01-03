@@ -105,6 +105,12 @@ $bot-level-zIndex: 2; // doubletall containers
     }
 }
 .mapmaker-container{
+    svg.expand-icon{
+        transition: all 0.3s;
+        &.expanded{
+            transform: rotate(90deg);
+        }
+    }
     .column-wrapper{
         align-items: center;
         position: relative;
@@ -298,13 +304,7 @@ ul.dropdown-menu.show{
         display: flex;
         align-items: center;
         justify-content: center;
-        svg.expand-icon{
-            // margin-right: 10px;
-            transition: all 0.3s;
-            &.expanded{
-                transform: rotate(90deg);
-            }
-        }
+        
     }
     .folder-headline-text{
         flex: auto;
@@ -443,11 +443,21 @@ ul.dropdown-menu.show{
     justify-content: center;
     .mini-board{
         border: 1px solid black;
+        position: relative;
     }
     .empty-planes-container, .empty-boards-container{
         display: flex;
         align-items: center;
         justify-content: center;
+    }
+    .plane-name{
+        position: absolute;
+        top: 0;
+        left: 0;
+        background-color: black;
+        color: white;
+        z-index: 1;
+        border: 1px solid lightgrey;
     }
 }
 

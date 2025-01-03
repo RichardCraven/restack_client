@@ -49,7 +49,7 @@ export default function LandingPage(props) {
 
 
 
-
+      console.log('setting props narrative sequence to intro');
       props.setNarrativeSequence('intro')
       
       setNavToIntro(true)

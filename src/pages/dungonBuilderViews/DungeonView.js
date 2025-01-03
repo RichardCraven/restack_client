@@ -813,7 +813,7 @@ class DungeonView extends React.Component {
                     </div>
                 </div>
 
-                <div className="palette right-palette" 
+                {/* <div className="palette right-palette" 
                     style={{
                         width: this.props.tileSize*3+'px', height: this.props.boardSize+ 'px',
                         backgroundColor: 'white',
@@ -906,7 +906,7 @@ class DungeonView extends React.Component {
                                 </div>)
                         })}
                     </div>
-                </div>
+                </div> */}
             </div>
         )
     }
