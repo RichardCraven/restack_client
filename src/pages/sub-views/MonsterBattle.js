@@ -55,6 +55,7 @@ class MonsterBattle extends React.Component {
         }
     }
     componentDidMount(){
+        console.log('is simulation: ', this.props.isSimulation);
         // const MAX_DEPTH = 8;
         this.props.combatManager.initialize();
         this.props.combatManager.connectAnimationManager(this.props.animationManager);
@@ -237,7 +238,13 @@ class MonsterBattle extends React.Component {
         } else {
             battleResult = 'loss'
             summaryMessage = 'Death has come for you and yours.'
-            this.launchDeathSequence();
+            if(this.props.isSimulation){
+                console.log('exit simulation');
+                this.props.exitSimulator();
+                return
+            } else {
+                this.launchDeathSequence();
+            }
         }
 
         this.setState({

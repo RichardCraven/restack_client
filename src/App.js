@@ -9,6 +9,7 @@ import MapmakerPage from './pages/MapmakerPage'
 import UserManagerPage from './pages/UserManagerPage'
 import UserProfilePage from './pages/UserProfilePage'
 import CrewManagerPage from './pages/CrewManagerPage'
+import CombatSimulator from './pages/CombatSimulator'
 
 
 import { Route, Switch, Redirect} from "react-router-dom";
@@ -45,6 +46,7 @@ useEffect(() => {
 useEffect(()=>{
 }, [allUsers])
 
+
 const logout = () => {
   saveUserData();
   sessionStorage.clear()
@@ -60,10 +62,13 @@ const loginFromRegister = (user) => {
     storeSessionData(user._id, user.token, user.isAdmin, user.username, user.metadata)
     setLoggedIn(true)
     setIsAdmin(JSON.parse(sessionStorage.getItem('isAdmin') === 'true' ))
-    history.push({
-      pathname: '/landing'
-    })
+    navToLanding()
   }, 500)
+}
+const navToLanding = () =>{
+  history.push({
+    pathname: '/landing'
+  })
 }
 const login = (userCredentials) => {
   let validUser = null;
@@ -202,6 +207,10 @@ const toggleMenuTray = () => {
           <Route exact path="/crewManager" render={() => (
             !loggedIn ? <Redirect to="/login" /> :
             <CrewManagerPage {...props} />
+          )}/>
+          <Route exact path="/combatSimulator" render={() => (
+            !loggedIn ? <Redirect to="/login" /> :
+            <CombatSimulator {...props} navToLanding={navToLanding} />
           )}/>
           <Route exact path="/dungeon" render={() => (
             !loggedIn ? <Redirect to="/login" /> :

@@ -5,6 +5,7 @@ import {getMeta} from '../utils/session-handler';
 
 export default function LandingPage(props) {
   const [navToUserProfile, setNavUserProfile] = useState(false);
+  const [navToCombatSimulator, setNavToCombatSimulator] = useState(false);
   const [navToCrew, setNavCrew] = useState(false);
   const [navToPortal, setNavMapmaker] = useState(false);
   const [navToUsermanager, setNavUsermanager] = useState(false);
@@ -64,13 +65,15 @@ export default function LandingPage(props) {
           { navToPortal && <Redirect to='/mapmaker'/> }
           { navToDungeon && <Redirect to='/dungeon'/> }
           { navToUsermanager && <Redirect to='/usermanager'/> }
+          { navToCombatSimulator && <Redirect to='/combatSimulator'/> }
           <div className="landing-buttons-container">
             {showWarning && <span className="warning">Cannot enter dungeon without a crew</span>}
             <div className={`landing-button enter-dungeon ${showWarning ? 'disabled' : ''}`} onMouseEnter={() => checkForCrew()} onMouseLeave={() => setShowWarning(false)} onClick={() => enterClicked()}>Enter</div>
             <div className="landing-button shop"  onClick={() => setNavCrew(true)} >Crew</div>
             <div className="landing-button user-data" onClick={() => setNavUserProfile(true)}>Profile</div>
             { isAdmin && <div className="landing-button map-maker" onClick={() => setNavMapmaker(true)}>Dungeon Builder</div>}
-            { isAdmin && <div className="landing-button-last user-manager" onClick={() => setNavUsermanager(true)}>User Manager</div>}
+            { isAdmin && <div className="landing-button user-manager" onClick={() => setNavUsermanager(true)}>User Manager</div>}
+            { isAdmin && <div className="landing-button landing-button-last combat-simulator" onClick={() => setNavToCombatSimulator(true)}>Combat Simulator</div>}
           </div>
        </div>
   )

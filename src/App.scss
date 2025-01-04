@@ -270,6 +270,12 @@ button{
       &.shop:hover{
         background-color: coral;
       }
+      &.user-manager:hover{
+        background-color: rgb(64, 148, 65);
+      }
+      &.combat-simulator:hover{
+        background-color: rgb(52, 166, 201);
+      }
       &.enter-dungeon:hover{
         background-color: black;
         color: red;
