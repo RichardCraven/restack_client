@@ -128,15 +128,15 @@ class CrewManagerPage extends React.Component{
     minions = null;
     if(monster && monster.minions){
         minions = [];
-        monster.minions.forEach((e,i)=>{
-            const minion = this.props.monsterManager.getMonster(e)
-            minion.id = minion.id+i+700
-            let minionName = this.pickRandom(minion.monster_names)
-            minion.name = minionName
-            minion.inventory = [];
+        // monster.minions.forEach((e,i)=>{
+        //     const minion = this.props.monsterManager.getMonster(e)
+        //     minion.id = minion.id+i+700
+        //     let minionName = this.pickRandom(minion.monster_names)
+        //     minion.name = minionName
+        //     minion.inventory = [];
 
-            minions.push(minion)
-        })
+        //     minions.push(minion)
+        // })
     }
 
     console.log('monster: ', monster);

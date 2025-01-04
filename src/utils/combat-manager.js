@@ -5,10 +5,16 @@ import { MonsterAI } from './monster-ai/monster-ai'
 import {MovementMethods} from './fighter-ai/methods/fighter-movement-methods'
 // import {MovementMethods} from './methods/movement-methods';
 
-const MAX_DEPTH = 7
+const MAX_DEPTH = 8
+// ^ means 8 squares, account for depth of 0 is far left
 const MAX_LANES = 5
 const FIGHT_INTERVAL = 10
 const DEBUG_STEPS = false;
+const RANGES = {
+    close: 1,
+    medium: 3,
+    far: 5
+}
 
 export function CombatManager(){
     this.gameIsOver = true;
@@ -96,6 +102,7 @@ export function CombatManager(){
             name: 'magic missile',
             type: 'arcane',
             range: 'far',
+            icon: images['magic_missile'],
             cooldown: 5,
             damage: 3
         },
@@ -586,13 +593,13 @@ export function CombatManager(){
                         //     //destination dickness still not working
                         // } else 
                         if(this.pendingAttack && this.pendingAttack.cooldown_position === 100){
-                            // if(this.isMonster) console.log('monster at 100, in deepest block')
-
-
+                            
+                            
                             if(this.name === "Loryastes"  && DEBUG_STEPS === true){
                                 // console.log('Loryastes [IN TURN CYCLE] about to call attack');
                             }
                             const target = getCombatant(this.targetId);
+                        if(this.isMonster) console.log('monster at 100, about to attack', target, 'targetId: ', this.targetId)
                             if(this.name === 'Loryastes' && this.DEBUG_STEPS){
                                 // console.log('Loryastes endcycle, target: ', target);
                             }
@@ -605,14 +612,17 @@ export function CombatManager(){
                                 return
                             }
                             let inRange = targetInRange(this);
+                            
                             // if(this.isMonster) console.log('monster at 100, inrange: ', inRange)
                             if(this.type === 'djinn'){
                                 console.log('djinn turnSkips: ', this.turnSkips, 'inRange: ', inRange);
                             }
                             if(inRange){
+                                if(this.isMonster) console.log('in range');
                                 // if(this.isMonster) console.log('monster at 100, attack')
                                 this.attack(target)
                             } else {
+                                if(this.isMonster) console.log('not in range');
                                 // if(this.isMonster) console.log('monster at 100, else, turnskips at ', this.turnSkips)
                                 
                                 if((this.isMonster || this.isMinion) && this.turnSkips >= 1){
@@ -653,6 +663,12 @@ export function CombatManager(){
                     broadcastDataUpdate(this)
                 }, FIGHT_INTERVAL)
             },
+            restartTurnCycle: function(){
+                console.log('restarting');
+                console.log('this.interval: ', this.interval);
+                clearInterval(this.interval)
+                this.turnCycle();
+            },
             waitForAttack: function(){
                 // this.aiming = true;
                 const waitInterval = setInterval(()=>{
@@ -691,6 +707,7 @@ export function CombatManager(){
         caller.action_queue.shift();
     }
     this.initializeCombat = (data) => {
+        console.log('initialize combat');
         const callbacks = {
             broadcastDataUpdate: this.broadcastDataUpdate,
             acquireTarget: this.acquireTarget,
@@ -716,17 +733,24 @@ export function CombatManager(){
         
         console.log('initializing with crew: ', this.data.crew);
         this.data.crew.forEach((e, index) => {
+            // e.hp = 1000
+            e.stats.hp = 1000
             e.position = index;
             e.depth = 0;
             e.coordinates = {x:0, y:index}
+            console.log('e: ', e);
             this.combatants[e.id] = createFighter(e, callbacks);
         })
+        console.log('new fighter: ', this.combatants);
+        // debugger
         this.data.monster.position = 2;
         this.data.monster.depth = MAX_DEPTH;
         this.data.monster.coordinates = {x:MAX_DEPTH, y:1}
         let monster = createFighter(this.data.monster, callbacks);
         monster.isMonster = true;
         this.combatants[monster.id] = monster;
+
+        console.log('initializing with monster ', monster);
 
 
         if(this.data.minions){
@@ -761,7 +785,7 @@ export function CombatManager(){
         const distanceToTarget = this.getDistanceToTarget(caller, target)
 
         let res;
-        // if(caller.isMonster) console.log('differential: ', differential, 'distance: ', distanceToTarget)
+        if(caller.isMonster) console.log('range: ', caller.pendingAttack.range, 'differential: ', differential, 'distance: ', distanceToTarget)
         switch(caller.pendingAttack.range){
             case 'self':
                 res = true;
@@ -888,8 +912,11 @@ export function CombatManager(){
         let attack, available = caller.attacks.filter(e=>e.cooldown_position === 100);
         const distanceToTarget = this.getDistanceToTarget(caller, target);
         let percentCooledDown = 0,
-            chosenAttack;
-
+        chosenAttack;
+        if(caller.isMonster){
+            console.log(caller,'choosing attack type', target);
+            console.log('distance to target', distanceToTarget, 'available:',  available, 'all attacks: ', caller.attacks);
+        }
         if(available.length === 0){
             caller.attacks.filter(e=>e.range === 'medium' || e.range === 'far').forEach(e=>{
                 if(e.cooldown_position > percentCooledDown){
@@ -906,6 +933,7 @@ export function CombatManager(){
             if(available.filter(e=>(e.range === 'far' || e.range === 'medium') && e.cooldown_position > 25).length > 0){
                 let percentCooledDown = 0;
                 available.filter(e=>(e.range === 'far' || e.range === 'medium') && e.cooldown_position > 25).forEach((e)=>{
+                    // console.log('attack e: ', e,  e.cooldown_position, percentCooledDown);
                     if(e.cooldown_position > percentCooledDown){
                         percentCooledDown = e.cooldown_position;
                         chosenAttack = e;
@@ -929,26 +957,34 @@ export function CombatManager(){
     }
     this.moveFighterOneSpace = (direction) => {
         // console.log('this.selectedFighter', this.selectedFighter);
+        console.log('move fighter one space ', direction);
         if(!this.selectedFighter) return 
         const fighter = this.combatants[this.selectedFighter.id]
         if(fighter.dead) return
+        fighter.restartTurnCycle()
         switch(direction){
             case 'up':
+                if(fighter.position === 0) return
                 fighter.position--
                 fighter.coordinates.y--
                 fighter.manualMoveCooldown()
             break;
             case 'down':
+                console.log('fighter: ', fighter, fighter.position);
+                console.log('max lanes: ', MAX_LANES);
+                if(fighter.position >= MAX_LANES - 1) return
                 fighter.position++
                 fighter.coordinates.y++
                 fighter.manualMoveCooldown()
             break;
             case 'right':
+                if(fighter.depth === MAX_DEPTH) return
                 fighter.depth++
                 fighter.coordinates.x++
                 fighter.manualMoveCooldown()
             break;
             case 'left':
+                if(fighter.depth === 0) return
                 fighter.depth--
                 fighter.coordinates.x--
                 fighter.manualMoveCooldown()
@@ -959,7 +995,10 @@ export function CombatManager(){
         // console.log('in combat manager move ', fighter.name, direction);
     }
     this.initiateAttack = (caller) => {
+        console.log('caller???', caller);
+        if(caller.isMonster) console.log('monster attempting to iniitiating attack target ', caller.targetId);
         if(caller.dead || !caller.targetId) return;
+        if(caller.isMonster) console.log('monster iniitiating attack');
         if(this.fighterAI.roster[caller.name]){
             this.fighterAI.roster[caller.name].initiateAttack(caller, this.combatants, this.hitsTarget, this.missesTarget);
             return
@@ -1002,6 +1041,7 @@ export function CombatManager(){
         }
     }
     this.kickoffAttackCooldown = (caller) => {
+        if(caller.isMonster) console.log('monster cooldown begins');
         const atk = caller.pendingAttack;
         atk['cooldown_position'] = 0;
         let totalTime = atk.cooldown * 1000;
@@ -1039,12 +1079,21 @@ export function CombatManager(){
         // ^ needs to be the old way
         return ((distanceToTarget * 100) + 100)
     }
+    this.getRangeWidthString = (caller) => {
+        if(caller.pendingAttack){
+            // console.log('range: ', caller.pendingAttack.range, 'translates to', RANGES[caller.pendingAttack.range] )
+            console.log(caller.name, 'depth: ', caller.depth, 'range width: ', RANGES[caller.pendingAttack.range]);
+            console.log('therfor finsl calc: ', caller.depth * 100 - RANGES[caller.pendingAttack.range]*100)
+            return RANGES[caller.pendingAttack.range]
+        }
+        return 0
+    }
     this.updateCoordinates = (caller) => {
         caller.coordinates = {x: caller.depth, y: caller.position}
     }
     this.acquireTarget = (caller, targetToAvoid = null) => {
         if(this.combatPaused || caller.dead) return;
-
+        
         if(this.fighterAI.roster[caller.name]){
             this.fighterAI.roster[caller.name].acquireTarget(caller, this.combatants)
             return
@@ -1053,11 +1102,13 @@ export function CombatManager(){
             this.fighterAI.roster[caller.type].acquireTarget(caller, this.combatants)
             return
         }
-
+        
         if(this.monsterAI.roster[caller.type]){
             this.monsterAI.roster[caller.type].acquireTarget(caller, this.combatants);
             return
         }
+        
+        // console.log(caller.name, 'acquires target');
 
         // let reposition = this.pickRandom([1,2,3,4,5,6,7,8,9,10]) < 4
         
@@ -1076,6 +1127,8 @@ export function CombatManager(){
             this.combatOver = true;
             return
         }
+        this.clearTargetListById(caller.id)
+        // if(target.)
         target.targettedBy.push(caller.id)
         const attack = this.chooseAttackType(caller, target);
         caller.targetId = target.id
@@ -1264,13 +1317,17 @@ export function CombatManager(){
         this.broadcastDataUpdate();
     }
     this.clearTargetListById = (targetId) => {
+        // console.log('clearing out ', targetId);
         const combatants = Object.values(this.combatants)
         combatants.forEach(e=>{
             e.targettedBy = e.targettedBy.filter(id=> id !== targetId)
-            if(e.targetId === targetId) e.targetId = null;
+            // if(e.targetId === targetId){
+            //     e.targetId = null;
+            // }
         })
     }
     this.hitsTarget = (caller) => {
+        console.log(caller.name, 'hits target');
         let target = this.getCombatant(caller.targetId);
         if(!target) return
         target.wounded = true;
@@ -1296,6 +1353,9 @@ export function CombatManager(){
             this.updateCoordinates(caller)
         }
         setTimeout(()=>{
+            // this.combatants[caller.targetId].targettedBy = this.combatants[caller.targetId].targettedBy.filter(e=>e !== caller.id)
+            this.clearTargetListById(caller.id)
+            caller.targetId = null
             caller.active = false;
             caller.tempo = 1;
             caller.turnCycle();
@@ -1317,8 +1377,10 @@ export function CombatManager(){
             caller.active = false;
             caller.attacking = caller.attackingReverse = false;
             caller.missed = false;
-            caller.tempo = 1;
-            caller.turnCycle();
+            // this.combatants[caller.targetId].targettedBy = this.combatants[caller.targetId].targettedBy.filter(e=>e !== caller.id)
+            this.clearTargetListById(caller.id)
+            caller.targetId = null
+            caller.restartTurnCycle();
         }, FIGHT_INTERVAL * 50)
 
         setTimeout(()=>{

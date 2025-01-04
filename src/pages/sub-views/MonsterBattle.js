@@ -11,11 +11,20 @@ import {
 import Canvas from '../../components/Canvas/canvas'
 
 const MAX_DEPTH = 8;
+// ^ means 8 squares, account for depth of 0 is far left
 const MAX_ROWS = 5;
 const TILE_SIZE = 100;
 const SHOW_TILE_BORDERS = true;
-const SHOW_COMBAT_BORDER_COLORS = false;
+const SHOW_COMBAT_BORDER_COLORS = true;
 const SHOW_INTERACTION_PANE=true
+
+const RANGES = {
+    close: 1,
+    medium: 3,
+    far: 5
+}
+
+
 // const SHOW_BORDERS = true;
 class MonsterBattle extends React.Component {
     constructor(props){
@@ -109,6 +118,9 @@ class MonsterBattle extends React.Component {
                 arrowUpImage: arrowUp
             })
         }
+    }
+    monster = () => {
+        return this.state.battleData[this.props.monster.id]
     }
     milliDelay = (numMilliseconds) => {
         return new Promise((resolve) => {
@@ -378,6 +390,12 @@ class MonsterBattle extends React.Component {
         this.setState({portraitHoveredId: id})
     }
     monsterCombatPortraitClicked = (id) => {
+        // console.log('battle data: ', this.state.battleData);
+        // console.log('images[this.state.battleData[e]?.portrait]', this.state.battleData[id].targettedBy);
+        // let targettedBy = this.state.battleData[id].targettedBy;
+        // console.log('should be Sadronis: ', this.state.battleData[targettedBy]);\
+        console.log('monster', this.monster());
+
         const selectedMonster = this.state.battleData[id];
         if(this.state.showCrosshair){
             this.props.combatManager.queueAction(this.state.selectedFighter.id, id, this.state.selectedAttack)
@@ -701,12 +719,22 @@ class MonsterBattle extends React.Component {
                                 <div className={`action-bar-wrapper`} 
                                     style={{
                                         zIndex: 1000,
-                                        width: !!this.state.battleData[this.props.monster.id]?.targetId ? `${this.props.combatManager.getDistanceToTargetWidthString(this.state.battleData[this.props.monster.id])}px` : '5px',
+                                        border: '2px solid red',
+                                        width: !!this.monster()?.targetId ? `${this.props.combatManager.getDistanceToTargetWidthString(this.state.battleData[this.props.monster.id])}px` : '0px',
                                         left: `calc(100px * ${this.props.combatManager.getCombatant(this.state.battleData[this.props.monster.id]?.targetId)?.depth} + 50px)`
                                         }}>
-                                    <div  style={{zIndex: 1000}}  className={`action-bar ${this.state.battleData[this.props.monster.id]?.attacking ? 'monsterHitsAnimation' : ''}`}>
+                                    <div  style={{zIndex: 1000, backgroundColor: '#2eb85c63'}}  className={`action-bar ${this.state.battleData[this.props.monster.id]?.attacking ? 'monsterHitsAnimation' : ''}`}>
 
                                     </div>
+                                </div>
+                                <div className={`range-bar-wrapper`} 
+                                    style={{
+                                        zIndex: 1001,
+                                        height: '100%',
+                                        border: this.monster()?.pendingAttack ? '1px solid blue' : '1px solid pink',
+                                        width: !!this.monster()?.pendingAttack ? `${this.props.combatManager.getRangeWidthString(this.monster()) * 100 + 100}px` : '0px',
+                                        left: this.monster()?.pendingAttack ? `${(this.monster()?.depth * 100) - RANGES[this.monster().pendingAttack.range]*100 - 100}px` : 0
+                                        }}>
                                 </div>
                                 { this.state.battleData[this.props.monster.id] && this.state.battleData[this.props.monster.id].pendingAttack && <div className={`weapon-wrapper 
                                 ${this.getMonsterWeaponAnimation(this.state.battleData[this.props.monster.id])}
@@ -752,9 +780,19 @@ class MonsterBattle extends React.Component {
                                     onMouseLeave={() => this.portraitHovered(null)}
                                     onClick={() => this.monsterCombatPortraitClicked(this.props.monster.id)}
                                     >
+                                        <div className="pending-attack-container">
+                                            {/* {this.monster()} */}
+                                            <div className="pending-attack-icon" style={{
+                                                backgroundImage: "url(" + this.monster()?.pendingAttack?.icon + ")"
+                                            }}></div>
+
+                                            {/* {this.state.battleData[this.props.monster.id]?.targettedBy.map((e,i)=>{
+                                                return <div key={i} className='targetted-by-portrait' style={{backgroundImage: "url(" + this.state.battleData[e]?.portrait + ")"}}></div>
+                                            })} */}
+                                        </div>
                                         <div className="targetted-by-container">
                                             {this.state.battleData[this.props.monster.id]?.targettedBy.map((e,i)=>{
-                                                return <div key={i} className='targetted-by-portrait' style={{backgroundImage: "url(" + images[this.state.battleData[e]?.portrait] + ")"}}></div>
+                                                return <div key={i} className='targetted-by-portrait' style={{backgroundImage: "url(" + this.state.battleData[e]?.portrait + ")"}}></div>
                                             })}
                                         </div>
                                     </div>

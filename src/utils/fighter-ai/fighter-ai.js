@@ -249,6 +249,7 @@ export function FighterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
             this.methods.moveTowardsCloseEnemyTarget(caller, combatants);
         },
         acquireTarget: (caller, combatants) => {
+            console.log('GRECO ACQUIRES');
             const liveEnemies = Object.values(combatants).filter(e=>!e.dead && (e.isMonster || e.isMinion));
             const sorted = liveEnemies.sort((a,b)=>a.depth - b.depth);
             const target = sorted[0];
@@ -258,6 +259,7 @@ export function FighterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
             caller.targetId = target.id;
         },
         initiateAttack: (caller, combatants, hitsTarget, missesTarget) => {
+            console.log('greco initiates attack');
             caller.attacking = true;
             const target = combatants[caller.targetId];
             const distanceToTarget = this.getDistanceToTarget(caller, target),
