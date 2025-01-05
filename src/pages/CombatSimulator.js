@@ -200,7 +200,6 @@ combatKeyDownHandler = (event) => {
             paused
         })
     }
-    console.log('key: ', key);
     switch(key){
         case 'Tab':
             event.preventDefault();

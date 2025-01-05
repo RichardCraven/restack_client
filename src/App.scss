@@ -472,7 +472,7 @@ button{
           position: relative;
           .name{
             position: absolute;
-            bottom: -50px;
+            bottom: -32px;
             left: 0;
             font-size: 20px;
             width: 100%;
@@ -544,9 +544,22 @@ button{
           .add-button{
             position: absolute;
             color: #8e8c8c;
-            top: -48px;
-            left: 34px;
-            font-size: 35px;
+            top: -8px;
+            left: -16px;
+            font-size: 30px;
+            cursor: pointer;
+            background-color: black;
+            border-radius: 3px;
+            // border: 1px solid white;
+            height: 21px;
+            /* padding: 1px; */
+            background-position: center;
+            background-size: 100% 100%;
+            display: flex
+        ;
+            align-items: center;
+
+
             cursor: pointer;
             &:hover{
               color: white;

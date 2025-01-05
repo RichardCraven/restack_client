@@ -56,6 +56,7 @@ export function MonsterManager(){
             deathCries: ['Urdu meklak milnaurku...'],
             specials: ['obliterate', 'flying', 'invisibility'],
             attacks: ['void_lance', 'magic_missile'],
+            // attacks: ['magic_missile'],
             weaknesses: ['arcane', 'holy-aura'],
             minions: ['beholder_minion', 'beholder_minion'],
             drops: [

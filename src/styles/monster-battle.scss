@@ -379,6 +379,34 @@
         animation: MonsterHits 1s linear ;
         background-position: 100% 100%;
     }
+    .monsterHitsAnimation_LtoR
+    {
+        z-index: 1001;
+        background: linear-gradient(90deg,transparent, red 6%, transparent 51%);
+        background-size: 200% 200%;
+        -webkit-animation: MonsterHitsLtoR 1s linear ;
+        -moz-animation: MonsterHitsLtoR 1s linear ;
+        animation: MonsterHitsLtoR 1s linear ;
+        background-position: 100% 100%;
+    }
+
+    @-webkit-keyframes MonsterHitsLtoR {
+        0%{background-position:100% -100%}
+        50%{background-position:-50% -100%}
+        100%{background-position:-100% -100%}
+    }
+    @-moz-keyframes MonsterHitsLtoR {
+        0%{background-position:100% -100%}
+        50%{background-position:-50% -100%}
+        100%{background-position:-100% -100%}
+    }
+    @keyframes MonsterHitsLtoR { 
+        0%{background-position:100% -100%}
+        50%{background-position:-50% -100%}
+        100%{background-position:-100% -100%}
+    }
+
+
     @-webkit-keyframes MonsterHits {
         0%{background-position:-100% 100%}
         50%{background-position:50% 100%}
@@ -641,6 +669,22 @@
                     transition: all 0.25s;
                     opacity: 0;
                     pointer-events: none;
+                    @keyframes WeaponSpins { 
+                        0%{
+                            transform: rotate(0deg);
+                            opacity: 1
+                        }
+                        50%{transform: rotate(180deg)}
+                        100%{transform: rotate(360deg)}
+                    }
+                    @keyframes WeaponSpinLeft { 
+                        0%{
+                            transform: rotate(0deg);
+                            opacity: 1
+                        }
+                        50%{transform: rotate(-180deg)}
+                        100%{transform: rotate(-360deg)}
+                    }
                     @keyframes WeaponSwings { 
                         0%{
                             transform: rotate(-20deg);
@@ -685,6 +729,9 @@
                     border-radius: 100px;
                     // transition: transform 1s;
                     transition: all 0.5s;
+                    &.reversed{
+                        transform: scaleX(-1)
+                    }
                     &.missed{
                         transform: scaleY(-1);
                     }
@@ -1105,6 +1152,16 @@
         }
         &.aiming{
             opacity: 1;
+        }
+        &.spinning{
+            -webkit-animation: WeaponSpins 1s linear ;
+            -moz-animation: WeaponSpins 1s linear ;
+            animation: WeaponSpins 1s linear ;
+        }
+        &.spin-left{
+            -webkit-animation: WeaponSpinLeft 1s linear ;
+            -moz-animation: WeaponSpinLeft 1s linear ;
+            animation: WeaponSpinLeft 1s linear ;
         }
         &.swinging-right{
             -webkit-animation: WeaponSwings 0.5s linear ;
