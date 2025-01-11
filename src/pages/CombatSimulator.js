@@ -43,6 +43,8 @@ class CrewManagerPage extends React.Component{
     this.props.inventoryManager.initializeItems()
     let options = this.props.crewManager.adventurers;
     let selectedCrew = [];
+    selectedCrew.push(options[0])
+    selectedCrew.push(options[1])
     // console.log('meta: ', meta);
     // if(meta && meta.crew && meta.crew.length){
     //     meta.crew.forEach((e,i)=>selectedCrew[i] = e)

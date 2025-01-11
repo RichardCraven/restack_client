@@ -10,12 +10,13 @@ import {
   } from '../../utils/api-handler';
 import Canvas from '../../components/Canvas/canvas'
 
-const MAX_DEPTH = 8;
+const MAX_DEPTH = 7;
+const NUM_COLUMNS = 8;
 // ^ means 8 squares, account for depth of 0 is far left
 const MAX_ROWS = 5;
 const TILE_SIZE = 100;
 const SHOW_TILE_BORDERS = true;
-const SHOW_COMBAT_BORDER_COLORS = true;
+const SHOW_COMBAT_BORDER_COLORS = false;
 const SHOW_INTERACTION_PANE=true
 
 const RANGES = {
@@ -69,9 +70,9 @@ class MonsterBattle extends React.Component {
         this.props.combatManager.initialize();
         this.props.combatManager.connectAnimationManager(this.props.animationManager);
         let arr = [], ghostPortraitMatrix = [];
-        for(let i = 0; i < 5*MAX_DEPTH; i++){
-            let x = i%MAX_DEPTH,
-            y = Math.floor(i/MAX_DEPTH)
+        for(let i = 0; i < 5*NUM_COLUMNS; i++){
+            let x = i%NUM_COLUMNS,
+            y = Math.floor(i/NUM_COLUMNS)
             arr.push({
                 id: i,
                 x,
@@ -103,7 +104,7 @@ class MonsterBattle extends React.Component {
 
         })
 
-        this.props.animationManager.initialize(MAX_DEPTH, MAX_ROWS);
+        this.props.animationManager.initialize(NUM_COLUMNS, MAX_ROWS);
 
         this.setState({
             combatTiles: arr, ghostPortraitMatrix,
@@ -120,7 +121,12 @@ class MonsterBattle extends React.Component {
         }
     }
     monster = () => {
+        // console.log('monster: ', this.state.battleData[this.props.monster.id]);
         return this.state.battleData[this.props.monster.id]
+    }
+    fighter = (propsRefFighter) => {
+        // console.log('monster: ', this.state.battleData[this.props.monster.id]);
+        return this.state.battleData[propsRefFighter.id]
     }
     targetOf = (caller) => {
         let c = this.state.battleData[caller.id],
@@ -133,6 +139,16 @@ class MonsterBattle extends React.Component {
     }
     minionDirectionReversed = (minion) => {
         return minion?.depth < this.targetOf(minion)?.depth
+    }
+    fighterFacingRight = (fighter) => {
+        const f = this.props.combatManager.combatants[fighter.id]
+        if(!f) return;
+        const target = this.state.battleData[f.targetId]
+        // console.log('target', target, 'fighter: ', f, f.targetId, this.state.battleData, this.state.battleData[f.targetId]);
+        if(target){
+            return f.depth < target.depth
+        }
+        else return true
     }
     milliDelay = (numMilliseconds) => {
         return new Promise((resolve) => {
@@ -167,10 +183,51 @@ class MonsterBattle extends React.Component {
             selectedFighter
         })
     }
-    fighterPortraitClicked = (id) => {
+    getActionBarLeftValForFighter = (id) => {
+        //cyan 
         const selectedFighter = this.state.battleData[id];
+        console.log('fighter clicked: ', selectedFighter);
+        console.log('this.fighter(selectedFighter)?.depth * 100 = ', this.fighter(selectedFighter)?.depth * 100);
+        console.log('(this.fighter(selectedFighter)?.depth * 100 - 100)', (this.fighter(selectedFighter)?.depth * 100 - 100));
+        console.log('this.fighterFacingRight(selectedFighter): ', this.fighterFacingRight(selectedFighter));
+
+        console.log('this.props.combatManager.getRangeWidthVal(fighter)', this.props.combatManager.getRangeWidthVal(selectedFighter));
+
+        // ${(this.fighter(fighter)?.depth * 100 + 100) - (this.fighterFacingRight(fighter) ? 0 : 100 - (this.props.combatManager.getRangeWidthVal(fighter) * 100))}
+
+
+        // (selectedFighter?.depth * 100 + 100) - (this.fighterFacingRight(selectedFighter) ? 0 : (100 + this.props.combatManager.getRangeWidthVal(selectedFighter) * 100))
+        let val = (this.fighter(selectedFighter)?.depth * 100) + (this.fighterFacingRight(selectedFighter) ? 100 : (0 - (this.props.combatManager.getRangeWidthVal(selectedFighter) * 100) ))
+        console.log('val: ', val);
+        return val
+    }
+    fighterPortraitClicked = (id) => {
+        //cyan 
+        const selectedFighter = this.state.battleData[id];
+        console.log('fighter clicked: ', selectedFighter);
+        console.log('this.fighter(selectedFighter)?.depth * 100 = ', this.fighter(selectedFighter)?.depth * 100);
+        console.log('(this.fighter(selectedFighter)?.depth * 100 - 100)', (this.fighter(selectedFighter)?.depth * 100 - 100));
+        console.log('this.fighterFacingRight(selectedFighter): ', this.fighterFacingRight(selectedFighter));
+
+        console.log('this.props.combatManager.getRangeWidthVal(fighter)', this.props.combatManager.getRangeWidthVal(selectedFighter));
+
+        // ${(this.fighter(fighter)?.depth * 100 + 100) - (this.fighterFacingRight(fighter) ? 0 : 100 - (this.props.combatManager.getRangeWidthVal(fighter) * 100))}
+
+
+        // (selectedFighter?.depth * 100 + 100) - (this.fighterFacingRight(selectedFighter) ? 0 : (100 + this.props.combatManager.getRangeWidthVal(selectedFighter) * 100))
+        let val = (this.fighter(selectedFighter)?.depth * 100) + (this.fighterFacingRight(selectedFighter) ? 0 : (100 - (this.props.combatManager.getRangeWidthVal(selectedFighter) * 100) ))
+        console.log('val: ', val);
+
+        // debugger
+        // console.log('THING', (this.state.selectedFighter?.depth * 100) - (RANGES[this.state.selectedFighter.pendingAttack.range]*100) - 100);
+        // console.log('THING PARTS: (', this.state.selectedFighter?.depth * 100, ')', ' - (', RANGES[this.state.selectedFighter.pendingAttack.range], '* 100');
         selectedFighter.portrait = this.props.crew.find(e=>e.id === id).portrait
         
+
+        // console.log('WIDTH: ', this.props.combatManager.getRangeWidthVal(this.state.selectedFighter) * 100);
+        // console.log('WIDTH PARTS: ', this.props.combatManager.getRangeWidthVal(this.state.selectedFighter));
+
+
         if(this.state.showCrosshair){
             this.props.combatManager.queueAction(this.state.selectedFighter.id, id, this.state.selectedAttack)
             this.setState({
@@ -229,6 +286,11 @@ class MonsterBattle extends React.Component {
     }
     gameOver = (outcome) => {
         console.log('outcome', outcome);
+        if(this.props.isSimulation){
+            console.log('exit simulation');
+            this.props.exitSimulator();
+            return
+        }
         let experienceGained,
             goldGained,
             itemsGained,
@@ -262,13 +324,7 @@ class MonsterBattle extends React.Component {
         } else {
             battleResult = 'loss'
             summaryMessage = 'Death has come for you and yours.'
-            if(this.props.isSimulation){
-                console.log('exit simulation');
-                this.props.exitSimulator();
-                return
-            } else {
-                this.launchDeathSequence();
-            }
+            this.launchDeathSequence();
         }
 
         this.setState({
@@ -542,7 +598,7 @@ class MonsterBattle extends React.Component {
                 { this.state.navToDeathScene && <Redirect to='/death'/>}
                 <div className="combat-grid-container"
                 style={{
-                    width: TILE_SIZE * MAX_DEPTH + (SHOW_TILE_BORDERS ? MAX_DEPTH * 2 : 0) + 'px',
+                    width: TILE_SIZE * NUM_COLUMNS + (SHOW_TILE_BORDERS ? NUM_COLUMNS * 2 : 0) + 'px',
                     height: TILE_SIZE * MAX_ROWS + (SHOW_TILE_BORDERS ? MAX_ROWS * 2 : 0) + 'px'
                 }}>
                     {this.state.showSummaryPanel && <div className='summary-panel'>
@@ -602,7 +658,7 @@ class MonsterBattle extends React.Component {
                     animationData={this.state.animationData}
                     tileProps={{
                         TILE_SIZE,
-                        MAX_DEPTH,
+                        NUM_COLUMNS,
                         SHOW_TILE_BORDERS,
                         MAX_ROWS
                     }}
@@ -625,7 +681,7 @@ class MonsterBattle extends React.Component {
                     </div> */}
 
                     {/* /// COMBAT GRID */}
-                    <div className="combat-grid" style={{width: TILE_SIZE * MAX_DEPTH + (SHOW_TILE_BORDERS ? MAX_DEPTH * 2 : 0) + 'px'}}>
+                    <div className="combat-grid" style={{width: TILE_SIZE * NUM_COLUMNS + (SHOW_TILE_BORDERS ? NUM_COLUMNS * 2 : 0) + 'px'}}>
                         {this.state.combatTiles.map((t,i)=>{
                             return <div 
                             key={i} 
@@ -671,17 +727,20 @@ class MonsterBattle extends React.Component {
                                             className={
                                                 `portrait fighter-portrait 
                                                 ${this.state.selectedFighter?.id === fighter.id && !fighter.dead ? 'selected' : ''}
-                                                ${this.state.battleData[fighter.id]?.wounded ? 'fighterWoundedAnimation' : ''} 
-                                                ${this.state.battleData[fighter.id]?.missed ? 'missed' : ''} 
+                                                ${this.fighter(fighter)?.wounded ? 'fighterWoundedAnimation' : ''} 
+                                                ${this.fighter(fighter)?.missed ? 'missed' : ''} 
                                                 ${fighter.isLeader ? 'leader-portrait' : ''} 
-                                                ${this.state.battleData[fighter.id]?.dead ? 'dead fighterDeadAnimation' : ''} 
+                                                ${this.fighter(fighter)?.dead ? 'dead fighterDeadAnimation' : ''} 
                                                 ${(this.state.selectedMonster?.targetId === fighter.id || this.state.selectedFighter?.targetId === fighter.id) ? 'targetted' : ''}
-                                                ${this.state.battleData[fighter.id]?.active ? 'active' : ''}`
+                                                ${this.fighter(fighter)?.active ? 'active' : ''}
+                                                ${this.fighterFacingRight(fighter) ? '' : 'reversed'}
+                                                `
                                             } 
                                             style={{
                                                 backgroundImage: "url(" + fighter.portrait + ")", 
-                                                filter: `saturate(${((this.state.battleData[fighter.id]?.hp / fighter.stats.hp) * 100) / 2}) 
-                                                        sepia(${this.state.portraitHoveredId === fighter.id ? '2' : '0'})`
+                                                filter: `saturate(${((this.fighter(fighter)?.hp / fighter.stats.hp) * 100) / 2}) 
+                                                        sepia(${this.state.portraitHoveredId === fighter.id ? '2' : '0'})`,
+                                                        // fighterFacingRight
                                             }} 
                                             onClick={() => this.fighterPortraitClicked(fighter.id)}
                                             onMouseEnter={() => this.portraitHovered(fighter.id)} 
@@ -689,43 +748,101 @@ class MonsterBattle extends React.Component {
                                             onDragStart = {(event) => this.onDragStart(fighter)}
                                             draggable
                                             >
+                                                <div className="damage-indicator-container">
+                                                {this.fighter(fighter)?.damageIndicators.map((e,i)=>{
+                                                    return <div key={i} className="damage-indicator">
+                                                        {e}
+                                                    </div>
+                                                })}
+                                                </div>
                                                 {/* <div className="coord">
-                                                    {this.state.battleData[fighter.id]?.coordinates?.x},{this.state.battleData[fighter.id]?.coordinates?.y}
+                                                    {this.fighter(fighter)?.coordinates?.x},{this.fighter(fighter)?.coordinates?.y}
                                                 </div> */}
                                             </div>
+                                            
                                             <div className="hp-bar">
-                                            {!this.state.battleData[fighter.id]?.dead && <div className="red-fill" 
-                                                style={{width: `${(this.state.battleData[fighter.id]?.hp / fighter.stats.hp) * 100}%`}}
+                                            {!this.fighter(fighter)?.dead && <div className="red-fill" 
+                                                style={{width: `${(this.fighter(fighter)?.hp / fighter.stats.hp) * 100}%`}}
                                                 ></div>}
                                             </div>
                                             <div className="energy-bar">
-                                                {!this.state.battleData[fighter.id]?.dead && <div className="yellow-fill" style={{width: `calc(${this.state.battleData[fighter.id]?.energy}%)`}}></div>}
+                                                {!this.fighter(fighter)?.dead && <div className="yellow-fill" style={{width: `calc(${this.fighter(fighter)?.energy}%)`}}></div>}
                                             </div>
                                             <div className="tempo-bar">
-                                                {!this.state.battleData[fighter.id]?.dead &&  <div className="tempo-indicator" style={{left: `calc(${this.state.battleData[fighter.id]?.tempo}% - 4px)`}}></div>}
+                                                {!this.fighter(fighter)?.dead &&  <div className="tempo-indicator" style={{left: `calc(${this.fighter(fighter)?.tempo}% - 4px)`}}></div>}
 
                                             </div>
                                         </div>
-                                        { this.state.battleData[fighter.id] && this.state.battleData[fighter.id].pendingAttack && !this.state.battleData[fighter.id].dead && 
+                                        { this.fighter(fighter) && this.fighter(fighter).pendingAttack && !this.fighter(fighter).dead && 
                                         <div className={`weapon-wrapper 
-                                            ${this.state.battleData[fighter.id]?.aiming ? 'aiming' : ''}
-                                            ${(this.state.battleData[fighter.id]?.attacking && this.state.battleData[fighter.id]?.pendingAttack.range === 'close') ? 'swinging-right' 
-                                            : (this.state.battleData[fighter.id]?.attacking && this.state.battleData[fighter.id]?.pendingAttack.range === 'far' ? 'shooting' : 
+                                            ${this.fighter(fighter)?.aiming ? 'aiming' : ''}
+                                            ${(this.fighter(fighter)?.attacking && this.fighter(fighter)?.pendingAttack.range === 'close') ? 'swinging-right' 
+                                            : (this.fighter(fighter)?.attacking && this.fighter(fighter)?.pendingAttack.range === 'far' ? 'shooting' : 
                                             '')}`}
                                             style={{
-                                            left: `${this.state.battleData[fighter.id]?.depth * 100 + 45 + (this.state.battleData[fighter.id]?.depth * 2)}px`,
+                                            left: this.fighterFacingRight(fighter) ?
+                                            `${this.fighter(fighter)?.depth * 100 + 45 + (this.fighter(fighter)?.depth * 2)}px` :
+                                            `${this.fighter(fighter)?.depth * 100 - 65 + (this.fighter(fighter)?.depth * 2)}px`
+                                            ,
                                             backgroundImage: "url(" + this.state.battleData[fighter.id].pendingAttack.icon + ")"
-                                            }}>
+                                            }}
+                                            // style={{
+                                            //     left: this.monsterDirectionReversed() ? 
+                                            //     `${this.monster()?.depth * 100 + 65 + (this.monster()?.depth * 2)}px` :
+                                            //     `${this.monster()?.depth * 100 - 45 + (this.monster()?.depth * 2)}px`,
+                                            //     backgroundImage: "url(" + this.monster().pendingAttack.icon + ")"
+                                            // }}
+                                            >
                                         </div>}
-                                        <div className={`action-bar-wrapper`} style={{
-                                            width: !!this.state.battleData[fighter.id]?.targetId ? `${this.props.combatManager.getDistanceToTargetWidthString(this.state.battleData[fighter.id])}px` : '5px',
-                                            left: `calc(100px * ${this.state.battleData[fighter.id]?.depth} + 50px)`
-                                            }}>
-                                            <div className={`action-bar 
-                                            ${(this.state.battleData[fighter.id]?.attacking) ? 'fighterHitsAnimation' : ''}
-                                            ${(this.state.battleData[fighter.id]?.healing) ? 'fighterHealsAnimation' : ''}
+                                        <div 
+                                        className={`action-bar-wrapper`} 
+                                        // style={{
+                                        //     width: !!this.state.battleData[fighter.id]?.targetId ? `${this.props.combatManager.getDistanceToTargetWidthString(this.state.battleData[fighter.id])}px` : '5px',
+                                        //     left: `calc(100px * ${this.state.battleData[fighter.id]?.depth} + 50px)`,
+                                        //     left: this.props.combatManager.getFighterActionBarLeftValue(fighter),
+                                        //     border: '3px dotted purple',
+                                        //     height: '105%'
+                                        // }}
+
+                                        // this.state.selectedFighter.id === fighter.id &&
+
+
+                                        style={{
+                                            zIndex: 1001,
+                                            height: '100%',
+                                            border: this.fighter(fighter)?.pendingAttack ? '1px solid cyan' : '1px solid pink',
+                                            width: !!this.fighter(fighter)?.pendingAttack ? `${this.props.combatManager.getRangeWidthVal(this.fighter(fighter)) * 100}px` : '0px',
+                                            left: 
+                                             this.fighter(fighter)?.pendingAttack ? 
+                                            //  '100px'
+                                            `${this.getActionBarLeftValForFighter(this.fighter(fighter)?.id)}px`
+
+                                            // `${(this.fighter(fighter)?.depth * 100 + 100) + (this.fighterFacingRight(fighter) ? 0 : 100 - (this.props.combatManager.getRangeWidthVal(fighter) * 100))}px`
+
+
+                                            // `${((this.fighter(fighter)?.depth * 100) - 100) + (this.fighterFacingRight(fighter) ? 200 : 0)}px` 
+                                            : 0
+                                        }}
+                                        
+                                        >
+                                            <div className={`
+                                            action-bar 
+                                            ${(this.fighter(fighter)?.attacking) ? (this.fighterFacingRight(fighter) ? 'fighterHitsAnimation' : 'fighterHitsAnimation_RtoL') : ''}
+                                            ${(this.fighter(fighter)?.healing) ? 'fighterHealsAnimation' : ''}
                                             `}></div>
                                         </div>
+                                        {/* <div className={`range-bar-wrapper`} 
+                                            style={{
+                                                zIndex: 1001,
+                                                height: '100%',
+                                                border: this.state.selectedFighter?.pendingAttack ? '1px solid cyan' : '1px solid pink',
+                                                width: !!this.state.selectedFighter?.pendingAttack ? `${this.props.combatManager.getRangeWidthVal(this.state.selectedFighter) * 100}px` : '0px',
+                                                left: 
+                                                this.state.selectedFighter?.pendingAttack ? 
+                                                `${(this.state.selectedFighter?.depth * 100) - (RANGES[this.state.selectedFighter.pendingAttack.range]*100) + (this.fighterFacingRight(fighter) ? 200 : 0)}px` 
+                                                : 0
+                                                }}>
+                                        </div> */}
                                     </div>
                                 </div>    
                             })}
@@ -744,10 +861,13 @@ class MonsterBattle extends React.Component {
                                 <div className={`action-bar-wrapper`} 
                                     style={{
                                         zIndex: 1000,
-                                        border: '2px solid red',
+                                        border: '1px dashed red',
                                         width: !!this.monster()?.targetId ? `${this.props.combatManager.getDistanceToTargetWidthString(this.state.battleData[this.props.monster.id])}px` : '0px',
+                                        maxWidth: !!this.monster()?.pendingAttack ? `${this.props.combatManager.getRangeWidthVal(this.monster()) * 100}px` : '0px',
                                         left: this.props.combatManager.getMonsterActionBarLeftValue(this.monster())
-                                        }}>
+                                        }}
+                                    // 
+                                    >
                                     <div  style={{
                                         zIndex: 1000, 
                                         // backgroundColor: '#2eb85c63'
@@ -759,10 +879,9 @@ class MonsterBattle extends React.Component {
                                     style={{
                                         zIndex: 1001,
                                         height: '100%',
-                                        // backgroundColor: '#46455391',
                                         border: this.monster()?.pendingAttack ? '1px solid blue' : '1px solid pink',
-                                        width: !!this.monster()?.pendingAttack ? `${this.props.combatManager.getRangeWidthString(this.monster()) * 100 + 100}px` : '0px',
-                                        left: this.monster()?.pendingAttack ? `${(this.monster()?.depth * 100) - RANGES[this.monster().pendingAttack.range]*100 - 100}px` : 0
+                                        width: !!this.monster()?.pendingAttack ? `${this.props.combatManager.getRangeWidthVal(this.monster()) * 100}px` : '0px',
+                                        left: this.monster()?.pendingAttack ? this.props.combatManager.getMonsterRangeBarLeftValue(this.monster()) : 0
                                         }}>
                                 </div>
                                 { this.monster() && this.monster().pendingAttack && <div className=
@@ -809,15 +928,17 @@ class MonsterBattle extends React.Component {
                                     onMouseLeave={() => this.portraitHovered(null)}
                                     onClick={() => this.monsterCombatPortraitClicked(this.props.monster.id)}
                                     >
+                                        <div className="damage-indicator-container">
+                                        {this.monster()?.damageIndicators.map((e,i)=>{
+                                            return <div key={i} className="damage-indicator">
+                                                {e}
+                                            </div>
+                                        })}
+                                        </div>
                                         <div className="pending-attack-container">
-                                            {/* {this.monster()} */}
                                             <div className="pending-attack-icon" style={{
                                                 backgroundImage: "url(" + this.monster()?.pendingAttack?.icon + ")"
                                             }}></div>
-
-                                            {/* {this.state.battleData[this.props.monster.id]?.targettedBy.map((e,i)=>{
-                                                return <div key={i} className='targetted-by-portrait' style={{backgroundImage: "url(" + this.state.battleData[e]?.portrait + ")"}}></div>
-                                            })} */}
                                         </div>
                                         <div className="targetted-by-container">
                                             {this.state.battleData[this.props.monster.id]?.targettedBy.map((e,i)=>{

@@ -313,8 +313,6 @@
         }
     }
     
-
-
     .fighterHitsAnimation
     {
         z-index: 1001;
@@ -325,22 +323,64 @@
         animation: FighterHits 1s ease ;
         background-position:-98% 110%;
     }
+    .fighterHitsAnimation_RtoL{
+        z-index: 1001;
+        background: linear-gradient(90deg,transparent, white 48%, transparent 51%);
+        background-size: 200% 200%;
+        -webkit-animation: FighterHitsRtoL 1s ease ;
+        -moz-animation: FighterHitsRtoL 1s ease ;
+        animation: FighterHitsRtoL 1s ease ;
+        background-position:-50% 0%;
+    }
+
+    // @-webkit-keyframes FighterHits {
+    //     0%{background-position:100% 0%}
+    //     50%{background-position:0% 100%}
+    //     100%{background-position:-98% 110%}
+    // }
+    // @-moz-keyframes FighterHits {
+    //     0%{background-position:100% 0%}
+    //     50%{background-position:0% 100%}
+    //     100%{background-position:-98% 110%}
+    // }
+    // @keyframes FighterHits { 
+    //     0%{background-position:100% 0%}
+    //     50%{background-position:0% 100%}
+    //     100%{background-position:-98% 110%}
+    // }
 
     @-webkit-keyframes FighterHits {
-        0%{background-position:100% 0%}
-        50%{background-position:0% 100%}
-        100%{background-position:-98% 110%}
+        0%{background-position:-100% 0%}
+        50%{background-position:-50% 0%}
+        100%{background-position:0% 0%}
     }
     @-moz-keyframes FighterHits {
-        0%{background-position:100% 0%}
-        50%{background-position:0% 100%}
-        100%{background-position:-98% 110%}
+        0%{background-position:-100% 0%}
+        50%{background-position:-50% 0%}
+        100%{background-position:0% 0%}
     }
     @keyframes FighterHits { 
-        0%{background-position:100% 0%}
-        50%{background-position:0% 100%}
-        100%{background-position:-98% 110%}
+        0%{background-position:-100% 0%}
+        50%{background-position:-50% 0%}
+        100%{background-position:0% 0%}
     }
+
+    @-webkit-keyframes FighterHitsRtoL {
+        0%{background-position:-50% 0%}
+        50%{background-position:50% 0%}
+        100%{background-position:100% 0%}
+    }
+    @-moz-keyframes FighterHitsRtoL {
+        0%{background-position:-50% 0%}
+        50%{background-position:50% 0%}
+        100%{background-position:100% 0%}
+    }
+    @keyframes FighterHitsRtoL { 
+        0%{background-position:-50% 0%}
+        50%{background-position:50% 0%}
+        100%{background-position:100% 0%}
+    }
+
 
     .fighterHealsAnimation
     {
@@ -525,6 +565,7 @@
     }
     .action-bar-wrapper{
         z-index: 0;
+        pointer-events: none;
     }
     .ghost-portrait{
         height: 90px;
@@ -535,7 +576,43 @@
         filter: brightness(0.3);
     }
 
+    .damage-indicator-container{
+        position: absolute;
+        top: -50px;
+        left: 0;
+        width: 100%;
+        height: 50px;
+        left: 0;
+        width: 100%;
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+        @keyframes FloatUp { 
+            0%{
+                transform: translateY(-1px);
+                opacity: 1;
+            }
+            50%{
+                transform: translateY(-15px);
+                opacity: 0.7;
+            }
+            100%{
+                transform: translateY(-30px);
+                opacity: 0.1;
+            }
+        }
 
+        .damage-indicator{
+            color: red;
+            position: absolute;
+            font-size: 16px;
+            opacity: 0;
+            -webkit-animation: FloatUp 1.8s linear ;
+            -moz-animation: FloatUp 1.8s linear ;
+            animation: FloatUp 1.8s linear ;
+        }
+    }
+    
     .fighter-pane{
         position: absolute;
         width: 100%;
@@ -574,6 +651,9 @@
                             position: relative;
                             cursor: pointer;
                             transition: all 1s;
+                            &.reversed{
+                                transform: scaleX(-1)
+                            }
                             &.missed{
                                 transform: scaleY(-1);
                             }
@@ -598,6 +678,7 @@
                         }
                     }
                     .action-bar-wrapper{
+                        pointer-events: none;
                         height: 100px;
                         // width: 100%;
                         // width: calc(100% - 300px);
@@ -606,6 +687,15 @@
                         position: absolute;
                         // left: 0;
                         // border: 1px dashed yellow;
+                    }
+                    .range-bar-wrapper{
+                        // height: 200px;
+                        width: 100%;
+                        display: flex;
+                        align-items: center;
+                        // left: 0;
+                        // border: 1px dashed rgb(149, 13, 13);
+                        position: absolute;
                     }
                 }
             }
@@ -776,7 +866,6 @@
                         left: 0;
                         width: 100%;
                         height: 20px;
-                        // border: 1px solid white;
                         display: flex;
                         align-items: center;
                         justify-content: flex-start;
@@ -788,19 +877,21 @@
                             filter: invert(1);
                         }
                     }
+                    
                     &.minion-portrait{
                         height: 100px;
                         width: 100px;
                     }
                 }
                 .action-bar-wrapper{
-                    // height: 200px;
+                    pointer-events: none;
                     width: 100%;
                     display: flex;
                     align-items: center;
                     left: 0;
-                    // border: 1px dashed rgb(149, 13, 13);
                     position: absolute;
+                    border: 1px dashed rgb(149, 13, 13);
+                    height: 90%;
                 }
                 .range-bar-wrapper{
                     // height: 200px;
@@ -1024,7 +1115,11 @@
             width: 100%;
             height: calc(100% - 40px);
             flex: auto;
-            
+            .target-col{
+                .interaction-tile{
+                    border: 2px solid transparent;
+                }
+            }
             .inventory-col, .specials-col, .attacks-col, .target-col, .queue-col, .glyphs-col{
                 height: 100%;
                 width: 100px;
@@ -1092,6 +1187,7 @@
                         background-color: whitesmoke;
                         margin-bottom: 3px;
                         background-size: 100% 100%;
+                        
                         &.available:hover{
                             filter: sepia(1);
                         }
@@ -1102,8 +1198,7 @@
                             filter: sepia(1)
                         }
                         &.target.targetted{
-                            border: 1px solid rgba(255, 255, 255, 0.68);
-
+                            border: 2px solid red
                         }
                     }
                 }
