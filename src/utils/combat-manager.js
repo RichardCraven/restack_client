@@ -453,6 +453,8 @@ export function CombatManager(){
             timeAhead: null,
             flagB: null,
             damageIndicators: [],
+            manualMovesTotal: fighter.manualMovesTotal,
+            manualMovesCurrent: fighter.manualMovesCurrent,
             attack: function(){
                 const target = getCombatant(this.targetId);
                 if(!target){
@@ -756,6 +758,8 @@ export function CombatManager(){
             e.coordinates = {x:0, y:index}
             // if(e.combatStyle) 
             console.log('eeeee: ', e);
+            e.manualMovesCurrent = 10;
+            e.manualMovesTotal = 12
             this.combatants[e.id] = createFighter(e, callbacks);
         })
         console.log('new fighter: ', this.combatants);
@@ -1021,6 +1025,7 @@ export function CombatManager(){
         const fighter = this.combatants[this.selectedFighter.id]
         if(fighter.dead) return
         fighter.restartTurnCycle()
+        fighter.manualMovesCurrent--
         switch(direction){
             case 'up':
                 if(fighter.position === 0) return

@@ -556,6 +556,51 @@
             filter: saturate(0);
         }
     }
+    .portrait-overlay{
+        background-size: 100% 100%;
+        height: 90px;
+        width: 90px;
+        border-radius: 90px;
+        position: absolute;
+        top: 0;
+        // border: 2px solid greenyellow;
+        opacity: 0;
+        border: 1px solid transparent;
+        z-index: 0;
+        &.selected{
+            opacity: 1;
+        }
+
+        // :root {
+        //     --progress-bar-width: 200px;
+        //     --progress-bar-height: 200px;
+        //     --font-size: 2rem;
+        // }
+          
+        .circular-progress {
+        width: 90px;
+        height: 90px;
+        border-radius: 50%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        // background: conic-gradient(greenyellow 30deg, black 0deg);
+        }
+        .inner-circle {
+        position: absolute;
+        width: calc(90px - 8px);
+        height: calc(90px - 8px);
+        border-radius: 50%;
+        background-color: black;
+        }
+        
+        // .percentage {
+        // position: relative;
+        // font-size: var(--font-size);
+        // color: rgba(0, 0, 0, 0.8);
+        // background: conic-gradient(green 30deg, black 0deg);
+        // }
+    }
     .action-bar{
         width: 100%;
         height: 100px;
@@ -612,7 +657,7 @@
             animation: FloatUp 1.8s linear ;
         }
     }
-    
+
     .fighter-pane{
         position: absolute;
         width: 100%;
@@ -651,6 +696,7 @@
                             position: relative;
                             cursor: pointer;
                             transition: all 1s;
+                            z-index: 1;
                             &.reversed{
                                 transform: scaleX(-1)
                             }

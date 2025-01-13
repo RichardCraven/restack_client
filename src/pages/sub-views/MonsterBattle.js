@@ -186,30 +186,30 @@ class MonsterBattle extends React.Component {
     getActionBarLeftValForFighter = (id) => {
         //cyan 
         const selectedFighter = this.state.battleData[id];
-        console.log('fighter clicked: ', selectedFighter);
-        console.log('this.fighter(selectedFighter)?.depth * 100 = ', this.fighter(selectedFighter)?.depth * 100);
-        console.log('(this.fighter(selectedFighter)?.depth * 100 - 100)', (this.fighter(selectedFighter)?.depth * 100 - 100));
-        console.log('this.fighterFacingRight(selectedFighter): ', this.fighterFacingRight(selectedFighter));
+        // console.log('fighter clicked: ', selectedFighter);
+        // console.log('this.fighter(selectedFighter)?.depth * 100 = ', this.fighter(selectedFighter)?.depth * 100);
+        // console.log('(this.fighter(selectedFighter)?.depth * 100 - 100)', (this.fighter(selectedFighter)?.depth * 100 - 100));
+        // console.log('this.fighterFacingRight(selectedFighter): ', this.fighterFacingRight(selectedFighter));
 
-        console.log('this.props.combatManager.getRangeWidthVal(fighter)', this.props.combatManager.getRangeWidthVal(selectedFighter));
+        // console.log('this.props.combatManager.getRangeWidthVal(fighter)', this.props.combatManager.getRangeWidthVal(selectedFighter));
 
         // ${(this.fighter(fighter)?.depth * 100 + 100) - (this.fighterFacingRight(fighter) ? 0 : 100 - (this.props.combatManager.getRangeWidthVal(fighter) * 100))}
 
 
         // (selectedFighter?.depth * 100 + 100) - (this.fighterFacingRight(selectedFighter) ? 0 : (100 + this.props.combatManager.getRangeWidthVal(selectedFighter) * 100))
         let val = (this.fighter(selectedFighter)?.depth * 100) + (this.fighterFacingRight(selectedFighter) ? 100 : (0 - (this.props.combatManager.getRangeWidthVal(selectedFighter) * 100) ))
-        console.log('val: ', val);
+        // console.log('val: ', val);
         return val
     }
     fighterPortraitClicked = (id) => {
         //cyan 
         const selectedFighter = this.state.battleData[id];
         console.log('fighter clicked: ', selectedFighter);
-        console.log('this.fighter(selectedFighter)?.depth * 100 = ', this.fighter(selectedFighter)?.depth * 100);
-        console.log('(this.fighter(selectedFighter)?.depth * 100 - 100)', (this.fighter(selectedFighter)?.depth * 100 - 100));
-        console.log('this.fighterFacingRight(selectedFighter): ', this.fighterFacingRight(selectedFighter));
+        // console.log('this.fighter(selectedFighter)?.depth * 100 = ', this.fighter(selectedFighter)?.depth * 100);
+        // console.log('(this.fighter(selectedFighter)?.depth * 100 - 100)', (this.fighter(selectedFighter)?.depth * 100 - 100));
+        // console.log('this.fighterFacingRight(selectedFighter): ', this.fighterFacingRight(selectedFighter));
 
-        console.log('this.props.combatManager.getRangeWidthVal(fighter)', this.props.combatManager.getRangeWidthVal(selectedFighter));
+        // console.log('this.props.combatManager.getRangeWidthVal(fighter)', this.props.combatManager.getRangeWidthVal(selectedFighter));
 
         // ${(this.fighter(fighter)?.depth * 100 + 100) - (this.fighterFacingRight(fighter) ? 0 : 100 - (this.props.combatManager.getRangeWidthVal(fighter) * 100))}
 
@@ -456,6 +456,14 @@ class MonsterBattle extends React.Component {
     }
     portraitHovered = (id) => {
         this.setState({portraitHoveredId: id})
+    }
+    getManualMovementArc = (fighter) => {
+        if(!fighter) return 0
+        console.log('fighter: ', fighter);
+        console.log('manual moves for ', fighter.name, 'is ', fighter.manualMovesCurrent / fighter.manualMovesTotal * 3.6);
+        const percentage = (fighter.manualMovesCurrent / fighter.manualMovesTotal) * 100;
+        const arc = percentage * 3.6
+        return  arc
     }
     monsterCombatPortraitClicked = (id) => {
         // console.log('battle data: ', this.state.battleData);
@@ -759,7 +767,14 @@ class MonsterBattle extends React.Component {
                                                     {this.fighter(fighter)?.coordinates?.x},{this.fighter(fighter)?.coordinates?.y}
                                                 </div> */}
                                             </div>
-                                            
+                                            <div className={`portrait-overlay ${this.state.selectedFighter?.id === fighter.id && !fighter.dead ? 'selected' : ''}`} >
+                                                <div class="circular-progress" style={{
+                                                    background: `conic-gradient(greenyellow ${this.getManualMovementArc(this.fighter(fighter))}deg, black 0deg)`
+                                                }}  data-inner-circle-color="lightgrey" data-percentage="80" data-progress-color="crimson" data-bg-color="black">
+                                                    <div class="inner-circle"></div>
+                                                    {/* <div class="percentage">0%</div> */}
+                                                </div>
+                                            </div>
                                             <div className="hp-bar">
                                             {!this.fighter(fighter)?.dead && <div className="red-fill" 
                                                 style={{width: `${(this.fighter(fighter)?.hp / fighter.stats.hp) * 100}%`}}
