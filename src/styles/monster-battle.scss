@@ -701,7 +701,10 @@
                                 transform: scaleX(-1)
                             }
                             &.missed{
-                                transform: scaleY(-1);
+                                transform: scale(0.8)
+                            }
+                            &.missed-reversed{
+                                transform: scale(0.8) scaleX(-1)
                             }
                             &.wounded{
                                 animation: fighterWoundedAnimation 3s ease;
@@ -869,7 +872,10 @@
                         transform: scaleX(-1)
                     }
                     &.missed{
-                        transform: scaleY(-1);
+                        transform: scale(0.8)
+                    }
+                    &.missed-reversed{
+                        transform: scale(0.8) scaleX(-1)
                     }
                     &.minion-portrait{
                         height: 90px;
@@ -889,7 +895,7 @@
                     &.selected{
                         border: 1px solid white;
                     }
-                    .targetted-by-container{
+                    .targetting-container{
                         position: absolute;
                         bottom: 0;
                         left: 0;
@@ -899,6 +905,23 @@
                         display: flex;
                         align-items: center;
                         justify-content: flex-start;
+                        flex-direction: row;
+                        .targetting-portrait{
+                            height: 20px;
+                            width: 20px;
+                            background-size: 100% 100%;
+                        }
+                    }
+                    .targetted-by-container{
+                        position: absolute;
+                        bottom: 0;
+                        left: 0;
+                        width: 100%;
+                        height: 20px;
+                        // border: 1px solid white;
+                        display: flex;
+                        align-items: center;
+                        justify-content: flex-end;
                         flex-direction: row;
                         .targetted-by-portrait{
                             height: 20px;
@@ -1268,19 +1291,22 @@
         pointer-events: none;
         @keyframes WeaponSwings { 
             0%{
-                transform: rotate(-20deg);
+                transform: rotate(0deg);
                 opacity: 1
             }
-            50%{transform: rotate(40deg)}
-            100%{transform: rotate(180deg)}
+            50%{transform: rotate(45deg)}
+            100%{transform: rotate(90deg)}
         }
         @keyframes WeaponSwingsLeft { 
             0%{
-                transform: rotate(20deg);
+                transform: scaleX(-1) rotate(0deg);
                 opacity: 1
             }
-            50%{transform: rotate(-40deg)}
-            100%{transform: rotate(-180deg)}
+            50%{transform: scaleX(-1) rotate(45deg)}
+            100%{
+                opacity: 0;
+                transform: scaleX(-1) rotate(90deg)
+            }
         }
         @keyframes WeaponShoots { 
             0%{
@@ -1293,6 +1319,9 @@
         }
         &.aiming{
             opacity: 1;
+        }
+        &.reversed{
+            transform: scaleX(-1);
         }
         &.spinning{
             -webkit-animation: WeaponSpins 1s linear ;
@@ -1310,9 +1339,9 @@
             animation: WeaponSwings 0.5s linear ;
         }
         &.swinging-left{
-            -webkit-animation: WeaponSwingsLeft 0.5s linear ;
-            -moz-animation: WeaponSwingsLeft 0.5s linear ;
-            animation: WeaponSwingsLeft 0.5s linear ;
+            -webkit-animation: WeaponSwingsLeft 0.75s linear ;
+            -moz-animation: WeaponSwingsLeft 0.75s linear ;
+            animation: WeaponSwingsLeft 0.75s linear ;
         }
         &.shooting{
             -webkit-animation: WeaponShoots 0.5s linear ;

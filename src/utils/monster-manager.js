@@ -315,7 +315,7 @@ export function MonsterManager(){
                 dex:7,
                 vit:9,
                 fort:8,
-                hp: 75,
+                hp: 175,
                 atk: 10,
                 baseDef: 11
             },

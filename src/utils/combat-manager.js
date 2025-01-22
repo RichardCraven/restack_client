@@ -9,7 +9,7 @@ const MAX_DEPTH = 7
 const NUM_COLUMNS = 8;
 // ^ means 8 squares, account for depth of 0 is far left
 const MAX_LANES = 5
-const FIGHT_INTERVAL = 10
+const FIGHT_INTERVAL = 20
 const DEBUG_STEPS = false;
 const RANGES = {
     close: 1,
@@ -482,7 +482,7 @@ export function CombatManager(){
             },
             manualAttack: function(){
                 if(this.name === 'Sardonis'){
-                    console.log('sardonis manual attack, pending attack: ', this.pendingAttack);
+                    // console.log('sardonis manual attack, pending attack: ', this.pendingAttack);
                 }
                 // clearInterval(this.interval)
                 // this.tempo = 1;
@@ -491,6 +491,10 @@ export function CombatManager(){
                     console.log('how come sardonis has no pending attack?');
                     debugger
                 }
+                if(this.manualMovesCurrent < 3){
+                    return
+                }
+                this.manualMovesCurrent-= 3
                 initiateAttack(this, true);
                 // this.turnCycle();
             },
@@ -533,6 +537,9 @@ export function CombatManager(){
                     if(this.combatPaused || this.dead) return
                     count += increment;
 
+                    this.manualMovesCurrent += this.manualMovesTotal/2000
+                    if(this.manualMovesCurrent > this.manualMovesTotal) this.manualMovesCurrent = this.manualMovesTotal
+
                     // if(this.type === 'djinn'){
                     //     console.log('djinn couint ', count, 'turnscips ', this.turnSkips, 'tempo: ', this.tempo);
                     // }
@@ -556,7 +563,7 @@ export function CombatManager(){
                         // console.log('yoooo WTFFFF');
                     }
                     if((this.tempo > 2 && this.tempo < 8) && this.targetId === null && !this.destinationSickness){
-                        // this.aiming = false;
+                        this.aiming = false;
                         acquireTarget(this);
                         checkOverlap(this)
                     }
@@ -725,7 +732,7 @@ export function CombatManager(){
         caller.action_queue.shift();
     }
     this.initializeCombat = (data) => {
-        console.log('initialize combat');
+        // console.log('initialize combat');
         const callbacks = {
             broadcastDataUpdate: this.broadcastDataUpdate,
             acquireTarget: this.acquireTarget,
@@ -749,20 +756,20 @@ export function CombatManager(){
         this.data = data;
         this.combatants = {};
         
-        console.log('initializing with crew: ', this.data.crew);
+        // console.log('initializing with crew: ', this.data.crew);
         this.data.crew.forEach((e, index) => {
             // e.hp = 1000
-            e.stats.hp = 1000
+            // e.stats.hp = 1000
             e.position = index;
             e.depth = 0;
             e.coordinates = {x:0, y:index}
             // if(e.combatStyle) 
-            console.log('eeeee: ', e);
+            // console.log('eeeee: ', e);
             e.manualMovesCurrent = 10;
             e.manualMovesTotal = 12
             this.combatants[e.id] = createFighter(e, callbacks);
         })
-        console.log('new fighter: ', this.combatants);
+        // console.log('new fighter: ', this.combatants);
         // debugger
         this.data.monster.position = 2;
         this.data.monster.depth = MAX_DEPTH;
@@ -771,7 +778,7 @@ export function CombatManager(){
         monster.isMonster = true;
         this.combatants[monster.id] = monster;
 
-        console.log('initializing with monster ', monster);
+        // console.log('initializing with monster ', monster);
 
 
         if(this.data.minions){
@@ -854,7 +861,7 @@ export function CombatManager(){
     this.fighterManualAttack = () =>{
         if(!this.selectedFighter) return 
         const fighter = this.combatants[this.selectedFighter.id]
-        console.log('fighter to attack', fighter);
+        // console.log('fighter to attack', fighter);
         fighter.manualAttack();
     }
     this.beginGreeting = () => {
@@ -934,12 +941,14 @@ export function CombatManager(){
         const distanceToTarget = this.getDistanceToTarget(caller, target);
         let percentCooledDown = 0,
         chosenAttack;
-
+        if(caller.isMonster){
+            console.log('MONSTER CHOSING ATTACK TYPE');
+        }
         if(caller.combatStyle){
-            console.log('COMBAT STYLE: ', caller.combatStyle);
+            // console.log('COMBAT STYLE: ', caller.combatStyle);
         }
         if(available.length === 0){
-            console.log('none available');
+            // console.log('none available');
             if(caller.combatStyle === 'prioritizeClosestEnemy'){
                 caller.attacks.filter(e=>e.range === 'close').forEach(e=>{
                     if(e.cooldown_position > percentCooledDown){
@@ -1025,7 +1034,12 @@ export function CombatManager(){
         const fighter = this.combatants[this.selectedFighter.id]
         if(fighter.dead) return
         fighter.restartTurnCycle()
-        fighter.manualMovesCurrent--
+        if(fighter.manualMovesCurrent < 1){
+            console.log('in here, returning');
+            return
+        } else {
+            fighter.manualMovesCurrent--
+        }
         switch(direction){
             case 'up':
                 if(fighter.position === 0) return
@@ -1075,7 +1089,7 @@ export function CombatManager(){
         // if(caller.dead || !caller.targetId) return;
         // if(caller.isMonster) console.log('monster iniitiating attack');
         if(this.fighterAI.roster[caller.name]){
-            console.log('Sardonis is in roster');
+            // console.log('Sardonis is in roster');
             this.fighterAI.roster[caller.name].initiateAttack(caller, this.combatants, this.hitsTarget, this.missesTarget);
             return
         }
@@ -1223,6 +1237,9 @@ export function CombatManager(){
         caller.coordinates = {x: caller.depth, y: caller.position}
     }
     this.acquireTarget = (caller, targetToAvoid = null) => {
+        if(caller.name === "Zildjikan"){
+            console.log('Z in hERRRRRRRR');
+        }
         if(this.combatPaused || caller.dead) return;
         
         if(this.fighterAI.roster[caller.name]){
@@ -1259,7 +1276,14 @@ export function CombatManager(){
             return
         }
         this.clearTargetListById(caller.id)
-        // if(target.)
+        if(caller.name === "Zildjikan"){
+
+            console.log("Zildjikan targetting monster", target);
+        }
+        if(caller.name === "Sardonis"){
+
+            console.log("Sardonis targetting monster", target);
+        }
         target.targettedBy.push(caller.id)
         const attack = this.chooseAttackType(caller, target);
         caller.targetId = target.id
@@ -1468,16 +1492,16 @@ export function CombatManager(){
         target.wounded = true;
 
         let damage = caller.atk;
-        console.log('caller: ', caller, 'damage: ', damage);
+        // console.log('caller: ', caller, 'damage: ', damage);
         if(target.weaknesses.includes[caller.pendingAttack.type]){
             damage += Math.floor(damage/2)
         }
         caller.readout.result = `hits ${target.name} for ${damage} damage`
         target.hp -= damage;
         target.damageIndicators.push(damage);
-        setTimeout(()=>{
-            target.damageIndicators.shift()
-        },2000)
+        // setTimeout(()=>{
+        //     target.damageIndicators.shift()
+        // },2000)
         caller.energy += caller.stats.fort * 3 + (1/2 * caller.level);
         if(caller.energy > 100) caller.energy = 100;
         if(target.hp <= 0){

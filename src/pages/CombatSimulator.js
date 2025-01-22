@@ -38,13 +38,14 @@ class CrewManagerPage extends React.Component{
     // }
 
   componentDidMount(){
-    console.log('combat sim component mounted props:', this.props)
-    console.log('this.props.inventoryManager', this.props.inventoryManager);
+    // console.log('combat sim component mounted props:', this.props)
+    // console.log('this.props.inventoryManager', this.props.inventoryManager);
     this.props.inventoryManager.initializeItems()
     let options = this.props.crewManager.adventurers;
     let selectedCrew = [];
     selectedCrew.push(options[0])
     selectedCrew.push(options[1])
+    selectedCrew.push(options[2])
     // console.log('meta: ', meta);
     // if(meta && meta.crew && meta.crew.length){
     //     meta.crew.forEach((e,i)=>selectedCrew[i] = e)
@@ -125,7 +126,9 @@ class CrewManagerPage extends React.Component{
     })
   }
   setMonster = (monsterString) => {
-    monsterString = 'beholder'
+    // monsterString = 'beholder'
+    // monsterString = 'djinn'
+    monsterString = 'sphinx'
     let monster = this.props.monsterManager.getMonster(monsterString), 
     minions = null;
     if(monster && monster.minions){
@@ -141,7 +144,7 @@ class CrewManagerPage extends React.Component{
         // })
     }
 
-    console.log('monster: ', monster);
+    // console.log('monster: ', monster);
 
     if(!monster) monster = this.props.monsterManager.getRandomMonster();
     let monsterName = this.pickRandom(monster.monster_names)
@@ -154,7 +157,7 @@ class CrewManagerPage extends React.Component{
 }
 
 submit = async () => {
-    console.log('submit simulator crew');
+    // console.log('submit simulator crew');
     this.setMonster()
 
     // return
@@ -189,6 +192,18 @@ goBack = () => {
     this.setState({
         navToLanding: true
     })
+}
+useConsumableFromInventory = (item) => {
+    let foundItem = this.props.inventoryManager.inventory.find(e=> e.name === item.name),
+    foundIndex = this.props.inventoryManager.inventory.findIndex(e=> e.name === item.name);
+    foundItem.animation = 'consumed';
+    this.forceUpdate();
+    setTimeout(()=>{
+        foundItem.animation = '';
+        this.props.inventoryManager.removeItemByIndex(foundIndex)
+        // this.forceUpdate();
+        // this.props.saveUserData();
+    }, 500)
 }
 combatKeyDownHandler = (event) => {
     let key = event.key, code = event.code;
@@ -308,8 +323,7 @@ combatKeyDownHandler = (event) => {
             </div>
         </div>}
 
-        {this.state.crewSelected && <div>
-            BATTLE TIME   
+        {this.state.crewSelected && <div>   
             <MonsterBattle
                 isSimulation={true}
                 exitSimulator={this.exitSimulator}

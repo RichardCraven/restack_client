@@ -12,21 +12,7 @@ export function Sphinx(data, animationManager){
         if(!target) return
         caller.pendingAttack = this.chooseAttackType(caller, target);
         caller.targetId = target.id;
-
-        
-        // 
-
-
-
-            // if(data.methods.isAnEnemyDirectlyInFrontOfMe(caller, combatants)){
-            //     caller.targetId = data.methods.isAnEnemyDirectlyInFrontOfMe().id;
-            //     caller.pendingAttack = caller.attacks.find(e=>e.name === 'meditate')
-            // } else {
-            //     const protectee = data.methods.pickRandom(Object.values(combatants).filter(e=>!e.isMonster && !e.isMinion && !e.dead && e.id !== caller.id))
-            //     if(!protectee) return
-            //     caller.targetId = protectee.id;
-            //     caller.pendingAttack = caller.attacks.find(e=>e.name === 'meditate');
-            // }
+        data.methods.targetAcquiredAnimation(caller.id, target.id)
     }
     this.processMove = (caller, combatants) => {
             if(!caller.pendingAttack){

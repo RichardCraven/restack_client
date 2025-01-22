@@ -27,6 +27,7 @@ export function Djinn(data, animationManager){
         data.methods.moveTowardsCloseEnemyTarget(caller, combatants)
     }
     this.triggerVoidLance = (coords) => {
+        console.log('TRIGGER VOID LANCE');
         const tileId = this.animationManager.getTileIdByCoords(coords)
         // console.log('tileId: ', tileId);
         if(tileId !== null){
@@ -34,7 +35,7 @@ export function Djinn(data, animationManager){
         }
     }
     this.goBehindAndAttack = (caller, target, hitsTarget, missesTarget) => {
-        // console.log('go behind attack');
+        console.log('go behind attack');
         caller.depth = target.depth-1;
         caller.position = target.position;
         caller.coordinates = {x : caller.depth, y: caller.position};
@@ -48,26 +49,14 @@ export function Djinn(data, animationManager){
         // // debugger
     }
     this.initiateAttack = (caller, combatants, hitsTarget, missesTarget) => {
-            
-        
-        
         caller.attacking = true;
         const target = combatants[caller.targetId];
-        
-        
-        // console.log('DJINN SWING', caller, 'target: ', target);
-        
-        
-        
         const distanceToTarget = data.methods.getDistanceToTarget(caller, target),
         laneDiff = data.methods.getLaneDifferenceToTarget(caller, target);
-        // console.log('DJINN INITIATE ATTACK',caller,  caller.pendingAttack, 'hits? ', distanceToTarget === 1 && laneDiff === 0);
-        // console.log('distance: ', distanceToTarget, 'laneDiff: ', laneDiff);
         if(caller.energy > 50){
             caller.energy -= 80;
             this.triggerVoidLance(target.coordinates);
             hitsTarget(caller)
-            // console.log('TRIGGER VOID LANCE');
             
         } else if(distanceToTarget > 0){
             this.goBehindAndAttack(caller, target, hitsTarget, missesTarget)
@@ -87,7 +76,6 @@ export function Djinn(data, animationManager){
 
         if(distanceToTarget === 1 && available.find(e=>e.range === 'close')){
             attack = available.find(e=>e.range === 'close');
-            // console.log('chosen attack: ', attack);
             return attack;
         }
 

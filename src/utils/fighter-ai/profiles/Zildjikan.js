@@ -22,6 +22,7 @@ export function Zildjikan(data, animationManager){
     }
 
     this.acquireTarget = (caller, combatants) => {
+        // console.log('Z ACQUIRING TARGET');
         const liveEnemies = Object.values(combatants).filter(e=>!e.dead && (e.isMonster || e.isMinion));
         const sorted = liveEnemies.sort((a,b)=>b.depth - a.depth);
         // console.log('Zildjikan sorted targets: ', sorted);
@@ -34,6 +35,7 @@ export function Zildjikan(data, animationManager){
         }
         caller.pendingAttack = this.chooseAttackType(caller, target);
         caller.targetId = target.id;
+        target.targettedBy.push(caller.id)
         // console.log('Zildjikan target: ', target);
     }
     this.chooseAttackType = (caller, target) => {
