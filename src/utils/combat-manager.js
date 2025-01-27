@@ -9,7 +9,7 @@ const MAX_DEPTH = 7
 const NUM_COLUMNS = 8;
 // ^ means 8 squares, account for depth of 0 is far left
 const MAX_LANES = 5
-const FIGHT_INTERVAL = 20
+const FIGHT_INTERVAL = 8;
 const DEBUG_STEPS = false;
 const RANGES = {
     close: 1,
@@ -18,16 +18,20 @@ const RANGES = {
 }
 
 export function CombatManager(){
-    this.gameIsOver = true;
     this.fighterAI = new FighterAI(NUM_COLUMNS, MAX_LANES, FIGHT_INTERVAL);
     this.monsterAI = new MonsterAI(NUM_COLUMNS, MAX_LANES, FIGHT_INTERVAL)
     this.movementMethods = MovementMethods;
+    this.overlayManager = null;
     this.selectedFighter = null;
     this.combatPaused = false;
     this.pauseCombat = (val) => {
         console.log('pause combt');
         this.combatPaused = val
         Object.values(this.combatants).forEach(e=>e.combatPaused = val)
+    }
+    this.reset = () => {
+        this.combatPaused = false;
+        this.combatants = {};
     }
     // this.combatStyles = {
     //     prioritizeClosestEnemy,
@@ -334,10 +338,24 @@ export function CombatManager(){
 
     this.combatants = {};
 
+    this.initializeOverlayManager = (combatants) => {
+        console.log('initializing overlay manager (from CM), combatants: ', combatants);
+        combatants.forEach(c=>{
+            this.overlayManager.addCombatant(c)
+        })
+        console.log('finally, overlayManager matrix: ', this.overlayManager.overlays);
+        // this.overlayManager.launchUpdateInterval()
+    }
+    this.connectOverlayManager = (instance) => {
+        console.log('CM connecting overlay manager', instance);
+        this.overlayManager = instance;
+        this.monsterAI.connectOverlayManager(instance);
+    }
     this.connectAnimationManager = (instance) => {
-        // this.animationManager = instance;
+        console.log('CM connecting ani manager', instance);
         this.monsterAI.connectAnimationManager(instance)
         this.fighterAI.connectAnimationManager(instance)
+        this.monsterAI.initializeRoster();
     }
 
     this.establishMessageCallback = (cb) => {
@@ -370,6 +388,9 @@ export function CombatManager(){
     this.establishMorphPortraitCallback = (cb) => {
         this.morphPortrait = cb;
     }
+    // this.establishInitializeOverlayManagerCallback = (cb) => {
+    //     this.initializeOverlayManagerCallback = cb;
+    // }
 
     this.formatAttacks = (stringArray) => {
         return stringArray.map(e=>{
@@ -491,10 +512,10 @@ export function CombatManager(){
                     console.log('how come sardonis has no pending attack?');
                     debugger
                 }
-                if(this.manualMovesCurrent < 3){
+                if(this.manualMovesCurrent < 2){
                     return
                 }
-                this.manualMovesCurrent-= 3
+                this.manualMovesCurrent-= 1
                 initiateAttack(this, true);
                 // this.turnCycle();
             },
@@ -794,6 +815,7 @@ export function CombatManager(){
             })
         }
 
+        this.initializeOverlayManager(Object.values(this.combatants))
         this.broadcastDataUpdate();
 
         this.beginGreeting()
@@ -1083,6 +1105,15 @@ export function CombatManager(){
 
         console.log('range: ', range);
     }
+    this.manualRetarget = (caller) => {
+        console.log('manual retarget for ', caller.type);
+        const targetOptions = Object.values(this.combatants).filter(e=>(e.isMinion || e.isMonster) && !e.dead)
+        console.log('target Options ', targetOptions);
+        const currentTarget = targetOptions.find(e=>e.id===caller.targetId)
+        console.log('currentTarget: ', currentTarget);
+        this.acquireTargetManually(caller, currentTarget)
+
+    }
     this.initiateAttack = (caller, manualAttack = false) => {
         // console.log('caller???', caller);
         // if(caller.isMonster) console.log('monster attempting to iniitiating attack target ', caller.targetId);
@@ -1241,18 +1272,38 @@ export function CombatManager(){
             console.log('Z in hERRRRRRRR');
         }
         if(this.combatPaused || caller.dead) return;
-        
-        if(this.fighterAI.roster[caller.name]){
-            this.fighterAI.roster[caller.name].acquireTarget(caller, this.combatants)
-            return
-        }
         if(this.fighterAI.roster[caller.type]){
-            this.fighterAI.roster[caller.type].acquireTarget(caller, this.combatants)
+            if(targetToAvoid){
+
+                console.log('fighter acquiring with avoid target', targetToAvoid);
+            }
+            this.fighterAI.roster[caller.type].acquireTarget(caller, this.combatants, targetToAvoid)
+            if(caller.targetId){
+                const animation = {
+                    type: 'targetted',
+                    id: caller.targetId,
+                    data:{
+                        color: 'white'
+                    }
+                }
+                this.overlayManager.addAnimation(animation)
+            }
             return
         }
         
         if(this.monsterAI.roster[caller.type]){
             this.monsterAI.roster[caller.type].acquireTarget(caller, this.combatants);
+            console.log('caller', caller, caller.targetId);
+            if(caller.targetId){
+                const animation = {
+                    type: 'targetted',
+                    id: caller.targetId,
+                    data:{
+                        color: caller.isMonster ? 'red' : 'lightred'
+                    }
+                }
+                this.overlayManager.addAnimation(animation)
+            }
             return
         }
         
@@ -1293,6 +1344,31 @@ export function CombatManager(){
             debugger
         }
         caller.pendingAttack = attack;
+        if(caller.targetId){
+            console.log('minion targetting', this.combatants[caller.targetId].name);
+            const animation = {
+                type: 'targetted',
+                id: caller.targetId,
+                data:{
+                    color: 'light-red'
+                }
+            }
+            this.overlayManager.addAnimation(animation)
+        }
+    }
+    this.acquireTargetManually = (caller) => {
+        let currentTarget = this.combatants[caller.targetId]
+        const liveEnemies = Object.values(this.combatants).filter(e=>!e.dead && (e.isMonster || e.isMinion));
+        const targetsSortedVertically = liveEnemies.sort((a,b)=>a.position - b.position);
+        console.log('targetsSortedVertically', targetsSortedVertically);
+        let currentTargetIndex = targetsSortedVertically.indexOf(currentTarget)
+        console.log('current target index', currentTargetIndex);
+        if(targetsSortedVertically[currentTargetIndex+1]){
+            caller.targetId = targetsSortedVertically[currentTargetIndex+1].id;
+        } else {
+            caller.targetId = targetsSortedVertically[0].id
+        }
+
     }
     this.processMove = (caller) => {
         if(caller.dead) return;
@@ -1489,10 +1565,15 @@ export function CombatManager(){
     this.hitsTarget = (caller) => {
         let target = this.getCombatant(caller.targetId);
         if(!target) return
-        target.wounded = true;
-
-        let damage = caller.atk;
-        // console.log('caller: ', caller, 'damage: ', damage);
+        let criticalHit = Math.random()*100 > 50;
+        let damage = criticalHit ? caller.atk*3 : caller.atk;
+        if(criticalHit){
+            console.log('CRITICAL HIT!')
+            target.woundedHeavily = true;
+        } else {
+            target.wounded = true;
+        }
+        console.log('caller: ', caller, 'damage: ', damage);
         if(target.weaknesses.includes[caller.pendingAttack.type]){
             damage += Math.floor(damage/2)
         }
@@ -1508,10 +1589,11 @@ export function CombatManager(){
             target.hp = 0;
             // target.dead = true;
             caller.targetId = null;
+            target.woundedLethal = true;
             this.targetKilled(target);
             // setTimeout(()=>{
-            // }, 750)
-        } else {
+            // }, 1750)
+        } else if(criticalHit) {
             // HANDLE PUSHBACK OF TARGET
 
             let hitsFromLeftToRight = caller.depth < target.depth;
@@ -1525,13 +1607,32 @@ export function CombatManager(){
             this.updateCoordinates(caller)
         }
         setTimeout(()=>{
-            if(!this.isMonster && !this.isMinion && Object.values(this.combatants).filter(e=>e.isMonster || e.isMinion).length === 1){
-                //dont retarget, just update attack
-                const attack = this.chooseAttackType(caller, target);
-                caller.pendingAttack = attack;
+            if(!this.isMonster && !this.isMinion){
+                const hasValidTargets = Object.values(this.combatants).filter(e=>e.isMonster || e.isMinion).length >= 1
+                if(caller.type === 'monk'){
+                    console.log('monk hit! better not retarget.....');
+                    console.log('has valid targets: ', hasValidTargets);
+                    console.log('Object.values(this.combatants)', Object.values(this.combatants));
+                    console.log('Object.values(this.combatants).filter(e=>e.isMonster || e.isMinion)', Object.values(this.combatants).filter(e=>e.isMonster || e.isMinion));
+                }
+                if(hasValidTargets){
+                    const attack = this.chooseAttackType(caller, target);
+                    caller.pendingAttack = attack;
+                } else {
+                    console.log('monk retargetting');
+                    this.clearTargetListById(caller.id)
+                    caller.targetId = null
+                }
             } else {
-                this.clearTargetListById(caller.id)
-                caller.targetId = null
+                //is monster or minion
+                const hasValidTargets = Object.values(this.combatants).filter(e=>!e.isMonster && !e.isMinion).length >= 1
+                if(hasValidTargets){
+                    const attack = this.chooseAttackType(caller, target);
+                    caller.pendingAttack = attack;
+                } else {
+                    this.clearTargetListById(caller.id)
+                    caller.targetId = null
+                }
             }
 
 
@@ -1545,12 +1646,18 @@ export function CombatManager(){
         setTimeout(()=>{
             caller.attacking = caller.attackingReverse = false;
             target.wounded = false;
-        }, FIGHT_INTERVAL * 100)
+            target.woundedHeavily = false;
+            // setTimeout(()=>{
+            //     target.woundedLethal = false;
+            // },1200)
+        }, FIGHT_INTERVAL * 30)
         setTimeout(()=>{
             caller.readout.action = ''
             caller.readout.result = ''
         }, 1500)
         
+
+        // this.overlayManager.addAnimation(this.combatants[target.id], 'blinded')
     }
     this.hasOnlyOneValidTarget = (caller) => {
         if(!caller.isMonster && !caller.isMinion && Object.values(this.combatants).filter(e=>e.isMonster || e.isMinion).length === 1) return true;
@@ -1561,25 +1668,36 @@ export function CombatManager(){
         caller.missed = true;
         caller.readout.result = `misses`
         let target = this.getCombatant(caller.targetId);
+        if(target) target.damageIndicators.push('miss');
         setTimeout(()=>{
             caller.active = caller.aiming = false;
             caller.attacking = caller.attackingReverse = false;
             caller.missed = false;
             
-            // if(!this.isMonster && !this.isMinion && Object.values(this.combatants).filter(e=>e.isMonster || e.isMinion).length === 1){
-            if(this.hasOnlyOneValidTarget(caller)){
-                //dont retarget
-                //dont retarget, just update attack
-                const attack = this.chooseAttackType(caller, target);
-                caller.pendingAttack = attack;
+            if(!this.isMonster && !this.isMinion){
+                const hasValidTargets = Object.values(this.combatants).filter(e=>e.isMonster || e.isMinion).length >= 1
+                if(hasValidTargets){
+                    const attack = this.chooseAttackType(caller, target);
+                    caller.pendingAttack = attack;
+                } else {
+                    this.clearTargetListById(caller.id)
+                    caller.targetId = null
+                }
             } else {
-                this.clearTargetListById(caller.id)
-                caller.targetId = null
+                //is monster or minion
+                const hasValidTargets = Object.values(this.combatants).filter(e=>!e.isMonster && !e.isMinion).length >= 1
+                if(hasValidTargets){
+                    const attack = this.chooseAttackType(caller, target);
+                    caller.pendingAttack = attack;
+                } else {
+                    this.clearTargetListById(caller.id)
+                    caller.targetId = null
+                }
             }
             
             setTimeout(()=>{
                 caller.restartTurnCycle();
-            }, 500)
+            }, 250)
 
         }, FIGHT_INTERVAL * 50)
 
@@ -1592,6 +1710,9 @@ export function CombatManager(){
     this.targetKilled = (combatant) => {
         combatant.aiming = false;
         combatant.dead = true;
+        setTimeout(()=>{
+            combatant.woundedLethal = false;
+        },1000)
         this.clearTargetListById(combatant.id)
         const allMonstersDead = Object.values(this.combatants).filter(e=> (e.isMonster || e.isMinion) && !e.dead).length === 0;
         const allCrewDead = Object.values(this.combatants).filter(e=>!e.isMonster && !e.isMinion).every(e=>e.dead)
@@ -1603,6 +1724,7 @@ export function CombatManager(){
                 e.aiming = false
             })
             this.combatOver = true;
+
             setTimeout(()=>{
                 this.gameOver(outcome)
             }, 2000)

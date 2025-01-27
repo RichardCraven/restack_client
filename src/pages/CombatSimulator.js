@@ -20,7 +20,8 @@ class CrewManagerPage extends React.Component{
         navToLanding: false,
         crewSlots: [null, null, null, null],
         advancedUser: false,
-        crewSelected: false
+        crewSelected: false,
+        shiftDown: false
     }
   }
   timer = null
@@ -38,18 +39,14 @@ class CrewManagerPage extends React.Component{
     // }
 
   componentDidMount(){
-    // console.log('combat sim component mounted props:', this.props)
-    // console.log('this.props.inventoryManager', this.props.inventoryManager);
     this.props.inventoryManager.initializeItems()
     let options = this.props.crewManager.adventurers;
     let selectedCrew = [];
     selectedCrew.push(options[0])
     selectedCrew.push(options[1])
     selectedCrew.push(options[2])
-    // console.log('meta: ', meta);
-    // if(meta && meta.crew && meta.crew.length){
-    //     meta.crew.forEach((e,i)=>selectedCrew[i] = e)
-    // }
+
+
     this.initializeListeners();
     this.setState({
         options,
@@ -63,9 +60,11 @@ class CrewManagerPage extends React.Component{
   }
   initializeListeners = () => {
     window.addEventListener('keydown', this.combatKeyDownHandler);
+    window.addEventListener('keyup', this.combatKeyUpListener)
   }
   componentCleanup = () => {
     window.removeEventListener('keydown', this.combatKeyDownHandler)
+    window.removeEventListener('keyup', this.combatKeyUpListener)
   }
   getDungeonDetails = async () => {
     const user = getMeta();
@@ -130,18 +129,22 @@ class CrewManagerPage extends React.Component{
     // monsterString = 'djinn'
     monsterString = 'sphinx'
     let monster = this.props.monsterManager.getMonster(monsterString), 
-    minions = null;
+    minions = [];
     if(monster && monster.minions){
-        minions = [];
-        // monster.minions.forEach((e,i)=>{
-        //     const minion = this.props.monsterManager.getMonster(e)
-        //     minion.id = minion.id+i+700
-        //     let minionName = this.pickRandom(minion.monster_names)
-        //     minion.name = minionName
-        //     minion.inventory = [];
 
-        //     minions.push(minion)
-        // })
+        monster.minions = ['skeleton','skeleton'];
+        // monster.minions = [];
+
+        monster.minions.forEach((e,i)=>{
+            const minion = this.props.monsterManager.getMonster(e)
+            console.log('gotten minion', minion);
+            minion.id = minion.id+i+700
+            let minionName = this.pickRandom(minion.monster_names)
+            minion.name = minionName
+            minion.inventory = [];
+
+            minions.push(minion)
+        })
     }
 
     // console.log('monster: ', monster);
@@ -150,6 +153,7 @@ class CrewManagerPage extends React.Component{
     let monsterName = this.pickRandom(monster.monster_names)
     monster.name = monsterName
     monster.inventory = [];
+    console.log('minions: ', minions);
     this.setState({
         monster,
         minions
@@ -220,7 +224,18 @@ combatKeyDownHandler = (event) => {
     switch(key){
         case 'Tab':
             event.preventDefault();
-            if(this.monsterBattleComponentRef.current) this.monsterBattleComponentRef.current.tabToFighter();
+            if(this.state.shiftDown){
+                if(this.monsterBattleComponentRef.current) this.monsterBattleComponentRef.current.tabToRetarget();
+            } else {
+                if(this.monsterBattleComponentRef.current) this.monsterBattleComponentRef.current.tabToFighter();
+            }
+        break;
+        case 'Shift':
+            event.preventDefault();
+            this.setState({
+                shiftDown: true
+            })
+            // if(this.monsterBattleComponentRef.current) this.monsterBattleComponentRef.current.tabToFighter();
         break;
         case 'ArrowUp':
             if(this.state.selectedCrewMember) this.props.combatManager.moveFighterOneSpace('up');
@@ -237,6 +252,14 @@ combatKeyDownHandler = (event) => {
         default:
             // nuttin
         break;
+    }
+}
+combatKeyUpListener = (event) => {
+    let key = event.key, code = event.code;
+    if(key === 'Shift'){
+        this.setState({
+            shiftDown: false
+        })
     }
 }
   render(){
@@ -328,6 +351,7 @@ combatKeyDownHandler = (event) => {
                 isSimulation={true}
                 exitSimulator={this.exitSimulator}
                 ref={this.monsterBattleComponentRef}
+                overlayManager={this.props.overlayManager}
                 combatManager={this.props.combatManager || null}
                 inventoryManager={this.props.inventoryManager}
                 animationManager={this.props.animationManager}

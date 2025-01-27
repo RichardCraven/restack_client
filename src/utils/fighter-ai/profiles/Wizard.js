@@ -1,4 +1,4 @@
-export function Zildjikan(data, animationManager){
+export function Wizard(data, animationManager){
     this.MAX_DEPTH = data.MAX_DEPTH;
     this.MAX_LANES = data.MAX_LANES;
     this.INTERVAL_TIME = data.INTERVAL_TIME
@@ -21,8 +21,8 @@ export function Zildjikan(data, animationManager){
         return Object.values(combatants).filter(e=>this.isEnemy(e));
     }
 
-    this.acquireTarget = (caller, combatants) => {
-        // console.log('Z ACQUIRING TARGET');
+    this.acquireTarget = (caller, combatants, targetToAvoid = null) => {
+        // console.log('wizard ACQUIRING TARGET');
         const liveEnemies = Object.values(combatants).filter(e=>!e.dead && (e.isMonster || e.isMinion));
         const sorted = liveEnemies.sort((a,b)=>b.depth - a.depth);
         // console.log('Zildjikan sorted targets: ', sorted);
@@ -36,7 +36,6 @@ export function Zildjikan(data, animationManager){
         caller.pendingAttack = this.chooseAttackType(caller, target);
         caller.targetId = target.id;
         target.targettedBy.push(caller.id)
-        // console.log('Zildjikan target: ', target);
     }
     this.chooseAttackType = (caller, target) => {
         let attack, available = caller.attacks.filter(e=>e.cooldown_position === 100);

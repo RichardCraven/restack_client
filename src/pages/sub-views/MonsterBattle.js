@@ -9,6 +9,7 @@ import {
     updateUserRequest
   } from '../../utils/api-handler';
 import Canvas from '../../components/Canvas/canvas'
+import Overlay from '../../components/Overlay'
 
 const MAX_DEPTH = 7;
 const NUM_COLUMNS = 8;
@@ -61,14 +62,18 @@ class MonsterBattle extends React.Component {
             monsterPortrait: '',
             navToDeathScene: false,
             glyphTrayExpanded: false,
-            arrowUpImage: null
+            arrowUpImage: null,
+            animationOverlays: []
         }
     }
     componentDidMount(){
         console.log('is simulation: ', this.props.isSimulation);
+        console.log('overlay manager: ', this.props.overlayManager);
         // const MAX_DEPTH = 8;
         this.props.combatManager.initialize();
+        this.props.combatManager.connectOverlayManager(this.props.overlayManager)
         this.props.combatManager.connectAnimationManager(this.props.animationManager);
+
         let arr = [], ghostPortraitMatrix = [];
         for(let i = 0; i < 5*NUM_COLUMNS; i++){
             let x = i%NUM_COLUMNS,
@@ -82,6 +87,8 @@ class MonsterBattle extends React.Component {
         }
         
         // const crewLeader = this.props.crew.find(e=>e.isLeader)
+
+        // combat manager callbacks
         this.establishMessageCallback();
         this.establishUpdateMatrixCallback();
         this.establishUpdateActorCallback();
@@ -91,6 +98,10 @@ class MonsterBattle extends React.Component {
         this.establishGameOverCallback();
         this.establishOnFighterMovedToDestinationCallback();
         this.establishOnFighterDeathCallback();
+        
+        //overlay manager callbacks
+        // this.establishInitializeOverlayManagerCallback();
+        this.establishBroadcastNewAnimationCallback();
         
         // /animation CB
         this.establishUpdateAnimationDataCallback();
@@ -183,6 +194,10 @@ class MonsterBattle extends React.Component {
             selectedFighter
         })
     }
+    tabToRetarget = () => {
+        console.log('tab to retarget', this.props.combatManager.manualRetarget);
+        this.props.combatManager.manualRetarget(this.state.selectedFighter)
+    }
     getActionBarLeftValForFighter = (id) => {
         //cyan 
         const selectedFighter = this.state.battleData[id];
@@ -204,7 +219,7 @@ class MonsterBattle extends React.Component {
     fighterPortraitClicked = (id) => {
         //cyan 
         const selectedFighter = this.state.battleData[id];
-        console.log('fighter clicked: ', selectedFighter);
+        console.log('fighter clicked: ', selectedFighter, this.state.animationOverlays[id]);
         // console.log('this.fighter(selectedFighter)?.depth * 100 = ', this.fighter(selectedFighter)?.depth * 100);
         // console.log('(this.fighter(selectedFighter)?.depth * 100 - 100)', (this.fighter(selectedFighter)?.depth * 100 - 100));
         // console.log('this.fighterFacingRight(selectedFighter): ', this.fighterFacingRight(selectedFighter));
@@ -266,6 +281,39 @@ class MonsterBattle extends React.Component {
             indicatorsMatrix
         })
     }
+    getAllOverlaysById = (id) => {
+        const animationsMatrix = this.state.animationOverlays[id].animations;
+        let finalVal = [];
+        Object.values(animationsMatrix).forEach(e=>{
+            finalVal = finalVal.concat(e);
+        })
+        return finalVal;
+    }
+    // initializeOverlayManager = (combatants) => {
+    //     console.log('initializing overlay manager (from MB), combatants: ', combatants);
+    //     combatants.forEach(c=>{
+    //         this.props.overlayManager.addCombatant(c)
+    //     })
+    //     console.log('finally, overlayManager matrix: ', this.props.overlayManager.overlays);
+    //     this.props.overlayManager.launchUpdateInterval()
+    // }
+    recieveAnimationBroadcastFromOverlayManager = (animationOverlaysUpdated) => {
+        // console.log('animationOverlays recieved: ', animationOverlaysUpdated);
+        // const animationOverlays = this.state.animationOverlays;÷
+        // switch(broadcastType){
+        //     case 'add':
+        //         animationOverlays.push(data.animation)
+        //     break;
+        //     case 'update':
+        //         const overlay = animationOverlays.find(a=>a.id === data.id)
+        //         console.log('found overlay: ', overlay);
+        //     break;
+        // }
+        this.setState({
+            animationOverlays: animationOverlaysUpdated
+        })
+        // console.log('animation overlays from state: ', this.state.animationOverlays);
+    }
     updateBattleData = (battleData) => {
         this.setState({
             battleData
@@ -286,6 +334,10 @@ class MonsterBattle extends React.Component {
     }
     gameOver = (outcome) => {
         console.log('outcome', outcome);
+
+        this.props.overlayManager.reset();
+        this.props.combatManager.reset();
+
         if(this.props.isSimulation){
             console.log('exit simulation');
             this.props.exitSimulator();
@@ -375,6 +427,13 @@ class MonsterBattle extends React.Component {
     establishOnFighterDeathCallback = () => {
         this.props.combatManager.establishOnFighterDeathCallback(this.handleFighterDeath)
     }
+    // OVERLAY MANAGER
+    establishBroadcastNewAnimationCallback = () => {
+        this.props.overlayManager.establishBroadcastAnimationEventCallback(this.recieveAnimationBroadcastFromOverlayManager)
+    }
+    // establishInitializeOverlayManagerCallback = () => {
+    //     this.props.combatManager.establishInitializeOverlayManagerCallback(this.initializeOverlayManager)
+    // }
 
     handleFighterDeath = (id) => {
         if(id === 'all enemies dead'){
@@ -742,7 +801,11 @@ class MonsterBattle extends React.Component {
                                             className={
                                                 `portrait fighter-portrait 
                                                 ${this.state.selectedFighter?.id === fighter.id && !fighter.dead ? 'selected' : ''}
-                                                ${this.fighter(fighter)?.wounded ? 'fighterWoundedAnimation' : ''} 
+                                                ${this.fighter(fighter)?.wounded ? (this.fighterFacingRight(fighter) ? 'hit-from-right' : 'hit-from-left') : ''} 
+                                                ${this.fighter(fighter)?.woundedHeavily ? (this.fighterFacingRight(fighter) ? 'hit-from-right-severe' : 'hit-from-left-severe') : ''} 
+                                                ${this.fighter(fighter)?.woundedLethal ? (this.fighterFacingRight(fighter) ? 'hit-from-right-lethal' : 'hit-from-left-lethal') : ''}
+
+
                                                 ${this.fighter(fighter)?.missed ? (this.fighterFacingRight(fighter) ? 'missed' : 'missed-reversed') : ''} 
                                                 ${fighter.isLeader ? 'leader-portrait' : ''} 
                                                 ${this.fighter(fighter)?.dead ? 'dead fighterDeadAnimation' : ''} 
@@ -776,7 +839,10 @@ class MonsterBattle extends React.Component {
                                                     {this.fighter(fighter)?.coordinates?.x},{this.fighter(fighter)?.coordinates?.y}
                                                 </div> */}
                                             </div>
-                                            <div className={`portrait-overlay ${this.state.selectedFighter?.id === fighter.id && !fighter.dead ? 'selected' : ''}`} >
+                                            {this.state.animationOverlays[fighter.id] && this.getAllOverlaysById(fighter.id).map((overlay, i) => {
+                                                return <Overlay key={i} animationType={overlay.type} data={overlay.data}/>
+                                            })}
+                                            <div className={`portrait-overlay`} >
                                                 <div className="damage-indicator-container">
                                                     {this.fighter(fighter)?.damageIndicators.map((e,i)=>{
                                                         return <div key={i} className="damage-indicator">
@@ -784,8 +850,8 @@ class MonsterBattle extends React.Component {
                                                         </div>
                                                     })}
                                                 </div>
-                                                <div className="circular-progress" style={{
-                                                    background: `conic-gradient(${this.getManualMovementArcColor(this.fighter(fighter))} ${this.getManualMovementArc(this.fighter(fighter))}deg, black 0deg)`
+                                                <div className={`circular-progress ${this.state.selectedFighter?.id === fighter.id && !fighter.dead ? 'selected' : ''}`} style={{
+                                                    background: `conic-gradient(${this.getManualMovementArcColor(this.fighter(fighter))} ${this.getManualMovementArc(this.fighter(fighter))}deg, black 0deg)`,
                                                 }}  data-inner-circle-color="lightgrey" data-percentage="80" data-progress-color="crimson" data-bg-color="black">
                                                     <div className="inner-circle"></div>
                                                     {/* <div class="percentage">0%</div> */}
@@ -935,13 +1001,18 @@ class MonsterBattle extends React.Component {
                                     zIndex: `${this.monster()?.dead ? '0' : '100'}`
                                 }}
                                 >
-                                    <div 
+                                    <div
                                     className={
                                         `portrait monster-portrait
                                         ${this.state.greetingInProcess ? 'enlarged' : ''} 
                                         ${this.monster()?.active ? 'active' : ''} 
                                         ${this.monster()?.dead ? 'dead monsterDeadAnimation' : ''}
-                                        ${this.monster()?.wounded ? 'fighterWoundedAnimation' : ''}
+
+                                        ${this.monster()?.wounded ? (this.monsterDirectionReversed() ? 'hit-from-right' : 'hit-from-left') : ''} 
+                                        ${this.monster()?.woundedHeavily ? (this.monsterDirectionReversed() ? 'hit-from-right-severe' : 'hit-from-left-severe') : ''}
+                                        ${this.monster()?.woundedLethal ? (this.monsterDirectionReversed() ? 'hit-from-right-lethal' : 'hit-from-left-lethal') : ''}
+
+
                                         ${this.monster()?.missed ? (this.monsterDirectionReversed() ? 'missed-reversed' : 'missed') : ''}
                                         ${this.state.selectedMonster?.id === this.props.monster.id ? 'selected' : ''}
                                         ${this.state.selectedFighter?.targetId === this.props.monster.id ? 'targetted' : ''}
@@ -955,7 +1026,13 @@ class MonsterBattle extends React.Component {
                                         this.monster().type === 'witch') ? `` 
                                         : `saturate(${((this.monster()?.hp / this.props.monster.stats.hp) * 100) / 2}) 
                                                 sepia(${this.state.portraitHoveredId === this.props.monster.id ? '2' : '0'})`
-                                    }} 
+                                    }}>
+                                    {/* //no children, because 3d matrix will stretch them on hit   */}
+                                    </div>
+                                    <div 
+                                    className={
+                                        `portrait-relative-container`
+                                    }
                                     onMouseEnter={() => this.portraitHovered(this.props.monster.id)} 
                                     onMouseLeave={() => this.portraitHovered(null)}
                                     onClick={() => this.monsterCombatPortraitClicked(this.props.monster.id)}
@@ -982,7 +1059,7 @@ class MonsterBattle extends React.Component {
                                                     {e}
                                                 </div>
                                             })}
-                                        </div>  ``
+                                        </div>
                                     </div>
                                     {<div className={`indicators-wrapper ${this.state.greetingInProcess ? 'hidden' : ''}`}>
                                         <div className="monster-hp-bar hp-bar">
@@ -1042,7 +1119,10 @@ class MonsterBattle extends React.Component {
                                                 `portrait minion-portrait 
                                                 ${this.state.battleData[minion.id]?.active ? 'active' : ''} 
                                                 ${this.state.battleData[minion.id]?.dead ? 'dead monsterDeadAnimation' : ''}
-                                                ${this.state.battleData[minion.id]?.wounded ? 'fighterWoundedAnimation' : ''}
+                                                ${this.state.battleData[minion.id]?.wounded ? 'hit' : ''}
+                                                ${this.state.battleData[minion.id]?.wounded ? (this.minionDirectionReversed(minion) ? 'hit-from-right' : 'hit-from-left') : ''} 
+                                                ${this.state.battleData[minion.id]?.woundedHeavily ? (this.minionDirectionReversed(minion) ? 'hit-from-right-severe' : 'hit-from-left-severe') : ''}
+                                                ${this.state.battleData[minion.id]?.woundedLethal ? (this.minionDirectionReversed(minion) ? 'hit-from-right-lethal' : 'hit-from-left-lethal') : ''}
                                                 ${this.state.battleData[minion.id]?.missed ? (this.minionDirectionReversed(minion) ? 'missed-reversed' : 'missed') : ''}
                                                 ${this.state.selectedMonster?.id === minion.id ? 'selected' : ''}
                                                 ${this.state.selectedFighter?.targetId === minion.id ? 'targetted' : ''}`
@@ -1052,6 +1132,12 @@ class MonsterBattle extends React.Component {
                                                 filter: `saturate(${((this.state.battleData[minion.id]?.hp / minion.stats.hp) * 100) / 2}) 
                                                         sepia(${this.state.portraitHoveredId === minion.id ? '2' : '0'})`
                                             }} 
+                                            
+                                            ></div>
+                                            <div 
+                                            className={
+                                                `portrait-relative-container`
+                                            }
                                             onMouseEnter={() => this.portraitHovered(minion.id)} 
                                             onMouseLeave={() => this.portraitHovered(null)}
                                             onClick={() => this.monsterCombatPortraitClicked(minion.id)}
@@ -1059,6 +1145,16 @@ class MonsterBattle extends React.Component {
                                                 <div className="targetted-by-container">
                                                     {this.state.battleData[minion.id]?.targettedBy.map((e,i)=>{
                                                         return <div key={i} className='targetted-by-portrait' style={{backgroundImage: "url(" + images[this.state.battleData[e]?.portrait] + ")"}}></div>
+                                                    })}
+                                                </div>
+                                            </div>
+                                            <div className={`portrait-overlay`} >
+                                                <div className="damage-indicator-container">
+                                                    {/* <div className="damage-indicator">33</div> */}
+                                                    {this.state.battleData[minion.id]?.damageIndicators.map((e,i)=>{
+                                                        return <div key={i} className="damage-indicator">
+                                                            {e}
+                                                        </div>
                                                     })}
                                                 </div>
                                             </div>

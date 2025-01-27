@@ -131,7 +131,7 @@ export function AnimationManager(){
                             let id = idArray.shift();
                             this.triggerTileAnimation(id, color);
                         }
-                    }, 100 + (distanceAway * 20))
+                    }, 100 + (distanceAway * 5))
                     // idArray.
                     // this.triggerTileAnimation(id, color)
                 }
@@ -151,7 +151,7 @@ export function AnimationManager(){
                             let id = idArray.shift();
                             this.triggerTileAnimation(id, color);
                         }
-                    }, 10 + (distanceAway * 10))
+                    }, 10 + (distanceAway * 5))
                 }
             }
         })
@@ -233,7 +233,7 @@ export function AnimationManager(){
                             let id = idArray.shift();
                             this.triggerTileAnimation(id, color);
                         }
-                    }, 100 + (distanceAway * 20));
+                    }, 50 + (distanceAway * 5));
                 }
                 if(sourceTile.x < destinationTile.x && direction === 'leftToRight'){
                     let sourceX = sourceTile.x
@@ -251,7 +251,7 @@ export function AnimationManager(){
                             let id = idArray.shift();
                             this.triggerTileAnimation(id, color);
                         }
-                    }, 100 + (distanceAway * 20));
+                    }, 50 + (distanceAway * 5));
                 }
             }
         })

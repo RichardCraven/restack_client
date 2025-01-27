@@ -1852,6 +1852,7 @@ class DungeonPage extends React.Component {
             <MonsterBattle
                 ref={this.monsterBattleComponentRef}
                 combatManager={this.props.combatManager}
+                overlayManager={this.props.overlayManager}
                 inventoryManager={this.props.inventoryManager}
                 animationManager={this.props.animationManager}
                 crewManager={this.props.crewManager}

@@ -11,6 +11,7 @@ import { CrewManager } from './utils/crew-manager'
 import { MonsterManager } from './utils/monster-manager'
 import { CombatManager } from './utils/combat-manager'
 import { AnimationManager } from './utils/animation-manager'
+import { OverlayManager } from './utils/overlay-manager';
 
 const boardManager = new BoardManager();
 const inventoryManager = new InventoryManager();
@@ -19,11 +20,12 @@ const mapMaker = new MapMaker();
 const monsterManager = new MonsterManager();
 const combatManager = new CombatManager();
 const animationManager = new AnimationManager();
+const overlayManager = new OverlayManager();
 
 ReactDOM.render(
   // <React.StrictMode>
     <BrowserRouter>
-      <App combatManager={combatManager} crewManager={crewManager} animationManager={animationManager} monsterManager={monsterManager} boardManager={boardManager} inventoryManager={inventoryManager} mapMaker={mapMaker}/>
+      <App overlayManager={overlayManager} combatManager={combatManager} crewManager={crewManager} animationManager={animationManager} monsterManager={monsterManager} boardManager={boardManager} inventoryManager={inventoryManager} mapMaker={mapMaker}/>
     </BrowserRouter>,
   // </React.StrictMode>,
   document.getElementById('root')

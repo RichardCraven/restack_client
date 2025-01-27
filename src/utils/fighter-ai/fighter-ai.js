@@ -1,5 +1,5 @@
-import { Loryastes } from './profiles/Loryastes'
-import { Zildjikan } from './profiles/Zildjikan'
+import { Sage } from './profiles/Sage'
+import { Wizard } from './profiles/Wizard'
 import { Rogue } from './profiles/Rogue'
 import {Methods} from './methods/basic-methods';
 import {MovementMethods} from './methods/fighter-movement-methods';
@@ -19,9 +19,9 @@ export function FighterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
     }
     this.initializeRoster = (animationManager) => {
         this.roster = {
-            Loryastes: new Loryastes(data, animationManager),
-            Zildjikan: new Zildjikan(data, animationManager),
-            Greco,
+            sage: new Sage(data, animationManager),
+            wizard: new Wizard(data, animationManager),
+            soldier,
             rogue: new Rogue(data, animationManager)
         }
     }
@@ -243,29 +243,29 @@ export function FighterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
     //     }
     // }
 
-    const Greco = {
+    const soldier = {
         processMove: (caller, combatants) => {
-            // console.log('Greco process move');
+            // console.log('soldier process move');
             this.methods.moveTowardsCloseEnemyTarget(caller, combatants);
         },
-        acquireTarget: (caller, combatants) => {
-            console.log('GRECO ACQUIRES');
+        acquireTarget: (caller, combatants, targetToAvoid = null) => {
+            console.log('soldier ACQUIRES');
             const liveEnemies = Object.values(combatants).filter(e=>!e.dead && (e.isMonster || e.isMinion));
-            const sorted = liveEnemies.sort((a,b)=>a.depth - b.depth);
+            const sorted = (targetToAvoid && liveEnemies.length > 1) ?  liveEnemies.filter(e => e.id !== targetToAvoid.id).sort((a,b)=>a.depth - b.depth) : liveEnemies.sort((a,b)=>a.depth - b.depth);
             const target = sorted[0];
-            // console.log('Grecos target: ', target);
+            // console.log('soldiers target: ', target);
 
             caller.pendingAttack = this.chooseAttackType(caller, target);
             caller.targetId = target.id;
         },
         initiateAttack: (caller, combatants, hitsTarget, missesTarget) => {
-            console.log('greco initiates attack');
+            console.log('soldier initiates attack');
             caller.attacking = true;
             const target = combatants[caller.targetId];
             const distanceToTarget = this.getDistanceToTarget(caller, target),
             laneDiff = this.methods.getLaneDifferenceToTarget(caller, target);
             if(distanceToTarget === 1 && laneDiff === 0){
-                console.log('SWING!!!! (Greco always hits)');
+                console.log('SWING!!!! (soldier always hits)');
                 hitsTarget(caller)
             } else {
                 missesTarget(caller);

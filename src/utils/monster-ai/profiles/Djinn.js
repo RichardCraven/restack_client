@@ -1,4 +1,4 @@
-export function Djinn(data, animationManager){
+export function Djinn(data, animationManager, overlayManager){
     this.MAX_DEPTH = data.MAX_DEPTH;
     this.MAX_LANES = data.MAX_LANES;
     this.INTERVAL_TIME = data.INTERVAL_TIME

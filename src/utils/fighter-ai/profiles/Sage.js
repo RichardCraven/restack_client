@@ -1,9 +1,9 @@
-export function Loryastes(data){
+export function Sage(data){
     this.MAX_DEPTH = data.MAX_DEPTH;
     this.MAX_LANES = data.MAX_LANES;
     this.INTERVAL_TIME = data.INTERVAL_TIME
     
-    this.acquireTarget = (caller, combatants) => {
+    this.acquireTarget = (caller, combatants, targetToAvoid = null) => {
             if(data.methods.isAnEnemyDirectlyInFrontOfMe(caller, combatants)){
                 caller.targetId = data.methods.isAnEnemyDirectlyInFrontOfMe().id;
                 caller.pendingAttack = caller.attacks.find(e=>e.name === 'meditate')

@@ -1,18 +1,21 @@
-export function Sphinx(data, animationManager){
+export function Sphinx(data, animationManager, overlayManager){
     this.MAX_DEPTH = data.MAX_DEPTH;
     this.MAX_LANES = data.MAX_LANES;
     this.INTERVAL_TIME = data.INTERVAL_TIME
     
     this.animationManager = animationManager;
+    this.overlayManager = overlayManager;
  
     this.acquireTarget = (caller, combatants) => {
+        // console.log('SPHINX TARGETTing. animation manager: ', this.animationManager, 'overlay manager: ', this.overlayManager);
         const liveEnemies = Object.values(combatants).filter(e=>!e.dead && (!e.isMonster && !e.isMinion));
         const sorted = liveEnemies.sort((a,b)=>a.depth - b.depth);
         const target = sorted[0];
         if(!target) return
         caller.pendingAttack = this.chooseAttackType(caller, target);
         caller.targetId = target.id;
-        data.methods.targetAcquiredAnimation(caller.id, target.id)
+        // this.overlayManager.addAnimation(target.id, 'targetted')
+        // data.methods.targetAcquiredAnimation(caller.id, target.id)
     }
     this.processMove = (caller, combatants) => {
             if(!caller.pendingAttack){
@@ -20,7 +23,7 @@ export function Sphinx(data, animationManager){
                 // debugger
                 return
             }
-            console.log('SPHIUNX PROCESS MOVE');
+            // console.log('SPHIUNX PROCESS MOVE');
             switch(caller.pendingAttack.name){
                 case 'induce madness':
                     console.log('---INDUCE MADNESSS MOVE---');
@@ -30,12 +33,12 @@ export function Sphinx(data, animationManager){
                 break;
                 case 'claws':
                     console.log('CLAWS');
-                    debugger
+                    // debugger
 
                 break;
                 case 'lightning':
                     console.log('LIGHTNING');
-                    debugger
+                    // debugger
                 break;
                 default:
                     break;
@@ -84,7 +87,7 @@ export function Sphinx(data, animationManager){
 
             break;
             case 'lightning':
-                console.log('LIGHTNING');
+                // console.log('LIGHTNING');
 
                 if(laneDiff === 0){
                     console.log('lightning hits');
