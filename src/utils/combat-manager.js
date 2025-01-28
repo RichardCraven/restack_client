@@ -809,17 +809,16 @@ export function CombatManager(){
     }
     this.targetInRange = (caller) => {
         const target = this.combatants[caller.targetId];
+        let attackRange = RANGES[caller.pendingAttack.range]
+        if(caller.type === 'monk' && this.fighterFacingUp(caller)){
+            console.log('attackRange: ', attackRange);
+        }
         if(!caller.pendingAttack || this.combatOver) return false
-        
-        // if(caller.isMonster) console.log('monster target in range check, target: ', target, 'and monster is ', caller)
         if(!target){
-            // debugger
             return
         }
-        const differential = Math.abs(caller.depth - target.depth);
+        const differential = this.fighterFacingUp(caller) ? Math.abs(caller.position - target.position) : Math.abs(caller.depth - target.depth);
         // 1 means target is right in front of you
-
-        const distanceToTarget = this.getDistanceToTarget(caller, target)
 
         let res;
         // if(caller.isMonster) console.log('range: ', caller.pendingAttack.range, 'differential: ', differential, 'distance: ', distanceToTarget)
@@ -833,6 +832,10 @@ export function CombatManager(){
                     // console.log('vs distance to target: ', distanceToTarget);
                 }
                 res = differential === 1;
+                if(caller.type === 'monk' && this.fighterFacingUp(caller)){
+                    // console.log('attackRange: ', attackRange);
+                    console.log('up in range', res);
+                }
             break;
             case 'medium':
                 // if(caller.isMonster) console.log('wiotch differential: ', differential, 'distance: ', distanceToTarget)
@@ -1100,31 +1103,24 @@ export function CombatManager(){
             break;
         }
         fighter.restartTurnCycle()
-        // console.log('in combat manager move ', fighter.name, direction);
-    }
-    this.attackBlindly = (caller) => {
-
-
-        
-
-
-
-        // caller.active = true;
-        // caller.attacking = true;
-        // this.broadcastDataUpdate();
-        // caller.readout.action = ` attacks with ${caller.pendingAttack.name}`
-        // this.kickoffAttackCooldown(caller)
-
-        
     }
     this.fighterFacingRight = (caller) => {
         const f = this.combatants[caller.id]
         if(!f) return;
         const target = this.combatants[f.targetId]
         if(target){
-            return f.depth < target.depth
+            return f.depth <= target.depth
         }
         else return true
+    }
+    this.fighterFacingUp = (caller) => {
+        const f = this.combatants[caller.id]
+        if(!f) return;
+        const target = this.combatants[f.targetId]
+        if(target){
+            return f.position > target.position && f.depth === target.depth
+        }
+        else return false
     }
     this.manualRetarget = (caller) => {
         console.log('manual retarget for ', caller.type);
@@ -1139,17 +1135,17 @@ export function CombatManager(){
        let manualTarget = false;
         const targetInRange = (caller, target) => {
             const pendingAttack = caller.pendingAttack
-            const depthDiff = Math.abs(caller.depth - target.depth)
-            // if(manualAttack){
+            const rangeDiff = this.fighterFacingUp(caller) ? Math.abs(caller.position - target.position) : Math.abs(caller.depth - target.depth)
+            if(manualAttack){
                 console.group('TARGET IN RANGE BLock');
 
                 console.log('caller', caller, 'target: ', target);
                 console.log('pendingAttack', pendingAttack);
-                console.log('pendingAttack range ', RANGES[caller.pendingAttack.range], 'vs depthDiff: ', depthDiff);
+                console.log('pendingAttack range ', RANGES[caller.pendingAttack.range], 'vs rangeDiff: ', rangeDiff);
 
                 console.groupEnd()
-            // }
-            return depthDiff <= RANGES[caller.pendingAttack.range]
+            }
+            return rangeDiff <= RANGES[caller.pendingAttack.range]
         }
 
         if(this.fighterAI.roster[caller.name]){
@@ -1169,14 +1165,10 @@ export function CombatManager(){
 
         let target = this.combatants[caller.targetId];
         if(!target || !targetInRange(caller, target)){
-            // if(!target) console.log(caller.type, 'attacked without a target');
-            // if(!targetInRange(caller, target)) console.log(caller.type, 'attacked a target that wasnt in range');
             if(!manualAttack){
                 console.log('somehow this fighter initiated an attack without a target/range and NOT manually! investigate');
                 debugger
             }
-            // this.attackBlindly(caller)
-            // return
             const attack = caller.pendingAttack,
             range = RANGES[attack.range]
             if(range === 1){
@@ -1189,6 +1181,14 @@ export function CombatManager(){
                     console.log('enemy occupier: ', occupier);
                     target = occupier;
                     manualTarget = true;
+                } else {
+                    console.log('SWINGING AT NOTHING $$$$$$$$$$$');
+                    caller.active = true;
+                    caller.attacking = true;
+                    this.broadcastDataUpdate();
+                    caller.readout.action = ` attacks with ${caller.pendingAttack.name}`
+                    this.kickoffAttackCooldown(caller)
+                    return
                 }
             }
         }

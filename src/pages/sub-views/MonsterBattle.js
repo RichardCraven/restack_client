@@ -151,6 +151,10 @@ class MonsterBattle extends React.Component {
     fighterFacingRight = (fighter) => {
         return this.props.combatManager.fighterFacingRight(fighter)
     }
+    fighterFacingUp = (fighter) => {
+        if(!fighter) return
+        return this.props.combatManager.fighterFacingUp(fighter)
+    }
     milliDelay = (numMilliseconds) => {
         return new Promise((resolve) => {
             setTimeout(()=>{
@@ -794,7 +798,7 @@ class MonsterBattle extends React.Component {
                                                 ${this.fighter(fighter)?.wounded ? (this.fighterFacingRight(fighter) ? 'hit-from-right' : 'hit-from-left') : ''} 
                                                 ${this.fighter(fighter)?.woundedHeavily ? (this.fighterFacingRight(fighter) ? 'hit-from-right-severe' : 'hit-from-left-severe') : ''} 
                                                 ${this.fighter(fighter)?.woundedLethal ? (this.fighterFacingRight(fighter) ? 'hit-from-right-lethal' : 'hit-from-left-lethal') : ''}
-
+                                                ${this.fighterFacingUp(this.fighter(fighter)) ? 'facing-up' : ''}
 
                                                 ${this.fighter(fighter)?.missed ? (this.fighterFacingRight(fighter) ? 'missed' : 'missed-reversed') : ''} 
                                                 ${fighter.isLeader ? 'leader-portrait' : ''} 
@@ -884,7 +888,7 @@ class MonsterBattle extends React.Component {
                                             >
                                         </div>}
                                         <div 
-                                        className={`action-bar-wrapper`} 
+                                        className={`action-bar-wrapper ${this.fighterFacingUp(this.fighter(fighter)) ? 'pointing-up' : ''}`} 
                                         // style={{
                                         //     width: !!this.state.battleData[fighter.id]?.targetId ? `${this.props.combatManager.getDistanceToTargetWidthString(this.state.battleData[fighter.id])}px` : '5px',
                                         //     left: `calc(100px * ${this.state.battleData[fighter.id]?.depth} + 50px)`,

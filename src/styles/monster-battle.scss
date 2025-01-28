@@ -762,6 +762,11 @@
     .action-bar-wrapper{
         z-index: 0;
         pointer-events: none;
+        &.pointing-up{
+            transform: rotate(-90deg);
+            transform-origin: 0% 0%;
+            translate: -90px;
+        }
     }
     .ghost-portrait{
         height: 90px;
@@ -851,6 +856,9 @@
                             &.reversed{
                                 transform: scaleX(-1)
                             }
+                            &.facing-up{
+                                transform: skewY(-40deg)
+                            }
                             &.missed{
                                 transform: scale(0.8)
                             }
@@ -884,7 +892,7 @@
                             &.leader-portrait{
                             }
                             &.selected{
-                                border: 1px solid white;
+                                // border: 1px solid white;
                             }
                             &.targetted{
                                 border: 1px solid yellow;
