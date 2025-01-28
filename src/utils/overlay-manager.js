@@ -31,10 +31,6 @@ export function OverlayManager(){
         }
     }
     this.addAnimation = (animation) => {
-        // this.
-        console.log('adding animation for ', this.overlays[animation.id].data.type, animation.type);
-        console.log('current animations: ', this.overlays[animation.id].animations);
-        // const animation = {type: animationType, duration: animationTypes[animationType].duration}
         const duration = animationTypes[animation.type]?.duration * 1000;
         const modifiedDuration = duration + 500;
         animation.locked = true;

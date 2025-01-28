@@ -980,6 +980,16 @@
                     transition: all 0.25s;
                     opacity: 0;
                     pointer-events: none;
+                    &.small{
+                        background-size: 50%;
+                        background-repeat: no-repeat;
+                        background-position: center;
+                    }
+                    &.medium{
+                        background-size: 75%;
+                        background-repeat: no-repeat;
+                        background-position: center;
+                    }
                     @keyframes WeaponSpins { 
                         0%{
                             transform: rotate(0deg);
@@ -1489,6 +1499,11 @@
         transition: all 0.25s;
         opacity: 0;
         pointer-events: none;
+        &.medium{
+            background-size: 75%;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
         @keyframes WeaponSwings { 
             0%{
                 transform: rotate(0deg);

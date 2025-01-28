@@ -67,9 +67,6 @@ class MonsterBattle extends React.Component {
         }
     }
     componentDidMount(){
-        console.log('is simulation: ', this.props.isSimulation);
-        console.log('overlay manager: ', this.props.overlayManager);
-        // const MAX_DEPTH = 8;
         this.props.combatManager.initialize();
         this.props.combatManager.connectOverlayManager(this.props.overlayManager)
         this.props.combatManager.connectAnimationManager(this.props.animationManager);
@@ -152,14 +149,7 @@ class MonsterBattle extends React.Component {
         return minion?.depth < this.targetOf(minion)?.depth
     }
     fighterFacingRight = (fighter) => {
-        const f = this.props.combatManager.combatants[fighter.id]
-        if(!f) return;
-        const target = this.state.battleData[f.targetId]
-        // console.log('target', target, 'fighter: ', f, f.targetId, this.state.battleData, this.state.battleData[f.targetId]);
-        if(target){
-            return f.depth < target.depth
-        }
-        else return true
+        return this.props.combatManager.fighterFacingRight(fighter)
     }
     milliDelay = (numMilliseconds) => {
         return new Promise((resolve) => {
@@ -876,7 +866,8 @@ class MonsterBattle extends React.Component {
                                             ${this.fighter(fighter)?.aiming ? 'aiming' : ''}
                                             ${(this.fighter(fighter)?.attacking && this.fighter(fighter)?.pendingAttack.range === 'close') ? (this.fighterFacingRight(fighter) ? 'swinging-right' : 'swinging-left') 
                                             : (this.fighter(fighter)?.attacking && this.fighter(fighter)?.pendingAttack.range === 'far' ? 'shooting' : 
-                                            '')}`}
+                                            '')}
+                                            medium`}
                                             style={{
                                             left: this.fighterFacingRight(fighter) ?
                                             `${this.fighter(fighter)?.depth * 100 + 45 + (this.fighter(fighter)?.depth * 2)}px` :
@@ -1098,7 +1089,7 @@ class MonsterBattle extends React.Component {
                                         { this.state.battleData[minion.id] && this.state.battleData[minion.id].pendingAttack && <div className={`weapon-wrapper 
                                         ${this.getMonsterWeaponAnimation(this.state.battleData[minion.id])}
                                         ${this.state.battleData[minion.id]?.aiming ? 'aiming' : ''}
-                                        
+                                        small
                                         `}
                                         style={{
                                             left: this.minionDirectionReversed(minion) ? 
@@ -1132,8 +1123,7 @@ class MonsterBattle extends React.Component {
                                                 filter: `saturate(${((this.state.battleData[minion.id]?.hp / minion.stats.hp) * 100) / 2}) 
                                                         sepia(${this.state.portraitHoveredId === minion.id ? '2' : '0'})`
                                             }} 
-                                            
-                                            ></div>
+                                            > {minion.id} </div>
                                             <div 
                                             className={
                                                 `portrait-relative-container`

@@ -24,19 +24,7 @@ class CrewManagerPage extends React.Component{
         shiftDown: false
     }
   }
-  timer = null
-  
-
-    // onClickHandler = event => {
-    //     clearTimeout(this.timer);
-
-    //     if (event.detail === 1) {
-    //         this.timer = setTimeout(this.props.onClick, 200)
-    //     } else if (event.detail === 2) {
-    //         console.log('double click!');
-    //         // this.props.onDoubleClick()
-    //     }
-    // }
+  timer = null;
 
   componentDidMount(){
     this.props.inventoryManager.initializeItems()
@@ -68,24 +56,6 @@ class CrewManagerPage extends React.Component{
   }
   getDungeonDetails = async () => {
     const user = getMeta();
-    // user.name = 'Henry'
-    console.log('user:', user)
-    
-    // if(!user.dungeonId){
-    //   this.setState({
-    //     user,
-    //     dungeon: null
-    //   })
-    // } else {
-    //   const res = await loadDungeonRequest(user.dungeonId)
-    //   console.log('res:', res)
-    //   const dungeon = JSON.parse(res.data[0].content)
-    //   console.log('dungeon:', dungeon)
-    //   this.setState({
-    //     user,
-    //     dungeon
-    //   })
-    // }
   }
   singleClick = (crewMember) => {
     this.setState({
@@ -104,7 +74,6 @@ class CrewManagerPage extends React.Component{
         this.timer = setTimeout(this.singleClick(crewMember), 200)
     } else if (event.detail === 2) {
         let crew = this.state.selectedCrew;
-        console.log('double click!', crewMember);
         if(crew.length === 3 && !this.state.advancedUser) return
         if(!crew.includes(crewMember)) crew.push(crewMember)
         this.setState({
@@ -137,7 +106,6 @@ class CrewManagerPage extends React.Component{
 
         monster.minions.forEach((e,i)=>{
             const minion = this.props.monsterManager.getMonster(e)
-            console.log('gotten minion', minion);
             minion.id = minion.id+i+700
             let minionName = this.pickRandom(minion.monster_names)
             minion.name = minionName
@@ -153,7 +121,6 @@ class CrewManagerPage extends React.Component{
     let monsterName = this.pickRandom(monster.monster_names)
     monster.name = monsterName
     monster.inventory = [];
-    console.log('minions: ', minions);
     this.setState({
         monster,
         minions

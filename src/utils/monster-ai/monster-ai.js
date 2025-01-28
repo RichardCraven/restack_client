@@ -24,17 +24,13 @@ export function MonsterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
     // }
 
     this.connectOverlayManager = (instance) => {
-        console.log('connecting overlay manager (needs to come first', instance);
         this.overlayManager = instance;
     }
     this.connectAnimationManager = (instance) => {
-        console.log('connecting animation manager', instance);
         this.animationManager = instance;
-        // this.initializeRoster(instance)
     }
 
     this.initializeRoster = () => {
-        console.log('*** INITIALIZING ROSTER, animation managaer: ', this.animationManager);
         this.roster = {
             djinn: new Djinn(data, this.animationManager, this.overlayManager),
             sphinx: new Sphinx(data, this.animationManager, this.overlayManager)
