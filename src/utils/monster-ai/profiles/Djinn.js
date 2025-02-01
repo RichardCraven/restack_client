@@ -1,9 +1,17 @@
-export function Djinn(data, animationManager, overlayManager){
+export function Djinn(data, utilMethods, animationManager, overlayManager){
     this.MAX_DEPTH = data.MAX_DEPTH;
     this.MAX_LANES = data.MAX_LANES;
     this.INTERVAL_TIME = data.INTERVAL_TIME
     
     this.animationManager = animationManager;
+
+    this.monsterFacingUp = utilMethods.monsterFacingUp;
+    this.monsterFacingDown = utilMethods.monsterFacingDown;
+    this.monsterFacingRight = utilMethods.monsterFacingRight;
+    this.broadcastDataUpdate = utilMethods.broadcastDataUpdate;
+    this.kickoffAttackCooldown = utilMethods.kickoffAttackCooldown;
+    this.missesTarget = utilMethods.missesTarget;
+    this.hitsTarget = utilMethods.hitsTarget;
  
     this.acquireTarget = (caller, combatants) => {
         const liveEnemies = Object.values(combatants).filter(e=>!e.dead && (!e.isMonster && !e.isMinion));
@@ -34,21 +42,21 @@ export function Djinn(data, animationManager, overlayManager){
             this.animationManager.rippleAnimation(tileId, 'red')
         }
     }
-    this.goBehindAndAttack = (caller, target, hitsTarget, missesTarget) => {
+    this.goBehindAndAttack = (caller, target) => {
         console.log('go behind attack');
         caller.depth = target.depth-1;
         caller.position = target.position;
         caller.coordinates = {x : caller.depth, y: caller.position};
-        this.initiateReverseAttack(caller, target, hitsTarget, missesTarget)
+        this.initiateReverseAttack(caller, target)
     }
-    this.initiateReverseAttack = (caller, target, hitsTarget, missesTarget) => {
+    this.initiateReverseAttack = (caller, target) => {
         // console.log('reverse attack');
         caller.attacking = caller.attackingReverse = true;
-        hitsTarget(caller);
+        this.hitsTarget(caller);
         // console.log('caller: ', caller);
         // // debugger
     }
-    this.initiateAttack = (caller, combatants, hitsTarget, missesTarget) => {
+    this.initiateAttack = (caller, combatants) => {
         caller.attacking = true;
         const target = combatants[caller.targetId];
         const distanceToTarget = data.methods.getDistanceToTarget(caller, target),
@@ -56,15 +64,15 @@ export function Djinn(data, animationManager, overlayManager){
         if(caller.energy > 50){
             caller.energy -= 80;
             this.triggerVoidLance(target.coordinates);
-            hitsTarget(caller)
+            this.hitsTarget(caller)
             
         } else if(distanceToTarget > 0){
-            this.goBehindAndAttack(caller, target, hitsTarget, missesTarget)
+            this.goBehindAndAttack(caller, target)
         } else if(distanceToTarget === 1 && laneDiff === 0){
-            hitsTarget(caller)
+            this.hitsTarget(caller)
         } else {
             caller.energy += 20
-            missesTarget(caller);
+            this.missesTarget(caller);
         }
     }
     this.chooseAttackType = (caller, target) => {

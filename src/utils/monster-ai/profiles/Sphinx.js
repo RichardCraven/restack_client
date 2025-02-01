@@ -1,11 +1,19 @@
-export function Sphinx(data, animationManager, overlayManager){
+export function Sphinx(data, utilMethods, animationManager, overlayManager){
     this.MAX_DEPTH = data.MAX_DEPTH;
     this.MAX_LANES = data.MAX_LANES;
     this.INTERVAL_TIME = data.INTERVAL_TIME
     
     this.animationManager = animationManager;
     this.overlayManager = overlayManager;
- 
+    
+    this.monsterFacingUp = utilMethods.monsterFacingUp;
+    this.monsterFacingDown = utilMethods.monsterFacingDown;
+    this.monsterFacingRight = utilMethods.monsterFacingRight;
+    this.broadcastDataUpdate = utilMethods.broadcastDataUpdate;
+    this.kickoffAttackCooldown = utilMethods.kickoffAttackCooldown;
+    this.missesTarget = utilMethods.missesTarget;
+    this.hitsTarget = utilMethods.hitsTarget;
+
     this.acquireTarget = (caller, combatants) => {
         // console.log('SPHINX TARGETTing. animation manager: ', this.animationManager, 'overlay manager: ', this.overlayManager);
         const liveEnemies = Object.values(combatants).filter(e=>!e.dead && (!e.isMonster && !e.isMinion));
@@ -14,8 +22,6 @@ export function Sphinx(data, animationManager, overlayManager){
         if(!target) return
         caller.pendingAttack = this.chooseAttackType(caller, target);
         caller.targetId = target.id;
-        // this.overlayManager.addAnimation(target.id, 'targetted')
-        // data.methods.targetAcquiredAnimation(caller.id, target.id)
     }
     this.processMove = (caller, combatants) => {
             if(!caller.pendingAttack){
@@ -26,18 +32,18 @@ export function Sphinx(data, animationManager, overlayManager){
             // console.log('SPHIUNX PROCESS MOVE');
             switch(caller.pendingAttack.name){
                 case 'induce madness':
-                    console.log('---INDUCE MADNESSS MOVE---');
+                    // console.log('---INDUCE MADNESSS MOVE---');
 
                     data.methods.stayInColumn(6, caller, combatants)
                 
                 break;
                 case 'claws':
-                    console.log('CLAWS');
+                    // console.log('CLAWS');
                     // debugger
 
                 break;
                 case 'lightning':
-                    console.log('LIGHTNING');
+                    // console.log('LIGHTNING');
                     // debugger
                 break;
                 default:
@@ -62,26 +68,37 @@ export function Sphinx(data, animationManager, overlayManager){
             }
         })
     }
-    this.initiateAttack = async (caller, combatants, hitsTarget, missesTarget) => {
+    this.initiateAttack = async (caller, combatants) => {
         caller.attacking = true;
         const target = combatants[caller.targetId];
         const distanceToTarget = data.methods.getDistanceToTarget(caller, target),
         laneDiff = data.methods.getLaneDifferenceToTarget(caller, target);
 
+
+        const animation = {
+            type: 'glowing-eyes',
+            id: caller.id,
+            data:{
+                // color: caller.isMonster ? 'red' : 'lightred'
+                color: 'white'
+            }
+        }
+        this.overlayManager.addAnimation(animation)
+
         switch(caller.pendingAttack.name){
             case 'induce madness':
                 if(laneDiff === 0){
                     await this.triggerInduceMadness(caller.coordinates, target.coordinates)
-                    hitsTarget(caller)
+                    this.hitsTarget(caller)
                 } else {
-                    missesTarget(caller);
+                    this.missesTarget(caller);
                 }
             break;
             case 'claws':
                 if(distanceToTarget === 1 && laneDiff === 0){
-                    hitsTarget(caller)
+                    this.hitsTarget(caller)
                 } else {
-                    missesTarget(caller);
+                    this.missesTarget(caller);
                 }
 
 
@@ -90,10 +107,10 @@ export function Sphinx(data, animationManager, overlayManager){
                 // console.log('LIGHTNING');
 
                 if(laneDiff === 0){
-                    console.log('lightning hits');
-                    hitsTarget(caller)
+                    // console.log('lightning hits');
+                    this.hitsTarget(caller)
                 } else {
-                    missesTarget(caller);
+                    this.missesTarget(caller);
                 }
             break;
             default:

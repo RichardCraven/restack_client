@@ -11,6 +11,9 @@ export function OverlayManager(){
         },
         blinded: {
             duration: 5
+        },
+        'glowing-eyes': {
+            duration: 2
         }
     }
     this.overlays = {};
@@ -36,15 +39,23 @@ export function OverlayManager(){
         animation.locked = true;
         animation.subjectType = this.overlays[animation.id].data.type
         
+        
+        
         // FIRST PUSH NEW ANIMATION
         const animationMatrix = this.overlays[animation.id].animations;
         const animationBucket = animationMatrix[animation.type];
-
+        
+        
         const animationLifespanSequence = ()=>{
             let animations = clone(this.overlays)
             this.broadcastAnimationEvent(animations)
+            
+            console.log('ADD ANIMATION: ', animation, 'ANIMATION MATRIX: ', animationMatrix);
+
 
             setTimeout(()=>{
+                console.log('snarf', this.overlays[animation.id].animations, '(animation bucked)', 'animation.type', animation.type);
+                console.log('croog', this.overlays[animation.id].animations[animation.type]);
                 const animationRef =  this.overlays[animation.id].animations[animation.type].find(a=>a===animation);
                 animationRef.locked = false;
             }, 500)
@@ -87,6 +98,7 @@ export function OverlayManager(){
         } else {
             animationMatrix[animation.type] = [];
             animationMatrix[animation.type].push(animation)
+            console.log('animation pushed to buck now bucket is ', animationMatrix[animation.type]);
             animationLifespanSequence();
         }
     }

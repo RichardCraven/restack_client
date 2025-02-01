@@ -17,7 +17,7 @@ const NUM_COLUMNS = 8;
 const MAX_ROWS = 5;
 const TILE_SIZE = 100;
 const SHOW_TILE_BORDERS = true;
-const SHOW_COMBAT_BORDER_COLORS = false;
+const SHOW_COMBAT_BORDER_COLORS = true;
 const SHOW_INTERACTION_PANE=true
 
 const RANGES = {
@@ -154,6 +154,16 @@ class MonsterBattle extends React.Component {
     fighterFacingUp = (fighter) => {
         if(!fighter) return
         return this.props.combatManager.fighterFacingUp(fighter)
+    }
+    fighterFacingDown = (fighter) => {
+        if(!fighter) return
+        return this.props.combatManager.fighterFacingDown(fighter)
+    }
+    monsterFacingUp = (monster) => {
+        return this.props.combatManager.monsterFacingUp(monster)
+    }
+    monsterFacingDown = (monster) => {
+        return this.props.combatManager.monsterFacingDown(monster)
     }
     milliDelay = (numMilliseconds) => {
         return new Promise((resolve) => {
@@ -798,7 +808,7 @@ class MonsterBattle extends React.Component {
                                                 ${this.fighter(fighter)?.wounded ? (this.fighterFacingRight(fighter) ? 'hit-from-right' : 'hit-from-left') : ''} 
                                                 ${this.fighter(fighter)?.woundedHeavily ? (this.fighterFacingRight(fighter) ? 'hit-from-right-severe' : 'hit-from-left-severe') : ''} 
                                                 ${this.fighter(fighter)?.woundedLethal ? (this.fighterFacingRight(fighter) ? 'hit-from-right-lethal' : 'hit-from-left-lethal') : ''}
-                                                ${this.fighterFacingUp(this.fighter(fighter)) ? 'facing-up' : ''}
+                                                ${this.fighterFacingUp(this.fighter(fighter)) ? 'facing-up' : (this.fighterFacingDown(this.fighter(fighter)) ? 'facing-down' : '')}
 
                                                 ${this.fighter(fighter)?.missed ? (this.fighterFacingRight(fighter) ? 'missed' : 'missed-reversed') : ''} 
                                                 ${fighter.isLeader ? 'leader-portrait' : ''} 
@@ -869,8 +879,8 @@ class MonsterBattle extends React.Component {
                                             ${!this.fighterFacingRight(fighter) ? 'reversed' : ''}
                                             ${this.fighter(fighter)?.aiming ? 'aiming' : ''}
                                             ${(this.fighter(fighter)?.attacking && this.fighter(fighter)?.pendingAttack.range === 'close') ? (this.fighterFacingRight(fighter) ? 'swinging-right' : 'swinging-left') 
-                                            : (this.fighter(fighter)?.attacking && this.fighter(fighter)?.pendingAttack.range === 'far' ? 'shooting' : 
-                                            '')}
+                                            : (this.fighter(fighter)?.attacking && this.fighter(fighter)?.pendingAttack.range === 'far' ? 'shooting' : '')}
+                                            ${this.fighterFacingUp(this.fighter(fighter)) ? 'pointing-up' : (this.fighterFacingDown(this.fighter(fighter)) ? 'pointing-down' : '')}
                                             medium`}
                                             style={{
                                             left: this.fighterFacingRight(fighter) ?
@@ -878,42 +888,16 @@ class MonsterBattle extends React.Component {
                                             `${this.fighter(fighter)?.depth * 100 - 65 + (this.fighter(fighter)?.depth * 2)}px`
                                             ,
                                             backgroundImage: "url(" + this.state.battleData[fighter.id].pendingAttack.icon + ")"
-                                            }}
-                                            // style={{
-                                            //     left: this.monsterDirectionReversed() ? 
-                                            //     `${this.monster()?.depth * 100 + 65 + (this.monster()?.depth * 2)}px` :
-                                            //     `${this.monster()?.depth * 100 - 45 + (this.monster()?.depth * 2)}px`,
-                                            //     backgroundImage: "url(" + this.monster().pendingAttack.icon + ")"
-                                            // }}
-                                            >
+                                        }}>
                                         </div>}
-                                        <div 
-                                        className={`action-bar-wrapper ${this.fighterFacingUp(this.fighter(fighter)) ? 'pointing-up' : ''}`} 
-                                        // style={{
-                                        //     width: !!this.state.battleData[fighter.id]?.targetId ? `${this.props.combatManager.getDistanceToTargetWidthString(this.state.battleData[fighter.id])}px` : '5px',
-                                        //     left: `calc(100px * ${this.state.battleData[fighter.id]?.depth} + 50px)`,
-                                        //     left: this.props.combatManager.getFighterActionBarLeftValue(fighter),
-                                        //     border: '3px dotted purple',
-                                        //     height: '105%'
-                                        // }}
-
-                                        // this.state.selectedFighter.id === fighter.id &&
-
-
-                                        style={{
+                                        <div className={`action-bar-wrapper ${this.fighterFacingUp(this.fighter(fighter)) ? 'pointing-up' : (this.fighterFacingDown(this.fighter(fighter)) ? 'pointing-down' : '')}`} 
+                                            style={{
                                             zIndex: 1001,
                                             height: '100%',
-                                            // border: this.fighter(fighter)?.pendingAttack ? '1px solid cyan' : '1px solid pink',
                                             width: !!this.fighter(fighter)?.pendingAttack ? `${this.props.combatManager.getRangeWidthVal(this.fighter(fighter)) * 100}px` : '0px',
                                             left: 
                                              this.fighter(fighter)?.pendingAttack ? 
-                                            //  '100px'
                                             `${this.getActionBarLeftValForFighter(this.fighter(fighter)?.id)}px`
-
-                                            // `${(this.fighter(fighter)?.depth * 100 + 100) + (this.fighterFacingRight(fighter) ? 0 : 100 - (this.props.combatManager.getRangeWidthVal(fighter) * 100))}px`
-
-
-                                            // `${((this.fighter(fighter)?.depth * 100) - 100) + (this.fighterFacingRight(fighter) ? 200 : 0)}px` 
                                             : 0
                                         }}
                                         
@@ -951,7 +935,7 @@ class MonsterBattle extends React.Component {
                             height: `${TILE_SIZE}px`
                         }}>
                             <div className="monster-wrapper">
-                                <div className={`action-bar-wrapper`} 
+                                <div className={`action-bar-wrapper ${this.monsterFacingUp(this.monster()) ? 'pointing-up' : (this.monsterFacingDown(this.monster()) ? 'pointing-down' : '')}`} 
                                     style={{
                                         zIndex: 1000,
                                         // border: '1px dashed red',
@@ -968,7 +952,7 @@ class MonsterBattle extends React.Component {
 
                                     </div>
                                 </div>
-                                <div className={`range-bar-wrapper`} 
+                                <div className={`range-bar-wrapper ${this.monsterFacingUp(this.monster()) ? 'pointing-up' : (this.monsterFacingDown(this.monster()) ? 'pointing-down' : '')}`} 
                                     style={{
                                         zIndex: 1001,
                                         height: '100%',
@@ -981,6 +965,7 @@ class MonsterBattle extends React.Component {
                                 {`weapon-wrapper 
                                 ${this.getMonsterWeaponAnimation(this.monster())}
                                 ${this.monster()?.aiming ? 'aiming' : ''}
+                                ${this.monsterFacingUp(this.monster()) ? 'pointing-up' : (this.monsterFacingDown(this.monster()) ? 'pointing-down' : '')}
                                 `}
                                 style={{
                                     left: this.monsterDirectionReversed() ? 
@@ -1006,7 +991,7 @@ class MonsterBattle extends React.Component {
                                         ${this.monster()?.wounded ? (this.monsterDirectionReversed() ? 'hit-from-right' : 'hit-from-left') : ''} 
                                         ${this.monster()?.woundedHeavily ? (this.monsterDirectionReversed() ? 'hit-from-right-severe' : 'hit-from-left-severe') : ''}
                                         ${this.monster()?.woundedLethal ? (this.monsterDirectionReversed() ? 'hit-from-right-lethal' : 'hit-from-left-lethal') : ''}
-
+                                        ${this.monsterFacingUp(this.monster()) ? 'facing-up' : (this.monsterFacingDown(this.monster()) ? 'facing-down' : '')}
 
                                         ${this.monster()?.missed ? (this.monsterDirectionReversed() ? 'missed-reversed' : 'missed') : ''}
                                         ${this.state.selectedMonster?.id === this.props.monster.id ? 'selected' : ''}
@@ -1024,6 +1009,9 @@ class MonsterBattle extends React.Component {
                                     }}>
                                     {/* //no children, because 3d matrix will stretch them on hit   */}
                                     </div>
+                                    {this.monster() && this.state.animationOverlays[this.monster().id] && this.getAllOverlaysById(this.monster().id).map((overlay, i) => {
+                                                return <Overlay key={i} animationType={overlay.type} data={overlay.data}/>
+                                    })}
                                     <div 
                                     className={
                                         `portrait-relative-container`

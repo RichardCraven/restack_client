@@ -23,7 +23,8 @@ const clone = (val) => {
 
 export function CombatManager(){
     this.fighterAI = new FighterAI(NUM_COLUMNS, MAX_LANES, FIGHT_INTERVAL);
-    this.monsterAI = new MonsterAI(NUM_COLUMNS, MAX_LANES, FIGHT_INTERVAL)
+    this.monsterAI = new MonsterAI(NUM_COLUMNS, MAX_LANES, FIGHT_INTERVAL);
+    
     this.movementMethods = MovementMethods;
     this.overlayManager = null;
     this.selectedFighter = null;
@@ -477,6 +478,9 @@ export function CombatManager(){
             manualMovesCurrent: fighter.manualMovesCurrent,
             attack: function(){
                 const target = getCombatant(this.targetId);
+                // if(this.type === 'monk') console.log('RANGES', RANGES, this.pendingAttack.range)
+                if(this.type === 'monk') console.log('monk attackl, target; ', target, 'RANGES[this.pendingAttack] === 1', RANGES[this.pendingAttack.range] === 1, 'depth comparison', this.depth, 'vs', target.depth);
+                
                 if(!target){
                     this.skip();
                     return
@@ -492,7 +496,15 @@ export function CombatManager(){
                 if(this.type === 'djinn'){
                     console.log('djinn initiate attack, this.position === target.position: ', this.position === target.position);
                 }
-                if(this.position === target.position){
+
+                if(RANGES[this.pendingAttack.range] === 1 && (this.depth === target.depth && Math.abs(this.position - target.position) === 1)){
+                    //melee attacker is above or below, proceed with attack
+                    if(this.type === 'monk') console.log('monk initiating attack from ABOVE [turn cycle]');
+                    // debugger
+                    initiateAttack(this);
+                    broadcastDataUpdate(this)
+                } else if(this.position === target.position){
+                    if(this.type === 'monk') console.log('monk initiating attack from [turn cycle]');
                     initiateAttack(this);
                     broadcastDataUpdate(this)
 
@@ -534,6 +546,7 @@ export function CombatManager(){
                 this.turnCycle();
             },
             move: function(){
+                if(this.type === 'monk') console.log('monk move from turn cycle');
                 processMove(this);
             },
             turnCycle: function(){
@@ -581,6 +594,7 @@ export function CombatManager(){
                     }
                     if(this.tempo > 5 && this.tempo < 10 && this.targetId !== null && !hasMoved && !this.destinationSickness){
                         // this.aiming = false;
+                        if(this.type === 'monk') console.log('monk moving 1st');
                         this.move();
                         hasMoved = true;
                     }
@@ -609,6 +623,7 @@ export function CombatManager(){
                         }
                         if(this.action_queue.length > 0){
                             // clearInterval(this.interval)
+                            if(this.type === 'monk') console.log('monk ????');
                             processActionQueue(this);
                             return
                         }
@@ -629,7 +644,8 @@ export function CombatManager(){
                         // } else 
                         if(this.pendingAttack && this.pendingAttack.cooldown_position === 100){
                             
-                            
+                            if(this.type === 'monk') console.log('monk ????');
+                            // debugger
                             if(this.name === "Loryastes"  && DEBUG_STEPS === true){
                                 // console.log('Loryastes [IN TURN CYCLE] about to call attack');
                             }
@@ -653,6 +669,8 @@ export function CombatManager(){
                                 console.log('djinn turnSkips: ', this.turnSkips, 'inRange: ', inRange);
                             }
                             if(inRange){
+                                if(this.type === 'monk') console.log('monk ????');
+                                // debugger
                                 // if(this.isMonster) console.log('in range');
                                 // if(this.isMonster) console.log('monster at 100, attack')
                                 this.attack(target)
@@ -675,6 +693,7 @@ export function CombatManager(){
                                     if(this.type === 'djinn'){
                                         console.log('djinn current turnSkips: ', this.turnSkips, 'incrementeing turnskips');
                                     }
+                                    if(this.type === 'monk') console.log('monk ????');
                                     this.turnSkips++
                                     this.skip();
                                 }
@@ -810,14 +829,11 @@ export function CombatManager(){
     this.targetInRange = (caller) => {
         const target = this.combatants[caller.targetId];
         let attackRange = RANGES[caller.pendingAttack.range]
-        if(caller.type === 'monk' && this.fighterFacingUp(caller)){
-            console.log('attackRange: ', attackRange);
-        }
         if(!caller.pendingAttack || this.combatOver) return false
         if(!target){
             return
         }
-        const differential = this.fighterFacingUp(caller) ? Math.abs(caller.position - target.position) : Math.abs(caller.depth - target.depth);
+        const differential = this.fighterFacingUp(caller) || this.fighterFacingDown(caller) ? Math.abs(caller.position - target.position) : Math.abs(caller.depth - target.depth);
         // 1 means target is right in front of you
 
         let res;
@@ -832,10 +848,6 @@ export function CombatManager(){
                     // console.log('vs distance to target: ', distanceToTarget);
                 }
                 res = differential === 1;
-                if(caller.type === 'monk' && this.fighterFacingUp(caller)){
-                    // console.log('attackRange: ', attackRange);
-                    console.log('up in range', res);
-                }
             break;
             case 'medium':
                 // if(caller.isMonster) console.log('wiotch differential: ', differential, 'distance: ', distanceToTarget)
@@ -908,6 +920,7 @@ export function CombatManager(){
         fighter.action_queue.push(action)
     }
     this.goToDestination = (caller) => {
+        if(this.type === 'monk') console.log('monk go to dest????');
         caller.depth = caller.destinationCoordinates.x;
         caller.position = caller.destinationCoordinates.y;
         caller.coordinates = {x: caller.destinationCoordinates.x, y: caller.destinationCoordinates.y}
@@ -954,7 +967,7 @@ export function CombatManager(){
         let percentCooledDown = 0,
         chosenAttack;
         if(caller.isMonster){
-            console.log('MONSTER CHOSING ATTACK TYPE');
+            // console.log('MONSTER CHOSING ATTACK TYPE');
         }
         if(caller.combatStyle){
             // console.log('COMBAT STYLE: ', caller.combatStyle);
@@ -1040,7 +1053,7 @@ export function CombatManager(){
         debugger
     }
     this.moveFighterOneSpace = (direction) => {
-        let pendingCoordinates, spaceIsOccupied;
+        let pendingCoordinates, spaceOccupier;
 
         if(!this.selectedFighter) return 
         const fighter = this.combatants[this.selectedFighter.id]
@@ -1054,12 +1067,13 @@ export function CombatManager(){
         switch(direction){
             case 'up':
                 if(fighter.position === 0) return
+                if(this.type === 'monk') console.log('monk key up????');
                 pendingCoordinates = {x: fighter.coordinates.x , y: fighter.coordinates.y-1}
-                spaceIsOccupied = Object.values(this.combatants).filter(e=>{
+                spaceOccupier = Object.values(this.combatants).find(e=>{
                     return e.coordinates.x === pendingCoordinates.x && e.coordinates.y === pendingCoordinates.y && !e.dead
-                }).length > 0
-                
-                if(spaceIsOccupied) return
+                })
+                // console.log('up occupied: ', spaceOccupier);
+                if(spaceOccupier) return
                 fighter.position--
                 fighter.coordinates.y--
                 fighter.manualMoveCooldown()
@@ -1067,10 +1081,11 @@ export function CombatManager(){
             case 'down':
                 if(fighter.position >= MAX_LANES - 1) return
                 pendingCoordinates = {x: fighter.coordinates.x , y: fighter.coordinates.y+1}
-                spaceIsOccupied = Object.values(this.combatants).filter(e=>{
+                spaceOccupier = Object.values(this.combatants).find(e=>{
                     return e.coordinates.x === pendingCoordinates.x && e.coordinates.y === pendingCoordinates.y && !e.dead
-                }).length > 0
-                if(spaceIsOccupied) return
+                })
+                // console.log('down occupied: ', spaceOccupier);
+                if(spaceOccupier) return
                 fighter.position++
                 fighter.coordinates.y++
                 fighter.manualMoveCooldown()
@@ -1078,10 +1093,10 @@ export function CombatManager(){
             case 'right':
                 if(fighter.depth === MAX_DEPTH) return
                 pendingCoordinates = {x: fighter.coordinates.x+1 , y: fighter.coordinates.y}
-                spaceIsOccupied = Object.values(this.combatants).filter(e=>{
+                spaceOccupier = Object.values(this.combatants).find(e=>{
                     return e.coordinates.x === pendingCoordinates.x && e.coordinates.y === pendingCoordinates.y && !e.dead
-                }).length > 0
-                if(spaceIsOccupied) return
+                })
+                if(spaceOccupier) return
                 
                 fighter.depth++
                 fighter.coordinates.x++
@@ -1091,10 +1106,10 @@ export function CombatManager(){
             case 'left':
                 if(fighter.depth === 0) return
                 pendingCoordinates = {x: fighter.coordinates.x-1 , y: fighter.coordinates.y}
-                spaceIsOccupied = Object.values(this.combatants).filter(e=>{
+                spaceOccupier = Object.values(this.combatants).find(e=>{
                     return e.coordinates.x === pendingCoordinates.x && e.coordinates.y === pendingCoordinates.y && !e.dead
-                }).length > 0
-                if(spaceIsOccupied) return
+                })
+                if(spaceOccupier) return
                 fighter.depth--
                 fighter.coordinates.x--
                 fighter.manualMoveCooldown()
@@ -1122,20 +1137,56 @@ export function CombatManager(){
         }
         else return false
     }
+    this.fighterFacingDown = (caller) => {
+        const f = this.combatants[caller.id]
+        if(!f) return;
+        const target = this.combatants[f.targetId]
+        if(target){
+            return f.position < target.position && f.depth === target.depth
+        }
+        else return false
+    }
+    this.monsterFacingUp = (caller) => {
+        if(!caller) return;
+        // console.log('monster: ', caller);
+        const monster = Object.values(this.combatants[caller.id])
+        const target = this.combatants[monster.targetId]
+        if(target){
+            return monster.position > target.position && monster.depth === target.depth
+        }
+        else return false
+    }
+    this.monsterFacingDown = (caller) => {
+        if(!caller) return;
+        const monster = Object.values(this.combatants[caller.id])
+        const target = this.combatants[monster.targetId]
+        if(target){
+            return monster.position < target.position && monster.depth === target.depth
+        }
+        else return false
+    }
     this.manualRetarget = (caller) => {
-        console.log('manual retarget for ', caller.type);
+        // console.log('manual retarget for ', caller.type);
         const targetOptions = Object.values(this.combatants).filter(e=>(e.isMinion || e.isMonster) && !e.dead)
-        console.log('target Options ', targetOptions);
+        // console.log('target Options ', targetOptions);
         const currentTarget = targetOptions.find(e=>e.id===caller.targetId)
-        console.log('currentTarget: ', currentTarget);
+        // console.log('currentTarget: ', currentTarget);
         this.acquireTargetManually(caller, currentTarget)
 
     }
     this.initiateAttack = (caller, manualAttack = false) => {
        let manualTarget = false;
+       if(caller.type === 'monk'){
+
+           console.log('monk initiates attack');
+       }
         const targetInRange = (caller, target) => {
             const pendingAttack = caller.pendingAttack
-            const rangeDiff = this.fighterFacingUp(caller) ? Math.abs(caller.position - target.position) : Math.abs(caller.depth - target.depth)
+            const rangeDiff = this.fighterFacingUp(caller) || this.fighterFacingDown(caller) ?
+             Math.abs(caller.position - target.position) 
+             : Math.abs(caller.depth - target.depth);
+
+
             if(manualAttack){
                 console.group('TARGET IN RANGE BLock');
 
@@ -1148,18 +1199,13 @@ export function CombatManager(){
             return rangeDiff <= RANGES[caller.pendingAttack.range]
         }
 
-        if(this.fighterAI.roster[caller.name]){
-            // console.log('Sardonis is in roster');
-            this.fighterAI.roster[caller.name].initiateAttack(caller, this.combatants, this.hitsTarget, this.missesTarget);
-            return
-        }
         if(this.fighterAI.roster[caller.type]){
-            this.fighterAI.roster[caller.type].initiateAttack(caller, this.combatants, this.hitsTarget, this.missesTarget);
+            this.fighterAI.roster[caller.type].initiateAttack(caller, manualAttack, this.combatants);
             return
         }
 
         if(this.monsterAI.roster[caller.type]){
-            this.monsterAI.roster[caller.type].initiateAttack(caller, this.combatants, this.hitsTarget, this.missesTarget);
+            this.monsterAI.roster[caller.type].initiateAttack(caller, this.combatants);
             return
         }
 
@@ -1205,7 +1251,7 @@ export function CombatManager(){
         }
         const connects = results.some(e=>e>defenseFactor);
         if(caller.type === 'monk'){
-            console.log('monk attackFactor: ', attackFactor, 'connects: ', connects, 'with target: ', target);
+            console.log('monk initiates attack. attackFactor: ', attackFactor, 'connects: ', connects, 'with target: ', target);
         }
         if(!caller.pendingAttack){
             console.log('WHOOA there. someone is trying to attack with nothing');
@@ -1218,8 +1264,14 @@ export function CombatManager(){
         this.kickoffAttackCooldown(caller)
         if(connects){
             if(manualAttack){
+                if(caller.type === 'monk'){
+                    console.log('monk hits target [manually]');
+                }
                 this.hitsTarget(caller, target)
             } else {
+                if(caller.type === 'monk'){
+                    console.log('monk hits target');
+                }
                 this.hitsTarget(caller)
             }
         } else {
@@ -1421,13 +1473,15 @@ export function CombatManager(){
 
     }
     this.processMove = (caller) => {
+        if(caller.type === 'monk') console.log('monk process move precheck');
         if(caller.dead) return;
 
-        if(this.fighterAI.roster[caller.name]){
-            this.fighterAI.roster[caller.name].processMove(caller, this.combatants, this.hitsTarget, this.missesTarget);
-            return
-        }
+        // if(this.fighterAI.roster[caller.name]){
+        //     this.fighterAI.roster[caller.name].processMove(caller, this.combatants, this.hitsTarget, this.missesTarget);
+        //     return
+        // }
         if(this.fighterAI.roster[caller.type]){
+            if(caller.type === 'monk') console.log('monk process move', 'targetInRange? ');
             this.fighterAI.roster[caller.type].processMove(caller, this.combatants, this.hitsTarget, this.missesTarget);
             return
         }
@@ -1441,25 +1495,47 @@ export function CombatManager(){
         const target = this.combatants[caller.targetId]
         const distanceToTarget = this.getDistanceToTarget(caller, target),
         laneDiff = this.getLaneDifferenceToTarget(caller, target)
+
+        
+        
         let newPosition, newDepth;
         const targetInRange = this.targetInRange(caller)
+        
+        if(caller.type === 'monk') console.log('monk process move', 'targetInRange? ', targetInRange);
         if(!targetInRange && caller.pendingAttack){
+            if(caller.type === 'monk') console.log('monk zebber 1');
             let moveBackLots = caller.pendingAttack.range === 'far' && distanceToTarget < 2
             newDepth = caller.isMonster || caller.isMinion ? 
             (distanceToTarget > -1 ? caller.depth+1 : caller.depth-1) : 
             (moveBackLots ? caller.depth-3 :
             (distanceToTarget < 1 ? caller.depth-1 : caller.depth+1))
         } else {
+            if(caller.type === 'monk') console.log('monk zebber 2');
             newDepth = caller.depth
         }
 
+        // if(this.type === 'monk') console.log('monk process move ????');
+
+        const coordinatesOccupiedBy = (coordinates) => {
+            if(caller.type === 'monk') console.log('in coordinatesOccupiedBy, coordinates: ', coordinates);
+            return Object.values(this.combatants).find(e=>e.coordinates.x === coordinates.x && e.coordinates.y === coordinates.y)
+        }
+
         // RE-POSITION
-        if(laneDiff < 0){
+        if(laneDiff < 0 ){
+            if(caller.type === 'monk') console.log('monk acorn 1');
             newPosition = caller.position - 1
         } else if(laneDiff > 0){
+            if(caller.type === 'monk') console.log('monk acorn 2');
             newPosition = caller.position + 1
         } else {
+            if(caller.type === 'monk') console.log('monk acorn 3');
             newPosition = caller.position
+        }
+        const newCoordinates = {x: newDepth, y: newPosition}
+        if(caller.type === 'monk') console.log('monk in REPOSITION, laneDiff = ', laneDiff, 'new coordinates: ', newCoordinates, 'coordinatesOccupiedBy(newCoordinates)', coordinatesOccupiedBy(newCoordinates));
+        if(coordinatesOccupiedBy(newCoordinates)){
+            return
         }
 
         if(liveCombatants.some(e=>e.position === newPosition && e.depth === newDepth)){
@@ -1618,8 +1694,8 @@ export function CombatManager(){
     this.hitsTarget = (caller, tempTarget = null) => {
         let target = tempTarget ? tempTarget : this.getCombatant(caller.targetId);
         if(!target) return
-        let criticalHit = Math.random()*100 > 50;
-        let damage = criticalHit ? caller.atk*3 : caller.atk;
+        let criticalHit = Math.random()*100 > 80;
+        let damage = criticalHit ? caller.atk*3 : caller.atk
         if(criticalHit){
             target.woundedHeavily = true;
         } else {
@@ -1827,4 +1903,18 @@ export function CombatManager(){
             })
         })
     }
+    
+    const utilMethods = {
+        fighterFacingDown: this.fighterFacingDown, 
+        fighterFacingUp: this.fighterFacingUp, 
+        fighterFacingRight: this.fighterFacingRight,
+        monsterFacingDown:this.monsterFacingDown,
+        monsterFacingUp: this.monsterFacingUp,
+        broadcastDataUpdate: this.broadcastDataUpdate,
+        kickoffAttackCooldown: this.kickoffAttackCooldown,
+        missesTarget: this.missesTarget,
+        hitsTarget: this.hitsTarget
+    }
+    this.fighterAI.connectUtilMethods(utilMethods)
+    this.monsterAI.connectUtilMethods(utilMethods)
 }

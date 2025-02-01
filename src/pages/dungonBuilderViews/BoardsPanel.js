@@ -15,6 +15,11 @@ class BoardsPanel extends React.Component {
     constructor(props){
         super(props)
         this.state = {}
+        const boards = this.props.boards.map((board, i) => board)
+        console.log('props: ', props, 'boardssss: ', boards, this.props.boards);
+        setTimeout(()=>{
+            console.log(this.props.boards)
+        },2000)
     }
 
     render (){
@@ -108,6 +113,7 @@ class BoardsPanel extends React.Component {
                                                                                                     id={tile.id}
                                                                                                     tileSize={(this.props.tileSize*3)/15}
                                                                                                     image={tile.image ? tile.image : null}
+                                                                                                    imageOverride={tile.image && tile.image.includes('/') ? tile.image : null}
                                                                                                     color={tile.color ? tile.color : 'lightgrey'}
                                                                                                     index={tile.id}
                                                                                                     showCoordinates={false}
@@ -211,6 +217,7 @@ class BoardsPanel extends React.Component {
                         })}
                         {this.props.boards && this.props.compatibilityMatrix.show === false && this.props.boards.map((board, i) => {
                         return (<div key={i} className="board-preview-wrapper">
+                            EYYYY
                                     <div 
                                     onDragStart = {(event) => this.props.onDragStart(event, board)}
                                     draggable
@@ -230,6 +237,7 @@ class BoardsPanel extends React.Component {
                                                 image={tile.image ? tile.image : null}
                                                 color={tile.color ? tile.color : 'lightgrey'}
                                                 index={tile.id}
+                                                imageOverride={tile.image && tile.image.includes('/') ? tile.image : null}
                                                 showCoordinates={false}
                                                 type={tile.type}
                                                 hovered={

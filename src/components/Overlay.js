@@ -22,6 +22,14 @@ export default function Overlay(props) {
                             BLINDED
                         </div>
         break;
+        case 'glowing-eyes':
+            // console.log('blinded!');
+            content = <div className={`overlay-content overlay-glowing-eyes ${props.data.fadeOut ? 'fade-out' : ''}`}>
+                        <div className="relative-child">
+                            <div className="eye redbackgroud"></div>
+                        </div>
+                    </div>
+        break;
     }
     return (
         content

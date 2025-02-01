@@ -149,8 +149,8 @@ class MapMakerPage extends React.Component {
   componentDidMount(){
     const that = this;
     let images = {};
-    console.log('mounted: ', this.props);
-    console.log('ok, this is: ', this);
+    // console.log('mounted: ', this.props);
+    // console.log('ok, this is: ', this);
     function checkIfAllImagesHaveLoaded(){
       if(
         images.arrowUpImg &&
@@ -217,7 +217,7 @@ class MapMakerPage extends React.Component {
     this.loadAllPlanes();
     this.loadAllDungeons();
     const meta = getMeta()
-    console.log('meta:', meta);
+    // console.log('meta:', meta);  
     
     this.setState((state, props) => {
       return {
@@ -449,7 +449,7 @@ class MapMakerPage extends React.Component {
         gate = GATES[this.state.pinnedOption.id];
       };
       if(monster){
-        console.log('monster get here');
+        console.log('monster get here, monster: ', monster);
         let arr = [...this.state.tiles];
         arr[tile.id].contains = monster.key
         arr[tile.id].image = monster.portrait
@@ -510,6 +510,7 @@ class MapMakerPage extends React.Component {
         let arr = [...this.state.tiles];
         arr[tile.id].contains = pinned.image
         arr[tile.id].image = pinned.image
+        console.log('in final pin block, pinned: ', pinned);
         this.setState({
           tiles: arr,
           hoveredTileIdx: null
@@ -587,6 +588,7 @@ class MapMakerPage extends React.Component {
 
   // Board CRUD methods
   writeBoard = async () => {
+    console.log('write board');
     let planesToUpdate = [];
     let miniboards;
 
@@ -598,8 +600,12 @@ class MapMakerPage extends React.Component {
       if(this.state.planes.length > 0){
         console.log('here we go----')
         this.state.planes.forEach((d) => {
+          let planeHasMatchingBoard = false;
           d.miniboards.forEach((b, index) => {
+            
             if(b.id === this.state.loadedBoard.id){
+              planeHasMatchingBoard = true;
+              console.log('found a plane with matching board: ', d);
               miniboards = d.miniboards;
               miniboards[index] = this.state.loadedBoard;
               miniboards[index].name = this.state.loadedBoard.name;
@@ -607,9 +613,10 @@ class MapMakerPage extends React.Component {
               miniboards[index].config = config;
             } 
           })
-          console.log('d.id:', d.id)
+          // console.log('d.id:', d.id)
           d.valid = this.props.mapMaker.isValidPlane(miniboards)
-          planesToUpdate.push(d)
+          if(planeHasMatchingBoard) planesToUpdate.push(d)
+          
         })
       }
       let obj = {
@@ -619,6 +626,7 @@ class MapMakerPage extends React.Component {
       }
       
       await updateBoardRequest(this.state.loadedBoard.id, obj);
+      console.log('individual board API request resolved, planestoUpdate: ', planesToUpdate);
       console.log('LOAD ALL BOARDS BYPASSED');
       // this.loadAllBoards();
       // ^ this is only needed to update board to board BoardsPanel. instead, just directly add it!
@@ -691,7 +699,8 @@ class MapMakerPage extends React.Component {
       this.toast('Board Saved')
     }
     if(planesToUpdate && planesToUpdate.length > 1){
-      
+      console.log('multiple planes to update, figure this out');
+      debugger
       // const payload = planesToUpdate.map(p=> {
       //   return {
       //     name: p.name,
@@ -703,6 +712,7 @@ class MapMakerPage extends React.Component {
       // })
       
     } else if (planesToUpdate && planesToUpdate.length === 1){
+      console.log('there is a plane to update', planesToUpdate[0]);
       let plane = planesToUpdate[0]
       const obj = {
         name: plane.name,
@@ -1259,7 +1269,7 @@ class MapMakerPage extends React.Component {
   validatePlane = (plane) => {
     plane.miniboards.forEach((b, i)=>{
       b.processed = this.props.mapMaker.filterMapAdjacency(b, i, plane.miniboards);
-      console.log('b.processed: ', b.processed);
+      console.log('b.processed: ', b.processed);  
       if(!b.processed) return;
 
       if(i === 0){
@@ -1850,11 +1860,11 @@ class MapMakerPage extends React.Component {
       break;
       case 'board':
         let board = this.state.loadedBoard;
-        // console.log('loaded board', this.state.loadedBoard);
-        // console.log('this.state.loadedBoard.name: ', this.state.loadedBoard.name, 'vs ', this.state.boardNameInput.current.value);
-        // console.log('same folder: ', this.isInSameFolder(this.state.loadedBoard.name, this.state.boardNameInput.current.value))
+        console.log('loaded board', this.state.loadedBoard);
+        console.log('this.state.loadedBoard.name: ', this.state.loadedBoard?.name, 'vs ', this.state.boardNameInput.current.value);
+        console.log('same folder: ', this.isInSameFolder(this.state.loadedBoard?.name, this.state.boardNameInput.current.value))
 
-        const needsFolderUpdate = !this.isInSameFolder(this.state.loadedBoard.name, this.state.boardNameInput.current.value);
+        const needsFolderUpdate = !this.isInSameFolder(this.state.loadedBoard?.name, this.state.boardNameInput.current.value);
         console.log('needs folder update? (not in same folder)', needsFolderUpdate);
         board.name = this.state.boardNameInput.current.value;
         this.setState({

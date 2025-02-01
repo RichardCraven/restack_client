@@ -15,7 +15,7 @@ class PlaneView extends React.Component {
       this.state = {
         hoveredPlane : null
       }
-      console.log('this.props:', this.props);
+    //   console.log('this.props:', this.props);
     }
     timer;
     onClickHandler = event => {
@@ -28,7 +28,7 @@ class PlaneView extends React.Component {
         }
     }
     miniboardClicked(event, board, boardIndex){
-        console.log('miniboard clicked', event.detail);
+        // console.log('miniboard clicked', event.detail);
         if(this.props.adjacencyHoverIdx === boardIndex && board.tiles){
             this.props.adjacencyFilter(board, boardIndex)
         }
@@ -387,6 +387,7 @@ class PlaneView extends React.Component {
                                             // boardIndex={boardIndex}
                                             tileSize={((this.props.tileSize*15)/3-2)/15}
                                             image={tile.image ? tile.image : null}
+                                            imageOverride={tile.image && tile.image.includes('/') ? tile.image : null}
                                             color={tile.color ? tile.color : 'white'}
                                             coordinates={tile.coordinates}
                                             index={tile.id}

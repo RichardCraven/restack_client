@@ -15,13 +15,32 @@ export function MonsterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
 
         },
         MAX_DEPTH: this.MAX_DEPTH,
-        MAX_Lanes: this.MAX_LANES,
+        MAX_LANES: this.MAX_LANES,
         INTERVAL_TIME: this.INTERVAL_TIME
     }
 
     // this.roster = {
     //     djinn: new Djinn(data)
     // }
+    this.connectUtilMethods = (utilMethods) => {
+        // console.log('util methods: ', utilMethods);
+        this.monsterFacingUp = utilMethods.monsterFacingUp;
+        this.monsterFacingDown = utilMethods.monsterFacingDown;
+        this.monsterFacingRight = utilMethods.monsterFacingRight;
+        this.broadcastDataUpdate = utilMethods.broadcastDataUpdate;
+        this.kickoffAttackCooldown = utilMethods.kickoffAttackCooldown;
+        this.missesTarget = utilMethods.missesTarget;
+        this.hitsTarget = utilMethods.hitsTarget;
+        this.utilMethods = {
+            monsterFacingDown:this.monsterFacingDown,
+            monsterFacingUp: this.monsterFacingUp,
+            monsterFacingRight: this.monsterFacingRight,
+            broadcastDataUpdate: this.broadcastDataUpdate,
+            kickoffAttackCooldown: this.kickoffAttackCooldown,
+            missesTarget: this.missesTarget,
+            hitsTarget: this.hitsTarget
+        }
+    }
 
     this.connectOverlayManager = (instance) => {
         this.overlayManager = instance;
@@ -32,8 +51,8 @@ export function MonsterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
 
     this.initializeRoster = () => {
         this.roster = {
-            djinn: new Djinn(data, this.animationManager, this.overlayManager),
-            sphinx: new Sphinx(data, this.animationManager, this.overlayManager)
+            djinn: new Djinn(data, this.utilMethods, this.animationManager, this.overlayManager),
+            sphinx: new Sphinx(data, this.utilMethods, this.animationManager, this.overlayManager)
         }
     }
 

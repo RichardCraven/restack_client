@@ -213,10 +213,10 @@ export function MapMaker(props){
                 })
             }
         }
-        console.log('this.palette tiles: ', this.paletteTiles);
+        // console.log('this.palette tiles: ', this.paletteTiles);
     }
     this.initializeTilesWithInput = (input) => {
-        console.log('input: ', input)
+        // console.log('input: ', input)
     }
     this.getMapConfiguration = (tiles) => {
             let topRow = function(){
@@ -270,7 +270,7 @@ export function MapMaker(props){
             left: []
         }
 
-        console.log('map:', map, 'config: ', config);
+        // console.log('map:', map, 'config: ', config);
         if(!config) return
         boards.forEach((b, i) => {
             let leftCompatibleCount = 0,
@@ -281,7 +281,7 @@ export function MapMaker(props){
             // SCANS TOP TO BOTTOM, LEFT TO RIGHT
             
             // top
-            console.log('b', b, 'b.config', b.config);
+            // console.log('b', b, 'b.config', b.config);
             if(!b.config) return
             if(boardIndex > 2){
                 for(let i = 0; i < config[0].length; i++){
@@ -368,7 +368,7 @@ export function MapMaker(props){
         return spawnPoints.length > 0 ? spawnPoints : null;
     }
     this.formatDungeon = (dungeonObj) => {
-        console.log('format dungeon ', dungeonObj);
+        // console.log('format dungeon ', dungeonObj);
         let markedPassages = this.markPassages(dungeonObj)
         let dungeonValid = true;
         let dungeonSpawns = [];
@@ -376,7 +376,7 @@ export function MapMaker(props){
             let valid = true;
             let passages = markedPassages.find(p=>p.id === l.id)
             let spawns = []
-            console.log('passages.frontPassages', passages.frontPassages);
+            // console.log('passages.frontPassages', passages.frontPassages);
             passages.frontPassages.forEach(passage=>{
                 if(passage.contains === 'spawn_point'){
                     spawns.push(passage);
@@ -407,11 +407,11 @@ export function MapMaker(props){
             passages.downwardPassages = passages.connected.filter(e=>e.type==='way_down')
             l.passages = passages;
             l.valid = valid;
-            console.log('spawns: ', spawns);
+            // console.log('spawns: ', spawns);
             l.spawns = spawns;
             if(!l.valid) dungeonValid = false;
         })
-        console.log('dungeonSpawns', dungeonSpawns);
+        // console.log('dungeonSpawns', dungeonSpawns);
         dungeonObj.valid = dungeonValid;
         dungeonObj.spawn_points = dungeonSpawns;
         if(dungeonObj.spawnPoints) delete dungeonObj.spawnPoints
@@ -427,7 +427,7 @@ export function MapMaker(props){
         // ^ make sure there are valid spawnpoints SOMEWHAERE in the dungeon
     }
     this.isValidPlane = (miniboards) => {
-        console.log('checking plane, miniboards: ', miniboards)
+        // console.log('checking plane, miniboards: ', miniboards)
         if(!miniboards) return false;
         for(let b of miniboards){
             if(b.tiles === undefined){
@@ -457,7 +457,7 @@ export function MapMaker(props){
             let board = miniboards[i];
             for(let h = 14; h < 225; h+=15){
                 if(board.tiles[h].contains !== 'void'){
-                    console.log('BANG', board);
+                    // console.log('BANG', board);
                     return false
                 }
             }
@@ -467,7 +467,7 @@ export function MapMaker(props){
             let board = miniboards[i];
             for(let h = 0; h < 211; h+=15){
                 if(board.tiles[h].contains !== 'void'){
-                    console.log('BANG');
+                    // console.log('BANG');
                     return false
                 }
             }

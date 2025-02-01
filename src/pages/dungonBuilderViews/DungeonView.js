@@ -685,6 +685,7 @@ class DungeonView extends React.Component {
                                                                 id={i}
                                                                 tileSize={((this.props.tileSize*6)/3-2)/15}
                                                                 image={tile.image ? tile.image : null}
+                                                                imageOverride={tile.image && tile.image.includes('/') ? tile.image : null}
                                                                 color={tile.color ? tile.color : 'white'}
                                                                 coordinates={tile.coordinates}
                                                                 index={tile.id}

@@ -15,7 +15,7 @@ class PlanesPanel extends React.Component {
       this.state = {
         hoveredPlane : null
       }
-      console.log('this.props:', this.props);
+    //   console.log('this.props:', this.props);
     }
     timer;
     onClickHandler = event => {

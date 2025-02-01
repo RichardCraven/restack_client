@@ -348,7 +348,8 @@ export function MonsterManager(){
                 baseDef: 13
             },
             level: 29,
-            portrait: images[this.pickRandom(['sphinx_portrait', 'sphinx_portrait2'])],
+            // portrait: images[this.pickRandom(['sphinx_portrait', 'sphinx_portrait2'])],
+            portrait: images['sphinx_portrait2'],
             greetings: ['be thee worthy?'],
             deathCries: ['you may pass'],
             specials: ['possess', 'tesseract'],

@@ -17,12 +17,31 @@ export function FighterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
     this.connectAnimationManager = (instance) => {
         this.initializeRoster(instance)
     }
+    this.connectUtilMethods = (utilMethods) => {
+        // console.log('fighter util methods: ', utilMethods);
+        this.fighterFacingUp = utilMethods.fighterFacingUp;
+        this.fighterFacingDown = utilMethods.fighterFacingDown;
+        this.fighterFacingRight = utilMethods.fighterFacingRight;
+        this.broadcastDataUpdate = utilMethods.broadcastDataUpdate;
+        this.kickoffAttackCooldown = utilMethods.kickoffAttackCooldown;
+        this.missesTarget = utilMethods.missesTarget;
+        this.hitsTarget = utilMethods.hitsTarget;
+        this.utilMethods = {
+            fighterFacingDown:this.monsterFacingDown,
+            fighterFacingUp: this.monsterFacingUp,
+            fighterFacingRight: this.fighterFacingRight,
+            broadcastDataUpdate: this.broadcastDataUpdate,
+            kickoffAttackCooldown: this.kickoffAttackCooldown,
+            missesTarget: this.missesTarget,
+            hitsTarget: this.hitsTarget
+        }
+    }
     this.initializeRoster = (animationManager) => {
         this.roster = {
-            sage: new Sage(data, animationManager),
-            wizard: new Wizard(data, animationManager),
+            sage: new Sage(data, this.utilMethods, this.animationManager, this.overlayManager),
+            wizard: new Wizard(data, this.utilMethods, animationManager),
             soldier,
-            rogue: new Rogue(data, animationManager)
+            rogue: new Rogue(data, this.utilMethods, this.animationManager, this.overlayManager)
         }
     }
 
@@ -245,7 +264,6 @@ export function FighterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
 
     const soldier = {
         processMove: (caller, combatants) => {
-            // console.log('soldier process move');
             this.methods.moveTowardsCloseEnemyTarget(caller, combatants);
         },
         acquireTarget: (caller, combatants, targetToAvoid = null) => {
@@ -257,16 +275,39 @@ export function FighterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
             caller.pendingAttack = this.chooseAttackType(caller, target);
             caller.targetId = target.id;
         },
-        initiateAttack: (caller, combatants, hitsTarget, missesTarget) => {
-            caller.attacking = true;
+        initiateAttack: (caller, manualAttack, combatants) => {
+            if(!caller) return
             const target = combatants[caller.targetId];
-            const distanceToTarget = this.getDistanceToTarget(caller, target),
-            laneDiff = this.methods.getLaneDifferenceToTarget(caller, target);
-            if(distanceToTarget === 1 && laneDiff === 0){
-                console.log('SWING!!!! (soldier always hits)');
-                hitsTarget(caller)
+            if(!target) return
+            let defenseFactor = target.stats.dex ** 2 + target.stats.baseDef;
+            if(defenseFactor > 99) defenseFactor = 90;
+            let attackFactor = Math.floor(Math.sqrt(caller.atk));
+            const results = [], diceRoll = function(){
+                return Math.random() * 100
+            };
+            
+            for(let i = 0; i < attackFactor; i++){
+                results.push(diceRoll())
+            }
+            const connects = results.some(e=>e>defenseFactor);
+            caller.active = true;
+            caller.attacking = true;
+            this.broadcastDataUpdate();
+            caller.readout.action = ` attacks with ${caller.pendingAttack.name}`
+            this.kickoffAttackCooldown(caller)
+            if(connects){
+                if(manualAttack){
+                    this.hitsTarget(caller, target)
+                } else {
+                    this.hitsTarget(caller)
+                }
             } else {
-                missesTarget(caller);
+                if(manualAttack){
+                    this.missesTarget(caller, target)
+                } else {
+                    this.missesTarget(caller)
+                }
+                
             }
         }
     }

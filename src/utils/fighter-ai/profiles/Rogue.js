@@ -110,7 +110,9 @@ export function Rogue(data, animationManager){
         })
     }
     this.initiateAttack = async (caller, combatants, hitsTarget, missesTarget) => {
+        if(!caller) return
             const target = combatants[caller.targetId];
+        if(!target) return
             const distanceToTarget = data.methods.getDistanceToTarget(caller, target),
             laneDiff = data.methods.getLaneDifferenceToTarget(caller, target);
 

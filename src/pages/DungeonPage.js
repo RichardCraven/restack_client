@@ -1792,6 +1792,7 @@ class DungeonPage extends React.Component {
                         cursor={this.state.minimapPlaceMapMarkerStarted ? 'crosshair' : 'default'}
                         tileSize={this.state.tileSize}
                         image={tile.image ? tile.image : null}
+                        imageOverride={tile.image && tile.image.includes('/') ? tile.image : null}
                         contains={tile.contains}
                         color={tile.color ? tile.color : 'lightgrey'}
                         borders={tile.borders}
@@ -1817,6 +1818,7 @@ class DungeonPage extends React.Component {
                         cursor={this.state.minimapPlaceMapMarkerStarted ? 'crosshair' : 'default'}
                         tileSize={this.state.tileSize}
                         image={tile.image ? tile.image : (tile.icon ? tile.icon : null)}
+                        imageOverride={tile.image && tile.image.includes('/') ? tile.image : null}
                         contains={tile.contains}
                         color={tile.color ? tile.color : 'lightgrey'}
                         borders={tile.borders}
