@@ -65,6 +65,10 @@ const GATES = [
   }
 ]
 
+const clone = (thing) => {
+  return JSON.parse(JSON.stringify(thing))
+}
+
 class MapMakerPage extends React.Component {
   constructor(props){
     super(props)
@@ -589,36 +593,37 @@ class MapMakerPage extends React.Component {
   // Board CRUD methods
   writeBoard = async () => {
     console.log('write board');
-    let planesToUpdate = [];
+    // let planesToUpdate = [];
     let miniboards;
 
     const config = this.props.mapMaker.getMapConfiguration(this.state.tiles)    
-    console.log('config:', config)
-    console.log('this.state: ', this.state);
+    // state.loadBoard is currently set to the new incoming board
+    let planesToUpdate = this.planesContainingBoard(this.state.loadedBoard)
+    
     if(this.state.loadedBoard && this.state.loadedBoard.id){
-      // debugger
-      if(this.state.planes.length > 0){
-        console.log('here we go----')
-        this.state.planes.forEach((d) => {
-          let planeHasMatchingBoard = false;
-          d.miniboards.forEach((b, index) => {
+
+
+      // if(this.state.planes.length > 0){
+      //   this.state.planes.forEach((d) => {
+      //     let planeHasMatchingBoard = false;
+      //     d.miniboards.forEach((b, index) => {
             
-            if(b.id === this.state.loadedBoard.id){
-              planeHasMatchingBoard = true;
-              console.log('found a plane with matching board: ', d);
-              miniboards = d.miniboards;
-              miniboards[index] = this.state.loadedBoard;
-              miniboards[index].name = this.state.loadedBoard.name;
-              miniboards[index].tiles = this.state.tiles;
-              miniboards[index].config = config;
-            } 
-          })
-          // console.log('d.id:', d.id)
-          d.valid = this.props.mapMaker.isValidPlane(miniboards)
-          if(planeHasMatchingBoard) planesToUpdate.push(d)
+            // if(b.id === this.state.loadedBoard.id){
+            //   planeHasMatchingBoard = true;
+            //   console.log('found a plane with matching board: ', d);
+            //   miniboards = d.miniboards;
+            //   miniboards[index] = this.state.loadedBoard;
+            //   miniboards[index].name = this.state.loadedBoard.name;
+            //   miniboards[index].tiles = this.state.tiles;
+            //   miniboards[index].config = config;
+            // } 
+      //     })
+      //     // console.log('d.id:', d.id)
+      //     d.valid = this.props.mapMaker.isValidPlane(miniboards)
+      //     if(planeHasMatchingBoard) planesToUpdate.push(d)
           
-        })
-      }
+      //   })
+      // }
       let obj = {
         name: this.state.loadedBoard.name,
         tiles: this.state.tiles,
@@ -678,9 +683,7 @@ class MapMakerPage extends React.Component {
     } else {
       
       console.log('CLONE PATH, RENAME SHOULD NOT GET HERE');
-      const clone = (thing) => {
-        return JSON.parse(JSON.stringify(thing))
-      }
+      
       const newBoard = {
         name: clone(this.state.loadedBoard.name),
         tiles: clone(this.state.tiles),
@@ -723,8 +726,10 @@ class MapMakerPage extends React.Component {
       await updatePlaneRequest(plane.id, obj);
       this.loadAllPlanes();
     }
+  }
 
-    // writeRequest({message: JSON.stringify(obj)})
+  updateBoard = (boardId) => {
+    console.log('updating board with id: ', boardId);
   }
 
   loadBoard = (board) => {
@@ -843,6 +848,8 @@ class MapMakerPage extends React.Component {
     // })
   }
   isInSameFolder = (firstName, secondName) => {
+    console.log('firstname, secondName', firstName, secondName);
+    if(!firstName) return false;
     let title = firstName.split('_')[0],
       subfolder = firstName.split('_').length > 2 ? firstName.split('_')[1] : null,
       deepfolder = subfolder && firstName.split('_').length > 3 ? firstName.split('_')[2] : null
@@ -1093,7 +1100,7 @@ class MapMakerPage extends React.Component {
         if(s) foundBoard = s;
         subfolder.deepfolders.forEach((deepfolder)=>{
           deepfolder.contents.forEach(e=>{
-            console.log('deep board.id', e.id, 'vs ', loadedBoard.id);
+            // console.log('deep board.id', e.id, 'vs ', loadedBoard.id);
             // if(e.id === loadedBoard.id) foundbo
           })
           let d = deepfolder.contents.find(b=>b.id === loadedBoard.id)
@@ -1108,6 +1115,7 @@ class MapMakerPage extends React.Component {
     }
   }
   clearLoadedBoard = () => {
+    console.log('clearing loaded board');
     if(this.state.loadedBoard) this.freezeSelectedPanelBoardBeforeClearing()
     
     
@@ -1129,17 +1137,82 @@ class MapMakerPage extends React.Component {
         tiles: arr,
         // miniboards
       })
+      console.log('should have cleared thre board');
     }, 0)
   }
-  deleteBoard = async () => {
+  deleteBoard = async (boardId) => {
     if(this.state.loadedBoard){
+      console.log('THIS FLOW SHOULD ONLY BE USED IF YOU WANT TO DELETE THE CURRENT LOADED BOARD, NOT FOR ITERATIVE METHOD');
+      
       let board = this.state.loadedBoard;
       this.removeBoardFromPanel(board)
-      await deleteBoardRequest(this.state.loadedBoard.id);
+      await deleteBoardRequest(board.id);
       this.clearLoadedBoard();
-      // this.loadAllBoards(); 
       this.toast('Board Deleted')
+
+      let planesToUpdate = this.planesContainingBoard(this.state.loadedBoard)
+      if(planesToUpdate && planesToUpdate.lensgth > 1){
+        console.log('multiple planes to update, figure this out');
+        debugger
+        // const payload = planesToUpdate.map(p=> {
+        //   return {
+        //     name: p.name,
+        //     miniboards: p.miniboards,
+        //     spawnPoints: p.spawnPoints,
+        //     valid: p.valid,
+        //     id: p.id
+        //   }
+        // })
+        
+      } else if (planesToUpdate && planesToUpdate.length === 1){
+        console.log('there is a plane to update', planesToUpdate[0]);
+        let plane = planesToUpdate[0],
+        index = plane.miniboards.findIndex(b => {
+          return b.id === boardId
+        }),
+        planeId = plane.id;
+        console.log('index to update', index);
+        console.log('plane to update: ', plane);
+        let newPlane = clone(plane)
+        newPlane.miniboards[index] = {processed: undefined};
+        console.log('now newPlane is ', newPlane);
+        const obj = {
+          name: newPlane.name,
+          miniboards: newPlane.miniboards,
+          spawnPoints: newPlane.spawnPoints,
+          valid: newPlane.valid
+        }
+        await updatePlaneRequest(plane.id, obj);
+        await this.loadAllPlanes();
+      }
     }
+  }
+  planesContainingBoard = (board) => {
+    let planesToUpdate = [];
+    if(!board.id) return planesToUpdate;
+    console.log('board: ', board, 'boardId = ', board.id);
+    if(this.state.planes.length > 0){
+      console.log('planes: ', this.state.planes);
+      this.state.planes.forEach((plane) => {
+        let planeHasMatchingBoard = false;
+        console.log('plane: ', plane);
+        plane.miniboards.forEach((b, index) => {
+          
+          if(b.id === board.id){
+            planeHasMatchingBoard = true;
+            console.log('found a plane with matching board: ', plane);
+            // miniboards = d.miniboards;
+            // miniboards[index] = board;
+            // miniboards[index].name = board.name;
+            // miniboards[index].tiles = this.state.tiles;
+            // miniboards[index].config = config;
+          } 
+        })
+        // d.valid = this.props.mapMaker.isValidPlane(miniboards)
+        if(planeHasMatchingBoard) planesToUpdate.push(plane)
+      })
+    }
+    return planesToUpdate;
   }
   
 
@@ -1191,6 +1264,7 @@ class MapMakerPage extends React.Component {
   writePlane = async () => {
     if(this.state.selectedView !== 'plane') return
     if(this.state.loadedPlane && this.state.loadedPlane.id){
+      console.log('miniboards: ', this.state.loadedPlane.miniboards);
       let obj = {
         name: this.state.loadedPlane.name,
         miniboards: this.state.loadedPlane.miniboards,
@@ -1269,7 +1343,7 @@ class MapMakerPage extends React.Component {
   validatePlane = (plane) => {
     plane.miniboards.forEach((b, i)=>{
       b.processed = this.props.mapMaker.filterMapAdjacency(b, i, plane.miniboards);
-      console.log('b.processed: ', b.processed);  
+      // console.log('b.processed: ', b.processed);  
       if(!b.processed) return;
 
       if(i === 0){
@@ -1322,6 +1396,7 @@ class MapMakerPage extends React.Component {
   }
   loadPlane = (incomingPlane) => {
     let plane = this.validatePlane(incomingPlane)
+    console.log('loaded plane: ', plane);
     this.setState({
       loadedPlane: plane,
       selectedThingTitle: `Plane: ${plane.name}`
@@ -1434,6 +1509,7 @@ class MapMakerPage extends React.Component {
       // miniboards: [],
       loadedPlane: newPlane,
     })
+    console.log('new plane: ', newPlane);
     this.renamePlane();
   }
   deletePlane = async () => {
@@ -1442,6 +1518,8 @@ class MapMakerPage extends React.Component {
       this.clearLoadedPlane();
       this.loadAllPlanes(); 
       this.toast('Plane Deleted')
+      console.log('NEED TO HANDLE DUNGEONS WITH THIS PLANE!!!!!!!');
+      debugger
     }
   }
   clearLoadedPlane = () => {
@@ -1855,6 +1933,7 @@ class MapMakerPage extends React.Component {
           showModal: false
         })
         setTimeout(()=>{
+          console.log('loaded plane: ', plane);
           this.writePlane()
         })
       break;
@@ -1986,8 +2065,8 @@ class MapMakerPage extends React.Component {
                   <CDropdownItem onClick={() => this.addNewBoard()}>New</CDropdownItem>
                   <CDropdownItem onClick={() => this.cloneBoard()}>Clone</CDropdownItem>
                   <CDropdownItem onClick={() => this.writeBoard()}>Save</CDropdownItem>
-                  <CDropdownItem onClick={() => this.clearLoadedBoard()}>Clear</CDropdownItem>
-                  <CDropdownItem onClick={() => this.deleteBoard()}>Delete</CDropdownItem>
+                  <CDropdownItem disabled={!this.state.loadedBoard} onClick={() => this.clearLoadedBoard()}>Clear</CDropdownItem>
+                  <CDropdownItem disabled={!this.state.loadedBoard} onClick={() => this.deleteBoard(this.state.loadedBoard.id)}>Delete</CDropdownItem>
                   <CDropdownItem disabled={!this.state.loadedBoard} onClick={() => this.renameBoard()}>Rename Current Map</CDropdownItem>
                   <CDropdownItem onClick={() => this.adjacencyFilterClicked()}>Filter: Adjacency</CDropdownItem>
                   <CDropdownItem onClick={() => this.nameFilterClicked()}>Filter: Name</CDropdownItem>

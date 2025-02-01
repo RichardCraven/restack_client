@@ -45,8 +45,8 @@ class BoardsPanel extends React.Component {
                             <CDropdownItem onClick={() => this.props.addNewBoard()}>New</CDropdownItem>
                             <CDropdownItem onClick={() => this.props.cloneBoard()}>Clone</CDropdownItem>
                             <CDropdownItem onClick={() => this.props.writeBoard()}>Save</CDropdownItem>
-                            <CDropdownItem onClick={() => this.props.clearLoadedBoard()}>Clear</CDropdownItem>
-                            <CDropdownItem onClick={() => this.props.deleteBoard()}>Delete</CDropdownItem>
+                            <CDropdownItem disabled={!this.props.loadedBoard} onClick={() => this.props.clearLoadedBoard()}>Clear</CDropdownItem>
+                            <CDropdownItem disabled={!this.props.loadedBoard} onClick={() => this.props.deleteBoard(this.props.loadedBoard.id)}>Delete</CDropdownItem>
                             <CDropdownItem disabled={!this.props.loadedBoard} onClick={() => this.props.renameBoard()}>Rename Current Map</CDropdownItem>
                             <CDropdownItem onClick={() => this.props.adjacencyFilterClicked()}>Filter: Adjacency</CDropdownItem>
                             <CDropdownItem onClick={() => this.props.nameFilterClicked()}>Filter: Name</CDropdownItem>
