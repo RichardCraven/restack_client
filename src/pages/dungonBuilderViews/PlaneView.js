@@ -18,17 +18,18 @@ class PlaneView extends React.Component {
     //   console.log('this.props:', this.props);
     }
     timer;
-    onClickHandler = event => {
-        clearTimeout(this.timer);
+    // onClickHandler = event => {
+    //     clearTimeout(this.timer);
 
-        if (event.detail === 1) {
-            this.timer = setTimeout(this.props.onClick, 200)
-        } else if (event.detail === 2) {
-            this.props.onDoubleClick()
-        }
-    }
+    //     if (event.detail === 1) {
+    //         this.timer = setTimeout(this.props.onClick, 200)
+    //     } else if (event.detail === 2) {
+    //         console.log('DOUBLE CLICK');
+    //         this.props.onDoubleClick()
+    //     }
+    // }
     miniboardClicked(event, board, boardIndex){
-        // console.log('miniboard clicked', event.detail);
+        console.log('miniboard clicked', event.detail);
         if(this.props.adjacencyHoverIdx === boardIndex && board.tiles){
             this.props.adjacencyFilter(board, boardIndex)
         }

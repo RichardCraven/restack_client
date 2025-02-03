@@ -56,6 +56,12 @@ $bot-level-zIndex: 2; // doubletall containers
         width: 100%;
         display: flex;
         flex-direction: column;
+        .plane-previews-container{
+            border: 1px solid transparent;
+            &:hover{
+                border: 1px solid lightyellow;
+            }
+        }
         .board-preview-wrapper{
             position: relative;
             .folder-color-line{
@@ -351,14 +357,26 @@ ul.dropdown-menu.show{
         right: 0px;
     }
     .toast-pane{
-        background-color: white;
-        // top: 50px;
+        background-color: transparent;
         position: absolute;
-        width: 100px;
-        height: 40px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+        
+        height: 100%;
+        width: 100%;
+        .relative-container{
+            height: 100%;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            .toast-message{
+                height: 40px;
+                line-height: 40px;
+                background-color: white;
+                width: 100px;
+                border-radius: 5px;
+                z-index: 1;
+            }
+        }
     }
     .palette{
         // overflow: scroll;

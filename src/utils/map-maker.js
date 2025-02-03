@@ -372,11 +372,17 @@ export function MapMaker(props){
         let markedPassages = this.markPassages(dungeonObj)
         let dungeonValid = true;
         let dungeonSpawns = [];
+        console.log('formatting dungeon: ', dungeonObj);
+        console.log('marked passages: ', markedPassages);
         dungeonObj.levels.forEach((l)=>{
-            let valid = true;
+            l.valid = true;
+            if(l.front) l.front.valid = true;
+            if(l.back) l.back.valid = true;
+            console.log('pre formatting: ', l);
             let passages = markedPassages.find(p=>p.id === l.id)
             let spawns = []
             // console.log('passages.frontPassages', passages.frontPassages);
+            console.log('passages for level', l.id, passages);
             passages.frontPassages.forEach(passage=>{
                 if(passage.contains === 'spawn_point'){
                     spawns.push(passage);
@@ -384,30 +390,49 @@ export function MapMaker(props){
                 } else {
                     let connectedMatch = passages.connected.find(e=>e.locationCode === passage.locationCode)
                     if(!connectedMatch){
-                        l.valid = false;
+                        // console.log('setting level valid to false in front');
+                        // debugger
+                        // l.valid = false;
+                        l.front.valid = false;
                     }
                 }
             })
+            // console.log('back passages for level', l.id, passages);
             passages.backPassages.forEach(passage=>{
+                // console.log('passage location code', passage.locationCode);
                 // mb.forEach(passage=>{
                 if(passage.contains === 'spawn_point'){
                     spawns.push(passage);
                     dungeonSpawns.push(passage);
                 } else {
+
                     let connectedMatch = passages.connected.find(e=>e.locationCode === passage.locationCode)
                     if(!connectedMatch){
-                        l.valid = false;
+                        // console.log('setting level valid to false in back');
+                        // debugger
+                        // l.valid = false;
+                        l.back.valid = false;
                     }
                 }
                 // })
             })
-            if(l.front && l.front.valid === false) valid = false
-            if(l.back && l.back.valid === false) valid = false
+            // console.log('level ', l);
+            // debugger
+            if(l.front && l.front.valid === false){
+                // console.log('111');
+                l.valid = false
+            }
+            if(l.back && l.back.valid === false){
+                // console.log('222');
+                l.valid = false
+            }
             passages.upwardPassages = passages.connected.filter(e=>e.type==='way_up')
             passages.downwardPassages = passages.connected.filter(e=>e.type==='way_down')
             l.passages = passages;
-            l.valid = valid;
+            // console.log('about to set valid to ', valid);
+            // l.valid = valid;
             // console.log('spawns: ', spawns);
+            // console.log('level: ', l);
             l.spawns = spawns;
             if(!l.valid) dungeonValid = false;
         })

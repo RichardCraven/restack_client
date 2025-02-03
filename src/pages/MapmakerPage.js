@@ -98,7 +98,7 @@ class MapMakerPage extends React.Component {
       optionClickedIdx: null,
       pinnedOption: null,
       mouseDown: false,
-      toastMessage: null,
+      toastMessage: '',
       // mapView: true,
       selectedView: viewStateFromPrefs ? viewStateFromPrefs : 'plane',
       hoveredSection: null,
@@ -545,12 +545,9 @@ class MapMakerPage extends React.Component {
 
   setViewState = (state) => {
     let title = '';
-    console.log('state: ', state);
-    console.log('hmmm, this: ', this);
-    console.log('this.setState', this.setState);
     switch(state){
       case 'plane':
-        console.log('plane...');
+        // console.log('plane...');
         if(this.state.loadedPlane) title = `Plane: ${this.state.loadedPlane.name}`
       break;
       case 'board':
@@ -601,7 +598,7 @@ class MapMakerPage extends React.Component {
     let planesToUpdate = this.planesContainingBoard(this.state.loadedBoard)
     
     if(this.state.loadedBoard && this.state.loadedBoard.id){
-
+      console.log('state.loadedboard" ', this.state.loadedBoard);
 
       // if(this.state.planes.length > 0){
       //   this.state.planes.forEach((d) => {
@@ -626,8 +623,8 @@ class MapMakerPage extends React.Component {
       // }
       let obj = {
         name: this.state.loadedBoard.name,
-        tiles: this.state.tiles,
-        config
+        tiles: clone(this.state.tiles),
+        config: clone(config)
       }
       
       await updateBoardRequest(this.state.loadedBoard.id, obj);
@@ -636,48 +633,7 @@ class MapMakerPage extends React.Component {
       // this.loadAllBoards();
       // ^ this is only needed to update board to board BoardsPanel. instead, just directly add it!
 
-      let boardMatch;
-      if(this.state.loadedDungeon){
-        this.state.loadedDungeon.levels.forEach(l=> {
-          let f, b;
-          if(l.front){
-            l.front.miniboards.forEach((m,i)=>{
-              if(m.id === this.state.loadedBoard.id){
-                boardMatch = {levelId: l.id, orientation: 'front', miniboardIndex: i}
-                f = true;
-              }
-            })
-          }
-          if(l.back){
-            l.back.miniboards.forEach((m,i)=>{
-              if(m.id === this.state.loadedBoard.id){
-                boardMatch = {levelId: l.id, orientation: 'back', miniboardIndex: i}
-                b = true;
-              }
-            })
-          }
-          if(f && b){
-            console.log('SHOULD NOT HAVE BOTH FRONT AND BACK MATCH');
-            debugger
-          }
-        })
-      }
       
-      if(boardMatch){
-        console.log('this level is in currently loaded dungeon!!!!');
-        
-        const dungeon = this.state.loadedDungeon;
-        const level = dungeon.levels.find(l => l.id === boardMatch.levelId)
-        if(boardMatch.orientation === 'front'){
-          level.front.miniboards[boardMatch.miniboardIndex] = this.state.loadedBoard
-        }
-        if(boardMatch.orientation === 'back'){
-          level.back.miniboards[boardMatch.miniboardIndex] = this.state.loadedBoard
-        }
-        console.log('dungeon:', dungeon, 'level:', level, boardMatch);
-        this.setState({loadedDungeon: dungeon})
-        // this.loadedDungeon
-      }
 
       this.toast('Board Saved')
     } else {
@@ -704,19 +660,24 @@ class MapMakerPage extends React.Component {
     if(planesToUpdate && planesToUpdate.length > 1){
       console.log('multiple planes to update, figure this out');
       debugger
-      // const payload = planesToUpdate.map(p=> {
-      //   return {
-      //     name: p.name,
-      //     miniboards: p.miniboards,
-      //     spawnPoints: p.spawnPoints,
-      //     valid: p.valid,
-      //     id: p.id
-      //   }
-      // })
       
     } else if (planesToUpdate && planesToUpdate.length === 1){
+      const newBoard = {
+        name: clone(this.state.loadedBoard.name),
+        tiles: clone(this.state.tiles),
+        config: clone(config),
+        id: this.state.loadedBoard.id
+      }
+
       console.log('there is a plane to update', planesToUpdate[0]);
-      let plane = planesToUpdate[0]
+      let plane = clone(planesToUpdate[0]);
+      console.log('planeId: ', plane.id);
+      if(!newBoard.id){
+        console.log('wtf how is this possible');
+        debugger
+      }
+      let index = plane.miniboards.findIndex(b=> b.id === newBoard.id);
+      plane.miniboards[index] = newBoard;
       const obj = {
         name: plane.name,
         miniboards: plane.miniboards,
@@ -724,8 +685,95 @@ class MapMakerPage extends React.Component {
         valid: plane.valid
       }
       await updatePlaneRequest(plane.id, obj);
-      this.loadAllPlanes();
+      await this.loadAllPlanes();
+
+      const dungeonClone = clone(this.state.loadedDungeon);
+      let needToUpdateDungeon = false;
+      console.log('checking if ned to update dungeon');
+      dungeonClone.levels.forEach(level => {
+        const frontPlane = level.front,
+        backPlane = level.back;
+        if(frontPlane && frontPlane.id === plane.id){
+          needToUpdateDungeon = true;
+          level.front = clone(plane)
+          console.log('CHICKEN DINNER');
+          // frontPlane.miniboards.forEach((m,i)=>{
+            //   if(m.id === this.state.loadedBoard.id){
+              //     boardMatch = {levelId: l.id, orientation: 'front', miniboardIndex: i}
+              //     f = true;
+              //   }
+              // })
+        }
+        console.log('back plane id vs plane id: ', backPlane?.id, plane.id);
+        if(backPlane && backPlane.id === plane.id){
+          needToUpdateDungeon = true;
+          level.back = clone(plane)
+          console.log('CHICKEN DINNER [backside');
+          // backPlane.miniboards.forEach((m,i)=>{
+          //   if(m.id === this.state.loadedBoard.id){
+          //     boardMatch = {levelId: l.id, orientation: 'back', miniboardIndex: i}
+          //     b = true;
+          //   }
+          // })
+        }
+      })
+      if(needToUpdateDungeon){
+        console.log('eyyyy');
+        this.setState({loadedDungeon: dungeonClone})
+        this.writeDungeon();
+      }
+      setTimeout(()=>{
+        console.log('updated plane ref: ', this.state.planes.find(p=>p.id === plane.id));
+        this.loadPlane(this.state.planes.find(p=>p.id === plane.id))
+      })
+
+      // let boardMatch;
+      // if(this.state.loadedDungeon){
+      //   this.state.loadedDungeon.levels.forEach(l=> {
+      //     let f, b;
+      //     if(l.front){
+      //       l.front.miniboards.forEach((m,i)=>{
+      //         if(m.id === this.state.loadedBoard.id){
+      //           boardMatch = {levelId: l.id, orientation: 'front', miniboardIndex: i}
+      //           f = true;
+      //         }
+      //       })
+      //     }
+      //     if(l.back){
+      //       l.back.miniboards.forEach((m,i)=>{
+      //         if(m.id === this.state.loadedBoard.id){
+      //           boardMatch = {levelId: l.id, orientation: 'back', miniboardIndex: i}
+      //           b = true;
+      //         }
+      //       })
+      //     }
+      //     if(f && b){
+      //       console.log('SHOULD NOT HAVE BOTH FRONT AND BACK MATCH');
+      //       debugger
+      //     }
+      //   })
+      // }
+      
+      // if(boardMatch){
+      //   console.log('this level is in currently loaded dungeon!!!! boarMatch: ', boardMatch);
+        
+      //   const dungeon = this.state.loadedDungeon;
+      //   const level = dungeon.levels.find(l => l.id === boardMatch.levelId)
+      //   if(boardMatch.orientation === 'front'){
+      //     level.front.miniboards[boardMatch.miniboardIndex] = clone(this.state.loadedBoard)
+      //   }
+      //   if(boardMatch.orientation === 'back'){
+      //     level.back.miniboards[boardMatch.miniboardIndex] = clone(this.state.loadedBoard)
+      //   }
+      //   console.log('dungeon:', dungeon, 'level:', level, boardMatch);
+      //   this.setState({loadedDungeon: dungeon})
+      //   this.writeDungeon();
+      // }
     }
+  }
+
+  updateDungeonWithPlane = (plane) => {
+
   }
 
   updateBoard = (boardId) => {
@@ -734,12 +782,18 @@ class MapMakerPage extends React.Component {
 
   loadBoard = (board) => {
     console.log('load board: ', board);
-    if(this.state.selectedView === 'plane'){
+    const boardRef = this.findBoardRefInFolders(board.id)
+    console.log('found board ref: ', boardRef);
+    if(!boardRef){
+      console.log('somehow you loaded a board that doesnt exist in folders or state.boards... investigate!');
+      debugger
+    }
+    if(this.state.selectedView !== 'board'){
       this.setViewState('board')
     } 
     this.setState({
-      loadedBoard: board,
-      tiles: board.tiles,
+      loadedBoard: boardRef,
+      tiles: boardRef.tiles,
       selectedThingTitle: `Board: ${board.name}`
     })
   }
@@ -749,13 +803,14 @@ class MapMakerPage extends React.Component {
     const miniboard = frontOrBack === 'front' ? level.front.miniboards[miniboardIndex] : level.back.miniboards[miniboardIndex]
     console.log('level:', level, 'miniboard:', miniboard);
     if(level && miniboard){
-      console.log('setting videw state');
-      this.setViewState('board')
-      // this.set
-      this.setState({
-        loadedBoard: miniboard,
-        tiles: miniboard.tiles
-      })
+      this.loadBoard(miniboard)
+      // console.log('setting videw state');
+      // this.setViewState('board')
+      // // this.set
+      // this.setState({
+      //   loadedBoard: miniboard,
+      //   tiles: miniboard.tiles
+      // })
     }
   }
   // zoomInToBoard = (board) => {
@@ -768,6 +823,28 @@ class MapMakerPage extends React.Component {
   //     tiles: board.tiles
   //   })
   // }
+  findBoardRefInFolders = (boardId) => {
+    const boardFolders = this.state.boardsFolders;
+    let found = null;
+    boardFolders.forEach(f=>{
+      let localFound = f.contents.find(b=>b.id === boardId)
+      if(localFound) found = localFound;
+      f.subfolders.forEach(fsub=>{
+        let localFound = fsub.contents.find(b=>b.id === boardId)
+        if(localFound) found = localFound;
+        fsub.deepfolders.forEach(fdeep=>{
+          let localFound = fdeep.contents.find(b=>b.id === boardId)
+          if(localFound) found = localFound;
+        })
+      })
+    })
+    let localFound = this.state.boards.find(b=>b.id === boardId)
+    if(localFound) found = localFound;
+
+    // console.log('board folders: ', boardFolders);
+    // console.log('top level', this.state.boards);
+    return found;
+  }
   updateLoadedBoardInPanel = (board) => {
 
     // THIS IS TO UPDATE A BOARD FOLDER LOCATION ONLY (renaming is already handled)
@@ -1215,6 +1292,11 @@ class MapMakerPage extends React.Component {
     return planesToUpdate;
   }
   
+  dungeonsContainingPlane = (plane) => {
+    //this actually needs to be a get all dungeons sort of flow, but for now I'm just going to handle the loaded dungeon
+    console.log('loaded dungeon: ', this.state.loadedDungeon);
+    
+  }
 
   // Dungeon CRUD Methods
   // saveDungeon = async () => {
@@ -1313,6 +1395,7 @@ class MapMakerPage extends React.Component {
       const newDungeonRes = await addDungeonRequest(newDungeonPayload);
       let loadedDungeon = this.state.loadedDungeon
       loadedDungeon.id = newDungeonRes.data._id;
+      console.log('about to format');
       this.setState({
         loadedDungeon: this.props.mapMaker.formatDungeon(loadedDungeon)
         // miniboards: this.state.loadedDungeon.miniboards
@@ -1331,6 +1414,7 @@ class MapMakerPage extends React.Component {
     if(meta.preferences && meta.preferences.editor){
       meta.preferences.editor['loadedDungeon'] = this.state.loadedDungeon
     } else {
+      console.log('about to format...');
       meta.preferences = {
         ...meta.prerences,
         editor: { loadedDungeon: this.props.mapMaker.formatDungeon(this.state.loadedDungeon)}
@@ -1341,6 +1425,7 @@ class MapMakerPage extends React.Component {
     storeMeta(meta);
   }
   validatePlane = (plane) => {
+    console.log('validating plane: ', plane);
     plane.miniboards.forEach((b, i)=>{
       b.processed = this.props.mapMaker.filterMapAdjacency(b, i, plane.miniboards);
       // console.log('b.processed: ', b.processed);  
@@ -1429,20 +1514,20 @@ class MapMakerPage extends React.Component {
       }
     }
     dungeon.valid = dungeonValid;
-    console.log('$$$ loaded dungeon: ', dungeon, 'is valid dungeon:', dungeonValid);
-    // debugger
-    // console.log('modified loaded dungeon:', this.props.mapMaker.formatDungeon(dungeon));
+    console.log('about to format 3');
     this.setState({
       loadedDungeon: this.props.mapMaker.formatDungeon(dungeon)
     })
   }
   loadAllDungeons = async () => {
+    console.log('load all dungeons');
     const val = await loadAllDungeonsRequest()
     let dungeons = [];
     val.data.forEach((e)=>{
       let dungeon = JSON.parse(e.content)
       // console.log('raw dungeon content ', JSON.parse(e.content));
       dungeon.id = e._id;
+      console.log('about to formattt');
       dungeons.push(this.props.mapMaker.formatDungeon(dungeon))
     })
     console.log('all dungeons:', dungeons);
@@ -1466,7 +1551,7 @@ class MapMakerPage extends React.Component {
       let dungeon = meta.preferences.editor.loadedDungeon;
       this.setLoadedDungeonDropdownValue(dungeon.name)
       this.setState({
-        loadedDungeon: this.props.mapMaker.formatDungeon(dungeon)
+        loadedDungeon: dungeons.find(d=>d.id === dungeon.id)
       })
     }
   }
@@ -1488,6 +1573,7 @@ class MapMakerPage extends React.Component {
       plane.id = e._id;
       planes.push(plane)
     })
+    console.log('ok all planes are now: ', planes);
     this.setState(() => {
       return {
         planes
@@ -1514,11 +1600,14 @@ class MapMakerPage extends React.Component {
   }
   deletePlane = async () => {
     if(this.state.loadedPlane){
+      const cachedPlane = clone(this.state.loadedPlane)
       await deletePlaneRequest(this.state.loadedPlane.id);
       this.clearLoadedPlane();
-      this.loadAllPlanes(); 
+      await this.loadAllPlanes(); 
       this.toast('Plane Deleted')
       console.log('NEED TO HANDLE DUNGEONS WITH THIS PLANE!!!!!!!');
+
+      let dungeonsToUpdate = this.dungeonsContainingPlane(cachedPlane)
       debugger
     }
   }
@@ -2025,7 +2114,11 @@ class MapMakerPage extends React.Component {
     return (
       <div className="mapmaker-container">
         {this.state.toastMessage && <div className="toast-pane">
-          {this.state.toastMessage}
+          <div className="relative-container">
+            <div className="toast-message">
+              {this.state.toastMessage}
+            </div>
+          </div>
         </div>}
 
         <CModal alignment="center" visible={this.state.showModal} onClose={
