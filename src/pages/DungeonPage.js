@@ -113,7 +113,8 @@ class DungeonPage extends React.Component {
             respawnUpdateInterval: null,
             monsterBattleTileId: null,
             setMemberRitualOptions: null,
-            ritualWrecked: false
+            ritualWrecked: false,
+            shiftDown: false
         }
     }
     
@@ -371,7 +372,6 @@ class DungeonPage extends React.Component {
         })
     }
     triggerMonsterBattle = (bool, tileId) => {
-        console.log('trigger monster battle', bool);
         this.setState({
             keysLocked: bool,
             inMonsterBattle: bool,
@@ -555,14 +555,12 @@ class DungeonPage extends React.Component {
     // transform: perspective(3cm) rotateX(16deg) rotateY(0deg) rotateZ(0deg)
 
     keyDownHandler = (event) => {
-        console.log('keys locked: ', this.state.keysLocked);
         if(this.state.keysLocked && this.state.inMonsterBattle){
             this.combatKeyDownHandler(event);
             return
         }
 
         if(this.state.keysLocked) return
-        console.log('chi');
         let key = event.key, code = event.code
         let newTiles = [], overlayTiles = [];
         // if(code === 'Space'){
@@ -590,8 +588,19 @@ class DungeonPage extends React.Component {
             break;
             case 'Tab':
                 event.preventDefault();
-                if(this.monsterBattleComponentRef.current) this.monsterBattleComponentRef.current.tabToFighter();
+                // if(this.monsterBattleComponentRef.current) this.monsterBattleComponentRef.current.tabToFighter();
+                if(this.state.shiftDown){
+                    if(this.monsterBattleComponentRef.current) this.monsterBattleComponentRef.current.tabToRetarget();
+                } else {
+                    if(this.monsterBattleComponentRef.current) this.monsterBattleComponentRef.current.tabToFighter();
+                }
             break;
+            case 'Shift':
+                event.preventDefault();
+                this.setState({
+                    shiftDown: true
+                })
+        break;
             case 'ArrowUp':
                 if(this.state.keysLocked) return
                 this.props.boardManager.moveUp();
@@ -918,21 +927,15 @@ class DungeonPage extends React.Component {
             spawn_points: selectedDungeon.spawn_points,
             valid: selectedDungeon.valid
           }
-          console.log('adding new dungeon with payload: ', newDungeonPayload);
         const newDungeonRes = await addDungeonRequest(newDungeonPayload);
-        console.log('new dungeon res', newDungeonRes);
         selectedDungeon = JSON.parse(newDungeonRes.data.content);
-          console.log('selected dungeon: ', selectedDungeon);
         selectedDungeon.id = newDungeonRes.data._id;
         // spawnPoint = selectedDungeon.spawn_points[Math.floor(Math.random()*spawnList.length)]
         // ^ need to populate spawnList
         spawnPoint = selectedDungeon.spawn_points[0]
-        console.log('spawn point', spawnPoint);
-        
         this.props.inventoryManager.initializeItems()
-        
+        console.log('spawnpoint: ', spawnPoint);
         if(spawnPoint){
-            console.log('eyyyy spawnpoint!');
             // return
             this.props.boardManager.setDungeon(selectedDungeon);
             let sp = spawnPoint.locationCode.split('_');
@@ -1012,8 +1015,14 @@ class DungeonPage extends React.Component {
     }
     loadExistingDungeon = async (dungeonId) => {
         const meta = getMeta();
-        
+        console.log('meta: ', meta);
         const res = await loadDungeonRequest(dungeonId);
+        console.log('res: ', res);
+        if(res.data && res.data.length === 0){
+            console.log('looks like cached dungeon was deleted, go to first time flow');
+            this.loadNewDungeon();
+            return
+        }
         const dungeon = JSON.parse(res.data[0].content)
         dungeon.id = res.data[0]._id;
         this.props.boardManager.setDungeon(dungeon)

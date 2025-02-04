@@ -4,6 +4,9 @@ import MonsterBattle from './sub-views/MonsterBattle';
 
 import { Route, Switch, Redirect} from "react-router-dom";
 
+const clone = (val) => {
+    return JSON.parse(JSON.stringify(val))
+}
 
 class CrewManagerPage extends React.Component{
   constructor(props){
@@ -29,11 +32,39 @@ class CrewManagerPage extends React.Component{
   componentDidMount(){
     this.props.inventoryManager.initializeItems()
     let options = this.props.crewManager.adventurers;
-    let selectedCrew = [];
-    selectedCrew.push(options[0])
-    selectedCrew.push(options[1])
-    selectedCrew.push(options[2])
+    this.props.crewManager.initializeCrew(options)
+    console.log('initialized crew', this.props.crewManager.crew);
+    let wizard = this.props.crewManager.crew.find(e=>e.type==='wizard')
+    let wizclone = clone(wizard);
+    console.log('wizclone', wizclone);
+    let action = {
+        text: "Etch Glyph",
+        type: "glyph",
+        // available: true,
+        subTypes: [
+            {
+                count: 1,
+                icon_url: "/static/media/cycle.c9c8214b.png",
+                type: "magic missile"
+            }
+        ]
+    }
+    this.props.crewManager.beginSpecialAction(wizard, action, action.subTypes[0])
+    // wizard.specialActions.push(action)
+    
 
+
+    console.log('ok now ', this.props.crewManager.crew);
+    let selectedCrew = [];
+    // selectedCrew.push(options[0])
+    // selectedCrew.push(options[1])
+    // selectedCrew.push(options[2])
+
+    selectedCrew.push(this.props.crewManager.crew.find(e=>e.type==='wizard'))
+    selectedCrew.push(this.props.crewManager.crew.find(e=>e.type==='soldier'))
+    selectedCrew.push(this.props.crewManager.crew.find(e=>e.type==='monk'))
+
+    console.log('vs selected crew: ', selectedCrew);
 
     this.initializeListeners();
     this.setState({
@@ -199,10 +230,7 @@ combatKeyDownHandler = (event) => {
         break;
         case 'Shift':
             event.preventDefault();
-            this.setState({
-                shiftDown: true
-            })
-            // if(this.monsterBattleComponentRef.current) this.monsterBattleComponentRef.current.tabToFighter();
+            this.setState({ shiftDown: true })
         break;
         case 'ArrowUp':
             if(this.state.selectedCrewMember) this.props.combatManager.moveFighterOneSpace('up');

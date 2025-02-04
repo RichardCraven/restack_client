@@ -48,14 +48,9 @@ export function OverlayManager(){
         
         const animationLifespanSequence = ()=>{
             let animations = clone(this.overlays)
-            this.broadcastAnimationEvent(animations)
-            
-            console.log('ADD ANIMATION: ', animation, 'ANIMATION MATRIX: ', animationMatrix);
-
+            this.broadcastAnimationEvent(animations);
 
             setTimeout(()=>{
-                console.log('snarf', this.overlays[animation.id].animations, '(animation bucked)', 'animation.type', animation.type);
-                console.log('croog', this.overlays[animation.id].animations[animation.type]);
                 const animationRef =  this.overlays[animation.id].animations[animation.type].find(a=>a===animation);
                 animationRef.locked = false;
             }, 500)
@@ -98,7 +93,6 @@ export function OverlayManager(){
         } else {
             animationMatrix[animation.type] = [];
             animationMatrix[animation.type].push(animation)
-            console.log('animation pushed to buck now bucket is ', animationMatrix[animation.type]);
             animationLifespanSequence();
         }
     }

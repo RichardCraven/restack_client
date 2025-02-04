@@ -20,6 +20,15 @@ class DungeonView extends React.Component {
         hoveredPlane : null
       }
     }
+    
+    // componentDidMount(){
+    // }
+    // componentDidUpdate(){
+        
+    //     console.log('props: ', this.props);
+    //     let thing = this.props.loadedDungeon?.levels.sort((a,b) => b.id - a.id).map((level,levelIndex)=>level)
+    //     console.log('thing', thing);
+    // }
 
 
     timer;
@@ -255,38 +264,35 @@ class DungeonView extends React.Component {
                                 onChange={this.props.dungeonSelectOnChange}
                                 />
                             </div>
-                            {/* this.props.loadedDungeon && !this.props.loadingData && */}
                             { <div className="level-buttons-container">
-                            <div className="icon-container" onClick={() => this.props.addDungeonLevelUp()}>
-                                <CIcon icon={cilLibraryAdd} size="lg"/> <CIcon className="add-level-up-icon" icon={cilLevelUp} size="lg"/>
-                            </div>
-                            <div className="icon-container" onClick={() =>  this.props.saveDungeonLevel()}>
-                                <CIcon icon={cilSave} size="lg"/>
-                            </div>
-                            <div className="icon-container" onClick={() => this.props.toggleDungeonLevelOverlay()}>
-                                <CIcon icon={cilQrCode} size="lg"/>
-                            </div>
-                            <div className="icon-container" onClick={() => this.props.addDungeonLevelDown()}>
-                                <CIcon icon={cilLibraryAdd} size="lg"/> <CIcon className="add-level-down-icon" icon={cilLevelDown} size="lg"/>
-                            </div>
-                            <div className="icon-container" onClick={() => this.props.addNewDungeon()}>
-                                <CIcon icon={cilPlus} size="lg"/>
-                            </div>
-                            <div className="icon-container dungeon-options-container" >
-                                <CDropdown>
-                                    <CDropdownToggle color="white">
-                                        <CIcon icon={cilOptions} size="lg"/>
-                                    </CDropdownToggle>
-                                    <CDropdownMenu>
-                                        <CDropdownItem onClick={() => this.props.renameDungeon()}>Rename Dungeon</CDropdownItem>
-                                        <CDropdownItem onClick={() => this.props.deleteDungeon()}>Delete Dungeon</CDropdownItem>
-                                        <CDropdownItem onClick={() => this.props.downloadDungeon()}>Download Dungeon</CDropdownItem>
-                                    </CDropdownMenu>
-                                </CDropdown>
-                            </div>
-
-                            
-                        </div>}
+                                <div className="icon-container" onClick={() => this.props.addDungeonLevelUp()}>
+                                    <CIcon icon={cilLibraryAdd} size="lg"/> <CIcon className="add-level-up-icon" icon={cilLevelUp} size="lg"/>
+                                </div>
+                                <div className="icon-container" onClick={() =>  this.props.saveDungeonLevel()}>
+                                    <CIcon icon={cilSave} size="lg"/>
+                                </div>
+                                <div className="icon-container" onClick={() => this.props.toggleDungeonLevelOverlay()}>
+                                    <CIcon icon={cilQrCode} size="lg"/>
+                                </div>
+                                <div className="icon-container" onClick={() => this.props.addDungeonLevelDown()}>
+                                    <CIcon icon={cilLibraryAdd} size="lg"/> <CIcon className="add-level-down-icon" icon={cilLevelDown} size="lg"/>
+                                </div>
+                                <div className="icon-container" onClick={() => this.props.addNewDungeon()}>
+                                    <CIcon icon={cilPlus} size="lg"/>
+                                </div>
+                                <div className="icon-container dungeon-options-container" >
+                                    <CDropdown>
+                                        <CDropdownToggle color="white">
+                                            <CIcon icon={cilOptions} size="lg"/>
+                                        </CDropdownToggle>
+                                        <CDropdownMenu>
+                                            <CDropdownItem onClick={() => this.props.renameDungeon()}>Rename Dungeon</CDropdownItem>
+                                            <CDropdownItem onClick={() => this.props.deleteDungeon()}>Delete Dungeon</CDropdownItem>
+                                            <CDropdownItem onClick={() => this.props.downloadDungeon()}>Download Dungeon</CDropdownItem>
+                                        </CDropdownMenu>
+                                    </CDropdown>
+                                </div>
+                            </div>}
                         </div>
                         <div className="dungeon-planes-container">
                             {this.props.loadedDungeon && !this.props.loadingData && <div className="loaded-dungeon-wrapper"
@@ -405,6 +411,22 @@ class DungeonView extends React.Component {
                                                     })}
                                                 </div>
                                             </div>}
+
+                                            {!level.front && <div 
+                                            className="front-plane plane-board-display"
+                                            style={{
+                                                height: this.props.tileSize*6,
+                                                width: this.props.tileSize*6,
+                                                backgroundColor: 
+                                                this.props.hoveredDungeonSection === `${levelIndex}_front` ? 'lightgoldenrodyellow': 'white'
+                                            }}
+
+                                            onDragOver={(event)=>this.props.onDragOverDungeon(event, levelIndex, 'front')}
+                                            onDrop={(event)=>{this.props.onDropDungeon(levelIndex, 'front')}}
+                                            >
+                                                Drag plane onto here (Front)
+                                            </div>}
+
                                             {level.back && <div className="back-plane plane-board-display">
                                                 <div 
                                                     className={`plane-preview draggable`}
@@ -478,20 +500,7 @@ class DungeonView extends React.Component {
                                                     })}
                                                 </div>
                                             </div>}
-                                            {!level.front && <div 
-                                            className="front-plane plane-board-display"
-                                            style={{
-                                                height: this.props.tileSize*6,
-                                                width: this.props.tileSize*6,
-                                                backgroundColor: 
-                                                this.props.hoveredDungeonSection === `${levelIndex}_front` ? 'lightgoldenrodyellow': 'white'
-                                            }}
-
-                                            onDragOver={(event)=>this.props.onDragOverDungeon(event, levelIndex, 'front')}
-                                            onDrop={(event)=>{this.props.onDropDungeon(levelIndex, 'front')}}
-                                            >
-                                                Drag plane onto here (Front)
-                                            </div>}
+                                            
                                             {!level.back && <div className="back-plane plane-board-display"
                                             style={{
                                                 height: this.props.tileSize*6,
@@ -517,101 +526,6 @@ class DungeonView extends React.Component {
                         </div>
                     </div>
                 </div>
-
-                {/* <div className="palette right-palette" 
-                    style={{
-                        width: this.props.tileSize*3+'px', height: this.props.boardSize+ 'px',
-                        backgroundColor: 'white',
-                        overflow: 'scroll'
-                    }}
-                    onMouseLeave={() => {
-                        if(this.props.optionClickedIdx === null){
-                            return this.props.setPaletteHover(null)
-                        }
-                    }}
-                >
-                    <div className="planes-title">Planes</div>
-                    <div className="planes-options-buttons-container" 
-                    style={{width: this.props.tileSize*3+'px'}}
-                    >
-                        <CDropdown>
-                            <CDropdownToggle color="secondary">Actions</CDropdownToggle>
-                            <CDropdownMenu>
-                                <CDropdownItem onClick={() => this.props.addNewPlane()}>New</CDropdownItem>
-                                <CDropdownItem onClick={() => this.props.clearLoadedPlane()}>Clear</CDropdownItem>
-                                <CDropdownItem onClick={() => this.props.resetLoadedPlane()}>Reset</CDropdownItem>
-                                <CDropdownItem onClick={() => this.props.writePlane()}>Save</CDropdownItem>
-                                <CDropdownItem onClick={() => this.props.renamePlane()}>Rename</CDropdownItem>
-                                <CDropdownItem onClick={() => this.props.deletePlane()}>Delete</CDropdownItem>
-                            </CDropdownMenu>
-                        </CDropdown>
-                    </div>
-                    
-                    <div className="previews-container"
-                        style={{
-                            height: (this.props.boardSize - 78)+ 'px'
-                        }}
-                    >
-                        {this.props.planes && this.props.planes.map((plane, planeIndex) => {
-                        return (<div 
-                                    className='plane-previews-container'
-                                    key={planeIndex}
-                                >
-                                    <div 
-                                    className={`plane-preview draggable ${this.state.hoveredPlane === planeIndex ? 'hovered' : ''}`}
-                                    draggable
-                                    onDragStart = {() => this.props.onDragStartDungeon(plane)}
-                                    style={{
-                                        height: this.props.tileSize*3,
-                                        width: this.props.tileSize*3
-                                    }}
-                                    onClick={() => {
-                                        this.setState({hoveredPlane : null})
-                                        return this.props.loadPlane(plane)
-                                    }}
-                                    onMouseEnter={() => {
-                                        if(this.props.loadedPlane?.id !== plane.id){
-                                            return this.setState({hoveredPlane : planeIndex})
-                                        }
-                                    }}
-                                    onMouseLeave={() => this.setState({hoveredPlane : null})}
-                                    >
-                                    {plane.miniboards.map((board, i) => {
-                                        return    <div 
-                                                className="micro-board board" 
-                                                key={i}
-                                                style={{
-                                                    height: (this.props.tileSize*3)/3-2+'px',
-                                                    width: (this.props.tileSize*3)/3-2+'px'
-                                                }}
-                                                > 
-                                                    {board.tiles && board.tiles.map((tile, i) => {
-                                                    return <Tile
-                                                    key={i}
-                                                    id={i}
-                                                    tileSize={((this.props.tileSize*3)/3-2)/15}
-                                                    image={tile.image ? tile.image : null}
-                                                    color={tile.color ? tile.color : 'white'}
-                                                    coordinates={tile.coordinates}
-                                                    index={tile.id}
-                                                    showCoordinates={false}
-                                                    editMode={true}
-                                                    handleHover={null}
-                                                    handleClick={null}
-                                                    type={tile.type}
-                                                    hovered={
-                                                        false
-                                                    }
-                                                    />
-                                                    })}
-                                                </div>
-                                    })}
-                                    </div>
-                                    <div className={`map-title ${this.props.loadedPlane?.id === plane.id ? 'selected' : ''} ${this.state.hoveredPlane === plane.id ? 'hovered' : ''}`}> <span className={`validity-indicator ${plane.valid && 'valid'}`}></span>  {plane.name}</div>
-                                </div>)
-                        })}
-                    </div>
-                </div> */}
             </div>
         )
     }

@@ -16,10 +16,6 @@ class BoardsPanel extends React.Component {
         super(props)
         this.state = {}
         const boards = this.props.boards.map((board, i) => board)
-        console.log('props: ', props, 'boardssss: ', boards, this.props.boards);
-        setTimeout(()=>{
-            console.log(this.props.boards)
-        },2000)
     }
 
     render (){
@@ -217,7 +213,6 @@ class BoardsPanel extends React.Component {
                         })}
                         {this.props.boards && this.props.compatibilityMatrix.show === false && this.props.boards.map((board, i) => {
                         return (<div key={i} className="board-preview-wrapper">
-                            EYYYY
                                     <div 
                                     onDragStart = {(event) => this.props.onDragStart(event, board)}
                                     draggable

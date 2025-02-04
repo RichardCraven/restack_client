@@ -17,7 +17,7 @@ const NUM_COLUMNS = 8;
 const MAX_ROWS = 5;
 const TILE_SIZE = 100;
 const SHOW_TILE_BORDERS = true;
-const SHOW_COMBAT_BORDER_COLORS = true;
+const SHOW_COMBAT_BORDER_COLORS = false;
 const SHOW_INTERACTION_PANE=true
 
 const RANGES = {
@@ -188,12 +188,25 @@ class MonsterBattle extends React.Component {
         this.setState({greetingInProcess: false})
     }
     tabToFighter = () => {
+        console.log('TAB');
         const liveCrew = Object.values(this.state.battleData).filter(e=>(!e.isMonster && !e.isMinion) && !e.dead)
         if(liveCrew.length === 0) return
         const currentIndex = this.state.selectedFighter ? liveCrew.findIndex(e=>e.id === this.state.selectedFighter.id) : -1;
         const nextIndex = currentIndex === liveCrew.length-1 ? 0 : currentIndex + 1;
         const selectedFighter = liveCrew[nextIndex];
         this.props.combatManager.setSelectedFighter(selectedFighter)
+        console.log('selected fighter: ', selectedFighter);
+        let a = selectedFighter?.specialActions
+        let b = selectedFighter?.specialActions?.find(a=> a && a.actionType.type==='glyph') 
+        console.log('thing: ', a, b);
+        if(a && b){
+            let c = b.actionType.subTypes.map((glyphUnit, i)=>{return glyphUnit})
+            console.log('c: ', c);
+
+        }
+        // let thing = selectedFighter?.specialActions?.find(a=> a && a.actionType.type==='glyph').actionType.subTypes.map((glyphUnit, i)=>{
+        //     return glyphUnit  
+        // })
         this.setState({
             selectedFighter
         })
@@ -247,6 +260,7 @@ class MonsterBattle extends React.Component {
         // console.log('WIDTH PARTS: ', this.props.combatManager.getRangeWidthVal(this.state.selectedFighter));
 
 
+        console.log('setting selected fighter: ', selectedFighter);
         if(this.state.showCrosshair){
             this.props.combatManager.queueAction(this.state.selectedFighter.id, id, this.state.selectedAttack)
             this.setState({
@@ -503,16 +517,29 @@ class MonsterBattle extends React.Component {
         this.props.useConsumableFromInventory(val);
     }
     specialTileClicked = (val) => {
+        console.log('special tile clicked: ', val);
         let finalVal;
         if(val !== null && typeof val === 'string'){
             val = val.replaceAll('_', ' ')
         }
+        console.log('val: ', val);
         if(val === 'glyph'){
             finalVal = !this.state.glyphTrayExpanded
+            this.setState({
+                glyphTrayExpanded: finalVal
+            })
         }
-        this.setState({
-            glyphTrayExpanded: finalVal
-        })
+        // if(val)
+    }
+    fireGlyph = (glyph) => {
+        console.log('glyph firing: ', glyph);
+        switch(glyph.type){
+            case 'magic missile':
+                console.log('magic missile!');
+            break;
+            default:
+                console.log('huh?');
+        }
     }
     specialTileHovered = (val) => {
         this.setState({
@@ -1173,26 +1200,23 @@ class MonsterBattle extends React.Component {
                         </div>
                     </div>
                     <div className="interaction-row">
-                        {/* <div className="stats-col">
-
-                        </div> */}
                         <div className="inventory-col">
                             <div className="interaction-header">Consumables</div>
                             <div className="interaction-tooltip" style={{fontSize: this.state.hoveredInventoryTile?.length > 8 ? '10px': 'inherit'}}>{this.state.hoveredInventoryTile}</div>
                             <div className="interaction-tile-container">
-                                    {this.state.selectedFighter && this.props.inventoryManager?.inventory.filter(e=>e.type==='consumable').map((a, i)=>{
-                                        return <div key={i}  className='interaction-tile-wrapper'>
-                                                    <div 
-                                                    className={`interaction-tile consumable`} 
-                                                    style={{backgroundImage: "url(" + images[a.icon] + ")", cursor: 'pointer'}} 
-                                                    onClick={() => this.combatInventoryTileClicked(a)} 
-                                                    onMouseEnter={() => this.inventoryTileHovered(a.name)} 
-                                                    onMouseLeave={() => this.inventoryTileHovered(null)}
-                                                    >
-                                                    </div>
-                                                    <div className="interaction-tile-overlay" style={{width: `${a.cooldown_position}%`, transition: a.cooldown_position === 0 ? '0s' : '0.2s'}}></div>
+                                {this.state.selectedFighter && this.props.inventoryManager?.inventory.filter(e=>e.type==='consumable').map((a, i)=>{
+                                    return <div key={i}  className='interaction-tile-wrapper'>
+                                                <div 
+                                                className={`interaction-tile consumable`} 
+                                                style={{backgroundImage: "url(" + images[a.icon] + ")", cursor: 'pointer'}} 
+                                                onClick={() => this.combatInventoryTileClicked(a)} 
+                                                onMouseEnter={() => this.inventoryTileHovered(a.name)} 
+                                                onMouseLeave={() => this.inventoryTileHovered(null)}
+                                                >
                                                 </div>
-                                    })}
+                                                <div className="interaction-tile-overlay" style={{width: `${a.cooldown_position}%`, transition: a.cooldown_position === 0 ? '0s' : '0.2s'}}></div>
+                                            </div>
+                                })}
                             </div>
                         </div>
                         <div className="specials-col">
@@ -1225,19 +1249,19 @@ class MonsterBattle extends React.Component {
                         </div>
                         <div className="glyphs-col" style={{width: this.state.glyphTrayExpanded ? '100px' : '0px'}}>
                             <div className="interaction-header">Glyphs</div>
-                            {/* <div className="interaction-tooltip">{this.state.hoveredSpecialTile}</div>
+                            <div className="interaction-tooltip">{this.state.hoveredSpecialTile}</div>
                             <div className="interaction-tile-container">
-                                {this.state.selectedFighter?.specials.map((a, i)=>{
+                                {this.state.selectedFighter?.specialActions.length > 0 && this.state.selectedFighter?.specialActions?.find(a=> a && a.actionType.type==='glyph').actionType.subTypes.map((glyphUnit, i)=>{
                                     return <div 
                                     key={i} 
-                                    style={{backgroundImage: "url(" + a.icon + ")", cursor: 'pointer'}} 
+                                    style={{backgroundImage: "url(" + glyphUnit.icon_url + ")", cursor: 'pointer'}} 
                                     className='interaction-tile special' 
-                                    onClick={() => this.specialTileClicked(a)} 
-                                    onMouseEnter={() => this.specialTileHovered(a)} 
+                                    onClick={() => this.fireGlyph(glyphUnit)} 
+                                    onMouseEnter={() => this.specialTileHovered(glyphUnit.type)} 
                                     onMouseLeave={() => this.specialTileHovered(null)}>
                                     </div>
                                 })}
-                            </div> */}
+                            </div>
                         </div>
                         <div className="attacks-col">
                             <div className="interaction-header">Attacks</div>

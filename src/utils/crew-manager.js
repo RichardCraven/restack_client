@@ -34,6 +34,7 @@ export function CrewManager(){
             console.log('special actions: ', member.specialActions);
             if(!member.specialActions) return
             member.specialActions.forEach(a=>{
+
                 let end = new Date(a.endDate),
                 now = new Date();
                 if(end - now < 0){
@@ -104,6 +105,7 @@ export function CrewManager(){
     }
 
     this.beginSpecialAction = (member, actionType, actionSubtype) => {
+        console.log('BEGIN SPECIAL ACTION: ', member, actionType, actionSubtype);
         const startDate = new Date();
         let endDate;
         switch(actionType.type){
@@ -120,7 +122,8 @@ export function CrewManager(){
                             actionSubtype,
                             startDate,
                             endDate,
-                            available: false,
+                            // available: false,
+                            available: true,
                             notified: false,
                         })
                     break;
@@ -175,7 +178,7 @@ export function CrewManager(){
                 dex: 5,
                 vit: 4,
                 fort: 7,
-                hp: 50,
+                hp: 20,
                 atk: 8,
                 baseDef: 12,
                 energy: 0,
@@ -293,7 +296,7 @@ export function CrewManager(){
                 dex: 4,
                 vit: 6,
                 fort: 6,
-                hp: 16,
+                hp: 17,
                 atk: 9,
                 baseDef: 12,
                 energy: 0,

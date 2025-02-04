@@ -69,6 +69,14 @@ const clone = (thing) => {
   return JSON.parse(JSON.stringify(thing))
 }
 
+const delay = (numSeconds) => {
+  return new Promise((resolve) => {
+      setTimeout(()=>{
+          resolve(numSeconds, ' complete')
+      }, numSeconds * 1000)
+  })
+}
+
 class MapMakerPage extends React.Component {
   constructor(props){
     super(props)
@@ -335,6 +343,7 @@ class MapMakerPage extends React.Component {
     })
   }
   renameBoard = () => {
+    console.log('in rename board, state.loadedBoard.name', this.state.loadedBoard?.name);
     this.setState({
       showModal: true,
       modalType: 'rename board'
@@ -1128,8 +1137,10 @@ class MapMakerPage extends React.Component {
     })
   }
 
-  addNewBoard = () => {
-    if(this.state.loadedBoard) this.clearLoadedBoard();
+  addNewBoard = async () => {
+    if(this.state.loadedBoard){
+      await this.clearLoadedBoard();
+    }
     
     let d = new Date()
     let n = d.getTime();
@@ -1140,12 +1151,22 @@ class MapMakerPage extends React.Component {
         config: [[],[],[],[]],
         tiles: []
     }
+    console.log('new board: ', newBoard);
     this.setState({
       loadedBoard: newBoard
     })
     setTimeout(()=>{
+      console.log('1about to fire loaded board, this.state.loadedBoard:', clone(this.state.loadedBoard));
       this.renameBoard();
     })
+    setTimeout(()=>{
+      console.log('2about to fire loaded board, this.state.loadedBoard:', clone(this.state.loadedBoard));
+      // this.renameBoard();
+    },100)
+    setTimeout(()=>{
+      console.log('3about to fire loaded board, this.state.loadedBoard:', clone(this.state.loadedBoard));
+      // this.renameBoard();
+    },1000)
   }
 
   cloneBoard = () => {
@@ -1169,6 +1190,11 @@ class MapMakerPage extends React.Component {
     let loadedBoard = this.state.loadedBoard;
     let foundBoard;
     console.log('loadedBoard.id', loadedBoard.id);
+
+    // return new Promise(resolve => {
+      
+    // })
+
     this.state.boardsFolders.forEach((folder)=>{
       let f = folder.contents.find(b=>b.id === loadedBoard.id)
       if(f) foundBoard = f;
@@ -1185,15 +1211,36 @@ class MapMakerPage extends React.Component {
         })
       })
     })
+    let topLevelFound = this.state.boards.find(b=>b.id === loadedBoard.id)
+    if(topLevelFound) foundBoard = topLevelFound;
     console.log('foundBoard: ', foundBoard);
     if(foundBoard){
       foundBoard.tiles = JSON.parse(JSON.stringify(loadedBoard.tiles))
       foundBoard = JSON.parse(JSON.stringify(loadedBoard))
     }
   }
-  clearLoadedBoard = () => {
+  clearLoadedBoard = async () => {
     console.log('clearing loaded board');
-    if(this.state.loadedBoard) this.freezeSelectedPanelBoardBeforeClearing()
+    return new Promise(resolve => {
+      if(this.state.loadedBoard) this.freezeSelectedPanelBoardBeforeClearing()
+      
+        let arr = [...this.state.tiles]
+        for(let t of arr){
+          t.image = null;
+          t.contains = null;
+          t.color = null
+        }
+        this.setState({
+          loadedBoard: null,
+          tiles: arr,
+          // miniboards
+        })
+        console.log('should have cleared thre board');
+        setTimeout(()=>{
+          console.log('resolving promise');
+          resolve()
+        })
+    })
     
     
     // let miniboards = []
@@ -1202,20 +1249,7 @@ class MapMakerPage extends React.Component {
       // }
       
       
-    setTimeout(()=>{
-      let arr = [...this.state.tiles]
-      for(let t of arr){
-        t.image = null;
-        t.contains = null;
-        t.color = null
-      }
-      this.setState({
-        loadedBoard: null,
-        tiles: arr,
-        // miniboards
-      })
-      console.log('should have cleared thre board');
-    }, 0)
+    
   }
   deleteBoard = async (boardId) => {
     if(this.state.loadedBoard){
@@ -1223,11 +1257,11 @@ class MapMakerPage extends React.Component {
       
       let board = this.state.loadedBoard;
       this.removeBoardFromPanel(board)
-      await deleteBoardRequest(board.id);
-      this.clearLoadedBoard();
-      this.toast('Board Deleted')
-
       let planesToUpdate = this.planesContainingBoard(this.state.loadedBoard)
+      await deleteBoardRequest(board.id);
+      await this.clearLoadedBoard();
+      this.toast('Board Deleted')
+      
       if(planesToUpdate && planesToUpdate.lensgth > 1){
         console.log('multiple planes to update, figure this out');
         debugger
@@ -1520,17 +1554,14 @@ class MapMakerPage extends React.Component {
     })
   }
   loadAllDungeons = async () => {
-    console.log('load all dungeons');
     const val = await loadAllDungeonsRequest()
     let dungeons = [];
     val.data.forEach((e)=>{
       let dungeon = JSON.parse(e.content)
       // console.log('raw dungeon content ', JSON.parse(e.content));
       dungeon.id = e._id;
-      console.log('about to formattt');
       dungeons.push(this.props.mapMaker.formatDungeon(dungeon))
     })
-    console.log('all dungeons:', dungeons);
     // let primari = dungeons.find(e=>e.name==='Primari')
     // const newPlane = primari.levels.find(e=>e.id === -1).front
     // delete newPlane.id
@@ -1573,7 +1604,6 @@ class MapMakerPage extends React.Component {
       plane.id = e._id;
       planes.push(plane)
     })
-    console.log('ok all planes are now: ', planes);
     this.setState(() => {
       return {
         planes
@@ -1584,7 +1614,6 @@ class MapMakerPage extends React.Component {
     let d = new Date()
     let n = d.getTime();
     let rand = n.toString().slice(9,13)
-    console.log('ahhh');
     let newPlane = {
         name: `plane${rand}`,
         miniboards: [[],[],[],[],[],[],[],[],[]],
@@ -1595,7 +1624,6 @@ class MapMakerPage extends React.Component {
       // miniboards: [],
       loadedPlane: newPlane,
     })
-    console.log('new plane: ', newPlane);
     this.renamePlane();
   }
   deletePlane = async () => {
@@ -1616,8 +1644,6 @@ class MapMakerPage extends React.Component {
     for(let i = 0; i < 9; i++){
       miniboards.push([])
     }
-    console.log('currently loaded plane: ', this.state.loadedPlane);
-    console.log('current planes ', this.state.planes);
     let planes = Array.from(this.state.planes)
     let loaded = planes.find(e=> e.id === this.state.loadedPlane.id)
     loaded.miniboards = miniboards
@@ -1754,7 +1780,6 @@ class MapMakerPage extends React.Component {
     })
   }
   viewSelectorChange = (val) => {
-    console.log('this.state', this.state);
     switch(val.target.id){
       case 'board-view':
         this.setViewState('board')
@@ -1807,8 +1832,6 @@ class MapMakerPage extends React.Component {
   // Drag and Drop code
 
   onDragStart = (event, board, origin = null) => {
-    // event.preventDefault()
-    console.log('on drag start');
     this.setState({
       draggedBoard: board,
       draggedBoardOrigin: origin
@@ -1868,7 +1891,6 @@ class MapMakerPage extends React.Component {
 
   onDropDungeon = (levelIndex, frontOrBack) => {
     const dungeon = this.state.loadedDungeon;
-    // let loadedDungeon = this.state.loadedDungeon;
     dungeon.levels[levelIndex][frontOrBack] = this.state.draggedPlane;
     setTimeout(()=>{
       this.setState({
@@ -1880,7 +1902,6 @@ class MapMakerPage extends React.Component {
   }
 
   saveDungeonLevel = () => {
-    console.log('save dungeon level');
     this.writeDungeon()
   }
   clearDungeonLevel = (levelId) => {
@@ -2022,18 +2043,16 @@ class MapMakerPage extends React.Component {
           showModal: false
         })
         setTimeout(()=>{
-          console.log('loaded plane: ', plane);
           this.writePlane()
         })
       break;
       case 'board':
         let board = this.state.loadedBoard;
-        console.log('loaded board', this.state.loadedBoard);
-        console.log('this.state.loadedBoard.name: ', this.state.loadedBoard?.name, 'vs ', this.state.boardNameInput.current.value);
-        console.log('same folder: ', this.isInSameFolder(this.state.loadedBoard?.name, this.state.boardNameInput.current.value))
-
+        if(!board){
+          console.log('no loaded board, investigate');
+          debugger
+        }
         const needsFolderUpdate = !this.isInSameFolder(this.state.loadedBoard?.name, this.state.boardNameInput.current.value);
-        console.log('needs folder update? (not in same folder)', needsFolderUpdate);
         board.name = this.state.boardNameInput.current.value;
         this.setState({
           loadedBoard: board,
@@ -2060,7 +2079,6 @@ class MapMakerPage extends React.Component {
         dungeonOverlayOn: false,
         overlayData: null
       })
-      console.log('dungeonId: ', dungeon.id);
       this.loadDungeon(dungeon.id)
     } else {
       this.setState({
@@ -2095,8 +2113,6 @@ class MapMakerPage extends React.Component {
   }
 
   closeModal = () => {
-    // {return this.setState(() => { return {showModal: false}})}
-    console.log('close modal!!!');
     this.setState({
       showModal: false
     })
@@ -2104,7 +2120,6 @@ class MapMakerPage extends React.Component {
 
   toggleShowPlaneNames = () => {
     let currentVal = this.state.showPlanesNames
-    console.log('toggle show planes names, current val: ', currentVal);
     this.setState({
       showPlanesNames: !currentVal
     })
@@ -2136,6 +2151,7 @@ class MapMakerPage extends React.Component {
             {(this.state.modalType === 'name dungeon' || this.state.modalType === 'rename dungeon') && <input ref={this.state.dungeonNameInput} className="dungeonname-input"  type="text" defaultValue={this.state.loadedDungeon?.name || ''} placeholder={this.state.loadedDungeon?.name || ''}/>}
             {(this.state.modalType === 'name plane' || this.state.modalType === 'rename plane') && <input ref={this.state.planeNameInput} className="dungeonname-input"  type="text" defaultValue={this.state.loadedPlane?.name || ''} placeholder={this.state.loadedPlane?.name || ''}/>}
             {(this.state.modalType === 'name board' || this.state.modalType === 'rename board') && <input ref={this.state.boardNameInput} className="dungeonname-input"  type="text" defaultValue={this.state.loadedBoard?.name || ''} placeholder={this.state.loadedBoard?.name || ''}/>}
+            LOADED BOARD.NAME: {this.state.loadedBoard?.name}
           </CModalBody>
           <CModalFooter>
             <CButton color="secondary" onClose={() => this.closeModal()}>

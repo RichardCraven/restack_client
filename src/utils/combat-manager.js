@@ -478,6 +478,7 @@ export function CombatManager(){
             manualMovesCurrent: fighter.manualMovesCurrent,
             attack: function(){
                 const target = getCombatant(this.targetId);
+                if(!target) return
                 // if(this.type === 'monk') console.log('RANGES', RANGES, this.pendingAttack.range)
                 if(this.type === 'monk') console.log('monk attackl, target; ', target, 'RANGES[this.pendingAttack] === 1', RANGES[this.pendingAttack.range] === 1, 'depth comparison', this.depth, 'vs', target.depth);
                 
@@ -546,7 +547,7 @@ export function CombatManager(){
                 this.turnCycle();
             },
             move: function(){
-                if(this.type === 'monk') console.log('monk move from turn cycle');
+                // if(this.type === 'monk') console.log('monk move from turn cycle');
                 processMove(this);
             },
             turnCycle: function(){
@@ -593,8 +594,7 @@ export function CombatManager(){
                         // console.log('monster is at move stage. hasMoved =', hasMoved);
                     }
                     if(this.tempo > 5 && this.tempo < 10 && this.targetId !== null && !hasMoved && !this.destinationSickness){
-                        // this.aiming = false;
-                        if(this.type === 'monk') console.log('monk moving 1st');
+                        // if(this.type === 'monk') console.log('monk moving 1st');
                         this.move();
                         hasMoved = true;
                     }
@@ -1147,8 +1147,7 @@ export function CombatManager(){
         else return false
     }
     this.monsterFacingUp = (caller) => {
-        if(!caller) return;
-        // console.log('monster: ', caller);
+        if(!caller || !this.combatants[caller.id]) return;
         const monster = Object.values(this.combatants[caller.id])
         const target = this.combatants[monster.targetId]
         if(target){
@@ -1157,7 +1156,7 @@ export function CombatManager(){
         else return false
     }
     this.monsterFacingDown = (caller) => {
-        if(!caller) return;
+        if(!caller || !this.combatants[caller.id]) return;
         const monster = Object.values(this.combatants[caller.id])
         const target = this.combatants[monster.targetId]
         if(target){
@@ -1166,11 +1165,8 @@ export function CombatManager(){
         else return false
     }
     this.manualRetarget = (caller) => {
-        // console.log('manual retarget for ', caller.type);
         const targetOptions = Object.values(this.combatants).filter(e=>(e.isMinion || e.isMonster) && !e.dead)
-        // console.log('target Options ', targetOptions);
         const currentTarget = targetOptions.find(e=>e.id===caller.targetId)
-        // console.log('currentTarget: ', currentTarget);
         this.acquireTargetManually(caller, currentTarget)
 
     }
@@ -1694,7 +1690,11 @@ export function CombatManager(){
     this.hitsTarget = (caller, tempTarget = null) => {
         let target = tempTarget ? tempTarget : this.getCombatant(caller.targetId);
         if(!target) return
-        let criticalHit = Math.random()*100 > 80;
+        let r = Math.random()
+        let criticalHit = r*100 > 80;
+        if(criticalHit){
+            console.log(caller.type, 'crit!!!!!!', r, criticalHit);
+        }
         let damage = criticalHit ? caller.atk*3 : caller.atk
         if(criticalHit){
             target.woundedHeavily = true;

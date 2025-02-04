@@ -15,11 +15,6 @@ class BoardView extends React.Component {
     constructor(props){
       super(props)
       this.state = {}
-    //   console.log('this.props:', this.props);
-    //   console.log('monsters: ', this.props.monsterManager.monsters);
-    //   console.log('goblin: ', this.props.monsterManager.monsters['goblin']);
-      console.log('***this.props.tiles***', this.props.tiles);
-      console.log('boardsFolders', this.props.boardsFolders);
     }
     
     render (){

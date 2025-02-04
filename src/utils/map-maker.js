@@ -372,17 +372,12 @@ export function MapMaker(props){
         let markedPassages = this.markPassages(dungeonObj)
         let dungeonValid = true;
         let dungeonSpawns = [];
-        console.log('formatting dungeon: ', dungeonObj);
-        console.log('marked passages: ', markedPassages);
         dungeonObj.levels.forEach((l)=>{
             l.valid = true;
             if(l.front) l.front.valid = true;
             if(l.back) l.back.valid = true;
-            console.log('pre formatting: ', l);
             let passages = markedPassages.find(p=>p.id === l.id)
             let spawns = []
-            // console.log('passages.frontPassages', passages.frontPassages);
-            console.log('passages for level', l.id, passages);
             passages.frontPassages.forEach(passage=>{
                 if(passage.contains === 'spawn_point'){
                     spawns.push(passage);
@@ -390,14 +385,10 @@ export function MapMaker(props){
                 } else {
                     let connectedMatch = passages.connected.find(e=>e.locationCode === passage.locationCode)
                     if(!connectedMatch){
-                        // console.log('setting level valid to false in front');
-                        // debugger
-                        // l.valid = false;
                         l.front.valid = false;
                     }
                 }
             })
-            // console.log('back passages for level', l.id, passages);
             passages.backPassages.forEach(passage=>{
                 // console.log('passage location code', passage.locationCode);
                 // mb.forEach(passage=>{
