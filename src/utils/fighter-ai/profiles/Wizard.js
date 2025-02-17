@@ -51,7 +51,6 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
 
         if(distanceToTarget === 1 && available.find(e=>e.range === 'close')){
             attack = available.find(e=>e.range === 'close');
-            // console.log('chosen attack: ', attack);
             return attack;
         }
 
@@ -81,7 +80,6 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                 attack = data.methods.pickRandom(available);
             }
         }
-        console.log('Zildjiakans attack: ', attack);
         return attack
     }
     this.processMove = (caller, combatants) => {
@@ -104,8 +102,11 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
             // laneDiff === 1 && this.friendlies(combatants).some(e=>e.position === caller.position+1)
             data.methods.isFriendlyAtCoordinates({x: caller.coordinates.x, y: caller.coordinates.y}, data.methods.getFriendlies(caller, combatants))
         ){
+            console.log('in this weird block. investigate!');
             caller.position = 2
+            debugger
         } else {
+            console.log('stay on back row');
             data.methods.stayOnBackRow(caller,combatants)
         }
 
@@ -113,58 +114,84 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
         caller.coordinates.y = caller.position
         caller.coordinates.x = caller.depth
     }
-    this.triggerMagicMissile = (coords) => {
-        console.log('zildjikan triggering magic missile');
-        const tileId = this.animationManager.getTileIdByCoords(coords);
-        if(tileId !== null){
-            this.animationManager.rippleAnimation(tileId, 'red')
-        }
-    }
-    this.triggerBeamAttack = (callerCoords, targetCoords) => {
-        console.log('zildjikan beam attack');
+    // this.triggerMagicMissile = (coords) => {
+    //     console.log('zildjikan triggering magic missile');
+    //     const tileId = this.animationManager.getTileIdByCoords(coords);
+    //     if(tileId !== null){
+    //         this.animationManager.rippleAnimation(tileId, 'red')
+    //     }
+    // }
+    this.triggerBeamAttack = (callerCoords, targetCoords, color = 'purple') => {
         const targetTileId = this.animationManager.getTileIdByCoords(targetCoords)
         const sourceTileId = this.animationManager.getTileIdByCoords(callerCoords)
         return new Promise((resolve) => {
             if(targetTileId !== null && sourceTileId !== null){
-                this.animationManager.beamAnimation(targetTileId, sourceTileId, 'purple', resolve)
+                console.log('booko');
+                this.animationManager.beamAnimation(targetTileId, sourceTileId, color, resolve)
             }
+        })
+    }
+    this.triggerIceBlast = (caller, target) => {
+
+        const callerCoords = caller.coordinates, targetCoords = target.coordinates;
+
+        this.triggerBeamAttack(callerCoords, targetCoords, 'lightblue').then(e=>{
+            const hitsTarget = true;
+            // ^ need to allow for missing 
+            if(hitsTarget){
+                let r = Math.random()
+                let criticalHit = r*100 > 80;
+                let damage = criticalHit ? caller.atk*(1.5)*3 : caller.atk*(1.5)
+                if(criticalHit){
+                    // target.woundedHeavily = true;
+                } else {
+                    // target.wounded = true;
+                }
+                target.hp -= damage;
+                target.damageIndicators.push(damage);
+                
+                target.setToFrozen();
+            }
+            caller.energy -= 50;
+            if(caller.energy < 0) caller.energy = 0; 
         })
     }
     this.initiateAttack = async (caller, manualAttack, combatants) => {
         if(!caller) return
-        console.log('zildjikan initiate attack', );
+        console.log('wizard initiating attack');
             const target = combatants[caller.targetId];
         if(!target) return
             const distanceToTarget = data.methods.getDistanceToTarget(caller, target),
             laneDiff = data.methods.getLaneDifferenceToTarget(caller, target);
-        // return
-        console.log('zildjikan initiate attack about to switch');
+            console.log('pending attack name ', caller.pendingAttack.name);
             switch(caller.pendingAttack.name){
                 case 'energy blast':
                     if(laneDiff === 0){
+                        console.log('okay go w beam attack!');
                         await this.triggerBeamAttack(caller.coordinates, target.coordinates)
-                        // console.log('energy blast hits');
+                        console.log('hits');
                         this.hitsTarget(caller)
                     } else {
                         this.missesTarget(caller);
                     }
                 break;
-                case 'magic missile':
-                    // console.log('launching magic missiles');
-                    // console.log('caller.coordinates', caller.coordinates);
-                    // console.log('LANE DIFF IS ', laneDiff);
-                    if(laneDiff === 0){
-                        await this.triggerBeamAttack(caller.coordinates, target.coordinates)
-                        // console.log('magic missile hits');
-                        this.hitsTarget(caller)
-                    } else {
-                        this.missesTarget(caller);
-                    }
+                // case 'magic missile':
+                //     debugger
+                //     // console.log('launching magic missiles');
+                //     // console.log('caller.coordinates', caller.coordinates);
+                //     // console.log('LANE DIFF IS ', laneDiff);
+                //     if(laneDiff === 0){
+                //         await this.triggerBeamAttack(caller.coordinates, target.coordinates)
+                //         // console.log('magic missile hits');
+                //         this.hitsTarget(caller)
+                //     } else {
+                //         this.missesTarget(caller);
+                //     }
     
                 break;
                 case 'lightning':
                     console.log('LIGHTNING');
-    
+                    debugger
                     if(laneDiff === 0){
                         console.log('lightning hits');
                         this.hitsTarget(caller)

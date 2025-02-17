@@ -1,3 +1,26 @@
+@keyframes Rocked { 
+    0%{transform: matrix3d(1, 0.3, 2, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);}
+    20%{ transform: matrix3d(1, -0.3, -1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);}
+    40%{transform: matrix3d(1, 0.2, 2, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);}
+    60%{transform: matrix3d(1, -0.2, -2, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);}
+    80%{transform: matrix3d(1, 0.3, 2, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);}
+    100%{transform: matrix3d(1, -0.3, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);}
+}
+@-webkit-keyframes Rocked {
+    0%{transform: matrix3d(1, 0, 2, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);}
+    25%{ transform: matrix3d(1, 0, -2, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);}
+    50%{transform: matrix3d(1, 0, 2, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);}
+    75%{transform: matrix3d(1, 0, -5, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);}
+    100%{transform: matrix3d(1, -1, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);}
+}
+@-moz-keyframes Rocked {
+    0%{transform: matrix3d(1, 0, 2, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);}
+    25%{ transform: matrix3d(1, 0, -2, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);}
+    50%{transform: matrix3d(1, 0, 2, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);}
+    75%{transform: matrix3d(1, 0, -5, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);}
+    100%{transform: matrix3d(1, -1, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);}
+}
+
 .mb-board{
     z-index: 1;
     background-color: black;
@@ -420,6 +443,31 @@
                 animation: TileAnimationRedFade 0.9s ease ;
             }
 
+            &.solid-lightblue-fade{
+                @-webkit-keyframes TileAnimationLightblueFade {
+                    0%{background-color:rgba(42, 135, 229, 0.322)}
+                    20%{background-color:rgba(42, 135, 229, 0.558)}
+                    60%{background-color:rgba(42, 135, 229, 0.912)}
+                    100%{background-color:transparent}
+                }
+                @-moz-keyframes TileAnimationLightblueFade {
+                    0%{background-color:rgba(42, 135, 229, 0.322)}
+                    20%{background-color:rgba(42, 135, 229, 0.558)}
+                    60%{background-color:rgba(42, 135, 229, 0.912)}
+                    100%{background-color:transparent}
+                }
+                @keyframes TileAnimationLightblueFade { 
+                    0%{background-color:rgba(42, 135, 229, 0.322)}
+                    20%{background-color:rgba(42, 135, 229, 0.558)}
+                    60%{background-color:rgba(42, 135, 229, 0.912)}
+                    100%{background-color:transparent}
+                }
+
+                -webkit-animation: TileAnimationLightblueFade 0.9s ease forwards;
+                -moz-animation: TileAnimationLightblueFade 0.9s ease forwards;
+                animation: TileAnimationLightblueFade 0.9s ease forwards;
+            }
+
             &.solid-purple-fade{
                 @-webkit-keyframes TileAnimationPurpleFade {
                     0%{background-color:rgba(103, 71, 128, 0.416)}
@@ -751,6 +799,10 @@
         //     opacity: 1;
         // }
 
+        &.frozen{
+            background-color: #2e9dd28a;
+        }
+
 
         .circular-progress {
             width: 100px;
@@ -888,6 +940,9 @@
                             cursor: pointer;
                             transition: all 1s;
                             z-index: 1;
+                            &.locked{
+                                filter: invert(1) !important;
+                            }
                             &.reversed{
                                 transform: scaleX(-1)
                             }
@@ -904,9 +959,14 @@
                                 transform: scale(0.8) scaleX(-1)
                             }
                             &.wounded{
-                                animation: fighterWoundedAnimation 3s ease;
+                                // animation: fighterWoundedAnimation 3s ease;
+                                box-shadow: 0px 0px 40px #951515;
                             }
-
+                            &.rocked{
+                                -webkit-animation: Rocked 1s linear;
+                                -moz-animation: Rocked 1s linear;
+                                animation: Rocked 1s linear;
+                            }
                             &.hit-from-left{
                                 transform: matrix3d(1, 0, 0, -0.01, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
                             }
@@ -922,7 +982,7 @@
                             &.hit-from-right-severe{
                                 transform: matrix3d(1, 0, 1, 0.02, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
                             }
-                            &.hot-from-right-lethal{
+                            &.hit-from-right-lethal{
                                 transform: matrix3d(1, 0, 1, 0.1, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
                             }
 
@@ -1197,8 +1257,13 @@
                     &.hit-from-right-severe{
                         transform: matrix3d(1, 0, 1, 0.02, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
                     }
-                    &.hot-from-right-lethal{
+                    &.hit-from-right-lethal{
                         transform: matrix3d(1, 0, 1, 0.1, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
+                    }
+                    &.rocked{
+                        -webkit-animation: Rocked 1s linear;
+                        -moz-animation: Rocked 1s linear;
+                        animation: Rocked 1s linear;
                     }
                     &.minion-portrait{
                         height: 100px;
@@ -1547,7 +1612,8 @@
                         background-color: whitesmoke;
                         margin-bottom: 3px;
                         background-size: 100% 100%;
-                        
+                        border: 2px solid black;
+
                         &.available:hover{
                             filter: sepia(1);
                         }
@@ -1559,6 +1625,9 @@
                         }
                         &.target.targetted{
                             border: 2px solid red
+                        }
+                        &.selected{
+                            border: 2px solid yellow;
                         }
                     }
                 }

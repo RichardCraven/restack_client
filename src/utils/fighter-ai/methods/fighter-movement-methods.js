@@ -44,16 +44,33 @@ export const MovementMethods = {
         const distanceToTarget = Methods.getDistanceToTarget(caller, enemyTarget),
         laneDiff = Methods.getLaneDifferenceToTarget(caller, enemyTarget)
 
-        if(laneDiff === 1 || laneDiff === -1){
-            caller.position = enemyTarget.position;
-        } else if(laneDiff < -1){
-            caller.position-= 2
-        } else if(laneDiff > 1){
-            caller.position+= 2
-        } else if(laneDiff === 0 && distanceToTarget === 1){
-            return
+        if(enemyTarget){
+            if(laneDiff > 0){
+                caller.position ++
+            } else if(laneDiff < 0){
+                caller.position --
+            }
+            // if(laneDiff === 1 || laneDiff === -1){
+            //     caller.position = enemyTarget.position;
+            // } else if(laneDiff < -1){
+            //     caller.position-= 2
+            // } else if(laneDiff > 1){
+            //     caller.position+= 2
+            // } else if(laneDiff === 0 && distanceToTarget === 1){
+            //     return
+            // }
+        } else {
+            if(caller.position > 2){
+                caller.position --
+            } else if(caller.position < 2){
+                caller.position ++
+            }
         }
-        caller.depth = 0;
+        if(caller.depth > 0){
+            caller.depth -= 1
+        } else {
+            caller.depth = 0;
+        }
 
         caller.coordinates.y = caller.position
         caller.coordinates.x = caller.depth

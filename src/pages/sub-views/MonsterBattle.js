@@ -10,6 +10,7 @@ import {
   } from '../../utils/api-handler';
 import Canvas from '../../components/Canvas/canvas'
 import Overlay from '../../components/Overlay'
+import CanvasMagicMissile from '../../components/Canvas/canvas_magic_missile'
 
 const MAX_DEPTH = 7;
 const NUM_COLUMNS = 8;
@@ -47,6 +48,7 @@ class MonsterBattle extends React.Component {
             hoveredAttackTile: null,
             hoveredInventoryTile: null,
             hoveredSpecialTile: null,
+            hoveredGlyphTile: null,
             showCrosshair: false,
             portraitHoveredId: null,
             greetingInProcess: true,
@@ -63,7 +65,11 @@ class MonsterBattle extends React.Component {
             navToDeathScene: false,
             glyphTrayExpanded: false,
             arrowUpImage: null,
-            animationOverlays: []
+            animationOverlays: [],
+            magicMissile_fire: false,
+            magicMissile_connectParticles: true,
+            magicMissile_targetDistance: 0,
+            magicMissile_targetLaneDiff: 0
         }
     }
     componentDidMount(){
@@ -188,32 +194,75 @@ class MonsterBattle extends React.Component {
         this.setState({greetingInProcess: false})
     }
     tabToFighter = () => {
-        console.log('TAB');
         const liveCrew = Object.values(this.state.battleData).filter(e=>(!e.isMonster && !e.isMinion) && !e.dead)
         if(liveCrew.length === 0) return
         const currentIndex = this.state.selectedFighter ? liveCrew.findIndex(e=>e.id === this.state.selectedFighter.id) : -1;
         const nextIndex = currentIndex === liveCrew.length-1 ? 0 : currentIndex + 1;
         const selectedFighter = liveCrew[nextIndex];
         this.props.combatManager.setSelectedFighter(selectedFighter)
-        console.log('selected fighter: ', selectedFighter);
         let a = selectedFighter?.specialActions
         let b = selectedFighter?.specialActions?.find(a=> a && a.actionType.type==='glyph') 
-        console.log('thing: ', a, b);
-        if(a && b){
-            let c = b.actionType.subTypes.map((glyphUnit, i)=>{return glyphUnit})
-            console.log('c: ', c);
 
-        }
-        // let thing = selectedFighter?.specialActions?.find(a=> a && a.actionType.type==='glyph').actionType.subTypes.map((glyphUnit, i)=>{
-        //     return glyphUnit  
-        // })
         this.setState({
-            selectedFighter
+            selectedFighter,
+            glyphTrayExpanded: selectedFighter.type === 'wizard'
         })
     }
     tabToRetarget = () => {
-        console.log('tab to retarget', this.props.combatManager.manualRetarget);
         this.props.combatManager.manualRetarget(this.state.selectedFighter)
+    }
+    selectSpecial = () => {
+        let selectedFighter = this.state.selectedFighter;
+        let specials = selectedFighter?.specials;
+        let consumableSpecials = selectedFighter?.specialActions;
+        
+        let currentSpecialIndex = specials.findIndex(a=> a.selected)
+        specials.forEach(a=>a.selected = false)
+        if(consumableSpecials.length){
+            consumableSpecials.forEach(a=>a.selected = false) 
+        }
+
+
+
+        if(currentSpecialIndex >= 0){
+            
+            console.log('hmm ', specials[currentSpecialIndex + 1]);
+            if(specials[currentSpecialIndex + 1]){
+                console.log('specials[currentSpecialIndex + 1]', specials[currentSpecialIndex + 1]);
+                specials[currentSpecialIndex + 1].selected = true;
+            } else {
+                // all cleared
+                console.log('all cleared');
+            }
+        } else {
+            specials[0].selected = true;
+        }
+    }
+    selectConsumableSpecial = () => {
+        console.log('consumable');
+        let selectedFighter = this.state.selectedFighter;
+        let specials = selectedFighter?.specials;
+        let consumableSpecials = selectedFighter?.specialActions;
+        
+        let currentSpecialIndex = consumableSpecials.findIndex(a=> a.selected);
+        consumableSpecials.forEach(a=>a.selected = false)
+        if(specials) specials.forEach(a=>a.selected = false)
+            console.log('currentSpecialIndex', currentSpecialIndex);
+        // console.log('consumableSpecials: ', consumableSpecials, 'currentindex: ', currentSpecialIndex);
+        if(currentSpecialIndex >= 0){
+            console.log('hmm index', currentSpecialIndex + 1, consumableSpecials[currentSpecialIndex + 1]);
+            if(consumableSpecials[currentSpecialIndex + 1]){
+                // console.log('specials[currentSpecialIndex + 1]', consumableSpecials[currentSpecialIndex + 1]);
+                console.log('SET next');
+                consumableSpecials[currentSpecialIndex + 1].selected = true;
+            } else {
+                // all cleared
+                console.log('all cleared');
+            }
+        } else {
+            console.log('set 0');
+            consumableSpecials[0].selected = true;
+        }
     }
     getActionBarLeftValForFighter = (id) => {
         //cyan 
@@ -523,19 +572,86 @@ class MonsterBattle extends React.Component {
             val = val.replaceAll('_', ' ')
         }
         console.log('val: ', val);
-        if(val === 'glyph'){
-            finalVal = !this.state.glyphTrayExpanded
-            this.setState({
-                glyphTrayExpanded: finalVal
-            })
+
+
+        // if(val === 'glyph'){
+        //     finalVal = !this.state.glyphTrayExpanded
+        //     this.setState({
+        //         glyphTrayExpanded: finalVal
+        //     })
+        // }
+    }
+    manualFire = () => {
+        console.log('manual fire');
+        let consumableSpecialSelected;
+
+        let selectedFighter = this.state.selectedFighter;
+        let specials = selectedFighter?.specials,
+        consumableSpecials = selectedFighter?.specialActions,
+        selectedSpecial = specials.find(a=> a.selected),
+        selectedConsumableSpecial = consumableSpecials.find(a=> a.selected);
+
+        if(selectedSpecial){
+            //fire special
+            // console.log('fire ', selectedSpecial);
+            this.props.combatManager.fighterSpecialAttack(selectedSpecial)
+        } else if (selectedConsumableSpecial){
+            console.log('consumableSPecial: ', selectedConsumableSpecial);
+            if(selectedConsumableSpecial.actionType.type === 'glyph'){
+                this.fireGlyph(selectedConsumableSpecial.actionType.subTypes[0])
+            }
+            // debugger
+        } else {
+            this.props.combatManager.fighterManualAttack()
         }
-        // if(val)
     }
     fireGlyph = (glyph) => {
         console.log('glyph firing: ', glyph);
         switch(glyph.type){
             case 'magic missile':
                 console.log('magic missile!');
+
+                let selectedFighter = this.state.selectedFighter;
+                let specials = selectedFighter?.specials;
+                let consumableSpecials = selectedFighter?.specialActions;
+                consumableSpecials.forEach(a=>a.selected = false)
+                if(specials) specials.forEach(a=>a.selected = false)
+
+
+
+                let target = this.props.combatManager.getCombatant(this.state.selectedFighter.targetId)
+                
+                let targetDistance = this.props.combatManager.getDistanceToTarget(this.state.selectedFighter, target)
+                let laneDiff = this.props.combatManager.getLaneDifferenceToTarget(this.state.selectedFighter, target)
+
+                console.log('laneDiff: ', laneDiff);
+                
+                this.props.combatManager.lockFighter(this.state.selectedFighter.id)
+
+                this.setState({
+                    magicMissile_fire: true,
+                    magicMissile_targetDistance: targetDistance,
+                    magicMissile_targetLaneDiff: laneDiff,
+                })
+                setTimeout(()=>{
+                    this.setState({
+                        magicMissile_connectParticles: false
+                    })
+                },1000)
+                setTimeout(()=>{
+                    this.props.combatManager.combatantRocked(target.id)
+                },1500)
+                // ^ 1.5 seconds of travel time for missiles
+                
+                setTimeout(()=>{
+                    this.setState({
+                        magicMissile_fire: false,
+                        magicMissile_connectParticles: true
+                    })
+                    if(this.state.selectedFighter) this.props.combatManager.unlockFighter(this.state.selectedFighter.id)
+                    if(target) this.props.combatManager.combatantRockedOff(target.id)
+                }, 2500)
+                // ^ travel time + 1 second of damage animation
             break;
             default:
                 console.log('huh?');
@@ -544,6 +660,11 @@ class MonsterBattle extends React.Component {
     specialTileHovered = (val) => {
         this.setState({
             hoveredSpecialTile: val ? val.name : null
+        })
+    }
+    glyphTileHovered = (val) => {
+        this.setState({
+            hoveredGlyphTile: val ? val.type : null
         })
     }
     portraitHovered = (id) => {
@@ -684,17 +805,11 @@ class MonsterBattle extends React.Component {
         }
     }
 
-    draw = (ctx, frameCount, data) => {
-        let that = this;
+    draw = (ctx, frameCount) => {
+        const that = this,
+            size = 20 + Math.sin(frameCount * 0.04)**2 * 5;
         ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
-                // let x = unit*p.coordinates[0] - 0.5*unit - (Math.sin(frameCount * 0.04)**2 * 2)
-                // let y = unit*p.coordinates[1]
-                // let imageKey = isConnected ? 'arrowUpImg' : 'arrowUpImgInvalid'
-
-                let size = 20 + Math.sin(frameCount * 0.04)**2 * 5;
-                
-                ctx.drawImage(that.state.arrowUpImage, 5, 5, size, size);
-
+        ctx.drawImage(that.state.arrowUpImage, 5, 5, size, size);
     }
 
     render(){
@@ -769,22 +884,6 @@ class MonsterBattle extends React.Component {
                     }}
                     ></AnimationGrid>
 
-
-                    {/* <div className="animation-grid" style={{width: TILE_SIZE * MAX_DEPTH + (SHOW_TILE_BORDERS ? MAX_DEPTH * 2 : 0) + 'px'}}>
-                        {this.props.animationManager.tiles.map((t,i)=>{
-                            return <AnimationTile
-                                key={i}
-                                id={i}
-                                x={t.x}
-                                y={t.y}
-                                animationOn = {t.animationOn}
-                                handleClick={t.handleClick}
-                                tileSize={TILE_SIZE}
-
-                            ></AnimationTile>
-                        })}
-                    </div> */}
-
                     {/* /// COMBAT GRID */}
                     <div className="combat-grid" style={{width: TILE_SIZE * NUM_COLUMNS + (SHOW_TILE_BORDERS ? NUM_COLUMNS * 2 : 0) + 'px'}}>
                         {this.state.combatTiles.map((t,i)=>{
@@ -835,6 +934,7 @@ class MonsterBattle extends React.Component {
                                                 ${this.fighter(fighter)?.wounded ? (this.fighterFacingRight(fighter) ? 'hit-from-right' : 'hit-from-left') : ''} 
                                                 ${this.fighter(fighter)?.woundedHeavily ? (this.fighterFacingRight(fighter) ? 'hit-from-right-severe' : 'hit-from-left-severe') : ''} 
                                                 ${this.fighter(fighter)?.woundedLethal ? (this.fighterFacingRight(fighter) ? 'hit-from-right-lethal' : 'hit-from-left-lethal') : ''}
+                                                ${this.fighter(fighter)?.rocked ? 'rocked' : ''}
                                                 ${this.fighterFacingUp(this.fighter(fighter)) ? 'facing-up' : (this.fighterFacingDown(this.fighter(fighter)) ? 'facing-down' : '')}
 
                                                 ${this.fighter(fighter)?.missed ? (this.fighterFacingRight(fighter) ? 'missed' : 'missed-reversed') : ''} 
@@ -843,13 +943,15 @@ class MonsterBattle extends React.Component {
                                                 ${(this.state.selectedMonster?.targetId === fighter.id || this.state.selectedFighter?.targetId === fighter.id) ? 'targetted' : ''}
                                                 ${this.fighter(fighter)?.active ? 'active' : ''}
                                                 ${this.fighterFacingRight(fighter) ? '' : 'reversed'}
+
+                                                ${this.fighter(fighter)?.locked ? 'locked' : ''}
+
                                                 `
                                             } 
                                             style={{
                                                 backgroundImage: "url(" + fighter.portrait + ")", 
                                                 filter: `saturate(${((this.fighter(fighter)?.hp / fighter.stats.hp) * 100) / 2}) 
                                                         sepia(${this.state.portraitHoveredId === fighter.id ? '2' : '0'})`,
-                                                        // fighterFacingRight
                                             }} 
                                             onClick={() => this.fighterPortraitClicked(fighter.id)}
                                             onMouseEnter={() => this.portraitHovered(fighter.id)} 
@@ -857,22 +959,17 @@ class MonsterBattle extends React.Component {
                                             onDragStart = {(event) => this.onDragStart(fighter)}
                                             draggable
                                             >
-                                                {/* <div className="damage-indicator-container">
-                                                    {this.fighter(fighter)?.damageIndicators.map((e,i)=>{
-                                                        return <div key={i} className="damage-indicator">
-                                                            {e}
-                                                        </div>
-                                                    })}
-                                                </div> */}
-
-
-                                                {/* <div className="coord">
-                                                    {this.fighter(fighter)?.coordinates?.x},{this.fighter(fighter)?.coordinates?.y}
-                                                </div> */}
                                             </div>
                                             {this.state.animationOverlays[fighter.id] && this.getAllOverlaysById(fighter.id).map((overlay, i) => {
                                                 return <Overlay key={i} animationType={overlay.type} data={overlay.data}/>
                                             })}
+                                            { fighter.type === 'wizard' && this.state.magicMissile_fire && <CanvasMagicMissile 
+                                                width={100}
+                                                height={100}
+                                                connectParticlesActive={this.state.magicMissile_connectParticles}
+                                                targetDistance={this.state.magicMissile_targetDistance}
+                                                targetLaneDiff={this.state.magicMissile_targetLaneDiff}
+                                            />}
                                             <div className={`portrait-overlay`} >
                                                 <div className="damage-indicator-container">
                                                     {this.fighter(fighter)?.damageIndicators.map((e,i)=>{
@@ -885,7 +982,6 @@ class MonsterBattle extends React.Component {
                                                     background: `conic-gradient(${this.getManualMovementArcColor(this.fighter(fighter))} ${this.getManualMovementArc(this.fighter(fighter))}deg, black 0deg)`,
                                                 }}  data-inner-circle-color="lightgrey" data-percentage="80" data-progress-color="crimson" data-bg-color="black">
                                                     <div className="inner-circle"></div>
-                                                    {/* <div class="percentage">0%</div> */}
                                                 </div>
                                             </div>
                                             <div className="hp-bar">
@@ -1019,6 +1115,7 @@ class MonsterBattle extends React.Component {
                                         ${this.monster()?.woundedHeavily ? (this.monsterDirectionReversed() ? 'hit-from-right-severe' : 'hit-from-left-severe') : ''}
                                         ${this.monster()?.woundedLethal ? (this.monsterDirectionReversed() ? 'hit-from-right-lethal' : 'hit-from-left-lethal') : ''}
                                         ${this.monsterFacingUp(this.monster()) ? 'facing-up' : (this.monsterFacingDown(this.monster()) ? 'facing-down' : '')}
+                                        ${this.monster()?.rocked ? 'rocked' : ''}
 
                                         ${this.monster()?.missed ? (this.monsterDirectionReversed() ? 'missed-reversed' : 'missed') : ''}
                                         ${this.state.selectedMonster?.id === this.props.monster.id ? 'selected' : ''}
@@ -1061,7 +1158,7 @@ class MonsterBattle extends React.Component {
                                             })}
                                         </div>
                                     </div>
-                                    <div className={`portrait-overlay selected`} >
+                                    <div className={`portrait-overlay selected ${this.monster()?.frozen ? 'frozen' : ''}`} >
                                         <div className="damage-indicator-container">
                                             {/* <div className="damage-indicator">33</div> */}
                                             {this.monster()?.damageIndicators.map((e,i)=>{
@@ -1134,6 +1231,7 @@ class MonsterBattle extends React.Component {
                                                 ${this.state.battleData[minion.id]?.woundedHeavily ? (this.minionDirectionReversed(minion) ? 'hit-from-right-severe' : 'hit-from-left-severe') : ''}
                                                 ${this.state.battleData[minion.id]?.woundedLethal ? (this.minionDirectionReversed(minion) ? 'hit-from-right-lethal' : 'hit-from-left-lethal') : ''}
                                                 ${this.state.battleData[minion.id]?.missed ? (this.minionDirectionReversed(minion) ? 'missed-reversed' : 'missed') : ''}
+                                                ${this.state.battleData[minion.id]?.rocked ? 'rocked' : ''}
                                                 ${this.state.selectedMonster?.id === minion.id ? 'selected' : ''}
                                                 ${this.state.selectedFighter?.targetId === minion.id ? 'targetted' : ''}`
                                             } 
@@ -1208,7 +1306,7 @@ class MonsterBattle extends React.Component {
                                     return <div key={i}  className='interaction-tile-wrapper'>
                                                 <div 
                                                 className={`interaction-tile consumable`} 
-                                                style={{backgroundImage: "url(" + images[a.icon] + ")", cursor: 'pointer'}} 
+                                                style={{backgroundImage: "url(" + images[a.icon] + "), radial-gradient(white 40%, black 80%)", cursor: 'pointer'}} 
                                                 onClick={() => this.combatInventoryTileClicked(a)} 
                                                 onMouseEnter={() => this.inventoryTileHovered(a.name)} 
                                                 onMouseLeave={() => this.inventoryTileHovered(null)}
@@ -1226,39 +1324,28 @@ class MonsterBattle extends React.Component {
                                 {this.state.selectedFighter?.specials.map((a, i)=>{
                                     return <div 
                                     key={i} 
-                                    style={{backgroundImage: "url(" + a.icon + ")", cursor: 'pointer'}} 
-                                    className='interaction-tile special' 
+                                    style={{backgroundImage: "url(" + a.icon + "), radial-gradient(white 40%, black 80%)", cursor: 'pointer'}} 
+                                    className={`interaction-tile special ${a.selected ? 'selected' : ''}`}
                                     onClick={() => this.specialTileClicked(a)} 
                                     onMouseEnter={() => this.specialTileHovered(a)} 
                                     onMouseLeave={() => this.specialTileHovered(null)}>
                                         {/* {a} */}
                                     </div>
                                 })}
-                                {this.state.selectedFighter?.specialActions.some(a=>a.actionType.type === 'glyph') &&
-                                this.state.selectedFighter?.specialActions.some(a=>a.available) &&
-                                    <div 
-                                    style={{backgroundImage: "url(" + images['glyph'] + ")", cursor: 'pointer'}} 
-                                    className='interaction-tile special' 
-                                    onClick={() => this.specialTileClicked('glyph')} 
-                                    onMouseEnter={() => this.specialTileHovered('glyph')} 
-                                    onMouseLeave={() => this.specialTileHovered(null)}>
-                                        {/* {a} */}
-                                    </div>
-                                }
                             </div>
                         </div>
                         <div className="glyphs-col" style={{width: this.state.glyphTrayExpanded ? '100px' : '0px'}}>
                             <div className="interaction-header">Glyphs</div>
-                            <div className="interaction-tooltip">{this.state.hoveredSpecialTile}</div>
+                            <div className="interaction-tooltip">{this.state.hoveredGlyphTile}</div>
                             <div className="interaction-tile-container">
-                                {this.state.selectedFighter?.specialActions.length > 0 && this.state.selectedFighter?.specialActions?.find(a=> a && a.actionType.type==='glyph').actionType.subTypes.map((glyphUnit, i)=>{
+                                {this.state.selectedFighter?.specialActions.length > 0 && this.state.selectedFighter?.specialActions.map((glyphUnit, i)=>{
                                     return <div 
                                     key={i} 
-                                    style={{backgroundImage: "url(" + glyphUnit.icon_url + ")", cursor: 'pointer'}} 
-                                    className='interaction-tile special' 
+                                    style={{backgroundImage: "url(" + glyphUnit.actionType.subTypes[0].icon_url + "), radial-gradient(white 40%, black 80%)", cursor: 'pointer'}} 
+                                    className={`interaction-tile special ${glyphUnit.selected ? 'selected' : ''}`}
                                     onClick={() => this.fireGlyph(glyphUnit)} 
-                                    onMouseEnter={() => this.specialTileHovered(glyphUnit.type)} 
-                                    onMouseLeave={() => this.specialTileHovered(null)}>
+                                    onMouseEnter={() => this.glyphTileHovered(glyphUnit)} 
+                                    onMouseLeave={() => this.glyphTileHovered(null)}>
                                     </div>
                                 })}
                             </div>

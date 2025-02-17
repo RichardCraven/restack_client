@@ -47,12 +47,9 @@ button{
   .nav-buttons-container{
     width: fit-content;
     flex-direction: column;
-    // height: 30px;
     position: fixed;
     top: 0;
     left: 0;
-    // z-index: 1000;
-    // z-index: 0;
     z-index: 4;
     display: flex;
     .hamburger-button{
@@ -64,15 +61,16 @@ button{
     .menu-tray{
       height: 200px;
       width: 189px;
-      // border: 1px solid yellow;
       flex-direction: column;
       justify-content: space-around;
       display: flex;
       overflow: hidden;
-      transition: all 1s ease-in-out;
+      transition: all 0.4s ease-in-out;
       align-items: flex-start;
       padding-left: 10px;
       background-color: black;
+
+      border: 1px solid #d3d3d300;
     }
   }
   .menu-buttons{
@@ -126,7 +124,6 @@ button{
     }
     .buttons-bar{
       width: 200px;
-      // border: 1px solid red;
       .back-button{
         border: none;
         background: none;
@@ -178,8 +175,6 @@ button{
   padding: 40px 0px;
   
   .intro-image{
-    // height: 80%;
-    // width: 80%;
     height: 80vh;
     width: 90vh;
     background-size: contain;
@@ -187,20 +182,6 @@ button{
     background-position: center;
     position: absolute;
     transition: all 1.5s;
-    // &.obscured:before {
-    //   content: ' ';
-    //   display: block;
-    //   position: absolute;
-    //   left: 0;
-    //   top: 0;
-    //   width: 100%;
-    //   height: 100%;
-    //   opacity: 0.6;
-    //   background-color: black;
-    //   background-repeat: no-repeat;
-    //   background-position: 50% 0;
-    //   background-size: cover;
-    // }
     &.wrecked{
       filter: invert(1) saturate(35.5);
       transform: perspective(350px) translateX(-3px) translateZ(130px) rotate(40deg)
@@ -303,48 +284,9 @@ button{
       }
       &.user-manager:hover{
         background-color: powderblue;
-        // color: white;
       }
     }
   }
-  // .user-row, .admin-row{
-  //   width: 100%;
-  //   height: 50%;
-  //   display: flex;
-  //   flex-direction: row;
-  //   justify-content: space-evenly;
-  //   align-items: center;
-  //   div{
-  //     cursor: pointer;
-  //     transition: all 0.5s;
-  //     border: 1px solid slategray;
-  //     // height: 100px;
-  //     // width: 150px;
-  //     height: 55%;
-  //     width: 20%;
-  //     border-radius: 5px;
-  //     display: flex;
-  //     align-items: center;
-  //     justify-content: center;
-  //     &.map-maker:hover{
-  //       background-color: thistle;
-  //     }
-  //     &.user-manager:hover{
-  //       background-color: rgb(115, 145, 154);
-  //       color: white;
-  //     }
-  //     &.user-data:hover{
-  //       background-color: paleturquoise;
-  //     }
-  //     &.shop:hover{
-  //       background-color: coral;
-  //     }
-  //     &.enter-dungeon:hover{
-  //       background-color: black;
-  //       color: red;
-  //     }
-  //   }
-  // }
 }
 .droppable {
   position: absolute;
@@ -359,8 +301,6 @@ button{
 .draggable {
   width: 100px;
   height: 100px;
-  // background-color: yellow;
-  // margin: 10px auto;
 }
 
 .inProgress {
@@ -391,20 +331,16 @@ button{
     width: 40%;
     max-width: 300px;
     border: 1px solid black;
-
     display: flex;
     align-items: flex-start;
     flex-direction: column;
     justify-content: center;
-    
     .landing-button{
       cursor: pointer;
       max-height: 100px;
       height: 50px;
       width: 100%;
       border-bottom: 1px solid black;
-
-
       max-height: 100px;
       height: 50px;
       width: 100%;
@@ -426,13 +362,11 @@ button{
   .content-container{
     height: 100%;
     width: 100%;
-    // background-color: white;
     display: flex;
     flex-direction: column;
     padding-bottom: 20px;
     .title{
       color: white;
-      // border: 1px solid green;
     }
     .crew-selector{
       flex: auto;
@@ -550,16 +484,11 @@ button{
             cursor: pointer;
             background-color: black;
             border-radius: 3px;
-            // border: 1px solid white;
             height: 21px;
-            /* padding: 1px; */
             background-position: center;
             background-size: 100% 100%;
-            display: flex
-        ;
+            display: flex;
             align-items: center;
-
-
             cursor: pointer;
             &:hover{
               color: white;
@@ -568,18 +497,6 @@ button{
               color: #8e8c8c !important;
               cursor:default;
             }
-            // border: 1px solid white;
-            // width: 20px;
-            // height: 20px;
-            // border-radius: 20px;
-
-            // width:20px;
-            // height:20px;
-            // border-radius:100%;
-            // position:relative;
-            // margin:4px;
-            // display:inline-block;
-            // vertical-align:middle;
           }
         }
         .selected-crew-portrait-wrapper{
@@ -640,4 +557,30 @@ button{
       }
     }
   }
+}
+
+@-webkit-keyframes Magic_Missile {
+  0%{transform: translateX(0%) translateX(0%); opacity: 1;}
+  50%{transform: translateX(25%) translateY(25%); opacity: 1}
+  100%{transform: translateX(75%) translateY(75%); opacity: 1}
+}
+@-moz-keyframes Magic_Missile {
+  0%{transform: translateX(0%) translateY(0%); opacity: 1;}
+  50%{transform: translateX(25%) translateY(25%); opacity: 1}
+  100%{transform: translateX(75%) translateY(75%); opacity: 1}
+}
+@keyframes Magic_Missile {
+  0%{transform: translateX(0%) translateY(0%); opacity: 1;}
+  50%{transform: translateX(25%) translateY(25%); opacity: 1}
+  100%{transform: translateX(75%) translateY(75%); opacity: 1}
+}
+
+canvas.spell-animation {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100px;
+  width: 100px;
+  z-index: 1000;
+  transition: all 0.5s;
 }

@@ -274,7 +274,6 @@ import glyph from '../assets/icons/magic/glyph.png'
 import info from '../assets/icons/menu/info_inverted.png'
 import hamburger from '../assets/icons/menu/hamburger.png'
 
-import magic_missile from '../assets/icons/misc/cycle.png'
 
 import hourglass1 from '../assets/icons/menu/hourglass-1_inverted.png'
 import hourglass2 from '../assets/icons/menu/hourglass-2_inverted.png'
@@ -282,6 +281,11 @@ import hourglass2 from '../assets/icons/menu/hourglass-2_inverted.png'
 import voidfill from '../assets/icons/menu/actions_inverted.png'
 
 import whiteskull from '../assets/icons/misc/white_skull.png'
+
+// special
+import ice_blast from '../assets/icons/combat-icons/specials/wizard/ice_blast.png'
+import fire_blast from '../assets/icons/combat-icons/specials/wizard/fire_blast.png'
+import magic_missile from '../assets/icons/misc/cycle.png'
 
 export {
     monster,
@@ -517,5 +521,8 @@ export {
     hourglass2,
 
     voidfill,
-    whiteskull
+    whiteskull,
+
+    ice_blast,
+    fire_blast
 };

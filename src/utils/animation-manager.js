@@ -106,12 +106,14 @@ export function AnimationManager(){
         },100)
     }
     this.straightBeamTo = (targetTileId, sourceTileId, color = null) => {
+        console.log('TARGET TILE ID ', targetTileId);
         const sourceTile = this.tiles.find(e=>e.id === sourceTileId)
         const destinationTile = this.tiles.find(e=>e.id === targetTileId)
         let isOnSamePlane = sourceTile.y === destinationTile.y;
         let direction = sourceTile.x > destinationTile.x ? 'rightToLeft' : 'leftToRight'
-
+        console.log('about to rerturn promise', sourceTile, destinationTile);
         return new Promise((resolve, reject) => {
+            console.log('is On Same Plane ', isOnSamePlane);
             if(isOnSamePlane){
                 let distanceAway = Math.abs(sourceTile.x - destinationTile.x)
 
@@ -136,6 +138,7 @@ export function AnimationManager(){
                     // this.triggerTileAnimation(id, color)
                 }
                 if(sourceTile.x < destinationTile.x && direction === 'leftToRight'){
+                    console.log('left to right');
                     let sourceX = sourceTile.x
                     let idArray = [];
                     for(let i = sourceX + 1; i < destinationTile.x; i++){
@@ -351,6 +354,7 @@ export function AnimationManager(){
         resolve();
     }
     this.beamAnimation = async (targetTileId, sourceTileId, color = null, resolve) => {
+        console.log('animstion mnger beam');
         await this.straightBeamTo(targetTileId, sourceTileId, color)
         resolve();
     }

@@ -1,8 +1,25 @@
 import React from 'react'
 import {storeMeta, getMeta, getUserId} from '../utils/session-handler';
+import { Route, Switch, Redirect} from "react-router-dom";
 import MonsterBattle from './sub-views/MonsterBattle';
 
-import { Route, Switch, Redirect} from "react-router-dom";
+
+// import useScript from '../hooks/useScript.js'
+
+// const useScriptCustom = (file) => {
+//     const script = document.createElement('script');
+
+//     script.src = file;
+//     console.log('file: ', file);
+//     script.type = 'type/javascript';
+//     // script.async = true;
+//     script.onload = () => {
+//         console.log('script loaded!');
+//         // this.scriptLoaded();
+//     }
+
+//     document.body.appendChild(script);
+// }
 
 const clone = (val) => {
     return JSON.parse(JSON.stringify(val))
@@ -24,7 +41,8 @@ class CrewManagerPage extends React.Component{
         crewSlots: [null, null, null, null],
         advancedUser: false,
         crewSelected: false,
-        shiftDown: false
+        shiftDown: false,
+        ctrlDown: false
     }
   }
   timer = null;
@@ -61,10 +79,23 @@ class CrewManagerPage extends React.Component{
     // selectedCrew.push(options[2])
 
     selectedCrew.push(this.props.crewManager.crew.find(e=>e.type==='wizard'))
-    selectedCrew.push(this.props.crewManager.crew.find(e=>e.type==='soldier'))
-    selectedCrew.push(this.props.crewManager.crew.find(e=>e.type==='monk'))
+    // selectedCrew.push(this.props.crewManager.crew.find(e=>e.type==='soldier'))
+    // selectedCrew.push(this.props.crewManager.crew.find(e=>e.type==='monk'))
 
     console.log('vs selected crew: ', selectedCrew);
+
+    console.log('here we go w the load script!');
+    // useScript('../assets/particles/particles.js')
+
+    // useScriptCustom('../assets/particles/particles.js')
+
+    // potatoe('test')
+
+    
+    // setTimeout(()=>{
+    //     potato()
+
+    // },5000)
 
     this.initializeListeners();
     this.setState({
@@ -73,6 +104,9 @@ class CrewManagerPage extends React.Component{
         selectedCrewMember: selectedCrew[0]
     })
   }
+//   useScript('../assets/fullYear.js')
+
+
   pickRandom = (array) => {
     let index = Math.floor(Math.random() * array.length)
     return array[index]
@@ -209,24 +243,53 @@ useConsumableFromInventory = (item) => {
 }
 combatKeyDownHandler = (event) => {
     let key = event.key, code = event.code;
+    // if(key === 'Tab'){
+    //     this.setState({
+    //         shiftDown: false
+    //     })
+    // }
     if(code === 'Space'){
-        this.props.combatManager.fighterManualAttack()
-    }
-    if(key === 'p'){
-        let paused = !this.state.paused;
-        this.props.combatManager.pauseCombat(paused)
-        this.setState({
-            paused
-        })
+        // if(this.state.specialDown){
+        //     // FIRE SPECIAL
+        //     console.log('FIRE SPECIAL');
+        // } else if(this.state.consumableSpecialDown){
+        //     // FIRE CONSUMABLE SPECIAL
+        //     console.log('FIRE SPECIAL consumable');
+        // } else {
+            // this.props.combatManager.fighterManualAttack()
+
+            if(this.monsterBattleComponentRef.current) this.monsterBattleComponentRef.current.manualFire();
+
+        // }
     }
     switch(key){
+        case 'p':
+            let paused = !this.state.paused;
+            this.props.combatManager.pauseCombat(paused)
+            this.setState({
+                paused
+            })
+        break;
+        case 'q':
+            if(this.monsterBattleComponentRef.current) this.monsterBattleComponentRef.current.selectSpecial();
+        break;
+        case 'w':
+            if(this.monsterBattleComponentRef.current) this.monsterBattleComponentRef.current.selectConsumableSpecial();
+        break;
         case 'Tab':
             event.preventDefault();
             if(this.state.shiftDown){
                 if(this.monsterBattleComponentRef.current) this.monsterBattleComponentRef.current.tabToRetarget();
+            } if(this.state.ctrlDown){
+                console.log('YEEEEEEE');
+                // if()
             } else {
                 if(this.monsterBattleComponentRef.current) this.monsterBattleComponentRef.current.tabToFighter();
             }
+        break;
+        case 'Control':
+            event.preventDefault();
+            this.setState({ ctrlDown: true })
         break;
         case 'Shift':
             event.preventDefault();
@@ -251,15 +314,32 @@ combatKeyDownHandler = (event) => {
 }
 combatKeyUpListener = (event) => {
     let key = event.key, code = event.code;
-    if(key === 'Shift'){
-        this.setState({
-            shiftDown: false
-        })
+    switch(key){
+        case 'Shift':
+            this.setState({
+                shiftDown: false
+            })
+        break;
+        case 'Control':
+            this.setState({
+                ctrlDown: false
+            })
+        break;
+        case 'q':
+            if(this.state.specialDown){
+                // cycle specials
+                console.log('CYCLE SPECIALS');
+            }
+            this.setState({
+                specialDown: false
+            })
+        break;
     }
 }
   render(){
     return (
     <div className="page-container">
+
         {!this.state.crewSelected && <div className="crew-manager">
             { this.state.navToLanding && <Redirect to='/'/> }
             <div className="content-container">
@@ -280,7 +360,6 @@ combatKeyUpListener = (event) => {
                     <div className="member-panel">
                         {this.state.selectedCrewMember && <div className='giant-portrait' 
                         style={{backgroundImage: "url(" + this.state.selectedCrewMember.portrait + ")"}}>
-                            {/* <div className="add-button" onClick={()=>this.addMember()}>+</div> */}
                             <div className="name">{this.state.selectedCrewMember.name}</div>
                         </div>}
                         {this.state.selectedCrewMember && <div className="details-pane">
@@ -317,9 +396,6 @@ combatKeyUpListener = (event) => {
                                 })}
                             </div>
                         </div>}
-                        {/* <div className="button-container">
-                            <button>+</button>
-                        </div> */}
                     </div>
                     <div className="crew-tray">
                         {this.state.crewSlots.map((slot, i)=>{

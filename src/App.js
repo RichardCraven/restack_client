@@ -171,7 +171,7 @@ const toggleMenuTray = () => {
           <div className="hamburger-button" style={{backgroundImage: `url(${images['hamburger']})`}} onClick={() => toggleMenuTray()}></div>
           <div className="menu-tray" style={{
             height: menuTrayExpanded ? '126px' : '0px',
-            border: menuTrayExpanded ? '1px solid lightgrey' : 'none'
+            border: menuTrayExpanded ? '1px solid lightgrey' : '1px solid #d3d3d300'
           }}>
             {<button className="menu-buttons logout-button" onClick={logout}>
               Logout

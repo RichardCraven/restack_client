@@ -322,7 +322,16 @@ export function CombatManager(){
         ice_blast: {
             name: 'ice blast',
             type: 'special',
-            icon: images['beetle_charm'],
+            icon: images['ice_blast'],
+            cooldown: 11,
+            damage: 8,
+            effect: ['damage_multi_target', 'special'],
+            special_instructions: 'each enemy has a 40% chance to be frozen'
+        },
+        fire_blast: {
+            name: 'fire blast',
+            type: 'special',
+            icon: images['fire_blast'],
             cooldown: 11,
             damage: 8,
             effect: ['damage_multi_target', 'special'],
@@ -477,6 +486,7 @@ export function CombatManager(){
             manualMovesTotal: fighter.manualMovesTotal,
             manualMovesCurrent: fighter.manualMovesCurrent,
             attack: function(){
+                console.log('attack');
                 const target = getCombatant(this.targetId);
                 if(!target) return
                 // if(this.type === 'monk') console.log('RANGES', RANGES, this.pendingAttack.range)
@@ -505,11 +515,13 @@ export function CombatManager(){
                     initiateAttack(this);
                     broadcastDataUpdate(this)
                 } else if(this.position === target.position){
+                    console.log('should gooo');
                     if(this.type === 'monk') console.log('monk initiating attack from [turn cycle]');
                     initiateAttack(this);
                     broadcastDataUpdate(this)
 
                 } else {
+                    console.log('attk skip`');
                     this.skip();
                 }
             },
@@ -530,7 +542,11 @@ export function CombatManager(){
                 // 12:00:20 AM on April 17, 2022
                 const newDate = addSeconds(now, 3).getTime();
                 this.timeAhead = newDate;
+                
                 this.isOnManualMoveCooldown = true;
+                // setTimeout(()=>{
+                //     this.isOnManualMoveCooldown = false;
+                // },2000)
                 let interval = setTimeout(()=>{
                     let now = new Date() 
                     let time = now.getTime();
@@ -550,14 +566,33 @@ export function CombatManager(){
                 // if(this.type === 'monk') console.log('monk move from turn cycle');
                 processMove(this);
             },
+            setToFrozen: function(){
+                console.log(this.type, 'set to FROZEN!');
+                this.frozen = true;
+                this.locked = true;  
+
+                // setTimeout(()=>{
+                //     this.frozen = this.locked = false
+                // }, 10000)
+            },
             turnCycle: function(){
                 let count = 0,
                 hasMoved = false, hasMovedSecondTime = false;
                 let factor = (1/this.stats.dex * 25)
                 let increment = (1 / factor)
                 if(this.hasOverlap) handleOverlap(this)
+                // if(this.type === 'sphinx') return
                 this.interval = setInterval(()=>{
-                    if(this.combatPaused || this.dead) return
+            
+                    if(this.combatPaused || this.dead || this.locked) return
+                    // if(this.type === 'wizard'){
+                    //     console.log('wizard go', this.position);
+                    // }
+                    if(this.isOnManualMoveCooldown){
+                        if(this.tempo > 100) this.tempo = 100;
+                        broadcastDataUpdate(this)
+                        return
+                    }
                     count += increment;
 
                     this.manualMovesCurrent += this.manualMovesTotal/2000
@@ -570,14 +605,20 @@ export function CombatManager(){
                         console.log('pending attack ', this.pendingAttack);
                         debugger
                     }
-
+                    // if(this.type === 'wizard'){
+                    //     console.log('wizard go', this.position);
+                    //     if(this.locked) debugger
+                    // }
                         
                     this.tempo = Math.floor((count/100)*100);
                     if(this.tempo < 1) return;
-                    if(this.isOnManualMoveCooldown){
-                        if(this.tempo > 100) this.tempo = 100;
-                        return
+                    if(this.type === 'wizard'){
+                        // console.log('wizard this.isOnManualMoveCooldown', this.isOnManualMoveCooldown);
+                        if(this.locked) debugger
                     }
+
+
+                    
                     if(isCombatOver() || this.dead){
                         clearInterval(this.interval)
                         return
@@ -593,12 +634,16 @@ export function CombatManager(){
                     if(this.tempo > 5 && this.tempo < 10 && this.isMonster){
                         // console.log('monster is at move stage. hasMoved =', hasMoved);
                     }
-                    if(this.tempo > 5 && this.tempo < 10 && this.targetId !== null && !hasMoved && !this.destinationSickness){
+                    // if(this.type === 'wizard'){
+                    //     console.log('wizard go', this.position);
+                    //     if(this.locked) debugger
+                    // }
+                    if(this.tempo > 5 && this.tempo < 10 && this.targetId !== null && !hasMoved && !this.destinationSickness && !this.locked){
                         // if(this.type === 'monk') console.log('monk moving 1st');
                         this.move();
                         hasMoved = true;
                     }
-                    if(this.tempo > 65 && this.tempo < 75 && this.targetId !== null && !hasMovedSecondTime && !this.destinationSickness){
+                    if(this.tempo > 65 && this.tempo < 75 && this.targetId !== null && !hasMovedSecondTime && !this.destinationSickness && !this.locked){
                         // this.aiming = false;
                         this.move();
                         hasMovedSecondTime = true;
@@ -608,6 +653,7 @@ export function CombatManager(){
                         this.aiming = true;
                     }
                     if(count >= 100){
+                        if(this.type === 'wizard') console.log('ye, pending attack ', this.pendingAttack)
                         if(this.type === 'djinn'){
                             console.log('djinn at 100, CLEARING INTERVAL ');
                         }
@@ -623,6 +669,7 @@ export function CombatManager(){
                         }
                         if(this.action_queue.length > 0){
                             // clearInterval(this.interval)
+                            console.log('action queue length > 0');
                             if(this.type === 'monk') console.log('monk ????');
                             processActionQueue(this);
                             return
@@ -642,8 +689,8 @@ export function CombatManager(){
                             
                         //     //destination dickness still not working
                         // } else 
-                        if(this.pendingAttack && this.pendingAttack.cooldown_position === 100){
-                            
+                        if(this.pendingAttack && this.pendingAttack.cooldown_position === 100 && !this.locked){
+                            console.log('in here');
                             if(this.type === 'monk') console.log('monk ????');
                             // debugger
                             if(this.name === "Loryastes"  && DEBUG_STEPS === true){
@@ -663,7 +710,7 @@ export function CombatManager(){
                                 return
                             }
                             let inRange = targetInRange(this);
-                            
+                            console.log('in range : ', inRange);
                             // if(this.isMonster) console.log('monster at 100, inrange: ', inRange)
                             if(this.type === 'djinn'){
                                 console.log('djinn turnSkips: ', this.turnSkips, 'inRange: ', inRange);
@@ -687,6 +734,7 @@ export function CombatManager(){
                                     this.tempo = 1
                                     this.turnCycle();
                                 } else {
+                                    console.log('in skip ');
                                     if(this.type === 'djinn'){
                                         console.log('djinn skipping ', this);
                                     }
@@ -714,6 +762,7 @@ export function CombatManager(){
                             // debugger
                         }
                     }
+                    // console.log('wiz broadcast');
                     broadcastDataUpdate(this)
                 }, FIGHT_INTERVAL)
             },
@@ -844,8 +893,7 @@ export function CombatManager(){
             break;
             case 'close':
                 if(caller.name === "LORYASTES" && DEBUG_STEPS){
-                    console.log('differential: ', differential);
-                    // console.log('vs distance to target: ', distanceToTarget);
+
                 }
                 res = differential === 1;
             break;
@@ -855,8 +903,6 @@ export function CombatManager(){
                 res = differential <= 3;
             break;
             case 'far':
-                // console.log('is withiin far range: ', differential <= 4 && differential > 1);
-                // res = differential <= 4 && differential > 1;
                 res = true;
             break;
             default:
@@ -885,8 +931,22 @@ export function CombatManager(){
     this.fighterManualAttack = () =>{
         if(!this.selectedFighter) return 
         const fighter = this.combatants[this.selectedFighter.id]
-        // console.log('fighter to attack', fighter);
         fighter.manualAttack();
+    }
+    this.fighterSpecialAttack = (special) => {
+        if(!this.selectedFighter) return 
+        const target = this.combatants[this.selectedFighter.targetId];
+        switch(this.selectedFighter.type){
+            case 'wizard':
+                switch(special.name){
+                    case 'ice blast':
+                        this.fighterAI.roster['wizard'].triggerIceBlast(this.selectedFighter, target)
+                    break;
+                }
+            break;
+            default:
+                break;
+        }
     }
     this.beginGreeting = () => {
         this.triggerMonsterGreeting().then(e=>{
@@ -956,6 +1016,7 @@ export function CombatManager(){
     this.broadcastDataUpdate = (caller = null) => {
         // if(this.combatPaused) return
         if(caller){
+            // console.log(caller.type, 'broadcast');
             this.checkOverlap(caller)
             this.updateCoordinates(caller)
         }
@@ -1057,8 +1118,11 @@ export function CombatManager(){
 
         if(!this.selectedFighter) return 
         const fighter = this.combatants[this.selectedFighter.id]
-        if(!fighter || fighter.dead) return;
-        
+        if(fighter.locked){
+            console.log('wtf');
+            debugger
+        }
+        if(!fighter || fighter.dead || fighter.locked) return;
         if(fighter.manualMovesCurrent < 1){
             return
         } else {
@@ -1072,7 +1136,6 @@ export function CombatManager(){
                 spaceOccupier = Object.values(this.combatants).find(e=>{
                     return e.coordinates.x === pendingCoordinates.x && e.coordinates.y === pendingCoordinates.y && !e.dead
                 })
-                // console.log('up occupied: ', spaceOccupier);
                 if(spaceOccupier) return
                 fighter.position--
                 fighter.coordinates.y--
@@ -1084,9 +1147,9 @@ export function CombatManager(){
                 spaceOccupier = Object.values(this.combatants).find(e=>{
                     return e.coordinates.x === pendingCoordinates.x && e.coordinates.y === pendingCoordinates.y && !e.dead
                 })
-                // console.log('down occupied: ', spaceOccupier);
                 if(spaceOccupier) return
                 fighter.position++
+                console.log(fighter.type, 'fighter.position: ', fighter.position);
                 fighter.coordinates.y++
                 fighter.manualMoveCooldown()
             break;
@@ -1184,13 +1247,13 @@ export function CombatManager(){
 
 
             if(manualAttack){
-                console.group('TARGET IN RANGE BLock');
+                // console.group('TARGET IN RANGE BLock');
 
-                console.log('caller', caller, 'target: ', target);
-                console.log('pendingAttack', pendingAttack);
-                console.log('pendingAttack range ', RANGES[caller.pendingAttack.range], 'vs rangeDiff: ', rangeDiff);
+                // console.log('caller', caller, 'target: ', target);
+                // console.log('pendingAttack', pendingAttack);
+                // console.log('pendingAttack range ', RANGES[caller.pendingAttack.range], 'vs rangeDiff: ', rangeDiff);
 
-                console.groupEnd()
+                // console.groupEnd()
             }
             return rangeDiff <= RANGES[caller.pendingAttack.range]
         }
@@ -1377,15 +1440,8 @@ export function CombatManager(){
         caller.coordinates = {x: caller.depth, y: caller.position}
     }
     this.acquireTarget = (caller, targetToAvoid = null) => {
-        if(caller.name === "Zildjikan"){
-            console.log('Z in hERRRRRRRR');
-        }
         if(this.combatPaused || caller.dead) return;
         if(this.fighterAI.roster[caller.type]){
-            if(targetToAvoid){
-
-                console.log('fighter acquiring with avoid target', targetToAvoid);
-            }
             this.fighterAI.roster[caller.type].acquireTarget(caller, this.combatants, targetToAvoid)
             if(caller.targetId){
                 const animation = {
@@ -1402,7 +1458,6 @@ export function CombatManager(){
         
         if(this.monsterAI.roster[caller.type]){
             this.monsterAI.roster[caller.type].acquireTarget(caller, this.combatants);
-            console.log('caller', caller, caller.targetId);
             if(caller.targetId){
                 const animation = {
                     type: 'targetted',
@@ -1513,23 +1568,18 @@ export function CombatManager(){
         // if(this.type === 'monk') console.log('monk process move ????');
 
         const coordinatesOccupiedBy = (coordinates) => {
-            if(caller.type === 'monk') console.log('in coordinatesOccupiedBy, coordinates: ', coordinates);
             return Object.values(this.combatants).find(e=>e.coordinates.x === coordinates.x && e.coordinates.y === coordinates.y)
         }
 
         // RE-POSITION
         if(laneDiff < 0 ){
-            if(caller.type === 'monk') console.log('monk acorn 1');
             newPosition = caller.position - 1
         } else if(laneDiff > 0){
-            if(caller.type === 'monk') console.log('monk acorn 2');
             newPosition = caller.position + 1
         } else {
-            if(caller.type === 'monk') console.log('monk acorn 3');
             newPosition = caller.position
         }
         const newCoordinates = {x: newDepth, y: newPosition}
-        if(caller.type === 'monk') console.log('monk in REPOSITION, laneDiff = ', laneDiff, 'new coordinates: ', newCoordinates, 'coordinatesOccupiedBy(newCoordinates)', coordinatesOccupiedBy(newCoordinates));
         if(coordinatesOccupiedBy(newCoordinates)){
             return
         }
@@ -1692,9 +1742,6 @@ export function CombatManager(){
         if(!target) return
         let r = Math.random()
         let criticalHit = r*100 > 80;
-        if(criticalHit){
-            console.log(caller.type, 'crit!!!!!!', r, criticalHit);
-        }
         let damage = criticalHit ? caller.atk*3 : caller.atk
         if(criticalHit){
             target.woundedHeavily = true;
@@ -1902,6 +1949,21 @@ export function CombatManager(){
                 resolve()
             })
         })
+    }
+
+    this.lockFighter = (fighterId) => {
+        console.log(this.combatants[fighterId].type, 'locked');
+        this.combatants[fighterId].locked = true;
+    }
+    this.unlockFighter = (fighterId) => {
+        console.log(this.combatants[fighterId].type, 'unlocked');
+        this.combatants[fighterId].locked = false;
+    }
+    this.combatantRocked = (combatantId) => {
+        this.combatants[combatantId].rocked = true;
+    }
+    this.combatantRockedOff = (combatantId) => {
+        this.combatants[combatantId].rocked = false;
     }
     
     const utilMethods = {
