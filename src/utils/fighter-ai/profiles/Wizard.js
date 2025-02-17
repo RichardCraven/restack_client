@@ -106,7 +106,6 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
             caller.position = 2
             debugger
         } else {
-            console.log('stay on back row');
             data.methods.stayOnBackRow(caller,combatants)
         }
 
@@ -114,13 +113,42 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
         caller.coordinates.y = caller.position
         caller.coordinates.x = caller.depth
     }
-    // this.triggerMagicMissile = (coords) => {
-    //     console.log('zildjikan triggering magic missile');
-    //     const tileId = this.animationManager.getTileIdByCoords(coords);
-    //     if(tileId !== null){
-    //         this.animationManager.rippleAnimation(tileId, 'red')
-    //     }
-    // }
+    this.triggerMagicMissile = (caller, target, travelTime) => {
+        console.log('zildjikan triggering magic missile against', target);
+        // const tileId = this.animationManager.getTileIdByCoords(coords);
+        // if(tileId !== null){
+        //     this.animationManager.rippleAnimation(tileId, 'red')
+        // }
+        caller.lock();
+        const damageSequence = () => {
+            let r = Math.random()
+            let criticalHit = r*100 > 80;
+            let damage = criticalHit ? caller.atk*3 : caller.atk
+            target.damageIndicators.push(damage);
+            target.hp -= damage;
+        }
+        setTimeout(()=>{
+            target.rockAnimationOn()
+            damageSequence();
+            setTimeout(()=>{
+                damageSequence();
+            },500)
+            setTimeout(()=>{
+                damageSequence();
+            },1000)
+            setTimeout(()=>{
+                damageSequence();
+            },1250)
+        },travelTime)
+        // ^ 1.5 seconds of travel time for missiles
+
+        setTimeout(()=>{
+            if(target) target.rockAnimationOff();
+            caller.unlock();
+        }, travelTime + 1000)
+        // ^ travel time + 1 second of damage animation
+
+    }
     this.triggerBeamAttack = (callerCoords, targetCoords, color = 'purple') => {
         const targetTileId = this.animationManager.getTileIdByCoords(targetCoords)
         const sourceTileId = this.animationManager.getTileIdByCoords(callerCoords)
@@ -152,14 +180,21 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                 
                 target.setToFrozen();
             }
-            caller.energy -= 50;
+            caller.energy -= 75;
             if(caller.energy < 0) caller.energy = 0; 
         })
     }
     this.initiateAttack = async (caller, manualAttack, combatants) => {
         if(!caller) return
-        console.log('wizard initiating attack');
-            const target = combatants[caller.targetId];
+        const target = combatants[caller.targetId];
+        
+        if(manualAttack){
+            if(caller.pendingAttack && caller.pendingAttack.cooldown_position < 99){
+                console.log('ruh roh');
+                // debugger
+                return
+            }
+        }
         if(!target) return
             const distanceToTarget = data.methods.getDistanceToTarget(caller, target),
             laneDiff = data.methods.getLaneDifferenceToTarget(caller, target);
@@ -171,6 +206,7 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                         await this.triggerBeamAttack(caller.coordinates, target.coordinates)
                         console.log('hits');
                         this.hitsTarget(caller)
+                        this.kickoffAttackCooldown(caller)
                     } else {
                         this.missesTarget(caller);
                     }

@@ -1591,43 +1591,46 @@
                         height: 40px;
                         width: 40px;
                         margin-bottom: 5px;
-                    }
-                    .interaction-tile-overlay{
-                        position: absolute;
-                        left: 0;
-                        top: 0;
-                        height: 100%;
-                        // transition: 0.2s;
-                        // background-color: #fdf512;
-                        // background-color: rgb(255, 0, 166);
-                        background-color: green;
-                        opacity: 0.3;
-                        pointer-events: none;
-                        border-right: 1px solid black;
-                    }
-                    .interaction-tile{
-                        height: 40px;
-                        width: 40px;
-                        cursor: pointer;
-                        background-color: whitesmoke;
-                        margin-bottom: 3px;
-                        background-size: 100% 100%;
-                        border: 2px solid black;
-
-                        &.available:hover{
-                            filter: sepia(1);
+                        .interaction-tile-overlay{
+                            position: absolute;
+                            left: 2px;
+                            top: 2px;
+                            height: 100%;
+                            // transition: 0.2s;
+                            // background-color: #fdf512;
+                            // background-color: rgb(255, 0, 166);
+                            // background-color: green;
+                            background-color: green;
+                            opacity: 0.3;
+                            pointer-events: none;
+                            // border-right: 1px solid black;
                         }
-                        &.consumable:hover{
-                            filter: sepia(1)
-                        }
-                        &.special:hover{
-                            filter: sepia(1)
-                        }
-                        &.target.targetted{
-                            border: 2px solid red
-                        }
-                        &.selected{
-                            border: 2px solid yellow;
+                        .interaction-tile{
+                            // height: 40px;
+                            // width: 40px;
+                            height: 100%;
+                            width: 100%;
+                            cursor: pointer;
+                            background-color: whitesmoke;
+                            // margin-bottom: 3px;
+                            background-size: 100% 100%;
+                            border: 2px solid black;
+    
+                            &.available:hover{
+                                filter: sepia(1);
+                            }
+                            &.consumable:hover{
+                                filter: sepia(1)
+                            }
+                            &.special:hover{
+                                filter: sepia(1)
+                            }
+                            &.target.targetted{
+                                border: 2px solid red
+                            }
+                            &.selected{
+                                border: 2px solid yellow;
+                            }
                         }
                     }
                 }

@@ -166,8 +166,8 @@ class CrewManagerPage extends React.Component{
     minions = [];
     if(monster && monster.minions){
 
-        // monster.minions = ['skeleton','skeleton'];
-        monster.minions = [];
+        monster.minions = ['skeleton','skeleton', 'skeleton','skeleton'];
+        // monster.minions = [];
 
         monster.minions.forEach((e,i)=>{
             const minion = this.props.monsterManager.getMonster(e)
@@ -243,24 +243,8 @@ useConsumableFromInventory = (item) => {
 }
 combatKeyDownHandler = (event) => {
     let key = event.key, code = event.code;
-    // if(key === 'Tab'){
-    //     this.setState({
-    //         shiftDown: false
-    //     })
-    // }
     if(code === 'Space'){
-        // if(this.state.specialDown){
-        //     // FIRE SPECIAL
-        //     console.log('FIRE SPECIAL');
-        // } else if(this.state.consumableSpecialDown){
-        //     // FIRE CONSUMABLE SPECIAL
-        //     console.log('FIRE SPECIAL consumable');
-        // } else {
-            // this.props.combatManager.fighterManualAttack()
-
-            if(this.monsterBattleComponentRef.current) this.monsterBattleComponentRef.current.manualFire();
-
-        // }
+        if(this.monsterBattleComponentRef.current) this.monsterBattleComponentRef.current.manualFire();
     }
     switch(key){
         case 'p':
@@ -280,9 +264,8 @@ combatKeyDownHandler = (event) => {
             event.preventDefault();
             if(this.state.shiftDown){
                 if(this.monsterBattleComponentRef.current) this.monsterBattleComponentRef.current.tabToRetarget();
-            } if(this.state.ctrlDown){
+            } else if(this.state.ctrlDown){
                 console.log('YEEEEEEE');
-                // if()
             } else {
                 if(this.monsterBattleComponentRef.current) this.monsterBattleComponentRef.current.tabToFighter();
             }

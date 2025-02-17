@@ -209,6 +209,7 @@ class MonsterBattle extends React.Component {
         })
     }
     tabToRetarget = () => {
+        if(!this.state.selectedFighter) return
         this.props.combatManager.manualRetarget(this.state.selectedFighter)
     }
     selectSpecial = () => {
@@ -572,7 +573,7 @@ class MonsterBattle extends React.Component {
             val = val.replaceAll('_', ' ')
         }
         console.log('val: ', val);
-
+        this.fireSpecial(val)
 
         // if(val === 'glyph'){
         //     finalVal = !this.state.glyphTrayExpanded
@@ -582,7 +583,8 @@ class MonsterBattle extends React.Component {
         // }
     }
     manualFire = () => {
-        console.log('manual fire');
+        if(!this.state.selectedFighter) return
+        console.log(this.state.selectedFighter.type, 'manual fire');
         let consumableSpecialSelected;
 
         let selectedFighter = this.state.selectedFighter;
@@ -592,15 +594,42 @@ class MonsterBattle extends React.Component {
         selectedConsumableSpecial = consumableSpecials.find(a=> a.selected);
 
         if(selectedSpecial){
-            //fire special
-            // console.log('fire ', selectedSpecial);
+            if(this.state.selectedFighter.energy < 100){
+                console.log('bnot enough energy');
+                return
+            }
             this.props.combatManager.fighterSpecialAttack(selectedSpecial)
+            specials.forEach(e=>e.selected=false)
         } else if (selectedConsumableSpecial){
-            console.log('consumableSPecial: ', selectedConsumableSpecial);
             if(selectedConsumableSpecial.actionType.type === 'glyph'){
                 this.fireGlyph(selectedConsumableSpecial.actionType.subTypes[0])
             }
-            // debugger
+            consumableSpecials.forEach(a=>a.selected=false)
+        } else {
+            this.props.combatManager.fighterManualAttack()
+        }
+    }
+    fireSpecial = (special) => {
+        if(!this.state.selectedFighter) return
+        console.log(this.state.selectedFighter.type, 'fire special', special );
+        console.log('handle this');
+        debugger
+        let consumableSpecialSelected;
+
+        let selectedFighter = this.state.selectedFighter;
+        let specials = selectedFighter?.specials,
+        consumableSpecials = selectedFighter?.specialActions,
+        selectedSpecial = specials.find(a=> a.selected),
+        selectedConsumableSpecial = consumableSpecials.find(a=> a.selected);
+
+        if(selectedSpecial){
+            this.props.combatManager.fighterSpecialAttack(selectedSpecial)
+            specials.forEach(e=>e.selected=false)
+        } else if (selectedConsumableSpecial){
+            if(selectedConsumableSpecial.actionType.type === 'glyph'){
+                this.fireGlyph(selectedConsumableSpecial.actionType.subTypes[0])
+            }
+            consumableSpecials.forEach(a=>a.selected=false)
         } else {
             this.props.combatManager.fighterManualAttack()
         }
@@ -625,8 +654,9 @@ class MonsterBattle extends React.Component {
                 let laneDiff = this.props.combatManager.getLaneDifferenceToTarget(this.state.selectedFighter, target)
 
                 console.log('laneDiff: ', laneDiff);
-                
-                this.props.combatManager.lockFighter(this.state.selectedFighter.id)
+                const travelTime = 1500
+                this.props.combatManager.fighterAI.roster['wizard'].triggerMagicMissile(selectedFighter, target, travelTime)
+                // this.props.combatManager.lockFighter(this.state.selectedFighter.id)
 
                 this.setState({
                     magicMissile_fire: true,
@@ -638,10 +668,7 @@ class MonsterBattle extends React.Component {
                         magicMissile_connectParticles: false
                     })
                 },1000)
-                setTimeout(()=>{
-                    this.props.combatManager.combatantRocked(target.id)
-                },1500)
-                // ^ 1.5 seconds of travel time for missiles
+                
                 
                 setTimeout(()=>{
                     this.setState({
@@ -649,7 +676,6 @@ class MonsterBattle extends React.Component {
                         magicMissile_connectParticles: true
                     })
                     if(this.state.selectedFighter) this.props.combatManager.unlockFighter(this.state.selectedFighter.id)
-                    if(target) this.props.combatManager.combatantRockedOff(target.id)
                 }, 2500)
                 // ^ travel time + 1 second of damage animation
             break;
@@ -1130,7 +1156,9 @@ class MonsterBattle extends React.Component {
                                         this.monster().type === 'witch') ? `` 
                                         : `saturate(${((this.monster()?.hp / this.props.monster.stats.hp) * 100) / 2}) 
                                                 sepia(${this.state.portraitHoveredId === this.props.monster.id ? '2' : '0'})`
-                                    }}>
+                                    }}
+                                    onClick={() => this.monsterCombatPortraitClicked(this.props.monster.id)}
+                                    >
                                     {/* //no children, because 3d matrix will stretch them on hit   */}
                                     </div>
                                     {this.monster() && this.state.animationOverlays[this.monster().id] && this.getAllOverlaysById(this.monster().id).map((overlay, i) => {
@@ -1240,7 +1268,9 @@ class MonsterBattle extends React.Component {
                                                 filter: `saturate(${((this.state.battleData[minion.id]?.hp / minion.stats.hp) * 100) / 2}) 
                                                         sepia(${this.state.portraitHoveredId === minion.id ? '2' : '0'})`
                                             }} 
-                                            > {minion.id} </div>
+                                            > 
+                                            {/* {minion.id}  */}
+                                            </div>
                                             <div 
                                             className={
                                                 `portrait-relative-container`
@@ -1255,7 +1285,7 @@ class MonsterBattle extends React.Component {
                                                     })}
                                                 </div>
                                             </div>
-                                            <div className={`portrait-overlay`} >
+                                            <div className={`portrait-overlay ${this.state.battleData[minion.id]?.frozen ? 'frozen' : ''}`} >
                                                 <div className="damage-indicator-container">
                                                     {/* <div className="damage-indicator">33</div> */}
                                                     {this.state.battleData[minion.id]?.damageIndicators.map((e,i)=>{
@@ -1322,15 +1352,16 @@ class MonsterBattle extends React.Component {
                             <div className="interaction-tooltip">{this.state.hoveredSpecialTile}</div>
                             <div className="interaction-tile-container">
                                 {this.state.selectedFighter?.specials.map((a, i)=>{
-                                    return <div 
-                                    key={i} 
-                                    style={{backgroundImage: "url(" + a.icon + "), radial-gradient(white 40%, black 80%)", cursor: 'pointer'}} 
-                                    className={`interaction-tile special ${a.selected ? 'selected' : ''}`}
-                                    onClick={() => this.specialTileClicked(a)} 
-                                    onMouseEnter={() => this.specialTileHovered(a)} 
-                                    onMouseLeave={() => this.specialTileHovered(null)}>
-                                        {/* {a} */}
-                                    </div>
+                                    return <div key={i} className='interaction-tile-wrapper'>
+                                                <div 
+                                                style={{backgroundImage: "url(" + a.icon + "), radial-gradient(white 40%, black 80%)", cursor: 'pointer'}} 
+                                                className={`interaction-tile special ${a.selected ? 'selected' : ''}`}
+                                                onClick={() => this.specialTileClicked(a)} 
+                                                onMouseEnter={() => this.specialTileHovered(a)} 
+                                                onMouseLeave={() => this.specialTileHovered(null)}>
+                                                </div>
+                                                <div className="interaction-tile-overlay" style={{width: `${a.cooldown_position}%`, transition: a.cooldown_position === 0 ? '0s' : '0.2s', backgroundColor: a.cooldown_position === 100 && this.state.selectedFighter?.energy >= 100 ? 'green' : '#c2bd0f'}}></div>
+                                            </div>
                                 })}
                             </div>
                         </div>
@@ -1339,14 +1370,15 @@ class MonsterBattle extends React.Component {
                             <div className="interaction-tooltip">{this.state.hoveredGlyphTile}</div>
                             <div className="interaction-tile-container">
                                 {this.state.selectedFighter?.specialActions.length > 0 && this.state.selectedFighter?.specialActions.map((glyphUnit, i)=>{
-                                    return <div 
-                                    key={i} 
-                                    style={{backgroundImage: "url(" + glyphUnit.actionType.subTypes[0].icon_url + "), radial-gradient(white 40%, black 80%)", cursor: 'pointer'}} 
-                                    className={`interaction-tile special ${glyphUnit.selected ? 'selected' : ''}`}
-                                    onClick={() => this.fireGlyph(glyphUnit)} 
-                                    onMouseEnter={() => this.glyphTileHovered(glyphUnit)} 
-                                    onMouseLeave={() => this.glyphTileHovered(null)}>
-                                    </div>
+                                return <div key={i} className='interaction-tile-wrapper'>
+                                            <div  
+                                                style={{backgroundImage: "url(" + glyphUnit.actionType.subTypes[0].icon_url + "), radial-gradient(white 40%, black 80%)", cursor: 'pointer'}} 
+                                                className={`interaction-tile special ${glyphUnit.selected ? 'selected' : ''}`}
+                                                onClick={() => this.fireGlyph(glyphUnit)} 
+                                                onMouseEnter={() => this.glyphTileHovered(glyphUnit)} 
+                                                onMouseLeave={() => this.glyphTileHovered(null)}>
+                                            </div>
+                                        </div>
                                 })}
                             </div>
                         </div>
@@ -1374,15 +1406,16 @@ class MonsterBattle extends React.Component {
                             <div className="interaction-tooltip"> </div>
                             <div className="interaction-tile-container">
                                 {this.state.selectedFighter && this.state.selectedFighter.name !== 'Loryastes' && Object.values(this.state.battleData).filter(e=>e.isMonster || (e.isMinion && !e.dead)).map((a, i)=>{
-                                return <div 
-                                    key={i} 
-                                    style={{backgroundImage: "url(" + a.portrait + ")", cursor: this.state.showCrosshair ? 'crosshair' : ''}} 
-                                    className={`interaction-tile target ${this.state.selectedFighter?.targetId === a.id ? 'targetted' : ''}`} 
-                                    onClick={() => this.targetTileClicked(a)} 
-                                    onMouseEnter={() => this.targetTileHovered(a)} 
-                                    onMouseLeave={() => this.targetTileHovered(null)}
-                                    >
-                                    </div>
+                                    return <div key={i} className='interaction-tile-wrapper'>
+                                                <div 
+                                                    key={i} 
+                                                    style={{backgroundImage: "url(" + a.portrait + ")", cursor: this.state.showCrosshair ? 'crosshair' : ''}} 
+                                                    className={`interaction-tile target ${this.state.selectedFighter?.targetId === a.id ? 'targetted' : ''}`} 
+                                                    onClick={() => this.targetTileClicked(a)} 
+                                                    onMouseEnter={() => this.targetTileHovered(a)} 
+                                                    onMouseLeave={() => this.targetTileHovered(null)}>
+                                                </div>
+                                            </div>
                                 })}
 
                                 {this.state.selectedFighter && this.state.selectedFighter.name === 'Loryastes' && Object.values(this.state.battleData).filter(e=>!e.isMonster && !e.isMinion && e.name !== 'Loryastes' && !e.dead).map((a, i)=>{

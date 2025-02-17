@@ -6,7 +6,7 @@ import React, { useRef, useEffect } from 'react'
 // }, 1000)
 
 const CanvasMagicMissile = ({ height, width, connectParticlesActive, targetDistance, targetLaneDiff}) => {
-    console.log('targetLaneDiff', targetLaneDiff);
+
     // const { connectParticlesActive } = props
     // console.log('connectParticlesActive === ', connectParticlesActive)
     // console.log('height: ', height);

@@ -324,6 +324,7 @@ export default function NarrativeSequence(props) {
             case 'intro':
                 console.log('in intro');
                 cloneArray =  Array.from(introSequence);
+                console.log('cloneArray: ', cloneArray);
             break;
             case 'death': 
             cloneArray =  Array.from(deathSequence);
@@ -379,6 +380,7 @@ export default function NarrativeSequence(props) {
             })
         }
         const endSequenceAndNav = () => {
+            console.log('end Sequence and Navb');
             switch(type){
                 case 'intro':
                     props.endIntroSequence();
@@ -402,9 +404,9 @@ export default function NarrativeSequence(props) {
                         console.log('NO TYPE'); return
                     }
                 }
-                props.endIntroSequence();
-                endSequenceAndNav();
-                return
+                // props.endIntroSequence();
+                // endSequenceAndNav();
+                // return
         fireItOff();
     }
   useEffect(()=> {

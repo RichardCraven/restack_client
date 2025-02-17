@@ -526,10 +526,10 @@ export function CombatManager(){
                 }
             },
             manualAttack: function(){
-                if(this.manualMovesCurrent < 2){
+                if(this.manualMovesCurrent < 2 || !this.pendingAttack || this.pendingAttack.cooldown_position < 100){
                     return
                 }
-                this.manualMovesCurrent-= 1
+                this.manualMovesCurrent-= 3
                 initiateAttack(this, true);
             },
             manualMoveCooldown: function(){
@@ -540,7 +540,7 @@ export function CombatManager(){
                 // 12:00:00 AM on April 17, 2022
                 const now = new Date();
                 // 12:00:20 AM on April 17, 2022
-                const newDate = addSeconds(now, 3).getTime();
+                const newDate = addSeconds(now, 1).getTime();
                 this.timeAhead = newDate;
                 
                 this.isOnManualMoveCooldown = true;
@@ -554,7 +554,7 @@ export function CombatManager(){
                         this.isOnManualMoveCooldown = false;
                         clearInterval(interval)
                     }
-                },3000)
+                },1000)
             },
             skip: function(){
                 this.active = false;
@@ -690,7 +690,6 @@ export function CombatManager(){
                         //     //destination dickness still not working
                         // } else 
                         if(this.pendingAttack && this.pendingAttack.cooldown_position === 100 && !this.locked){
-                            console.log('in here');
                             if(this.type === 'monk') console.log('monk ????');
                             // debugger
                             if(this.name === "Loryastes"  && DEBUG_STEPS === true){
@@ -710,7 +709,6 @@ export function CombatManager(){
                                 return
                             }
                             let inRange = targetInRange(this);
-                            console.log('in range : ', inRange);
                             // if(this.isMonster) console.log('monster at 100, inrange: ', inRange)
                             if(this.type === 'djinn'){
                                 console.log('djinn turnSkips: ', this.turnSkips, 'inRange: ', inRange);
@@ -734,7 +732,6 @@ export function CombatManager(){
                                     this.tempo = 1
                                     this.turnCycle();
                                 } else {
-                                    console.log('in skip ');
                                     if(this.type === 'djinn'){
                                         console.log('djinn skipping ', this);
                                     }
@@ -768,6 +765,7 @@ export function CombatManager(){
             },
             restartTurnCycle: function(){
                 clearInterval(this.interval)
+                this.tempo = 0;
                 this.turnCycle();
             },
             waitForAttack: function(){
@@ -785,6 +783,18 @@ export function CombatManager(){
                         clearInterval(waitInterval)
                     }
                 }, 500)
+            },
+            rockAnimationOn : function(){
+                this.rocked = true;
+            },
+            rockAnimationOff : function(){
+                this.rocked = false;
+            },
+            lock: function(){
+                this.locked = true;
+            },
+            unlock: function(){
+                this.locked = false;
             }
         };
     }
@@ -849,7 +859,7 @@ export function CombatManager(){
         // debugger
         this.data.monster.position = 2;
         this.data.monster.depth = MAX_DEPTH;
-        this.data.monster.coordinates = {x:MAX_DEPTH, y:1}
+        this.data.monster.coordinates = {x:MAX_DEPTH, y:2}
         let monster = createFighter(this.data.monster, callbacks);
         monster.isMonster = true;
         this.combatants[monster.id] = monster;
@@ -936,6 +946,7 @@ export function CombatManager(){
     this.fighterSpecialAttack = (special) => {
         if(!this.selectedFighter) return 
         const target = this.combatants[this.selectedFighter.targetId];
+        // this.selectedFighter.energy = 0;
         switch(this.selectedFighter.type){
             case 'wizard':
                 switch(special.name){
@@ -1118,15 +1129,12 @@ export function CombatManager(){
 
         if(!this.selectedFighter) return 
         const fighter = this.combatants[this.selectedFighter.id]
-        if(fighter.locked){
-            console.log('wtf');
-            debugger
-        }
         if(!fighter || fighter.dead || fighter.locked) return;
         if(fighter.manualMovesCurrent < 1){
             return
         } else {
             fighter.manualMovesCurrent--
+            fighter.restartTurnCycle();
         }
         switch(direction){
             case 'up':
@@ -1344,6 +1352,7 @@ export function CombatManager(){
     }
     this.kickoffAttackCooldown = (caller) => {
         // if(caller.isMonster) console.log('monster cooldown begins');
+        console.log(caller.type,'kick off attack cooldown');
         const atk = caller.pendingAttack;
         atk['cooldown_position'] = 0;
         let totalTime = atk.cooldown * 1000;
@@ -1871,6 +1880,7 @@ export function CombatManager(){
     this.targetKilled = (combatant) => {
         combatant.aiming = false;
         combatant.dead = true;
+        combatant.locked = combatant.frozen = false;
         setTimeout(()=>{
             combatant.woundedLethal = false;
         },1000)
@@ -1952,19 +1962,17 @@ export function CombatManager(){
     }
 
     this.lockFighter = (fighterId) => {
-        console.log(this.combatants[fighterId].type, 'locked');
         this.combatants[fighterId].locked = true;
     }
     this.unlockFighter = (fighterId) => {
-        console.log(this.combatants[fighterId].type, 'unlocked');
         this.combatants[fighterId].locked = false;
     }
-    this.combatantRocked = (combatantId) => {
-        this.combatants[combatantId].rocked = true;
-    }
-    this.combatantRockedOff = (combatantId) => {
-        this.combatants[combatantId].rocked = false;
-    }
+    // this.combatantRocked = (combatantId) => {
+    //     this.combatants[combatantId].rocked = true;
+    // }
+    // this.combatantRockedOff = (combatantId) => {
+    //     this.combatants[combatantId].rocked = false;
+    // }
     
     const utilMethods = {
         fighterFacingDown: this.fighterFacingDown, 

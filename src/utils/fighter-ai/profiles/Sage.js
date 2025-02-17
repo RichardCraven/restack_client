@@ -29,6 +29,11 @@ export function Sage(data){
         }
     this.initiateAttack = (caller, combatants, hitsTarget, missesTarget) => {
             const target = combatants[caller.targetId];
+            if(!target){
+                console.log('no target!!!');
+                // debugger
+                return
+            }
             const distanceToTarget = data.methods.getDistanceToTarget(caller, target),
             laneDiff = data.methods.getLaneDifferenceToTarget(caller, target);
             if(target.isMonster || target.isMinion){

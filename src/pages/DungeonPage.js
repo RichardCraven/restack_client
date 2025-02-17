@@ -654,19 +654,39 @@ class DungeonPage extends React.Component {
     combatKeyDownHandler = (event) => {
         let key = event.key, code = event.code;
         if(code === 'Space'){
-            this.props.combatManager.fighterManualAttack()
-        }
-        if(key === 'p'){
-            let paused = !this.state.paused;
-            this.props.combatManager.pauseCombat(paused)
-            this.setState({
-                paused
-            })
+            if(this.monsterBattleComponentRef.current) this.monsterBattleComponentRef.current.manualFire();
         }
         switch(key){
+            case 'p':
+                let paused = !this.state.paused;
+                this.props.combatManager.pauseCombat(paused)
+                this.setState({
+                    paused
+                })
+            break;
+            case 'q':
+                if(this.monsterBattleComponentRef.current) this.monsterBattleComponentRef.current.selectSpecial();
+            break;
+            case 'w':
+                if(this.monsterBattleComponentRef.current) this.monsterBattleComponentRef.current.selectConsumableSpecial();
+            break;
             case 'Tab':
                 event.preventDefault();
-                if(this.monsterBattleComponentRef.current) this.monsterBattleComponentRef.current.tabToFighter();
+                if(this.state.shiftDown){
+                    if(this.monsterBattleComponentRef.current) this.monsterBattleComponentRef.current.tabToRetarget();
+                } else if(this.state.ctrlDown){
+                    
+                } else {
+                    if(this.monsterBattleComponentRef.current) this.monsterBattleComponentRef.current.tabToFighter();
+                }
+            break;
+            case 'Control':
+                event.preventDefault();
+                this.setState({ ctrlDown: true })
+            break;
+            case 'Shift':
+                event.preventDefault();
+                this.setState({ shiftDown: true })
             break;
             case 'ArrowUp':
                 if(this.state.selectedCrewMember) this.props.combatManager.moveFighterOneSpace('up');
