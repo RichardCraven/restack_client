@@ -635,10 +635,21 @@ class MonsterBattle extends React.Component {
         }
     }
     fireGlyph = (glyph) => {
-        console.log('glyph firing: ', glyph);
+        console.log('glyph firing');
         switch(glyph.type){
             case 'magic missile':
-                console.log('magic missile!');
+                console.log('!', this.props.animationManager);
+                // this.props.animationManager.magicMissile()
+                // this.props.animationManager.canvasAnimations.push({
+                //     magicMissile_fire: false,
+                //     magicMissile_connectParticles: true,
+                //     magicMissile_targetDistance: 0,
+                //     magicMissile_targetLaneDiff: 0
+                // })
+
+                
+
+
 
                 let selectedFighter = this.state.selectedFighter;
                 let specials = selectedFighter?.specials;
@@ -649,34 +660,38 @@ class MonsterBattle extends React.Component {
 
 
                 let target = this.props.combatManager.getCombatant(this.state.selectedFighter.targetId)
-                
-                let targetDistance = this.props.combatManager.getDistanceToTarget(this.state.selectedFighter, target)
-                let laneDiff = this.props.combatManager.getLaneDifferenceToTarget(this.state.selectedFighter, target)
+                console.log('target: ', target);
+                if(!target) return
+                // let targetDistance = this.props.combatManager.getDistanceToTarget(this.state.selectedFighter, target)
+                // let laneDiff = this.props.combatManager.getLaneDifferenceToTarget(this.state.selectedFighter, target)
 
-                console.log('laneDiff: ', laneDiff);
+                // console.log('laneDiff: ', laneDiff);
                 const travelTime = 1500
+                console.log('about to trigger from fighgter AI');
                 this.props.combatManager.fighterAI.roster['wizard'].triggerMagicMissile(selectedFighter, target, travelTime)
                 // this.props.combatManager.lockFighter(this.state.selectedFighter.id)
-
-                this.setState({
-                    magicMissile_fire: true,
-                    magicMissile_targetDistance: targetDistance,
-                    magicMissile_targetLaneDiff: laneDiff,
-                })
-                setTimeout(()=>{
-                    this.setState({
-                        magicMissile_connectParticles: false
-                    })
-                },1000)
+                // console.log('this.props.animationManager.canvasAnimations', this.props.animationManager.canvasAnimations);
+                // this.props.animationManager.canvasAnimations[0]
+                this.props.animationManager.magicMissile(selectedFighter.coordinates, target.coordinates)
+                // this.setState({
+                //     magicMissile_fire: true,
+                //     magicMissile_targetDistance: targetDistance,
+                //     magicMissile_targetLaneDiff: laneDiff,
+                // })
+                // setTimeout(()=>{
+                //     this.setState({
+                //         magicMissile_connectParticles: false
+                //     })
+                // },1000)
                 
                 
-                setTimeout(()=>{
-                    this.setState({
-                        magicMissile_fire: false,
-                        magicMissile_connectParticles: true
-                    })
-                    if(this.state.selectedFighter) this.props.combatManager.unlockFighter(this.state.selectedFighter.id)
-                }, 2500)
+                // setTimeout(()=>{
+                //     this.setState({
+                //         magicMissile_fire: false,
+                //         magicMissile_connectParticles: true
+                //     })
+                //     if(this.state.selectedFighter) this.props.combatManager.unlockFighter(this.state.selectedFighter.id)
+                // }, 2500)
                 // ^ travel time + 1 second of damage animation
             break;
             default:
@@ -989,13 +1004,13 @@ class MonsterBattle extends React.Component {
                                             {this.state.animationOverlays[fighter.id] && this.getAllOverlaysById(fighter.id).map((overlay, i) => {
                                                 return <Overlay key={i} animationType={overlay.type} data={overlay.data}/>
                                             })}
-                                            { fighter.type === 'wizard' && this.state.magicMissile_fire && <CanvasMagicMissile 
+                                            {/* { fighter.type === 'wizard' && this.state.magicMissile_fire && <CanvasMagicMissile 
                                                 width={100}
                                                 height={100}
                                                 connectParticlesActive={this.state.magicMissile_connectParticles}
                                                 targetDistance={this.state.magicMissile_targetDistance}
                                                 targetLaneDiff={this.state.magicMissile_targetLaneDiff}
-                                            />}
+                                            />} */}
                                             <div className={`portrait-overlay`} >
                                                 <div className="damage-indicator-container">
                                                     {this.fighter(fighter)?.damageIndicators.map((e,i)=>{

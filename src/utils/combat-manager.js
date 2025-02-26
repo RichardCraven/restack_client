@@ -365,6 +365,18 @@ export function CombatManager(){
         this.monsterAI.connectAnimationManager(instance)
         this.fighterAI.connectAnimationManager(instance)
         this.monsterAI.initializeRoster();
+        instance.connectCombatMethods(this.checkForCollision)
+    }
+    this.checkForCollision = (coordinates) => {
+        console.log('checking for collision, coordinates: ', coordinates);
+        let found;
+        Object.values(this.combatants).forEach(e=>{
+            if(JSON.stringify(e.coordinates) === JSON.stringify(coordinates)){
+                found = e;
+                console.log('found! ', e);
+            }
+        })
+        return found;
     }
 
     this.establishMessageCallback = (cb) => {
@@ -431,6 +443,7 @@ export function CombatManager(){
             processActionQueue,
             processMove,
             targetInRange,
+            getSelectedFighter
         } = callbacks;
         return {
             name: fighter.name,
@@ -527,7 +540,8 @@ export function CombatManager(){
             },
             manualAttack: function(){
                 if(this.manualMovesCurrent < 2 || !this.pendingAttack || this.pendingAttack.cooldown_position < 100){
-                    return
+                    // console.log('about to return', this.manualMovesCurrent < 2, this.pendingAttack);
+                    // return
                 }
                 this.manualMovesCurrent-= 3
                 initiateAttack(this, true);
@@ -593,10 +607,20 @@ export function CombatManager(){
                         broadcastDataUpdate(this)
                         return
                     }
-                    count += increment;
-
+                    
                     this.manualMovesCurrent += this.manualMovesTotal/2000
                     if(this.manualMovesCurrent > this.manualMovesTotal) this.manualMovesCurrent = this.manualMovesTotal
+                    
+                    if(getSelectedFighter() && this.type === getSelectedFighter().type){
+                        // console.log('woop wooop!');
+                        if(!this.pendingAttack){
+                            acquireTarget(this);
+                        }
+                        broadcastDataUpdate(this)
+                        return
+                    }
+                    count += increment;
+
 
                     // if(this.type === 'djinn'){
                     //     console.log('djinn couint ', count, 'turnscips ', this.turnSkips, 'tempo: ', this.tempo);
@@ -612,13 +636,7 @@ export function CombatManager(){
                         
                     this.tempo = Math.floor((count/100)*100);
                     if(this.tempo < 1) return;
-                    if(this.type === 'wizard'){
-                        // console.log('wizard this.isOnManualMoveCooldown', this.isOnManualMoveCooldown);
-                        if(this.locked) debugger
-                    }
 
-
-                    
                     if(isCombatOver() || this.dead){
                         clearInterval(this.interval)
                         return
@@ -640,6 +658,10 @@ export function CombatManager(){
                     // }
                     if(this.tempo > 5 && this.tempo < 10 && this.targetId !== null && !hasMoved && !this.destinationSickness && !this.locked){
                         // if(this.type === 'monk') console.log('monk moving 1st');
+                        // if(this.type === 'wizard'){
+                        //     console.log('woop!');
+                        //     return
+                        // }
                         this.move();
                         hasMoved = true;
                     }
@@ -817,6 +839,9 @@ export function CombatManager(){
         }
         caller.action_queue.shift();
     }
+    this.getSelectedFighter = () => {
+        return this.selectedFighter
+    }
     this.initializeCombat = (data) => {
         // console.log('initialize combat');
         const callbacks = {
@@ -836,7 +861,8 @@ export function CombatManager(){
             goToDestination: this.goToDestination,
             processActionQueue: this.processActionQueue,
             processMove: this.processMove,
-            targetInRange: this.targetInRange
+            targetInRange: this.targetInRange,
+            getSelectedFighter: this.getSelectedFighter
             // combatPaused: this.combatPaused
         }
         this.data = data;
@@ -1380,9 +1406,6 @@ export function CombatManager(){
         if(!target) return 0;
         let d = target.depth - caller.depth
         return d
-        // 0 = same tile
-        // 1 = 1 tile in front
-        // -1 = 1 tile behind
     }
     this.getDistanceToTargetWidthString = (caller) => {
         if(!caller || !this.combatants[caller.targetId]) return '0px'
@@ -1967,12 +1990,7 @@ export function CombatManager(){
     this.unlockFighter = (fighterId) => {
         this.combatants[fighterId].locked = false;
     }
-    // this.combatantRocked = (combatantId) => {
-    //     this.combatants[combatantId].rocked = true;
-    // }
-    // this.combatantRockedOff = (combatantId) => {
-    //     this.combatants[combatantId].rocked = false;
-    // }
+    
     
     const utilMethods = {
         fighterFacingDown: this.fighterFacingDown, 

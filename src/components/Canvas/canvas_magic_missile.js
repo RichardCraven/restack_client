@@ -5,7 +5,7 @@ import React, { useRef, useEffect } from 'react'
 //     connect = false
 // }, 1000)
 
-const CanvasMagicMissile = ({ height, width, connectParticlesActive, targetDistance, targetLaneDiff}) => {
+const CanvasMagicMissile = ({origin, height, width, connectParticlesActive, targetDistance, targetLaneDiff}) => {
 
     // const { connectParticlesActive } = props
     // console.log('connectParticlesActive === ', connectParticlesActive)
@@ -37,6 +37,8 @@ const CanvasMagicMissile = ({ height, width, connectParticlesActive, targetDista
 
     useEffect(() => {
         console.log('connectParticlesActive ', connectParticlesActive)
+        console.log('*****************origin: ', origin, `translateX(${origin.x * 100}px) translateY(${origin.y * 100}px)`);
+        console.log(`transform: translateX(${origin.x * 100 + 50}px) translateY(${origin.y * 100}px scale(1)`);
         const canvas = canvasRef.current
         const context = canvas.getContext('2d')
 
@@ -171,16 +173,30 @@ const CanvasMagicMissile = ({ height, width, connectParticlesActive, targetDista
         }
     }, [connectParticlesActive])
   
-    return <canvas style={{animation: 'moveRight 1.5s linear forwards' }} className='spell-animation' height={height} width={width} ref={canvasRef}>
+    return <canvas 
+    style={{
+      animation: 'moveRight 1.5s linear forwards',
+    }} 
+    // transform: `translateX(${origin.x * 100}px) translateY(${origin.y * 100}px)`
+    className='spell-animation' 
+    height={height} 
+    width={width} 
+    ref={canvasRef}>
         <style>{`
             @keyframes moveRight {
-                 0% { transform: translateX(0%) scale(0.1) }
-                 25% { transform: translateX(50%) scale(1) }
-                 50% { transform: translateX(100%) scale(2.75) }
-                 
-                 100% { transform: translateX(${targetDistance * 100}%) translateY(${targetLaneDiff * 100}%)   scale(1.5)}
-            }
-        `}</style>
+              0% { transform: translateX(${origin.x * 100}px) translateY(${origin.y * 100}px) scale(0.1) }
+              25% { transform: translateX(${origin.x * 100 + 50}px) translateY(${origin.y * 100}px) scale(1) }
+              50% { transform: translateX(${origin.x * 100 + 100}px) translateY(${origin.y * 100}px) scale(2.75)}
+              100% { transform: translateX(${(origin.x + targetDistance) * 100}px) translateY(${(origin.y + targetLaneDiff) * 100}px) scale(1.5)}
+              }
+              `}</style>
+        {/* 100% { transform: translateX(${targetDistance * 100}px) translateY(${targetLaneDiff * 100}px)   scale(1.5)} */}
+
+              {/* 0% { transform: translateX(0%) scale(0.1) }
+              25% { transform: translateX(50%) scale(1) }
+              50% { transform: translateX(100%) scale(2.75) }
+              100% { transform: translateX(${targetDistance * 100}%) translateY(${targetLaneDiff * 100}%)   scale(1.5)} */}
+
     </canvas>
     // 0% { transform: translateX(0%) scale(0.1) }
     // 10% { transform: translateX(100%) scale(0.5) }

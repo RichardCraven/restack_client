@@ -1,5 +1,41 @@
 export function AnimationManager(){
     this.tiles = [];
+    this.canvasAnimations = [];
+    this.MAX_DEPTH = 0;
+
+    this.connectCombatMethods = (callback) => {
+        this.checkForCollision = callback;
+    }
+
+
+    this.magicMissile = (sourceCoords, targetCoords) => {
+        console.log('sourceCoords', sourceCoords, 'targetCoords', targetCoords);
+        const ref = {
+            origin: sourceCoords,
+            distanceToTarget: this.getDistanceToTarget(sourceCoords, targetCoords), 
+            verticalDistanceToTarget: this.getVerticalDistanceToTarget(sourceCoords, targetCoords),
+            connectParticles: false
+        };
+        this.canvasAnimations.push(ref)
+        this.update();
+        setTimeout(()=>{
+            let e = this.canvasAnimations.find(c=>c===ref);
+            this.canvasAnimations = this.canvasAnimations.filter(v=>v!==e);
+            // if(this.state.selectedFighter) this.props.combatManager.unlockFighter(this.state.selectedFighter.id)
+            this.update();
+        }, 2500)
+        // ^ travel time + 1 second of damage animation
+    }
+    this.getDistanceToTarget = (sourceCoords, targetCoords) => {
+        // if(!target) return 0;
+        let d = targetCoords.x - sourceCoords.x
+        return d
+    }
+    this.getVerticalDistanceToTarget = (sourceCoords, targetCoords) => {
+        // if(!target) return 0;
+        let d = targetCoords.y - sourceCoords.y
+        return d
+    }
     // this.establishAnimationCallbck = (callBack) => {
     //     console.log('establishCallback', callBack);
     //     // const {tileAnimated} = callBacks;
@@ -13,9 +49,15 @@ export function AnimationManager(){
         let tile = this.tiles.find(e=>e.x === coords.x && e.y === coords.y)
         return tile ? tile.id : null
     }
+    this.getTileCoordsById = (id) => {
+        let tile = this.tiles.find(e=>e.id === id)
+        return tile ? {x: tile.x, y: tile.y} : null
+    }
 
 
     this.initialize = (MAX_DEPTH, MAX_ROWS) => {
+        this.MAX_DEPTH = MAX_DEPTH;
+        console.log('max depth: ', MAX_DEPTH);
         let arr = [];
         for(let i = 0; i < MAX_ROWS*MAX_DEPTH; i++){
             let x = i%MAX_DEPTH,
@@ -31,7 +73,11 @@ export function AnimationManager(){
             })
         }
         this.tiles = arr;
-        this.updateAnimationData({tiles: this.tiles})
+        this.update();
+        console.log('animation manager initialize');
+    }
+    this.update = () => {
+        this.updateAnimationData({tiles: this.tiles, canvasAnimations: this.canvasAnimations})
     }
     this.handleTileClick = (tileId) => {
         let colors = ['purple', 'red', 'green', 'white'],
@@ -62,14 +108,14 @@ export function AnimationManager(){
         storedTile.animationOn = true;
         storedTile.animationType = animationType;
         storedTile.transitionType = color ? `${color}-fade` : 'red-fade';
-        this.updateAnimationData({tiles: this.tiles})
+        this.update();
     }
     this.tileOff = (tileId) => {
         const storedTile = this.tiles.find(e=>e.id === tileId)
         storedTile.animationOn = false;
         storedTile.transitionType = ''
         storedTile.animationType = ''
-        this.updateAnimationData({tiles: this.tiles})
+        this.update();
     }
 
     // ANIMATION METHODS
@@ -157,6 +203,78 @@ export function AnimationManager(){
                     }, 10 + (distanceAway * 5))
                 }
             }
+        })
+    }
+    this.straightBeamNoTarget = (sourceTileId, color = null, resolve) => {
+        const sourceTile = this.tiles.find(e=>e.id === sourceTileId)
+        console.log('siourceTile: ', sourceTile);
+        
+        let maxX = this.MAX_DEPTH-1;
+        let newCoords = {x: maxX, y: sourceTile.y}
+        console.log('maxX: ', maxX, 'sourceTile.x', sourceTile.x);
+        console.log('new coords: ', newCoords);
+        let destinationTileId = this.getTileIdByCoords(newCoords)
+        let destinationTile = this.tiles[destinationTileId]
+        console.log('destination ', destinationTile);
+        // const destinationTile = this.tiles.find(e=>e.id === targetTileId)
+        let isOnSamePlane = sourceTile.y === destinationTile.y;
+        let direction = sourceTile.x > destinationTile.x ? 'rightToLeft' : 'leftToRight'
+        console.log('about to rerturn promise', sourceTile, destinationTile, 'DIRECTION:::', direction);
+        return new Promise((resolve, reject) => {
+            console.log('is On Same Plane ', isOnSamePlane);
+            // if(isOnSamePlane){
+                let distanceAway = Math.abs(sourceTile.x - destinationTile.x)
+                console.log('init, distanceAway', distanceAway);
+                if(sourceTile.x > destinationTile.x && direction === 'rightToLeft'){
+                    let sourceX = sourceTile.x
+                    let idArray = [];
+                    for(let i = sourceX -1; i > destinationTile.x; i--){
+                        let id = this.getTileIdByCoords({x: i, y: destinationTile.y})
+                        idArray.push(id)
+                    }
+                    
+                    const lineInterval = setInterval(()=>{
+                        if(idArray.length === 0){
+                            clearInterval(lineInterval);
+                            resolve();
+                        } else {
+                            let id = idArray.shift();
+                            // this.checkForCollision(id)
+                            this.triggerTileAnimation(id, color);
+                        }
+                    }, 100 + (distanceAway * 5))
+                    // idArray.
+                    // this.triggerTileAnimation(id, color)
+                }
+                console.log('sourceTile.x', sourceTile.x, 'destinationTile.x', destinationTile.x);
+                if(sourceTile.x < destinationTile.x && direction === 'leftToRight'){
+                    console.log('left to right');
+                    let sourceX = sourceTile.x
+                    let idArray = [];
+                    for(let i = sourceX + 1; i < destinationTile.x +1; i++){
+                        let id = this.getTileIdByCoords({x: i, y: destinationTile.y})
+                        idArray.push(id)
+                    }
+                    console.log('idArray', idArray);
+                    
+                    const lineInterval = setInterval(()=>{
+                        if(idArray.length === 0){
+                            clearInterval(lineInterval);
+                            resolve();
+                        } else {
+                            let id = idArray.shift();
+                            let tileCoords = this.getTileCoordsById(id)
+                            console.log('tileCoords: ', tileCoords);
+                            let collision = this.checkForCollision(tileCoords)
+                            this.triggerTileAnimation(id, color);
+                            if(collision){
+                                clearInterval(lineInterval);
+                                resolve();
+                            }
+                        }
+                    }, 10 + (distanceAway * 5))
+                }
+            // }
         })
     }
     this.straightNarrowBeamTo = (targetTileId, sourceTileId, color = null) => {

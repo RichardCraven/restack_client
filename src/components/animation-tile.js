@@ -62,15 +62,19 @@ export default function AnimationTile(props) {
                     return null
                 }
             }}
-            // className={`animation-tile ${props.animationOn ? 'animated' : ''}`}
             className={`animation-tile 
             ${props.animationOn ? 'animated' : ''}
             ${props.animationType ? props.animationType+'-'+props.transitionType : ''}
             `}
-        >
-           {/* <div style={{color: 'yellow', userSelect: 'none'}}>
-                    {props.x},{props.y} <span style={{color: 'red'}}>{props.index}</span>
-            </div> */}
+        >   
+            {/* <div className="test"></div> */}
+            {/* <CanvasMagicMissile 
+                width={100}
+                height={100}
+                connectParticlesActive={this.state.magicMissile_connectParticles}
+                targetDistance={this.state.magicMissile_targetDistance}
+                targetLaneDiff={this.state.magicMissile_targetLaneDiff}
+            /> */}
         </div>
     )
 }

@@ -340,6 +340,18 @@
         pointer-events: none;
         // ^ may need to be dynamic 
 
+        .canvas-grid-container{
+            position: absolute;
+            height: 100%;
+            width: 100%;
+            .canvas-grid{
+                position: relative;
+                border:  2px dashed red;
+                height: 100%;
+                width: 100%;
+            }
+        }
+
 
         .animation-tile{
             height: 100px;

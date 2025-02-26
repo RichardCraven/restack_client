@@ -38,6 +38,7 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
         if(this.friendlies(combatants).some(e=>e.targetId === target.targetId) && sorted.length > 1){
             target = sorted[1]
         }
+        console.log('wizard acquiring target & pending attack');
         caller.pendingAttack = this.chooseAttackType(caller, target);
         caller.targetId = target.id;
         target.targettedBy.push(caller.id)
@@ -119,7 +120,9 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
         // if(tileId !== null){
         //     this.animationManager.rippleAnimation(tileId, 'red')
         // }
-        caller.lock();
+
+
+        // caller.lock();
         const damageSequence = () => {
             let r = Math.random()
             let criticalHit = r*100 > 80;
@@ -159,6 +162,15 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
             }
         })
     }
+    this.triggerBeamAttackManual = (callerCoords, color = 'purple') => {
+        const sourceTileId = this.animationManager.getTileIdByCoords(callerCoords)
+        return new Promise((resolve) => {
+            // if(targetTileId !== null && sourceTileId !== null){
+                console.log('booko');
+                this.animationManager.straightBeamNoTarget(sourceTileId, color, resolve)
+            // }
+        })
+    }
     this.triggerIceBlast = (caller, target) => {
 
         const callerCoords = caller.coordinates, targetCoords = target.coordinates;
@@ -193,9 +205,15 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                 console.log('ruh roh');
                 // debugger
                 return
+            } else if (caller.pendingAttack && caller.pendingAttack.cooldown_position === 100){
+                console.log('lez do it');
+                // if()
+                await this.triggerBeamAttackManual(caller.coordinates)
+                return
             }
         }
-        if(!target) return
+        console.log('wizard initiate attack');
+        // if(!target) return
             const distanceToTarget = data.methods.getDistanceToTarget(caller, target),
             laneDiff = data.methods.getLaneDifferenceToTarget(caller, target);
             console.log('pending attack name ', caller.pendingAttack.name);
