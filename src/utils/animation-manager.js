@@ -205,30 +205,33 @@ export function AnimationManager(){
             }
         })
     }
-    this.straightBeamNoTarget = (sourceTileId, color = null, resolve) => {
+    this.straightBeamNoTarget = (sourceTileId, direction, color = null, resolve) => {
         const sourceTile = this.tiles.find(e=>e.id === sourceTileId)
         console.log('siourceTile: ', sourceTile);
-        
-        let maxX = this.MAX_DEPTH-1;
-        let newCoords = {x: maxX, y: sourceTile.y}
-        console.log('maxX: ', maxX, 'sourceTile.x', sourceTile.x);
+        const maxX = this.MAX_DEPTH-1;
+        let newCoords
+        if(direction === 'left-to-right'){
+            newCoords = {x: maxX, y: sourceTile.y}
+        } else if(direction === "right-to-left"){
+            newCoords = {x: 0, y: sourceTile.y}
+        }
         console.log('new coords: ', newCoords);
         let destinationTileId = this.getTileIdByCoords(newCoords)
         let destinationTile = this.tiles[destinationTileId]
         console.log('destination ', destinationTile);
         // const destinationTile = this.tiles.find(e=>e.id === targetTileId)
         let isOnSamePlane = sourceTile.y === destinationTile.y;
-        let direction = sourceTile.x > destinationTile.x ? 'rightToLeft' : 'leftToRight'
+        // let direction = sourceTile.x > destinationTile.x ? 'rightToLeft' : 'leftToRight'
         console.log('about to rerturn promise', sourceTile, destinationTile, 'DIRECTION:::', direction);
-        return new Promise((resolve, reject) => {
+        return new Promise(() => {
             console.log('is On Same Plane ', isOnSamePlane);
             // if(isOnSamePlane){
                 let distanceAway = Math.abs(sourceTile.x - destinationTile.x)
                 console.log('init, distanceAway', distanceAway);
-                if(sourceTile.x > destinationTile.x && direction === 'rightToLeft'){
+                if(sourceTile.x > destinationTile.x && direction === 'right-to-left'){
                     let sourceX = sourceTile.x
                     let idArray = [];
-                    for(let i = sourceX -1; i > destinationTile.x; i--){
+                    for(let i = sourceX -1; i >= destinationTile.x; i--){
                         let id = this.getTileIdByCoords({x: i, y: destinationTile.y})
                         idArray.push(id)
                     }
@@ -236,40 +239,45 @@ export function AnimationManager(){
                     const lineInterval = setInterval(()=>{
                         if(idArray.length === 0){
                             clearInterval(lineInterval);
-                            resolve();
-                        } else {
-                            let id = idArray.shift();
-                            // this.checkForCollision(id)
-                            this.triggerTileAnimation(id, color);
-                        }
-                    }, 100 + (distanceAway * 5))
-                    // idArray.
-                    // this.triggerTileAnimation(id, color)
-                }
-                console.log('sourceTile.x', sourceTile.x, 'destinationTile.x', destinationTile.x);
-                if(sourceTile.x < destinationTile.x && direction === 'leftToRight'){
-                    console.log('left to right');
-                    let sourceX = sourceTile.x
-                    let idArray = [];
-                    for(let i = sourceX + 1; i < destinationTile.x +1; i++){
-                        let id = this.getTileIdByCoords({x: i, y: destinationTile.y})
-                        idArray.push(id)
-                    }
-                    console.log('idArray', idArray);
-                    
-                    const lineInterval = setInterval(()=>{
-                        if(idArray.length === 0){
-                            clearInterval(lineInterval);
-                            resolve();
+                            resolve(false);
                         } else {
                             let id = idArray.shift();
                             let tileCoords = this.getTileCoordsById(id)
-                            console.log('tileCoords: ', tileCoords);
+                            // console.log('tileCoords: ', tileCoords);
                             let collision = this.checkForCollision(tileCoords)
+                            // console.log('collision: ', collision);
                             this.triggerTileAnimation(id, color);
                             if(collision){
                                 clearInterval(lineInterval);
-                                resolve();
+                                resolve(true);
+                            }
+                        }
+                    }, 10 + (distanceAway * 5))
+                    // idArray.
+                    // this.triggerTileAnimation(id, color)
+                }
+                // console.log('sourceTile.x', sourceTile.x, 'destinationTile.x', destinationTile.x);
+                if(sourceTile.x < destinationTile.x && direction === 'left-to-right'){
+                    // console.log('left to right');
+                    let sourceX = sourceTile.x
+                    let idArray = [];
+                    for(let i = sourceX + 1; i < destinationTile.x+1; i++){
+                        let id = this.getTileIdByCoords({x: i, y: destinationTile.y})
+                        idArray.push(id)
+                    }
+                    const lineInterval = setInterval(()=>{
+                        if(idArray.length === 0){
+                            clearInterval(lineInterval);
+                            resolve(false);
+                        } else {
+                            let id = idArray.shift();
+                            let tileCoords = this.getTileCoordsById(id)
+                            let collision = this.checkForCollision(tileCoords)
+                            console.log('collision: ', collision);
+                            this.triggerTileAnimation(id, color);
+                            if(collision){
+                                clearInterval(lineInterval);
+                                resolve(true);
                             }
                         }
                     }, 10 + (distanceAway * 5))

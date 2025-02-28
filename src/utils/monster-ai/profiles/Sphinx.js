@@ -68,8 +68,16 @@ export function Sphinx(data, utilMethods, animationManager, overlayManager){
             }
         })
     }
+    this.triggerLightningAttack = (callerCoords) => {
+        const sourceTileId = this.animationManager.getTileIdByCoords(callerCoords);
+        return new Promise((resolve) => {
+            if(sourceTileId !== null){
+                this.animationManager.straightBeamNoTarget(sourceTileId, 'right-to-left', 'red', resolve)
+            }
+        })
+    }
     this.initiateAttack = async (caller, combatants) => {
-        caller.attacking = true;
+        // caller.attacking = true;
         const target = combatants[caller.targetId];
         const distanceToTarget = data.methods.getDistanceToTarget(caller, target),
         laneDiff = data.methods.getLaneDifferenceToTarget(caller, target);
@@ -87,6 +95,7 @@ export function Sphinx(data, utilMethods, animationManager, overlayManager){
 
         switch(caller.pendingAttack.name){
             case 'induce madness':
+                console.log('INDUCE MADNESS!!!!!!');
                 if(laneDiff === 0){
                     await this.triggerInduceMadness(caller.coordinates, target.coordinates)
                     this.hitsTarget(caller)
@@ -95,6 +104,8 @@ export function Sphinx(data, utilMethods, animationManager, overlayManager){
                 }
             break;
             case 'claws':
+                console.log('CLAWS');
+                debugger
                 if(distanceToTarget === 1 && laneDiff === 0){
                     this.hitsTarget(caller)
                 } else {
@@ -104,10 +115,13 @@ export function Sphinx(data, utilMethods, animationManager, overlayManager){
 
             break;
             case 'lightning':
-                // console.log('LIGHTNING');
+                console.log('LIGHTNING');
+                // debugger
 
-                if(laneDiff === 0){
-                    // console.log('lightning hits');
+                let hits = await this.triggerLightningAttack(caller.coordinates, target.coordinates)
+                console.log('sphinx hits: ', !!hits);
+                if(hits){
+                    console.log('lightning hits');
                     this.hitsTarget(caller)
                 } else {
                     this.missesTarget(caller);

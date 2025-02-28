@@ -47,8 +47,6 @@ class UserProfilePage extends React.Component{
     console.log('clearing dungeon', this.state.dungeon)
     let meta = getMeta();
     if(this.state.dungeon){
-      console.log('state dungeon eists, first block, dungeon ID: ', meta.dungeonId);
-      // debugger
       await deleteDungeonRequest(meta.dungeonId)
 
       this.props.boardManager.dungeon.id = null;

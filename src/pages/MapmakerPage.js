@@ -84,11 +84,6 @@ class MapMakerPage extends React.Component {
     meta = getMeta();
     if(meta?.preferences?.editor?.selectedView){
       viewStateFromPrefs = meta.preferences.editor.selectedView
-      // debugger
-      // let dungeon = meta.preferences.editor.loadedDungeon;
-      // this.setLoadedDungeonDropdownValue(dungeon.name)
-
-      // this.setViewState(meta.preferences.editor.selectedView)
     }
 
     this.state = {
@@ -161,8 +156,6 @@ class MapMakerPage extends React.Component {
   componentDidMount(){
     const that = this;
     let images = {};
-    // console.log('mounted: ', this.props);
-    // console.log('ok, this is: ', this);
     function checkIfAllImagesHaveLoaded(){
       if(
         images.arrowUpImg &&
@@ -172,7 +165,6 @@ class MapMakerPage extends React.Component {
         images.doorImg &&
         images.spawnPointImg
       ){
-        // debugger
         that.setState({imagesMatrix : images})
       }
     }
@@ -240,18 +232,6 @@ class MapMakerPage extends React.Component {
       }
     })
     this.nameFilterClicked();
-
-    // if(meta?.preferences?.editor?.selectedView){
-    //   console.log('viewState!!!', meta.preferences.editor.selectedView);
-    //   // debugger
-    //   // let dungeon = meta.preferences.editor.loadedDungeon;
-    //   // this.setLoadedDungeonDropdownValue(dungeon.name)
-
-    //   this.setViewState(meta.preferences.editor.selectedView)
-    // }
-
-
-    // this.setViewState('dungeon');
   }
   getTileSize(){
     const h = Math.floor((window.innerHeight/17));

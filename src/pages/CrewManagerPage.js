@@ -124,12 +124,6 @@ submit = async () => {
     const meta = getMeta();
     meta.crew = this.state.selectedCrew.filter(e=> e !== null)
     await updateUserRequest(getUserId(), meta)
-    console.log('updated meta: ', meta);
-    // if(meta.dungeonId){
-    //     console.log('wtf');
-    //     debugger
-    // }
-    // return
     storeMeta(meta)
     this.goBack()
 }

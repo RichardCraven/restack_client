@@ -394,7 +394,6 @@ export function BoardManager(){
         } else {
             this.dungeon.levels.find(e=>e.id === this.currentLevel.id).back.miniboards.find(b=>b.id === this.currentBoard.id).tiles[tile.id].contains = null;
         }
-        // debugger
         this.updateDungeon(this.dungeon);
         this.refreshTiles();
     }

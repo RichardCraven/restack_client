@@ -257,6 +257,7 @@ export function CombatManager(){
             cooldown: 10,
             damage: 10,
             effect: ['damage_single_target'],
+            level: 1
         },
         berserker_rage: {
             name: 'berserker rage',
@@ -280,7 +281,8 @@ export function CombatManager(){
                         {stat: 'int', amount: 3}
                     ]
                 }
-            }
+            },
+            level: 1
         },
         healing_hymn: {
             name: 'healing hymn',
@@ -292,7 +294,8 @@ export function CombatManager(){
                     amount: 12 
                 }
             },
-            cooldown: 12
+            cooldown: 12,
+            level: 1
         },
         reveal_weakness: {
             name: 'reveal weakness',
@@ -300,7 +303,8 @@ export function CombatManager(){
             icon: images['hamsa_charm'],
             cooldown: 12,
             effect: ['special'],
-            special_instructions: 'reveal all monsters weaknesses'
+            special_instructions: 'reveal all monsters weaknesses',
+            level: 1
         },
         flying_lotus: {
             name: 'flying lotus',
@@ -309,7 +313,8 @@ export function CombatManager(){
             cooldown: 11,
             damage: 15,
             effect: ['damage_single_target', 'special'],
-            special_instructions: 'target has 50% chance to be stunned for 1 sec * $str'
+            special_instructions: 'target has 50% chance to be stunned for 1 sec * $str',
+            level: 1
         },
         shield_wall: {
             name: 'shield wall',
@@ -317,7 +322,8 @@ export function CombatManager(){
             icon: images['beetle_charm'],
             cooldown: 11,
             effect: ['special'],
-            special_instructions: 'shield all members for three hits'
+            special_instructions: 'shield all members for three hits',
+            level: 1
         },
         ice_blast: {
             name: 'ice blast',
@@ -325,8 +331,9 @@ export function CombatManager(){
             icon: images['ice_blast'],
             cooldown: 11,
             damage: 8,
-            effect: ['damage_multi_target', 'special'],
-            special_instructions: 'each enemy has a 40% chance to be frozen'
+            effect: ['damage_single_target', 'special'],
+            special_instructions: 'each enemy has a 40% chance to be frozen',
+            level: 1
         },
         fire_blast: {
             name: 'fire blast',
@@ -335,7 +342,8 @@ export function CombatManager(){
             cooldown: 11,
             damage: 8,
             effect: ['damage_multi_target', 'special'],
-            special_instructions: 'each enemy has a 40% chance to be frozen'
+            special_instructions: 'each enemy has a 40% chance to be lit aflame',
+            level: 1
         },
     }
     
@@ -498,6 +506,7 @@ export function CombatManager(){
             damageIndicators: [],
             manualMovesTotal: fighter.manualMovesTotal,
             manualMovesCurrent: fighter.manualMovesCurrent,
+            frozenPoints: 0,
             attack: function(){
                 console.log('attack');
                 const target = getCombatant(this.targetId);
@@ -509,9 +518,6 @@ export function CombatManager(){
                     this.skip();
                     return
                 }
-                // let inRange = targetInRange(this);
-                // if(this.isMonster || this.isMinion) inRange = true;
-
                 if(this.name === 'Loryastes' && DEBUG_STEPS === true){
                     initiateAttack(this);
                     broadcastDataUpdate(this);
@@ -522,9 +528,7 @@ export function CombatManager(){
                 }
 
                 if(RANGES[this.pendingAttack.range] === 1 && (this.depth === target.depth && Math.abs(this.position - target.position) === 1)){
-                    //melee attacker is above or below, proceed with attack
                     if(this.type === 'monk') console.log('monk initiating attack from ABOVE [turn cycle]');
-                    // debugger
                     initiateAttack(this);
                     broadcastDataUpdate(this)
                 } else if(this.position === target.position){
@@ -551,16 +555,11 @@ export function CombatManager(){
                     date.setSeconds(date.getSeconds() + seconds);
                     return date;
                 }
-                // 12:00:00 AM on April 17, 2022
                 const now = new Date();
-                // 12:00:20 AM on April 17, 2022
                 const newDate = addSeconds(now, 1).getTime();
                 this.timeAhead = newDate;
                 
                 this.isOnManualMoveCooldown = true;
-                // setTimeout(()=>{
-                //     this.isOnManualMoveCooldown = false;
-                // },2000)
                 let interval = setTimeout(()=>{
                     let now = new Date() 
                     let time = now.getTime();
@@ -577,17 +576,13 @@ export function CombatManager(){
                 this.turnCycle();
             },
             move: function(){
-                // if(this.type === 'monk') console.log('monk move from turn cycle');
                 processMove(this);
             },
-            setToFrozen: function(){
-                console.log(this.type, 'set to FROZEN!');
+            setToFrozen: function(val){
+                console.log(this.type, 'set to FROZEN! val: ', val);
                 this.frozen = true;
-                this.locked = true;  
-
-                // setTimeout(()=>{
-                //     this.frozen = this.locked = false
-                // }, 10000)
+                this.locked = true;
+                this.frozenPoints += val
             },
             turnCycle: function(){
                 let count = 0,
@@ -595,13 +590,9 @@ export function CombatManager(){
                 let factor = (1/this.stats.dex * 25)
                 let increment = (1 / factor)
                 if(this.hasOverlap) handleOverlap(this)
-                // if(this.type === 'sphinx') return
                 this.interval = setInterval(()=>{
             
                     if(this.combatPaused || this.dead || this.locked) return
-                    // if(this.type === 'wizard'){
-                    //     console.log('wizard go', this.position);
-                    // }
                     if(this.isOnManualMoveCooldown){
                         if(this.tempo > 100) this.tempo = 100;
                         broadcastDataUpdate(this)
@@ -620,20 +611,10 @@ export function CombatManager(){
                         return
                     }
                     count += increment;
-
-
-                    // if(this.type === 'djinn'){
-                    //     console.log('djinn couint ', count, 'turnscips ', this.turnSkips, 'tempo: ', this.tempo);
-                    // }
                     if(this.tempo > 10 && this.name === 'Sardonis' && !this.pendingAttack){
                         console.log('pending attack ', this.pendingAttack);
                         debugger
                     }
-                    // if(this.type === 'wizard'){
-                    //     console.log('wizard go', this.position);
-                    //     if(this.locked) debugger
-                    // }
-                        
                     this.tempo = Math.floor((count/100)*100);
                     if(this.tempo < 1) return;
 
@@ -652,21 +633,11 @@ export function CombatManager(){
                     if(this.tempo > 5 && this.tempo < 10 && this.isMonster){
                         // console.log('monster is at move stage. hasMoved =', hasMoved);
                     }
-                    // if(this.type === 'wizard'){
-                    //     console.log('wizard go', this.position);
-                    //     if(this.locked) debugger
-                    // }
                     if(this.tempo > 5 && this.tempo < 10 && this.targetId !== null && !hasMoved && !this.destinationSickness && !this.locked){
-                        // if(this.type === 'monk') console.log('monk moving 1st');
-                        // if(this.type === 'wizard'){
-                        //     console.log('woop!');
-                        //     return
-                        // }
                         this.move();
                         hasMoved = true;
                     }
                     if(this.tempo > 65 && this.tempo < 75 && this.targetId !== null && !hasMovedSecondTime && !this.destinationSickness && !this.locked){
-                        // this.aiming = false;
                         this.move();
                         hasMovedSecondTime = true;
                     }
@@ -696,29 +667,8 @@ export function CombatManager(){
                             processActionQueue(this);
                             return
                         }
-                        // clearInterval(this.interval)
-                        // let target = getCombatant(this.targetId)
-                        // if(this.destinationCoordinates){
-                        //     goToDestination(this);
-                        // } else if(this.destinationSickness){
-                        //     this.tempo = 1;
-                        //     clearInterval(this.interval)
-                            
-                        //     this.turnCycle();
-
-                            
-                        //     this.destinationSickness = false;
-                            
-                        //     //destination dickness still not working
-                        // } else 
                         if(this.pendingAttack && this.pendingAttack.cooldown_position === 100 && !this.locked){
-                            if(this.type === 'monk') console.log('monk ????');
-                            // debugger
-                            if(this.name === "Loryastes"  && DEBUG_STEPS === true){
-                                // console.log('Loryastes [IN TURN CYCLE] about to call attack');
-                            }
                             const target = getCombatant(this.targetId);
-                        // if(this.isMonster) console.log('monster at 100, about to attack', target, 'targetId: ', this.targetId)
                             if(this.name === 'Loryastes' && this.DEBUG_STEPS){
                                 // console.log('Loryastes endcycle, target: ', target);
                             }
@@ -731,20 +681,12 @@ export function CombatManager(){
                                 return
                             }
                             let inRange = targetInRange(this);
-                            // if(this.isMonster) console.log('monster at 100, inrange: ', inRange)
                             if(this.type === 'djinn'){
                                 console.log('djinn turnSkips: ', this.turnSkips, 'inRange: ', inRange);
                             }
                             if(inRange){
-                                if(this.type === 'monk') console.log('monk ????');
-                                // debugger
-                                // if(this.isMonster) console.log('in range');
-                                // if(this.isMonster) console.log('monster at 100, attack')
                                 this.attack(target)
                             } else {
-                                // if(this.isMonster) console.log('not in range');
-                                // if(this.isMonster) console.log('monster at 100, else, turnskips at ', this.turnSkips)
-                                
                                 if((this.isMonster || this.isMinion) && this.turnSkips >= 1){
                                     if(this.type === 'djinn'){
                                         console.log('in skip block, resetting for ', this);
@@ -867,31 +809,20 @@ export function CombatManager(){
         }
         this.data = data;
         this.combatants = {};
-        
-        // console.log('initializing with crew: ', this.data.crew);
         this.data.crew.forEach((e, index) => {
-            // e.hp = 1000
-            // e.stats.hp = 1000
             e.position = index;
             e.depth = 0;
             e.coordinates = {x:0, y:index}
-            // if(e.combatStyle) 
-            // console.log('eeeee: ', e);
             e.manualMovesCurrent = 10;
             e.manualMovesTotal = 12
             this.combatants[e.id] = createFighter(e, callbacks);
         })
-        // console.log('new fighter: ', this.combatants);
-        // debugger
         this.data.monster.position = 2;
         this.data.monster.depth = MAX_DEPTH;
         this.data.monster.coordinates = {x:MAX_DEPTH, y:2}
         let monster = createFighter(this.data.monster, callbacks);
         monster.isMonster = true;
         this.combatants[monster.id] = monster;
-
-        // console.log('initializing with monster ', monster);
-
 
         if(this.data.minions){
             let position = MAX_LANES-1;
@@ -1558,11 +1489,6 @@ export function CombatManager(){
     this.processMove = (caller) => {
         if(caller.type === 'monk') console.log('monk process move precheck');
         if(caller.dead) return;
-
-        // if(this.fighterAI.roster[caller.name]){
-        //     this.fighterAI.roster[caller.name].processMove(caller, this.combatants, this.hitsTarget, this.missesTarget);
-        //     return
-        // }
         if(this.fighterAI.roster[caller.type]){
             if(caller.type === 'monk') console.log('monk process move', 'targetInRange? ');
             this.fighterAI.roster[caller.type].processMove(caller, this.combatants, this.hitsTarget, this.missesTarget);

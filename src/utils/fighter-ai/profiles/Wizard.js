@@ -158,7 +158,8 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
         return new Promise((resolve) => {
             if(targetTileId !== null && sourceTileId !== null){
                 console.log('booko');
-                this.animationManager.beamAnimation(targetTileId, sourceTileId, color, resolve)
+                // this.animationManager.beamAnimation(targetTileId, sourceTileId, color, resolve)
+                this.animationManager.straightBeamNoTarget(sourceTileId, 'left-to-right', color, resolve)
             }
         })
     }
@@ -167,30 +168,46 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
         return new Promise((resolve) => {
             // if(targetTileId !== null && sourceTileId !== null){
                 console.log('booko');
-                this.animationManager.straightBeamNoTarget(sourceTileId, color, resolve)
+                this.animationManager.straightBeamNoTarget(sourceTileId, 'left-to-right', color, resolve)
             // }
         })
     }
     this.triggerIceBlast = (caller, target) => {
-
+        console.log('caller: ', caller);
         const callerCoords = caller.coordinates, targetCoords = target.coordinates;
+        const iceBlast = caller.specials.find(e=>e.name === "ice blast")
+        console.log('ice blast props: ', iceBlast);
+        console.log('ice blast level: ', iceBlast.level);
 
+        // lvl 1 -> 1 TC, 1x damage
+        // lvl 2 -> 1 TC, 1.5x damage
+        // lvl 3 -> 2 TC, 1.75x damage
+        // lvl 4 -> 2 TC, 2x damage
+        // lvl 5 -> 3 TC, 2.5x damage
+
+        const levelMatrix = {
+            1: {TC: 1, multiplier: 1},
+            2: {TC: 1, multiplier: 1.5},
+            3: {TC: 2, multiplier: 1.75},
+            4: {TC: 2, multiplier: 2},
+            5: {TC: 3, multiplier: 2.5},
+        }
         this.triggerBeamAttack(callerCoords, targetCoords, 'lightblue').then(e=>{
             const hitsTarget = true;
             // ^ need to allow for missing 
             if(hitsTarget){
                 let r = Math.random()
                 let criticalHit = r*100 > 80;
-                let damage = criticalHit ? caller.atk*(1.5)*3 : caller.atk*(1.5)
+                let baseDmg = levelMatrix[iceBlast.level].multiplier * caller.atk
+                let damage = criticalHit ? baseDmg*3 : baseDmg
                 if(criticalHit){
-                    // target.woundedHeavily = true;
+                    target.woundedHeavily = true;
                 } else {
-                    // target.wounded = true;
+                    target.wounded = true;
                 }
                 target.hp -= damage;
                 target.damageIndicators.push(damage);
-                
-                target.setToFrozen();
+                target.setToFrozen(levelMatrix[iceBlast.level].TC);
             }
             caller.energy -= 75;
             if(caller.energy < 0) caller.energy = 0; 
@@ -202,29 +219,34 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
         
         if(manualAttack){
             if(caller.pendingAttack && caller.pendingAttack.cooldown_position < 99){
-                console.log('ruh roh');
-                // debugger
                 return
             } else if (caller.pendingAttack && caller.pendingAttack.cooldown_position === 100){
-                console.log('lez do it');
-                // if()
-                await this.triggerBeamAttackManual(caller.coordinates)
-                return
+                let hits = await this.triggerBeamAttackManual(caller.coordinates)
+                if(hits){
+                    this.hitsTarget(caller)
+                    
+                } else {
+                    this.missesTarget(caller);
+                }
+                this.kickoffAttackCooldown(caller)
             }
-        }
-        console.log('wizard initiate attack');
-        // if(!target) return
+        } else {
             const distanceToTarget = data.methods.getDistanceToTarget(caller, target),
             laneDiff = data.methods.getLaneDifferenceToTarget(caller, target);
-            console.log('pending attack name ', caller.pendingAttack.name);
             switch(caller.pendingAttack.name){
                 case 'energy blast':
                     if(laneDiff === 0){
-                        console.log('okay go w beam attack!');
-                        await this.triggerBeamAttack(caller.coordinates, target.coordinates)
-                        console.log('hits');
-                        this.hitsTarget(caller)
-                        this.kickoffAttackCooldown(caller)
+                        let hits  = await this.triggerBeamAttack(caller.coordinates, target.coordinates)
+                        // this.hitsTarget(caller)
+                        if(hits){
+                            console.log('energy blast hits');
+                            this.hitsTarget(caller)
+                            this.kickoffAttackCooldown(caller)
+                        } else {
+                            console.log('energy blast misses');
+                            this.missesTarget(caller);
+                            this.kickoffAttackCooldown(caller)
+                        }
                     } else {
                         this.missesTarget(caller);
                     }
@@ -256,5 +278,7 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                 default:
                     break;
             }
+
+        }
     }
 }

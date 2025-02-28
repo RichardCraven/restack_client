@@ -284,31 +284,10 @@ class MonsterBattle extends React.Component {
         return val
     }
     fighterPortraitClicked = (id) => {
-        //cyan 
         const selectedFighter = this.state.battleData[id];
         console.log('fighter clicked: ', selectedFighter, this.state.animationOverlays[id]);
-        // console.log('this.fighter(selectedFighter)?.depth * 100 = ', this.fighter(selectedFighter)?.depth * 100);
-        // console.log('(this.fighter(selectedFighter)?.depth * 100 - 100)', (this.fighter(selectedFighter)?.depth * 100 - 100));
-        // console.log('this.fighterFacingRight(selectedFighter): ', this.fighterFacingRight(selectedFighter));
-
-        // console.log('this.props.combatManager.getRangeWidthVal(fighter)', this.props.combatManager.getRangeWidthVal(selectedFighter));
-
-        // ${(this.fighter(fighter)?.depth * 100 + 100) - (this.fighterFacingRight(fighter) ? 0 : 100 - (this.props.combatManager.getRangeWidthVal(fighter) * 100))}
-
-
-        // (selectedFighter?.depth * 100 + 100) - (this.fighterFacingRight(selectedFighter) ? 0 : (100 + this.props.combatManager.getRangeWidthVal(selectedFighter) * 100))
         let val = (this.fighter(selectedFighter)?.depth * 100) + (this.fighterFacingRight(selectedFighter) ? 0 : (100 - (this.props.combatManager.getRangeWidthVal(selectedFighter) * 100) ))
-        console.log('val: ', val);
-
-        // debugger
-        // console.log('THING', (this.state.selectedFighter?.depth * 100) - (RANGES[this.state.selectedFighter.pendingAttack.range]*100) - 100);
-        // console.log('THING PARTS: (', this.state.selectedFighter?.depth * 100, ')', ' - (', RANGES[this.state.selectedFighter.pendingAttack.range], '* 100');
         selectedFighter.portrait = this.props.crew.find(e=>e.id === id).portrait
-        
-
-        // console.log('WIDTH: ', this.props.combatManager.getRangeWidthVal(this.state.selectedFighter) * 100);
-        // console.log('WIDTH PARTS: ', this.props.combatManager.getRangeWidthVal(this.state.selectedFighter));
-
 
         console.log('setting selected fighter: ', selectedFighter);
         if(this.state.showCrosshair){
