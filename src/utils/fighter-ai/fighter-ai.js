@@ -203,65 +203,6 @@ export function FighterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
         // const target = combatants[caller.targetId];
     }
 
-    // const Loryastes = {
-    //     acquireTarget: (caller, combatants) => {
-    //         console.log('Loryastes acquiring Target');
-    //         if(this.isAnEnemyDirectlyInFrontOfMe(caller, combatants)){
-    //             console.log('ENEMY DIRECTLY IN FRONT OF LORY:', this.isAnEnemyDirectlyInFrontOfMe());
-    //             caller.targetId = this.isAnEnemyDirectlyInFrontOfMe().id;
-    //             caller.pendingAttack = caller.attacks.find(e=>e.name === 'meditate')
-    //         } else {
-    //             const protectee = this.pickRandom(Object.values(combatants).filter(e=>!e.isMonster && !e.isMinion && !e.dead && e.id !== caller.id))
-    //             caller.targetId = protectee.id;
-    //             caller.pendingAttack = caller.attacks.find(e=>e.name === 'meditate')
-    //             console.log('Loryastes has a new target ', protectee);
-    //         }
-    //     },
-    //     processMove: (caller, combatants) => {
-    //         console.log('Loryastes process move');
-    //         if(caller.pendingAttack.name === 'meditate'){
-    //             this.moveTowardsCloseFriendlyTarget(caller, combatants)
-    //         } else if(caller.pendingAttack.name === 'cane_strike'){
-    //             console.log('MAFUCKIN CAAAANNNEEE STRIKE!');
-    //             debugger
-    //         }
-    //     },
-    //     initiateAttack: (caller, combatants, hitsTarget, missesTarget) => {
-    //         const target = combatants[caller.targetId];
-    //         console.log('---------------------Loryastes initiate attack, target is: ', target);
-    //         const distanceToTarget = this.getDistanceToTarget(caller, target),
-    //         laneDiff = this.getLaneDifferenceToTarget(caller, target);
-    //         if(target.isMonster || target.isMinion){
-    //             hitsTarget(caller);
-    //         } else {
-    //             console.log('LORYASTES: check if protectee is in range');
-    //             console.log('LORYASTES: distanceToTarget: ', distanceToTarget, 'lane diff: ', laneDiff)
-    //             if(distanceToTarget === 1 && laneDiff === 0){
-    //                 console.log('heal from behind, starting hp: ', target.starting_hp);
-    //                 target.hp += 10;
-    //                 if(target.hp > target.starting_hp) target.hp = target.starting_hp;
-    //                 setTimeout(()=>{
-    //                     caller.active = false;
-    //                     caller.tempo = 1;
-    //                     caller.turnCycle();
-    //                 }, 500)
-    //             } else if(distanceToTarget === 0 && (laneDiff === 1 || laneDiff === -1)){
-    //                 console.log('LORYASTES: adjacent heal');
-    //                 debugger
-    //             } else if(distanceToTarget === 1 && (laneDiff === 1 || laneDiff === -1)){
-    //                 console.log('LORYASTES: go behind adjacent to target');
-    //                 caller.position = (laneDiff === 1) ? caller.position -1 : caller.position + 1;
-    //                 setTimeout(()=>{
-    //                     caller.tempo = 1;
-    //                     caller.turnCycle();
-    //                 }, 500)
-    //             } else {
-    //                 missesTarget(caller)
-    //             }
-    //         }
-    //     }
-    // }
-
     const soldier = {
         processMove: (caller, combatants) => {
             this.methods.moveTowardsCloseEnemyTarget(caller, combatants);

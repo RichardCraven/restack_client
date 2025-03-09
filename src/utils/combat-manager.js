@@ -462,7 +462,7 @@ export function CombatManager(){
             level: fighter.level,
             hp: fighter.stats.hp,
             starting_hp: fighter.stats.hp,
-            energy: 1,
+            energy: 100,
             tempo: 1,
             atk: fighter.stats.atk,
             stats: {
@@ -507,13 +507,14 @@ export function CombatManager(){
             manualMovesTotal: fighter.manualMovesTotal,
             manualMovesCurrent: fighter.manualMovesCurrent,
             frozenPoints: 0,
+            targetAcquired: null,
+            movesPerTurnCycle: 5,
+            movesLeft: 0,
+
             attack: function(){
                 console.log('attack');
                 const target = getCombatant(this.targetId);
                 if(!target) return
-                // if(this.type === 'monk') console.log('RANGES', RANGES, this.pendingAttack.range)
-                if(this.type === 'monk') console.log('monk attackl, target; ', target, 'RANGES[this.pendingAttack] === 1', RANGES[this.pendingAttack.range] === 1, 'depth comparison', this.depth, 'vs', target.depth);
-                
                 if(!target){
                     this.skip();
                     return
@@ -547,7 +548,7 @@ export function CombatManager(){
                     // console.log('about to return', this.manualMovesCurrent < 2, this.pendingAttack);
                     // return
                 }
-                this.manualMovesCurrent-= 3
+                this.manualMovesCurrent-= 2
                 initiateAttack(this, true);
             },
             manualMoveCooldown: function(){
@@ -581,7 +582,7 @@ export function CombatManager(){
             setToFrozen: function(val){
                 console.log(this.type, 'set to FROZEN! val: ', val);
                 this.frozen = true;
-                this.locked = true;
+                this.wounded = this.woundedHeavily = false;
                 this.frozenPoints += val
             },
             turnCycle: function(){
@@ -611,9 +612,25 @@ export function CombatManager(){
                         return
                     }
                     count += increment;
-                    if(this.tempo > 10 && this.name === 'Sardonis' && !this.pendingAttack){
-                        console.log('pending attack ', this.pendingAttack);
+                    if(this.frozen){
+                        console.log('frozen', this.frozen);
                         debugger
+                        this.tempo = Math.floor((count/100)*100);
+                        if(count >= 100){
+                            console.log('frozen points: ', JSON.parse(JSON.stringify(this.frozenPoints)));
+                            this.frozenPoints--
+                            console.log('now frozen points: ', this.frozenPoints);
+                            if(this.frozenPoints <= 0){
+                                this.frozenPoints = 0;
+                                this.frozen =  false;
+                            }
+                            clearInterval(this.interval)
+                            this.turnSkips = 0;
+                            this.tempo = 1
+                            this.turnCycle();
+                        }
+                        broadcastDataUpdate()
+                        return
                     }
                     this.tempo = Math.floor((count/100)*100);
                     if(this.tempo < 1) return;
@@ -621,9 +638,6 @@ export function CombatManager(){
                     if(isCombatOver() || this.dead){
                         clearInterval(this.interval)
                         return
-                    }
-                    if(this.isMonster && this.targetId === null){
-                        // console.log('yoooo WTFFFF');
                     }
                     if((this.tempo > 2 && this.tempo < 8) && this.targetId === null && !this.destinationSickness){
                         this.aiming = false;
@@ -813,8 +827,8 @@ export function CombatManager(){
             e.position = index;
             e.depth = 0;
             e.coordinates = {x:0, y:index}
-            e.manualMovesCurrent = 10;
-            e.manualMovesTotal = 12
+            e.manualMovesCurrent = 20;
+            e.manualMovesTotal = 25
             this.combatants[e.id] = createFighter(e, callbacks);
         })
         this.data.monster.position = 2;
@@ -903,7 +917,6 @@ export function CombatManager(){
     this.fighterSpecialAttack = (special) => {
         if(!this.selectedFighter) return 
         const target = this.combatants[this.selectedFighter.targetId];
-        // this.selectedFighter.energy = 0;
         switch(this.selectedFighter.type){
             case 'wizard':
                 switch(special.name){

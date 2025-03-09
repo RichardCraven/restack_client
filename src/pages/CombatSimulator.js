@@ -79,7 +79,8 @@ class CrewManagerPage extends React.Component{
     // selectedCrew.push(options[2])
 
     selectedCrew.push(this.props.crewManager.crew.find(e=>e.type==='wizard'))
-    // selectedCrew.push(this.props.crewManager.crew.find(e=>e.type==='soldier'))
+    selectedCrew.push(this.props.crewManager.crew.find(e=>e.type==='soldier'))
+    selectedCrew.push(this.props.crewManager.crew.find(e=>e.type==='rogue'))
     // selectedCrew.push(this.props.crewManager.crew.find(e=>e.type==='monk'))
 
     console.log('vs selected crew: ', selectedCrew);
@@ -193,27 +194,10 @@ class CrewManagerPage extends React.Component{
 }
 
 submit = async () => {
-    // console.log('submit simulator crew');
     this.setMonster()
-
-    // return
-
     this.setState({
         crewSelected: true
     })
-
-
-    // const meta = getMeta();
-    // meta.crew = this.state.selectedCrew.filter(e=> e !== null)
-    // await updateUserRequest(getUserId(), meta)
-    // console.log('updated meta: ', meta);
-    // // if(meta.dungeonId){
-    // //     console.log('wtf');
-    // //     debugger
-    // // }
-    // // return
-    // storeMeta(meta)
-    // this.goBack()
 }
 clear = () => {
     const meta = getMeta();
@@ -237,8 +221,6 @@ useConsumableFromInventory = (item) => {
     setTimeout(()=>{
         foundItem.animation = '';
         this.props.inventoryManager.removeItemByIndex(foundIndex)
-        // this.forceUpdate();
-        // this.props.saveUserData();
     }, 500)
 }
 combatKeyDownHandler = (event) => {

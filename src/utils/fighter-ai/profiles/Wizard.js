@@ -97,19 +97,7 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
         }
 
         // data.methods.moveTowardsCloseEnemyTarget(caller, combatants)
-
-        if(
-            // laneDiff === -1 && this.friendlies(combatants).some(e=>e.position === caller.position-1) ||
-            // laneDiff === 1 && this.friendlies(combatants).some(e=>e.position === caller.position+1)
-            data.methods.isFriendlyAtCoordinates({x: caller.coordinates.x, y: caller.coordinates.y}, data.methods.getFriendlies(caller, combatants))
-        ){
-            console.log('in this weird block. investigate!');
-            caller.position = 2
-            debugger
-        } else {
-            data.methods.stayOnBackRow(caller,combatants)
-        }
-
+        data.methods.stayOnBackRow(caller,combatants)
 
         caller.coordinates.y = caller.position
         caller.coordinates.x = caller.depth

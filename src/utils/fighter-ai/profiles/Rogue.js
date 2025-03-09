@@ -32,6 +32,7 @@ export function Rogue(data, animationManager){
         }
         caller.pendingAttack = this.chooseAttackType(caller, target);
         caller.targetId = target.id;
+        console.log('rogue acquired target: ', target);
     }
     this.chooseAttackType = (caller, target) => {
         let attack, available = caller.attacks.filter(e=>e.cooldown_position === 100);
@@ -110,9 +111,11 @@ export function Rogue(data, animationManager){
         })
     }
     this.initiateAttack = async (caller, combatants, hitsTarget, missesTarget) => {
+        console.log('rogue initiate attack');
         if(!caller) return
             const target = combatants[caller.targetId];
         if(!target) return
+            console.log('rogue initiating attack', caller.pendingAttack.name);
             const distanceToTarget = data.methods.getDistanceToTarget(caller, target),
             laneDiff = data.methods.getLaneDifferenceToTarget(caller, target);
 
@@ -126,6 +129,8 @@ export function Rogue(data, animationManager){
                     }
                 break;
                 default:
+                    console.log('NO ATTACK!!!!');
+                    debugger
                     hitsTarget(caller);
                     break;
             }

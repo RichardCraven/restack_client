@@ -152,7 +152,7 @@ export function CrewManager(){
                 hp:1000,
                 atk:12,
                 baseDef: 9,
-                energy: 0,
+                energy: 100,
                 experience: 0
             }, 
             portrait: images['wizard_portrait'],
