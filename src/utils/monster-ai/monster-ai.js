@@ -31,6 +31,7 @@ export function MonsterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
         this.kickoffAttackCooldown = utilMethods.kickoffAttackCooldown;
         this.missesTarget = utilMethods.missesTarget;
         this.hitsTarget = utilMethods.hitsTarget;
+        this.hitsCombatant = utilMethods.hitsCombatant;
         this.utilMethods = {
             monsterFacingDown:this.monsterFacingDown,
             monsterFacingUp: this.monsterFacingUp,
@@ -38,7 +39,8 @@ export function MonsterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
             broadcastDataUpdate: this.broadcastDataUpdate,
             kickoffAttackCooldown: this.kickoffAttackCooldown,
             missesTarget: this.missesTarget,
-            hitsTarget: this.hitsTarget
+            hitsTarget: this.hitsTarget,
+            hitsCombatant: this.hitsCombatant
         }
     }
 

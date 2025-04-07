@@ -9,7 +9,8 @@ const MAX_DEPTH = 7
 const NUM_COLUMNS = 8;
 // ^ means 8 squares, account for depth of 0 is far left
 const MAX_LANES = 5
-const FIGHT_INTERVAL = 8;
+// const FIGHT_INTERVAL = 8;
+const FIGHT_INTERVAL = 20;
 const DEBUG_STEPS = false;
 const RANGES = {
     close: 1,
@@ -379,7 +380,7 @@ export function CombatManager(){
         console.log('checking for collision, coordinates: ', coordinates);
         let found;
         Object.values(this.combatants).forEach(e=>{
-            if(JSON.stringify(e.coordinates) === JSON.stringify(coordinates)){
+            if(JSON.stringify(e.coordinates) === JSON.stringify(coordinates) && !e.dead){
                 found = e;
                 console.log('found! ', e);
             }
@@ -478,7 +479,6 @@ export function CombatManager(){
             targetId: null,
             position: fighter.position,
             depth: fighter.depth,
-            wounded: false,
             active: false,
             pendingAttack: null,
             aiming: false,
@@ -510,9 +510,37 @@ export function CombatManager(){
             targetAcquired: null,
             movesPerTurnCycle: 5,
             movesLeft: 0,
-
+            eras: [
+                {
+                    moved: false,
+                    attacked: false
+                },
+                {
+                    moved: false,
+                    attacked: false
+                },
+                {
+                    moved: false,
+                    attacked: false
+                },
+                {
+                    moved: false,
+                    attacked: false
+                },
+                {
+                    moved: false,
+                    attacked: false
+                }
+            ],
+            wounded: false,
             attack: function(){
-                console.log('attack');
+                if(this.type==='wizard'){
+                    console.log('WIZARD ATTACKING');
+                }
+                if(this.id===816){
+                    // console.log('attack');
+                    console.log('minion attack, this.movesLeft', this.movesLeft);
+                }
                 const target = getCombatant(this.targetId);
                 if(!target) return
                 if(!target){
@@ -524,24 +552,28 @@ export function CombatManager(){
                     broadcastDataUpdate(this);
                     return 
                 }
-                if(this.type === 'djinn'){
-                    console.log('djinn initiate attack, this.position === target.position: ', this.position === target.position);
+                if(this.type === 'skeleton'){
+                    console.log('skele about to INITIATE attack');
                 }
+                initiateAttack(this);
+                // if(this.type === 'djinn'){
+                //     console.log('djinn initiate attack, this.position === target.position: ', this.position === target.position);
+                // }
 
-                if(RANGES[this.pendingAttack.range] === 1 && (this.depth === target.depth && Math.abs(this.position - target.position) === 1)){
-                    if(this.type === 'monk') console.log('monk initiating attack from ABOVE [turn cycle]');
-                    initiateAttack(this);
-                    broadcastDataUpdate(this)
-                } else if(this.position === target.position){
-                    console.log('should gooo');
-                    if(this.type === 'monk') console.log('monk initiating attack from [turn cycle]');
-                    initiateAttack(this);
-                    broadcastDataUpdate(this)
+                // if(RANGES[this.pendingAttack.range] === 1 && (this.depth === target.depth && Math.abs(this.position - target.position) === 1)){
+                //     if(this.type === 'monk') console.log('monk initiating attack from ABOVE [turn cycle]');
+                //     initiateAttack(this);
+                //     broadcastDataUpdate(this)
+                // } else if(this.position === target.position){
+                //     console.log('should gooo');
+                //     if(this.type === 'monk') console.log('monk initiating attack from [turn cycle]');
+                //     initiateAttack(this);
+                //     broadcastDataUpdate(this)
 
-                } else {
-                    console.log('attk skip`');
-                    this.skip();
-                }
+                // } else {
+                //     console.log('attk skip`');
+                //     this.skip();
+                // }
             },
             manualAttack: function(){
                 if(this.manualMovesCurrent < 2 || !this.pendingAttack || this.pendingAttack.cooldown_position < 100){
@@ -577,12 +609,14 @@ export function CombatManager(){
                 this.turnCycle();
             },
             move: function(){
+                //only ever triggered from turn cycle AI method
+                
                 processMove(this);
             },
             setToFrozen: function(val){
                 console.log(this.type, 'set to FROZEN! val: ', val);
                 this.frozen = true;
-                this.wounded = this.woundedHeavily = false;
+                this.wounded = false;
                 this.frozenPoints += val
             },
             turnCycle: function(){
@@ -591,8 +625,17 @@ export function CombatManager(){
                 let factor = (1/this.stats.dex * 25)
                 let increment = (1 / factor)
                 if(this.hasOverlap) handleOverlap(this)
+
+                this.movesLeft = this.movesPerTurnCycle;
+                    
+                if(this.id===816){
+                    console.log('minion start, this.movesLeft', this.movesLeft);
+                }
+                
                 this.interval = setInterval(()=>{
-            
+                    // if(this.id===816){
+                    //     console.log('minion tick');
+                    // }
                     if(this.combatPaused || this.dead || this.locked) return
                     if(this.isOnManualMoveCooldown){
                         if(this.tempo > 100) this.tempo = 100;
@@ -639,111 +682,202 @@ export function CombatManager(){
                         clearInterval(this.interval)
                         return
                     }
-                    if((this.tempo > 2 && this.tempo < 8) && this.targetId === null && !this.destinationSickness){
-                        this.aiming = false;
-                        acquireTarget(this);
-                        checkOverlap(this)
+                    // ------------------------------------------------------------------------------------------------------------------
+                    // posiibilities:
+                    // this.aiming = false;
+                    // acquireTarget(this);
+                    // checkOverlap(this)
+                    // this.move();
+                    // this.aiming = true;
+                    // clearInterval(this.interval)
+                    // this.skip();
+                    // processActionQueue(this);
+                    // const target = getCombatant(this.targetId);
+                    // let inRange = targetInRange(this);
+                    // this.attack(target)
+                    // this.waitForAttack()
+                    // this.turnSkips++
+                    // acquireTarget(this, target);  <--- this is to avoid the current target, find another one. Useful if target is out of range
+                    // this.turnSkips = 0;
+                    // this.tempo = 1
+                    // this.turnCycle();
+
+
+                    
+                    // ------------------------------------------------------------------------------------------------------------------
+                    // era 1 = 1-20
+                    // era 2 = 21-40
+                    // era 3 = 41-60
+                    // era 4 = 61-80
+                    // era 5 = 81-100
+                    let target, inRange;
+                    const eraIndex = this.tempo < 21 ? 0 :
+                    (this.tempo < 41 ? 1 :
+                    (this.tempo < 61 ? 2 :
+                    (this.tempo < 81 ? 3 :
+                    (this.tempo < 101 ? 4 : 0))))
+                    const era = this.eras[eraIndex]
+
+                    const eraMove = () => {
+                        if(this.movesLeft && !era.moved){
+                            era.moved = true;
+                            this.movesLeft--
+                            this.move()
+                        }
                     }
-                    if(this.tempo > 5 && this.tempo < 10 && this.isMonster){
-                        // console.log('monster is at move stage. hasMoved =', hasMoved);
+                    const eraAttack = () => {
+                        target = getCombatant(this.targetId);
+                        inRange = targetInRange(this);
+                        if(inRange && this.movesLeft && !era.attacked){
+                            era.attacked = true;
+                            this.movesLeft--
+                            this.attack(target);
+                        }
                     }
-                    if(this.tempo > 5 && this.tempo < 10 && this.targetId !== null && !hasMoved && !this.destinationSickness && !this.locked){
-                        this.move();
-                        hasMoved = true;
+                    switch(eraIndex){
+                        case 0: 
+                            if(!this.targetId) acquireTarget(this);
+                            eraMove();
+                            eraAttack();
+                        break;
+                        case 1: 
+                            if(!this.targetId) acquireTarget(this);
+                            eraMove();
+                            eraAttack();
+                        break;
+                        case 2: 
+                            if(!this.targetId) acquireTarget(this);
+                            eraMove();
+                            eraAttack();
+                        break;
+                        case 3: 
+                            if(!this.targetId) acquireTarget(this);
+                            eraMove();
+                            eraAttack();
+                        break;
+                        case 4: 
+                            if(!this.targetId) acquireTarget(this);
+                            eraMove();
+                            eraAttack();
+                        break;
                     }
-                    if(this.tempo > 65 && this.tempo < 75 && this.targetId !== null && !hasMovedSecondTime && !this.destinationSickness && !this.locked){
-                        this.move();
-                        hasMovedSecondTime = true;
+                    if(this.tempo >= 100){
+                        this.restartTurnCycle();
                     }
 
-                    if(count >= 90 && this.pendingAttack && targetInRange(this) && this.pendingAttack.cooldown_position > 80){
-                        this.aiming = true;
-                    }
-                    if(count >= 100){
-                        if(this.type === 'wizard') console.log('ye, pending attack ', this.pendingAttack)
-                        if(this.type === 'djinn'){
-                            console.log('djinn at 100, CLEARING INTERVAL ');
-                        }
-                        clearInterval(this.interval)
 
-                        if(this.name === "Loryastes"  && DEBUG_STEPS === true){
-                            console.log('Loryastes [turn] count = 100.. sickness = ', this.destinationSickness);
-                        }
-                        if(this.destinationSickness){
-                            this.destinationSickness = false;
-                            this.skip();
-                            return
-                        }
-                        if(this.action_queue.length > 0){
-                            // clearInterval(this.interval)
-                            console.log('action queue length > 0');
-                            if(this.type === 'monk') console.log('monk ????');
-                            processActionQueue(this);
-                            return
-                        }
-                        if(this.pendingAttack && this.pendingAttack.cooldown_position === 100 && !this.locked){
-                            const target = getCombatant(this.targetId);
-                            if(this.name === 'Loryastes' && this.DEBUG_STEPS){
-                                // console.log('Loryastes endcycle, target: ', target);
-                            }
+
+
+                    // if((this.tempo > 2 && this.tempo < 8) && this.targetId === null && !this.destinationSickness){
+                    //     this.aiming = false;
+                    //     acquireTarget(this);
+                    //     checkOverlap(this)
+                    // }
+                    // if(this.tempo > 5 && this.tempo < 10 && this.isMonster){
+                    //     // console.log('monster is at move stage. hasMoved =', hasMoved);
+                    // }
+                    // if(this.tempo > 5 && this.tempo < 10 && this.targetId !== null && !hasMoved && !this.destinationSickness && !this.locked){
+                    //     this.move();
+                    //     hasMoved = true;
+                    // }
+                    // if(this.tempo > 65 && this.tempo < 75 && this.targetId !== null && !hasMovedSecondTime && !this.destinationSickness && !this.locked){
+                    //     this.move();
+                    //     hasMovedSecondTime = true;
+                    // }
+
+                    // if(count >= 90 && this.pendingAttack && targetInRange(this) && this.pendingAttack.cooldown_position > 80){
+                    //     this.aiming = true;
+                    // }
+                    // if(count >= 100){
+                    //     if(this.type === 'wizard') console.log('ye, pending attack ', this.pendingAttack)
+                    //     if(this.type === 'djinn'){
+                    //         console.log('djinn at 100, CLEARING INTERVAL ');
+                    //     }
+                    //     clearInterval(this.interval)
+
+                    //     if(this.name === "Loryastes"  && DEBUG_STEPS === true){
+                    //         console.log('Loryastes [turn] count = 100.. sickness = ', this.destinationSickness);
+                    //     }
+                    //     if(this.destinationSickness){
+                    //         this.destinationSickness = false;
+                    //         this.skip();
+                    //         return
+                    //     }
+                    //     if(this.action_queue.length > 0){
+                    //         // clearInterval(this.interval)
+                    //         console.log('action queue length > 0');
+                    //         if(this.type === 'monk') console.log('monk ????');
+                    //         processActionQueue(this);
+                    //         return
+                    //     }
+                    //     if(this.pendingAttack && this.pendingAttack.cooldown_position === 100 && !this.locked){
+                    //         const target = getCombatant(this.targetId);
+                    //         if(this.name === 'Loryastes' && this.DEBUG_STEPS){
+                    //             // console.log('Loryastes endcycle, target: ', target);
+                    //         }
                             
-                            if(!target){
-                                this.skip();
-                                if(this.name === 'Loryastes'  && DEBUG_STEPS === true){
-                                    // console.log('Loryastes skipping');
-                                }
-                                return
-                            }
-                            let inRange = targetInRange(this);
-                            if(this.type === 'djinn'){
-                                console.log('djinn turnSkips: ', this.turnSkips, 'inRange: ', inRange);
-                            }
-                            if(inRange){
-                                this.attack(target)
-                            } else {
-                                if((this.isMonster || this.isMinion) && this.turnSkips >= 1){
-                                    if(this.type === 'djinn'){
-                                        console.log('in skip block, resetting for ', this);
-                                    }
-                                    acquireTarget(this, target);
-                                    this.turnSkips = 0;
-                                    this.tempo = 1
-                                    this.turnCycle();
-                                } else {
-                                    if(this.type === 'djinn'){
-                                        console.log('djinn skipping ', this);
-                                    }
-                                    if(this.type === 'djinn'){
-                                        console.log('djinn current turnSkips: ', this.turnSkips, 'incrementeing turnskips');
-                                    }
-                                    if(this.type === 'monk') console.log('monk ????');
-                                    this.turnSkips++
-                                    this.skip();
-                                }
+                    //         if(!target){
+                    //             this.skip();
+                    //             if(this.name === 'Loryastes'  && DEBUG_STEPS === true){
+                    //                 // console.log('Loryastes skipping');
+                    //             }
+                    //             return
+                    //         }
+                    //         let inRange = targetInRange(this);
+                    //         if(this.type === 'djinn'){
+                    //             console.log('djinn turnSkips: ', this.turnSkips, 'inRange: ', inRange);
+                    //         }
+                    //         if(inRange){
+                    //             this.attack(target)
+                    //         } else {
+                    //             if((this.isMonster || this.isMinion) && this.turnSkips >= 1){
+                    //                 if(this.type === 'djinn'){
+                    //                     console.log('in skip block, resetting for ', this);
+                    //                 }
+                    //                 acquireTarget(this, target);
+                    //                 this.turnSkips = 0;
+                    //                 this.tempo = 1
+                    //                 this.turnCycle();
+                    //             } else {
+                    //                 if(this.type === 'djinn'){
+                    //                     console.log('djinn skipping ', this);
+                    //                 }
+                    //                 if(this.type === 'djinn'){
+                    //                     console.log('djinn current turnSkips: ', this.turnSkips, 'incrementeing turnskips');
+                    //                 }
+                    //                 if(this.type === 'monk') console.log('monk ????');
+                    //                 this.turnSkips++
+                    //                 this.skip();
+                    //             }
                                 
-                            }
-                        } else if(this.pendingAttack && this.pendingAttack.cooldown_position !== 100){
-                            if(this.name === "Loryastes"  && DEBUG_STEPS === true){
-                            }
-                            if(this.isMonster ||  this.isMinion){
-                                // console.log(this, 'monster minion waiting for attck');
-                            }
-                            this.waitForAttack()
-                        } else {
+                    //         }
+                    //     } else if(this.pendingAttack && this.pendingAttack.cooldown_position !== 100){
+                    //         if(this.name === "Loryastes"  && DEBUG_STEPS === true){
+                    //         }
+                    //         if(this.isMonster ||  this.isMinion){
+                    //             // console.log(this, 'monster minion waiting for attck');
+                    //         }
+                    //         this.waitForAttack()
+                    //     } else {
 
-                            // console.log('uhhhhh no pending');
-                            // acquireTarget(this);
-                            this.skip();
-                            // debugger
-                        }
-                    }
+                    //         // console.log('uhhhhh no pending');
+                    //         // acquireTarget(this);
+                    //         this.skip();
+                    //         // debugger
+                    //     }
+                    // }
                     // console.log('wiz broadcast');
                     broadcastDataUpdate(this)
                 }, FIGHT_INTERVAL)
             },
             restartTurnCycle: function(){
+                if(this.type==='wizard'){
+                    console.log('wizard RESTART TURN CYCLE');
+                }
                 clearInterval(this.interval)
                 this.tempo = 0;
+                this.movesLeft = this.movesPerTurnCycle;
+                this.eras.forEach(e=>e.moved = e.attacked = false)
                 this.turnCycle();
             },
             waitForAttack: function(){
@@ -1104,6 +1238,7 @@ export function CombatManager(){
             return
         } else {
             fighter.manualMovesCurrent--
+            console.log('restart manual');
             fighter.restartTurnCycle();
         }
         switch(direction){
@@ -1158,6 +1293,7 @@ export function CombatManager(){
             default:
             break;
         }
+        console.log('restart this one');
         fighter.restartTurnCycle()
     }
     this.fighterFacingRight = (caller) => {
@@ -1608,6 +1744,10 @@ export function CombatManager(){
         })
     }
     this.checkOverlap = (combatant) => {
+        setTimeout(()=>{
+            if(combatant.coordinates.x > MAX_DEPTH) combatant.coordinates.x = MAX_DEPTH;
+            if(combatant.coordinates.x < 0)combatant.coordinates.x = 0;
+        },200)
         const liveCombatants = Object.values(this.combatants).filter(e=> (e.id !== combatant.id && !e.dead));
         if(liveCombatants.some(e=>e.depth === combatant.depth && e.position === combatant.position)) combatant.hasOverlap = true;
         if(combatant.hasOverlap){
@@ -1703,12 +1843,70 @@ export function CombatManager(){
         const combatants = Object.values(this.combatants)
         combatants.forEach(e=>{
             e.targettedBy = e.targettedBy.filter(id=> id !== targetId)
-            // if(e.targetId === targetId){
-            //     e.targetId = null;
-            // }
+            if(e.targetId === targetId){
+                e.targetId = null;
+            }
         })
     }
+    this.hitsCombatant = (caller, combatantHit) => {
+        // this is an improved version of hitsTarget, that can handle anything getting hit in the line of fire, does
+        // not have to be targetted
+        console.log(caller.name, 'hits ', combatantHit.name);
+        
+        let r = Math.random()
+        // let criticalHit = r*100 > 80;
+        let criticalHit = true
+        let damage = criticalHit ? caller.atk*3 : caller.atk
+        if(combatantHit.weaknesses.includes[caller.pendingAttack.type]){
+            damage += Math.floor(damage/2)
+        }
+        combatantHit.hp -= damage;
+        combatantHit.damageIndicators.push(damage);
+        caller.energy += caller.stats.fort * 3 + (1/2 * caller.level);
+        if(caller.energy > 100) caller.energy = 100;
+        
+        combatantHit.wounded = {
+            severity: criticalHit ? 'severe' : 'minor',
+            damage
+        }
+
+
+        if(caller.coordinates.x < combatantHit.coordinates.x){
+            console.log('from the left');
+            combatantHit.wounded.sourceDirection = 'left';
+            if(criticalHit){
+                console.log('CRITICAL');
+                combatantHit.coordinates.x++
+                combatantHit.depth++
+            }
+        } else {
+            console.log('from the right');
+            combatantHit.wounded.sourceDirection = 'right';
+            if(criticalHit){
+                console.log('CRITICAL');
+                combatantHit.coordinates.x--
+                combatantHit.depth--
+                // to remove once confirmed working wihtout depth
+            }
+
+        }
+        this.checkOverlap(combatantHit)
+
+        if(combatantHit.hp <= 0){
+            combatantHit.hp = 0;
+            if(caller.targetId === combatantHit.id) caller.targetId = null;
+            combatantHit.wounded.severity = 'lethal';
+            this.targetKilled(combatantHit);
+        }
+        // console.log('final val: ', `hit-from-${combatantHit.wounded.sourceDirection}-${combatantHit.wounded.severity}`);
+        // this.broadcastDataUpdate(combatantHit)
+        setTimeout(()=>{
+            // caller.attacking = caller.attackingReverse = false;
+            combatantHit.wounded = false;
+        }, FIGHT_INTERVAL * 30)
+    }
     this.hitsTarget = (caller, tempTarget = null) => {
+        return
         let target = tempTarget ? tempTarget : this.getCombatant(caller.targetId);
         if(!target) return
         let r = Math.random()
@@ -1771,9 +1969,9 @@ export function CombatManager(){
 
             caller.active = caller.aiming = false;
             
-            setTimeout(()=>{
-                caller.restartTurnCycle();
-            }, 500)
+            // setTimeout(()=>{
+            //     caller.restartTurnCycle();
+            // }, 500)
         }, FIGHT_INTERVAL * 100)
         setTimeout(()=>{
             caller.attacking = caller.attackingReverse = false;
@@ -1827,9 +2025,9 @@ export function CombatManager(){
                 }
             }
             
-            setTimeout(()=>{
-                caller.restartTurnCycle();
-            }, 250)
+            // setTimeout(()=>{
+            //     caller.restartTurnCycle();
+            // }, 250)
 
         }, FIGHT_INTERVAL * 50)
 
@@ -1844,7 +2042,7 @@ export function CombatManager(){
         combatant.dead = true;
         combatant.locked = combatant.frozen = false;
         setTimeout(()=>{
-            combatant.woundedLethal = false;
+            combatant.wounded = false;
         },1000)
         this.clearTargetListById(combatant.id)
         const allMonstersDead = Object.values(this.combatants).filter(e=> (e.isMonster || e.isMinion) && !e.dead).length === 0;
@@ -1940,7 +2138,8 @@ export function CombatManager(){
         broadcastDataUpdate: this.broadcastDataUpdate,
         kickoffAttackCooldown: this.kickoffAttackCooldown,
         missesTarget: this.missesTarget,
-        hitsTarget: this.hitsTarget
+        hitsTarget: this.hitsTarget,
+        hitsCombatant: this.hitsCombatant
     }
     this.fighterAI.connectUtilMethods(utilMethods)
     this.monsterAI.connectUtilMethods(utilMethods)

@@ -979,7 +979,7 @@
                                 -moz-animation: Rocked 1s linear;
                                 animation: Rocked 1s linear;
                             }
-                            &.hit-from-left{
+                            &.hit-from-lef-minor{
                                 transform: matrix3d(1, 0, 0, -0.01, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
                             }
                             &.hit-from-left-severe{
@@ -987,8 +987,9 @@
                             }
                             &.hit-from-left-lethal{
                                 transform: matrix3d(1, 0, 1, -0.1, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
+                                opacity: 0.5;
                             }
-                            &.hit-from-right{
+                            &.hit-from-right-minor{
                                 transform: matrix3d(1, 0, 0, 0.01, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
                             }
                             &.hit-from-right-severe{
@@ -996,6 +997,7 @@
                             }
                             &.hit-from-right-lethal{
                                 transform: matrix3d(1, 0, 1, 0.1, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
+                                opacity: 0.5;
                             }
 
 
@@ -1254,7 +1256,7 @@
                     &.missed-reversed{
                         transform: scale(0.8) scaleX(-1)
                     }
-                    &.hit-from-left{
+                    &.hit-from-left-minor{
                         transform: matrix3d(1, 0, 0, -0.01, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
                     }
                     &.hit-from-left-severe{
@@ -1262,8 +1264,9 @@
                     }
                     &.hit-from-left-lethal{
                         transform: matrix3d(1, 0, 1, -0.1, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
+                        opacity: 0.5;
                     }
-                    &.hit-from-right{
+                    &.hit-from-right-minor{
                         transform: matrix3d(1, 0, 0, 0.01, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
                     }
                     &.hit-from-right-severe{
@@ -1271,6 +1274,7 @@
                     }
                     &.hit-from-right-lethal{
                         transform: matrix3d(1, 0, 1, 0.1, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
+                        opacity: 0.5;
                     }
                     &.rocked{
                         -webkit-animation: Rocked 1s linear;

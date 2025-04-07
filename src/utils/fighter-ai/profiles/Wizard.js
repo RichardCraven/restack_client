@@ -13,6 +13,7 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
     this.kickoffAttackCooldown = utilMethods.kickoffAttackCooldown;
     this.missesTarget = utilMethods.missesTarget;
     this.hitsTarget = utilMethods.hitsTarget;
+    this.hitsCombatant = utilMethods.hitsCombatant;
 
     this.isFriendly = (e) => {
         return !e.isMonster && !e.isMinion;
@@ -145,7 +146,6 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
         const sourceTileId = this.animationManager.getTileIdByCoords(callerCoords)
         return new Promise((resolve) => {
             if(targetTileId !== null && sourceTileId !== null){
-                console.log('booko');
                 // this.animationManager.beamAnimation(targetTileId, sourceTileId, color, resolve)
                 this.animationManager.straightBeamNoTarget(sourceTileId, 'left-to-right', color, resolve)
             }
@@ -155,7 +155,7 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
         const sourceTileId = this.animationManager.getTileIdByCoords(callerCoords)
         return new Promise((resolve) => {
             // if(targetTileId !== null && sourceTileId !== null){
-                console.log('booko');
+                // console.log('booko');
                 this.animationManager.straightBeamNoTarget(sourceTileId, 'left-to-right', color, resolve)
             // }
         })
@@ -180,7 +180,9 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
             4: {TC: 2, multiplier: 2},
             5: {TC: 3, multiplier: 2.5},
         }
-        this.triggerBeamAttack(callerCoords, targetCoords, 'lightblue').then(e=>{
+        this.triggerBeamAttack(callerCoords, targetCoords, 'lightblue').then(res=>{
+            console.log('TRIGGER BEAM ATTACK RES: ', res);
+            
             const hitsTarget = true;
             // ^ need to allow for missing 
             if(hitsTarget){
@@ -224,11 +226,15 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
             switch(caller.pendingAttack.name){
                 case 'energy blast':
                     if(laneDiff === 0){
-                        let hits  = await this.triggerBeamAttack(caller.coordinates, target.coordinates)
+                        console.log('energy blast');
+                        let combatantHit  = await this.triggerBeamAttack(caller.coordinates, target.coordinates)
+                        
+                        console.log('hits should not be a boolean: ', combatantHit);
                         // this.hitsTarget(caller)
-                        if(hits){
+                        if(combatantHit){
                             console.log('energy blast hits');
-                            this.hitsTarget(caller)
+                            // this.hitsTarget(caller);
+                            this.hitsCombatant(caller, combatantHit)
                             this.kickoffAttackCooldown(caller)
                         } else {
                             console.log('energy blast misses');

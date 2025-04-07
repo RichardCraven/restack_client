@@ -13,9 +13,9 @@ export function Sphinx(data, utilMethods, animationManager, overlayManager){
     this.kickoffAttackCooldown = utilMethods.kickoffAttackCooldown;
     this.missesTarget = utilMethods.missesTarget;
     this.hitsTarget = utilMethods.hitsTarget;
+    this.hitsCombatant = utilMethods.hitsCombatant;
 
     this.acquireTarget = (caller, combatants) => {
-        // console.log('SPHINX TARGETTing. animation manager: ', this.animationManager, 'overlay manager: ', this.overlayManager);
         const liveEnemies = Object.values(combatants).filter(e=>!e.dead && (!e.isMonster && !e.isMinion));
         const sorted = liveEnemies.sort((a,b)=>a.depth - b.depth);
         const target = sorted[0];
@@ -25,26 +25,16 @@ export function Sphinx(data, utilMethods, animationManager, overlayManager){
     }
     this.processMove = (caller, combatants) => {
             if(!caller.pendingAttack){
-                // console.log('no pending attack ', caller);
-                // debugger
                 return
             }
-            // console.log('SPHIUNX PROCESS MOVE');
             switch(caller.pendingAttack.name){
                 case 'induce madness':
-                    // console.log('---INDUCE MADNESSS MOVE---');
-
                     data.methods.stayInColumn(6, caller, combatants)
                 
                 break;
                 case 'claws':
-                    // console.log('CLAWS');
-                    // debugger
-
                 break;
                 case 'lightning':
-                    // console.log('LIGHTNING');
-                    // debugger
                 break;
                 default:
                     break;
@@ -95,7 +85,7 @@ export function Sphinx(data, utilMethods, animationManager, overlayManager){
 
         switch(caller.pendingAttack.name){
             case 'induce madness':
-                console.log('INDUCE MADNESS!!!!!!');
+                // console.log('INDUCE MADNESS!!!!!!');
                 if(laneDiff === 0){
                     await this.triggerInduceMadness(caller.coordinates, target.coordinates)
                     this.hitsTarget(caller)
@@ -104,7 +94,6 @@ export function Sphinx(data, utilMethods, animationManager, overlayManager){
                 }
             break;
             case 'claws':
-                console.log('CLAWS');
                 debugger
                 if(distanceToTarget === 1 && laneDiff === 0){
                     this.hitsTarget(caller)
@@ -115,14 +104,15 @@ export function Sphinx(data, utilMethods, animationManager, overlayManager){
 
             break;
             case 'lightning':
-                console.log('LIGHTNING');
+                // console.log('LIGHTNING');
                 // debugger
 
-                let hits = await this.triggerLightningAttack(caller.coordinates, target.coordinates)
-                console.log('sphinx hits: ', !!hits);
-                if(hits){
+                let combatantHit = await this.triggerLightningAttack(caller.coordinates, target.coordinates)
+                // console.log('sphinx hits: ', !!hits);
+                if(combatantHit){
                     console.log('lightning hits');
-                    this.hitsTarget(caller)
+                    // this.hitsTarget(caller)
+                    this.hitsCombatant(caller, combatantHit);
                 } else {
                     this.missesTarget(caller);
                 }

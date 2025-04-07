@@ -9,7 +9,7 @@ export function AnimationManager(){
 
 
     this.magicMissile = (sourceCoords, targetCoords) => {
-        console.log('sourceCoords', sourceCoords, 'targetCoords', targetCoords);
+        // console.log('sourceCoords', sourceCoords, 'targetCoords', targetCoords);
         const ref = {
             origin: sourceCoords,
             distanceToTarget: this.getDistanceToTarget(sourceCoords, targetCoords), 
@@ -74,7 +74,7 @@ export function AnimationManager(){
         }
         this.tiles = arr;
         this.update();
-        console.log('animation manager initialize');
+        // console.log('animation manager initialize');
     }
     this.update = () => {
         this.updateAnimationData({tiles: this.tiles, canvasAnimations: this.canvasAnimations})
@@ -152,14 +152,14 @@ export function AnimationManager(){
         },100)
     }
     this.straightBeamTo = (targetTileId, sourceTileId, color = null) => {
-        console.log('TARGET TILE ID ', targetTileId);
+        // console.log('TARGET TILE ID ', targetTileId);
         const sourceTile = this.tiles.find(e=>e.id === sourceTileId)
         const destinationTile = this.tiles.find(e=>e.id === targetTileId)
         let isOnSamePlane = sourceTile.y === destinationTile.y;
         let direction = sourceTile.x > destinationTile.x ? 'rightToLeft' : 'leftToRight'
-        console.log('about to rerturn promise', sourceTile, destinationTile);
+        // console.log('about to rerturn promise', sourceTile, destinationTile);
         return new Promise((resolve, reject) => {
-            console.log('is On Same Plane ', isOnSamePlane);
+            // console.log('is On Same Plane ', isOnSamePlane);
             if(isOnSamePlane){
                 let distanceAway = Math.abs(sourceTile.x - destinationTile.x)
 
@@ -184,7 +184,7 @@ export function AnimationManager(){
                     // this.triggerTileAnimation(id, color)
                 }
                 if(sourceTile.x < destinationTile.x && direction === 'leftToRight'){
-                    console.log('left to right');
+                    // console.log('left to right');
                     let sourceX = sourceTile.x
                     let idArray = [];
                     for(let i = sourceX + 1; i < destinationTile.x; i++){
@@ -207,7 +207,7 @@ export function AnimationManager(){
     }
     this.straightBeamNoTarget = (sourceTileId, direction, color = null, resolve) => {
         const sourceTile = this.tiles.find(e=>e.id === sourceTileId)
-        console.log('siourceTile: ', sourceTile);
+        // console.log('siourceTile: ', sourceTile);
         const maxX = this.MAX_DEPTH-1;
         let newCoords
         if(direction === 'left-to-right'){
@@ -215,19 +215,19 @@ export function AnimationManager(){
         } else if(direction === "right-to-left"){
             newCoords = {x: 0, y: sourceTile.y}
         }
-        console.log('new coords: ', newCoords);
+        // console.log('new coords: ', newCoords);
         let destinationTileId = this.getTileIdByCoords(newCoords)
         let destinationTile = this.tiles[destinationTileId]
-        console.log('destination ', destinationTile);
+        // console.log('destination ', destinationTile);
         // const destinationTile = this.tiles.find(e=>e.id === targetTileId)
         let isOnSamePlane = sourceTile.y === destinationTile.y;
         // let direction = sourceTile.x > destinationTile.x ? 'rightToLeft' : 'leftToRight'
-        console.log('about to rerturn promise', sourceTile, destinationTile, 'DIRECTION:::', direction);
+        // console.log('about to rerturn promise', sourceTile, destinationTile, 'DIRECTION:::', direction);
         return new Promise(() => {
-            console.log('is On Same Plane ', isOnSamePlane);
+            // console.log('is On Same Plane ', isOnSamePlane);
             // if(isOnSamePlane){
                 let distanceAway = Math.abs(sourceTile.x - destinationTile.x)
-                console.log('init, distanceAway', distanceAway);
+                // console.log('init, distanceAway', distanceAway);
                 if(sourceTile.x > destinationTile.x && direction === 'right-to-left'){
                     let sourceX = sourceTile.x
                     let idArray = [];
@@ -245,11 +245,12 @@ export function AnimationManager(){
                             let tileCoords = this.getTileCoordsById(id)
                             // console.log('tileCoords: ', tileCoords);
                             let collision = this.checkForCollision(tileCoords)
-                            // console.log('collision: ', collision);
+                            console.log('collision:::::::: ', collision?.id);
+
                             this.triggerTileAnimation(id, color);
                             if(collision){
                                 clearInterval(lineInterval);
-                                resolve(true);
+                                resolve(collision);
                             }
                         }
                     }, 10 + (distanceAway * 5))
@@ -273,11 +274,11 @@ export function AnimationManager(){
                             let id = idArray.shift();
                             let tileCoords = this.getTileCoordsById(id)
                             let collision = this.checkForCollision(tileCoords)
-                            console.log('collision: ', collision);
+                            // collision is a combatant object
                             this.triggerTileAnimation(id, color);
                             if(collision){
                                 clearInterval(lineInterval);
-                                resolve(true);
+                                resolve(collision);
                             }
                         }
                     }, 10 + (distanceAway * 5))
@@ -480,7 +481,7 @@ export function AnimationManager(){
         resolve();
     }
     this.beamAnimation = async (targetTileId, sourceTileId, color = null, resolve) => {
-        console.log('animstion mnger beam');
+        // console.log('animstion mnger beam');
         await this.straightBeamTo(targetTileId, sourceTileId, color)
         resolve();
     }

@@ -26,6 +26,7 @@ export function FighterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
         this.kickoffAttackCooldown = utilMethods.kickoffAttackCooldown;
         this.missesTarget = utilMethods.missesTarget;
         this.hitsTarget = utilMethods.hitsTarget;
+        this.hitsCombatant = utilMethods.hitsCombatant;
         this.utilMethods = {
             fighterFacingDown:this.monsterFacingDown,
             fighterFacingUp: this.monsterFacingUp,
@@ -33,7 +34,8 @@ export function FighterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
             broadcastDataUpdate: this.broadcastDataUpdate,
             kickoffAttackCooldown: this.kickoffAttackCooldown,
             missesTarget: this.missesTarget,
-            hitsTarget: this.hitsTarget
+            hitsTarget: this.hitsTarget,
+            hitsCombatant: this.hitsCombatant
         }
     }
     this.initializeRoster = (animationManager) => {
