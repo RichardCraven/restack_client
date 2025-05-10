@@ -56,8 +56,14 @@
                 height: 10px;
                 width: 10px;
                 position: absolute;
-                top: 36px;
-                left: 25px;
+                // top: 36px;
+                // left: 25px;
+                // ^ this is for non-enlarged size
+                top: 24px;
+                left: 3px;
+                // ^ this is for enlarged size
+                
+
                 border-radius: 10px;
                 background-image: radial-gradient(red 1%, black 50%);
 
@@ -358,6 +364,119 @@
             width: 100px;
             position: relative;
             user-select: none;
+            &.claw-fade{
+                // background-image: url;
+                border: 1px solid red;
+            }
+            @-webkit-keyframes ArcAnimationFromLeft {
+                0%{
+                    transform: translate(-50px, -35px) rotateZ(-70deg);
+                    opacity: 0.1;
+                }
+                50%{
+                    transform: translate(-50px, -35px) rotateZ(-70deg);
+                    opacity: 0.9;
+                }
+                80%{
+                    transform: translate(-10px, 0px) rotateZ(45deg);
+                    opacity: 1;
+                }
+                100%{
+                    transform: translate(-50px, 20px) rotateZ(45deg);
+                    opacity: 0;
+                }
+            }
+            @-moz-keyframes ArcAnimationFromLeft {
+                0%{
+                    transform: translate(-50px, -35px) rotateZ(-70deg);
+                    opacity: 0.1;
+                }
+                50%{
+                    transform: translate(-50px, -35px) rotateZ(-70deg);
+                    opacity: 0.9;
+                }
+                80%{
+                    transform: translate(-10px, 0px) rotateZ(45deg);
+                    opacity: 1;
+                }
+                100%{
+                    transform: translate(-50px, 20px) rotateZ(45deg);
+                    opacity: 0;
+                }
+            }
+            @keyframes ArcAnimationFromLeft {
+                0%{
+                    transform: translate(-50px, -35px) rotateZ(-70deg);
+                    opacity: 0.1;
+                }
+                50%{
+                    transform: translate(-50px, -35px) rotateZ(-70deg);
+                    opacity: 0.9;
+                }
+                80%{
+                    transform: translate(-10px, 0px) rotateZ(45deg);
+                    opacity: 1;
+                }
+                100%{
+                    transform: translate(-50px, 20px) rotateZ(45deg);
+                    opacity: 0;
+                }
+            }
+
+            @-webkit-keyframes ClawAnimation {
+                0%{
+                    transform: translate(50px, -20px) rotateZ(45deg);
+                    opacity: 0.1;
+                }
+                50%{
+                    transform: translate(10px, 0px) rotateZ(45deg);
+                    opacity: 0.9;
+                }
+                80%{
+                    transform: translate(50px, 35px) rotateZ(-70deg);
+                    opacity: 1;
+                }
+                100%{
+                    transform: translate(50px, 35px) rotateZ(-70deg);
+                    opacity: 0;
+                }
+            }
+            @-moz-keyframes ClawAnimation {
+                0%{
+                    transform: translate(50px, -20px) rotateZ(45deg);
+                    opacity: 0.1;
+                }
+                50%{
+                    transform: translate(10px, 0px) rotateZ(45deg);
+                    opacity: 0.9;
+                }
+                80%{
+                    transform: translate(50px, 35px) rotateZ(-70deg);
+                    opacity: 1;
+                }
+                100%{
+                    transform: translate(50px, 35px) rotateZ(-70deg);
+                    opacity: 0;
+                }
+            }
+            @keyframes ClawAnimation {
+                0%{
+                    transform: translate(50px, -20px) rotateZ(45deg);
+                    opacity: 0.1;
+                }
+                50%{
+                    transform: translate(10px, 0px) rotateZ(45deg);
+                    opacity: 0.9;
+                }
+                80%{
+                    transform: translate(50px, 35px) rotateZ(-70deg);
+                    opacity: 1;
+                }
+                100%{
+                    transform: translate(50px, 35px) rotateZ(-70deg);
+                    opacity: 0;
+                }
+            }
             &.line-white-fade{
                 @-webkit-keyframes TileAnimationLineWhiteFade {
                     0%{background: linear-gradient(180deg,transparent 28%, white 48%, transparent 51%)}
@@ -545,8 +664,8 @@
                 width: 30px;
                 // border: 1px solid white;
                 font-size: 10px;
-                // color: white;
-                color: transparent;
+                color: white;
+                // color: transparent;
             }
         }
     }
@@ -1088,6 +1207,9 @@
                     transition: 1s;
                     top: 0;
                     z-index: 100;
+                    // &.monster-portrait-wrapper{
+                    //     transform: scale(2);
+                    // }
                 }
                 .weapon-wrapper{
                     position: absolute;
@@ -1169,8 +1291,16 @@
                 .indicators-wrapper{
                     opacity: 1;
                     transition: opacity 1s;
+                    // position: absolute;
+                    // bottom: -50px;
+                    z-index: 10000;
+                    width: 100px;
                     &.hidden{
                         opacity: 0;
+                    }
+                    &.enlarged-portrait{
+                        position: absolute;
+                        bottom: -50px;
                     }
                 }
                 .portrait-relative-container{
@@ -1239,7 +1369,9 @@
                     // transition: transform 1s;
                     transform: matrix3d(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
                     transition: all 0.5s;
-
+                    &.monster-portrait{
+                        transform: scale(2);
+                    }
                     &.facing-up{
                         transform: skewY(-40deg)
                     }
@@ -1251,16 +1383,16 @@
                         transform: scaleX(-1)
                     }
                     &.missed{
-                        transform: scale(0.8)
+                        // transform: scale(0.9)
                     }
                     &.missed-reversed{
-                        transform: scale(0.8) scaleX(-1)
+                        // transform: scale(0.9) scaleX(-1)
                     }
                     &.hit-from-left-minor{
-                        transform: matrix3d(1, 0, 0, -0.01, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
+                        // transform: matrix3d(1, 0, 0, -0.001, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
                     }
                     &.hit-from-left-severe{
-                        transform: matrix3d(1, 0, 1, -0.02, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
+                        // transform: matrix3d(1, 0, 1, -0.02, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
                     }
                     &.hit-from-left-lethal{
                         transform: matrix3d(1, 0, 1, -0.1, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
@@ -1287,9 +1419,12 @@
                         border-radius: 100px;
                     }
                     &.monster-portrait.enlarged{
-                        transform: scale(4);
+                        transform: scale(3);
                         transform-origin: 86px 68px;
                     }
+                    // &.monster-portrait{
+                    //     transform: scale(2);
+                    // }
                     
                     pointer-events: initial;
                     

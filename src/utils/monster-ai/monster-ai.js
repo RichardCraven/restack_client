@@ -1,6 +1,6 @@
 import { Djinn } from './profiles/Djinn'
 import { Sphinx } from './profiles/Sphinx'
-import {Methods} from './methods/basic-methods';
+import {Methods} from '../basic-methods';
 import {MonsterMovementMethods} from './methods/monster-movement-methods';
 
 export function MonsterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
@@ -19,7 +19,7 @@ export function MonsterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
         INTERVAL_TIME: this.INTERVAL_TIME
     }
 
-    // this.roster = {
+    // this.roster = { 
     //     djinn: new Djinn(data)
     // }
     this.connectUtilMethods = (utilMethods) => {
@@ -32,6 +32,9 @@ export function MonsterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
         this.missesTarget = utilMethods.missesTarget;
         this.hitsTarget = utilMethods.hitsTarget;
         this.hitsCombatant = utilMethods.hitsCombatant;
+
+        // this.chooseAttackType = this.chooseAttackType;
+
         this.utilMethods = {
             monsterFacingDown:this.monsterFacingDown,
             monsterFacingUp: this.monsterFacingUp,
@@ -40,7 +43,8 @@ export function MonsterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
             kickoffAttackCooldown: this.kickoffAttackCooldown,
             missesTarget: this.missesTarget,
             hitsTarget: this.hitsTarget,
-            hitsCombatant: this.hitsCombatant
+            hitsCombatant: this.hitsCombatant,
+            chooseAttackType: this.chooseAttackType
         }
     }
 
@@ -82,20 +86,26 @@ export function MonsterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
         return array[index]
     }
     this.chooseAttackType = (caller, target) => {
+        if(caller.type === 'sphinx'){
+            // console.log('SPHINX CHOOSE ATTACK TYPE');
+        }
         let attack, available = caller.attacks.filter(e=>e.cooldown_position === 100);
         let percentCooledDown = 0,
             chosenAttack;
         const distanceToTarget = this.methods.getDistanceToTarget(caller, target);
 
+        console.log('distance to target',distanceToTarget );
         if(distanceToTarget === 1 && available.find(e=>e.range === 'close')){
             attack = available.find(e=>e.range === 'close');
             return attack;
         }
-
+        // console.log(caller.type,'AVAILBLE: ', available);
+        // console.log('vs ', caller.attacks);
         if(available.length === 0){
             // choose the attack that is closest to 100 percent
             
-            caller.attacks.filter(e=>e.range === 'medium' || e.range === 'far').forEach(e=>{
+            // .filter(e=>e.range === 'medium' || e.range === 'far')
+            caller.attacks.forEach(e=>{
                 if(e.cooldown_position > percentCooledDown){
                     percentCooledDown = e.cooldown_position;
                     chosenAttack = e;
@@ -104,15 +114,32 @@ export function MonsterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
             attack = chosenAttack;
         } else {
             if(available.filter(e=>(e.range === 'far' || e.range === 'medium') && e.cooldown_position > 25).length > 0){
-                let percentCooledDown = 0;
-                available.filter(e=>(e.range === 'far' || e.range === 'medium') && e.cooldown_position > 25).forEach((e)=>{
-                    if(e.cooldown_position > percentCooledDown){
-                        percentCooledDown = e.cooldown_position;
-                        chosenAttack = e;
-                    }
-                })
-                attack = chosenAttack;
+                let attacks = available.filter(e=>(e.range === 'far' || e.range === 'medium') && e.cooldown_position > 25);
+                let sortedAttacks = attacks.sort((a,b)=> b.cooldown_position - a.cooldown_position)
+                // console.log('sphinx sortedAttacks : ', sortedAttacks);
+                // console.log('sphinx available": ', available, 'and ', available.filter(e=>(e.range === 'far' || e.range === 'medium') && e.cooldown_position > 25));
+
+                if(sortedAttacks[1] && sortedAttacks[1].cooldown_position === sortedAttacks[0].cooldown_position){
+                    // console.log('theres a tie for first choose randomly');
+                    attack = data.methods.pickRandom(sortedAttacks.filter(e=> e.cooldown_position === sortedAttacks[0].cooldown_position) )
+                    // console.log('randomly picked: ', attack);
+                } else {
+                    attack = sortedAttacks[0]
+                }
+                return attack
+
+                // let percentCooledDown = 0;
+                // attacks.forEach((e)=>{
+                //     if(e.cooldown_position > percentCooledDown){
+                //         percentCooledDown = e.cooldown_position;
+                //         chosenAttack = e;
+                //     } else {
+
+                //     }
+                // })
+                // attack = chosenAttack;
             } else {
+                // console.log('randomly picking between');
                 attack = data.methods.pickRandom(available);
             }
         }
@@ -131,10 +158,7 @@ export function MonsterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
         const distanceToTarget = this.methods.getDistanceToTarget(caller, friendlyTarget),
         laneDiff = this.methods.getLaneDifferenceToTarget(caller, friendlyTarget)
         if(laneDiff === 1 || laneDiff === -1){
-            console.log('LORYASTES: adjacent lane');
             if(distanceToTarget === 0){
-                console.log('LORYASTES: UP OR DOWN ADJACENT');
-
 
             }
         } else if(laneDiff < -1){
@@ -142,7 +166,6 @@ export function MonsterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
         } else if(laneDiff > 1){
             newPosition = caller.position + 1
         } else if(laneDiff === 0 && distanceToTarget === 1){
-            console.log('LORYASTES: BEHIND ADJACENT!');
             newPosition = caller.position - 1
         }
         if((distanceToTarget < 0 && laneDiff) !== 0 ||  

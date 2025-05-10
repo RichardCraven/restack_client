@@ -18,7 +18,7 @@ const NUM_COLUMNS = 8;
 const MAX_ROWS = 5;
 const TILE_SIZE = 100;
 const SHOW_TILE_BORDERS = true;
-const SHOW_COMBAT_BORDER_COLORS = false;
+const SHOW_COMBAT_BORDER_COLORS = true;
 const SHOW_INTERACTION_PANE=true
 
 const RANGES = {
@@ -152,23 +152,11 @@ class MonsterBattle extends React.Component {
         return this.monster()?.coordinates.x < this.targetOf(this.monster())?.coordinates.x
     }
     minionDirectionReversed = (minion) => {
-        return minion?.depth < this.targetOf(minion)?.coordinates.x
+        return minion?.coordinates.x < this.targetOf(minion)?.coordinates.x
     }
     getHitAnimation = (combatant) => {
-        console.log('get hit animation', combatant, combatant.wounded);
         if(!combatant || !combatant.wounded) return '';
-        console.log('get hit animation, retruning: ', `hit-from-${combatant.wounded.sourceDirection}-${combatant.wounded.severity}`);
         return `hit-from-${combatant.wounded.sourceDirection}-${combatant.wounded.severity}`
-        // switch(combatant.wounded.sourceDirection){
-        //     case 'left':
-        //         return `hit-from-${combatant.wounded.sourceDirection}-${combatant.wounded.severity}`
-        //     break;
-        //     case 'right':
-
-        //     break;
-        //     default:
-        //         break;
-        // }
     }
 
     fighterFacingRight = (fighter) => {
@@ -286,24 +274,24 @@ class MonsterBattle extends React.Component {
         //cyan 
         const selectedFighter = this.state.battleData[id];
         // console.log('fighter clicked: ', selectedFighter);
-        // console.log('this.fighter(selectedFighter)?.depth * 100 = ', this.fighter(selectedFighter)?.depth * 100);
-        // console.log('(this.fighter(selectedFighter)?.depth * 100 - 100)', (this.fighter(selectedFighter)?.depth * 100 - 100));
+        // console.log('this.fighter(selectedFighter)?.coordinates.x * 100 = ', this.fighter(selectedFighter)?.coordinates.x * 100);
+        // console.log('(this.fighter(selectedFighter)?.coordinates.x * 100 - 100)', (this.fighter(selectedFighter)?.coordinates.x * 100 - 100));
         // console.log('this.fighterFacingRight(selectedFighter): ', this.fighterFacingRight(selectedFighter));
 
         // console.log('this.props.combatManager.getRangeWidthVal(fighter)', this.props.combatManager.getRangeWidthVal(selectedFighter));
 
-        // ${(this.fighter(fighter)?.depth * 100 + 100) - (this.fighterFacingRight(fighter) ? 0 : 100 - (this.props.combatManager.getRangeWidthVal(fighter) * 100))}
+        // ${(this.fighter(fighter)?.coordinates.x * 100 + 100) - (this.fighterFacingRight(fighter) ? 0 : 100 - (this.props.combatManager.getRangeWidthVal(fighter) * 100))}
 
 
-        // (selectedFighter?.depth * 100 + 100) - (this.fighterFacingRight(selectedFighter) ? 0 : (100 + this.props.combatManager.getRangeWidthVal(selectedFighter) * 100))
-        let val = (this.fighter(selectedFighter)?.depth * 100) + (this.fighterFacingRight(selectedFighter) ? 100 : (0 - (this.props.combatManager.getRangeWidthVal(selectedFighter) * 100) ))
+        // (selectedFighter?.coordinates.x * 100 + 100) - (this.fighterFacingRight(selectedFighter) ? 0 : (100 + this.props.combatManager.getRangeWidthVal(selectedFighter) * 100))
+        let val = (this.fighter(selectedFighter)?.coordinates.x * 100) + (this.fighterFacingRight(selectedFighter) ? 100 : (0 - (this.props.combatManager.getRangeWidthVal(selectedFighter) * 100) ))
         // console.log('val: ', val);
         return val
     }
     fighterPortraitClicked = (id) => {
         const selectedFighter = this.state.battleData[id];
         console.log('fighter clicked: ', selectedFighter, this.state.animationOverlays[id]);
-        let val = (this.fighter(selectedFighter)?.depth * 100) + (this.fighterFacingRight(selectedFighter) ? 0 : (100 - (this.props.combatManager.getRangeWidthVal(selectedFighter) * 100) ))
+        let val = (this.fighter(selectedFighter)?.coordinates.x * 100) + (this.fighterFacingRight(selectedFighter) ? 0 : (100 - (this.props.combatManager.getRangeWidthVal(selectedFighter) * 100) ))
         selectedFighter.portrait = this.props.crew.find(e=>e.id === id).portrait
 
         console.log('setting selected fighter: ', selectedFighter);
@@ -631,7 +619,7 @@ class MonsterBattle extends React.Component {
         }
     }
     fireGlyph = (glyph) => {
-        console.log('glyph firing');
+        console.log('glyph firing', glyph);
         switch(glyph.type){
             case 'magic missile':
                 console.log('!', this.props.animationManager);
@@ -934,9 +922,9 @@ class MonsterBattle extends React.Component {
                                 border: SHOW_COMBAT_BORDER_COLORS ? '1px solid #e8e880' : '1px solid transparent'
                             }}
                             >
-                                {/* <div className="coord-container">
+                                <div className="coord-container">
                                     {t.x}, {t.y}
-                                </div> */}
+                                </div>
                                 {this.state.ghostPortraitMatrix[i] && <div className="ghost-portrait"
                                 style={{
                                     backgroundImage: "url(" + this.state.ghostPortraitMatrix[i] + ")"
@@ -952,7 +940,7 @@ class MonsterBattle extends React.Component {
                             {this.props.crew.map((fighter, i) => {
                         return  <div key={i}  className='lane-wrapper' 
                                     style={{ 
-                                        top: `${this.state.battleData[fighter.id]?.position * TILE_SIZE + (SHOW_TILE_BORDERS ? this.state.battleData[fighter.id]?.position * 2 : 0)}px`,
+                                        top: `${this.state.battleData[fighter.id]?.coordinates.y * TILE_SIZE + (SHOW_TILE_BORDERS ? this.state.battleData[fighter.id]?.coordinates.y * 2 : 0)}px`,
                                         height: `${TILE_SIZE}px`
                                     }}>
                                     <div 
@@ -960,7 +948,7 @@ class MonsterBattle extends React.Component {
                                     >
                                         <div className="portrait-wrapper"
                                         style={{
-                                            left: `${this.state.battleData[fighter.id]?.depth * 100 + (SHOW_TILE_BORDERS ? this.state.battleData[fighter.id]?.depth * 2 : 0)}px`,
+                                            left: `${this.state.battleData[fighter.id]?.coordinates.x * 100 + (SHOW_TILE_BORDERS ? this.state.battleData[fighter.id]?.coordinates.x * 2 : 0)}px`,
                                             zIndex: `${this.state.battleData[fighter.id]?.dead ? '0' : '100'}`
                                         }}
                                         >
@@ -1044,8 +1032,8 @@ class MonsterBattle extends React.Component {
                                             medium`}
                                             style={{
                                             left: this.fighterFacingRight(fighter) ?
-                                            `${this.fighter(fighter)?.depth * 100 + 45 + (this.fighter(fighter)?.depth * 2)}px` :
-                                            `${this.fighter(fighter)?.depth * 100 - 65 + (this.fighter(fighter)?.depth * 2)}px`
+                                            `${this.fighter(fighter)?.coordinates.x * 100 + 45 + (this.fighter(fighter)?.coordinates.x * 2)}px` :
+                                            `${this.fighter(fighter)?.coordinates.x * 100 - 65 + (this.fighter(fighter)?.coordinates.x * 2)}px`
                                             ,
                                             backgroundImage: "url(" + this.state.battleData[fighter.id].pendingAttack.icon + ")"
                                         }}>
@@ -1076,7 +1064,7 @@ class MonsterBattle extends React.Component {
                                                 width: !!this.state.selectedFighter?.pendingAttack ? `${this.props.combatManager.getRangeWidthVal(this.state.selectedFighter) * 100}px` : '0px',
                                                 left: 
                                                 this.state.selectedFighter?.pendingAttack ? 
-                                                `${(this.state.selectedFighter?.depth * 100) - (RANGES[this.state.selectedFighter.pendingAttack.range]*100) + (this.fighterFacingRight(fighter) ? 200 : 0)}px` 
+                                                `${(this.state.selectedFighter?.coordinates.x * 100) - (RANGES[this.state.selectedFighter.pendingAttack.range]*100) + (this.fighterFacingRight(fighter) ? 200 : 0)}px` 
                                                 : 0
                                                 }}>
                                         </div> */}
@@ -1091,7 +1079,7 @@ class MonsterBattle extends React.Component {
                         {/* // MONSTER // */}
                         <div className='lane-wrapper'  
                         style={{ 
-                            top: `${this.state.battleData[this.props.monster.id]?.position * TILE_SIZE + (SHOW_TILE_BORDERS ? this.state.battleData[this.props.monster.id]?.position * 2 : 0)}px`,
+                            top: `${this.state.battleData[this.props.monster.id]?.coordinates.y * TILE_SIZE + (SHOW_TILE_BORDERS ? this.state.battleData[this.props.monster.id]?.coordinates.y * 2 : 0)}px`,
                             height: `${TILE_SIZE}px`
                         }}>
                             <div className="monster-wrapper">
@@ -1108,7 +1096,7 @@ class MonsterBattle extends React.Component {
                                     <div  style={{
                                         zIndex: 1000, 
                                         // backgroundColor: '#2eb85c63'
-                                        }}  className={`action-bar ${this.monster()?.attacking ? (this.monster()?.depth < this.targetOf(this.monster())?.depth ? 'monsterHitsAnimation_LtoR' : 'monsterHitsAnimation') : ''}`}>
+                                        }}  className={`action-bar ${this.monster()?.attacking ? (this.monster()?.coordinates.x < this.targetOf(this.monster())?.coordinates.x ? 'monsterHitsAnimation_LtoR' : 'monsterHitsAnimation') : ''}`}>
 
                                     </div>
                                 </div>
@@ -1135,7 +1123,7 @@ class MonsterBattle extends React.Component {
                                 }}
                                 ></div>}
                                 <div 
-                                className="portrait-wrapper"
+                                className="portrait-wrapper monster-portrait-wrapper"
                                 style={{
                                     left: `${this.monster()?.coordinates.x * 100 + (this.monster()?.coordinates.x * 2)}px`,
                                     zIndex: `${this.monster()?.dead ? '0' : '100'}`
@@ -1207,7 +1195,7 @@ class MonsterBattle extends React.Component {
                                             })}
                                         </div>
                                     </div>
-                                    {<div className={`indicators-wrapper ${this.state.greetingInProcess ? 'hidden' : ''}`}>
+                                    {<div className={`indicators-wrapper enlarged-portrait ${this.state.greetingInProcess ? 'hidden' : ''}`}>
                                         <div className="monster-hp-bar hp-bar">
                                             {!this.state.battleData[this.props.monster.id]?.dead && <div className="red-fill" style={{width: `${(this.state.battleData[this.props.monster.id]?.hp / this.props.monster.stats.hp) * 100}%`}}></div>}
                                         </div>
@@ -1228,7 +1216,7 @@ class MonsterBattle extends React.Component {
                                 key={i} 
                                 className='lane-wrapper' 
                                 style={{ 
-                                    top: `${this.state.battleData[minion.id]?.position * TILE_SIZE + (this.state.battleData[minion.id]?.position * 2)}px`,
+                                    top: `${this.state.battleData[minion.id]?.coordinates.y * TILE_SIZE + (this.state.battleData[minion.id]?.coordinates.y * 2)}px`,
                                     height: `${TILE_SIZE}px`
                                 }}> 
                                     <div className="monster-wrapper">
@@ -1387,7 +1375,7 @@ class MonsterBattle extends React.Component {
                                             <div  
                                                 style={{backgroundImage: "url(" + glyphUnit.actionType.subTypes[0].icon_url + "), radial-gradient(white 40%, black 80%)", cursor: 'pointer'}} 
                                                 className={`interaction-tile special ${glyphUnit.selected ? 'selected' : ''}`}
-                                                onClick={() => this.fireGlyph(glyphUnit)} 
+                                                onClick={() => this.fireGlyph(glyphUnit.actionType.subTypes[0])}
                                                 onMouseEnter={() => this.glyphTileHovered(glyphUnit)} 
                                                 onMouseLeave={() => this.glyphTileHovered(null)}>
                                             </div>

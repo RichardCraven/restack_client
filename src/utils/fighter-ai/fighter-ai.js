@@ -1,7 +1,8 @@
 import { Sage } from './profiles/Sage'
 import { Wizard } from './profiles/Wizard'
 import { Rogue } from './profiles/Rogue'
-import {Methods} from './methods/basic-methods';
+import { Soldier } from './profiles/Soldier'
+import {Methods} from '../basic-methods';
 import {MovementMethods} from './methods/fighter-movement-methods';
 
 export function FighterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
@@ -18,7 +19,6 @@ export function FighterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
         this.initializeRoster(instance)
     }
     this.connectUtilMethods = (utilMethods) => {
-        // console.log('fighter util methods: ', utilMethods);
         this.fighterFacingUp = utilMethods.fighterFacingUp;
         this.fighterFacingDown = utilMethods.fighterFacingDown;
         this.fighterFacingRight = utilMethods.fighterFacingRight;
@@ -27,6 +27,7 @@ export function FighterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
         this.missesTarget = utilMethods.missesTarget;
         this.hitsTarget = utilMethods.hitsTarget;
         this.hitsCombatant = utilMethods.hitsCombatant;
+        this.targetKilled = utilMethods.targetKilled;
         this.utilMethods = {
             fighterFacingDown:this.monsterFacingDown,
             fighterFacingUp: this.monsterFacingUp,
@@ -35,14 +36,15 @@ export function FighterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
             kickoffAttackCooldown: this.kickoffAttackCooldown,
             missesTarget: this.missesTarget,
             hitsTarget: this.hitsTarget,
-            hitsCombatant: this.hitsCombatant
+            hitsCombatant: this.hitsCombatant,
+            targetKilled: this.targetKilled
         }
     }
     this.initializeRoster = (animationManager) => {
         this.roster = {
             sage: new Sage(data, this.utilMethods, this.animationManager, this.overlayManager),
             wizard: new Wizard(data, this.utilMethods, animationManager),
-            soldier,
+            soldier: new Soldier(data, this.utilMethods, animationManager),
             rogue: new Rogue(data, this.utilMethods, this.animationManager, this.overlayManager)
         }
     }
@@ -77,8 +79,6 @@ export function FighterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
         }
 
         if(available.length === 0){
-            // choose the attack that is closest to 100 percent
-            
             caller.attacks.filter(e=>e.range === 'medium' || e.range === 'far').forEach(e=>{
                 if(e.cooldown_position > percentCooledDown){
                     percentCooledDown = e.cooldown_position;

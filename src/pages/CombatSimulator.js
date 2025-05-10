@@ -78,8 +78,8 @@ class CrewManagerPage extends React.Component{
     // selectedCrew.push(options[1])
     // selectedCrew.push(options[2])
 
-    selectedCrew.push(this.props.crewManager.crew.find(e=>e.type==='wizard'))
-    // selectedCrew.push(this.props.crewManager.crew.find(e=>e.type==='soldier'))
+    // selectedCrew.push(this.props.crewManager.crew.find(e=>e.type==='wizard'))
+    selectedCrew.push(this.props.crewManager.crew.find(e=>e.type==='soldier'))
     // selectedCrew.push(this.props.crewManager.crew.find(e=>e.type==='rogue'))
 
     // selectedCrew.push(this.props.crewManager.crew.find(e=>e.type==='monk'))
@@ -168,7 +168,7 @@ class CrewManagerPage extends React.Component{
     minions = [];
     if(monster && monster.minions){
 
-        monster.minions = ['skeleton'];
+        monster.minions = ['skeleton', 'skeleton'];
         // monster.minions = [];
 
         monster.minions.forEach((e,i)=>{

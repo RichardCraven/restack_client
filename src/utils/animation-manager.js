@@ -97,6 +97,47 @@ export function AnimationManager(){
             this.tileOff(tileId)
         }, 1000)
     }
+    this.triggerTileAnimationComplex = (data) => {
+        // const [targetTileId, type, facing] = data
+        // why is ^ this not deconstructing? prolly wrong syntax
+        const targetTileId = data.targetTileId, type = data.type, facing = data.facing;
+        console.log('facing ', facing);
+        // this.tileOn(tileId, 'solid', color)
+        let storedTile = this.tiles.find(e=>e.id === targetTileId);
+        switch(type){
+            case 'claw':
+                storedTile.animationType = 'claw';
+                storedTile.transitionType = 'fade';
+                this.update();
+                console.log('CLAW AT ', targetTileId);
+                setTimeout(()=>{
+                    storedTile.animationType = null;
+                    storedTile.transitionType = null;
+                    this.update();
+                },1000)
+            break;
+            case 'sword_swing':
+                storedTile.animationType = 'sword_swing';
+                storedTile.transitionType = 'fade';
+                this.update();
+                console.log('SWORD AT ', targetTileId);
+                setTimeout(()=>{
+                    storedTile.animationType = null;
+                    storedTile.transitionType = null;
+                    this.update();
+                },1000)
+                // debugger
+            break;
+            default:
+                console.log('animation not properly specified... INVESTIGATE');
+                break;
+
+        }
+        // this.
+        // setTimeout(()=>{
+        //     this.tileOff(tileId)
+        // }, 1000)
+    }
     this.triggerTileAnimation_line = (tileId, color = null) => {
         this.tileOn(tileId, 'line', color);
         setTimeout(()=>{
@@ -105,14 +146,14 @@ export function AnimationManager(){
     }
     this.tileOn = (tileId, animationType, color = null) => {
         const storedTile = this.tiles.find(e=>e.id === tileId)
-        storedTile.animationOn = true;
+        // storedTile.animationOn = true;
         storedTile.animationType = animationType;
         storedTile.transitionType = color ? `${color}-fade` : 'red-fade';
         this.update();
     }
     this.tileOff = (tileId) => {
         const storedTile = this.tiles.find(e=>e.id === tileId)
-        storedTile.animationOn = false;
+        // storedTile.animationOn = false;
         storedTile.transitionType = ''
         storedTile.animationType = ''
         this.update();
@@ -245,7 +286,7 @@ export function AnimationManager(){
                             let tileCoords = this.getTileCoordsById(id)
                             // console.log('tileCoords: ', tileCoords);
                             let collision = this.checkForCollision(tileCoords)
-                            console.log('collision:::::::: ', collision?.id);
+                            // console.log('collision:::::::: ', collision?.id);
 
                             this.triggerTileAnimation(id, color);
                             if(collision){
@@ -334,6 +375,38 @@ export function AnimationManager(){
                 }
                 
                 // debugger
+            }
+        })
+    }
+    this.clawTo = (targetTileId, sourceTileId) => {
+        const sourceTile = this.tiles.find(e=>e.id === sourceTileId)
+        const destinationTile = this.tiles.find(e=>e.id === targetTileId)
+        console.log('sourceTile: ', sourceTile, 'dest Tile:', destinationTile);
+        if(!sourceTile || !destinationTile){
+            console.log('missing one');
+            debugger
+        }
+        let isOnSamePlane = sourceTile.y === destinationTile.y;
+        let facing = sourceTile.x > destinationTile.x ? 'left' : 'right'
+        return new Promise((resolve, reject) => {
+            if(isOnSamePlane){
+                let distanceAway = Math.abs(sourceTile.x - destinationTile.x)
+                let id = this.getTileIdByCoords({x: destinationTile.x, y: destinationTile.y})
+                // if(sourceTile.x > destinationTile.x && direction === 'rightToLeft'){
+                    const data = {
+                        targetTileId: id,
+                        type: 'claw',
+                        facing
+                    }
+                    // need to handle attacks from above or below
+                    this.triggerTileAnimationComplex(data);
+                    let tileCoords = this.getTileCoordsById(id)
+                    let collision = this.checkForCollision(tileCoords)
+                    resolve(collision);
+                    
+                // if(sourceTile.x < destinationTile.x && direction === 'leftToRight'){
+                //     debugger
+                // }
             }
         })
     }
@@ -470,6 +543,44 @@ export function AnimationManager(){
     this.crossAnimation = (tileId, color = null) => {
         this.triggerTileAnimation(tileId, color)
         this.cross(tileId, color)
+    }
+    this.clawToTarget = async (targetTileId, sourceTileId, direction, resolve) => {
+        console.log('claw direction: ', direction);
+        let hit = await this.clawTo(targetTileId, sourceTileId)
+        console.log('hit ', hit);
+        resolve(hit)
+    }
+    this.swordSwing = async (targetTileId, sourceTileId, resolve) => {
+        // let hit = await this.clawTo(targetTileId, sourceTileId)
+        // console.log('hit ', hit);
+        // resolve(hit)
+        // this.clawTo = (targetTileId, sourceTileId) => {
+            const sourceTile = this.tiles.find(e=>e.id === sourceTileId)
+            const destinationTile = this.tiles.find(e=>e.id === targetTileId)
+            console.log('sourceTile: ', sourceTile);
+            if(!sourceTile){
+                console.log('missing source');
+                debugger
+            }
+            // let isOnSamePlane = sourceTile.y === destinationTile.y;
+            const facing = sourceTile.x > destinationTile.x ? 'left' : 'right'
+            console.log('sword direction: ', facing);
+            return new Promise(() => {
+                // let id = this.getTileIdByCoords({x: destinationTile.x, y: destinationTile.y})
+                const data = {
+                    targetTileId,
+                    type: 'sword_swing',
+                    facing
+                }
+                // this.triggerTileAnimationComplex(targetTileId, 'sword_swing', facingRight);
+                this.triggerTileAnimationComplex(data)
+                let tileCoords = this.getTileCoordsById(targetTileId)
+                let collision = this.checkForCollision(tileCoords)
+                console.log('collision: ', collision);
+                console.log('resolve from animanager');
+                resolve(collision);
+            })
+        // }
     }
     this.zapBurstAnimation = async (targetTileId, sourceTileId, color = null, resolve) => {
         await this.straightLineTo(targetTileId, sourceTileId, color)

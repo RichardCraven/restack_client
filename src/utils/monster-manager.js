@@ -354,7 +354,8 @@ export function MonsterManager(){
             greetings: ['be thee worthy?'],
             deathCries: ['you may pass'],
             specials: ['possess', 'tesseract'],
-            attacks: ['claws', 'induce_madness', 'lightning'],
+            // attacks: ['claws', 'claws', 'claws'],
+            attacks: ['claws', 'claws', 'induce_madness', 'lightning'],
             weaknesses: ['arcane'],
             minions: ['djinn'],
             drops: [
@@ -464,7 +465,7 @@ export function MonsterManager(){
             greetings: ['*screech*'],
             deathCries: ['*screech*'],
             specials: ['induce_fear'],
-            attacks: ['crush', 'bite', 'tackle'],
+            attacks: ['claws', 'claws', 'claws'],
             minions: ['skeleton', 'skeleton'],
             weaknesses: ['fire'],
             drops: [

@@ -8,14 +8,65 @@ export const MonsterMovementMethods = {
     stayInColumn: (columnNum, caller, combatants) => {
         const enemyTarget = Object.values(combatants).find(e=>e.id === caller.targetId),
         laneDiff = Methods.getLaneDifferenceToTarget(caller, enemyTarget);
-
-        if(laneDiff < 0){
-            caller.position--
-        } else if(laneDiff > 0){
-            caller.position++
+        let coords = caller.coordinates;
+        let newCoords = JSON.parse(JSON.stringify(coords))
+        let amount = window.pickRandom([1,2])
+        newCoords.y += amount
+        if(newCoords.y < 0){
+            newCoords.y = 0;
+        } else if(newCoords.y > MAX_LANES){
+            newCoords.y = MAX_LANES
         }
-        caller.depth = columnNum
-        caller.coordinates = {x: columnNum, y: caller.position}
+        caller.coordinates = newCoords;
+    },
+    goUp: (caller, combatants) => {
+        const enemyTarget = Object.values(combatants).find(e=>e.id === caller.targetId);
+        let coords = caller.coordinates;
+        let newCoords = JSON.parse(JSON.stringify(coords))
+        let amount = window.pickRandom([1,2])
+        newCoords.y -= amount
+        if(newCoords.y < 0){
+            newCoords.y = 0;
+        } else if(newCoords.y > MAX_LANES){
+            newCoords.y = MAX_LANES
+        }
+        caller.coordinates = newCoords;
+    },
+    goDown: (caller, combatants) => {
+        const enemyTarget = Object.values(combatants).find(e=>e.id === caller.targetId);
+        let coords = caller.coordinates;
+        let newCoords = JSON.parse(JSON.stringify(coords))
+        let amount = window.pickRandom([1,2])
+        newCoords.y -= amount
+        if(newCoords.y < 0){
+            newCoords.y = 0;
+        } else if(newCoords.y > MAX_LANES){
+            newCoords.y = MAX_LANES
+        }
+        caller.coordinates = newCoords;
+    },
+    centerBack: (caller) => {
+        let targetTile = {x: 6, y: 2}
+        let coords = caller.coordinates;
+        let newCoords = JSON.parse(JSON.stringify(coords))
+        if(targetTile.x > coords.x) newCoords.x = coords.x+1
+        if(targetTile.x < coords.x) newCoords.x = coords.x-1
+        if(targetTile.y > coords.y) newCoords.y = coords.y+1
+        if(targetTile.y < coords.y) newCoords.y = coords.y-1
+        caller.coordinates = newCoords;
+    },
+    evade: (caller, combatants) => {
+        const enemyTarget = Object.values(combatants).find(e=>e.id === caller.targetId),
+        laneDiff = Methods.getLaneDifferenceToTarget(caller, enemyTarget),
+        depthDiff = Methods.getDistanceToTarget(caller, enemyTarget)
+        let coords = caller.coordinates;
+        if(laneDiff < 0){
+            // caller.position--
+            caller.coordinates = {x: depthDiff > 3 ? coords.x-1 : coords.x, y: coords.y+1}
+        } else if(laneDiff > 0){
+            // caller.position++
+            caller.coordinates = {x: depthDiff > 3 ? coords.x-1 : coords.x, y: coords.y+1}
+        }
     },
     moveTowardsCloseEnemyTarget: (caller, combatants) => {
         const enemyTarget = Object.values(combatants).find(e=>e.id === caller.targetId)

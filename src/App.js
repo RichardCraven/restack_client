@@ -34,6 +34,11 @@ const [showToolbar, setShowToolbar] = useState(true)
 const [narrativeSequenceType, setNarrativeSequenceType] = useState('')
 const history = useHistory();
 useEffect(() => {
+  console.log('setting global methods');
+  window.pickRandom = (array) => {
+    let index = Math.floor(Math.random() * array.length)
+    return array[index]
+}
   getAllUsersRequest().then((response)=>{
     setAllUsers(response.data)
   })

@@ -14,6 +14,13 @@ export function Djinn(data, utilMethods, animationManager, overlayManager){
     this.hitsTarget = utilMethods.hitsTarget;
  
     this.acquireTarget = (caller, combatants) => {
+        if(caller.targetId){
+
+            const target = combatants[caller.targetId]
+            console.log('already has target, just choose new attack');
+            caller.pendingAttack = this.chooseAttackType(caller, target);
+            return
+        }
         const liveEnemies = Object.values(combatants).filter(e=>!e.dead && (!e.isMonster && !e.isMinion));
         const sorted = liveEnemies.sort((a,b)=>b.depth - a.depth);
         // console.log('djinn sorted targets: ', sorted);
