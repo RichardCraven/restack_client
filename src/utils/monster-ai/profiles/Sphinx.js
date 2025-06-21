@@ -188,8 +188,7 @@ export function Sphinx(data, utilMethods, animationManager, overlayManager){
         const sourceTileId = this.animationManager.getTileIdByCoords(callerCoords);
         return new Promise((resolve) => {
             if(sourceTileId !== null){
-                // console.log('sourceTileId: ', sourceTileId);
-                this.animationManager.clawToTarget(targetTileId, sourceTileId, 'right-to-left', resolve)
+                this.animationManager.clawToTarget(targetTileId, sourceTileId, resolve)
             }
         })
     }

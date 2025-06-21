@@ -949,7 +949,7 @@ class MonsterBattle extends React.Component {
                                         <div className="portrait-wrapper"
                                         style={{
                                             left: `${this.state.battleData[fighter.id]?.coordinates.x * 100 + (SHOW_TILE_BORDERS ? this.state.battleData[fighter.id]?.coordinates.x * 2 : 0)}px`,
-                                            zIndex: `${this.state.battleData[fighter.id]?.dead ? '0' : '100'}`
+                                            zIndex: `${this.state.battleData[fighter.id]?.dead ? '0' : '101'}`
                                         }}
                                         >
                                             <div 
@@ -1226,7 +1226,7 @@ class MonsterBattle extends React.Component {
                                                 left: `calc(100px * ${this.props.combatManager.getCombatant(this.state.battleData[minion.id]?.targetId)?.coordinates.x} + 50px)`
                                                 }}>
                                             <div className={`action-bar ${this.state.battleData[minion.id]?.attacking ? (this.minionDirectionReversed(minion) ? 'monsterHitsAnimation_LtoR' : 'monsterHitsAnimation') : ''}`}>
-                                                {minion.id}
+                                                {/* {minion.id} */}
                                             </div>
                                         </div>
                                         { this.state.battleData[minion.id] && this.state.battleData[minion.id].pendingAttack && <div className={`weapon-wrapper 
@@ -1270,7 +1270,7 @@ class MonsterBattle extends React.Component {
                                             }} 
                                             onClick={() => this.monsterCombatPortraitClicked(minion.id)}
                                             > 
-                                            {/* {minion.id}  */}
+                                            {minion.id} 
                                             </div>
                                             <div 
                                             className={

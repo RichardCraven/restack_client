@@ -100,23 +100,18 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
             case 'brawler':
                 switch(caller.eraIndex){
                     case 0:
-                        console.log('era 0');
                         data.methods.closeTheGap(caller, combatants)
                     break;
                     case 1:
-                        console.log('era 1');
                         data.methods.closeTheGap(caller, combatants)
                     break;
                     case 2:
-                        console.log('era 2');
                         data.methods.closeTheGap(caller, combatants)
                     break;
                     case 3:
-                        console.log('era 3');
                         data.methods.closeTheGap(caller, combatants)
                     break;
                     case 4:
-                        console.log('era 4');
                         data.methods.closeTheGap(caller, combatants)
                     break;
                     default: 
@@ -197,35 +192,25 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
         const target = combatants[caller.targetId];
         
         if(manualAttack){
-            console.log('facing right', facingRight);
             if(caller.pendingAttack && caller.pendingAttack.cooldown_position < 99){
                 return
             } else if (caller.pendingAttack && caller.pendingAttack.cooldown_position === 100){
-                console.log('soldier manual attack! need to handle this')
-                // debugger
-                // target.coordinates
-
                 const combatantHit = await this.triggerSwordSwing(caller.coordinates, facingRight)
-                console.log('sword swing combatant hit: ', combatantHit);
                 if(combatantHit){
                     this.hitsCombatant(caller, combatantHit)
-                    // this.hitsTarget(caller)
-                    
+                    this.kickoffAttackCooldown(caller)
                 } else {
                     this.missesTarget(caller);
+                    this.kickoffAttackCooldown(caller)
                 }
-                // this.kickoffAttackCooldown(caller)
             }
         } else {
             const distanceToTarget = data.methods.getDistanceToTarget(caller, target),
             laneDiff = data.methods.getLaneDifferenceToTarget(caller, target);
-            console.log('soldier attacking with ', caller.pendingAttack.name);
             // debugger
             switch(caller.pendingAttack.name){
                 case 'sword swing':
-                    console.log('SWORD SWING');
                     const combatantHit = await this.triggerSwordSwing(caller.coordinates, facingRight)
-                    console.log('hits: ', combatantHit);
                     if(combatantHit){
                         this.hitsCombatant(caller, combatantHit);
                     } else {

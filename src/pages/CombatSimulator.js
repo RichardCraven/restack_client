@@ -163,7 +163,7 @@ class CrewManagerPage extends React.Component{
   setMonster = (monsterString) => {
     // monsterString = 'beholder'
     // monsterString = 'djinn'
-    monsterString = 'sphinx'
+    monsterString = 'skeleton'
     let monster = this.props.monsterManager.getMonster(monsterString), 
     minions = [];
     if(monster && monster.minions){

@@ -101,15 +101,12 @@ export function AnimationManager(){
         // const [targetTileId, type, facing] = data
         // why is ^ this not deconstructing? prolly wrong syntax
         const targetTileId = data.targetTileId, type = data.type, facing = data.facing;
-        console.log('facing ', facing);
-        // this.tileOn(tileId, 'solid', color)
         let storedTile = this.tiles.find(e=>e.id === targetTileId);
         switch(type){
             case 'claw':
                 storedTile.animationType = 'claw';
                 storedTile.transitionType = 'fade';
                 this.update();
-                console.log('CLAW AT ', targetTileId);
                 setTimeout(()=>{
                     storedTile.animationType = null;
                     storedTile.transitionType = null;
@@ -120,7 +117,6 @@ export function AnimationManager(){
                 storedTile.animationType = 'sword_swing';
                 storedTile.transitionType = 'fade';
                 this.update();
-                console.log('SWORD AT ', targetTileId);
                 setTimeout(()=>{
                     storedTile.animationType = null;
                     storedTile.transitionType = null;
@@ -133,10 +129,6 @@ export function AnimationManager(){
                 break;
 
         }
-        // this.
-        // setTimeout(()=>{
-        //     this.tileOff(tileId)
-        // }, 1000)
     }
     this.triggerTileAnimation_line = (tileId, color = null) => {
         this.tileOn(tileId, 'line', color);
@@ -146,14 +138,12 @@ export function AnimationManager(){
     }
     this.tileOn = (tileId, animationType, color = null) => {
         const storedTile = this.tiles.find(e=>e.id === tileId)
-        // storedTile.animationOn = true;
         storedTile.animationType = animationType;
         storedTile.transitionType = color ? `${color}-fade` : 'red-fade';
         this.update();
     }
     this.tileOff = (tileId) => {
         const storedTile = this.tiles.find(e=>e.id === tileId)
-        // storedTile.animationOn = false;
         storedTile.transitionType = ''
         storedTile.animationType = ''
         this.update();
@@ -193,14 +183,11 @@ export function AnimationManager(){
         },100)
     }
     this.straightBeamTo = (targetTileId, sourceTileId, color = null) => {
-        // console.log('TARGET TILE ID ', targetTileId);
         const sourceTile = this.tiles.find(e=>e.id === sourceTileId)
         const destinationTile = this.tiles.find(e=>e.id === targetTileId)
         let isOnSamePlane = sourceTile.y === destinationTile.y;
         let direction = sourceTile.x > destinationTile.x ? 'rightToLeft' : 'leftToRight'
-        // console.log('about to rerturn promise', sourceTile, destinationTile);
         return new Promise((resolve, reject) => {
-            // console.log('is On Same Plane ', isOnSamePlane);
             if(isOnSamePlane){
                 let distanceAway = Math.abs(sourceTile.x - destinationTile.x)
 
@@ -221,11 +208,8 @@ export function AnimationManager(){
                             this.triggerTileAnimation(id, color);
                         }
                     }, 100 + (distanceAway * 5))
-                    // idArray.
-                    // this.triggerTileAnimation(id, color)
                 }
                 if(sourceTile.x < destinationTile.x && direction === 'leftToRight'){
-                    // console.log('left to right');
                     let sourceX = sourceTile.x
                     let idArray = [];
                     for(let i = sourceX + 1; i < destinationTile.x; i++){
@@ -248,7 +232,6 @@ export function AnimationManager(){
     }
     this.straightBeamNoTarget = (sourceTileId, direction, color = null, resolve) => {
         const sourceTile = this.tiles.find(e=>e.id === sourceTileId)
-        // console.log('siourceTile: ', sourceTile);
         const maxX = this.MAX_DEPTH-1;
         let newCoords
         if(direction === 'left-to-right'){
@@ -256,19 +239,11 @@ export function AnimationManager(){
         } else if(direction === "right-to-left"){
             newCoords = {x: 0, y: sourceTile.y}
         }
-        // console.log('new coords: ', newCoords);
         let destinationTileId = this.getTileIdByCoords(newCoords)
         let destinationTile = this.tiles[destinationTileId]
-        // console.log('destination ', destinationTile);
-        // const destinationTile = this.tiles.find(e=>e.id === targetTileId)
         let isOnSamePlane = sourceTile.y === destinationTile.y;
-        // let direction = sourceTile.x > destinationTile.x ? 'rightToLeft' : 'leftToRight'
-        // console.log('about to rerturn promise', sourceTile, destinationTile, 'DIRECTION:::', direction);
         return new Promise(() => {
-            // console.log('is On Same Plane ', isOnSamePlane);
-            // if(isOnSamePlane){
                 let distanceAway = Math.abs(sourceTile.x - destinationTile.x)
-                // console.log('init, distanceAway', distanceAway);
                 if(sourceTile.x > destinationTile.x && direction === 'right-to-left'){
                     let sourceX = sourceTile.x
                     let idArray = [];
@@ -284,9 +259,7 @@ export function AnimationManager(){
                         } else {
                             let id = idArray.shift();
                             let tileCoords = this.getTileCoordsById(id)
-                            // console.log('tileCoords: ', tileCoords);
                             let collision = this.checkForCollision(tileCoords)
-                            // console.log('collision:::::::: ', collision?.id);
 
                             this.triggerTileAnimation(id, color);
                             if(collision){
@@ -295,12 +268,8 @@ export function AnimationManager(){
                             }
                         }
                     }, 10 + (distanceAway * 5))
-                    // idArray.
-                    // this.triggerTileAnimation(id, color)
                 }
-                // console.log('sourceTile.x', sourceTile.x, 'destinationTile.x', destinationTile.x);
                 if(sourceTile.x < destinationTile.x && direction === 'left-to-right'){
-                    // console.log('left to right');
                     let sourceX = sourceTile.x
                     let idArray = [];
                     for(let i = sourceX + 1; i < destinationTile.x+1; i++){
@@ -373,15 +342,13 @@ export function AnimationManager(){
                         }
                     }, 10 + (distanceAway * 10))
                 }
-                
-                // debugger
             }
         })
     }
     this.clawTo = (targetTileId, sourceTileId) => {
         const sourceTile = this.tiles.find(e=>e.id === sourceTileId)
         const destinationTile = this.tiles.find(e=>e.id === targetTileId)
-        console.log('sourceTile: ', sourceTile, 'dest Tile:', destinationTile);
+        // console.log('sourceTile: ', sourceTile, 'dest Tile:', destinationTile);
         if(!sourceTile || !destinationTile){
             console.log('missing one');
             debugger
@@ -544,10 +511,8 @@ export function AnimationManager(){
         this.triggerTileAnimation(tileId, color)
         this.cross(tileId, color)
     }
-    this.clawToTarget = async (targetTileId, sourceTileId, direction, resolve) => {
-        console.log('claw direction: ', direction);
+    this.clawToTarget = async (targetTileId, sourceTileId, resolve) => {
         let hit = await this.clawTo(targetTileId, sourceTileId)
-        console.log('hit ', hit);
         resolve(hit)
     }
     this.swordSwing = async (targetTileId, sourceTileId, resolve) => {
@@ -557,14 +522,18 @@ export function AnimationManager(){
         // this.clawTo = (targetTileId, sourceTileId) => {
             const sourceTile = this.tiles.find(e=>e.id === sourceTileId)
             const destinationTile = this.tiles.find(e=>e.id === targetTileId)
-            console.log('sourceTile: ', sourceTile);
+            // console.log('sourceTile: ', sourceTile);
             if(!sourceTile){
                 console.log('missing source');
                 debugger
             }
+            if(!destinationTile){
+                console.log('missing destination');
+                debugger
+            }
             // let isOnSamePlane = sourceTile.y === destinationTile.y;
             const facing = sourceTile.x > destinationTile.x ? 'left' : 'right'
-            console.log('sword direction: ', facing);
+            // console.log('sword direction: ', facing);
             return new Promise(() => {
                 // let id = this.getTileIdByCoords({x: destinationTile.x, y: destinationTile.y})
                 const data = {
@@ -576,8 +545,8 @@ export function AnimationManager(){
                 this.triggerTileAnimationComplex(data)
                 let tileCoords = this.getTileCoordsById(targetTileId)
                 let collision = this.checkForCollision(tileCoords)
-                console.log('collision: ', collision);
-                console.log('resolve from animanager');
+                // console.log('collision: ', collision);
+                // console.log('resolve from animanager');
                 resolve(collision);
             })
         // }

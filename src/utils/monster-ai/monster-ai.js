@@ -1,5 +1,6 @@
 import { Djinn } from './profiles/Djinn'
 import { Sphinx } from './profiles/Sphinx'
+import { Skeleton } from './profiles/Skeleton'
 import {Methods} from '../basic-methods';
 import {MonsterMovementMethods} from './methods/monster-movement-methods';
 
@@ -18,12 +19,7 @@ export function MonsterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
         MAX_LANES: this.MAX_LANES,
         INTERVAL_TIME: this.INTERVAL_TIME
     }
-
-    // this.roster = { 
-    //     djinn: new Djinn(data)
-    // }
     this.connectUtilMethods = (utilMethods) => {
-        // console.log('util methods: ', utilMethods);
         this.monsterFacingUp = utilMethods.monsterFacingUp;
         this.monsterFacingDown = utilMethods.monsterFacingDown;
         this.monsterFacingRight = utilMethods.monsterFacingRight;
@@ -32,8 +28,6 @@ export function MonsterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
         this.missesTarget = utilMethods.missesTarget;
         this.hitsTarget = utilMethods.hitsTarget;
         this.hitsCombatant = utilMethods.hitsCombatant;
-
-        // this.chooseAttackType = this.chooseAttackType;
 
         this.utilMethods = {
             monsterFacingDown:this.monsterFacingDown,
@@ -58,7 +52,8 @@ export function MonsterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
     this.initializeRoster = () => {
         this.roster = {
             djinn: new Djinn(data, this.utilMethods, this.animationManager, this.overlayManager),
-            sphinx: new Sphinx(data, this.utilMethods, this.animationManager, this.overlayManager)
+            sphinx: new Sphinx(data, this.utilMethods, this.animationManager, this.overlayManager),
+            skeleton: new Skeleton(data, this.utilMethods, this.animationManager, this.overlayManager)
         }
     }
 
@@ -94,17 +89,11 @@ export function MonsterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
             chosenAttack;
         const distanceToTarget = this.methods.getDistanceToTarget(caller, target);
 
-        console.log('distance to target',distanceToTarget );
         if(distanceToTarget === 1 && available.find(e=>e.range === 'close')){
             attack = available.find(e=>e.range === 'close');
             return attack;
         }
-        // console.log(caller.type,'AVAILBLE: ', available);
-        // console.log('vs ', caller.attacks);
         if(available.length === 0){
-            // choose the attack that is closest to 100 percent
-            
-            // .filter(e=>e.range === 'medium' || e.range === 'far')
             caller.attacks.forEach(e=>{
                 if(e.cooldown_position > percentCooledDown){
                     percentCooledDown = e.cooldown_position;
@@ -116,30 +105,13 @@ export function MonsterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
             if(available.filter(e=>(e.range === 'far' || e.range === 'medium') && e.cooldown_position > 25).length > 0){
                 let attacks = available.filter(e=>(e.range === 'far' || e.range === 'medium') && e.cooldown_position > 25);
                 let sortedAttacks = attacks.sort((a,b)=> b.cooldown_position - a.cooldown_position)
-                // console.log('sphinx sortedAttacks : ', sortedAttacks);
-                // console.log('sphinx available": ', available, 'and ', available.filter(e=>(e.range === 'far' || e.range === 'medium') && e.cooldown_position > 25));
-
                 if(sortedAttacks[1] && sortedAttacks[1].cooldown_position === sortedAttacks[0].cooldown_position){
-                    // console.log('theres a tie for first choose randomly');
                     attack = data.methods.pickRandom(sortedAttacks.filter(e=> e.cooldown_position === sortedAttacks[0].cooldown_position) )
-                    // console.log('randomly picked: ', attack);
                 } else {
                     attack = sortedAttacks[0]
                 }
                 return attack
-
-                // let percentCooledDown = 0;
-                // attacks.forEach((e)=>{
-                //     if(e.cooldown_position > percentCooledDown){
-                //         percentCooledDown = e.cooldown_position;
-                //         chosenAttack = e;
-                //     } else {
-
-                //     }
-                // })
-                // attack = chosenAttack;
             } else {
-                // console.log('randomly picking between');
                 attack = data.methods.pickRandom(available);
             }
         }
@@ -207,9 +179,7 @@ export function MonsterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
         // handle position
 
         if(laneDiff === 1 || laneDiff === -1){
-            console.log('adjacent lane');
             if(distanceToTarget === 0){
-                console.log('UP OR DOWN ADJACENT');
                 if(caller.depth !== 0) caller.depth--
             } else if(distanceToTarget === 1){
                 if(laneDiff === 1){
@@ -233,7 +203,6 @@ export function MonsterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
         (distanceToTarget < -1 && laneDiff === 0 && caller.depth > 1)){
             caller.depth--
         }else if(distanceToTarget === -1 && laneDiff === 0){
-            console.log('enemy behind, hopscotch over');
             if(caller.depth > 1) caller.depth -= 2
         } else if(distanceToTarget > 1){
             caller.depth++

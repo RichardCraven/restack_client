@@ -118,7 +118,7 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
             //     broadcastDataUpdate(this);
             //     return 
             // }
-            if(this.type === 'skeleton'){
+            if(this.type === 'skeleton' && (this.id === 816 || this.id === 817)){
                 console.log('skele about to INITIATE attack');
             }
             initiateAttack(this);
