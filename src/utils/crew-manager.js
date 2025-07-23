@@ -31,7 +31,7 @@ export function CrewManager(){
     this.initializeCrew = (crew) => {
         this.crew = [];
         crew.forEach(member=> { 
-            console.log('special actions: ', member.specialActions);
+            // console.log('special actions: ', member.specialActions);
             if(!member.specialActions) return
             member.specialActions.forEach(a=>{
 
@@ -61,7 +61,6 @@ export function CrewManager(){
     }
 
     this.checkForLevelUp = (memberArray) => {
-        console.log('crew, check for level up', memberArray);
         memberArray.forEach(m=>{
             let nextLevelExp = EXP_TABLE[m.level]
             let member = this.crew.find(c=>c.type === m.type)
@@ -149,7 +148,7 @@ export function CrewManager(){
                 dex: 5,
                 vit: 4,
                 fort: 7,
-                hp:200,
+                hp:20,
                 atk:12,
                 baseDef: 9,
                 energy: 100,
@@ -173,12 +172,12 @@ export function CrewManager(){
             id: 123,
             level: 1,
             stats: {
-                str: 7,
+                str: 8,
                 int: 5,
-                dex: 5,
+                dex: 6,
                 vit: 4,
                 fort: 7,
-                hp: 200,
+                hp: 30,
                 atk: 8,
                 baseDef: 12,
                 energy: 0,
@@ -210,7 +209,7 @@ export function CrewManager(){
                 dex: 9,
                 vit: 4,
                 fort: 7,
-                hp: 13,
+                hp: 23,
                 atk: 6,
                 baseDef: 11,
                 energy: 0,
@@ -239,7 +238,7 @@ export function CrewManager(){
                 dex: 5,
                 vit: 4,
                 fort: 7,
-                hp: 9,
+                hp: 19,
                 atk: 4,
                 baseDef: 5,
                 energy: 0,
@@ -268,7 +267,7 @@ export function CrewManager(){
                 dex: 6,
                 vit: 6,
                 fort: 3,
-                hp: 12,
+                hp: 22,
                 atk: 6,
                 baseDef: 10,
                 energy: 0,
@@ -297,7 +296,7 @@ export function CrewManager(){
                 dex: 4,
                 vit: 6,
                 fort: 6,
-                hp: 17,
+                hp: 27,
                 atk: 9,
                 baseDef: 12,
                 energy: 0,

@@ -2,8 +2,8 @@ import { Sage } from './profiles/Sage'
 import { Wizard } from './profiles/Wizard'
 import { Rogue } from './profiles/Rogue'
 import { Soldier } from './profiles/Soldier'
-import {Methods} from '../basic-methods';
-import {MovementMethods} from './methods/fighter-movement-methods';
+import {Methods} from '../shared-ai-methods/basic-methods';
+import {MovementMethods} from '../shared-ai-methods/movement-methods';
 
 export function FighterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
     this.MAX_DEPTH = MAX_DEPTH;

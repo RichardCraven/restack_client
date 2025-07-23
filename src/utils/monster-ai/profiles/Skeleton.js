@@ -17,7 +17,6 @@ export function Skeleton(data, utilMethods, animationManager, overlayManager){
     this.chooseAttackType = utilMethods.chooseAttackType
 
     this.initialize = (caller) => {
-        console.log('skelly initializing')
         caller.behaviorSequence = 'brawler'
     }
     this.acquireTarget = (caller, combatants) => {
@@ -30,7 +29,12 @@ export function Skeleton(data, utilMethods, animationManager, overlayManager){
     }
     this.handleOverlap = (caller,combatants) => {
         console.log('SKELLY handle overlap');
-        debugger
+        // debugger
+        data.methods.closeTheGap(caller, combatants)
+        if(caller.targetId){
+            // data.methods.
+            data.methods.evade(caller, combatants)
+        }
     }
     this.processMove = (caller, combatants) => {
         caller.onMoveCooldown = true;
@@ -105,7 +109,7 @@ export function Skeleton(data, utilMethods, animationManager, overlayManager){
         }
     }
 
-    this.triggerClawAttack = (callerCoords, targetCoords) => {
+    this.triggerClawAttack = (callerCoords, targetCoords, id = null) => {
         const targetTileId = this.animationManager.getTileIdByCoords(targetCoords)
         const sourceTileId = this.animationManager.getTileIdByCoords(callerCoords);
         return new Promise((resolve) => {
@@ -116,16 +120,14 @@ export function Skeleton(data, utilMethods, animationManager, overlayManager){
     }
     this.initiateAttack = async (caller, combatants) => {
         const target = combatants[caller.targetId];
-        const distanceToTarget = data.methods.getDistanceToTarget(caller, target),
-        laneDiff = data.methods.getLaneDifferenceToTarget(caller, target);
-
-        let combatantHit;
-        if(caller.id === 817 || caller.id === 816){
-            console.log('SKELLY initiate attack');
+        if(!target){
+            console.log('NO TARGET!');
+            return;
         }
+        let combatantHit;
         switch(caller.pendingAttack.name){
             case 'claws':
-                combatantHit = await this.triggerClawAttack(caller.coordinates, target.coordinates)
+                combatantHit = await this.triggerClawAttack(caller.coordinates, target.coordinates, caller.id)
                 if(combatantHit){
                     const supplementalData = {increasedCritChance: false}
                     this.hitsCombatant(caller, combatantHit, supplementalData);

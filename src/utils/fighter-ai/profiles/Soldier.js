@@ -188,14 +188,28 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
     }
     this.initiateAttack = async (caller, manualAttack, combatants) => {
         if(!caller) return
+        const callerFacing = (caller, target) => {
+            let val;
+            if(!target) return null;
+            const targX = target.coordinates.x,
+                  targY = target.coordinates.y,
+                  callX = caller.coordinates.x,
+                  callY = caller.coordinates.y
+            if(targX === callX){
+                val = targY > callY ? 'down' : 'up'
+            } else {
+                val = targX > callX ? 'right' : 'left'
+            }
+            return val;
+        }
         const facingRight = this.fighterFacingRight(caller)
         const target = combatants[caller.targetId];
-        
+        const facing = caller.facing ? caller.facing : callerFacing(caller,target)
         if(manualAttack){
             if(caller.pendingAttack && caller.pendingAttack.cooldown_position < 99){
                 return
             } else if (caller.pendingAttack && caller.pendingAttack.cooldown_position === 100){
-                const combatantHit = await this.triggerSwordSwing(caller.coordinates, facingRight)
+                const combatantHit = await this.triggerSwordSwing(caller.coordinates, facing)
                 if(combatantHit){
                     this.hitsCombatant(caller, combatantHit)
                     this.kickoffAttackCooldown(caller)
@@ -210,10 +224,12 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
             // debugger
             switch(caller.pendingAttack.name){
                 case 'sword swing':
-                    const combatantHit = await this.triggerSwordSwing(caller.coordinates, facingRight)
+                    const combatantHit = await this.triggerSwordSwing(caller.coordinates, facing)
                     if(combatantHit){
+                        console.log('SWORD HIT');
                         this.hitsCombatant(caller, combatantHit);
                     } else {
+                        console.log('SWORD MISS');
                         this.missesTarget(caller);
                     }
                 break;
@@ -229,14 +245,52 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
 
         }
     }
-    this.triggerSwordSwing = (callerCoords, facingRight) => {
+    this.triggerSwordSwing = (callerCoords, facing) => {
         const sourceTileId = this.animationManager.getTileIdByCoords(callerCoords);
-        // const targetTileId = this.animationManager.getTileIdByCoords(targetCoords)
-        const targetTileId = facingRight ? sourceTileId + 1 : sourceTileId - 1;
+        let targetTileId;
+        if(facing){
+            let id;
+            switch(facing){
+                case 'right':
+                    if(callerCoords.x === this.MAX_DEPTH){
+                        targetTileId = null;
+                    } else {
+                        let coordsToCheck = {x: callerCoords.x+1, y: callerCoords.y}
+                        targetTileId = this.animationManager.getTileIdByCoords(coordsToCheck);
+                    }
+                break;
+                case 'left':
+                    if(callerCoords.x === 0){
+                        targetTileId = null;
+                    } else {
+                        let coordsToCheck = {x: callerCoords.x-1, y: callerCoords.y}
+                        targetTileId = this.animationManager.getTileIdByCoords(coordsToCheck);
+                    }
+                break;
+                case 'up':
+                    if(callerCoords.y === 0){
+                        targetTileId = null;
+                    } else {
+                        let coordsToCheck = {x: callerCoords.x, y: callerCoords.y-1}
+                        targetTileId = this.animationManager.getTileIdByCoords(coordsToCheck);
+                    }
+                break;
+                case 'down':
+                    if(callerCoords.y === this.MAX_LANES-1){
+                        targetTileId = null;
+                    } else {
+                        let coordsToCheck = {x: callerCoords.x, y: callerCoords.y+1}
+                        targetTileId = this.animationManager.getTileIdByCoords(coordsToCheck);
+                    }
+                break;
+            }
+        }
+        // const targetTileId = facing ? (true) : sourceTileId + 1
+        // const targetTileId = facing === '' ? sourceTileId + 1 : sourceTileId - 1;
         return new Promise((resolve) => {
             if(sourceTileId !== null){
                 // console.log('sourceTileId: ', sourceTileId);
-                this.animationManager.swordSwing(targetTileId, sourceTileId, resolve)
+                this.animationManager.swordSwing(targetTileId, sourceTileId, facing, resolve)
             }
         })
     }

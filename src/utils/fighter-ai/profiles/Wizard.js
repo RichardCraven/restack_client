@@ -103,42 +103,51 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                 
                 switch(caller.eraIndex){
                     case 0:
-                        // console.log('wizard move in era 0');
-                        data.methods.centerBack(caller)
+                        if(caller.targetId){
+                            console.log('wizard move in era 0 HAS TARGET!');
+                        }
+                        if(!combatants){
+                            console.log('how can there be no combatants???');
+                            debugger
+                        }
+                        data.methods.centerBack(caller, combatants)
                     break;
                     case 1:
-                        // console.log('wizard move in era 1');
-                        if(window.pickRandom([true,true, false])){
-                            data.methods.centerBack(caller)
-                            
-                        } else {
-                            if(window.pickRandom([true,false])){
-                                data.methods.goUp(caller, combatants)
-                            } else {
-                                data.methods.goDown(caller, combatants)
-                            }
+                        if(caller.targetId){
+                            console.log('wizard move in era 1 HAS TARGET!');
                         }
+                        data.methods.centerBack(caller, combatants)
+                        // if(window.pickRandom([true,true, false])){
+                        //     data.methods.centerBack(caller, combatants)
+                            
+                        // } else {
+                        //     if(window.pickRandom([true,false])){
+                        //         data.methods.goUp(caller, combatants)
+                        //     } else {
+                        //         data.methods.goDown(caller, combatants)
+                        //     }
+                        // }
                     break;
                     case 2:
                         // console.log('wizard move in era 2');
-                        data.methods.centerBack(caller)
+                        data.methods.centerBack(caller, combatants)
                     break;
                     case 3:
-                        // console.log('wizard move in era 3');
-                        if(window.pickRandom([true,true, false])){
-                            data.methods.centerBack(caller)
+                        data.methods.centerBack(caller, combatants)
+                        // if(window.pickRandom([true,true, false])){
+                        //     data.methods.centerBack(caller, combatants)
                             
-                        } else {
-                            if(window.pickRandom([true,false])){
-                                data.methods.goUp(caller, combatants)
-                            } else {
-                                data.methods.goDown(caller, combatants)
-                            }
-                        }
+                        // } else {
+                        //     if(window.pickRandom([true,false])){
+                        //         data.methods.goUp(caller, combatants)
+                        //     } else {
+                        //         data.methods.goDown(caller, combatants)
+                        //     }
+                        // }
                     break;
                     case 4:
                         // console.log('wizard move in era 4');
-                        data.methods.centerBack(caller)
+                        data.methods.centerBack(caller, combatants)
                     break;
                     default: 
                     break;

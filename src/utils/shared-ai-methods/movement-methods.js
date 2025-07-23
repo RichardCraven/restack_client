@@ -1,5 +1,5 @@
 
-import {Methods} from '../../basic-methods';
+import {Methods} from './basic-methods';
 
 const MAX_DEPTH = 7
 // ^ index 7, actual col count is 8
@@ -15,8 +15,15 @@ const getSurroundings = (coords) => {
               SE = {x: coords.x+1, y: coords.y+1}
     return {N,S,E,W,NW,NE,SW,SE}
 }
-const someoneIsInCoords = (coords)=>{
-    return Object.values(this.combatants).some(e=>JSON.stringify(e.coordinates) == JSON.stringify(coords))
+const someoneIsInCoords = (coords, combatants)=>{
+    if(!combatants) return false
+    return Object.values(combatants).some(e=>JSON.stringify(e.coordinates) == JSON.stringify(coords))
+}
+const isOutOfBounds = (coords) => {
+    return coords.x >= MAX_DEPTH || coords.y > MAX_LANES || coords.x < 0 || coords.y < 0
+}
+const isAvailableToMoveInto = (coords, combatants) => {
+    return !isOutOfBounds(coords) && !someoneIsInCoords(coords, combatants)
 }
 const someoneElseIsInCoords = (caller, coords)=>{
     return Object.values(this.combatants).filter(c=>c.id!==caller.id).some(e=>JSON.stringify(e.coordinates) == JSON.stringify(coords))
@@ -25,9 +32,10 @@ const someoneElseIsInCoords = (caller, coords)=>{
 const goTowards = (caller, combatants, targetTile) => {
     const {N,E,S,W,NW,SW,NE,SE} = getSurroundings(caller.coordinates)
 
-    let someoneIsInCoords = (coords)=>{
-        return Object.values(combatants).filter(c=>c.id!==caller.id).some(e=>JSON.stringify(e.coordinates) == JSON.stringify(coords))
-    }
+    // overwriting
+    // let someoneIsInCoords = (coords)=>{
+    //     return Object.values(combatants).filter(c=>c.id!==caller.id).some(e=>JSON.stringify(e.coordinates) == JSON.stringify(coords))
+    // }
     const targetIsInCoords = (coords)=>{
         return JSON.stringify(targetTile) == JSON.stringify(coords);
     }
@@ -45,21 +53,19 @@ const goTowards = (caller, combatants, targetTile) => {
 
     if(targetIsNorthWest){ /////////////////////////////////////  NW
         if(targetIsInCoords(NW)){
-            if(!someoneIsInCoords(W)){
+            if(isAvailableToMoveInto(W, combatants)){
                 newCoords = W;
-            } else if(!someoneIsInCoords(N)){
+            } else if(isAvailableToMoveInto(N, combatants)){
                 newCoords = N;
             } else {
-                console.log('TARGET DIRECTLY NORTHWEST, but Im stuck');
             }
-        } else if(someoneIsInCoords(NW)){
+        } else if(someoneIsInCoords(NW, combatants)){
             //go up or left
-            if(!someoneIsInCoords(N)){
+            if(isAvailableToMoveInto(N, combatants)){
                 newCoords = N
-            } else if(!someoneIsInCoords(W)){
+            } else if(isAvailableToMoveInto(W, combatants)){
                 newCoords = W
             } else {
-                console.log('nowhere to go, stay put');
                 return
             }
         } else {
@@ -68,21 +74,19 @@ const goTowards = (caller, combatants, targetTile) => {
         }
     } else if(targetIsNorthEast){ /////////////////////// NE
         if(targetIsInCoords(NE)){
-            if(!someoneIsInCoords(E)){
+            if(isAvailableToMoveInto(E, combatants)){
                 newCoords = E;
-            } else if(!someoneIsInCoords(N)){
+            } else if(isAvailableToMoveInto(N, combatants)){
                 newCoords = N;
             } else {
-                console.log('TARGET DIRECTLY NORTHEAST, but Im stuck');
             }
-        } else if(someoneIsInCoords(NE)){
+        } else if(someoneIsInCoords(NE, combatants)){
             //go up or right
-            if(!someoneIsInCoords(N)){
+            if(isAvailableToMoveInto(N, combatants)){
                 newCoords = N
-            } else if(!someoneIsInCoords(E)){
+            } else if(isAvailableToMoveInto(E, combatants)){
                 newCoords = E
             } else {
-                console.log('nowhere to go, stay put');
                 return
             }
         } else {
@@ -91,21 +95,19 @@ const goTowards = (caller, combatants, targetTile) => {
         }
     } else if(targetIsSouthWest){ ////////////////////////////////////// SW
         if(targetIsInCoords(SW)){
-            if(!someoneIsInCoords(W)){
+            if(isAvailableToMoveInto(W, combatants)){
                 newCoords = W;
-            } else if(!someoneIsInCoords(S)){
+            } else if(isAvailableToMoveInto(S, combatants)){
                 newCoords = S;
             } else {
-                console.log('TARGET DIRECTLY SW, but Im stuck');
             }
-        } else if(someoneIsInCoords(SW)){
+        } else if(someoneIsInCoords(SW, combatants)){
             //go down or left
-            if(!someoneIsInCoords(S)){
+            if(isAvailableToMoveInto(S, combatants)){
                 newCoords = S
-            } else if(!someoneIsInCoords(W)){
+            } else if(isAvailableToMoveInto(W, combatants)){
                 newCoords = W
             } else {
-                console.log('nowhere to go, stay put');
                 return
             }
         } else {
@@ -114,18 +116,18 @@ const goTowards = (caller, combatants, targetTile) => {
         }
     } else if(targetIsSouthEast){ //////////////////////// SE
         if(targetIsInCoords(SE)){
-            if(!someoneIsInCoords(E)){
+            if(isAvailableToMoveInto(E, combatants)){
                 newCoords = E;
-            } else if(!someoneIsInCoords(S)){
+            } else if(isAvailableToMoveInto(S, combatants)){
                 newCoords = S;
             } else {
                 console.log('TARGET DIRECTLY SE, but Im stuck');
             }
-        } else if(someoneIsInCoords(SE)){
+        } else if(someoneIsInCoords(SE, combatants)){
             //go down or right
-            if(!someoneIsInCoords(S)){
+            if(isAvailableToMoveInto(S, combatants)){
                 newCoords = S
-            } else if(!someoneIsInCoords(E)){
+            } else if(isAvailableToMoveInto(E, combatants)){
                 newCoords = E
             } else {
                 console.log('nowhere to go, stay put');
@@ -137,15 +139,13 @@ const goTowards = (caller, combatants, targetTile) => {
         }
     } else if(targetIsNorth){ ////////// N
         if(targetIsInCoords(N)){
-            console.log('TARGET DIRECTLY North');
-        } else if(someoneIsInCoords(N)){
+        } else if(someoneIsInCoords(N, combatants)){
             //go NW or NE
-            if(!someoneIsInCoords(NW)){
+            if(isAvailableToMoveInto(NW, combatants)){
                 newCoords = NW
-            } else if(!someoneIsInCoords(NE)){
+            } else if(isAvailableToMoveInto(NE, combatants)){
                 newCoords = NE
             } else {
-                console.log('nowhere to go, stay put');
                 return
             }
         } else {
@@ -155,14 +155,13 @@ const goTowards = (caller, combatants, targetTile) => {
     } else if(targetIsSouth){ //////////// S
         if(targetIsInCoords(S)){
             // console.log('TARGET DIRECTLY South');
-        } else if(someoneIsInCoords(S)){
+        } else if(someoneIsInCoords(S, combatants)){
             //go SW or SE
-            if(!someoneIsInCoords(SW)){
+            if(isAvailableToMoveInto(SW, combatants)){
                 newCoords = SW
-            } else if(!someoneIsInCoords(SE)){
+            } else if(isAvailableToMoveInto(SE, combatants)){
                 newCoords = SE
             } else {
-                console.log('nowhere to go, stay put');
                 return
             }
         } else {
@@ -170,13 +169,13 @@ const goTowards = (caller, combatants, targetTile) => {
             newCoords = S;
         }
     } else if(targetIsEast){ ///////////  E
-        if(targetIsInCoords(E)){
+        if(targetIsInCoords(E, combatants)){
             // console.log('TARGET DIRECTLY east');
-        } else if(someoneIsInCoords(E)){
+        } else if(someoneIsInCoords(E, combatants)){
             //go NE or SE
-            if(!someoneIsInCoords(NE)){
+            if(isAvailableToMoveInto(NE, combatants)){
                 newCoords = NE
-            } else if(!someoneIsInCoords(SE)){
+            } else if(isAvailableToMoveInto(SE, combatants)){
                 newCoords = SE
             } else {
                 console.log('nowhere to go, stay put');
@@ -188,14 +187,13 @@ const goTowards = (caller, combatants, targetTile) => {
         }
     } else if(targetIsWest){
         if(targetIsInCoords(W)){
-        } else if(someoneIsInCoords(W)){
+        } else if(someoneIsInCoords(W, combatants)){
             //go NW or SW
-            if(!someoneIsInCoords(NW)){
+            if(isAvailableToMoveInto(NW, combatants)){
                 newCoords = NW
-            } else if(!someoneIsInCoords(SW)){
+            } else if(isAvailableToMoveInto(SW, combatants)){
                 newCoords = SW
             } else {
-                console.log('nowhere to go, stay put');
                 return
             }
         } else {
@@ -203,9 +201,9 @@ const goTowards = (caller, combatants, targetTile) => {
             newCoords = W;
         }
     }
-    if(newCoords.x > MAX_DEPTH) newCoords.x = MAX_DEPTH;
+    if(newCoords.x > MAX_DEPTH-1) newCoords.x = MAX_DEPTH -1;
     if(newCoords.x < 0) newCoords.x = 0
-    if(newCoords.y > MAX_LANES) newCoords.y = MAX_LANES;
+    if(newCoords.y > MAX_LANES-1) newCoords.y = MAX_LANES -1;
     if(newCoords.y < 0) newCoords.y = 0;
     caller.coordinates = newCoords;
 }
@@ -237,11 +235,7 @@ export const MovementMethods = {
         }
         caller.coordinates = newCoords;
     },
-    moveTowardsTarget: () => {
-
-    },
     centerBack: (caller, combatants) => {
-        console.log('combatants: ', combatants);
         const enemyTarget = Object.values(combatants).find(e=>e.id === caller.targetId)
 
         const {N,E,S,W,NW,SW,NE,SE} = getSurroundings(caller.coordinates)
@@ -258,22 +252,50 @@ export const MovementMethods = {
         goTowards(caller, combatants, targetTile);
     },
     evade: (caller, combatants) => {
-        console.log('EVADE!!!!!!!!!!!!!!!!!!!!!!!!!!!');
-        const enemyTarget = Object.values(combatants).find(e=>e.id === caller.targetId),
-        laneDiff = Methods.getLaneDifferenceToTarget(caller, enemyTarget),
-        depthDiff = Methods.getDistanceToTarget(caller, enemyTarget)
-        let coords = caller.coordinates;
-        let newCoords = JSON.parse(JSON.stringify(coords))
-        console.log('original coords', JSON.parse(JSON.stringify(caller.coordinates)));
-        if(laneDiff < 0){
-            // caller.position--
-            caller.coordinates = {x: depthDiff > 3 ? coords.x-1 : coords.x, y: coords.y+1}
-        } else if(laneDiff > 0){
-            // caller.position++
-            caller.coordinates = {x: depthDiff > 3 ? coords.x-1 : coords.x, y: coords.y+1}
+        if(!caller.targetId){
+            // remove this when you figure how to dodge projectiles or something
+            return
         }
-        // console.log('new coordinates', caller.coordinates);
-        // debugger
+        let newCoords = JSON.parse(JSON.stringify(caller.coordinates))
+        const enemyTarget = Object.values(combatants).find(e=>e.id === caller.targetId)
+        let targetTile = {x: enemyTarget.coordinates.x, y: enemyTarget.coordinates.y}
+        console.log('EVADE!!!!!!!!!!!!!!!!!!!!!!!!!!!');
+        const {N,E,S,W,NW,SW,NE,SE} = getSurroundings(caller.coordinates)
+
+        const targetIsNorthWest = targetTile.y < caller.coordinates.y && targetTile.x < caller.coordinates.x,
+        targetIsNorth = targetTile.y < caller.coordinates.y && targetTile.x === caller.coordinates.x,
+        targetIsNorthEast = targetTile.y < caller.coordinates.y && targetTile.x > caller.coordinates.x,
+        targetIsWest = targetTile.y === caller.coordinates.y && targetTile.x < caller.coordinates.x,
+        targetIsEast = targetTile.y === caller.coordinates.y && targetTile.x > caller.coordinates.x,
+        targetIsSouthWest = targetTile.y > caller.coordinates.y && targetTile.x < caller.coordinates.x,
+        targetIsSouth = targetTile.y > caller.coordinates.y && targetTile.x === caller.coordinates.x,
+        targetIsSouthEast = targetTile.y > caller.coordinates.y && targetTile.x > caller.coordinates.x;
+
+
+        if(targetIsNorth){
+            if(isAvailableToMoveInto(S)){
+                newCoords = S
+            }
+        } else if(targetIsSouth){
+            if(isAvailableToMoveInto(N)){
+                newCoords = N
+            }
+        } else if(targetIsWest){
+            if(isAvailableToMoveInto(E)){
+                newCoords = E
+            }
+        } else {
+            if(isAvailableToMoveInto(NE)){
+                newCoords = NE
+            } else if(isAvailableToMoveInto(SE)){
+                newCoords = SE
+            } else if(isAvailableToMoveInto(NW)){
+                newCoords = NW
+            }else if(isAvailableToMoveInto(SW)){
+                newCoords = SW
+            }
+        }
+        caller.coordinates = newCoords;
     },
     closeTheGap: (caller, combatants) => {
         const enemyTarget = Object.values(combatants).find(e=>e.id === caller.targetId)
@@ -287,194 +309,11 @@ export const MovementMethods = {
         }
         if(enemyTarget){
             const coords = caller.coordinates;
-
-            // const {N,E,S,W,NW,SW,NE,SE} = getSurroundings(caller.coordinates)
-
-            
             let targetTile = {x: enemyTarget.coordinates.x, y: enemyTarget.coordinates.y}
             let newCoords = JSON.parse(JSON.stringify(coords))
-
-            // let someoneIsInCoords = (coords)=>{
-            //     return Object.values(combatants).filter(c=>c.id!==caller.id).some(e=>JSON.stringify(e.coordinates) == JSON.stringify(coords))
-            // }
-            // const targetIsInCoords = (coords)=>{
-            //     return JSON.stringify(targetTile) == JSON.stringify(coords);
-            // }
-
-
-            // const targetIsNorthWest = targetTile.y < coords.y && targetTile.x < coords.x,
-            // targetIsNorth = targetTile.y < coords.y && targetTile.x === coords.x,
-            // targetIsNorthEast = targetTile.y < coords.y && targetTile.x > coords.x,
-            // targetIsWest = targetTile.y === coords.y && targetTile.x < coords.x,
-            // targetIsEast = targetTile.y === coords.y && targetTile.x > coords.x,
-            // targetIsSouthWest = targetTile.y > coords.y && targetTile.x < coords.x,
-            // targetIsSouth = targetTile.y > coords.y && targetTile.x === coords.x,
-            // targetIsSouthEast = targetTile.y > coords.y && targetTile.x > coords.x;
-
-            // if(targetIsNorthWest){ /////////////////////////////////////  NW
-            //     if(targetIsInCoords(NW)){
-            //         if(!someoneIsInCoords(W)){
-            //             newCoords = W;
-            //         } else if(!someoneIsInCoords(N)){
-            //             newCoords = N;
-            //         } else {
-            //             console.log('TARGET DIRECTLY NORTHWEST, but Im stuck');
-            //         }
-            //     } else if(someoneIsInCoords(NW)){
-            //         //go up or left
-            //         if(!someoneIsInCoords(N)){
-            //             newCoords = N
-            //         } else if(!someoneIsInCoords(W)){
-            //             newCoords = W
-            //         } else {
-            //             console.log('nowhere to go, stay put');
-            //             return
-            //         }
-            //     } else {
-            //         // space available go NW
-            //         newCoords = NW;
-            //     }
-            // } else if(targetIsNorthEast){ /////////////////////// NE
-            //     if(targetIsInCoords(NE)){
-            //         if(!someoneIsInCoords(E)){
-            //             newCoords = E;
-            //         } else if(!someoneIsInCoords(N)){
-            //             newCoords = N;
-            //         } else {
-            //             console.log('TARGET DIRECTLY NORTHEAST, but Im stuck');
-            //         }
-            //     } else if(someoneIsInCoords(NE)){
-            //         //go up or right
-            //         if(!someoneIsInCoords(N)){
-            //             newCoords = N
-            //         } else if(!someoneIsInCoords(E)){
-            //             newCoords = E
-            //         } else {
-            //             console.log('nowhere to go, stay put');
-            //             return
-            //         }
-            //     } else {
-            //         // space available go NW
-            //         newCoords = NE;
-            //     }
-            // } else if(targetIsSouthWest){ ////////////////////////////////////// SW
-            //     if(targetIsInCoords(SW)){
-            //         if(!someoneIsInCoords(W)){
-            //             newCoords = W;
-            //         } else if(!someoneIsInCoords(S)){
-            //             newCoords = S;
-            //         } else {
-            //             console.log('TARGET DIRECTLY SW, but Im stuck');
-            //         }
-            //     } else if(someoneIsInCoords(SW)){
-            //         //go down or left
-            //         if(!someoneIsInCoords(S)){
-            //             newCoords = S
-            //         } else if(!someoneIsInCoords(W)){
-            //             newCoords = W
-            //         } else {
-            //             console.log('nowhere to go, stay put');
-            //             return
-            //         }
-            //     } else {
-            //         // space available go SW
-            //         newCoords = SW;
-            //     }
-            // } else if(targetIsSouthEast){ //////////////////////// SE
-            //     if(targetIsInCoords(SE)){
-            //         if(!someoneIsInCoords(E)){
-            //             newCoords = E;
-            //         } else if(!someoneIsInCoords(S)){
-            //             newCoords = S;
-            //         } else {
-            //             console.log('TARGET DIRECTLY SE, but Im stuck');
-            //         }
-            //     } else if(someoneIsInCoords(SE)){
-            //         //go down or right
-            //         if(!someoneIsInCoords(S)){
-            //             newCoords = S
-            //         } else if(!someoneIsInCoords(E)){
-            //             newCoords = E
-            //         } else {
-            //             console.log('nowhere to go, stay put');
-            //             return
-            //         }
-            //     } else {
-            //         // space available go SW
-            //         newCoords = SE;
-            //     }
-            // } else if(targetIsNorth){ ////////// N
-            //     if(targetIsInCoords(N)){
-            //         console.log('TARGET DIRECTLY North');
-            //     } else if(someoneIsInCoords(N)){
-            //         //go NW or NE
-            //         if(!someoneIsInCoords(NW)){
-            //             newCoords = NW
-            //         } else if(!someoneIsInCoords(NE)){
-            //             newCoords = NE
-            //         } else {
-            //             console.log('nowhere to go, stay put');
-            //             return
-            //         }
-            //     } else {
-            //         // space available go SW
-            //         newCoords = N;
-            //     }
-            // } else if(targetIsSouth){ //////////// S
-            //     if(targetIsInCoords(S)){
-            //         // console.log('TARGET DIRECTLY South');
-            //     } else if(someoneIsInCoords(S)){
-            //         //go SW or SE
-            //         if(!someoneIsInCoords(SW)){
-            //             newCoords = SW
-            //         } else if(!someoneIsInCoords(SE)){
-            //             newCoords = SE
-            //         } else {
-            //             console.log('nowhere to go, stay put');
-            //             return
-            //         }
-            //     } else {
-            //         // space available go South
-            //         newCoords = S;
-            //     }
-            // } else if(targetIsEast){ ///////////  E
-            //     if(targetIsInCoords(E)){
-            //         // console.log('TARGET DIRECTLY east');
-            //     } else if(someoneIsInCoords(E)){
-            //         //go NE or SE
-            //         if(!someoneIsInCoords(NE)){
-            //             newCoords = NE
-            //         } else if(!someoneIsInCoords(SE)){
-            //             newCoords = SE
-            //         } else {
-            //             console.log('nowhere to go, stay put');
-            //             return
-            //         }
-            //     } else {
-            //         // space available go South
-            //         newCoords = E;
-            //     }
-            // } else if(targetIsWest){
-            //     if(targetIsInCoords(W)){
-            //     } else if(someoneIsInCoords(W)){
-            //         //go NW or SW
-            //         if(!someoneIsInCoords(NW)){
-            //             newCoords = NW
-            //         } else if(!someoneIsInCoords(SW)){
-            //             newCoords = SW
-            //         } else {
-            //             console.log('nowhere to go, stay put');
-            //             return
-            //         }
-            //     } else {
-            //         // space available go West
-            //         newCoords = W;
-            //     }
-            // }
-
             goTowards(caller, combatants, targetTile);
         } else {
-            console.log('no enbemey target!!!, caller ', caller);
+            
         }
     },
     moveTowardsCloseEnemyTarget: (caller, combatants) => {

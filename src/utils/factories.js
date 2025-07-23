@@ -1,7 +1,3 @@
-export function test(){
-    console.log('test!')
-}
-
 export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
     const {
         acquireTarget, 
@@ -113,21 +109,9 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
                 this.skip();
                 return
             }
-            // if(this.name === 'Loryastes' && DEBUG_STEPS === true){
-            //     initiateAttack(this);
-            //     broadcastDataUpdate(this);
-            //     return 
-            // }
-            if(this.type === 'skeleton' && (this.id === 816 || this.id === 817)){
-                console.log('skele about to INITIATE attack');
-            }
             initiateAttack(this);
         },
         manualAttack: function(){
-            if(this.manualMovesCurrent < 2 || !this.pendingAttack || this.pendingAttack.cooldown_position < 100){
-                // console.log('about to return', this.manualMovesCurrent < 2, this.pendingAttack);
-                // return
-            }
             this.manualMovesCurrent-= 2
             initiateAttack(this, true);
         },
@@ -162,7 +146,6 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
             processMove(this);
         },
         setToFrozen: function(val){
-            console.log(this.type, 'set to FROZEN! val: ', val);
             this.frozen = true;
             this.wounded = false;
             this.frozenPoints += val
@@ -188,7 +171,6 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
                 if(this.manualMovesCurrent > this.manualMovesTotal) this.manualMovesCurrent = this.manualMovesTotal
                 
                 if(getSelectedFighter() && this.type === getSelectedFighter().type){
-                    // console.log('woop wooop!');
                     if(!this.pendingAttack){
                         acquireTarget(this);
                     }
@@ -197,13 +179,10 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
                 }
                 count += increment;
                 if(this.frozen){
-                    console.log('frozen', this.frozen);
                     debugger
                     this.tempo = Math.floor((count/100)*100);
                     if(count >= 100){
-                        console.log('frozen points: ', JSON.parse(JSON.stringify(this.frozenPoints)));
                         this.frozenPoints--
-                        console.log('now frozen points: ', this.frozenPoints);
                         if(this.frozenPoints <= 0){
                             this.frozenPoints = 0;
                             this.frozen =  false;

@@ -6,10 +6,16 @@ export function AnimationManager(){
     this.connectCombatMethods = (callback) => {
         this.checkForCollision = callback;
     }
-
+    this.animationsMatrix = {
+        sword_swing: {
+            duration: 500
+        },
+        claw: {
+            duration: 500
+        }
+    }
 
     this.magicMissile = (sourceCoords, targetCoords) => {
-        // console.log('sourceCoords', sourceCoords, 'targetCoords', targetCoords);
         const ref = {
             origin: sourceCoords,
             distanceToTarget: this.getDistanceToTarget(sourceCoords, targetCoords), 
@@ -36,11 +42,6 @@ export function AnimationManager(){
         let d = targetCoords.y - sourceCoords.y
         return d
     }
-    // this.establishAnimationCallbck = (callBack) => {
-    //     console.log('establishCallback', callBack);
-    //     // const {tileAnimated} = callBacks;
-    //     this.tileAnimated = callBack;
-    // }
     this.establishUpdateAnimationDataCallback = (callBack) => {
         this.updateAnimationData = callBack;
     }
@@ -57,7 +58,6 @@ export function AnimationManager(){
 
     this.initialize = (MAX_DEPTH, MAX_ROWS) => {
         this.MAX_DEPTH = MAX_DEPTH;
-        console.log('max depth: ', MAX_DEPTH);
         let arr = [];
         for(let i = 0; i < MAX_ROWS*MAX_DEPTH; i++){
             let x = i%MAX_DEPTH,
@@ -68,13 +68,13 @@ export function AnimationManager(){
                 y,
                 animationOn: false,
                 animationType: '',
+                animationData: {},
                 animationtransitionType: '',
                 handleClick: this.handleTileClick 
             })
         }
         this.tiles = arr;
         this.update();
-        // console.log('animation manager initialize');
     }
     this.update = () => {
         this.updateAnimationData({tiles: this.tiles, canvasAnimations: this.canvasAnimations})
@@ -98,31 +98,33 @@ export function AnimationManager(){
         }, 1000)
     }
     this.triggerTileAnimationComplex = (data) => {
-        // const [targetTileId, type, facing] = data
-        // why is ^ this not deconstructing? prolly wrong syntax
         const targetTileId = data.targetTileId, type = data.type, facing = data.facing;
-        let storedTile = this.tiles.find(e=>e.id === targetTileId);
+        const sourceTileId = data.sourceTileId;
+        let animationTile = this.tiles.find(e=>e.id === sourceTileId);
         switch(type){
             case 'claw':
-                storedTile.animationType = 'claw';
-                storedTile.transitionType = 'fade';
+                animationTile.animationType = `claw`;
+                animationTile.transitionType = 'fade';
+                animationTile.animationData = {facing: data.facing, duration: this.animationsMatrix[type].duration};
                 this.update();
                 setTimeout(()=>{
-                    storedTile.animationType = null;
-                    storedTile.transitionType = null;
+                    animationTile.animationType = null;
+                    animationTile.transitionType = null;
+                    animationTile.animationData = {};
                     this.update();
-                },1000)
+                },this.animationsMatrix[type].duration)
             break;
             case 'sword_swing':
-                storedTile.animationType = 'sword_swing';
-                storedTile.transitionType = 'fade';
+                animationTile.animationType = 'sword_swing';
+                animationTile.transitionType = 'fade';
+                animationTile.animationData = {facing: data.facing, duration: this.animationsMatrix[type].duration};
                 this.update();
                 setTimeout(()=>{
-                    storedTile.animationType = null;
-                    storedTile.transitionType = null;
+                    animationTile.animationType = null;
+                    animationTile.transitionType = null;
+                    animationTile.animationData = {};
                     this.update();
-                },1000)
-                // debugger
+                },this.animationsMatrix[type].duration)
             break;
             default:
                 console.log('animation not properly specified... INVESTIGATE');
@@ -137,34 +139,34 @@ export function AnimationManager(){
         }, 1000)
     }
     this.tileOn = (tileId, animationType, color = null) => {
-        const storedTile = this.tiles.find(e=>e.id === tileId)
-        storedTile.animationType = animationType;
-        storedTile.transitionType = color ? `${color}-fade` : 'red-fade';
+        const animationTile = this.tiles.find(e=>e.id === tileId)
+        animationTile.animationType = animationType;
+        animationTile.transitionType = color ? `${color}-fade` : 'red-fade';
         this.update();
     }
     this.tileOff = (tileId) => {
-        const storedTile = this.tiles.find(e=>e.id === tileId)
-        storedTile.transitionType = ''
-        storedTile.animationType = ''
+        const animationTile = this.tiles.find(e=>e.id === tileId)
+        animationTile.transitionType = ''
+        animationTile.animationType = ''
         this.update();
     }
 
     // ANIMATION METHODS
     this.ripple = (tileId, color = null) => {
-        const storedTile = this.tiles.find(e=>e.id === tileId)
-        const leftSide = this.tiles.filter(e=>e.x === storedTile.x - 1 && (
-            e.y === storedTile.y ||
-            e.y === storedTile.y - 1 ||
-            e.y === storedTile.y + 1
+        const animationTile = this.tiles.find(e=>e.id === tileId)
+        const leftSide = this.tiles.filter(e=>e.x === animationTile.x - 1 && (
+            e.y === animationTile.y ||
+            e.y === animationTile.y - 1 ||
+            e.y === animationTile.y + 1
             ))  
-        const rightSide = this.tiles.filter(e=>e.x === storedTile.x + 1 && (
-            e.y === storedTile.y ||
-            e.y === storedTile.y - 1 ||
-            e.y === storedTile.y + 1
+        const rightSide = this.tiles.filter(e=>e.x === animationTile.x + 1 && (
+            e.y === animationTile.y ||
+            e.y === animationTile.y - 1 ||
+            e.y === animationTile.y + 1
             ))  
-        const topAndBottom = this.tiles.filter(e=>e.x === storedTile.x && (
-            e.y === storedTile.y - 1 ||
-            e.y === storedTile.y + 1
+        const topAndBottom = this.tiles.filter(e=>e.x === animationTile.x && (
+            e.y === animationTile.y - 1 ||
+            e.y === animationTile.y + 1
             )) 
      
         const animate = () => {
@@ -348,19 +350,18 @@ export function AnimationManager(){
     this.clawTo = (targetTileId, sourceTileId) => {
         const sourceTile = this.tiles.find(e=>e.id === sourceTileId)
         const destinationTile = this.tiles.find(e=>e.id === targetTileId)
-        // console.log('sourceTile: ', sourceTile, 'dest Tile:', destinationTile);
         if(!sourceTile || !destinationTile){
-            console.log('missing one');
             debugger
         }
-        let isOnSamePlane = sourceTile.y === destinationTile.y;
-        let facing = sourceTile.x > destinationTile.x ? 'left' : 'right'
+        const facing = sourceTile.x > destinationTile.x ? 'left' : (
+            sourceTile.x < destinationTile.x ? 'right' :
+            (sourceTile.y > destinationTile.y ? 'up' : 'down')
+        )
         return new Promise((resolve, reject) => {
-            if(isOnSamePlane){
                 let distanceAway = Math.abs(sourceTile.x - destinationTile.x)
                 let id = this.getTileIdByCoords({x: destinationTile.x, y: destinationTile.y})
-                // if(sourceTile.x > destinationTile.x && direction === 'rightToLeft'){
                     const data = {
+                        sourceTileId: sourceTile.id,
                         targetTileId: id,
                         type: 'claw',
                         facing
@@ -370,11 +371,7 @@ export function AnimationManager(){
                     let tileCoords = this.getTileCoordsById(id)
                     let collision = this.checkForCollision(tileCoords)
                     resolve(collision);
-                    
-                // if(sourceTile.x < destinationTile.x && direction === 'leftToRight'){
-                //     debugger
-                // }
-            }
+            // }
         })
     }
     this.straightLineTo = (targetTileId, sourceTileId, color = null) => {
@@ -427,19 +424,19 @@ export function AnimationManager(){
         })
     }
     this.cross = (tileId, color = null) => {
-        const storedTile = this.tiles.find(e=>e.id === tileId)
+        const animationTile = this.tiles.find(e=>e.id === tileId)
         let leftSide, rightSide, topAndBottom;
 
         const firstLayer = () => {
-            leftSide = this.tiles.filter(e=>e.x === storedTile.x - 1 && (
-                e.y === storedTile.y
+            leftSide = this.tiles.filter(e=>e.x === animationTile.x - 1 && (
+                e.y === animationTile.y
                 ))  
-            rightSide = this.tiles.filter(e=>e.x === storedTile.x + 1 && (
-                e.y === storedTile.y
+            rightSide = this.tiles.filter(e=>e.x === animationTile.x + 1 && (
+                e.y === animationTile.y
                 ))  
-            topAndBottom = this.tiles.filter(e=>e.x === storedTile.x && (
-                e.y === storedTile.y - 1 ||
-                e.y === storedTile.y + 1
+            topAndBottom = this.tiles.filter(e=>e.x === animationTile.x && (
+                e.y === animationTile.y - 1 ||
+                e.y === animationTile.y + 1
                 )) 
             const animate = () => {
                 leftSide.forEach((e) => {
@@ -458,20 +455,16 @@ export function AnimationManager(){
         }
 
         // const secondLayer = () => {
-        //     leftSide = this.tiles.filter(e=>e.x === storedTile.x - 2 && (
-        //         e.y === storedTile.y
+        //     leftSide = this.tiles.filter(e=>e.x === animationTile.x - 2 && (
+        //         e.y === animationTile.y
         //         ))  
-        //     rightSide = this.tiles.filter(e=>e.x === storedTile.x + 2 && (
-        //         e.y === storedTile.y
+        //     rightSide = this.tiles.filter(e=>e.x === animationTile.x + 2 && (
+        //         e.y === animationTile.y
         //         ))  
-        //     topAndBottom = this.tiles.filter(e=>e.x === storedTile.x && (
-        //         e.y === storedTile.y - 2 ||
-        //         e.y === storedTile.y + 2
+        //     topAndBottom = this.tiles.filter(e=>e.x === animationTile.x && (
+        //         e.y === animationTile.y - 2 ||
+        //         e.y === animationTile.y + 2
         //         )) 
-        //     console.log('2nd layer ANIMATION on tileId: ', tileId, this.tiles);
-        //     console.log('leftSide: ', leftSide);
-        //     console.log('rightSide: ', rightSide);
-        //     console.log('topAndBottom: ', topAndBottom);
         //     const animate = () => {
         //         leftSide.forEach((e) => {
         //             this.triggerTileAnimation(e.id, color)
@@ -515,41 +508,29 @@ export function AnimationManager(){
         let hit = await this.clawTo(targetTileId, sourceTileId)
         resolve(hit)
     }
-    this.swordSwing = async (targetTileId, sourceTileId, resolve) => {
-        // let hit = await this.clawTo(targetTileId, sourceTileId)
-        // console.log('hit ', hit);
-        // resolve(hit)
-        // this.clawTo = (targetTileId, sourceTileId) => {
-            const sourceTile = this.tiles.find(e=>e.id === sourceTileId)
-            const destinationTile = this.tiles.find(e=>e.id === targetTileId)
-            // console.log('sourceTile: ', sourceTile);
-            if(!sourceTile){
-                console.log('missing source');
-                debugger
+    this.swordSwing = async (targetTileId, sourceTileId, facing, resolve) => {
+        const sourceTile = this.tiles.find(e=>e.id === sourceTileId)
+        // const destinationTile = this.tiles.find(e=>e.id === targetTileId)
+        if(!sourceTile){
+            console.log('missing source');
+            debugger
+        }
+        return new Promise(() => {
+            const data = {
+                targetTileId,
+                type: 'sword_swing',
+                facing,
+                sourceTileId: sourceTile.id
             }
-            if(!destinationTile){
-                console.log('missing destination');
-                debugger
-            }
-            // let isOnSamePlane = sourceTile.y === destinationTile.y;
-            const facing = sourceTile.x > destinationTile.x ? 'left' : 'right'
-            // console.log('sword direction: ', facing);
-            return new Promise(() => {
-                // let id = this.getTileIdByCoords({x: destinationTile.x, y: destinationTile.y})
-                const data = {
-                    targetTileId,
-                    type: 'sword_swing',
-                    facing
-                }
-                // this.triggerTileAnimationComplex(targetTileId, 'sword_swing', facingRight);
-                this.triggerTileAnimationComplex(data)
-                let tileCoords = this.getTileCoordsById(targetTileId)
-                let collision = this.checkForCollision(tileCoords)
-                // console.log('collision: ', collision);
-                // console.log('resolve from animanager');
-                resolve(collision);
-            })
-        // }
+            this.triggerTileAnimationComplex(data)
+            //target tile ID can be null if they are facing left at the left edge
+            // ...not entirely sure when this would happen
+            let tileCoords = targetTileId ? this.getTileCoordsById(targetTileId) : null;
+            console.log('target tileId: ', targetTileId);
+            let collision = tileCoords ? this.checkForCollision(tileCoords) : false;
+            console.log('collision result: ', collision);
+            resolve(collision);
+        })
     }
     this.zapBurstAnimation = async (targetTileId, sourceTileId, color = null, resolve) => {
         await this.straightLineTo(targetTileId, sourceTileId, color)
@@ -561,7 +542,6 @@ export function AnimationManager(){
         resolve();
     }
     this.beamAnimation = async (targetTileId, sourceTileId, color = null, resolve) => {
-        // console.log('animstion mnger beam');
         await this.straightBeamTo(targetTileId, sourceTileId, color)
         resolve();
     }

@@ -1,8 +1,8 @@
 import { Djinn } from './profiles/Djinn'
 import { Sphinx } from './profiles/Sphinx'
 import { Skeleton } from './profiles/Skeleton'
-import {Methods} from '../basic-methods';
-import {MonsterMovementMethods} from './methods/monster-movement-methods';
+import {Methods} from '../shared-ai-methods/basic-methods';
+import {MovementMethods} from '../shared-ai-methods/movement-methods';
 
 export function MonsterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
     this.MAX_DEPTH = MAX_DEPTH;
@@ -12,7 +12,7 @@ export function MonsterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
     const data = {
         methods: {
             ...Methods,
-            ...MonsterMovementMethods,
+            ...MovementMethods,
 
         },
         MAX_DEPTH: this.MAX_DEPTH,
@@ -59,7 +59,7 @@ export function MonsterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
 
     this.methods = {
         ...Methods,
-        ...MonsterMovementMethods
+        ...MovementMethods
     }
 
     //UTILS

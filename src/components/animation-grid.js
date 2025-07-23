@@ -34,6 +34,7 @@ const AnimationGrid = ({
                     y={t.y}
                     animationOn = {t.animationOn}
                     animationType = {t.animationType}
+                    animationData = {t.animationData}
                     transitionType = {t.transitionType}
                     handleClick={handleClickWrapper}
                     tileSize={tileProps.TILE_SIZE}

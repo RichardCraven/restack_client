@@ -3,22 +3,28 @@ import * as images from '../utils/images'
 
 
 export default function AnimationTile(props) {
-    let image;
+    let image, facing, keyframe, duration;
+    facing = props.animationData?.facing
+    duration = props.animationData?.duration
+
+
+    let processedAnimation
+    let baseType = props.animationType
     switch(props.animationType){
         case 'claw':
             image = images['claws']
+            keyframe = `ClawAnimation_${facing}`
         break;
         case 'sword_swing':
             image = images['sword_white']
-            // setTimeout(()=>{
-            //     console.log('YO!')  ;
-            //     debugger
-            // },100)
+            facing = props.animationData?.facing
+            keyframe = `ArcAnimation_${facing}`
         break;
         default:
             break;
 
     }
+    const infiniteLoop = false
     return (
         <div style={{
             border: '1px solid transparent',
@@ -29,8 +35,9 @@ export default function AnimationTile(props) {
             width: props.tileSize+'px',
             backgroundImage: image ? "url(" + image + ")" : '',
 
-            animation: props.animationType === 'claw' ? 'ClawAnimation 0.5s linear forwards' : (props.animationType === 'sword_swing' ? 'ArcAnimationFromLeft 0.5s linear forwards' : ''),
-            WebkitAnimation: props.animationType === 'claw' ? 'ClawAnimation 0.5s linear forwards' : (props.animationType === 'sword_swing' ? 'ArcAnimationFromLeft 0.5s linear forwards' : ''),
+            // animation short-hand: name, duration, timing-function, delay, iteration-count, direction
+            animation: keyframe ? `${keyframe} ${duration/1000}s linear 0s ${infiniteLoop ? 'infinite' : ''} forwards` : '',
+            WebkitAnimation: keyframe ? `${keyframe} ${duration/1000}s linear 0s ${infiniteLoop ? 'infinite' : ''} forwards` : '',
             // animationIterationCount: 'infinite',
 
             // backgroundColor: 
@@ -89,7 +96,7 @@ export default function AnimationTile(props) {
             ${props.animationType ? props.animationType+'-'+props.transitionType : ''}
             `}
         >   
-            <div className="test">{props.id}</div>
+            <div className="animation-tile-id">{props.id}</div>
             {/* <CanvasMagicMissile 
                 width={100}
                 height={100}

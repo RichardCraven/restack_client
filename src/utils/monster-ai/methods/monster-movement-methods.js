@@ -67,6 +67,18 @@ export const MonsterMovementMethods = {
         let targetTile = {x: 6, y: 2}
         let coords = caller.coordinates;
         let newCoords = JSON.parse(JSON.stringify(coords))
+
+        const {N,E,S,W,NW,SW,NE,SE} = getSurroundings(caller.coordinates)
+
+        const targetIsNorthWest = targetTile.y < coords.y && targetTile.x < coords.x,
+            targetIsNorth = targetTile.y < coords.y && targetTile.x === coords.x,
+            targetIsNorthEast = targetTile.y < coords.y && targetTile.x > coords.x,
+            targetIsWest = targetTile.y === coords.y && targetTile.x < coords.x,
+            targetIsEast = targetTile.y === coords.y && targetTile.x > coords.x,
+            targetIsSouthWest = targetTile.y > coords.y && targetTile.x < coords.x,
+            targetIsSouth = targetTile.y > coords.y && targetTile.x === coords.x,
+            targetIsSouthEast = targetTile.y > coords.y && targetTile.x > coords.x;
+
         if(targetTile.x > coords.x) newCoords.x = coords.x+1
         if(targetTile.x < coords.x) newCoords.x = coords.x-1
         if(targetTile.y > coords.y) newCoords.y = coords.y+1

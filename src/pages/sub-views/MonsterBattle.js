@@ -144,15 +144,17 @@ class MonsterBattle extends React.Component {
     }
     targetOf = (caller) => {
         let c = this.state.battleData[caller.id],
-        target = this.state.battleData[c.targetId]
+        target = c.targetId ? this.state.battleData[c.targetId] : null;
         return target
     }
     monsterDirectionReversed = () => {
         if(!this.monster()) return false
         return this.monster()?.coordinates.x < this.targetOf(this.monster())?.coordinates.x
     }
-    minionDirectionReversed = (minion) => {
-        return minion?.coordinates.x < this.targetOf(minion)?.coordinates.x
+    minionDirectionReversed = (minionReference) => {
+        const minion = this.state.battleData[minionReference.id]
+        if(!minion || !minion.targetId) return false
+        return minion?.coordinates?.x < this.targetOf(minion)?.coordinates.x
     }
     getHitAnimation = (combatant) => {
         if(!combatant || !combatant.wounded) return '';
@@ -1261,7 +1263,9 @@ class MonsterBattle extends React.Component {
                                                 ${this.state.battleData[minion.id]?.missed ? (this.minionDirectionReversed(minion) ? 'missed-reversed' : 'missed') : ''}
                                                 ${this.state.battleData[minion.id]?.rocked ? 'rocked' : ''}
                                                 ${this.state.selectedMonster?.id === minion.id ? 'selected' : ''}
-                                                ${this.state.selectedFighter?.targetId === minion.id ? 'targetted' : ''}`
+                                                ${this.state.selectedFighter?.targetId === minion.id ? 'targetted' : ''}
+                                                ${this.minionDirectionReversed(minion) ? 'reversed' : ''}`
+                                                
                                             } 
                                             style={{
                                                 backgroundImage: "url(" + minion.portrait + ")", 

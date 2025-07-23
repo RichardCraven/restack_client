@@ -364,11 +364,14 @@
             width: 100px;
             position: relative;
             user-select: none;
+            .animation-tile-id{
+                color: cyan;
+            }
             &.claw-fade{
                 // background-image: url;
                 border: 1px solid red;
             }
-            @-webkit-keyframes ArcAnimationFromLeft {
+            @-webkit-keyframes ArcAnimation_right {
                 0%{
                     transform: translate(-50px, -35px) rotateZ(-70deg);
                     opacity: 0.1;
@@ -386,7 +389,7 @@
                     opacity: 0;
                 }
             }
-            @-moz-keyframes ArcAnimationFromLeft {
+            @-moz-keyframes ArcAnimation_right {
                 0%{
                     transform: translate(-50px, -35px) rotateZ(-70deg);
                     opacity: 0.1;
@@ -404,76 +407,262 @@
                     opacity: 0;
                 }
             }
-            @keyframes ArcAnimationFromLeft {
+            @keyframes ArcAnimation_right {
+                // 0%{
+                //     transform: translate(50px, 35px) rotateZ(70deg);
+                //     opacity: 0.1;
+                // }
+                // 50%{
+                //     transform: translate(50px, 35px) rotateZ(70deg);
+                //     opacity: 0.9;
+                // }
+                // 80%{
+                //     transform: translate(10px, 0px) rotateZ(45deg);
+                //     opacity: 1;
+                // }
+                // 100%{
+                //     transform: translate(50px, -20px) rotateZ(45deg);
+                //     opacity: 0;
+                // }
+
+                //decent
+                // 0%{
+                //     transform: translate(-50px, -35px) rotateZ(-70deg);
+                //     opacity: 0.1;
+                // }
+                // 50%{
+                //     transform: translate(-50px, -35px) rotateZ(-70deg);
+                //     opacity: 0.9;
+                // }
+                // 80%{
+                //     transform: translate(-10px, 0px) rotateZ(45deg);
+                //     opacity: 1;
+                // }
+                // 100%{
+                //     transform: translate(-50px, 20px) rotateZ(45deg);
+                //     opacity: 0;
+                // }
+
+                // latest attempt:
                 0%{
-                    transform: translate(-50px, -35px) rotateZ(-70deg);
+                    transform: translate(20px, -35px) rotateZ(-30deg);
                     opacity: 0.1;
                 }
                 50%{
-                    transform: translate(-50px, -35px) rotateZ(-70deg);
+                    transform: translate(40px, -5px) rotateZ(50deg);
                     opacity: 0.9;
                 }
                 80%{
-                    transform: translate(-10px, 0px) rotateZ(45deg);
+                    transform: translate(40px, 35px) rotateZ(50deg);
                     opacity: 1;
                 }
                 100%{
-                    transform: translate(-50px, 20px) rotateZ(45deg);
+                    transform: translate(0px, 35px) rotateZ(110deg);
+                    opacity: 0;
+                }
+                
+            }
+            @keyframes ArcAnimation_left {
+                0%{
+                    transform: translate(-10px, -35px) rotateZ(0deg);
+                    opacity: 0.1;
+                }
+                50%{
+                    transform: translate(-50px, -35px) rotateZ(-100deg);
+                    opacity: 0.9;
+                }
+                80%{
+                    transform: translate(-60px, -35px) rotateZ(-120deg);
+                    opacity: 1;
+                }
+                100%{
+                    transform: translate(-50px, 20px) rotateZ(-180deg);
+                    opacity: 0;
+                }
+            }
+            // ARC Down to Up
+            @keyframes ArcAnimation_up {
+                0%{
+                    transform: translate(0px, -70px) rotateZ(-100deg);
+                    opacity: 0.1;
+                }
+                50%{
+                    transform: translate(10px, -60px) rotateZ(-60deg);
+                    opacity: 0.9;
+                }
+                80%{
+                    transform: translate(20px, -50px) rotateZ(-50deg);
+                    opacity: 1;
+                }
+                100%{
+                    transform: translate(20px, -50px) rotateZ(-10deg);
+                    opacity: 0;
+                }
+            }
+            // ArcAnimation Up to Down
+            @keyframes ArcAnimation_down {
+                0%{
+                    transform: translate(10px, 40px) rotateZ(100deg);
+                    opacity: 0.1;
+                }
+                50%{
+                    transform: translate(10px, 50px) rotateZ(150deg);
+                    opacity: 0.9;
+                }
+                80%{
+                    transform: translate(-5px, 60px) rotateZ(170deg);
+                    opacity: 1;
+                }
+                100%{
+                    transform: translate(-10px, 50px) rotateZ(200deg);
+                    opacity: 0;
+                }
+            }
+            @keyframes StabAnimation_left {
+                0%{
+                    transform: translate(0px, 0px) rotateZ(-129deg);
+                    opacity: 0.1;
+                }
+                50%{
+                    transform: translate(-50px, -35px) rotateZ(-130deg);
+                    opacity: 0.9;
+                }
+                80%{
+                    transform: translate(-10px, 0px) rotateZ(-130deg);
+                    opacity: 1;
+                }
+                100%{
+                    transform: translate(-50px, 20px) rotateZ(-130deg);
+                    opacity: 0;
+                }
+            }
+            @keyframes StabAnimation_right {
+                0%{
+                    transform: translate(50px, 35px) rotateZ(70deg);
+                    opacity: 0.1;
+                }
+                50%{
+                    transform: translate(50px, 35px) rotateZ(70deg);
+                    opacity: 0.9;
+                }
+                80%{
+                    transform: translate(10px, 0px) rotateZ(45deg);
+                    opacity: 1;
+                }
+                100%{
+                    transform: translate(50px, -20px) rotateZ(45deg);
                     opacity: 0;
                 }
             }
 
-            @-webkit-keyframes ClawAnimation {
+            @-webkit-keyframes ClawAnimation_left {
                 0%{
-                    transform: translate(50px, -20px) rotateZ(45deg);
+                    transform: translate(-40px, -20px) rotateZ(45deg);
                     opacity: 0.1;
                 }
                 50%{
-                    transform: translate(10px, 0px) rotateZ(45deg);
+                    transform: translate(-70px, 0px) rotateZ(45deg);
                     opacity: 0.9;
                 }
                 80%{
-                    transform: translate(50px, 35px) rotateZ(-70deg);
+                    transform: translate(-40px, 35px) rotateZ(-70deg);
                     opacity: 1;
                 }
                 100%{
-                    transform: translate(50px, 35px) rotateZ(-70deg);
+                    transform: translate(-40px, 35px) rotateZ(-70deg);
                     opacity: 0;
                 }
             }
-            @-moz-keyframes ClawAnimation {
+            @-moz-keyframes ClawAnimation_left {
                 0%{
-                    transform: translate(50px, -20px) rotateZ(45deg);
+                    transform: translate(-40px, -20px) rotateZ(45deg);
                     opacity: 0.1;
                 }
                 50%{
-                    transform: translate(10px, 0px) rotateZ(45deg);
+                    transform: translate(-70px, 0px) rotateZ(45deg);
                     opacity: 0.9;
                 }
                 80%{
-                    transform: translate(50px, 35px) rotateZ(-70deg);
+                    transform: translate(-40px, 35px) rotateZ(-70deg);
                     opacity: 1;
                 }
                 100%{
-                    transform: translate(50px, 35px) rotateZ(-70deg);
+                    transform: translate(-40px, 35px) rotateZ(-70deg);
                     opacity: 0;
                 }
             }
-            @keyframes ClawAnimation {
+            @keyframes ClawAnimation_left {
                 0%{
-                    transform: translate(50px, -20px) rotateZ(45deg);
+                    transform: translate(-40px, -20px) rotateZ(45deg);
                     opacity: 0.1;
                 }
                 50%{
-                    transform: translate(10px, 0px) rotateZ(45deg);
+                    transform: translate(-70px, 0px) rotateZ(45deg);
                     opacity: 0.9;
                 }
                 80%{
-                    transform: translate(50px, 35px) rotateZ(-70deg);
+                    transform: translate(-40px, 35px) rotateZ(-70deg);
                     opacity: 1;
                 }
                 100%{
-                    transform: translate(50px, 35px) rotateZ(-70deg);
+                    transform: translate(-40px, 35px) rotateZ(-70deg);
+                    opacity: 0;
+                }
+            }
+            // CLAW Left to Right
+            @keyframes ClawAnimation_right {
+                0%{
+                    transform: translate(40px, -20px) rotateZ(-65deg);
+                    opacity: 0.1;
+                }
+                50%{
+                    transform: translate(70px, 0px) rotateZ(0deg);
+                    opacity: 0.9;
+                }
+                80%{
+                    transform: translate(40px, 35px) rotateZ(10deg);
+                    opacity: 1;
+                }
+                100%{
+                    transform: translate(40px, 35px) rotateZ(10deg);
+                    opacity: 0;
+                }
+            }
+            // CLAW Down to Up
+            @keyframes ClawAnimation_up {
+                0%{
+                    transform: translate(-40px, -20px) rotateZ(-170deg) scale(-1,-1);
+                    opacity: 0.1;
+                }
+                50%{
+                    transform: translate(10px, -90px) rotateZ(-50deg) scale(-1,-1);
+                    opacity: 0.9;
+                }
+                80%{
+                    transform: translate(20px, -60px) rotateZ(0deg) scale(-1,-1);
+                    opacity: 1;
+                }
+                100%{
+                    transform: translate(20px, -50px) rotateZ(0deg) scale(-1,-1);
+                    opacity: 0;
+                }
+            }
+            // CLAW Up to Down
+            @keyframes ClawAnimation_down {
+                0%{
+                    transform: translate(-10px, 20px) rotateZ(320deg);
+                    opacity: 0.1;
+                }
+                50%{
+                    transform: translate(-10px, 50px) rotateZ(320deg);
+                    opacity: 0.9;
+                }
+                80%{
+                    transform: translate(0px, 55px) rotateZ(250deg);
+                    opacity: 1;
+                }
+                100%{
+                    transform: translate(20px, 30px) rotateZ(250deg);
                     opacity: 0;
                 }
             }
@@ -1369,7 +1558,6 @@
                     height: 100px;
                     width: 100px;
                     border-radius: 100px;
-                    // transition: transform 1s;
                     transform: matrix3d(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
                     transition: all 0.5s;
                     &.monster-portrait{
@@ -1383,7 +1571,10 @@
                     }
 
                     &.reversed{
-                        transform: scaleX(-1)
+                        transform: scaleX(-1);
+                        &.monster-portrait{
+                            transform: scale(-2, 2);
+                        }
                     }
                     &.missed{
                         // transform: scale(0.9)
