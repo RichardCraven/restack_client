@@ -77,21 +77,26 @@
             &.fade-out{
                 opacity: 0;
             }
-            &.red{
-                .moving-square{
-                    border: 1px dashed #b10d0d;
-                }
-            }
-            &.light-red{
-                .moving-square{
-                    border: 1px dashed #d77272;
-                }
-            }
-            &.default-color{
-                .moving-square{
-                    border: 1px dashed white;
-                }
-            }
+            // &.red{
+            //     .moving-square{
+            //         border: 1px dashed #b10d0d;
+            //     }
+            // }
+            // &.light-red{
+            //     .moving-square{
+            //         border: 1px dashed #d77272;
+            //     }
+            // }
+            // &.white{
+            //     .moving-square{
+            //         border: 1px dashed white;
+            //     }
+            // }
+            // &.default-color{
+            //     .moving-square{
+            //         border: 1px dashed white;
+            //     }
+            // }
             .relative-child{
                 .moving-square{
                     position: absolute;
@@ -1260,6 +1265,13 @@
                             cursor: pointer;
                             transition: all 1s;
                             z-index: 1;
+                            .color-glow{
+                                height: 100%;
+                                width: 100%;
+                                border-radius: 100%;
+                                box-shadow: 0px 0px 30px;
+                                // color: #b710d5;
+                            }
                             &.locked{
                                 filter: invert(1) !important;
                             }

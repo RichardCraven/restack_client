@@ -102,6 +102,7 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
         wounded: false,
         onGeneralAttackCooldown: false,
         onMoveCooldown: false,
+        color: fighter.color,
         attack: function(){
             const target = getCombatant(this.targetId);
             if(!target) return
@@ -250,7 +251,9 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
                     target = getCombatant(this.targetId)
                     if(!this.pendingAttack) chooseAttackType(this, target)
                     inRange = targetInRange(this);
+                // console.log('in range', inRange);
                     if(inRange && this.movesLeft && !era.attacked && !this.onGeneralAttackCooldown && !this.onMoveCooldown && !target.onMoveCooldown){
+                        console.log('***ATTACK***');
                         era.attacked = true;
                         this.movesLeft--
                         this.attack(target);
@@ -262,23 +265,28 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
                         if(!this.targetId) acquireTarget(this);
                         eraMove();
                         if(this.tempo > 10){
+                            
                             eraAttack();
                         }
                     break;
                     case 1: 
                         eraMove();
+                        
                         eraAttack();
                     break;
                     case 2: 
                         eraMove();
+                        
                         eraAttack();
                     break;
                     case 3: 
                         eraMove();
+                        
                         eraAttack();
                     break;
                     case 4: 
                         eraMove();
+                        
                         eraAttack();
                     break;
                 }

@@ -37,14 +37,35 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
     }
 
     this.acquireTarget = (caller, combatants, targetToAvoid = null) => {
+        console.log('WIZARD acquire target');
         const liveEnemies = Object.values(combatants).filter(e=>!e.dead && (e.isMonster || e.isMinion));
-        const sorted = liveEnemies.sort((a,b)=>b.depth - a.depth);
-        let target = sorted.length ? sorted[0] : null;
-        if(!target) return;
-        if(this.friendlies(combatants).some(e=>e.targetId === target.targetId) && sorted.length > 1){
-            target = sorted[1]
+        // c2 = a2 + b2
+        // c (hypotenuse) = square root of a squared plus b squared
+        // Math.sqrt(Math.pow(a, 2) + Math.pow(b, 2))
+
+        const getClosestEnemy = () => {
+            let closestEnemy = {enemy: null, distance: Infinity}
+            let arr = []
+            liveEnemies.forEach(e=>{
+                let distanceToEnemy = Math.sqrt(Math.pow(e.coordinates.x - caller.coordinates.x, 2) + Math.pow(e.coordinates.y - caller.coordinates.y, 2))
+                if(distanceToEnemy < closestEnemy.distance) closestEnemy = {enemy: e, distance: distanceToEnemy}
+                arr.push({enemy: e, distance: distanceToEnemy})
+            })
+            console.log('distance arr: ', arr);
+            return closestEnemy
         }
-        // console.log('wizard acquiring target & pending attack');
+        const closestEnemy = getClosestEnemy();
+        console.log('closest enemy: ', closestEnemy);
+        const sorted = liveEnemies.sort((a,b)=>b.depth - a.depth);
+        console.log('sorted: ', sorted);
+        // need to get closest!
+        // debugger
+        let target = closestEnemy.enemy;
+        if(!target) return;
+        // if(this.friendlies(combatants).some(e=>e.targetId === target.targetId) && sorted.length > 1){
+        //     target = sorted[1]
+        // }
+        console.log('target: ', target);
         caller.pendingAttack = this.chooseAttackType(caller, target);
         caller.targetId = target.id;
         target.targettedBy.push(caller.id)
@@ -325,15 +346,20 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
     }
     this.initiateAttack = async (caller, manualAttack, combatants) => {
         if(!caller) return
+        console.log('Wizard initiating attack, pending attack:', caller.pendingAttack);
         const target = combatants[caller.targetId];
         
         if(manualAttack){
+            console.log('manual');
             if(caller.pendingAttack && caller.pendingAttack.cooldown_position < 99){
+                console.log('pending attack not charged fully');
                 return
             } else if (caller.pendingAttack && caller.pendingAttack.cooldown_position === 100){
-                let hits = await this.triggerBeamAttackManual(caller.coordinates)
-                if(hits){
-                    this.hitsTarget(caller)
+                let combatantHit = await this.triggerBeamAttackManual(caller.coordinates)
+                console.log('combatantHit: ', combatantHit);
+                if(combatantHit){
+                    this.hitsCombatant(caller, combatantHit)
+                    // this.hitsTarget(caller)
                     
                 } else {
                     this.missesTarget(caller);
@@ -341,14 +367,16 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                 this.kickoffAttackCooldown(caller)
             }
         } else {
+            console.log('**automated');
             const distanceToTarget = data.methods.getDistanceToTarget(caller, target),
             laneDiff = data.methods.getLaneDifferenceToTarget(caller, target);
             switch(caller.pendingAttack.name){
                 case 'energy blast':
+                    console.log('energy blast');
                     if(laneDiff === 0){
                         let combatantHit  = await this.triggerBeamAttack(caller.coordinates, target.coordinates);
                         if(combatantHit){
-                            // this.hitsTarget(caller);
+                            console.log('energy blast hit', combatantHit);
                             this.hitsCombatant(caller, combatantHit)
                             this.kickoffAttackCooldown(caller)
                         } else {
@@ -356,6 +384,7 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                             this.kickoffAttackCooldown(caller)
                         }
                     } else {
+                        console.log('woops, missed');
                         this.missesTarget(caller);
                     }
                 break;

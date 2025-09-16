@@ -7,12 +7,12 @@ export default function Overlay(props) {
     switch(props.animationType){
         case 'targetted':
             // console.log('targetted!');
-            content =   <div className={`overlay-content overlay-targetted ${props.data?.color ? props.data.color : 'default-color'} ${props.data.fadeOut ? 'fade-out' : ''}`}>
+            content =  <div className={`overlay-content overlay-targetted ${props.data?.color ? props.data.color : 'default-color'} ${props.data.fadeOut ? 'fade-out' : ''}`}>
                             <div className="relative-child">
-                                <div className="moving-square top-left"></div>
-                                <div className="moving-square top-right"></div>
-                                <div className="moving-square bot-left"></div>
-                                <div className="moving-square bot-right"></div>
+                                <div className="moving-square top-left" style={{borderTop: `2px solid ${props.data?.color}`, borderLeft: `2px solid ${props.data?.color}`}}></div>
+                                <div className="moving-square top-right" style={{borderTop: `2px solid ${props.data?.color}`, borderRight: `2px solid ${props.data?.color}`}}></div>
+                                <div className="moving-square bot-left" style={{borderBottom: `2px solid ${props.data?.color}`, borderLeft: `2px solid ${props.data?.color}`}}></div>
+                                <div className="moving-square bot-right" style={{borderBottom: `2px solid ${props.data?.color}`, borderRight: `2px solid ${props.data?.color}`}}></div>
                             </div>
                         </div>
         break;

@@ -1,3 +1,7 @@
+const clone = (val) => {
+    return JSON.parse(JSON.stringify(val))
+}
+
 export function Soldier(data, utilMethods, animationManager, overlayManager){
     this.MAX_DEPTH = data.MAX_DEPTH;
     this.MAX_LANES = data.MAX_LANES;
@@ -58,7 +62,7 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
             attack = available.find(e=>e.range === 'close');
             return attack;
         }
-
+        // console.log('soldier available attacks: ', available);
         if(available.length === 0){
             // choose the attack that is closest to 100 percent
             caller.attacks.filter(e=>e.range === 'medium' || e.range === 'far').forEach(e=>{
@@ -79,13 +83,14 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
                         chosenAttack = e;
                     }
                 })
+                // console.log('chosen attack: ', clone(chosenAttack));
                 attack = chosenAttack;
                 // caller.aiming = true;
             } else {
                 attack = data.methods.pickRandom(available);
             }
         }
-        console.log('attack type chosen: ', attack);
+        // console.log('attack type chosen: ', attack);
         return attack
     }
     this.processMove = (caller, combatants) => {
@@ -206,6 +211,7 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
         const target = combatants[caller.targetId];
         const facing = caller.facing ? caller.facing : callerFacing(caller,target)
         if(manualAttack){
+            console.log('soldier manual attack', caller.pendingAttack);
             if(caller.pendingAttack && caller.pendingAttack.cooldown_position < 99){
                 return
             } else if (caller.pendingAttack && caller.pendingAttack.cooldown_position === 100){

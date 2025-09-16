@@ -177,7 +177,7 @@ export function CrewManager(){
                 dex: 6,
                 vit: 4,
                 fort: 7,
-                hp: 30,
+                hp: 100,
                 atk: 8,
                 baseDef: 12,
                 energy: 0,

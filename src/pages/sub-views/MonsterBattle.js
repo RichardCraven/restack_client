@@ -352,7 +352,6 @@ class MonsterBattle extends React.Component {
     //     this.props.overlayManager.launchUpdateInterval()
     // }
     recieveAnimationBroadcastFromOverlayManager = (animationOverlaysUpdated) => {
-        // console.log('animationOverlays recieved: ', animationOverlaysUpdated);
         // const animationOverlays = this.state.animationOverlays;÷
         // switch(broadcastType){
         //     case 'add':
@@ -483,6 +482,7 @@ class MonsterBattle extends React.Component {
     }
     // OVERLAY MANAGER
     establishBroadcastNewAnimationCallback = () => {
+        console.log('establish broadcast animation callback');
         this.props.overlayManager.establishBroadcastAnimationEventCallback(this.recieveAnimationBroadcastFromOverlayManager)
     }
     // establishInitializeOverlayManagerCallback = () => {
@@ -592,6 +592,7 @@ class MonsterBattle extends React.Component {
             }
             consumableSpecials.forEach(a=>a.selected=false)
         } else {
+            console.log('manual attack');
             this.props.combatManager.fighterManualAttack()
         }
     }
@@ -599,7 +600,7 @@ class MonsterBattle extends React.Component {
         if(!this.state.selectedFighter) return
         console.log(this.state.selectedFighter.type, 'fire special', special );
         console.log('handle this');
-        debugger
+        // debugger
         let consumableSpecialSelected;
 
         let selectedFighter = this.state.selectedFighter;
@@ -986,6 +987,7 @@ class MonsterBattle extends React.Component {
                                             onDragStart = {(event) => this.onDragStart(fighter)}
                                             draggable
                                             >
+                                                <div className="color-glow" style={{color: this.fighter(fighter)?.color}}></div>
                                             </div>
                                             {this.state.animationOverlays[fighter.id] && this.getAllOverlaysById(fighter.id).map((overlay, i) => {
                                                 return <Overlay key={i} animationType={overlay.type} data={overlay.data}/>
@@ -1276,6 +1278,11 @@ class MonsterBattle extends React.Component {
                                             > 
                                             {minion.id} 
                                             </div>
+                                            {this.state.battleData[minion.id] && this.state.animationOverlays[minion.id] && this.getAllOverlaysById(minion.id).map((overlay, i) => {
+                                                return <Overlay key={i} animationType={overlay.type} data={overlay.data}/>
+                                                // return  <div style={{color:white}}>???????</div>
+                                            })}
+                                            {this.state.battleData[minion.id] && this.state.animationOverlays[minion.id] && <div>OOO</div>}
                                             <div 
                                             className={
                                                 `portrait-relative-container`

@@ -154,7 +154,6 @@ const goTowards = (caller, combatants, targetTile) => {
         }
     } else if(targetIsSouth){ //////////// S
         if(targetIsInCoords(S)){
-            // console.log('TARGET DIRECTLY South');
         } else if(someoneIsInCoords(S, combatants)){
             //go SW or SE
             if(isAvailableToMoveInto(SW, combatants)){

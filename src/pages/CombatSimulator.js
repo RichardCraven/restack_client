@@ -116,10 +116,13 @@ class CrewManagerPage extends React.Component{
   initializeListeners = () => {
     window.addEventListener('keydown', this.combatKeyDownHandler);
     window.addEventListener('keyup', this.combatKeyUpListener)
+    window.addEventListener('beforeunload', this.componentCleanup);
   }
   componentCleanup = () => {
+    console.log('combat simulator cleanup');
     window.removeEventListener('keydown', this.combatKeyDownHandler)
     window.removeEventListener('keyup', this.combatKeyUpListener)
+    window.removeEventListener('beforeunload', this.componentCleanup); 
   }
   getDungeonDetails = async () => {
     const user = getMeta();
@@ -131,6 +134,7 @@ class CrewManagerPage extends React.Component{
   }
   exitSimulator = () => {
     console.log('exit sim');
+    this.componentCleanup();
     this.props.navToLanding();
     // const history = useHistory();
     // history.push('/landing')
