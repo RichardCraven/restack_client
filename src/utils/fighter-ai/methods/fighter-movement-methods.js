@@ -241,7 +241,8 @@ export const MovementMethods = {
 
     },
     centerBack: (caller, combatants) => {
-        console.log('combatants: ', combatants);
+        // WE ARE NO LONGER USING THIS, USE SHARED METHODS FILE
+        // console.log('move CENTER BACK combatants: ', combatants);
         const enemyTarget = Object.values(combatants).find(e=>e.id === caller.targetId)
 
         const {N,E,S,W,NW,SW,NE,SE} = getSurroundings(caller.coordinates)

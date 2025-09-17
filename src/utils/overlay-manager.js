@@ -55,12 +55,12 @@ export function OverlayManager(){
                 animationRef.locked = false;
             }, 500)
 
-            // setTimeout(()=>{
-            //     const animationRef =  this.overlays[animation.id].animations[animation.type].find(a=>a===animation);
-            //     animationRef.data.fadeOut = true;
-            //     animations = clone(this.overlays)
-            //     this.broadcastAnimationEvent(animations)
-            // }, duration)
+            setTimeout(()=>{
+                const animationRef =  this.overlays[animation.id].animations[animation.type].find(a=>a===animation);
+                animationRef.data.fadeOut = true;
+                animations = clone(this.overlays)
+                this.broadcastAnimationEvent(animations)
+            }, duration)
 
             setTimeout(()=>{
                 if(!this.overlays[animation.id]) return

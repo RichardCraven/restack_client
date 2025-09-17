@@ -37,7 +37,6 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
     }
 
     this.acquireTarget = (caller, combatants, targetToAvoid = null) => {
-        console.log('WIZARD acquire target');
         const liveEnemies = Object.values(combatants).filter(e=>!e.dead && (e.isMonster || e.isMinion));
         // c2 = a2 + b2
         // c (hypotenuse) = square root of a squared plus b squared
@@ -51,21 +50,13 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                 if(distanceToEnemy < closestEnemy.distance) closestEnemy = {enemy: e, distance: distanceToEnemy}
                 arr.push({enemy: e, distance: distanceToEnemy})
             })
-            console.log('distance arr: ', arr);
+            // console.log('distance arr: ', arr);
             return closestEnemy
         }
         const closestEnemy = getClosestEnemy();
-        console.log('closest enemy: ', closestEnemy);
         const sorted = liveEnemies.sort((a,b)=>b.depth - a.depth);
-        console.log('sorted: ', sorted);
-        // need to get closest!
-        // debugger
         let target = closestEnemy.enemy;
         if(!target) return;
-        // if(this.friendlies(combatants).some(e=>e.targetId === target.targetId) && sorted.length > 1){
-        //     target = sorted[1]
-        // }
-        console.log('target: ', target);
         caller.pendingAttack = this.chooseAttackType(caller, target);
         caller.targetId = target.id;
         target.targettedBy.push(caller.id)
@@ -135,7 +126,7 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                     break;
                     case 1:
                         if(caller.targetId){
-                            console.log('wizard move in era 1 HAS TARGET!');
+                            console.log('wizard move in era 1 HAS TARGET! (should go center back)');
                         }
                         data.methods.centerBack(caller, combatants)
                         // if(window.pickRandom([true,true, false])){
@@ -346,7 +337,6 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
     }
     this.initiateAttack = async (caller, manualAttack, combatants) => {
         if(!caller) return
-        console.log('Wizard initiating attack, pending attack:', caller.pendingAttack);
         const target = combatants[caller.targetId];
         
         if(manualAttack){
@@ -356,7 +346,6 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                 return
             } else if (caller.pendingAttack && caller.pendingAttack.cooldown_position === 100){
                 let combatantHit = await this.triggerBeamAttackManual(caller.coordinates)
-                console.log('combatantHit: ', combatantHit);
                 if(combatantHit){
                     this.hitsCombatant(caller, combatantHit)
                     // this.hitsTarget(caller)
@@ -367,16 +356,14 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                 this.kickoffAttackCooldown(caller)
             }
         } else {
-            console.log('**automated');
+            console.log('**automated, caller: ', caller);
             const distanceToTarget = data.methods.getDistanceToTarget(caller, target),
             laneDiff = data.methods.getLaneDifferenceToTarget(caller, target);
             switch(caller.pendingAttack.name){
                 case 'energy blast':
-                    console.log('energy blast');
                     if(laneDiff === 0){
                         let combatantHit  = await this.triggerBeamAttack(caller.coordinates, target.coordinates);
                         if(combatantHit){
-                            console.log('energy blast hit', combatantHit);
                             this.hitsCombatant(caller, combatantHit)
                             this.kickoffAttackCooldown(caller)
                         } else {
@@ -384,7 +371,6 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                             this.kickoffAttackCooldown(caller)
                         }
                     } else {
-                        console.log('woops, missed');
                         this.missesTarget(caller);
                     }
                 break;

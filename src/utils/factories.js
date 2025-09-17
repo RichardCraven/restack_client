@@ -253,7 +253,7 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
                     inRange = targetInRange(this);
                 // console.log('in range', inRange);
                     if(inRange && this.movesLeft && !era.attacked && !this.onGeneralAttackCooldown && !this.onMoveCooldown && !target.onMoveCooldown){
-                        console.log('***ATTACK***');
+                        // console.log('***ATTACK***');
                         era.attacked = true;
                         this.movesLeft--
                         this.attack(target);

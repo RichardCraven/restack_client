@@ -51,6 +51,7 @@ export function FighterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
 
     //UTILS
     this.getLaneDifferenceToTarget = (caller, target) => {
+        //THIS SHOULDNT NEED TO BE HERE, REMOVE
         if(!target) return 0;
         let d =  target.position - caller.position
         return d

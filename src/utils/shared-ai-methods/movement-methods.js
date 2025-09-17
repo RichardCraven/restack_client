@@ -1,6 +1,8 @@
 
 import {Methods} from './basic-methods';
-
+const clone = (val) => {
+    return JSON.parse(JSON.stringify(val))
+}
 const MAX_DEPTH = 7
 // ^ index 7, actual col count is 8
 const MAX_LANES = 5
@@ -15,6 +17,7 @@ const getSurroundings = (coords) => {
               SE = {x: coords.x+1, y: coords.y+1}
     return {N,S,E,W,NW,NE,SW,SE}
 }
+const PC_TYPES = ['soldier','rogue','wizard', 'monk', 'sage', 'barbarian']
 const someoneIsInCoords = (coords, combatants)=>{
     if(!combatants) return false
     return Object.values(combatants).some(e=>JSON.stringify(e.coordinates) == JSON.stringify(coords))
@@ -30,6 +33,7 @@ const someoneElseIsInCoords = (caller, coords)=>{
 }
 
 const goTowards = (caller, combatants, targetTile) => {
+    const isTargetTileOccupied = someoneIsInCoords(targetTile, combatants);
     const {N,E,S,W,NW,SW,NE,SE} = getSurroundings(caller.coordinates)
 
     // overwriting
@@ -52,7 +56,9 @@ const goTowards = (caller, combatants, targetTile) => {
     let newCoords = JSON.parse(JSON.stringify(caller.coordinates))
 
     if(targetIsNorthWest){ /////////////////////////////////////  NW
-        if(targetIsInCoords(NW)){
+        if(targetIsInCoords(NW) && !isTargetTileOccupied){
+            newCoords = NW;
+        } else if(targetIsInCoords(NW)){
             if(isAvailableToMoveInto(W, combatants)){
                 newCoords = W;
             } else if(isAvailableToMoveInto(N, combatants)){
@@ -73,7 +79,9 @@ const goTowards = (caller, combatants, targetTile) => {
             newCoords = NW;
         }
     } else if(targetIsNorthEast){ /////////////////////// NE
-        if(targetIsInCoords(NE)){
+        if(targetIsInCoords(NE) && !isTargetTileOccupied){
+            newCoords = NE;
+        } else if(targetIsInCoords(NE)){
             if(isAvailableToMoveInto(E, combatants)){
                 newCoords = E;
             } else if(isAvailableToMoveInto(N, combatants)){
@@ -90,11 +98,13 @@ const goTowards = (caller, combatants, targetTile) => {
                 return
             }
         } else {
-            // space available go NW
+            // space available go NE
             newCoords = NE;
         }
     } else if(targetIsSouthWest){ ////////////////////////////////////// SW
-        if(targetIsInCoords(SW)){
+        if(targetIsInCoords(SW) && !isTargetTileOccupied){
+            newCoords = SW;
+        } else if(targetIsInCoords(SW)){
             if(isAvailableToMoveInto(W, combatants)){
                 newCoords = W;
             } else if(isAvailableToMoveInto(S, combatants)){
@@ -115,14 +125,8 @@ const goTowards = (caller, combatants, targetTile) => {
             newCoords = SW;
         }
     } else if(targetIsSouthEast){ //////////////////////// SE
-        if(targetIsInCoords(SE)){
-            if(isAvailableToMoveInto(E, combatants)){
-                newCoords = E;
-            } else if(isAvailableToMoveInto(S, combatants)){
-                newCoords = S;
-            } else {
-                console.log('TARGET DIRECTLY SE, but Im stuck');
-            }
+        if(targetIsInCoords(SE) && !isTargetTileOccupied){
+            newCoords = SE;
         } else if(someoneIsInCoords(SE, combatants)){
             //go down or right
             if(isAvailableToMoveInto(S, combatants)){
@@ -130,15 +134,17 @@ const goTowards = (caller, combatants, targetTile) => {
             } else if(isAvailableToMoveInto(E, combatants)){
                 newCoords = E
             } else {
-                console.log('nowhere to go, stay put');
                 return
             }
         } else {
-            // space available go SW
+            // space available go SE
             newCoords = SE;
         }
     } else if(targetIsNorth){ ////////// N
-        if(targetIsInCoords(N)){
+        if(targetIsInCoords(N) && !isTargetTileOccupied){
+            newCoords = N;
+        } else if(targetIsInCoords(N)){
+            // do nothing (original code is empty here)
         } else if(someoneIsInCoords(N, combatants)){
             //go NW or NE
             if(isAvailableToMoveInto(NW, combatants)){
@@ -149,11 +155,14 @@ const goTowards = (caller, combatants, targetTile) => {
                 return
             }
         } else {
-            // space available go SW
+            // space available go N
             newCoords = N;
         }
     } else if(targetIsSouth){ //////////// S
-        if(targetIsInCoords(S)){
+        if(targetIsInCoords(S) && !isTargetTileOccupied){
+            newCoords = S;
+        } else if(targetIsInCoords(S)){
+            // do nothing (original code is empty here)
         } else if(someoneIsInCoords(S, combatants)){
             //go SW or SE
             if(isAvailableToMoveInto(SW, combatants)){
@@ -168,8 +177,9 @@ const goTowards = (caller, combatants, targetTile) => {
             newCoords = S;
         }
     } else if(targetIsEast){ ///////////  E
-        if(targetIsInCoords(E, combatants)){
-            // console.log('TARGET DIRECTLY east');
+        if(targetIsInCoords(E) && !isTargetTileOccupied){
+            newCoords = E;
+        } else if(targetIsInCoords(E)){
         } else if(someoneIsInCoords(E, combatants)){
             //go NE or SE
             if(isAvailableToMoveInto(NE, combatants)){
@@ -177,15 +187,17 @@ const goTowards = (caller, combatants, targetTile) => {
             } else if(isAvailableToMoveInto(SE, combatants)){
                 newCoords = SE
             } else {
-                console.log('nowhere to go, stay put');
                 return
             }
         } else {
-            // space available go South
+            // space available go East
             newCoords = E;
         }
     } else if(targetIsWest){
-        if(targetIsInCoords(W)){
+        if(targetIsInCoords(W) && !isTargetTileOccupied){
+            newCoords = W;
+        } else if(targetIsInCoords(W)){
+            // do nothing (original code is empty here)
         } else if(someoneIsInCoords(W, combatants)){
             //go NW or SW
             if(isAvailableToMoveInto(NW, combatants)){
@@ -235,17 +247,32 @@ export const MovementMethods = {
         caller.coordinates = newCoords;
     },
     centerBack: (caller, combatants) => {
-        const enemyTarget = Object.values(combatants).find(e=>e.id === caller.targetId)
-
+        const enemyTarget = Object.values(combatants).find(e=>e.id === caller.targetId);
         const {N,E,S,W,NW,SW,NE,SE} = getSurroundings(caller.coordinates)
 
-        
-
-        let centerTile = {x: 1, y: 2}
+        let centerTile;
+        if(PC_TYPES.includes(caller.type)){
+            // PC always go to x:1
+            // let newCoords = JSON.parse(JSON.stringify(caller.coordinates))
+            // newCoords.x = 1;
+            // if(newCoords.x > MAX_DEPTH) newCoords.x = MAX_DEPTH
+            // if(newCoords.x < 0) newCoords.x = 0
+            // caller.coordinates = newCoords;
+            // return
+            let centerTile = {x: 1, y: 2}
+        } else {
+            // NPC always go to x:6
+            // let newCoords = JSON.parse(JSON.stringify(caller.coordinates))
+            // newCoords.x = 6;
+            // if(newCoords.x > MAX_DEPTH) newCoords.x = MAX_DEPTH
+            // if(newCoords.x < 0) newCoords.x = 0
+            // caller.coordinates = newCoords;
+            // return
+            let centerTile = {x: 6, y: 2}
+        }
+        // let centerTile = {x: 1, y: 2}
         let targetTile = centerTile;
         if(enemyTarget){
-            const enemyTargetY = enemyTarget.coordinates.y
-            const enemyTile = {x: enemyTarget.coordinates.x,y: enemyTarget.coordinates.y}
             targetTile = {x: 1, y: enemyTarget.coordinates.y}
         }
         goTowards(caller, combatants, targetTile);
@@ -258,7 +285,6 @@ export const MovementMethods = {
         let newCoords = JSON.parse(JSON.stringify(caller.coordinates))
         const enemyTarget = Object.values(combatants).find(e=>e.id === caller.targetId)
         let targetTile = {x: enemyTarget.coordinates.x, y: enemyTarget.coordinates.y}
-        console.log('EVADE!!!!!!!!!!!!!!!!!!!!!!!!!!!');
         const {N,E,S,W,NW,SW,NE,SE} = getSurroundings(caller.coordinates)
 
         const targetIsNorthWest = targetTile.y < caller.coordinates.y && targetTile.x < caller.coordinates.x,

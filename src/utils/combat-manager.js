@@ -13,7 +13,7 @@ const NUM_COLUMNS = 8;
 // ^ means 8 squares, account for depth of 0 is far left
 const MAX_LANES = 5
 // const FIGHT_INTERVAL = 8;
-const FIGHT_INTERVAL = 20;
+const FIGHT_INTERVAL = 10;
 const DEBUG_STEPS = false;
 const RANGES = {
     close: 1,
@@ -480,7 +480,6 @@ export function CombatManager(){
         this.combatants = {};
         const colors_withColorSquare = [' #b710d5',' #6495ed',' #73b746',' #f4d013']
         const colors = ['#b710d5', '#6495ed', '#73b746', '#f4d013']
-        console.log('colors[0]:', colors[0], colors);
         this.data.crew.forEach((e, index) => {
             e.coordinates = {x:0,y:0}
             e.coordinates.y = index;
@@ -492,8 +491,6 @@ export function CombatManager(){
             e.color = colors[index]
             this.combatants[e.id] = createFighter(e, callbacks, FIGHT_INTERVAL);
         })
-        console.log('this.combatants: ', this.combatants);
-        // debugger
         this.data.monster.coordinates = {x:0,y:0}
         this.data.monster.coordinates.y = 2;
         this.data.monster.coordinates.x = MAX_DEPTH;
@@ -556,7 +553,7 @@ export function CombatManager(){
                 res = differential === 1;
             break;
             case 'medium':
-                // if(caller.isMonster) console.log('wiotch differential: ', differential, 'distance: ', distanceToTarget)
+                res = differential > 1 && differential <= 3;
             break;
             case 'far':
                 // if(caller.type === 'sphinx'){
@@ -1102,11 +1099,9 @@ export function CombatManager(){
         caller.coordinates = {x: caller.coordinates.x, y: caller.coordinates.y}
     }
     this.acquireTarget = (caller, targetToAvoid = null) => {
-        console.log('acquire target ', caller.type);
         if(this.combatPaused || caller.dead) return;
         if(this.fighterAI.roster[caller.type]){
             this.fighterAI.roster[caller.type].acquireTarget(caller, this.combatants, targetToAvoid)
-            console.log('targetting ', this.getCombatant(caller.targetId))
             if(caller.targetId){
                 const animation = {
                     type: 'targetted',
@@ -1457,12 +1452,7 @@ export function CombatManager(){
         // this is an improved version of hitsTarget, that can handle anything getting hit in the line of fire, does
         // not have to be targetted
         let r = Math.random()
-        console.log('increased hit chance? ', supplementalData, caller);
         let criticalHit = (supplementalData && supplementalData.increasedCritChance) ? r*100 > 50  : r*100 > 80;
-        if(caller.type === 'wizard'){
-            console.log('WIZARD crit', criticalHit);
-        }
-        // let criticalHit = true
         let damage = criticalHit ? caller.atk*3 : caller.atk
         if(!caller.pendingAttack){
             console.log('HOW CAN YOU HIT WITH NO PENDING ATTACK??>', caller);
@@ -1472,9 +1462,6 @@ export function CombatManager(){
             }
         }
         caller.readout.result = `${caller.name} hits ${combatantHit.name} for ${damage} damage`
-        if(caller.type === 'wizard'){
-            console.log('WIZARD dmg', damage);
-        }
         combatantHit.hp -= damage;
         combatantHit.damageIndicators.push(damage);
         caller.energy += caller.stats.fort * 3 + (1/2 * caller.level);

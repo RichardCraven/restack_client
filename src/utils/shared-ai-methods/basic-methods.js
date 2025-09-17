@@ -1,7 +1,7 @@
 export const Methods = {
     getLaneDifferenceToTarget: (caller, target) => {
         if(!target) return 0;
-        let d =  target.position - caller.position
+        let d =  target.coordinates.y - caller.coordinates.y
         return d
     },
     getDistanceToTarget: (caller, target) => {

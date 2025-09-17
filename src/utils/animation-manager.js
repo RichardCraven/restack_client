@@ -526,9 +526,7 @@ export function AnimationManager(){
             //target tile ID can be null if they are facing left at the left edge
             // ...not entirely sure when this would happen
             let tileCoords = targetTileId ? this.getTileCoordsById(targetTileId) : null;
-            console.log('target tileId: ', targetTileId);
             let collision = tileCoords ? this.checkForCollision(tileCoords) : false;
-            console.log('collision result: ', collision);
             resolve(collision);
         })
     }
