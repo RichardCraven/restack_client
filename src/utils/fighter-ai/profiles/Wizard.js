@@ -116,18 +116,11 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                 switch(caller.eraIndex){
                     case 0:
                         if(caller.targetId){
-                            console.log('wizard move in era 0 HAS TARGET!');
-                        }
-                        if(!combatants){
-                            console.log('how can there be no combatants???');
-                            debugger
+
                         }
                         data.methods.centerBack(caller, combatants)
                     break;
                     case 1:
-                        if(caller.targetId){
-                            console.log('wizard move in era 1 HAS TARGET! (should go center back)');
-                        }
                         data.methods.centerBack(caller, combatants)
                         // if(window.pickRandom([true,true, false])){
                         //     data.methods.centerBack(caller, combatants)
@@ -243,7 +236,6 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
 
         // caller.lock();
         const damageSequence = () => {
-            console.log('MM damage sequence');
             let r = Math.random()
             let criticalHit = r*100 > 80;
             let damage = criticalHit ? caller.atk*3 : caller.atk
@@ -255,7 +247,6 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                 target.woundedLethal = true;
                 this.targetKilled(target);
             }
-            console.log('now target hp: ', target.hp);
         }
         setTimeout(()=>{
             target.rockAnimationOn()
@@ -292,10 +283,7 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
     this.triggerBeamAttackManual = (callerCoords, color = 'purple') => {
         const sourceTileId = this.animationManager.getTileIdByCoords(callerCoords)
         return new Promise((resolve) => {
-            // if(targetTileId !== null && sourceTileId !== null){
-                // console.log('booko');
-                this.animationManager.straightBeamNoTarget(sourceTileId, 'left-to-right', color, resolve)
-            // }
+            this.animationManager.straightBeamNoTarget(sourceTileId, 'left-to-right', color, resolve)
         })
     }
     this.triggerIceBlast = (caller, target) => {
@@ -340,7 +328,6 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
         const target = combatants[caller.targetId];
         
         if(manualAttack){
-            console.log('manual');
             if(caller.pendingAttack && caller.pendingAttack.cooldown_position < 99){
                 console.log('pending attack not charged fully');
                 return
@@ -356,7 +343,6 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                 this.kickoffAttackCooldown(caller)
             }
         } else {
-            console.log('**automated, caller: ', caller);
             const distanceToTarget = data.methods.getDistanceToTarget(caller, target),
             laneDiff = data.methods.getLaneDifferenceToTarget(caller, target);
             switch(caller.pendingAttack.name){

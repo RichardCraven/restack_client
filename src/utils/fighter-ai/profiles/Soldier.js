@@ -93,6 +93,37 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
         // console.log('attack type chosen: ', attack);
         return attack
     }
+    this.isSurrounded = (caller, combatants) => {
+    // Get all 8 adjacent tiles
+    const getSurroundings = (coords) => {
+        return [
+            {x: coords.x,     y: coords.y-1},   // N
+            {x: coords.x+1,   y: coords.y-1},   // NE
+            {x: coords.x+1,   y: coords.y},     // E
+            {x: coords.x+1,   y: coords.y+1},   // SE
+            {x: coords.x,     y: coords.y+1},   // S
+            {x: coords.x-1,   y: coords.y+1},   // SW
+            {x: coords.x-1,   y: coords.y},     // W
+            {x: coords.x-1,   y: coords.y-1},   // NW
+        ];
+    };
+
+    const surroundings = getSurroundings(caller.coordinates);
+
+    // Count adjacent enemies
+    let adjacentEnemies = 0;
+    surroundings.forEach(tile => {
+        const enemy = Object.values(combatants).find(e =>
+            this.isEnemy(e) &&
+            !e.dead &&
+            e.coordinates.x === tile.x &&
+            e.coordinates.y === tile.y
+        );
+        if (enemy) adjacentEnemies++;
+    });
+
+    return adjacentEnemies >= 3;
+}
     this.processMove = (caller, combatants) => {
         caller.onMoveCooldown = true;
         setTimeout(()=>{
@@ -100,23 +131,48 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
             // 1 second is how long it takes for lane-wrapper and portrait-wrapper to finish CSS transition
         }, 1000)
 
-
+        console.log('Soldier behavior sequence', caller.behaviorSequence);
         switch(caller.behaviorSequence){
             case 'brawler':
                 switch(caller.eraIndex){
                     case 0:
+                        if(this.isSurrounded(caller, combatants)){
+                            console.log('soldier is surrounded, do spin move');
+                            
+                            break;
+                        }
                         data.methods.closeTheGap(caller, combatants)
                     break;
                     case 1:
+                        if(this.isSurrounded(caller, combatants)){
+                            console.log('soldier is surrounded, do spin move');
+                            
+                            break;
+                        }
                         data.methods.closeTheGap(caller, combatants)
                     break;
                     case 2:
+                        if(this.isSurrounded(caller, combatants)){
+                            console.log('soldier is surrounded, do spin move');
+                            
+                            break;
+                        }
                         data.methods.closeTheGap(caller, combatants)
                     break;
                     case 3:
+                        if(this.isSurrounded(caller, combatants)){
+                            console.log('soldier is surrounded, do spin move');
+                            
+                            break;
+                        }
                         data.methods.closeTheGap(caller, combatants)
                     break;
                     case 4:
+                        if(this.isSurrounded(caller, combatants)){
+                            console.log('soldier is surrounded, do spin move');
+                            
+                            break;
+                        }
                         data.methods.closeTheGap(caller, combatants)
                     break;
                     default: 
@@ -211,7 +267,6 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
         const target = combatants[caller.targetId];
         const facing = caller.facing ? caller.facing : callerFacing(caller,target)
         if(manualAttack){
-            console.log('soldier manual attack', caller.pendingAttack);
             if(caller.pendingAttack && caller.pendingAttack.cooldown_position < 99){
                 return
             } else if (caller.pendingAttack && caller.pendingAttack.cooldown_position === 100){
@@ -232,18 +287,16 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
                 case 'sword swing':
                     const combatantHit = await this.triggerSwordSwing(caller.coordinates, facing)
                     if(combatantHit){
-                        console.log('SWORD HIT');
                         this.hitsCombatant(caller, combatantHit);
                     } else {
-                        console.log('SWORD MISS');
                         this.missesTarget(caller);
                     }
                 break;
                 case 'sword thrust':
-                    console.log('SWORD THRUST');
+                    // console.log('SWORD THRUST');
                 break;
                 case 'shield bash':
-                    console.log('SHIELD BASH');
+                    // console.log('SHIELD BASH');
                 break;
                 default:
                     break;

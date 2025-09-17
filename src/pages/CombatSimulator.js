@@ -234,6 +234,10 @@ combatKeyDownHandler = (event) => {
         if(this.monsterBattleComponentRef.current) this.monsterBattleComponentRef.current.manualFire();
     }
     switch(key){
+        case 'd':
+            console.log('debugger');
+            debugger
+        break;
         case 'p':
             let paused = !this.state.paused;
             this.props.combatManager.pauseCombat(paused)

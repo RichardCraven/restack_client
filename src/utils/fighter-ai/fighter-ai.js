@@ -48,22 +48,6 @@ export function FighterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
             rogue: new Rogue(data, this.utilMethods, this.animationManager, this.overlayManager)
         }
     }
-
-    //UTILS
-    this.getLaneDifferenceToTarget = (caller, target) => {
-        //THIS SHOULDNT NEED TO BE HERE, REMOVE
-        if(!target) return 0;
-        let d =  target.position - caller.position
-        return d
-    }
-    this.getDistanceToTarget = (caller, target) => {
-        if(!target) return 0;
-        let d = target.depth - caller.depth
-        return d
-        // 0 = same tile
-        // 1 = 1 tile in front
-        // -1 = 1 tile behind
-    }
     this.pickRandom = (array) => {
         let index = Math.floor(Math.random() * array.length)
         return array[index]
