@@ -93,6 +93,54 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
         // console.log('attack type chosen: ', attack);
         return attack
     }
+    // this.triggerSpinAttack = (callerCoords) => {
+    //     const sourceTileId = this.animationManager.getTileIdByCoords(callerCoords);
+    //     return new Promise((resolve) => {
+    //         if (sourceTileId !== null) {
+    //             const data = {
+    //                 sourceTileId,
+    //                 type: 'spin_attack',
+    //                 icon: this.animationManager.images ? this.animationManager.images['sword'] : undefined
+    //             };
+    //             this.animationManager.triggerTileAnimationComplex(data);
+    //             setTimeout(() => resolve(), 800); // match duration
+    //         }
+    //     });
+    // }
+    this.triggerSpinAttack = async (caller, combatants) => {
+        console.log('caller: ', caller, 'combatants: ', combatants);
+        const { x, y } = caller.coordinates;
+        const arcTiles = [
+            { x,     y: y - 1 },     // 12 o'clock (N)
+            { x: x - 1, y: y - 1 },  // 10:30 (NW)
+            { x: x - 1, y },         // 9 o'clock (W)
+        ];
+        // I want to update the above logic to go from 12 oclock to 9 oclock clockwise, not counter clockwise
+        const sourceTileId = this.animationManager.getTileIdByCoords(caller.coordinates);
+
+        // Trigger animation
+        // this.animationManager.triggerTileAnimationComplex({
+        //     sourceTileId,
+        //     type: 'spin_attack_arc',
+        //     arcTiles,
+        //     duration: 800
+        // });
+        this.animationManager.arcAttack(arcTiles, sourceTileId);
+
+        let that = this;
+        // Hit logic: hit any enemy in arcTiles
+        arcTiles.forEach(tile => {
+            const enemy = Object.values(combatants).find(e =>
+                that.isEnemy(e) &&
+                !e.dead &&
+                e.coordinates.x === tile.x &&
+                e.coordinates.y === tile.y
+            );
+            if (enemy) {
+                this.hitsCombatant(caller, enemy);
+            }
+        });
+    }
     this.isSurrounded = (caller, combatants) => {
     // Get all 8 adjacent tiles
     const getSurroundings = (coords) => {
@@ -130,46 +178,68 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
             caller.onMoveCooldown = false;
             // 1 second is how long it takes for lane-wrapper and portrait-wrapper to finish CSS transition
         }, 1000)
-
-        console.log('Soldier behavior sequence', caller.behaviorSequence);
         switch(caller.behaviorSequence){
             case 'brawler':
                 switch(caller.eraIndex){
                     case 0:
                         if(this.isSurrounded(caller, combatants)){
-                            console.log('soldier is surrounded, do spin move');
-                            
+                            console.log('soldier is surrounded, do spin move. combatants:', combatants );
+                            this.triggerSpinAttack(caller, combatants).then((combatantHit)=>{
+                                if(combatantHit){
+                                    this.hitsCombatant(caller, combatantHit);
+                                } else {
+                                    console.log('spin move missed');
+                                }
+                            });
                             break;
                         }
                         data.methods.closeTheGap(caller, combatants)
                     break;
                     case 1:
                         if(this.isSurrounded(caller, combatants)){
-                            console.log('soldier is surrounded, do spin move');
-                            
+                            console.log('soldier is surrounded, do spin move. combatants:', combatants );
+                            this.triggerSpinAttack(caller, combatants).then((combatantHit)=>{
+                                if(combatantHit){
+                                    this.hitsCombatant(caller, combatantHit);
+                                } else {
+                                    console.log('spin move missed');
+                                }
+                            });
                             break;
                         }
                         data.methods.closeTheGap(caller, combatants)
                     break;
                     case 2:
                         if(this.isSurrounded(caller, combatants)){
-                            console.log('soldier is surrounded, do spin move');
-                            
+                            console.log('soldier is surrounded, do spin move. combatants:', combatants);
+                            this.triggerSpinAttack(caller, combatants).then((combatantHit)=>{
+                                if(combatantHit){
+                                    this.hitsCombatant(caller, combatantHit);
+                                } else {
+                                    console.log('spin move missed');
+                                }
+                            });
                             break;
                         }
                         data.methods.closeTheGap(caller, combatants)
                     break;
                     case 3:
                         if(this.isSurrounded(caller, combatants)){
-                            console.log('soldier is surrounded, do spin move');
-                            
+                            console.log('soldier is surrounded, do spin move. combatants:', combatants );
+                            this.triggerSpinAttack(caller, combatants).then((combatantHit)=>{
+                                if(combatantHit){
+                                    this.hitsCombatant(caller, combatantHit);
+                                } else {
+                                    console.log('spin move missed');
+                                }
+                            });
                             break;
                         }
                         data.methods.closeTheGap(caller, combatants)
                     break;
                     case 4:
                         if(this.isSurrounded(caller, combatants)){
-                            console.log('soldier is surrounded, do spin move');
+                            console.log('soldier is surrounded, do spin move. combatants:', combatants );
                             
                             break;
                         }
@@ -221,30 +291,6 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
                     break;
                 }
             break;
-        }
-
-        return
-        let originalCoords = JSON.parse(JSON.stringify(caller.coordinates));
-        const enemyTarget = Object.values(combatants).find(e=>e.id === caller.targetId)
-        const distanceToTarget = data.methods.getDistanceToTarget(caller, enemyTarget),
-        laneDiff = data.methods.getLaneDifferenceToTarget(caller, enemyTarget)
-        if(!caller.pendingAttack){
-            return
-        }
-        if(caller.pendingAttack.name === 'meditate'){
-            data.methods.moveTowardsCloseFriendlyTarget(caller, combatants)
-        } else if(caller.pendingAttack.name === 'cane_strike'){
-            debugger
-        }
-
-        // data.methods.moveTowardsCloseEnemyTarget(caller, combatants)
-        data.methods.stayOnBackRow(caller,combatants)
-
-        caller.coordinates.y = caller.position
-        caller.coordinates.x = caller.depth
-        let moved = JSON.stringify(originalCoords) !== JSON.stringify(caller.coordinates);
-        if(moved){
-            caller.movesLeft--
         }
     }
     this.initiateAttack = async (caller, manualAttack, combatants) => {

@@ -1,3 +1,4 @@
+import * as images from '../utils/images'
 export function AnimationManager(){
     this.tiles = [];
     this.canvasAnimations = [];
@@ -12,9 +13,53 @@ export function AnimationManager(){
         },
         claw: {
             duration: 500
+        },
+        spin_attack: {
+            duration: 800
         }
     }
+    this.spinAttack = (sourceTileId, resolve) => {
+        const animationTile = this.tiles.find(e=>e.id === sourceTileId);
+        if (!animationTile) return;
 
+        animationTile.animationType = 'spin_attack';
+        animationTile.transitionType = 'spin';
+        animationTile.animationData = {
+            icon: images['sword'], // use your sword icon
+            duration: 800 // ms, adjust as needed
+        };
+        this.update();
+
+        setTimeout(() => {
+            animationTile.animationType = null;
+            animationTile.transitionType = null;
+            animationTile.animationData = {};
+            this.update();
+            if (resolve) resolve();
+        }, 800);
+    }
+    this.arcAttack = (arcTiles, duration = 2800) => {
+        arcTiles.forEach(coords => {
+            const tile = this.tiles.find(e => e.x === coords.x && e.y === coords.y);
+            if (!tile) return;
+            tile.animationType = 'spin_attack_arc';
+            tile.transitionType = 'arc';
+            tile.animationData = {
+                duration
+            };
+        });
+        this.update();
+        setTimeout(() => {
+            arcTiles.forEach(coords => {
+                const tile = this.tiles.find(e => e.x === coords.x && e.y === coords.y);
+                if (!tile) return;
+                tile.animationType = null;
+                tile.transitionType = null;
+                tile.animationData = {};
+            });
+            this.update();
+        }, duration);
+    }
     this.magicMissile = (sourceCoords, targetCoords) => {
         const ref = {
             origin: sourceCoords,
@@ -125,6 +170,37 @@ export function AnimationManager(){
                     animationTile.animationData = {};
                     this.update();
                 },this.animationsMatrix[type].duration)
+            break;
+            case 'spin_attack':
+                animationTile.animationType = 'spin_attack';
+                animationTile.transitionType = 'spin';
+                animationTile.animationData = {
+                    icon: data.icon || images['sword'],
+                    duration: this.animationsMatrix[type].duration,
+
+                };
+                this.update();
+                setTimeout(()=>{
+                    animationTile.animationType = null;
+                    animationTile.transitionType = null;
+                    animationTile.animationData = {};
+                    this.update();
+                }, this.animationsMatrix[type].duration)
+            break;
+            case 'spin_attack_arc':
+                animationTile.animationType = 'spin_attack_arc';
+                animationTile.transitionType = 'arc';
+                animationTile.animationData = {
+                    arcTiles: data.arcTiles,
+                    duration: data.duration || this.animationsMatrix['spin_attack'].duration
+                };
+                this.update();
+                setTimeout(()=>{
+                    animationTile.animationType = null;
+                    animationTile.transitionType = null;
+                    animationTile.animationData = {};
+                    this.update();
+                }, animationTile.animationData.duration);
             break;
             default:
                 console.log('animation not properly specified... INVESTIGATE');

@@ -376,6 +376,22 @@
                 // background-image: url;
                 border: 1px solid red;
             }
+
+            /// experimental 
+            .spin-attack-icon {
+                animation: spin-attack 0.8s linear;
+            }
+            
+            .spin_attack-spin .spin-attack-icon {
+                animation: spin-attack 0.8s linear;
+            }
+
+            @keyframes spin-attack {
+                0% { transform: rotate(0deg);}
+                100% { transform: rotate(360deg);}
+            }
+
+
             @-webkit-keyframes ArcAnimation_right {
                 0%{
                     transform: translate(-50px, -35px) rotateZ(-70deg);
@@ -2024,6 +2040,8 @@
             translate: -90px 38px;
             transform: rotate(-270deg);
         }
+
+
         @keyframes WeaponSwings { 
             0%{
                 transform: rotate(0deg);
