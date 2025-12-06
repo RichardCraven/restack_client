@@ -34,7 +34,7 @@ const [showToolbar, setShowToolbar] = useState(true)
 const [narrativeSequenceType, setNarrativeSequenceType] = useState('')
 const history = useHistory();
 useEffect(() => {
-  console.log('setting global methods');
+  // ...existing code...
   window.pickRandom = (array) => {
     let index = Math.floor(Math.random() * array.length)
     return array[index]
@@ -60,10 +60,10 @@ const logout = () => {
   return <Redirect to="/login" />
 }
 const loginFromRegister = (user) => {
-  console.log('in loginFromRegister (APP) user: ', user);
-  console.log('user metadata: ', JSON.parse(user.metadata));
+  // ...existing code...
+  // ...existing code...
   setTimeout(()=>{
-    console.log('in timeout');
+  // ...existing code...
     storeSessionData(user._id, user.token, user.isAdmin, user.username, user.metadata)
     setLoggedIn(true)
     setIsAdmin(JSON.parse(sessionStorage.getItem('isAdmin') === 'true' ))
@@ -93,7 +93,7 @@ const login = (userCredentials) => {
       })
     })
   } else {
-      console.log('INVALID')
+  // ...existing code...
   }
   return
 }
@@ -105,7 +105,7 @@ const refreshAllUsers = () => {
 }
 
 const saveUserData = async () => {
-  console.log('SAVING');
+  // ...existing code...
   setMenuTrayExpanded(false);
   if(props.boardManager.boardIndex === null) return
   if(!props.boardManager.dungeon.id) return
@@ -127,7 +127,7 @@ const saveUserData = async () => {
     totems: props.inventoryManager.totems
   }
   if(props.crewManager.crew.length === 0){
-    console.log('wtf');
+  // ...existing code...
     debugger
   }
   meta.crew = props.crewManager.crew;
@@ -156,7 +156,7 @@ const beginIntroSequence = () => {
   setShowToolbar(false);
 }
 const endIntroSequence = () => {
-  console.log('dnd intro');
+  // ...existing code...
   setShowToolbar(true);
 }
 const beginDeathSequence = () => {

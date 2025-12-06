@@ -10,11 +10,11 @@ import MonsterBattle from './sub-views/MonsterBattle';
 //     const script = document.createElement('script');
 
 //     script.src = file;
-//     console.log('file: ', file);
+// ...existing code...
 //     script.type = 'type/javascript';
 //     // script.async = true;
 //     script.onload = () => {
-//         console.log('script loaded!');
+// ...existing code...
 //         // this.scriptLoaded();
 //     }
 
@@ -51,10 +51,8 @@ class CrewManagerPage extends React.Component{
     this.props.inventoryManager.initializeItems()
     let options = this.props.crewManager.adventurers;
     this.props.crewManager.initializeCrew(options)
-    console.log('initialized crew', this.props.crewManager.crew);
     let wizard = this.props.crewManager.crew.find(e=>e.type==='wizard')
     let wizclone = clone(wizard);
-    console.log('wizclone', wizclone);
     let action = {
         text: "Etch Glyph",
         type: "glyph",
@@ -72,32 +70,22 @@ class CrewManagerPage extends React.Component{
     
 
 
-    console.log('ok now ', this.props.crewManager.crew);
     let selectedCrew = [];
     // selectedCrew.push(options[0])
     // selectedCrew.push(options[1])
     // selectedCrew.push(options[2])
 
-    selectedCrew.push(this.props.crewManager.crew.find(e=>e.type==='wizard'))
+    // selectedCrew.push(this.props.crewManager.crew.find(e=>e.type==='wizard'))
     selectedCrew.push(this.props.crewManager.crew.find(e=>e.type==='soldier'))
     // selectedCrew.push(this.props.crewManager.crew.find(e=>e.type==='rogue'))
 
     // selectedCrew.push(this.props.crewManager.crew.find(e=>e.type==='monk'))
 
-    console.log('vs selected crew: ', selectedCrew);
-
-    console.log('here we go w the load script!');
     // useScript('../assets/particles/particles.js')
 
     // useScriptCustom('../assets/particles/particles.js')
 
     // potatoe('test')
-
-    
-    // setTimeout(()=>{
-    //     potato()
-
-    // },5000)
 
     this.initializeListeners();
     this.setState({
@@ -119,7 +107,7 @@ class CrewManagerPage extends React.Component{
     window.addEventListener('beforeunload', this.componentCleanup);
   }
   componentCleanup = () => {
-    console.log('combat simulator cleanup');
+    // ...existing code...
     window.removeEventListener('keydown', this.combatKeyDownHandler)
     window.removeEventListener('keyup', this.combatKeyUpListener)
     window.removeEventListener('beforeunload', this.componentCleanup); 
@@ -133,7 +121,7 @@ class CrewManagerPage extends React.Component{
     })
   }
   exitSimulator = () => {
-    console.log('exit sim');
+    // ...existing code...
     this.componentCleanup();
     this.props.navToLanding();
     // const history = useHistory();
@@ -186,7 +174,7 @@ class CrewManagerPage extends React.Component{
         })
     }
 
-    // console.log('monster: ', monster);
+    // ...existing code...
 
     if(!monster) monster = this.props.monsterManager.getRandomMonster();
     let monsterName = this.pickRandom(monster.monster_names)
@@ -206,7 +194,7 @@ submit = async () => {
 }
 clear = () => {
     const meta = getMeta();
-    console.log('meta: ', meta);
+    // ...existing code...
     meta.crew = [];
     storeMeta(meta);
     this.setState({
@@ -235,7 +223,7 @@ combatKeyDownHandler = (event) => {
     }
     switch(key){
         case 'd':
-            console.log('debugger');
+            // ...existing code...
             debugger
         break;
         case 'p':
@@ -256,7 +244,7 @@ combatKeyDownHandler = (event) => {
             if(this.state.shiftDown){
                 if(this.monsterBattleComponentRef.current) this.monsterBattleComponentRef.current.tabToRetarget();
             } else if(this.state.ctrlDown){
-                console.log('YEEEEEEE');
+                // ...existing code...
             } else {
                 if(this.monsterBattleComponentRef.current) this.monsterBattleComponentRef.current.tabToFighter();
             }
@@ -302,7 +290,7 @@ combatKeyUpListener = (event) => {
         case 'q':
             if(this.state.specialDown){
                 // cycle specials
-                console.log('CYCLE SPECIALS');
+                // ...existing code...
             }
             this.setState({
                 specialDown: false

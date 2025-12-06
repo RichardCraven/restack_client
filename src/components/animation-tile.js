@@ -3,11 +3,21 @@ import * as images from '../utils/images'
 
 
 export default function AnimationTile(props) {
-    // console.log('AnimationTile props', props);
+    const [debugAnimating, setDebugAnimating] = React.useState(false);
+    React.useEffect(() => {
+        if (props.animationType === 'debug-animation') {
+            setDebugAnimating(true);
+            const timeout = setTimeout(() => setDebugAnimating(false), 500);
+            return () => clearTimeout(timeout);
+        } else {
+            setDebugAnimating(false);
+        }
+    }, [props.animationType, props.animationData]);
+    // ...existing code...
     let image, facing, keyframe, duration;
     facing = props.animationData?.facing
     duration = props.animationData?.duration
-
+    let swordX, swordY;
     switch(props.animationType){
         case 'claw':
             image = images['claws']
@@ -23,8 +33,40 @@ export default function AnimationTile(props) {
             keyframe = 'spin-attack'
         break;
         case 'spin_attack_arc':
-            image = images['sword_white'];
-            keyframe = 'spin-arc-sweep';
+            if (
+                props.animationData?.arcTiles &&
+                typeof props.animationData.currentFrame === 'number'
+            ) {
+                // Arc parameters
+                const totalFrames = props.animationData.arcTiles.length;
+                const frame = props.animationData.currentFrame;
+                const tileSize = props.tileSize;
+                const radius = tileSize * 0.9; // or tileSize * 1.1 for a slightly larger arc
+
+                // Angles in radians: 12 o'clock (-90deg) to 9 o'clock (180deg)
+                const startAngle = -Math.PI / 2;
+                const endAngle = Math.PI;
+                const angle = startAngle + (endAngle - startAngle) * (frame / (totalFrames - 1));
+
+                // Center of the source tile
+                const centerX = tileSize / 2;
+                const centerY = tileSize / 2;
+                // ...existing code...
+                // Sword position relative to the source tile
+                swordX = centerX + radius * Math.cos(angle) - tileSize * 0.3; // adjust offset for icon size
+                swordY = centerY + radius * Math.sin(angle) - tileSize * 0.3;
+                // ...existing code...
+                // debugger
+                if(!swordX || !swordY){
+                    let a = centerX
+                    let b = radius * Math.cos(angle)
+                    let c = tileSize * 0.3
+                    // ...existing code...
+                    debugger
+                }
+                image = images['sword_white'];
+                keyframe = null;
+            }
         break;
         default:
             break;
@@ -32,57 +74,31 @@ export default function AnimationTile(props) {
     }
     const infiniteLoop = false
     return (
-        <div style={{
-            border: '1px solid transparent',
-            transition: 'background-color 0.25s',
-            cursor: 'pointer',
-            height: props.tileSize+'px',
-            width: props.tileSize+'px',
-            backgroundImage: image && props.animationType !== 'spin_attack' ? "url(" + image + ")" : '',
-            animation: keyframe && props.animationType !== 'spin_attack' ? `${keyframe} ${duration/1000}s linear 0s ${infiniteLoop ? 'infinite' : ''} forwards` : '',
-            WebkitAnimation: keyframe && props.animationType !== 'spin_attack' ? `${keyframe} ${duration/1000}s linear 0s ${infiniteLoop ? 'infinite' : ''} forwards` : '',
-            backgroundSize: '100% 100%',
-            backgroundRepeat: 'no-repeat',
-            fontSize: '0.7em',
-            position: 'relative',
+        <div
+            style={{
+                border: '1px solid transparent',
+                transition: 'background-color 0.25s',
+                cursor: 'pointer',
+                height: props.tileSize + 'px',
+                width: props.tileSize + 'px',
+                backgroundImage: image && props.animationType !== 'spin_attack_arc' && props.animationType !== 'spin_attack' ? "url(" + image + ")" : '',
+                animation: keyframe && props.animationType !== 'spin_attack' ? `${keyframe} ${duration / 1000}s linear 0s ${infiniteLoop ? 'infinite' : ''} forwards` : '',
+                WebkitAnimation: keyframe && props.animationType !== 'spin_attack' ? `${keyframe} ${duration / 1000}s linear 0s ${infiniteLoop ? 'infinite' : ''} forwards` : '',
+                backgroundSize: '100% 100%',
+                backgroundRepeat: 'no-repeat',
+                fontSize: '0.7em',
+                position: 'relative',
             }}
-            onMouseEnter={() => {
-                // if(props.type === 'crew-tile'){
-                //     return props.handleHover(props)
-                // } else if(props.handleHover && props.type !== 'inventory-tile'){
-                //     return props.handleHover(props.id, props.type, this)
-                // } else if(props.handleHover && props.type === 'inventory-tile'){
-                //     return props.handleHover(props)
-                // } else{
-                //     return null
-                // }
-            }}
-            onMouseLeave={() => {
-                // if(props.type === 'crew-tile' || props.type === 'inventory-tile'){
-                //     return props.handleHover(null)
-                // } 
-                // else if(props.handleHover && props.type !== 'inventory-tile'){
-                //     return props.handleHover(props.id, props.type, this)
-                // } else if(props.handleHover && props.type === 'inventory-tile'){
-                //     return props.handleHover(props)
-                // } else{
-                //     return null
-                // }
-            }}
-            onMouseDown={() => {
-                console.log('tile clicked', props.id, props);
-                if(props.handleClick){
-                    console.log('inside');
-                    return props.handleClick(props)
-                } else {
-                    return null
-                }
-            }}
+            onMouseEnter={() => {/* ...existing code... */}}
+            onMouseLeave={() => {/* ...existing code... */}}
+            onMouseDown={() => {/* ...existing code... */}}
             className={`animation-tile 
-            ${props.animationOn ? 'animated' : ''}
-            ${props.animationType ? props.animationType+'-'+props.transitionType : ''}
+                ${props.animationOn ? 'animated' : ''}
+                ${props.animationType ? props.animationType + '-' + props.transitionType : ''}
+                ${props.animationType === 'debug-animation' ? 'debug-animation' : ''}
+                ${debugAnimating ? 'debug-animating' : ''}
             `}
-        >   
+        >
             <div className="animation-tile-id">{props.id}</div>
             {props.animationType === 'spin_attack' && (
                 <img
@@ -100,20 +116,54 @@ export default function AnimationTile(props) {
                 />
             )}
             {props.animationType === 'spin_attack_arc' && image && (
+  <div
+    className="spin-arc-orbit"
+    style={{
+      position: 'absolute',
+      left: '50%',
+      top: '50%',
+      width: 0,
+      height: 0,
+      pointerEvents: 'none',
+      animation: `sword-arc-orbit 0.8s linear forwards`
+    }}
+  >
+    <img
+      src={image}
+      alt="spin arc"
+      className="spin-arc-sweep-icon"
+      style={{
+        position: 'absolute',
+        left: '-30px', // half icon width, adjust as needed
+        top: '-60px',  // full icon height, adjust as needed
+        width: '60px',
+        height: '60px',
+        pointerEvents: 'none',
+        animation: `sword-arc-spin 2s linear forwards`
+      }}
+    />
+  </div>
+)}
+            {/* {props.animationType === 'spin_attack_arc' && image && (
                 <img
                     src={image}
                     alt="spin arc"
                     className="spin-arc-sweep-icon"
                     style={{
                         position: 'absolute',
-                        top: '20%',
-                        left: '20%',
+                        left: swordX !== undefined ? `${swordX}px` : '0px',
+                        top: swordY !== undefined ? `${swordY}px` : '0px',
                         width: '60%',
                         height: '60%',
-                        pointerEvents: 'none'
+                        pointerEvents: 'none',
+                        border: '2px solid red', // for debugging
+                        background: 'rgba(255,0,0,0.2)' // for debugging
+                        // transition: `left ${props.animationData.frameDuration}ms linear, top ${props.animationData.frameDuration}ms linear`
                     }}
                 />
-            )}
+            )} */}
+
+
             {/* <CanvasMagicMissile 
                 width={100}
                 height={100}

@@ -9,26 +9,26 @@ class UserManagerPage extends React.Component {
       users: [],
       color: '#008f68',
     };
-    console.log('User Manager Page props: ', this.props)
+  // ...existing code...
   }
   async componentDidMount(){
-    console.log('user manager component did mount')
+  // ...existing code...
     const response  = await loadAllUsersRequest()
-    console.log('users: ', response.data)
+  // ...existing code...
     this.setState((state, props) => {
       return  {users: response.data}
     })
   }
   componentDidUpdate(){
-    console.log('compomnent did update', this.state)
+  // ...existing code...
     
   }
   deleteUser = async (user) => {
-    console.log('delete user ', user)
+  // ...existing code...
     const c = window.confirm("Are you sure you want to delete this user?")
     if(c){
       const response  = await deleteUserRequest(user.id)
-      console.log('response: ', response)
+  // ...existing code...
       const final  = await loadAllUsersRequest()
       this.setState((state, props) => {
         return  {users: final.data}

@@ -369,6 +369,16 @@
             width: 100px;
             position: relative;
             user-select: none;
+
+            @keyframes sword-arc-orbit {
+  0%   { transform: rotate(-90deg) translateY(-45px); }
+  100% { transform: rotate(180deg) translateY(-45px); }
+}
+
+@keyframes sword-arc-spin {
+  0%   { transform: rotate(0deg); }
+  100% { transform: rotate(270deg); }
+}
             .animation-tile-id{
                 color: cyan;
             }
@@ -1074,13 +1084,13 @@
     }
 
     .fighterDeadAnimation{
-        filter: blur(20px);
+        // filter: blur(20px);
         -webkit-animation: FighterDead 5s forwards ;
         -moz-animation: FighterDead 5s forwards ;
         animation: FighterDead 5s forwards ;
     }
     .monsterDeadAnimation{
-        filter: blur(10px);
+        // filter: blur(10px);
         -webkit-animation: FighterDead 5s forwards ;
         -moz-animation: FighterDead 5s forwards ;
         animation: FighterDead 5s forwards ;

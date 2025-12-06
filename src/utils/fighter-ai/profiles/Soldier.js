@@ -108,38 +108,69 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
     //     });
     // }
     this.triggerSpinAttack = async (caller, combatants) => {
-        console.log('caller: ', caller, 'combatants: ', combatants);
         const { x, y } = caller.coordinates;
-        const arcTiles = [
-            { x,     y: y - 1 },     // 12 o'clock (N)
-            { x: x - 1, y: y - 1 },  // 10:30 (NW)
-            { x: x - 1, y },         // 9 o'clock (W)
+        // 8 adjacent directions, clockwise from N
+        const directions = [
+            { dx: 0, dy: -1 },   // N
+            { dx: 1, dy: -1 },   // NE
+            { dx: 1, dy: 0 },    // E
+            { dx: 1, dy: 1 },    // SE
+            { dx: 0, dy: 1 },    // S
+            { dx: -1, dy: 1 },   // SW
+            { dx: -1, dy: 0 },   // W
+            { dx: -1, dy: -1 },  // NW
         ];
-        // I want to update the above logic to go from 12 oclock to 9 oclock clockwise, not counter clockwise
-        const sourceTileId = this.animationManager.getTileIdByCoords(caller.coordinates);
-
-        // Trigger animation
-        // this.animationManager.triggerTileAnimationComplex({
-        //     sourceTileId,
-        //     type: 'spin_attack_arc',
-        //     arcTiles,
-        //     duration: 800
-        // });
-        this.animationManager.arcAttack(arcTiles, sourceTileId);
-
-        let that = this;
-        // Hit logic: hit any enemy in arcTiles
-        arcTiles.forEach(tile => {
-            const enemy = Object.values(combatants).find(e =>
-                that.isEnemy(e) &&
-                !e.dead &&
-                e.coordinates.x === tile.x &&
-                e.coordinates.y === tile.y
-            );
-            if (enemy) {
-                this.hitsCombatant(caller, enemy);
+        // Build all possible 3-tile arcs (wrap around)
+        let bestArc = null;
+        let maxEnemies = -1;
+        for (let i = 0; i < directions.length; i++) {
+            const arc = [0,1,2].map(j => {
+                const dir = directions[(i + j) % directions.length];
+                return { x: x + dir.dx, y: y + dir.dy };
+            });
+            // Count enemies in this arc
+            const enemiesHit = arc.reduce((acc, tile) => {
+                const enemy = Object.values(combatants).find(e =>
+                    this.isEnemy(e) &&
+                    !e.dead &&
+                    e.coordinates.x === tile.x &&
+                    e.coordinates.y === tile.y
+                );
+                return acc + (enemy ? 1 : 0);
+            }, 0);
+            if (enemiesHit > maxEnemies) {
+                maxEnemies = enemiesHit;
+                bestArc = arc;
             }
-        });
+        }
+        // Fallback: if no enemies, just pick the first arc (N, NE, E)
+        if (!bestArc) {
+            bestArc = [0,1,2].map(j => {
+                const dir = directions[j];
+                return { x: x + dir.dx, y: y + dir.dy };
+            });
+        }
+        const sourceTileId = this.animationManager.getTileIdByCoords(caller.coordinates);
+        this.animationManager.arcAttack(
+            bestArc,
+            sourceTileId,
+            combatants,
+            (enemy) => this.hitsCombatant(caller, enemy)
+        );
+
+        // let that = this;
+        // // Hit logic: hit any enemy in arcTiles
+        // arcTiles.forEach(tile => {
+        //     const enemy = Object.values(combatants).find(e =>
+        //         that.isEnemy(e) &&
+        //         !e.dead &&
+        //         e.coordinates.x === tile.x &&
+        //         e.coordinates.y === tile.y
+        //     );
+        //     if (enemy) {
+        //         this.hitsCombatant(caller, enemy);
+        //     }
+        // });
     }
     this.isSurrounded = (caller, combatants) => {
     // Get all 8 adjacent tiles
@@ -183,13 +214,13 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
                 switch(caller.eraIndex){
                     case 0:
                         if(this.isSurrounded(caller, combatants)){
-                            console.log('soldier is surrounded, do spin move. combatants:', combatants );
+                            console.log('soldier is surrounded, do spin move');
                             this.triggerSpinAttack(caller, combatants).then((combatantHit)=>{
-                                if(combatantHit){
-                                    this.hitsCombatant(caller, combatantHit);
-                                } else {
-                                    console.log('spin move missed');
-                                }
+                                // if(combatantHit){
+                                //     this.hitsCombatant(caller, combatantHit);
+                                // } else {
+                                //     console.log('spin move missed');
+                                // }
                             });
                             break;
                         }
@@ -199,11 +230,11 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
                         if(this.isSurrounded(caller, combatants)){
                             console.log('soldier is surrounded, do spin move. combatants:', combatants );
                             this.triggerSpinAttack(caller, combatants).then((combatantHit)=>{
-                                if(combatantHit){
-                                    this.hitsCombatant(caller, combatantHit);
-                                } else {
-                                    console.log('spin move missed');
-                                }
+                                // if(combatantHit){
+                                //     this.hitsCombatant(caller, combatantHit);
+                                // } else {
+                                //     console.log('spin move missed');
+                                // }
                             });
                             break;
                         }
@@ -213,11 +244,11 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
                         if(this.isSurrounded(caller, combatants)){
                             console.log('soldier is surrounded, do spin move. combatants:', combatants);
                             this.triggerSpinAttack(caller, combatants).then((combatantHit)=>{
-                                if(combatantHit){
-                                    this.hitsCombatant(caller, combatantHit);
-                                } else {
-                                    console.log('spin move missed');
-                                }
+                                // if(combatantHit){
+                                //     this.hitsCombatant(caller, combatantHit);
+                                // } else {
+                                //     console.log('spin move missed');
+                                // }
                             });
                             break;
                         }
@@ -227,11 +258,11 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
                         if(this.isSurrounded(caller, combatants)){
                             console.log('soldier is surrounded, do spin move. combatants:', combatants );
                             this.triggerSpinAttack(caller, combatants).then((combatantHit)=>{
-                                if(combatantHit){
-                                    this.hitsCombatant(caller, combatantHit);
-                                } else {
-                                    console.log('spin move missed');
-                                }
+                                // if(combatantHit){
+                                //     this.hitsCombatant(caller, combatantHit);
+                                // } else {
+                                //     console.log('spin move missed');
+                                // }
                             });
                             break;
                         }
@@ -240,7 +271,13 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
                     case 4:
                         if(this.isSurrounded(caller, combatants)){
                             console.log('soldier is surrounded, do spin move. combatants:', combatants );
-                            
+                            this.triggerSpinAttack(caller, combatants).then((combatantHit)=>{
+                                // if(combatantHit){
+                                //     this.hitsCombatant(caller, combatantHit);
+                                // } else {
+                                //     console.log('spin move missed');
+                                // }
+                            });
                             break;
                         }
                         data.methods.closeTheGap(caller, combatants)

@@ -1452,7 +1452,8 @@ export function CombatManager(){
         // this is an improved version of hitsTarget, that can handle anything getting hit in the line of fire, does
         // not have to be targetted
         let r = Math.random()
-        let criticalHit = (supplementalData && supplementalData.increasedCritChance) ? r*100 > 50  : r*100 > 80;
+        // let criticalHit = (supplementalData && supplementalData.increasedCritChance) ? r*100 > 50  : r*100 > 80;
+        let criticalHit = false;
         let damage = criticalHit ? caller.atk*3 : caller.atk
         if(!caller.pendingAttack){
             console.log('HOW CAN YOU HIT WITH NO PENDING ATTACK??>', caller);
@@ -1533,7 +1534,8 @@ export function CombatManager(){
         let target = tempTarget ? tempTarget : this.getCombatant(caller.targetId);
         if(!target) return
         let r = Math.random()
-        let criticalHit = r*100 > 80;
+        // let criticalHit = r*100 > 80;
+        let criticalHit = false;
         let damage = criticalHit ? caller.atk*3 : caller.atk
         if(criticalHit){
             target.woundedHeavily = true;

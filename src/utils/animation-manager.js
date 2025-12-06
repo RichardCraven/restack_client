@@ -3,6 +3,7 @@ export function AnimationManager(){
     this.tiles = [];
     this.canvasAnimations = [];
     this.MAX_DEPTH = 0;
+    this.TILE_SIZE = 100;
 
     this.connectCombatMethods = (callback) => {
         this.checkForCollision = callback;
@@ -38,28 +39,124 @@ export function AnimationManager(){
             if (resolve) resolve();
         }, 800);
     }
-    this.arcAttack = (arcTiles, duration = 2800) => {
-        arcTiles.forEach(coords => {
-            const tile = this.tiles.find(e => e.x === coords.x && e.y === coords.y);
-            if (!tile) return;
-            tile.animationType = 'spin_attack_arc';
-            tile.transitionType = 'arc';
-            tile.animationData = {
-                duration
-            };
-        });
+
+    this.arcAttack = (arcTiles, sourceTileId, combatants, hitCallback, duration = 800) => {
+        const animationTile = this.tiles.find(e => e.id === sourceTileId);
+        if (!animationTile) return;
+        animationTile.tileSize = this.TILE_SIZE;
+        animationTile.animationType = 'spin_attack_arc';
+        animationTile.transitionType = 'arc';
+        animationTile.animationData = {
+            arcTiles,
+            currentFrame: 0,
+            duration,
+            frameDuration: duration / arcTiles.length
+        };
         this.update();
-        setTimeout(() => {
-            arcTiles.forEach(coords => {
-                const tile = this.tiles.find(e => e.x === coords.x && e.y === coords.y);
-                if (!tile) return;
-                tile.animationType = null;
-                tile.transitionType = null;
-                tile.animationData = {};
-            });
-            this.update();
-        }, duration);
-    }
+
+        // For debug-animation: mark each tile hit for 0.5s
+        const markDebugTile = (coords) => {
+            const tile = this.tiles.find(e => e.x === coords.x && e.y === coords.y);
+            if (tile) {
+                tile.animationType = 'debug-animation';
+                this.update();
+                setTimeout(() => {
+                    if (tile.animationType === 'debug-animation') {
+                        tile.animationType = null;
+                        this.update();
+                    }
+                }, 500);
+            }
+        };
+
+        let frame = 0;
+        const animateStep = () => {
+            frame++;
+            if (frame < arcTiles.length) {
+                animationTile.animationData.currentFrame = frame;
+                this.update();
+
+                // --- HIT LOGIC ---
+                const tile = arcTiles[frame];
+                markDebugTile(tile);
+                if (combatants && hitCallback) {
+                    // Find all enemies on this tile (in case of multiple units per tile)
+                    const enemies = Object.values(combatants).filter(e =>
+                        !e.dead &&
+                        e.coordinates.x === tile.x &&
+                        e.coordinates.y === tile.y
+                    );
+                    enemies.forEach(enemy => hitCallback(enemy));
+                }
+                // --- END HIT LOGIC ---
+
+                setTimeout(animateStep, animationTile.animationData.frameDuration);
+            } else {
+                animationTile.animationType = null;
+                animationTile.transitionType = null;
+                animationTile.animationData = {};
+                this.update();
+            }
+        };
+        setTimeout(animateStep, animationTile.animationData.frameDuration);
+    };
+    // this.arcAttack = (arcTiles, sourceTileId, duration = 800) => {
+    //     const animationTile = this.tiles.find(e => e.id === sourceTileId);
+    //     if (!animationTile) return;
+
+    //     // Store arc path and start at frame 0
+    //     animationTile.animationType = 'spin_attack_arc';
+    //     animationTile.transitionType = 'arc';
+    //     animationTile.animationData = {
+    //         arcTiles,           // Array of {x, y}
+    //         currentFrame: 0,    // Start at first tile
+    //         duration,
+    //         frameDuration: duration / arcTiles.length
+    //     };
+    //     this.update();
+
+    //     // Animate the sword moving along the arc
+    //     let frame = 0;
+    //     const animateStep = () => {
+    //         frame++;
+    //         if (frame < arcTiles.length) {
+    //             animationTile.animationData.currentFrame = frame;
+    //             this.update();
+    //             setTimeout(animateStep, animationTile.animationData.frameDuration);
+    //         } else {
+    //             // End animation
+    //             animationTile.animationType = null;
+    //             animationTile.transitionType = null;
+    //             animationTile.animationData = {};
+    //             this.update();
+    //         }
+    //     };
+    //     setTimeout(animateStep, animationTile.animationData.frameDuration);
+    // };
+    // ^ 2nd iteration
+
+    // this.arcAttack = (arcTiles, duration = 2800) => {
+    //     arcTiles.forEach(coords => {
+    //         const tile = this.tiles.find(e => e.x === coords.x && e.y === coords.y);
+    //         if (!tile) return;
+    //         tile.animationType = 'spin_attack_arc';
+    //         tile.transitionType = 'arc';
+    //         tile.animationData = {
+    //             duration
+    //         };
+    //     });
+    //     this.update();
+    //     setTimeout(() => {
+    //         arcTiles.forEach(coords => {
+    //             const tile = this.tiles.find(e => e.x === coords.x && e.y === coords.y);
+    //             if (!tile) return;
+    //             tile.animationType = null;
+    //             tile.transitionType = null;
+    //             tile.animationData = {};
+    //         });
+    //         this.update();
+    //     }, duration);
+    // }
     this.magicMissile = (sourceCoords, targetCoords) => {
         const ref = {
             origin: sourceCoords,

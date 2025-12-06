@@ -31,22 +31,22 @@ class CrewManagerPage extends React.Component{
     //     if (event.detail === 1) {
     //         this.timer = setTimeout(this.props.onClick, 200)
     //     } else if (event.detail === 2) {
-    //         console.log('double click!');
+    // ...existing code...
     //         // this.props.onDoubleClick()
     //     }
     // }
 
   componentDidMount(){
-    console.log('crew manager component mounted props:', this)
+    // ...existing code...
     // const userData = getMeta();
     
     // this.getDungeonDetails();
-    console.log('this.props:', this.props)
+    // ...existing code...
     let options = this.props.crewManager.adventurers;
-    console.log('options:', options);
+    // ...existing code...
     const meta = getMeta();
     let selectedCrew = [];
-    console.log('meta: ', meta);
+    // ...existing code...
     if(meta && meta.crew && meta.crew.length){
         meta.crew.forEach((e,i)=>selectedCrew[i] = e)
     }
@@ -60,7 +60,7 @@ class CrewManagerPage extends React.Component{
   getDungeonDetails = async () => {
     const user = getMeta();
     // user.name = 'Henry'
-    console.log('user:', user)
+    // ...existing code...
     
     // if(!user.dungeonId){
     //   this.setState({
@@ -69,7 +69,7 @@ class CrewManagerPage extends React.Component{
     //   })
     // } else {
     //   const res = await loadDungeonRequest(user.dungeonId)
-    //   console.log('res:', res)
+    // ...existing code...
     //   const dungeon = JSON.parse(res.data[0].content)
     //   console.log('dungeon:', dungeon)
     //   this.setState({

@@ -25,9 +25,9 @@ class DungeonView extends React.Component {
     // }
     // componentDidUpdate(){
         
-    //     console.log('props: ', this.props);
+    // ...existing code...
     //     let thing = this.props.loadedDungeon?.levels.sort((a,b) => b.id - a.id).map((level,levelIndex)=>level)
-    //     console.log('thing', thing);
+    // ...existing code...
     // }
 
 
@@ -36,11 +36,11 @@ class DungeonView extends React.Component {
         clearTimeout(this.timer);
  
         if (event.detail === 1) {
-            console.log('SINGLE CLICK!');
+            // ...existing code...
             // this.timer = setTimeout(this.props.onClick, 200)
         } else if (event.detail === 2) {
             // this.props.onDoubleClick()
-            console.log('DOUBLE CLICK!');
+            // ...existing code...
         }
     }
     getPassageColors = (contains) => {
@@ -71,23 +71,23 @@ class DungeonView extends React.Component {
             passages = data.orientation === 'front' ? levelData.frontPassages.filter(p=>p.miniboardIndex === data.index) :
             (data.orientation === 'back' ? levelData.backPassages.filter(p=>p.miniboardIndex === data.index) : null)
             if(data.levelId === 1 && data.orientation === 'front' && data.index === 4){
-                // console.log('passages: ', passages, 'levelData.frontPassages', levelData.frontPassages);
-                // console.log('incorrect planeSize = ', planeSize);
+                // ...existing code...
+                // ...existing code...
             }
             if(data.levelId === 0 && data.orientation === 'front' && data.index === 4){
-                // console.log('passages: ', passages, 'levelData.frontPassages', levelData.frontPassages);
-                // console.log('correct planeSize = ', planeSize);
+                // ...existing code...
+                // ...existing code...
             }
             // if(data.levelId === 1 && data.orientation === 'front'){
-            //     console.log('data:', data, 'levelData: ', levelData, 'passages: ', passages);
+            // ...existing code...
             // }
             if(passages){
                 const that = this;
                 ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
                 passages.forEach((p, index)=>{
                     // if(data.levelId === 1 && data.orientation === 'front' && data.index === 4){
-                    //     // console.log('passages: ', passages, 'levelData.frontPassages', levelData.frontPassages);
-                    //     console.log('passage:', p);
+                    // ...existing code...
+                    // ...existing code...
                     // }
                     // ctx.fillStyle = fillStyle
                     let x = unit*p.coordinates[0] + unit/2
@@ -106,14 +106,14 @@ class DungeonView extends React.Component {
 
                         
 
-                        // console.log('way up ', 'connected: ', isConnected, imageKey);
+                        // ...existing code...
                         let size = 20 + Math.sin(frameCount * 0.04)**2 * 5;
                         if(data.levelId === 0 && data.orientation === 'front' && data.index === 4){
-                            // console.log('correct unit:', unit);
-                            // console.log('correct p.coordinates[0]', p.coordinates[0]);
-                            // console.log('passages: ', passages, 'levelData.frontPassages', levelData.frontPassages);
+                            // ...existing code...
+                            // ...existing code...
+                            // ...existing code...
                             // x = 10; y = 10
-                            // console.log('x y and size:', x, y, size);
+                            // ...existing code...
                             // ctx.drawImage(this.props.imagesMatrix[imageKey], 100, 100, size, size);
                         }
                         ctx.drawImage(this.props.imagesMatrix[imageKey], x, y, size, size);
@@ -124,11 +124,11 @@ class DungeonView extends React.Component {
                         let imageKey = isConnected ? 'arrowDownImg' : 'arrowDownImgInvalid'
                    
                         if(data.levelId === 1 && data.orientation === 'front' && data.index === 4){
-                            // console.log('passages: ', passages, 'levelData.frontPassages', levelData.frontPassages);
+                            // ...existing code...
                             // x = 10; y = 10
-                            // console.log(' unit:', unit);
-                            // console.log('p.coordinates[0]', p.coordinates[0]);
-                            // console.log('x y:', x, y);
+                            // ...existing code...
+                            // ...existing code...
+                            // ...existing code...
                         }
                         // ctx.drawImage(this.props.imagesMatrix[imageKey], 120, 120, size, size);
                         ctx.drawImage(this.props.imagesMatrix[imageKey], x, y, size, size);
@@ -139,11 +139,11 @@ class DungeonView extends React.Component {
                         let imageKey = 'spawnPointImg'
                    
                         if(data.levelId === 1 && data.orientation === 'front' && data.index === 4){
-                            // console.log('passages: ', passages, 'levelData.frontPassages', levelData.frontPassages);
+                            // ...existing code...
                             // x = 10; y = 10
-                            // console.log(' unit:', unit);
-                            // console.log('p.coordinates[0]', p.coordinates[0]);
-                            // console.log('x y:', x, y);
+                            // ...existing code...
+                            // ...existing code...
+                            // ...existing code...
                         }
                         // ctx.drawImage(this.props.imagesMatrix[imageKey], 120, 120, size, size);
                         ctx.drawImage(this.props.imagesMatrix[imageKey], x, y, size, size);
@@ -206,7 +206,7 @@ class DungeonView extends React.Component {
                 let rows = [1,1,1,2,2,2,3,3,3]
                 // if(levelData.passages)
                 levelData.connected.filter(e=>e.type==='way_up').forEach((lim)=>{
-                    // console.log('upwards:', lim);
+                    // ...existing code...
                     let row = rows[lim.miniboardIndex] 
                     let col = cols[lim.miniboardIndex] 
                     let originPointX = (miniboardSize * col) - miniboardSize + (unit * 2)

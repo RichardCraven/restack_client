@@ -1,3 +1,12 @@
+// Debug animation for tile: black to light grey
+.debug-animation {
+  background-color: black !important;
+  transition: background-color 0.5s;
+}
+.debug-animation.debug-animating {
+  background-color: #e0e0e0 !important;
+  transition: background-color 0.5s;
+}
 html, body{
   height: 100%;
   width: 100%;
