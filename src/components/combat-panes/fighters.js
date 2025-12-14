@@ -13,7 +13,7 @@ const SHOW_INTERACTION_PANE=true
 
 export default function FightersCombatGrid(props) {
     // props = props;
-    console.log('fighter combat grid, props: ', props);
+    // console.log('fighter combat grid, props: ', props);
     // debugger
     return (
         <div className="mb-col fighter-pane">

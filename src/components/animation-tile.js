@@ -1,16 +1,15 @@
 import React from 'react';
 import * as images from '../utils/images'
 
-
 export default function AnimationTile(props) {
-    const [debugAnimating, setDebugAnimating] = React.useState(false);
+    const [hitFlashing, setHitFlashing] = React.useState(false);
     React.useEffect(() => {
-        if (props.animationType === 'debug-animation') {
-            setDebugAnimating(true);
-            const timeout = setTimeout(() => setDebugAnimating(false), 500);
+        if (props.animationType === 'hit-flash') {
+            setHitFlashing(true);
+            const timeout = setTimeout(() => setHitFlashing(false), 500);
             return () => clearTimeout(timeout);
         } else {
-            setDebugAnimating(false);
+            setHitFlashing(false);
         }
     }, [props.animationType, props.animationData]);
     // ...existing code...
@@ -95,8 +94,8 @@ export default function AnimationTile(props) {
             className={`animation-tile 
                 ${props.animationOn ? 'animated' : ''}
                 ${props.animationType ? props.animationType + '-' + props.transitionType : ''}
-                ${props.animationType === 'debug-animation' ? 'debug-animation' : ''}
-                ${debugAnimating ? 'debug-animating' : ''}
+                ${props.animationType === 'hit-flash' ? 'hit-flash' : ''}
+                ${hitFlashing ? 'hit-flashing' : ''}
             `}
         >
             <div className="animation-tile-id">{props.id}</div>

@@ -54,14 +54,14 @@ export function AnimationManager(){
         };
         this.update();
 
-        // For debug-animation: mark each tile hit for 0.5s
-        const markDebugTile = (coords) => {
+        // For hit-flash: mark each tile hit for 0.5s
+        const markHitFlashTile = (coords) => {
             const tile = this.tiles.find(e => e.x === coords.x && e.y === coords.y);
             if (tile) {
-                tile.animationType = 'debug-animation';
+                tile.animationType = 'hit-flash';
                 this.update();
                 setTimeout(() => {
-                    if (tile.animationType === 'debug-animation') {
+                    if (tile.animationType === 'hit-flash') {
                         tile.animationType = null;
                         this.update();
                     }
@@ -78,7 +78,7 @@ export function AnimationManager(){
 
                 // --- HIT LOGIC ---
                 const tile = arcTiles[frame];
-                markDebugTile(tile);
+                markHitFlashTile(tile);
                 if (combatants && hitCallback) {
                     // Find all enemies on this tile (in case of multiple units per tile)
                     const enemies = Object.values(combatants).filter(e =>

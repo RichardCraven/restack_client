@@ -27,6 +27,30 @@ const clone = (val) => {
 
 export function CombatManager(){
     this.fighterAI = new FighterAI(NUM_COLUMNS, MAX_LANES, FIGHT_INTERVAL);
+    /**
+     * Remove a combatant from the combatants object by id.
+     * This should be called after the death animation/fade-out completes in the UI.
+     */
+    this.removeCombatant = (id) => {
+        if (this.combatants && this.combatants[id]) {
+            // Remove from target lists of other combatants
+            Object.values(this.combatants).forEach(e => {
+                if (Array.isArray(e.targettedBy)) {
+                    e.targettedBy = e.targettedBy.filter(tid => tid !== id);
+                }
+                if (e.targetId === id) {
+                    e.targetId = null;
+                }
+            });
+            delete this.combatants[id];
+            // Broadcast update to ensure UI sync
+            if (typeof this.updateData === 'function') {
+                console.log('Broadcasting data update after removing combatant:', id, 'this.combatants: ', this.combatants  );
+                // debugger
+                this.updateData(clone(this.combatants));
+            }
+        }
+    }
     this.monsterAI = new MonsterAI(NUM_COLUMNS, MAX_LANES, FIGHT_INTERVAL);
     
     this.movementMethods = MovementMethods;
@@ -690,7 +714,7 @@ export function CombatManager(){
             this.checkOverlap(caller)
             this.updateCoordinates(caller)
         }
-        this.updateData(this.combatants)
+    this.updateData(clone(this.combatants))
     }
     this.chooseAttackType = (caller, target) => {
         if(this.fighterAI.roster[caller.type]){
@@ -1467,6 +1491,9 @@ export function CombatManager(){
         caller.readout.result = `${caller.name} hits ${combatantHit.name} for ${damage} damage`
         combatantHit.hp -= damage;
         combatantHit.damageIndicators.push(damage);
+        if (typeof this.updateData === 'function') {
+            this.updateData(clone(this.combatants));
+        }
         caller.energy += caller.stats.fort * 3 + (1/2 * caller.level);
         if(caller.energy > 100) caller.energy = 100;
         
@@ -1509,6 +1536,67 @@ export function CombatManager(){
             }
         } else if(caller.coordinates.x > combatantHit.coordinates.x){
             combatantHit.wounded.sourceDirection = 'right';
+            if(combatantHit.type !== 'soldier'){
+                console.log('NOT SOLDIER!', 'combatant: ', combatantHit, 'caller: ', caller);
+                // debugger
+            }
+            if(criticalHit){
+                const {W} = this.getSurroundings(combatantHit.coordinates),
+                someoneElseIsInCoords = this.someoneElseIsInCoords(combatantHit, W);
+                console.log(caller.name, '>', combatantHit.name,'crit from right, someoneElseIsInCoords', someoneElseIsInCoords);
+                if(!someoneElseIsInCoords && combatantHit.coordinates.x !== 0){
+                    combatantHit.coordinates.x--
+                    this.checkOverlap(combatantHit)
+                }
+            }
+        }
+
+        // Cleanup wounded property after hit-flash duration (monsters and minions)
+        setTimeout(() => {
+            combatantHit.wounded = false;
+            if (typeof this.updateData === 'function') {
+                this.updateData(clone(this.combatants));
+            }
+        }, 750);
+
+        // NEED TO HANDLE CRIT FROM TOP AND BOTTOM
+
+        if(caller.coordinates.x < combatantHit.coordinates.x){
+            combatantHit.wounded.sourceDirection = 'left';
+            if(criticalHit){
+                const {E} = this.getSurroundings(combatantHit.coordinates),
+                someoneElseIsInCoords = this.someoneElseIsInCoords(combatantHit.coordinates, E);
+                if(!someoneElseIsInCoords && combatantHit.coordinates.x !== MAX_DEPTH){
+                    combatantHit.coordinates.x++
+                    this.checkOverlap(combatantHit)
+                }
+            }
+        } else if((caller.coordinates.x === combatantHit.coordinates.x) && caller.coordinates.y > combatantHit.coordinates.y){
+            combatantHit.wounded.sourceDirection = 'bottom';
+            if(criticalHit){
+                const {S} = this.getSurroundings(combatantHit.coordinates),
+                someoneElseIsInCoords = this.someoneElseIsInCoords(combatantHit, S);
+                if(!someoneElseIsInCoords && combatantHit.coordinates.y !== 0){
+                    combatantHit.coordinates.y--
+                    this.checkOverlap(combatantHit)
+                }
+            }
+        } else if((caller.coordinates.x === combatantHit.coordinates.x) && caller.coordinates.y < combatantHit.coordinates.y){
+            combatantHit.wounded.sourceDirection = 'top';
+            if(criticalHit){
+                const {S} = this.getSurroundings(combatantHit.coordinates),
+                someoneElseIsInCoords = this.someoneElseIsInCoords(combatantHit, S);
+                if(!someoneElseIsInCoords && combatantHit.coordinates.y !== MAX_LANES-1){
+                    combatantHit.coordinates.y++
+                    this.checkOverlap(combatantHit)
+                }
+            }
+        } else if(caller.coordinates.x > combatantHit.coordinates.x){
+            combatantHit.wounded.sourceDirection = 'right';
+            if(combatantHit.type !== 'soldier'){
+                console.log('NOT SOLDIER!', 'combatant: ', combatantHit, 'caller: ', caller);
+                // debugger
+            }
             if(criticalHit){
                 const {W} = this.getSurroundings(combatantHit.coordinates),
                 someoneElseIsInCoords = this.someoneElseIsInCoords(combatantHit, W);
@@ -1529,27 +1617,46 @@ export function CombatManager(){
             this.targetKilled(combatantHit);
         }
         setTimeout(()=>{
-            combatantHit.wounded = false;
+            // combatantHit.wounded = false;
         }, FIGHT_INTERVAL * 30)
     }
     this.hitsTarget = (caller, tempTarget = null) => {
         let target = tempTarget ? tempTarget : this.getCombatant(caller.targetId);
-        if(!target) return
-        let r = Math.random()
-        // let criticalHit = r*100 > 80;
+        if (!target) return;
+        // If the target is a monster or minion, use hitsCombatant to ensure .wounded is set and hit-flash is triggered
+        if (target.isMonster || target.isMinion) {
+            this.hitsCombatant(caller, target);
+            return;
+        }
+        // Otherwise, fallback to the original logic (for non-monster/minion targets)
+        let r = Math.random();
         let criticalHit = false;
-        let damage = criticalHit ? caller.atk*3 : caller.atk
-        if(criticalHit){
-            target.woundedHeavily = true;
-        } else {
-            target.wounded = true;
+        let damage = criticalHit ? caller.atk*3 : caller.atk;
+        let sourceDirection = 'left';
+        if (caller.coordinates.x < target.coordinates.x) {
+            sourceDirection = 'left';
+        } else if ((caller.coordinates.x === target.coordinates.x) && caller.coordinates.y > target.coordinates.y) {
+            sourceDirection = 'bottom';
+        } else if ((caller.coordinates.x === target.coordinates.x) && caller.coordinates.y < target.coordinates.y) {
+            sourceDirection = 'top';
+        } else if (caller.coordinates.x > target.coordinates.x) {
+            sourceDirection = 'right';
+            debugger
         }
+        target.wounded = {
+            severity: criticalHit ? 'severe' : 'minor',
+            damage,
+            sourceDirection
+        };
         if(target.weaknesses.includes[caller.pendingAttack.type]){
-            damage += Math.floor(damage/2)
+            damage += Math.floor(damage/2);
         }
-        caller.readout.result = `${caller.name} hits ${target.name} for ${damage} damage`
+        caller.readout.result = `${caller.name} hits ${target.name} for ${damage} damage`;
         target.hp -= damage;
         target.damageIndicators.push(damage);
+        if (typeof this.updateData === 'function') {
+            this.updateData(clone(this.combatants));
+        }
         caller.energy += caller.stats.fort * 3 + (1/2 * caller.level);
         if(caller.energy > 100) caller.energy = 100;
         if(target.hp <= 0){
@@ -1559,63 +1666,39 @@ export function CombatManager(){
             this.targetKilled(target);
         } else if(criticalHit) {
             // HANDLE PUSHBACK OF TARGET
-
-            console.log('WHY ARE WE STILL USING HITS TARGET?? ');
-            debugger
-            // let hitsFromLeftToRight = caller.coordinates.x < target.coordinates.x;
-            // // hits from the left
-            // if(hitsFromLeftToRight && target.coordinates.x < MAX_DEPTH && caller.pendingAttack.range === 'close') target.coordinates.x++
-            // // hits from the right
-            // if(!hitsFromLeftToRight && target.coordinates.x > 0 && caller.pendingAttack.range === 'close') target.coordinates.x--
-            
-            // this.checkOverlap(target)
-            // this.updateCoordinates(caller)
         }
         setTimeout(()=>{
             if(!this.isMonster && !this.isMinion){
-                const hasValidTargets = Object.values(this.combatants).filter(e=>e.isMonster || e.isMinion).length >= 1
+                const hasValidTargets = Object.values(this.combatants).filter(e=>e.isMonster || e.isMinion).length >= 1;
                 if(hasValidTargets){
                     const attack = this.chooseAttackType(caller, target);
                     caller.pendingAttack = attack;
                 } else {
-                    this.clearTargetListById(caller.id)
-                    caller.targetId = null
+                    this.clearTargetListById(caller.id);
+                    caller.targetId = null;
                 }
             } else {
                 //is monster or minion
-                const hasValidTargets = Object.values(this.combatants).filter(e=>!e.isMonster && !e.isMinion).length >= 1
+                const hasValidTargets = Object.values(this.combatants).filter(e=>!e.isMonster && !e.isMinion).length >= 1;
                 if(hasValidTargets){
                     const attack = this.chooseAttackType(caller, target);
                     caller.pendingAttack = attack;
                 } else {
-                    this.clearTargetListById(caller.id)
-                    caller.targetId = null
+                    this.clearTargetListById(caller.id);
+                    caller.targetId = null;
                 }
             }
-
-
-
             caller.active = caller.aiming = false;
-            
-            // setTimeout(()=>{
-            //     caller.restartTurnCycle();
-            // }, 500)
-        }, FIGHT_INTERVAL * 100)
+        }, FIGHT_INTERVAL * 100);
         setTimeout(()=>{
             caller.attacking = caller.attackingReverse = false;
             target.wounded = false;
             target.woundedHeavily = false;
-            // setTimeout(()=>{
-            //     target.woundedLethal = false;
-            // },1200)
         }, FIGHT_INTERVAL * 30)
         setTimeout(()=>{
             caller.readout.action = ''
             caller.readout.result = ''
         }, 1500)
-        
-
-        // this.overlayManager.addAnimation(this.combatants[target.id], 'blinded')
     }
     this.hasOnlyOneValidTarget = (caller) => {
         if(!caller.isMonster && !caller.isMinion && Object.values(this.combatants).filter(e=>e.isMonster || e.isMinion).length === 1) return true;
