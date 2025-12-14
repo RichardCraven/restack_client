@@ -142,12 +142,6 @@ const MonstersCombatGrid = ({
                                 zIndex: `${battleData[monster.id]?.dead ? '0' : '100'}`
                             }}
                         >
-                            {/* HP bar above portrait */}
-                            <div className="monster-hp-bar hp-bar" style={{ position: 'absolute', top: '-18px', left: 0, width: '100%', zIndex: 200 }}>
-                                {!battleData[monster.id]?.dead && (
-                                    <div className="red-fill" style={{ width: `${(battleData[monster.id]?.hp / battleData[monster.id]?.stats.hp) * 100}%` }}></div>
-                                )}
-                            </div>
                             <div
                                 className={`portrait monster-portrait
                                     ${greetingInProcess ? 'enlarged' : ''}
