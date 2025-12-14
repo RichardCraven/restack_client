@@ -803,9 +803,9 @@ export function CombatManager(){
         return specials.includes(attackType)
     }
     this.handleSpecialAction = (caller) => {
+        console.log('handle special action called');
         // console.log('pending', caller.pendingAttack);
         // switch(caller.pendingAttack)
-        debugger
     }
     this.moveFighterOneSpace = (direction) => {
         let pendingCoordinates, spaceOccupier;
@@ -1641,7 +1641,6 @@ export function CombatManager(){
             sourceDirection = 'top';
         } else if (caller.coordinates.x > target.coordinates.x) {
             sourceDirection = 'right';
-            debugger
         }
         target.wounded = {
             severity: criticalHit ? 'severe' : 'minor',
