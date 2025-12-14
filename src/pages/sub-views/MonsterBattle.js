@@ -12,6 +12,7 @@ import Canvas from '../../components/Canvas/canvas'
 import Overlay from '../../components/Overlay'
 import CanvasMagicMissile from '../../components/Canvas/canvas_magic_missile'
 import FightersCombatGrid from '../../components/combat-panes/fighters'
+import MonstersCombatGrid from '../../components/combat-panes/monsters'
 
 const MAX_DEPTH = 7;
 const NUM_COLUMNS = 8;
@@ -843,6 +844,7 @@ class MonsterBattle extends React.Component {
     }
 
     render(){
+                   
         return (
             <div className={`mb-board ${this.state.showCrosshair ? 'show-crosshair' : ''}`}>
                 { this.state.navToDeathScene && <Redirect to='/death'/>}
@@ -1083,27 +1085,42 @@ class MonsterBattle extends React.Component {
                     </div> */}
                     
                     {/* /// MONSTERS & MINIONS */}
-                    <div className="mb-col monster-pane">
+                    <MonstersCombatGrid
+                        monster={this.props.monster}
+                        minions={this.props.minions}
+                        battleData={this.state.battleData}
+                        monsterData={this.monster()}
+                        combatManager={this.props.combatManager}
+                        selectedMonster={this.state.selectedMonster}
+                        monsterFacingUp={this.monsterFacingUp}
+                        monsterFacingDown={this.monsterFacingDown}
+                        portraitHovered={this.portraitHovered}
+                        greetingInProcess={this.state.greetingInProcess}
+                        monsterCombatPortraitClicked={this.monsterCombatPortraitClicked}
+                        animationOverlays={this.state.animationOverlays}
+                        getAllOverlaysById={this.getAllOverlaysById}
+                        minionDirectionReversed={this.minionDirectionReversed}
+                        getMonsterWeaponAnimation={this.getMonsterWeaponAnimation}
+                        getHitAnimation={this.getHitAnimation}
+                        images={images}
+                        TILE_SIZE={TILE_SIZE}
+                        SHOW_TILE_BORDERS={SHOW_TILE_BORDERS}
+                    />
+                    {/* <div className="mb-col monster-pane"> */}
                         {/* // MONSTER // */}
-                        <div className='lane-wrapper'  
+                        
+                        {/* <div className='lane-wrapper'  
                         style={{ 
                             top: `${this.state.battleData[this.props.monster.id]?.coordinates.y * TILE_SIZE + (SHOW_TILE_BORDERS ? this.state.battleData[this.props.monster.id]?.coordinates.y * 2 : 0)}px`,
                             height: `${TILE_SIZE}px`
                         }}>
                             <div className="monster-wrapper">
                                 <div className={`action-bar-wrapper ${this.monsterFacingUp(this.monster()) ? 'pointing-up' : (this.monsterFacingDown(this.monster()) ? 'pointing-down' : '')}`} 
-                                    style={{
-                                        zIndex: 1000,
-                                        // border: '1px dashed red',
-                                        width: !!this.monster()?.targetId ? `${this.props.combatManager.getDistanceToTargetWidthString(this.state.battleData[this.props.monster.id])}px` : '0px',
-                                        maxWidth: !!this.monster()?.pendingAttack ? `${this.props.combatManager.getRangeWidthVal(this.monster()) * 100}px` : '0px',
-                                        left: this.props.combatManager.getMonsterActionBarLeftValue(this.monster())
-                                        }}
+                                    
                                     // 
                                     >
                                     <div  style={{
                                         zIndex: 1000, 
-                                        // backgroundColor: '#2eb85c63'
                                         }}  className={`action-bar ${this.monster()?.attacking ? (this.monster()?.coordinates.x < this.targetOf(this.monster())?.coordinates.x ? 'monsterHitsAnimation_LtoR' : 'monsterHitsAnimation') : ''}`}>
 
                                     </div>
@@ -1112,7 +1129,6 @@ class MonsterBattle extends React.Component {
                                     style={{
                                         zIndex: 1001,
                                         height: '100%',
-                                        // border: this.monster()?.pendingAttack ? '1px solid blue' : '1px solid pink',
                                         width: !!this.monster()?.pendingAttack ? `${this.props.combatManager.getRangeWidthVal(this.monster()) * 100}px` : '0px',
                                         left: this.monster()?.pendingAttack ? this.props.combatManager.getMonsterRangeBarLeftValue(this.monster()) : 0
                                         }}>
@@ -1166,7 +1182,6 @@ class MonsterBattle extends React.Component {
                                     }}
                                     onClick={() => this.monsterCombatPortraitClicked(this.props.monster.id)}
                                     >
-                                    {/* //no children, because 3d matrix will stretch them on hit   */}
                                     </div>
                                     {this.monster() && this.state.animationOverlays[this.monster().id] && this.getAllOverlaysById(this.monster().id).map((overlay, i) => {
                                                 return <Overlay key={i} animationType={overlay.type} data={overlay.data}/>
@@ -1195,7 +1210,6 @@ class MonsterBattle extends React.Component {
                                     </div>
                                     <div className={`portrait-overlay selected ${this.monster()?.frozen ? 'frozen' : ''}`} >
                                         <div className="damage-indicator-container">
-                                            {/* <div className="damage-indicator">33</div> */}
                                             {this.monster()?.damageIndicators.map((e,i)=>{
                                                 return <div key={i} className="damage-indicator">
                                                     {e}
@@ -1216,10 +1230,10 @@ class MonsterBattle extends React.Component {
                                     </div>}
                                 </div>
                             </div>
-                        </div>
+                        </div> */}
 
                         {/* // MINIONS // */}
-                        {this.props.minions && this.props.minions.filter(minion => !!this.state.battleData[minion.id]).map((minion, i) => {
+                        {/* {this.props.minions && this.props.minions.filter(minion => !!this.state.battleData[minion.id]).map((minion, i) => {
                         return <div 
                                 key={i} 
                                 className='lane-wrapper' 
@@ -1234,7 +1248,6 @@ class MonsterBattle extends React.Component {
                                                 left: `calc(100px * ${this.props.combatManager.getCombatant(this.state.battleData[minion.id]?.targetId)?.coordinates.x} + 50px)`
                                                 }}>
                                             <div className={`action-bar ${this.state.battleData[minion.id]?.attacking ? (this.minionDirectionReversed(minion) ? 'monsterHitsAnimation_LtoR' : 'monsterHitsAnimation') : ''}`}>
-                                                {/* {minion.id} */}
                                             </div>
                                         </div>
                                         { this.state.battleData[minion.id] && this.state.battleData[minion.id].pendingAttack && <div className={`weapon-wrapper 
@@ -1284,7 +1297,6 @@ class MonsterBattle extends React.Component {
                                             </div>
                                             {this.state.battleData[minion.id] && this.state.animationOverlays[minion.id] && this.getAllOverlaysById(minion.id).map((overlay, i) => {
                                                 return <Overlay key={i} animationType={overlay.type} data={overlay.data}/>
-                                                // return  <div style={{color:white}}>???????</div>
                                             })}
                                             {this.state.battleData[minion.id] && this.state.animationOverlays[minion.id] && <div>OOO</div>}
                                             <div 
@@ -1303,7 +1315,6 @@ class MonsterBattle extends React.Component {
                                             </div>
                                             <div className={`portrait-overlay ${this.state.battleData[minion.id]?.frozen ? 'frozen' : ''}`} >
                                                 <div className="damage-indicator-container">
-                                                    {/* <div className="damage-indicator">33</div> */}
                                                     {this.state.battleData[minion.id]?.damageIndicators.map((e,i)=>{
                                                         return <div key={i} className="damage-indicator">
                                                             {e}
@@ -1325,8 +1336,8 @@ class MonsterBattle extends React.Component {
                                         </div>
                                     </div>
                                 </div>
-                        })}
-                    </div>
+                        })} */}
+                    {/* </div> */}
                 </div>
 
                 {/* // INTERACTION PANE */}

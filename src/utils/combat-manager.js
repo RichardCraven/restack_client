@@ -495,6 +495,7 @@ export function CombatManager(){
         this.data.monster.coordinates.y = 2;
         this.data.monster.coordinates.x = MAX_DEPTH;
         // this.data.monster.coordinates = {x:MAX_DEPTH, y:2}
+        console.log('monster ID: ', this.data.monster.id);
         let monster = createFighter(this.data.monster, callbacks, FIGHT_INTERVAL);
         monster.isMonster = true;
         this.combatants[monster.id] = monster;
@@ -502,6 +503,7 @@ export function CombatManager(){
         if(this.data.minions){
             let position = MAX_LANES-1;
             this.data.minions.forEach(e=>{
+                console.log('new minion ID: ', e.id);
                 e.coordinates = {x:0,y:0}
                 e.coordinates.y = position;
                 position--
