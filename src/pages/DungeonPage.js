@@ -47,7 +47,7 @@ function diff_seconds(dt2,dt1){
 // const MAX_DEPTH = 8;
 // const MAX_ROWS = 5;
 // const TILE_SIZE = 100;
-// const SHOW_TILE_BORDERS = true;
+// const SHOW_TILE_BORDERS = false;
 
 const MARKER_TYPES = [
     'enemy',

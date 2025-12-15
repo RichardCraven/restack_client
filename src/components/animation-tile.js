@@ -98,7 +98,7 @@ export default function AnimationTile(props) {
                 ${hitFlashing ? 'hit-flashing' : ''}
             `}
         >
-            <div className="animation-tile-id">{props.id}</div>
+            {/* <div className="animation-tile-id">{props.id}</div> */}
             {props.animationType === 'spin_attack' && (
                 <img
                     src={images['spear_white']}

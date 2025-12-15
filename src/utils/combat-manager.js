@@ -13,7 +13,7 @@ const NUM_COLUMNS = 8;
 // ^ means 8 squares, account for depth of 0 is far left
 const MAX_LANES = 5
 // const FIGHT_INTERVAL = 8;
-const FIGHT_INTERVAL = 10;
+const FIGHT_INTERVAL = 1;
 const DEBUG_STEPS = false;
 const RANGES = {
     close: 1,

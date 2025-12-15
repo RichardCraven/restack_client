@@ -1,4 +1,6 @@
 export function Skeleton(data, utilMethods, animationManager, overlayManager){
+    console.log('[Skeleton] data:', data);
+    console.log('[Skeleton] data.methods:', data && data.methods);
     this.MAX_DEPTH = data.MAX_DEPTH;
     this.MAX_LANES = data.MAX_LANES;
     this.INTERVAL_TIME = data.INTERVAL_TIME
@@ -20,10 +22,9 @@ export function Skeleton(data, utilMethods, animationManager, overlayManager){
         caller.behaviorSequence = 'brawler'
     }
     this.acquireTarget = (caller, combatants) => {
-        const liveEnemies = Object.values(combatants).filter(e=>!e.dead && (!e.isMonster && !e.isMinion));
-        const sorted = liveEnemies.sort((a,b)=>a.depth - b.depth);
-        const target = sorted[0];
-        if(!target) return
+        const { MonsterAcquireTargetMethods } = require('../methods/monster-acquire-target-methods');
+        const target = MonsterAcquireTargetMethods.acquireClosestSoftTarget(caller, combatants);
+        if (!target) return;
         caller.pendingAttack = this.chooseAttackType(caller, target);
         caller.targetId = target.id;
     }

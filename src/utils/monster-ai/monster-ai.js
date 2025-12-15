@@ -208,6 +208,52 @@ export function MonsterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
             caller.depth++
         }
     }
+        // Only monsters should use this. Minions must use the method from monster-movement-methods.js
+        this.moveTowardsCloseEnemyTarget = (caller, combatants) => {
+            if (caller.isMinion) {
+                // Import and use the correct method for minions
+                const { MonsterMovementMethods } = require('./methods/monster-movement-methods');
+                return MonsterMovementMethods.moveTowardsCloseEnemyTarget(caller, combatants);
+            }
+            // ...existing code for monsters (copy the logic here if needed, or call the original logic)
+            const enemyTarget = Object.values(combatants).find(e=>e.id === caller.targetId)
+            const distanceToTarget = this.methods.getDistanceToTarget(caller, enemyTarget),
+            laneDiff = this.methods.getLaneDifferenceToTarget(caller, enemyTarget)
+
+            // handle position
+
+            if(laneDiff === 1 || laneDiff === -1){
+                if(distanceToTarget === 0){
+                    if(caller.depth !== 0) caller.depth--
+                } else if(distanceToTarget === 1){
+                    if(laneDiff === 1){
+                        caller.position++
+                    } else if(laneDiff === -1){
+                        caller.position--
+                    }
+                }
+            } else if(laneDiff < -1){
+                caller.position--
+            } else if(laneDiff > 1){
+                caller.position++
+            } else if(laneDiff === 0 && distanceToTarget === 1){
+                console.log('********enemy right in front, dont move!')
+                return
+            }
+
+            // now handle depth
+
+            if((distanceToTarget < 0 && laneDiff !== 0) ||  
+            (distanceToTarget < -1 && laneDiff === 0 && caller.depth > 1)){
+                caller.depth--
+            }else if(distanceToTarget === -1 && laneDiff === 0){
+                if(caller.depth > 1) caller.depth -= 2
+            } else if(distanceToTarget > 1){
+                caller.depth++
+            }
+
+            caller.coordinates = {x: caller.depth, y: caller.position}
+        }
 
     this.defaultAquireTarget = (caller, combatants) => {
         // const target = combatants[caller.targetId],
