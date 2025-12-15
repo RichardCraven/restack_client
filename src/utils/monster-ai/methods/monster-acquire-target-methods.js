@@ -53,8 +53,9 @@ export const MonsterAcquireTargetMethods = {
         if (enemies.length === 0) return null;
         const getDistanceToTarget = (caller.Methods && caller.Methods.getDistanceToTarget) ? caller.Methods.getDistanceToTarget : Methods.getDistanceToTarget;
         // First, filter to soft targets
-        const softTargets = enemies.filter(e => SOFT_CLASSES.includes(e.class));
+        const softTargets = enemies.filter(e => SOFT_CLASSES.includes(e.type));
         let candidates = softTargets.length > 0 ? softTargets : enemies;
+        console.log('soft targets:', softTargets);
         const sorted = candidates.sort((a, b) => {
             if (getDistanceToTarget) {
                 return Math.abs(getDistanceToTarget(caller, a)) - Math.abs(getDistanceToTarget(caller, b));
@@ -62,6 +63,7 @@ export const MonsterAcquireTargetMethods = {
             return Math.abs(a.coordinates.x - caller.coordinates.x) + Math.abs(a.coordinates.y - caller.coordinates.y) -
                 (Math.abs(b.coordinates.x - caller.coordinates.x) + Math.abs(b.coordinates.y - caller.coordinates.y));
         });
+        console.log('sorted targets:', sorted);
         return sorted[0];
     }
 }
