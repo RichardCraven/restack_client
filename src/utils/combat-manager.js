@@ -42,11 +42,16 @@ export function CombatManager(){
                     e.targetId = null;
                 }
             });
+            // Debugger only for fighters (not monsters or minions)
+            const combatant = this.combatants[id];
+            if (combatant && !combatant.isMonster && !combatant.isMinion) {
+                // debugger;
+                console.log('NOW REMOVING COMBATANT:', id, combatant);
+            }
             delete this.combatants[id];
             // Broadcast update to ensure UI sync
             if (typeof this.updateData === 'function') {
                 console.log('Broadcasting data update after removing combatant:', id, 'this.combatants: ', this.combatants  );
-                // debugger
                 this.updateData(clone(this.combatants));
             }
         }

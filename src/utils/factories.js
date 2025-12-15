@@ -296,7 +296,7 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
                     this.restartTurnCycle();
                 }
                 broadcastDataUpdate(this)
-            }, FIGHT_INTERVAL * 0.5)
+            }, FIGHT_INTERVAL * 0.1)
         },
         restartTurnCycle: function(){
             clearInterval(this.interval)

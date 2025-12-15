@@ -1,3 +1,14 @@
+export const getSurroundings = (coords) => {
+    const N = { x: coords.x, y: coords.y - 1 },
+        S = { x: coords.x, y: coords.y + 1 },
+        W = { x: coords.x - 1, y: coords.y },
+        E = { x: coords.x + 1, y: coords.y },
+        NW = { x: coords.x - 1, y: coords.y - 1 },
+        NE = { x: coords.x + 1, y: coords.y - 1 },
+        SW = { x: coords.x - 1, y: coords.y + 1 },
+        SE = { x: coords.x + 1, y: coords.y + 1 };
+    return { N, S, E, W, NW, NE, SW, SE };
+};
 export const Methods = {
     getLaneDifferenceToTarget: (caller, target) => {
         if(!target) return 0;

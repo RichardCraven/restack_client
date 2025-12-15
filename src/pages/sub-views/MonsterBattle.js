@@ -972,6 +972,7 @@ class MonsterBattle extends React.Component {
                         animationOverlays={this.state.animationOverlays}
                         getAllOverlaysById={this.getAllOverlaysById}
                         portraitHovered={this.portraitHovered}
+                        fighterPortraitClicked={this.fighterPortraitClicked}
                     />
                     {/* /// MONSTERS & MINIONS */}
                     <MonstersCombatGrid

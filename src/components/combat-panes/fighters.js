@@ -15,11 +15,13 @@ export default function FightersCombatGrid(props) {
     // props = props;
     // console.log('fighter combat grid, props: ', props);
     // debugger
+    // Only render fighters still present in battleData (i.e., not removed from combat)
+    const activeCrew = props.crew.filter(f => props.battleData[f.id]);
     return (
         <div className="mb-col fighter-pane">
             <div className="fighter-content">
-                {props.crew.map((fighter, i) => {
-                    return  <div key={i}  className='lane-wrapper' 
+                {activeCrew.map((fighter) => {
+                    return  <div key={fighter.id}  className='lane-wrapper' 
                                 style={{ 
                                     top: `${props.battleData[fighter.id]?.coordinates.y * TILE_SIZE + (SHOW_TILE_BORDERS ? props.battleData[fighter.id]?.coordinates.y * 2 : 0)}px`,
                                     height: `${TILE_SIZE}px`

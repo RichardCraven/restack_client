@@ -14,7 +14,24 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
     this.missesTarget = utilMethods.missesTarget;
     this.hitsTarget = utilMethods.hitsTarget;
     this.hitsCombatant = utilMethods.hitsCombatant;
-    this.targetKilled = utilMethods.targetKilled;
+    // Override targetKilled to match monster/minion death animation and removal
+    this.targetKilled = (target) => {
+        // Blue ripple animation on death
+        if (this.animationManager && target && target.coordinates) {
+            const tileId = this.animationManager.getTileIdByCoords(target.coordinates);
+            if (tileId !== null && tileId !== undefined) {
+                this.animationManager.rippleAnimation(tileId, 'blue');
+            }
+        }
+        // Mark as dead and trigger removal (customize as needed for your game logic)
+        target.dead = true;
+        // Optionally: add overlay animation or fade-out here if desired
+        // Remove from combatants or trigger any additional cleanup as needed
+        // ...existing utilMethods.targetKilled logic if needed...
+        if (utilMethods.targetKilled) {
+            utilMethods.targetKilled(target);
+        }
+    };
 
     this.isFriendly = (e) => {
         return !e.isMonster && !e.isMinion;
@@ -33,7 +50,9 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
     }
 
     this.initialize = (caller) => {
-        caller.behaviorSequence = 'center-spellcaster'
+        caller.behaviorSequence = 'center-spellcaster';
+        // Default facing right
+        caller.facing = 'right';
     }
 
     this.acquireTarget = (caller, combatants, targetToAvoid = null) => {
@@ -111,52 +130,54 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
 
 
         switch(caller.behaviorSequence){
-            case 'center-spellcaster':
-                
+            case 'center-spellcaster': {
+                // Helper to check for adjacent enemies
+                const {N, S, E, W, NW, NE, SW, SE} = data.methods.getSurroundings(caller.coordinates);
+                const adjacentCoords = [N, S, E, W, NW, NE, SW, SE];
+                const isEnemy = (e) => e && (e.isMonster || e.isMinion) && !e.dead;
+                const enemyIsAdjacent = adjacentCoords.some(coord => {
+                    return Object.values(combatants).some(e => isEnemy(e) && e.coordinates.x === coord.x && e.coordinates.y === coord.y);
+                });
                 switch(caller.eraIndex){
                     case 0:
-                        if(caller.targetId){
-
+                        if(enemyIsAdjacent) {
+                            data.methods.evadeBack(caller, combatants);
+                        } else {
+                            data.methods.centerBack(caller, combatants);
                         }
-                        data.methods.centerBack(caller, combatants)
                     break;
                     case 1:
-                        data.methods.centerBack(caller, combatants)
-                        // if(window.pickRandom([true,true, false])){
-                        //     data.methods.centerBack(caller, combatants)
-                            
-                        // } else {
-                        //     if(window.pickRandom([true,false])){
-                        //         data.methods.goUp(caller, combatants)
-                        //     } else {
-                        //         data.methods.goDown(caller, combatants)
-                        //     }
-                        // }
+                        if(enemyIsAdjacent) {
+                            data.methods.evadeBack(caller, combatants);
+                        } else {
+                            data.methods.centerBack(caller, combatants);
+                        }
                     break;
                     case 2:
-                        // console.log('wizard move in era 2');
-                        data.methods.centerBack(caller, combatants)
+                        if(enemyIsAdjacent) {
+                            data.methods.evadeBack(caller, combatants);
+                        } else {
+                            data.methods.centerBack(caller, combatants);
+                        }
                     break;
                     case 3:
-                        data.methods.centerBack(caller, combatants)
-                        // if(window.pickRandom([true,true, false])){
-                        //     data.methods.centerBack(caller, combatants)
-                            
-                        // } else {
-                        //     if(window.pickRandom([true,false])){
-                        //         data.methods.goUp(caller, combatants)
-                        //     } else {
-                        //         data.methods.goDown(caller, combatants)
-                        //     }
-                        // }
+                        if(enemyIsAdjacent) {
+                            data.methods.evadeBack(caller, combatants);
+                        } else {
+                            data.methods.centerBack(caller, combatants);
+                        }
                     break;
                     case 4:
-                        // console.log('wizard move in era 4');
-                        data.methods.centerBack(caller, combatants)
+                        if(enemyIsAdjacent) {
+                            data.methods.evadeBack(caller, combatants);
+                        } else {
+                            data.methods.centerBack(caller, combatants);
+                        }
                     break;
-                    default: 
+                    default:
                     break;
                 }
+            }
             break;
             case 'panicked':
                 switch(caller.eraIndex){

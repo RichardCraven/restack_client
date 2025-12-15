@@ -2,7 +2,7 @@ import { Sage } from './profiles/Sage'
 import { Wizard } from './profiles/Wizard'
 import { Rogue } from './profiles/Rogue'
 import { Soldier } from './profiles/Soldier'
-import {Methods} from '../shared-ai-methods/basic-methods';
+import {Methods, getSurroundings} from '../shared-ai-methods/basic-methods';
 import {MovementMethods} from '../shared-ai-methods/movement-methods';
 
 export function FighterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
@@ -10,10 +10,21 @@ export function FighterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
     this.MAX_LANES = MAX_LANES;
     this.INTERVAL_TIME = INTERVAL_TIME
 
-    this.methods = {
-        ...Methods,
-        ...MovementMethods
+    const data = {
+        methods: {
+            ...Methods,
+            ...MovementMethods,
+            getSurroundings,
+        },
+        MAX_DEPTH: this.MAX_DEPTH,
+        MAX_Lanes: this.MAX_LANES,
+        INTERVAL_TIME: this.INTERVAL_TIME
     }
+
+    // this.methods = {
+    //     ...Methods,
+    //     ...MovementMethods
+    // }
 
     this.connectAnimationManager = (instance) => {
         this.initializeRoster(instance)
@@ -56,7 +67,7 @@ export function FighterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
         let attack, available = caller.attacks.filter(e=>e.cooldown_position === 100);
         let percentCooledDown = 0,
             chosenAttack;
-        const distanceToTarget = this.methods.getDistanceToTarget(caller, target);
+        const distanceToTarget = data.methods.getDistanceToTarget(caller, target);
 
         if(distanceToTarget === 1 && available.find(e=>e.range === 'close')){
             attack = available.find(e=>e.range === 'close');
@@ -240,13 +251,5 @@ export function FighterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
         }
     }
 
-    const data = {
-        methods: {
-            ...Methods,
-            ...MovementMethods
-        },
-        MAX_DEPTH: this.MAX_DEPTH,
-        MAX_Lanes: this.MAX_LANES,
-        INTERVAL_TIME: this.INTERVAL_TIME
-    }
+    
 }

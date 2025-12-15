@@ -1,4 +1,3 @@
-
 import {Methods} from './basic-methods';
 const clone = (val) => {
     return JSON.parse(JSON.stringify(val))
@@ -318,6 +317,46 @@ export const MovementMethods = {
                 newCoords = NW
             }else if(isAvailableToMoveInto(SW)){
                 newCoords = SW
+            }
+        }
+        caller.coordinates = newCoords;
+    },
+    evadeBack: (caller, combatants) => {
+        // Determine if caller is a monster/minion or a fighter
+        // Fighters: back is x = 0 (left side)
+        // Monsters/Minions: back is x = MAX_DEPTH (right side)
+        const isMonsterOrMinion = caller.isMonster || caller.isMinion;
+        const targetX = isMonsterOrMinion ? MAX_DEPTH : 0;
+        let newCoords = { ...caller.coordinates };
+        const atBack = caller.coordinates.x === targetX;
+        // Helper to check if enemy is directly in front
+        const inFront = isMonsterOrMinion
+            ? { x: caller.coordinates.x - 1, y: caller.coordinates.y }
+            : { x: caller.coordinates.x + 1, y: caller.coordinates.y };
+        const enemyInFront = Object.values(combatants).some(e =>
+            (e.isMonster || e.isMinion || e.isFighter) && !e.dead && e.coordinates.x === inFront.x && e.coordinates.y === inFront.y
+        );
+        if (!atBack) {
+            // Move toward back
+            if (isMonsterOrMinion) {
+                const nextCoords = { x: caller.coordinates.x + 1, y: caller.coordinates.y };
+                if (isAvailableToMoveInto(nextCoords, combatants)) {
+                    newCoords = nextCoords;
+                }
+            } else {
+                const nextCoords = { x: caller.coordinates.x - 1, y: caller.coordinates.y };
+                if (isAvailableToMoveInto(nextCoords, combatants)) {
+                    newCoords = nextCoords;
+                }
+            }
+        } else if (enemyInFront) {
+            // At back and enemy in front: try to move up or down
+            const up = { x: caller.coordinates.x, y: caller.coordinates.y - 1 };
+            const down = { x: caller.coordinates.x, y: caller.coordinates.y + 1 };
+            if (isAvailableToMoveInto(up, combatants)) {
+                newCoords = up;
+            } else if (isAvailableToMoveInto(down, combatants)) {
+                newCoords = down;
             }
         }
         caller.coordinates = newCoords;

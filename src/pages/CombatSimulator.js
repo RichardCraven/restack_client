@@ -160,7 +160,7 @@ class CrewManagerPage extends React.Component{
     minions = [];
     if(monster && monster.minions){
 
-        monster.minions = ['skeleton', 'skeleton', 'skeleton', 'skeleton'];
+        monster.minions = ['skeleton', 'skeleton', 'skeleton', 'skeleton', 'skeleton', 'skeleton', 'skeleton'];
         // monster.minions = [];
 
         monster.minions.forEach((e,i)=>{
