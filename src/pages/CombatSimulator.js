@@ -79,7 +79,7 @@ class CrewManagerPage extends React.Component{
     selectedCrew.push(this.props.crewManager.crew.find(e=>e.type==='soldier'))
     // selectedCrew.push(this.props.crewManager.crew.find(e=>e.type==='rogue'))
 
-    // selectedCrew.push(this.props.crewManager.crew.find(e=>e.type==='monk'))
+    selectedCrew.push(this.props.crewManager.crew.find(e=>e.type==='monk'))
 
     // useScript('../assets/particles/particles.js')
 

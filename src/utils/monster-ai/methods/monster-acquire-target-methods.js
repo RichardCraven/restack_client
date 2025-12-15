@@ -1,5 +1,5 @@
 // src/utils/monster-ai/methods/monster-acquire-target-methods.js
-// Methods for monster and minion target acquisition, similar structure to monster-movement-methods.js
+// Methods for monster and minion target acquisition.
 
 import { Methods } from '../../shared-ai-methods/basic-methods';
 

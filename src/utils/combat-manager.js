@@ -2,7 +2,6 @@ import * as images from '../utils/images'
 
 import { FighterAI } from './fighter-ai/fighter-ai'
 import { MonsterAI } from './monster-ai/monster-ai'
-import {MovementMethods} from './fighter-ai/methods/fighter-movement-methods'
 import {createFighter, test} from './factories'
 import { cilLifeRing } from '@coreui/icons'
 // import test from './factories'
@@ -57,8 +56,6 @@ export function CombatManager(){
         }
     }
     this.monsterAI = new MonsterAI(NUM_COLUMNS, MAX_LANES, FIGHT_INTERVAL);
-    
-    this.movementMethods = MovementMethods;
     this.overlayManager = null;
     this.selectedFighter = null;
     this.combatPaused = false;
