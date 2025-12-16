@@ -1666,6 +1666,7 @@
                     transition: all 0.5s;
                     &.monster-portrait{
                         transform: scale(2);
+                        transform-origin: bottom;
                     }
                     &.facing-up{
                         transform: skewY(-40deg)

@@ -349,6 +349,9 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
         const facingRight = this.fighterFacingRight(caller)
         const target = combatants[caller.targetId];
         const facing = caller.facing ? caller.facing : callerFacing(caller,target)
+
+        caller.attacking = true; 
+        
         if(manualAttack){
             if(caller.pendingAttack && caller.pendingAttack.cooldown_position < 99){
                 return

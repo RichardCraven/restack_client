@@ -296,7 +296,8 @@ const MonstersCombatGrid = ({
                                         ${minionDirectionReversed(minion) ? 'reversed' : ''}`}
                                     style={{
                                         backgroundImage: `url(${minion.portrait})`,
-                                        filter: `saturate(${((minion.hp / minion.stats.hp) * 100) / 2}) sepia(${portraitHoveredId === minion.id ? '2' : '0'})`
+                                        filter: `saturate(${((minion.hp / minion.stats.hp) * 100) / 2}) sepia(${portraitHoveredId === minion.id ? '2' : '0'})`,
+                                        zIndex: 2 // Always below fighter portraits
                                     }}
                                     onClick={() => monsterCombatPortraitClicked(minion.id)}
                                     ref={el => {

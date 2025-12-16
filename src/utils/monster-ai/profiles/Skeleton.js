@@ -121,6 +121,7 @@ export function Skeleton(data, utilMethods, animationManager, overlayManager){
     }
     this.initiateAttack = async (caller, combatants) => {
         const target = combatants[caller.targetId];
+        caller.attacking = true
         if(!target){
             console.log('NO TARGET!');
             return;

@@ -86,8 +86,6 @@ export function Monk(data, utilMethods, animationManager, overlayManager){
                         if (caller.chargingUpActive) caller.chargingUpActive = false;
                         if (data.methods.teleportToBackLine) {
                             // Pass a callback to notify the UI when teleport occurs
-                            console.log('this.onTeleport: ', this.onTeleport);
-                            // debugger
                             data.methods.teleportToBackLine(caller, combatants, this.onTeleport);
                             caller.behaviorSequence = 'brawler';
                         } else {
@@ -180,7 +178,7 @@ export function Monk(data, utilMethods, animationManager, overlayManager){
     }
     this.initiateAttack = async (caller, manualAttack, combatants) => {
         if(!caller) return
-        
+
         const callerFacing = (caller, target) => {
             let val;
             if(!target) return null;
@@ -196,30 +194,40 @@ export function Monk(data, utilMethods, animationManager, overlayManager){
             return val;
         }
 
-        
-        
         const facingRight = this.fighterFacingRight(caller)
         const target = combatants[caller.targetId];
         const facing = caller.facing ? caller.facing : callerFacing(caller,target)
         console.log('MONK INITIATE ATTACK, caller.pendingAttack:', caller.pendingAttack);
+        caller.attacking = true; 
         if(manualAttack){
             if(caller.pendingAttack && caller.pendingAttack.cooldown_position < 99){
                 return
             } else if (caller.pendingAttack && caller.pendingAttack.cooldown_position === 100){
-                const combatantHit = await this.triggerSwordSwing(caller.coordinates, facing)
-                if(combatantHit){
-                    this.hitsCombatant(caller, combatantHit)
-                    this.kickoffAttackCooldown(caller)
+                // Use punch animation for basic attack (close range, not dragon punch)
+                if (caller.pendingAttack.range === 'close' && caller.pendingAttack.name !== 'dragon punch') {
+                    const combatantHit = await this.triggerPunch(caller.coordinates, facing)
+                    if(combatantHit){
+                        this.hitsCombatant(caller, combatantHit)
+                        this.kickoffAttackCooldown(caller)
+                    } else {
+                        this.missesTarget(caller);
+                        this.kickoffAttackCooldown(caller)
+                    }
                 } else {
-                    this.missesTarget(caller);
-                    this.kickoffAttackCooldown(caller)
+                    const combatantHit = await this.triggerSwordSwing(caller.coordinates, facing)
+                    if(combatantHit){
+                        this.hitsCombatant(caller, combatantHit)
+                        this.kickoffAttackCooldown(caller)
+                    } else {
+                        this.missesTarget(caller);
+                        this.kickoffAttackCooldown(caller)
+                    }
                 }
             }
         } else {
             console.log('should be in here...');
             const distanceToTarget = data.methods.getDistanceToTarget(caller, target),
             laneDiff = data.methods.getLaneDifferenceToTarget(caller, target);
-            // debugger
             switch(caller.pendingAttack.name){
                 case 'dragon punch':
                     console.log('about to trigger dragon punch...');
@@ -229,17 +237,33 @@ export function Monk(data, utilMethods, animationManager, overlayManager){
                     } else {
                         this.missesTarget(caller);
                     }
-                // break;
-                // case 'sword thrust':
-                //     // console.log('SWORD THRUST');
-                // break;
-                // case 'shield bash':
-                //     // console.log('SHIELD BASH');
-                // break;
+                    break;
                 default:
+                    // Use punch animation for basic attack (close range, not dragon punch)
+                    if (caller.pendingAttack.range === 'close' && caller.pendingAttack.name !== 'dragon punch') {
+                        const combatantHit = await this.triggerPunch(caller.coordinates, facing)
+                        if(combatantHit){
+                            this.hitsCombatant(caller, combatantHit)
+                        } else {
+                            this.missesTarget(caller);
+                        }
+                    }
                     break;
             }
-
         }
+    this.triggerPunch = async (coordinates, facing) => {
+        // AnimationManager should handle the animation and return the hit combatant if any
+        if (!this.animationManager || !this.animationManager.triggerAttackAnimation) {
+            console.warn('No animationManager or triggerAttackAnimation method found');
+            return null;
+        }
+        console.log('************* TRIGGER MONK PUNCH ANIMATION *************');
+        return await this.animationManager.triggerAttackAnimation({
+            coordinates,
+            facing,
+            type: 'punch',
+            animationType: 'punch',
+        });
+    }
     }
 }

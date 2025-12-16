@@ -953,6 +953,13 @@ export function CombatManager(){
             return
         }
 
+        // this should only happern for minions with no ai
+
+        debugger
+        return
+
+
+
         let target = this.combatants[caller.targetId];
         if(!target || !targetInRange(caller, target)){
             if(!manualAttack){
@@ -999,6 +1006,9 @@ export function CombatManager(){
         }
         caller.active = true;
         caller.attacking = true;
+        if(caller.type === 'monk'){
+            console.log('***monk attacking: ', caller);
+        }
         this.broadcastDataUpdate();
         caller.readout.action = ` attacks with ${caller.pendingAttack.name}`
         this.kickoffAttackCooldown(caller)

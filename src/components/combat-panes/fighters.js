@@ -1,4 +1,5 @@
 import React from 'react';
+import * as images from '../../utils/images';
 import Overlay from '../Overlay'
 // import * as images from '../utils/images'
 
@@ -43,7 +44,7 @@ export default function FightersCombatGrid(props) {
                                     <div className={`portrait-wrapper${isTeleporting ? ' teleporting' : ''}`}
                                     style={{
                                         left: `${props.battleData[fighter.id]?.coordinates.x * 100 + (SHOW_TILE_BORDERS ? props.battleData[fighter.id]?.coordinates.x * 2 : 0)}px`,
-                                        zIndex: `${props.battleData[fighter.id]?.dead ? '0' : '101'}`,
+                                        zIndex: 300, // Always above monsters/minions
                                         ...transitionStyle
                                     }}
                                     >
@@ -75,6 +76,7 @@ export default function FightersCombatGrid(props) {
                                                 props.getFighterDetails(fighter)?.chargingUpActive ? "url('#ripple-effect')" : null,
                                                 `saturate(${((props.getFighterDetails(fighter)?.hp / fighter.stats.hp) * 100) / 2}) sepia(${props.portraitHoveredId === fighter.id ? '2' : '0'})`
                                             ].filter(Boolean).join(' '),
+                                            zIndex: 300 // Always above monsters/minions
                                         }} 
                                         onClick={() => props.fighterPortraitClicked(fighter.id)}
                                         onMouseEnter={() => props.portraitHovered(fighter.id)} 
@@ -114,22 +116,36 @@ export default function FightersCombatGrid(props) {
 
                                         </div>
                                     </div>
-                                    { props.getFighterDetails(fighter) && props.getFighterDetails(fighter).pendingAttack && !props.getFighterDetails(fighter).dead && 
-                                    <div className={`weapon-wrapper
-                                        ${!props.fighterFacingRight(fighter) ? 'reversed' : ''}
-                                        ${props.getFighterDetails(fighter)?.aiming ? 'aiming' : ''}
-                                        ${(props.getFighterDetails(fighter)?.attacking && props.getFighterDetails(fighter)?.pendingAttack.range === 'close') ? (props.fighterFacingRight(fighter) ? 'swinging-right' : 'swinging-left') 
-                                        : (props.getFighterDetails(fighter)?.attacking && props.getFighterDetails(fighter)?.pendingAttack.range === 'far' ? 'shooting' : '')}
-                                        ${props.fighterFacingUp(props.getFighterDetails(fighter)) ? 'pointing-up' : (props.fighterFacingDown(props.getFighterDetails(fighter)) ? 'pointing-down' : '')}
-                                        medium`}
-                                        style={{
-                                        left: props.fighterFacingRight(fighter) ?
-                                        `${props.getFighterDetails(fighter)?.coordinates.x * 100 + 45 + (props.getFighterDetails(fighter)?.coordinates.x * 2)}px` :
-                                        `${props.getFighterDetails(fighter)?.coordinates.x * 100 - 65 + (props.getFighterDetails(fighter)?.coordinates.x * 2)}px`
-                                        ,
-                                        backgroundImage: "url(" + props.battleData[fighter.id].pendingAttack.icon + ")"
-                                    }}>
-                                    </div>}
+                                    { props.getFighterDetails(fighter) && props.getFighterDetails(fighter).pendingAttack && !props.getFighterDetails(fighter).dead && (() => {
+                                        const details = props.getFighterDetails(fighter);
+                                        const isMonk = fighter.type === 'monk';
+                                        // if(isMonk){
+                                        //     console.log('is monk', fighter, 'details:',  details);
+                                        // }
+                                        const isBasicPunch = isMonk && details.pendingAttack.range === 'close' && details.pendingAttack.name !== 'dragon punch';
+                                        const icon = isBasicPunch ? images.fist_punch : props.battleData[fighter.id].pendingAttack.icon;
+                                        if(isMonk && details.attacking){
+                                            console.log('basicPunch: ', isBasicPunch, details.pendingAttack);
+                                            // debugger
+                                            console.log('icon: ', icon)
+                                        }
+                                        return (
+                                            <div className={`weapon-wrapper
+                                                ${!props.fighterFacingRight(fighter) ? 'reversed' : ''}
+                                                ${details?.aiming ? 'aiming' : ''}
+                                                ${(details?.attacking && details?.pendingAttack.range === 'close') ? (props.fighterFacingRight(fighter) ? 'swinging-right' : 'swinging-left') 
+                                                : (details?.attacking && details?.pendingAttack.range === 'far' ? 'shooting' : '')}
+                                                ${props.fighterFacingUp(details) ? 'pointing-up' : (props.fighterFacingDown(details) ? 'pointing-down' : '')}
+                                                medium`}
+                                                style={{
+                                                left: props.fighterFacingRight(fighter) ?
+                                                `${details?.coordinates.x * 100 + 45 + (details?.coordinates.x * 2)}px` :
+                                                `${details?.coordinates.x * 100 - 65 + (details?.coordinates.x * 2)}px`,
+                                                backgroundImage: `url(${icon})`
+                                            }}>
+                                            </div>
+                                        );
+                                    })()}
                                     <div className={`action-bar-wrapper ${props.fighterFacingUp(props.getFighterDetails(fighter)) ? 'pointing-up' : (props.fighterFacingDown(props.getFighterDetails(fighter)) ? 'pointing-down' : '')}`} 
                                         style={{
                                         zIndex: 1001,

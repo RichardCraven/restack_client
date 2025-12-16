@@ -1,3 +1,4 @@
+import fist_punch from '../assets/icons/combat-icons/__fist-punch.png';
 // monsters
 import monster from '../assets/icons/monster.png'
 import avatar from '../assets/icons/avatar.png'
@@ -298,6 +299,7 @@ export {
     black_djinn,
     black_gorgon,
     black_kronos,
+    fist_punch,
     black_minotaur,
     black_vampire,
     black_wraith,

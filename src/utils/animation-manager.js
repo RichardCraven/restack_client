@@ -1,5 +1,14 @@
 import * as images from '../utils/images'
 export function AnimationManager(){
+    // Animation durations (ms)
+    this.animationsMatrix = {
+        claw: { duration: 600 },
+        sword_swing: { duration: 600 },
+        spin_attack: { duration: 900 },
+        dragon_punch: { duration: 700 },
+        punch: { duration: 600 },
+        spin_attack_arc: { duration: 800 },
+    };
 
     // Generic attack animation trigger for AI modules (e.g., Monk)
     this.triggerAttackAnimation = async ({ coordinates, facing, icon, type, animationType }) => {
@@ -319,6 +328,57 @@ export function AnimationManager(){
         const targetTileId = data.targetTileId, type = data.type, facing = data.facing;
         const sourceTileId = data.sourceTileId;
         let animationTile = this.tiles.find(e=>e.id === sourceTileId);
+        // PUNCH animation: move fist from source to target and fade out
+        if(type === 'punch') {
+            const duration = this.animationsMatrix['punch']?.duration || 600;
+            animationTile.animationType = 'punch';
+            animationTile.transitionType = 'move-fade';
+            // Calculate pixel positions for from/to (center of tiles)
+            const tileSize = this.TILE_SIZE;
+            const from = { x: 0, y: 0 };
+            const to = { x: 0, y: 0 };
+            let sourceTileX = 0, sourceTileY = 0;
+            if(animationTile && typeof animationTile.x === 'number' && typeof animationTile.y === 'number') {
+                from.x = animationTile.x * tileSize + tileSize/2;
+                from.y = animationTile.y * tileSize + tileSize/2;
+                sourceTileX = animationTile.x;
+                sourceTileY = animationTile.y;
+            }
+            const targetTile = this.tiles.find(e=>e.id === targetTileId);
+            if(targetTile && typeof targetTile.x === 'number' && typeof targetTile.y === 'number') {
+                to.x = targetTile.x * tileSize + tileSize/2;
+                to.y = targetTile.y * tileSize + tileSize/2;
+            }
+            animationTile.animationData = {
+                icon: data.icon || images['fist_punch'],
+                duration,
+                from,
+                to,
+                progress: 0,
+                sourceTileX,
+                sourceTileY
+            };
+            this.update();
+            // Animate progress from 0 to 1
+            let start = null;
+            const step = (timestamp) => {
+                if (!start) start = timestamp;
+                const elapsed = timestamp - start;
+                const progress = Math.min(elapsed / duration, 1);
+                animationTile.animationData.progress = progress;
+                this.update();
+                if (progress < 1) {
+                    requestAnimationFrame(step);
+                } else {
+                    animationTile.animationType = null;
+                    animationTile.transitionType = null;
+                    animationTile.animationData = {};
+                    this.update();
+                }
+            };
+            requestAnimationFrame(step);
+            return;
+        }
         switch(type){
             case 'claw':
                 animationTile.animationType = `claw`;

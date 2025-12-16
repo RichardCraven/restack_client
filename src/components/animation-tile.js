@@ -1,9 +1,20 @@
-import React from 'react';
-import * as images from '../utils/images'
+import React, { useRef, useEffect, useState } from 'react';
+import * as images from '../utils/images';
 
 export default function AnimationTile(props) {
-    const [hitFlashing, setHitFlashing] = React.useState(false);
-    React.useEffect(() => {
+    const [hitFlashing, setHitFlashing] = useState(false);
+    const [gridRect, setGridRect] = useState(null);
+    const tileRef = useRef();
+
+    useEffect(() => {
+        // Only for punch animation: get grid container rect
+        if (props.animationType === 'punch' && tileRef.current) {
+            let grid = tileRef.current.closest('.animation-grid');
+            if (grid) setGridRect(grid.getBoundingClientRect());
+        }
+    }, [props.animationType]);
+
+    useEffect(() => {
         if (props.animationType === 'hit-flash') {
             setHitFlashing(true);
             const timeout = setTimeout(() => setHitFlashing(false), 500);
@@ -12,14 +23,15 @@ export default function AnimationTile(props) {
             setHitFlashing(false);
         }
     }, [props.animationType, props.animationData]);
-    // ...existing code...
+
     let image, facing, keyframe, duration;
-    facing = props.animationData?.facing
-    duration = props.animationData?.duration
+    facing = props.animationData?.facing;
+    duration = props.animationData?.duration;
     let swordX, swordY;
+
     // Charging up animation state
-    const [chargingUp, setChargingUp] = React.useState(false);
-    React.useEffect(() => {
+    const [chargingUp, setChargingUp] = useState(false);
+    useEffect(() => {
         if (props.animationType === 'charging-up') {
             setChargingUp(true);
             let timeout;
@@ -31,13 +43,21 @@ export default function AnimationTile(props) {
             setChargingUp(false);
         }
     }, [props.animationType, props.animationData?.chargingUpKey]);
+
     // Always use coordinate lookups for tile id
     // If AnimationManager is available via props, use getTileIdByCoords
     let tileIdFromCoords = null;
     if (props.animationManager && typeof props.animationManager.getTileIdByCoords === 'function' && props.x !== undefined && props.y !== undefined) {
         tileIdFromCoords = props.animationManager.getTileIdByCoords({ x: props.x, y: props.y });
     }
+
     switch(props.animationType){
+        case 'punch':
+            image = images['fist_punch'];
+            // For punch, we want to animate from source to target and fade out
+            // We'll use animationData: { from: {x, y}, to: {x, y}, duration }
+            keyframe = null;
+        break;
         case 'claw':
             image = images['claws']
             keyframe = `ClawAnimation_${facing}`
@@ -161,8 +181,41 @@ export default function AnimationTile(props) {
                                 }}
                             />
                         )}
+                        {props.animationType === 'punch' && props.animationData && gridRect &&
+                            props.x === props.animationData.sourceTileX && props.y === props.animationData.sourceTileY && (
+                                (() => {
+                                    // Calculate global positions
+                                    const from = props.animationData.from;
+                                    const to = props.animationData.to;
+                                    const progress = props.animationData.progress || 0;
+                                    const x = from.x + (to.x - from.x) * progress;
+                                    const y = from.y + (to.y - from.y) * progress;
+                                    // Offset by grid container
+                                    const left = x - gridRect.left;
+                                    const top = y - gridRect.top;
+                                    return (
+                                        <img
+                                            src={images['fist_punch']}
+                                            alt="punch"
+                                            className="punch-animation-icon"
+                                            style={{
+                                                position: 'fixed',
+                                                left: left + 'px',
+                                                top: top + 'px',
+                                                width: props.tileSize * 0.6 + 'px',
+                                                height: props.tileSize * 0.6 + 'px',
+                                                pointerEvents: 'none',
+                                                zIndex: 5000,
+                                                opacity: 1 - progress,
+                                                transition: 'left 0.1s linear, top 0.1s linear, opacity 0.1s linear',
+                                            }}
+                                        />
+                                    );
+                                })()
+                        )}
                         {props.animationType === 'spin_attack_arc' && image && (
-    <div
+        <div
+            ref={tileRef}
         className="spin-arc-orbit"
         style={{
             position: 'absolute',
