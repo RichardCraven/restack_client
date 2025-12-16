@@ -2,7 +2,8 @@ import {Methods} from './basic-methods';
 
 
 // Teleport the caller to an empty tile on the back line (or next available column)
-const teleportToBackLine = (caller, combatants) => {
+// Optionally accepts a callback (onTeleport) to notify when teleport occurs
+const teleportToBackLine = (caller, combatants, onTeleport) => {
     const isMonsterOrMinion = caller.isMonster || caller.isMinion;
     const backCol = isMonsterOrMinion ? 0 : MAX_DEPTH;
     const secondBackCol = isMonsterOrMinion ? 1 : MAX_DEPTH - 1;
@@ -26,6 +27,9 @@ const teleportToBackLine = (caller, combatants) => {
     if (!dest) dest = findAvailableInCol(secondBackCol);
     if (dest) {
         caller.coordinates = dest;
+        if (typeof onTeleport === 'function') {
+            onTeleport(caller);
+        }
     }
 }
 const clone = (val) => {

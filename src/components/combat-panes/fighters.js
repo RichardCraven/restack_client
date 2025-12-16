@@ -12,6 +12,7 @@ const SHOW_COMBAT_BORDER_COLORS = true;
 const SHOW_INTERACTION_PANE=true
 
 export default function FightersCombatGrid(props) {
+    // Accept teleportingFighterId as a prop
     // props = props;
     // console.log('fighter combat grid, props: ', props);
     // debugger
@@ -21,18 +22,29 @@ export default function FightersCombatGrid(props) {
         <div className="mb-col fighter-pane">
             <div className="fighter-content">
                 {activeCrew.map((fighter) => {
-                    return  <div key={fighter.id}  className='lane-wrapper' 
+                    const isTeleporting = props.teleportingFighterId === fighter.id;
+                    if (props.teleportingFighterId || isTeleporting) {
+                        console.log('[Teleport Debug]', {
+                            teleportingFighterId: props.teleportingFighterId,
+                            fighterId: fighter.id,
+                            isTeleporting
+                        });
+                    }
+                    const transitionStyle = { transition: isTeleporting ? 'none' : '1s' };
+                    return  <div key={fighter.id}  className={`lane-wrapper ${isTeleporting ? ' teleporting' : ''}`}
                                 style={{ 
                                     top: `${props.battleData[fighter.id]?.coordinates.y * TILE_SIZE + (SHOW_TILE_BORDERS ? props.battleData[fighter.id]?.coordinates.y * 2 : 0)}px`,
-                                    height: `${TILE_SIZE}px`
+                                    height: `${TILE_SIZE}px`,
+                                    ...transitionStyle
                                 }}>
                                 <div 
-                                className={`fighter-wrapper ${fighter.isLeader ? 'leader-wrapper' : ''}`} 
+                                className={`fighter-wrapper${fighter.isLeader ? ' leader-wrapper' : ''}${isTeleporting ? ' teleporting' : ''}`}
                                 >
-                                    <div className="portrait-wrapper"
+                                    <div className={`portrait-wrapper${isTeleporting ? ' teleporting' : ''}`}
                                     style={{
                                         left: `${props.battleData[fighter.id]?.coordinates.x * 100 + (SHOW_TILE_BORDERS ? props.battleData[fighter.id]?.coordinates.x * 2 : 0)}px`,
-                                        zIndex: `${props.battleData[fighter.id]?.dead ? '0' : '101'}`
+                                        zIndex: `${props.battleData[fighter.id]?.dead ? '0' : '101'}`,
+                                        ...transitionStyle
                                     }}
                                     >
                                         <div 
@@ -40,6 +52,7 @@ export default function FightersCombatGrid(props) {
                                             [
                                                 'portrait',
                                                 'fighter-portrait',
+                                                isTeleporting ? 'teleporting' : '',
                                                 props.selectedFighter?.id === fighter.id && !fighter.dead ? 'selected' : '',
                                                 props.getFighterDetails(fighter)?.wounded ? (props.fighterFacingRight(fighter) ? 'hit-from-right-minor' : 'hit-from-left-minor') : '',
                                                 props.getFighterDetails(fighter)?.woundedHeavily ? (props.fighterFacingRight(fighter) ? 'hit-from-right-severe' : 'hit-from-left-severe') : '',

@@ -1,4 +1,7 @@
 export function Monk(data, utilMethods, animationManager, overlayManager){
+
+    // Callback for teleport event, can be overridden by UI
+    this.onTeleport = () => {};
     
 
     this.MAX_DEPTH = data.MAX_DEPTH;
@@ -79,21 +82,14 @@ export function Monk(data, utilMethods, animationManager, overlayManager){
                         this.triggerChargingUp(caller);
                         break;
                     case 4:
+                        console.log('this.onTeleport: ', this.onTeleport);
                         if (caller.chargingUpActive) caller.chargingUpActive = false;
                         if (data.methods.teleportToBackLine) {
-                            data.methods.teleportToBackLine(caller, combatants);
-                            // Immediately broadcast the new coordinates to the UI
-                            if (typeof this.broadcastDataUpdate === 'function') {
-                                this.broadcastDataUpdate(caller);
-                            }
-                            // Add a short delay to ensure UI/state is updated before triggering the attack
+                            // Pass a callback to notify the UI when teleport occurs
+                            console.log('this.onTeleport: ', this.onTeleport);
+                            // debugger
+                            data.methods.teleportToBackLine(caller, combatants, this.onTeleport);
                             caller.behaviorSequence = 'brawler';
-                            setTimeout(() => {
-                                // Now trigger the dragon punch attack after teleport and update
-                                if (caller.pendingAttack && caller.pendingAttack.name === 'dragon punch') {
-                                    this.initiateAttack(caller, false, combatants);
-                                }
-                            }, 50); // 50ms delay to allow UI/state to update
                         } else {
                             data.methods.closeTheGap(caller, combatants);
                             caller.behaviorSequence = 'brawler';
@@ -172,6 +168,8 @@ export function Monk(data, utilMethods, animationManager, overlayManager){
         });
         }
     this.triggerChargingUp = (caller) => {
+    // Called when Monk teleports; can be set by UI to trigger teleport effect
+    
         if (!caller.chargingUpActive) {
             console.log('************* TRIGGER MONK CHARGING UP ANIMATION *************');
             caller.chargingUpActive = true;

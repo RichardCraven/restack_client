@@ -20,8 +20,8 @@ const NUM_COLUMNS = 8;
 
 const MAX_ROWS = 5;
 const TILE_SIZE = 100;
-const SHOW_TILE_BORDERS = false;
-const SHOW_COMBAT_BORDER_COLORS = true;
+const SHOW_TILE_BORDERS = true;
+const SHOW_COMBAT_BORDER_COLORS = false;
 const SHOW_INTERACTION_PANE = true;
 const SHOW_MONSTER_IDS = false;
 
@@ -90,13 +90,28 @@ class MonsterBattle extends React.Component {
             magicMissile_fire: false,
             magicMissile_connectParticles: true,
             magicMissile_targetDistance: 0,
-            magicMissile_targetLaneDiff: 0
+               magicMissile_targetLaneDiff: 0,
+            teleportingFighterId: null
         }
     }
     componentDidMount(){
         this.props.combatManager.initialize();
         this.props.combatManager.connectOverlayManager(this.props.overlayManager)
         this.props.combatManager.connectAnimationManager(this.props.animationManager);
+
+        // Wire Monk teleport callback to set teleportingFighterId
+        const monkAI = this.props.combatManager.fighterAI?.roster?.monk;
+        if (monkAI) {
+            monkAI.onTeleport = (caller) => {
+                console.log('Monk teleported: ', caller.id);
+                // debugger
+                this.setState({ teleportingFighterId: caller.id });
+                // Optionally clear after a tick for animation
+                setTimeout(() => {
+                    this.setState({ teleportingFighterId: null });
+                }, 100);
+            };
+        }
 
         let arr = [], ghostPortraitMatrix = [];
         for(let i = 0; i < 5*NUM_COLUMNS; i++){
@@ -495,6 +510,16 @@ class MonsterBattle extends React.Component {
     establishOnFighterMovedToDestinationCallback = () => {
         this.props.combatManager.establishOnFighterMovedToDestinationCallback(this.onFighterMovedToDestination)
     }
+
+    // Called when a fighter finishes moving to their destination (including teleport)
+    onFighterMovedToDestination = (destination, fighter) => {
+        // If the fighter is a monk and just teleported, clear teleportingFighterId after a tick
+        if (fighter && fighter.type === 'monk') {
+            // setTimeout(() => {
+            //     this.setState({ teleportingFighterId: null });
+            // }, 50); // allow one render with .teleporting class
+        }
+    }
     establishOnFighterDeathCallback = () => {
         this.props.combatManager.establishOnFighterDeathCallback(this.handleFighterDeath)
     }
@@ -601,6 +626,7 @@ class MonsterBattle extends React.Component {
                 console.log('bnot enough energy');
                 return
             }
+            // (Teleport effect will now be triggered only on actual teleport, not on special selection)
             this.props.combatManager.fighterSpecialAttack(selectedSpecial)
             specials.forEach(e=>e.selected=false)
         } else if (selectedConsumableSpecial){
@@ -975,6 +1001,7 @@ class MonsterBattle extends React.Component {
                         getAllOverlaysById={this.getAllOverlaysById}
                         portraitHovered={this.portraitHovered}
                         fighterPortraitClicked={this.fighterPortraitClicked}
+                        teleportingFighterId={this.state.teleportingFighterId}
                     />
                     {/* /// MONSTERS & MINIONS */}
                     <MonstersCombatGrid

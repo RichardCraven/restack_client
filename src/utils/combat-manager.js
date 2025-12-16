@@ -50,7 +50,6 @@ export function CombatManager(){
             delete this.combatants[id];
             // Broadcast update to ensure UI sync
             if (typeof this.updateData === 'function') {
-                console.log('Broadcasting data update after removing combatant:', id, 'this.combatants: ', this.combatants  );
                 this.updateData(clone(this.combatants));
             }
         }
@@ -60,7 +59,6 @@ export function CombatManager(){
     this.selectedFighter = null;
     this.combatPaused = false;
     this.pauseCombat = (val) => {
-        console.log('pause combt');
         this.combatPaused = val
         Object.values(this.combatants).forEach(e=>e.combatPaused = val)
     }
@@ -521,7 +519,6 @@ export function CombatManager(){
         this.data.monster.coordinates.y = 2;
         this.data.monster.coordinates.x = MAX_DEPTH;
         // this.data.monster.coordinates = {x:MAX_DEPTH, y:2}
-        console.log('monster ID: ', this.data.monster.id);
         let monster = createFighter(this.data.monster, callbacks, FIGHT_INTERVAL);
         monster.isMonster = true;
         this.combatants[monster.id] = monster;
@@ -529,7 +526,6 @@ export function CombatManager(){
         if(this.data.minions){
             let position = MAX_LANES-1;
             this.data.minions.forEach(e=>{
-                console.log('new minion ID: ', e.id);
                 e.coordinates = {x:0,y:0}
                 e.coordinates.y = position;
                 position--
@@ -678,7 +674,6 @@ export function CombatManager(){
         fighter.action_queue.push(action)
     }
     this.goToDestination = (caller) => {
-        if(this.type === 'monk') console.log('monk go to dest????');
         caller.coordinates.x = caller.destinationCoordinates.x;
         caller.coordinates.y = caller.destinationCoordinates.y;
         caller.coordinates = {x: caller.destinationCoordinates.x, y: caller.destinationCoordinates.y}
@@ -805,7 +800,6 @@ export function CombatManager(){
         return specials.includes(attackType)
     }
     this.handleSpecialAction = (caller) => {
-        console.log('handle special action called');
         // console.log('pending', caller.pendingAttack);
         // switch(caller.pendingAttack)
     }
@@ -824,13 +818,11 @@ export function CombatManager(){
         }
         switch(direction){
             case 'up':
-                if(fighter.coordinates.y === 0) return
-                if(this.type === 'monk') console.log('monk key up????');
+                if(fighter.coordinates.y === 0) return;
                 pendingCoordinates = {x: fighter.coordinates.x , y: fighter.coordinates.y-1}
                 spaceOccupier = Object.values(this.combatants).find(e=>{
                     return e.coordinates.x === pendingCoordinates.x && e.coordinates.y === pendingCoordinates.y && !e.dead
                 })
-                console.log('space occupier', spaceOccupier);
                 if(spaceOccupier) return
                 fighter.coordinates.y--
                 fighter.manualMovesCurrent--
@@ -843,7 +835,6 @@ export function CombatManager(){
                 spaceOccupier = Object.values(this.combatants).find(e=>{
                     return e.coordinates.x === pendingCoordinates.x && e.coordinates.y === pendingCoordinates.y && !e.dead
                 })
-                console.log('space occupier', spaceOccupier);
                 if(spaceOccupier) return
                 fighter.coordinates.y++
                 console.log(fighter.type, 'fighter.coordinates.y: ', fighter.coordinates.y);
@@ -857,7 +848,6 @@ export function CombatManager(){
                 spaceOccupier = Object.values(this.combatants).find(e=>{
                     return e.coordinates.x === pendingCoordinates.x && e.coordinates.y === pendingCoordinates.y && !e.dead
                 })
-                console.log('space occupier', spaceOccupier);
                 if(spaceOccupier) return
                 
                 fighter.coordinates.x++
@@ -871,7 +861,6 @@ export function CombatManager(){
                 spaceOccupier = Object.values(this.combatants).find(e=>{
                     return e.coordinates.x === pendingCoordinates.x && e.coordinates.y === pendingCoordinates.y && !e.dead
                 })
-                console.log('space occupier', spaceOccupier);
                 if(spaceOccupier) return
                 fighter.coordinates.x--
                 fighter.manualMovesCurrent--
@@ -880,7 +869,6 @@ export function CombatManager(){
             default:
             break;
         }
-        console.log('restart this one');
         fighter.restartTurnCycle()
     }
     this.fighterFacingRight = (caller) => {

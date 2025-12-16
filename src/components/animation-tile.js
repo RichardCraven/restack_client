@@ -21,7 +21,6 @@ export default function AnimationTile(props) {
     const [chargingUp, setChargingUp] = React.useState(false);
     React.useEffect(() => {
         if (props.animationType === 'charging-up') {
-            console.log('********** AnimationTile: Start charging up animation **********');
             setChargingUp(true);
             let timeout;
             if (props.animationData?.chargingUpDuration) {
@@ -55,14 +54,6 @@ export default function AnimationTile(props) {
         case 'dragon_punch':
             image = images['scepter_white']
             keyframe = 'dragon-punch'
-            // Log and debug when about to render the dragon punch icon
-            console.log('[DRAGON PUNCH ICON RENDER]', {
-                tileId: tileIdFromCoords,
-                coordinates: { x: props.x, y: props.y },
-                animationType: props.animationType,
-                animationData: props.animationData
-            });
-            // debugger;
         break;
         case 'spin_attack_arc':
             if (
@@ -104,11 +95,13 @@ export default function AnimationTile(props) {
             break;
     }
     const infiniteLoop = false
+    // Determine if this tile is teleporting (for instant transition)
+    const isTeleporting = props.animationType === 'teleport' || props.transitionType === 'teleport';
     return (
         <div
             style={{
                 border: '1px solid transparent',
-                transition: 'background-color 0.25s',
+                transition: isTeleporting ? 'none' : 'background-color 0.25s',
                 cursor: 'pointer',
                 height: props.tileSize + 'px',
                 width: props.tileSize + 'px',
@@ -132,6 +125,7 @@ export default function AnimationTile(props) {
                 ${props.animationType === 'hit-flash' ? 'hit-flash' : ''}
                 ${hitFlashing ? 'hit-flashing' : ''}
                 ${chargingUp ? 'charging-up' : ''}
+                ${isTeleporting ? 'instant-teleport' : ''}
             `}
         >
             <div className="animation-tile-id">{tileIdFromCoords !== null ? tileIdFromCoords : props.id}</div>

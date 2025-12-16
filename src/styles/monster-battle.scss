@@ -1,3 +1,43 @@
+// Only disable transitions for the teleporting fighter
+.lane-wrapper.teleporting,
+.fighter-wrapper.teleporting,
+.portrait-wrapper.teleporting,
+.fighter-portrait.teleporting {
+    transition: none !important;
+    -webkit-transition: none !important;
+    -moz-transition: none !important;
+    -o-transition: none !important;
+    transition-property: all !important;
+    transition-duration: 0s !important;
+    transition-delay: 0s !important;
+}
+        // Disable portrait/fighter transitions when teleporting
+        .animation-tile.instant-teleport .portrait-wrapper,
+        .animation-tile.instant-teleport .fighter-portrait {
+            transition: none !important;
+            -webkit-transition: none !important;
+            -moz-transition: none !important;
+            -o-transition: none !important;
+            transition-property: all !important;
+            transition-duration: 0s !important;
+            transition-delay: 0s !important;
+        }
+        .animation-tile {
+            // ...existing code...
+            &.instant-teleport,
+            &.instant-teleport *,
+            &.instant-teleport::before,
+            &.instant-teleport::after {
+                transition: none !important;
+                -webkit-transition: none !important;
+                -moz-transition: none !important;
+                -o-transition: none !important;
+                transition-property: all !important;
+                transition-duration: 0s !important;
+                transition-delay: 0s !important;
+                /* Disable all transitions for instant pop */
+            }
+        }
 // Hit-flash overlay for monster/minion portraits
 .hit-flash-overlay {
     position: absolute;
@@ -369,10 +409,11 @@
         justify-content: flex-start;
     }
     .animation-grid{
-        z-index: 1000;
-        position: absolute;
-        top: 0;
-        left: 0;
+        /* revert to flexbox layout */
+    z-index: 1000;
+    position: absolute;
+    top: 0;
+    left: 0;
 
         pointer-events: none;
         // ^ may need to be dynamic 
@@ -1291,8 +1332,7 @@
             .lane-wrapper{
                 width: 100%;
                 position: absolute;
-                // height: 110px;
-                transition: 1s;
+                // transition: 1s;
                 .fighter-wrapper{
                     // border: 1px solid lightgrey;
                     width: 100%;
@@ -1307,7 +1347,7 @@
                     }
                     .portrait-wrapper{
                         position: absolute;
-                        transition: 1s;
+                        // transition: 1s;
                         top: 0;
                         .fighter-portrait{
                             height: 100px;

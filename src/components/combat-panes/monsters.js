@@ -22,7 +22,8 @@ const MonstersCombatGrid = ({
     monsterFacingUp,
     monsterFacingDown,
     greetingInProcess,
-    SHOW_MONSTER_IDS = false
+    SHOW_MONSTER_IDS = false,
+    teleportingFighterId
 }) => {
     const [monsterHitFlashKey, setMonsterHitFlashKey] = React.useState(0);
     const [showMonsterHitFlash, setShowMonsterHitFlash] = React.useState(false);
@@ -101,6 +102,13 @@ const MonstersCombatGrid = ({
         prevMinionWounded.current = newPrev;
     }, [battleData]);
 
+    // Determine if monster or minion is teleporting (by id)
+    const isTeleporting = (id) => {
+        // Accept teleportingFighterId as a prop (passed in destructured args)
+        return (typeof teleportingFighterId !== 'undefined' && teleportingFighterId === id);
+    };
+    const transitionStyle = (id) => ({ transition: isTeleporting(id) ? 'none' : '1s' });
+
     return (
         <div className="mb-col monster-pane">
             {/* Main Monster: only render if not dead, or if dead but still animating */}
@@ -109,7 +117,8 @@ const MonstersCombatGrid = ({
                     className="lane-wrapper"
                     style={{
                         top: `${battleData[monster.id]?.coordinates.y * TILE_SIZE + (SHOW_TILE_BORDERS ? battleData[monster.id]?.coordinates.y * 2 : 0)}px`,
-                        height: `${TILE_SIZE}px`
+                        height: `${TILE_SIZE}px`,
+                        ...transitionStyle(monster.id)
                     }}
                 >
                     <div className="monster-wrapper">
@@ -140,7 +149,8 @@ const MonstersCombatGrid = ({
                             className="portrait-wrapper monster-portrait-wrapper"
                             style={{
                                 left: `${battleData[monster.id]?.coordinates.x * 100 + (SHOW_TILE_BORDERS ? battleData[monster.id]?.coordinates.x * 2 : 0)}px`,
-                                zIndex: `${battleData[monster.id]?.dead ? '0' : '200'}`
+                                zIndex: `${battleData[monster.id]?.dead ? '0' : '200'}`,
+                                ...transitionStyle(monster.id)
                             }}
                         >
                             <div
@@ -237,7 +247,8 @@ const MonstersCombatGrid = ({
                         className="lane-wrapper"
                         style={{
                             top: `${minion.coordinates.y * TILE_SIZE + (SHOW_TILE_BORDERS ? minion.coordinates.y * 2 : 0)}px`,
-                            height: `${TILE_SIZE}px`
+                            height: `${TILE_SIZE}px`,
+                            ...transitionStyle(minion.id)
                         }}
                     >
                         <div className="monster-wrapper">
@@ -268,7 +279,8 @@ const MonstersCombatGrid = ({
                                 className="portrait-wrapper"
                                 style={{
                                     left: `${minion.coordinates.x * 100 + (SHOW_TILE_BORDERS ? minion.coordinates.x * 2 : 0)}px`,
-                                    zIndex: `${minion.dead ? '0' : '100'}`
+                                    zIndex: `${minion.dead ? '0' : '100'}`,
+                                    ...transitionStyle(minion.id)
                                 }}
                             >
                                 <div
