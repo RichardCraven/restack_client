@@ -37,29 +37,31 @@ export default function FightersCombatGrid(props) {
                                     >
                                         <div 
                                         className={
-                                            `portrait fighter-portrait 
-                                            ${props.selectedFighter?.id === fighter.id && !fighter.dead ? 'selected' : ''}
-                                            ${props.getFighterDetails(fighter)?.wounded ? (props.fighterFacingRight(fighter) ? 'hit-from-right-minor' : 'hit-from-left-minor') : ''} 
-                                            ${props.getFighterDetails(fighter)?.woundedHeavily ? (props.fighterFacingRight(fighter) ? 'hit-from-right-severe' : 'hit-from-left-severe') : ''} 
-                                            ${props.getFighterDetails(fighter)?.woundedLethal ? (props.fighterFacingRight(fighter) ? 'hit-from-right-lethal' : 'hit-from-left-lethal') : ''}
-                                            ${props.getFighterDetails(fighter)?.rocked ? 'rocked' : ''}
-                                            ${props.fighterFacingUp(props.getFighterDetails(fighter)) ? 'facing-up' : (props.fighterFacingDown(props.getFighterDetails(fighter)) ? 'facing-down' : '')}
-
-                                            ${props.getFighterDetails(fighter)?.missed ? (props.fighterFacingRight(fighter) ? 'missed' : 'missed-reversed') : ''} 
-                                            ${fighter.isLeader ? 'leader-portrait' : ''} 
-                                            ${props.getFighterDetails(fighter)?.dead ? 'dead fighterDeadAnimation' : ''} 
-                                            ${(props.selectedMonster?.targetId === fighter.id || props.selectedFighter?.targetId === fighter.id) ? 'targetted' : ''}
-                                            ${props.getFighterDetails(fighter)?.active ? 'active' : ''}
-                                            ${props.fighterFacingRight(fighter) ? '' : 'reversed'}
-
-                                            ${props.getFighterDetails(fighter)?.locked ? 'locked' : ''}
-
-                                            `
-                                        } 
+                                            [
+                                                'portrait',
+                                                'fighter-portrait',
+                                                props.selectedFighter?.id === fighter.id && !fighter.dead ? 'selected' : '',
+                                                props.getFighterDetails(fighter)?.wounded ? (props.fighterFacingRight(fighter) ? 'hit-from-right-minor' : 'hit-from-left-minor') : '',
+                                                props.getFighterDetails(fighter)?.woundedHeavily ? (props.fighterFacingRight(fighter) ? 'hit-from-right-severe' : 'hit-from-left-severe') : '',
+                                                props.getFighterDetails(fighter)?.woundedLethal ? (props.fighterFacingRight(fighter) ? 'hit-from-right-lethal' : 'hit-from-left-lethal') : '',
+                                                props.getFighterDetails(fighter)?.rocked ? 'rocked' : '',
+                                                props.fighterFacingUp(props.getFighterDetails(fighter)) ? 'facing-up' : (props.fighterFacingDown(props.getFighterDetails(fighter)) ? 'facing-down' : ''),
+                                                props.getFighterDetails(fighter)?.missed ? (props.fighterFacingRight(fighter) ? 'missed' : 'missed-reversed') : '',
+                                                fighter.isLeader ? 'leader-portrait' : '',
+                                                props.getFighterDetails(fighter)?.dead ? 'dead fighterDeadAnimation' : '',
+                                                (props.selectedMonster?.targetId === fighter.id || props.selectedFighter?.targetId === fighter.id) ? 'targetted' : '',
+                                                props.getFighterDetails(fighter)?.active ? 'active' : '',
+                                                props.fighterFacingRight(fighter) ? '' : 'reversed',
+                                                props.getFighterDetails(fighter)?.locked ? 'locked' : '',
+                                                props.getFighterDetails(fighter)?.chargingUpActive ? 'charging-up' : '',
+                                            ].filter(Boolean).join(' ')
+                                        }
                                         style={{
-                                            backgroundImage: "url(" + fighter.portrait + ")", 
-                                            filter: `saturate(${((props.getFighterDetails(fighter)?.hp / fighter.stats.hp) * 100) / 2}) 
-                                                    sepia(${props.portraitHoveredId === fighter.id ? '2' : '0'})`,
+                                            backgroundImage: "url(" + fighter.portrait + ")",
+                                            filter: [
+                                                props.getFighterDetails(fighter)?.chargingUpActive ? "url('#ripple-effect')" : null,
+                                                `saturate(${((props.getFighterDetails(fighter)?.hp / fighter.stats.hp) * 100) / 2}) sepia(${props.portraitHoveredId === fighter.id ? '2' : '0'})`
+                                            ].filter(Boolean).join(' '),
                                         }} 
                                         onClick={() => props.fighterPortraitClicked(fighter.id)}
                                         onMouseEnter={() => props.portraitHovered(fighter.id)} 

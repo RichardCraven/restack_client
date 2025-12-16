@@ -1,5 +1,15 @@
-
 export function Monk(data, utilMethods, animationManager, overlayManager){
+    // Abstracted charging up sequence for Monk
+    this.triggerChargingUp = (caller) => {
+        if (!caller.chargingUpActive) {
+            console.log('************* TRIGGER MONK CHARGING UP ANIMATION *************');
+            caller.chargingUpActive = true;
+            caller.chargingUpKey = (caller.chargingUpKey || 0) + 1;
+            caller.chargingUpStartedAt = Date.now();
+            caller.chargingUpDuration = (this.INTERVAL_TIME || 1) * 0.95 * 1000;
+        }
+    }
+
     this.MAX_DEPTH = data.MAX_DEPTH;
     this.MAX_LANES = data.MAX_LANES;
     this.INTERVAL_TIME = data.INTERVAL_TIME;
@@ -50,46 +60,35 @@ export function Monk(data, utilMethods, animationManager, overlayManager){
             case 'brawler':
                 switch (caller.eraIndex) {
                     case 0:
-                        data.methods.closeTheGap(caller, combatants);
-                        break;
                     case 1:
-                        data.methods.closeTheGap(caller, combatants);
-                        break;
                     case 2:
-                        data.methods.closeTheGap(caller, combatants);
-                        break;
                     case 3:
-                        data.methods.closeTheGap(caller, combatants);
+                        this.triggerChargingUp(caller);
                         break;
                     case 4:
+                        if (caller.chargingUpActive) caller.chargingUpActive = false;
                         data.methods.closeTheGap(caller, combatants);
-                    break;
+                        break;
                     default:
+                        if (caller.chargingUpActive) caller.chargingUpActive = false;
                         data.methods.closeTheGap(caller, combatants);
                 }
                 break;
             case 'teleport-attacker':
                 switch (caller.eraIndex) {
                     case 0:
-                        // data.methods.closeTheGap(caller, combatants);
-                        console.log('DO NOTHING');
-                        break;
                     case 1:
-                        console.log('DO NOTHING');
-                        break;
                     case 2:
-                        console.log('CLOSE THE GAP')
-                        data.methods.closeTheGap(caller, combatants);
-                        break;
                     case 3:
-                        // data.methods.closeTheGap(caller, combatants);
-                        console.log('DO NOTHING');
+                        this.triggerChargingUp(caller);
                         break;
                     case 4:
-                        console.log('DO NOTHING');
+                        if (caller.chargingUpActive) caller.chargingUpActive = false;
+                        data.methods.closeTheGap(caller, combatants);
                         break;
                     default:
-                        // do nothing
+                        if (caller.chargingUpActive) caller.chargingUpActive = false;
+                        data.methods.closeTheGap(caller, combatants);
                 }
                 break;
             default:

@@ -17,6 +17,21 @@ export default function AnimationTile(props) {
     facing = props.animationData?.facing
     duration = props.animationData?.duration
     let swordX, swordY;
+    // Charging up animation state
+    const [chargingUp, setChargingUp] = React.useState(false);
+    React.useEffect(() => {
+        if (props.animationType === 'charging-up') {
+            console.log('********** AnimationTile: Start charging up animation **********');
+            setChargingUp(true);
+            let timeout;
+            if (props.animationData?.chargingUpDuration) {
+                timeout = setTimeout(() => setChargingUp(false), props.animationData.chargingUpDuration);
+            }
+            return () => timeout && clearTimeout(timeout);
+        } else {
+            setChargingUp(false);
+        }
+    }, [props.animationType, props.animationData?.chargingUpKey]);
     switch(props.animationType){
         case 'claw':
             image = images['claws']
@@ -87,6 +102,9 @@ export default function AnimationTile(props) {
                 backgroundRepeat: 'no-repeat',
                 fontSize: '0.7em',
                 position: 'relative',
+                filter: chargingUp ? 'url(#chargingUpFilter)' : undefined,
+                transform: chargingUp ? 'matrix3d(1,0,0,0.05,0,1,0,0.05,0,0,1,0,0,0,0,1) scale(1.04,0.96)' : undefined,
+                willChange: chargingUp ? 'filter, transform' : undefined
             }}
             onMouseEnter={() => {/* ...existing code... */}}
             onMouseLeave={() => {/* ...existing code... */}}
@@ -96,6 +114,7 @@ export default function AnimationTile(props) {
                 ${props.animationType ? props.animationType + '-' + props.transitionType : ''}
                 ${props.animationType === 'hit-flash' ? 'hit-flash' : ''}
                 ${hitFlashing ? 'hit-flashing' : ''}
+                ${chargingUp ? 'charging-up' : ''}
             `}
         >
             {/* <div className="animation-tile-id">{props.id}</div> */}

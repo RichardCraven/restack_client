@@ -163,7 +163,8 @@ const MonstersCombatGrid = ({
                                         ${selectedMonster?.id === monster.id ? 'selected' : ''}
                                         ${selectedFighter?.targetId === monster.id ? 'targetted' : ''}
                                         ${minionDirectionReversed(monster) ? 'reversed' : ''}
-                                        ${battleData[monster.id]?.wounded ? 'hit-flash' : ''}`}
+                                        ${battleData[monster.id]?.wounded ? 'hit-flash' : ''}
+                                        ${battleData[monster.id]?.chargingUpActive ? 'charging-up' : ''}`}
                                     ref={el => {
                                         if (battleData[monster.id]?.wounded) {
                                             // console.log('MONSTER WOUNDED:', battleData[monster.id]?.wounded, 'classes:',
