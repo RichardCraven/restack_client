@@ -32,6 +32,12 @@ export default function AnimationTile(props) {
             setChargingUp(false);
         }
     }, [props.animationType, props.animationData?.chargingUpKey]);
+    // Always use coordinate lookups for tile id
+    // If AnimationManager is available via props, use getTileIdByCoords
+    let tileIdFromCoords = null;
+    if (props.animationManager && typeof props.animationManager.getTileIdByCoords === 'function' && props.x !== undefined && props.y !== undefined) {
+        tileIdFromCoords = props.animationManager.getTileIdByCoords({ x: props.x, y: props.y });
+    }
     switch(props.animationType){
         case 'claw':
             image = images['claws']
@@ -45,6 +51,18 @@ export default function AnimationTile(props) {
         case 'spin_attack':
             image = images['sword_white']
             keyframe = 'spin-attack'
+        break;
+        case 'dragon_punch':
+            image = images['scepter_white']
+            keyframe = 'dragon-punch'
+            // Log and debug when about to render the dragon punch icon
+            console.log('[DRAGON PUNCH ICON RENDER]', {
+                tileId: tileIdFromCoords,
+                coordinates: { x: props.x, y: props.y },
+                animationType: props.animationType,
+                animationData: props.animationData
+            });
+            // debugger;
         break;
         case 'spin_attack_arc':
             if (
@@ -84,7 +102,6 @@ export default function AnimationTile(props) {
         break;
         default:
             break;
-
     }
     const infiniteLoop = false
     return (
@@ -117,50 +134,69 @@ export default function AnimationTile(props) {
                 ${chargingUp ? 'charging-up' : ''}
             `}
         >
-            {/* <div className="animation-tile-id">{props.id}</div> */}
-            {props.animationType === 'spin_attack' && (
-                <img
-                    src={images['spear_white']}
-                    alt="spin"
-                    className="spin-attack-icon"
-                    style={{
-                        position: 'absolute',
-                        top: '20%',
-                        left: '20%',
-                        width: '60%',
-                        height: '60%',
-                        pointerEvents: 'none'
-                    }}
-                />
-            )}
-            {props.animationType === 'spin_attack_arc' && image && (
-  <div
-    className="spin-arc-orbit"
-    style={{
-      position: 'absolute',
-      left: '50%',
-      top: '50%',
-      width: 0,
-      height: 0,
-      pointerEvents: 'none',
-      animation: `sword-arc-orbit 0.8s linear forwards`
-    }}
-  >
-    <img
-      src={image}
-      alt="spin arc"
-      className="spin-arc-sweep-icon"
-      style={{
-        position: 'absolute',
-        left: '-30px', // half icon width, adjust as needed
-        top: '-60px',  // full icon height, adjust as needed
-        width: '60px',
-        height: '60px',
-        pointerEvents: 'none',
-        animation: `sword-arc-spin 2s linear forwards`
-      }}
-    />
-  </div>
+            <div className="animation-tile-id">{tileIdFromCoords !== null ? tileIdFromCoords : props.id}</div>
+                        {props.animationType === 'spin_attack' && (
+                            <img
+                                src={images['spear_white']}
+                                alt="spin"
+                                className="spin-attack-icon"
+                                style={{
+                                    position: 'absolute',
+                                    top: '20%',
+                                    left: '20%',
+                                    width: '60%',
+                                    height: '60%',
+                                    pointerEvents: 'none',
+                                    zIndex: 5000
+                                }}
+                            />
+                        )}
+                        {props.animationType === 'dragon_punch' && (
+                            <img
+                                src={images['scepter_white']}
+                                alt="dragon punch"
+                                className="dragon-punch-icon"
+                                style={{
+                                    position: 'absolute',
+                                    top: '20%',
+                                    left: '20%',
+                                    width: '60%',
+                                    height: '60%',
+                                    pointerEvents: 'none',
+                                    zIndex: 5000
+                                }}
+                            />
+                        )}
+                        {props.animationType === 'spin_attack_arc' && image && (
+    <div
+        className="spin-arc-orbit"
+        style={{
+            position: 'absolute',
+            left: '50%',
+            top: '50%',
+            width: 0,
+            height: 0,
+            pointerEvents: 'none',
+            animation: `sword-arc-orbit 0.8s linear forwards`,
+            zIndex: 5000
+        }}
+    >
+        <img
+            src={image}
+            alt="spin arc"
+            className="spin-arc-sweep-icon"
+            style={{
+                position: 'absolute',
+                left: '-30px', // half icon width, adjust as needed
+                top: '-60px',  // full icon height, adjust as needed
+                width: '60px',
+                height: '60px',
+                pointerEvents: 'none',
+                animation: `sword-arc-spin 2s linear forwards`,
+                zIndex: 5000
+            }}
+        />
+    </div>
 )}
             {/* {props.animationType === 'spin_attack_arc' && image && (
                 <img

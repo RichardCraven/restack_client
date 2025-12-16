@@ -24,8 +24,12 @@ const AnimationGrid = ({
     const handleClickWrapper = (tile) => {
         animationManager.handleTileClick(tile.id)
     }
+    // Grid width: if borders, add offset; if not, use exact tile width
+    const gridWidth = tileProps.SHOW_TILE_BORDERS
+        ? tileProps.TILE_SIZE * tileProps.MAX_DEPTH + tileProps.MAX_DEPTH * 2
+        : tileProps.TILE_SIZE * tileProps.MAX_DEPTH;
     return (
-        <div className="animation-grid" style={{width: tileProps.TILE_SIZE * tileProps.MAX_DEPTH + (tileProps.SHOW_TILE_BORDERS ? tileProps.MAX_DEPTH * 2 : 0) + 'px'}}>
+        <div className="animation-grid" style={{width: gridWidth + 'px'}}>
             {animationData.tiles.map((t,i)=>{
                 return <AnimationTile
                     key={i}

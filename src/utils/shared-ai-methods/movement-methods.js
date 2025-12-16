@@ -1,4 +1,33 @@
 import {Methods} from './basic-methods';
+
+
+// Teleport the caller to an empty tile on the back line (or next available column)
+const teleportToBackLine = (caller, combatants) => {
+    const isMonsterOrMinion = caller.isMonster || caller.isMinion;
+    const backCol = isMonsterOrMinion ? 0 : MAX_DEPTH;
+    const secondBackCol = isMonsterOrMinion ? 1 : MAX_DEPTH - 1;
+    const startLane = caller.coordinates.y;
+    // Helper to find available tile in a column, searching vertically from startLane
+    function findAvailableInCol(col) {
+        for (let offset = 0; offset <= MAX_LANES; offset++) {
+            // Try up and down from startLane
+            const up = startLane - offset;
+            const down = startLane + offset;
+            if (up >= 0 && up < MAX_LANES && isAvailableToMoveInto({x: col, y: up}, combatants)) {
+                return {x: col, y: up};
+            }
+            if (offset !== 0 && down >= 0 && down < MAX_LANES && isAvailableToMoveInto({x: col, y: down}, combatants)) {
+                return {x: col, y: down};
+            }
+        }
+        return null;
+    }
+    let dest = findAvailableInCol(backCol);
+    if (!dest) dest = findAvailableInCol(secondBackCol);
+    if (dest) {
+        caller.coordinates = dest;
+    }
+}
 const clone = (val) => {
     return JSON.parse(JSON.stringify(val))
 }
@@ -219,6 +248,7 @@ const goTowards = (caller, combatants, targetTile) => {
 }
 
 export const MovementMethods = {
+    teleportToBackLine,
     goUp: (caller, combatants) => {
         const enemyTarget = Object.values(combatants).find(e=>e.id === caller.targetId);
         let coords = caller.coordinates;

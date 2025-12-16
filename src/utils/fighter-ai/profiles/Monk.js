@@ -1,14 +1,5 @@
 export function Monk(data, utilMethods, animationManager, overlayManager){
-    // Abstracted charging up sequence for Monk
-    this.triggerChargingUp = (caller) => {
-        if (!caller.chargingUpActive) {
-            console.log('************* TRIGGER MONK CHARGING UP ANIMATION *************');
-            caller.chargingUpActive = true;
-            caller.chargingUpKey = (caller.chargingUpKey || 0) + 1;
-            caller.chargingUpStartedAt = Date.now();
-            caller.chargingUpDuration = (this.INTERVAL_TIME || 1) * 0.95 * 1000;
-        }
-    }
+    
 
     this.MAX_DEPTH = data.MAX_DEPTH;
     this.MAX_LANES = data.MAX_LANES;
@@ -43,6 +34,7 @@ export function Monk(data, utilMethods, animationManager, overlayManager){
         return Object.values(combatants).filter(e=>this.isEnemy(e));
     }
     this.initialize = (caller) => {
+        console.log('MONK INITIALIZE');
         // Default facing right
         caller.facing = 'right';
 
@@ -58,22 +50,26 @@ export function Monk(data, utilMethods, animationManager, overlayManager){
         console.log('monk eraIndex:', caller.eraIndex);
         switch (caller.behaviorSequence) {
             case 'brawler':
-                switch (caller.eraIndex) {
+                switch(caller.eraIndex){
                     case 0:
+                        data.methods.closeTheGap(caller, combatants)
+                    break;
                     case 1:
+                        data.methods.closeTheGap(caller, combatants)
+                    break;
                     case 2:
+                        data.methods.closeTheGap(caller, combatants)
+                    break;
                     case 3:
-                        this.triggerChargingUp(caller);
-                        break;
+                        data.methods.closeTheGap(caller, combatants)
+                    break;
                     case 4:
-                        if (caller.chargingUpActive) caller.chargingUpActive = false;
-                        data.methods.closeTheGap(caller, combatants);
-                        break;
-                    default:
-                        if (caller.chargingUpActive) caller.chargingUpActive = false;
-                        data.methods.closeTheGap(caller, combatants);
+                        data.methods.closeTheGap(caller, combatants)
+                    break;
+                    default: 
+                    break;
                 }
-                break;
+            break;
             case 'teleport-attacker':
                 switch (caller.eraIndex) {
                     case 0:
@@ -84,7 +80,24 @@ export function Monk(data, utilMethods, animationManager, overlayManager){
                         break;
                     case 4:
                         if (caller.chargingUpActive) caller.chargingUpActive = false;
-                        data.methods.closeTheGap(caller, combatants);
+                        if (data.methods.teleportToBackLine) {
+                            data.methods.teleportToBackLine(caller, combatants);
+                            // Immediately broadcast the new coordinates to the UI
+                            if (typeof this.broadcastDataUpdate === 'function') {
+                                this.broadcastDataUpdate(caller);
+                            }
+                            // Add a short delay to ensure UI/state is updated before triggering the attack
+                            caller.behaviorSequence = 'brawler';
+                            setTimeout(() => {
+                                // Now trigger the dragon punch attack after teleport and update
+                                if (caller.pendingAttack && caller.pendingAttack.name === 'dragon punch') {
+                                    this.initiateAttack(caller, false, combatants);
+                                }
+                            }, 50); // 50ms delay to allow UI/state to update
+                        } else {
+                            data.methods.closeTheGap(caller, combatants);
+                            caller.behaviorSequence = 'brawler';
+                        }
                         break;
                     default:
                         if (caller.chargingUpActive) caller.chargingUpActive = false;
@@ -144,8 +157,32 @@ export function Monk(data, utilMethods, animationManager, overlayManager){
         }
         return attack;
     }
+    this.triggerDragonPunch = async (coordinates, facing) => {
+        // AnimationManager should handle the animation and return the hit combatant if any
+        if (!this.animationManager || !this.animationManager.triggerAttackAnimation) {
+            console.warn('No animationManager or triggerAttackAnimation method found');
+            return null;
+        }
+        console.log('************* TRIGGER MONK DRAGON PUNCH ANIMATION *************');
+        return await this.animationManager.triggerAttackAnimation({
+            coordinates,
+            facing,
+            type: 'dragon_punch',
+            animationType: 'dragon_punch',
+        });
+        }
+    this.triggerChargingUp = (caller) => {
+        if (!caller.chargingUpActive) {
+            console.log('************* TRIGGER MONK CHARGING UP ANIMATION *************');
+            caller.chargingUpActive = true;
+            caller.chargingUpKey = (caller.chargingUpKey || 0) + 1;
+            caller.chargingUpStartedAt = Date.now();
+            caller.chargingUpDuration = (this.INTERVAL_TIME || 1) * 0.95 * 1000;
+        }
+    }
     this.initiateAttack = async (caller, manualAttack, combatants) => {
         if(!caller) return
+        
         const callerFacing = (caller, target) => {
             let val;
             if(!target) return null;
@@ -160,9 +197,13 @@ export function Monk(data, utilMethods, animationManager, overlayManager){
             }
             return val;
         }
+
+        
+        
         const facingRight = this.fighterFacingRight(caller)
         const target = combatants[caller.targetId];
         const facing = caller.facing ? caller.facing : callerFacing(caller,target)
+        console.log('MONK INITIATE ATTACK, caller.pendingAttack:', caller.pendingAttack);
         if(manualAttack){
             if(caller.pendingAttack && caller.pendingAttack.cooldown_position < 99){
                 return
@@ -177,24 +218,26 @@ export function Monk(data, utilMethods, animationManager, overlayManager){
                 }
             }
         } else {
+            console.log('should be in here...');
             const distanceToTarget = data.methods.getDistanceToTarget(caller, target),
             laneDiff = data.methods.getLaneDifferenceToTarget(caller, target);
             // debugger
             switch(caller.pendingAttack.name){
-                case 'sword swing':
-                    const combatantHit = await this.triggerSwordSwing(caller.coordinates, facing)
+                case 'dragon punch':
+                    console.log('about to trigger dragon punch...');
+                    const combatantHit = await this.triggerDragonPunch(caller.coordinates, facing)
                     if(combatantHit){
                         this.hitsCombatant(caller, combatantHit);
                     } else {
                         this.missesTarget(caller);
                     }
-                break;
-                case 'sword thrust':
-                    // console.log('SWORD THRUST');
-                break;
-                case 'shield bash':
-                    // console.log('SHIELD BASH');
-                break;
+                // break;
+                // case 'sword thrust':
+                //     // console.log('SWORD THRUST');
+                // break;
+                // case 'shield bash':
+                //     // console.log('SHIELD BASH');
+                // break;
                 default:
                     break;
             }

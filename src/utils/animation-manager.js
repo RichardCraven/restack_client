@@ -1,5 +1,75 @@
 import * as images from '../utils/images'
 export function AnimationManager(){
+
+    // Generic attack animation trigger for AI modules (e.g., Monk)
+    this.triggerAttackAnimation = async ({ coordinates, facing, icon, type, animationType }) => {
+        // Default to using 'type' as animationType if not provided
+        const animType = animationType || type;
+        const sourceTileId = this.getTileIdByCoords(coordinates);
+        if (sourceTileId === null || sourceTileId === undefined) {
+            console.warn('triggerAttackAnimation: Invalid coordinates for tile:', coordinates);
+            return null;
+        }
+        // Set icon based on type if not provided
+        console.log('ok got past the first check');
+        let resolvedIcon = icon;
+        console.log('resolvedIcon before switch: ', resolvedIcon);
+        if (!resolvedIcon) {
+            switch (type) {
+                case 'dragon_punch':
+                    resolvedIcon = images['scepter_white'];
+                    break;
+                case 'sword_swing':
+                    resolvedIcon = images['sword'];
+                    break;
+                case 'spin_attack':
+                    resolvedIcon = images['sword'];
+                    break;
+                // Add more cases as needed
+                default:
+                    resolvedIcon = undefined;
+            }
+        }
+        // Determine the target tile based on facing
+        let targetCoords = { ...coordinates };
+        switch (facing) {
+            case 'right':
+                targetCoords.x += 1;
+                break;
+            case 'left':
+                targetCoords.x -= 1;
+                break;
+            case 'up':
+                targetCoords.y -= 1;
+                break;
+            case 'down':
+                targetCoords.y += 1;
+                break;
+            default:
+                break;
+        }
+        const targetTileId = this.getTileIdByCoords(targetCoords);
+        console.log('about to trigger tile animation complex with:', { sourceTileId, targetTileId, type: type || 'dragon_punch' }   );
+        return new Promise((resolve) => {
+            const data = {
+                sourceTileId,
+                targetTileId,
+                type: type || 'dragon_punch',
+                icon: resolvedIcon,
+                facing
+            };
+            this.triggerTileAnimationComplex(data);
+            // After the animation, check for a combatant at the target tile
+            setTimeout(() => {
+                let combatantHit = null;
+                if (typeof this.checkForCollision === 'function' && targetTileId !== null) {
+                    const tileCoords = this.getTileCoordsById(targetTileId);
+                    combatantHit = this.checkForCollision(tileCoords);
+                }
+                resolve(combatantHit);
+            }, this.animationsMatrix[type]?.duration || 700);
+        });
+    }
     this.tiles = [];
     this.canvasAnimations = [];
     this.MAX_DEPTH = 0;
@@ -17,6 +87,9 @@ export function AnimationManager(){
         },
         spin_attack: {
             duration: 800
+        },
+        dragon_punch: {
+            duration: 700
         }
     }
     this.spinAttack = (sourceTileId, resolve) => {
@@ -201,19 +274,21 @@ export function AnimationManager(){
     this.initialize = (MAX_DEPTH, MAX_ROWS) => {
         this.MAX_DEPTH = MAX_DEPTH;
         let arr = [];
-        for(let i = 0; i < MAX_ROWS*MAX_DEPTH; i++){
-            let x = i%MAX_DEPTH,
-            y = Math.floor(i/MAX_DEPTH)
-            arr.push({
-                id: i,
-                x,
-                y,
-                animationOn: false,
-                animationType: '',
-                animationData: {},
-                animationtransitionType: '',
-                handleClick: this.handleTileClick 
-            })
+        // Use row-major order: id = y * MAX_DEPTH + x
+        for (let y = 0; y < MAX_ROWS; y++) {
+            for (let x = 0; x < MAX_DEPTH; x++) {
+                let id = y * MAX_DEPTH + x;
+                arr.push({
+                    id,
+                    x,
+                    y,
+                    animationOn: false,
+                    animationType: '',
+                    animationData: {},
+                    animationtransitionType: '',
+                    handleClick: this.handleTileClick
+                });
+            }
         }
         this.tiles = arr;
         this.update();
@@ -240,6 +315,7 @@ export function AnimationManager(){
         }, 1000)
     }
     this.triggerTileAnimationComplex = (data) => {
+        console.log('**** TRIGGERED ANIMATION COMPLEX ****', data);
         const targetTileId = data.targetTileId, type = data.type, facing = data.facing;
         const sourceTileId = data.sourceTileId;
         let animationTile = this.tiles.find(e=>e.id === sourceTileId);
@@ -274,8 +350,25 @@ export function AnimationManager(){
                 animationTile.animationData = {
                     icon: data.icon || images['sword'],
                     duration: this.animationsMatrix[type].duration,
-
                 };
+                this.update();
+                setTimeout(()=>{
+                    animationTile.animationType = null;
+                    animationTile.transitionType = null;
+                    animationTile.animationData = {};
+                    this.update();
+                }, this.animationsMatrix[type].duration)
+            break;
+            case 'dragon_punch':
+                console.log('animation complex, dragon_punch case');
+                animationTile.animationType = 'dragon_punch';
+                animationTile.transitionType = 'fade';
+                animationTile.animationData = {
+                    icon: data.icon || images['scepter_white'],
+                    duration: this.animationsMatrix[type].duration,
+                    facing: data.facing
+                };
+                console.log('animationTile: ', animationTile);
                 this.update();
                 setTimeout(()=>{
                     animationTile.animationType = null;

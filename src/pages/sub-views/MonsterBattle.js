@@ -932,7 +932,7 @@ class MonsterBattle extends React.Component {
                     ></AnimationGrid>
 
                     {/* /// COMBAT GRID .   <--- not really in use, only shows grid lines */}
-                    {/* <div className="combat-grid" style={{width: TILE_SIZE * NUM_COLUMNS + (SHOW_TILE_BORDERS ? NUM_COLUMNS * 2 : 0) + 'px'}}>
+                    <div className="combat-grid" style={{width: TILE_SIZE * NUM_COLUMNS + (SHOW_TILE_BORDERS ? NUM_COLUMNS * 2 : 0) + 'px'}}>
                         {this.state.combatTiles.map((t,i)=>{
                             return <div 
                             key={i} 
@@ -954,7 +954,7 @@ class MonsterBattle extends React.Component {
                                 </div>}
                             </div>
                         })}
-                    </div> */}
+                    </div>
                     {/* /// FIGHTERS */}
                     <FightersCombatGrid 
                         crew={this.props.crew}

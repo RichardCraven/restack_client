@@ -57,8 +57,8 @@ export function FighterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
             sage: new Sage(data, this.utilMethods, this.animationManager, this.overlayManager),
             wizard: new Wizard(data, this.utilMethods, animationManager),
             soldier: new Soldier(data, this.utilMethods, animationManager),
-            rogue: new Rogue(data, this.utilMethods, this.animationManager, this.overlayManager),
-            monk: new Monk(data, this.utilMethods, this.animationManager, this.overlayManager)
+            rogue: new Rogue(data, this.utilMethods, animationManager, this.overlayManager),
+            monk: new Monk(data, this.utilMethods, animationManager, this.overlayManager)
         }
     }
     this.pickRandom = (array) => {

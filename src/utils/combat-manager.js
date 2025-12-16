@@ -1536,10 +1536,6 @@ export function CombatManager(){
             }
         } else if(caller.coordinates.x > combatantHit.coordinates.x){
             combatantHit.wounded.sourceDirection = 'right';
-            if(combatantHit.type !== 'soldier'){
-                console.log('NOT SOLDIER!', 'combatant: ', combatantHit, 'caller: ', caller);
-                // debugger
-            }
             if(criticalHit){
                 const {W} = this.getSurroundings(combatantHit.coordinates),
                 someoneElseIsInCoords = this.someoneElseIsInCoords(combatantHit, W);
