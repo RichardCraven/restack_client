@@ -121,7 +121,6 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
         return attack
     }
     this.processMove = (caller, combatants) => {
-        // console.log('wizard process move');
         caller.onMoveCooldown = true;
         setTimeout(()=>{
             caller.onMoveCooldown = false;

@@ -2,6 +2,7 @@ import { Sage } from './profiles/Sage'
 import { Wizard } from './profiles/Wizard'
 import { Rogue } from './profiles/Rogue'
 import { Soldier } from './profiles/Soldier'
+import { Monk } from './profiles/Monk'
 import {Methods, getSurroundings} from '../shared-ai-methods/basic-methods';
 import {MovementMethods} from '../shared-ai-methods/movement-methods';
 
@@ -56,7 +57,8 @@ export function FighterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
             sage: new Sage(data, this.utilMethods, this.animationManager, this.overlayManager),
             wizard: new Wizard(data, this.utilMethods, animationManager),
             soldier: new Soldier(data, this.utilMethods, animationManager),
-            rogue: new Rogue(data, this.utilMethods, this.animationManager, this.overlayManager)
+            rogue: new Rogue(data, this.utilMethods, this.animationManager, this.overlayManager),
+            monk: new Monk(data, this.utilMethods, this.animationManager, this.overlayManager)
         }
     }
     this.pickRandom = (array) => {
@@ -201,55 +203,55 @@ export function FighterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
         // const target = combatants[caller.targetId];
     }
 
-    const soldier = {
-        processMove: (caller, combatants) => {
-            this.methods.moveTowardsCloseEnemyTarget(caller, combatants);
-        },
-        acquireTarget: (caller, combatants, targetToAvoid = null) => {
-            const liveEnemies = Object.values(combatants).filter(e=>!e.dead && (e.isMonster || e.isMinion));
-            const sorted = (targetToAvoid && liveEnemies.length > 1) ?  liveEnemies.filter(e => e.id !== targetToAvoid.id).sort((a,b)=>a.depth - b.depth) : liveEnemies.sort((a,b)=>a.depth - b.depth);
-            const target = sorted[0];
-            // console.log('soldiers target: ', target);
+    // const soldier = {
+    //     processMove: (caller, combatants) => {
+    //         this.methods.moveTowardsCloseEnemyTarget(caller, combatants);
+    //     },
+    //     acquireTarget: (caller, combatants, targetToAvoid = null) => {
+    //         const liveEnemies = Object.values(combatants).filter(e=>!e.dead && (e.isMonster || e.isMinion));
+    //         const sorted = (targetToAvoid && liveEnemies.length > 1) ?  liveEnemies.filter(e => e.id !== targetToAvoid.id).sort((a,b)=>a.depth - b.depth) : liveEnemies.sort((a,b)=>a.depth - b.depth);
+    //         const target = sorted[0];
+    //         // console.log('soldiers target: ', target);
 
-            caller.pendingAttack = this.chooseAttackType(caller, target);
-            caller.targetId = target.id;
-        },
-        initiateAttack: (caller, manualAttack, combatants) => {
-            if(!caller) return
-            const target = combatants[caller.targetId];
-            if(!target) return
-            let defenseFactor = target.stats.dex ** 2 + target.stats.baseDef;
-            if(defenseFactor > 99) defenseFactor = 90;
-            let attackFactor = Math.floor(Math.sqrt(caller.atk));
-            const results = [], diceRoll = function(){
-                return Math.random() * 100
-            };
+    //         caller.pendingAttack = this.chooseAttackType(caller, target);
+    //         caller.targetId = target.id;
+    //     },
+    //     initiateAttack: (caller, manualAttack, combatants) => {
+    //         if(!caller) return
+    //         const target = combatants[caller.targetId];
+    //         if(!target) return
+    //         let defenseFactor = target.stats.dex ** 2 + target.stats.baseDef;
+    //         if(defenseFactor > 99) defenseFactor = 90;
+    //         let attackFactor = Math.floor(Math.sqrt(caller.atk));
+    //         const results = [], diceRoll = function(){
+    //             return Math.random() * 100
+    //         };
             
-            for(let i = 0; i < attackFactor; i++){
-                results.push(diceRoll())
-            }
-            const connects = results.some(e=>e>defenseFactor);
-            caller.active = true;
-            caller.attacking = true;
-            this.broadcastDataUpdate();
-            caller.readout.action = ` attacks with ${caller.pendingAttack.name}`
-            this.kickoffAttackCooldown(caller)
-            if(connects){
-                if(manualAttack){
-                    this.hitsTarget(caller, target)
-                } else {
-                    this.hitsTarget(caller)
-                }
-            } else {
-                if(manualAttack){
-                    this.missesTarget(caller, target)
-                } else {
-                    this.missesTarget(caller)
-                }
+    //         for(let i = 0; i < attackFactor; i++){
+    //             results.push(diceRoll())
+    //         }
+    //         const connects = results.some(e=>e>defenseFactor);
+    //         caller.active = true;
+    //         caller.attacking = true;
+    //         this.broadcastDataUpdate();
+    //         caller.readout.action = ` attacks with ${caller.pendingAttack.name}`
+    //         this.kickoffAttackCooldown(caller)
+    //         if(connects){
+    //             if(manualAttack){
+    //                 this.hitsTarget(caller, target)
+    //             } else {
+    //                 this.hitsTarget(caller)
+    //             }
+    //         } else {
+    //             if(manualAttack){
+    //                 this.missesTarget(caller, target)
+    //             } else {
+    //                 this.missesTarget(caller)
+    //             }
                 
-            }
-        }
-    }
+    //         }
+    //     }
+    // }
 
     
 }

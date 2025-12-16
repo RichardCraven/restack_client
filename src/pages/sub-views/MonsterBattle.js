@@ -17,11 +17,13 @@ import MonstersCombatGrid from '../../components/combat-panes/monsters'
 const MAX_DEPTH = 7;
 const NUM_COLUMNS = 8;
 // ^ means 8 squares, account for depth of 0 is far left
+
 const MAX_ROWS = 5;
 const TILE_SIZE = 100;
 const SHOW_TILE_BORDERS = false;
 const SHOW_COMBAT_BORDER_COLORS = true;
-const SHOW_INTERACTION_PANE=true
+const SHOW_INTERACTION_PANE = true;
+const SHOW_MONSTER_IDS = false;
 
 
 const RANGES = {
@@ -995,6 +997,7 @@ class MonsterBattle extends React.Component {
                         images={images}
                         TILE_SIZE={TILE_SIZE}
                         SHOW_TILE_BORDERS={SHOW_TILE_BORDERS}
+                        SHOW_MONSTER_IDS={SHOW_MONSTER_IDS}
                     />
                 </div>
 

@@ -21,7 +21,8 @@ const MonstersCombatGrid = ({
     getHitAnimation,
     monsterFacingUp,
     monsterFacingDown,
-    greetingInProcess
+    greetingInProcess,
+    SHOW_MONSTER_IDS = false
 }) => {
     const [monsterHitFlashKey, setMonsterHitFlashKey] = React.useState(0);
     const [showMonsterHitFlash, setShowMonsterHitFlash] = React.useState(false);
@@ -74,7 +75,7 @@ const MonstersCombatGrid = ({
             if (minion.isMinion) {
                 const wounded = !!minion.wounded;
                 if (wounded && !prevMinionWounded.current[minion.id]) {
-                    console.log('[MINION FLASH TRIGGER]', minion.id, 'wounded:', minion.wounded, 'prev:', prevMinionWounded.current[minion.id]);
+                    // console.log('[MINION FLASH TRIGGER]', minion.id, 'wounded:', minion.wounded, 'prev:', prevMinionWounded.current[minion.id]);
                     newFlashes[minion.id] = true;
                     setTimeout(() => {
                         setMinionHitFlash(prev => ({ ...prev, [minion.id]: false }));
@@ -139,7 +140,7 @@ const MonstersCombatGrid = ({
                             className="portrait-wrapper monster-portrait-wrapper"
                             style={{
                                 left: `${battleData[monster.id]?.coordinates.x * 100 + (SHOW_TILE_BORDERS ? battleData[monster.id]?.coordinates.x * 2 : 0)}px`,
-                                zIndex: `${battleData[monster.id]?.dead ? '0' : '100'}`
+                                zIndex: `${battleData[monster.id]?.dead ? '0' : '200'}`
                             }}
                         >
                             <div
@@ -178,7 +179,7 @@ const MonstersCombatGrid = ({
                                         position: 'relative'
                                     }}
                                 >
-                                    {monster.id}
+                                    {SHOW_MONSTER_IDS ? monster.id : null}
                                     {/* White hit-flash overlay */}
                                     {showMonsterHitFlash && (
                                         <div className="hit-flash-overlay" key={monsterHitFlashKey} />
@@ -291,7 +292,7 @@ const MonstersCombatGrid = ({
                                         }
                                     }}
                                 >
-                                    {minion.id}
+                                    {SHOW_MONSTER_IDS ? minion.id : null}
                                     {/* White hit-flash overlay for minions */}
                                     {minionHitFlash[minion.id] && (
                                         <div className="hit-flash-overlay" />

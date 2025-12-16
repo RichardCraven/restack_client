@@ -1222,10 +1222,8 @@ export function CombatManager(){
 
     }
     this.processMove = (caller) => {
-        if(caller.type === 'monk') console.log('monk process move precheck');
         if(caller.dead) return;
         if(this.fighterAI.roster[caller.type]){
-            if(caller.type === 'monk') console.log('monk process move', 'targetInRange? ');
             this.fighterAI.roster[caller.type].processMove(caller, this.combatants, this.hitsTarget, this.missesTarget);
             return
         }

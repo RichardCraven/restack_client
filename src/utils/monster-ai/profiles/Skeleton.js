@@ -22,8 +22,8 @@ export function Skeleton(data, utilMethods, animationManager, overlayManager){
         caller.behaviorSequence = 'brawler'
     }
     this.acquireTarget = (caller, combatants) => {
-        const { MonsterAcquireTargetMethods } = require('../methods/monster-acquire-target-methods');
-        const target = MonsterAcquireTargetMethods.acquireClosestSoftTarget(caller, combatants);
+    const { AcquireTargetMethods } = require('../../shared-ai-methods/acquire-target-methods');
+    const target = AcquireTargetMethods.acquireClosestSoftTarget(caller, combatants);
         if (!target) return;
         caller.pendingAttack = this.chooseAttackType(caller, target);
         caller.targetId = target.id;
