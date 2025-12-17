@@ -256,6 +256,43 @@ export function AnimationManager(){
         }, 2500)
         // ^ travel time + 1 second of damage animation
     }
+    // Magic Circle Animation: static circle of particles at midpoint between source and target
+    this.magicCircle = (sourceCoords, targetCoords, options = {}) => {
+        console.log('in magic circle with sourceCoords, targetCoords:', sourceCoords, targetCoords);
+        // debugger
+        // Calculate midpoint between source and target
+        const midX = (sourceCoords.x + targetCoords.x) / 2;
+        const midY = (sourceCoords.y + targetCoords.y) / 2;
+        // Circle parameters
+        const numParticles = options.numParticles || 12;
+        const radius = options.radius || 4; // in tile units
+        // Generate particle positions in a circle
+        const particles = [];
+        for (let i = 0; i < numParticles; i++) {
+            const angle = (2 * Math.PI * i) / numParticles;
+            particles.push({
+                x: midX + radius * Math.cos(angle),
+                y: midY + radius * Math.sin(angle)
+            });
+        }
+        const ref = {
+            type: 'magicCircle',
+            center: { x: midX, y: midY },
+            radius,
+            particles,
+            numParticles,
+            duration: options.duration || 2500,
+            color: options.color || 'aqua',
+            // You can add more visual options here
+        };
+        this.canvasAnimations.push(ref);
+        this.update();
+        setTimeout(() => {
+            let e = this.canvasAnimations.find(c => c === ref);
+            this.canvasAnimations = this.canvasAnimations.filter(v => v !== e);
+            this.update();
+        }, ref.duration);
+    }
     this.getDistanceToTarget = (sourceCoords, targetCoords) => {
         // if(!target) return 0;
         let d = targetCoords.x - sourceCoords.x

@@ -555,10 +555,6 @@ export function CombatManager(){
         this.beginGreeting()
     }
     this.targetInRange = (caller) => {
-        if(caller.type === 'wizard'){
-            console.log('WIZARD TARGET IN RANGE CHECK, caller.pending attack...', caller.pendingAttack);
-            // debugger
-        }
         const target = this.combatants[caller.targetId];
         if(!caller.pendingAttack) return false;
         let attackRange = RANGES[caller.pendingAttack.range]

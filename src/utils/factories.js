@@ -257,10 +257,6 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
                     target = getCombatant(this.targetId)
                     if(!this.pendingAttack) chooseAttackType(this, target)
                     inRange = targetInRange(this);
-                if(this.type === 'wizard'){
-                    console.log('wqiz in range', inRange);
-                    // debugger
-                }
                 if(inRange && this.movesLeft && !era.attacked && !this.onGeneralAttackCooldown && !this.onMoveCooldown && !target.onMoveCooldown){
                     // console.log('***ATTACK***');
                     era.attacked = true;

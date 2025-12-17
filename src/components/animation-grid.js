@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 // import * as images from '../utils/images'
 import AnimationTile from '../components/animation-tile';
 import CanvasMagicMissile from '../components/Canvas/canvas_magic_missile'
+import CanvasMagicCircle from '../components/Canvas/canvas_magic_circle'
 
 // class AnimationGrid extends React.Component {
     // constructor(props){
@@ -47,14 +48,35 @@ const AnimationGrid = ({
             })}
             <div className="canvas-grid-container">
                 <div className="canvas-grid">
-                    {animationData.canvasAnimations?.length > 0 && <CanvasMagicMissile 
-                    origin={animationData?.canvasAnimations[0].origin}
-                    width={100}
-                    height={100}
-                    connectParticlesActive={true}
-                    targetDistance={animationData?.canvasAnimations[0].distanceToTarget}
-                    targetLaneDiff={animationData?.canvasAnimations[0].verticalDistanceToTarget}
-                    />}
+                    {animationData.canvasAnimations?.map((anim, idx) => {
+                        if (anim.type === 'magicCircle' || anim.particles) {
+                            // Safe fallbacks for width/height
+                            const TILE_SIZE = typeof tileProps.TILE_SIZE === 'number' && !isNaN(tileProps.TILE_SIZE) ? tileProps.TILE_SIZE : 100;
+                            const MAX_DEPTH = typeof tileProps.MAX_DEPTH === 'number' && !isNaN(tileProps.MAX_DEPTH) ? tileProps.MAX_DEPTH : 5;
+                            const MAX_ROWS = typeof tileProps.MAX_ROWS === 'number' && !isNaN(tileProps.MAX_ROWS) ? tileProps.MAX_ROWS : 5;
+                            const width = TILE_SIZE * MAX_DEPTH;
+                            const height = TILE_SIZE * MAX_ROWS;
+                            return <CanvasMagicCircle
+                                key={idx}
+                                center={anim.center}
+                                radius={anim.radius}
+                                numParticles={anim.numParticles}
+                                color={anim.color}
+                                width={width}
+                                height={height}
+                            />
+                        } else {
+                            return <CanvasMagicMissile
+                                key={idx}
+                                origin={anim.origin}
+                                width={100}
+                                height={100}
+                                connectParticlesActive={true}
+                                targetDistance={anim.distanceToTarget}
+                                targetLaneDiff={anim.verticalDistanceToTarget}
+                            />
+                        }
+                    })}
                 </div>
             </div>
         </div>
