@@ -555,6 +555,10 @@ export function CombatManager(){
         this.beginGreeting()
     }
     this.targetInRange = (caller) => {
+        if(caller.type === 'wizard'){
+            console.log('WIZARD TARGET IN RANGE CHECK, caller.pending attack...', caller.pendingAttack);
+            // debugger
+        }
         const target = this.combatants[caller.targetId];
         if(!caller.pendingAttack) return false;
         let attackRange = RANGES[caller.pendingAttack.range]
@@ -638,15 +642,11 @@ export function CombatManager(){
     }
     this.kickOffTurnCycles = () => {
         let arr = Object.values(this.combatants)
-        Object.values(this.combatants).forEach((combatant) => {
-            if (Array.isArray(combatant.attacks)) {
-                combatant.attacks.forEach((a) => {
-                    if (a && typeof a.cooldown_position !== 'undefined') {
-                        a.cooldown_position = 100;
-                    }
-                });
-            }
-        });
+        Object.values(this.combatants).forEach((combatant)=>{
+            combatant.attacks.forEach((a)=>{
+                a.cooldown_position = 100
+            })
+        })
         let c = 0;
         const int = setInterval(()=>{
             c++
@@ -926,6 +926,9 @@ export function CombatManager(){
     }
     this.initiateAttack = (caller, manualAttack = false) => {
        let manualTarget = false;
+       if(caller.type === 'wizard'){
+        console.log('OH SHIT');
+       }
         const targetInRange = (caller, target) => {
             const pendingAttack = caller.pendingAttack
             const rangeDiff = this.fighterFacingUp(caller) || this.fighterFacingDown(caller) ?

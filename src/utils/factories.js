@@ -249,15 +249,22 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
                     }
                 }
                 const eraAttack = () => {
+                    // if(this.type === 'wizard'){
+                    //     console.log('WIZARD ATTACKING???...', this, target);
+                    //     // debugger
+                    // }
                     if(!this.targetId) acquireTarget(this);
                     target = getCombatant(this.targetId)
                     if(!this.pendingAttack) chooseAttackType(this, target)
                     inRange = targetInRange(this);
-                // console.log('in range', inRange);
-                    if(inRange && this.movesLeft && !era.attacked && !this.onGeneralAttackCooldown && !this.onMoveCooldown && !target.onMoveCooldown){
-                        // console.log('***ATTACK***');
-                        era.attacked = true;
-                        this.movesLeft--
+                if(this.type === 'wizard'){
+                    console.log('wqiz in range', inRange);
+                    // debugger
+                }
+                if(inRange && this.movesLeft && !era.attacked && !this.onGeneralAttackCooldown && !this.onMoveCooldown && !target.onMoveCooldown){
+                    // console.log('***ATTACK***');
+                    era.attacked = true;
+                    this.movesLeft--
                         this.attack(target);
                     }
                 }

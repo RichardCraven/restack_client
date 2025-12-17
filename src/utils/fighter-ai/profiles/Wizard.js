@@ -78,7 +78,9 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
         const sorted = liveEnemies.sort((a,b)=>b.depth - a.depth);
         let target = closestEnemy.enemy;
         if(!target) return;
-        caller.pendingAttack = this.chooseAttackType(caller, target);
+        const attack = this.chooseAttackType(caller, target);
+        console.log('CHOSEN ATTACK TYPE FOR WIZARD:', attack);
+        caller.pendingAttack = attack || null;
         caller.targetId = target.id;
         target.targettedBy.push(caller.id)
     }
@@ -120,7 +122,7 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                 attack = data.methods.pickRandom(available);
             }
         }
-        return attack
+    return attack;
     }
     this.processMove = (caller, combatants) => {
         caller.onMoveCooldown = true;
@@ -141,6 +143,8 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                 });
                 switch(caller.eraIndex){
                     case 0:
+                        // About to make a normal attack (not glyph)
+                        // debugger;
                         if(enemyIsAdjacent) {
                             data.methods.evadeBack(caller, combatants);
                         } else {
@@ -155,24 +159,19 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                         }
                     break;
                     case 2:
-                        // cast spell if available
-                        // Instead of looking for a spell in attacks, use the glyph via specialActions
+                        // Try to cast magic missile glyph if available
                         const glyphAction = caller.specialActions && caller.specialActions.find(
                             a => a.type === 'glyph' && a.subTypes && a.subTypes[0] && a.subTypes[0].type === 'magic missile'
                         );
-                        console.log('***glyphaction: ', glyphAction, 'this.monsterBattleRef', this.monsterBattleRef);
                         if (glyphAction && (!glyphAction.cooldown_position || glyphAction.cooldown_position === 0)) {
                             // Acquire a target (closest enemy)
                             const liveEnemies = Object.values(combatants).filter(e => !e.dead && (e.isMonster || e.isMinion));
                             if (liveEnemies.length > 0) {
-                                console.log('enemies available for magic missile glyph', liveEnemies);
                                 // Sort by distance
                                 const getDist = (a, b) => Math.sqrt(Math.pow(a.coordinates.x - b.coordinates.x, 2) + Math.pow(a.coordinates.y - b.coordinates.y, 2));
                                 const target = liveEnemies.sort((a, b) => getDist(a, caller) - getDist(b, caller))[0];
                                 // Use MonsterBattle's fireSpecialForAI if available
-                                console.log('about to check');
                                 if (this.monsterBattleRef && typeof this.monsterBattleRef.fireSpecialForAI === 'function') {
-                                    console.log('inside check 1');
                                     // Set the targetId so fireGlyph uses the correct target
                                     caller.targetId = target.id;
                                     this.monsterBattleRef.fireSpecialForAI(caller, glyphAction.subTypes[0]);
@@ -186,8 +185,8 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                                 glyphAction.cooldown_position = glyphAction.cooldown || 3;
                                 break;
                             }
-                            console.log('magic missile glyph used by wizard');
                         }
+                        // If can't cast glyph, fallback to movement/positioning
                         if(enemyIsAdjacent) {
                             data.methods.evadeBack(caller, combatants);
                         } else {
@@ -383,7 +382,6 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
     this.initiateAttack = async (caller, manualAttack, combatants) => {
         if(!caller) return
         const target = combatants[caller.targetId];
-        
         if(manualAttack){
             if(caller.pendingAttack && caller.pendingAttack.cooldown_position < 99){
                 console.log('pending attack not charged fully');

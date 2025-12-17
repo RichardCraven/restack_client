@@ -40,14 +40,16 @@ const DEATH_ANIMATION_DURATION = 2200;
 // const SHOW_BORDERS = true;
 class MonsterBattle extends React.Component {
     // Allow AI to trigger glyph/special casting using the same path as the UI
+    // Allow AI to fire glyphs without requiring the fighter to be selected
     fireSpecialForAI = (fighter, glyph = null) => {
-        this.setState({ selectedFighter: fighter }, () => {
-            if (glyph) {
-                this.fireGlyph(glyph);
-            } else {
+        if (glyph) {
+            this.fireGlyph(glyph, fighter);
+        } else {
+            // fallback: set selectedFighter for other specials
+            this.setState({ selectedFighter: fighter }, () => {
                 this.fireSpecial(null);
-            }
-        });
+            });
+        }
     }
     removeDeadCombatantAfterDelay = (id) => {
             // Only remove from combatManager (the source of truth)
@@ -675,8 +677,11 @@ class MonsterBattle extends React.Component {
             this.props.combatManager.fighterManualAttack()
         }
     }
-    fireGlyph = (glyph) => {
-        console.log('glyph firing', glyph);
+    // Accept optional fighter argument for AI path
+    fireGlyph = (glyph, fighterOverride = null) => {
+        console.log('glyph firing', glyph, 'fighterOverride', fighterOverride);
+        // Use override if provided (AI), else fall back to selectedFighter (manual)
+        const selectedFighter = fighterOverride || this.state.selectedFighter;
         switch(glyph.type){
             case 'magic missile':
                 console.log('!', this.props.animationManager);
@@ -692,15 +697,14 @@ class MonsterBattle extends React.Component {
 
 
 
-                let selectedFighter = this.state.selectedFighter;
                 let specials = selectedFighter?.specials;
                 let consumableSpecials = selectedFighter?.specialActions;
-                consumableSpecials.forEach(a=>a.selected = false)
-                if(specials) specials.forEach(a=>a.selected = false)
+                if (consumableSpecials) consumableSpecials.forEach(a=>a.selected = false)
+                if (specials) specials.forEach(a=>a.selected = false)
 
 
 
-                let target = this.props.combatManager.getCombatant(this.state.selectedFighter.targetId)
+                let target = this.props.combatManager.getCombatant(selectedFighter.targetId)
                 console.log('target: ', target);
                 if(!target) return
                 // let targetDistance = this.props.combatManager.getDistanceToTarget(this.state.selectedFighter, target)
