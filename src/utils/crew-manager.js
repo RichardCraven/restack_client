@@ -206,7 +206,7 @@ export function CrewManager(){
             stats: {
                 str: 5,
                 int: 6,
-                dex: 9,
+                dex: 5,
                 vit: 4,
                 fort: 7,
                 hp: 23,

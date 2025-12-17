@@ -87,10 +87,10 @@ export function Monk(data, utilMethods, animationManager, overlayManager){
                         if (data.methods.teleportToBackLine) {
                             // Pass a callback to notify the UI when teleport occurs
                             data.methods.teleportToBackLine(caller, combatants, this.onTeleport);
-                            caller.behaviorSequence = 'brawler';
+                            caller.behaviorSequence = 'attackFromTheBack';
                         } else {
                             data.methods.closeTheGap(caller, combatants);
-                            caller.behaviorSequence = 'brawler';
+                            caller.behaviorSequence = 'attackFromTheBack';
                         }
                         break;
                     default:
@@ -98,6 +98,68 @@ export function Monk(data, utilMethods, animationManager, overlayManager){
                         data.methods.closeTheGap(caller, combatants);
                 }
                 break;
+            case 'attackFromTheBack': {
+                // Acquire all live enemies
+                const liveEnemies = Object.values(combatants).filter(e => !e.dead && (e.isMonster || e.isMinion));
+                if (liveEnemies.length === 0) break;
+                // Try to find a target where Monk can get to their back (right side)
+                let foundBackTarget = false;
+                // Sort enemies by depth (closest to front)
+                const sortedByDepth = [...liveEnemies].sort((a, b) => a.depth - b.depth);
+                for (const enemy of sortedByDepth) {
+                    const desiredX = enemy.coordinates.x + 1;
+                    const desiredY = enemy.coordinates.y;
+                    const isWithinBounds = desiredX < this.MAX_DEPTH;
+                    const occupied = Object.values(combatants).some(e => !e.dead && e.coordinates.x === desiredX && e.coordinates.y === desiredY);
+                    if (isWithinBounds && !occupied) {
+                        caller.coordinates.x = desiredX;
+                        caller.coordinates.y = desiredY;
+                        caller.facing = 'left';
+                        caller.pendingAttack = this.chooseAttackType(caller, enemy);
+                        caller.targetId = enemy.id;
+                        foundBackTarget = true;
+                        break;
+                    }
+                }
+                if (!foundBackTarget) {
+                    // Prioritize enemies closest to the back line (highest x)
+                    const sortedByBack = [...liveEnemies].sort((a, b) => b.coordinates.x - a.coordinates.x);
+                    let placed = false;
+                    for (const enemy of sortedByBack) {
+                        // Try to move above or below the enemy if can't go past their column
+                        const aboveY = enemy.coordinates.y - 1;
+                        const belowY = enemy.coordinates.y + 1;
+                        const x = enemy.coordinates.x;
+                        // Try above
+                        if (aboveY >= 0 && !Object.values(combatants).some(e => !e.dead && e.coordinates.x === x && e.coordinates.y === aboveY)) {
+                            caller.coordinates.x = x;
+                            caller.coordinates.y = aboveY;
+                            caller.facing = 'left';
+                            caller.pendingAttack = this.chooseAttackType(caller, enemy);
+                            caller.targetId = enemy.id;
+                            placed = true;
+                            break;
+                        }
+                        // Try below
+                        if (belowY < this.MAX_LANES && !Object.values(combatants).some(e => !e.dead && e.coordinates.x === x && e.coordinates.y === belowY)) {
+                            caller.coordinates.x = x;
+                            caller.coordinates.y = belowY;
+                            caller.facing = 'left';
+                            caller.pendingAttack = this.chooseAttackType(caller, enemy);
+                            caller.targetId = enemy.id;
+                            placed = true;
+                            break;
+                        }
+                    }
+                    // If still not placed, just target the enemy closest to the back line
+                    if (!placed) {
+                        const enemy = sortedByBack[0];
+                        caller.pendingAttack = this.chooseAttackType(caller, enemy);
+                        caller.targetId = enemy.id;
+                    }
+                }
+                break;
+            }
             default:
                 data.methods.closeTheGap(caller, combatants);
         }
@@ -106,7 +168,6 @@ export function Monk(data, utilMethods, animationManager, overlayManager){
         const liveEnemies = Object.values(combatants).filter(e=>!e.dead && (e.isMonster || e.isMinion));
         const sorted = (targetToAvoid && liveEnemies.length > 1) ?  liveEnemies.filter(e => e.id !== targetToAvoid.id).sort((a,b)=>a.depth - b.depth) : liveEnemies.sort((a,b)=>a.depth - b.depth);
         const target = sorted[0];
-        // console.log('monk target: ', target);
 
         caller.pendingAttack = this.chooseAttackType(caller, target);
         caller.targetId = target.id;
@@ -152,12 +213,6 @@ export function Monk(data, utilMethods, animationManager, overlayManager){
         return attack;
     }
     this.triggerDragonPunch = async (coordinates, facing) => {
-        // AnimationManager should handle the animation and return the hit combatant if any
-        if (!this.animationManager || !this.animationManager.triggerAttackAnimation) {
-            console.warn('No animationManager or triggerAttackAnimation method found');
-            return null;
-        }
-        console.log('************* TRIGGER MONK DRAGON PUNCH ANIMATION *************');
         return await this.animationManager.triggerAttackAnimation({
             coordinates,
             facing,
@@ -169,7 +224,6 @@ export function Monk(data, utilMethods, animationManager, overlayManager){
     // Called when Monk teleports; can be set by UI to trigger teleport effect
     
         if (!caller.chargingUpActive) {
-            console.log('************* TRIGGER MONK CHARGING UP ANIMATION *************');
             caller.chargingUpActive = true;
             caller.chargingUpKey = (caller.chargingUpKey || 0) + 1;
             caller.chargingUpStartedAt = Date.now();
@@ -196,8 +250,7 @@ export function Monk(data, utilMethods, animationManager, overlayManager){
 
         const facingRight = this.fighterFacingRight(caller)
         const target = combatants[caller.targetId];
-        const facing = caller.facing ? caller.facing : callerFacing(caller,target)
-        console.log('MONK INITIATE ATTACK, caller.pendingAttack:', caller.pendingAttack);
+        const facing = caller.facing ? caller.facing : callerFacing(caller,target);
         caller.attacking = true; 
         if(manualAttack){
             if(caller.pendingAttack && caller.pendingAttack.cooldown_position < 99){
@@ -225,12 +278,10 @@ export function Monk(data, utilMethods, animationManager, overlayManager){
                 }
             }
         } else {
-            console.log('should be in here...');
             const distanceToTarget = data.methods.getDistanceToTarget(caller, target),
             laneDiff = data.methods.getLaneDifferenceToTarget(caller, target);
             switch(caller.pendingAttack.name){
                 case 'dragon punch':
-                    console.log('about to trigger dragon punch...');
                     const combatantHit = await this.triggerDragonPunch(caller.coordinates, facing)
                     if(combatantHit){
                         this.hitsCombatant(caller, combatantHit);
@@ -257,7 +308,7 @@ export function Monk(data, utilMethods, animationManager, overlayManager){
             console.warn('No animationManager or triggerAttackAnimation method found');
             return null;
         }
-        console.log('************* TRIGGER MONK PUNCH ANIMATION *************');
+        
         return await this.animationManager.triggerAttackAnimation({
             coordinates,
             facing,

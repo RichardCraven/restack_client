@@ -21,7 +21,8 @@ const RANGES = {
 }
 
 const clone = (val) => {
-    return JSON.parse(JSON.stringify(val))
+    if (val === undefined || val === null) return val;
+    return JSON.parse(JSON.stringify(val));
 }
 
 export function CombatManager(){
@@ -637,14 +638,15 @@ export function CombatManager(){
     }
     this.kickOffTurnCycles = () => {
         let arr = Object.values(this.combatants)
-        Object.values(this.combatants).forEach((combatant)=>{
-            combatant.attacks.forEach((a)=>{
-                a.cooldown_position = 100
-            })
-            // setTimeout(()=>{
-                // combatant.turnCycle();
-            // },8000)
-        })
+        Object.values(this.combatants).forEach((combatant) => {
+            if (Array.isArray(combatant.attacks)) {
+                combatant.attacks.forEach((a) => {
+                    if (a && typeof a.cooldown_position !== 'undefined') {
+                        a.cooldown_position = 100;
+                    }
+                });
+            }
+        });
         let c = 0;
         const int = setInterval(()=>{
             c++

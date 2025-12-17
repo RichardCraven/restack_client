@@ -65,10 +65,11 @@ class CrewManagerPage extends React.Component{
             }
         ]
     }
+    // Ref wiring will be done after MonsterBattle is mounted in componentDidUpdate
+    // After MonsterBattle is mounted, wire up the ref to Wizard AI synchronously
+    this.wireMonsterBattleRefToWizardAI();
     this.props.crewManager.beginSpecialAction(wizard, action, action.subTypes[0])
     wizard.specialActions.push(action)
-    
-
 
     let selectedCrew = [];
     // selectedCrew.push(options[0])
@@ -93,6 +94,25 @@ class CrewManagerPage extends React.Component{
         selectedCrew,
         selectedCrewMember: selectedCrew[0]
     })
+    }
+
+    componentDidUpdate(prevProps, prevState) {
+        // Only wire the ref if crewSelected just became true and MonsterBattle is mounted
+        if (!prevState.crewSelected && this.state.crewSelected) {
+            this.wireMonsterBattleRefToWizardAI();
+        }
+    }
+
+    wireMonsterBattleRefToWizardAI = () => {
+        if (
+            this.monsterBattleComponentRef.current &&
+            this.props.combatManager &&
+            this.props.combatManager.fighterAI &&
+            this.props.combatManager.fighterAI.roster &&
+            this.props.combatManager.fighterAI.roster.wizard
+        ) {
+            this.props.combatManager.fighterAI.roster.wizard.monsterBattleRef = this.monsterBattleComponentRef.current;
+        }
   }
 //   useScript('../assets/fullYear.js')
 
@@ -339,22 +359,26 @@ combatKeyUpListener = (event) => {
                         {this.state.selectedCrewMember && <div className="abilities-pane">
                             <div className="attacks">Attacks: &nbsp;
                                 {this.state.selectedCrewMember.attacks.map((e,i)=> {
-                                    return <div key={i}>{ e }{i !== this.state.selectedCrewMember.attacks.length-1 ?  ',' : ''} &nbsp; </div>
+                                    const name = typeof e === 'object' && e !== null ? e.name : e;
+                                    return <div key={i}>{ name }{i !== this.state.selectedCrewMember.attacks.length-1 ?  ',' : ''} &nbsp; </div>
                                 })}
                             </div>
                             <div className="specials">Specials: &nbsp;
                                 {this.state.selectedCrewMember.specials.map((e,i)=> {
-                                    return <div key={i}>{ e }{i !== this.state.selectedCrewMember.specials.length-1 ?  ',' : ''} &nbsp; </div>
+                                    const name = typeof e === 'object' && e !== null ? e.name : e;
+                                    return <div key={i}>{ name }{i !== this.state.selectedCrewMember.specials.length-1 ?  ',' : ''} &nbsp; </div>
                                 })}
                             </div>
                             <div className="passives">Passives: &nbsp;
                                 {this.state.selectedCrewMember.passives.map((e,i)=> {
-                                    return <div key={i}>{ e }{i !== this.state.selectedCrewMember.passives.length-1 ?  ',' : ''} &nbsp; </div>
+                                    const name = typeof e === 'object' && e !== null ? e.name : e;
+                                    return <div key={i}>{ name }{i !== this.state.selectedCrewMember.passives.length-1 ?  ',' : ''} &nbsp; </div>
                                 })}
                             </div>
                             <div className="weaknesses">Weaknesses: &nbsp;
                                 {this.state.selectedCrewMember.weaknesses.map((e,i)=> {
-                                    return <div key={i}>{ e }{i !== this.state.selectedCrewMember.weaknesses.length-1 ?  ',' : ''} &nbsp; </div>
+                                    const name = typeof e === 'object' && e !== null ? e.name : e;
+                                    return <div key={i}>{ name }{i !== this.state.selectedCrewMember.weaknesses.length-1 ?  ',' : ''} &nbsp; </div>
                                 })}
                             </div>
                         </div>}

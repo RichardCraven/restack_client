@@ -1,4 +1,5 @@
 import React from 'react'
+// Show/hide tile coordinates overlay
 import '../../styles/monster-battle.scss'
 import * as images from '../../utils/images'
 // import AnimationTile from '../../components/animation-tile';
@@ -24,7 +25,7 @@ const SHOW_TILE_BORDERS = true;
 const SHOW_COMBAT_BORDER_COLORS = false;
 const SHOW_INTERACTION_PANE = true;
 const SHOW_MONSTER_IDS = false;
-
+const SHOW_COORDINATES = false;
 
 const RANGES = {
     close: 1,
@@ -38,6 +39,16 @@ const DEATH_ANIMATION_DURATION = 2200;
 
 // const SHOW_BORDERS = true;
 class MonsterBattle extends React.Component {
+    // Allow AI to trigger glyph/special casting using the same path as the UI
+    fireSpecialForAI = (fighter, glyph = null) => {
+        this.setState({ selectedFighter: fighter }, () => {
+            if (glyph) {
+                this.fireGlyph(glyph);
+            } else {
+                this.fireSpecial(null);
+            }
+        });
+    }
     removeDeadCombatantAfterDelay = (id) => {
             // Only remove from combatManager (the source of truth)
             if (this.props.combatManager && typeof this.props.combatManager.removeCombatant === 'function') {
@@ -970,9 +981,11 @@ class MonsterBattle extends React.Component {
                                 border: SHOW_COMBAT_BORDER_COLORS ? '1px solid #e8e880' : '1px solid transparent'
                             }}
                             >
-                                <div className="coord-container">
-                                    {t.x}, {t.y}
-                                </div>
+                                {SHOW_COORDINATES && (
+                                    <div className="coord-container">
+                                        {t.x}, {t.y}
+                                    </div>
+                                )}
                                 {this.state.ghostPortraitMatrix[i] && <div className="ghost-portrait"
                                 style={{
                                     backgroundImage: "url(" + this.state.ghostPortraitMatrix[i] + ")"
@@ -1084,16 +1097,23 @@ class MonsterBattle extends React.Component {
                             <div className="interaction-header">Glyphs</div>
                             <div className="interaction-tooltip">{this.state.hoveredGlyphTile}</div>
                             <div className="interaction-tile-container">
-                                {this.state.selectedFighter?.specialActions.length > 0 && this.state.selectedFighter?.specialActions.map((glyphUnit, i)=>{
-                                return <div key={i} className='interaction-tile-wrapper'>
-                                            <div  
-                                                style={{backgroundImage: "url(" + glyphUnit.actionType.subTypes[0].icon_url + "), radial-gradient(white 40%, black 80%)", cursor: 'pointer'}} 
+                                {this.state.selectedFighter?.specialActions && this.state.selectedFighter.specialActions.length > 0 && this.state.selectedFighter.specialActions.map((glyphUnit, i) => {
+                                    // Defensive: ensure glyphUnit and subTypes exist
+                                    if (!glyphUnit || !glyphUnit.actionType || !Array.isArray(glyphUnit.actionType.subTypes) || !glyphUnit.actionType.subTypes[0]) {
+                                        return null;
+                                    }
+                                    const glyph = glyphUnit.actionType.subTypes[0];
+                                    return (
+                                        <div key={i} className='interaction-tile-wrapper'>
+                                            <div
+                                                style={{ backgroundImage: `url(${glyph.icon_url}), radial-gradient(white 40%, black 80%)`, cursor: 'pointer' }}
                                                 className={`interaction-tile special ${glyphUnit.selected ? 'selected' : ''}`}
-                                                onClick={() => this.fireGlyph(glyphUnit.actionType.subTypes[0])}
-                                                onMouseEnter={() => this.glyphTileHovered(glyphUnit)} 
+                                                onClick={() => this.fireGlyph(glyph)}
+                                                onMouseEnter={() => this.glyphTileHovered(glyphUnit)}
                                                 onMouseLeave={() => this.glyphTileHovered(null)}>
                                             </div>
                                         </div>
+                                    );
                                 })}
                             </div>
                         </div>

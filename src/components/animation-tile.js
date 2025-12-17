@@ -148,7 +148,7 @@ export default function AnimationTile(props) {
                 ${isTeleporting ? 'instant-teleport' : ''}
             `}
         >
-            <div className="animation-tile-id">{tileIdFromCoords !== null ? tileIdFromCoords : props.id}</div>
+            {/* <div className="animation-tile-id">{tileIdFromCoords !== null ? tileIdFromCoords : props.id}</div> */}
                         {props.animationType === 'spin_attack' && (
                             <img
                                 src={images['spear_white']}

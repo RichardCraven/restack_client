@@ -24,13 +24,6 @@ export default function FightersCombatGrid(props) {
             <div className="fighter-content">
                 {activeCrew.map((fighter) => {
                     const isTeleporting = props.teleportingFighterId === fighter.id;
-                    if (props.teleportingFighterId || isTeleporting) {
-                        console.log('[Teleport Debug]', {
-                            teleportingFighterId: props.teleportingFighterId,
-                            fighterId: fighter.id,
-                            isTeleporting
-                        });
-                    }
                     const transitionStyle = { transition: isTeleporting ? 'none' : '1s' };
                     return  <div key={fighter.id}  className={`lane-wrapper ${isTeleporting ? ' teleporting' : ''}`}
                                 style={{ 
@@ -119,16 +112,9 @@ export default function FightersCombatGrid(props) {
                                     { props.getFighterDetails(fighter) && props.getFighterDetails(fighter).pendingAttack && !props.getFighterDetails(fighter).dead && (() => {
                                         const details = props.getFighterDetails(fighter);
                                         const isMonk = fighter.type === 'monk';
-                                        // if(isMonk){
-                                        //     console.log('is monk', fighter, 'details:',  details);
-                                        // }
                                         const isBasicPunch = isMonk && details.pendingAttack.range === 'close' && details.pendingAttack.name !== 'dragon punch';
                                         const icon = isBasicPunch ? images.fist_punch : props.battleData[fighter.id].pendingAttack.icon;
-                                        if(isMonk && details.attacking){
-                                            console.log('basicPunch: ', isBasicPunch, details.pendingAttack);
-                                            // debugger
-                                            console.log('icon: ', icon)
-                                        }
+
                                         return (
                                             <div className={`weapon-wrapper
                                                 ${!props.fighterFacingRight(fighter) ? 'reversed' : ''}
