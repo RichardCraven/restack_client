@@ -2,7 +2,7 @@ import React, { useRef, useEffect } from 'react'
 
 // CanvasMagicCircle renders a static circle of particles at a given center and radius
 // Expects: center {x, y} in tile units, radius (in tile units), numParticles, color, width, height
-const CanvasMagicCircle = ({ center, radius = 1.2, numParticles = 12, color = 'aqua', width, height }) => {
+const CanvasMagicCircle = ({ center, radius = 1.2, numParticles = 12, color = 'aqua', width, height, origin, targetDistance, targetLaneDiff, duration }) => {
     // Fallbacks for width/height if not provided or NaN
     const safeWidth = typeof width === 'number' && !isNaN(width) ? width : 200;
     const safeHeight = typeof height === 'number' && !isNaN(height) ? height : 200;
@@ -51,14 +51,40 @@ const CanvasMagicCircle = ({ center, radius = 1.2, numParticles = 12, color = 'a
         };
     }, [center, radius, numParticles, color, safeWidth, safeHeight]);
 
+    // Animation movement props (optional)
+    // These props are injected by animation-manager.js for moving/lingering effect
+    const _origin = origin || { x: 0, y: 0 };
+    const _targetDistance = typeof targetDistance === 'number' ? targetDistance : 0;
+    const _targetLaneDiff = typeof targetLaneDiff === 'number' ? targetLaneDiff : 0;
+    const _duration = typeof duration === 'number' ? duration : 2500;
+
+    // Use a static animation name for testing, and put <style> in JSX like CanvasMagicMissile
+    const animationName = 'moveRight';
     return (
-        <canvas
-            className='spell-animation magic-circle'
-            ref={canvasRef}
-            width={safeWidth}
-            height={safeHeight}
-            style={{ position: 'absolute', left: 0, top: 0, pointerEvents: 'none' }}
-        />
+        <>
+            <canvas
+                className='spell-animation magic-circle'
+                ref={canvasRef}
+                width={safeWidth}
+                height={safeHeight}
+                style={{
+                    position: 'absolute',
+                    left: 0,
+                    top: 0,
+                    pointerEvents: 'none',
+                    animation: `${animationName} ${_duration}ms linear forwards`,
+                }}
+            />
+                        <style>{`
+                                @keyframes moveRight {
+                                    0% { transform: translateX(${_origin.x * 100}px) translateY(${_origin.y * 100}px) scale(1); opacity: 1; }
+                                    25% { transform: translateX(${_origin.x * 100 + 50}px) translateY(${_origin.y * 100}px) scale(1); opacity: 1; }
+                                    50% { transform: translateX(${_origin.x * 100 + 100}px) translateY(${_origin.y * 100}px) scale(1); opacity: 1; }
+                                    80% { transform: translateX(${(_origin.x + 3) * 100}px) translateY(${_origin.y * 100}px) scale(1); opacity: 1; }
+                                    100% { transform: translateX(${(_origin.x + 3) * 100}px) translateY(${_origin.y * 100}px) scale(1); opacity: 0.7; }
+                                }
+                        `}</style>
+        </>
     )
 }
 

@@ -50,7 +50,7 @@ const AnimationGrid = ({
                 <div className="canvas-grid">
                     {animationData.canvasAnimations?.map((anim, idx) => {
                         if (anim.type === 'magicCircle' || anim.particles) {
-                            // Safe fallbacks for width/height
+                            // Safe fallbacks for width/height (original logic)
                             const TILE_SIZE = typeof tileProps.TILE_SIZE === 'number' && !isNaN(tileProps.TILE_SIZE) ? tileProps.TILE_SIZE : 100;
                             const MAX_DEPTH = typeof tileProps.MAX_DEPTH === 'number' && !isNaN(tileProps.MAX_DEPTH) ? tileProps.MAX_DEPTH : 5;
                             const MAX_ROWS = typeof tileProps.MAX_ROWS === 'number' && !isNaN(tileProps.MAX_ROWS) ? tileProps.MAX_ROWS : 5;
@@ -64,6 +64,10 @@ const AnimationGrid = ({
                                 color={anim.color}
                                 width={width}
                                 height={height}
+                                origin={anim.origin}
+                                targetDistance={anim.targetDistance}
+                                targetLaneDiff={anim.targetLaneDiff}
+                                duration={anim.duration}
                             />
                         } else {
                             return <CanvasMagicMissile
