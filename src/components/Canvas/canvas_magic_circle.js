@@ -56,7 +56,8 @@ const CanvasMagicCircle = ({ center, radius = 1.2, numParticles = 12, color = 'a
     const _origin = origin || { x: 0, y: 0 };
     const _targetDistance = typeof targetDistance === 'number' ? targetDistance : 0;
     const _targetLaneDiff = typeof targetLaneDiff === 'number' ? targetLaneDiff : 0;
-    const _duration = typeof duration === 'number' ? duration : 2500;
+    // Make the animation much faster (e.g., 400ms)
+    const _duration = 400;
 
     // Use a static animation name for testing, and put <style> in JSX like CanvasMagicMissile
     const animationName = 'moveRight';
@@ -77,11 +78,8 @@ const CanvasMagicCircle = ({ center, radius = 1.2, numParticles = 12, color = 'a
             />
                         <style>{`
                                 @keyframes moveRight {
-                                    0% { transform: translateX(${_origin.x * 100}px) translateY(${_origin.y * 100}px) scale(1); opacity: 1; }
-                                    25% { transform: translateX(${_origin.x * 100 + 50}px) translateY(${_origin.y * 100}px) scale(1); opacity: 1; }
-                                    50% { transform: translateX(${_origin.x * 100 + 100}px) translateY(${_origin.y * 100}px) scale(1); opacity: 1; }
-                                    80% { transform: translateX(${(_origin.x + 3) * 100}px) translateY(${_origin.y * 100}px) scale(1); opacity: 1; }
-                                    100% { transform: translateX(${(_origin.x + 3) * 100}px) translateY(${_origin.y * 100}px) scale(1); opacity: 0.7; }
+                                      0% { transform: translateX(${_origin.x * 100}px) translateY(${_origin.y * 100}px) scale(1); opacity: 1; }
+                                      100% { transform: translateX(${(_origin.x + _targetDistance) * 100}px) translateY(${(_origin.y + _targetLaneDiff) * 100}px) scale(1); opacity: 0.7; }
                                 }
                         `}</style>
         </>
