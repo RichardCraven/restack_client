@@ -65,6 +65,10 @@ const someoneElseIsInCoords = (caller, coords)=>{
 }
 
 const goTowards = (caller, combatants, targetTile) => {
+    if (!targetTile || typeof targetTile.x !== 'number' || typeof targetTile.y !== 'number') {
+        // Prevent TypeError if targetTile is invalid
+        return JSON.parse(JSON.stringify(caller.coordinates));
+    }
     const isTargetTileOccupied = someoneIsInCoords(targetTile, combatants);
     const {N,E,S,W,NW,SW,NE,SE} = getSurroundings(caller.coordinates)
 

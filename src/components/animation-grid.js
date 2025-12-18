@@ -3,6 +3,7 @@ import React, { useEffect } from 'react';
 import AnimationTile from '../components/animation-tile';
 import CanvasMagicMissile from '../components/Canvas/canvas_magic_missile'
 import CanvasMagicCircle from '../components/Canvas/canvas_magic_circle'
+import CanvasMagicTriangle from '../components/Canvas/canvas_magic_triangle'
 
 // class AnimationGrid extends React.Component {
     // constructor(props){
@@ -49,14 +50,27 @@ const AnimationGrid = ({
             <div className="canvas-grid-container">
                 <div className="canvas-grid">
                     {animationData.canvasAnimations?.map((anim, idx) => {
-                        if (anim.type === 'magicCircle' || anim.particles) {
-                            // Safe fallbacks for width/height (original logic)
-                            const TILE_SIZE = typeof tileProps.TILE_SIZE === 'number' && !isNaN(tileProps.TILE_SIZE) ? tileProps.TILE_SIZE : 100;
-                            const MAX_DEPTH = typeof tileProps.MAX_DEPTH === 'number' && !isNaN(tileProps.MAX_DEPTH) ? tileProps.MAX_DEPTH : 5;
-                            const MAX_ROWS = typeof tileProps.MAX_ROWS === 'number' && !isNaN(tileProps.MAX_ROWS) ? tileProps.MAX_ROWS : 5;
-                            const width = TILE_SIZE * MAX_DEPTH;
-                            const height = TILE_SIZE * MAX_ROWS;
+                        const TILE_SIZE = typeof tileProps.TILE_SIZE === 'number' && !isNaN(tileProps.TILE_SIZE) ? tileProps.TILE_SIZE : 100;
+                        const MAX_DEPTH = typeof tileProps.MAX_DEPTH === 'number' && !isNaN(tileProps.MAX_DEPTH) ? tileProps.MAX_DEPTH : 5;
+                        const MAX_ROWS = typeof tileProps.MAX_ROWS === 'number' && !isNaN(tileProps.MAX_ROWS) ? tileProps.MAX_ROWS : 5;
+                        const width = TILE_SIZE * MAX_DEPTH;
+                        const height = TILE_SIZE * MAX_ROWS;
+                        if (anim.type === 'magicCircle') {
                             return <CanvasMagicCircle
+                                key={idx}
+                                center={anim.center}
+                                radius={anim.radius}
+                                numParticles={anim.numParticles}
+                                color={anim.color}
+                                width={width}
+                                height={height}
+                                origin={anim.origin}
+                                targetDistance={anim.targetDistance}
+                                targetLaneDiff={anim.targetLaneDiff}
+                                duration={anim.duration}
+                            />
+                        } else if (anim.type === 'magicTriangle') {
+                            return <CanvasMagicTriangle
                                 key={idx}
                                 center={anim.center}
                                 radius={anim.radius}

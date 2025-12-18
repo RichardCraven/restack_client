@@ -112,8 +112,22 @@ export function Monk(data, utilMethods, animationManager, overlayManager){
                     const isWithinBounds = desiredX < this.MAX_DEPTH;
                     const occupied = Object.values(combatants).some(e => !e.dead && e.coordinates.x === desiredX && e.coordinates.y === desiredY);
                     if (isWithinBounds && !occupied) {
-                        caller.coordinates.x = desiredX;
-                        caller.coordinates.y = desiredY;
+                        // Move only one space per turn toward the desired position
+                        const dx = desiredX - caller.coordinates.x;
+                        const dy = desiredY - caller.coordinates.y;
+                        let nextX = caller.coordinates.x;
+                        let nextY = caller.coordinates.y;
+                        if (dx !== 0) {
+                            nextX += Math.sign(dx);
+                        } else if (dy !== 0) {
+                            nextY += Math.sign(dy);
+                        }
+                        // Only move if the next tile is not occupied
+                        const nextOccupied = Object.values(combatants).some(e => !e.dead && e.coordinates.x === nextX && e.coordinates.y === nextY);
+                        if (!nextOccupied) {
+                            caller.coordinates.x = nextX;
+                            caller.coordinates.y = nextY;
+                        }
                         caller.facing = 'left';
                         caller.pendingAttack = this.chooseAttackType(caller, enemy);
                         caller.targetId = enemy.id;
@@ -130,20 +144,41 @@ export function Monk(data, utilMethods, animationManager, overlayManager){
                         const aboveY = enemy.coordinates.y - 1;
                         const belowY = enemy.coordinates.y + 1;
                         const x = enemy.coordinates.x;
-                        // Try above
+                        // Try above (move only one space per turn)
                         if (aboveY >= 0 && !Object.values(combatants).some(e => !e.dead && e.coordinates.x === x && e.coordinates.y === aboveY)) {
-                            caller.coordinates.x = x;
-                            caller.coordinates.y = aboveY;
+                            // Move Monk one space toward aboveY if not already there
+                            let nextY = caller.coordinates.y;
+                            if (nextY > aboveY) {
+                                nextY -= 1;
+                            } else if (nextY < aboveY) {
+                                nextY += 1;
+                            } else {
+                                nextY = aboveY;
+                            }
+                            if (!Object.values(combatants).some(e => !e.dead && e.coordinates.x === x && e.coordinates.y === nextY)) {
+                                caller.coordinates.x = x;
+                                caller.coordinates.y = nextY;
+                            }
                             caller.facing = 'left';
                             caller.pendingAttack = this.chooseAttackType(caller, enemy);
                             caller.targetId = enemy.id;
                             placed = true;
                             break;
                         }
-                        // Try below
+                        // Try below (move only one space per turn)
                         if (belowY < this.MAX_LANES && !Object.values(combatants).some(e => !e.dead && e.coordinates.x === x && e.coordinates.y === belowY)) {
-                            caller.coordinates.x = x;
-                            caller.coordinates.y = belowY;
+                            let nextY = caller.coordinates.y;
+                            if (nextY < belowY) {
+                                nextY += 1;
+                            } else if (nextY > belowY) {
+                                nextY -= 1;
+                            } else {
+                                nextY = belowY;
+                            }
+                            if (!Object.values(combatants).some(e => !e.dead && e.coordinates.x === x && e.coordinates.y === nextY)) {
+                                caller.coordinates.x = x;
+                                caller.coordinates.y = nextY;
+                            }
                             caller.facing = 'left';
                             caller.pendingAttack = this.chooseAttackType(caller, enemy);
                             caller.targetId = enemy.id;

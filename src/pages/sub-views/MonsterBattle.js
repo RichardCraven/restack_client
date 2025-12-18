@@ -718,7 +718,9 @@ class MonsterBattle extends React.Component {
                 // console.log('this.props.animationManager.canvasAnimations', this.props.animationManager.canvasAnimations);
                 // this.props.animationManager.canvasAnimations[0]
                 // TEMP: Use magicCircle instead of magicMissile for testing
-                this.props.animationManager.magicCircle(selectedFighter.coordinates, target.coordinates)
+                // this.props.animationManager.magicMissile(selectedFighter.coordinates, target.coordinates)
+                // this.props.animationManager.magicCircle(selectedFighter.coordinates, target.coordinates)
+                this.props.animationManager.magicTriangle(selectedFighter.coordinates, target.coordinates)
                 // this.setState({
                 //     magicMissile_fire: true,
                 //     magicMissile_targetDistance: targetDistance,

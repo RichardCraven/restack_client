@@ -289,6 +289,38 @@ export function AnimationManager(){
             this.update();
         }, duration);
     }
+        // Magic Triangle Animation: triangle of particles at midpoint between source and target
+    this.magicTriangle = (sourceCoords, targetCoords, options = {}) => {
+        // Calculate midpoint between source and target
+        const midX = (sourceCoords.x + targetCoords.x) / 2;
+        const midY = (sourceCoords.y + targetCoords.y) / 2;
+        // Triangle parameters
+        const numParticles = 3;
+        const radius = options.radius || 4; // in tile units
+        const duration = options.duration || 2500;
+        // For movement animation (like magic missile)
+        const origin = sourceCoords;
+        const targetDistance = this.getDistanceToTarget(sourceCoords, targetCoords);
+        const targetLaneDiff = this.getVerticalDistanceToTarget(sourceCoords, targetCoords);
+        const ref = {
+            type: 'magicTriangle',
+            center: { x: midX, y: midY },
+            radius,
+            numParticles,
+            duration,
+            color: options.color || 'aqua',
+            origin,
+            targetDistance,
+            targetLaneDiff
+        };
+        this.canvasAnimations.push(ref);
+        this.update();
+        setTimeout(() => {
+            let e = this.canvasAnimations.find(c => c === ref);
+            this.canvasAnimations = this.canvasAnimations.filter(v => v !== e);
+            this.update();
+        }, duration);
+    }
     this.getDistanceToTarget = (sourceCoords, targetCoords) => {
         // if(!target) return 0;
         let d = targetCoords.x - sourceCoords.x
