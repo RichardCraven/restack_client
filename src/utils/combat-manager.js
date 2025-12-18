@@ -709,7 +709,7 @@ export function CombatManager(){
             this.checkOverlap(caller)
             this.updateCoordinates(caller)
         }
-    this.updateData(clone(this.combatants))
+        this.updateData(clone(this.combatants))
     }
     this.chooseAttackType = (caller, target) => {
         if(this.fighterAI.roster[caller.type]){
@@ -1743,9 +1743,17 @@ export function CombatManager(){
     }
 
     this.targetKilled = (combatant) => {
-        combatant.aiming = false;
-        combatant.dead = true;
+    combatant.aiming = false;
+    combatant.dead = true;
         combatant.locked = combatant.frozen = false;
+        // Immediately clear targettedBy so reticle is removed
+        if (Array.isArray(combatant.targettedBy)) {
+            combatant.targettedBy = [];
+        }
+        // Immediately broadcast update so UI sees dead state instantly
+        // if (typeof this.updateData === 'function') {
+            this.updateData(clone(this.combatants));
+        // }
         setTimeout(()=>{
             combatant.wounded = false;
         },1000)

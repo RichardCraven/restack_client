@@ -2,11 +2,11 @@ import React from 'react';
 
 export default function Overlay(props) {
     // {id: combatant.id, animationType: animationType, data: combatant}
-    let content;
-    // console.log('props.animationType: ', props.animationType);
+    let content = null;
     switch(props.animationType){
         case 'targetted':
-            // console.log('targetted!');
+            // Only render the reticle if the combatant is not dead
+            if (props.data?.dead) return null;
             content =  <div className={`overlay-content overlay-targetted ${props.data?.color ? props.data.color : 'default-color'} ${props.data.fadeOut ? 'fade-out' : ''}`}>
                             <div className="relative-child">
                                 <div className="moving-square top-left" style={{borderTop: `2px solid ${props.data?.color}`, borderLeft: `2px solid ${props.data?.color}`}}></div>
@@ -14,24 +14,22 @@ export default function Overlay(props) {
                                 <div className="moving-square bot-left" style={{borderBottom: `2px solid ${props.data?.color}`, borderLeft: `2px solid ${props.data?.color}`}}></div>
                                 <div className="moving-square bot-right" style={{borderBottom: `2px solid ${props.data?.color}`, borderRight: `2px solid ${props.data?.color}`}}></div>
                             </div>
-                        </div>
-        break;
+                        </div>;
+            break;
         case 'blinded':
-            // console.log('blinded!');
             content = <div className="overlay-content">
                             BLINDED
-                        </div>
-        break;
+                        </div>;
+            break;
         case 'glowing-eyes':
-            // console.log('blinded!');
             content = <div className={`overlay-content overlay-glowing-eyes ${props.data.fadeOut ? 'fade-out' : ''}`}>
                         <div className="relative-child">
                             <div className="eye redbackgroud"></div>
                         </div>
-                    </div>
-        break;
+                    </div>;
+            break;
+        default:
+            return null;
     }
-    return (
-        content
-    )
+    return content;
 }

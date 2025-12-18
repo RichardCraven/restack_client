@@ -56,7 +56,7 @@ export default function FightersCombatGrid(props) {
                                                 props.getFighterDetails(fighter)?.missed ? (props.fighterFacingRight(fighter) ? 'missed' : 'missed-reversed') : '',
                                                 fighter.isLeader ? 'leader-portrait' : '',
                                                 props.getFighterDetails(fighter)?.dead ? 'dead fighterDeadAnimation' : '',
-                                                (props.selectedMonster?.targetId === fighter.id || props.selectedFighter?.targetId === fighter.id) ? 'targetted' : '',
+                                                (props.selectedFighter?.targetId === fighter.id || props.selectedMonster?.targetId === fighter.id) && !props.getFighterDetails(fighter)?.dead ? 'targetted' : '',
                                                 props.getFighterDetails(fighter)?.active ? 'active' : '',
                                                 props.fighterFacingRight(fighter) ? '' : 'reversed',
                                                 props.getFighterDetails(fighter)?.locked ? 'locked' : '',
@@ -80,7 +80,11 @@ export default function FightersCombatGrid(props) {
                                             <div className="color-glow" style={{color: props.getFighterDetails(fighter)?.color}}></div>
                                         </div>
                                         {props.animationOverlays[fighter.id] && props.getAllOverlaysById(fighter.id).map((overlay, i) => {
-                                            return <Overlay key={i} animationType={overlay.type} data={overlay.data}/>
+                                            const overlayData = {
+                                                ...overlay.data,
+                                                dead: props.getFighterDetails(fighter)?.dead
+                                            };
+                                            return <Overlay key={i} animationType={overlay.type} data={overlayData} />;
                                         })}
                                         <div className={`portrait-overlay`} >
                                             <div className="damage-indicator-container">

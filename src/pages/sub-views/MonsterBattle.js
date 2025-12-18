@@ -413,6 +413,10 @@ class MonsterBattle extends React.Component {
     }
     updateBattleData = (battleData) => {
         // Deep clone to ensure new reference for React
+        // if (Object.values(battleData).some(e => e.dead)) {
+        //     console.log('*****************battleData update received in MB   ', battleData);
+        //     debugger;
+        // }
         const clonedBattleData = JSON.parse(JSON.stringify(battleData));
         this.setState({
             battleData: clonedBattleData

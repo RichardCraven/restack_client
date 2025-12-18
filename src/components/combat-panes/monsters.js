@@ -108,7 +108,6 @@ const MonstersCombatGrid = ({
         return (typeof teleportingFighterId !== 'undefined' && teleportingFighterId === id);
     };
     const transitionStyle = (id) => ({ transition: isTeleporting(id) ? 'none' : '1s' });
-
     return (
         <div className="mb-col monster-pane">
             {/* Main Monster: only render if not dead, or if dead but still animating */}
@@ -206,7 +205,8 @@ const MonstersCombatGrid = ({
                                         ))}
                                     </div>
                                 </div>
-                                <div className="targetted-by-container" style={{zIndex: 3, position: 'absolute', top: 0, left: 0, width: '100%', height: '100%'}}>
+                                {/* { !battleData[monster.id]?.dead && (
+                                  <div className="targetted-by-container" style={{zIndex: 3, position: 'absolute', top: 0, left: 0, width: '100%', height: '100%'}}>
                                     {battleData[monster.id]?.targettedBy.map((e, i) => (
                                         <div
                                             key={i}
@@ -214,11 +214,17 @@ const MonstersCombatGrid = ({
                                             style={{ backgroundImage: `url(${images[battleData[e]?.portrait]})` }}
                                         ></div>
                                     ))}
-                                </div>
+                                  </div>
+                                )} */}
                             </div>
-                            {battleData[monster.id] && animationOverlays[monster.id] && getAllOverlaysById(monster.id).map((overlay, i) => (
-                                <Overlay key={i} animationType={overlay.type} data={overlay.data} />
-                            ))}
+                            {battleData[monster.id] && !battleData[monster.id]?.dead && animationOverlays[monster.id] && getAllOverlaysById(monster.id).map((overlay, i) => {
+                                // Ensure overlay.data contains up-to-date 'dead' property
+                                const overlayData = {
+                                    ...overlay.data,
+                                    dead: battleData[monster.id]?.dead
+                                };
+                                return <Overlay key={i} animationType={overlay.type} data={overlayData} />;
+                            })}
                             <div className="indicators-wrapper">
                                 <div className="monster-hp-bar hp-bar">
                                     {!battleData[monster.id]?.dead && (
@@ -312,9 +318,13 @@ const MonstersCombatGrid = ({
                                         <div className="hit-flash-overlay" />
                                     )}
                                 </div>
-                                {animationOverlays[minion.id] && getAllOverlaysById(minion.id).map((overlay, i) => (
-                                    <Overlay key={i} animationType={overlay.type} data={overlay.data} />
-                                ))}
+                                {animationOverlays[minion.id] && getAllOverlaysById(minion.id).map((overlay, i) => {
+                                    const overlayData = {
+                                        ...overlay.data,
+                                        dead: minion.dead
+                                    };
+                                    return <Overlay key={i} animationType={overlay.type} data={overlayData} />;
+                                })}
                                 <div
                                     className="portrait-relative-container"
                                     onMouseEnter={() => portraitHovered(minion.id)}
