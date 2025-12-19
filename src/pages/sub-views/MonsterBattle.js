@@ -719,12 +719,14 @@ class MonsterBattle extends React.Component {
                 console.log('about to trigger from fighgter AI');
                 this.props.combatManager.fighterAI.roster['wizard'].triggerMagicMissile(selectedFighter, target, travelTime)
                 // this.props.combatManager.lockFighter(this.state.selectedFighter.id)
-                // console.log('this.props.animationManager.canvasAnimations', this.props.animationManager.canvasAnimations);
-                // this.props.animationManager.canvasAnimations[0]
-                // TEMP: Use magicCircle instead of magicMissile for testing
-                // this.props.animationManager.magicMissile(selectedFighter.coordinates, target.coordinates)
+
+
                 // this.props.animationManager.magicCircle(selectedFighter.coordinates, target.coordinates)
-                this.props.animationManager.magicTriangle(selectedFighter.coordinates, target.coordinates)
+                // setTimeout(()=>{
+                //     this.props.animationManager.magicTriangle(selectedFighter.coordinates, target.coordinates)
+                // }, 500)
+
+
                 // this.setState({
                 //     magicMissile_fire: true,
                 //     magicMissile_targetDistance: targetDistance,

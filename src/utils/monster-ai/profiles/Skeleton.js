@@ -1,6 +1,4 @@
 export function Skeleton(data, utilMethods, animationManager, overlayManager){
-    console.log('[Skeleton] data:', data);
-    console.log('[Skeleton] data.methods:', data && data.methods);
     this.MAX_DEPTH = data.MAX_DEPTH;
     this.MAX_LANES = data.MAX_LANES;
     this.INTERVAL_TIME = data.INTERVAL_TIME
@@ -29,8 +27,6 @@ export function Skeleton(data, utilMethods, animationManager, overlayManager){
         caller.targetId = target.id;
     }
     this.handleOverlap = (caller,combatants) => {
-        console.log('SKELLY handle overlap');
-        // debugger
         data.methods.closeTheGap(caller, combatants)
         if(caller.targetId){
             // data.methods.

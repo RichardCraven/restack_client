@@ -20,9 +20,7 @@ export function AnimationManager(){
             return null;
         }
         // Set icon based on type if not provided
-        console.log('ok got past the first check');
         let resolvedIcon = icon;
-        console.log('resolvedIcon before switch: ', resolvedIcon);
         if (!resolvedIcon) {
             switch (type) {
                 case 'dragon_punch':
@@ -58,7 +56,6 @@ export function AnimationManager(){
                 break;
         }
         const targetTileId = this.getTileIdByCoords(targetCoords);
-        console.log('about to trigger tile animation complex with:', { sourceTileId, targetTileId, type: type || 'dragon_punch' }   );
         return new Promise((resolve) => {
             const data = {
                 sourceTileId,
@@ -258,7 +255,6 @@ export function AnimationManager(){
     }
     // Magic Circle Animation: static circle of particles at midpoint between source and target
     this.magicCircle = (sourceCoords, targetCoords, options = {}) => {
-        console.log('in magic circle with sourceCoords, targetCoords:', sourceCoords, targetCoords);
         // Calculate midpoint between source and target
         const midX = (sourceCoords.x + targetCoords.x) / 2;
         const midY = (sourceCoords.y + targetCoords.y) / 2;
@@ -291,10 +287,10 @@ export function AnimationManager(){
     }
         // Magic Triangle Animation: triangle of particles at midpoint between source and target
     this.magicTriangle = (sourceCoords, targetCoords, options = {}) => {
-        // Calculate midpoint between source and target
-        const midX = (sourceCoords.x + targetCoords.x) / 2;
-        const midY = (sourceCoords.y + targetCoords.y) / 2;
-        // Triangle parameters
+        console.log('MAGIC TRIANGLE ANIMATION REQUESTED, targetCoords', targetCoords);
+        // debugger
+        // Center the triangle at the destination tile
+        // Draw triangle at the center of the canvas, but animate canvas from origin to destination
         const numParticles = 3;
         const radius = options.radius || 4; // in tile units
         const duration = options.duration || 2500;
@@ -302,16 +298,19 @@ export function AnimationManager(){
         const origin = sourceCoords;
         const targetDistance = this.getDistanceToTarget(sourceCoords, targetCoords);
         const targetLaneDiff = this.getVerticalDistanceToTarget(sourceCoords, targetCoords);
+        // The triangle is always drawn at the center of the canvas (0.5, 0.5 in tile units)
         const ref = {
             type: 'magicTriangle',
-            center: { x: midX, y: midY },
+            center: { x: 0.5, y: 0.5 }, // always draw at canvas center
             radius,
             numParticles,
             duration,
             color: options.color || 'aqua',
             origin,
+            // Animate canvas from origin to destination
             targetDistance,
-            targetLaneDiff
+            targetLaneDiff,
+            dest: { x: targetCoords.x, y: targetCoords.y }
         };
         this.canvasAnimations.push(ref);
         this.update();
@@ -389,7 +388,6 @@ export function AnimationManager(){
         }, 1000)
     }
     this.triggerTileAnimationComplex = (data) => {
-        console.log('**** TRIGGERED ANIMATION COMPLEX ****', data);
         const targetTileId = data.targetTileId, type = data.type, facing = data.facing;
         const sourceTileId = data.sourceTileId;
         let animationTile = this.tiles.find(e=>e.id === sourceTileId);
@@ -485,7 +483,6 @@ export function AnimationManager(){
                 }, this.animationsMatrix[type].duration)
             break;
             case 'dragon_punch':
-                console.log('animation complex, dragon_punch case');
                 animationTile.animationType = 'dragon_punch';
                 animationTile.transitionType = 'fade';
                 animationTile.animationData = {
@@ -493,7 +490,6 @@ export function AnimationManager(){
                     duration: this.animationsMatrix[type].duration,
                     facing: data.facing
                 };
-                console.log('animationTile: ', animationTile);
                 this.update();
                 setTimeout(()=>{
                     animationTile.animationType = null;

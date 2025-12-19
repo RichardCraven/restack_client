@@ -922,9 +922,6 @@ export function CombatManager(){
     }
     this.initiateAttack = (caller, manualAttack = false) => {
        let manualTarget = false;
-       if(caller.type === 'wizard'){
-        console.log('OH SHIT');
-       }
         const targetInRange = (caller, target) => {
             const pendingAttack = caller.pendingAttack
             const rangeDiff = this.fighterFacingUp(caller) || this.fighterFacingDown(caller) ?

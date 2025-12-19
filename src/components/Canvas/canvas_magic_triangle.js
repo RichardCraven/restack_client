@@ -3,18 +3,19 @@ import React, { useRef, useEffect } from 'react'
 // CanvasMagicTriangle renders particles moving along the outline of a triangle
 // Expects: center {x, y} in tile units, radius (in tile units), numParticles, color, width, height, origin, targetDistance, targetLaneDiff, duration
 const CanvasMagicTriangle = ({ center, radius = 1.2, numParticles = 12, color = 'aqua', width, height, origin, targetDistance, targetLaneDiff, duration }) => {
+    // Revert DEBUG CHANGE: Use provided width/height like magicCircle
     const safeWidth = typeof width === 'number' && !isNaN(width) ? width : 200;
     const safeHeight = typeof height === 'number' && !isNaN(height) ? height : 200;
     const canvasRef = useRef(null)
     const angleRef = useRef(0);
     useEffect(() => {
-        let animationFrameId;
-        const canvas = canvasRef.current;
-        const context = canvas.getContext('2d');
-        const px = v => v * 100;
-        const r = px(radius) / 2;
-        const cx = safeWidth / 2;
-        const cy = safeHeight / 2;
+    let animationFrameId;
+    const canvas = canvasRef.current;
+    const context = canvas.getContext('2d');
+    const px = v => v * 100;
+    const r = px(radius) / 2;
+    const cx = safeWidth / 2;
+    const cy = safeHeight / 2;
         // Triangle vertices
         const triR = r;
         const v1 = [cx + triR * Math.cos(-Math.PI / 2), cy + triR * Math.sin(-Math.PI / 2)];
@@ -54,6 +55,16 @@ const CanvasMagicTriangle = ({ center, radius = 1.2, numParticles = 12, color = 
                     context.shadowBlur = 0;
                 }
             }
+            // DEBUG: Draw a large red particle at the center of the triangle
+            context.beginPath();
+            context.arc(cx, cy, 20, 0, Math.PI * 2);
+            context.fillStyle = 'red';
+            context.globalAlpha = 0.7;
+            context.shadowColor = 'red';
+            context.shadowBlur = 16;
+            context.fill();
+            context.globalAlpha = 1;
+            context.shadowBlur = 0;
         }
         function animate() {
             draw(performance.now());
@@ -65,35 +76,43 @@ const CanvasMagicTriangle = ({ center, radius = 1.2, numParticles = 12, color = 
         };
     }, [center, radius, numParticles, color, safeWidth, safeHeight]);
     // Animation movement props
+    // DEBUG CHANGE: Log all computed values for animation
+    useEffect(() => {
+        console.log('[DEBUG] CanvasMagicTriangle mount', {
+            _origin,
+            _targetDistance,
+            _targetLaneDiff,
+            safeWidth,
+            safeHeight,
+        });
+    }, []);
     const _origin = origin || { x: 0, y: 0 };
     const _targetDistance = typeof targetDistance === 'number' ? targetDistance : 0;
     const _targetLaneDiff = typeof targetLaneDiff === 'number' ? targetLaneDiff : 0;
-    // Fast animation
     const _duration = 400;
-    // Use a static animation name and put <style> in JSX
     const animationName = 'moveRightTriangle';
     return (
-        <>
-            <canvas
-                className='spell-animation magic-triangle'
-                ref={canvasRef}
-                width={safeWidth}
-                height={safeHeight}
-                style={{
-                    position: 'absolute',
-                    left: 0,
-                    top: 0,
-                    pointerEvents: 'none',
-                    animation: `${animationName} ${_duration}ms linear forwards`,
-                }}
-            />
-            <style>{`
-                @keyframes moveRightTriangle {
-                  0% { transform: translateX(${_origin.x * 100}px) translateY(${_origin.y * 100}px) scale(1); opacity: 1; }
-                  100% { transform: translateX(${(_origin.x + _targetDistance) * 100}px) translateY(${(_origin.y + _targetLaneDiff) * 100}px) scale(1); opacity: 0.7; }
-                }
-            `}</style>
-        </>
+                        <>
+                            <canvas
+                                className='spell-animation magic-triangle'
+                                ref={canvasRef}
+                                width={safeWidth}
+                                height={safeHeight}
+                                style={{
+                                    position: 'absolute',
+                                    left: 0,
+                                    top: 0,
+                                    pointerEvents: 'none',
+                                    animation: `${animationName} ${_duration}ms linear forwards`,
+                                }}
+                            />
+                            <style>{`
+                                @keyframes moveRightTriangle {
+                                  0% { transform: translateX(${_origin.x * 100}px) translateY(${_origin.y * 100}px) scale(1); opacity: 1; }
+                                  100% { transform: translateX(${(_origin.x + _targetDistance) * 100}px) translateY(${(_origin.y + _targetLaneDiff) * 100}px) scale(1); opacity: 0.7; }
+                                }
+                            `}</style>
+                        </>
     )
 }
 

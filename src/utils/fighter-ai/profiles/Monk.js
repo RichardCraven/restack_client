@@ -1,3 +1,4 @@
+const { attackFromTheBack } = require('../shared-ai-methods/behaviors');
 export function Monk(data, utilMethods, animationManager, overlayManager){
 
     // Callback for teleport event, can be overridden by UI
@@ -37,7 +38,6 @@ export function Monk(data, utilMethods, animationManager, overlayManager){
         return Object.values(combatants).filter(e=>this.isEnemy(e));
     }
     this.initialize = (caller) => {
-        console.log('MONK INITIALIZE');
         // Default facing right
         caller.facing = 'right';
 
@@ -50,7 +50,6 @@ export function Monk(data, utilMethods, animationManager, overlayManager){
         setTimeout(() => {
             caller.onMoveCooldown = false;
         }, 1000);
-        console.log('monk eraIndex:', caller.eraIndex);
         switch (caller.behaviorSequence) {
             case 'brawler':
                 switch(caller.eraIndex){
@@ -82,7 +81,6 @@ export function Monk(data, utilMethods, animationManager, overlayManager){
                         this.triggerChargingUp(caller);
                         break;
                     case 4:
-                        console.log('this.onTeleport: ', this.onTeleport);
                         if (caller.chargingUpActive) caller.chargingUpActive = false;
                         if (data.methods.teleportToBackLine) {
                             // Pass a callback to notify the UI when teleport occurs
@@ -99,100 +97,12 @@ export function Monk(data, utilMethods, animationManager, overlayManager){
                 }
                 break;
             case 'attackFromTheBack': {
-                // Acquire all live enemies
-                const liveEnemies = Object.values(combatants).filter(e => !e.dead && (e.isMonster || e.isMinion));
-                if (liveEnemies.length === 0) break;
-                // Try to find a target where Monk can get to their back (right side)
-                let foundBackTarget = false;
-                // Sort enemies by depth (closest to front)
-                const sortedByDepth = [...liveEnemies].sort((a, b) => a.depth - b.depth);
-                for (const enemy of sortedByDepth) {
-                    const desiredX = enemy.coordinates.x + 1;
-                    const desiredY = enemy.coordinates.y;
-                    const isWithinBounds = desiredX < this.MAX_DEPTH;
-                    const occupied = Object.values(combatants).some(e => !e.dead && e.coordinates.x === desiredX && e.coordinates.y === desiredY);
-                    if (isWithinBounds && !occupied) {
-                        // Move only one space per turn toward the desired position
-                        const dx = desiredX - caller.coordinates.x;
-                        const dy = desiredY - caller.coordinates.y;
-                        let nextX = caller.coordinates.x;
-                        let nextY = caller.coordinates.y;
-                        if (dx !== 0) {
-                            nextX += Math.sign(dx);
-                        } else if (dy !== 0) {
-                            nextY += Math.sign(dy);
-                        }
-                        // Only move if the next tile is not occupied
-                        const nextOccupied = Object.values(combatants).some(e => !e.dead && e.coordinates.x === nextX && e.coordinates.y === nextY);
-                        if (!nextOccupied) {
-                            caller.coordinates.x = nextX;
-                            caller.coordinates.y = nextY;
-                        }
-                        caller.facing = 'left';
-                        caller.pendingAttack = this.chooseAttackType(caller, enemy);
-                        caller.targetId = enemy.id;
-                        foundBackTarget = true;
-                        break;
-                    }
-                }
-                if (!foundBackTarget) {
-                    // Prioritize enemies closest to the back line (highest x)
-                    const sortedByBack = [...liveEnemies].sort((a, b) => b.coordinates.x - a.coordinates.x);
-                    let placed = false;
-                    for (const enemy of sortedByBack) {
-                        // Try to move above or below the enemy if can't go past their column
-                        const aboveY = enemy.coordinates.y - 1;
-                        const belowY = enemy.coordinates.y + 1;
-                        const x = enemy.coordinates.x;
-                        // Try above (move only one space per turn)
-                        if (aboveY >= 0 && !Object.values(combatants).some(e => !e.dead && e.coordinates.x === x && e.coordinates.y === aboveY)) {
-                            // Move Monk one space toward aboveY if not already there
-                            let nextY = caller.coordinates.y;
-                            if (nextY > aboveY) {
-                                nextY -= 1;
-                            } else if (nextY < aboveY) {
-                                nextY += 1;
-                            } else {
-                                nextY = aboveY;
-                            }
-                            if (!Object.values(combatants).some(e => !e.dead && e.coordinates.x === x && e.coordinates.y === nextY)) {
-                                caller.coordinates.x = x;
-                                caller.coordinates.y = nextY;
-                            }
-                            caller.facing = 'left';
-                            caller.pendingAttack = this.chooseAttackType(caller, enemy);
-                            caller.targetId = enemy.id;
-                            placed = true;
-                            break;
-                        }
-                        // Try below (move only one space per turn)
-                        if (belowY < this.MAX_LANES && !Object.values(combatants).some(e => !e.dead && e.coordinates.x === x && e.coordinates.y === belowY)) {
-                            let nextY = caller.coordinates.y;
-                            if (nextY < belowY) {
-                                nextY += 1;
-                            } else if (nextY > belowY) {
-                                nextY -= 1;
-                            } else {
-                                nextY = belowY;
-                            }
-                            if (!Object.values(combatants).some(e => !e.dead && e.coordinates.x === x && e.coordinates.y === nextY)) {
-                                caller.coordinates.x = x;
-                                caller.coordinates.y = nextY;
-                            }
-                            caller.facing = 'left';
-                            caller.pendingAttack = this.chooseAttackType(caller, enemy);
-                            caller.targetId = enemy.id;
-                            placed = true;
-                            break;
-                        }
-                    }
-                    // If still not placed, just target the enemy closest to the back line
-                    if (!placed) {
-                        const enemy = sortedByBack[0];
-                        caller.pendingAttack = this.chooseAttackType(caller, enemy);
-                        caller.targetId = enemy.id;
-                    }
-                }
+                // For all eraIndex cases, call the shared behavior
+                attackFromTheBack(caller, combatants, {
+                    MAX_DEPTH: this.MAX_DEPTH,
+                    MAX_LANES: this.MAX_LANES,
+                    chooseAttackType: this.chooseAttackType.bind(this),
+                });
                 break;
             }
             default:

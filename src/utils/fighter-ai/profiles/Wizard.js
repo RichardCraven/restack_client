@@ -286,6 +286,11 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
     }
     this.triggerMagicMissile = (caller, target, travelTime) => {
 
+        // Trigger the animation when the spell is cast
+        if (this.animationManager && caller && target) {
+            this.animationManager.magicMissile(caller.coordinates, target.coordinates);
+        }
+
         // caller.lock();
         const damageSequence = () => {
             let r = Math.random()
