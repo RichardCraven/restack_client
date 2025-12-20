@@ -124,6 +124,7 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
     return attack;
     }
     this.useGlyph = (caller, combatants) => {
+        
         const glyphAction = caller.specialActions && caller.specialActions.find(
             a => a.type === 'glyph' && a.subTypes && a.subTypes[0] && a.subTypes[0].type === 'magic missile'
         );
@@ -147,6 +148,7 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                 }
                 // Set glyph on cooldown if needed
                 glyphAction.cooldown_position = glyphAction.cooldown || 3;
+                console.log('glyph available');
                 return true;
             }
         }

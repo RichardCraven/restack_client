@@ -42,12 +42,6 @@ export function CombatManager(){
                     e.targetId = null;
                 }
             });
-            // Debugger only for fighters (not monsters or minions)
-            const combatant = this.combatants[id];
-            if (combatant && !combatant.isMonster && !combatant.isMinion) {
-                // debugger;
-                console.log('NOW REMOVING COMBATANT:', id, combatant);
-            }
             delete this.combatants[id];
             // Broadcast update to ensure UI sync
             if (typeof this.updateData === 'function') {
@@ -1585,14 +1579,9 @@ export function CombatManager(){
             }
         } else if(caller.coordinates.x > combatantHit.coordinates.x){
             combatantHit.wounded.sourceDirection = 'right';
-            if(combatantHit.type !== 'soldier'){
-                console.log('NOT SOLDIER!', 'combatant: ', combatantHit, 'caller: ', caller);
-                // debugger
-            }
             if(criticalHit){
                 const {W} = this.getSurroundings(combatantHit.coordinates),
                 someoneElseIsInCoords = this.someoneElseIsInCoords(combatantHit, W);
-                console.log(caller.name, '>', combatantHit.name,'crit from right, someoneElseIsInCoords', someoneElseIsInCoords);
                 if(!someoneElseIsInCoords && combatantHit.coordinates.x !== 0){
                     combatantHit.coordinates.x--
                     this.checkOverlap(combatantHit)

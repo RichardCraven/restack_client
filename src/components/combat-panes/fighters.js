@@ -1,7 +1,6 @@
 import React from 'react';
 import * as images from '../../utils/images';
 import Overlay from '../Overlay'
-// import * as images from '../utils/images'
 
 const MAX_DEPTH = 7;
 const NUM_COLUMNS = 8;
@@ -12,13 +11,28 @@ const SHOW_TILE_BORDERS = false;
 const SHOW_COMBAT_BORDER_COLORS = true;
 const SHOW_INTERACTION_PANE=true
 
+
 export default function FightersCombatGrid(props) {
-    // Accept teleportingFighterId as a prop
-    // props = props;
-    // console.log('fighter combat grid, props: ', props);
-    // debugger
-    // Only render fighters still present in battleData (i.e., not removed from combat)
-    const activeCrew = props.crew.filter(f => props.battleData[f.id]);
+    // Delay removal of fighter portrait after death for death animation
+    const [showDeathAnimation, setShowDeathAnimation] = React.useState({});
+    const [fullyDead, setFullyDead] = React.useState({});
+
+    React.useEffect(() => {
+        props.crew.forEach(fighter => {
+            const details = props.getFighterDetails(fighter);
+            if (details?.dead && !showDeathAnimation[fighter.id] && !fullyDead[fighter.id]) {
+                setShowDeathAnimation(prev => ({ ...prev, [fighter.id]: true }));
+            } else if (!details?.dead && (showDeathAnimation[fighter.id] || fullyDead[fighter.id])) {
+                setShowDeathAnimation(prev => ({ ...prev, [fighter.id]: false }));
+                setFullyDead(prev => ({ ...prev, [fighter.id]: false }));
+            }
+        });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [props.crew, props.battleData]);
+
+    // Only render fighters still present in battleData (i.e., not removed from combat),
+    // and if dead, only if showDeathAnimation is true and not fullyDead
+    const activeCrew = props.crew.filter(f => props.battleData[f.id] && (!props.getFighterDetails(f)?.dead || (showDeathAnimation[f.id] && !fullyDead[f.id])));
     return (
         <div className="mb-col fighter-pane">
             <div className="fighter-content">
@@ -76,6 +90,17 @@ export default function FightersCombatGrid(props) {
                                         onMouseLeave={() => props.portraitHovered(null)}
                                         onDragStart = {(event) => props.onDragStart(fighter)}
                                         draggable
+                                        onAnimationEnd={e => {
+                                            if (
+                                                props.getFighterDetails(fighter)?.dead &&
+                                                e.animationName &&
+                                                e.animationName.includes('meltDownDeath') &&
+                                                showDeathAnimation[fighter.id]
+                                            ) {
+                                                setFullyDead(prev => ({ ...prev, [fighter.id]: true }));
+                                                setShowDeathAnimation(prev => ({ ...prev, [fighter.id]: false }));
+                                            }
+                                        }}
                                         >
                                             <div className="color-glow" style={{color: props.getFighterDetails(fighter)?.color}}></div>
                                         </div>

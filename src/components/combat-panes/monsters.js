@@ -102,6 +102,34 @@ const MonstersCombatGrid = ({
         prevMinionWounded.current = newPrev;
     }, [battleData]);
 
+    // Delay removal of monster/minion portrait after death for death animation
+    const [showDeathAnimation, setShowDeathAnimation] = React.useState({});
+    const [fullyDead, setFullyDead] = React.useState({});
+
+    React.useEffect(() => {
+        // Main monster
+        if (monster && battleData[monster.id]) {
+            if (battleData[monster.id].dead && !showDeathAnimation[monster.id] && !fullyDead[monster.id]) {
+                setShowDeathAnimation(prev => ({ ...prev, [monster.id]: true }));
+            } else if (!battleData[monster.id].dead && (showDeathAnimation[monster.id] || fullyDead[monster.id])) {
+                setShowDeathAnimation(prev => ({ ...prev, [monster.id]: false }));
+                setFullyDead(prev => ({ ...prev, [monster.id]: false }));
+            }
+        }
+        // Minions
+        Object.values(battleData).forEach(minion => {
+            if (minion.isMinion) {
+                if (minion.dead && !showDeathAnimation[minion.id] && !fullyDead[minion.id]) {
+                    setShowDeathAnimation(prev => ({ ...prev, [minion.id]: true }));
+                } else if (!minion.dead && (showDeathAnimation[minion.id] || fullyDead[minion.id])) {
+                    setShowDeathAnimation(prev => ({ ...prev, [minion.id]: false }));
+                    setFullyDead(prev => ({ ...prev, [minion.id]: false }));
+                }
+            }
+        });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [battleData, monster]);
+
     // Determine if monster or minion is teleporting (by id)
     const isTeleporting = (id) => {
         // Accept teleportingFighterId as a prop (passed in destructured args)
@@ -111,7 +139,7 @@ const MonstersCombatGrid = ({
     return (
         <div className="mb-col monster-pane">
             {/* Main Monster: only render if not dead, or if dead but still animating */}
-            {monster && battleData[monster.id] && (!battleData[monster.id].dead || (battleData[monster.id].dead && battleData[monster.id].showDeathAnimation)) && (
+            {monster && battleData[monster.id] && (!battleData[monster.id].dead || (showDeathAnimation[monster.id] && !fullyDead[monster.id])) && (
                 <div
                     className="lane-wrapper"
                     style={{
@@ -188,6 +216,17 @@ const MonstersCombatGrid = ({
                                         zIndex: 1,
                                         position: 'relative'
                                     }}
+                                    onAnimationEnd={e => {
+                                        if (
+                                            battleData[monster.id]?.dead &&
+                                            e.animationName &&
+                                            e.animationName.includes('meltDownDeath') &&
+                                            showDeathAnimation[monster.id]
+                                        ) {
+                                            setFullyDead(prev => ({ ...prev, [monster.id]: true }));
+                                            setShowDeathAnimation(prev => ({ ...prev, [monster.id]: false }));
+                                        }
+                                    }}
                                 >
                                     {SHOW_MONSTER_IDS ? monster.id : null}
                                     {/* White hit-flash overlay */}
@@ -247,7 +286,7 @@ const MonstersCombatGrid = ({
                 </div>
             )}
                 {/* Minions: render only those present in battleData and flagged as isMinion */}
-                                {Object.values(battleData).filter(m => m.isMinion).map((minion) => (
+                                {Object.values(battleData).filter(m => m.isMinion && (!m.dead || (showDeathAnimation[m.id] && !fullyDead[m.id]))).map((minion) => (
                     <div
                         key={minion.id}
                         className="lane-wrapper"
@@ -309,6 +348,17 @@ const MonstersCombatGrid = ({
                                     ref={el => {
                                         if (minion.wounded) {
                                             // console.log('MINION WOUNDED:', minion.id, minion.wounded, 'class:', getHitAnimation(minion));
+                                        }
+                                    }}
+                                    onAnimationEnd={e => {
+                                        if (
+                                            minion.dead &&
+                                            e.animationName &&
+                                            e.animationName.includes('meltDownDeath') &&
+                                            showDeathAnimation[minion.id]
+                                        ) {
+                                            setFullyDead(prev => ({ ...prev, [minion.id]: true }));
+                                            setShowDeathAnimation(prev => ({ ...prev, [minion.id]: false }));
                                         }
                                     }}
                                 >
