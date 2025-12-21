@@ -414,6 +414,12 @@ export function CombatManager(){
     }
     this.setSelectedFighter = (selectedFighter) => {
         this.selectedFighter = selectedFighter;
+        // Set manualControl true for selected fighter, false for others
+        Object.values(this.combatants).forEach(f => {
+            if (!f.isMonster && !f.isMinion) {
+                f.manualControl = (selectedFighter && f.id === selectedFighter.id);
+            }
+        });
     }
     this.establishUpdateMatrixCallback = (cb) => {
         this.updateIndicatorsMatrix = cb;
@@ -543,6 +549,8 @@ export function CombatManager(){
             } else {
                 const ai = this.fighterAI.roster[combatant.type]
                 if(ai && ai.initialize) ai.initialize(combatant);
+                // Ensure manualControl is initialized to false
+                combatant.manualControl = false;
             }
         })
 
@@ -641,7 +649,10 @@ export function CombatManager(){
         const int = setInterval(()=>{
             c++
             let combatant = arr.pop()
-            combatant.turnCycle();
+            // Skip AI turnCycle for fighters under manual control
+            if (!(combatant.manualControl && !combatant.isMonster && !combatant.isMinion)) {
+                combatant.turnCycle();
+            }
             if(!arr.length) clearInterval(int)
         },100)
         // while (arr.length){

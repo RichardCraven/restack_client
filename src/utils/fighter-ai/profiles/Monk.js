@@ -212,7 +212,7 @@ export function Monk(data, utilMethods, animationManager, overlayManager){
                         this.kickoffAttackCooldown(caller)
                     }
                 } else {
-                    const combatantHit = await this.triggerSwordSwing(caller.coordinates, facing)
+                    const combatantHit = await this.triggerDragonPunch(caller.coordinates, facing)
                     if(combatantHit){
                         this.hitsCombatant(caller, combatantHit)
                         this.kickoffAttackCooldown(caller)
