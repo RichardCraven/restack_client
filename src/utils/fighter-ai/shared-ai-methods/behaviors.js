@@ -8,6 +8,9 @@
  * @param {object} data - Data and utility methods passed to the AI profile
  */
 function attackFromTheBack(caller, combatants, data) {
+    if(caller.type === 'monk'){
+        
+    }
     // Acquire all live enemies
     const liveEnemies = Object.values(combatants).filter(e => !e.dead && (e.isMonster || e.isMinion));
     if (liveEnemies.length === 0) return;

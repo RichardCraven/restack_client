@@ -34,6 +34,10 @@ export function Djinn(data, utilMethods, animationManager, overlayManager){
         caller.targetId = target.id;
     }
     this.processMove = (caller, combatants) => {
+        if (typeof caller.moveCooldown === 'undefined') {
+            debugger;
+            throw new Error('moveCooldown must be defined for all units');
+        }
         if(!caller.pendingAttack){
             return
         }

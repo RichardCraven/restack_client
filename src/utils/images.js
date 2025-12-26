@@ -1,3 +1,26 @@
+import hand_1 from '../assets/icons/items/weapons/hands/hands_numbered/hand_1.png';
+import hand_2 from '../assets/icons/items/weapons/hands/hands_numbered/hand_2.png';
+import hand_3 from '../assets/icons/items/weapons/hands/hands_numbered/hand_3.png';
+import hand_4 from '../assets/icons/items/weapons/hands/hands_numbered/hand_4.png';
+import hand_5 from '../assets/icons/items/weapons/hands/hands_numbered/hand_5.png';
+import hand_6 from '../assets/icons/items/weapons/hands/hands_numbered/hand_6.png';
+import hand_7 from '../assets/icons/items/weapons/hands/hands_numbered/hand_7.png';
+import hand_8 from '../assets/icons/items/weapons/hands/hands_numbered/hand_8.png';
+import hand_9 from '../assets/icons/items/weapons/hands/hands_numbered/hand_9.png';
+import hand_10 from '../assets/icons/items/weapons/hands/hands_numbered/hand_10.png';
+import hand_11 from '../assets/icons/items/weapons/hands/hands_numbered/hand_11.png';
+import hand_12 from '../assets/icons/items/weapons/hands/hands_numbered/hand_12.png';
+import hand_13 from '../assets/icons/items/weapons/hands/hands_numbered/hand_13.png';
+import hand_14 from '../assets/icons/items/weapons/hands/hands_numbered/hand_14.png';
+import hand_15 from '../assets/icons/items/weapons/hands/hands_numbered/hand_15.png';
+import hand_16 from '../assets/icons/items/weapons/hands/hands_numbered/hand_16.png';
+import hand_17 from '../assets/icons/items/weapons/hands/hands_numbered/hand_17.png';
+import hand_18 from '../assets/icons/items/weapons/hands/hands_numbered/hand_18.png';
+import hand_19 from '../assets/icons/items/weapons/hands/hands_numbered/hand_19.png';
+import hand_20 from '../assets/icons/items/weapons/hands/hands_numbered/hand_20.png';
+import hand_21 from '../assets/icons/items/weapons/hands/hands_numbered/hand_21.png';
+import hand_22 from '../assets/icons/items/weapons/hands/hands_numbered/hand_22.png';
+
 import fist_punch from '../assets/icons/combat-icons/__fist-punch.png';
 // monsters
 import monster from '../assets/icons/monster.png'
@@ -213,6 +236,8 @@ import witch_p1_6 from '../assets/portraits/monsters/variations/witch/type1/witc
 import witch_p1_7 from '../assets/portraits/monsters/variations/witch/type1/witch7.png';
 import witch_p1_8 from '../assets/portraits/monsters/variations/witch/type1/witch8.png';
 
+// import monk_strike_1 from '../assets/icons/'
+
 // import witch_p2_1 from '../assets/portraits/monsters/variations/witch/type2/witch1.png';
 // import witch_p2_2 from '../assets/portraits/monsters/variations/witch/type2/witch2.png';
 // import witch_p2_3 from '../assets/portraits/monsters/variations/witch/type2/witch3.png';
@@ -289,6 +314,28 @@ import fire_blast from '../assets/icons/combat-icons/specials/wizard/fire_blast.
 import magic_missile from '../assets/icons/misc/cycle.png'
 
 export {
+    hand_1,
+    hand_2,
+    hand_3,
+    hand_4,
+    hand_5,
+    hand_6,
+    hand_7,
+    hand_8,
+    hand_9,
+    hand_10,
+    hand_11,
+    hand_12,
+    hand_13,
+    hand_14,
+    hand_15,
+    hand_16,
+    hand_17,
+    hand_18,
+    hand_19,
+    hand_20,
+    hand_21,
+    hand_22,
     monster,
     avatar,
     avatar_white,

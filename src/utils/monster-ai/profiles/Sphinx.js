@@ -35,11 +35,14 @@ export function Sphinx(data, utilMethods, animationManager, overlayManager){
         caller.targetId = target.id;
     }
     this.processMove = (caller, combatants) => {
+        if (typeof caller.moveCooldown === 'undefined') {
+            debugger;
+            throw new Error('moveCooldown must be defined for all units');
+        }
         caller.onMoveCooldown = true;
-        setTimeout(()=>{
+        setTimeout(() => {
             caller.onMoveCooldown = false;
-            // 1 second is how long it takes for lane-wrapper and portrait-wrapper to finish CSS transition
-        }, 1000)
+        }, caller.moveCooldown);
             switch(caller.behaviorSequence){
                 case 'center-spellcaster':
                     

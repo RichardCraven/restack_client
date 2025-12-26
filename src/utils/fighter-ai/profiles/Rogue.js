@@ -75,6 +75,10 @@ export function Rogue(data, animationManager){
         return attack
     }
     this.processMove = (caller, combatants) => {
+        if (typeof caller.moveCooldown === 'undefined') {
+            debugger;
+            throw new Error('moveCooldown must be defined for all units');
+        }
         const enemyTarget = Object.values(combatants).find(e=>e.id === caller.targetId)
         const distanceToTarget = data.methods.getDistanceToTarget(caller, enemyTarget),
         laneDiff = data.methods.getLaneDifferenceToTarget(caller, enemyTarget)

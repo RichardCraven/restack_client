@@ -1,7 +1,6 @@
 const clone = (val) => {
     return JSON.parse(JSON.stringify(val))
-}
-
+    }
 export function Soldier(data, utilMethods, animationManager, overlayManager){
     this.MAX_DEPTH = data.MAX_DEPTH;
     this.MAX_LANES = data.MAX_LANES;
@@ -22,11 +21,9 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
     this.isFriendly = (e) => {
         return !e.isMonster && !e.isMinion;
     }
-
     this.friendlies = (combatants) => {
         return Object.values(combatants).filter(e=>this.isFriendly(e));
     }
-
     this.isEnemy = (e) => {
         return e.isMonster|| e.isMinion;
     }
@@ -204,11 +201,17 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
     return adjacentEnemies >= 3;
 }
     this.processMove = (caller, combatants) => {
+        if (typeof caller.moveCooldown === 'undefined') {
+            debugger;
+            throw new Error('moveCooldown must be defined for all units');
+        }
         caller.onMoveCooldown = true;
-        setTimeout(()=>{
+        setTimeout(() => {
             caller.onMoveCooldown = false;
-            // 1 second is how long it takes for lane-wrapper and portrait-wrapper to finish CSS transition
-        }, 1000)
+        }, caller.moveCooldown);
+
+        // transition-duration is now set via CSS variable --move-duration, which should match moveCooldown
+
         switch(caller.behaviorSequence){
             case 'brawler':
                 switch(caller.eraIndex){
@@ -331,63 +334,74 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
         }
     }
     this.initiateAttack = async (caller, manualAttack, combatants) => {
-        if(!caller) return
+        if (typeof caller.moveCooldown === 'undefined') {
+            debugger;
+            throw new Error('moveCooldown must be defined for all units');
+        }
+        caller.onMoveCooldown = true;
+        setTimeout(() => {
+            caller.onMoveCooldown = false;
+        }, caller.moveCooldown);
+
+        // Helper for facing
         const callerFacing = (caller, target) => {
             let val;
             if(!target) return null;
             const targX = target.coordinates.x,
                   targY = target.coordinates.y,
                   callX = caller.coordinates.x,
-                  callY = caller.coordinates.y
+                  callY = caller.coordinates.y;
             if(targX === callX){
-                val = targY > callY ? 'down' : 'up'
+                val = targY > callY ? 'down' : 'up';
             } else {
-                val = targX > callX ? 'right' : 'left'
+                val = targX > callX ? 'right' : 'left';
             }
             return val;
-        }
-        const facingRight = this.fighterFacingRight(caller)
+        };
+        const facingRight = this.fighterFacingRight(caller);
         const target = combatants[caller.targetId];
-        const facing = caller.facing ? caller.facing : callerFacing(caller,target)
+        const facing = caller.facing ? caller.facing : callerFacing(caller,target);
 
-        caller.attacking = true; 
-        
+        caller.attacking = true;
+
         if(manualAttack){
             if(caller.pendingAttack && caller.pendingAttack.cooldown_position < 99){
-                return
+                return;
             } else if (caller.pendingAttack && caller.pendingAttack.cooldown_position === 100){
-                const combatantHit = await this.triggerSwordSwing(caller.coordinates, facing)
+                const combatantHit = await this.triggerSwordSwing(caller.coordinates, facing);
                 if(combatantHit){
-                    this.hitsCombatant(caller, combatantHit)
-                    this.kickoffAttackCooldown(caller)
+                    this.hitsCombatant(caller, combatantHit);
+                    this.kickoffAttackCooldown(caller);
                 } else {
                     this.missesTarget(caller);
-                    this.kickoffAttackCooldown(caller)
+                    this.kickoffAttackCooldown(caller);
                 }
             }
         } else {
-            const distanceToTarget = data.methods.getDistanceToTarget(caller, target),
-            laneDiff = data.methods.getLaneDifferenceToTarget(caller, target);
-            // debugger
-            switch(caller.pendingAttack.name){
-                case 'sword swing':
-                    const combatantHit = await this.triggerSwordSwing(caller.coordinates, facing)
-                    if(combatantHit){
-                        this.hitsCombatant(caller, combatantHit);
-                    } else {
-                        this.missesTarget(caller);
+            await (async () => {
+                const distanceToTarget = data.methods.getDistanceToTarget(caller, target),
+                laneDiff = data.methods.getLaneDifferenceToTarget(caller, target);
+                // debugger
+                switch(caller.pendingAttack.name){
+                    case 'sword swing': {
+                        const combatantHit = await this.triggerSwordSwing(caller.coordinates, facing);
+                        if(combatantHit){
+                            this.hitsCombatant(caller, combatantHit);
+                        } else {
+                            this.missesTarget(caller);
+                        }
+                        break;
                     }
-                break;
-                case 'sword thrust':
-                    // console.log('SWORD THRUST');
-                break;
-                case 'shield bash':
-                    // console.log('SHIELD BASH');
-                break;
-                default:
-                    break;
-            }
-
+                    case 'sword thrust':
+                        // console.log('SWORD THRUST');
+                        break;
+                    case 'shield bash':
+                        // console.log('SHIELD BASH');
+                        break;
+                    default:
+                        break;
+                }
+            })();
         }
     }
     this.triggerSwordSwing = (callerCoords, facing) => {
@@ -438,5 +452,7 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
                 this.animationManager.swordSwing(targetTileId, sourceTileId, facing, resolve)
             }
         })
-    }
+    }   
 }
+    
+

@@ -15,17 +15,21 @@ export function Sage(data){
             }
         }
     this.processMove = (caller, combatants) => {
-            if(!caller.pendingAttack){
-                console.log('no pending attack ', caller);
-                // debugger
-                return
-            }
-            if(caller.pendingAttack.name === 'meditate'){
-                data.methods.moveTowardsCloseFriendlyTarget(caller, combatants)
-            } else if(caller.pendingAttack.name === 'cane_strike'){
-                console.log('MAFUCKIN CAAAANNNEEE STRIKE!');
-                debugger
-            }
+        if (typeof caller.moveCooldown === 'undefined') {
+            debugger;
+            throw new Error('moveCooldown must be defined for all units');
+        }
+        if(!caller.pendingAttack){
+            console.log('no pending attack ', caller);
+            // debugger
+            return
+        }
+        if(caller.pendingAttack.name === 'meditate'){
+            data.methods.moveTowardsCloseFriendlyTarget(caller, combatants)
+        } else if(caller.pendingAttack.name === 'cane_strike'){
+            console.log('MAFUCKIN CAAAANNNEEE STRIKE!');
+            debugger
+        }
         }
     this.initiateAttack = (caller, combatants, hitsTarget, missesTarget) => {
             const target = combatants[caller.targetId];

@@ -75,8 +75,9 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
         manualMovesCurrent: fighter.manualMovesCurrent,
         frozenPoints: 0,
         targetAcquired: null,
-        movesPerTurnCycle: 5,
+        movesPerTurnCycle: fighter.stats.dex * 2,
         movesLeft: 0,
+        moveCooldown: 1/fighter.dex * 5000, // Higher dex = lower cooldown
         eras: [
             {
                 moved: false,
@@ -243,24 +244,20 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
                 this.eraIndex = eraIndex;
 
                 const eraMove = () => {
-                    if(this.movesLeft && !era.moved){
+                    if(this.movesLeft && !era.moved && !this.onMoveCooldown){
                         era.moved = true;
+                        this.movesLeft--
                         this.move()
                     }
                 }
                 const eraAttack = () => {
-                    // if(this.type === 'wizard'){
-                    //     console.log('WIZARD ATTACKING???...', this, target);
-                    //     // debugger
-                    // }
                     if(!this.targetId) acquireTarget(this);
                     target = getCombatant(this.targetId)
                     if(!this.pendingAttack) chooseAttackType(this, target)
                     inRange = targetInRange(this);
-                if(inRange && this.movesLeft && !era.attacked && !this.onGeneralAttackCooldown && !this.onMoveCooldown && !target.onMoveCooldown){
-                    // console.log('***ATTACK***');
-                    era.attacked = true;
-                    this.movesLeft--
+                    if(inRange && this.movesLeft && !era.attacked && !this.onGeneralAttackCooldown && !this.onMoveCooldown){
+                        era.attacked = true;
+                        this.movesLeft--
                         this.attack(target);
                     }
                 }

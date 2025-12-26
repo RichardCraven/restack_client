@@ -155,11 +155,14 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
         return false;
     }
     this.processMove = (caller, combatants) => {
+        if (typeof caller.moveCooldown === 'undefined') {
+            debugger;
+            throw new Error('moveCooldown must be defined for all units');
+        }
         caller.onMoveCooldown = true;
-        setTimeout(()=>{
+        setTimeout(() => {
             caller.onMoveCooldown = false;
-            // 1 second is how long it takes for lane-wrapper and portrait-wrapper to finish CSS transition
-        }, 1000)
+        }, caller.moveCooldown);
 
 
         switch(caller.behaviorSequence){

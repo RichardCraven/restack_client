@@ -72,7 +72,7 @@ export default function AnimationTile(props) {
             keyframe = 'spin-attack'
         break;
         case 'dragon_punch':
-            image = images['scepter_white']
+            image = images['hand_7']
             keyframe = 'dragon-punch'
         break;
         case 'spin_attack_arc':
@@ -107,7 +107,7 @@ export default function AnimationTile(props) {
                     // ...existing code...
                     debugger
                 }
-                image = images['sword_white'];
+                // // image = images['sword_white'];
                 keyframe = null;
             }
         break;
@@ -125,7 +125,7 @@ export default function AnimationTile(props) {
                 cursor: 'pointer',
                 height: props.tileSize + 'px',
                 width: props.tileSize + 'px',
-                backgroundImage: image && props.animationType !== 'spin_attack_arc' && props.animationType !== 'spin_attack' ? "url(" + image + ")" : '',
+                // backgroundImage: image && props.animationType !== 'spin_attack_arc' && props.animationType !== 'spin_attack' ? "url(" + image + ")" : '',
                 animation: keyframe && props.animationType !== 'spin_attack' ? `${keyframe} ${duration / 1000}s linear 0s ${infiniteLoop ? 'infinite' : ''} forwards` : '',
                 WebkitAnimation: keyframe && props.animationType !== 'spin_attack' ? `${keyframe} ${duration / 1000}s linear 0s ${infiniteLoop ? 'infinite' : ''} forwards` : '',
                 backgroundSize: '100% 100%',
@@ -161,26 +161,69 @@ export default function AnimationTile(props) {
                                     width: '60%',
                                     height: '60%',
                                     pointerEvents: 'none',
-                                    zIndex: 5000
+                                    zIndex: 5000,
+                                    
                                 }}
                             />
                         )}
-                        {props.animationType === 'dragon_punch' && (
-                            <img
-                                src={images['scepter_white']}
-                                alt="dragon punch"
-                                className="dragon-punch-icon"
-                                style={{
-                                    position: 'absolute',
-                                    top: '20%',
-                                    left: '20%',
-                                    width: '60%',
-                                    height: '60%',
-                                    pointerEvents: 'none',
-                                    zIndex: 5000
-                                }}
-                            />
-                        )}
+                        {props.animationType === 'dragon_punch' && (() => {
+                            // Offset 50px from center in the direction of the target (facing)
+                            // Facing can be 'up', 'down', 'left', 'right', or angles
+                            // Default to right if missing
+                            let dx = 0, dy = 0;
+                            const offset = 50;
+                            switch (facing) {
+                                case 'up':
+                                    dx = 0; dy = -offset;
+                                    break;
+                                case 'down':
+                                    dx = 0; dy = offset;
+                                    break;
+                                case 'left':
+                                    dx = -offset; dy = 0;
+                                    break;
+                                case 'right':
+                                    dx = offset; dy = 0;
+                                    break;
+                                case 'up-right':
+                                    dx = offset * 0.7071; dy = -offset * 0.7071;
+                                    break;
+                                case 'up-left':
+                                    dx = -offset * 0.7071; dy = -offset * 0.7071;
+                                    break;
+                                case 'down-right':
+                                    dx = offset * 0.7071; dy = offset * 0.7071;
+                                    break;
+                                case 'down-left':
+                                    dx = -offset * 0.7071; dy = offset * 0.7071;
+                                    break;
+                                default:
+                                    dx = offset; dy = 0;
+                            }
+                            // Flip horizontally if facing left, up-left, or down-left
+                            let flip = false;
+                            if (facing === 'left' || facing === 'up-left' || facing === 'down-left') {
+                                flip = true;
+                            }
+                            return (
+                                <img
+                                    src={image}
+                                    alt="dragon punch"
+                                    className="dragon-punch-icon"
+                                    style={{
+                                        position: 'absolute',
+                                        top: `calc(50% - 30% + ${dy}px)`,
+                                        left: `calc(50% - 30% + ${dx}px)`,
+                                        width: '60%',
+                                        height: '60%',
+                                        pointerEvents: 'none',
+                                        zIndex: 5000,
+                                        filter: 'invert(1)',
+                                        transform: flip ? 'scaleX(-1)' : undefined
+                                    }}
+                                />
+                            );
+                        })()}
                         {props.animationType === 'punch' && props.animationData && gridRect &&
                             props.x === props.animationData.sourceTileX && props.y === props.animationData.sourceTileY && (
                                 (() => {
