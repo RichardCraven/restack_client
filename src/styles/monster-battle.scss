@@ -2054,12 +2054,12 @@
                     border: 2px solid transparent;
                 }
             }
-            .inventory-col, .specials-col, .attacks-col, .target-col, .queue-col, .glyphs-col{
+            .inventory-col, .specials-col, .attacks-col, .target-col, .queue-col, .spells-col{
                 height: 100%;
                 width: 100px;
                 border: 1px solid #ffffff5c;
                 color: white;
-                &.glyphs-col{
+                &.spells-col{
                     height: 100%;
                     border: 1px solid #ffffff5c;
                     color: white;

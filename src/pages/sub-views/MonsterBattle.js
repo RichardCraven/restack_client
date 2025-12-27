@@ -1144,8 +1144,8 @@ class MonsterBattle extends React.Component {
                                 })}
                             </div>
                         </div>
-                        <div className="glyphs-col" style={{width: this.state.glyphTrayExpanded ? '100px' : '0px'}}>
-                            <div className="interaction-header">Glyphs</div>
+                        <div className="spells-col" style={{width: this.state.glyphTrayExpanded ? '100px' : '0px'}}>
+                            <div className="interaction-header">Spells</div>
                             <div className="interaction-tooltip">{this.state.hoveredGlyphTile}</div>
                             <div className="interaction-tile-container">
                                 {this.state.selectedFighter?.specialActions && this.state.selectedFighter.specialActions.length > 0 && this.state.selectedFighter.specialActions.map((glyphUnit, i) => {

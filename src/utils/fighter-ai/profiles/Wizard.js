@@ -123,13 +123,13 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
         }
     return attack;
     }
-    this.useGlyph = (caller, combatants) => {
+    this.useSpell = (caller, combatants) => {
         // const getGlyph = () => {
 
         // }
         console.log('caller.specialActions: ', caller.specialActions);
+        // debugger
 
-        
         const magicMissile = caller.specialActions && caller.specialActions.find(
             a => a.type === 'glyph' && a.subTypes && a.subTypes[0] && a.subTypes[0].type === 'magic missile'
         );
@@ -148,8 +148,8 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                     // Set the targetId so fireGlyph uses the correct target
                     caller.targetId = target.id;
                     this.monsterBattleRef.fireSpecialForAI(caller, glyphAction.subTypes[0]);
-                } else if (this.useGlyphMagicMissile) {
-                    this.useGlyphMagicMissile(caller, target, glyphAction);
+                } else if (this.useSpellMagicMissile) {
+                    this.useSpellMagicMissile(caller, target, glyphAction);
                 } else {
                     // fallback: triggerMagicMissile for compatibility
                     this.triggerMagicMissile(caller, target, 1500);
@@ -184,11 +184,18 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                 });
                 const target = Object.values(combatants).find(e=>e.id === caller.targetId),
                 targetHasMoreThanHalfHp = target && target.hp > (target.starting_hp / 2),
-                glyphAvailable = caller.specialActions && caller.specialActions.find(action => action.type === 'glyph');
-
-                if (target && targetHasMoreThanHalfHp && this.useGlyph(caller, combatants)) {
+                spells = caller.specialActions && caller.specialActions.filter(action => action.type === 'spell'),
+                spellAvailable = caller.specialActions && caller.specialActions.find(action => action.type === 'spell' && action.available);
+                console.log('caller.specialActions: ', caller.specialActions);
+                console.log('spells: ', spells, 'spellsAvailable: ', spellAvailable);
+                console.log('target', target);
+                debugger
+                // if (target && targetHasMoreThanHalfHp && this.useSpell(caller, combatants)) {
+                if (target && this.useSpell(caller, combatants)) {
                     break;
                 }
+                console.log('got here');
+                // debugger
                 switch(caller.eraIndex){
                     case 0:
                         if(enemyIsAdjacent) {
@@ -198,7 +205,7 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                         }
                     break;
                     case 1:
-                        if (target && targetHasMoreThanHalfHp && this.useGlyph(caller, combatants)) {
+                        if (target && targetHasMoreThanHalfHp && this.useSpell(caller, combatants)) {
                             break;
                         }
                         if(enemyIsAdjacent) {
@@ -208,7 +215,7 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                         }
                     break;
                     case 2:
-                        if (target && targetHasMoreThanHalfHp &&  this.useGlyph(caller, combatants)) {
+                        if (target && targetHasMoreThanHalfHp &&  this.useSpell(caller, combatants)) {
                             break;
                         }
                         // If can't cast glyph, fallback to movement/positioning

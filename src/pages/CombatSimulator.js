@@ -52,28 +52,37 @@ class CrewManagerPage extends React.Component{
   timer = null;
 
   componentDidMount(){
+
+    console.log('meta: ', getMeta());
+    const meta = getMeta();
+    meta.crew[1].specialActions.pop();
+    storeMeta(meta);
+    
     this.props.inventoryManager.initializeItems()
     let options = this.props.crewManager.adventurers;
     this.props.crewManager.initializeCrew(options)
     let wizard = this.props.crewManager.crew.find(e=>e.type==='wizard')
     let wizclone = clone(wizard);
-    let action = {
-        text: "Etch Glyph",
-        type: "glyph",
-        // available: true,
-        subTypes: [
-            {
-                count: 1,
-                icon_url: "/static/media/cycle.c9c8214b.png",
-                type: "magic missile"
-            }
-        ]
-    }
+
+    // let action = {
+    //     text: "Etch Glyph",
+    //     type: "glyph",
+    //     // available: true,
+    //     subTypes: [
+    //         {
+    //             count: 1,
+    //             icon_url: "/static/media/cycle.c9c8214b.png",
+    //             type: "magic missile"
+    //         }
+    //     ]
+    // }
+
+
     // Ref wiring will be done after MonsterBattle is mounted in componentDidUpdate
     // After MonsterBattle is mounted, wire up the ref to Wizard AI synchronously
     this.wireMonsterBattleRefToWizardAI();
-    this.props.crewManager.beginSpecialAction(wizard, action, action.subTypes[0])
-    wizard.specialActions.push(action)
+    // this.props.crewManager.beginSpecialAction(wizard, action, action.subTypes[0])
+    // wizard.specialActions.push(action)
 
     let selectedCrew = [];
     // selectedCrew.push(options[0])
