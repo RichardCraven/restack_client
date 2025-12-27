@@ -174,6 +174,13 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                 const enemyIsAdjacent = adjacentCoords.some(coord => {
                     return Object.values(combatants).some(e => isEnemy(e) && e.coordinates.x === coord.x && e.coordinates.y === coord.y);
                 });
+                const target = Object.values(combatants).find(e=>e.id === caller.targetId),
+                targetHasMoreThanHalfHp = target && target.hp > (target.starting_hp / 2),
+                glyphAvailable = caller.specialActions && caller.specialActions.find(action => action.type === 'glyph');
+                
+                if (target && targetHasMoreThanHalfHp && this.useGlyph(caller, combatants)) {
+                    break;
+                }
                 switch(caller.eraIndex){
                     case 0:
                         if(enemyIsAdjacent) {
@@ -183,6 +190,9 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                         }
                     break;
                     case 1:
+                        if (target && targetHasMoreThanHalfHp && this.useGlyph(caller, combatants)) {
+                            break;
+                        }
                         if(enemyIsAdjacent) {
                             data.methods.evadeBack(caller, combatants);
                         } else {
@@ -190,7 +200,7 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                         }
                     break;
                     case 2:
-                        if (this.useGlyph(caller, combatants)) {
+                        if (target && targetHasMoreThanHalfHp &&  this.useGlyph(caller, combatants)) {
                             break;
                         }
                         // If can't cast glyph, fallback to movement/positioning

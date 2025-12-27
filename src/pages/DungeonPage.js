@@ -1,4 +1,5 @@
-import React from 'react'
+import React from 'react';
+import { INTERVALS } from '../utils/shared-constants';
 import '../styles/dungeon-board.scss'
 import Tile from '../components/tile'
 import MonsterBattle from './sub-views/MonsterBattle';
@@ -657,6 +658,27 @@ class DungeonPage extends React.Component {
             if(this.monsterBattleComponentRef.current) this.monsterBattleComponentRef.current.manualFire();
         }
         switch(key){
+                // =/+ key: increase speed (decrease interval)
+                case '=':
+                case '+': {
+                    const current = this.props.combatManager?.FIGHT_INTERVAL;
+                    const idx = INTERVALS.indexOf(current);
+                    if (idx < INTERVALS.length - 1) {
+                        this.props.combatManager.updateAllFightIntervals(INTERVALS[idx + 1]);
+                        this.forceUpdate();
+                    }
+                    break;
+                }
+                // - key: decrease speed (increase interval)
+                case '-': {
+                    const current = this.props.combatManager?.FIGHT_INTERVAL;
+                    const idx = INTERVALS.indexOf(current);
+                    if (idx > 0) {
+                        this.props.combatManager.updateAllFightIntervals(INTERVALS[idx - 1]);
+                        this.forceUpdate();
+                    }
+                    break;
+                }
             case 'p':
                 let paused = !this.state.paused;
                 this.props.combatManager.pauseCombat(paused)

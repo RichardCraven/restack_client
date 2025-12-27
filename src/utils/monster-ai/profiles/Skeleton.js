@@ -38,13 +38,6 @@ export function Skeleton(data, utilMethods, animationManager, overlayManager){
             debugger;
             throw new Error('moveCooldown must be defined for all units');
         }
-        console.log('[Skeleton.processMove] BEFORE:', {
-            id: caller.id,
-            coords: {...caller.coordinates},
-            targetId: caller.targetId,
-            targetCoords: caller.targetId && combatants[caller.targetId] ? {...combatants[caller.targetId].coordinates} : null,
-            facing: caller.facing
-        });
         caller.onMoveCooldown = true;
         setTimeout(() => {
             caller.onMoveCooldown = false;
@@ -109,13 +102,6 @@ export function Skeleton(data, utilMethods, animationManager, overlayManager){
             const target = combatants[caller.targetId];
             caller.facing = (caller.coordinates.x <= target.coordinates.x) ? 'right' : 'left';
         }
-        console.log('[Skeleton.processMove] AFTER:', {
-            id: caller.id,
-            coords: {...caller.coordinates},
-            targetId: caller.targetId,
-            targetCoords: caller.targetId && combatants[caller.targetId] ? {...combatants[caller.targetId].coordinates} : null,
-            facing: caller.facing
-        });
     }
 
     this.triggerClawAttack = (callerCoords, targetCoords, id = null) => {

@@ -15,6 +15,8 @@ import CanvasMagicMissile from '../../components/Canvas/canvas_magic_missile'
 import FightersCombatGrid from '../../components/combat-panes/fighters'
 import MonstersCombatGrid from '../../components/combat-panes/monsters'
 
+import { INTERVALS, INTERVAL_DISPLAY_NAMES } from '../../utils/shared-constants';
+
 const MAX_DEPTH = 7;
 const NUM_COLUMNS = 8;
 // ^ means 8 squares, account for depth of 0 is far left
@@ -39,6 +41,27 @@ const DEATH_ANIMATION_DURATION = 2200;
 
 // const SHOW_BORDERS = true;
 class MonsterBattle extends React.Component {
+    getGameSpeed = () => {
+        return this.props.combatManager?.FIGHT_INTERVAL;
+    }
+    componentDidMount() {
+    // ...existing code...
+    }
+
+    componentWillUnmount() {
+    // ...existing code...
+    }
+
+    // All keydown logic removed; now handled in CombatSimulator
+
+    enableManualModeForSelectedFighter = () => {
+        // Implement logic to enable manual control for the selected fighter
+        // For example, set a flag in state or call a combatManager method
+        if (this.state.selectedFighter) {
+            this.props.combatManager.setManualControl(this.state.selectedFighter.id, true);
+            this.setState({ manualControl: true });
+        }
+    }
     // Allow AI to trigger glyph/special casting using the same path as the UI
     // Allow AI to fire glyphs without requiring the fighter to be selected
     fireSpecialForAI = (fighter, glyph = null) => {
@@ -266,9 +289,11 @@ class MonsterBattle extends React.Component {
         let a = selectedFighter?.specialActions
         let b = selectedFighter?.specialActions?.find(a=> a && a.actionType.type==='glyph') 
 
+        // Do NOT enable manual mode here; just select the fighter
         this.setState({
             selectedFighter,
-            glyphTrayExpanded: selectedFighter.type === 'wizard'
+            glyphTrayExpanded: selectedFighter.type === 'wizard',
+            manualControl: false // Ensure manual mode is off when tabbing
         })
     }
     tabToRetarget = () => {
@@ -911,6 +936,19 @@ class MonsterBattle extends React.Component {
                    
         return (
             <div className={`mb-board ${this.state.showCrosshair ? 'show-crosshair' : ''}`}>
+                {/* Game speed readout in upper right */}
+                <div style={{position: 'absolute', top: 10, right: 20, color: 'white', fontSize: '18px', zIndex: 1000}}>
+                    Game Speed: {
+                        (() => {
+                            // Try to get intervalDisplayNames from parent props (CombatSimulator)
+                            const intervalDisplayNames = INTERVAL_DISPLAY_NAMES;
+                            const intervals = INTERVALS;
+                            const current = this.getGameSpeed();
+                            const idx = intervals.indexOf(current);
+                            return idx !== -1 ? intervalDisplayNames[idx] : `${current} ms`;
+                        })()
+                    }
+                </div>
                 { this.state.navToDeathScene && <Redirect to='/death'/>}
                 <div className="combat-grid-container"
                     style={{

@@ -1,4 +1,5 @@
 import React from 'react'
+import { INTERVALS, INTERVAL_DISPLAY_NAMES } from '../utils/shared-constants';
 import {storeMeta, getMeta, getUserId} from '../utils/session-handler';
 import { Route, Switch, Redirect} from "react-router-dom";
 import MonsterBattle from './sub-views/MonsterBattle';
@@ -26,6 +27,9 @@ const clone = (val) => {
 }
 
 class CrewManagerPage extends React.Component{
+    // The available speed intervals (should match combat-manager.js)
+    intervals = INTERVALS;
+    intervalDisplayNames = INTERVAL_DISPLAY_NAMES;
   constructor(props){
       super(props)
       this.monsterBattleComponentRef = React.createRef()
@@ -242,6 +246,27 @@ combatKeyDownHandler = (event) => {
         if(this.monsterBattleComponentRef.current) this.monsterBattleComponentRef.current.manualFire();
     }
     switch(key){
+        // =/+ key: increase speed (decrease interval)
+        case '=':
+        case '+': {
+            const current = this.props.combatManager?.FIGHT_INTERVAL;
+            const idx = INTERVALS.indexOf(current);
+            if (idx < INTERVALS.length - 1) {
+                this.props.combatManager.updateAllFightIntervals(INTERVALS[idx + 1]);
+                this.forceUpdate();
+            }
+            break;
+        }
+        // - key: decrease speed (increase interval)
+        case '-': {
+            const current = this.props.combatManager?.FIGHT_INTERVAL;
+            const idx = INTERVALS.indexOf(current);
+            if (idx > 0) {
+                this.props.combatManager.updateAllFightIntervals(INTERVALS[idx - 1]);
+                this.forceUpdate();
+            }
+            break;
+        }
         case 'd':
             // ...existing code...
             debugger
@@ -321,7 +346,7 @@ combatKeyUpListener = (event) => {
   render(){
     return (
     <div className="page-container">
-
+        {/* ...existing code... */}
         {!this.state.crewSelected && <div className="crew-manager">
             { this.state.navToLanding && <Redirect to='/'/> }
             <div className="content-container">
@@ -420,6 +445,8 @@ combatKeyUpListener = (event) => {
                 paused={this.state.paused || null}
                 setNarrativeSequence={this.props.setNarrativeSequence || null}
                 useConsumableFromInventory={this.useConsumableFromInventory || null}
+                intervals={INTERVALS}
+                intervalDisplayNames={INTERVAL_DISPLAY_NAMES}
             ></MonsterBattle> 
         </div>}
     </div>

@@ -304,7 +304,7 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
                     this.restartTurnCycle();
                 }
                 broadcastDataUpdate(this)
-            }, FIGHT_INTERVAL * 0.1)
+            }, this.FIGHT_INTERVAL)
         },
         restartTurnCycle: function(){
             clearInterval(this.interval)
@@ -341,6 +341,16 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
         },
         unlock: function(){
             this.locked = false;
+        },
+        // Allow updating the fighter's interval dynamically
+        setFightInterval: function(newInterval) {
+            console.log('setFighterInterval called with: ', newInterval, 'for ', this.type, 'this.interval identifier: ', this.interval, 'current this.FIGHT_INTERVAL: ', this.FIGHT_INTERVAL  );
+            this.FIGHT_INTERVAL = newInterval;
+            // If a turn cycle is running, restart it with the new interval
+            if (this.interval) {
+                clearInterval(this.interval);
+                this.restartTurnCycle();
+            }
         }
     };
 }

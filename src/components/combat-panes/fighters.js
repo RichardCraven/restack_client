@@ -39,6 +39,9 @@ export default function FightersCombatGrid(props) {
                 {activeCrew.map((fighter) => {
                     const isTeleporting = props.teleportingFighterId === fighter.id;
                     const transitionStyle = { transition: isTeleporting ? 'none' : '1s' };
+                    // Always use the facing at the moment of death for the death animation
+                    const details = props.getFighterDetails(fighter);
+                    const facingClass = details?.facing === 'right' ? '' : 'reversed';
                     return  <div key={fighter.id}  className={`lane-wrapper ${isTeleporting ? ' teleporting' : ''}`}
                                 style={{ 
                                     top: `${props.battleData[fighter.id]?.coordinates.y * TILE_SIZE + (SHOW_TILE_BORDERS ? props.battleData[fighter.id]?.coordinates.y * 2 : 0)}px`,
@@ -62,26 +65,26 @@ export default function FightersCombatGrid(props) {
                                                 'fighter-portrait',
                                                 isTeleporting ? 'teleporting' : '',
                                                 props.selectedFighter?.id === fighter.id && !fighter.dead ? 'selected' : '',
-                                                props.getFighterDetails(fighter)?.wounded ? (props.getFighterDetails(fighter)?.facing === 'right' ? 'hit-from-right-minor' : 'hit-from-left-minor') : '',
-                                                props.getFighterDetails(fighter)?.woundedHeavily ? (props.getFighterDetails(fighter)?.facing === 'right' ? 'hit-from-right-severe' : 'hit-from-left-severe') : '',
-                                                props.getFighterDetails(fighter)?.woundedLethal ? (props.getFighterDetails(fighter)?.facing === 'right' ? 'hit-from-right-lethal' : 'hit-from-left-lethal') : '',
-                                                props.getFighterDetails(fighter)?.rocked ? 'rocked' : '',
+                                                details?.wounded ? (details?.facing === 'right' ? 'hit-from-right-minor' : 'hit-from-left-minor') : '',
+                                                details?.woundedHeavily ? (details?.facing === 'right' ? 'hit-from-right-severe' : 'hit-from-left-severe') : '',
+                                                details?.woundedLethal ? (details?.facing === 'right' ? 'hit-from-right-lethal' : 'hit-from-left-lethal') : '',
+                                                details?.rocked ? 'rocked' : '',
                                                 // up/down facing classes removed; add if you have a new property for this
-                                                // props.getFighterDetails(fighter)?.missed ? (props.getFighterDetails(fighter)?.facing === 'right' ? 'missed' : 'missed-reversed') : '',
+                                                // details?.missed ? (details?.facing === 'right' ? 'missed' : 'missed-reversed') : '',
                                                 fighter.isLeader ? 'leader-portrait' : '',
-                                                props.getFighterDetails(fighter)?.dead ? 'dead fighterDeadAnimation' : '',
-                                                (props.selectedFighter?.targetId === fighter.id || props.selectedMonster?.targetId === fighter.id) && !props.getFighterDetails(fighter)?.dead ? 'targetted' : '',
-                                                props.getFighterDetails(fighter)?.active ? 'active' : '',
-                                                props.getFighterDetails(fighter)?.facing === 'right' ? '' : 'reversed',
-                                                props.getFighterDetails(fighter)?.locked ? 'locked' : '',
-                                                props.getFighterDetails(fighter)?.chargingUpActive ? 'charging-up' : '',
+                                                details?.dead ? 'dead fighterDeadAnimation' : '',
+                                                (props.selectedFighter?.targetId === fighter.id || props.selectedMonster?.targetId === fighter.id) && !details?.dead ? 'targetted' : '',
+                                                details?.active ? 'active' : '',
+                                                facingClass,
+                                                details?.locked ? 'locked' : '',
+                                                details?.chargingUpActive ? 'charging-up' : '',
                                             ].filter(Boolean).join(' ')
                                         }
                                         style={{
                                             backgroundImage: "url(" + fighter.portrait + ")",
                                             filter: [
-                                                props.getFighterDetails(fighter)?.chargingUpActive ? "url('#ripple-effect')" : null,
-                                                `saturate(${((props.getFighterDetails(fighter)?.hp / fighter.stats.hp) * 100) / 2}) sepia(${props.portraitHoveredId === fighter.id ? '2' : '0'})`
+                                                details?.chargingUpActive ? "url('#ripple-effect')" : null,
+                                                `saturate(${((details?.hp / fighter.stats.hp) * 100) / 2}) sepia(${props.portraitHoveredId === fighter.id ? '2' : '0'})`
                                             ].filter(Boolean).join(' '),
                                             zIndex: 300 // Always above monsters/minions
                                         }} 
@@ -92,7 +95,7 @@ export default function FightersCombatGrid(props) {
                                         draggable
                                         onAnimationEnd={e => {
                                             if (
-                                                props.getFighterDetails(fighter)?.dead &&
+                                                details?.dead &&
                                                 e.animationName &&
                                                 e.animationName.includes('meltDownDeath') &&
                                                 showDeathAnimation[fighter.id]

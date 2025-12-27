@@ -11,8 +11,9 @@ const MAX_DEPTH = 7
 const NUM_COLUMNS = 8;
 // ^ means 8 squares, account for depth of 0 is far left
 const MAX_LANES = 5
-// const FIGHT_INTERVAL = 8;
-const FIGHT_INTERVAL = 30;
+// const this.FIGHT_INTERVAL = 8;
+const intervals = [5, 10, 40, 90]
+const FIGHT_INTERVAL = 10;
 const DEBUG_STEPS = false;
 const RANGES = {
     close: 1,
@@ -26,7 +27,18 @@ const clone = (val) => {
 }
 
 export function CombatManager(){
-    this.fighterAI = new FighterAI(NUM_COLUMNS, MAX_LANES, FIGHT_INTERVAL);
+    // Update all combatants' intervals and restart their turn cycles
+    this.updateAllFightIntervals = (newInterval) => {
+        this.FIGHT_INTERVAL = newInterval;
+        Object.values(this.combatants).forEach(c => {
+            if (typeof c.setFightInterval === 'function') {
+                c.setFightInterval(newInterval);
+            }
+        });
+    }
+    // Assign this.FIGHT_INTERVAL to the instance for external access
+    this.FIGHT_INTERVAL = FIGHT_INTERVAL;
+    this.fighterAI = new FighterAI(NUM_COLUMNS, MAX_LANES, this.FIGHT_INTERVAL);
     /**
      * Remove a combatant from the combatants object by id.
      * This should be called after the death animation/fade-out completes in the UI.
@@ -49,7 +61,7 @@ export function CombatManager(){
             }
         }
     }
-    this.monsterAI = new MonsterAI(NUM_COLUMNS, MAX_LANES, FIGHT_INTERVAL);
+    this.monsterAI = new MonsterAI(NUM_COLUMNS, MAX_LANES, this.FIGHT_INTERVAL);
     this.overlayManager = null;
     this.selectedFighter = null;
     this.combatPaused = false;
@@ -514,14 +526,14 @@ export function CombatManager(){
             // e.manualMovesTotal = 25
             e.manualMovesTotal = 100
             e.color = colors[index]
-            this.combatants[e.id] = createFighter(e, callbacks, FIGHT_INTERVAL);
+            this.combatants[e.id] = createFighter(e, callbacks, this.FIGHT_INTERVAL);
         })
         this.data.monster.coordinates = {x:0,y:0}
         this.data.monster.coordinates.y = 2;
         this.data.monster.coordinates.x = MAX_DEPTH;
         this.data.monster.isMonster = true;
         // this.data.monster.coordinates = {x:MAX_DEPTH, y:2}
-        let monster = createFighter(this.data.monster, callbacks, FIGHT_INTERVAL);
+        let monster = createFighter(this.data.monster, callbacks, this.FIGHT_INTERVAL);
         monster.isMonster = true;
         this.combatants[monster.id] = monster;
 
@@ -534,7 +546,7 @@ export function CombatManager(){
                 position--
                 e.coordinates.x = MAX_DEPTH;
                 // e.coordinates = {x:MAX_DEPTH+1, y:position}
-                let m = createFighter(e, callbacks, FIGHT_INTERVAL)
+                let m = createFighter(e, callbacks, this.FIGHT_INTERVAL)
                 m.isMinion = true;
                 this.combatants[m.id] = m;
             })
@@ -1628,7 +1640,7 @@ export function CombatManager(){
         }
         setTimeout(()=>{
             // combatantHit.wounded = false;
-        }, FIGHT_INTERVAL * 30)
+        }, this.FIGHT_INTERVAL * 30)
     }
     this.hitsTarget = (caller, tempTarget = null) => {
         let target = tempTarget ? tempTarget : this.getCombatant(caller.targetId);
@@ -1698,12 +1710,12 @@ export function CombatManager(){
                 }
             }
             caller.active = caller.aiming = false;
-        }, FIGHT_INTERVAL * 100);
+        }, this.FIGHT_INTERVAL * 100);
         setTimeout(()=>{
             caller.attacking = caller.attackingReverse = false;
             target.wounded = false;
             target.woundedHeavily = false;
-        }, FIGHT_INTERVAL * 30)
+        }, this.FIGHT_INTERVAL * 30)
         setTimeout(()=>{
             caller.readout.action = ''
             caller.readout.result = ''
@@ -1749,7 +1761,7 @@ export function CombatManager(){
             //     caller.restartTurnCycle();
             // }, 250)
 
-        }, FIGHT_INTERVAL * 50)
+        }, this.FIGHT_INTERVAL * 50)
 
         setTimeout(()=>{
             caller.readout.action = ''
