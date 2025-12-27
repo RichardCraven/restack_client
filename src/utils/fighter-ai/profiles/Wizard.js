@@ -124,10 +124,18 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
     return attack;
     }
     this.useGlyph = (caller, combatants) => {
+        // const getGlyph = () => {
+
+        // }
+        console.log('caller.specialActions: ', caller.specialActions);
+
         
-        const glyphAction = caller.specialActions && caller.specialActions.find(
+        const magicMissile = caller.specialActions && caller.specialActions.find(
             a => a.type === 'glyph' && a.subTypes && a.subTypes[0] && a.subTypes[0].type === 'magic missile'
         );
+
+
+        const glyphAction = magicMissile;
         if (glyphAction && (!glyphAction.cooldown_position || glyphAction.cooldown_position === 0)) {
             // Acquire a target (closest enemy)
             const liveEnemies = Object.values(combatants).filter(e => !e.dead && (e.isMonster || e.isMinion));
@@ -177,7 +185,7 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                 const target = Object.values(combatants).find(e=>e.id === caller.targetId),
                 targetHasMoreThanHalfHp = target && target.hp > (target.starting_hp / 2),
                 glyphAvailable = caller.specialActions && caller.specialActions.find(action => action.type === 'glyph');
-                
+
                 if (target && targetHasMoreThanHalfHp && this.useGlyph(caller, combatants)) {
                     break;
                 }

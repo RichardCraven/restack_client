@@ -30,6 +30,7 @@ export function CrewManager(){
     
     this.initializeCrew = (crew) => {
         this.crew = [];
+        console.log('initializing crew: ', crew, 'this is where specialActions are checked and marked available if their endDate has passed');
         crew.forEach(member=> { 
             // console.log('special actions: ', member.specialActions);
             if(!member.specialActions) return
@@ -121,8 +122,8 @@ export function CrewManager(){
                             actionSubtype,
                             startDate,
                             endDate,
-                            // available: false,
-                            available: true,
+                            available: false,
+                            // available: true,
                             notified: false,
                         })
                     break;

@@ -1102,6 +1102,7 @@ class DungeonPage extends React.Component {
             storeMeta(meta)
         }
         let selectedCrewMember = this.props.crewManager.crew.find(c=>c.selected) || {};
+        console.log('selectedCrewMember: ', selectedCrewMember);
         this.setState(()=>{
             return {
                 spawn: meta.location.tileIndex,
