@@ -16,11 +16,11 @@ const MonstersCombatGrid = ({
     images,
     TILE_SIZE,
     SHOW_TILE_BORDERS,
-    minionDirectionReversed,
+    // minionDirectionReversed removed, use facing property instead
     getMonsterWeaponAnimation,
     getHitAnimation,
-    monsterFacingUp,
-    monsterFacingDown,
+    // monsterFacingUp,
+    // monsterFacingDown,
     greetingInProcess,
     SHOW_MONSTER_IDS = false,
     teleportingFighterId
@@ -150,13 +150,13 @@ const MonstersCombatGrid = ({
                 >
                     <div className="monster-wrapper">
                         <div
-                            className={`action-bar-wrapper ${monsterFacingUp(battleData[monster.id]) ? 'pointing-up' : (monsterFacingDown(battleData[monster.id]) ? 'pointing-down' : '')}`}
+                            className="action-bar-wrapper"
                             style={{
                                 width: !!battleData[monster.id]?.targetId ? `${combatManager.getDistanceToTargetWidthString(battleData[monster.id])}px` : '5px',
                                 left: `calc(100px * ${combatManager.getCombatant(battleData[monster.id]?.targetId)?.coordinates.x} + 50px)`
                             }}
                         >
-                            <div className={`action-bar ${battleData[monster.id]?.attacking ? (minionDirectionReversed(monster) ? 'monsterHitsAnimation_LtoR' : 'monsterHitsAnimation') : ''}`}></div>
+                            <div className={`action-bar ${battleData[monster.id]?.attacking ? (battleData[monster.id]?.facing === 'right' ? 'monsterHitsAnimation_LtoR' : 'monsterHitsAnimation') : ''}`}></div>
                         </div>
                         {battleData[monster.id] && battleData[monster.id].pendingAttack && (
                             <div
@@ -165,7 +165,7 @@ const MonstersCombatGrid = ({
                                     ${battleData[monster.id]?.aiming ? 'aiming' : ''}
                                     small`}
                                 style={{
-                                    left: minionDirectionReversed(monster)
+                                    left: battleData[monster.id]?.facing === 'right'
                                         ? `${battleData[monster.id]?.coordinates.x * 100 + 65 + (battleData[monster.id]?.coordinates.x * 2)}px`
                                         : `${battleData[monster.id]?.coordinates.x * 100 - 45 + (battleData[monster.id]?.coordinates.x * 2)}px`,
                                     backgroundImage: `url(${battleData[monster.id].pendingAttack.icon})`
@@ -194,12 +194,12 @@ const MonstersCombatGrid = ({
                                         ${battleData[monster.id]?.active ? 'active' : ''}
                                         ${battleData[monster.id]?.dead ? 'dead monsterDeadAnimation' : ''}
                                         ${battleData[monster.id]?.wounded ? 'hit' : ''}
-                                        ${battleData[monster.id]?.wounded ? (minionDirectionReversed(monster) ? 'hit-from-right-minor' : 'hit-from-left-minor') : ''}
+                                        ${battleData[monster.id]?.wounded ? (battleData[monster.id]?.facing === 'right' ? 'hit-from-right-minor' : 'hit-from-left-minor') : ''}
                                         ${battleData[monster.id]?.rocked ? 'rocked' : ''}
-                                        ${battleData[monster.id]?.missed ? (minionDirectionReversed(monster) ? 'missed-reversed' : 'missed') : ''}
+                                        ${battleData[monster.id]?.missed ? (battleData[monster.id]?.facing === 'right' ? 'missed-reversed' : 'missed') : ''}
                                         ${selectedMonster?.id === monster.id ? 'selected' : ''}
                                         ${selectedFighter?.targetId === monster.id ? 'targetted' : ''}
-                                        ${minionDirectionReversed(monster) ? 'reversed' : ''}
+                                        ${battleData[monster.id]?.facing === 'right' ? 'reversed' : ''}
                                         ${battleData[monster.id]?.wounded ? 'hit-flash' : ''}
                                         ${battleData[monster.id]?.chargingUpActive ? 'charging-up' : ''}`}
                                     ref={el => {
@@ -304,7 +304,7 @@ const MonstersCombatGrid = ({
                                     left: `calc(100px * ${combatManager.getCombatant(minion.targetId)?.coordinates.x} + 50px)`
                                 }}
                             >
-                                <div className={`action-bar ${minion.attacking ? (minionDirectionReversed(minion) ? 'monsterHitsAnimation_LtoR' : 'monsterHitsAnimation') : ''}`}></div>
+                                <div className={`action-bar ${minion.attacking ? (minion.facing === 'right' ? 'monsterHitsAnimation_LtoR' : 'monsterHitsAnimation') : ''}`}></div>
                             </div>
                             {minion.pendingAttack && (
                                 <div
@@ -313,7 +313,7 @@ const MonstersCombatGrid = ({
                                         ${minion.aiming ? 'aiming' : ''}
                                         small`}
                                     style={{
-                                        left: minionDirectionReversed(minion)
+                                        left: minion.facing === 'right'
                                             ? `${minion.coordinates.x * 100 + 65 + (minion.coordinates.x * 2)}px`
                                             : `${minion.coordinates.x * 100 - 45 + (minion.coordinates.x * 2)}px`,
                                         backgroundImage: `url(${minion.pendingAttack.icon})`
@@ -334,11 +334,12 @@ const MonstersCombatGrid = ({
                                         ${minion.dead ? 'dead monsterDeadAnimation' : ''}
                                         ${minion.wounded ? 'hit' : ''}
                                         ${minion.wounded ? getHitAnimation(minion) : ''}
-                                        ${minion.missed ? (minionDirectionReversed(minion) ? 'missed-reversed' : 'missed') : ''}
+                                        ${minion.missed ? (minion.facing === 'right' ? 'missed-reversed' : 'missed') : ''}
                                         ${minion.rocked ? 'rocked' : ''}
                                         ${selectedMonster?.id === minion.id ? 'selected' : ''}
                                         ${selectedFighter?.targetId === minion.id ? 'targetted' : ''}
-                                        ${minionDirectionReversed(minion) ? 'reversed' : ''}`}
+                                        ${minion.facing === 'right' ? 'reversed' : ''}`
+                                    }
                                     style={{
                                         backgroundImage: `url(${minion.portrait})`,
                                         filter: `saturate(${((minion.hp / minion.stats.hp) * 100) / 2}) sepia(${portraitHoveredId === minion.id ? '2' : '0'})`,

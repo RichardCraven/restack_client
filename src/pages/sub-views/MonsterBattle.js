@@ -217,23 +217,23 @@ class MonsterBattle extends React.Component {
         return `hit-from-${combatant.wounded.sourceDirection}-${combatant.wounded.severity}`
     }
 
-    fighterFacingRight = (fighter) => {
-        return this.props.combatManager.fighterFacingRight(fighter)
-    }
-    fighterFacingUp = (fighter) => {
-        if(!fighter) return
-        return this.props.combatManager.fighterFacingUp(fighter)
-    }
-    fighterFacingDown = (fighter) => {
-        if(!fighter) return
-        return this.props.combatManager.fighterFacingDown(fighter)
-    }
-    monsterFacingUp = (monster) => {
-        return this.props.combatManager.monsterFacingUp(monster)
-    }
-    monsterFacingDown = (monster) => {
-        return this.props.combatManager.monsterFacingDown(monster)
-    }
+    // fighterFacingRight = (fighter) => {
+    //     return this.props.combatManager.fighterFacingRight(fighter)
+    // }
+    // fighterFacingUp = (fighter) => {
+    //     if(!fighter) return
+    //     return this.props.combatManager.fighterFacingUp(fighter)
+    // }
+    // fighterFacingDown = (fighter) => {
+    //     if(!fighter) return
+    //     return this.props.combatManager.fighterFacingDown(fighter)
+    // }
+    // monsterFacingUp = (monster) => {
+    //     return this.props.combatManager.monsterFacingUp(monster)
+    // }
+    // monsterFacingDown = (monster) => {
+    //     return this.props.combatManager.monsterFacingDown(monster)
+    // }
     milliDelay = (numMilliseconds) => {
         return new Promise((resolve) => {
             setTimeout(()=>{
@@ -329,16 +329,16 @@ class MonsterBattle extends React.Component {
         }
     }
     getActionBarLeftValForFighter = (id) => {
-        //cyan 
-        const selectedFighter = this.state.battleData[id];
-        let val = (this.getFighterDetails(selectedFighter)?.coordinates.x * 100) + (this.fighterFacingRight(selectedFighter) ? 100 : (0 - (this.props.combatManager.getRangeWidthVal(selectedFighter) * 100) ))
-        return val
+    //cyan 
+    const selectedFighter = this.state.battleData[id];
+    let val = (this.getFighterDetails(selectedFighter)?.coordinates.x * 100) + (selectedFighter?.facing === 'right' ? 100 : (0 - (this.props.combatManager.getRangeWidthVal(selectedFighter) * 100) ))
+    return val
     }
     fighterPortraitClicked = (id) => {
-        const selectedFighter = this.state.battleData[id];
-        console.log('fighter clicked: ', selectedFighter, this.state.animationOverlays[id]);
-        let val = (this.getFighterDetails(selectedFighter)?.coordinates.x * 100) + (this.fighterFacingRight(selectedFighter) ? 0 : (100 - (this.props.combatManager.getRangeWidthVal(selectedFighter) * 100) ))
-        selectedFighter.portrait = this.props.crew.find(e=>e.id === id).portrait
+    const selectedFighter = this.state.battleData[id];
+    console.log('fighter clicked: ', selectedFighter, this.state.animationOverlays[id]);
+    let val = (this.getFighterDetails(selectedFighter)?.coordinates.x * 100) + (selectedFighter?.facing === 'right' ? 0 : (100 - (this.props.combatManager.getRangeWidthVal(selectedFighter) * 100) ))
+    selectedFighter.portrait = this.props.crew.find(e=>e.id === id).portrait
 
         console.log('setting selected fighter: ', selectedFighter);
         if(this.state.showCrosshair){
@@ -1014,10 +1014,10 @@ class MonsterBattle extends React.Component {
                         selectedFighter={this.state.selectedFighter}
                         battleData={this.state.battleData}
                         getFighterDetails={this.getFighterDetails}
-                        fighterFacingRight={this.fighterFacingRight}
                         selectedMonster={this.state.selectedMonster}
-                        fighterFacingUp={this.fighterFacingUp}
-                        fighterFacingDown={this.fighterFacingDown}
+                        // fighterFacingRight={this.fighterFacingRight}
+                        // fighterFacingUp={this.fighterFacingUp}
+                        // fighterFacingDown={this.fighterFacingDown}
                         portraitHoveredId={this.state.portraitHoveredId}
                         onDragStart={this.onDragStart}
                         getActionBarLeftValForFighter={this.getActionBarLeftValForFighter}
@@ -1037,8 +1037,8 @@ class MonsterBattle extends React.Component {
                         monsterData={this.monster()}
                         combatManager={this.props.combatManager}
                         selectedMonster={this.state.selectedMonster}
-                        monsterFacingUp={this.monsterFacingUp}
-                        monsterFacingDown={this.monsterFacingDown}
+                        // monsterFacingUp={this.monsterFacingUp}
+                        // monsterFacingDown={this.monsterFacingDown}
                         portraitHovered={this.portraitHovered}
                         greetingInProcess={this.state.greetingInProcess}
                         monsterCombatPortraitClicked={this.monsterCombatPortraitClicked}

@@ -44,6 +44,11 @@ export function Djinn(data, utilMethods, animationManager, overlayManager){
         // console.log('Djinn energy');
         caller.energy+=5
         data.methods.moveTowardsCloseEnemyTarget(caller, combatants)
+        // After moving, update facing to face target if one exists
+        if (caller.targetId && combatants[caller.targetId]) {
+            const target = combatants[caller.targetId];
+            caller.facing = (caller.coordinates.x <= target.coordinates.x) ? 'right' : 'left';
+        }
     }
     this.triggerVoidLance = (coords) => {
         console.log('TRIGGER VOID LANCE');

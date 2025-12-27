@@ -12,9 +12,9 @@ export function Monk(data, utilMethods, animationManager, overlayManager){
     this.overlayManager = overlayManager;
 
     // Assign utility methods (match Soldier/Wizard)
-    this.fighterFacingUp = utilMethods.fighterFacingUp;
-    this.fighterFacingDown = utilMethods.fighterFacingDown;
-    this.fighterFacingRight = utilMethods.fighterFacingRight;
+    // this.fighterFacingUp = utilMethods.fighterFacingUp;
+    // this.fighterFacingDown = utilMethods.fighterFacingDown;
+    // this.fighterFacingRight = utilMethods.fighterFacingRight;
     this.broadcastDataUpdate = utilMethods.broadcastDataUpdate;
     this.kickoffAttackCooldown = utilMethods.kickoffAttackCooldown;
     this.missesTarget = utilMethods.missesTarget;
@@ -197,7 +197,7 @@ export function Monk(data, utilMethods, animationManager, overlayManager){
             return val;
         }
 
-        const facingRight = this.fighterFacingRight(caller)
+    const facingRight = caller.facing === 'right';
         const target = combatants[caller.targetId];
         const facing = caller.facing ? caller.facing : callerFacing(caller,target);
         caller.attacking = true; 

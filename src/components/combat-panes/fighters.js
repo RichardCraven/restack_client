@@ -62,17 +62,17 @@ export default function FightersCombatGrid(props) {
                                                 'fighter-portrait',
                                                 isTeleporting ? 'teleporting' : '',
                                                 props.selectedFighter?.id === fighter.id && !fighter.dead ? 'selected' : '',
-                                                props.getFighterDetails(fighter)?.wounded ? (props.fighterFacingRight(fighter) ? 'hit-from-right-minor' : 'hit-from-left-minor') : '',
-                                                props.getFighterDetails(fighter)?.woundedHeavily ? (props.fighterFacingRight(fighter) ? 'hit-from-right-severe' : 'hit-from-left-severe') : '',
-                                                props.getFighterDetails(fighter)?.woundedLethal ? (props.fighterFacingRight(fighter) ? 'hit-from-right-lethal' : 'hit-from-left-lethal') : '',
+                                                props.getFighterDetails(fighter)?.wounded ? (props.getFighterDetails(fighter)?.facing === 'right' ? 'hit-from-right-minor' : 'hit-from-left-minor') : '',
+                                                props.getFighterDetails(fighter)?.woundedHeavily ? (props.getFighterDetails(fighter)?.facing === 'right' ? 'hit-from-right-severe' : 'hit-from-left-severe') : '',
+                                                props.getFighterDetails(fighter)?.woundedLethal ? (props.getFighterDetails(fighter)?.facing === 'right' ? 'hit-from-right-lethal' : 'hit-from-left-lethal') : '',
                                                 props.getFighterDetails(fighter)?.rocked ? 'rocked' : '',
-                                                props.fighterFacingUp(props.getFighterDetails(fighter)) ? 'facing-up' : (props.fighterFacingDown(props.getFighterDetails(fighter)) ? 'facing-down' : ''),
-                                                props.getFighterDetails(fighter)?.missed ? (props.fighterFacingRight(fighter) ? 'missed' : 'missed-reversed') : '',
+                                                // up/down facing classes removed; add if you have a new property for this
+                                                // props.getFighterDetails(fighter)?.missed ? (props.getFighterDetails(fighter)?.facing === 'right' ? 'missed' : 'missed-reversed') : '',
                                                 fighter.isLeader ? 'leader-portrait' : '',
                                                 props.getFighterDetails(fighter)?.dead ? 'dead fighterDeadAnimation' : '',
                                                 (props.selectedFighter?.targetId === fighter.id || props.selectedMonster?.targetId === fighter.id) && !props.getFighterDetails(fighter)?.dead ? 'targetted' : '',
                                                 props.getFighterDetails(fighter)?.active ? 'active' : '',
-                                                props.fighterFacingRight(fighter) ? '' : 'reversed',
+                                                props.getFighterDetails(fighter)?.facing === 'right' ? '' : 'reversed',
                                                 props.getFighterDetails(fighter)?.locked ? 'locked' : '',
                                                 props.getFighterDetails(fighter)?.chargingUpActive ? 'charging-up' : '',
                                             ].filter(Boolean).join(' ')
@@ -146,14 +146,14 @@ export default function FightersCombatGrid(props) {
 
                                         return (
                                             <div className={`weapon-wrapper
-                                                ${!props.fighterFacingRight(fighter) ? 'reversed' : ''}
+                                                ${props.getFighterDetails(fighter)?.facing === 'right' ? '' : 'reversed'}
                                                 ${details?.aiming ? 'aiming' : ''}
-                                                ${(details?.attacking && details?.pendingAttack.range === 'close') ? (props.fighterFacingRight(fighter) ? 'swinging-right' : 'swinging-left') 
+                                                ${(details?.attacking && details?.pendingAttack.range === 'close') ? (details?.facing === 'right' ? 'swinging-right' : 'swinging-left') 
                                                 : (details?.attacking && details?.pendingAttack.range === 'far' ? 'shooting' : '')}
-                                                ${props.fighterFacingUp(details) ? 'pointing-up' : (props.fighterFacingDown(details) ? 'pointing-down' : '')}
+                                                // up/down pointing classes removed; add if you have a new property for this
                                                 medium`}
                                                 style={{
-                                                left: props.fighterFacingRight(fighter) ?
+                                                left: details?.facing === 'right' ?
                                                 `${details?.coordinates.x * 100 + 45 + (details?.coordinates.x * 2)}px` :
                                                 `${details?.coordinates.x * 100 - 65 + (details?.coordinates.x * 2)}px`,
                                                 backgroundImage: `url(${icon})`
@@ -161,7 +161,7 @@ export default function FightersCombatGrid(props) {
                                             </div>
                                         );
                                     })()}
-                                    <div className={`action-bar-wrapper ${props.fighterFacingUp(props.getFighterDetails(fighter)) ? 'pointing-up' : (props.fighterFacingDown(props.getFighterDetails(fighter)) ? 'pointing-down' : '')}`} 
+                                    <div className={`action-bar-wrapper`} 
                                         style={{
                                         zIndex: 1001,
                                         height: '100%',
@@ -175,7 +175,7 @@ export default function FightersCombatGrid(props) {
                                     >
                                         <div className={`
                                         action-bar 
-                                        ${(props.getFighterDetails(fighter)?.attacking) ? (props.fighterFacingRight(fighter) ? 'fighterHitsAnimation' : 'fighterHitsAnimation_RtoL') : ''}
+                                        ${(props.getFighterDetails(fighter)?.attacking) ? (props.getFighterDetails(fighter)?.facing === 'right' ? 'fighterHitsAnimation' : 'fighterHitsAnimation_RtoL') : ''}
                                         ${(props.getFighterDetails(fighter)?.healing) ? 'fighterHealsAnimation' : ''}
                                         `}></div>
                                     </div>

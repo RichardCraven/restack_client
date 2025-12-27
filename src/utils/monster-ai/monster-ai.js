@@ -20,9 +20,9 @@ export function MonsterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
         INTERVAL_TIME: this.INTERVAL_TIME
     }
     this.connectUtilMethods = (utilMethods) => {
-        this.monsterFacingUp = utilMethods.monsterFacingUp;
-        this.monsterFacingDown = utilMethods.monsterFacingDown;
-        this.monsterFacingRight = utilMethods.monsterFacingRight;
+        // this.monsterFacingUp = utilMethods.monsterFacingUp;
+        // this.monsterFacingDown = utilMethods.monsterFacingDown;
+        // this.monsterFacingRight = utilMethods.monsterFacingRight;
         this.broadcastDataUpdate = utilMethods.broadcastDataUpdate;
         this.kickoffAttackCooldown = utilMethods.kickoffAttackCooldown;
         this.missesTarget = utilMethods.missesTarget;
@@ -30,9 +30,9 @@ export function MonsterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
         this.hitsCombatant = utilMethods.hitsCombatant;
 
         this.utilMethods = {
-            monsterFacingDown:this.monsterFacingDown,
-            monsterFacingUp: this.monsterFacingUp,
-            monsterFacingRight: this.monsterFacingRight,
+            // monsterFacingDown:this.monsterFacingDown,
+            // monsterFacingUp: this.monsterFacingUp,
+            // monsterFacingRight: this.monsterFacingRight,
             broadcastDataUpdate: this.broadcastDataUpdate,
             kickoffAttackCooldown: this.kickoffAttackCooldown,
             missesTarget: this.missesTarget,

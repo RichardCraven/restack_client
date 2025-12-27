@@ -9,9 +9,9 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
     this.animationManager = animationManager;
     this.overlayManager = overlayManager;
 
-    this.fighterFacingUp = utilMethods.fighterFacingUp;
-    this.fighterFacingDown = utilMethods.fighterFacingDown;
-    this.fighterFacingRight = utilMethods.fighterFacingRight;
+    // this.fighterFacingUp = utilMethods.fighterFacingUp;
+    // this.fighterFacingDown = utilMethods.fighterFacingDown;
+    // this.fighterFacingRight = utilMethods.fighterFacingRight;
     this.broadcastDataUpdate = utilMethods.broadcastDataUpdate;
     this.kickoffAttackCooldown = utilMethods.kickoffAttackCooldown;
     this.missesTarget = utilMethods.missesTarget;
@@ -358,7 +358,7 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
             }
             return val;
         };
-        const facingRight = this.fighterFacingRight(caller);
+    const facingRight = caller.facing === 'right';
         const target = combatants[caller.targetId];
         const facing = caller.facing ? caller.facing : callerFacing(caller,target);
 

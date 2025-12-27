@@ -6,9 +6,9 @@ export function Skeleton(data, utilMethods, animationManager, overlayManager){
     this.animationManager = animationManager;
     this.overlayManager = overlayManager;
     
-    this.monsterFacingUp = utilMethods.monsterFacingUp;
-    this.monsterFacingDown = utilMethods.monsterFacingDown;
-    this.monsterFacingRight = utilMethods.monsterFacingRight;
+    // this.monsterFacingUp = utilMethods.monsterFacingUp;
+    // this.monsterFacingDown = utilMethods.monsterFacingDown;
+    // this.monsterFacingRight = utilMethods.monsterFacingRight;
     this.broadcastDataUpdate = utilMethods.broadcastDataUpdate;
     this.kickoffAttackCooldown = utilMethods.kickoffAttackCooldown;
     this.missesTarget = utilMethods.missesTarget;
@@ -38,6 +38,13 @@ export function Skeleton(data, utilMethods, animationManager, overlayManager){
             debugger;
             throw new Error('moveCooldown must be defined for all units');
         }
+        console.log('[Skeleton.processMove] BEFORE:', {
+            id: caller.id,
+            coords: {...caller.coordinates},
+            targetId: caller.targetId,
+            targetCoords: caller.targetId && combatants[caller.targetId] ? {...combatants[caller.targetId].coordinates} : null,
+            facing: caller.facing
+        });
         caller.onMoveCooldown = true;
         setTimeout(() => {
             caller.onMoveCooldown = false;
@@ -64,23 +71,17 @@ export function Skeleton(data, utilMethods, animationManager, overlayManager){
                     break;
                 }
             break;
-            
             case 'panicked':
                 switch(caller.eraIndex){
                     case 0:
-
                     break;
                     case 1:
-
                     break;
                     case 2:
-
                     break;
                     case 3:
-
                     break;
                     case 4:
-
                     break;
                     default: 
                     break;
@@ -89,25 +90,32 @@ export function Skeleton(data, utilMethods, animationManager, overlayManager){
             case 'melee':
                 switch(caller.eraIndex){
                     case 0:
-
                     break;
                     case 1:
-
                     break;
                     case 2:
-
                     break;
                     case 3:
-
                     break;
                     case 4:
-
                     break;
                     default: 
                     break;
                 }
             break;
         }
+        // After moving, update facing to face target if one exists
+        if (caller.targetId && combatants[caller.targetId]) {
+            const target = combatants[caller.targetId];
+            caller.facing = (caller.coordinates.x <= target.coordinates.x) ? 'right' : 'left';
+        }
+        console.log('[Skeleton.processMove] AFTER:', {
+            id: caller.id,
+            coords: {...caller.coordinates},
+            targetId: caller.targetId,
+            targetCoords: caller.targetId && combatants[caller.targetId] ? {...combatants[caller.targetId].coordinates} : null,
+            facing: caller.facing
+        });
     }
 
     this.triggerClawAttack = (callerCoords, targetCoords, id = null) => {

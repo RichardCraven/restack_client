@@ -12,7 +12,7 @@ const NUM_COLUMNS = 8;
 // ^ means 8 squares, account for depth of 0 is far left
 const MAX_LANES = 5
 // const FIGHT_INTERVAL = 8;
-const FIGHT_INTERVAL = 1;
+const FIGHT_INTERVAL = 30;
 const DEBUG_STEPS = false;
 const RANGES = {
     close: 1,
@@ -519,6 +519,7 @@ export function CombatManager(){
         this.data.monster.coordinates = {x:0,y:0}
         this.data.monster.coordinates.y = 2;
         this.data.monster.coordinates.x = MAX_DEPTH;
+        this.data.monster.isMonster = true;
         // this.data.monster.coordinates = {x:MAX_DEPTH, y:2}
         let monster = createFighter(this.data.monster, callbacks, FIGHT_INTERVAL);
         monster.isMonster = true;
@@ -527,6 +528,7 @@ export function CombatManager(){
         if(this.data.minions){
             let position = MAX_LANES-1;
             this.data.minions.forEach(e=>{
+                e.isMinion = true;
                 e.coordinates = {x:0,y:0}
                 e.coordinates.y = position;
                 position--
@@ -564,7 +566,8 @@ export function CombatManager(){
         if(!target){
             return
         }
-        const differential = this.fighterFacingUp(caller) || this.fighterFacingDown(caller) ? Math.abs(caller.coordinates.y - target.coordinates.y) : Math.abs(caller.coordinates.x - target.coordinates.x);
+    // Use only x-differential for range, as facing is now left/right only
+    const differential = Math.abs(caller.coordinates.x - target.coordinates.x);
         // 1 means target is right in front of you
 
         let res;
@@ -874,51 +877,51 @@ export function CombatManager(){
         }
         fighter.restartTurnCycle()
     }
-    this.fighterFacingRight = (caller) => {
-        const f = this.combatants[caller.id]
-        if(!f) return;
-        const target = this.combatants[f.targetId]
-        if(target){
-            return f.coordinates.x <= target.coordinates.x
-        }
-        else return true
-    }
-    this.fighterFacingUp = (caller) => {
-        const f = this.combatants[caller.id]
-        if(!f) return;
-        const target = this.combatants[f.targetId]
-        if(target){
-            return f.coordinates.y > target.coordinates.y && f.coordinates.x === target.coordinates.x
-        }
-        else return false
-    }
-    this.fighterFacingDown = (caller) => {
-        const f = this.combatants[caller.id]
-        if(!f) return;
-        const target = this.combatants[f.targetId]
-        if(target){
-            return f.coordinates.y < target.coordinates.y && f.coordinates.x === target.coordinates.x
-        }
-        else return false
-    }
-    this.monsterFacingUp = (caller) => {
-        if(!caller || !this.combatants[caller.id]) return;
-        const monster = Object.values(this.combatants[caller.id])
-        const target = this.combatants[monster.targetId]
-        if(target){
-            return monster.coordinates.y > target.coordinates.y && monster.coordinates.x === target.coordinates.x
-        }
-        else return false
-    }
-    this.monsterFacingDown = (caller) => {
-        if(!caller || !this.combatants[caller.id]) return;
-        const monster = Object.values(this.combatants[caller.id])
-        const target = this.combatants[monster.targetId]
-        if(target){
-            return monster.coordinates.y < target.coordinates.y && monster.coordinates.x === target.coordinates.x
-        }
-        else return false
-    }
+    // this.fighterFacingRight = (caller) => {
+    //     const f = this.combatants[caller.id]
+    //     if(!f) return;
+    //     const target = this.combatants[f.targetId]
+    //     if(target){
+    //         return f.coordinates.x <= target.coordinates.x
+    //     }
+    //     else return true
+    // }
+    // this.fighterFacingUp = (caller) => {
+    //     const f = this.combatants[caller.id]
+    //     if(!f) return;
+    //     const target = this.combatants[f.targetId]
+    //     if(target){
+    //         return f.coordinates.y > target.coordinates.y && f.coordinates.x === target.coordinates.x
+    //     }
+    //     else return false
+    // }
+    // this.fighterFacingDown = (caller) => {
+    //     const f = this.combatants[caller.id]
+    //     if(!f) return;
+    //     const target = this.combatants[f.targetId]
+    //     if(target){
+    //         return f.coordinates.y < target.coordinates.y && f.coordinates.x === target.coordinates.x
+    //     }
+    //     else return false
+    // }
+    // this.monsterFacingUp = (caller) => {
+    //     if(!caller || !this.combatants[caller.id]) return;
+    //     const monster = Object.values(this.combatants[caller.id])
+    //     const target = this.combatants[monster.targetId]
+    //     if(target){
+    //         return monster.coordinates.y > target.coordinates.y && monster.coordinates.x === target.coordinates.x
+    //     }
+    //     else return false
+    // }
+    // this.monsterFacingDown = (caller) => {
+    //     if(!caller || !this.combatants[caller.id]) return;
+    //     const monster = Object.values(this.combatants[caller.id])
+    //     const target = this.combatants[monster.targetId]
+    //     if(target){
+    //         return monster.coordinates.y < target.coordinates.y && monster.coordinates.x === target.coordinates.x
+    //     }
+    //     else return false
+    // }
     this.manualRetarget = (caller) => {
         const targetOptions = Object.values(this.combatants).filter(e=>(e.isMinion || e.isMonster) && !e.dead)
         const currentTarget = targetOptions.find(e=>e.id===caller.targetId)
@@ -928,15 +931,11 @@ export function CombatManager(){
     this.initiateAttack = (caller, manualAttack = false) => {
        let manualTarget = false;
         const targetInRange = (caller, target) => {
-            const pendingAttack = caller.pendingAttack
-            const rangeDiff = this.fighterFacingUp(caller) || this.fighterFacingDown(caller) ?
-             Math.abs(caller.coordinates.y - target.coordinates.y) 
-             : Math.abs(caller.coordinates.x - target.coordinates.x);
-
-
+            const pendingAttack = caller.pendingAttack;
+            // Use only x-differential for range, as facing is now left/right only
+            const rangeDiff = Math.abs(caller.coordinates.x - target.coordinates.x);
             if(manualAttack){
                 // console.group('TARGET IN RANGE BLock');
-
                 // console.log('caller', caller, 'target: ', target);
                 // console.log('pendingAttack', pendingAttack);
                 // console.log('pendingAttack range ', RANGES[caller.pendingAttack.range], 'vs rangeDiff: ', rangeDiff);
@@ -1130,8 +1129,14 @@ export function CombatManager(){
     this.acquireTarget = (caller, targetToAvoid = null) => {
         if(this.combatPaused || caller.dead) return;
         if(this.fighterAI.roster[caller.type]){
+            const prevTargetId = caller.targetId;
             this.fighterAI.roster[caller.type].acquireTarget(caller, this.combatants, targetToAvoid)
-            if(caller.targetId){
+            if(caller.targetId && caller.targetId !== prevTargetId){
+                // Set facing based on target position ONLY if targetId changed
+                const target = this.combatants[caller.targetId];
+                if (target) {
+                    caller.facing = (caller.coordinates.x <= target.coordinates.x) ? 'right' : 'left';
+                }
                 const animation = {
                     type: 'targetted',
                     id: caller.targetId,
@@ -1141,12 +1146,19 @@ export function CombatManager(){
                 }
                 this.overlayManager.addAnimation(animation)
             }
+            // If no new target, do not change facing (persist last direction)
             return
         }
         
         if(this.monsterAI.roster[caller.type]){
+            const prevTargetId = caller.targetId;
             this.monsterAI.roster[caller.type].acquireTarget(caller, this.combatants);
-            if(caller.targetId){
+            if(caller.targetId && caller.targetId !== prevTargetId){
+                // Set facing based on target position ONLY if targetId changed
+                const target = this.combatants[caller.targetId];
+                if (target) {
+                    caller.facing = (caller.coordinates.x <= target.coordinates.x) ? 'right' : 'left';
+                }
                 const animation = {
                     type: 'targetted',
                     id: caller.targetId,
@@ -1156,6 +1168,7 @@ export function CombatManager(){
                 }
                 this.overlayManager.addAnimation(animation)
             }
+            // If no new target, do not change facing (persist last direction)
             return
         }
         const liveMonsters = Object.values(this.combatants).filter(e=> ((e.isMonster || e.isMinion )  && !e.dead)),
@@ -1206,10 +1219,15 @@ export function CombatManager(){
         let currentTargetIndex = targetsSortedVertically.indexOf(currentTarget)
         if(targetsSortedVertically[currentTargetIndex+1]){
             caller.targetId = targetsSortedVertically[currentTargetIndex+1].id;
-        } else {
+                // If no target, do not change facing (persist last direction)
             caller.targetId = targetsSortedVertically[0].id
         }
         if(caller.targetId){
+            // Set facing based on target position
+            const target = this.combatants[caller.targetId];
+            if (target) {
+                caller.facing = (caller.coordinates.x <= target.coordinates.x) ? 'right' : 'left';
+            }
             console.log('MANUAL in here, target', caller, caller.targetId);
             const animation = {
                 type: 'targetted',
@@ -1843,8 +1861,8 @@ export function CombatManager(){
         fighterFacingDown: this.fighterFacingDown, 
         fighterFacingUp: this.fighterFacingUp, 
         fighterFacingRight: this.fighterFacingRight,
-        monsterFacingDown:this.monsterFacingDown,
-        monsterFacingUp: this.monsterFacingUp,
+        // monsterFacingDown:this.monsterFacingDown,
+        // monsterFacingUp: this.monsterFacingUp,
         broadcastDataUpdate: this.broadcastDataUpdate,
         kickoffAttackCooldown: this.kickoffAttackCooldown,
         missesTarget: this.missesTarget,

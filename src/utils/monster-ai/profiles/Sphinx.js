@@ -43,7 +43,12 @@ export function Sphinx(data, utilMethods, animationManager, overlayManager){
         setTimeout(() => {
             caller.onMoveCooldown = false;
         }, caller.moveCooldown);
-            switch(caller.behaviorSequence){
+        // After moving, update facing to face target if one exists
+        if (caller.targetId && combatants[caller.targetId]) {
+            const target = combatants[caller.targetId];
+            caller.facing = (caller.coordinates.x <= target.coordinates.x) ? 'right' : 'left';
+        }
+        switch(caller.behaviorSequence){
                 case 'center-spellcaster':
                     
                     switch(caller.eraIndex){

@@ -41,9 +41,9 @@ export function FighterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
         this.hitsCombatant = utilMethods.hitsCombatant;
         this.targetKilled = utilMethods.targetKilled;
         this.utilMethods = {
-            fighterFacingDown:this.monsterFacingDown,
-            fighterFacingUp: this.monsterFacingUp,
-            fighterFacingRight: this.fighterFacingRight,
+            // fighterFacingDown:this.monsterFacingDown,
+            // fighterFacingUp: this.monsterFacingUp,
+            // fighterFacingRight: this.fighterFacingRight,
             broadcastDataUpdate: this.broadcastDataUpdate,
             kickoffAttackCooldown: this.kickoffAttackCooldown,
             missesTarget: this.missesTarget,

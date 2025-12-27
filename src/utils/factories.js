@@ -20,6 +20,13 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
         targetInRange,
         getSelectedFighter
     } = callbacks;
+    // Determine initial facing: right for fighters, left for monsters/minions
+    let initialFacing = 'right';
+    console.log('fighter in createFighter: ', fighter);
+    if (fighter.isMonster || fighter.isMinion) {
+        console.log('*****fighter: ', fighter);
+        initialFacing = 'left';
+    }
     return {
         name: fighter.name,
         type: fighter.type,
@@ -106,6 +113,7 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
         onGeneralAttackCooldown: false,
         onMoveCooldown: false,
         color: fighter.color,
+        facing: initialFacing, // persistent facing property
         attack: function(){
             const target = getCombatant(this.targetId);
             if(!target) return
