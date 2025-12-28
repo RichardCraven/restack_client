@@ -760,6 +760,11 @@
     z-index: 1;
     pointer-events: none;
 }
+/* Modal style for in-session preparation completion */
+.prep-complete-modal .modal-content{
+    border: 2px solid #add8e6; /* light blue */
+    box-shadow: 0 0 12px rgba(173,216,230,0.6);
+}
 .info-panel{
     color: white;
     position: absolute;

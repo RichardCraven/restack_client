@@ -18,6 +18,60 @@ import  CIcon  from '@coreui/icons-react';
 import { CButton, CFormSelect, CFormInput, CModal, CModalHeader, CModalTitle, CModalBody, CTabPane, CTabContent} from '@coreui/react';
 import * as images from '../utils/images'
 
+// Small subcomponent to render modal header + body based on modalType
+const ModalInner = ({ modalType, updates, crew, tileSize, handleMemberClickRitual, handleCrewTileHover, setMemberRitualOptions }) => {
+    return (
+        <>
+            <CModalHeader>
+                {modalType === 'Updates' && <CModalTitle>Since your last visit...</CModalTitle>}
+                {modalType === 'PrepComplete' && <CModalTitle>Spell preparation completed</CModalTitle>}
+                {modalType === 'Magic' && <CModalTitle>You encounter a magic field...</CModalTitle>}
+            </CModalHeader>
+            <CModalBody>
+                {modalType === 'Updates' && <div>
+                    {(updates || []).map((update, i) => (
+                        <div key={i}>{update.text}</div>
+                    ))}
+                </div>}
+                {modalType === 'PrepComplete' && <div>
+                    <p>Spell preparation completed.</p>
+                    {(updates || []).map((update, i) => (
+                        <div key={i}>{update.text}</div>
+                    ))}
+                </div>}
+                {modalType === 'Magic' && <div>
+                    <p>
+                    If you have a magic user in your crew you may begin a known ritual with 3x effect or learn a new one.
+                    </p>
+                    <div className="modal-zone">
+                        {crew.filter(e=> e.type === 'wizard' || e.type === 'sage').map((magicUser, i)=>{
+                            return <div className="options-row" key={i}>
+                                <Tile 
+                                id={i}
+                                tileSize={tileSize}
+                                image={magicUser.image ? magicUser.image : null}
+                                imageOverride={magicUser.portrait ? magicUser.portrait : null}
+                                contains={magicUser.type}
+                                data={magicUser}
+                                color={magicUser.color}
+                                editMode={false}
+                                type={'crew-tile'}
+                                handleClick={handleMemberClickRitual}
+                                handleHover={handleCrewTileHover}
+                                className={`crew-tile `}> </Tile>
+                                {setMemberRitualOptions === magicUser && <div className="options-zone">
+                                    <div className="option" onClick={()=> console.log('learn')}>Learn</div>
+                                    <div className={`option ${magicUser.specialActions.filter(e=>e.type === 'ritual').length === 0 ? 'disabled' : ''}`}>Perform ritual 3x</div>
+                                </div>}
+                            </div>
+                        })}
+                    </div>
+                </div>}
+            </CModalBody>
+        </>
+    )
+}
+
 Date.prototype.addHours= function(h){
     this.setHours(this.getHours()+h);
     return this;
@@ -189,6 +243,7 @@ class DungeonPage extends React.Component {
         return deg;
     }
     realTimeSpecialActionCheckInterval = null;
+    prepCompleteTimeout = null;
     constructor(props){
         super(props)
         this.monsterBattleComponentRef = React.createRef()
@@ -316,15 +371,25 @@ class DungeonPage extends React.Component {
                     const updated = meta.crew.find(c => c.id === selectedCrewMember.id);
                     if (updated) selectedCrewMember = { ...updated };
                 }
-                this.setState({
-                    updates,
-                    modalType: 'Updates',
-                    showModal: true,
-                    selectedCrewMember,
-                    numeralUpdate: (this.state.numeralUpdate || false) ? false : true // toggle dummy state
-                }, () => {
-                    this.forceUpdate();
-                });
+                    this.setState({
+                        updates,
+                        // Use a distinct modal for in-session preparation completions
+                        modalType: 'PrepComplete',
+                        showModal: true,
+                        selectedCrewMember,
+                        numeralUpdate: (this.state.numeralUpdate || false) ? false : true // toggle dummy state
+                    }, () => {
+                        this.forceUpdate();
+                        // auto-dismiss PrepComplete modal after a short delay
+                        try {
+                            if (this.prepCompleteTimeout) clearTimeout(this.prepCompleteTimeout);
+                        } catch (e) {}
+                        this.prepCompleteTimeout = setTimeout(() => {
+                            if (this.state.modalType === 'PrepComplete' && this.state.showModal) {
+                                this.onUpdateModalClosed();
+                            }
+                        }, 3500);
+                    });
             } else if (modified || numeralUpdate) {
                 // If no popup, still force update for numeral/count UI
                 this.setState(prevState => {
@@ -429,6 +494,10 @@ class DungeonPage extends React.Component {
     componentWillUnmount(){
         if (this.realTimeSpecialActionCheckInterval) {
             clearInterval(this.realTimeSpecialActionCheckInterval);
+        }
+        if (this.prepCompleteTimeout) {
+            clearTimeout(this.prepCompleteTimeout);
+            this.prepCompleteTimeout = null;
         }
         this.componentCleanup();
         window.removeEventListener('beforeunload', this.componentCleanup); 
@@ -1507,6 +1576,14 @@ class DungeonPage extends React.Component {
                 this.props.saveUserData();
                 this.setState({showModal: false})
             break;
+            case 'PrepComplete':
+                // In-session preparation completion modal — clear auto-dismiss timeout and close
+                if (this.prepCompleteTimeout) {
+                    clearTimeout(this.prepCompleteTimeout);
+                    this.prepCompleteTimeout = null;
+                }
+                this.setState({ showModal: false });
+            break;
             case 'Magic':
                 this.setState({keysLocked: false})
             break;
@@ -1528,60 +1605,16 @@ class DungeonPage extends React.Component {
     render(){
         return (
         <div className={`dungeon-container ${this.state.ritualWrecked ? 'wrecked' : ''}`}>
-            <CModal alignment="center" visible={this.state.showModal} onClose={() => this.onUpdateModalClosed()}>
-                <CModalHeader>
-                    {this.state.modalType === 'Updates' && <CModalTitle>Since your last visit...</CModalTitle>}
-                    {this.state.modalType === 'Magic' && <CModalTitle>You encounter a magic field...</CModalTitle>}
-                </CModalHeader>
-                <CModalBody>
-                    {this.state.modalType === 'Updates' && <div>
-                        {this.state.updates.map((update, i)=>{
-                            return <div key={i}>
-                                {update.text}
-                            </div>
-                        })}
-                    </div>}
-                    {this.state.modalType === 'Magic' && <div>
-                        <p>
-                        If you have a magic user in your crew you may begin a known ritual with 3x effect or learn a new one.
-                        </p>
-                        <div className="modal-zone">
-                            {/* <CTabPane>
-                                <CTabContent>
-                                    tab content
-                                </CTabContent>
-                            </CTabPane> */}
-                            {this.props.crewManager.crew.filter(e=> e.type === 'wizard' || e.type === 'sage').map((magicUser, i)=>{
-                                return <div className="options-row" key={i}>
-                                    <Tile 
-                                    
-                                    id={i}
-                                    tileSize={this.state.tileSize}
-                                    image={magicUser.image ? magicUser.image : null}
-                                    imageOverride={magicUser.portrait ? magicUser.portrait : null}
-                                    contains={magicUser.type}
-                                    data={magicUser}
-                                    color={magicUser.color}
-                                    editMode={false}
-                                    type={'crew-tile'}
-                                    handleClick={this.handleMemberClickRitual}
-                                    handleHover={this.handleCrewTileHover}
-                                    className={`crew-tile `}> </Tile>
-                                    {/* <div className="options-zone">
-                                        OPTIONS
-                                        {this.state.setMemberRitualOptions === null && 'yeee'}
-                                        {this.state.setMemberRitualOptions?.name}
-                                    </div> */}
-                                    {this.state.setMemberRitualOptions === magicUser && <div className="options-zone">
-                                        <div className="option" onClick={()=> this.learnNewRitual(magicUser)}>Learn</div>
-                                        <div className={`option ${magicUser.specialActions.filter(e=>e.type === 'ritual').length === 0 ? 'disabled' : ''}`}>Perform ritual 3x</div>
-                                    </div>}
-                                </div>
-                                
-                            })}
-                        </div>
-                    </div>}
-                </CModalBody>
+            <CModal className={this.state.modalType === 'PrepComplete' ? 'prep-complete-modal' : ''} alignment="center" visible={this.state.showModal} onClose={() => this.onUpdateModalClosed()}>
+                <ModalInner
+                    modalType={this.state.modalType}
+                    updates={this.state.updates}
+                    crew={this.props.crewManager.crew}
+                    tileSize={this.state.tileSize}
+                    handleMemberClickRitual={this.handleMemberClickRitual}
+                    handleCrewTileHover={this.handleCrewTileHover}
+                    setMemberRitualOptions={this.state.setMemberRitualOptions}
+                />
             </CModal>
             {/* <ExpositionPane></ExpositionPane> */}
             {this.props.boardManager.currentOrientation === 'B' && <div className="dark-mask"></div>}
@@ -1639,11 +1672,8 @@ class DungeonPage extends React.Component {
                                     return Object.keys(grouped).map((type, i) => {
                                         const group = grouped[type];
                                         const action = group[0]; // representative
-                                        // Only count actions that are available (preparation complete)
-                                        console.log('group', group);
                                         const count = group.filter(a => a.available).length;
-                                        console.log('count: ', count);
-                                        // debugger
+                                        
                                         // Prefer iconUrlInverted for DungeonPage (dark bg), fallback to iconUrl, then subtype/default
                                         let iconUrl = action.iconUrlInverted || action.iconUrl;
                                         if (!iconUrl && action.subtype === 'magic missile' && typeof images !== 'undefined') {
