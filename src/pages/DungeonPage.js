@@ -60,6 +60,7 @@ const MARKER_TYPES = [
 ]
 
 class DungeonPage extends React.Component {
+    realTimeSpecialActionCheckInterval = null;
     constructor(props){
         super(props)
         this.monsterBattleComponentRef = React.createRef()
@@ -130,6 +131,11 @@ class DungeonPage extends React.Component {
             arr.push([])
         }
         const meta = getMeta();
+        console.log('1st access of meta: ', meta);
+        meta.crew[0].stats.hp = 1000;
+        // remove this after debugging ^
+
+
         // const meta = null
         this.props.boardManager.establishAvailableItems(this.props.inventoryManager.items);
 
@@ -180,6 +186,63 @@ class DungeonPage extends React.Component {
         })
     }
     componentDidMount(){
+        // Real-time check for completed special actions
+        this.realTimeSpecialActionCheckInterval = setInterval(() => {
+            const meta = getMeta();
+            let updates = [];
+            let changed = false;
+            meta.crew.forEach(member => {
+                member.specialActions.forEach(a => {
+                    let end = new Date(a.endDate), now = new Date();
+                    if (!a.available && end - now < 0) {
+                        a.available = true;
+                        if (!a.notified) {
+                            updates.push({
+                                text: `${member.name} has finished ${a.actionType.text}`,
+                                owner: `${member.name}`,
+                                actionType: a.actionType.type
+                            });
+                            a.notified = false; // Mark as not notified so popup will show
+                            changed = true;
+                        }
+                    }
+                });
+            });
+            if (updates.length > 0) {
+                this.setState({
+                    updates,
+                    modalType: 'Updates',
+                    showModal: true
+                }, () => {
+                    this.forceUpdate();
+                });
+            } else if (changed) {
+                // If no popup, still force update for numeral/count UI
+                // Also update selectedCrewMember reference to trigger re-render
+                this.setState(prevState => {
+                    let selectedCrewMember = prevState.selectedCrewMember;
+                    if (selectedCrewMember && selectedCrewMember.id) {
+                        // Find the updated crew member from meta.crew
+                        const updated = meta.crew.find(c => c.id === selectedCrewMember.id);
+                        if (updated) {
+                            // Clone to ensure reference change
+                            selectedCrewMember = { ...updated };
+                        }
+                    }
+                    return { selectedCrewMember };
+                }, () => {
+                    this.forceUpdate();
+                });
+            }
+            if (changed) {
+                meta.crew = meta.crew;
+                storeMeta(meta);
+                this.props.crewManager.crew = meta.crew;
+                this.props.saveUserData();
+            }
+        }, 1000);
+        console.log('meta: ', getMeta());
+        
         this.props.boardManager.establishAddItemToInventoryCallback(this.addItemToInventory)
         this.props.boardManager.establishAddTreasureToInventoryCallback(this.addTreasureToInventory)
         this.props.boardManager.establishAddCurrencyToInventoryCallback(this.addCurrencyToInventory)
@@ -267,6 +330,9 @@ class DungeonPage extends React.Component {
         this.props.boardManager.respawnMonsters(selectedDungeon)
     }
     componentWillUnmount(){
+        if (this.realTimeSpecialActionCheckInterval) {
+            clearInterval(this.realTimeSpecialActionCheckInterval);
+        }
         this.componentCleanup();
         window.removeEventListener('beforeunload', this.componentCleanup); 
     }
@@ -1538,15 +1604,46 @@ class DungeonPage extends React.Component {
                             </div>
                             <div className="portrait" style={{backgroundImage: "url(" + this.state.selectedCrewMember.portrait + ")"}}></div>
                             <div className="cooldowns-container">
-                                {this.state.selectedCrewMember.specialActions.map((action, i)=>{
-                                    return <div key={i}
-                                    className="special-action-wrapper">
-                                        <div className="special-action-icon" style={{backgroundImage: `url(${action.actionType.icon_url})`}}></div>
-                                        {this.getActionCooldownPercentage(action) < 50 && <div className="progress-overlay"></div>}
-                                        <div className="left" style={{transform: `rotate(${this.getRotateDegreesLeft(this.getActionCooldownPercentage(action))}deg)`}}></div>
-                                        <div className="right" style={{transform: `rotate(${this.getRotateDegreesRight(this.getActionCooldownPercentage(action))}deg)`}}></div>
-                                    </div>
-                                })}
+                                {/* Group special actions by type */}
+                                {(() => {
+                                    const actions = this.state.selectedCrewMember.specialActions || [];
+                                    const grouped = {};
+                                    actions.forEach(action => {
+                                        const type = action.actionType.type;
+                                        if (!grouped[type]) grouped[type] = [];
+                                        grouped[type].push(action);
+                                    });
+                                    return Object.keys(grouped).map((type, i) => {
+                                        const group = grouped[type];
+                                        const action = group[0]; // representative
+                                        const count = group.length;
+                                        return (
+                                            <div key={type} className="special-action-wrapper" style={{position: 'relative'}}>
+                                                <div className="special-action-icon" style={{backgroundImage: `url(${action.actionType.icon_url})`}}></div>
+                                                {this.getActionCooldownPercentage(action) < 50 && <div className="progress-overlay"></div>}
+                                                <div className="left" style={{transform: `rotate(${this.getRotateDegreesLeft(this.getActionCooldownPercentage(action))}deg)`}}></div>
+                                                <div className="right" style={{transform: `rotate(${this.getRotateDegreesRight(this.getActionCooldownPercentage(action))}deg)`}}></div>
+                                                {count > 1 && (
+                                                    <div style={{
+                                                        position: 'absolute',
+                                                        top: 6,
+                                                        right: -16,
+                                                        color: 'red',
+                                                        fontWeight: 'bold',
+                                                        borderRadius: '50%',
+                                                        minWidth: 18,
+                                                        minHeight: 18,
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        fontSize: 10,
+                                                        zIndex: 99,
+                                                    }}>{['','I','II','III','IV','V'][Math.min(count,5)]}</div>
+                                                )}
+                                            </div>
+                                        );
+                                    });
+                                })()}
                             </div>
                         </div>
                         <div className="name-line">{this.state.selectedCrewMember.name} the {this.uppercaseFirstLetter(this.state.selectedCrewMember.type)}</div>

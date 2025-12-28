@@ -937,7 +937,7 @@ class MonsterBattle extends React.Component {
         return (
             <div className={`mb-board ${this.state.showCrosshair ? 'show-crosshair' : ''}`}>
                 {/* Game speed readout in upper right */}
-                <div style={{position: 'absolute', top: 10, right: 20, color: 'white', fontSize: '18px', zIndex: 1000}}>
+                <div style={{position: 'absolute', top: -35, right: 20, color: 'white', fontSize: '18px', zIndex: 1000}}>
                     Game Speed: {
                         (() => {
                             // Try to get intervalDisplayNames from parent props (CombatSimulator)

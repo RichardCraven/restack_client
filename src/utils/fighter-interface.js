@@ -41,23 +41,23 @@
  * @property {Object} stats - Fighter stats (str, int, dex, vit, fort, hp, atk, baseDef, energy, experience)
  * @property {string} portrait
  * @property {Array} inventory
- * @property {Array<string>} specials
- * @property {Array<string>} attacks
- * @property {Array<string>} passives
- * @property {Array<string>} weaknesses
+ * @property {Array<string>} specials - Special abilities (string names; may be objects in future)
+ * @property {Array<string>} attacks - Attack abilities (string names; may be objects in future)
+ * @property {Array<string>} passives - Passive abilities (string names; may be objects in future)
+ * @property {Array<string>} weaknesses - Weaknesses (string names; may be objects in future)
  * @property {string} description
- * @property {Array<SpecialAction>} specialActions
- * @property {boolean} [actionsTrayExpanded]
- * @property {boolean} [actionMenuTypeExpanded]
- * @property {boolean} [selected]
- * @property {string} [color]
- * @property {Object} [coordinates] - {x: number, y: number}
- * @property {number} [depth]
- * @property {number} [position]
- * @property {number} [manualMovesCurrent]
- * @property {number} [manualMovesTotal]
- * @property {boolean} [dead]
- * @property {boolean} [isLeader]
+ * @property {Array<SpecialAction>} specialActions - Consumable or time-gated special actions
+ * @property {boolean} [actionsTrayExpanded] - UI state: is the actions tray expanded?
+ * @property {boolean} [actionMenuTypeExpanded] - UI state: is the action menu type expanded?
+ * @property {boolean} [selected] - UI state: is this fighter selected?
+ * @property {string} [color] - UI: color for display/highlighting
+ * @property {Object} [coordinates] - {x: number, y: number} grid position
+ * @property {number} [depth] - Z-depth for rendering
+ * @property {number} [position] - Position in party or formation
+ * @property {number} [manualMovesCurrent] - Manual moves used this turn
+ * @property {number} [manualMovesTotal] - Manual moves allowed per turn
+ * @property {boolean} [dead] - Is the fighter dead?
+ * @property {boolean} [isLeader] - Is this fighter the party leader?
  * @property {string} [combatStyle]
  */
 

@@ -4,6 +4,7 @@ import { FighterAI } from './fighter-ai/fighter-ai'
 import { MonsterAI } from './monster-ai/monster-ai'
 import {createFighter, test} from './factories'
 import { cilLifeRing } from '@coreui/icons'
+import { INTERVALS } from './shared-constants';
 // import test from './factories'
 // import {MovementMethods} from './methods/movement-methods';
 
@@ -12,8 +13,8 @@ const NUM_COLUMNS = 8;
 // ^ means 8 squares, account for depth of 0 is far left
 const MAX_LANES = 5
 // const this.FIGHT_INTERVAL = 8;
-const intervals = [5, 10, 40, 90]
-const FIGHT_INTERVAL = 10;
+// const intervals = [5, 10, 40, 90]
+const FIGHT_INTERVAL = INTERVALS[1]; // 'Slow' (40)
 const DEBUG_STEPS = false;
 const RANGES = {
     close: 1,
@@ -551,6 +552,9 @@ export function CombatManager(){
                 this.combatants[m.id] = m;
             })
         }
+
+        // Ensure all fighters use the correct interval
+        this.updateAllFightIntervals(this.FIGHT_INTERVAL);
 
         this.initializeOverlayManager(Object.values(this.combatants))
         this.broadcastDataUpdate();

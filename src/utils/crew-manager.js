@@ -1,4 +1,6 @@
+
 import * as images from '../utils/images'
+import { SPELLS } from './spells-table'
 
 Date.prototype.addHours= function(h){
     this.setHours(this.getHours()+h);
@@ -111,10 +113,11 @@ export function CrewManager(){
         switch(actionType.type){
             case 'glyph':
                 switch(actionSubtype.type){
-                    case 'magic missile':
-                        // endDate = new Date().addHours(4);
-                        endDate = new Date().addHours(1);
 
+                    case 'magic missile': {
+                        // Use prepareTime from spells table
+                        const prepareTime = SPELLS.magicMissile.prepareTime || 10000;
+                        endDate = new Date(Date.now() + prepareTime);
                         console.log('MAGIC MISSILE BEGIN!');
                         console.log('date + 1 hrs:', new Date().addHours(1));
                         member.specialActions.push({
@@ -126,6 +129,9 @@ export function CrewManager(){
                             // available: true,
                             notified: false,
                         })
+                    }
+                    break;
+
                     break;
                     default:
                         break;
@@ -137,24 +143,14 @@ export function CrewManager(){
     }
 
     this.adventurers = [
+        // All fighter objects now use the new, less redundant structure
         {
-            image: 'wizard', 
+            image: 'wizard',
             type: 'wizard',
             name: 'Zildjikan',
-            level: 1,
             id: 33344,
-            stats: {
-                str: 3,
-                int: 7,
-                dex: 5,
-                vit: 4,
-                fort: 7,
-                hp:11,
-                atk:12,
-                baseDef: 9,
-                energy: 100,
-                experience: 0
-            }, 
+            level: 1,
+            stats: { str: 3, int: 7, dex: 5, vit: 4, fort: 7, hp: 11000, atk: 12, baseDef: 9, energy: 100, experience: 0 },
             portrait: images['wizard_portrait'],
             inventory: [],
             specials: ['ice_blast', 'fire_blast'],
@@ -167,55 +163,32 @@ export function CrewManager(){
             actionMenuTypeExpanded: false
         },
         {
-            image: 'soldier', 
+            image: 'soldier',
             type: 'soldier',
             name: 'Sardonis',
             id: 123,
             level: 1,
-            stats: {
-                str: 8,
-                int: 5,
-                dex: 6,
-                vit: 4,
-                fort: 7,
-                hp: 15,
-                atk: 8,
-                baseDef: 12,
-                energy: 0,
-                experience: 0
-            }, 
-            isLeader: true,
+            stats: { str: 8, int: 5, dex: 6, vit: 4, fort: 7, hp: 15, atk: 8, baseDef: 12, energy: 0, experience: 0 },
             portrait: images['soldier_portrait'],
             inventory: [],
             passives: ['inspiring_force'],
             specials: ['shield_wall'],
-            // attacks: ['sword_swing', 'sword_thrust', 'shield_bash'],
             attacks: ['sword_swing', 'sword_swing', 'sword_swing'],
             weaknesses: ['ice', 'electricity', 'blood_magic'],
             description: "Once the captain of the royal army's legendary vangard battalion, Sardonis has a reputation for fair leadership and honor.",
             specialActions: [],
+            isLeader: true,
             combatStyle: 'prioritizeClosestEnemy',
             actionsTrayExpanded: false,
             actionMenuTypeExpanded: false
         },
         {
-            image: 'monk', 
+            image: 'monk',
             type: 'monk',
             name: 'Yu',
-            level: 1,
             id: 8080,
-            stats: {
-                str: 5,
-                int: 6,
-                dex: 7,
-                vit: 4,
-                fort: 7,
-                hp: 23,
-                atk: 6,
-                baseDef: 11,
-                energy: 0,
-                experience: 0
-            }, 
+            level: 1,
+            stats: { str: 5, int: 6, dex: 7, vit: 4, fort: 7, hp: 23, atk: 6, baseDef: 11, energy: 0, experience: 0 },
             portrait: images['monk_portrait'],
             inventory: [],
             passives: ['diamond_skin'],
@@ -228,23 +201,12 @@ export function CrewManager(){
             actionMenuTypeExpanded: false
         },
         {
-            image: 'sage', 
+            image: 'sage',
             type: 'sage',
             name: 'Loryastes',
-            level: 1,
             id: 456,
-            stats: {
-                str: 3,
-                int: 7,
-                dex: 5,
-                vit: 4,
-                fort: 7,
-                hp: 19,
-                atk: 4,
-                baseDef: 5,
-                energy: 0,
-                experience: 0
-            }, 
+            level: 1,
+            stats: { str: 3, int: 7, dex: 5, vit: 4, fort: 7, hp: 19, atk: 4, baseDef: 5, energy: 0, experience: 0 },
             portrait: images['sage_portrait'],
             inventory: [],
             specials: ['healing_hymn'],
@@ -257,23 +219,12 @@ export function CrewManager(){
             actionMenuTypeExpanded: false
         },
         {
-            image: 'rogue', 
+            image: 'rogue',
             type: 'rogue',
             name: 'Tyra',
-            level: 1,
             id: 789,
-            stats: {
-                str: 5,
-                int: 5,
-                dex: 6,
-                vit: 6,
-                fort: 3,
-                hp: 22,
-                atk: 6,
-                baseDef: 10,
-                energy: 0,
-                experience: 0
-            }, 
+            level: 1,
+            stats: { str: 5, int: 5, dex: 6, vit: 6, fort: 3, hp: 22, atk: 6, baseDef: 10, energy: 0, experience: 0 },
             portrait: images['rogue_portrait'],
             inventory: [],
             specials: ['deadeye_shot'],
@@ -286,23 +237,12 @@ export function CrewManager(){
             actionMenuTypeExpanded: false
         },
         {
-            image: 'barbarian', 
+            image: 'barbarian',
             type: 'barbarian',
             name: 'Ulaf',
-            level: 1,
             id: 8822,
-            stats: {
-                str: 8,
-                int: 3,
-                dex: 4,
-                vit: 6,
-                fort: 6,
-                hp: 27,
-                atk: 9,
-                baseDef: 12,
-                energy: 0,
-                experience: 0
-            }, 
+            level: 1,
+            stats: { str: 8, int: 3, dex: 4, vit: 6, fort: 6, hp: 27, atk: 9, baseDef: 12, energy: 0, experience: 0 },
             portrait: images['barbarian_portrait'],
             inventory: [],
             specials: ['berserker_rage'],

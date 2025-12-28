@@ -189,7 +189,7 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                 console.log('caller.specialActions: ', caller.specialActions);
                 console.log('spells: ', spells, 'spellsAvailable: ', spellAvailable);
                 console.log('target', target);
-                debugger
+                
                 // if (target && targetHasMoreThanHalfHp && this.useSpell(caller, combatants)) {
                 if (target && this.useSpell(caller, combatants)) {
                     break;
