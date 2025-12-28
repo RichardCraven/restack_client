@@ -131,7 +131,7 @@ class DungeonPage extends React.Component {
             arr.push([])
         }
         const meta = getMeta();
-        console.log('1st access of meta: ', meta);
+        console.log('1st access of met: ', meta);
         meta.crew[0].stats.hp = 1000;
         // remove this after debugging ^
 
@@ -1628,7 +1628,7 @@ class DungeonPage extends React.Component {
                                                         position: 'absolute',
                                                         top: 6,
                                                         right: -16,
-                                                        color: 'red',
+                                                        color: 'white',
                                                         fontWeight: 'bold',
                                                         borderRadius: '50%',
                                                         minWidth: 18,

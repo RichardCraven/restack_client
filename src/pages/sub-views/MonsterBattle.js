@@ -1146,26 +1146,55 @@ class MonsterBattle extends React.Component {
                         </div>
                         <div className="spells-col" style={{width: this.state.glyphTrayExpanded ? '100px' : '0px'}}>
                             <div className="interaction-header">Spells</div>
-                            <div className="interaction-tooltip">{this.state.hoveredGlyphTile}</div>
+                            <div className="interaction-tooltip">{this.state.hoveredSpellTile}</div>
                             <div className="interaction-tile-container">
-                                {this.state.selectedFighter?.specialActions && this.state.selectedFighter.specialActions.length > 0 && this.state.selectedFighter.specialActions.map((glyphUnit, i) => {
-                                    // Defensive: ensure glyphUnit and subTypes exist
-                                    if (!glyphUnit || !glyphUnit.actionType || !Array.isArray(glyphUnit.actionType.subTypes) || !glyphUnit.actionType.subTypes[0]) {
-                                        return null;
-                                    }
-                                    const glyph = glyphUnit.actionType.subTypes[0];
-                                    return (
-                                        <div key={i} className='interaction-tile-wrapper'>
-                                            <div
-                                                style={{ backgroundImage: `url(${glyph.icon_url}), radial-gradient(white 40%, black 80%)`, cursor: 'pointer' }}
-                                                className={`interaction-tile special ${glyphUnit.selected ? 'selected' : ''}`}
-                                                onClick={() => this.fireGlyph(glyph)}
-                                                onMouseEnter={() => this.glyphTileHovered(glyphUnit)}
-                                                onMouseLeave={() => this.glyphTileHovered(null)}>
+                                {(() => {
+                                    // Group spells by type
+                                    const spells = this.state.selectedFighter?.specialActions || [];
+                                    if (!spells.length) return null;
+                                    const grouped = {};
+                                    spells.forEach(spellUnit => {
+                                        if (!spellUnit || !spellUnit.actionType || !Array.isArray(spellUnit.actionType.subTypes) || !spellUnit.actionType.subTypes[0]) return;
+                                        const spellType = spellUnit.actionType.type;
+                                        if (!grouped[spellType]) grouped[spellType] = [];
+                                        grouped[spellType].push(spellUnit);
+                                    });
+                                    const romanNumerals = ['', 'I', 'II', 'III', 'IV', 'V'];
+                                    return Object.keys(grouped).map((type, idx) => {
+                                        const group = grouped[type];
+                                        const spellUnit = group[0];
+                                        const spell = spellUnit.actionType.subTypes[0];
+                                        const count = group.length;
+                                        return (
+                                            <div key={type} className='interaction-tile-wrapper' style={{position: 'relative'}}>
+                                                <div
+                                                    style={{ backgroundImage: `url(${spell.icon_url}), radial-gradient(white 40%, black 80%)`, cursor: 'pointer' }}
+                                                    className={`interaction-tile special ${spellUnit.selected ? 'selected' : ''}`}
+                                                    onClick={() => this.fireSpell(spell)}
+                                                    onMouseEnter={() => this.spellTileHovered(spellUnit)}
+                                                    onMouseLeave={() => this.spellTileHovered(null)}>
+                                                </div>
+                                                {count > 1 && (
+                                                    <div style={{
+                                                        position: 'absolute',
+                                                        top: 13,
+                                                        right: -26,
+                                                        color: 'white',
+                                                        fontWeight: 'bold',
+                                                        borderRadius: '50%',
+                                                        minWidth: 18,
+                                                        minHeight: 18,
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        fontSize: 10,
+                                                        zIndex: 99,
+                                                    }}>{romanNumerals[Math.min(count, 5)]}</div>
+                                                )}
                                             </div>
-                                        </div>
-                                    );
-                                })}
+                                        );
+                                    });
+                                })()}
                             </div>
                         </div>
                         <div className="attacks-col">
