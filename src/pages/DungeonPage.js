@@ -126,6 +126,58 @@ class DungeonPage extends React.Component {
             ))}
         </div>;
     }
+    
+    // Scans crew specialActions for finished preparations, marks availability, optionally marks notified,
+    // persists meta and returns any collected updates.
+    checkAndCollectFinishedSpecialActions = ({ markNotified = true } = {}) => {
+        const meta = getMeta();
+        let updates = [];
+        let modified = false;
+        let numeralUpdate = false;
+
+        meta.crew.forEach(member => {
+            (member.specialActions || []).forEach(a => {
+                if (!a || !a.endDate) return;
+                const end = new Date(a.endDate);
+                const now = new Date();
+                if (end - now < 0) {
+                    if (!a.available) {
+                        a.available = true;
+                        modified = true;
+                        numeralUpdate = true;
+                    }
+                    if (markNotified) {
+                        if (!a.notified) {
+                            updates.push({
+                                text: `${member.name} has finished ${a.name}`,
+                                owner: `${member.name}`,
+                                actionType: a.type
+                            });
+                            a.notified = true;
+                            modified = true;
+                        }
+                    } else {
+                        if (!a.notified) {
+                            updates.push({
+                                text: `${member.name} has finished ${a.name}`,
+                                owner: `${member.name}`,
+                                actionType: a.type
+                            });
+                        }
+                    }
+                }
+            });
+        });
+
+        if (modified) {
+            meta.crew = meta.crew;
+            storeMeta(meta);
+            this.props.crewManager.crew = meta.crew;
+            this.props.saveUserData();
+        }
+
+        return { updates, modified, numeralUpdate };
+    }
     getRotateDegreesLeft = (percentage) => {
         let deg = Math.floor(percentage / 100 * 360);
         return deg;
@@ -232,20 +284,8 @@ class DungeonPage extends React.Component {
             minimap.push({active: false})
         }
         
-        let updates = []
-        meta.crew.forEach(member=>{
-            member.specialActions.forEach(a=>{
-                let end = new Date(a.endDate),
-                now = new Date();
-                if(end - now < 0 && !a.notified){
-                    updates.push({
-                        text: `${member.name} has finished ${a.name}`,
-                        owner: `${member.name}`,
-                        actionType: a.type
-                    })
-                }
-            })
-        })
+        // Consolidated check: mark finished special actions available and collect updates
+        const { updates, modified } = this.checkAndCollectFinishedSpecialActions({ markNotified: false });
         this.setState((state, props) => {
             return {
                 tileSize,
@@ -264,60 +304,39 @@ class DungeonPage extends React.Component {
     componentDidMount(){
         // Real-time check for completed special actions
         this.realTimeSpecialActionCheckInterval = setInterval(() => {
+            // Use centralized helper to find finished actions and optionally mark them notified
+            const { updates, modified, numeralUpdate } = this.checkAndCollectFinishedSpecialActions({ markNotified: true });
+
             const meta = getMeta();
-            let updates = [];
-            let changed = false;
-            let numeralUpdate = false;
-            meta.crew.forEach(member => {
-                member.specialActions.forEach(a => {
-                    let end = new Date(a.endDate), now = new Date();
-                    if (!a.available && end - now < 0) {
-                        a.available = true;
-                        numeralUpdate = true;
-                        if (!a.notified) {
-                            updates.push({
-                                text: `${member.name} has finished ${a.name}`,
-                                owner: `${member.name}`,
-                                actionType: a.type
-                            });
-                            a.notified = false; // Mark as not notified so popup will show
-                            changed = true;
-                        }
-                    }
-                });
-            });
+
             if (updates.length > 0) {
+                // Also update selectedCrewMember reference so numerals/counts update immediately
+                let selectedCrewMember = this.state.selectedCrewMember;
+                if (selectedCrewMember && selectedCrewMember.id) {
+                    const updated = meta.crew.find(c => c.id === selectedCrewMember.id);
+                    if (updated) selectedCrewMember = { ...updated };
+                }
                 this.setState({
                     updates,
                     modalType: 'Updates',
                     showModal: true,
+                    selectedCrewMember,
                     numeralUpdate: (this.state.numeralUpdate || false) ? false : true // toggle dummy state
                 }, () => {
                     this.forceUpdate();
                 });
-            } else if (changed || numeralUpdate) {
+            } else if (modified || numeralUpdate) {
                 // If no popup, still force update for numeral/count UI
-                // Also update selectedCrewMember reference to trigger re-render
                 this.setState(prevState => {
                     let selectedCrewMember = prevState.selectedCrewMember;
                     if (selectedCrewMember && selectedCrewMember.id) {
-                        // Find the updated crew member from meta.crew
                         const updated = meta.crew.find(c => c.id === selectedCrewMember.id);
-                        if (updated) {
-                            // Clone to ensure reference change
-                            selectedCrewMember = { ...updated };
-                        }
+                        if (updated) selectedCrewMember = { ...updated };
                     }
                     return { selectedCrewMember, numeralUpdate: (prevState.numeralUpdate || false) ? false : true };
                 }, () => {
                     this.forceUpdate();
                 });
-            }
-            if (changed || numeralUpdate) {
-                meta.crew = meta.crew;
-                storeMeta(meta);
-                this.props.crewManager.crew = meta.crew;
-                this.props.saveUserData();
             }
         }, 1000);
         console.log('meta: ', getMeta());
@@ -1449,6 +1468,12 @@ class DungeonPage extends React.Component {
         meta.crew = this.props.crewManager.crew;
         storeMeta(meta);
         this.props.saveUserData();
+        // Force update to reflect new specialActions count immediately
+        // Find updated selectedCrewMember from crewManager
+        const updatedCrewMember = this.props.crewManager.crew.find(e => e.id === this.state.selectedCrewMember.id);
+        if (updatedCrewMember) {
+            this.setState({ selectedCrewMember: { ...updatedCrewMember } });
+        }
     }
     getActionCooldownPercentage = (action) => {
     if(!action) return;
