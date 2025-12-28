@@ -6,29 +6,16 @@
  */
 
 /**
- * @typedef {Object} SpecialActionSubtype
- * @property {string} type - The subtype name (e.g., 'magic missile')
- * @property {string} [icon_url] - Icon for the subtype
- * @property {boolean} [available] - If this subtype is available
- * @property {number} [count] - Number of uses or charges
- */
-
-/**
- * @typedef {Object} SpecialActionType
- * @property {string} type - The action type (e.g., 'glyph')
- * @property {string} [text] - Display text
- * @property {string} [icon_url] - Icon for the action
- * @property {SpecialActionSubtype[]} [subTypes] - Subtypes for this action
- */
-
-/**
  * @typedef {Object} SpecialAction
- * @property {SpecialActionType} actionType
- * @property {SpecialActionSubtype} actionSubtype
- * @property {Date|string} startDate
- * @property {Date|string} endDate
- * @property {boolean} available
- * @property {boolean} notified
+ * @property {string} type - The main type of the action (e.g., 'spell', 'special').
+ * @property {string} name - The display name of the action (e.g., 'Magic Missile').
+ * @property {string} iconUrl - The icon for the action or spell.
+ * @property {boolean} available - Whether the action is currently available for use.
+ * @property {number} [count] - Optional: Number of available uses (for count-limited actions).
+ * @property {string} [subtype] - Optional: Subtype or variant (e.g., 'magic missile', 'fireball').
+ * @property {string} [startDate] - Optional: When the action started (for cooldowns).
+ * @property {string} [endDate] - Optional: When the action becomes available again.
+ * @property {boolean} [notified] - Optional: Whether the user has been notified of readiness.
  */
 
 /**

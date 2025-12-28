@@ -60,6 +60,82 @@ const MARKER_TYPES = [
 ]
 
 class DungeonPage extends React.Component {
+    getCharacterActions = (character) => {
+        // Show all potential glyphs for wizard, with only magic missile available initially
+        let actions = [];
+        if (character.type === 'wizard') {
+            // Count available for each subtype
+                const mmCount = (character.specialActions || []).filter(a => a.subtype === 'magic missile' && a.available).length;
+            actions.push({
+                type: 'glyph',
+                name: 'Etch Glyph',
+                iconUrl: images['glyph_inverted'],
+                subTypes: [
+                    {
+                        type: 'magic missile',
+                        iconUrl: images['magic_missile_inverted'],
+                        available: true,
+                        count: mmCount
+                    },
+                    {
+                        type: 'doppleganger',
+                        iconUrl: '',
+                        available: false,
+                        count: 0
+                    },
+                    {
+                        type: 'yawning rift',
+                        iconUrl: '',
+                        available: false,
+                        count: 0
+                    }
+                ]
+            });
+        }
+        // Add other class logic here as needed
+        let count = 0;
+        actions.forEach(a => {
+            (a.subTypes || []).forEach(s => {
+                count += s.count;
+            });
+        });
+        let maximumReached = count >= 3;
+        return <div className='actions-container'>
+            {actions.map((action, i) => (
+                <div className="action-wrapper" key={i}>
+                    <div className='action-hover-wrapper' onClick={() => this.handleActionClick(action)} style={{
+                        border: `${this.getActionCooldownPercentage() && (character.specialActions || []).find(e=>e.type === action.type) ? '1px solid #635b4a' : ''}`
+                    }}>
+                        {(character.specialActions || []).some(action=> this.getActionCooldownPercentage(action) < 100) && <div className="progress-overlay" style={{
+                            width: `${this.getActionCooldownPercentage((character.specialActions || []).find(action=>this.getActionCooldownPercentage(action) < 100))}%`,
+                        }}></div>}
+                        <div className='action-icon' style={{backgroundImage: `url(${action.iconUrl})`}}></div>
+                        <div className="action-text">{action.name}</div>
+                    </div>
+                    <div className="info-icon" style={{backgroundImage: `url(${images['info']})`}}></div>
+                    <div className={`action-sub-menu ${this.state.actionMenuTypeExpanded === action.type ? 'expanded' : ''}`}>
+                        {maximumReached && <div className='max-reached'>maximum reached</div>}
+                        {action.subTypes && action.subTypes.map((subType, j) => (
+                            <div key={j} onClick={() => this.handleActionSubtypeClick(action, subType)}
+                                className={`action-subtype ${this.getSubtypeClass(subType, maximumReached)} `}>
+                                {subType.type} {subType.count !== 0 && this.getSubtypeImageCountElement(subType)}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            ))}
+        </div>;
+    }
+    getRotateDegreesLeft = (percentage) => {
+        let deg = Math.floor(percentage / 100 * 360);
+        return deg;
+    }
+
+    getRotateDegreesRight = (percentage) => {
+        let deg = Math.floor(percentage / 100 * 360);
+        if (percentage >= 50) deg = 180;
+        return deg;
+    }
     realTimeSpecialActionCheckInterval = null;
     constructor(props){
         super(props)
@@ -163,9 +239,9 @@ class DungeonPage extends React.Component {
                 now = new Date();
                 if(end - now < 0 && !a.notified){
                     updates.push({
-                        text: `${member.name} has finished ${a.actionType.text}`,
+                        text: `${member.name} has finished ${a.name}`,
                         owner: `${member.name}`,
-                        actionType: a.actionType.type
+                        actionType: a.type
                     })
                 }
             })
@@ -191,16 +267,18 @@ class DungeonPage extends React.Component {
             const meta = getMeta();
             let updates = [];
             let changed = false;
+            let numeralUpdate = false;
             meta.crew.forEach(member => {
                 member.specialActions.forEach(a => {
                     let end = new Date(a.endDate), now = new Date();
                     if (!a.available && end - now < 0) {
                         a.available = true;
+                        numeralUpdate = true;
                         if (!a.notified) {
                             updates.push({
-                                text: `${member.name} has finished ${a.actionType.text}`,
+                                text: `${member.name} has finished ${a.name}`,
                                 owner: `${member.name}`,
-                                actionType: a.actionType.type
+                                actionType: a.type
                             });
                             a.notified = false; // Mark as not notified so popup will show
                             changed = true;
@@ -212,11 +290,12 @@ class DungeonPage extends React.Component {
                 this.setState({
                     updates,
                     modalType: 'Updates',
-                    showModal: true
+                    showModal: true,
+                    numeralUpdate: (this.state.numeralUpdate || false) ? false : true // toggle dummy state
                 }, () => {
                     this.forceUpdate();
                 });
-            } else if (changed) {
+            } else if (changed || numeralUpdate) {
                 // If no popup, still force update for numeral/count UI
                 // Also update selectedCrewMember reference to trigger re-render
                 this.setState(prevState => {
@@ -229,12 +308,12 @@ class DungeonPage extends React.Component {
                             selectedCrewMember = { ...updated };
                         }
                     }
-                    return { selectedCrewMember };
+                    return { selectedCrewMember, numeralUpdate: (prevState.numeralUpdate || false) ? false : true };
                 }, () => {
                     this.forceUpdate();
                 });
             }
-            if (changed) {
+            if (changed || numeralUpdate) {
                 meta.crew = meta.crew;
                 storeMeta(meta);
                 this.props.crewManager.crew = meta.crew;
@@ -307,7 +386,6 @@ class DungeonPage extends React.Component {
                 this.respawnMonsters();
                 respawnString = ''
                 this.setNewRespawnDate();
-                return
             }
             this.setState({
                 timeToRespawn: respawnString,
@@ -1349,10 +1427,20 @@ class DungeonPage extends React.Component {
             return end > now
         })) return 'in-progress'
     }
-    getSubtypeCountElement = (subtype) => {
-        let arr = ['zero','one','two','three','four','five','six','seven','eight','nine']
-        
-        return <div className="numeral" style={{backgroundImage: `url(${images[arr[subtype.count]]})`}}></div>
+    // For special-action-icon: Roman numerals as text
+    getSubtypeNumeralElement = (subtype) => {
+        if (!subtype.count || subtype.count < 1) return null;
+        const numerals = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX'];
+        const idx = Math.max(0, Math.min(subtype.count, numerals.length - 1));
+        return <div className="numeral">{numerals[idx]}</div>;
+    }
+
+    // For action-sub-menu/action-subtype: image-based numbers
+    getSubtypeImageCountElement = (subtype) => {
+        let arr = ['zero','one','two','three','four','five','six','seven','eight','nine'];
+        if (!subtype.count || subtype.count < 1) return null;
+        let idx = Math.max(0, Math.min(subtype.count, arr.length - 1));
+        return <div className="numeral" style={{backgroundImage: `url(${images[arr[idx]]})`}}></div>;
     }
     handleActionSubtypeClick = (action, subType) => {
         let characterFromCrew = this.props.crewManager.crew.find(e=> e.id === this.state.selectedCrewMember.id)
@@ -1363,106 +1451,16 @@ class DungeonPage extends React.Component {
         this.props.saveUserData();
     }
     getActionCooldownPercentage = (action) => {
-        if(!action) return;
-        const startDate = new Date(action.startDate),
-        endDate = new Date(action.endDate);
-        let diffInMilli = endDate - startDate,
-        diffInMinutes = diffInMilli / (1000 * 60);
-        // diffInHours = diffInMinutes / (60)
-        let currentTime = new Date()
-        let minutesElapsed = (currentTime - startDate) / (1000 * 60)
-        let percentageComplete = Math.ceil(minutesElapsed/diffInMinutes*100);
-        if(percentageComplete > 100) percentageComplete = 100;
-        return percentageComplete
-    }
-    getRotateDegreesRight = (percentage) => {
-        let deg = Math.floor(percentage / 100 * 360)
-        if(percentage >= 50) deg = 180;
-        return deg
-    }
-    getRotateDegreesLeft = (percentage) => {
-        let deg = Math.floor(percentage / 100 * 360)
-        return deg
-    }
-    getCharacterActions = (character) => {
-        let actions = [];
-        switch(character.type){
-            case 'wizard':
-                actions.push({
-                    text: 'Etch Glyph', 
-                    icon_url: images['glyph_inverted'], 
-                    type: 'glyph',
-                    subTypes: [
-                        {
-                            type: 'magic missile', 
-                            icon_url: images['magic_missile'],
-                            available: true,
-                            count: character.specialActions.filter(a=>a.available).length
-                        }, 
-                        {
-                            type: 'doppleganger',
-                            available: false,
-                            count: 0
-                        }, 
-                        {
-                            type: 'yawning rift',
-                            available: false,
-                            count: 0
-                        }
-                    ]
-                })
-                // actions.push({text: 'Etch Glyph', icon_url: images['glyph']})
-                // actions.push({text: 'Etch Glyph', icon_url: images['glyph']})
-            break;
-            default:
-                break;
-        }
-        let count = 0;
-        actions.forEach(a=>{
-            a.subTypes.forEach(s=>{
-                count += s.count
-            })
-        })
-        let maximumReached = count >= 3;
-        return <div className='actions-container'>
-            {actions.map((action,i)=>{
-                return  <div className="action-wrapper" key={i}>
-                            <div className='action-hover-wrapper' onClick={() => this.handleActionClick(action)} style={{
-                                    border: `${this.getActionCooldownPercentage() && this.state.selectedCrewMember.specialActions.find(e=>e.actionType.type === action.type) ? '1px solid #635b4a' : ''}`
-                                    }}>
-                                {this.state.selectedCrewMember.specialActions.some(action=> this.getActionCooldownPercentage(action) < 100) && <div className="progress-overlay" style={{
-                                    width: `${this.getActionCooldownPercentage(this.state.selectedCrewMember.specialActions.find(action=>this.getActionCooldownPercentage(action) < 100) )}%`,
-                                    }}></div>}
-                                <div className='action-icon' style={{backgroundImage: `url(${action.icon_url})`}}></div>
-                                <div className="action-text">{action.text}</div>
-                            </div>
-                            <div className="info-icon" style={{backgroundImage: `url(${images['info']})`}}></div>
-                            <div className={`action-sub-menu ${this.state.actionMenuTypeExpanded === action.type ? 'expanded' : ''}`}>
-                                {maximumReached && <div className='max-reached'>maximum reached</div>}
-                                {action.subTypes.map((subType,i)=>{
-                                    return <div key={i} onClick={() => this.handleActionSubtypeClick(action, subType)} 
-                                    className={`action-subtype ${this.getSubtypeClass(subType, maximumReached)} 
-                                    `}>
-                                        {/* ${!subType.available ? 'disabled' : (this.state.selectedCrewMember.specialActions.find(e=>e.actionType.type === action.type).actionSubtype.type === subType.type ? 'in-progress' : '')} */}
-                                        {subType.type} {subType.count !== 0 && this.getSubtypeCountElement(subType)}
-                                    </div>
-                                })}
-                            </div>
-                        </div>
-            })}
-            {/* {actions.map((e,i)=>{
-                return <div className='action-wrapper' key={i}>
-                            <div className='action-icon' style={{backgroundImage: `url(${e.icon_url})`}}></div>
-                            <div className="action-text">{e.text}</div>
-                        </div>
-            })}
-            {actions.map((e,i)=>{
-                return <div className='action-wrapper' key={i}>
-                            <div className='action-icon' style={{backgroundImage: `url(${e.icon_url})`}}></div>
-                            <div className="action-text">{e.text}</div>
-                        </div>
-            })} */}
-        </div>
+    if(!action) return;
+    const startDate = new Date(action.startDate);
+    const endDate = new Date(action.endDate);
+    let diffInMilli = endDate - startDate;
+    let diffInMinutes = diffInMilli / (1000 * 60);
+    let currentTime = new Date();
+    let minutesElapsed = (currentTime - startDate) / (1000 * 60);
+    let percentageComplete = Math.ceil(minutesElapsed/diffInMinutes*100);
+    if(percentageComplete > 100) percentageComplete = 100;
+    return percentageComplete;
     }
     onUpdateModalClosed = () => {
         console.log('on update modal closed');
@@ -1474,8 +1472,8 @@ class DungeonPage extends React.Component {
                 crew.forEach(c=>{
                     if(updates.some(e=>e.owner === c.name)){
                         let update = updates.find(e=>e.owner === c.name)
-                        let ref = c.specialActions.find(e=> e.actionType.type === update.actionType && !e.notified)
-                        ref.notified = true;
+                        let ref = c.specialActions.find(e=> e.type === update.actionType && !e.notified)
+                        if (ref) ref.notified = true;
                     }
                 })
                 meta.crew = crew;
@@ -1551,7 +1549,7 @@ class DungeonPage extends React.Component {
                                     </div> */}
                                     {this.state.setMemberRitualOptions === magicUser && <div className="options-zone">
                                         <div className="option" onClick={()=> this.learnNewRitual(magicUser)}>Learn</div>
-                                        <div className={`option ${magicUser.specialActions.filter(e=>e.actionType.type === 'ritual').length === 0 ? 'disabled' : ''}`}>Perform ritual 3x</div>
+                                        <div className={`option ${magicUser.specialActions.filter(e=>e.type === 'ritual').length === 0 ? 'disabled' : ''}`}>Perform ritual 3x</div>
                                     </div>}
                                 </div>
                                 
@@ -1604,26 +1602,38 @@ class DungeonPage extends React.Component {
                             </div>
                             <div className="portrait" style={{backgroundImage: "url(" + this.state.selectedCrewMember.portrait + ")"}}></div>
                             <div className="cooldowns-container">
-                                {/* Group special actions by type */}
+                                {/* Group special actions by type (flat structure) */}
                                 {(() => {
                                     const actions = this.state.selectedCrewMember.specialActions || [];
                                     const grouped = {};
                                     actions.forEach(action => {
-                                        const type = action.actionType.type;
+                                        const type = action.type;
                                         if (!grouped[type]) grouped[type] = [];
                                         grouped[type].push(action);
                                     });
                                     return Object.keys(grouped).map((type, i) => {
                                         const group = grouped[type];
                                         const action = group[0]; // representative
-                                        const count = group.length;
+                                        // Only count actions that are available (preparation complete)
+                                        console.log('group', group);
+                                        const count = group.filter(a => a.available).length;
+                                        console.log('count: ', count);
+                                        // debugger
+                                        // Prefer iconUrlInverted for DungeonPage (dark bg), fallback to iconUrl, then subtype/default
+                                        let iconUrl = action.iconUrlInverted || action.iconUrl;
+                                        if (!iconUrl && action.subtype === 'magic missile' && typeof images !== 'undefined') {
+                                            iconUrl = images['magic_missile_inverted'] || images['magic_missile'];
+                                        }
+                                        if (!iconUrl && typeof images !== 'undefined') {
+                                            iconUrl = images['glyph_inverted'] || '';
+                                        }
                                         return (
                                             <div key={type} className="special-action-wrapper" style={{position: 'relative'}}>
-                                                <div className="special-action-icon" style={{backgroundImage: `url(${action.actionType.icon_url})`}}></div>
+                                                <div className="special-action-icon" style={{backgroundImage: `url(${iconUrl})`}}></div>
                                                 {this.getActionCooldownPercentage(action) < 50 && <div className="progress-overlay"></div>}
                                                 <div className="left" style={{transform: `rotate(${this.getRotateDegreesLeft(this.getActionCooldownPercentage(action))}deg)`}}></div>
                                                 <div className="right" style={{transform: `rotate(${this.getRotateDegreesRight(this.getActionCooldownPercentage(action))}deg)`}}></div>
-                                                {count > 1 && (
+                                                {count >= 1 && (
                                                     <div style={{
                                                         position: 'absolute',
                                                         top: 6,
@@ -1638,7 +1648,9 @@ class DungeonPage extends React.Component {
                                                         justifyContent: 'center',
                                                         fontSize: 10,
                                                         zIndex: 99,
-                                                    }}>{['','I','II','III','IV','V'][Math.min(count,5)]}</div>
+                                                    }}>
+                                                        {this.getSubtypeNumeralElement({count})}
+                                                    </div>
                                                 )}
                                             </div>
                                         );

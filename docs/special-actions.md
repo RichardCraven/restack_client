@@ -10,7 +10,12 @@ Special actions in the combat system (such as glyphs, spells, or consumables) ar
 - When a special action (e.g., casting 'magic missile') is started, the `beginSpecialAction` method in `crew-manager.js` is called.
 - This method creates a new special action object and pushes it to the fighter's `specialActions` array.
 - The object includes:
-  - `actionType` and `actionSubtype` (describing the action)
+
+  - `type` (e.g., 'spell', 'special')
+  - `name` (display name, e.g., 'Magic Missile')
+  - `iconUrl` (icon for the action)
+  - `subtype` (e.g., 'magic missile', 'fireball')
+  - `count` (number of available uses)
   - `startDate` (when preparation begins)
   - `endDate` (when the action will be available)
   - `available` (initially `false`)
@@ -19,8 +24,12 @@ Special actions in the combat system (such as glyphs, spells, or consumables) ar
 #### Example (from `beginSpecialAction`):
 ```js
 member.specialActions.push({
-  actionType,
-  actionSubtype,
+  type: 'spell',
+  name: 'Magic Missile',
+  iconUrlInverted: '/static/media/magic_missile_inverted.png',
+  iconUrl: '/static/media/magic_missile.png',
+  subtype: 'magic missile',
+  count: 1,
   startDate, // new Date()
   endDate,   // new Date().addHours(1) for magic missile
   available: false,

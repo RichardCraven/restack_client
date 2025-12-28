@@ -63,7 +63,7 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
         missed: false,
         attacks: formatAttacks(fighter.attacks),
         specials: formatSpecials(fighter.specials),
-        specialActions: fighter.specialActions,
+    specialActions: fighter.specialActions, // Now uses flat structure: type, name, iconUrl, subtype, etc.
         targettedBy: [],
         combatPaused: false,
         readout: {action:'', result: ''},

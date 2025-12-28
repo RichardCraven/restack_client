@@ -312,6 +312,7 @@ import whiteskull from '../assets/icons/misc/white_skull.png'
 import ice_blast from '../assets/icons/combat-icons/specials/wizard/ice_blast.png'
 import fire_blast from '../assets/icons/combat-icons/specials/wizard/fire_blast.png'
 import magic_missile from '../assets/icons/misc/cycle.png'
+import magic_missile_inverted from '../assets/icons/misc/cycle_inverted.png'
 
 export {
     hand_1,
@@ -562,6 +563,7 @@ export {
     nine,
 
     magic_missile,
+    magic_missile_inverted,
 
     arrowUp,
     arrowDown,

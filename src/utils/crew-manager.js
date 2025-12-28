@@ -110,28 +110,26 @@ export function CrewManager(){
         console.log('BEGIN SPECIAL ACTION: ', member, actionType, actionSubtype);
         const startDate = new Date();
         let endDate;
+        // Flat structure for special actions
         switch(actionType.type){
             case 'glyph':
+            case 'spell':
                 switch(actionSubtype.type){
-
                     case 'magic missile': {
-                        // Use prepareTime from spells table
                         const prepareTime = SPELLS.magicMissile.prepareTime || 10000;
                         endDate = new Date(Date.now() + prepareTime);
-                        console.log('MAGIC MISSILE BEGIN!');
-                        console.log('date + 1 hrs:', new Date().addHours(1));
                         member.specialActions.push({
-                            actionType,
-                            actionSubtype,
+                            type: 'spell',
+                            name: 'Magic Missile',
+                            iconUrl: actionSubtype.icon_url || '',
+                            available: false,
+                            count: 1, // or logic for count
+                            subtype: 'magic missile',
                             startDate,
                             endDate,
-                            available: false,
-                            // available: true,
-                            notified: false,
-                        })
+                            notified: false
+                        });
                     }
-                    break;
-
                     break;
                     default:
                         break;

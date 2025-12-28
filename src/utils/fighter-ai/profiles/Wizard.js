@@ -130,13 +130,12 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
         console.log('caller.specialActions: ', caller.specialActions);
         // debugger
 
+        // Find a spell of subtype 'magic missile'
         const magicMissile = caller.specialActions && caller.specialActions.find(
-            a => a.type === 'glyph' && a.subTypes && a.subTypes[0] && a.subTypes[0].type === 'magic missile'
+            a => a.type === 'spell' && a.subtype === 'magic missile'
         );
 
-
-        const glyphAction = magicMissile;
-        if (glyphAction && (!glyphAction.cooldown_position || glyphAction.cooldown_position === 0)) {
+        if (magicMissile && (!magicMissile.cooldown_position || magicMissile.cooldown_position === 0)) {
             // Acquire a target (closest enemy)
             const liveEnemies = Object.values(combatants).filter(e => !e.dead && (e.isMonster || e.isMinion));
             if (liveEnemies.length > 0) {
@@ -145,18 +144,15 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                 const target = liveEnemies.sort((a, b) => getDist(a, caller) - getDist(b, caller))[0];
                 // Use MonsterBattle's fireSpecialForAI if available
                 if (this.monsterBattleRef && typeof this.monsterBattleRef.fireSpecialForAI === 'function') {
-                    // Set the targetId so fireGlyph uses the correct target
                     caller.targetId = target.id;
-                    this.monsterBattleRef.fireSpecialForAI(caller, glyphAction.subTypes[0]);
+                    this.monsterBattleRef.fireSpecialForAI(caller, magicMissile);
                 } else if (this.useSpellMagicMissile) {
-                    this.useSpellMagicMissile(caller, target, glyphAction);
+                    this.useSpellMagicMissile(caller, target, magicMissile);
                 } else {
-                    // fallback: triggerMagicMissile for compatibility
                     this.triggerMagicMissile(caller, target, 1500);
                 }
-                // Set glyph on cooldown if needed
-                glyphAction.cooldown_position = glyphAction.cooldown || 3;
-                console.log('glyph available');
+                magicMissile.cooldown_position = magicMissile.cooldown || 3;
+                console.log('spell available');
                 return true;
             }
         }

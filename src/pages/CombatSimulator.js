@@ -55,33 +55,35 @@ class CrewManagerPage extends React.Component{
 
     console.log('meta: ', getMeta());
     const meta = getMeta();
-    meta.crew[1].specialActions.pop();
+    console.log('meta.crew before pops: ', meta.crew);
+    meta.crew[0].specialActions.pop();
+    meta.crew[0].specialActions.pop();
+    meta.crew[0].specialActions.pop();
     storeMeta(meta);
-    
+
     this.props.inventoryManager.initializeItems()
     let options = this.props.crewManager.adventurers;
     this.props.crewManager.initializeCrew(options)
     let wizard = this.props.crewManager.crew.find(e=>e.type==='wizard')
     let wizclone = clone(wizard);
 
+    // Example for new structure:
     // let action = {
-    //     text: "Etch Glyph",
-    //     type: "glyph",
-    //     // available: true,
-    //     subTypes: [
-    //         {
-    //             count: 1,
-    //             icon_url: "/static/media/cycle.c9c8214b.png",
-    //             type: "magic missile"
-    //         }
-    //     ]
+    //   type: 'spell',
+    //   name: 'Magic Missile',
+    //   iconUrl: '/static/media/magic_missile.png',
+    //   subtype: 'magic missile',
+    //   count: 1,
+    //   startDate,
+    //   endDate,
+    //   available: false,
+    //   notified: false,
     // }
-
 
     // Ref wiring will be done after MonsterBattle is mounted in componentDidUpdate
     // After MonsterBattle is mounted, wire up the ref to Wizard AI synchronously
     this.wireMonsterBattleRefToWizardAI();
-    // this.props.crewManager.beginSpecialAction(wizard, action, action.subTypes[0])
+    // this.props.crewManager.beginSpecialAction(wizard, action)
     // wizard.specialActions.push(action)
 
     let selectedCrew = [];

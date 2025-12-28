@@ -286,8 +286,8 @@ class MonsterBattle extends React.Component {
         const nextIndex = currentIndex === liveCrew.length-1 ? 0 : currentIndex + 1;
         const selectedFighter = liveCrew[nextIndex];
         this.props.combatManager.setSelectedFighter(selectedFighter)
-        let a = selectedFighter?.specialActions
-        let b = selectedFighter?.specialActions?.find(a=> a && a.actionType.type==='glyph') 
+    let a = selectedFighter?.specialActions
+    let b = selectedFighter?.specialActions?.find(a=> a && a.type==='spell')
 
         // Do NOT enable manual mode here; just select the fighter
         this.setState({
@@ -304,7 +304,6 @@ class MonsterBattle extends React.Component {
         let selectedFighter = this.state.selectedFighter;
         let specials = selectedFighter?.specials;
         let consumableSpecials = selectedFighter?.specialActions;
-        
         let currentSpecialIndex = specials.findIndex(a=> a.selected)
         specials.forEach(a=>a.selected = false)
         if(consumableSpecials.length){
@@ -672,8 +671,8 @@ class MonsterBattle extends React.Component {
             this.props.combatManager.fighterSpecialAttack(selectedSpecial)
             specials.forEach(e=>e.selected=false)
         } else if (selectedConsumableSpecial){
-            if(selectedConsumableSpecial.actionType.type === 'glyph'){
-                this.fireGlyph(selectedConsumableSpecial.actionType.subTypes[0])
+            if(selectedConsumableSpecial.type === 'spell'){
+                this.fireSpell(selectedConsumableSpecial)
             }
             consumableSpecials.forEach(a=>a.selected=false)
         } else {
@@ -698,8 +697,8 @@ class MonsterBattle extends React.Component {
             this.props.combatManager.fighterSpecialAttack(selectedSpecial)
             specials.forEach(e=>e.selected=false)
         } else if (selectedConsumableSpecial){
-            if(selectedConsumableSpecial.actionType.type === 'glyph'){
-                this.fireGlyph(selectedConsumableSpecial.actionType.subTypes[0])
+            if(selectedConsumableSpecial.type === 'spell'){
+                this.fireSpell(selectedConsumableSpecial)
             }
             consumableSpecials.forEach(a=>a.selected=false)
         } else {
@@ -711,14 +710,9 @@ class MonsterBattle extends React.Component {
         console.log('glyph firing', glyph, 'fighterOverride', fighterOverride);
         // Use override if provided (AI), else fall back to selectedFighter (manual)
         const selectedFighter = fighterOverride || this.state.selectedFighter;
-        switch(glyph.type){
+        switch(glyph.subtype){
             case 'magic missile':
                 console.log('!', this.props.animationManager);
-                // this.props.animationManager.magicMissile()
-                // this.props.animationManager.canvasAnimations.push({
-                //     magicMissile_fire: false,
-                //     magicMissile_connectParticles: true,
-                //     magicMissile_targetDistance: 0,
                 //     magicMissile_targetLaneDiff: 0
                 // })
 
@@ -1150,12 +1144,12 @@ class MonsterBattle extends React.Component {
                             <div className="interaction-tile-container">
                                 {(() => {
                                     // Group spells by type
-                                    const spells = this.state.selectedFighter?.specialActions || [];
+                                    const spells = this.state.selectedFighter?.specialActions?.filter(a => a.type === 'spell') || [];
                                     if (!spells.length) return null;
                                     const grouped = {};
                                     spells.forEach(spellUnit => {
-                                        if (!spellUnit || !spellUnit.actionType || !Array.isArray(spellUnit.actionType.subTypes) || !spellUnit.actionType.subTypes[0]) return;
-                                        const spellType = spellUnit.actionType.type;
+                                        if (!spellUnit) return;
+                                        const spellType = spellUnit.subtype;
                                         if (!grouped[spellType]) grouped[spellType] = [];
                                         grouped[spellType].push(spellUnit);
                                     });
@@ -1163,14 +1157,13 @@ class MonsterBattle extends React.Component {
                                     return Object.keys(grouped).map((type, idx) => {
                                         const group = grouped[type];
                                         const spellUnit = group[0];
-                                        const spell = spellUnit.actionType.subTypes[0];
                                         const count = group.length;
                                         return (
                                             <div key={type} className='interaction-tile-wrapper' style={{position: 'relative'}}>
                                                 <div
-                                                    style={{ backgroundImage: `url(${spell.icon_url}), radial-gradient(white 40%, black 80%)`, cursor: 'pointer' }}
+                                                    style={{ backgroundImage: `url(${spellUnit.iconUrl}), radial-gradient(white 40%, black 80%)`, cursor: 'pointer' }}
                                                     className={`interaction-tile special ${spellUnit.selected ? 'selected' : ''}`}
-                                                    onClick={() => this.fireSpell(spell)}
+                                                    onClick={() => this.fireSpell(spellUnit)}
                                                     onMouseEnter={() => this.spellTileHovered(spellUnit)}
                                                     onMouseLeave={() => this.spellTileHovered(null)}>
                                                 </div>
