@@ -7,7 +7,6 @@ const CanvasMagicTriangle = ({ center, radius = 1.2, numParticles = 12, color = 
     const safeWidth = typeof width === 'number' && !isNaN(width) ? width : 200;
     const safeHeight = typeof height === 'number' && !isNaN(height) ? height : 200;
     const canvasRef = useRef(null)
-    const angleRef = useRef(0);
     useEffect(() => {
     let animationFrameId;
     const canvas = canvasRef.current;
@@ -75,22 +74,12 @@ const CanvasMagicTriangle = ({ center, radius = 1.2, numParticles = 12, color = 
             cancelAnimationFrame(animationFrameId);
         };
     }, [center, radius, numParticles, color, safeWidth, safeHeight]);
-    // Animation movement props
-    // DEBUG CHANGE: Log all computed values for animation
-    useEffect(() => {
-        console.log('[DEBUG] CanvasMagicTriangle mount', {
-            _origin,
-            _targetDistance,
-            _targetLaneDiff,
-            safeWidth,
-            safeHeight,
-        });
-    }, []);
     const _origin = origin || { x: 0, y: 0 };
     const _targetDistance = typeof targetDistance === 'number' ? targetDistance : 0;
     const _targetLaneDiff = typeof targetLaneDiff === 'number' ? targetLaneDiff : 0;
     const _duration = 400;
     const animationName = 'moveRightTriangle';
+    
     return (
                         <>
                             <canvas

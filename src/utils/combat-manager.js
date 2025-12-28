@@ -427,10 +427,17 @@ export function CombatManager(){
     }
     this.setSelectedFighter = (selectedFighter) => {
         this.selectedFighter = selectedFighter;
-        // Set manualControl true for selected fighter, false for others
+        // NOTE: selecting a fighter should NOT automatically enable manual control.
+        // Manual control is an explicit user action (e.g., pressing Enter). Keep
+        // the selectedFighter reference here but do not toggle `manualControl`.
+    }
+
+    // Explicit API to enable/disable manual control for a single fighter.
+    // When enabling manual control for a fighter we disable manual control for others.
+    this.setManualControl = (fighterId, enabled) => {
         Object.values(this.combatants).forEach(f => {
             if (!f.isMonster && !f.isMinion) {
-                f.manualControl = (selectedFighter && f.id === selectedFighter.id);
+                f.manualControl = (enabled && f.id === fighterId);
             }
         });
     }
@@ -1258,6 +1265,7 @@ export function CombatManager(){
     }
     this.processMove = (caller) => {
         if(caller.dead) return;
+        try { console.debug('[processMove] start', { id: caller.id, name: caller.name, targetId: caller.targetId, pendingAttack: caller.pendingAttack ? caller.pendingAttack.name : null, onMoveCooldown: caller.onMoveCooldown }); } catch(e) {}
         if(this.fighterAI.roster[caller.type]){
             this.fighterAI.roster[caller.type].processMove(caller, this.combatants, this.hitsTarget, this.missesTarget);
             return
@@ -1304,6 +1312,7 @@ export function CombatManager(){
         }
         const newCoordinates = {x: newDepth, y: newPosition}
         if(coordinatesOccupiedBy(newCoordinates)){
+            try { console.debug('[processMove] target occupied, aborting move', {id: caller.id, name: caller.name, newCoordinates}); } catch(e) {}
             return
         }
 

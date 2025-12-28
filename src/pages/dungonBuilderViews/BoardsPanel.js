@@ -8,14 +8,13 @@ import  CIcon  from '@coreui/icons-react'
 import { cilCaretRight } from '@coreui/icons';
 import '../../styles/dungeon-board.scss'
 import '../../styles/map-maker.scss'
-import * as images from '../../utils/images'
 
 
 class BoardsPanel extends React.Component {
     constructor(props){
         super(props)
         this.state = {}
-        const boards = this.props.boards.map((board, i) => board)
+    // no-op mapping removed; state initialization kept minimal
     }
 
     render (){

@@ -125,8 +125,7 @@ const CanvasMagicMissile = ({origin, height, width, connectParticlesActive, targ
 
 
 
-        let frameCount = 0
-        let animationFrameId
+  let animationFrameId
         
         //Our draw came here
         // const render = () => {
@@ -161,17 +160,17 @@ const CanvasMagicMissile = ({origin, height, width, connectParticlesActive, targ
 
         const effect = new Effect(canvas);
         
-        function animate() {
-            context.clearRect(0, 0, canvas.width, canvas.height);
-            window.requestAnimationFrame(animate);
-            effect.handleParticles(context, connectParticlesActive);
-        }
-        animate();
+    function animate() {
+      context.clearRect(0, 0, canvas.width, canvas.height);
+      effect.handleParticles(context, connectParticlesActive);
+      animationFrameId = window.requestAnimationFrame(animate);
+    }
+    animationFrameId = window.requestAnimationFrame(animate);
         
-        return () => {
-            window.cancelAnimationFrame(animationFrameId)
-        }
-    }, [connectParticlesActive])
+    return () => {
+      window.cancelAnimationFrame(animationFrameId)
+    }
+  }, [connectParticlesActive, origin, height, width, targetDistance, targetLaneDiff])
   
     return <canvas 
     style={{

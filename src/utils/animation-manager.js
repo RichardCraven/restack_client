@@ -60,7 +60,7 @@ export function AnimationManager(){
             const data = {
                 sourceTileId,
                 targetTileId,
-                type: type || 'dragon_punch',
+                type: animType || 'dragon_punch',
                 icon: resolvedIcon,
                 facing
             };
@@ -73,7 +73,7 @@ export function AnimationManager(){
                     combatantHit = this.checkForCollision(tileCoords);
                 }
                 resolve(combatantHit);
-            }, this.animationsMatrix[type]?.duration || 700);
+            }, this.animationsMatrix[animType]?.duration || 700);
         });
     }
     this.tiles = [];
@@ -388,7 +388,7 @@ export function AnimationManager(){
         }, 1000)
     }
     this.triggerTileAnimationComplex = (data) => {
-        const targetTileId = data.targetTileId, type = data.type, facing = data.facing;
+    const targetTileId = data.targetTileId, type = data.type, facing = data.facing;
         const sourceTileId = data.sourceTileId;
         let animationTile = this.tiles.find(e=>e.id === sourceTileId);
         // PUNCH animation: move fist from source to target and fade out
@@ -446,7 +446,7 @@ export function AnimationManager(){
             case 'claw':
                 animationTile.animationType = `claw`;
                 animationTile.transitionType = 'fade';
-                animationTile.animationData = {facing: data.facing, duration: this.animationsMatrix[type].duration};
+                animationTile.animationData = {facing, duration: this.animationsMatrix[type].duration};
                 this.update();
                 setTimeout(()=>{
                     animationTile.animationType = null;
@@ -458,7 +458,7 @@ export function AnimationManager(){
             case 'sword_swing':
                 animationTile.animationType = 'sword_swing';
                 animationTile.transitionType = 'fade';
-                animationTile.animationData = {facing: data.facing, duration: this.animationsMatrix[type].duration};
+                animationTile.animationData = {facing, duration: this.animationsMatrix[type].duration};
                 this.update();
                 setTimeout(()=>{
                     animationTile.animationType = null;
@@ -488,7 +488,7 @@ export function AnimationManager(){
                 animationTile.animationData = {
                     icon: data.icon || images['scepter_white'],
                     duration: this.animationsMatrix[type].duration,
-                    facing: data.facing
+                    facing
                 };
                 this.update();
                 setTimeout(()=>{

@@ -12,10 +12,10 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
         formatAttacks,
         formatSpecials,
         initiateAttack,
-        checkOverlap,
+    checkOverlap: _checkOverlap,
         handleOverlap,
         // goToDestination,
-        processActionQueue,
+    processActionQueue: _processActionQueue,
         processMove,
         targetInRange,
         getSelectedFighter
@@ -163,8 +163,7 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
             this.frozenPoints += val
         },
         turnCycle: function(){
-            let count = 0,
-            hasMoved = false, hasMovedSecondTime = false;
+            let count = 0;
             let factor = (1/this.stats.dex * 25)
             let increment = (1 / factor)
             if(this.hasOverlap) handleOverlap(this)
@@ -182,7 +181,11 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
                 this.manualMovesCurrent += this.manualMovesTotal/2000
                 if(this.manualMovesCurrent > this.manualMovesTotal) this.manualMovesCurrent = this.manualMovesTotal
                 
-                if(getSelectedFighter() && this.type === getSelectedFighter().type){
+                const _selected = getSelectedFighter && getSelectedFighter();
+                // Do not let mere selection of a fighter pause AI. Only when the
+                // fighter is both selected AND in manualControl should we short-circuit
+                // the AI turn cycle behavior.
+                if(_selected && _selected.id === this.id && this.manualControl){
                     if(!this.pendingAttack){
                         acquireTarget(this);
                     }
@@ -253,6 +256,9 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
 
                 const eraMove = () => {
                     if(this.movesLeft && !era.moved && !this.onMoveCooldown){
+                        // Diagnostic log to help trace when AI attempts to move
+                        // (will show in browser console)
+                        try { console.debug('[turnCycle] moving:', { id: this.id, name: this.name, movesLeft: this.movesLeft, onMoveCooldown: this.onMoveCooldown, eraIndex: this.eraIndex }); } catch(e) {}
                         era.moved = true;
                         this.movesLeft--
                         this.move()
@@ -299,6 +305,8 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
                         
                         eraAttack();
                     break;
+                        default:
+                            break;
                 }
                 if(this.tempo >= 100){
                     this.restartTurnCycle();

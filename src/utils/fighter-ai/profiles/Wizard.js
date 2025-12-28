@@ -185,14 +185,13 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                 console.log('caller.specialActions: ', caller.specialActions);
                 console.log('spells: ', spells, 'spellsAvailable: ', spellAvailable);
                 console.log('target', target);
-                debugger
+                // debugger
                 
                 // if (target && targetHasMoreThanHalfHp && this.useSpell(caller, combatants)) {
-                if (target && this.useSpell(caller, combatants)) {
-                    break;
-                }
-                console.log('got here');
-                // debugger
+                // if (target && this.useSpell(caller, combatants)) {
+                //     break;
+                // }
+
                 switch(caller.eraIndex){
                     case 0:
                         if(enemyIsAdjacent) {
@@ -209,6 +208,10 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                             data.methods.evadeBack(caller, combatants);
                         } else {
                             data.methods.centerBack(caller, combatants);
+                        }
+
+                        if (target && this.useSpell(caller, combatants)) {
+                            break;
                         }
                     break;
                     case 2:
@@ -229,6 +232,10 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                             data.methods.evadeBack(caller, combatants);
                         } else {
                             data.methods.centerBack(caller, combatants);
+                        }
+
+                        if (target && this.useSpell(caller, combatants)) {
+                            break;
                         }
                     break;
                     case 4:
