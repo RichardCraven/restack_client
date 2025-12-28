@@ -737,9 +737,27 @@ export function AnimationManager(){
     this.clawTo = (targetTileId, sourceTileId) => {
         const sourceTile = this.tiles.find(e=>e.id === sourceTileId)
         const destinationTile = this.tiles.find(e=>e.id === targetTileId)
-        if(!sourceTile || !destinationTile){
-            debugger
+        // Defensive: ensure source tile exists
+        if (!sourceTile) {
+            console.warn('clawTo: missing sourceTile for sourceTileId', sourceTileId);
+            return Promise.resolve(null);
         }
+
+        // If destination tile is missing (target may have died or be off-map),
+        // still play a local 'claw' animation on the source tile and bail gracefully.
+        if (!destinationTile) {
+            console.warn('clawTo: destinationTile missing for targetTileId', targetTileId, ' — animating source only');
+            const facing = 'right'; // default facing when target coords are unknown
+            const data = {
+                sourceTileId: sourceTile.id,
+                targetTileId: null,
+                type: 'claw',
+                facing
+            };
+            this.triggerTileAnimationComplex(data);
+            return Promise.resolve(null);
+        }
+
         const facing = sourceTile.x > destinationTile.x ? 'left' : (
             sourceTile.x < destinationTile.x ? 'right' :
             (sourceTile.y > destinationTile.y ? 'up' : 'down')
@@ -755,8 +773,14 @@ export function AnimationManager(){
                     }
                     // need to handle attacks from above or below
                     this.triggerTileAnimationComplex(data);
-                    let tileCoords = this.getTileCoordsById(id)
-                    let collision = this.checkForCollision(tileCoords)
+                    let tileCoords = id != null ? this.getTileCoordsById(id) : null
+                    let collision = null
+                    try {
+                        collision = (typeof this.checkForCollision === 'function' && tileCoords) ? this.checkForCollision(tileCoords) : null
+                    } catch (err) {
+                        console.warn('clawTo: checkForCollision threw', err)
+                        collision = null
+                    }
                     resolve(collision);
             // }
         })

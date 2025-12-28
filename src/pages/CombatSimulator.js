@@ -56,9 +56,9 @@ class CrewManagerPage extends React.Component{
     console.log('meta: ', getMeta());
     const meta = getMeta();
     console.log('meta.crew before pops: ', meta.crew);
-    meta.crew[0].specialActions.pop();
-    meta.crew[0].specialActions.pop();
-    meta.crew[0].specialActions.pop();
+    // meta.crew[0].specialActions.pop();
+    // meta.crew[0].specialActions.pop();
+    // meta.crew[0].specialActions.pop();
     storeMeta(meta);
 
     this.props.inventoryManager.initializeItems()

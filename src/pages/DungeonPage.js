@@ -155,14 +155,32 @@ class DungeonPage extends React.Component {
         });
         let maximumReached = count >= 3;
         return <div className='actions-container'>
-            {actions.map((action, i) => (
+            {actions.map((action, i) => {
+                // find any active special action for this character (used by canvas overlay)
+                const activeAction = (character.specialActions || []).find(a => {
+                    if (!a || !a.startDate || !a.endDate) return false;
+                    const start = new Date(a.startDate);
+                    const end = new Date(a.endDate);
+                    const now = new Date();
+                    return now >= start && now < end;
+                });
+                return (
                 <div className="action-wrapper" key={i}>
                     <div className='action-hover-wrapper' onClick={() => this.handleActionClick(action)} style={{
                         border: `${this.getActionCooldownPercentage() && (character.specialActions || []).find(e=>e.type === action.type) ? '1px solid #635b4a' : ''}`
                     }}>
-                        {(character.specialActions || []).some(action=> this.getActionCooldownPercentage(action) < 100) && <div className="progress-overlay" style={{
-                            width: `${this.getActionCooldownPercentage((character.specialActions || []).find(action=>this.getActionCooldownPercentage(action) < 100))}%`,
-                        }}></div>}
+                        {/* placeholder used by canvas to draw high-frequency progress overlays */}
+                        {(() => {
+                            const placeholderId = `po-${this._nextPlaceholderId++}`;
+                            return (
+                                <div
+                                    ref={(el) => this.placeholderRef(el, placeholderId, activeAction ? activeAction.startDate : '', activeAction ? activeAction.endDate : '')}
+                                    className="progress-overlay progress-overlay-placeholder"
+                                    data-start={activeAction ? activeAction.startDate : ''}
+                                    data-end={activeAction ? activeAction.endDate : ''}
+                                ></div>
+                            );
+                        })()}
                         <div className='action-icon' style={{backgroundImage: `url(${action.iconUrl})`}}></div>
                         <div className="action-text">{action.name}</div>
                     </div>
@@ -177,7 +195,8 @@ class DungeonPage extends React.Component {
                         ))}
                     </div>
                 </div>
-            ))}
+                )
+            })}
         </div>;
     }
     
@@ -244,9 +263,17 @@ class DungeonPage extends React.Component {
     }
     realTimeSpecialActionCheckInterval = null;
     prepCompleteTimeout = null;
+    // Canvas-based cooldown overlay for high-frequency updates
+    cooldownCanvas = null;
+    cooldownAnimationFrame = null;
     constructor(props){
         super(props)
         this.monsterBattleComponentRef = React.createRef()
+        // internal registry of active placeholders (id -> { el, start:Date, end:Date })
+        this._placeholderRegistry = new Map();
+        this._nextPlaceholderId = 1;
+        this._lastDrawTimestamp = 0;
+        this._fpsLimit = 30; // cap draw loop to 30fps
         this.state = {
             tileSize: 0,
             boardSize: 0,
@@ -402,9 +429,69 @@ class DungeonPage extends React.Component {
                 }, () => {
                     this.forceUpdate();
                 });
+            } else {
+                // No updates/modified flags — but the cooldown visuals rely on frequent re-renders
+                // (getActionCooldownPercentage uses current time). Only trigger a lightweight
+                // re-render if any special action is currently in-progress to avoid needless work.
+                const anyActive = meta.crew && meta.crew.some(member =>
+                    (member.specialActions || []).some(a => {
+                        if (!a || !a.startDate || !a.endDate) return false;
+                        const start = new Date(a.startDate);
+                        const end = new Date(a.endDate);
+                        const now = new Date();
+                        return now >= start && now < end;
+                    })
+                );
+                if (anyActive) {
+                    // update a tiny state field so React re-renders and progress UI updates
+                    this.setState({ _cooldownTick: Date.now() });
+                    // ensure canvas draw loop is running
+                        try {
+                            if (!this.cooldownAnimationFrame) {
+                                this.cooldownAnimationFrame = requestAnimationFrame(this.drawCooldowns);
+                            }
+                        } catch (e) {}
+                } else {
+                    // stop canvas loop if running and clear canvas
+                    try {
+                        if (this.cooldownAnimationFrame) {
+                            cancelAnimationFrame(this.cooldownAnimationFrame);
+                            this.cooldownAnimationFrame = null;
+                        }
+                        if (this.cooldownCanvas) {
+                            const ctx = this.cooldownCanvas.getContext && this.cooldownCanvas.getContext('2d');
+                            if (ctx) ctx.clearRect(0, 0, this.cooldownCanvas.width, this.cooldownCanvas.height);
+                        }
+                    } catch (e) {}
+                }
             }
-        }, 1000);
+        }, 100);
         console.log('meta: ', getMeta());
+        // Create a full-page canvas used to draw cooldown overlays at high frequency
+        try {
+            if (!this.cooldownCanvas) {
+                this.cooldownCanvas = document.createElement('canvas');
+                this.cooldownCanvas.id = 'cooldownCanvas';
+                Object.assign(this.cooldownCanvas.style, {
+                    position: 'fixed',
+                    left: '0',
+                    top: '0',
+                    width: '100%',
+                    height: '100%',
+                    pointerEvents: 'none',
+                    zIndex: '9999'
+                });
+                document.body.appendChild(this.cooldownCanvas);
+            }
+        } catch (e) {
+            console.warn('Could not create cooldown canvas', e);
+        }
+        // start the draw loop only if there are active cooldowns
+        try {
+            if (this.hasActiveCooldowns()) {
+                this.cooldownAnimationFrame = requestAnimationFrame(this.drawCooldowns);
+            }
+        } catch (e) {}
         
         this.props.boardManager.establishAddItemToInventoryCallback(this.addItemToInventory)
         this.props.boardManager.establishAddTreasureToInventoryCallback(this.addTreasureToInventory)
@@ -499,6 +586,19 @@ class DungeonPage extends React.Component {
             clearTimeout(this.prepCompleteTimeout);
             this.prepCompleteTimeout = null;
         }
+        // stop canvas animation and remove canvas
+        try {
+            if (this.cooldownAnimationFrame) {
+                cancelAnimationFrame(this.cooldownAnimationFrame);
+                this.cooldownAnimationFrame = null;
+            }
+            if (this.cooldownCanvas) {
+                if (this.cooldownCanvas.parentNode) this.cooldownCanvas.parentNode.removeChild(this.cooldownCanvas);
+                this.cooldownCanvas = null;
+            }
+        } catch (e) {
+            console.warn('Error cleaning up cooldown canvas', e);
+        }
         this.componentCleanup();
         window.removeEventListener('beforeunload', this.componentCleanup); 
     }
@@ -507,6 +607,113 @@ class DungeonPage extends React.Component {
         window.removeEventListener('keydown', this.keyDownHandler)
         window.removeEventListener('resize', this.handleResize.bind(this));
         clearInterval(this.state.intervalId)
+    }
+
+    // Draw cooldown overlays onto the full-page canvas. This runs on requestAnimationFrame
+    drawCooldowns = (timestamp) => {
+        // throttle to _fpsLimit
+        try {
+            if (this._lastDrawTimestamp && timestamp && (timestamp - this._lastDrawTimestamp) < (1000 / this._fpsLimit)) {
+                // still need to schedule next frame if active
+                if (this.hasActiveCooldowns()) {
+                    this.cooldownAnimationFrame = requestAnimationFrame(this.drawCooldowns);
+                } else {
+                    this.cooldownAnimationFrame = null;
+                }
+                return;
+            }
+            this._lastDrawTimestamp = timestamp || performance.now();
+        } catch (e) {}
+        try {
+            const canvas = this.cooldownCanvas;
+            if (!canvas) return;
+            const dpr = window.devicePixelRatio || 1;
+            const rect = document.documentElement.getBoundingClientRect();
+            const width = rect.width;
+            const height = rect.height;
+            const cw = Math.floor(width * dpr);
+            const ch = Math.floor(height * dpr);
+            if (canvas.width !== cw || canvas.height !== ch) {
+                canvas.width = cw;
+                canvas.height = ch;
+                canvas.style.width = `${width}px`;
+                canvas.style.height = `${height}px`;
+            }
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return;
+            // reset transform/clear
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.scale(dpr, dpr);
+            const now = new Date();
+            for (const [id, entry] of this._placeholderRegistry) {
+                try {
+                    const { el, start, end } = entry;
+                    if (!el || !start || !end) continue;
+                    if (now < start || now >= end) continue;
+                    const pct = Math.min(1, (now - start) / (end - start));
+                    const r = el.getBoundingClientRect();
+                    const x = r.left;
+                    const y = r.top;
+                    const w = r.width;
+                    const h = r.height;
+                    // draw a semi-opaque overlay matching the original style
+                    // Updated to use the requested color #f9b11554 (approx rgba(249,177,21,0.329))
+                    ctx.fillStyle = 'rgba(249,177,21,0.6)';
+                    ctx.fillRect(x, y, w * pct, h);
+                } catch (inner) {
+                    // skip problematic element
+                }
+            }
+
+            // restore transform before next frame
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+        } catch (e) {
+            console.warn('Error drawing cooldowns', e);
+        }
+
+        // Schedule next frame only if there are still active cooldowns
+        try {
+            if (this.hasActiveCooldowns()) {
+                this.cooldownAnimationFrame = requestAnimationFrame(this.drawCooldowns);
+            } else {
+                this.cooldownAnimationFrame = null;
+            }
+        } catch (e) {
+            this.cooldownAnimationFrame = null;
+        }
+    }
+
+    // Returns true when any placeholder indicates an in-progress cooldown
+    hasActiveCooldowns = () => {
+        try {
+            const now = new Date();
+            for (const [id, entry] of this._placeholderRegistry) {
+                const { start, end } = entry;
+                if (!start || !end) continue;
+                if (now >= start && now < end) return true;
+            }
+        } catch (e) {
+            return false;
+        }
+        return false;
+    }
+    
+    // ref callback used to register/unregister placeholders
+    placeholderRef = (el, id, start, end) => {
+        try {
+            if (el) {
+                // normalize start/end to Date
+                const s = start ? new Date(start) : null;
+                const e = end ? new Date(end) : null;
+                this._placeholderRegistry.set(id, { el, start: s, end: e });
+            } else {
+                // element unmounted, remove from registry
+                this._placeholderRegistry.delete(id);
+            }
+        } catch (e) {
+            // ignore
+        }
     }
     logMeta = () => {
         const meta = getMeta();
@@ -1673,6 +1880,15 @@ class DungeonPage extends React.Component {
                                         const group = grouped[type];
                                         const action = group[0]; // representative
                                         const count = group.filter(a => a.available).length;
+                                        // Prefer an in-progress action (one whose start/end bracket 'now') for the circular progress UI.
+                                        const now = new Date();
+                                        const inProgressAction = group.find(a => {
+                                            if (!a || !a.startDate || !a.endDate) return false;
+                                            const s = new Date(a.startDate);
+                                            const e = new Date(a.endDate);
+                                            return now >= s && now < e;
+                                        });
+                                        const progressPct = inProgressAction ? this.getActionCooldownPercentage(inProgressAction) : 0;
                                         
                                         // Prefer iconUrlInverted for DungeonPage (dark bg), fallback to iconUrl, then subtype/default
                                         let iconUrl = action.iconUrlInverted || action.iconUrl;
@@ -1685,9 +1901,9 @@ class DungeonPage extends React.Component {
                                         return (
                                             <div key={type} className="special-action-wrapper" style={{position: 'relative'}}>
                                                 <div className="special-action-icon" style={{backgroundImage: `url(${iconUrl})`}}></div>
-                                                {this.getActionCooldownPercentage(action) < 50 && <div className="progress-overlay"></div>}
-                                                <div className="left" style={{transform: `rotate(${this.getRotateDegreesLeft(this.getActionCooldownPercentage(action))}deg)`}}></div>
-                                                <div className="right" style={{transform: `rotate(${this.getRotateDegreesRight(this.getActionCooldownPercentage(action))}deg)`}}></div>
+                                                {inProgressAction && progressPct < 50 && <div className="progress-overlay"></div>}
+                                                {inProgressAction && <div className="left" style={{transform: `rotate(${this.getRotateDegreesLeft(progressPct)}deg)`}}></div>}
+                                                {inProgressAction && <div className="right" style={{transform: `rotate(${this.getRotateDegreesRight(progressPct)}deg)`}}></div>}
                                                 {count >= 1 && (
                                                     <div style={{
                                                         position: 'absolute',
