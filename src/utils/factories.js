@@ -258,23 +258,16 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
                     if(this.movesLeft && !era.moved && !this.onMoveCooldown){
                         // Diagnostic log to help trace when AI attempts to move
                         // (will show in browser console)
-                        try { console.debug('[turnCycle] moving:', { id: this.id, name: this.name, movesLeft: this.movesLeft, onMoveCooldown: this.onMoveCooldown, eraIndex: this.eraIndex }); } catch(e) {}
                         era.moved = true;
                         this.movesLeft--
                         this.move()
                     }
                 }
                 const eraAttack = () => {
-                    if(this.type === 'soldier'){
-                        console.log('SOLDIER ERA ATTACK');
-                    }
                     if(!this.targetId) acquireTarget(this);
                     target = getCombatant(this.targetId)
                     if(!this.pendingAttack) chooseAttackType(this, target)
                     inRange = targetInRange(this);
-                if(this.type === 'soldier'){
-                    console.log(target, 'inRange:', inRange, 'for', this.name);
-                    }
                     if(inRange && this.movesLeft && !era.attacked && !this.onGeneralAttackCooldown && !this.onMoveCooldown){
                         era.attacked = true;
                         this.movesLeft--
@@ -358,7 +351,6 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
         },
         // Allow updating the fighter's interval dynamically
         setFightInterval: function(newInterval) {
-            console.log('setFighterInterval called with: ', newInterval, 'for ', this.type, 'this.interval identifier: ', this.interval, 'current this.FIGHT_INTERVAL: ', this.FIGHT_INTERVAL  );
             this.FIGHT_INTERVAL = newInterval;
             // If a turn cycle is running, restart it with the new interval
             if (this.interval) {

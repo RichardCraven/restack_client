@@ -596,11 +596,6 @@ export function CombatManager(){
         let res;
         res = differential <= 3;
 
-
-        if(caller.type === 'soldier'){
-            console.log('SOLDIER TARGET IN RANGE CHECK', { callerId: caller.id, callerCoords: caller.coordinates, targetId: target.id, targetCoords: target.coordinates, pendingAttack: caller.pendingAttack, differential, attackRange });
-        }
-
         switch(caller.pendingAttack.range){
             case 'self':
                 res = true;
@@ -608,9 +603,6 @@ export function CombatManager(){
             case 'close':
                 if(caller.name === "LORYASTES" && DEBUG_STEPS){
 
-                }
-                if(caller.type === 'soldier'){
-                    console.log('soldier close');
                 }
                 // Close means horizontally adjacent (differential === 1)
                 // or vertically adjacent in the same column (differential === 0 && verticalDiff === 1)

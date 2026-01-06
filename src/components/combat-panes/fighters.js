@@ -150,24 +150,30 @@ export default function FightersCombatGrid(props) {
                                         const isBasicPunch = isMonk && details.pendingAttack.range === 'close' && details.pendingAttack.name !== 'dragon punch';
                                         const icon = isBasicPunch ? images.fist_punch : props.battleData[fighter.id].pendingAttack.icon;
 
+                                        // position weapon differently when facing up/down
+                                        const isVertical = details?.facing === 'up' || details?.facing === 'down';
+                                        // Debug: log facing and pending attack to help diagnose vertical-facing weapon issues
+                                        /* eslint-disable no-console */
+                                        console.debug('[FightersCombatGrid] pendingAttack', { id: fighter.id, facing: details?.facing, pendingAttack: details?.pendingAttack });
+                                        /* eslint-enable no-console */
+                                        const weaponStyle = (() => {
+                                            if (details?.facing === 'right') return { left: `${details?.coordinates.x * 100 + 45 + (details?.coordinates.x * 2)}px`, backgroundImage: `url(${icon})`, opacity: (details?.aiming ? 1 : undefined) };
+                                            if (details?.facing === 'left') return { left: `${details?.coordinates.x * 100 - 65 + (details?.coordinates.x * 2)}px`, backgroundImage: `url(${icon})`, opacity: (details?.aiming ? 1 : undefined) };
+                                               // up / down: center horizontally at tile and nudge vertically relative to the lane (not board coords)
+                                               // portrait-wrapper already positions itself using coordinates.y on the lane, so here we should use
+                                               // small pixel offsets relative to the fighter container instead of adding coordinates.y * 100 again.
+                                               const left = `${details?.coordinates.x * 100 + 45 + (details?.coordinates.x * 2)}px`;
+                                               const top = details?.facing === 'up' ? `-40px` : `110px`;
+                                            // Ensure vertical-facing weapons are visible while pending attack (fallback)
+                                            return { left, top, backgroundImage: `url(${icon})`, opacity: 1 };
+                                        })();
+
                                         return (
-                                            <div className={`weapon-wrapper
-                                                ${props.getFighterDetails(fighter)?.facing === 'left' ? 'reversed' : ''}
-                                                ${details?.aiming ? 'aiming' : ''}
-                                                ${(details?.attacking && details?.pendingAttack.range === 'close') ? (details?.facing === 'right' ? 'swinging-right' : 'swinging-left') 
-                                                : (details?.attacking && details?.pendingAttack.range === 'far' ? 'shooting' : '')}
-                                                // up/down pointing classes removed; add if you have a new property for this
-                                                medium`}
-                                                style={{
-                                                left: details?.facing === 'right' ?
-                                                `${details?.coordinates.x * 100 + 45 + (details?.coordinates.x * 2)}px` :
-                                                `${details?.coordinates.x * 100 - 65 + (details?.coordinates.x * 2)}px`,
-                                                backgroundImage: `url(${icon})`
-                                            }}>
+                                            <div className={`weapon-wrapper ${details?.facing === 'left' ? 'reversed' : ''} ${verticalFacingClass} ${details?.aiming ? 'aiming' : ''} ${(details?.attacking && details?.pendingAttack.range === 'close') ? (details?.facing === 'right' ? 'swinging-right' : 'swinging-left') : (details?.attacking && details?.pendingAttack.range === 'far' ? 'shooting' : '')} medium`} style={weaponStyle}>
                                             </div>
                                         );
                                     })()}
-                                    <div className={`action-bar-wrapper`} 
+                                    <div className={`action-bar-wrapper ${verticalFacingClass === 'facing-up' ? 'pointing-up' : (verticalFacingClass === 'facing-down' ? 'pointing-down' : '')}`} 
                                         style={{
                                         zIndex: 1001,
                                         height: '100%',
