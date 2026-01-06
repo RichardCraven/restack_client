@@ -41,7 +41,9 @@ export default function FightersCombatGrid(props) {
                     const transitionStyle = { transition: isTeleporting ? 'none' : '1s' };
                     // Always use the facing at the moment of death for the death animation
                     const details = props.getFighterDetails(fighter);
-                    const facingClass = details?.facing === 'right' ? '' : 'reversed';
+                    // only mark reversed when explicitly facing left; support up/down classes separately
+                    const facingClass = details?.facing === 'left' ? 'reversed' : '';
+                    const verticalFacingClass = details?.facing === 'up' ? 'facing-up' : (details?.facing === 'down' ? 'facing-down' : '');
                     return  <div key={fighter.id}  className={`lane-wrapper ${isTeleporting ? ' teleporting' : ''}`}
                                 style={{ 
                                     top: `${props.battleData[fighter.id]?.coordinates.y * TILE_SIZE + (SHOW_TILE_BORDERS ? props.battleData[fighter.id]?.coordinates.y * 2 : 0)}px`,
@@ -76,6 +78,7 @@ export default function FightersCombatGrid(props) {
                                                 (props.selectedFighter?.targetId === fighter.id || props.selectedMonster?.targetId === fighter.id) && !details?.dead ? 'targetted' : '',
                                                 details?.active ? 'active' : '',
                                                 facingClass,
+                                                verticalFacingClass,
                                                 details?.locked ? 'locked' : '',
                                                 details?.chargingUpActive ? 'charging-up' : '',
                                             ].filter(Boolean).join(' ')
@@ -149,7 +152,7 @@ export default function FightersCombatGrid(props) {
 
                                         return (
                                             <div className={`weapon-wrapper
-                                                ${props.getFighterDetails(fighter)?.facing === 'right' ? '' : 'reversed'}
+                                                ${props.getFighterDetails(fighter)?.facing === 'left' ? 'reversed' : ''}
                                                 ${details?.aiming ? 'aiming' : ''}
                                                 ${(details?.attacking && details?.pendingAttack.range === 'close') ? (details?.facing === 'right' ? 'swinging-right' : 'swinging-left') 
                                                 : (details?.attacking && details?.pendingAttack.range === 'far' ? 'shooting' : '')}

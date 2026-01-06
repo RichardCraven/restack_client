@@ -353,7 +353,7 @@ class MapMakerPage extends React.Component {
         let arr = [...this.state.tiles]
         arr[tile.id].image = null;
         arr[tile.id].color = 'black';
-        arr[tile.id].contains = 'void'
+        arr[tile.id].contains = { type: 'void', subtype: null }
         this.setState({
           hoveredTileIdx: null,
           tiles: arr
@@ -444,7 +444,7 @@ class MapMakerPage extends React.Component {
       if(monster){
         console.log('monster get here, monster: ', monster);
         let arr = [...this.state.tiles];
-        arr[tile.id].contains = monster.key
+        arr[tile.id].contains = { type: 'monster', subtype: monster.key }
         arr[tile.id].image = monster.portrait
         console.log('arr[tile.id]:', arr[tile.id]);
         console.log('tiles now ', arr);
@@ -456,7 +456,7 @@ class MapMakerPage extends React.Component {
       } else if(gate){
         console.log('gate get here');
         let arr = [...this.state.tiles];
-        arr[tile.id].contains = gate.key
+        arr[tile.id].contains = { type: 'gate', subtype: gate.key }
         arr[tile.id].image = images[gate.key]
         console.log('arr[tile.id]:', arr[tile.id]);
         console.log('tiles now ', arr);
@@ -474,7 +474,7 @@ class MapMakerPage extends React.Component {
         let arr = [...this.state.tiles];
         arr[tile.id].image = null;
         arr[tile.id].color = 'black'
-        arr[tile.id].contains = 'void'
+        arr[tile.id].contains = { type: 'void', subtype: null }
         this.setState({
           tiles: arr,
           hoveredTileIdx: null
@@ -484,7 +484,7 @@ class MapMakerPage extends React.Component {
         arr.forEach(e=>{
           e.image = null;
           e.color = 'black'
-          e.contains = 'void'
+          e.contains = { type: 'void', subtype: null }
         })
         this.setState({
           tiles: arr,
@@ -501,7 +501,8 @@ class MapMakerPage extends React.Component {
         })
       } else if(pinned){
         let arr = [...this.state.tiles];
-        arr[tile.id].contains = pinned.image
+        // Store new contains shape for placed tiles. Use pinned.optionType or image as type if needed.
+        arr[tile.id].contains = { type: pinned.optionType || pinned.image || pinned.type || 'misc', subtype: pinned.image }
         arr[tile.id].image = pinned.image
         console.log('in final pin block, pinned: ', pinned);
         this.setState({

@@ -157,6 +157,89 @@ export function BoardManager(){
         // let y = col;
         return [x, y]
     }
+    // Helpers for new contains format and backwards compatibility
+    // New format for tile.contains: { type: 'monster'|'item'|... , subtype: 'skeleton'|null }
+    this.getContainsType = (contains) => {
+        if (!contains && contains !== null) return null;
+        if (typeof contains === 'object' && contains !== null) {
+            // special-case older 'gate' -> 'minor_gate' naming used elsewhere
+            if (contains.type === 'gate' && contains.subtype === 'minor') return 'minor_gate';
+            return contains.type;
+        }
+        // string legacy format
+        if (typeof contains === 'string') {
+            if (this.monstersArr.includes(contains)) return 'monster';
+            return contains;
+        }
+        return null;
+    }
+    this.getContainsSubtype = (contains) => {
+        if (!contains && contains !== null) return null;
+        if (typeof contains === 'object' && contains !== null) return contains.subtype || null;
+        if (typeof contains === 'string') return contains;
+        return null;
+    }
+    this.getImageForContains = (contains) => {
+        const type = this.getContainsType(contains);
+        const subtype = this.getContainsSubtype(contains);
+        if (!type) return null;
+        // monsters should render subtype image
+        if (type === 'monster') {
+            const key = subtype || this.getRandomMonster();
+            return this.getImage(key) ? this.getImage(key) : key;
+        }
+        // items/other types - prefer subtype when present
+        const key = subtype || type;
+        return this.getImage(key) ? this.getImage(key) : key;
+    }
+
+    // Normalize a single board's tiles from legacy string format into object format
+    this.normalizeBoardTiles = (board) => {
+        if (!board || !board.tiles) return;
+        for (let i = 0; i < board.tiles.length; i++) {
+            let t = board.tiles[i];
+            if (!t) continue;
+            // if already object format, ensure minimal shape
+            if (typeof t.contains === 'object' && t.contains !== null && t.contains.type) {
+                // nothing to do
+                continue;
+            }
+            const legacy = t.contains;
+            // Handle legacy strings
+            if (typeof legacy === 'string') {
+                if (legacy === 'monster') {
+                    t.contains = { type: 'monster', subtype: this.getRandomMonster() };
+                } else if (this.monstersArr.includes(legacy)) {
+                    t.contains = { type: 'monster', subtype: legacy };
+                } else if (legacy === 'gate') {
+                    t.contains = { type: 'gate', subtype: 'minor' };
+                } else if (legacy === 'lantern') {
+                    t.contains = { type: 'item', subtype: (this.pickRandom(this.availableItems) || null) };
+                } else {
+                    // generic mapping: keep type as legacy and no subtype
+                    t.contains = { type: legacy, subtype: null };
+                }
+            } else {
+                // null/undefined -> leave as null
+                t.contains = null;
+            }
+        }
+    }
+
+    // Normalize entire dungeon (all levels/miniboards). Returns true if any change is made.
+    this.normalizeDungeon = () => {
+        if (!this.dungeon || !this.dungeon.levels) return false;
+        let changed = false;
+        this.dungeon.levels.forEach(level => {
+            if (level.front && level.front.miniboards) {
+                level.front.miniboards.forEach(b => { this.normalizeBoardTiles(b); changed = true });
+            }
+            if (level.back && level.back.miniboards) {
+                level.back.miniboards.forEach(b => { this.normalizeBoardTiles(b); changed = true });
+            }
+        });
+        return changed;
+    }
     this.establishAvailableItems = (items) => {
         this.availableItems = items;
     }
@@ -180,6 +263,16 @@ export function BoardManager(){
     }
     this.setDungeon = (dungeon) => {
         this.dungeon = dungeon;
+        // Normalize any legacy string-based contains into object shape
+        try {
+            const changed = this.normalizeDungeon();
+            // persist normalized dungeon if callback available
+            if (changed && this.updateDungeon) {
+                this.updateDungeon(this.dungeon);
+            }
+        } catch (e) {
+            // ignore normalization errors
+        }
     }
     this.setCurrentLevel = (level) => {
         this.currentLevel = level;
@@ -204,14 +297,26 @@ export function BoardManager(){
         let templateBoard = foundTemplatePlane.miniboards[this.playerTile.boardIndex]
         console.log('templateBNoard: ', templateBoard);
         // console.log('templateLevel');
-        console.log('templateBoard monsters: ', templateBoard.tiles.filter(tile => tile.contains === 'monster'));
-        console.log('currentLevel monsters: ', currentLevel.miniboards[this.playerTile.boardIndex].tiles.filter(tile => tile.contains === 'monster'));
+        // Make sure templateBoard is normalized for legacy templates
+        try { this.normalizeBoardTiles(templateBoard); } catch (e) {}
+        console.log('templateBoard monsters: ', templateBoard.tiles.filter(tile => this.getContainsType(tile.contains) === 'monster'));
+        console.log('currentLevel monsters: ', currentLevel.miniboards[this.playerTile.boardIndex].tiles.filter(tile => this.getContainsType(tile.contains) === 'monster'));
         templateBoard.tiles.forEach(templateTile=>{
             let equivalentTile = currentLevel.miniboards[this.playerTile.boardIndex].tiles.find(tile=> tile.id === templateTile.id)
-            if(templateTile.contains === 'monster' && !this.isMonster(equivalentTile) && this.getIndexFromCoordinates(this.playerTile.location) !== templateTile.id) {
+            if(this.getContainsType(templateTile.contains) === 'monster' && !this.isMonster(equivalentTile) && this.getIndexFromCoordinates(this.playerTile.location) !== templateTile.id) {
                 console.log('monster', equivalentTile);
-                equivalentTile.contains = this.getRandomMonster()
-                equivalentTile.image = this.getImage(equivalentTile.contains) ? this.getImage(equivalentTile.contains) : equivalentTile.contains
+                // assign a monster object shape — prefer the template's subtype when available
+                const monsterSubtype = this.getContainsSubtype(templateTile.contains) || this.getRandomMonster();
+                equivalentTile.contains = { type: 'monster', subtype: monsterSubtype };
+                equivalentTile.image = this.getImageForContains(equivalentTile.contains);
+                // also reflect into the currentLevel/dungeon structure so persistence will work
+                try {
+                    if (this.currentOrientation === 'F') {
+                        this.dungeon.levels.find(e=>e.id === this.currentLevel.id).front.miniboards.find(b=>b.id === this.currentBoard.id).tiles[templateTile.id].contains = equivalentTile.contains;
+                    } else {
+                        this.dungeon.levels.find(e=>e.id === this.currentLevel.id).back.miniboards.find(b=>b.id === this.currentBoard.id).tiles[templateTile.id].contains = equivalentTile.contains;
+                    }
+                } catch (e) {}
                 this.tiles[templateTile.id] = equivalentTile;
             }
         })
@@ -225,7 +330,10 @@ export function BoardManager(){
             return item;
         }
         let spawnCoords = this.getCoordinatesFromIndex(spawnTileIndex);
-        let board = this.currentOrientation === 'F' ? this.currentLevel.front.miniboards[boardIndex] : this.currentLevel.back.miniboards[boardIndex]
+    let board = this.currentOrientation === 'F' ? this.currentLevel.front.miniboards[boardIndex] : this.currentLevel.back.miniboards[boardIndex]
+
+    // Normalize the board tiles in-place (backwards-compatibility)
+    try { this.normalizeBoardTiles(board); } catch (e) {}
 
         this.currentBoard = board;
         this.tiles = [];
@@ -236,20 +344,28 @@ export function BoardManager(){
         }
         for(let i = 0; i< board.tiles.length; i++){
             let tile = board.tiles[i]
-            if(tile.contains === 'monster'){
-                tile.contains = this.getRandomMonster();
+            // ensure tile.contains is object-shaped (normalizeBoardTiles already attempted this)
+            if (typeof tile.contains === 'string') {
+                // defensive fallback
+                if (tile.contains === 'monster') tile.contains = { type: 'monster', subtype: this.getRandomMonster() };
+                else tile.contains = { type: tile.contains, subtype: null };
             }
-            if(tile.contains === 'gate') tile.contains = 'minor_gate';
-            if(tile.contains === 'lantern'){
-                tile.contains = getRandomItem();
+            // for monster entries with missing subtype, assign one
+            if (tile.contains && tile.contains.type === 'monster' && !tile.contains.subtype) {
+                tile.contains.subtype = this.getRandomMonster();
             }
+            // for lantern legacy random item, ensure subtype is present
+            if (tile.contains && tile.contains.type === 'item' && !tile.contains.subtype && tile.original && tile.original === 'lantern') {
+                tile.contains.subtype = getRandomItem();
+            }
+            const imageKey = this.getImageForContains(tile.contains);
             this.tiles.push({
                 type: 'board-tile',
                 id: tile.id,
                 color: tile.color,
                 showCoordinates: false,
                 contains: tile.contains,
-                image: this.getImage(tile.contains) ? this.getImage(tile.contains) : tile.contains,
+                image: imageKey,
                 borders: null
             })
             this.overlayTiles.push({
@@ -260,6 +376,8 @@ export function BoardManager(){
                 borders: null
             })
         }
+        // persist any normalizations made to the dungeon tiles
+        try { if (this.updateDungeon) this.updateDungeon(this.dungeon); } catch (e) {}
         for(let j = 0; j < 15; j++){
             for(let p = 0; p<15; p++){
                 this.tiles[p+(15*j)].coordinates = [(j+1*15), p+1*15]
@@ -275,13 +393,16 @@ export function BoardManager(){
         this.tiles[index].image = 'avatar'
     }
     this.isMonster = (tile => {
-        return this.monstersArr.includes(tile.contains)
+        if (!tile) return false;
+        const c = tile.contains;
+        if (!c) return false;
+        if (typeof c === 'object') return c.type === 'monster';
+        return this.monstersArr.includes(c);
     })
     this.handleInteraction = (destinationTile) => {
-        let val = destinationTile.contains
-        if(this.monstersArr.includes(destinationTile.contains)) val = 'monster'
-        if(this.availableItems.includes(destinationTile.contains)) val = 'item'
-        switch(val){
+        const type = this.getContainsType(destinationTile.contains);
+        const subtype = this.getContainsSubtype(destinationTile.contains);
+        switch(type){
             case 'door':
                 return 'door';
             case 'way_up':
@@ -289,14 +410,21 @@ export function BoardManager(){
             case 'way_down':
                 return 'way_down';
             case 'monster':
-                this.setMonster(destinationTile.contains)
+                // pass subtype string to monster handler
+                this.setMonster(subtype)
                 this.triggerMonsterBattle(true, destinationTile.id)
                 return 'impassable';
             case 'minor_gate':
                 this.handleGate(destinationTile);
                 return 'impassable';
             case 'item':
-                this.addItemToInventory(destinationTile)
+                // destinationTile.contains may be object; callers expect string contains
+                try {
+                    const tileForCallback = Object.assign({}, destinationTile, { contains: subtype });
+                    this.addItemToInventory(tileForCallback)
+                } catch (e) {
+                    this.addItemToInventory(destinationTile)
+                }
                 this.removeTileFromBoard(destinationTile)
                 return 'item';
             case 'spell':
@@ -473,8 +601,9 @@ export function BoardManager(){
     this.checkAdjacency = () => {
         const highlightColor = (tile) => {
             let color = null;
-            if(this.monstersArr.includes(tile.contains)) color = '#ff000078'
-            if(this.availableItems.includes(tile.contains)) color = 'lightyellow'
+            if(this.isMonster(tile)) color = '#ff000078'
+            const subtype = this.getContainsSubtype(tile.contains);
+            if(subtype && this.availableItems.includes(subtype)) color = 'lightyellow'
             return color;
         }
         const curIndex = this.getIndexFromCoordinates(this.playerTile.location);
@@ -487,19 +616,19 @@ export function BoardManager(){
         if(rightTile && highlightColor(rightTile)) rightTile.color = highlightColor(rightTile);
         if(topRow) topRow.forEach((t, i)=>{ 
             if(i === 0){
-                if(topRow[1].contains === 'void' && leftTile.contains === 'void') return
+                if(this.getContainsType(topRow[1].contains) === 'void' && this.getContainsType(leftTile.contains) === 'void') return
             }
             if(i === 2){
-                if(topRow[1].contains === 'void' && rightTile.contains === 'void') return
+                if(this.getContainsType(topRow[1].contains) === 'void' && this.getContainsType(rightTile.contains) === 'void') return
             }
             if(highlightColor(t))t.color = highlightColor(t)
         })
         if(bottomRow) bottomRow.forEach((t, i)=>{if(highlightColor(t)){
             if(i === 0){
-                if(bottomRow[1].contains === 'void' && leftTile.contains === 'void') return
+                if(this.getContainsType(bottomRow[1].contains) === 'void' && this.getContainsType(leftTile.contains) === 'void') return
             }
             if(i === 2){
-                if(bottomRow[1].contains === 'void' && rightTile.contains === 'void') return
+                if(this.getContainsType(bottomRow[1].contains) === 'void' && this.getContainsType(rightTile.contains) === 'void') return
             }
             t.color = highlightColor(t)}
         })
@@ -510,14 +639,14 @@ export function BoardManager(){
         const tile = this.tiles[this.getIndexFromCoordinates(this.playerTile.location)];
         const destinationIndex = this.getIndexFromCoordinates(destinationCoords),
         destinationTile = this.tiles[destinationIndex];
-        if(destinationTile.contains === 'void') return
+                if(this.getContainsType(destinationTile.contains) === 'void') return
         let interaction = '';
         if(destinationTile.contains){
           interaction = this.handleInteraction(destinationTile)
         }
         if(interaction === 'impassable') return
        
-        tile.image = this.getImage(tile.contains) ? this.getImage(tile.contains) : tile.contains;
+                tile.image = this.getImageForContains(tile.contains);
         
 
         this.handleFogOfWar(this.currentBoard.tiles[destinationIndex])
@@ -640,16 +769,16 @@ export function BoardManager(){
                 let isWrapAroundTile = (e.id === destinationTile.id + 2 || e.id === destinationTile.id -2 || destinationTile.id + 1 || e.id === destinationTile.id - 1) && (this.getCoordinatesFromIndex(e.id)[0] !== this.getCoordinatesFromIndex(destinationTile.id)[0]);
                 if(!isWrapAroundTile){
                     e.color = this.currentBoard.tiles[e.id].color;
-                    e.image = e.contains;
+                    e.image = this.getImageForContains(e.contains);
                 }
             } 
             
-            if(e.id === destinationTile.id - 2 && this.tiles[destinationTile.id - 1].contains === 'void'){
+            if(e.id === destinationTile.id - 2 && this.getContainsType(this.tiles[destinationTile.id - 1].contains) === 'void'){
                 //prevent seeing past walls
                 e.color = 'black'
                 e.image = null;
             } 
-            if(e.id === destinationTile.id + 2 && this.tiles[destinationTile.id + 1].contains === 'void'){
+            if(e.id === destinationTile.id + 2 && this.getContainsType(this.tiles[destinationTile.id + 1].contains) === 'void'){
                 //prevent seeing past walls
                 e.color = 'black'
                 e.image = null;
@@ -657,23 +786,23 @@ export function BoardManager(){
             // eslint-disable-next-line
             if( e.id === destinationTile.id - 15 || 
                 // eslint-disable-next-line
-                e.id === destinationTile.id - 30 &&  this.tiles[destinationTile.id - 15].contains !== 'void' ||
+                e.id === destinationTile.id - 30 &&  this.getContainsType(this.tiles[destinationTile.id - 15].contains) !== 'void' ||
                 // eslint-disable-next-line
                 e.id === destinationTile.id + 15 ||
                 // eslint-disable-next-line
-                e.id === destinationTile.id + 30 &&  this.tiles[destinationTile.id + 15].contains !== 'void') {
+                e.id === destinationTile.id + 30 &&  this.getContainsType(this.tiles[destinationTile.id + 15].contains) !== 'void') {
                 e.color = this.currentBoard.tiles[e.id].color
-                e.image = e.contains;
+                e.image = this.getImageForContains(e.contains);
             }
-            if( (e.id === destinationTile.id - 14 && this.tiles[destinationTile.id - 15].contains !== 'void' && this.tiles[destinationTile.id + 1].contains !== 'void') || 
+            if( (e.id === destinationTile.id - 14 && this.getContainsType(this.tiles[destinationTile.id - 15].contains) !== 'void' && this.getContainsType(this.tiles[destinationTile.id + 1].contains) !== 'void') || 
                 // eslint-disable-next-line
-                (e.id === destinationTile.id - 16 && this.tiles[destinationTile.id - 15].contains !== 'void' && this.tiles[destinationTile.id - 1].contains !== 'void') ||
+                (e.id === destinationTile.id - 16 && this.getContainsType(this.tiles[destinationTile.id - 15].contains) !== 'void' && this.getContainsType(this.tiles[destinationTile.id - 1].contains) !== 'void') ||
                 // eslint-disable-next-line
-                (e.id === destinationTile.id + 14 && this.tiles[destinationTile.id + 15].contains !== 'void' && this.tiles[destinationTile.id - 1].contains !== 'void') ||
+                (e.id === destinationTile.id + 14 && this.getContainsType(this.tiles[destinationTile.id + 15].contains) !== 'void' && this.getContainsType(this.tiles[destinationTile.id - 1].contains) !== 'void') ||
                 // eslint-disable-next-line
-                e.id === destinationTile.id + 16 && this.tiles[destinationTile.id + 15].contains !== 'void' && this.tiles[destinationTile.id + 1].contains !== 'void'){   
+                e.id === destinationTile.id + 16 && this.getContainsType(this.tiles[destinationTile.id + 15].contains) !== 'void' && this.getContainsType(this.tiles[destinationTile.id + 1].contains) !== 'void'){   
                 e.color = this.currentBoard.tiles[e.id].color
-                e.image = e.contains;
+                e.image = this.getImageForContains(e.contains);
             }
             //handle left side mapscroll border
             if(e.id === destinationTile.id - 1 && this.tiles[e.id].contains !== 'void' && this.getCoordinatesFromIndex(e.id)[0] !== this.getCoordinatesFromIndex(e.id-1)[0]){

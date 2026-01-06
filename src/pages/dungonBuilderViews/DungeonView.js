@@ -50,16 +50,17 @@ class DungeonView extends React.Component {
             'way_down': '#7bb1db',
             'door': '#c97cdc'
         }
-        if(matrix[contains]) val=matrix[contains]
+        const type = (typeof contains === 'object' && contains !== null) ? contains.type : contains;
+        if(matrix[type]) val=matrix[type]
         return val
     }
     containsImages = (passagesArray) => {
         let imageTypes = ['way_up', 'way_down']
-        return passagesArray.some(p=>imageTypes.includes(p.contains))
+        return passagesArray.some(p=>imageTypes.includes((typeof p.contains === 'object' && p.contains !== null) ? p.contains.type : p.contains))
     }
     countImages = (passagesArray) => {
         let imageTypes = ['way_up', 'way_down']
-        return passagesArray.filter(p=>imageTypes.includes(p.contains)).length
+        return passagesArray.filter(p=>imageTypes.includes((typeof p.contains === 'object' && p.contains !== null) ? p.contains.type : p.contains)).length
     }
     draw = (ctx, frameCount, data) => {
         ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
@@ -93,13 +94,14 @@ class DungeonView extends React.Component {
                     let x = unit*p.coordinates[0] + unit/2
                     let y = unit*p.coordinates[1] + unit/2
                     let isConnected = levelData.connected.some(x => x.locationCode === p.locationCode)
-                    if(p.contains === 'door' && isConnected){
+                    const pType = (typeof p.contains === 'object' && p.contains !== null) ? p.contains.type : p.contains;
+                    if(pType === 'door' && isConnected){
                         let x = unit*p.coordinates[0] - 0.5*unit - (Math.sin(frameCount * 0.04)**2 * 2)
                         let y = unit*p.coordinates[1]
                         let size = 20 + Math.sin(frameCount * 0.04)**2 * 5
                         let imageKey = 'doorImg'
                         ctx.drawImage(this.props.imagesMatrix[imageKey], x, y, size, size);
-                    } else if(p.contains === 'way_up'){
+                    } else if(pType === 'way_up'){
                         let x = unit*p.coordinates[0] - 0.5*unit - (Math.sin(frameCount * 0.04)**2 * 2)
                         let y = unit*p.coordinates[1]
                         let imageKey = isConnected ? 'arrowUpImg' : 'arrowUpImgInvalid'
@@ -117,7 +119,7 @@ class DungeonView extends React.Component {
                             // ctx.drawImage(this.props.imagesMatrix[imageKey], 100, 100, size, size);
                         }
                         ctx.drawImage(this.props.imagesMatrix[imageKey], x, y, size, size);
-                    } else if(p.contains === 'way_down'){
+                    } else if(pType === 'way_down'){
                         let x = unit*p.coordinates[0] - 0.5*unit - (Math.sin(frameCount * 0.04)**2 * 2)
                         let y = unit*p.coordinates[1]
                         let size = 20 + Math.sin(frameCount * 0.04)**2 * 5
@@ -132,7 +134,7 @@ class DungeonView extends React.Component {
                         }
                         // ctx.drawImage(this.props.imagesMatrix[imageKey], 120, 120, size, size);
                         ctx.drawImage(this.props.imagesMatrix[imageKey], x, y, size, size);
-                    } else if(p.contains === 'spawn_point'){
+                    } else if(pType === 'spawn_point'){
                         let x = unit*p.coordinates[0] - 0.5*unit - (Math.sin(frameCount * 0.04)**2 * 2)
                         let y = unit*p.coordinates[1]
                         let size = 20 + Math.sin(frameCount * 0.04)**2 * 5

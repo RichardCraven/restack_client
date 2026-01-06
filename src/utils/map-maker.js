@@ -37,6 +37,11 @@ export function MapMaker(props){
         let index = row*15 + col;
         return index
     }
+    // Helper to accept either legacy string contains or new {type,subtype} objects
+    this.getContainsType = (contains) => {
+        if (typeof contains === 'object' && contains !== null) return contains.type;
+        return contains;
+    }
     this.resetCoordinates = (tiles) => {
         for(let row = 0; row < 15; row++){
             for(let column = 0; column<15; column++){
@@ -53,23 +58,27 @@ export function MapMaker(props){
                 if(!mb|| !mb.tiles) return
                 mb.tiles.forEach(t=> {
                     t.level = lvl.id
-                    t.locationCode = `${t.contains}_level-${lvl.id}_miniboard-${i}_F_[${t.coordinates}]`
+                    const type = this.getContainsType(t.contains);
+                    t.locationCode = `${type}_level-${lvl.id}_miniboard-${i}_F_[${t.coordinates}]`
                 })
             })
             if(lvl.back) lvl.back.miniboards.forEach((mb, i) => {
                 if(!mb|| !mb.tiles) return
                 mb.tiles.forEach(t=> {
                     t.level = lvl.id
-                    t.locationCode = `${t.contains}_level-${lvl.id}_miniboard-${i}_B_[${t.coordinates}]`
+                    const type = this.getContainsType(t.contains);
+                    t.locationCode = `${type}_level-${lvl.id}_miniboard-${i}_B_[${t.coordinates}]`
                 })
             })
         })
         let val = [];
         dungeon.levels.forEach((l) => {
-            let frontFilteredMiniboards = (!!l.front && l.front.miniboards && l.front.miniboards.filter(e=>e.id).length === 9) ? l.front.miniboards.map(b=> b.tiles.filter(t=>t.contains==='way_up' || 
-            t.contains === 'way_down' || t.contains==='door' || t.contains==='spawn_point')) : [];
-            let backFilteredMiniboards = (!!l.back && l.back.miniboards && l.back.miniboards.filter(e=>e.id).length === 9) ? l.back.miniboards.map(b=>b.tiles.filter(t=>t.contains==='way_up' || 
-            t.contains === 'way_down' || t.contains==='door' || t.contains==='spawn_point')) : [];
+            let frontFilteredMiniboards = (!!l.front && l.front.miniboards && l.front.miniboards.filter(e=>e.id).length === 9) ? l.front.miniboards.map(b=> b.tiles.filter(t=>{
+                const type = this.getContainsType(t.contains); return (type === 'way_up' || type === 'way_down' || type === 'door' || type === 'spawn_point')
+            })) : [];
+            let backFilteredMiniboards = (!!l.back && l.back.miniboards && l.back.miniboards.filter(e=>e.id).length === 9) ? l.back.miniboards.map(b=>b.tiles.filter(t=>{
+                const type = this.getContainsType(t.contains); return (type === 'way_up' || type === 'way_down' || type === 'door' || type === 'spawn_point')
+            })) : [];
 
             let aboveLevel = dungeon.levels.find(lev => lev.id === l.id+1)
             let belowLevel = dungeon.levels.find(lev => lev.id === l.id-1)
@@ -78,14 +87,18 @@ export function MapMaker(props){
             for(let i =0; i < 9; i++){
                 const frontBoardPassages = frontFilteredMiniboards[i];
                 const backBoardPassages = backFilteredMiniboards[i];
-                const aboveFrontMiniboards = (aboveLevel && aboveLevel.front && aboveLevel.front.miniboards.filter(e=>e.id).length === 9) ? aboveLevel.front.miniboards.map(b=>b.tiles.filter(t=>t.contains==='way_up' || 
-                t.contains === 'way_down' || t.contains==='door')) : null;
-                const aboveBackMiniboards = aboveLevel && aboveLevel.back && aboveLevel.back && aboveLevel.back.miniboards.filter(e=>e.id).length === 9 ? aboveLevel.back.miniboards.map(b=>b.tiles.filter(t=>t.contains==='way_up' || 
-                t.contains === 'way_down' || t.contains==='door')) : null;
-                const belowFront = belowLevel && belowLevel.front && belowLevel.front && belowLevel.front.miniboards.filter(e=>e.id).length === 9 ? belowLevel.front.miniboards.map(b=>b.tiles.filter(t=>t.contains==='way_up' || 
-                t.contains === 'way_down' || t.contains==='door')) : null,
-                belowBack = belowLevel && belowLevel.back && belowLevel.back && belowLevel.back.miniboards.filter(e=>e.id).length === 9 ? belowLevel.back.miniboards.map(b=>b.tiles.filter(t=>t.contains==='way_up' || 
-                t.contains === 'way_down' || t.contains==='door')) : null;
+                const aboveFrontMiniboards = (aboveLevel && aboveLevel.front && aboveLevel.front.miniboards.filter(e=>e.id).length === 9) ? aboveLevel.front.miniboards.map(b=>b.tiles.filter(t=>{
+                    const type = this.getContainsType(t.contains); return (type === 'way_up' || type === 'way_down' || type === 'door')
+                })) : null;
+                const aboveBackMiniboards = (aboveLevel && aboveLevel.back && aboveLevel.back && aboveLevel.back.miniboards.filter(e=>e.id).length === 9) ? aboveLevel.back.miniboards.map(b=>b.tiles.filter(t=>{
+                    const type = this.getContainsType(t.contains); return (type === 'way_up' || type === 'way_down' || type === 'door')
+                })) : null;
+                const belowFront = (belowLevel && belowLevel.front && belowLevel.front && belowLevel.front.miniboards.filter(e=>e.id).length === 9) ? belowLevel.front.miniboards.map(b=>b.tiles.filter(t=>{
+                    const type = this.getContainsType(t.contains); return (type === 'way_up' || type === 'way_down' || type === 'door')
+                })) : null,
+                belowBack = (belowLevel && belowLevel.back && belowLevel.back && belowLevel.back.miniboards.filter(e=>e.id).length === 9) ? belowLevel.back.miniboards.map(b=>b.tiles.filter(t=>{
+                    const type = this.getContainsType(t.contains); return (type === 'way_up' || type === 'way_down' || type === 'door')
+                })) : null;
                 if(frontBoardPassages && frontBoardPassages.length > 0){
                     frontBoardPassages.forEach((f)=>{
                         let backMatch = backBoardPassages ? backBoardPassages.find(b=>b.id === f.id) : null,
@@ -222,7 +235,7 @@ export function MapMaker(props){
             let topRow = function(){
                 let openings = []
                 for(let p = 0; p<15; p++){
-                    if(tiles[p].contains !== 'void'){
+                    if(this.getContainsType(tiles[p].contains) !== 'void'){
                         openings.push(p)
                     }
                 }
@@ -232,7 +245,7 @@ export function MapMaker(props){
                 let openings = []
                 for(let p = 0; p<15; p++){
                     let index = p*15
-                    if(tiles[p*15].contains !== 'void'){
+                    if(this.getContainsType(tiles[p*15].contains) !== 'void'){
                         openings.push(index)
                     }
                 }
@@ -242,7 +255,7 @@ export function MapMaker(props){
                 let openings = []
                 for(let p = 0; p<15; p++){
                     let index = p*15+14
-                    if(tiles[index].contains !== 'void'){
+                    if(this.getContainsType(tiles[index].contains) !== 'void'){
                         openings.push(index)
                     }
                 }
@@ -251,7 +264,7 @@ export function MapMaker(props){
             let botRow = function(){
                 let openings = []
                 for(let p = 210; p<225; p++){
-                    if(tiles[p].contains !== 'void'){
+                    if(this.getContainsType(tiles[p].contains) !== 'void'){
                         openings.push(p)
                     }
                 }
@@ -357,7 +370,7 @@ export function MapMaker(props){
         for(let i = 0; i< miniboards.length; i++){
             if(miniboards[i].tiles === undefined) return;
             miniboards[i].tiles.forEach((t, tileIndex) => {
-                if(t.image === 'spawn_point' || t.contains === 'spawn_point'){
+                if(t.image === 'spawn_point' || this.getContainsType(t.contains) === 'spawn_point'){
                     spawnPoints.push({
                         boardIndex: i,
                         tileIndex: tileIndex
@@ -379,7 +392,7 @@ export function MapMaker(props){
             let passages = markedPassages.find(p=>p.id === l.id)
             let spawns = []
             passages.frontPassages.forEach(passage=>{
-                if(passage.contains === 'spawn_point'){
+                if(this.getContainsType(passage.contains) === 'spawn_point'){
                     spawns.push(passage);
                     dungeonSpawns.push(passage);
                 } else {
@@ -392,7 +405,7 @@ export function MapMaker(props){
             passages.backPassages.forEach(passage=>{
                 // console.log('passage location code', passage.locationCode);
                 // mb.forEach(passage=>{
-                if(passage.contains === 'spawn_point'){
+                if(this.getContainsType(passage.contains) === 'spawn_point'){
                     spawns.push(passage);
                     dungeonSpawns.push(passage);
                 } else {
@@ -454,7 +467,7 @@ export function MapMaker(props){
         for(let i = 0; i < 3; i++){
             let board = miniboards[i];
             for(let h = 0; h < 15; h++){
-                if(board.tiles[h].contains !== 'void'){
+                if(this.getContainsType(board.tiles[h].contains) !== 'void'){
                     return false
                 }
             }
@@ -463,7 +476,7 @@ export function MapMaker(props){
         for(let i = 6; i < 9; i++){
             let board = miniboards[i];
             for(let h = 210; h < 225; h++){
-                if(board.tiles[h].contains !== 'void'){
+                if(this.getContainsType(board.tiles[h].contains) !== 'void'){
                     return false
                 }
             }
@@ -472,7 +485,7 @@ export function MapMaker(props){
         for(let i = 2; i < 9; i+=3){
             let board = miniboards[i];
             for(let h = 14; h < 225; h+=15){
-                if(board.tiles[h].contains !== 'void'){
+                if(this.getContainsType(board.tiles[h].contains) !== 'void'){
                     // console.log('BANG', board);
                     return false
                 }
@@ -482,7 +495,7 @@ export function MapMaker(props){
         for(let i = 0; i < 9; i+=3){
             let board = miniboards[i];
             for(let h = 0; h < 211; h+=15){
-                if(board.tiles[h].contains !== 'void'){
+                if(this.getContainsType(board.tiles[h].contains) !== 'void'){
                     // console.log('BANG');
                     return false
                 }

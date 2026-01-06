@@ -1228,28 +1228,31 @@ class DungeonPage extends React.Component {
         inputElement = this.state.mapMarkerInput.current;
         switch(this.state.markerType){
             case 'enemy':
-                indicatorContainer.enemies.push({
-                    type: this.props.boardManager.tiles[tile.id].contains,
-                    tileId: tile.id
-                })
-                inputElement.value = this.props.boardManager.tiles[tile.id].contains
+                {
+                    const c = this.props.boardManager.tiles[tile.id].contains;
+                    const typeVal = (typeof c === 'object' && c !== null) ? c.subtype || c.type : c;
+                    indicatorContainer.enemies.push({ type: typeVal, tileId: tile.id })
+                    inputElement.value = typeVal
+                }
             break;
             case 'merchant':
                 console.log('merchant marker not set up yet');
             break;
             case 'gate':
-                indicatorContainer.gates.push({
-                    type: this.props.boardManager.tiles[tile.id].contains,
-                    tileId: tile.id
-                })
-                inputElement.value = this.props.boardManager.tiles[tile.id].contains;
+                {
+                    const c = this.props.boardManager.tiles[tile.id].contains;
+                    const typeVal = (typeof c === 'object' && c !== null) ? (c.subtype || c.type) : c;
+                    indicatorContainer.gates.push({ type: typeVal, tileId: tile.id })
+                    inputElement.value = typeVal;
+                }
             break;
             case 'stairs':
-                indicatorContainer.stairs.push({
-                    type: this.props.boardManager.tiles[tile.id].contains,
-                    tileId: tile.id
-                })
-                inputElement.value = this.props.boardManager.tiles[tile.id].contains;
+                {
+                    const c = this.props.boardManager.tiles[tile.id].contains;
+                    const typeVal = (typeof c === 'object' && c !== null) ? (c.subtype || c.type) : c;
+                    indicatorContainer.stairs.push({ type: typeVal, tileId: tile.id })
+                    inputElement.value = typeVal;
+                }
             break;
             case 'custom':
                 console.log('custom marker not set up yet');
