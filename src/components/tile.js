@@ -6,6 +6,29 @@ export default function Tile(props) {
     if(props.image === 'void_fill'){
         console.log('void fill ', images[props.image]);
     }
+    // Normalize coordinates for display only.
+    // Engine uses a world-offset coordinate system (tiles often start at 15..29).
+    // We expose zero-based coordinates for UI without changing game logic.
+    const getDisplayCoords = (coords) => {
+        if (!coords) return null;
+        // support [x,y] arrays
+        if (Array.isArray(coords) && coords.length >= 2) {
+            const x = coords[0];
+            const y = coords[1];
+            const displayX = (typeof x === 'number' && x >= 15) ? x - 15 : x;
+            const displayY = (typeof y === 'number' && y >= 15) ? y - 15 : y;
+            return [displayX, displayY];
+        }
+        // support {x,y} objects
+        if (typeof coords === 'object' && coords !== null && coords.x != null && coords.y != null) {
+            const x = coords.x;
+            const y = coords.y;
+            const displayX = (typeof x === 'number' && x >= 15) ? x - 15 : x;
+            const displayY = (typeof y === 'number' && y >= 15) ? y - 15 : y;
+            return [displayX, displayY];
+        }
+        return null;
+    }
     return (
         <div style={{
             pointerEvents: props.passThrough ? 'none' : 'inherit',
@@ -69,11 +92,15 @@ export default function Tile(props) {
             }}
             className={`tile ${props.className}`}
         >
-           {props.showCoordinates && 
-                <div style={{color: 'yellow', userSelect: 'none'}}>
-                    {props.coordinates[0]},{props.coordinates[1]} <span style={{color: 'red'}}>{props.index}</span>
-               </div>
-            }
+           {props.showCoordinates && (() => {
+                const displayCoords = getDisplayCoords(props.coordinates);
+                if (!displayCoords) return null;
+                return (
+                    <div style={{color: 'yellow', userSelect: 'none'}}>
+                        {displayCoords[0]},{displayCoords[1]} <span style={{color: 'red'}}>{props.index}</span>
+                    </div>
+                )
+           })()}
         </div>
     )
 }
