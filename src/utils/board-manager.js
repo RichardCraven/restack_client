@@ -202,10 +202,14 @@ export function BoardManager(){
             }
         })
         let templateBoard = foundTemplatePlane.miniboards[this.playerTile.boardIndex]
+        console.log('templateBNoard: ', templateBoard);
+        // console.log('templateLevel');
+        console.log('templateBoard monsters: ', templateBoard.tiles.filter(tile => tile.contains === 'monster'));
+        console.log('currentLevel monsters: ', currentLevel.miniboards[this.playerTile.boardIndex].tiles.filter(tile => tile.contains === 'monster'));
         templateBoard.tiles.forEach(templateTile=>{
             let equivalentTile = currentLevel.miniboards[this.playerTile.boardIndex].tiles.find(tile=> tile.id === templateTile.id)
             if(templateTile.contains === 'monster' && !this.isMonster(equivalentTile) && this.getIndexFromCoordinates(this.playerTile.location) !== templateTile.id) {
-                
+                console.log('monster', equivalentTile);
                 equivalentTile.contains = this.getRandomMonster()
                 equivalentTile.image = this.getImage(equivalentTile.contains) ? this.getImage(equivalentTile.contains) : equivalentTile.contains
                 this.tiles[templateTile.id] = equivalentTile;

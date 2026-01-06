@@ -595,6 +595,12 @@ export function CombatManager(){
 
         let res;
         res = differential <= 3;
+
+
+        if(caller.type === 'soldier'){
+            console.log('SOLDIER TARGET IN RANGE CHECK', { callerId: caller.id, callerCoords: caller.coordinates, targetId: target.id, targetCoords: target.coordinates, pendingAttack: caller.pendingAttack, differential, attackRange });
+        }
+
         switch(caller.pendingAttack.range){
             case 'self':
                 res = true;
@@ -603,7 +609,13 @@ export function CombatManager(){
                 if(caller.name === "LORYASTES" && DEBUG_STEPS){
 
                 }
-                res = differential === 1;
+                if(caller.type === 'soldier'){
+                    console.log('soldier close');
+                }
+                // Close means horizontally adjacent (differential === 1)
+                // or vertically adjacent in the same column (differential === 0 && verticalDiff === 1)
+                const verticalDiff = Math.abs(caller.coordinates.y - target.coordinates.y);
+                res = differential === 1 || (differential === 0 && verticalDiff === 1);
             break;
             case 'medium':
                 res = differential > 1 && differential <= 3;
@@ -951,6 +963,24 @@ export function CombatManager(){
         this.acquireTargetManually(caller, currentTarget)
 
     }
+    // Recalculate and persist facing for a combatant based on its current target (if any).
+    // This should be called before attacks or moves to avoid stale facing values.
+    this.recalculateFacing = (caller) => {
+        if(!caller) return;
+        const target = caller && caller.targetId ? this.combatants[caller.targetId] : null;
+        if(!target) return;
+        try {
+            if (target.coordinates.x === caller.coordinates.x) {
+                // Same column -> vertical facing
+                caller.facing = target.coordinates.y > caller.coordinates.y ? 'down' : 'up';
+            } else {
+                caller.facing = target.coordinates.x > caller.coordinates.x ? 'right' : 'left';
+            }
+        } catch (e) {
+            // be defensive
+            // console.warn('recalculateFacing error', e);
+        }
+    }
     this.initiateAttack = (caller, manualAttack = false) => {
        let manualTarget = false;
         const targetInRange = (caller, target) => {
@@ -968,6 +998,9 @@ export function CombatManager(){
             return rangeDiff <= RANGES[caller.pendingAttack.range]
         }
 
+        // Always recompute facing from target immediately before initiating an attack
+        try { this.recalculateFacing(caller); } catch (e) {}
+
         if(this.fighterAI.roster[caller.type]){
             this.fighterAI.roster[caller.type].initiateAttack(caller, manualAttack, this.combatants);
             return
@@ -975,6 +1008,9 @@ export function CombatManager(){
         
         if(this.monsterAI.roster[caller.type]){
             this.monsterAI.roster[caller.type].initiateAttack(caller, this.combatants);
+            return
+        } else {
+            this.monsterAI.roster['skeleton'].initiateAttack(caller, this.combatants);
             return
         }
 
@@ -1265,7 +1301,9 @@ export function CombatManager(){
     }
     this.processMove = (caller) => {
         if(caller.dead) return;
-        try { console.debug('[processMove] start', { id: caller.id, name: caller.name, targetId: caller.targetId, pendingAttack: caller.pendingAttack ? caller.pendingAttack.name : null, onMoveCooldown: caller.onMoveCooldown }); } catch(e) {}
+    try { console.debug('[processMove] start', { id: caller.id, name: caller.name, targetId: caller.targetId, pendingAttack: caller.pendingAttack ? caller.pendingAttack.name : null, onMoveCooldown: caller.onMoveCooldown }); } catch(e) {}
+    // Recompute facing before attempting movement so facing isn't stale as units shift around
+    try { this.recalculateFacing(caller); } catch (e) {}
         if(this.fighterAI.roster[caller.type]){
             this.fighterAI.roster[caller.type].processMove(caller, this.combatants, this.hitsTarget, this.missesTarget);
             return

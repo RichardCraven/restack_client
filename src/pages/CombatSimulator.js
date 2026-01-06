@@ -1,6 +1,7 @@
 import React from 'react'
 import { INTERVALS, INTERVAL_DISPLAY_NAMES } from '../utils/shared-constants';
 import {storeMeta, getMeta, getUserId} from '../utils/session-handler';
+import { CrewManager } from '../utils/crew-manager'
 import { Route, Switch, Redirect} from "react-router-dom";
 import MonsterBattle from './sub-views/MonsterBattle';
 
@@ -33,6 +34,8 @@ class CrewManagerPage extends React.Component{
   constructor(props){
       super(props)
       this.monsterBattleComponentRef = React.createRef()
+        // Temporary crew manager used by the Combat Simulator to avoid mutating the global crew
+        this.tempCrewManager = null;
     this.state = {
         monster: null,
         minions: null,
@@ -63,8 +66,11 @@ class CrewManagerPage extends React.Component{
 
     this.props.inventoryManager.initializeItems()
     let options = this.props.crewManager.adventurers;
-    this.props.crewManager.initializeCrew(options)
-    let wizard = this.props.crewManager.crew.find(e=>e.type==='wizard')
+    // Create a temporary CrewManager instance for the simulator so we don't mutate the global crew state
+    this.tempCrewManager = new CrewManager();
+    // initialize with a deep-cloned options array to avoid sharing references
+    this.tempCrewManager.initializeCrew(clone(options));
+    let wizard = this.tempCrewManager.crew.find(e=>e.type==='wizard')
     let wizclone = clone(wizard);
 
     // Example for new structure:
@@ -91,11 +97,11 @@ class CrewManagerPage extends React.Component{
     // selectedCrew.push(options[1])
     // selectedCrew.push(options[2])
 
-    selectedCrew.push(this.props.crewManager.crew.find(e=>e.type==='wizard'))
-    selectedCrew.push(this.props.crewManager.crew.find(e=>e.type==='soldier'))
+    selectedCrew.push(this.tempCrewManager.crew.find(e=>e.type==='wizard'))
+    selectedCrew.push(this.tempCrewManager.crew.find(e=>e.type==='soldier'))
     // selectedCrew.push(this.props.crewManager.crew.find(e=>e.type==='rogue'))
 
-    selectedCrew.push(this.props.crewManager.crew.find(e=>e.type==='monk'))
+    selectedCrew.push(this.tempCrewManager.crew.find(e=>e.type==='monk'))
 
     // useScript('../assets/particles/particles.js')
 
@@ -228,13 +234,9 @@ submit = async () => {
     })
 }
 clear = () => {
-    const meta = getMeta();
-    // ...existing code...
-    meta.crew = [];
-    storeMeta(meta);
-    this.setState({
-        selectedCrew: []
-    })
+        // Clear only the simulator-local crew selection and temp manager; do not mutate global meta or the app's crewManager
+        if (this.tempCrewManager) this.tempCrewManager.crew = [];
+        this.setState({ selectedCrew: [] })
 }
 goBack = () => {
     this.setState({
@@ -448,7 +450,7 @@ combatKeyUpListener = (event) => {
                 combatManager={this.props.combatManager || null}
                 inventoryManager={this.props.inventoryManager}
                 animationManager={this.props.animationManager}
-                crewManager={this.props.crewManager || null}
+                crewManager={this.tempCrewManager || this.props.crewManager || null}
                 crew={this.state.selectedCrew|| null}
                 monster={this.state.monster || null}
                 minions={this.state.minions || null}

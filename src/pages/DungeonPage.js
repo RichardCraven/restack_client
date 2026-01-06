@@ -575,7 +575,9 @@ class DungeonPage extends React.Component {
             d.id = e._id
             dungeons.push(d)
         })
-        selectedDungeon = allDungeons[0];
+        console.log('all dungeons: ', allDungeons, 'actual object: ', dungeons);
+        selectedDungeon = dungeons[0];
+        console.log('selected dungeon', selectedDungeon);
         this.props.boardManager.respawnMonsters(selectedDungeon)
     }
     componentWillUnmount(){
@@ -720,7 +722,7 @@ class DungeonPage extends React.Component {
         console.log('meta: ', meta);
     }
     setNewRespawnDate = () => {
-        let soon = new Date().addMinutes(10)
+        let soon = new Date().addMinutes(1)
         let meta = getMeta();
         meta.respawnDate = soon;
         storeMeta(meta)

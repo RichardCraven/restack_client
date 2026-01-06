@@ -54,8 +54,13 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
             chosenAttack;
 
         const distanceToTarget = data.methods.getDistanceToTarget(caller, target);
+        const laneDiff = data.methods.getLaneDifferenceToTarget(caller, target);
 
-        if(distanceToTarget === 1 && available.find(e=>e.range === 'close')){
+        // Treat as 'close' if target is one tile in front/back (x diff = 1)
+        // OR if target is in the same column but one lane up/down (vertical adjacency).
+        const isCloseRange = Math.abs(distanceToTarget) === 1 || (Math.abs(distanceToTarget) === 0 && Math.abs(laneDiff) === 1);
+
+        if(isCloseRange && available.find(e=>e.range === 'close')){
             attack = available.find(e=>e.range === 'close');
             return attack;
         }
@@ -334,6 +339,7 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
         }
     }
     this.initiateAttack = async (caller, manualAttack, combatants) => {
+        console.log('SOLDIER INITIATE ATTACK');
         if (typeof caller.moveCooldown === 'undefined') {
             debugger;
             throw new Error('moveCooldown must be defined for all units');
@@ -358,9 +364,12 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
             }
             return val;
         };
-    const facingRight = caller.facing === 'right';
+        const facingRight = caller.facing === 'right';
         const target = combatants[caller.targetId];
-        const facing = caller.facing ? caller.facing : callerFacing(caller,target);
+        // Prefer a facing derived from the current target position when a target exists
+        // so vertical (up/down) attacks are used when appropriate.
+        const computedFacing = callerFacing(caller, target);
+        const facing = target ? (computedFacing || caller.facing) : (caller.facing || computedFacing);
 
         caller.attacking = true;
 
@@ -368,6 +377,10 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
             if(caller.pendingAttack && caller.pendingAttack.cooldown_position < 99){
                 return;
             } else if (caller.pendingAttack && caller.pendingAttack.cooldown_position === 100){
+                if (facing === 'up'){
+                    console.log('SOLDIER: about to swing UP', { callerId: caller.id, callerCoords: caller.coordinates, targetId: caller.targetId, targetCoords: target ? target.coordinates : null, pendingAttack: caller.pendingAttack });
+                    // debugger;
+                }
                 const combatantHit = await this.triggerSwordSwing(caller.coordinates, facing);
                 if(combatantHit){
                     this.hitsCombatant(caller, combatantHit);
@@ -384,6 +397,10 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
                 // debugger
                 switch(caller.pendingAttack.name){
                     case 'sword swing': {
+                        console.log('SWING ', facing);
+                        if (facing === 'up'){
+                            console.log('SOLDIER: about to swing UP (AI)', { callerId: caller.id, callerCoords: caller.coordinates, targetId: caller.targetId, targetCoords: target ? target.coordinates : null, pendingAttack: caller.pendingAttack });
+                        }
                         const combatantHit = await this.triggerSwordSwing(caller.coordinates, facing);
                         if(combatantHit){
                             this.hitsCombatant(caller, combatantHit);

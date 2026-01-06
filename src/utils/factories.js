@@ -265,10 +265,16 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
                     }
                 }
                 const eraAttack = () => {
+                    if(this.type === 'soldier'){
+                        console.log('SOLDIER ERA ATTACK');
+                    }
                     if(!this.targetId) acquireTarget(this);
                     target = getCombatant(this.targetId)
                     if(!this.pendingAttack) chooseAttackType(this, target)
                     inRange = targetInRange(this);
+                if(this.type === 'soldier'){
+                    console.log(target, 'inRange:', inRange, 'for', this.name);
+                    }
                     if(inRange && this.movesLeft && !era.attacked && !this.onGeneralAttackCooldown && !this.onMoveCooldown){
                         era.attacked = true;
                         this.movesLeft--
