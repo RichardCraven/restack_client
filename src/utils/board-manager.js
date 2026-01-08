@@ -281,7 +281,6 @@ export function BoardManager(){
         this.currentOrientation = orientation;
     }
     this.respawnMonsters = (template) => {
-        console.log('respawn monsters, template: ', template);
         if(!template || !template.levels) return
         let currentOrientation = this.currentOrientation
         let currentLevel = currentOrientation === 'F' ? this.currentLevel.front : this.currentLevel.back
@@ -295,20 +294,52 @@ export function BoardManager(){
             }
         })
         let templateBoard = foundTemplatePlane.miniboards[this.playerTile.boardIndex]
-        console.log('templateBNoard: ', templateBoard);
         // console.log('templateLevel');
         // Make sure templateBoard is normalized for legacy templates
         try { this.normalizeBoardTiles(templateBoard); } catch (e) {}
-        console.log('templateBoard monsters: ', templateBoard.tiles.filter(tile => this.getContainsType(tile.contains) === 'monster'));
-        console.log('currentLevel monsters: ', currentLevel.miniboards[this.playerTile.boardIndex].tiles.filter(tile => this.getContainsType(tile.contains) === 'monster'));
+    
         templateBoard.tiles.forEach(templateTile=>{
             let equivalentTile = currentLevel.miniboards[this.playerTile.boardIndex].tiles.find(tile=> tile.id === templateTile.id)
             if(this.getContainsType(templateTile.contains) === 'monster' && !this.isMonster(equivalentTile) && this.getIndexFromCoordinates(this.playerTile.location) !== templateTile.id) {
-                console.log('monster', equivalentTile);
                 // assign a monster object shape — prefer the template's subtype when available
                 const monsterSubtype = this.getContainsSubtype(templateTile.contains) || this.getRandomMonster();
                 equivalentTile.contains = { type: 'monster', subtype: monsterSubtype };
                 equivalentTile.image = this.getImageForContains(equivalentTile.contains);
+                // Determine a color for the respawned tile. Prefer the template's color, then
+                // the current board definition, then a sensible monster highlight so it won't
+                // remain black after fog-of-war overwrites runtime tile state.
+                try {
+                    const templateColor = templateTile && templateTile.color;
+                    const boardColor = this.currentBoard && this.currentBoard.tiles && this.currentBoard.tiles[templateTile.id] && this.currentBoard.tiles[templateTile.id].color;
+                    // sensible default for monsters so they show up if no color is present
+                    const defaultMonsterColor = '#ff000078';
+                    const isValidColor = (c) => (c !== null && c !== undefined && c !== '' && c !== 'black');
+                    // Prefer a non-black template color, then a non-black board color, otherwise default
+                    const colorToUse = isValidColor(templateColor) ? templateColor : (isValidColor(boardColor) ? boardColor : defaultMonsterColor);
+                    equivalentTile.color = colorToUse;
+                    // Persist the color into the in-memory currentBoard and dungeon so
+                    // handleFogOfWar (which reads from currentBoard.tiles) will apply it
+                    // when recalculating visibility.
+                    try {
+                        if (this.currentBoard && this.currentBoard.tiles && this.currentBoard.tiles[templateTile.id]) {
+                            this.currentBoard.tiles[templateTile.id].color = colorToUse;
+                        }
+                        if (this.currentOrientation === 'F') {
+                            const levelEntry = this.dungeon.levels.find(e => e.id === this.currentLevel.id);
+                            if (levelEntry && levelEntry.front && levelEntry.front.miniboards) {
+                                const b = levelEntry.front.miniboards.find(bi => bi.id === this.currentBoard.id);
+                                if (b && b.tiles && b.tiles[templateTile.id]) b.tiles[templateTile.id].color = colorToUse;
+                            }
+                        } else {
+                            const levelEntry = this.dungeon.levels.find(e => e.id === this.currentLevel.id);
+                            if (levelEntry && levelEntry.back && levelEntry.back.miniboards) {
+                                const b = levelEntry.back.miniboards.find(bi => bi.id === this.currentBoard.id);
+                                if (b && b.tiles && b.tiles[templateTile.id]) b.tiles[templateTile.id].color = colorToUse;
+                            }
+                        }
+                    } catch (e) {}
+                } catch (e) {}
+                
                 // also reflect into the currentLevel/dungeon structure so persistence will work
                 try {
                     if (this.currentOrientation === 'F') {
@@ -320,8 +351,13 @@ export function BoardManager(){
                 this.tiles[templateTile.id] = equivalentTile;
             }
         })
-        this.updateDungeon(this.dungeon);
-        this.refreshTiles()
+        try { if (this.updateDungeon) this.updateDungeon(this.dungeon); } catch (e) {}
+        // Recompute fog-of-war visibility after respawn so newly-placed monsters are visible when appropriate
+        try {
+            const playerIdx = this.getIndexFromCoordinates(this.playerTile.location);
+            if (this.tiles[playerIdx]) this.handleFogOfWar(this.tiles[playerIdx]);
+        } catch (e) {}
+        try { if (this.refreshTiles) this.refreshTiles(); } catch (e) {}
     }
     this.initializeTilesFromMap = (boardIndex, spawnTileIndex) => {
         const getRandomItem = () => {
@@ -342,6 +378,7 @@ export function BoardManager(){
             location: spawnCoords,
             boardIndex: boardIndex
         }
+    
         for(let i = 0; i< board.tiles.length; i++){
             let tile = board.tiles[i]
             // ensure tile.contains is object-shaped (normalizeBoardTiles already attempted this)
@@ -359,6 +396,14 @@ export function BoardManager(){
                 tile.contains.subtype = getRandomItem();
             }
             const imageKey = this.getImageForContains(tile.contains);
+            // Log monster tiles on initialization to verify contains/image are correct
+            if (tile.contains && tile.contains.type === 'monster' && tile.contains.subtype) {
+                // regular init tile
+                try { /* no-op */ } catch (e) {}
+            }
+            if (this.getContainsType(tile.contains) === 'monster') {
+                try { /* debug removed */ } catch (e) {}
+            }
             this.tiles.push({
                 type: 'board-tile',
                 id: tile.id,
@@ -512,22 +557,58 @@ export function BoardManager(){
         }
     }
     this.removeDefeatedMonsterTile = (tileId) => {
-        console.log('remove monster tile', tileId);
+    
         const tile = this.tiles[tileId];
         this.removeTileFromBoard(tile);
     }
     this.removeTileFromBoard = (tile) => {
+        // Clear runtime monster/image but preserve or restore an appropriate base color
         tile.image = null;
         tile.contains = null;
-        tile.color = null; 
+        // Prefer the currentBoard's color for this tile, otherwise fallback to white
+        // try {
+        //     const boardColor = this.currentBoard && this.currentBoard.tiles && this.currentBoard.tiles[tile.id] && this.currentBoard.tiles[tile.id].color;
+        //     tile.color = boardColor || 'white';
+        // } catch (e) {
+            tile.color = 'white';
+        // }
         this.tiles[tile.id] = tile;
-        if(this.currentOrientation === 'F'){
-            this.dungeon.levels.find(e=>e.id === this.currentLevel.id).front.miniboards.find(b=>b.id === this.currentBoard.id).tiles[tile.id].contains = null;
-        } else {
-            this.dungeon.levels.find(e=>e.id === this.currentLevel.id).back.miniboards.find(b=>b.id === this.currentBoard.id).tiles[tile.id].contains = null;
-        }
-        this.updateDungeon(this.dungeon);
-        this.refreshTiles();
+        // Persist the cleared contains and ensure the dungeon/currentBoard tile has a usable color
+        try {
+            // Update the in-memory currentBoard entry so fog uses the right color immediately
+            if (this.currentBoard && this.currentBoard.tiles && this.currentBoard.tiles[tile.id]) {
+                this.currentBoard.tiles[tile.id].contains = null;
+                this.currentBoard.tiles[tile.id].color = tile.color;
+            }
+            // Also update the dungeon structure so persistence will include the cleared tile
+            const levelEntry = this.dungeon.levels.find(e => e.id === this.currentLevel.id);
+            if (levelEntry) {
+                if (this.currentOrientation === 'F' && levelEntry.front && levelEntry.front.miniboards) {
+                    const b = levelEntry.front.miniboards.find(bi => bi.id === this.currentBoard.id);
+                    if (b && b.tiles && b.tiles[tile.id]) {
+                        b.tiles[tile.id].contains = null;
+                        b.tiles[tile.id].color = tile.color;
+                    }
+                } else if (this.currentOrientation === 'B' && levelEntry.back && levelEntry.back.miniboards) {
+                    const b = levelEntry.back.miniboards.find(bi => bi.id === this.currentBoard.id);
+                    if (b && b.tiles && b.tiles[tile.id]) {
+                        b.tiles[tile.id].contains = null;
+                        b.tiles[tile.id].color = tile.color;
+                    }
+                }
+            }
+        } catch (e) {}
+        try { if (this.updateDungeon) this.updateDungeon(this.dungeon); } catch (e) {}
+        // debugger
+        // return;  
+        // Recompute fog-of-war after removing the tile so visibility updates immediately
+        try {
+            const playerIdx = this.getIndexFromCoordinates(this.playerTile.location);
+            if (this.tiles[playerIdx]) this.handleFogOfWar(this.tiles[playerIdx]);
+            else if (this.currentBoard && this.currentBoard.tiles && this.currentBoard.tiles[playerIdx]) this.handleFogOfWar(this.currentBoard.tiles[playerIdx]);
+        } catch (e) {}
+        // Ensure UI refresh in case handleFogOfWar did not run for any reason
+        try { if (this.refreshTiles) this.refreshTiles(); } catch (e) {}
     }
     this.handleGate = (tile) => {
         if(!this.activeInteractionTile) this.activeInteractionTile = tile;
@@ -649,8 +730,6 @@ export function BoardManager(){
                 tile.image = this.getImageForContains(tile.contains);
         
 
-        this.handleFogOfWar(this.currentBoard.tiles[destinationIndex])
-
         switch(direction){
             case 'up':
                 this.playerTile.location[0] = (this.playerTile.location[0]- 1)
@@ -667,6 +746,12 @@ export function BoardManager(){
             default:
             break;
         }
+        // Recompute fog after updating the player's location so fog centers on the player
+        try {
+            const playerIdx = this.getIndexFromCoordinates(this.playerTile.location);
+            if (this.tiles[playerIdx]) this.handleFogOfWar(this.tiles[playerIdx]);
+            else this.handleFogOfWar(this.currentBoard.tiles[playerIdx]);
+        } catch (e) {}
         if(interaction === 'door'){
             this.handlePassingThroughDoor();
         }
@@ -759,99 +844,70 @@ export function BoardManager(){
         }
     } 
     this.handleFogOfWar = (destinationTile) => {
-        this.tiles.forEach((e)=> {
+        // Reset all tiles to hidden
+        this.tiles.forEach((e) => {
             e.color = 'black';
             e.image = null;
             e.borders = null;
-        })
-        this.tiles.forEach((e)=> {
-            if(e.id > destinationTile.id - 3 && e.id < destinationTile.id + 3 ){
-                let isWrapAroundTile = (e.id === destinationTile.id + 2 || e.id === destinationTile.id -2 || destinationTile.id + 1 || e.id === destinationTile.id - 1) && (this.getCoordinatesFromIndex(e.id)[0] !== this.getCoordinatesFromIndex(destinationTile.id)[0]);
-                if(!isWrapAroundTile){
-                    e.color = this.currentBoard.tiles[e.id].color;
+        });
+
+        // Bresenham line algorithm to check for blocking 'void' tiles between two coordinates
+        const isBlockedBetween = (fromIdx, toIdx) => {
+            try {
+                const from = this.getCoordinatesFromIndex(fromIdx);
+                const to = this.getCoordinatesFromIndex(toIdx);
+                let x0 = from[0], y0 = from[1];
+                let x1 = to[0], y1 = to[1];
+                let dx = Math.abs(x1 - x0);
+                let dy = Math.abs(y1 - y0);
+                let sx = (x0 < x1) ? 1 : -1;
+                let sy = (y0 < y1) ? 1 : -1;
+                let err = dx - dy;
+                // step through intermediate points (excluding endpoints)
+                while (!(x0 === x1 && y0 === y1)) {
+                    const e2 = err * 2;
+                    if (e2 > -dy) { err -= dy; x0 += sx; }
+                    if (e2 < dx) { err += dx; y0 += sy; }
+                    // if we've reached the target, break before checking
+                    if (x0 === x1 && y0 === y1) break;
+                    const idx = this.getIndexFromCoordinates([x0, y0]);
+                    const tile = this.tiles[idx];
+                    if (!tile) continue;
+                    if (this.getContainsType(tile.contains) === 'void') return true;
+                }
+            } catch (e) { /* ignore errors and assume not blocked */ }
+            return false;
+        };
+
+        const destCoords = this.getCoordinatesFromIndex(destinationTile.id);
+        this.tiles.forEach((e) => {
+            try {
+                const coords = this.getCoordinatesFromIndex(e.id);
+                const dx = Math.abs(coords[0] - destCoords[0]);
+                const dy = Math.abs(coords[1] - destCoords[1]);
+                const manhattan = dx + dy;
+                // reveal tiles within radius 2 (Manhattan distance) if not blocked
+                if (manhattan <= 2 && this.getContainsType(e.contains) !== 'void') {
+                    if (!isBlockedBetween(destinationTile.id, e.id)) {
+                        const persistedColor = (this.currentBoard && this.currentBoard.tiles && this.currentBoard.tiles[e.id] && this.currentBoard.tiles[e.id].color);
+                        const runtimeColor = (e.color && e.color !== 'black') ? e.color : null;
+                        const boardColor = (persistedColor && persistedColor !== 'black') ? persistedColor : (runtimeColor || null);
+                        e.color = boardColor || 'white';
+                        e.image = this.getImageForContains(e.contains);
+                    }
+                }
+                // also reveal the tile in the same column up/down up to 30/15 offsets if not blocked (preserve some original behavior)
+                if ((e.id === destinationTile.id - 15 || e.id === destinationTile.id + 15) && !isBlockedBetween(destinationTile.id, e.id) && this.getContainsType(e.contains) !== 'void') {
+                    const persistedColor = (this.currentBoard && this.currentBoard.tiles && this.currentBoard.tiles[e.id] && this.currentBoard.tiles[e.id].color);
+                    const runtimeColor = (e.color && e.color !== 'black') ? e.color : null;
+                    const boardColor = (persistedColor && persistedColor !== 'black') ? persistedColor : (runtimeColor || null);
+                    e.color = boardColor || 'white';
                     e.image = this.getImageForContains(e.contains);
                 }
-            } 
-            
-            if(e.id === destinationTile.id - 2 && this.getContainsType(this.tiles[destinationTile.id - 1].contains) === 'void'){
-                //prevent seeing past walls
-                e.color = 'black'
-                e.image = null;
-            } 
-            if(e.id === destinationTile.id + 2 && this.getContainsType(this.tiles[destinationTile.id + 1].contains) === 'void'){
-                //prevent seeing past walls
-                e.color = 'black'
-                e.image = null;
-            } 
-            // eslint-disable-next-line
-            if( e.id === destinationTile.id - 15 || 
-                // eslint-disable-next-line
-                e.id === destinationTile.id - 30 &&  this.getContainsType(this.tiles[destinationTile.id - 15].contains) !== 'void' ||
-                // eslint-disable-next-line
-                e.id === destinationTile.id + 15 ||
-                // eslint-disable-next-line
-                e.id === destinationTile.id + 30 &&  this.getContainsType(this.tiles[destinationTile.id + 15].contains) !== 'void') {
-                e.color = this.currentBoard.tiles[e.id].color
-                e.image = this.getImageForContains(e.contains);
-            }
-            if( (e.id === destinationTile.id - 14 && this.getContainsType(this.tiles[destinationTile.id - 15].contains) !== 'void' && this.getContainsType(this.tiles[destinationTile.id + 1].contains) !== 'void') || 
-                // eslint-disable-next-line
-                (e.id === destinationTile.id - 16 && this.getContainsType(this.tiles[destinationTile.id - 15].contains) !== 'void' && this.getContainsType(this.tiles[destinationTile.id - 1].contains) !== 'void') ||
-                // eslint-disable-next-line
-                (e.id === destinationTile.id + 14 && this.getContainsType(this.tiles[destinationTile.id + 15].contains) !== 'void' && this.getContainsType(this.tiles[destinationTile.id - 1].contains) !== 'void') ||
-                // eslint-disable-next-line
-                e.id === destinationTile.id + 16 && this.getContainsType(this.tiles[destinationTile.id + 15].contains) !== 'void' && this.getContainsType(this.tiles[destinationTile.id + 1].contains) !== 'void'){   
-                e.color = this.currentBoard.tiles[e.id].color
-                e.image = this.getImageForContains(e.contains);
-            }
-            //handle left side mapscroll border
-            if(e.id === destinationTile.id - 1 && this.tiles[e.id].contains !== 'void' && this.getCoordinatesFromIndex(e.id)[0] !== this.getCoordinatesFromIndex(e.id-1)[0]){
-                e.borders = {left: '1px solid red'}
-                if(this.tiles[e.id - 15]) this.tiles[e.id - 15].borders = {left: '1px solid red'}
-                if(this.tiles[e.id + 15]) this.tiles[e.id + 15].borders = {left: '1px solid red'}
-            }
-            if(e.id === destinationTile.id &&  this.getCoordinatesFromIndex(e.id)[0] !== this.getCoordinatesFromIndex(e.id-1)[0]){
-                e.borders = {left: '1px solid red'}
-                if(this.tiles[e.id - 15]) this.tiles[e.id - 15].borders = {left: '1px solid red'}
-                if(this.tiles[e.id + 15]) this.tiles[e.id + 15].borders = {left: '1px solid red'}
-            } 
+            } catch (err) {}
+    });
+        try { if (this.refreshTiles) this.refreshTiles(); } catch (e) {}
 
-            //handle right side mapscroll border
-            if(e.id === destinationTile.id + 1 && this.tiles[e.id].contains !== 'void' &&  this.getCoordinatesFromIndex(e.id)[0] !== this.getCoordinatesFromIndex(e.id+1)[0]){
-                e.borders = {right: '1px solid red'}
-                if(this.tiles[e.id - 15]) this.tiles[e.id - 15].borders = {right: '1px solid red'}
-                if(this.tiles[e.id + 15]) this.tiles[e.id + 15].borders = {right: '1px solid red'}
-            }
-            if(e.id === destinationTile.id &&  this.getCoordinatesFromIndex(e.id)[0] !== this.getCoordinatesFromIndex(e.id+1)[0]){
-                e.borders = {right: '1px solid red'}
-                if(this.tiles[e.id - 15]) this.tiles[e.id - 15].borders = {right: '1px solid red'}
-                if(this.tiles[e.id + 15]) this.tiles[e.id + 15].borders = {right: '1px solid red'}
-            } 
-
-            //handle top side mapscroll border
-            if(e.id === destinationTile.id - 15 && this.tiles[e.id].contains !== 'void' && !this.tiles[destinationTile.id - 30]){
-                e.borders = {top: '1px solid red'}
-                if(this.tiles[e.id - 1]) this.tiles[e.id - 1].borders = {top: '1px solid red'}
-                if(this.tiles[e.id + 1]) this.tiles[e.id + 1].borders = {top: '1px solid red'}
-            }
-            if(e.id === destinationTile.id && !this.tiles[destinationTile.id - 15]){
-                e.borders = {top: '1px solid red'}
-                if(this.tiles[e.id - 1]) this.tiles[e.id - 1].borders = {top: '1px solid red'}
-                if(this.tiles[e.id + 1]) this.tiles[e.id + 1].borders = {top: '1px solid red'}
-            } 
-            
-            //handle bottom side mapscroll border
-            if(e.id === destinationTile.id + 15 && this.tiles[e.id].contains !== 'void' && !this.tiles[destinationTile.id + 30]){
-                e.borders = {bottom: '1px solid red'}
-                if(this.tiles[e.id - 1]) this.tiles[e.id - 1].borders = {bottom: '1px solid red'}
-                if(this.tiles[e.id + 1]) this.tiles[e.id + 1].borders = {bottom: '1px solid red'}
-            }
-            if(e.id === destinationTile.id && !this.tiles[destinationTile.id + 15]){
-                e.borders = {bottom: '1px solid red'}
-                if(this.tiles[e.id - 1]) this.tiles[e.id - 1].borders = {bottom: '1px solid red'}
-                if(this.tiles[e.id + 1]) this.tiles[e.id + 1].borders = {bottom: '1px solid red'}
-            } 
-        })
         return true
     }
 }

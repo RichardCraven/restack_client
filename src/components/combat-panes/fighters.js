@@ -33,6 +33,40 @@ export default function FightersCombatGrid(props) {
     // Only render fighters still present in battleData (i.e., not removed from combat),
     // and if dead, only if showDeathAnimation is true and not fullyDead
     const activeCrew = props.crew.filter(f => props.battleData[f.id] && (!props.getFighterDetails(f)?.dead || (showDeathAnimation[f.id] && !fullyDead[f.id])));
+    // Refs to portrait wrappers and fighter containers so we can measure DOM for precise weapon placement
+    const portraitWrapperRefs = React.useRef({});
+    const fighterWrapperRefs = React.useRef({});
+    const [weaponPositions, setWeaponPositions] = React.useState({});
+
+    // Compute weapon positions based on the rendered portrait positions. Use layout effect to read DOM
+    React.useLayoutEffect(() => {
+        const newPos = {};
+        props.crew.forEach(fighter => {
+            const details = props.getFighterDetails(fighter);
+            if (!details || details.dead || !details.pendingAttack) return;
+            const portraitEl = portraitWrapperRefs.current[fighter.id];
+            // prefer explicit wrapper ref (offsetParent should be fighter-wrapper)
+            const parentEl = portraitEl ? (portraitEl.offsetParent || fighterWrapperRefs.current[fighter.id]) : fighterWrapperRefs.current[fighter.id];
+            if (portraitEl && parentEl) {
+                const pRect = portraitEl.getBoundingClientRect();
+                const parentRect = parentEl.getBoundingClientRect();
+                const weaponW = 90; // CSS default weapon size
+                const weaponH = 90;
+                const left = pRect.left - parentRect.left + (pRect.width / 2) - (weaponW / 2);
+                let top;
+                if (details.facing === 'up') {
+                    top = pRect.top - parentRect.top - (weaponH / 2);
+                } else if (details.facing === 'down') {
+                    top = pRect.top - parentRect.top + pRect.height - (weaponH / 2) + 10; // nudge down a little
+                } else {
+                    top = pRect.top - parentRect.top;
+                }
+                newPos[fighter.id] = { left: `${Math.round(left)}px`, top: `${Math.round(top)}px` };
+            }
+        });
+        setWeaponPositions(newPos);
+        // Recompute when battle data changes, overlays change, or crew list changes
+    }, [props.crew, props.battleData, props.animationOverlays, props.selectedFighter]);
     return (
         <div className="mb-col fighter-pane">
             <div className="fighter-content">
@@ -51,6 +85,7 @@ export default function FightersCombatGrid(props) {
                                     ...transitionStyle
                                 }}>
                                 <div 
+                                ref={el => { fighterWrapperRefs.current[fighter.id] = el }}
                                 className={`fighter-wrapper${fighter.isLeader ? ' leader-wrapper' : ''}${isTeleporting ? ' teleporting' : ''}`}
                                 >
                                     <div className={`portrait-wrapper${isTeleporting ? ' teleporting' : ''}`}
@@ -59,6 +94,7 @@ export default function FightersCombatGrid(props) {
                                         zIndex: 300, // Always above monsters/minions
                                         ...transitionStyle
                                     }}
+                                    ref={el => { portraitWrapperRefs.current[fighter.id] = el }}
                                     >
                                         <div 
                                         className={
@@ -150,22 +186,15 @@ export default function FightersCombatGrid(props) {
                                         const isBasicPunch = isMonk && details.pendingAttack.range === 'close' && details.pendingAttack.name !== 'dragon punch';
                                         const icon = isBasicPunch ? images.fist_punch : props.battleData[fighter.id].pendingAttack.icon;
 
-                                        // position weapon differently when facing up/down
-                                        const isVertical = details?.facing === 'up' || details?.facing === 'down';
-                                        // Debug: log facing and pending attack to help diagnose vertical-facing weapon issues
-                                        /* eslint-disable no-console */
-                                        console.debug('[FightersCombatGrid] pendingAttack', { id: fighter.id, facing: details?.facing, pendingAttack: details?.pendingAttack });
-                                        /* eslint-enable no-console */
-                                        const weaponStyle = (() => {
-                                            if (details?.facing === 'right') return { left: `${details?.coordinates.x * 100 + 45 + (details?.coordinates.x * 2)}px`, backgroundImage: `url(${icon})`, opacity: (details?.aiming ? 1 : undefined) };
-                                            if (details?.facing === 'left') return { left: `${details?.coordinates.x * 100 - 65 + (details?.coordinates.x * 2)}px`, backgroundImage: `url(${icon})`, opacity: (details?.aiming ? 1 : undefined) };
-                                               // up / down: center horizontally at tile and nudge vertically relative to the lane (not board coords)
-                                               // portrait-wrapper already positions itself using coordinates.y on the lane, so here we should use
-                                               // small pixel offsets relative to the fighter container instead of adding coordinates.y * 100 again.
-                                               const left = `${details?.coordinates.x * 100 + 45 + (details?.coordinates.x * 2)}px`;
-                                               const top = details?.facing === 'up' ? `-40px` : `110px`;
-                                            // Ensure vertical-facing weapons are visible while pending attack (fallback)
-                                            return { left, top, backgroundImage: `url(${icon})`, opacity: 1 };
+                                        // position weapon using measured portrait positions when available
+                                        const measured = weaponPositions[fighter.id];
+                                        const weaponStyle = measured ? { ...measured, backgroundImage: `url(${icon})` } : (() => {
+                                            // fallback to original coordinate math if measurement not ready
+                                            if (details?.facing === 'right') return { left: `${details?.coordinates.x * 100 + 45 + (details?.coordinates.x * 2)}px`, backgroundImage: `url(${icon})` };
+                                            if (details?.facing === 'left') return { left: `${details?.coordinates.x * 100 - 65 + (details?.coordinates.x * 2)}px`, backgroundImage: `url(${icon})` };
+                                            const left = `${details?.coordinates.x * 100 + 45 + (details?.coordinates.x * 2)}px`;
+                                            const top = details?.facing === 'up' ? `-40px` : `110px`;
+                                            return { left, top, backgroundImage: `url(${icon})` };
                                         })();
 
                                         return (
