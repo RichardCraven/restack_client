@@ -240,6 +240,13 @@ class MonsterBattle extends React.Component {
         return `hit-from-${combatant.wounded.sourceDirection}-${combatant.wounded.severity}`
     }
 
+    // Small helper to convert small counts to Roman numerals for UI badges
+    romanNumeral = (n) => {
+        if (!n || n <= 0) return '';
+        const roman = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
+        return roman[Math.min(n, roman.length - 1)];
+    }
+
     // fighterFacingRight = (fighter) => {
     //     return this.props.combatManager.fighterFacingRight(fighter)
     // }
@@ -280,14 +287,15 @@ class MonsterBattle extends React.Component {
         this.setState({greetingInProcess: false})
     }
     tabToFighter = () => {
-        const liveCrew = Object.values(this.state.battleData).filter(e=>(!e.isMonster && !e.isMinion) && !e.dead)
-        if(liveCrew.length === 0) return
-        const currentIndex = this.state.selectedFighter ? liveCrew.findIndex(e=>e.id === this.state.selectedFighter.id) : -1;
-        const nextIndex = currentIndex === liveCrew.length-1 ? 0 : currentIndex + 1;
+        const liveCrew = this.getSortedLiveCrew();
+        if (liveCrew.length === 0) return;
+        const currentIndex = this.state.selectedFighter ? liveCrew.findIndex(e => e.id === this.state.selectedFighter.id) : -1;
+        const nextIndex = currentIndex === liveCrew.length - 1 ? 0 : currentIndex + 1;
         const selectedFighter = liveCrew[nextIndex];
-        this.props.combatManager.setSelectedFighter(selectedFighter)
-    let a = selectedFighter?.specialActions
-    let b = selectedFighter?.specialActions?.find(a=> a && a.type==='spell')
+        if (!selectedFighter) return;
+        if (this.props.combatManager && typeof this.props.combatManager.setSelectedFighter === 'function') {
+            this.props.combatManager.setSelectedFighter(selectedFighter);
+        }
 
         // Do NOT enable manual mode here; just select the fighter
         this.setState({
@@ -442,9 +450,71 @@ class MonsterBattle extends React.Component {
         //     debugger;
         // }
         const clonedBattleData = JSON.parse(JSON.stringify(battleData));
+
+        // Ensure wizards have at least 3 "magic missile" spells available in their specialActions
+        this.ensureWizardSpells(clonedBattleData);
+
         this.setState({
             battleData: clonedBattleData
+        }, () => {
+            // If nothing is selected yet, pick the default top-most / left-most crew member
+            if (!this.state.selectedFighter) {
+                const liveCrew = this.getSortedLiveCrew();
+                if (liveCrew && liveCrew.length) {
+                    const first = liveCrew[0];
+                    // inform combatManager (authoritative) and update local state
+                    if (this.props.combatManager && typeof this.props.combatManager.setSelectedFighter === 'function') {
+                        this.props.combatManager.setSelectedFighter(first);
+                    }
+                    this.setState({
+                        selectedFighter: first,
+                        glyphTrayExpanded: first.type === 'wizard',
+                        greetingInProcess: false // show interaction pane by default
+                    });
+                }
+            }
         })
+    }
+
+    // Ensure each wizard combatant has at least 3 magic missile spells in their specialActions
+    ensureWizardSpells = (battleData) => {
+        if (!battleData) return;
+        Object.values(battleData).forEach(combatant => {
+            try {
+                if (!combatant) return;
+                if (combatant.type !== 'wizard') return;
+                if (!combatant.specialActions) combatant.specialActions = [];
+                const existing = combatant.specialActions.filter(sa => sa && sa.type === 'spell' && (sa.subtype === 'magic missile' || (sa.name && sa.name.toLowerCase().includes('magic missile'))));
+                const needed = Math.max(0, 3 - existing.length);
+                for (let i = 0; i < needed; i++) {
+                    combatant.specialActions.push({
+                        type: 'spell',
+                        subtype: 'magic missile',
+                        name: 'magic missile',
+                        iconUrl: images['magic_missile'] || '',
+                        selected: false,
+                        cooldown_position: 100
+                    });
+                }
+            } catch (err) {
+                // defensive: don't break update if something unexpected exists
+                console.warn('ensureWizardSpells error', err);
+            }
+        });
+    }
+
+    // Return live crew sorted by top-most (lowest y) first, then left-to-right (lowest x)
+    getSortedLiveCrew = () => {
+        const crew = Object.values(this.state.battleData).filter(e => (!e.isMonster && !e.isMinion) && !e.dead);
+        crew.sort((a, b) => {
+            const ay = a.coordinates?.y ?? 0;
+            const by = b.coordinates?.y ?? 0;
+            if (ay !== by) return ay - by; // top-most first
+            const ax = a.coordinates?.x ?? 0;
+            const bx = b.coordinates?.x ?? 0;
+            return ax - bx; // left-to-right
+        });
+        return crew;
     }
     updateAnimationData = (animationData) => {
         this.setState({
@@ -776,6 +846,14 @@ class MonsterBattle extends React.Component {
             hoveredSpecialTile: val ? val.name : null
         })
     }
+    
+    // Minimal handler for spell hover to avoid missing-method runtime errors.
+    // Logs a small message and updates hoveredSpellTile for the tooltip.
+    spellTileHovered = (val) => {
+        const label = val ? (val.subtype || val.name || 'unknown') : 'none';
+        console.log(`spell ${label} hovered`);
+        this.setState({ hoveredSpellTile: val ? (val.subtype || val.name) : null });
+    }
     glyphTileHovered = (val) => {
         this.setState({
             hoveredGlyphTile: val ? val.type : null
@@ -928,6 +1006,11 @@ class MonsterBattle extends React.Component {
 
     render(){
                    
+        // Determine the currently selected fighter's target id from the authoritative battleData
+        const selectedTargetId = this.state.selectedFighter
+            ? (this.state.selectedFighter.targetId ?? this.state.battleData[this.state.selectedFighter.id]?.targetId)
+            : null;
+
         return (
             <div className={`mb-board ${this.state.showCrosshair ? 'show-crosshair' : ''}`}>
                 {/* Game speed readout in upper right */}
@@ -1105,19 +1188,38 @@ class MonsterBattle extends React.Component {
                             <div className="interaction-header">Consumables</div>
                             <div className="interaction-tooltip" style={{fontSize: this.state.hoveredInventoryTile?.length > 8 ? '10px': 'inherit'}}>{this.state.hoveredInventoryTile}</div>
                             <div className="interaction-tile-container">
-                                {this.state.selectedFighter && this.props.inventoryManager?.inventory.filter(e=>e.type==='consumable').map((a, i)=>{
-                                    return <div key={i}  className='interaction-tile-wrapper'>
-                                                <div 
-                                                className={`interaction-tile consumable`} 
-                                                style={{backgroundImage: "url(" + images[a.icon] + "), radial-gradient(white 40%, black 80%)", cursor: 'pointer'}} 
-                                                onClick={() => this.combatInventoryTileClicked(a)} 
-                                                onMouseEnter={() => this.inventoryTileHovered(a.name)} 
-                                                onMouseLeave={() => this.inventoryTileHovered(null)}
+                                {this.state.selectedFighter && (() => {
+                                    const consumables = this.props.inventoryManager?.inventory.filter(e => e.type === 'consumable') || [];
+                                    if (!consumables.length) return null;
+                                    const grouped = {};
+                                    consumables.forEach(unit => {
+                                        if (!unit) return;
+                                        const key = unit.name;
+                                        if (!grouped[key]) grouped[key] = [];
+                                        grouped[key].push(unit);
+                                    });
+                                    return Object.keys(grouped).map((name) => {
+                                        const group = grouped[name];
+                                        const unit = group[0];
+                                        const count = group.length;
+                                        return (
+                                            <div key={name} className='interaction-tile-wrapper' style={{position: 'relative'}}>
+                                                <div
+                                                    className={`interaction-tile consumable`}
+                                                    style={{backgroundImage: `url(${images[unit.icon]}), radial-gradient(white 40%, black 80%)`, cursor: 'pointer'}}
+                                                    onClick={() => this.combatInventoryTileClicked(unit)}
+                                                    onMouseEnter={() => this.inventoryTileHovered(unit.name)}
+                                                    onMouseLeave={() => this.inventoryTileHovered(null)}
                                                 >
                                                 </div>
-                                                <div className="interaction-tile-overlay" style={{width: `${a.cooldown_position}%`, transition: a.cooldown_position === 0 ? '0s' : '0.2s'}}></div>
+                                                <div className="interaction-tile-overlay" style={{width: `${unit.cooldown_position}%`, transition: unit.cooldown_position === 0 ? '0s' : '0.2s'}}></div>
+                                                {count > 1 && (
+                                                    <div className="stack-badge">{this.romanNumeral(count)}</div>
+                                                )}
                                             </div>
-                                })}
+                                        );
+                                    });
+                                })()}
                             </div>
                         </div>
                         <div className="specials-col">
@@ -1168,21 +1270,7 @@ class MonsterBattle extends React.Component {
                                                     onMouseLeave={() => this.spellTileHovered(null)}>
                                                 </div>
                                                 {count > 1 && (
-                                                    <div style={{
-                                                        position: 'absolute',
-                                                        top: 13,
-                                                        right: -26,
-                                                        color: 'white',
-                                                        fontWeight: 'bold',
-                                                        borderRadius: '50%',
-                                                        minWidth: 18,
-                                                        minHeight: 18,
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        fontSize: 10,
-                                                        zIndex: 99,
-                                                    }}>{romanNumerals[Math.min(count, 5)]}</div>
+                                                    <div className={`stack-badge small`}>{romanNumerals[Math.min(count, 5)]}</div>
                                                 )}
                                             </div>
                                         );
@@ -1213,12 +1301,11 @@ class MonsterBattle extends React.Component {
                             <div className="interaction-header">Target</div>
                             <div className="interaction-tooltip"> </div>
                             <div className="interaction-tile-container">
-                                {this.state.selectedFighter && this.state.selectedFighter.name !== 'Loryastes' && Object.values(this.state.battleData).filter(e=>e.isMonster || (e.isMinion && !e.dead)).map((a, i)=>{
-                                    return <div key={i} className='interaction-tile-wrapper'>
+                                {this.state.selectedFighter && this.state.selectedFighter.name !== 'Loryastes' && Object.values(this.state.battleData).filter(e => (e.isMonster || e.isMinion) && !e.dead && !e.invisible).map((a)=>{
+                                    return <div key={a.id} className='interaction-tile-wrapper'>
                                                 <div 
-                                                    key={i} 
                                                     style={{backgroundImage: "url(" + a.portrait + ")", cursor: this.state.showCrosshair ? 'crosshair' : ''}} 
-                                                    className={`interaction-tile target ${this.state.selectedFighter?.targetId === a.id ? 'targetted' : ''}`} 
+                                                    className={`interaction-tile target ${selectedTargetId === a.id ? 'targetted' : ''}`} 
                                                     onClick={() => this.targetTileClicked(a)} 
                                                     onMouseEnter={() => this.targetTileHovered(a)} 
                                                     onMouseLeave={() => this.targetTileHovered(null)}>
@@ -1226,11 +1313,11 @@ class MonsterBattle extends React.Component {
                                             </div>
                                 })}
 
-                                {this.state.selectedFighter && this.state.selectedFighter.name === 'Loryastes' && Object.values(this.state.battleData).filter(e=>!e.isMonster && !e.isMinion && e.name !== 'Loryastes' && !e.dead).map((a, i)=>{
+                                {this.state.selectedFighter && this.state.selectedFighter.name === 'Loryastes' && Object.values(this.state.battleData).filter(e => !e.isMonster && !e.isMinion && e.name !== 'Loryastes' && !e.dead && !e.invisible).map((a)=>{
                                 return <div 
-                                    key={i} 
+                                    key={a.id}
                                     style={{backgroundImage: "url(" + a.portrait + ")", cursor: this.state.showCrosshair ? 'crosshair' : ''}} 
-                                    className={`interaction-tile target ${this.state.selectedFighter?.targetId === a.id ? 'targetted' : ''}`} 
+                                    className={`interaction-tile target ${selectedTargetId === a.id ? 'targetted' : ''}`} 
                                     onClick={() => this.targetTileClicked(a)} 
                                     onMouseEnter={() => this.targetTileHovered(a)} 
                                     onMouseLeave={() => this.targetTileHovered(null)}

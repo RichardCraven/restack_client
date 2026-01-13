@@ -281,6 +281,7 @@ export function BoardManager(){
         this.currentOrientation = orientation;
     }
     this.respawnMonsters = (template) => {
+        console.log('respawn monsters, template: ', template);
         if(!template || !template.levels) return
         let currentOrientation = this.currentOrientation
         let currentLevel = currentOrientation === 'F' ? this.currentLevel.front : this.currentLevel.back
@@ -298,6 +299,12 @@ export function BoardManager(){
         // Make sure templateBoard is normalized for legacy templates
         try { this.normalizeBoardTiles(templateBoard); } catch (e) {}
     
+        if (!templateBoard) {
+            // nothing to respawn from - template didn't contain a matching plane/board
+            try { console.warn('respawnMonsters: no templateBoard found for current boardIndex', this.playerTile && this.playerTile.boardIndex); } catch (e) {}
+            return;
+        }
+
         templateBoard.tiles.forEach(templateTile=>{
             let equivalentTile = currentLevel.miniboards[this.playerTile.boardIndex].tiles.find(tile=> tile.id === templateTile.id)
             if(this.getContainsType(templateTile.contains) === 'monster' && !this.isMonster(equivalentTile) && this.getIndexFromCoordinates(this.playerTile.location) !== templateTile.id) {

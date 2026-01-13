@@ -1293,7 +1293,6 @@ export function CombatManager(){
     }
     this.processMove = (caller) => {
         if(caller.dead) return;
-    try { console.debug('[processMove] start', { id: caller.id, name: caller.name, targetId: caller.targetId, pendingAttack: caller.pendingAttack ? caller.pendingAttack.name : null, onMoveCooldown: caller.onMoveCooldown }); } catch(e) {}
     // Recompute facing before attempting movement so facing isn't stale as units shift around
     try { this.recalculateFacing(caller); } catch (e) {}
         if(this.fighterAI.roster[caller.type]){
@@ -1316,16 +1315,13 @@ export function CombatManager(){
         let newPosition, newDepth;
         const targetInRange = this.targetInRange(caller)
         
-        if(caller.type === 'monk') console.log('monk process move', 'targetInRange? ', targetInRange);
         if(!targetInRange && caller.pendingAttack){
-            if(caller.type === 'monk') console.log('monk zebber 1');
             let moveBackLots = caller.pendingAttack.range === 'far' && distanceToTarget < 2
             newDepth = caller.isMonster || caller.isMinion ? 
             (distanceToTarget > -1 ? caller.coordinates.x+1 : caller.coordinates.x-1) : 
             (moveBackLots ? caller.coordinates.x-3 :
             (distanceToTarget < 1 ? caller.coordinates.x-1 : caller.coordinates.x+1))
         } else {
-            if(caller.type === 'monk') console.log('monk zebber 2');
             newDepth = caller.coordinates.x
         }
         const coordinatesOccupiedBy = (coordinates) => {
@@ -1342,7 +1338,6 @@ export function CombatManager(){
         }
         const newCoordinates = {x: newDepth, y: newPosition}
         if(coordinatesOccupiedBy(newCoordinates)){
-            try { console.debug('[processMove] target occupied, aborting move', {id: caller.id, name: caller.name, newCoordinates}); } catch(e) {}
             return
         }
 
@@ -1430,10 +1425,8 @@ export function CombatManager(){
         const liveCombatants = Object.values(this.combatants).filter(e=> (e.id !== combatant.id && !e.dead));
         let depthAvailable = false;
         if(combatant.isMonster || combatant.isMinion){
-            console.log('do I have access to monsters behavior? ', combatant);
             // debugger
             if(this.monsterAI.roster[combatant.type] && this.monsterAI.roster[combatant.type].handleOverlap){
-                console.log('handle overlap from AI file for id', combatant.id);
                 this.monsterAI.roster[combatant.type].handleOverlap(combatant, this.combatants)
                 // handleOverlap
                 combatant.hasOverlap = false;
@@ -1470,13 +1463,10 @@ export function CombatManager(){
                 }
             }
         } else {
-            console.log('fighter overlap');
             while(!depthAvailable){
                 if(liveCombatants.some(e=>e.coordinates.x === combatant.coordinates.x && e.coordinates.y === combatant.coordinates.y)){
                     let blockerCombatant = liveCombatants.find(e=>e.coordinates.x === combatant.coordinates.x && e.coordinates.y === combatant.coordinates.y)
-                    console.log('blocker combatant: ', blockerCombatant);
                     let blockerDistanceToTarget = this.getDistanceToTarget(blockerCombatant, this.combatants[blockerCombatant.targetId])
-                    console.log('blocker distance', blockerDistanceToTarget);
                     depthAvailable = false;
                     switch(combatant.type){
                         case 'rogue':

@@ -341,8 +341,7 @@ class DungeonPage extends React.Component {
             arr.push([])
         }
         const meta = getMeta();
-        console.log('1st access of met: ', meta);
-        meta.crew[0].stats.hp = 1000;
+        // meta.crew[0].stats.hp = 1000;
         // remove this after debugging ^
 
 
@@ -466,7 +465,6 @@ class DungeonPage extends React.Component {
                 }
             }
         }, 100);
-        console.log('meta: ', getMeta());
         // Create a full-page canvas used to draw cooldown overlays at high frequency
         try {
             if (!this.cooldownCanvas) {
@@ -564,7 +562,6 @@ class DungeonPage extends React.Component {
         }
     }
     respawnMonsters = async () => {
-        console.log('respawn')
         let dungeons = [],
         selectedDungeon;
         
@@ -575,9 +572,7 @@ class DungeonPage extends React.Component {
             d.id = e._id
             dungeons.push(d)
         })
-        console.log('all dungeons: ', allDungeons, 'actual object: ', dungeons);
         selectedDungeon = dungeons[0];
-        console.log('selected dungeon', selectedDungeon);
         this.props.boardManager.respawnMonsters(selectedDungeon)
     }
     componentWillUnmount(){
@@ -1020,13 +1015,11 @@ class DungeonPage extends React.Component {
             })
         }
         if(code === 'Space'){
-            console.log('SPACEEE');
-            // console.log('key: ', key);
             this.checkWhichSideOfBoard();
         }
         switch(key){
             case 'Space':
-            console.log('billy jessup');
+                
             break;
             case 'Tab':
                 event.preventDefault();
@@ -2171,33 +2164,78 @@ class DungeonPage extends React.Component {
                             </div>}
                     </div>
                     <div className="inventory-tile-container">
-                    {   this.props.inventoryManager && this.props.inventoryManager.inventory &&
-                        this.props.inventoryManager.inventory.map((item, i) => {
-                            return <div className={`sub-container ${item.animation === 'consumed' ? 'consumed' : ''}`} key={i}>
-                                        { this.state.inventoryHoverMatrix[i] && 
-                                            <div className="hover-message-container">
-                                                <div className="hover-message">{this.state.inventoryHoverMatrix[i].replaceAll('_', ' ')}</div>
-                                            </div>
-                                        }
-                                        <Tile 
-                                        key={i}
-                                        id={i}
+                    {(() => {
+                        // Group identical inventory items so they 'stack' visually.
+                        const inv = (this.props.inventoryManager && this.props.inventoryManager.inventory) || [];
+                        const grouped = {};
+                        inv.forEach((item, idx) => {
+                            // Use name as the stack key (falls back to type if name missing)
+                            const key = item.name || item.type || `item_${idx}`;
+                            if (!grouped[key]) grouped[key] = { items: [], firstIndex: idx };
+                            grouped[key].items.push(item);
+                        });
+
+                        return Object.keys(grouped).map((key, gIdx) => {
+                            const group = grouped[key];
+                            const count = group.items.length;
+                            const item = group.items[0]; // representative item for the stack
+                            const firstIndex = group.firstIndex;
+                            return (
+                                <div className={`sub-container ${item.animation === 'consumed' ? 'consumed' : ''}`} key={gIdx}>
+                                    { this.state.inventoryHoverMatrix[firstIndex] && 
+                                        <div className="hover-message-container">
+                                            <div className="hover-message">{this.state.inventoryHoverMatrix[firstIndex].replaceAll('_', ' ')}</div>
+                                        </div>
+                                    }
+                                    <Tile
+                                        key={gIdx}
+                                        id={firstIndex}
                                         data={item}
                                         tileSize={this.state.tileSize}
                                         image={item.icon ? item.icon : null}
-                                        contains={item.name.replace(' ', '_')}
+                                        contains={item.name ? item.name.replace(' ', '_') : null}
                                         color={item.color}
                                         editMode={false}
                                         type={'inventory-tile'}
-                                        handleClick={() => this.handleItemClick(item, i)}
+                                        handleClick={() => this.handleItemClick(item, firstIndex)}
                                         handleHover={this.handleInventoryTileHover}
-                                        className={`inventory-tile ${this.state.activeInventoryItem?.id === i ? 'active' : ''}`}
-                                        isActiveInventory={this.state.activeInventoryItem?.id === i}
-                                        >
-                                        </Tile>
-                                    </div>
+                                        className={`inventory-tile ${this.state.activeInventoryItem?.id === firstIndex ? 'active' : ''}`}
+                                        isActiveInventory={this.state.activeInventoryItem?.id === firstIndex}
+                                    >
+                                    </Tile>
+
+                                    {count > 1 && (
+                                        <div style={{
+                                            position: 'absolute',
+                                            top: 2,
+                                            right: 2,
+                                            color: 'white',
+                                            fontWeight: 'bold',
+                                            borderRadius: '50%',
+                                            minWidth: 18,
+                                            minHeight: 18,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            fontSize: 11,
+                                            zIndex: 99,
+                                            backgroundColor: 'rgba(0,0,0,0.6)'
+                                        }}>
+                                                {/* Reuse the numeral element styling if available; ensure it has explicit size so CSS scoping doesn't hide it */}
+                                                {(() => {
+                                                    const numeralEl = this.getSubtypeImageCountElement({count});
+                                                    if (numeralEl) {
+                                                        // give it explicit dimensions in case the scoped .numeral CSS isn't applied here
+                                                        return React.cloneElement(numeralEl, { style: Object.assign({}, numeralEl.props.style || {}, { height: 14, width: 14, backgroundSize: '100% 100%' }) });
+                                                    }
+                                                    return <div style={{fontSize: 11, color: 'white'}}>{count}</div>;
+                                                })()}
+                                        </div>
+                                    )}
+                                </div>
+                            )
                         })
-                    }
+                    })()}
                     </div>
                 </div>
                 <div className="expand-collapse-button icon-container" onClick={this.toggleRightSidePanel}>

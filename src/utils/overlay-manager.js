@@ -25,7 +25,8 @@ export function OverlayManager(){
     this.addCombatant = (combatant) => {
         if(this.overlays[combatant.id]){
             console.log('how are you adding an existing combatant???', combatant);
-            debugger
+            // I THINK THIS IS MULTIPLE RETICLES BEING ADDED FOR IT
+            // debugger
         }
         this.overlays[combatant.id] = {
             id: combatant.id,

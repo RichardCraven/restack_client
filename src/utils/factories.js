@@ -24,7 +24,7 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
     let initialFacing = 'right';
     console.log('fighter in createFighter: ', fighter);
     if (fighter.isMonster || fighter.isMinion) {
-        console.log('*****fighter: ', fighter);
+        // console.log('*****fighter: ', fighter);
         initialFacing = 'left';
     }
     return {

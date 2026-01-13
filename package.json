@@ -24,6 +24,7 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
+    "test:harness": "react-scripts test src/utils/__tests__/fog-harness.test.js --watchAll=false",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {
