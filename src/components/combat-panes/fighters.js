@@ -37,10 +37,14 @@ export default function FightersCombatGrid(props) {
     const portraitWrapperRefs = React.useRef({});
     const fighterWrapperRefs = React.useRef({});
     const [weaponPositions, setWeaponPositions] = React.useState({});
+    const [actionBarPositions, setActionBarPositions] = React.useState({});
+    const [animatingHits, setAnimatingHits] = React.useState({});
+    const prevAttackingRef = React.useRef({});
 
     // Compute weapon positions based on the rendered portrait positions. Use layout effect to read DOM
     React.useLayoutEffect(() => {
-        const newPos = {};
+        const newWeaponPos = {};
+        const newActionBarPos = {};
         props.crew.forEach(fighter => {
             const details = props.getFighterDetails(fighter);
             if (!details || details.dead || !details.pendingAttack) return;
@@ -52,21 +56,61 @@ export default function FightersCombatGrid(props) {
                 const parentRect = parentEl.getBoundingClientRect();
                 const weaponW = 90; // CSS default weapon size
                 const weaponH = 90;
-                const left = pRect.left - parentRect.left + (pRect.width / 2) - (weaponW / 2);
+                // Prefer offsetLeft/offsetTop (relative to offsetParent) when available —
+                // more robust against page scroll and transforms than client bounding rect diffs.
+                const portraitOffsetLeft = (typeof portraitEl.offsetLeft === 'number') ? portraitEl.offsetLeft : Math.round(pRect.left - parentRect.left);
+                const portraitOffsetTop = (typeof portraitEl.offsetTop === 'number') ? portraitEl.offsetTop : Math.round(pRect.top - parentRect.top);
+                const left = portraitOffsetLeft + (pRect.width / 2) - (weaponW / 2);
                 let top;
                 if (details.facing === 'up') {
-                    top = pRect.top - parentRect.top - (weaponH / 2);
+                    top = portraitOffsetTop - (weaponH / 2);
                 } else if (details.facing === 'down') {
-                    top = pRect.top - parentRect.top + pRect.height - (weaponH / 2) + 10; // nudge down a little
+                    top = portraitOffsetTop + pRect.height - (weaponH / 2) + 10; // nudge down a little
                 } else {
-                    top = pRect.top - parentRect.top;
+                    top = portraitOffsetTop;
                 }
-                newPos[fighter.id] = { left: `${Math.round(left)}px`, top: `${Math.round(top)}px` };
+                newWeaponPos[fighter.id] = { left: `${Math.round(left)}px`, top: `${Math.round(top)}px` };
+
+                // Compute action-bar left anchored to the portrait's tile so it matches
+                // the grid-based calculation in `getActionBarLeftValForFighter`.
+                const rangeWidth = props.combatManager.getRangeWidthVal(details) || 0;
+                const offset = (details?.facing === 'left') ? (-(rangeWidth * 100)) : 100;
+                const barLeft = portraitOffsetLeft + offset;
+                newActionBarPos[fighter.id] = { left: `${Math.round(barLeft)}px` };
             }
         });
-        setWeaponPositions(newPos);
+        setWeaponPositions(newWeaponPos);
+        setActionBarPositions(newActionBarPos);
         // Recompute when battle data changes, overlays change, or crew list changes
     }, [props.crew, props.battleData, props.animationOverlays, props.selectedFighter]);
+
+    // Track when an attack animation should play visually (decoupled from the
+    // battle state). We set a transient flag when the fighter begins attacking
+    // and clear it on the animationend event so the CSS class is removed
+    // deterministically when the animation finishes (prevents lingering).
+    // Trigger a single visual play when `attacking` transitions false->true.
+    // Use a ref to remember the previous attacking state per fighter so we don't
+    // retrigger while the combat state keeps `attacking === true` for the
+    // duration of the attack — the animation should only play once per attack.
+    React.useEffect(() => {
+        props.crew.forEach(fighter => {
+            const details = props.getFighterDetails(fighter);
+            if (!details) return;
+            const prev = !!prevAttackingRef.current[fighter.id];
+            const now = !!details.attacking;
+            if (!prev && now) {
+                // attacking went from false -> true: start visual animation
+                setAnimatingHits(prevState => ({ ...prevState, [fighter.id]: true }));
+            }
+            // update prev ref for next tick
+            prevAttackingRef.current[fighter.id] = now;
+            // If attacking has ended, clear prev flag so next attack can trigger
+            if (!now) {
+                prevAttackingRef.current[fighter.id] = false;
+            }
+        });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [props.battleData, props.crew]);
     return (
         <div className="mb-col fighter-pane">
             <div className="fighter-content">
@@ -208,18 +252,23 @@ export default function FightersCombatGrid(props) {
                                         zIndex: 1001,
                                         height: '100%',
                                         width: !!props.getFighterDetails(fighter)?.pendingAttack ? `${props.combatManager.getRangeWidthVal(props.getFighterDetails(fighter)) * 100}px` : '0px',
-                                        left: 
-                                            props.getFighterDetails(fighter)?.pendingAttack ? 
-                                        `${props.getActionBarLeftValForFighter(props.getFighterDetails(fighter)?.id)}px`
-                                        : 0
+                                        // Prefer measured DOM position for pixel-perfect alignment; fall back to grid math
+                                        left: props.getFighterDetails(fighter)?.pendingAttack ? (actionBarPositions[fighter.id]?.left || `${props.getActionBarLeftValForFighter(props.getFighterDetails(fighter)?.id)}px`) : 0
                                     }}
-                                    
                                     >
                                         <div className={`
                                         action-bar 
-                                        ${(props.getFighterDetails(fighter)?.attacking) ? (props.getFighterDetails(fighter)?.facing === 'right' ? 'fighterHitsAnimation' : 'fighterHitsAnimation_RtoL') : ''}
+                                        ${(animatingHits[fighter.id]) ? (props.getFighterDetails(fighter)?.facing === 'right' ? 'fighterHitsAnimation' : 'fighterHitsAnimation_RtoL') : ''}
                                         ${(props.getFighterDetails(fighter)?.healing) ? 'fighterHealsAnimation' : ''}
-                                        `}></div>
+                                        `}
+                                        onAnimationEnd={e => {
+                                            // When the visual hit animation completes, clear our
+                                            // transient flag so the class is removed and the
+                                            // background/gradient won't linger.
+                                            if (e && e.animationName && (e.animationName.includes('FighterHits') || e.animationName.includes('FighterHitsRtoL') || e.animationName.includes('MonsterHits'))) {
+                                                setAnimatingHits(prev => ({ ...prev, [fighter.id]: false }));
+                                            }
+                                        }}></div>
                                     </div>
                                 </div>
                             </div>    

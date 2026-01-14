@@ -339,7 +339,6 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
         }
     }
     this.initiateAttack = async (caller, manualAttack, combatants) => {
-        console.log('SOLDIER INITIATE ATTACK');
         if (typeof caller.moveCooldown === 'undefined') {
             debugger;
             throw new Error('moveCooldown must be defined for all units');

@@ -361,10 +361,18 @@ class MonsterBattle extends React.Component {
         }
     }
     getActionBarLeftValForFighter = (id) => {
-    //cyan 
+    // Determine the left pixel position for the action bar. For vertical facings
+    // (up/down) we treat them like non-left-facing so the bar aligns over the
+    // fighter rather than shifting left by the range width.
     const selectedFighter = this.state.battleData[id];
-    let val = (this.getFighterDetails(selectedFighter)?.coordinates.x * 100) + (selectedFighter?.facing === 'right' ? 100 : (0 - (this.props.combatManager.getRangeWidthVal(selectedFighter) * 100) ))
-    return val
+    const details = this.getFighterDetails(selectedFighter);
+    const baseX = (details?.coordinates.x || 0) * 100;
+    // Use the fighter details when asking combatManager for the range width
+    const rangeWidth = this.props.combatManager.getRangeWidthVal(details) || 0;
+    // If the fighter is explicitly facing left, offset to the left by the range width;
+    // otherwise (right, up, down, or undefined) place the bar to the right.
+    const offset = (selectedFighter?.facing === 'left') ? (0 - (rangeWidth * 100)) : 100;
+    return baseX + offset;
     }
     fighterPortraitClicked = (id) => {
     const selectedFighter = this.state.battleData[id];

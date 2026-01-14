@@ -1508,26 +1508,9 @@
                                 -moz-animation: Rocked 1s linear;
                                 animation: Rocked 1s linear;
                             }
-                            &.hit-from-lef-minor{
-                                transform: matrix3d(1, 0, 0, -0.01, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
-                            }
-                            &.hit-from-left-severe{
-                                transform: matrix3d(1, 0, 1, -0.02, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
-                            }
-                            &.hit-from-left-lethal{
-                                transform: matrix3d(1, 0, 1, -0.1, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
-                                opacity: 0.5;
-                            }
-                            &.hit-from-right-minor{
-                                transform: matrix3d(1, 0, 0, 0.01, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
-                            }
-                            &.hit-from-right-severe{
-                                transform: matrix3d(1, 0, 1, 0.02, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
-                            }
-                            &.hit-from-right-lethal{
-                                transform: matrix3d(1, 0, 1, 0.1, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
-                                opacity: 0.5;
-                            }
+                            /* Legacy portrait-level matrix3d hit transforms removed so the portrait's
+                               composed transform (from --portrait-*) and the new bulge animation
+                               can run without being overwritten. */
 
 
                             &.leader-portrait{
@@ -1628,7 +1611,9 @@
                     width: 100px;
                     background-size: 100% 100%;
                     filter: invert(100%);
-                    transition: all 0.25s;
+                          /* Only animate properties we actually change to avoid weird
+                              background-image / filter cross-fades that linger. */
+                          transition: opacity 0.25s, left 0.15s, top 0.15s, transform 0.25s;
                     opacity: 0;
                     pointer-events: none;
                     &.small{
@@ -1850,89 +1835,96 @@
                 .monster-pane .monster-wrapper.hit-from-left-minor,
                 .monster-pane .monster-wrapper.hit-from-right-minor {
                     transform: perspective(600px) rotateY(-10deg) translateX(4px);
+                    --portrait-perspective: 600px;
+                    --portrait-rotateY: -10deg;
+                    --portrait-translateX: 4px;
+                    --portrait-bulge-x: 1.06;
+                    --portrait-bulge-y: 1;
                 }
                 .monster-pane .monster-wrapper.hit-from-left-severe,
                 .monster-pane .monster-wrapper.hit-from-right-severe {
                     transform: perspective(800px) rotateY(-18deg) translateX(10px);
+                    --portrait-perspective: 800px;
+                    --portrait-rotateY: -18deg;
+                    --portrait-translateX: 10px;
+                    --portrait-bulge-x: 1.09;
+                    --portrait-bulge-y: 1;
                 }
                 .monster-pane .monster-wrapper.hit-from-left-lethal,
                 .monster-pane .monster-wrapper.hit-from-right-lethal {
                     transform: perspective(1000px) rotateY(-30deg) translateX(18px);
+                    --portrait-perspective: 1000px;
+                    --portrait-rotateY: -30deg;
+                    --portrait-translateX: 18px;
+                    --portrait-bulge-x: 1.12;
+                    --portrait-bulge-y: 1;
                     opacity: 0.5;
                 }
                 /* Reversed monster wrapper variants (flip rotate direction and translate) */
                 .monster-pane .monster-wrapper.reversed.hit-from-left-minor,
                 .monster-pane .monster-wrapper.reversed.hit-from-right-minor {
                     transform: perspective(600px) rotateY(10deg) translateX(-4px);
+                    --portrait-perspective: 600px;
+                    --portrait-rotateY: 10deg;
+                    --portrait-translateX: -4px;
+                    --portrait-bulge-x: 1.06;
+                    --portrait-bulge-y: 1;
                 }
                 .monster-pane .monster-wrapper.reversed.hit-from-left-severe,
                 .monster-pane .monster-wrapper.reversed.hit-from-right-severe {
                     transform: perspective(800px) rotateY(18deg) translateX(-10px);
+                    --portrait-perspective: 800px;
+                    --portrait-rotateY: 18deg;
+                    --portrait-translateX: -10px;
+                    --portrait-bulge-x: 1.09;
+                    --portrait-bulge-y: 1;
                 }
                 .monster-pane .monster-wrapper.reversed.hit-from-left-lethal,
                 .monster-pane .monster-wrapper.reversed.hit-from-right-lethal {
                     transform: perspective(1000px) rotateY(30deg) translateX(-18px);
+                    --portrait-perspective: 1000px;
+                    --portrait-rotateY: 30deg;
+                    --portrait-translateX: -18px;
+                    --portrait-bulge-x: 1.12;
+                    --portrait-bulge-y: 1;
                     opacity: 0.5;
                 }
 
-                /* Portrait-level static transforms to produce the outward bulge/distort effect
-                   These are static (not animated) and include the portrait's own scale so
-                   they don't get visually lost. The wrapper still animates (Rocked) when used. */
-                .monster-pane .monster-wrapper.hit-from-left-minor .monster-portrait {
-                    transform: perspective(600px) rotateY(-10deg) scale(2) translateX(4px);
-                }
-                .monster-pane .monster-wrapper.hit-from-left-severe .monster-portrait,
-                .monster-pane .monster-wrapper.hit-from-right-severe .monster-portrait {
-                    transform: perspective(800px) rotateY(-18deg) scale(2) translateX(10px);
-                }
-                .monster-pane .monster-wrapper.hit-from-left-lethal .monster-portrait,
-                .monster-pane .monster-wrapper.hit-from-right-lethal .monster-portrait {
-                    transform: perspective(1000px) rotateY(-30deg) scale(2) translateX(18px);
-                    opacity: 0.5;
-                }
+                /* Portrait-level hit transforms were removed here so the portrait's composed
+                   transform and the portrait-level bulge animation (implemented below) can
+                   run without being overwritten by static transforms. Wrapper-level
+                   variables (e.g. --portrait-*) are used to drive the portrait animation. */
 
-                /* Minion portraits get a smaller-scale bulge (they are not doubled) */
-                .monster-pane .monster-wrapper.hit-from-left-minor .minion-portrait {
-                    transform: perspective(600px) rotateY(-10deg) scale(1.06) translateX(4px);
-                }
-                .monster-pane .monster-wrapper.hit-from-left-severe .minion-portrait,
-                .monster-pane .monster-wrapper.hit-from-right-severe .minion-portrait {
-                    transform: perspective(800px) rotateY(-18deg) scale(1.09) translateX(10px);
-                }
-                .monster-pane .monster-wrapper.hit-from-left-lethal .minion-portrait,
-                .monster-pane .monster-wrapper.hit-from-right-lethal .minion-portrait {
-                    transform: perspective(1000px) rotateY(-30deg) scale(1.12) translateX(18px);
-                    opacity: 0.5;
-                }
+                    /* Portrait-level bulge animation (runs on portrait element). Uses non-uniform
+                       scaling (scaleX/scaleY) with perspective so the image appears to bulge.
+                       Controlled by axis-specific --portrait-bulge-x / --portrait-bulge-y and other --portrait-* variables. */
+                    @keyframes BulgePortrait {
+                        0% {
+                            transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scale(var(--portrait-base-scale, 1));
+                        }
+                        30% {
+                            transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-base-scale, 1) * var(--portrait-bulge-x, 1))) scaleY(calc(var(--portrait-base-scale, 1) * var(--portrait-bulge-y, 1)));
+                        }
+                        50% {
+                            transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-base-scale, 1) * var(--portrait-bulge-x, 1))) scaleY(calc(var(--portrait-base-scale, 1) * var(--portrait-bulge-y, 1)));
+                        }
+                        100% {
+                            transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scale(var(--portrait-base-scale, 1));
+                        }
+                    }
 
-                /* Reversed variants for portraits */
-                .monster-pane .monster-wrapper.reversed.hit-from-left-minor .monster-portrait,
-                .monster-pane .monster-wrapper.reversed.hit-from-right-minor .monster-portrait {
-                    transform: scale(-2, 2) perspective(600px) rotateY(10deg) translateX(-4px);
-                }
-                .monster-pane .monster-wrapper.reversed.hit-from-left-severe .monster-portrait,
-                .monster-pane .monster-wrapper.reversed.hit-from-right-severe .monster-portrait {
-                    transform: scale(-2, 2) perspective(800px) rotateY(18deg) translateX(-10px);
-                }
-                .monster-pane .monster-wrapper.reversed.hit-from-left-lethal .monster-portrait,
-                .monster-pane .monster-wrapper.reversed.hit-from-right-lethal .monster-portrait {
-                    transform: scale(-2, 2) perspective(1000px) rotateY(30deg) translateX(-18px);
-                    opacity: 0.5;
-                }
-
-                .monster-pane .monster-wrapper.reversed.hit-from-left-minor .minion-portrait,
-                .monster-pane .monster-wrapper.reversed.hit-from-right-minor .minion-portrait {
-                    transform: perspective(600px) rotateY(10deg) scale(1.06) translateX(-4px);
-                }
-                .monster-pane .monster-wrapper.reversed.hit-from-left-severe .minion-portrait,
-                .monster-pane .monster-wrapper.reversed.hit-from-right-severe .minion-portrait {
-                    transform: perspective(800px) rotateY(18deg) scale(1.09) translateX(-10px);
-                }
-                .monster-pane .monster-wrapper.reversed.hit-from-left-lethal .minion-portrait,
-                .monster-pane .monster-wrapper.reversed.hit-from-right-lethal .minion-portrait {
-                    transform: perspective(1000px) rotateY(30deg) scale(1.12) translateX(-18px);
-                    opacity: 0.5;
-                }
+                    .monster-pane .monster-wrapper.hit .monster-portrait,
+                    .monster-pane .monster-wrapper.hit .minion-portrait {
+                        transform-origin: var(--portrait-transform-origin, 50% 80%);
+                        /* Use CSS vars for animation timing so JS can tune per-element (e.g. minions)
+                           and enable GPU-friendly hints for smoother animation. */
+                        animation: BulgePortrait var(--portrait-animation-duration, 420ms) var(--portrait-animation-timing, cubic-bezier(.2,.8,.2,1));
+                        animation-fill-mode: forwards;
+                        will-change: transform;
+                        backface-visibility: hidden;
+                        /* baseline: use composed transform so no legacy transforms apply */
+                        transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scale(var(--portrait-base-scale, 1));
+                    }
 
                 .action-bar-wrapper{
                     pointer-events: none;
