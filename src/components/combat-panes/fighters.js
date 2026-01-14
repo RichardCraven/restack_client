@@ -103,9 +103,10 @@ export default function FightersCombatGrid(props) {
                                                 'fighter-portrait',
                                                 isTeleporting ? 'teleporting' : '',
                                                 props.selectedFighter?.id === fighter.id && !fighter.dead ? 'selected' : '',
-                                                details?.wounded ? (details?.facing === 'right' ? 'hit-from-right-minor' : 'hit-from-left-minor') : '',
-                                                details?.woundedHeavily ? (details?.facing === 'right' ? 'hit-from-right-severe' : 'hit-from-left-severe') : '',
-                                                details?.woundedLethal ? (details?.facing === 'right' ? 'hit-from-right-lethal' : 'hit-from-left-lethal') : '',
+                                                // wound classes: use unified wounded object with severity ('minor'|'severe'|'lethal')
+                                                (details?.wounded && details?.wounded.severity === 'minor') ? (details?.facing === 'right' ? 'hit-from-right-minor' : 'hit-from-left-minor') : '',
+                                                (details?.wounded && details?.wounded.severity === 'severe') ? (details?.facing === 'right' ? 'hit-from-right-severe' : 'hit-from-left-severe') : '',
+                                                (details?.wounded && details?.wounded.severity === 'lethal') ? (details?.facing === 'right' ? 'hit-from-right-lethal' : 'hit-from-left-lethal') : '',
                                                 details?.rocked ? 'rocked' : '',
                                                 // up/down facing classes removed; add if you have a new property for this
                                                 // details?.missed ? (details?.facing === 'right' ? 'missed' : 'missed-reversed') : '',

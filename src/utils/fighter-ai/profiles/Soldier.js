@@ -397,11 +397,11 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
                 // debugger
                 switch(caller.pendingAttack.name){
                     case 'sword swing': {
-                        console.log('SWING ', facing);
-                        if (facing === 'up'){
-                            console.log('********************************SOLDIER: about to swing UP (AI)', { callerId: caller.id, callerCoords: caller.coordinates, targetId: caller.targetId, targetCoords: target ? target.coordinates : null, pendingAttack: caller.pendingAttack });
-                            // debugger;
-                        }
+                        // console.log('SWING ', facing);
+                        // if (facing === 'up'){
+                        //     console.log('********************************SOLDIER: about to swing UP (AI)', { callerId: caller.id, callerCoords: caller.coordinates, targetId: caller.targetId, targetCoords: target ? target.coordinates : null, pendingAttack: caller.pendingAttack });
+                        //     // debugger;
+                        // }
                         const combatantHit = await this.triggerSwordSwing(caller.coordinates, facing);
                         if(combatantHit){
                             this.hitsCombatant(caller, combatantHit);

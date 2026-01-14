@@ -1,5 +1,6 @@
 import React from 'react';
 import Overlay from '../Overlay';
+import { ROCK_DURATION } from '../../utils/shared-constants';
 
 const MonstersCombatGrid = ({
     monster,
@@ -45,7 +46,7 @@ const MonstersCombatGrid = ({
             const timeout = setTimeout(() => {
                 setShowMonsterHitFlash(false);
                 monsterFlashTimeout.current = null;
-            }, 750);
+            }, ROCK_DURATION);
             monsterFlashTimeout.current = timeout;
             prevMonsterWounded.current = true;
         } else if (!wounded && prevMonsterWounded.current) {
@@ -80,7 +81,7 @@ const MonstersCombatGrid = ({
                     newFlashes[minion.id] = true;
                     setTimeout(() => {
                         setMinionHitFlash(prev => ({ ...prev, [minion.id]: false }));
-                    }, 750);
+                    }, ROCK_DURATION);
                     newPrev[minion.id] = true;
                 } else if (!wounded) {
                     newFlashes[minion.id] = false;

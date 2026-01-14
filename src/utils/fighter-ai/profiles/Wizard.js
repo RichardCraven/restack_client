@@ -127,7 +127,7 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
         // const getGlyph = () => {
 
         // }
-        console.log('caller.specialActions: ', caller.specialActions);
+        // console.log('caller.specialActions: ', caller.specialActions);
         // debugger
 
         // Find a spell of subtype 'magic missile'
@@ -152,7 +152,7 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                     this.triggerMagicMissile(caller, target, 1500);
                 }
                 magicMissile.cooldown_position = magicMissile.cooldown || 3;
-                console.log('spell available');
+                // console.log('spell available');
                 return true;
             }
         }
@@ -182,9 +182,6 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                 targetHasMoreThanHalfHp = target && target.hp > (target.starting_hp / 2),
                 spells = caller.specialActions && caller.specialActions.filter(action => action.type === 'spell'),
                 spellAvailable = caller.specialActions && caller.specialActions.find(action => action.type === 'spell' && action.available);
-                console.log('caller.specialActions: ', caller.specialActions);
-                console.log('spells: ', spells, 'spellsAvailable: ', spellAvailable);
-                console.log('target', target);
                 // debugger
                 
                 // if (target && targetHasMoreThanHalfHp && this.useSpell(caller, combatants)) {
@@ -326,38 +323,49 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
         }
 
         // caller.lock();
+        // Use the centralized damage handler for each missile hit so we keep
+        // critical logic, wounded state, and rock animation consistent.
         const damageSequence = () => {
-            let r = Math.random()
-            let criticalHit = r*100 > 80;
-            let damage = criticalHit ? caller.atk*3 : caller.atk
-            target.damageIndicators.push(damage);
-            target.hp -= damage;
-            if(target.hp <= 0){
-                target.hp = 0;
-                caller.targetId = null;
-                target.woundedLethal = true;
-                this.targetKilled(target);
+            if (!caller || !target) return;
+            try {
+                // hitsCombatant handles crit chance, damage application, wounded, and rock animation
+                if (typeof this.hitsCombatant === 'function') {
+                    this.hitsCombatant(caller, target);
+                } else {
+                    // fallback: apply simple damage
+                    let r = Math.random();
+                    let criticalHit = r * 100 > 80;
+                    let damage = criticalHit ? caller.atk * 3 : caller.atk;
+                    target.damageIndicators.push(damage);
+                    target.hp -= damage;
+                    if (target.hp <= 0) {
+                        target.hp = 0;
+                        caller.targetId = null;
+                        this.targetKilled(target);
+                    }
+                }
+            } catch (err) {
+                console.warn('magic missile damage handler failed', err);
             }
-        }
-        setTimeout(()=>{
-            target.rockAnimationOn()
+        };
+
+        setTimeout(() => {
             damageSequence();
-            setTimeout(()=>{
+            setTimeout(() => {
                 damageSequence();
-            },500)
-            setTimeout(()=>{
+            }, 500);
+            setTimeout(() => {
                 damageSequence();
-            },1000)
-            setTimeout(()=>{
+            }, 1000);
+            setTimeout(() => {
                 damageSequence();
-            },1250)
-        },travelTime)
+            }, 1250);
+        }, travelTime);
         // ^ 1.5 seconds of travel time for missiles
 
-        setTimeout(()=>{
-            if(target) target.rockAnimationOff();
+        setTimeout(() => {
             caller.unlock();
-        }, travelTime + 1000)
+        }, travelTime + 1000);
         // ^ travel time + 1 second of damage animation
 
     }
@@ -371,6 +379,43 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
             }
         })
     }
+    // this.triggerBeamAttack(callerCoords, targetCoords, 'lightblue').then(res=>{
+    //         const hitsTarget = true;
+    //         // ^ need to allow for missing 
+    //         console.log('TRIGGER BEAM');
+    //         if(hitsTarget){
+    //             let r = Math.random()
+    //             console.log('r: ', r);
+    //             let criticalHit = r*100 > 10;
+    //             let baseDmg = levelMatrix[iceBlast.level].multiplier * caller.atk
+    //             let damage = criticalHit ? baseDmg*3 : baseDmg
+    //             if (criticalHit) {
+    //                 console.log('CRIT ON ', target.id);
+    //                 // set unified wounded object with severity and damage
+    //                 const sourceDirection = caller.coordinates.x < target.coordinates.x ? 'left' : (caller.coordinates.x > target.coordinates.x ? 'right' : (caller.coordinates.y > target.coordinates.y ? 'bottom' : 'top'));
+    //                 target.wounded = {
+    //                     severity: 'severe',
+    //                     damage,
+    //                     sourceDirection
+    //                 };
+    //                 // temporarily trigger rocked animation
+    //                 if (typeof target.rockAnimationOn === 'function') target.rockAnimationOn();
+    //                 setTimeout(() => {
+    //                     if (typeof target.rockAnimationOff === 'function') target.rockAnimationOff();
+    //                 }, 750);
+    //             } else {
+    //                 target.wounded = {
+    //                     severity: 'minor',
+    //                     damage
+    //                 };
+    //             }
+    //             target.hp -= damage;
+    //             target.damageIndicators.push(damage);
+    //             target.setToFrozen(levelMatrix[iceBlast.level].TC);
+    //         }
+    //         caller.energy -= 75;
+    //         if(caller.energy < 0) caller.energy = 0; 
+    //     })
     this.triggerBeamAttackManual = (callerCoords, color = 'purple') => {
         const sourceTileId = this.animationManager.getTileIdByCoords(callerCoords)
         return new Promise((resolve) => {
@@ -393,26 +438,7 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
             4: {TC: 2, multiplier: 2},
             5: {TC: 3, multiplier: 2.5},
         }
-        this.triggerBeamAttack(callerCoords, targetCoords, 'lightblue').then(res=>{
-            const hitsTarget = true;
-            // ^ need to allow for missing 
-            if(hitsTarget){
-                let r = Math.random()
-                let criticalHit = r*100 > 80;
-                let baseDmg = levelMatrix[iceBlast.level].multiplier * caller.atk
-                let damage = criticalHit ? baseDmg*3 : baseDmg
-                if(criticalHit){
-                    target.woundedHeavily = true;
-                } else {
-                    target.wounded = true;
-                }
-                target.hp -= damage;
-                target.damageIndicators.push(damage);
-                target.setToFrozen(levelMatrix[iceBlast.level].TC);
-            }
-            caller.energy -= 75;
-            if(caller.energy < 0) caller.energy = 0; 
-        })
+        
     }
     this.initiateAttack = async (caller, manualAttack, combatants) => {
         if(!caller) return
@@ -424,9 +450,18 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
             } else if (caller.pendingAttack && caller.pendingAttack.cooldown_position === 100){
                 let combatantHit = await this.triggerBeamAttackManual(caller.coordinates)
                 if(combatantHit){
-                    this.hitsCombatant(caller, combatantHit)
-                    // this.hitsTarget(caller)
-                    
+                    // Delegate to centralized hitsCombatant so damage, crits, and animations are consistent
+                    try {
+                        if (typeof this.hitsCombatant === 'function') {
+                            this.hitsCombatant(caller, combatantHit);
+                        } else {
+                            this.hitsCombatant(caller, combatantHit);
+                        }
+                    } catch (err) {
+                        console.warn('apply beam manual hit error', err);
+                        // fallback defensively
+                        if (typeof this.hitsCombatant === 'function') this.hitsCombatant(caller, combatantHit);
+                    }
                 } else {
                     this.missesTarget(caller);
                 }
@@ -440,7 +475,17 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                     if(laneDiff === 0){
                         let combatantHit  = await this.triggerBeamAttack(caller.coordinates, target.coordinates);
                         if(combatantHit){
-                            this.hitsCombatant(caller, combatantHit)
+                            // Apply unified wounded/damage logic for AI beam hit
+                            try {
+                                if (typeof this.hitsCombatant === 'function') {
+                                    this.hitsCombatant(caller, combatantHit);
+                                } else {
+                                    this.hitsCombatant(caller, combatantHit);
+                                }
+                            } catch (err) {
+                                console.warn('apply beam AI hit error', err);
+                                if (typeof this.hitsCombatant === 'function') this.hitsCombatant(caller, combatantHit);
+                            }
                             this.kickoffAttackCooldown(caller)
                         } else {
                             this.missesTarget(caller);

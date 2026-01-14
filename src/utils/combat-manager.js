@@ -4,7 +4,7 @@ import { FighterAI } from './fighter-ai/fighter-ai'
 import { MonsterAI } from './monster-ai/monster-ai'
 import {createFighter, test} from './factories'
 import { cilLifeRing } from '@coreui/icons'
-import { INTERVALS } from './shared-constants';
+import { INTERVALS, ROCK_DURATION, CRIT_THRESHOLD_DEFAULT, CRIT_THRESHOLD_INCREASED, CRITICAL_DAMAGE_MULTIPLIER } from './shared-constants';
 // import test from './factories'
 // import {MovementMethods} from './methods/movement-methods';
 
@@ -1538,32 +1538,56 @@ export function CombatManager(){
         // console.log('In someoneelse... Object.values(this.combatants).filter(c=>c.id!==caller.id)', Object.values(this.combatants).filter(c=>c.id!==caller.id), 'JSON.stringify(coords)', JSON.stringify(coords));
         return Object.values(this.combatants).filter(c=>c.id!==caller.id).some(e=>JSON.stringify(e.coordinates) == JSON.stringify(coords))
     }
-    this.hitsCombatant = (caller, combatantHit, supplementalData = null) => {
-        // this is an improved version of hitsTarget, that can handle anything getting hit in the line of fire, does
-        // not have to be targetted
-        let r = Math.random()
-        // let criticalHit = (supplementalData && supplementalData.increasedCritChance) ? r*100 > 50  : r*100 > 80;
-        let criticalHit = false;
-        let damage = criticalHit ? caller.atk*3 : caller.atk
-        if(!caller.pendingAttack){
+    this.hitsCombatant = (caller, combatantHit, supplementalData = null, options = {}) => {
+        // Unified damage application used by many attack paths.
+        // options.forceCritical: boolean to force a critical hit
+        // supplementalData.increasedCritChance: legacy flag that increases crit chance
+        let r = Math.random();
+        let criticalHit;
+        if (typeof options.forceCritical === 'boolean') {
+            criticalHit = !!options.forceCritical;
+        } else {
+            const threshold = (supplementalData && supplementalData.increasedCritChance) ? CRIT_THRESHOLD_INCREASED : CRIT_THRESHOLD_DEFAULT;
+            criticalHit = r * 100 > threshold;
+        }
+
+        let damage = criticalHit ? caller.atk * CRITICAL_DAMAGE_MULTIPLIER : caller.atk;
+
+        if (!caller.pendingAttack) {
             console.log('HOW CAN YOU HIT WITH NO PENDING ATTACK??>', caller);
         } else {
-            if(combatantHit.weaknesses.includes[caller.pendingAttack.type]){
-                damage += Math.floor(damage/2)
+            if (combatantHit.weaknesses.includes[caller.pendingAttack.type]) {
+                damage += Math.floor(damage / 2);
             }
         }
-        caller.readout.result = `${caller.name} hits ${combatantHit.name} for ${damage} damage`
+
+        caller.readout.result = `${caller.name} hits ${combatantHit.name} for ${damage} damage`;
         combatantHit.hp -= damage;
         combatantHit.damageIndicators.push(damage);
-        if (typeof this.updateData === 'function') {
-            this.updateData(clone(this.combatants));
-        }
-        caller.energy += caller.stats.fort * 3 + (1/2 * caller.level);
-        if(caller.energy > 100) caller.energy = 100;
-        
+        caller.energy += caller.stats.fort * 3 + (1 / 2 * caller.level);
+        if (caller.energy > 100) caller.energy = 100;
+
+        // compute sourceDirection for animation purposes
+        const sourceDirection = caller.coordinates.x < combatantHit.coordinates.x ? 'left' : (caller.coordinates.x > combatantHit.coordinates.x ? 'right' : (caller.coordinates.y > combatantHit.coordinates.y ? 'bottom' : 'top'));
+
+        // set unified wounded object
         combatantHit.wounded = {
             severity: criticalHit ? 'severe' : 'minor',
-            damage
+            damage,
+            sourceDirection
+        };
+
+        // trigger rocked animation on severe (critical) hits
+        if (criticalHit && typeof combatantHit.rockAnimationOn === 'function') {
+            console.log('************TRIGGERING ROCKED ANIMATION FOR ', combatantHit);
+            combatantHit.rockAnimationOn();
+            setTimeout(() => {
+                if (typeof combatantHit.rockAnimationOff === 'function') combatantHit.rockAnimationOff();
+            }, ROCK_DURATION);
+        }
+
+        if (typeof this.updateData === 'function') {
+            this.updateData(clone(this.combatants));
         }
 
         // NEED TO HANDLE CRIT FROM TOP AND BOTTOM
@@ -1617,7 +1641,7 @@ export function CombatManager(){
             if (typeof this.updateData === 'function') {
                 this.updateData(clone(this.combatants));
             }
-        }, 750);
+        }, ROCK_DURATION);
 
         // NEED TO HANDLE CRIT FROM TOP AND BOTTOM
 
@@ -1746,8 +1770,8 @@ export function CombatManager(){
         }, this.FIGHT_INTERVAL * 100);
         setTimeout(()=>{
             caller.attacking = caller.attackingReverse = false;
+            // Clear the unified wounded state after the hit-flash window
             target.wounded = false;
-            target.woundedHeavily = false;
         }, this.FIGHT_INTERVAL * 30)
         setTimeout(()=>{
             caller.readout.action = ''
