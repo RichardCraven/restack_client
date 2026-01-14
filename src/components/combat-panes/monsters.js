@@ -31,6 +31,7 @@ const MonstersCombatGrid = ({
     const prevMonsterWounded = React.useRef(false);
     const monsterFlashTimeout = React.useRef();
     const monsterFlashHasOccurred = React.useRef(false); // tracker for first hit-flash only
+    const monsterDiagInterval = React.useRef();
     const [minionHitFlash, setMinionHitFlash] = React.useState({});
     const prevMinionWounded = React.useRef({});
 
@@ -149,7 +150,7 @@ const MonstersCombatGrid = ({
                         ...transitionStyle(monster.id)
                     }}
                 >
-                    <div className="monster-wrapper">
+                    <div className={`monster-wrapper ${battleData[monster.id]?.rocked ? 'rocked' : ''} ${battleData[monster.id]?.wounded ? 'hit' : ''} ${battleData[monster.id]?.wounded ? getHitAnimation(battleData[monster.id]) : ''} ${battleData[monster.id]?.wounded ? 'hit-flash' : ''} ${battleData[monster.id]?.facing === 'right' ? 'reversed' : ''}`}>
                         <div
                             className="action-bar-wrapper"
                             style={{
@@ -194,14 +195,10 @@ const MonstersCombatGrid = ({
                                         ${greetingInProcess ? 'enlarged' : ''}
                                         ${battleData[monster.id]?.active ? 'active' : ''}
                                         ${battleData[monster.id]?.dead ? 'dead monsterDeadAnimation' : ''}
-                                        ${battleData[monster.id]?.wounded ? 'hit' : ''}
-                                        ${battleData[monster.id]?.wounded ? (battleData[monster.id]?.facing === 'right' ? 'hit-from-right-minor' : 'hit-from-left-minor') : ''}
-                                        ${battleData[monster.id]?.rocked ? 'rocked' : ''}
                                         ${battleData[monster.id]?.missed ? (battleData[monster.id]?.facing === 'right' ? 'missed-reversed' : 'missed') : ''}
                                         ${selectedMonster?.id === monster.id ? 'selected' : ''}
                                         ${selectedFighter?.targetId === monster.id ? 'targetted' : ''}
                                         ${battleData[monster.id]?.facing === 'right' ? 'reversed' : ''}
-                                        ${battleData[monster.id]?.wounded ? 'hit-flash' : ''}
                                         ${battleData[monster.id]?.chargingUpActive ? 'charging-up' : ''}`}
                                     ref={el => {
                                         if (battleData[monster.id]?.wounded) {
@@ -230,8 +227,8 @@ const MonstersCombatGrid = ({
                                     }}
                                 >
                                     {SHOW_MONSTER_IDS ? monster.id : null}
-                                    {/* White hit-flash overlay */}
-                                    {showMonsterHitFlash && (
+                                    {/* Blue hit-flash overlay: show for transient flash OR when wounded (keeps behavior consistent with minions) */}
+                                    {(showMonsterHitFlash || battleData[monster.id]?.wounded) && (
                                         <div className="hit-flash-overlay" key={monsterHitFlashKey} />
                                     )}
                                 </div>
@@ -297,7 +294,7 @@ const MonstersCombatGrid = ({
                             ...transitionStyle(minion.id)
                         }}
                     >
-                        <div className="monster-wrapper">
+                        <div className={`monster-wrapper ${minion.rocked ? 'rocked' : ''} ${minion.wounded ? 'hit' : ''} ${minion.wounded ? getHitAnimation(minion) : ''} ${minion.wounded ? 'hit-flash' : ''} ${minion.facing === 'right' ? 'reversed' : ''}`}>
                             <div
                                 className="action-bar-wrapper"
                                 style={{
@@ -331,16 +328,13 @@ const MonstersCombatGrid = ({
                             >
                                 <div
                                     className={`portrait minion-portrait
-                                        ${minion.active ? 'active' : ''}
-                                        ${minion.dead ? 'dead monsterDeadAnimation' : ''}
-                                        ${minion.wounded ? 'hit' : ''}
-                                        ${minion.wounded ? getHitAnimation(minion) : ''}
-                                        ${minion.missed ? (minion.facing === 'right' ? 'missed-reversed' : 'missed') : ''}
-                                        ${minion.rocked ? 'rocked' : ''}
-                                        ${selectedMonster?.id === minion.id ? 'selected' : ''}
-                                        ${selectedFighter?.targetId === minion.id ? 'targetted' : ''}
-                                        ${minion.facing === 'right' ? 'reversed' : ''}`
-                                    }
+                                            ${minion.active ? 'active' : ''}
+                                            ${minion.dead ? 'dead monsterDeadAnimation' : ''}
+                                            ${minion.missed ? (minion.facing === 'right' ? 'missed-reversed' : 'missed') : ''}
+                                            ${selectedMonster?.id === minion.id ? 'selected' : ''}
+                                            ${selectedFighter?.targetId === minion.id ? 'targetted' : ''}
+                                            ${minion.facing === 'right' ? 'reversed' : ''}`
+                                        }
                                     style={{
                                         backgroundImage: `url(${minion.portrait})`,
                                         filter: `saturate(${((minion.hp / minion.stats.hp) * 100) / 2}) sepia(${portraitHoveredId === minion.id ? '2' : '0'})`,

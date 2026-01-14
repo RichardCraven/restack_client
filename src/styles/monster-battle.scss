@@ -1636,6 +1636,13 @@
                         background-repeat: no-repeat;
                         background-position: center;
                     }
+                    /* When the wrapper is rocked, animate the wrapper (not the portrait) so the portrait's own transform/scale is preserved */
+                    &.rocked{
+                        -webkit-animation: Rocked 1s linear;
+                        -moz-animation: Rocked 1s linear;
+                        animation: Rocked 1s linear;
+                        transform-origin: 50% 100%;
+                    }
                     &.medium{
                         background-size: 75%;
                         background-repeat: no-repeat;
@@ -1804,47 +1811,7 @@
                     &.missed-reversed{
                         // transform: scale(0.9) scaleX(-1)
                     }
-                    &.hit-from-left-minor{
-                        transform: scale(1.1) matrix3d(1, 0, 0, -0.001, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
-                    }
-                    &.hit-from-left-severe{
-                        transform: scale(1.1) matrix3d(1, 0, 1, -0.02, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
-                    }
-                    &.hit-from-left-lethal{
-                        transform: scale(1.1) matrix3d(1, 0, 1, -0.1, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
-                        opacity: 0.5;
-                    }
-                    &.hit-from-right-minor{
-                        transform: scale(1.1) matrix3d(1, 0, 0, 0.01, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
-                    }
-                    &.hit-from-right-severe{
-                        transform: scale(1.1) matrix3d(1, 0, 1, 0.02, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
-                    }
-                    &.hit-from-right-lethal{
-                        transform: scale(1.1) matrix3d(1, 0, 1, 0.1, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
-                        opacity: 0.5;
-                    }
-                    // Preserve flipped/reversed state when hit by providing explicit reversed+hit selectors
-                    &.reversed.hit-from-left-minor{
-                        transform: scale(-2,2) matrix3d(1, 0, 0, -0.001, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
-                    }
-                    &.reversed.hit-from-left-severe{
-                        transform: scale(-2,2) matrix3d(1, 0, 1, -0.02, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
-                    }
-                    &.reversed.hit-from-left-lethal{
-                        transform: scale(-2,2) matrix3d(1, 0, 1, -0.1, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
-                        opacity: 0.5;
-                    }
-                    &.reversed.hit-from-right-minor{
-                        transform: scale(-2,2) matrix3d(1, 0, 0, 0.01, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
-                    }
-                    &.reversed.hit-from-right-severe{
-                        transform: scale(-2,2) matrix3d(1, 0, 1, 0.02, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
-                    }
-                    &.reversed.hit-from-right-lethal{
-                        transform: scale(-2,2) matrix3d(1, 0, 1, 0.1, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);
-                        opacity: 0.5;
-                    }
+                    /* hit-from-* transforms now applied to the .monster-wrapper so portrait scale is preserved */
                     &.rocked{
                         -webkit-animation: Rocked 1s linear;
                         -moz-animation: Rocked 1s linear;
@@ -1877,7 +1844,96 @@
                         height: 100px;
                         width: 100px;
                     }
+                    /* (moved fully-qualified hit selectors out to top-level below to avoid unintended nesting) */
                 }
+                /* Apply hit transforms to the wrapper so the portrait's own scale(2) is preserved */
+                .monster-pane .monster-wrapper.hit-from-left-minor,
+                .monster-pane .monster-wrapper.hit-from-right-minor {
+                    transform: perspective(600px) rotateY(-10deg) translateX(4px);
+                }
+                .monster-pane .monster-wrapper.hit-from-left-severe,
+                .monster-pane .monster-wrapper.hit-from-right-severe {
+                    transform: perspective(800px) rotateY(-18deg) translateX(10px);
+                }
+                .monster-pane .monster-wrapper.hit-from-left-lethal,
+                .monster-pane .monster-wrapper.hit-from-right-lethal {
+                    transform: perspective(1000px) rotateY(-30deg) translateX(18px);
+                    opacity: 0.5;
+                }
+                /* Reversed monster wrapper variants (flip rotate direction and translate) */
+                .monster-pane .monster-wrapper.reversed.hit-from-left-minor,
+                .monster-pane .monster-wrapper.reversed.hit-from-right-minor {
+                    transform: perspective(600px) rotateY(10deg) translateX(-4px);
+                }
+                .monster-pane .monster-wrapper.reversed.hit-from-left-severe,
+                .monster-pane .monster-wrapper.reversed.hit-from-right-severe {
+                    transform: perspective(800px) rotateY(18deg) translateX(-10px);
+                }
+                .monster-pane .monster-wrapper.reversed.hit-from-left-lethal,
+                .monster-pane .monster-wrapper.reversed.hit-from-right-lethal {
+                    transform: perspective(1000px) rotateY(30deg) translateX(-18px);
+                    opacity: 0.5;
+                }
+
+                /* Portrait-level static transforms to produce the outward bulge/distort effect
+                   These are static (not animated) and include the portrait's own scale so
+                   they don't get visually lost. The wrapper still animates (Rocked) when used. */
+                .monster-pane .monster-wrapper.hit-from-left-minor .monster-portrait {
+                    transform: perspective(600px) rotateY(-10deg) scale(2) translateX(4px);
+                }
+                .monster-pane .monster-wrapper.hit-from-left-severe .monster-portrait,
+                .monster-pane .monster-wrapper.hit-from-right-severe .monster-portrait {
+                    transform: perspective(800px) rotateY(-18deg) scale(2) translateX(10px);
+                }
+                .monster-pane .monster-wrapper.hit-from-left-lethal .monster-portrait,
+                .monster-pane .monster-wrapper.hit-from-right-lethal .monster-portrait {
+                    transform: perspective(1000px) rotateY(-30deg) scale(2) translateX(18px);
+                    opacity: 0.5;
+                }
+
+                /* Minion portraits get a smaller-scale bulge (they are not doubled) */
+                .monster-pane .monster-wrapper.hit-from-left-minor .minion-portrait {
+                    transform: perspective(600px) rotateY(-10deg) scale(1.06) translateX(4px);
+                }
+                .monster-pane .monster-wrapper.hit-from-left-severe .minion-portrait,
+                .monster-pane .monster-wrapper.hit-from-right-severe .minion-portrait {
+                    transform: perspective(800px) rotateY(-18deg) scale(1.09) translateX(10px);
+                }
+                .monster-pane .monster-wrapper.hit-from-left-lethal .minion-portrait,
+                .monster-pane .monster-wrapper.hit-from-right-lethal .minion-portrait {
+                    transform: perspective(1000px) rotateY(-30deg) scale(1.12) translateX(18px);
+                    opacity: 0.5;
+                }
+
+                /* Reversed variants for portraits */
+                .monster-pane .monster-wrapper.reversed.hit-from-left-minor .monster-portrait,
+                .monster-pane .monster-wrapper.reversed.hit-from-right-minor .monster-portrait {
+                    transform: scale(-2, 2) perspective(600px) rotateY(10deg) translateX(-4px);
+                }
+                .monster-pane .monster-wrapper.reversed.hit-from-left-severe .monster-portrait,
+                .monster-pane .monster-wrapper.reversed.hit-from-right-severe .monster-portrait {
+                    transform: scale(-2, 2) perspective(800px) rotateY(18deg) translateX(-10px);
+                }
+                .monster-pane .monster-wrapper.reversed.hit-from-left-lethal .monster-portrait,
+                .monster-pane .monster-wrapper.reversed.hit-from-right-lethal .monster-portrait {
+                    transform: scale(-2, 2) perspective(1000px) rotateY(30deg) translateX(-18px);
+                    opacity: 0.5;
+                }
+
+                .monster-pane .monster-wrapper.reversed.hit-from-left-minor .minion-portrait,
+                .monster-pane .monster-wrapper.reversed.hit-from-right-minor .minion-portrait {
+                    transform: perspective(600px) rotateY(10deg) scale(1.06) translateX(-4px);
+                }
+                .monster-pane .monster-wrapper.reversed.hit-from-left-severe .minion-portrait,
+                .monster-pane .monster-wrapper.reversed.hit-from-right-severe .minion-portrait {
+                    transform: perspective(800px) rotateY(18deg) scale(1.09) translateX(-10px);
+                }
+                .monster-pane .monster-wrapper.reversed.hit-from-left-lethal .minion-portrait,
+                .monster-pane .monster-wrapper.reversed.hit-from-right-lethal .minion-portrait {
+                    transform: perspective(1000px) rotateY(30deg) scale(1.12) translateX(-18px);
+                    opacity: 0.5;
+                }
+
                 .action-bar-wrapper{
                     pointer-events: none;
                     width: 100%;
