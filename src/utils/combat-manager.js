@@ -367,7 +367,7 @@ export function CombatManager(){
             type: 'special',
             icon: images['ice_blast'],
             cooldown: 8,
-            damage: 8,
+            damage: 5,
             energy_cost: 50,
             effect: ['damage_single_target', 'special'],
             special_instructions: 'each enemy has a 40% chance to be frozen',
@@ -379,7 +379,7 @@ export function CombatManager(){
             icon: images['fire_blast'],
             energy_cost: 30,
             cooldown: 4,
-            damage: 8,
+            damage: 7,
             effect: ['damage_multi_target', 'special'],
             special_instructions: 'each enemy has a 40% chance to be lit aflame',
             level: 1
@@ -606,9 +606,7 @@ export function CombatManager(){
 
             this.combatants[e.id] = createFighter(e, callbacks, this.FIGHT_INTERVAL);
         })
-        console.log('crew:', this.data.crew);
-        console.log('combatants: ', this.combatants);
-        // debugger
+        
         this.data.monster.coordinates = {x:0,y:0}
         this.data.monster.coordinates.y = 2;
         this.data.monster.coordinates.x = MAX_DEPTH;
@@ -1655,6 +1653,12 @@ export function CombatManager(){
         return Object.values(this.combatants).filter(c=>c.id!==caller.id).some(e=>JSON.stringify(e.coordinates) == JSON.stringify(coords))
     }
     this.hitsCombatant = (caller, combatantHit, supplementalData = null, options = {}) => {
+        if(caller.type === 'wizard'){
+            console.log('WIZARD HITS');
+        }
+        if(supplementalData){
+            console.log('supplementalData: ', supplementalData);
+        }
         // Unified damage application used by many attack paths.
         // options.forceCritical: boolean to force a critical hit
         // supplementalData.increasedCritChance: legacy flag that increases crit chance
@@ -1667,16 +1671,26 @@ export function CombatManager(){
             criticalHit = r * 100 > threshold;
         }
 
-        let damage = criticalHit ? caller.atk * CRITICAL_DAMAGE_MULTIPLIER : caller.atk;
+        // Determine base damage. If supplementalData (special) provides a damage
+        // field, prefer that as the baseline. Otherwise fall back to caller.atk.
+        const isSpecial = supplementalData && typeof supplementalData === 'object' && (typeof supplementalData.damage === 'number' || typeof supplementalData.base_damage === 'number' || supplementalData.energy_cost || supplementalData.effect);
+        const baseDamage = isSpecial ? (typeof supplementalData.damage === 'number' ? supplementalData.damage : (typeof supplementalData.base_damage === 'number' ? supplementalData.base_damage : caller.atk)) : caller.atk;
 
-        if (!caller.pendingAttack) {
+        let damage = criticalHit ? baseDamage * CRITICAL_DAMAGE_MULTIPLIER : baseDamage;
+
+        // Determine attack type for weakness checks: prefer pendingAttack.type, but
+        // if this is a special use supplementalData.type when available.
+        const attackType = (caller.pendingAttack && caller.pendingAttack.type) || (supplementalData && supplementalData.type) || null;
+
+        if (!caller.pendingAttack && !isSpecial) {
             console.log('HOW CAN YOU HIT WITH NO PENDING ATTACK??>', caller);
         } else {
-            if (combatantHit.weaknesses.includes[caller.pendingAttack.type]) {
+            if (attackType && Array.isArray(combatantHit.weaknesses) && combatantHit.weaknesses.includes(attackType)) {
                 damage += Math.floor(damage / 2);
             }
         }
 
+        // Save readout and apply damage
         caller.readout.result = `${caller.name} hits ${combatantHit.name} for ${damage} damage`;
         combatantHit.hp -= damage;
         combatantHit.damageIndicators.push(damage);

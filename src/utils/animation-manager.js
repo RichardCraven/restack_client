@@ -279,6 +279,22 @@ export function AnimationManager(){
         };
         this.canvasAnimations.push(ref);
         this.update();
+
+        // Optional arrival callback: compute arrival time based on tiles to travel
+        const onComplete = typeof options.onComplete === 'function' ? options.onComplete : null;
+        const tilesToTravel = Math.abs(targetDistance) || 0;
+        const perTileMs = typeof options.perTileMs === 'number' ? options.perTileMs : 300;
+        const arrivalMs = Math.max(100, tilesToTravel * perTileMs);
+        if (onComplete) {
+            setTimeout(() => {
+                try {
+                    onComplete();
+                } catch (err) {
+                    console.warn('magicCircle onComplete handler threw', err);
+                }
+            }, arrivalMs);
+        }
+
         setTimeout(() => {
             let e = this.canvasAnimations.find(c => c === ref);
             this.canvasAnimations = this.canvasAnimations.filter(v => v !== e);
@@ -287,7 +303,7 @@ export function AnimationManager(){
     }
         // Magic Triangle Animation: triangle of particles at midpoint between source and target
     this.magicTriangle = (sourceCoords, targetCoords, options = {}) => {
-        console.log('MAGIC TRIANGLE ANIMATION REQUESTED, targetCoords', targetCoords);
+        console.log('MAGIC TRIANGLE ANIMATION REQUESTED, targetCoords', sourceCoords, targetCoords, options);
         // debugger
         // Center the triangle at the destination tile
         // Draw triangle at the center of the canvas, but animate canvas from origin to destination
@@ -314,6 +330,27 @@ export function AnimationManager(){
         };
         this.canvasAnimations.push(ref);
         this.update();
+        const onComplete = typeof options.onComplete === 'function' ? options.onComplete : null;
+
+        // Compute an arrival time (when the animated triangle should reach
+        // the target) based on horizontal distance in tiles. This lets us
+        // fire onComplete exactly when the visual reaches its destination
+        // rather than waiting the full particle lifetime (`duration`).
+        const tilesToTravel = Math.abs(targetDistance) || 0;
+        const perTileMs = typeof options.perTileMs === 'number' ? options.perTileMs : 300; // ms per tile
+        const arrivalMs = Math.max(100, tilesToTravel * perTileMs);
+
+        if (onComplete) {
+            setTimeout(() => {
+                try {
+                    onComplete();
+                } catch (err) {
+                    console.warn('magicTriangle onComplete handler threw', err);
+                }
+            }, arrivalMs);
+        }
+
+        // Remove the canvas animation after the full visual lifetime
         setTimeout(() => {
             let e = this.canvasAnimations.find(c => c === ref);
             this.canvasAnimations = this.canvasAnimations.filter(v => v !== e);

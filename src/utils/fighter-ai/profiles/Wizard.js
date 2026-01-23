@@ -141,7 +141,7 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
             a => a.type === 'spell' && a.subtype === 'magic missile' && a.cooldown_position === 100
         );
         console.log('magic missile: ', magicMissile, 'cooldown: ', magicMissile ? magicMissile.cooldown_position : 'N/A');
-        const magicMissileAvailable = magicMissile && (!magicMissile.cooldown_position || magicMissile.cooldown_position === 0) && caller.energy > 33
+        const magicMissileAvailable = magicMissile && (magicMissile.cooldown_position === 100) && caller.energy > 33
         if (magicMissileAvailable) {
             // Acquire a target (closest enemy)
             const liveEnemies = Object.values(combatants).filter(e => !e.dead && (e.isMonster || e.isMinion));
@@ -520,9 +520,48 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
             4: {TC: 2, multiplier: 2},
             5: {TC: 3, multiplier: 2.5},
         }
-        this.animationManager.magicCircle(caller.coordinates, target.coordinates)
+        this.animationManager.magicCircle(caller.coordinates, target.coordinates, {
+            // fire the hit logic when the circle visual reaches the target
+            onComplete: () => {
+                try {
+                    if (!caller || !target) return;
+                    if (typeof this.hitsCombatant === 'function') {
+                        try {
+                            this.hitsCombatant(caller, target, iceBlast);
+                            return;
+                        } catch (err) {
+                            try {
+                                this.hitsCombatant(caller, target);
+                                return;
+                            } catch (err2) {
+                                console.warn('hitsCombatant failed when applying iceBlast, falling back to inline damage', err2);
+                            }
+                        }
+                    }
 
-        
+                    // Inline fallback damage calculation using iceBlast.damage and levelMatrix
+                    const level = (iceBlast && (iceBlast.level || iceBlast.lvl)) || 1;
+                    const multiplier = (levelMatrix[level] && levelMatrix[level].multiplier) || levelMatrix[1].multiplier;
+                    const baseDamage = (iceBlast && (typeof iceBlast.damage === 'number' ? iceBlast.damage : (iceBlast.base_damage || null))) || ((caller && caller.atk) || 1);
+                    const r = Math.random();
+                    const critical = r * 100 > 80;
+                    const damage = Math.round((critical ? baseDamage * multiplier * 3 : baseDamage * multiplier));
+                    if (!Array.isArray(target.damageIndicators)) target.damageIndicators = [];
+                    target.damageIndicators.push(damage);
+                    target.hp -= damage;
+                    if (target.hp <= 0) {
+                        target.hp = 0;
+                        caller.targetId = null;
+                        this.targetKilled(target);
+                    }
+                } catch (err) {
+                    console.warn('triggerIceBlast onComplete handler failed', err);
+                }
+            },
+            perTileMs: 80
+        })
+
+
     }
     this.triggerFireBlast = (caller, target) => {
         const callerCoords = caller.coordinates, targetCoords = target.coordinates;
@@ -563,7 +602,53 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
             4: {TC: 3, multiplier: 3.5},
             5: {TC: 4, multiplier: 4},
         }
-        this.animationManager.magicTriangle(caller.coordinates, target.coordinates)
+        this.animationManager.magicTriangle(caller.coordinates, target.coordinates, {
+            // when animation reaches the target, invoke hit callback
+            onComplete: () => {
+                console.log('triggerFireBlast: magicTriangle reached target for', caller && (caller.id || caller.name), 'target', target && (target.id || target.name));
+                try {
+                    if (!caller || !target) return;
+                    // Prefer centralized handler if available. Pass the resolved special so handlers
+                    // that support it can use canonical damage/TC/etc.
+                    if (typeof this.hitsCombatant === 'function') {
+                        // Many callers use hitsCombatant(caller, target). Passing the special as a third
+                        // argument is a non-breaking enhancement for handlers that accept it.
+                        try {
+                            this.hitsCombatant(caller, target, fireBlast);
+                            return;
+                        } catch (err) {
+                            // If the handler doesn't accept the third arg, fall back to two-arg call
+                            try {
+                                this.hitsCombatant(caller, target);
+                                return;
+                            } catch (err2) {
+                                console.warn('hitsCombatant failed when applying fireBlast, falling back to inline damage', err2);
+                            }
+                        }
+                    }
+
+                    // Fallback: inline damage application using the levelMatrix defined above
+                    const level = (fireBlast && (fireBlast.level || fireBlast.lvl)) || 1;
+                    const multiplier = (levelMatrix[level] && levelMatrix[level].multiplier) || levelMatrix[1].multiplier;
+                    // Prefer canonical damage from the special definition. Fall back to caller.atk if missing.
+                    const baseDamage = (fireBlast && (typeof fireBlast.damage === 'number' ? fireBlast.damage : (fireBlast.base_damage || null))) || ((caller && caller.atk) || 1);
+                    const r = Math.random();
+                    const critical = r * 100 > 80;
+                    const damage = Math.round((critical ? baseDamage * multiplier * 3 : baseDamage * multiplier));
+                    if (!Array.isArray(target.damageIndicators)) target.damageIndicators = [];
+                    target.damageIndicators.push(damage);
+                    target.hp -= damage;
+                    if (target.hp <= 0) {
+                        target.hp = 0;
+                        caller.targetId = null;
+                        this.targetKilled(target);
+                    }
+                } catch (err) {
+                    console.warn('triggerFireBlast onComplete handler failed', err);
+                }
+            },
+            perTileMs: 80
+        })
     }
     this.initiateAttack = async (caller, manualAttack, combatants) => {
         if(!caller) return
