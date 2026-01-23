@@ -519,6 +519,23 @@ class MonsterBattle extends React.Component {
                         selected: false,
                         cooldown_position: 100
                     };
+                    // If a combatManager is available, merge in any canonical
+                    // definition fields (energy_cost, cooldown, damage, etc.) so
+                    // AI paths that expect those properties see them on the
+                    // created specialAction objects.
+                    try {
+                        const cm = this.props && this.props.combatManager;
+                        const def = cm && (cm.specialsMatrix && cm.specialsMatrix['magic_missile'] || cm.attacksMatrix && cm.attacksMatrix['magic_missile']);
+                        if (def) {
+                            ['energy_cost', 'cooldown', 'damage', 'effect', 'level', 'icon'].forEach(k => {
+                                if (typeof def[k] !== 'undefined' && typeof newSpell[k] === 'undefined') {
+                                    newSpell[k] = def[k];
+                                }
+                            });
+                        }
+                    } catch (err) {
+                        console.debug('ensureWizardSpells merge diagnostic error', err);
+                    }
                     // Diagnostic: log inserted spells so we can trace creation time
                     try {
                         console.info('ensureWizardSpells: inserting magic-missile specialAction for', combatant.id || combatant.name, newSpell);

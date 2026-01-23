@@ -368,6 +368,7 @@ export function CombatManager(){
             icon: images['ice_blast'],
             cooldown: 8,
             damage: 8,
+            energy_cost: 50,
             effect: ['damage_single_target', 'special'],
             special_instructions: 'each enemy has a 40% chance to be frozen',
             level: 1
@@ -376,6 +377,7 @@ export function CombatManager(){
             name: 'fire blast',
             type: 'special',
             icon: images['fire_blast'],
+            energy_cost: 30,
             cooldown: 4,
             damage: 8,
             effect: ['damage_multi_target', 'special'],
@@ -498,6 +500,38 @@ export function CombatManager(){
         } catch (e) {}
         return mapped;
     }
+    // Resolve a special by key from either a caller's `specials` array or an
+    // arbitrary array of keys/objects. This centralizes the logic so callers
+    // (AI modules, UI) can reliably obtain a canonical special object.
+    this.resolveSpecial = (callerOrArray, specialKey) => {
+        const key = (specialKey || '').toString();
+        const normalized = key.replace(/\s+/g, '_').toLowerCase();
+        let arr = null;
+        if (callerOrArray) {
+            if (Array.isArray(callerOrArray.specials)) arr = callerOrArray.specials;
+            else if (Array.isArray(callerOrArray)) arr = callerOrArray;
+        }
+        if (!Array.isArray(arr)) return null;
+
+        for (let s of arr) {
+            if (!s) continue;
+            if (typeof s === 'string') {
+                const sNorm = s.replace(/\s+/g, '_').toLowerCase();
+                if (s.toLowerCase() === key.toLowerCase() || sNorm === normalized) {
+                    const expanded = this.formatSpecials([s]);
+                    if (Array.isArray(expanded) && expanded[0]) return expanded[0];
+                    return { name: key };
+                }
+            } else if (typeof s === 'object') {
+                if (s.name && (s.name.toLowerCase() === key.toLowerCase() || s.name.toLowerCase() === normalized)) return s;
+                if (s.key && s.key.toLowerCase() === normalized) return s;
+            }
+        }
+
+        const expanded = this.formatSpecials([normalized]);
+        if (Array.isArray(expanded) && expanded[0]) return expanded[0];
+        return null;
+    }
     this.processActionQueue = (caller) => {
         const action = caller.action_queue[0],
         instruction = action.instruction;
@@ -533,6 +567,7 @@ export function CombatManager(){
             getCombatant: this.getCombatant,
             formatAttacks: this.formatAttacks,
             formatSpecials: this.formatSpecials,
+            resolveSpecial: this.resolveSpecial,
             initiateAttack: this.initiateAttack,
             checkOverlap: this.checkOverlap,
             handleOverlap: this.handleOverlap,
@@ -1645,7 +1680,7 @@ export function CombatManager(){
         caller.readout.result = `${caller.name} hits ${combatantHit.name} for ${damage} damage`;
         combatantHit.hp -= damage;
         combatantHit.damageIndicators.push(damage);
-        caller.energy += caller.stats.fort * 3 + (1 / 2 * caller.level);
+        caller.energy += caller.stats.fort * 1 + (1 / 2 * caller.level);
         if (caller.energy > 100) caller.energy = 100;
 
         // compute sourceDirection for animation purposes
@@ -1815,7 +1850,7 @@ export function CombatManager(){
         if (typeof this.updateData === 'function') {
             this.updateData(clone(this.combatants));
         }
-        caller.energy += caller.stats.fort * 3 + (1/2 * caller.level);
+        caller.energy += caller.stats.fort * 1 + (1/2 * caller.level);
         if(caller.energy > 100) caller.energy = 100;
         if(target.hp <= 0){
             target.hp = 0;

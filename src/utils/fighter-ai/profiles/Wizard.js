@@ -179,11 +179,11 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
             const target = Object.values(combatants).find(e=>e.id === caller.targetId)
             switch(special.name){
                 case "ice blast":
-                    this.animationManager.magicCircle(caller.coordinates, target.coordinates)
+                    this.triggerIceBlast(caller, target);
+                    
                 break;
                 case "fire blast":
-                    console.log('FIRE BLAST!!!!!!!!!!!!!!!!');
-                    this.animationManager.magicTriangle(caller.coordinates, target.coordinates)
+                    this.triggerFireBlast(caller, target);
                 break;
             }
         }
@@ -458,7 +458,55 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
     }
     this.triggerIceBlast = (caller, target) => {
         const callerCoords = caller.coordinates, targetCoords = target.coordinates;
-        const iceBlast = caller.specials.find(e=>e.name === "ice blast")
+        // Defensive resolution for ice blast (same rationale as fireBlast)
+        const resolveLocalSpecial = (caller, specialKey) => {
+            const key = (specialKey || '').toString();
+            const normalized = key.replace(/\s+/g, '_').toLowerCase();
+            if (!Array.isArray(caller.specials)) return null;
+            for (let s of caller.specials) {
+                if (!s) continue;
+                if (typeof s === 'string') {
+                    const sNorm = s.replace(/\s+/g, '_').toLowerCase();
+                    if (s.toLowerCase() === key.toLowerCase() || sNorm === normalized) {
+                        if (data && data.methods && typeof data.methods.formatSpecials === 'function') {
+                            const expanded = data.methods.formatSpecials([s]);
+                            if (Array.isArray(expanded) && expanded[0]) return expanded[0];
+                        }
+                        return { name: key };
+                    }
+                } else if (typeof s === 'object') {
+                    if (s.name && (s.name.toLowerCase() === key.toLowerCase() || s.name.toLowerCase() === normalized)) return s;
+                    if (s.key && s.key.toLowerCase() === normalized) return s;
+                }
+            }
+            if (data && data.methods && typeof data.methods.formatSpecials === 'function') {
+                const expanded = data.methods.formatSpecials([normalized]);
+                if (Array.isArray(expanded) && expanded[0]) return expanded[0];
+            }
+            return null;
+        }
+
+        let iceBlast = null;
+        if (data && data.methods && typeof data.methods.resolveSpecial === 'function') {
+            iceBlast = data.methods.resolveSpecial(caller, 'ice blast');
+        }
+        if (!iceBlast && Array.isArray(caller.specials)) {
+            iceBlast = caller.specials.find(s => {
+                if (!s) return false;
+                if (typeof s === 'string') return s.toLowerCase().includes('ice');
+                if (typeof s === 'object' && s.name) return s.name.toLowerCase().includes('ice');
+                return false;
+            }) || null;
+        }
+        if (!iceBlast) {
+            console.warn('triggerIceBlast: could not resolve ice blast special for', caller && (caller.id || caller.name));
+            return;
+        }
+        if (typeof iceBlast.energy_cost === 'undefined') {
+            console.warn('triggerIceBlast: energy_cost missing on resolved iceBlast, falling back to 50', iceBlast);
+            iceBlast.energy_cost = 50;
+        }
+        caller.energy -= iceBlast.energy_cost;
         // lvl 1 -> 1 TC, 1x damage
         // lvl 2 -> 1 TC, 1.5x damage
         // lvl 3 -> 2 TC, 1.75x damage
@@ -472,7 +520,50 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
             4: {TC: 2, multiplier: 2},
             5: {TC: 3, multiplier: 2.5},
         }
+        this.animationManager.magicCircle(caller.coordinates, target.coordinates)
+
         
+    }
+    this.triggerFireBlast = (caller, target) => {
+        const callerCoords = caller.coordinates, targetCoords = target.coordinates;
+        // Prefer the centralized resolver when available.
+        let fireBlast = null;
+        if (data && data.methods && typeof data.methods.resolveSpecial === 'function') {
+            fireBlast = data.methods.resolveSpecial(caller, 'fire blast');
+        }
+        // Fallback: shallow find on caller.specials
+        if (!fireBlast && Array.isArray(caller.specials)) {
+            fireBlast = caller.specials.find(s => {
+                if (!s) return false;
+                if (typeof s === 'string') return s.toLowerCase().includes('fire');
+                if (typeof s === 'object' && s.name) return s.name.toLowerCase().includes('fire');
+                return false;
+            }) || null;
+        }
+        if (!fireBlast) {
+            console.warn('triggerFireBlast: could not resolve fire blast special for', caller && (caller.id || caller.name));
+            return;
+        }
+        if (typeof fireBlast.energy_cost === 'undefined') {
+            console.warn('triggerFireBlast: energy_cost missing on resolved fireBlast, falling back to 30', fireBlast);
+            fireBlast.energy_cost = 30;
+        }
+        console.log('fireBlast.energy_cost', fireBlast.energy_cost);
+        caller.energy -= fireBlast.energy_cost;
+        // lvl 1 -> 2 TC, 2x damage
+        // lvl 2 -> 2 TC, 2.5x damage
+        // lvl 3 -> 3 TC, 3x damage
+        // lvl 4 -> 3 TC, 3.5x damage
+        // lvl 5 -> 4 TC, 4x damage
+
+        const levelMatrix = {
+            1: {TC: 2, multiplier: 2},
+            2: {TC: 2, multiplier: 2.5},
+            3: {TC: 3, multiplier: 3},
+            4: {TC: 3, multiplier: 3.5},
+            5: {TC: 4, multiplier: 4},
+        }
+        this.animationManager.magicTriangle(caller.coordinates, target.coordinates)
     }
     this.initiateAttack = async (caller, manualAttack, combatants) => {
         if(!caller) return
