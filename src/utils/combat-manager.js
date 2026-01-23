@@ -606,7 +606,7 @@ export function CombatManager(){
 
             this.combatants[e.id] = createFighter(e, callbacks, this.FIGHT_INTERVAL);
         })
-        
+
         this.data.monster.coordinates = {x:0,y:0}
         this.data.monster.coordinates.y = 2;
         this.data.monster.coordinates.x = MAX_DEPTH;
@@ -797,6 +797,12 @@ export function CombatManager(){
         fighter.action_queue.push(action)
     }
     this.goToDestination = (caller) => {
+        // Defensive: if the caller is already dead (killed just before moving),
+        // abort the move so dead units don't appear to reposition.
+        if (!caller || caller.dead) {
+            console.warn('goToDestination aborted for dead or missing caller:', caller && caller.id);
+            return;
+        }
         caller.coordinates.x = caller.destinationCoordinates.x;
         caller.coordinates.y = caller.destinationCoordinates.y;
         caller.coordinates = {x: caller.destinationCoordinates.x, y: caller.destinationCoordinates.y}
@@ -1514,9 +1520,12 @@ export function CombatManager(){
             if(combatant.coordinates.x > MAX_DEPTH) combatant.coordinates.x = MAX_DEPTH;
             if(combatant.coordinates.x < 0)combatant.coordinates.x = 0;
         // },800)
-        if(combatant.dead){
-            console.log('why are you trying to check overlap of a dead guy???');
-            debugger
+        if (combatant.dead) {
+            // Defensive: checkOverlap should never be invoked for dead combatants.
+            // Instead of breaking in the debugger, clear overlap and return.
+            console.warn('checkOverlap called for dead combatant:', combatant && combatant.id);
+            combatant.hasOverlap = false;
+            return;
         }
         const liveCombatants = Object.values(this.combatants).filter(e=> (e.id !== combatant.id && !e.dead));
         if(liveCombatants.some(e=>e.coordinates.x === combatant.coordinates.x && e.coordinates.y === combatant.coordinates.y)){
@@ -1771,53 +1780,9 @@ export function CombatManager(){
                 this.updateData(clone(this.combatants));
             }
         }, ROCK_DURATION);
-
-        // NEED TO HANDLE CRIT FROM TOP AND BOTTOM
-
-        if(caller.coordinates.x < combatantHit.coordinates.x){
-            combatantHit.wounded.sourceDirection = 'left';
-            if(criticalHit){
-                const {E} = this.getSurroundings(combatantHit.coordinates),
-                someoneElseIsInCoords = this.someoneElseIsInCoords(combatantHit.coordinates, E);
-                if(!someoneElseIsInCoords && combatantHit.coordinates.x !== MAX_DEPTH){
-                    combatantHit.coordinates.x++
-                    this.checkOverlap(combatantHit)
-                }
-            }
-        } else if((caller.coordinates.x === combatantHit.coordinates.x) && caller.coordinates.y > combatantHit.coordinates.y){
-            combatantHit.wounded.sourceDirection = 'bottom';
-            if(criticalHit){
-                const {S} = this.getSurroundings(combatantHit.coordinates),
-                someoneElseIsInCoords = this.someoneElseIsInCoords(combatantHit, S);
-                if(!someoneElseIsInCoords && combatantHit.coordinates.y !== 0){
-                    combatantHit.coordinates.y--
-                    this.checkOverlap(combatantHit)
-                }
-            }
-        } else if((caller.coordinates.x === combatantHit.coordinates.x) && caller.coordinates.y < combatantHit.coordinates.y){
-            combatantHit.wounded.sourceDirection = 'top';
-            if(criticalHit){
-                const {S} = this.getSurroundings(combatantHit.coordinates),
-                someoneElseIsInCoords = this.someoneElseIsInCoords(combatantHit, S);
-                if(!someoneElseIsInCoords && combatantHit.coordinates.y !== MAX_LANES-1){
-                    combatantHit.coordinates.y++
-                    this.checkOverlap(combatantHit)
-                }
-            }
-        } else if(caller.coordinates.x > combatantHit.coordinates.x){
-            combatantHit.wounded.sourceDirection = 'right';
-            if(criticalHit){
-                const {W} = this.getSurroundings(combatantHit.coordinates),
-                someoneElseIsInCoords = this.someoneElseIsInCoords(combatantHit, W);
-                if(!someoneElseIsInCoords && combatantHit.coordinates.x !== 0){
-                    combatantHit.coordinates.x--
-                    this.checkOverlap(combatantHit)
-                }
-            }
-
-        }
+        // (Critical movement handled above; duplicated block removed)
         
-
+        
         if(combatantHit.hp <= 0){
             combatantHit.hp = 0;
             if(caller.targetId === combatantHit.id) caller.targetId = null;
@@ -1956,9 +1921,19 @@ export function CombatManager(){
     }
 
     this.targetKilled = (combatant) => {
+    // Ensure the combatant stops all activity immediately.
     combatant.aiming = false;
+    combatant.active = false;
+    combatant.attacking = combatant.attackingReverse = false;
+    combatant.pendingAttack = null;
+    combatant.destinationCoordinates = null;
+    if (Array.isArray(combatant.action_queue)) combatant.action_queue.length = 0;
+    combatant.manualControl = false;
+    combatant.manualMovesCurrent = 0;
     combatant.dead = true;
-        combatant.locked = combatant.frozen = false;
+        // Lock the combatant to prevent any further movement/turns.
+        combatant.locked = true;
+        combatant.frozen = false;
         // Immediately clear targettedBy so reticle is removed
         if (Array.isArray(combatant.targettedBy)) {
             combatant.targettedBy = [];

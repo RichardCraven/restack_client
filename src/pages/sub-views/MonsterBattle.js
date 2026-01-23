@@ -67,6 +67,29 @@ class MonsterBattle extends React.Component {
     fireSpecialForAI = (fighter, glyph = null) => {
         if (glyph) {
             console.log('oooooooooo in here..........');
+            // If a consumable/spell glyph was provided by AI, remove one
+            // instance from the fighter's consumable specialActions so the
+            // UI reflects the usage immediately. Use a best-effort match by
+            // reference, subtype, or name.
+            try {
+                if (fighter && Array.isArray(fighter.specialActions)) {
+                    const matchIndex = fighter.specialActions.findIndex(sa => {
+                        if (!sa) return false;
+                        if (sa === glyph) return true;
+                        if (glyph.subtype && sa.subtype && sa.subtype === glyph.subtype) return true;
+                        if (glyph.name && sa.name && sa.name === glyph.name) return true;
+                        return false;
+                    });
+                    if (matchIndex !== -1) {
+                        fighter.specialActions.splice(matchIndex, 1);
+                        // Notify local component state to re-render immediately
+                        try { this.applyFighterUpdate(fighter); } catch (err) { console.warn('applyFighterUpdate failed', err); }
+                    }
+                }
+            } catch (err) {
+                console.warn('fireSpecialForAI: failed to remove glyph from fighter.specialActions', err);
+            }
+
             this.fireGlyph(glyph, fighter);
         } else {
             // fallback: set selectedFighter for other specials
@@ -206,6 +229,18 @@ class MonsterBattle extends React.Component {
             combatTiles: arr, ghostPortraitMatrix,
             monsterPortrait: this.props.monster.portrait
         })
+
+        // Wire the MonsterBattle component instance into the AI roster so
+        // fighter profiles (e.g. Wizard) can call back to update UI state
+        // directly. This is a best-effort hookup; other pages (CombatSimulator)
+        // may also wire the ref.
+        try {
+            if (this.props.combatManager && this.props.combatManager.fighterAI && this.props.combatManager.fighterAI.roster && this.props.combatManager.fighterAI.roster.wizard) {
+                this.props.combatManager.fighterAI.roster.wizard.monsterBattleRef = this;
+            }
+        } catch (err) {
+            console.warn('failed to wire monsterBattleRef to wizard AI', err);
+        }
 
         let arrowUp = new Image()
         arrowUp.src = images['arrowUp']
@@ -489,6 +524,31 @@ class MonsterBattle extends React.Component {
                 }
             }
         })
+    }
+
+    // Allow external callers (AI helpers) to push an update for a single
+    // fighter object into MonsterBattle's internal `battleData` state and
+    // trigger a re-render. This is used by fighter AIs (e.g. Wizard) to
+    // notify the UI that a fighter's consumable `specialActions` changed so
+    // the interaction pane updates immediately.
+    applyFighterUpdate = (fighter) => {
+        if (!fighter || !fighter.id) return;
+        console.log('applyFighterUpdate called for fighter', fighter && fighter.id);
+        try {
+            // Clone existing battleData to ensure React sees the new reference
+            const battleData = Object.assign({}, this.state.battleData);
+            // Merge/replace the fighter entry with a shallow-cloned copy
+            battleData[fighter.id] = JSON.parse(JSON.stringify(fighter));
+            const newState = { battleData };
+            // If the updated fighter is currently selected, keep selectedFighter
+            // in-sync with the authoritative object.
+            if (this.state.selectedFighter && this.state.selectedFighter.id === fighter.id) {
+                newState.selectedFighter = battleData[fighter.id];
+            }
+            this.setState(newState);
+        } catch (err) {
+            console.warn('applyFighterUpdate failed', err);
+        }
     }
 
     // Ensure each wizard combatant has at least 3 magic missile spells in their specialActions
@@ -866,16 +926,7 @@ class MonsterBattle extends React.Component {
                 // }, 500)
 
 
-                // this.setState({
-                //     magicMissile_fire: true,
-                //     magicMissile_targetDistance: targetDistance,
-                //     magicMissile_targetLaneDiff: laneDiff,
-                // })
-                // setTimeout(()=>{
-                //     this.setState({
-                //         magicMissile_connectParticles: false
-                //     })
-                // },1000)
+                
                 
                 
                 // setTimeout(()=>{

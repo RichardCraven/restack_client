@@ -4,6 +4,7 @@ import AnimationTile from '../components/animation-tile';
 import CanvasMagicMissile from '../components/Canvas/canvas_magic_missile'
 import CanvasMagicCircle from '../components/Canvas/canvas_magic_circle'
 import CanvasMagicTriangle from '../components/Canvas/canvas_magic_triangle'
+import CanvasFireball from '../components/Canvas/canvas_fireball'
 
 // class AnimationGrid extends React.Component {
     // constructor(props){
@@ -71,6 +72,20 @@ const AnimationGrid = ({
                             />
                         } else if (anim.type === 'magicTriangle') {
                             return <CanvasMagicTriangle
+                                key={idx}
+                                center={anim.center}
+                                radius={anim.radius}
+                                numParticles={anim.numParticles}
+                                color={anim.color}
+                                width={width}
+                                height={height}
+                                origin={anim.origin}
+                                targetDistance={anim.targetDistance}
+                                targetLaneDiff={anim.targetLaneDiff}
+                                duration={anim.duration}
+                            />
+                        } else if (anim.type === 'fireball') {
+                            return <CanvasFireball
                                 key={idx}
                                 center={anim.center}
                                 radius={anim.radius}

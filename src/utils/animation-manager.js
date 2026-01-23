@@ -357,6 +357,53 @@ export function AnimationManager(){
             this.update();
         }, duration);
     }
+    this.fireball = (sourceCoords, targetCoords, options = {}) => {
+        // Very similar to magicTriangle but renders a fireball canvas component
+    const numParticles = options.numParticles || 50;
+    const radius = options.radius || 1.8;
+    // Make fireball noticeably faster by default (shorter visual lifetime)
+    // and reduce per-tile travel time so long-range fireballs don't crawl.
+    const duration = options.duration || 800;
+        const origin = sourceCoords;
+        const targetDistance = this.getDistanceToTarget(sourceCoords, targetCoords);
+        const targetLaneDiff = this.getVerticalDistanceToTarget(sourceCoords, targetCoords);
+        const ref = {
+            type: 'fireball',
+            center: { x: 0.5, y: 0.5 },
+            radius,
+            numParticles,
+            duration,
+            color: options.color || 'red',
+            origin,
+            targetDistance,
+            targetLaneDiff,
+            dest: { x: targetCoords.x, y: targetCoords.y }
+        };
+        this.canvasAnimations.push(ref);
+        this.update();
+
+        const onComplete = typeof options.onComplete === 'function' ? options.onComplete : null;
+        const tilesToTravel = Math.abs(targetDistance) || 0;
+    const perTileMs = typeof options.perTileMs === 'number' ? options.perTileMs : 120;
+        const arrivalMs = Math.max(100, tilesToTravel * perTileMs);
+
+        if (onComplete) {
+            setTimeout(() => {
+                try {
+                    onComplete();
+                } catch (err) {
+                    console.warn('fireball onComplete handler threw', err);
+                }
+            }, arrivalMs);
+        }
+
+        // Remove after full visual lifetime
+        setTimeout(() => {
+            let e = this.canvasAnimations.find(c => c === ref);
+            this.canvasAnimations = this.canvasAnimations.filter(v => v !== e);
+            this.update();
+        }, duration);
+    }
     this.getDistanceToTarget = (sourceCoords, targetCoords) => {
         // if(!target) return 0;
         let d = targetCoords.x - sourceCoords.x

@@ -156,8 +156,26 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                 } else if (this.useSpellMagicMissile) {
                     this.useSpellMagicMissile(caller, target, magicMissile);
                 } else {
-                    console.log('about to TREIGGER magic missile');
+                    console.log('about to TREIGGER magic missile, this.monsterBattleRef: ', this.monsterBattleRef);
                     caller.specialActions = caller.specialActions.filter(a => a !== magicMissile)
+                    // notify host/owner that caller data changed so UI can re-render
+                    if (typeof this.broadcastDataUpdate === 'function') {
+                        try {
+                            this.broadcastDataUpdate(caller);
+                        } catch (e) {
+                            try { this.broadcastDataUpdate(); } catch (e2) { /* ignore */ }
+                        }
+                    }
+                    // Additionally, if a MonsterBattle ref is wired in, call its
+                    // update hook so the component can reconcile the change and
+                    // refresh the interaction pane count directly.
+                    if (this.monsterBattleRef && typeof this.monsterBattleRef.applyFighterUpdate === 'function') {
+                        try {
+                            this.monsterBattleRef.applyFighterUpdate(caller);
+                        } catch (err) {
+                            console.warn('monsterBattleRef.applyFighterUpdate failed', err);
+                        }
+                    }
                     caller.energy -= 50;
                     this.triggerMagicMissile(caller, target, 1500);
                     console.log('now speical actions: ', caller.specialActions);
@@ -602,10 +620,10 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
             4: {TC: 3, multiplier: 3.5},
             5: {TC: 4, multiplier: 4},
         }
-        this.animationManager.magicTriangle(caller.coordinates, target.coordinates, {
+    this.animationManager.fireball(caller.coordinates, target.coordinates, {
             // when animation reaches the target, invoke hit callback
             onComplete: () => {
-                console.log('triggerFireBlast: magicTriangle reached target for', caller && (caller.id || caller.name), 'target', target && (target.id || target.name));
+        console.log('triggerFireBlast: fireball reached target for', caller && (caller.id || caller.name), 'target', target && (target.id || target.name));
                 try {
                     if (!caller || !target) return;
                     // Prefer centralized handler if available. Pass the resolved special so handlers
