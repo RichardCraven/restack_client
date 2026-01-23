@@ -366,7 +366,7 @@ export function CombatManager(){
             name: 'ice blast',
             type: 'special',
             icon: images['ice_blast'],
-            cooldown: 11,
+            cooldown: 8,
             damage: 8,
             effect: ['damage_single_target', 'special'],
             special_instructions: 'each enemy has a 40% chance to be frozen',
@@ -376,7 +376,7 @@ export function CombatManager(){
             name: 'fire blast',
             type: 'special',
             icon: images['fire_blast'],
-            cooldown: 11,
+            cooldown: 4,
             damage: 8,
             effect: ['damage_multi_target', 'special'],
             special_instructions: 'each enemy has a 40% chance to be lit aflame',
@@ -472,9 +472,31 @@ export function CombatManager(){
         })
     }
     this.formatSpecials = (stringArray) => {
-        return stringArray.map(e=>{
-            return this.specialsMatrix[e]
-        })
+        // Defensive formatter: accept either an array of keys (strings) or
+        // an array of already-formatted special objects. Return an array of
+        // special objects (cloned) and tolerate malformed inputs.
+        if (!Array.isArray(stringArray)) return [];
+        const mapped = stringArray.map(keyOrObj => {
+            
+            if (!keyOrObj) return undefined;
+            if (typeof keyOrObj === 'string') {
+                const def = this.specialsMatrix[keyOrObj];
+                if (!def) {
+                    console.warn('formatSpecials: unknown special key', keyOrObj);
+                    return undefined;
+                }
+                return clone(def);
+            }
+            if (typeof keyOrObj === 'object') {
+                // assume already formatted; return as-is (clone to be safe)
+                return clone(keyOrObj);
+            }
+            return undefined;
+        });
+        try {
+            console.log('returning ', mapped);
+        } catch (e) {}
+        return mapped;
     }
     this.processActionQueue = (caller) => {
         const action = caller.action_queue[0],
@@ -525,6 +547,7 @@ export function CombatManager(){
         this.combatants = {};
         const colors_withColorSquare = [' #b710d5',' #6495ed',' #73b746',' #f4d013']
         const colors = ['#b710d5', '#6495ed', '#73b746', '#f4d013']
+
         this.data.crew.forEach((e, index) => {
             e.coordinates = {x:0,y:0}
             e.coordinates.y = index;
@@ -534,12 +557,32 @@ export function CombatManager(){
             // e.manualMovesTotal = 25
             e.manualMovesTotal = 100
             e.color = colors[index]
+
+            e.specialActions && e.specialActions.forEach(action => {
+                action.cooldown_position = 100;
+            })
+            // Do not pre-format `e.specials` here — `createFighter` will call
+            // `formatSpecials` via the provided callbacks. If we format them
+            // twice we'll attempt to index `specialsMatrix` with already-formed
+            // objects which yields `undefined` entries. Instead, run
+            // kickoffSpecialCooldown after the fighter is created (below).
+            console.log('E.SPECIALS: ', e,  e.specials);
+            // debugger
+
             this.combatants[e.id] = createFighter(e, callbacks, this.FIGHT_INTERVAL);
         })
+        console.log('crew:', this.data.crew);
+        console.log('combatants: ', this.combatants);
+        // debugger
         this.data.monster.coordinates = {x:0,y:0}
         this.data.monster.coordinates.y = 2;
         this.data.monster.coordinates.x = MAX_DEPTH;
         this.data.monster.isMonster = true;
+        if(this.data.monster.specials){
+            console.log('monster specials: ', this.data.monster.specials);
+        }
+        
+        
         // this.data.monster.coordinates = {x:MAX_DEPTH, y:2}
         let monster = createFighter(this.data.monster, callbacks, this.FIGHT_INTERVAL);
         monster.isMonster = true;
@@ -559,6 +602,20 @@ export function CombatManager(){
                 this.combatants[m.id] = m;
             })
         }
+
+        // Start cooldowns for any formatted specials now that fighters are created
+        Object.values(this.combatants).forEach(combatant => {
+            if (combatant.specials && Array.isArray(combatant.specials)) {
+                combatant.specials.forEach(action => {
+                    try {
+                        this.kickoffSpecialCooldown(action);
+                    } catch (err) {
+                        // non-fatal: log and continue
+                        console.warn('kickoffSpecialCooldown error for', combatant.id, err);
+                    }
+                });
+            }
+        });
 
         // Ensure all fighters use the correct interval
         this.updateAllFightIntervals(this.FIGHT_INTERVAL);
@@ -1111,6 +1168,30 @@ export function CombatManager(){
             }
         },100)
     }
+    this.kickoffSpecialCooldown = (specialAction) => {
+        if(!specialAction) return
+
+        specialAction['cooldown_position'] = 0;
+        let totalTime = specialAction.cooldown * 1000;
+        let scopeVar = 0, that = this;
+        // caller.onGeneralAttackCooldown = true;
+        // const generalAttackCooldown = setTimeout(()=>{
+        //     caller.onGeneralAttackCooldown = false;
+        // }, generalCooldown)
+        const intervalRef = setInterval(()=>{
+            let ratio = 0;
+            if(!that.combatPaused){
+                scopeVar += 100;
+                ratio = Math.ceil((scopeVar / totalTime) * 100);
+                specialAction['cooldown_position'] = ratio;
+            }
+            if(ratio >= 100){
+                scopeVar = 0;
+                // console.log(caller.type, 'done with cooldown for ', atk);
+                clearInterval(intervalRef)
+            }
+        },100)
+    }
     this.getLaneDifferenceToTarget = (caller, target) => {
         if(!target) return 0;
         let d = target.coordinates.y - caller.coordinates.y
@@ -1570,7 +1651,7 @@ export function CombatManager(){
         // compute sourceDirection for animation purposes
         const sourceDirection = caller.coordinates.x < combatantHit.coordinates.x ? 'left' : (caller.coordinates.x > combatantHit.coordinates.x ? 'right' : (caller.coordinates.y > combatantHit.coordinates.y ? 'bottom' : 'top'));
 
-        // set unified wounded object
+        // set unified wounded objectF
         combatantHit.wounded = {
             severity: criticalHit ? 'severe' : 'minor',
             damage,

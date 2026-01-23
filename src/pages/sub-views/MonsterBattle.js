@@ -66,6 +66,7 @@ class MonsterBattle extends React.Component {
     // Allow AI to fire glyphs without requiring the fighter to be selected
     fireSpecialForAI = (fighter, glyph = null) => {
         if (glyph) {
+            console.log('oooooooooo in here..........');
             this.fireGlyph(glyph, fighter);
         } else {
             // fallback: set selectedFighter for other specials
@@ -129,6 +130,8 @@ class MonsterBattle extends React.Component {
                magicMissile_targetLaneDiff: 0,
             teleportingFighterId: null
         }
+        // Internal flag to ensure we only inject wizard spells once for simulation battles
+        this._wizardSpellsEnsured = false;
     }
     componentDidMount(){
         this.props.combatManager.initialize();
@@ -460,7 +463,11 @@ class MonsterBattle extends React.Component {
         const clonedBattleData = JSON.parse(JSON.stringify(battleData));
 
         // Ensure wizards have at least 3 "magic missile" spells available in their specialActions
-        this.ensureWizardSpells(clonedBattleData);
+        // Only for simulation-originated battles, and only once per component instance.
+        if (this.props.isSimulation && !this._wizardSpellsEnsured) {
+            this.ensureWizardSpells(clonedBattleData);
+            this._wizardSpellsEnsured = true;
+        }
 
         this.setState({
             battleData: clonedBattleData
@@ -492,17 +499,35 @@ class MonsterBattle extends React.Component {
                 if (!combatant) return;
                 if (combatant.type !== 'wizard') return;
                 if (!combatant.specialActions) combatant.specialActions = [];
+                // Diagnostic: log if any incoming specialActions already have cooldown_position === 3
+                try {
+                    if (combatant.specialActions.some(sa => sa && sa.cooldown_position === 3)) {
+                        console.warn('ensureWizardSpells: combatant with specialActions containing cooldown_position===3', combatant.id || combatant.name, combatant.specialActions.filter(sa => sa && sa.cooldown_position === 3));
+                        console.trace();
+                    }
+                } catch (err) {
+                    console.debug('ensureWizardSpells diagnostic error', err);
+                }
                 const existing = combatant.specialActions.filter(sa => sa && sa.type === 'spell' && (sa.subtype === 'magic missile' || (sa.name && sa.name.toLowerCase().includes('magic missile'))));
                 const needed = Math.max(0, 3 - existing.length);
                 for (let i = 0; i < needed; i++) {
-                    combatant.specialActions.push({
+                    const newSpell = {
                         type: 'spell',
                         subtype: 'magic missile',
                         name: 'magic missile',
                         iconUrl: images['magic_missile'] || '',
                         selected: false,
                         cooldown_position: 100
-                    });
+                    };
+                    // Diagnostic: log inserted spells so we can trace creation time
+                    try {
+                        console.info('ensureWizardSpells: inserting magic-missile specialAction for', combatant.id || combatant.name, newSpell);
+                        // lightweight stack trace to find caller path
+                        console.trace();
+                    } catch (err) {
+                        console.debug('ensureWizardSpells insert diagnostic error', err);
+                    }
+                    combatant.specialActions.push(newSpell);
                 }
             } catch (err) {
                 // defensive: don't break update if something unexpected exists
@@ -1234,10 +1259,10 @@ class MonsterBattle extends React.Component {
                             <div className="interaction-header">Specials</div>
                             <div className="interaction-tooltip">{this.state.hoveredSpecialTile}</div>
                             <div className="interaction-tile-container">
-                                {this.state.selectedFighter?.specials.map((a, i)=>{
-                                    return <div key={i} className='interaction-tile-wrapper'>
+                                {this.state.selectedFighter?.specials?.map((a, i)=>{
+                                    return a && <div key={i} className='interaction-tile-wrapper'>
                                                 <div 
-                                                style={{backgroundImage: "url(" + a.icon + "), radial-gradient(white 40%, black 80%)", cursor: 'pointer'}} 
+                                                style={{backgroundImage: "url(" + a?.icon + "), radial-gradient(white 40%, black 80%)", cursor: 'pointer'}} 
                                                 className={`interaction-tile special ${a.selected ? 'selected' : ''}`}
                                                 onClick={() => this.specialTileClicked(a)} 
                                                 onMouseEnter={() => this.specialTileHovered(a)} 
@@ -1271,13 +1296,13 @@ class MonsterBattle extends React.Component {
                                         return (
                                             <div key={type} className='interaction-tile-wrapper' style={{position: 'relative'}}>
                                                 <div
-                                                    style={{ backgroundImage: `url(${spellUnit.iconUrl}), radial-gradient(white 40%, black 80%)`, cursor: 'pointer' }}
+                                                    style={{ backgroundImage: `url(${spellUnit.iconUrl}), radial-gradient(white 0%, black 60%)`, cursor: 'pointer' }}
                                                     className={`interaction-tile special ${spellUnit.selected ? 'selected' : ''}`}
                                                     onClick={() => this.fireSpell(spellUnit)}
                                                     onMouseEnter={() => this.spellTileHovered(spellUnit)}
                                                     onMouseLeave={() => this.spellTileHovered(null)}>
                                                 </div>
-                                                {count > 1 && (
+                                                {count > 0 && (
                                                     <div className={`stack-badge small`}>{romanNumerals[Math.min(count, 5)]}</div>
                                                 )}
                                             </div>

@@ -36,8 +36,16 @@ export function CrewManager(){
         crew.forEach(member=> { 
             // console.log('special actions: ', member.specialActions);
             if(!member.specialActions) return
+            // Diagnostic: detect any specialActions that already have cooldown_position === 3
+            try {
+                if (member.specialActions.some(a => a && a.cooldown_position === 3)) {
+                    console.warn('initializeCrew: member has specialActions with cooldown_position===3', member.id || member.name, member.specialActions.filter(a => a && a.cooldown_position === 3));
+                    console.trace();
+                }
+            } catch (err) {
+                console.debug('initializeCrew diagnostic error', err);
+            }
             member.specialActions.forEach(a=>{
-
                 let end = new Date(a.endDate),
                 now = new Date();
                 if(end - now < 0){
@@ -121,7 +129,7 @@ export function CrewManager(){
                         member.specialActions.push({
                             type: 'spell',
                             name: 'Magic Missile',
-                            iconUrl: actionSubtype.icon_url || '',
+                            iconUrl: actionSubtype.iconUrl || '',
                             available: false,
                             count: 1, // or logic for count
                             subtype: 'magic missile',
@@ -138,6 +146,7 @@ export function CrewManager(){
             default:
                 break;
         }
+        console.log('member.specialActions', member.specialActions);
     }
 
     this.adventurers = [

@@ -88,6 +88,7 @@ export function Monk(data, utilMethods, animationManager, overlayManager){
                         if (caller.chargingUpActive) caller.chargingUpActive = false;
                         if (data.methods.teleportToBackLine) {
                             // Pass a callback to notify the UI when teleport occurs
+                            caller.energy = 0;
                             data.methods.teleportToBackLine(caller, combatants, this.onTeleport);
                             caller.behaviorSequence = 'attackFromTheBack';
                         } else {

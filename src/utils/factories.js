@@ -22,10 +22,21 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
     } = callbacks;
     // Determine initial facing: right for fighters, left for monsters/minions
     let initialFacing = 'right';
-    console.log('fighter in createFighter: ', fighter);
     if (fighter.isMonster || fighter.isMinion) {
         // console.log('*****fighter: ', fighter);
         initialFacing = 'left';
+    }
+    // Diagnostic instrumentation: if any incoming specialActions carry an unexpected
+    // cooldown_position === 3, log them with a stack trace so we can find the creation site.
+    try {
+        if (fighter.specialActions && fighter.specialActions.some(s => s && s.cooldown_position === 3)) {
+            console.warn('createFighter: incoming specialActions with cooldown_position===3 for fighter:', fighter.id || fighter.name, fighter.specialActions.filter(s => s && s.cooldown_position === 3));
+            // Print stack to help locate who created/modified these objects at runtime
+            console.trace();
+        }
+    } catch (err) {
+        // Non-fatal diagnostic — don't break the game if console access fails
+        // console.debug('createFighter diagnostic error', err);
     }
     return {
         name: fighter.name,
@@ -61,9 +72,9 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
         attackingReverse: false,
         healing: false,
         missed: false,
-        attacks: formatAttacks(fighter.attacks),
-        specials: formatSpecials(fighter.specials),
-    specialActions: fighter.specialActions, // Now uses flat structure: type, name, iconUrl, subtype, etc.
+    attacks: formatAttacks(fighter.attacks),
+    specials: (typeof formatSpecials === 'function') ? formatSpecials(fighter.specials || []) : (fighter.specials || []),
+        specialActions: fighter.specialActions, // Now uses flat structure: type, name, iconUrl, subtype, etc.
         targettedBy: [],
         combatPaused: false,
         readout: {action:'', result: ''},

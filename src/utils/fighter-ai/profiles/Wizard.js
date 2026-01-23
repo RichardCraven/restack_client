@@ -1,3 +1,8 @@
+const pickRandom = (array) => {
+    let index = Math.floor(Math.random() * array.length)
+    return array[index]
+}
+
 export function Wizard(data, utilMethods, animationManager, overlayManager){
     // Reference to MonsterBattle component for AI-triggered glyph casting
     this.monsterBattleRef = null;
@@ -124,6 +129,7 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
     return attack;
     }
     this.useSpell = (caller, combatants) => {
+        console.log('USE SPELL', caller);
         // const getGlyph = () => {
 
         // }
@@ -132,10 +138,11 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
 
         // Find a spell of subtype 'magic missile'
         const magicMissile = caller.specialActions && caller.specialActions.find(
-            a => a.type === 'spell' && a.subtype === 'magic missile'
+            a => a.type === 'spell' && a.subtype === 'magic missile' && a.cooldown_position === 100
         );
-
-        if (magicMissile && (!magicMissile.cooldown_position || magicMissile.cooldown_position === 0)) {
+        console.log('magic missile: ', magicMissile, 'cooldown: ', magicMissile ? magicMissile.cooldown_position : 'N/A');
+        const magicMissileAvailable = magicMissile && (!magicMissile.cooldown_position || magicMissile.cooldown_position === 0) && caller.energy > 33
+        if (magicMissileAvailable) {
             // Acquire a target (closest enemy)
             const liveEnemies = Object.values(combatants).filter(e => !e.dead && (e.isMonster || e.isMinion));
             if (liveEnemies.length > 0) {
@@ -149,11 +156,35 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                 } else if (this.useSpellMagicMissile) {
                     this.useSpellMagicMissile(caller, target, magicMissile);
                 } else {
+                    console.log('about to TREIGGER magic missile');
+                    caller.specialActions = caller.specialActions.filter(a => a !== magicMissile)
+                    caller.energy -= 50;
                     this.triggerMagicMissile(caller, target, 1500);
+                    console.log('now speical actions: ', caller.specialActions);
                 }
-                magicMissile.cooldown_position = magicMissile.cooldown || 3;
+                // magicMissile.cooldown_position = magicMissile.cooldown || 3;
                 // console.log('spell available');
                 return true;
+            }
+        }
+        if(caller.energy > 50){
+            const pickRandomSpecial = () => {
+                console.log('specials: ', caller.specials)
+                const availableSpecials = caller.specials.filter(e=>e.cooldown_position >= 100)
+                console.log('available specials: ', availableSpecials);
+                const special = pickRandom(availableSpecials)
+                return special
+            }
+            const special = pickRandomSpecial();
+            const target = Object.values(combatants).find(e=>e.id === caller.targetId)
+            switch(special.name){
+                case "ice blast":
+                    this.animationManager.magicCircle(caller.coordinates, target.coordinates)
+                break;
+                case "fire blast":
+                    console.log('FIRE BLAST!!!!!!!!!!!!!!!!');
+                    this.animationManager.magicTriangle(caller.coordinates, target.coordinates)
+                break;
             }
         }
         return false;
@@ -184,10 +215,12 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                 spellAvailable = caller.specialActions && caller.specialActions.find(action => action.type === 'spell' && action.available);
                 // debugger
                 
-                // if (target && targetHasMoreThanHalfHp && this.useSpell(caller, combatants)) {
-                // if (target && this.useSpell(caller, combatants)) {
-                //     break;
-                // }
+
+                const magicMissile = caller.specialActions && caller.specialActions.find(
+                    a => a.type === 'spell' && a.subtype === 'magic missile'
+                );
+                console.log('magic missile: ', magicMissile, 'cooldown: ', magicMissile ? magicMissile.cooldown_position : 'N/A');
+
 
                 switch(caller.eraIndex){
                     case 0:
@@ -198,6 +231,7 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                         }
                     break;
                     case 1:
+                        console.log('Era 1, targetHasMoreThanHalfHp: ', targetHasMoreThanHalfHp);
                         if (target && targetHasMoreThanHalfHp && this.useSpell(caller, combatants)) {
                             break;
                         }
@@ -316,7 +350,7 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
         }
     }
     this.triggerMagicMissile = (caller, target, travelTime) => {
-
+        console.log('triggering***');
         // Trigger the animation when the spell is cast
         if (this.animationManager && caller && target) {
             this.animationManager.magicMissile(caller.coordinates, target.coordinates);

@@ -218,6 +218,7 @@ class DungeonPage extends React.Component {
                         a.available = true;
                         modified = true;
                         numeralUpdate = true;
+                        console.log('MARKING AS AVAILABLE');
                     }
                     if (markNotified) {
                         if (!a.notified) {
@@ -326,7 +327,8 @@ class DungeonPage extends React.Component {
             monsterBattleTileId: null,
             setMemberRitualOptions: null,
             ritualWrecked: false,
-            shiftDown: false
+            shiftDown: false,
+            showFullScreen: false
         }
     }
     
@@ -809,6 +811,7 @@ class DungeonPage extends React.Component {
         })
     }
     triggerMonsterBattle = (bool, tileId) => {
+        console.log('trigger monster battle, crew: ', this.props.crewManager.crew);
         this.setState({
             keysLocked: bool,
             inMonsterBattle: bool,
@@ -987,9 +990,18 @@ class DungeonPage extends React.Component {
             }
         })
     }
-
-
-    // transform: perspective(3cm) rotateX(16deg) rotateY(0deg) rotateZ(0deg)
+    toggleFullscreen = () => {
+        console.log('toggle full screen');
+        const currentState = this.state.showFullScreen;
+        console.log('currentState', currentState);
+        this.toggleLeftSidePanel({expanded: !currentState});
+        this.toggleRightSidePanel({expanded: !currentState});
+        this.setState(()=>{
+            return {
+                showFullScreen: !currentState
+            }
+        })
+    }
 
     keyDownHandler = (event) => {
         if(this.state.keysLocked && this.state.inMonsterBattle){
@@ -1007,6 +1019,8 @@ class DungeonPage extends React.Component {
         //         paused
         //     })
         // }
+
+        console.log('code: ', code, 'key', key);
         if(code === 'p'){
             let paused = !this.state.paused;
             this.props.combatManager.pauseCombat(paused)
@@ -1018,6 +1032,10 @@ class DungeonPage extends React.Component {
             this.checkWhichSideOfBoard();
         }
         switch(key){
+            case '1':
+                console.log('in 1');
+                this.toggleFullscreen();
+            break;
             case 'Space':
                 
             break;
@@ -1554,16 +1572,18 @@ class DungeonPage extends React.Component {
             }
         })
     }
-    toggleLeftSidePanel = async () => {
-        const newVal = !this.state.leftPanelExpanded;
+    toggleLeftSidePanel = async (val = null) => {
+        console.log('toggle left val: ', val);
+        const newVal = val ? val.expanded : !this.state.leftPanelExpanded;
+        console.log('newval: ', newVal);
         this.setState({leftPanelExpanded: newVal})
         const meta = getMeta()
         meta.leftExpanded = newVal
         storeMeta(meta)
         await updateUserRequest(getUserId(), meta)
     }
-    toggleRightSidePanel = async () => {
-        const newVal = !this.state.rightPanelExpanded
+    toggleRightSidePanel = async (val = null) => {
+        const newVal = val ? val.expanded : !this.state.rightPanelExpanded
         this.setState({rightPanelExpanded: newVal})
         const meta = getMeta()
         meta.rightExpanded = newVal;
