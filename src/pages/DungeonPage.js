@@ -22,44 +22,45 @@ import '../styles/inventory-modal.scss'
 // Small subcomponent to render modal header + body based on modalType
 const ModalInner = ({ modalType, updates, crew, tileSize, handleMemberClickRitual, handleCrewTileHover, setMemberRitualOptions }) => {
     return (
-        <>
-            <CModalHeader>
-                {modalType === 'Updates' && <CModalTitle>Since your last visit...</CModalTitle>}
-                {modalType === 'PrepComplete' && <CModalTitle>Spell preparation completed</CModalTitle>}
-                {modalType === 'Magic' && <CModalTitle>You encounter a magic field...</CModalTitle>}
-            </CModalHeader>
-            <CModalBody>
-                {modalType === 'Updates' && <div>
+        <CModalBody>
+            {modalType === 'Updates' && (
+                <div className='updates-zone'>
                     {(updates || []).map((update, i) => (
                         <div key={i}>{update.text}</div>
                     ))}
-                </div>}
-                {modalType === 'PrepComplete' && <div>
+                </div>
+            )}
+
+            {modalType === 'PrepComplete' && (
+                <div>
                     <p>Spell preparation completed.</p>
                     {(updates || []).map((update, i) => (
                         <div key={i}>{update.text}</div>
                     ))}
-                </div>}
-                {modalType === 'Magic' && <div>
+                </div>
+            )}
+
+            {modalType === 'Magic' && (
+                <div>
                     <p>
-                    If you have a magic user in your crew you may begin a known ritual with 3x effect or learn a new one.
+                        If you have a magic user in your crew you may begin a known ritual with 3x effect or learn a new one.
                     </p>
                     <div className="modal-zone">
                         {crew.filter(e=> e.type === 'wizard' || e.type === 'sage').map((magicUser, i)=>{
                             return <div className="options-row" key={i}>
                                 <Tile 
-                                id={i}
-                                tileSize={tileSize}
-                                image={magicUser.image ? magicUser.image : null}
-                                imageOverride={magicUser.portrait ? magicUser.portrait : null}
-                                contains={magicUser.type}
-                                data={magicUser}
-                                color={magicUser.color}
-                                editMode={false}
-                                type={'crew-tile'}
-                                handleClick={handleMemberClickRitual}
-                                handleHover={handleCrewTileHover}
-                                className={`crew-tile `}> </Tile>
+                                    id={i}
+                                    tileSize={tileSize}
+                                    image={magicUser.image ? magicUser.image : null}
+                                    imageOverride={magicUser.portrait ? magicUser.portrait : null}
+                                    contains={magicUser.type}
+                                    data={magicUser}
+                                    color={magicUser.color}
+                                    editMode={false}
+                                    type={'crew-tile'}
+                                    handleClick={handleMemberClickRitual}
+                                    handleHover={handleCrewTileHover}
+                                    className={`crew-tile `}> </Tile>
                                 {setMemberRitualOptions === magicUser && <div className="options-zone">
                                     <div className="option" onClick={()=> console.log('learn')}>Learn</div>
                                     <div className={`option ${magicUser.specialActions.filter(e=>e.type === 'ritual').length === 0 ? 'disabled' : ''}`}>Perform ritual 3x</div>
@@ -67,9 +68,9 @@ const ModalInner = ({ modalType, updates, crew, tileSize, handleMemberClickRitua
                             </div>
                         })}
                     </div>
-                </div>}
-            </CModalBody>
-        </>
+                </div>
+            )}
+        </CModalBody>
     )
 }
 
@@ -175,7 +176,6 @@ class DungeonPage extends React.Component {
                             const placeholderId = `po-${this._nextPlaceholderId++}`;
                             return (
                                 <div
-                                    ref={(el) => this.placeholderRef(el, placeholderId, activeAction ? activeAction.startDate : '', activeAction ? activeAction.endDate : '')}
                                     className="progress-overlay progress-overlay-placeholder"
                                     data-start={activeAction ? activeAction.startDate : ''}
                                     data-end={activeAction ? activeAction.endDate : ''}
@@ -374,8 +374,7 @@ class DungeonPage extends React.Component {
         this.setState((state, props) => {
             return {
                 leftPanelExpanded: meta?.leftExpanded,
-                rightPanelExpanded: meta?.rightExpanded,
-                crewSize: meta.crew.length,
+                    crewSize: meta.crew.length,
                 minimap,
                 updates,
                 modalType: updates.length > 0 ? 'Updates' : '',
@@ -947,8 +946,8 @@ class DungeonPage extends React.Component {
 
         this.setState((state, props) => {
             return {
-            tileSize,
-            boardSize
+                tileSize,
+                boardSize
             }
         })
     }
@@ -974,14 +973,13 @@ class DungeonPage extends React.Component {
         this.setState(()=>{
             return {
                 showMessage : true,
-                messageToDisplay: message.replaceAll('_',' ')
+                messageToDisplay: message
             }
         })
         setTimeout(() => {
             this.setState(()=>{
                 return {
-                    showMessage : false,
-                    messageToDisplay: ''
+                    showMessage : false
                 }
             })
         },3900)
@@ -2506,7 +2504,13 @@ class DungeonPage extends React.Component {
                                             boxSizing: 'border-box'
                                         }}
                                     ></div>
-                                    <div className='crew-body' style={{backgroundImage: `url(${images.body_male})`, filter: 'invert(1)', backgroundSize: '130%'}}>
+                                    <div className='crew-body' style={{
+                                        backgroundImage: `url(${images.body_male})`,
+                                        filter: 'invert(1)',
+                                        backgroundSize: '130%',
+                                        opacity: isSelected ? 1 : 0.5,
+                                        pointerEvents: isSelected ? 'auto' : 'none'
+                                    }}>
                                         {/* equip slots: chest, right-hand, left-hand, head, and ancillary */}
                                         {(() => {
                                             const findEquipped = (m, slot) => (m.inventory || []).find(i => i.equippedSlot === slot);
@@ -2518,7 +2522,7 @@ class DungeonPage extends React.Component {
                                             const ancillaryRight = findEquipped(member, 'ancillary-right');
                                             return (
                                                 <>
-                                                    <div className='equip-slot slot-chest'>{chest && (
+                                                    <div className='equip-slot slot-chest' style={{border: isSelected && chest ? '2px solid #782d7b' : undefined}}>{chest && (
                                                         <Tile
                                                             id={chest.id}
                                                             data={chest}
@@ -2528,11 +2532,11 @@ class DungeonPage extends React.Component {
                                                             color={chest.color}
                                                             editMode={false}
                                                             type={'inventory-tile'}
-                                                            handleClick={() => this.handleEquipmentItemClick(chest)}
+                                                            handleClick={() => isSelected ? this.handleEquipmentItemClick(chest) : null}
                                                             handleHover={this.handleInventoryTileHover}
                                                         />
                                                     )}</div>
-                                                    <div className='equip-slot slot-right'>{right && (
+                                                    <div className='equip-slot slot-right' style={{border: isSelected && right ? '2px solid #782d7b' : undefined}}>{right && (
                                                         <Tile
                                                             id={right.id}
                                                             data={right}
@@ -2542,11 +2546,11 @@ class DungeonPage extends React.Component {
                                                             color={right.color}
                                                             editMode={false}
                                                             type={'inventory-tile'}
-                                                            handleClick={() => this.handleEquipmentItemClick(right)}
+                                                            handleClick={() => isSelected ? this.handleEquipmentItemClick(right) : null}
                                                             handleHover={this.handleInventoryTileHover}
                                                         />
                                                     )}</div>
-                                                    <div className='equip-slot slot-left'>{left && (
+                                                    <div className='equip-slot slot-left' style={{border: isSelected && left ? '2px solid #782d7b' : undefined}}>{left && (
                                                         <Tile
                                                             id={left.id}
                                                             data={left}
@@ -2556,11 +2560,11 @@ class DungeonPage extends React.Component {
                                                             color={left.color}
                                                             editMode={false}
                                                             type={'inventory-tile'}
-                                                            handleClick={() => this.handleEquipmentItemClick(left)}
+                                                            handleClick={() => isSelected ? this.handleEquipmentItemClick(left) : null}
                                                             handleHover={this.handleInventoryTileHover}
                                                         />
                                                     )}</div>
-                                                    <div className='equip-slot slot-head'>{head && (
+                                                    <div className='equip-slot slot-head' style={{border: isSelected && head ? '2px solid #782d7b' : undefined}}>{head && (
                                                         <Tile
                                                             id={head.id}
                                                             data={head}
@@ -2570,11 +2574,11 @@ class DungeonPage extends React.Component {
                                                             color={head.color}
                                                             editMode={false}
                                                             type={'inventory-tile'}
-                                                            handleClick={() => this.handleEquipmentItemClick(head)}
+                                                            handleClick={() => isSelected ? this.handleEquipmentItemClick(head) : null}
                                                             handleHover={this.handleInventoryTileHover}
                                                         />
                                                     )}</div>
-                                                    <div className='equip-slot slot-ancillary-left'>{ancillaryLeft && (
+                                                    <div className='equip-slot slot-ancillary-left' style={{border: isSelected && ancillaryLeft ? '2px solid #782d7b' : undefined}}>{ancillaryLeft && (
                                                         <Tile
                                                             id={ancillaryLeft.id}
                                                             data={ancillaryLeft}
@@ -2584,11 +2588,11 @@ class DungeonPage extends React.Component {
                                                             color={ancillaryLeft.color}
                                                             editMode={false}
                                                             type={'inventory-tile'}
-                                                            handleClick={() => this.handleEquipmentItemClick(ancillaryLeft)}
+                                                            handleClick={() => isSelected ? this.handleEquipmentItemClick(ancillaryLeft) : null}
                                                             handleHover={this.handleInventoryTileHover}
                                                         />
                                                     )}</div>
-                                                    <div className='equip-slot slot-ancillary-right'>{ancillaryRight && (
+                                                    <div className='equip-slot slot-ancillary-right' style={{border: isSelected && ancillaryRight ? '2px solid #782d7b' : undefined}}>{ancillaryRight && (
                                                         <Tile
                                                             id={ancillaryRight.id}
                                                             data={ancillaryRight}
@@ -2598,7 +2602,7 @@ class DungeonPage extends React.Component {
                                                             color={ancillaryRight.color}
                                                             editMode={false}
                                                             type={'inventory-tile'}
-                                                            handleClick={() => this.handleEquipmentItemClick(ancillaryRight)}
+                                                            handleClick={() => isSelected ? this.handleEquipmentItemClick(ancillaryRight) : null}
                                                             handleHover={this.handleInventoryTileHover}
                                                         />
                                                     )}</div>
@@ -2626,7 +2630,7 @@ class DungeonPage extends React.Component {
                                 const item = group.items[0];
                                 const firstIndex = group.firstIndex;
                                 return (
-                                    <div className={`strip-item sub-container ${item.animation === 'consumed' ? 'consumed' : ''}`} key={gIdx} style={{position: 'relative', marginRight: 8}}>
+                                    <div className={`strip-item sub-container ${item.animation === 'consumed' ? 'consumed' : ''}`} key={gIdx} style={{position: 'relative'}}>
                                         { this.state.inventoryHoverMatrix[firstIndex] && 
                                             <div className="hover-message-container">
                                                 <div className="hover-message">{this.state.inventoryHoverMatrix[firstIndex].replaceAll('_', ' ')}</div>

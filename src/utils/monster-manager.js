@@ -472,7 +472,11 @@ export function MonsterManager(){
                 {item: 'minor_health_potion', percentChance: 55},
                 {item: 'sword', percentChance: 85},
                 {item: 'nukta_amulet', percentChance: 85},
-                {item: 'basic_helm', percentChance: 75}
+                {item: 'basic_helm', percentChance: 75},
+                {item: 'scarab_charm', percentChance: 55},
+                {item: 'seeing_shield', percentChance: 85},
+                {item: 'glindas_wand', percentChance: 85},
+                {item: 'zul_mask', percentChance: 75}
             ]
         }
     }
