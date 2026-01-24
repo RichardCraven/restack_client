@@ -378,7 +378,8 @@ class DungeonPage extends React.Component {
         this.setState((state, props) => {
             return {
                 leftPanelExpanded: meta?.leftExpanded,
-                    crewSize: meta.crew.length,
+                rightPanelExpanded: meta?.rightExpanded,
+                crewSize: meta.crew.length,
                 minimap,
                 updates,
                 modalType: updates.length > 0 ? 'Updates' : '',
@@ -582,7 +583,25 @@ class DungeonPage extends React.Component {
             dungeons.push(d)
         })
         selectedDungeon = dungeons[0];
-        this.props.boardManager.respawnMonsters(selectedDungeon)
+        try {
+            this.props.boardManager.respawnMonsters(selectedDungeon)
+            // Persist meta after a respawn event so UI/session state is saved
+            try {
+                const meta = getMeta();
+                storeMeta(meta);
+            } catch (e) {
+                // ignore storeMeta failures
+            }
+            if (this.props.saveUserData) {
+                try {
+                    this.props.saveUserData();
+                } catch (e) {
+                    // ignore save failures
+                }
+            }
+        } catch (e) {
+            console.warn('Error triggering respawnMonsters', e);
+        }
     }
     componentWillUnmount(){
         if (this.realTimeSpecialActionCheckInterval) {
@@ -2029,34 +2048,7 @@ class DungeonPage extends React.Component {
                 {/* <div className="minimap-container">
 
                 </div> */}
-                <div className="crew-container">
-                    <div className="title" onClick={() => this.logMeta()}>Crew</div>
-                    <div className="crew-tile-container">
-                        {   this.props.crewManager.crew &&
-                            this.props.crewManager.crew.map((member, i) => {
-                                return <div className="sub-container" key={i}>
-                                            { this.state.crewHoverMatrix[i] && <div className="hover-message">{this.state.crewHoverMatrix[i]}</div>}
-                                            <Tile 
-                                            key={i}
-                                            id={i}
-                                            tileSize={this.state.tileSize}
-                                            image={member.image ? member.image : null}
-                                            imageOverride={member.portrait ? member.portrait : null}
-                                            contains={member.type}
-                                            data={member}
-                                            color={member.color}
-                                            editMode={false}
-                                            type={'crew-tile'}
-                                            handleClick={this.handleMemberClick}
-                                            handleHover={this.handleCrewTileHover}
-                                            className={`crew-tile `}
-                                            >
-                                            </Tile>
-                                        </div>
-                            })
-                        }
-                    </div>
-                </div>
+                {/* crew-container moved to right-side panel */}
                 {this.state.selectedCrewMember.name && <div className="crew-info-section">
                         <div className="portrait-wrapper">
                             <div className="status-container">
@@ -2127,9 +2119,31 @@ class DungeonPage extends React.Component {
                             </div>
                         </div>
                         <div className="name-line">{this.state.selectedCrewMember.name} the {this.uppercaseFirstLetter(this.state.selectedCrewMember.type)}</div>
+                        {/* HP bar (xp-line-container as requested) - shows current HP proportion */}
+                        {(() => {
+                            const selected = this.state.selectedCrewMember || {};
+                            const maxHp = (selected.stats && selected.stats.hp) ? selected.stats.hp : 0;
+                            const currentHp = (typeof selected.hp !== 'undefined') ? selected.hp : maxHp;
+                            const hpPct = maxHp > 0 ? Math.max(0, Math.min(100, Math.ceil((currentHp / maxHp) * 100))) : 0;
+                            return (
+                                <div className="xp-line-container" style={{width: '100%'}}>
+                                    <div className="hp-line" style={{width: `${hpPct}%`}}></div>
+                                </div>
+                            )
+                        })()}
+
                         <div className="experience-line-container">
                             <div className="experience-line" style={{width: `${this.props.crewManager.calculateExpPercentage(this.state.selectedCrewMember)}%`}}></div>
                         </div>
+
+                        {/* Max HP stat-line under the experience container */}
+                        {(() => {
+                            const selected = this.state.selectedCrewMember || {};
+                            const maxHp = (selected.stats && selected.stats.hp) ? selected.stats.hp : 0;
+                            return (
+                                <div className="stat-line"> <span className="stat-name">Max HP</span>  <span className='stat-value'>{maxHp} </span> </div>
+                            )
+                        })()}
                         <div className="stat-line"> <span className="stat-name">Strength</span>  <span className='stat-value'>{this.state.selectedCrewMember.stats.str} </span> </div>
                         <div className="stat-line">Dexterity <span className='stat-value'> {this.state.selectedCrewMember.stats.dex} </span></div>
                         <div className="stat-line">Intelligence <span className='stat-value'>{this.state.selectedCrewMember.stats.int} </span></div>
@@ -2353,78 +2367,33 @@ class DungeonPage extends React.Component {
                         <CButton className='clear-all-markers' onClick={() => this.clearAllMarkers()} color="danger">Clear All Markers</CButton>
                     </div>
                 </div>
-                <div className="inventory">
-                    <div className="title">Inventory</div>
-                    <div className="currency-container">
-                        {this.props.inventoryManager.gold > 0 && <div className='gold-readout'>Gold: {this.props.inventoryManager.gold}</div>}
-                        {this.props.inventoryManager.shimmering_dust > 0 && <div className='shimmering-dust-readout'>Shimmering Dust: {this.props.inventoryManager.shimmering_dust}</div>}
-                        {this.props.inventoryManager.totems > 0 && <div className='totems-readout-readout'>
-                            Totems: {this.props.inventoryManager.totems}
-                            </div>}
-                    </div>
-                    <div className="inventory-tile-container">
-                    {(() => {
-                        // Group identical inventory items so they 'stack' visually.
-                        const inv = (this.props.inventoryManager && this.props.inventoryManager.inventory) || [];
-                        const grouped = {};
-                        inv.forEach((item, idx) => {
-                            // Use name as the stack key (falls back to type if name missing)
-                            const key = item.name || item.type || `item_${idx}`;
-                            if (!grouped[key]) grouped[key] = { items: [], firstIndex: idx };
-                            grouped[key].items.push(item);
-                        });
-
-                        return Object.keys(grouped).map((key, gIdx) => {
-                            const group = grouped[key];
-                            const count = group.items.length;
-                            const item = group.items[0]; // representative item for the stack
-                            const firstIndex = group.firstIndex;
-                            return (
-                                <div className={`sub-container ${item.animation === 'consumed' ? 'consumed' : ''}`} key={gIdx}>
-                                    { this.state.inventoryHoverMatrix[firstIndex] && 
-                                        <div className="hover-message-container">
-                                            <div className="hover-message">{this.state.inventoryHoverMatrix[firstIndex].replaceAll('_', ' ')}</div>
+                <div className="crew-container">
+                    <div className="title">Crew</div>
+                    <div className="crew-tile-container">
+                        {   this.props.crewManager.crew &&
+                            this.props.crewManager.crew.map((member, i) => {
+                                const isSelectedTile = this.state.selectedCrewMember && this.state.selectedCrewMember.id === member.id;
+                                return <div className="sub-container" key={i} style={{opacity: isSelectedTile ? 1 : 0.5}}>
+                                            { this.state.crewHoverMatrix[i] && <div className="hover-message">{this.state.crewHoverMatrix[i]}</div>}
+                                            <Tile 
+                                            key={i}
+                                            id={i}
+                                            tileSize={this.state.tileSize}
+                                            image={member.image ? member.image : null}
+                                            imageOverride={member.portrait ? member.portrait : null}
+                                            contains={member.type}
+                                            data={member}
+                                            color={member.color}
+                                            editMode={false}
+                                            type={'crew-tile'}
+                                            handleClick={this.handleMemberClick}
+                                            handleHover={this.handleCrewTileHover}
+                                            className={`crew-tile `}
+                                            >
+                                            </Tile>
                                         </div>
-                                    }
-                                    <Tile
-                                        key={gIdx}
-                                        id={firstIndex}
-                                        data={item}
-                                        tileSize={this.state.tileSize}
-                                        image={item.icon ? item.icon : null}
-                                        contains={item.name ? item.name.replace(' ', '_') : null}
-                                        color={item.color}
-                                        editMode={false}
-                                        type={'inventory-tile'}
-                                        handleClick={() => this.handleItemClick(item, firstIndex)}
-                                        handleHover={this.handleInventoryTileHover}
-                                        className={`inventory-tile ${this.state.activeInventoryItem?.id === firstIndex ? 'active' : ''}`}
-                                        isActiveInventory={this.state.activeInventoryItem?.id === firstIndex}
-                                    >
-                                    </Tile>
-
-                                        {count > 1 && (
-                                        <div style={{
-                                            position: 'absolute',
-                                            top: 2,
-                                            right: 2,
-                                            color: 'white',
-                                            fontWeight: 'bold',
-                                            borderRadius: '50%',
-                                            minWidth: 18,
-                                            minHeight: 18,
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            fontSize: 11,
-                                            zIndex: 99,
-                                            backgroundColor: 'rgba(0,0,0,0.6)'
-                                        }}>{count}</div>
-                                    )}
-                                </div>
-                            )
-                        })
-                    })()}
+                            })
+                        }
                     </div>
                 </div>
                 <div className="expand-collapse-button icon-container" onClick={this.toggleRightSidePanel}>

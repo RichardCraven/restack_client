@@ -173,6 +173,54 @@
                 }
             }
         }
+        /* When crew-container is placed on the right panel, reuse the left-panel styling
+           but render crew tiles horizontally with optional horizontal scrolling. */
+        .crew-container{
+            right: 0;
+            top: 29px;
+            transition: all 0.3s;
+            padding: 8px;
+            .title{
+                color: white;
+                position: sticky;
+                top: 0px;
+                background: transparent;
+                z-index: 100;
+                height: 32px;
+                line-height: 32px;
+                margin-bottom: 8px;
+            }
+            .crew-tile-container{
+                width: 100%;
+                display: flex;
+                flex-direction: row;
+                flex-wrap: nowrap; /* keep tiles on a single row */
+                gap: 8px;
+                overflow-x: auto; /* allow horizontal scrolling if too many */
+                padding-bottom: 6px;
+                .sub-container{
+                    position: relative;
+                    flex: 0 0 auto; /* prevent stretching */
+                    .hover-message{
+                        color: white;
+                        position: absolute;
+                        font-size: 9px;
+                        top: -7px;
+                        left: 5px;
+                    }
+                    .tile.crew-tile{
+                        margin: 2px;
+                        background-color: lightgrey;
+                        &:hover{
+                            background-color: rgb(151, 176, 208) !important;
+                        }
+                        &.active{
+                            background-color: #f9b115 !important;
+                        }
+                    }
+                }
+            }
+        }
 
         
         
@@ -412,7 +460,7 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            // padding: 25px 0px;
+            padding-top: 50px;
             .stat-line{
                 width: 100%;
                 display: flex;
@@ -542,6 +590,20 @@
                 .experience-line{
                     height: 100%;
                     background: #f9b115e3;
+                }
+            }
+            .xp-line-container{
+                height: 6px;
+                width: 100%;
+                align-self: flex-start;
+                padding: 0px 25px;
+                box-sizing: border-box;
+                margin-bottom: 8px;
+                background: rgba(255,255,255,0.08);
+                .hp-line{
+                    height: 100%;
+                    background: #2eb85c; /* requested HP color */
+                    transition: width 300ms ease;
                 }
             }
             .actions-tray{
