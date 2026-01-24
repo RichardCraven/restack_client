@@ -45,8 +45,10 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
         id: fighter.id,
         portrait: fighter.portrait,
         level: fighter.level,
-        hp: fighter.stats.hp,
-        starting_hp: fighter.stats.hp,
+    // Use incoming current hp if provided (persisted from DungeonPage), otherwise default to stats.hp
+    hp: (typeof fighter.hp === 'number') ? fighter.hp : fighter.stats.hp,
+    // starting_hp represents the max HP for the fighter (may be provided or fall back to stats.hp)
+    starting_hp: (typeof fighter.starting_hp === 'number') ? fighter.starting_hp : fighter.stats.hp,
         energy: 100,
         tempo: 1,
         atk: fighter.stats.atk,
@@ -60,7 +62,8 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
             hp: fighter.stats.hp,
             atk: fighter.stats.atk
         },
-        inventory: fighter.inventory,
+    inventory: fighter.inventory,
+    dead: !!fighter.dead,
         weaknesses: fighter.weaknesses,
         targetId: null,
         position: fighter.coordinates.y,

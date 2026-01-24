@@ -533,6 +533,10 @@ export function CombatManager(){
         const colors = ['#b710d5', '#6495ed', '#73b746', '#f4d013']
 
         this.data.crew.forEach((e, index) => {
+            // Do not add dead crew members to combat — they should not participate
+            if (e && (e.dead === true || e.hp === 0)) {
+                return;
+            }
             e.coordinates = {x:0,y:0}
             e.coordinates.y = index;
             e.coordinates.x = 0;

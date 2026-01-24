@@ -133,7 +133,18 @@ export function Skeleton(data, utilMethods, animationManager, overlayManager){
 
             break;
             default:
-                break;
+                // Fallback: for attacks not explicitly animated here (eg. void_lance,
+                // magic_missile when using the skeleton AI as a fallback), apply
+                // damage directly so monsters still hurt players.
+                try {
+                    if (target) {
+                        // Use hitsCombatant to ensure wounded/damageIndicators are set
+                        this.hitsCombatant(caller, target);
+                    }
+                } catch (e) {
+                    console.warn('Fallback attack failed in Skeleton.initiateAttack', e);
+                }
+            break;
         }
         this.kickoffAttackCooldown(caller)
         caller.pendingAttack = null;
