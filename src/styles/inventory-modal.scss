@@ -84,6 +84,39 @@
     justify-content: flex-start;
     box-shadow: 0 4px 8px rgba(0,0,0,0.12);
 }
+.inventory-popup .crew-panel,
+.inventory-modal .crew-panel{
+    position: relative; /* allow absolute-positioned slots inside */
+}
+.inventory-popup .crew-body,
+.inventory-modal .crew-body{
+    position: relative; /* container for equip slots */
+}
+.inventory-popup .equip-slot,
+.inventory-modal .equip-slot{
+    position: absolute;
+    width: 70px;
+    height: 70px;
+    border: 1px solid black;
+    background: transparent;
+    box-sizing: border-box;
+    border-radius: 4px;
+    pointer-events: auto;
+}
+/* chest slot centered on upper torso */
+.inventory-popup .crew-body .slot-chest,
+.inventory-modal .crew-body .slot-chest{
+    left: 50%;
+    top: 32%;
+    transform: translate(-50%, -50%);
+}
+/* right hand slot roughly mid-right */
+.inventory-popup .crew-body .slot-right,
+.inventory-modal .crew-body .slot-right{
+    right: 15%;
+    top: 52%;
+    transform: translate(0, -50%);
+}
 .inventory-popup .crew-portrait,
 .inventory-modal .crew-portrait{
     width: 112px;

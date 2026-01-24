@@ -138,10 +138,18 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
 
         // Find a spell of subtype 'magic missile'
         const magicMissile = caller.specialActions && caller.specialActions.find(
-            a => a.type === 'spell' && a.subtype === 'magic missile' && a.cooldown_position === 100
+            a => a.type === 'spell' && a.subtype === 'magic missile'
         );
+        // Ensure defaults: energy_cost and movement_point_cost
+        if (magicMissile) {
+            if (typeof magicMissile.energy_cost === 'undefined') magicMissile.energy_cost = 30;
+            // movement point cost is 1/4 of the fighter's movementPointsMax (or manualMovesTotal fallback)
+            const maxPts = (typeof caller.movementPointsMax === 'number') ? caller.movementPointsMax : (caller.manualMovesTotal || 1);
+            if (typeof magicMissile.movement_point_cost === 'undefined') magicMissile.movement_point_cost = Math.ceil(maxPts * 0.25);
+        }
         console.log('magic missile: ', magicMissile, 'cooldown: ', magicMissile ? magicMissile.cooldown_position : 'N/A');
-        const magicMissileAvailable = magicMissile && (magicMissile.cooldown_position === 100) && caller.energy > 33
+        // Three conditions to cast: cooldown_position===100, enough energy, and enough movement points
+        const magicMissileAvailable = magicMissile && (magicMissile.cooldown_position === 100) && (typeof magicMissile.energy_cost === 'number' ? caller.energy >= magicMissile.energy_cost : true) && (typeof magicMissile.movement_point_cost === 'number' ? ((typeof caller.movementPointsCurrent === 'number' ? caller.movementPointsCurrent : caller.manualMovesCurrent || 0) >= magicMissile.movement_point_cost) : true);
         if (magicMissileAvailable) {
             // Acquire a target (closest enemy)
             const liveEnemies = Object.values(combatants).filter(e => !e.dead && (e.isMonster || e.isMinion));
@@ -176,7 +184,18 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                             console.warn('monsterBattleRef.applyFighterUpdate failed', err);
                         }
                     }
-                    caller.energy -= 50;
+                    // Deduct energy as defined by the special
+                    caller.energy -= (magicMissile.energy_cost || 50);
+                    // Reduce move points by the special's movement_point_cost so UI updates
+                    try {
+                        const reduce = magicMissile.movement_point_cost || Math.ceil(((typeof caller.movementPointsMax === 'number' ? caller.movementPointsMax : (caller.manualMovesTotal || 1)) * 0.25));
+                        caller.manualMovesCurrent = Math.max(0, (caller.manualMovesCurrent || 0) - reduce);
+                        caller.movementPointsCurrent = Math.max(0, (caller.movementPointsCurrent || 0) - reduce);
+                        if (typeof this.broadcastDataUpdate === 'function') this.broadcastDataUpdate(caller);
+                        if (this.monsterBattleRef && typeof this.monsterBattleRef.applyFighterUpdate === 'function') {
+                            try { this.monsterBattleRef.applyFighterUpdate(caller); } catch (err) { /* ignore */ }
+                        }
+                    } catch (err) { /* non-fatal */ }
                     this.triggerMagicMissile(caller, target, 1500);
                     console.log('now speical actions: ', caller.specialActions);
                 }
@@ -193,14 +212,38 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
             }
             const special = pickRandomSpecial();
             const target = Object.values(combatants).find(e=>e.id === caller.targetId)
-            switch(special.name){
-                case "ice blast":
-                    this.triggerIceBlast(caller, target);
-                    
-                break;
-                case "fire blast":
-                    this.triggerFireBlast(caller, target);
-                break;
+            // Before invoking a chosen special, ensure it meets the three conditions
+            if (special) {
+                if (typeof special.energy_cost === 'undefined') special.energy_cost = special.energy_cost || 30;
+                const maxPts = (typeof caller.movementPointsMax === 'number') ? caller.movementPointsMax : (caller.manualMovesTotal || 1);
+                if (typeof special.movement_point_cost === 'undefined') special.movement_point_cost = Math.ceil(maxPts * 0.25);
+                const canCast = special.cooldown_position >= 100 && (caller.energy >= (special.energy_cost || 0)) && ((typeof caller.movementPointsCurrent === 'number' ? caller.movementPointsCurrent : caller.manualMovesCurrent || 0) >= (special.movement_point_cost || 0));
+                if (canCast) {
+                    // Deduct energy and movement points
+                    try {
+                        caller.energy -= (special.energy_cost || 0);
+                        const reduce = special.movement_point_cost || Math.ceil(maxPts * 0.25);
+                        caller.manualMovesCurrent = Math.max(0, (caller.manualMovesCurrent || 0) - reduce);
+                        caller.movementPointsCurrent = Math.max(0, (caller.movementPointsCurrent || 0) - reduce);
+                        if (typeof this.broadcastDataUpdate === 'function') this.broadcastDataUpdate(caller);
+                        if (this.monsterBattleRef && typeof this.monsterBattleRef.applyFighterUpdate === 'function') {
+                            try { this.monsterBattleRef.applyFighterUpdate(caller); } catch (err) { /* ignore */ }
+                        }
+                    } catch (err) {}
+                    switch(special.name){
+                        case "ice blast":
+                            this.triggerIceBlast(caller, target);
+                            break;
+                        case "fire blast":
+                            this.triggerFireBlast(caller, target);
+                            break;
+                        default:
+                            // fallback: try to trigger by name if supported
+                            if (special.name && special.name.toLowerCase().includes('fire')) this.triggerFireBlast(caller, target);
+                            else if (special.name && special.name.toLowerCase().includes('ice')) this.triggerIceBlast(caller, target);
+                            break;
+                    }
+                }
             }
         }
         return false;
@@ -572,6 +615,7 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                     console.warn('triggerIceBlast onComplete handler failed', err);
                 }
             },
+            // halve perTileMs to make fireball/magic visuals faster
             perTileMs: 80
         })
 
@@ -661,7 +705,8 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                     console.warn('triggerFireBlast onComplete handler failed', err);
                 }
             },
-            perTileMs: 80
+            // halve perTileMs to make fireball/magic visuals faster
+            perTileMs: 40
         })
     }
     this.initiateAttack = async (caller, manualAttack, combatants) => {

@@ -1348,9 +1348,11 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            opacity: 0;
+            /* Always visible for all fighters */
+            opacity: 1;
             &.selected{
-                opacity: 1;
+                /* keep selected for potential highlight effects */
+                box-shadow: 0 0 0 4px rgba(255,255,255,0.06) inset;
             }
             .inner-circle {
                 position: absolute;

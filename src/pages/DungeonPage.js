@@ -2414,7 +2414,11 @@ class DungeonPage extends React.Component {
                             return (
                                 <div className='crew-panel' key={member.id || idx}>
                                     <div className='crew-portrait' style={{backgroundImage: `url(${portraitUrl})`}}></div>
-                                    <div className='crew-body' style={{backgroundImage: `url(${images.body_male})`, filter: 'invert(1)', backgroundSize: '130%'}}></div>
+                                    <div className='crew-body' style={{backgroundImage: `url(${images.body_male})`, filter: 'invert(1)', backgroundSize: '130%'}}>
+                                        {/* equip slots: chest and right-hand */}
+                                        <div className='equip-slot slot-chest' />
+                                        <div className='equip-slot slot-right' />
+                                    </div>
                                 </div>
                             )
                         })}

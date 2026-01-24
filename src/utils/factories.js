@@ -89,8 +89,11 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
         manualCount: 0,
         timeAhead: null,
         damageIndicators: [],
-        manualMovesTotal: fighter.manualMovesTotal,
-        manualMovesCurrent: fighter.manualMovesCurrent,
+    manualMovesTotal: fighter.manualMovesTotal,
+    manualMovesCurrent: fighter.manualMovesCurrent,
+    // New alias fields for broader use: movement points apply to both manual and AI
+    movementPointsMax: typeof fighter.manualMovesTotal === 'number' ? fighter.manualMovesTotal : fighter.manualMovesTotal,
+    movementPointsCurrent: typeof fighter.manualMovesCurrent === 'number' ? fighter.manualMovesCurrent : fighter.manualMovesCurrent,
         frozenPoints: 0,
         targetAcquired: null,
         movesPerTurnCycle: fighter.stats.dex * 2,
@@ -132,6 +135,15 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
                 this.skip();
                 return
             }
+            // Ensure AI attack consumes move points similarly to manual attack
+            try {
+                const cost = 2; // match manualAttack reduction
+                this.manualMovesCurrent = Math.max(0, (this.manualMovesCurrent || 0) - cost);
+                this.movementPointsCurrent = Math.max(0, (this.movementPointsCurrent || 0) - cost);
+                if (typeof broadcastDataUpdate === 'function') broadcastDataUpdate(this);
+            } catch (err) {
+                // non-fatal
+            }
             initiateAttack(this);
         },
         manualAttack: function(){
@@ -165,7 +177,14 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
         },
         move: function(){
             //only ever triggered from turn cycle AI method
-            
+            // AI moves should also consume one manual move point so the
+            // manual-moves UI reflects AI actions.
+            try {
+                const cost = 1;
+                this.manualMovesCurrent = Math.max(0, (this.manualMovesCurrent || 0) - cost);
+                this.movementPointsCurrent = Math.max(0, (this.movementPointsCurrent || 0) - cost);
+                if (typeof broadcastDataUpdate === 'function') broadcastDataUpdate(this);
+            } catch (err) {}
             processMove(this);
         },
         setToFrozen: function(val){
@@ -191,6 +210,9 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
                 
                 this.manualMovesCurrent += this.manualMovesTotal/2000
                 if(this.manualMovesCurrent > this.manualMovesTotal) this.manualMovesCurrent = this.manualMovesTotal
+                // mirror into movementPoints
+                this.movementPointsCurrent = this.manualMovesCurrent;
+                this.movementPointsMax = this.manualMovesTotal;
                 
                 const _selected = getSelectedFighter && getSelectedFighter();
                 // Do not let mere selection of a fighter pause AI. Only when the

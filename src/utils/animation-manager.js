@@ -363,7 +363,8 @@ export function AnimationManager(){
     const radius = options.radius || 1.8;
     // Make fireball noticeably faster by default (shorter visual lifetime)
     // and reduce per-tile travel time so long-range fireballs don't crawl.
-    const duration = options.duration || 800;
+    // Halve the default visual lifetime so fireball appears twice as fast by default
+    const duration = options.duration || 400;
         const origin = sourceCoords;
         const targetDistance = this.getDistanceToTarget(sourceCoords, targetCoords);
         const targetLaneDiff = this.getVerticalDistanceToTarget(sourceCoords, targetCoords);
@@ -384,7 +385,8 @@ export function AnimationManager(){
 
         const onComplete = typeof options.onComplete === 'function' ? options.onComplete : null;
         const tilesToTravel = Math.abs(targetDistance) || 0;
-    const perTileMs = typeof options.perTileMs === 'number' ? options.perTileMs : 120;
+    // Reduce per-tile travel time to double travel speed (ms per tile)
+    const perTileMs = typeof options.perTileMs === 'number' ? options.perTileMs : 60;
         const arrivalMs = Math.max(100, tilesToTravel * perTileMs);
 
         if (onComplete) {
