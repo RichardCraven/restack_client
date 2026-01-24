@@ -676,6 +676,7 @@ class MonsterBattle extends React.Component {
                 itemsGained = [];
                 this.props.monster.drops.forEach(e=>{
                     let d = Math.random();
+                    console.log('drop calculation for', e, 'random num: ', d, 'vs', e.percentChance, 'and actual calc for perc: ', e.percentChance*.01);
                     if(d < e.percentChance*.01) itemsGained.push(e.item)
                 })
                 this.props.inventoryManager.addItemsByName(itemsGained)

@@ -760,6 +760,28 @@
     z-index: 1;
     pointer-events: none;
 }
+
+/* Make inventory tile styles available outside of .dungeon-container
+   (inventory popup/modal is rendered outside that scope). */
+.tile.inventory-tile{
+    margin: 5px;
+    background-color: lightgrey;
+
+    &:hover{
+        background-color: rgb(151, 176, 208) !important;
+    }
+    &.active{
+        background-color: #f9b115 !important;
+    }
+}
+
+.tile.inventory-tile.equipment{
+    background-color: white;
+    margin: 0;
+    &.empty{
+        background-color: transparent;
+    }
+}
 /* Modal style for in-session preparation completion */
 .prep-complete-modal .modal-content{
     border: 2px solid #add8e6; /* light blue */

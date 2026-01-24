@@ -527,7 +527,7 @@ class DungeonPage extends React.Component {
         })
 
         
-        this.checkDungeon()
+        this.checkDungeon();
     }
     checkDungeon = async () => {
         const allDungeons = await loadAllDungeonsRequest();
@@ -1040,7 +1040,9 @@ class DungeonPage extends React.Component {
             // Toggle dungeon-level inventory when not in a monster battle
             if ((maybeKey === 'i' || maybeKey === 'I') && !this.state.inMonsterBattle) {
                 event.preventDefault();
-                this.setState((prev) => ({ showInventoryPopup: !prev.showInventoryPopup }));
+                this.setState((prev) => ({ showInventoryPopup: !prev.showInventoryPopup }), () => {
+                    console.log('[inventory] toggled showInventoryPopup', this.state.showInventoryPopup);
+                });
                 return;
             }
         } catch (err) {
@@ -1616,9 +1618,7 @@ class DungeonPage extends React.Component {
         })
     }
     toggleLeftSidePanel = async (val = null) => {
-        console.log('toggle left val: ', val);
         const newVal = val ? val.expanded : !this.state.leftPanelExpanded;
-        console.log('newval: ', newVal);
         this.setState({leftPanelExpanded: newVal})
         const meta = getMeta()
         meta.leftExpanded = newVal
@@ -1650,7 +1650,7 @@ class DungeonPage extends React.Component {
         return text.charAt(0).toUpperCase() + text.slice(1);
     }
     battleOver = (result) => {
-        console.log('battle over result: ', result);
+        console.log('battle over resu3lt: ', result);
         if(result === 'win'){
             this.props.boardManager.removeDefeatedMonsterTile(this.state.monsterBattleTileId)
             this.props.crewManager.checkForLevelUp(this.props.crewManager.crew)
@@ -2267,7 +2267,7 @@ class DungeonPage extends React.Component {
                                     >
                                     </Tile>
 
-                                    {count > 1 && (
+                                        {count > 1 && (
                                         <div style={{
                                             position: 'absolute',
                                             top: 2,
@@ -2283,17 +2283,7 @@ class DungeonPage extends React.Component {
                                             fontSize: 11,
                                             zIndex: 99,
                                             backgroundColor: 'rgba(0,0,0,0.6)'
-                                        }}>
-                                                {/* Reuse the numeral element styling if available; ensure it has explicit size so CSS scoping doesn't hide it */}
-                                                {(() => {
-                                                    const numeralEl = this.getSubtypeImageCountElement({count});
-                                                    if (numeralEl) {
-                                                        // give it explicit dimensions in case the scoped .numeral CSS isn't applied here
-                                                        return React.cloneElement(numeralEl, { style: Object.assign({}, numeralEl.props.style || {}, { height: 14, width: 14, backgroundSize: '100% 100%' }) });
-                                                    }
-                                                    return <div style={{fontSize: 11, color: 'white'}}>{count}</div>;
-                                                })()}
-                                        </div>
+                                        }}>{count}</div>
                                     )}
                                 </div>
                             )
@@ -2422,6 +2412,53 @@ class DungeonPage extends React.Component {
                                 </div>
                             )
                         })}
+                    </div>
+                    <div className='inventory-strip'>
+                        {(() => {
+                            const inv = (this.props.inventoryManager && this.props.inventoryManager.inventory) || [];
+                            const grouped = {};
+                            inv.forEach((item, idx) => {
+                                const key = item.name || item.type || `item_${idx}`;
+                                if (!grouped[key]) grouped[key] = { items: [], firstIndex: idx };
+                                grouped[key].items.push(item);
+                            });
+
+                            return Object.keys(grouped).map((key, gIdx) => {
+                                const group = grouped[key];
+                                const count = group.items.length;
+                                const item = group.items[0];
+                                const firstIndex = group.firstIndex;
+                                return (
+                                    <div className={`strip-item sub-container ${item.animation === 'consumed' ? 'consumed' : ''}`} key={gIdx} style={{position: 'relative', marginRight: 8}}>
+                                        { this.state.inventoryHoverMatrix[firstIndex] && 
+                                            <div className="hover-message-container">
+                                                <div className="hover-message">{this.state.inventoryHoverMatrix[firstIndex].replaceAll('_', ' ')}</div>
+                                            </div>
+                                        }
+                                        <Tile
+                                            key={gIdx}
+                                            id={firstIndex}
+                                            data={item}
+                                            tileSize={this.state.tileSize}
+                                            image={item.icon ? item.icon : null}
+                                            contains={item.name ? item.name.replace(' ', '_') : null}
+                                            color={item.color}
+                                            editMode={false}
+                                            type={'inventory-tile'}
+                                            handleClick={() => this.handleItemClick(item, firstIndex)}
+                                            handleHover={this.handleInventoryTileHover}
+                                            className={`inventory-tile ${this.state.activeInventoryItem?.id === firstIndex ? 'active' : ''}`}
+                                            isActiveInventory={this.state.activeInventoryItem?.id === firstIndex}
+                                        />
+                                        {count > 1 && (
+                                            <div className='stack-count-badge'>
+                                                {count}
+                                            </div>
+                                        )}
+                                    </div>
+                                )
+                            })
+                        })()}
                     </div>
                 </div>
             </CModal>

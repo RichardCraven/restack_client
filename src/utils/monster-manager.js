@@ -469,7 +469,10 @@ export function MonsterManager(){
             minions: ['skeleton', 'skeleton'],
             weaknesses: ['fire'],
             drops: [
-                {item: 'minor_health_potion', percentChance: 55}
+                {item: 'minor_health_potion', percentChance: 55},
+                {item: 'sword', percentChance: 85},
+                {item: 'nukta_amulet', percentChance: 85},
+                {item: 'basic_helm', percentChance: 75}
             ]
         }
     }
