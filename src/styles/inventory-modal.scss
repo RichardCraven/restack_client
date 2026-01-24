@@ -136,8 +136,8 @@
 .inventory-popup .equip-slot,
 .inventory-modal .equip-slot{
     position: absolute;
-    width: 70px;
-    height: 70px;
+    width: 55px;
+    height: 55px;
     border: 1px solid black;
     background: transparent;
     box-sizing: border-box;
@@ -154,9 +154,52 @@
 /* right hand slot roughly mid-right */
 .inventory-popup .crew-body .slot-right,
 .inventory-modal .crew-body .slot-right{
-    right: 15%;
+    right: 19%;
     top: 52%;
     transform: translate(0, -50%);
+}
+/* left hand slot roughly mid-left */
+.inventory-popup .crew-body .slot-left,
+.inventory-modal .crew-body .slot-left{
+    left: 19%;
+    top: 52%;
+    transform: translate(0, -50%);
+}
+/* head slot above torso */
+.inventory-popup .crew-body .slot-head,
+.inventory-modal .crew-body .slot-head{
+    left: 50%;
+    top: 16%;
+    transform: translate(-50%, -50%);
+}
+/* ancillary slot inside the body (left-of-torso placement) */
+.inventory-popup .crew-body .slot-ancillary-left,
+.inventory-modal .crew-body .slot-ancillary-left{
+    left: 8%;
+    top: 24%;
+    transform: translate(0, -50%);
+    width: 55px;
+    height: 55px;
+    border: 1px solid black;
+    background: transparent;
+    box-sizing: border-box;
+    border-radius: 4px;
+    pointer-events: auto;
+    position: absolute;
+}
+.inventory-popup .crew-body .slot-ancillary-right,
+.inventory-modal .crew-body .slot-ancillary-right{
+    right: 8%;
+    top: 24%;
+    transform: translate(0, -50%);
+    width: 55px;
+    height: 55px;
+    border: 1px solid black;
+    background: transparent;
+    box-sizing: border-box;
+    border-radius: 4px;
+    pointer-events: auto;
+    position: absolute;
 }
 .inventory-popup .crew-portrait,
 .inventory-modal .crew-portrait{

@@ -446,22 +446,26 @@ export function InventoryManager(){
             description: `Nukta amulets have a power of 9. Doubles experience gained for wearer, -3 to all stats`
         }
     }
-
-    this.ornaments = {
+    // Move mask/ornament items into the magical collection so they are available
+    // via the same initialization loop as other magical items. This replaces
+    // the previous `this.ornaments` object.
+    this.magical = Object.assign({}, this.magical, {
         mardi_mask: {
             power: 1,
             icon: 'mardi_mask',
             type: 'ancillary',
             name: 'mardi mask',
+            subtype: 'mask',
             equippedBy: null,
             animation: null,
-            description: `Court masks have a power of 1 and a give +15 max hp. <br /> Passive: 10% chance of healing 15 hp on being hit.`
+            description: `Court     masks have a power of 1 and a give +15 max hp. <br /> Passive: 10% chance of healing 15 hp on being hit.`
         },
         court_mask: {
             power: 1,
             icon: 'court_mask',
             type: 'ancillary',
             name: 'court mask',
+            subtype: 'mask',
             equippedBy: null,
             animation: null,
             description: `Court masks have a power of 1 and a give +1 magic resistance to the wearer. <br /> Passive: 80% chance of negating an enemy hex if wearer is within 4 tiles of caster.`
@@ -471,6 +475,7 @@ export function InventoryManager(){
             icon: 'zul_mask',
             type: 'ancillary',
             name: 'zul mask',
+            subtype: 'mask',
             equippedBy: null,
             animation: null,
             description: `Zul masks have a power of 2 and a give immunity from demobilization and mind control. <br /> Passive: 50% chance of negating a successful hit on wearer and teleporting to a random empty space`
@@ -480,6 +485,7 @@ export function InventoryManager(){
             icon: 'bundu_mask',
             type: 'ancillary',
             name: 'bundu mask',
+            subtype: 'mask',
             equippedBy: null,
             animation: null,
             description: `Bundu masks have a power of 2 and a give +2 magic resistance to the wearer. <br /> Passive: 80% chance of negating an enemy hex if wearer is within 3 tiles of caster.`
@@ -489,6 +495,7 @@ export function InventoryManager(){
             icon: 'lundi_mask',
             type: 'ancillary',
             name: 'lundi mask',
+            subtype: 'mask',
             equippedBy: null,
             animation: null,
             description: `Lundi masks have a power of 3 and a give +4 magic resistance to the wearer. <br /> Passive: If a boon is cast, 50% to recast after 5 seconds.`
@@ -498,11 +505,12 @@ export function InventoryManager(){
             icon: 'solomon_mask',
             type: 'ancillary',
             name: 'solomon mask',
+            subtype: 'mask',
             equippedBy: null,
             animation: null,
             description: `Solomon masks have a power of 5 and a give +10 magic resistance to the wearer. <br /> Passive: 1/2 cooldown time for all of wearer's skills, 2x gold drop.`
         }
-    }
+    });
     this.misc = {
         ornate_key: {
             icon: 'ornate_key',
@@ -546,9 +554,8 @@ export function InventoryManager(){
         for(let key in this.consumables){
             this.allItems[key] = this.consumables[key]
         }
-        for(let key in this.ornaments){
-            this.allItems[key] = this.ornaments[key]
-        }
+        // Masks/ornaments were merged into `this.magical` above. We no longer
+        // iterate `this.ornaments` here.
         for(let key in this.armor){
             this.allItems[key] = this.armor[key]
         }

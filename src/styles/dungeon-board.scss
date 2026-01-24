@@ -685,6 +685,58 @@
                 margin-top: 15px;
                 display: flex;
                 flex-direction: column;
+                /* ensure crew-body copy inside equipment-panel takes visible space */
+                .crew-body{
+                    width: 210px;
+                    height: 350px;
+                    background-size: contain;
+                    background-repeat: no-repeat;
+                    background-position: center;
+                    margin-top: 8px;
+                    flex: 0 0 auto;
+                    position: relative;
+                }
+                /* replicate equip-slot styling from inventory-modal so slots show in left panel */
+                .equip-slot{
+                    position: absolute;
+                    width: 55px;
+                    height: 55px;
+                    border: 1px solid black;
+                    background: transparent;
+                    box-sizing: border-box;
+                    border-radius: 4px;
+                    pointer-events: auto;
+                }
+                .crew-body .slot-chest{
+                    left: 50%;
+                    top: 32%;
+                    transform: translate(-50%, -50%);
+                }
+                .crew-body .slot-right{
+                    right: 19%;
+                    top: 52%;
+                    transform: translate(0, -50%);
+                }
+                .crew-body .slot-left{
+                    left: 19%;
+                    top: 52%;
+                    transform: translate(0, -50%);
+                }
+                .crew-body .slot-head{
+                    left: 50%;
+                    top: 16%;
+                    transform: translate(-50%, -50%);
+                }
+                .crew-body .slot-ancillary-left{
+                    left: 8%;
+                    top: 24%;
+                    transform: translate(0, -50%);
+                }
+                .crew-body .slot-ancillary-right{
+                    right: 8%;
+                    top: 24%;
+                    transform: translate(0, -50%);
+                }
                 .equipment-line{
                     display: flex;
                     align-items: center;

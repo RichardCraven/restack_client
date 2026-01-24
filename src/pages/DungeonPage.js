@@ -373,9 +373,6 @@ class DungeonPage extends React.Component {
         const { updates, modified } = this.checkAndCollectFinishedSpecialActions({ markNotified: false });
         this.setState((state, props) => {
             return {
-                tileSize,
-                boardSize,
-                inventoryHoverMatrix: {},
                 leftPanelExpanded: meta?.leftExpanded,
                 rightPanelExpanded: meta?.rightExpanded,
                 crewSize: meta.crew.length,
@@ -514,6 +511,11 @@ class DungeonPage extends React.Component {
         // this.props.inventoryManager.establishUseConsumableFromInventoryCallback(this.useConsumableFromInventory)
 
         window.addEventListener('beforeunload', this.componentCleanup);
+        // Ensure initial layout calculations run once on mount so the board renders
+        // correctly without requiring a manual window resize.
+        try {
+            this.handleResize();
+        } catch (e) {}
         
         let respawnInterval = setInterval(()=>{
             // let meta = getMeta();
@@ -1086,11 +1088,17 @@ class DungeonPage extends React.Component {
             break;
             case 'Tab':
                 event.preventDefault();
+                // Battle-specific tab handling (existing behavior)
                 // if(this.monsterBattleComponentRef.current) this.monsterBattleComponentRef.current.tabToFighter();
                 if(this.state.shiftDown){
                     if(this.monsterBattleComponentRef.current) this.monsterBattleComponentRef.current.tabToRetarget();
                 } else {
                     if(this.monsterBattleComponentRef.current) this.monsterBattleComponentRef.current.tabToFighter();
+                }
+                // Dungeon-level tab handling: cycle selected crew member when not in a monster battle
+                if(!this.state.inMonsterBattle){
+                    const direction = this.state.shiftDown ? 'prev' : 'next';
+                    this.cycleSelectedCrewMember(direction);
                 }
             break;
             case 'Shift':
@@ -1365,6 +1373,45 @@ class DungeonPage extends React.Component {
             actionMenuTypeExpanded: foundMember.actionMenuTypeExpanded
         })
     }
+
+    cycleSelectedCrewMember = (direction = 'next') => {
+        // direction: 'next' or 'prev'
+        const crew = (this.props.crewManager && this.props.crewManager.crew) || [];
+        if(!crew || crew.length === 0) return;
+
+        const currentType = this.state.selectedCrewMember && this.state.selectedCrewMember.type;
+        let currentIndex = crew.findIndex(c => c.type === currentType);
+        if(currentIndex === -1) currentIndex = 0;
+
+        let nextIndex = 0;
+        if(direction === 'prev'){
+            nextIndex = (currentIndex - 1 + crew.length) % crew.length;
+        } else {
+            nextIndex = (currentIndex + 1) % crew.length;
+        }
+
+        // clear selection on all crew
+        crew.forEach(c => c.selected = false);
+        const foundMember = crew[nextIndex];
+        foundMember.selected = true;
+
+        // persist selection to meta so other parts of the app see it
+        try{
+            const meta = getMeta();
+            meta.crew = crew;
+            storeMeta(meta);
+            if(this.props.saveUserData) this.props.saveUserData();
+        } catch (e) {
+            console.warn('failed to store meta when cycling selected crew', e);
+        }
+
+        // update local state so UI updates (inventory popup border, etc.)
+        this.setState({
+            selectedCrewMember: foundMember,
+            actionsTrayExpanded: foundMember.actionsTrayExpanded,
+            actionMenuTypeExpanded: foundMember.actionMenuTypeExpanded
+        })
+    }
     handleEquipmentItemClick = (item) => {
         if(!item)return;
         const selectedCrewMember = this.state.selectedCrewMember;
@@ -1377,33 +1424,80 @@ class DungeonPage extends React.Component {
         })
     }
     handleItemClick = (item, index) => {
-        const equipTypes = ['weapon', 'armor', 'ancillary', 'magical'];
-        let selectedCrewMember = this.state.selectedCrewMember;
-        if(selectedCrewMember && this.state.selectedCrewMember.inventory && equipTypes.includes(item.type) && !this.state.selectedCrewMember.inventory.map(e=>e.type).includes(item.type)){
-            selectedCrewMember = this.state.selectedCrewMember;
-            item.equippedBy = selectedCrewMember.id;
-            selectedCrewMember.inventory.push(item)
-            this.props.inventoryManager.removeItemByIndex(index)
+        // New equip logic: place item into an appropriate equip slot on the selected crew member
+        if(!item || index === undefined || index === null) return;
+        const selected = this.state.selectedCrewMember;
+        if(!selected || !selected.id){
+            // nothing to equip to
+            return;
         }
-        this.setState({
-            activeInventoryItem: item,
-            selectedCrewMember
-        })
-        this.props.boardManager.setActiveInventoryItem(item)
-        switch(item.contains){
-            case 'minor_key':
-                if(this.props.boardManager.pending && this.props.boardManager.pending.type === 'minor_gate'){
-                    // nothing
-                }
-            break;
-            case 'ornate_key':
-                if(this.props.boardManager.pending && this.props.boardManager.pending.type === 'gate' && this.props.boardManager.pending.subtype === 'ornate'){
-                    // nothing
-                }
-            break;
-            default:
-                // nothin
-            break;
+
+        // ensure inventory array exists on member
+        if(!Array.isArray(selected.inventory)) selected.inventory = [];
+
+        const subtype = item.subtype || '';
+        const type = item.type || '';
+
+        const slotOccupied = (slotName) => selected.inventory.some(i => i.equippedSlot === slotName);
+
+        let targetSlot = null;
+
+        // Map by subtype/type
+        if(['helm','mask'].includes(subtype)){
+            targetSlot = 'head';
+            if(slotOccupied(targetSlot)) targetSlot = null;
+        } else if(['amulet','armor'].includes(subtype)){
+            targetSlot = 'chest';
+            if(slotOccupied(targetSlot)) targetSlot = null;
+        } else if(subtype === 'wand' || type === 'weapon' || subtype === 'shield'){
+            // prefer left, then right
+            if(!slotOccupied('left')) targetSlot = 'left';
+            else if(!slotOccupied('right')) targetSlot = 'right';
+            else targetSlot = null;
+        } else if(subtype === 'charm'){
+            // ancillary slots
+            if(!slotOccupied('ancillary-left')) targetSlot = 'ancillary-left';
+            else if(!slotOccupied('ancillary-right')) targetSlot = 'ancillary-right';
+            else targetSlot = null;
+        }
+
+        if(!targetSlot){
+            // no eligible slot or all relevant slots full — do nothing
+            return;
+        }
+
+        // equip: set metadata on item, move from global inventory into crew member inventory
+        try{
+            item.equippedBy = selected.id;
+            item.equippedSlot = targetSlot;
+
+            // remove from player's global inventory by index
+            if(this.props.inventoryManager && typeof this.props.inventoryManager.removeItemByIndex === 'function'){
+                this.props.inventoryManager.removeItemByIndex(index);
+            }
+
+            // add to crew member inventory
+            selected.inventory.push(item);
+
+            // persist selection to meta and save
+            const meta = getMeta();
+            const crew = meta.crew || this.props.crewManager.crew;
+            const found = crew.find(c => c.id === selected.id);
+            if(found){
+                // ensure found.inventory reflects selected.inventory
+                found.inventory = selected.inventory;
+            }
+            meta.crew = crew;
+            storeMeta(meta);
+            if(this.props.saveUserData) this.props.saveUserData();
+
+            // update state so UI refreshes
+            this.setState({
+                activeInventoryItem: item,
+                selectedCrewMember: selected
+            });
+        } catch (err) {
+            console.warn('failed to equip item', err);
         }
     }
     outfitNewCrew = () => {
@@ -2008,110 +2102,110 @@ class DungeonPage extends React.Component {
                             {this.getCharacterActions(this.state.selectedCrewMember)}
                         </div>
                         <div className="equipment-panel">
-                            <div className="equipment-line">
-                                Weapon 
-                                <div className="equipment-icon">
-                                    <div className="equipment-name">
-                                        {this.state.selectedCrewMember.inventory.find(e=> e.type === 'weapon')?.name}
-                                    </div>
-                                    <Tile 
-                                    tileSize={this.state.tileSize}
-                                    image={
-                                        this.state.selectedCrewMember.inventory.find(e=> e.type === 'weapon') && 
-                                        this.state.selectedCrewMember.inventory.find(e=> e.type === 'weapon').icon ? 
-                                        this.state.selectedCrewMember.inventory.find(e=> e.type === 'weapon').icon : 
-                                        null
-                                    }
-                                    contains={null}
-                                    color={null}
-                                    editMode={false}
-                                    type={'inventory-tile'}
-                                    handleClick={() => this.handleEquipmentItemClick(this.state.selectedCrewMember.inventory.find(e=> e.type === 'weapon'))}
-                                    handleHover={this.handleInventoryTileHover}
-                                    className={`inventory-tile equipment ${!this.state.selectedCrewMember.inventory.find(e=> e.type === 'weapon') ? 'empty' : ''}`}
-                                    description={this.state.selectedCrewMember.inventory.find(e=> e.type === 'weapon')?.description}
-                                    >
-                                    </Tile>
-                                </div> 
+                            {/* Replaced with a direct copy of the `.crew-body` from the inventory popup */}
+                            <div className='crew-body' style={{backgroundImage: `url(${images.body_male})`, filter: 'invert(1)', backgroundSize: '130%'}}>
+                                {/* equip slots: chest, right-hand, left-hand, head, ancillary-left, ancillary-right */}
+                                {(() => {
+                                    const selected = this.state.selectedCrewMember || {};
+                                    const findEquipped = (slot) => (selected.inventory || []).find(i => i.equippedSlot === slot);
+                                    const chest = findEquipped('chest');
+                                    const right = findEquipped('right');
+                                    const left = findEquipped('left');
+                                    const head = findEquipped('head');
+                                    const ancillaryLeft = findEquipped('ancillary-left');
+                                    const ancillaryRight = findEquipped('ancillary-right');
+                                    return (
+                                        <>
+                                            <div className='equip-slot slot-chest'>{chest && (
+                                                <Tile
+                                                    id={chest.id}
+                                                    data={chest}
+                                                    tileSize={this.state.tileSize}
+                                                    image={chest.icon}
+                                                    contains={chest.name ? chest.name.replace(' ', '_') : null}
+                                                    color={chest.color}
+                                                    editMode={false}
+                                                    type={'inventory-tile'}
+                                                    handleClick={() => this.handleEquipmentItemClick(chest)}
+                                                    handleHover={this.handleInventoryTileHover}
+                                                />
+                                            )}</div>
+                                            <div className='equip-slot slot-right'>{right && (
+                                                <Tile
+                                                    id={right.id}
+                                                    data={right}
+                                                    tileSize={this.state.tileSize}
+                                                    image={right.icon}
+                                                    contains={right.name ? right.name.replace(' ', '_') : null}
+                                                    color={right.color}
+                                                    editMode={false}
+                                                    type={'inventory-tile'}
+                                                    handleClick={() => this.handleEquipmentItemClick(right)}
+                                                    handleHover={this.handleInventoryTileHover}
+                                                />
+                                            )}</div>
+                                            <div className='equip-slot slot-left'>{left && (
+                                                <Tile
+                                                    id={left.id}
+                                                    data={left}
+                                                    tileSize={this.state.tileSize}
+                                                    image={left.icon}
+                                                    contains={left.name ? left.name.replace(' ', '_') : null}
+                                                    color={left.color}
+                                                    editMode={false}
+                                                    type={'inventory-tile'}
+                                                    handleClick={() => this.handleEquipmentItemClick(left)}
+                                                    handleHover={this.handleInventoryTileHover}
+                                                />
+                                            )}</div>
+                                            <div className='equip-slot slot-head'>{head && (
+                                                <Tile
+                                                    id={head.id}
+                                                    data={head}
+                                                    tileSize={this.state.tileSize}
+                                                    image={head.icon}
+                                                    contains={head.name ? head.name.replace(' ', '_') : null}
+                                                    color={head.color}
+                                                    editMode={false}
+                                                    type={'inventory-tile'}
+                                                    handleClick={() => this.handleEquipmentItemClick(head)}
+                                                    handleHover={this.handleInventoryTileHover}
+                                                />
+                                            )}</div>
+                                            <div className='equip-slot slot-ancillary-left'>{ancillaryLeft && (
+                                                <Tile
+                                                    id={ancillaryLeft.id}
+                                                    data={ancillaryLeft}
+                                                    tileSize={this.state.tileSize}
+                                                    image={ancillaryLeft.icon}
+                                                    contains={ancillaryLeft.name ? ancillaryLeft.name.replace(' ', '_') : null}
+                                                    color={ancillaryLeft.color}
+                                                    editMode={false}
+                                                    type={'inventory-tile'}
+                                                    handleClick={() => this.handleEquipmentItemClick(ancillaryLeft)}
+                                                    handleHover={this.handleInventoryTileHover}
+                                                />
+                                            )}</div>
+                                            <div className='equip-slot slot-ancillary-right'>{ancillaryRight && (
+                                                <Tile
+                                                    id={ancillaryRight.id}
+                                                    data={ancillaryRight}
+                                                    tileSize={this.state.tileSize}
+                                                    image={ancillaryRight.icon}
+                                                    contains={ancillaryRight.name ? ancillaryRight.name.replace(' ', '_') : null}
+                                                    color={ancillaryRight.color}
+                                                    editMode={false}
+                                                    type={'inventory-tile'}
+                                                    handleClick={() => this.handleEquipmentItemClick(ancillaryRight)}
+                                                    handleHover={this.handleInventoryTileHover}
+                                                />
+                                            )}</div>
+                                        </>
+                                    )
+                                })()}
                             </div>
-                            <div className="equipment-line">
-                                Armor
-                                <div className="equipment-icon">
-                                    <div className="equipment-name">
-                                        {this.state.selectedCrewMember.inventory.find(e=> e.type === 'armor')?.name}
-                                    </div>
-                                    <Tile 
-                                        tileSize={this.state.tileSize}
-                                        image={
-                                            this.state.selectedCrewMember.inventory.find(e=> e.type === 'armor') && 
-                                            this.state.selectedCrewMember.inventory.find(e=> e.type === 'armor').icon ? 
-                                            this.state.selectedCrewMember.inventory.find(e=> e.type === 'armor').icon : 
-                                            null
-                                        }
-                                        contains={null}
-                                        color={null}
-                                        editMode={false}
-                                        type={'inventory-tile'}
-                                        handleClick={() => this.handleEquipmentItemClick(this.state.selectedCrewMember.inventory.find(e=> e.type === 'armor'))}
-                                        handleHover={this.handleInventoryTileHover}
-                                        className={`inventory-tile equipment ${!this.state.selectedCrewMember.inventory.find(e=> e.type === 'armor') ? 'empty' : ''}`}
-                                        description={this.state.selectedCrewMember.inventory.find(e=> e.type === 'armor')?.description}
-                                        >
-                                    </Tile>
-                                </div> 
-                            </div>
-                            <div className="equipment-line">
-                                Ancillary
-                                <div className="equipment-icon">
-                                    <div className="equipment-name">
-                                        {this.state.selectedCrewMember.inventory.find(e=> e.type === 'ancillary')?.name}
-                                    </div>
-                                    <Tile 
-                                        tileSize={this.state.tileSize}
-                                        image={
-                                            this.state.selectedCrewMember.inventory.find(e=> e.type === 'ancillary') && 
-                                            this.state.selectedCrewMember.inventory.find(e=> e.type === 'ancillary').icon ? 
-                                            this.state.selectedCrewMember.inventory.find(e=> e.type === 'ancillary').icon : 
-                                            null
-                                        }
-                                        contains={null}
-                                        color={null}
-                                        editMode={false}
-                                        type={'inventory-tile'}
-                                        handleClick={() => this.handleEquipmentItemClick(this.state.selectedCrewMember.inventory.find(e=> e.type === 'ancillary'))}
-                                        handleHover={this.handleInventoryTileHover}
-                                        className={`inventory-tile equipment ${!this.state.selectedCrewMember.inventory.find(e=> e.type === 'ancillary') ? 'empty' : ''}`}
-                                        description={this.state.selectedCrewMember.inventory.find(e=> e.type === 'ancillary')?.description}
-                                        >
-                                    </Tile>
-                                </div>
-                            </div>
-                            <div className="equipment-line">
-                                Magical
-                                <div className="equipment-icon">
-                                    <div className="equipment-name">
-                                        {this.state.selectedCrewMember.inventory.find(e=> e.type === 'magical')?.name}
-                                    </div>
-                                    <Tile 
-                                        tileSize={this.state.tileSize}
-                                        image={
-                                            this.state.selectedCrewMember.inventory.find(e=> e.type === 'magical') && 
-                                            this.state.selectedCrewMember.inventory.find(e=> e.type === 'magical').icon ? 
-                                            this.state.selectedCrewMember.inventory.find(e=> e.type === 'magical').icon : 
-                                            null
-                                        }
-                                        contains={null}
-                                        color={null}
-                                        editMode={false}
-                                        type={'inventory-tile'}
-                                        handleClick={() => this.handleEquipmentItemClick(this.state.selectedCrewMember.inventory.find(e=> e.type === 'magical'))}
-                                        handleHover={this.handleInventoryTileHover}
-                                        className={`inventory-tile equipment ${!this.state.selectedCrewMember.inventory.find(e=> e.type === 'magical') ? 'empty' : ''}`}
-                                        description={this.state.selectedCrewMember.inventory.find(e=> e.type === 'magical')?.description}
-                                        >
-                                    </Tile>
-                                </div>
-                            </div>
+                            {/* left-body-preview mirror (kept for legacy styling hooks) */}
+                            <div className='left-body-preview' style={{backgroundImage: `url(${images.body_male})`, backgroundSize: '130%'}}></div>
                         </div>
                         <div className="description-panel">
                             {this.state.descriptionText}
@@ -2401,13 +2495,116 @@ class DungeonPage extends React.Component {
                     <div className='crew-panels'>
                         {(this.props.crewManager && this.props.crewManager.crew || []).map((member, idx) => {
                             const portraitUrl = (images && images[member.portrait]) || member.portrait;
+                            const isSelected = this.state.selectedCrewMember && this.state.selectedCrewMember.id === member.id;
                             return (
                                 <div className='crew-panel' key={member.id || idx}>
-                                    <div className='crew-portrait' style={{backgroundImage: `url(${portraitUrl})`}}></div>
+                                    <div
+                                        className='crew-portrait'
+                                        style={{
+                                            backgroundImage: `url(${portraitUrl})`,
+                                            border: isSelected ? '3px solid lightgreen' : '3px solid transparent',
+                                            boxSizing: 'border-box'
+                                        }}
+                                    ></div>
                                     <div className='crew-body' style={{backgroundImage: `url(${images.body_male})`, filter: 'invert(1)', backgroundSize: '130%'}}>
-                                        {/* equip slots: chest and right-hand */}
-                                        <div className='equip-slot slot-chest' />
-                                        <div className='equip-slot slot-right' />
+                                        {/* equip slots: chest, right-hand, left-hand, head, and ancillary */}
+                                        {(() => {
+                                            const findEquipped = (m, slot) => (m.inventory || []).find(i => i.equippedSlot === slot);
+                                            const chest = findEquipped(member, 'chest');
+                                            const right = findEquipped(member, 'right');
+                                            const left = findEquipped(member, 'left');
+                                            const head = findEquipped(member, 'head');
+                                            const ancillaryLeft = findEquipped(member, 'ancillary-left');
+                                            const ancillaryRight = findEquipped(member, 'ancillary-right');
+                                            return (
+                                                <>
+                                                    <div className='equip-slot slot-chest'>{chest && (
+                                                        <Tile
+                                                            id={chest.id}
+                                                            data={chest}
+                                                            tileSize={this.state.tileSize}
+                                                            image={chest.icon}
+                                                            contains={chest.name ? chest.name.replace(' ', '_') : null}
+                                                            color={chest.color}
+                                                            editMode={false}
+                                                            type={'inventory-tile'}
+                                                            handleClick={() => this.handleEquipmentItemClick(chest)}
+                                                            handleHover={this.handleInventoryTileHover}
+                                                        />
+                                                    )}</div>
+                                                    <div className='equip-slot slot-right'>{right && (
+                                                        <Tile
+                                                            id={right.id}
+                                                            data={right}
+                                                            tileSize={this.state.tileSize}
+                                                            image={right.icon}
+                                                            contains={right.name ? right.name.replace(' ', '_') : null}
+                                                            color={right.color}
+                                                            editMode={false}
+                                                            type={'inventory-tile'}
+                                                            handleClick={() => this.handleEquipmentItemClick(right)}
+                                                            handleHover={this.handleInventoryTileHover}
+                                                        />
+                                                    )}</div>
+                                                    <div className='equip-slot slot-left'>{left && (
+                                                        <Tile
+                                                            id={left.id}
+                                                            data={left}
+                                                            tileSize={this.state.tileSize}
+                                                            image={left.icon}
+                                                            contains={left.name ? left.name.replace(' ', '_') : null}
+                                                            color={left.color}
+                                                            editMode={false}
+                                                            type={'inventory-tile'}
+                                                            handleClick={() => this.handleEquipmentItemClick(left)}
+                                                            handleHover={this.handleInventoryTileHover}
+                                                        />
+                                                    )}</div>
+                                                    <div className='equip-slot slot-head'>{head && (
+                                                        <Tile
+                                                            id={head.id}
+                                                            data={head}
+                                                            tileSize={this.state.tileSize}
+                                                            image={head.icon}
+                                                            contains={head.name ? head.name.replace(' ', '_') : null}
+                                                            color={head.color}
+                                                            editMode={false}
+                                                            type={'inventory-tile'}
+                                                            handleClick={() => this.handleEquipmentItemClick(head)}
+                                                            handleHover={this.handleInventoryTileHover}
+                                                        />
+                                                    )}</div>
+                                                    <div className='equip-slot slot-ancillary-left'>{ancillaryLeft && (
+                                                        <Tile
+                                                            id={ancillaryLeft.id}
+                                                            data={ancillaryLeft}
+                                                            tileSize={this.state.tileSize}
+                                                            image={ancillaryLeft.icon}
+                                                            contains={ancillaryLeft.name ? ancillaryLeft.name.replace(' ', '_') : null}
+                                                            color={ancillaryLeft.color}
+                                                            editMode={false}
+                                                            type={'inventory-tile'}
+                                                            handleClick={() => this.handleEquipmentItemClick(ancillaryLeft)}
+                                                            handleHover={this.handleInventoryTileHover}
+                                                        />
+                                                    )}</div>
+                                                    <div className='equip-slot slot-ancillary-right'>{ancillaryRight && (
+                                                        <Tile
+                                                            id={ancillaryRight.id}
+                                                            data={ancillaryRight}
+                                                            tileSize={this.state.tileSize}
+                                                            image={ancillaryRight.icon}
+                                                            contains={ancillaryRight.name ? ancillaryRight.name.replace(' ', '_') : null}
+                                                            color={ancillaryRight.color}
+                                                            editMode={false}
+                                                            type={'inventory-tile'}
+                                                            handleClick={() => this.handleEquipmentItemClick(ancillaryRight)}
+                                                            handleHover={this.handleInventoryTileHover}
+                                                        />
+                                                    )}</div>
+                                                </>
+                                            )
+                                        })()}
                                     </div>
                                 </div>
                             )
