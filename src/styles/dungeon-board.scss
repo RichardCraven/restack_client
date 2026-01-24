@@ -793,6 +793,7 @@
             bottom: 10px;
             left: 10px;
             cursor: pointer;
+            z-index: 9999; /* ensure collapse/expand button sits above any panel content */
             .expand-icon{
                 transition: all 1s;
                 &.expanded{

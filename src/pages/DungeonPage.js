@@ -1710,7 +1710,10 @@ class DungeonPage extends React.Component {
         })
     }
     toggleLeftSidePanel = async (val = null) => {
-        const newVal = val ? val.expanded : !this.state.leftPanelExpanded;
+        console.log('toggleLeftSidePanel called with', val);
+        // If called as an onClick handler it may receive an event object.
+        // Accept either an object like { expanded: true } or no arg to toggle.
+        const newVal = (val && typeof val === 'object' && Object.prototype.hasOwnProperty.call(val, 'expanded')) ? val.expanded : !this.state.leftPanelExpanded;
         this.setState({leftPanelExpanded: newVal})
         const meta = getMeta()
         meta.leftExpanded = newVal
@@ -1718,7 +1721,8 @@ class DungeonPage extends React.Component {
         await updateUserRequest(getUserId(), meta)
     }
     toggleRightSidePanel = async (val = null) => {
-        const newVal = val ? val.expanded : !this.state.rightPanelExpanded
+        // Handle event objects from onClick; accept { expanded } objects or toggle when no arg
+        const newVal = (val && typeof val === 'object' && Object.prototype.hasOwnProperty.call(val, 'expanded')) ? val.expanded : !this.state.rightPanelExpanded
         this.setState({rightPanelExpanded: newVal})
         const meta = getMeta()
         meta.rightExpanded = newVal;
