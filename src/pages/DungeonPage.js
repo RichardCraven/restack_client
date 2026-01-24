@@ -19,6 +19,19 @@ import { CButton, CFormSelect, CFormInput, CModal, CModalHeader, CModalTitle, CM
 import * as images from '../utils/images'
 import '../styles/inventory-modal.scss'
 
+// helper: convert 3/6-digit hex to rgba string
+function hexToRgba(hex, alpha = 1){
+    let h = hex.replace('#','').trim();
+    if(h.length === 3){
+        h = h.split('').map(c=>c+c).join('');
+    }
+    if(h.length !== 6) return hex;
+    const r = parseInt(h.substring(0,2),16);
+    const g = parseInt(h.substring(2,4),16);
+    const b = parseInt(h.substring(4,6),16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 // Small subcomponent to render modal header + body based on modalType
 const ModalInner = ({ modalType, updates, crew, tileSize, handleMemberClickRitual, handleCrewTileHover, setMemberRitualOptions }) => {
     return (
@@ -1941,12 +1954,15 @@ class DungeonPage extends React.Component {
                 const idx = this.props.crewManager.crew.findIndex(c => c && c.id === fighter.id);
                 if (idx !== -1) {
                     this.props.crewManager.crew[idx].specialActions = JSON.parse(JSON.stringify(fighter.specialActions || []));
+                    // Also update hp/dead if provided by combat
+                    if (typeof fighter.hp !== 'undefined') this.props.crewManager.crew[idx].hp = fighter.hp;
+                    if (typeof fighter.dead !== 'undefined') this.props.crewManager.crew[idx].dead = !!fighter.dead;
                 }
             }
 
             // If this fighter is currently selected, update selectedCrewMember state so UI updates immediately
             if (this.state.selectedCrewMember && this.state.selectedCrewMember.id === fighter.id) {
-                this.setState({ selectedCrewMember: { ...this.state.selectedCrewMember, specialActions: JSON.parse(JSON.stringify(fighter.specialActions || [])) } });
+                this.setState({ selectedCrewMember: { ...this.state.selectedCrewMember, specialActions: JSON.parse(JSON.stringify(fighter.specialActions || [])), hp: (typeof fighter.hp !== 'undefined' ? fighter.hp : this.state.selectedCrewMember.hp), dead: (typeof fighter.dead !== 'undefined' ? !!fighter.dead : this.state.selectedCrewMember.dead) } });
             }
 
             // Persist to meta as well
@@ -1956,6 +1972,8 @@ class DungeonPage extends React.Component {
                     const mIdx = meta.crew.findIndex(c => c && c.id === fighter.id);
                     if (mIdx !== -1) {
                         meta.crew[mIdx].specialActions = JSON.parse(JSON.stringify(fighter.specialActions || []));
+                        if (typeof fighter.hp !== 'undefined') meta.crew[mIdx].hp = fighter.hp;
+                        if (typeof fighter.dead !== 'undefined') meta.crew[mIdx].dead = !!fighter.dead;
                         storeMeta(meta);
                         if (typeof this.props.saveUserData === 'function') this.props.saveUserData();
                     }
@@ -2119,14 +2137,14 @@ class DungeonPage extends React.Component {
                             </div>
                         </div>
                         <div className="name-line">{this.state.selectedCrewMember.name} the {this.uppercaseFirstLetter(this.state.selectedCrewMember.type)}</div>
-                        {/* HP bar (xp-line-container as requested) - shows current HP proportion */}
+                        {/* HP bar (hp-line-container) - shows current HP proportion */}
                         {(() => {
                             const selected = this.state.selectedCrewMember || {};
                             const maxHp = (selected.stats && selected.stats.hp) ? selected.stats.hp : 0;
                             const currentHp = (typeof selected.hp !== 'undefined') ? selected.hp : maxHp;
                             const hpPct = maxHp > 0 ? Math.max(0, Math.min(100, Math.ceil((currentHp / maxHp) * 100))) : 0;
                             return (
-                                <div className="xp-line-container" style={{width: '100%'}}>
+                                <div className="hp-line-container" style={{width: '100%'}}>
                                     <div className="hp-line" style={{width: `${hpPct}%`}}></div>
                                 </div>
                             )
@@ -2384,6 +2402,7 @@ class DungeonPage extends React.Component {
                                             contains={member.type}
                                             data={member}
                                             color={member.color}
+                                            backgroundColor={hexToRgba(member.color, 0.5)}
                                             editMode={false}
                                             type={'crew-tile'}
                                             handleClick={this.handleMemberClick}

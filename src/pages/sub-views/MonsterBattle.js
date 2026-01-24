@@ -529,6 +529,8 @@ class MonsterBattle extends React.Component {
                 }
             }
         })
+        // NOTE: persistence of HP/dead should only occur when combat ends
+        // to avoid excessive writes; see gameOver for persistence logic.
     }
 
     // Allow external callers (AI helpers) to push an update for a single
@@ -726,6 +728,41 @@ class MonsterBattle extends React.Component {
             this.launchDeathSequence();
         }
 
+        // Persist final HP and dead state for crew once when combat ends
+        try {
+            const meta = getMeta();
+            if (meta && Array.isArray(meta.crew)) {
+                let modified = false;
+                const battleEntries = this.state.battleData || {};
+                Object.values(battleEntries).forEach(entry => {
+                    try {
+                        if (!entry) return;
+                        if (entry.isMonster || entry.isMinion) return;
+                        const idx = meta.crew.findIndex(c => c && c.id === entry.id);
+                        if (idx !== -1) {
+                            if (typeof entry.hp !== 'undefined' && meta.crew[idx].hp !== entry.hp) {
+                                meta.crew[idx].hp = entry.hp;
+                                modified = true;
+                            }
+                            if (typeof entry.dead !== 'undefined' && meta.crew[idx].dead !== entry.dead) {
+                                meta.crew[idx].dead = !!entry.dead;
+                                modified = true;
+                            }
+                        }
+                        // notify parent so DungeonPage immediately reflects final HP/dead
+                        try { if (this.props && typeof this.props.onFighterUpdate === 'function') this.props.onFighterUpdate(entry); } catch(e) {}
+                    } catch (inner) {}
+                });
+                if (modified) {
+                    try { storeMeta(meta); } catch (e) {}
+                    try { updateUserRequest(getUserId(), meta).catch(()=>{}); } catch(e) {}
+                    try { if (this.props.saveUserData) this.props.saveUserData(); } catch(e) {}
+                }
+            }
+        } catch (err) {
+            console.warn('Failed to persist final battle HP to meta', err);
+        }
+
         this.setState({
             showSummaryPanel: true,
             goldGained,
@@ -804,6 +841,34 @@ class MonsterBattle extends React.Component {
                 selectedFighter: null
             })
             return
+        }
+        // Persist death immediately so dungeon/meta reflects 0 HP even if the
+        // combat manager removes the fighter from battleData shortly after.
+        try {
+            const entry = this.state.battleData && this.state.battleData[id] ? this.state.battleData[id] : { id };
+            // mark dead and hp=0 locally
+            entry.dead = true;
+            entry.hp = 0;
+            // update meta
+            try {
+                const meta = getMeta();
+                if (meta && Array.isArray(meta.crew)) {
+                    const idx = meta.crew.findIndex(c => c && c.id === id);
+                    if (idx !== -1) {
+                        meta.crew[idx].hp = 0;
+                        meta.crew[idx].dead = true;
+                        try { storeMeta(meta); } catch (e) {}
+                        try { updateUserRequest(getUserId(), meta).catch(()=>{}); } catch(e) {}
+                        try { if (this.props.saveUserData) this.props.saveUserData(); } catch(e) {}
+                    }
+                }
+            } catch (inner) {
+                console.warn('handleFighterDeath: failed to persist meta', inner);
+            }
+            // notify parent immediately so UI updates
+            try { if (this.props && typeof this.props.onFighterUpdate === 'function') this.props.onFighterUpdate(entry); } catch(e) {}
+        } catch (err) {
+            console.warn('handleFighterDeath persistence failed', err);
         }
         if(this.state.selectedFighter && this.state.selectedFighter.id === id){
             const liveFighters = this.props.combatManager.getLiveFighters();

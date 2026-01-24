@@ -33,7 +33,8 @@ export function CrewManager(){
     this.initializeCrew = (crew) => {
         this.crew = [];
         console.log('initializing crew: ', crew, 'this is where specialActions are checked and marked available if their endDate has passed');
-        crew.forEach(member=> { 
+        const colors = ['#b710d5', '#6495ed', '#73b746', '#f4d013'];
+        crew.forEach((member, index)=> { 
             // console.log('special actions: ', member.specialActions);
             if(!member.specialActions) return
             // Diagnostic: detect any specialActions that already have cooldown_position === 3
@@ -52,6 +53,10 @@ export function CrewManager(){
                     a.available = true;
                 }
             })
+            // assign a display color to the crew member (fall back to a repeating palette)
+            try{
+                member.color = member.color || colors[index % colors.length];
+            } catch(e){}
             if(this.memberTypes.includes(member.image)){
                 this.crew.push(member)
             }

@@ -590,9 +590,10 @@
                 .experience-line{
                     height: 100%;
                     background: #f9b115e3;
+                    transition: width 300ms ease; /* match HP bar transition */
                 }
             }
-            .xp-line-container{
+            .hp-line-container{
                 height: 6px;
                 width: 100%;
                 align-self: flex-start;
