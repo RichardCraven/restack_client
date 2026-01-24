@@ -551,6 +551,31 @@ class MonsterBattle extends React.Component {
                 newState.selectedFighter = battleData[fighter.id];
             }
             this.setState(newState);
+
+            // Also persist consumable specialActions back to the global meta so
+            // the DungeonPage and other pages reflect the updated counts immediately.
+            try {
+                // Notify parent (DungeonPage) if it provided a handler so it can
+                // update its own state/selectedCrewMember immediately.
+                try {
+                    if (this.props && typeof this.props.onFighterUpdate === 'function') {
+                        try { this.props.onFighterUpdate(battleData[fighter.id]); } catch(e){}
+                    }
+                } catch(e){}
+                const meta = getMeta();
+                if (meta && Array.isArray(meta.crew)) {
+                    const idx = meta.crew.findIndex(c => c && c.id === fighter.id);
+                    if (idx !== -1) {
+                        // copy the specialActions from the updated fighter into meta
+                        meta.crew[idx].specialActions = JSON.parse(JSON.stringify(battleData[fighter.id].specialActions || []));
+                        storeMeta(meta);
+                        // fire-and-forget server update to persist the change
+                        try { updateUserRequest(getUserId(), meta).catch(()=>{}); } catch(e){}
+                    }
+                }
+            } catch (err) {
+                console.warn('applyFighterUpdate: failed to persist specialActions to meta', err);
+            }
         } catch (err) {
             console.warn('applyFighterUpdate failed', err);
         }

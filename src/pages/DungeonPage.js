@@ -1904,6 +1904,42 @@ class DungeonPage extends React.Component {
             this.setState({ selectedCrewMember: { ...updatedCrewMember } });
         }
     }
+
+    // Called by MonsterBattle (via prop) when a fighter's consumable specialActions change
+    handleFighterUpdateFromBattle = (fighter) => {
+        if (!fighter || !fighter.id) return;
+        try {
+            // Update crewManager's copy
+            if (this.props.crewManager && Array.isArray(this.props.crewManager.crew)) {
+                const idx = this.props.crewManager.crew.findIndex(c => c && c.id === fighter.id);
+                if (idx !== -1) {
+                    this.props.crewManager.crew[idx].specialActions = JSON.parse(JSON.stringify(fighter.specialActions || []));
+                }
+            }
+
+            // If this fighter is currently selected, update selectedCrewMember state so UI updates immediately
+            if (this.state.selectedCrewMember && this.state.selectedCrewMember.id === fighter.id) {
+                this.setState({ selectedCrewMember: { ...this.state.selectedCrewMember, specialActions: JSON.parse(JSON.stringify(fighter.specialActions || [])) } });
+            }
+
+            // Persist to meta as well
+            try {
+                const meta = getMeta();
+                if (meta && Array.isArray(meta.crew)) {
+                    const mIdx = meta.crew.findIndex(c => c && c.id === fighter.id);
+                    if (mIdx !== -1) {
+                        meta.crew[mIdx].specialActions = JSON.parse(JSON.stringify(fighter.specialActions || []));
+                        storeMeta(meta);
+                        if (typeof this.props.saveUserData === 'function') this.props.saveUserData();
+                    }
+                }
+            } catch (err) {
+                console.warn('handleFighterUpdateFromBattle: failed to persist meta', err);
+            }
+        } catch (err) {
+            console.warn('handleFighterUpdateFromBattle failed', err);
+        }
+    }
     getActionCooldownPercentage = (action) => {
     if(!action) return;
     const startDate = new Date(action.startDate);
@@ -2485,6 +2521,7 @@ class DungeonPage extends React.Component {
                 paused={this.state.paused}
                 setNarrativeSequence={this.props.setNarrativeSequence}
                 useConsumableFromInventory={this.useConsumableFromInventory}
+                onFighterUpdate={this.handleFighterUpdateFromBattle}
             ></MonsterBattle>}
 
             <CModal className='inventory-modal' alignment='center' visible={this.state.showInventoryPopup} onClose={() => this.setState({ showInventoryPopup: false })}>
