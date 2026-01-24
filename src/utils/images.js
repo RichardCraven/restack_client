@@ -315,6 +315,10 @@ import fire_blast from '../assets/icons/combat-icons/specials/wizard/fire_blast.
 import magic_missile from '../assets/icons/misc/cycle.png'
 import magic_missile_inverted from '../assets/icons/misc/cycle_inverted.png'
 
+// body
+import body_male from '../assets/icons/figures/body_man.png'
+import body_female from '../assets/icons/figures/body_fem.png'
+
 export {
     hand_1,
     hand_2,
@@ -576,5 +580,8 @@ export {
     whiteskull,
 
     ice_blast,
-    fire_blast
+    fire_blast,
+
+    body_male,
+    body_female
 };

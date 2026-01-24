@@ -3,6 +3,7 @@ import * as images from '../utils/images'
 import { FighterAI } from './fighter-ai/fighter-ai'
 import { MonsterAI } from './monster-ai/monster-ai'
 import {createFighter, test} from './factories'
+import specialsMatrix from './specials-matrix'
 import { cilLifeRing } from '@coreui/icons'
 import { INTERVALS, ROCK_DURATION, CRIT_THRESHOLD_DEFAULT, CRIT_THRESHOLD_INCREASED, CRITICAL_DAMAGE_MULTIPLIER } from './shared-constants';
 // import test from './factories'
@@ -286,104 +287,52 @@ export function CombatManager(){
         }
     }
 
-    this.specialsMatrix = {
-        deadeye_shot: {
-            name: 'deadeye shot',
-            type: 'special',
-            icon: images['evilai_charm'],
-            cooldown: 10,
-            damage: 10,
-            effect: ['damage_single_target'],
-            level: 1
-        },
-        berserker_rage: {
-            name: 'berserker rage',
-            type: 'special',
-            icon: images['demonskull_charm'],
-            cooldown: 10,
-            effect: ['buff_self', 'nerf_self'],
-            duration: 18,
-            buff: {
-                increase_stats: {
-                    stats: [
-                        {stat: 'str', amount: 5},
-                        {stat:'dex',amount:3},
-                        {stat: 'atk', amount: 7}
-                    ]
+    // Use the centralized canonical specials matrix so other modules import
+    // the same authoritative data. Keep on the instance for compatibility.
+    this.specialsMatrix = specialsMatrix;
+
+    // Sync any already-instantiated combatants' specials/specialActions
+    // with the canonical matrix to avoid stale data.
+    this.syncSpecials = () => {
+        try {
+            Object.values(this.combatants).forEach(combatant => {
+                if (!combatant) return;
+                // Normalize `specials` (learned/innate specials)
+                if (Array.isArray(combatant.specials)) {
+                    try {
+                        combatant.specials = this.formatSpecials(combatant.specials);
+                    } catch (err) {
+                        console.warn('syncSpecials: failed to format specials for', combatant.id, err);
+                    }
                 }
-            },
-            nerf: {
-                decrease_stats:{
-                    stats: [
-                        {stat: 'int', amount: 3}
-                    ]
+
+                // Normalize `specialActions` (consumable instances) while
+                // preserving instance-specific fields (count, id, etc.)
+                if (Array.isArray(combatant.specialActions)) {
+                    combatant.specialActions = combatant.specialActions.map(sa => {
+                        if (!sa) return sa;
+                        if (typeof sa === 'string') {
+                            return this.formatSpecials([sa])[0] || sa;
+                        }
+                        // Try to resolve by common keys
+                        const lookupKey = sa.key || sa.name || sa.subtype || (sa.type === 'special' && sa.name) || null;
+                        const canonical = lookupKey ? this.formatSpecials([lookupKey])[0] : null;
+                        if (canonical) {
+                            // Keep prefs from instance (counts, dynamic props) but
+                            // merge canonical data for missing fields.
+                            const instanceProps = {};
+                            ['count','uses','id','cooldown_position','romanCount','stackCount'].forEach(k => {
+                                if (sa[k] !== undefined) instanceProps[k] = sa[k];
+                            });
+                            return Object.assign({}, canonical, instanceProps);
+                        }
+                        return sa;
+                    });
                 }
-            },
-            level: 1
-        },
-        healing_hymn: {
-            name: 'healing hymn',
-            type: 'special',
-            icon: images['lundi_charm'],
-            effect: ['buff_all_friendly'],
-            buff: {
-                heal: {
-                    amount: 12 
-                }
-            },
-            cooldown: 12,
-            level: 1
-        },
-        reveal_weakness: {
-            name: 'reveal weakness',
-            type: 'special',
-            icon: images['hamsa_charm'],
-            cooldown: 12,
-            effect: ['special'],
-            special_instructions: 'reveal all monsters weaknesses',
-            level: 1
-        },
-        flying_lotus: {
-            name: 'flying lotus',
-            type: 'special',
-            icon: images['lundi_charm'],
-            cooldown: 11,
-            damage: 15,
-            effect: ['damage_single_target', 'special'],
-            special_instructions: 'target has 50% chance to be stunned for 1 sec * $str',
-            level: 1
-        },
-        shield_wall: {
-            name: 'shield wall',
-            type: 'special',
-            icon: images['beetle_charm'],
-            cooldown: 11,
-            effect: ['special'],
-            special_instructions: 'shield all members for three hits',
-            level: 1
-        },
-        ice_blast: {
-            name: 'ice blast',
-            type: 'special',
-            icon: images['ice_blast'],
-            cooldown: 8,
-            damage: 5,
-            energy_cost: 50,
-            effect: ['damage_single_target', 'special'],
-            special_instructions: 'each enemy has a 40% chance to be frozen',
-            level: 1
-        },
-        fire_blast: {
-            name: 'fire blast',
-            type: 'special',
-            icon: images['fire_blast'],
-            energy_cost: 30,
-            cooldown: 4,
-            damage: 7,
-            effect: ['damage_multi_target', 'special'],
-            special_instructions: 'each enemy has a 40% chance to be lit aflame',
-            level: 1
-        },
+            });
+        } catch (e) {
+            console.warn('syncSpecials failed', e);
+        }
     }
     
     
@@ -596,14 +545,6 @@ export function CombatManager(){
             e.specialActions && e.specialActions.forEach(action => {
                 action.cooldown_position = 100;
             })
-            // Do not pre-format `e.specials` here — `createFighter` will call
-            // `formatSpecials` via the provided callbacks. If we format them
-            // twice we'll attempt to index `specialsMatrix` with already-formed
-            // objects which yields `undefined` entries. Instead, run
-            // kickoffSpecialCooldown after the fighter is created (below).
-            console.log('E.SPECIALS: ', e,  e.specials);
-            // debugger
-
             this.combatants[e.id] = createFighter(e, callbacks, this.FIGHT_INTERVAL);
         })
 
@@ -612,7 +553,7 @@ export function CombatManager(){
         this.data.monster.coordinates.x = MAX_DEPTH;
         this.data.monster.isMonster = true;
         if(this.data.monster.specials){
-            console.log('monster specials: ', this.data.monster.specials);
+            // console.log('monster specials: ', this.data.monster.specials);
         }
         
         
@@ -637,6 +578,10 @@ export function CombatManager(){
         }
 
         // Start cooldowns for any formatted specials now that fighters are created
+        // Ensure combatants' specials reflect the canonical matrix to avoid
+        // using stale values persisted from earlier runs.
+        try { this.syncSpecials(); } catch (e) { console.warn('syncSpecials error', e); }
+
         Object.values(this.combatants).forEach(combatant => {
             if (combatant.specials && Array.isArray(combatant.specials)) {
                 combatant.specials.forEach(action => {

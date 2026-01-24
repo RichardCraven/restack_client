@@ -187,9 +187,7 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
         }
         if(caller.energy > 50){
             const pickRandomSpecial = () => {
-                console.log('specials: ', caller.specials)
                 const availableSpecials = caller.specials.filter(e=>e.cooldown_position >= 100)
-                console.log('available specials: ', availableSpecials);
                 const special = pickRandom(availableSpecials)
                 return special
             }
@@ -237,7 +235,6 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                 const magicMissile = caller.specialActions && caller.specialActions.find(
                     a => a.type === 'spell' && a.subtype === 'magic missile'
                 );
-                console.log('magic missile: ', magicMissile, 'cooldown: ', magicMissile ? magicMissile.cooldown_position : 'N/A');
 
 
                 switch(caller.eraIndex){
@@ -249,7 +246,6 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                         }
                     break;
                     case 1:
-                        console.log('Era 1, targetHasMoreThanHalfHp: ', targetHasMoreThanHalfHp);
                         if (target && targetHasMoreThanHalfHp && this.useSpell(caller, combatants)) {
                             break;
                         }

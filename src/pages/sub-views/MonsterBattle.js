@@ -4,6 +4,8 @@ import '../../styles/monster-battle.scss'
 import * as images from '../../utils/images'
 // import AnimationTile from '../../components/animation-tile';
 import AnimationGrid from '../../components/animation-grid';
+import { CModal } from '@coreui/react';
+import '../../styles/inventory-modal.scss';
 import { Redirect } from "react-router-dom";
 import {storeMeta, getMeta, getUserId, getUserName} from '../../utils/session-handler';
 import {
@@ -138,6 +140,8 @@ class MonsterBattle extends React.Component {
             draggingFighter: null,
             ghostPortraitMatrix: [],
             showSummaryPanel: false,
+            // Inventory popup visibility
+            showInventoryPopup: false,
             summaryMessage: '',
             experienceGained: null,
             goldGained: null,
@@ -250,6 +254,7 @@ class MonsterBattle extends React.Component {
                 arrowUpImage: arrowUp
             })
         }
+        // key handling moved to parent DungeonPage
     }
     monster = () => {
         // console.log('monster: ', this.state.battleData[this.props.monster.id]);
@@ -548,6 +553,15 @@ class MonsterBattle extends React.Component {
             this.setState(newState);
         } catch (err) {
             console.warn('applyFighterUpdate failed', err);
+        }
+    }
+
+    // Public helper to toggle the inventory popup from parent via ref
+    toggleInventory = () => {
+        try {
+            this.setState((prev) => ({ showInventoryPopup: !prev.showInventoryPopup }));
+        } catch (err) {
+            console.warn('toggleInventory failed', err);
         }
     }
 
@@ -1180,6 +1194,23 @@ class MonsterBattle extends React.Component {
                             <div className="confirm-button" onClick={() => this.confirmClicked()}>OK</div>
                         </div>
                     </div>}
+
+                    <CModal className='inventory-modal' alignment='center' visible={this.state.showInventoryPopup} onClose={() => this.setState({ showInventoryPopup: false })}>
+                        <div className='inventory-content'>
+                            <div className='inventory-title'>Inventory</div>
+                            <div className='crew-panels'>
+                                {(this.props.crew || []).map((member, idx) => {
+                                    const portraitUrl = images[member.portrait] || member.portrait;
+                                    return (
+                                        <div className='crew-panel' key={member.id || idx}>
+                                            <div className='crew-portrait' style={{backgroundImage: `url(${portraitUrl})`}}></div>
+                                            <div className='crew-body' style={{backgroundImage: `url(${images.body_male})`}}></div>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        </div>
+                    </CModal>
 
                     {(this.state.message) && <div className="message-container">
                                 {this.state.message}

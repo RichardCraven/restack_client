@@ -17,6 +17,7 @@ import  CIcon  from '@coreui/icons-react';
 
 import { CButton, CFormSelect, CFormInput, CModal, CModalHeader, CModalTitle, CModalBody, CTabPane, CTabContent} from '@coreui/react';
 import * as images from '../utils/images'
+import '../styles/inventory-modal.scss'
 
 // Small subcomponent to render modal header + body based on modalType
 const ModalInner = ({ modalType, updates, crew, tileSize, handleMemberClickRitual, handleCrewTileHover, setMemberRitualOptions }) => {
@@ -293,6 +294,7 @@ class DungeonPage extends React.Component {
             crewHoverMatrix: {},
             selectedCrewMember: {},
             pending: null,
+            showInventoryPopup: false,
             activeInventoryItem: null,
             keysLocked: false,
             inMonsterBattle: false,
@@ -1004,6 +1006,47 @@ class DungeonPage extends React.Component {
     }
 
     keyDownHandler = (event) => {
+        // Allow global 'i' to toggle MonsterBattle inventory when a battle is active
+        try {
+            const maybeKey = event.key;
+            // Enter should confirm summary panel when visible inside MonsterBattle
+            if ((maybeKey === 'Enter' || maybeKey === 'Return') && this.state.inMonsterBattle && this.monsterBattleComponentRef && this.monsterBattleComponentRef.current) {
+                try {
+                    const mb = this.monsterBattleComponentRef.current;
+                    if (mb.state && mb.state.showSummaryPanel) {
+                        event.preventDefault();
+                        if (typeof mb.confirmClicked === 'function') mb.confirmClicked();
+                        return;
+                    }
+                } catch (err) {
+                    console.warn('failed to invoke MonsterBattle.confirmClicked via ref', err);
+                }
+            }
+            if ((maybeKey === 'i' || maybeKey === 'I') && this.state.inMonsterBattle && this.monsterBattleComponentRef && this.monsterBattleComponentRef.current) {
+                event.preventDefault();
+                try {
+                    const mb = this.monsterBattleComponentRef.current;
+                    if (mb && typeof mb.toggleInventory === 'function') {
+                        mb.toggleInventory();
+                    } else if (mb) {
+                        // fallback
+                        mb.setState((prev) => ({ showInventoryPopup: !prev.showInventoryPopup }));
+                    }
+                } catch (err) {
+                    console.warn('failed to toggle MonsterBattle inventory via ref', err);
+                }
+                return;
+            }
+            // Toggle dungeon-level inventory when not in a monster battle
+            if ((maybeKey === 'i' || maybeKey === 'I') && !this.state.inMonsterBattle) {
+                event.preventDefault();
+                this.setState((prev) => ({ showInventoryPopup: !prev.showInventoryPopup }));
+                return;
+            }
+        } catch (err) {
+            // ignore key handling errors
+        }
+
         if(this.state.keysLocked && this.state.inMonsterBattle){
             this.combatKeyDownHandler(event);
             return
@@ -2361,6 +2404,23 @@ class DungeonPage extends React.Component {
                 setNarrativeSequence={this.props.setNarrativeSequence}
                 useConsumableFromInventory={this.useConsumableFromInventory}
             ></MonsterBattle>}
+
+            <CModal className='inventory-modal' alignment='center' visible={this.state.showInventoryPopup} onClose={() => this.setState({ showInventoryPopup: false })}>
+                <div className='inventory-content'>
+                    <div className='inventory-title'>Inventory</div>
+                    <div className='crew-panels'>
+                        {(this.props.crewManager && this.props.crewManager.crew || []).map((member, idx) => {
+                            const portraitUrl = (images && images[member.portrait]) || member.portrait;
+                            return (
+                                <div className='crew-panel' key={member.id || idx}>
+                                    <div className='crew-portrait' style={{backgroundImage: `url(${portraitUrl})`}}></div>
+                                    <div className='crew-body' style={{backgroundImage: `url(${images.body_male})`, filter: 'invert(1)', backgroundSize: '130%'}}></div>
+                                </div>
+                            )
+                        })}
+                    </div>
+                </div>
+            </CModal>
         </div>
         )
     }
