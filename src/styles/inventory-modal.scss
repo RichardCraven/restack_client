@@ -61,7 +61,26 @@
 .inventory-modal .inventory-title{
     font-size: 20px;
     font-weight: 700;
-    margin-bottom: 12px;
+    margin-bottom: 2px;
+}
+
+/* Header layout for inventory modal: title + small gold readout to its right */
+.inventory-popup .inventory-header,
+.inventory-modal .inventory-header{
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.inventory-popup .inventory-gold,
+.inventory-modal .inventory-gold{
+    display: inline-flex;
+    align-items: center;
+}
+.inventory-popup .inventory-gold .gold-readout,
+.inventory-modal .inventory-gold .gold-readout{
+    font-size: 16px;
+    font-weight: 600;
+    color: white;
 }
 .inventory-popup .crew-panels,
 .inventory-modal .crew-panels{

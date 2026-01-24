@@ -174,11 +174,15 @@ class DungeonPage extends React.Component {
                         {/* placeholder used by canvas to draw high-frequency progress overlays */}
                         {(() => {
                             const placeholderId = `po-${this._nextPlaceholderId++}`;
+                            const start = activeAction ? activeAction.startDate : '';
+                            const end = activeAction ? activeAction.endDate : '';
                             return (
                                 <div
+                                    id={placeholderId}
+                                    ref={el => this.placeholderRef(el, placeholderId, start, end)}
                                     className="progress-overlay progress-overlay-placeholder"
-                                    data-start={activeAction ? activeAction.startDate : ''}
-                                    data-end={activeAction ? activeAction.endDate : ''}
+                                    data-start={start}
+                                    data-end={end}
                                 ></div>
                             );
                         })()}
@@ -2530,7 +2534,14 @@ class DungeonPage extends React.Component {
 
             <CModal className='inventory-modal' alignment='center' visible={this.state.showInventoryPopup} onClose={() => this.setState({ showInventoryPopup: false })}>
                 <div className='inventory-content'>
-                    <div className='inventory-title'>Inventory</div>
+                    <div className='inventory-header'>
+                        <div className='inventory-title'>Inventory</div>
+                        {this.props.inventoryManager && this.props.inventoryManager.gold > 0 && (
+                            <div className='inventory-gold'>
+                                <div className='gold-readout'>Gold: {this.props.inventoryManager.gold}</div>
+                            </div>
+                        )}
+                    </div>
                     <div className='crew-panels'>
                         {(this.props.crewManager && this.props.crewManager.crew || []).map((member, idx) => {
                             const portraitUrl = (images && images[member.portrait]) || member.portrait;
