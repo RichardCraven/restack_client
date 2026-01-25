@@ -2455,7 +2455,8 @@ class DungeonPage extends React.Component {
                         type={'overlay-tile'}
                         passThrough={!this.state.minimapPlaceMapMarkerStarted}
                         handleClick={(e)=>this.handleOverlayClick}
-                        backgroundColor={this.state.overlayHoveredTileId === i && this.state.minimapPlaceMapMarkerStarted ? 'rgba(100, 100, 38, 0.272)' : 'transparent'}
+                        // For overlay tiles we want the background color to reflect overlay state (e.g. edge indicator)
+                        backgroundColor={tile.color ? tile.color : (this.state.overlayHoveredTileId === i && this.state.minimapPlaceMapMarkerStarted ? 'rgba(100, 100, 38, 0.272)' : 'transparent')}
                         >
                         </Tile>
                     })}

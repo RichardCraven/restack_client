@@ -437,6 +437,8 @@ export function BoardManager(){
         }
         this.placePlayer(this.playerTile.location)
         this.handleFogOfWar(this.tiles[this.getIndexFromCoordinates(this.playerTile.location)])
+        // Ensure adjacency/overlay indicators are computed immediately after initializing a new board
+        try { this.checkAdjacency(); } catch (e) {}
     }
     this.placePlayer = (coordinates) => {
         let index = this.getIndexFromCoordinates(coordinates)
@@ -687,6 +689,8 @@ export function BoardManager(){
         this.broadcastLevelChange(this.currentLevel.id)
     }
     this.checkAdjacency = () => {
+    // Clear any previous overlay indicators (we will set edge indicators here)
+    try { this.overlayTiles.forEach(t => { if (t) { t.color = null; t.borders = null } }) } catch (e) {}
         const highlightColor = (tile) => {
             let color = null;
             if(this.isMonster(tile)) color = '#ff000078'
@@ -720,6 +724,62 @@ export function BoardManager(){
             }
             t.color = highlightColor(t)}
         })
+
+        // Edge indicator: when the player is adjacent to the board boundary, show a
+        // 3-tile red indicator along that edge centered on the player's row/column.
+        try {
+            const pCoords = this.playerTile.location; // [x, y]
+            const px = pCoords[0], py = pCoords[1];
+            const EDGE_MIN = 15, EDGE_MAX = 29;
+            const indicatorColor = '#ff000088';
+
+            const markOverlayAt = (coords, side) => {
+                try {
+                    if (!coords) return;
+                    const idx = this.getIndexFromCoordinates(coords);
+                    if (!this.overlayTiles[idx]) return;
+                    // set a single thick border on the given side to render the 3-tile edge line
+                    const borderStyle = `3px solid ${indicatorColor}`;
+                    const borders = { left: null, right: null, top: null, bottom: null };
+                    if (side === 'left') borders.left = borderStyle;
+                    if (side === 'right') borders.right = borderStyle;
+                    if (side === 'top') borders.top = borderStyle;
+                    if (side === 'bottom') borders.bottom = borderStyle;
+                    this.overlayTiles[idx].borders = borders;
+                } catch (e) {}
+            }
+
+            // Left edge
+            if (py === EDGE_MIN) {
+                for (let d = -1; d <= 1; d++) {
+                    const nx = px + d;
+                    if (nx >= EDGE_MIN && nx <= EDGE_MAX) markOverlayAt([nx, EDGE_MIN], 'left');
+                }
+            }
+            // Right edge
+            if (py === EDGE_MAX) {
+                for (let d = -1; d <= 1; d++) {
+                    const nx = px + d;
+                    if (nx >= EDGE_MIN && nx <= EDGE_MAX) markOverlayAt([nx, EDGE_MAX], 'right');
+                }
+            }
+            // Top edge
+            if (px === EDGE_MIN) {
+                for (let d = -1; d <= 1; d++) {
+                    const ny = py + d;
+                    if (ny >= EDGE_MIN && ny <= EDGE_MAX) markOverlayAt([EDGE_MIN, ny], 'top');
+                }
+            }
+            // Bottom edge
+            if (px === EDGE_MAX) {
+                for (let d = -1; d <= 1; d++) {
+                    const ny = py + d;
+                    if (ny >= EDGE_MIN && ny <= EDGE_MAX) markOverlayAt([EDGE_MAX, ny], 'bottom');
+                }
+            }
+        } catch (e) {}
+
+        try { if (this.refreshTiles) this.refreshTiles(); } catch (e) {}
 
 
     }

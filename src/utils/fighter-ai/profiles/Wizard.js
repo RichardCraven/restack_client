@@ -711,12 +711,104 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
     }
     this.initiateAttack = async (caller, manualAttack, combatants) => {
         if(!caller) return
-        const target = combatants[caller.targetId];
+        const target = combatants ? combatants[caller.targetId] : null;
+        // Helper: check for any friendly combatant strictly between caller and target on same row
+        const friendlyInLineBetween = (caller, target, combatants) => {
+            if(!caller || !target || !combatants) return false;
+            if (caller.coordinates.y !== target.coordinates.y) return false;
+            const y = caller.coordinates.y;
+            const startX = Math.min(caller.coordinates.x, target.coordinates.x) + 1;
+            const endX = Math.max(caller.coordinates.x, target.coordinates.x) - 1;
+            if (startX > endX) return false;
+            for (let x = startX; x <= endX; x++) {
+                const found = Object.values(combatants).find(e => e && !e.dead && e.coordinates.x === x && e.coordinates.y === y);
+                if (found && (!found.isMonster && !found.isMinion)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        // Helper: find an enemy on the same row that has a clear path (no friendlies between)
+        const findEnemyWithClearPath = (caller, combatants, preferDirection = null) => {
+            if(!caller || !combatants) return null;
+            const y = caller.coordinates.y;
+            const enemies = Object.values(combatants).filter(e => e && !e.dead && (e.isMonster || e.isMinion) && e.coordinates.y === y);
+            if(enemies.length === 0) return null;
+            // Sort by distance from caller
+            enemies.sort((a,b) => Math.abs(a.coordinates.x - caller.coordinates.x) - Math.abs(b.coordinates.x - caller.coordinates.x));
+            // If preferDirection provided ('left' or 'right'), try those first
+            if (preferDirection === 'right') {
+                const rightFirst = enemies.filter(e => e.coordinates.x > caller.coordinates.x).sort((a,b)=>a.coordinates.x - b.coordinates.x);
+                for (const cand of rightFirst) {
+                    const startX = Math.min(caller.coordinates.x, cand.coordinates.x) + 1;
+                    const endX = Math.max(caller.coordinates.x, cand.coordinates.x) - 1;
+                    let blocked = false;
+                    for (let x = startX; x <= endX; x++) {
+                        const found = Object.values(combatants).find(c => c && !c.dead && c.coordinates.x === x && c.coordinates.y === y);
+                        if (found && (!found.isMonster && !found.isMinion)) { blocked = true; break; }
+                    }
+                    if (!blocked) return cand;
+                }
+            } else if (preferDirection === 'left') {
+                const leftFirst = enemies.filter(e => e.coordinates.x < caller.coordinates.x).sort((a,b)=>b.coordinates.x - a.coordinates.x);
+                for (const cand of leftFirst) {
+                    const startX = Math.min(caller.coordinates.x, cand.coordinates.x) + 1;
+                    const endX = Math.max(caller.coordinates.x, cand.coordinates.x) - 1;
+                    let blocked = false;
+                    for (let x = startX; x <= endX; x++) {
+                        const found = Object.values(combatants).find(c => c && !c.dead && c.coordinates.x === x && c.coordinates.y === y);
+                        if (found && (!found.isMonster && !found.isMinion)) { blocked = true; break; }
+                    }
+                    if (!blocked) return cand;
+                }
+            }
+            // Fallback: any enemy with clear path
+            for (const cand of enemies) {
+                const startX = Math.min(caller.coordinates.x, cand.coordinates.x) + 1;
+                const endX = Math.max(caller.coordinates.x, cand.coordinates.x) - 1;
+                let blocked = false;
+                for (let x = startX; x <= endX; x++) {
+                    const found = Object.values(combatants).find(c => c && !c.dead && c.coordinates.x === x && c.coordinates.y === y);
+                    if (found && (!found.isMonster && !found.isMinion)) { blocked = true; break; }
+                }
+                if (!blocked) return cand;
+            }
+            return null;
+        }
         if(manualAttack){
             if(caller.pendingAttack && caller.pendingAttack.cooldown_position < 99){
                 console.log('pending attack not charged fully');
                 return
             } else if (caller.pendingAttack && caller.pendingAttack.cooldown_position === 100){
+                // For manual beam attacks, check the line of fire along the wizard's facing for any friendlies
+                if (combatants) {
+                    const facing = caller.facing || 'right';
+                    // If there's a friendly in the direct beam path, try to find another enemy in the lane with a clear path
+                    const firstEnemyClear = findEnemyWithClearPath(caller, combatants, facing === 'right' ? 'right' : 'left');
+                    if (!firstEnemyClear) {
+                        // no clear enemy in preferred direction; try opposite direction
+                        const opposite = facing === 'right' ? 'left' : 'right';
+                        const alt = findEnemyWithClearPath(caller, combatants, opposite);
+                        if (alt) {
+                            // Fire beam towards alt enemy
+                            let combatantHit = await this.triggerBeamAttack(caller.coordinates, alt.coordinates);
+                            if (combatantHit) {
+                                try { this.hitsCombatant(caller, combatantHit); } catch (err) { this.hitsCombatant(caller, combatantHit); }
+                            } else {
+                                this.missesTarget(caller);
+                            }
+                            this.kickoffAttackCooldown(caller);
+                            return;
+                        }
+                        // No valid alternative enemy with clear path; treat as miss
+                        this.missesTarget(caller);
+                        this.kickoffAttackCooldown(caller);
+                        return;
+                    } else {
+                        // There is at least one enemy with a clear path in preferred direction; fire normally (beam will hit first occupant)
+                    }
+                }
                 let combatantHit = await this.triggerBeamAttackManual(caller.coordinates)
                 if(combatantHit){
                     // Delegate to centralized hitsCombatant so damage, crits, and animations are consistent
@@ -742,6 +834,21 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
             switch(caller.pendingAttack.name){
                 case 'energy blast':
                     if(laneDiff === 0){
+                        // If there's any friendly between caster and target on same plane, try to retarget
+                        if (friendlyInLineBetween(caller, target, combatants)) {
+                            // Prefer enemies in the original direction
+                            const preferDir = (target.coordinates.x > caller.coordinates.x) ? 'right' : 'left';
+                            const alt = findEnemyWithClearPath(caller, combatants, preferDir);
+                            if (alt) {
+                                target = alt;
+                                caller.targetId = alt.id;
+                            } else {
+                                // No alternative enemy with a clear path; treat as miss
+                                this.missesTarget(caller);
+                                this.kickoffAttackCooldown(caller);
+                                break;
+                            }
+                        }
                         let combatantHit  = await this.triggerBeamAttack(caller.coordinates, target.coordinates);
                         if(combatantHit){
                             // Apply unified wounded/damage logic for AI beam hit

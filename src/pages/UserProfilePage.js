@@ -1,4 +1,5 @@
 import React from 'react'
+import { Redirect } from 'react-router-dom';
 import {storeMeta, getMeta, getUserName, getUserId} from '../utils/session-handler';
 import {
   loadDungeonRequest,
@@ -10,7 +11,8 @@ class UserProfilePage extends React.Component{
     super(props)
     this.state = {
         dungeon: null,
-        user: null
+    user: null,
+    navToLanding: false
     }
   }
 
@@ -87,7 +89,8 @@ class UserProfilePage extends React.Component{
   }
   render(){
     return (
-      <div className="landing-pane pane">
+      <div className="landing-pane pane user-profile-page">
+        { this.state.navToLanding && <Redirect to="/landing" /> }
         {/* { navToUserProfile && <Redirect to='/userProfilePage'/> }
         { navToShop && <Redirect to='/shop'/> }
         { navToPortal && <Redirect to='/mapmaker'/> }
@@ -96,7 +99,10 @@ class UserProfilePage extends React.Component{
         <div className="content-container">
           <div className="title">Name: {this.state.user?.name}</div>
           <div className="current-dungeon">Dungeon: {this.state.dungeon?.name}</div>
-          <button onClick={() => this.clearDungeon()}>Clear Dungeon</button>
+          <div className="user-profile-actions">
+            <button onClick={() => this.clearDungeon()}>Clear Dungeon</button>
+            <button onClick={() => this.setState({navToLanding: true})}>Back</button>
+          </div>
   
           {/* <div className="landing-button enter-dungeon" onClick={() => setNavDungeon(true)}>Enter</div>
           <div className="landing-button shop"  onClick={() => setNavShop(true)} >Crew</div>

@@ -210,7 +210,13 @@ export function Monk(data, utilMethods, animationManager, overlayManager){
                 if (caller.pendingAttack.range === 'close' && caller.pendingAttack.name !== 'dragon punch') {
                     const combatantHit = await this.triggerPunch(caller.coordinates, facing)
                     if(combatantHit){
-                        this.hitsCombatant(caller, combatantHit)
+                        // Only apply damage if the hit target is an enemy
+                        if (combatantHit.isMonster || combatantHit.isMinion) {
+                            this.hitsCombatant(caller, combatantHit)
+                        } else {
+                            // Hit a friendly — treat as a miss to avoid friendly-fire
+                            this.missesTarget(caller);
+                        }
                         this.kickoffAttackCooldown(caller)
                     } else {
                         this.missesTarget(caller);
@@ -234,7 +240,11 @@ export function Monk(data, utilMethods, animationManager, overlayManager){
                 case 'dragon punch':
                     const combatantHit = await this.triggerDragonPunch(caller.coordinates, facing)
                     if(combatantHit){
-                        this.hitsCombatant(caller, combatantHit);
+                            if (combatantHit.isMonster || combatantHit.isMinion) {
+                                this.hitsCombatant(caller, combatantHit);
+                            } else {
+                                this.missesTarget(caller);
+                            }
                     } else {
                         this.missesTarget(caller);
                     }
@@ -244,7 +254,11 @@ export function Monk(data, utilMethods, animationManager, overlayManager){
                     if (caller.pendingAttack.range === 'close' && caller.pendingAttack.name !== 'dragon punch') {
                         const combatantHit = await this.triggerPunch(caller.coordinates, facing)
                         if(combatantHit){
-                            this.hitsCombatant(caller, combatantHit)
+                                if (combatantHit.isMonster || combatantHit.isMinion) {
+                                    this.hitsCombatant(caller, combatantHit)
+                                } else {
+                                    this.missesTarget(caller);
+                                }
                         } else {
                             this.missesTarget(caller);
                         }
