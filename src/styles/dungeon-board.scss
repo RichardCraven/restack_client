@@ -107,70 +107,79 @@
                 }
             }
         }
-        .inventory{
-            padding-top: 5px;
-            align-items: center;
-            display: flex;
-            flex-direction: column;
-
-            transition: all 1s;
-            .title{
+        .crew-container {
+            .crew-actions{
                 color: white;
-                position: sticky;
-                top: 30px;
-                background: black;
-                z-index: 100;
-                height: 40px;
-                line-height: 40px;
-                margin-bottom: 10px;
-            }
-            .gold-readout, .shimmering-dust-readout, .totems-readout{
-                color: white;
-
-            }
-            .inventory-tile-container{
-                width: 170px;
-                display: flex;
-                flex-wrap: wrap;
-                align-items: center;
-                justify-content: center;
-                max-height: 820px;
-                overflow: scroll;
-                padding-top: 10px;
-                .sub-container{
-                    position: relative;
-                    margin-bottom: 8px;
-                    transition: filter 1s;
-                    &.consumed{
-                        filter: blur(20px);
-                    }
-                    .hover-message-container{
-                        position: absolute;
-                        top: -11px;
-                        left: 5px;
-                        width: 54px;
-                    }
-                    .hover-message{
-                        color: white;
-                        text-align: center;
-                        font-size: 9px;
-                        display: flex;
-                        justify-content: center;
-                        white-space: nowrap;
-                        
-                    }
-                    // .tile.inventory-tile{
-                    //     margin: 5px;
-                    //     background-color: lightgrey;
-                        
-                    //     &:hover{
-                    //         background-color: rgb(151, 176, 208) !important;
-                    //     }
-                    //     &.active{
-                    //         background-color: #f9b115 !important;
-                    //     }
-                    // }
+                text-align: left;
+                cursor: pointer;
+                padding: 8px;
+                svg{
+                    margin-right: 7px;
                 }
+                
+            }
+        }
+        .actions-tray{
+            color: white;
+            overflow: hidden;
+            transition: all 1s;
+            height: 0px;
+            min-height: 0px;
+            border: 1px solid #bbbbb84d;
+            display: flex;
+            justify-content: flex-start;
+            align-items: center;
+            padding-left: 21px;
+            &.expanded{
+                min-height: 50px;
+            }
+            .crew-action-item{
+                color: white;
+                cursor: pointer;
+                &:hover{
+                    color: #f9b115;
+                }
+            }
+        }
+
+        /* Ensure crew action rows have visible height so placeholders can be measured/drawn */
+        .crew-actions-tray {
+            .action-row {
+                position: relative;
+                min-height: 28px;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+            .camp-label {
+                display: inline-block;
+                line-height: 20px;
+                padding: 4px 6px;
+            }
+            .progress-overlay.debug-placeholder{
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                box-sizing: border-box;
+                display: block;
+                z-index: 2;
+                pointer-events: none; /* allow clicks to pass through */
+            }
+            /* CSS animation for smooth progress fill (fallback to canvas) */
+            .progress-overlay.camp-anim{
+                background-color: rgba(249,177,21,0.45);
+                width: 0%;
+                transition: none;
+                animation-name: campProgress;
+                animation-timing-function: linear;
+                animation-fill-mode: forwards;
+                height: 100%;
+            }
+            @keyframes campProgress{
+                from { width: 0%; }
+                to { width: 100%; }
             }
         }
         /* When crew-container is placed on the right panel, reuse the left-panel styling
@@ -179,7 +188,7 @@
             right: 0;
             top: 29px;
             transition: all 0.3s;
-            padding: 8px;
+            
             .title{
                 color: white;
                 position: sticky;
@@ -190,6 +199,22 @@
                 line-height: 32px;
                 margin-bottom: 8px;
             }
+            .death-tracker{
+                width: 100%;
+                height: 40px;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                padding: 8px;
+                .death-skull{
+                    width: 32px;
+                    height: 32px;
+                    background-size: contain;
+                    background-repeat: no-repeat;
+                    opacity: 0.95;
+                    filter: invert(1);
+                }
+            }
             .crew-tile-container{
                 width: 100%;
                 display: flex;
@@ -197,7 +222,7 @@
                 flex-wrap: nowrap; /* keep tiles on a single row */
                 gap: 8px;
                 overflow-x: auto; /* allow horizontal scrolling if too many */
-                padding-bottom: 6px;
+                padding: 8px;
                 .sub-container{
                     position: relative;
                     flex: 0 0 auto; /* prevent stretching */
@@ -671,6 +696,12 @@
                                 // background-color: #f9b11554;
                                 border: 1px solid transparent;
                             }
+
+                            /* debug helper: visually highlight debug placeholders */
+                            .progress-overlay.debug-placeholder{
+                                box-shadow: 0 0 0 2px rgba(249,177,21,0.6) inset;
+                                border: 1px dashed rgba(249,177,21,0.9);
+                            }
                             .action-icon{
                                 height: 28px;
                                 width: 28px;
@@ -851,6 +882,9 @@
                 margin-right: 10px;
             }
         }
+        /* When a menu button is placed inside the crew container on the right panel,
+           it should flow with the document (not be fixed to the viewport). */
+        
         .icon-container.expand-collapse-button{
             position: fixed;
             bottom: 10px;

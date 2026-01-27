@@ -668,9 +668,11 @@ export function CombatManager(){
         return Object.values(this.combatants).filter(e=> !e.isMonster && !e.isMinion && !e.dead)
     }
     this.itemUsed = (item, userInput) => {
+        console.log('item used, ', item);
         const user = this.combatants[userInput.id];
         switch(item.effect){
             case 'health gain': 
+                console.log('inside health gain')
                 const healthGain = Math.ceil(user.starting_hp * 0.01 * item.amount)
                 user.hp += healthGain
                 if(user.hp > user.starting_hp) user.hp = user.starting_hp
@@ -1992,6 +1994,31 @@ export function CombatManager(){
         hitsCombatant: this.hitsCombatant,
         targetKilled: this.targetKilled
     }
+    // Allow AI to consume consumables and notify UI (DungeonPage) to remove one item
+    utilMethods.useConsumable = (item, user) => {
+        console.log('in useConsumabkle', item, user);
+        try {
+            // Apply the item effect to the combatant
+            this.itemUsed(item, user);
+        } catch (e) { console.warn('useConsumable: itemUsed failed', e); }
+        try {
+            if (this.useConsumableCallback) this.useConsumableCallback(item);
+        } catch (e) { console.warn('useConsumable: useConsumableCallback failed', e); }
+        try { if (typeof this.broadcastDataUpdate === 'function') this.broadcastDataUpdate(user); } catch (e) {}
+    }
+    // Allow AI to query the current (communal) inventory via a registered callback
+    utilMethods.getCurrentInventory = () => {
+        try {
+            return (this.getCurrentInventoryCallback && typeof this.getCurrentInventoryCallback === 'function') ? this.getCurrentInventoryCallback() : [];
+        } catch (e) { return []; }
+    }
     this.fighterAI.connectUtilMethods(utilMethods)
     this.monsterAI.connectUtilMethods(utilMethods)
+
+    this.establishUseConsumableCallback = (cb) => {
+        this.useConsumableCallback = cb;
+    }
+    this.establishGetCurrentInventoryCallback = (cb) => {
+        this.getCurrentInventoryCallback = cb;
+    }
 }

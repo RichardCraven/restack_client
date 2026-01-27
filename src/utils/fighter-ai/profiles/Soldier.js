@@ -17,6 +17,8 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
     this.missesTarget = utilMethods.missesTarget;
     this.hitsTarget = utilMethods.hitsTarget;
     this.hitsCombatant = utilMethods.hitsCombatant;
+    this.useConsumable = utilMethods.useConsumable;
+    this.getCurrentInventory = utilMethods.getCurrentInventory;
 
     this.isFriendly = (e) => {
         return !e.isMonster && !e.isMinion;
@@ -249,6 +251,7 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
                         data.methods.closeTheGap(caller, combatants)
                     break;
                     case 2:
+                        console.log('era 2');
                         if(this.isSurrounded(caller, combatants)){
                             console.log('soldier is surrounded, do spin move. combatants:', combatants);
                             this.triggerSpinAttack(caller, combatants).then((combatantHit)=>{
@@ -259,6 +262,29 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
                                 // }
                             });
                             break;
+                        }
+                        console.log('attempt to drink', caller.hp, 'vs ', caller.starting_hp * 0.4);
+                        // Era 2: attempt to drink a health potion if low
+                        if (caller.hp < (caller.starting_hp * 0.4) && this.useConsumable && ((Array.isArray(caller.inventory) && caller.inventory.length) || (typeof this.getCurrentInventory === 'function' && this.getCurrentInventory().length))) {
+                            // Prefer communal inventory when available via utilMethods.getCurrentInventory()
+                            const groupInv = (typeof this.getCurrentInventory === 'function') ? this.getCurrentInventory() : (Array.isArray(caller.inventory) ? caller.inventory : []);
+                            const pIdx = groupInv.findIndex(i => i && (i.effect === 'health gain' || (i.name && i.name.toLowerCase().includes('potion'))));
+                            console.log('inside potion check', pIdx, groupInv);
+                            if (pIdx !== -1) {
+                                console.log('inside pIdx check');
+                                const isGroup = (typeof this.getCurrentInventory === 'function');
+                                let item;
+                                if (!isGroup && Array.isArray(caller.inventory)) {
+                                    item = caller.inventory.splice(pIdx, 1)[0];
+                                } else {
+                                    // If using group inventory, don't mutate it here — let the UI callback remove it
+                                    item = groupInv[pIdx];
+                                }
+                                console.log('item', item, 'useConsumable:', this.useConsumable);
+                                try { this.useConsumable(item, caller); } catch (e) {}
+                                try { if (typeof this.broadcastDataUpdate === 'function') this.broadcastDataUpdate(caller); } catch (e) {}
+                                break;
+                            }
                         }
                         data.methods.closeTheGap(caller, combatants)
                     break;
@@ -274,6 +300,22 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
                             });
                             break;
                         }
+                        if (caller.hp < (caller.starting_hp * 0.4) && this.useConsumable && ((Array.isArray(caller.inventory) && caller.inventory.length) || (typeof this.getCurrentInventory === 'function' && this.getCurrentInventory().length))) {
+                            const groupInv = (typeof this.getCurrentInventory === 'function') ? this.getCurrentInventory() : (Array.isArray(caller.inventory) ? caller.inventory : []);
+                            const pIdx = groupInv.findIndex(i => i && (i.effect === 'health gain' || (i.name && i.name.toLowerCase().includes('potion'))));
+                            if (pIdx !== -1) {
+                                const isGroup = (typeof this.getCurrentInventory === 'function');
+                                let item;
+                                if (!isGroup && Array.isArray(caller.inventory)) {
+                                    item = caller.inventory.splice(pIdx, 1)[0];
+                                } else {
+                                    item = groupInv[pIdx];
+                                }
+                                try { this.useConsumable(item, caller); } catch (e) {}
+                                try { if (typeof this.broadcastDataUpdate === 'function') this.broadcastDataUpdate(caller); } catch (e) {}
+                                break;
+                            }
+                        }
                         data.methods.closeTheGap(caller, combatants)
                     break;
                     case 4:
@@ -287,6 +329,22 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
                                 // }
                             });
                             break;
+                        }
+                        if (caller.hp < (caller.starting_hp * 0.4) && this.useConsumable && ((Array.isArray(caller.inventory) && caller.inventory.length) || (typeof this.getCurrentInventory === 'function' && this.getCurrentInventory().length))) {
+                            const groupInv = (typeof this.getCurrentInventory === 'function') ? this.getCurrentInventory() : (Array.isArray(caller.inventory) ? caller.inventory : []);
+                            const pIdx = groupInv.findIndex(i => i && (i.effect === 'health gain' || (i.name && i.name.toLowerCase().includes('potion'))));
+                            if (pIdx !== -1) {
+                                const isGroup = (typeof this.getCurrentInventory === 'function');
+                                let item;
+                                if (!isGroup && Array.isArray(caller.inventory)) {
+                                    item = caller.inventory.splice(pIdx, 1)[0];
+                                } else {
+                                    item = groupInv[pIdx];
+                                }
+                                try { this.useConsumable(item, caller); } catch (e) {}
+                                try { if (typeof this.broadcastDataUpdate === 'function') this.broadcastDataUpdate(caller); } catch (e) {}
+                                break;
+                            }
                         }
                         data.methods.closeTheGap(caller, combatants)
                     break;

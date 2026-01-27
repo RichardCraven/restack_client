@@ -75,7 +75,7 @@ const ModalInner = ({ modalType, updates, crew, tileSize, handleMemberClickRitua
                                     handleHover={handleCrewTileHover}
                                     className={`crew-tile `}> </Tile>
                                 {setMemberRitualOptions === magicUser && <div className="options-zone">
-                                    <div className="option" onClick={()=> console.log('learn')}>Learn</div>
+                                    <div className="option" onClick={()=> {/* learn */}}>Learn</div>
                                     <div className={`option ${magicUser.specialActions.filter(e=>e.type === 'ritual').length === 0 ? 'disabled' : ''}`}>Perform ritual 3x</div>
                                 </div>}
                             </div>
@@ -231,12 +231,11 @@ class DungeonPage extends React.Component {
                 if (!a || !a.endDate) return;
                 const end = new Date(a.endDate);
                 const now = new Date();
-                if (end - now < 0) {
+                        if (end - now < 0) {
                     if (!a.available) {
                         a.available = true;
                         modified = true;
                         numeralUpdate = true;
-                        console.log('MARKING AS AVAILABLE');
                     }
                     if (markNotified) {
                         if (!a.notified) {
@@ -392,6 +391,8 @@ class DungeonPage extends React.Component {
             return {
                 leftPanelExpanded: meta?.leftExpanded,
                 rightPanelExpanded: meta?.rightExpanded,
+                // persist/rehydrate crew actions tray expanded state
+                crewActionsTrayExpanded: meta?.crewActionsTrayExpanded || false,
                 crewSize: meta.crew.length,
                 minimap,
                 updates,
@@ -508,6 +509,32 @@ class DungeonPage extends React.Component {
                 this.cooldownAnimationFrame = requestAnimationFrame(this.drawCooldowns);
             }
         } catch (e) {}
+
+        // If a camp was active before a reload, rehydrate the camping state so the
+        // progress continues from the stored start/end times and the endCamp is scheduled.
+        try {
+            const meta = getMeta() || {};
+            if (meta.camping && meta.campingEnd) {
+                const now = new Date();
+                const end = new Date(meta.campingEnd);
+                const remaining = end - now;
+                if (remaining > 0) {
+                    // ensure continuous draw loop while camping
+                    this._forcedDraw = true;
+                    if (!this.cooldownAnimationFrame) this.cooldownAnimationFrame = requestAnimationFrame(this.drawCooldowns);
+                    // lock movement hotkeys while rehydrated camping is active
+                    try { this.setState({ keysLocked: true }); } catch(e) {}
+                    // schedule endCamp after the remaining time
+                    try { this.campTimeout = setTimeout(() => { try { this.endCamp(); } catch(e){ console.warn('endCamp timeout failed during rehydrate', e); } }, remaining + 200); } catch(e){}
+                    // refresh player visuals and overlay tiles
+                    try{ if (this.props.boardManager && typeof this.props.boardManager.placePlayer === 'function') this.props.boardManager.placePlayer(this.props.boardManager.playerTile.location); } catch(e){}
+                    try{ this.setState({ overlayTiles: this.props.boardManager.overlayTiles }); } catch(e){}
+                } else {
+                    // expired while offline / between reloads: end immediately
+                    try { setTimeout(() => { try { this.endCamp(); } catch(e){} }, 50); } catch(e){}
+                }
+            }
+        } catch(e) {}
         
         this.props.boardManager.establishAddItemToInventoryCallback(this.addItemToInventory)
         this.props.boardManager.establishAddTreasureToInventoryCallback(this.addTreasureToInventory)
@@ -684,10 +711,18 @@ class DungeonPage extends React.Component {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.scale(dpr, dpr);
             const now = new Date();
+            try { if (!this._lastDebugLogTime) this._lastDebugLogTime = 0; } catch(e) { this._lastDebugLogTime = 0; }
             for (const [id, entry] of this._placeholderRegistry) {
                 try {
                     const { el, start, end } = entry;
+                    // debug: occasional log (disabled to avoid console spam)
                     if (!el || !start || !end) continue;
+                    // Skip canvas drawing for the camp CSS-driven placeholder so we don't double-draw
+                    try {
+                        if (id === 'camp-progress-placeholder' || (el.classList && el.classList.contains && el.classList.contains('camp-anim'))) {
+                            continue;
+                        }
+                    } catch (e) {}
                     if (now < start || now >= end) continue;
                     const pct = Math.min(1, (now - start) / (end - start));
                     const r = el.getBoundingClientRect();
@@ -699,6 +734,7 @@ class DungeonPage extends React.Component {
                     // Updated to use the requested color #f9b11554 (approx rgba(249,177,21,0.329))
                     ctx.fillStyle = 'rgba(249,177,21,0.6)';
                     ctx.fillRect(x, y, w * pct, h);
+                    // debug: draw logging disabled to avoid frequent console output
                 } catch (inner) {
                     // skip problematic element
                 }
@@ -710,9 +746,9 @@ class DungeonPage extends React.Component {
             console.warn('Error drawing cooldowns', e);
         }
 
-        // Schedule next frame only if there are still active cooldowns
+        // Schedule next frame while there are active cooldowns or forced draw is enabled
         try {
-            if (this.hasActiveCooldowns()) {
+            if (this.hasActiveCooldowns() || this._forcedDraw) {
                 this.cooldownAnimationFrame = requestAnimationFrame(this.drawCooldowns);
             } else {
                 this.cooldownAnimationFrame = null;
@@ -745,9 +781,28 @@ class DungeonPage extends React.Component {
                 const s = start ? new Date(start) : null;
                 const e = end ? new Date(end) : null;
                 this._placeholderRegistry.set(id, { el, start: s, end: e });
+                // try { console.log(`placeholderRef: registered ${id} start=${s} end=${e}`); } catch(e){}
+                // ensure the draw loop is running when a new active placeholder is registered
+                try {
+                    if (!this.cooldownAnimationFrame && (this.hasActiveCooldowns() || this._forcedDraw)) {
+                        this.cooldownAnimationFrame = requestAnimationFrame(this.drawCooldowns);
+                    }
+                } catch (e) {}
             } else {
                 // element unmounted, remove from registry
                 this._placeholderRegistry.delete(id);
+                // try { console.log(`placeholderRef: unregistered ${id}`); } catch(e){}
+                // if no active placeholders, stop the draw loop and clear canvas
+                try {
+                    if (!this.hasActiveCooldowns() && !this._forcedDraw && this.cooldownAnimationFrame) {
+                        cancelAnimationFrame(this.cooldownAnimationFrame);
+                        this.cooldownAnimationFrame = null;
+                        if (this.cooldownCanvas) {
+                            const ctx = this.cooldownCanvas.getContext && this.cooldownCanvas.getContext('2d');
+                            if (ctx) ctx.clearRect(0, 0, this.cooldownCanvas.width, this.cooldownCanvas.height);
+                        }
+                    }
+                } catch (e) {}
             }
         } catch (e) {
             // ignore
@@ -755,7 +810,6 @@ class DungeonPage extends React.Component {
     }
     logMeta = () => {
         const meta = getMeta();
-        console.log('meta: ', meta);
     }
     setNewRespawnDate = () => {
         let soon = new Date().addMinutes(1)
@@ -850,7 +904,6 @@ class DungeonPage extends React.Component {
         })
     }
     triggerMonsterBattle = (bool, tileId) => {
-        console.log('trigger monster battle, crew: ', this.props.crewManager.crew);
         this.setState({
             keysLocked: bool,
             inMonsterBattle: bool,
@@ -893,7 +946,7 @@ class DungeonPage extends React.Component {
         levelTracker.forEach(e=>e.active = false)
         const level = levelTracker.find(e=>e.id === newLevelId);
         if(!level){
-            console.log('new level doesnt exist in dungeon page, initialize better!');
+            // level missing -- initialize better
             debugger
         }
         level.active = true;
@@ -1029,9 +1082,7 @@ class DungeonPage extends React.Component {
         })
     }
     toggleFullscreen = () => {
-        console.log('toggle full screen');
         const currentState = this.state.showFullScreen;
-        console.log('currentState', currentState);
         this.toggleLeftSidePanel({expanded: !currentState});
         this.toggleRightSidePanel({expanded: !currentState});
         this.setState(()=>{
@@ -1076,9 +1127,7 @@ class DungeonPage extends React.Component {
             // Toggle dungeon-level inventory when not in a monster battle
             if ((maybeKey === 'i' || maybeKey === 'I') && !this.state.inMonsterBattle) {
                 event.preventDefault();
-                this.setState((prev) => ({ showInventoryPopup: !prev.showInventoryPopup }), () => {
-                    console.log('[inventory] toggled showInventoryPopup', this.state.showInventoryPopup);
-                });
+                    this.setState((prev) => ({ showInventoryPopup: !prev.showInventoryPopup }));
                 return;
             }
         } catch (err) {
@@ -1101,7 +1150,7 @@ class DungeonPage extends React.Component {
         //     })
         // }
 
-        console.log('code: ', code, 'key', key);
+    // debug code/key log removed
         if(code === 'p'){
             let paused = !this.state.paused;
             this.props.combatManager.pauseCombat(paused)
@@ -1113,8 +1162,7 @@ class DungeonPage extends React.Component {
             this.checkWhichSideOfBoard();
         }
         switch(key){
-            case '1':
-                console.log('in 1');
+                case '1':
                 this.toggleFullscreen();
             break;
             case 'Space':
@@ -1314,7 +1362,6 @@ class DungeonPage extends React.Component {
     }
     handleClick = (tile) => {
         // nothing
-        console.log('tile: ', tile);
     }
     handleOverlayClick = (tile, event) => {
         if(!this.state.minimapPlaceMapMarkerStarted) return
@@ -1334,7 +1381,7 @@ class DungeonPage extends React.Component {
                 }
             break;
             case 'merchant':
-                console.log('merchant marker not set up yet');
+                // merchant marker handling not implemented yet
             break;
             case 'gate':
                 {
@@ -1353,7 +1400,7 @@ class DungeonPage extends React.Component {
                 }
             break;
             case 'custom':
-                console.log('custom marker not set up yet');
+                // custom marker handling not implemented yet
             break;
             default:
                 break;
@@ -1365,16 +1412,11 @@ class DungeonPage extends React.Component {
     }
 
     handleMemberClickRitual = (member) => {
-        console.log('member: ', member);
         this.setState({
             setMemberRitualOptions: member.data
         })
-        setTimeout(()=>{
-            console.log('equal? ', member === this.state.setMemberRitualOptions);
-        }, 1000)
     }
     learnNewRitual = (magicUser) => {
-        console.log(magicUser.name, 'learns a new ritual');
         this.setState({ritualWrecked: true})
         setTimeout(()=>{
             this.setState({ritualWrecked: false}) 
@@ -1586,7 +1628,7 @@ class DungeonPage extends React.Component {
             d.id = e._id
             dungeons.push(d)
         })
-        console.log('dungeons: ', dungeons);
+    // dungeons loaded
         selectedDungeon = dungeons[0]
         // selectedDungeon = dungeons.find(e=>e.name === 'Primari');
         let newDungeonPayload = {
@@ -1604,7 +1646,7 @@ class DungeonPage extends React.Component {
         // ^ need to populate spawnList
         spawnPoint = selectedDungeon.spawn_points[0]
         this.props.inventoryManager.initializeItems()
-        console.log('spawnpoint: ', spawnPoint);
+    // spawnpoint selected
         if(spawnPoint){
             // return
             this.props.boardManager.setDungeon(selectedDungeon);
@@ -1616,7 +1658,7 @@ class DungeonPage extends React.Component {
             const spawnTileIndex = spawnPoint.id;
             const board = orientation === 'F' ? level.front.miniboards[miniboardIndex] : (orientation === 'B' ? level.back.miniboards[miniboardIndex] : null)
             if(board === null){
-                console.log('board is null, investigate');
+                // board is null -- investigate
                 debugger
             }
             
@@ -1679,17 +1721,15 @@ class DungeonPage extends React.Component {
                 this.toggleRightSidePanel();
             }, 1000)
         } else {
-            console.log('uhhhh', 'NO VALID DUNGEON!?');
+            // no valid dungeon
             // alert('no valid dungeon!')
         }
     }
     loadExistingDungeon = async (dungeonId) => {
         const meta = getMeta();
-        console.log('meta: ', meta);
         const res = await loadDungeonRequest(dungeonId);
-        console.log('res: ', res);
         if(res.data && res.data.length === 0){
-            console.log('looks like cached dungeon was deleted, go to first time flow');
+            // cached dungeon deleted; go to first time flow
             this.loadNewDungeon();
             return
         }
@@ -1729,8 +1769,7 @@ class DungeonPage extends React.Component {
             meta.minimapIndicators.push(indicatorsGroup)
             storeMeta(meta)
         }
-        let selectedCrewMember = this.props.crewManager.crew.find(c=>c.selected) || {};
-        console.log('selectedCrewMember: ', selectedCrewMember);
+    let selectedCrewMember = this.props.crewManager.crew.find(c=>c.selected) || {};
         this.setState(()=>{
             return {
                 spawn: meta.location.tileIndex,
@@ -1746,7 +1785,7 @@ class DungeonPage extends React.Component {
         })
     }
     toggleLeftSidePanel = async (val = null) => {
-        console.log('toggleLeftSidePanel called with', val);
+        // toggle left side panel
         // If called as an onClick handler it may receive an event object.
         // Accept either an object like { expanded: true } or no arg to toggle.
         const newVal = (val && typeof val === 'object' && Object.prototype.hasOwnProperty.call(val, 'expanded')) ? val.expanded : !this.state.leftPanelExpanded;
@@ -1778,11 +1817,95 @@ class DungeonPage extends React.Component {
 
         this.setState({actionsTrayExpanded: newVal})
     }
+    toggleCrewActionsTray = () => {
+        const newVal = !this.state.crewActionsTrayExpanded;
+        // persist crew actions tray state to meta so it survives reloads
+        try {
+            const meta = getMeta() || {};
+            meta.crewActionsTrayExpanded = newVal;
+            storeMeta(meta);
+            if (this.props.saveUserData) this.props.saveUserData();
+        } catch (e) {}
+        this.setState({ crewActionsTrayExpanded: newVal });
+    }
+
+    // Start camping. Accepts optional durationSeconds (number). If called as an event handler,
+    // the first param may be an event object; use default when not provided.
+    setUpCamp = async (maybeDuration) => {
+        let durationSeconds = 180;
+        try { if (typeof maybeDuration === 'number') durationSeconds = maybeDuration; } catch(e){}
+        try {
+            try { if (this.campTimeout) { clearTimeout(this.campTimeout); this.campTimeout = null; } } catch (e) {}
+            let meta = getMeta() || {};
+            const now = new Date();
+            meta.camping = true;
+            meta.campingStart = now.toISOString();
+            meta.campingEnd = new Date(now.getTime() + durationSeconds * 1000).toISOString();
+            storeMeta(meta);
+            try { await updateUserRequest(getUserId(), meta); } catch (e) {}
+            // Persist meta via the higher-level save helper so location and session
+            // state are stored consistently (ensures position is saved on refresh).
+            try { if (this.props.saveUserData) await this.props.saveUserData(); } catch (e) {}
+            // camping started
+            // lock movement hotkeys while camping
+            try { this.setState({ keysLocked: true }); } catch(e) {}
+            if (this.props.boardManager && typeof this.props.boardManager.placePlayer === 'function') {
+                try{ this.props.boardManager.placePlayer(this.props.boardManager.playerTile.location); } catch(e){}
+            }
+            this.setState({ overlayTiles: this.props.boardManager.overlayTiles });
+            // ensure continuous draw loop while camping to avoid flashing
+            try {
+                this._forcedDraw = true;
+                if (!this.cooldownAnimationFrame) this.cooldownAnimationFrame = requestAnimationFrame(this.drawCooldowns);
+            } catch (e) {}
+            // schedule end
+            try { this.campTimeout = setTimeout(() => { try { this.endCamp(); } catch(e){ console.warn('endCamp timeout failed', e); } }, durationSeconds*1000 + 200); } catch(e){}
+        } catch (err) { console.warn('setUpCamp error', err); }
+    }
+
+    // End camping immediately and apply restorative effects
+    endCamp = async () => {
+        try {
+            try { if (this.campTimeout) { clearTimeout(this.campTimeout); this.campTimeout = null; } } catch (e) {}
+            let m = getMeta() || {};
+            m.camping = false;
+            delete m.campingStart;
+            delete m.campingEnd;
+            try {
+                const crew = (this.props.crewManager && this.props.crewManager.crew) || [];
+                crew.forEach(member => {
+                    if (!member) return;
+                    if (member.dead) { member.dead = false; member.hp = 1; }
+                    else { try { member.hp = (member.stats && typeof member.stats.hp === 'number') ? member.stats.hp : member.hp || 0; } catch(e){} }
+                });
+                m.crew = crew;
+                try { if (this.props.crewManager) this.props.crewManager.crew = m.crew; } catch(e){}
+            } catch(e){}
+            storeMeta(m);
+            try { await updateUserRequest(getUserId(), m); } catch(e){}
+            if (this.props.boardManager && typeof this.props.boardManager.placePlayer === 'function') {
+                try{ this.props.boardManager.placePlayer(this.props.boardManager.playerTile.location); } catch(e){}
+            }
+            this.setState({ overlayTiles: this.props.boardManager.overlayTiles, selectedCrewMember: this.state.selectedCrewMember });
+            try { if (this.props.saveUserData) this.props.saveUserData(); } catch(e){}
+            // camping ended and crew restored
+            // unlock movement hotkeys
+            try { this.setState({ keysLocked: false }); } catch(e) {}
+            // stop forced draw loop and clear canvas
+            try {
+                this._forcedDraw = false;
+                if (this.cooldownAnimationFrame) { cancelAnimationFrame(this.cooldownAnimationFrame); this.cooldownAnimationFrame = null; }
+                if (this.cooldownCanvas) {
+                    const ctx = this.cooldownCanvas.getContext && this.cooldownCanvas.getContext('2d');
+                    if (ctx) ctx.clearRect(0, 0, this.cooldownCanvas.width, this.cooldownCanvas.height);
+                }
+            } catch (e) {}
+        } catch (err) { console.warn('endCamp error', err); }
+    }
     uppercaseFirstLetter = (text) => {
         return text.charAt(0).toUpperCase() + text.slice(1);
     }
     battleOver = (result) => {
-        console.log('battle over resu3lt: ', result);
         if(result === 'win'){
             this.props.boardManager.removeDefeatedMonsterTile(this.state.monsterBattleTileId)
             this.props.crewManager.checkForLevelUp(this.props.crewManager.crew)
@@ -1998,7 +2121,6 @@ class DungeonPage extends React.Component {
     return percentageComplete;
     }
     onUpdateModalClosed = () => {
-        console.log('on update modal closed');
         switch(this.state.modalType){
             case 'Updates':
                 const meta = getMeta();
@@ -2036,7 +2158,6 @@ class DungeonPage extends React.Component {
         return side
     }
     triggerRitualEncounter = () => {
-        console.log('trigger ritual encounter');
         this.setState({
             keysLocked: true,
             modalType: 'Magic',
@@ -2413,6 +2534,58 @@ class DungeonPage extends React.Component {
                                         </div>
                             })
                         }
+                    </div>
+                    {/* Crew Actions: a right-panel mirror of the left Actions menu */}
+                    <div className="menu crew-actions" onClick={this.toggleCrewActionsTray}>
+                        <CIcon icon={cilMenu} className={`menu-icon ${this.state.crewActionsTrayExpanded ? 'expanded' : ''}`} size="sm"/>
+                        Crew Actions
+                    </div>
+                    <div className={`actions-tray crew-actions-tray ${this.state.crewActionsTrayExpanded ? 'expanded' : ''}`}>
+                        {(() => {
+                            const meta = getMeta() || {};
+                            const camping = meta.camping;
+                            if (camping) {
+                                const start = meta.campingStart || '';
+                                const end = meta.campingEnd || '';
+                                const now = new Date();
+                                const startDate = start ? new Date(start) : null;
+                                const endDate = end ? new Date(end) : null;
+                                // compute total and elapsed seconds so we can use a negative animationDelay
+                                const totalSeconds = (startDate && endDate) ? Math.max(0, (endDate - startDate) / 1000) : 0;
+                                const elapsedSeconds = (startDate) ? Math.max(0, (now - startDate) / 1000) : 0;
+                                // use a stable id so the placeholder element is not recreated each render
+                                const placeholderId = 'camp-progress-placeholder';
+                                return (
+                                    <div className="crew-action-item action-row" style={{position:'relative'}}>
+                                        <div className="camp-label" style={{position: 'relative'}}>
+                                            Recuperating in Camp...
+                                            <div
+                                                id={placeholderId}
+                                                ref={el => this.placeholderRef(el, placeholderId, start, end)}
+                                                className={`progress-overlay progress-overlay-placeholder debug-placeholder camp-anim`}
+                                                data-start={start}
+                                                data-end={end}
+                                                style={{ animationDuration: `${totalSeconds}s`, animationDelay: `-${elapsedSeconds}s` }}
+                                            ></div>
+                                            <div
+                                                onClick={() => this.endCamp()}
+                                                role="button"
+                                                aria-label="Close camp"
+                                                style={{position: 'absolute', right: 6, top: 2, cursor: 'pointer', fontWeight: 700, zIndex: 3}}
+                                            >
+                                                ×
+                                            </div>
+                                            </div>
+                                        
+                                    </div>
+                                );
+                            }
+                            return (
+                                <div className="crew-action-item action-row" style={{display:'flex', gap:8}}>
+                                    <div onClick={() => this.setUpCamp()} style={{cursor:'pointer'}}>Set Up Camp</div>
+                                </div>
+                            );
+                        })()}
                     </div>
                 </div>
                 <div className="expand-collapse-button icon-container" onClick={this.toggleRightSidePanel}>

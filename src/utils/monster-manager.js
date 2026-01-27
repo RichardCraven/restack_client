@@ -368,7 +368,7 @@ export function MonsterManager(){
             type: 'goblin',
             key: 'goblin',
             image_names: ['goblin'],
-            monster_names: ['Wiggit', 'Miggi'],
+            monster_names: ['Wiggit', 'Miggi', "Gurnak"],
             stats: {
                 str: 4,
                 int:2,

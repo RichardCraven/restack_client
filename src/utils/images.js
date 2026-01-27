@@ -319,6 +319,9 @@ import magic_missile_inverted from '../assets/icons/misc/cycle_inverted.png'
 import body_male from '../assets/icons/figures/body_man.png'
 import body_female from '../assets/icons/figures/body_fem.png'
 
+//camp
+import camp from '../assets/icons/misc/camp/camp-1.png'
+
 export {
     hand_1,
     hand_2,
@@ -583,5 +586,7 @@ export {
     fire_blast,
 
     body_male,
-    body_female
+    body_female, 
+
+    camp
 };

@@ -9,8 +9,9 @@ import '../../styles/inventory-modal.scss';
 import { Redirect } from "react-router-dom";
 import {storeMeta, getMeta, getUserId, getUserName} from '../../utils/session-handler';
 import {
-    updateUserRequest
-  } from '../../utils/api-handler';
+        updateUserRequest,
+        deleteDungeonRequest
+    } from '../../utils/api-handler';
 import Canvas from '../../components/Canvas/canvas'
 import Overlay from '../../components/Overlay'
 import CanvasMagicMissile from '../../components/Canvas/canvas_magic_missile'
@@ -140,6 +141,7 @@ class MonsterBattle extends React.Component {
             draggingFighter: null,
             ghostPortraitMatrix: [],
             showSummaryPanel: false,
+            suppressSummaryPortraits: false,
             // Inventory popup visibility
             showInventoryPopup: false,
             summaryMessage: '',
@@ -157,6 +159,8 @@ class MonsterBattle extends React.Component {
                magicMissile_targetLaneDiff: 0,
             teleportingFighterId: null
         }
+        // Internal flags for special group-death flow
+        this._suppressPersistFinalHP = false;
         // Internal flag to ensure we only inject wizard spells once for simulation battles
         this._wizardSpellsEnsured = false;
     }
@@ -725,38 +729,141 @@ class MonsterBattle extends React.Component {
         } else {
             battleResult = 'loss'
             summaryMessage = 'Death has come for you and yours.'
-            this.launchDeathSequence();
+            // Implement group-death handling: track group deaths in meta.deathTracker.
+            // On non-final deaths: increment counter, restore crew HP to 1, respawn at dungeon spawn,
+            // and show the summary panel (do NOT navigate to the death scene).
+            // On the third full-group death: clear dungeon and crew, persist, then run the final death sequence.
+            try {
+                const meta = getMeta();
+                let deaths = meta.deathTracker || 0;
+                deaths = deaths + 1;
+                meta.deathTracker = deaths;
+                try { storeMeta(meta); } catch(e) {}
+                try { updateUserRequest(getUserId(), meta).catch(()=>{}); } catch(e) {}
+
+                if (deaths >= 3) {
+                    // Final death: clear dungeon and crew now, persist, then launch final death sequence.
+                    try {
+                        if (meta.dungeonId) {
+                            // best-effort delete remote dungeon
+                            try { deleteDungeonRequest(meta.dungeonId).catch(()=>{}); } catch(e) {}
+                        }
+                    } catch (inner) {}
+                    try {
+                        this.props.boardManager.dungeon.id = null;
+                    } catch(e) {}
+                    try { this.props.inventoryManager.inventory = []; } catch(e) {}
+                    meta.dungeonId = null;
+                    meta.location = null;
+                    meta.inventory = { items: [], gold: 0, shimmering_dust: 0, totems: 0 };
+                    meta.crew = [];
+                    try { storeMeta(meta); } catch(e) {}
+                    try { updateUserRequest(getUserId(), meta).catch(()=>{}); } catch(e) {}
+                    try { this.props.crewManager.initializeCrew([]); } catch(e) {}
+                    try { if (this.props.saveUserData) this.props.saveUserData(); } catch(e) {}
+
+                    // Now run the usual final death sequence which navigates to the death scene
+                    this.launchDeathSequence();
+                } else {
+                    // We will show the battle summary (without portraits), wait 3s, then launch
+                    // the death narrative and perform the respawn & restore so the narrative
+                    // plays before the crew are moved/cleared in the UI.
+                    try {
+                        // persist the incremented death tracker now
+                        try { storeMeta(meta); } catch(e) {}
+                        try { updateUserRequest(getUserId(), meta).catch(()=>{}); } catch(e) {}
+                    } catch (inner) {}
+
+                    // Suppress the later "persist final HP" block so it does not overwrite our planned restore
+                    this._suppressPersistFinalHP = true;
+
+                    // Set a state flag so the summary-panel rendering hides portraits
+                    try { this.setState({ suppressSummaryPortraits: true }); } catch(e) {}
+
+                    // After a short delay, close summary, launch death sequence, then restore crew and respawn
+                    setTimeout(async () => {
+                        try { this.setState({ showSummaryPanel: false, suppressSummaryPortraits: false }); } catch(e) {}
+                        // Launch death narrative
+                        try { this.launchDeathSequence(); } catch(e) {}
+
+                        // Perform respawn & restore (best-effort)
+                        try {
+                            const meta2 = getMeta();
+                            if (meta2 && Array.isArray(meta2.crew)) {
+                                meta2.crew.forEach(c => {
+                                    if (!c) return;
+                                    c.hp = 1;
+                                    c.dead = false;
+                                });
+                                try { storeMeta(meta2); } catch(e) {}
+                                try { updateUserRequest(getUserId(), meta2).catch(()=>{}); } catch(e) {}
+                                try { this.props.crewManager.initializeCrew(meta2.crew); } catch(e) {}
+                                try { if (this.props.saveUserData) this.props.saveUserData(); } catch(e) {}
+
+                                // Notify parent UI for each crew member so DungeonPage updates portrait overlays
+                                try {
+                                    if (this.props && typeof this.props.onFighterUpdate === 'function') {
+                                        meta2.crew.forEach(c => {
+                                            try { this.props.onFighterUpdate(c); } catch (inner) {}
+                                        });
+                                    }
+                                } catch (inner) { }
+                            }
+
+                            // Try to respawn the player at spawn point
+                            try {
+                                if (meta2 && meta2.location) {
+                                    this.props.boardManager.initializeTilesFromMap(meta2.location.boardIndex, meta2.location.tileIndex);
+                                }
+                            } catch (inner) { console.warn('group-death: respawn failed', inner); }
+                        } catch (inner) { console.warn('group-death: restore failed', inner); }
+
+                        // allow later persistence block to run normally again
+                        this._suppressPersistFinalHP = false;
+                    }, 3000);
+                    // Show the summary panel now (it will be visible until the timeout closes it)
+                    try { this.setState({ showSummaryPanel: true }); } catch(e) {}
+                }
+            } catch (err) {
+                console.warn('group-death handler failed, falling back to death scene', err);
+                this.launchDeathSequence();
+            }
         }
 
         // Persist final HP and dead state for crew once when combat ends
         try {
-            const meta = getMeta();
-            if (meta && Array.isArray(meta.crew)) {
-                let modified = false;
-                const battleEntries = this.state.battleData || {};
-                Object.values(battleEntries).forEach(entry => {
-                    try {
-                        if (!entry) return;
-                        if (entry.isMonster || entry.isMinion) return;
-                        const idx = meta.crew.findIndex(c => c && c.id === entry.id);
-                        if (idx !== -1) {
-                            if (typeof entry.hp !== 'undefined' && meta.crew[idx].hp !== entry.hp) {
-                                meta.crew[idx].hp = entry.hp;
-                                modified = true;
+            // If a group-death flow is in-progress, skip persisting final HP (we'll restore later)
+            if (this._suppressPersistFinalHP) {
+                // do nothing
+            } else {
+                const meta = getMeta();
+                if (meta && Array.isArray(meta.crew)) {
+                    let modified = false;
+                    const battleEntries = this.state.battleData || {};
+                    Object.values(battleEntries).forEach(entry => {
+                        try {
+                            if (!entry) return;
+                            if (entry.isMonster || entry.isMinion) return;
+                            const idx = meta.crew.findIndex(c => c && c.id === entry.id);
+                            if (idx !== -1) {
+                                if (typeof entry.hp !== 'undefined' && meta.crew[idx].hp !== entry.hp) {
+                                    meta.crew[idx].hp = entry.hp;
+                                    modified = true;
+                                }
+                                if (typeof entry.dead !== 'undefined' && meta.crew[idx].dead !== entry.dead) {
+                                    meta.crew[idx].dead = !!entry.dead;
+                                    modified = true;
+                                }
                             }
-                            if (typeof entry.dead !== 'undefined' && meta.crew[idx].dead !== entry.dead) {
-                                meta.crew[idx].dead = !!entry.dead;
-                                modified = true;
-                            }
-                        }
-                        // notify parent so DungeonPage immediately reflects final HP/dead
-                        try { if (this.props && typeof this.props.onFighterUpdate === 'function') this.props.onFighterUpdate(entry); } catch(e) {}
-                    } catch (inner) {}
-                });
-                if (modified) {
-                    try { storeMeta(meta); } catch (e) {}
-                    try { updateUserRequest(getUserId(), meta).catch(()=>{}); } catch(e) {}
-                    try { if (this.props.saveUserData) this.props.saveUserData(); } catch(e) {}
+                            // notify parent so DungeonPage immediately reflects final HP/dead
+                            try { if (this.props && typeof this.props.onFighterUpdate === 'function') this.props.onFighterUpdate(entry); } catch(e) {}
+                        } catch (inner) {}
+                    });
+                    if (modified) {
+                        try { storeMeta(meta); } catch (e) {}
+                        try { updateUserRequest(getUserId(), meta).catch(()=>{}); } catch(e) {}
+                        try { if (this.props.saveUserData) this.props.saveUserData(); } catch(e) {}
+                    }
                 }
             }
         } catch (err) {
@@ -1257,29 +1364,31 @@ class MonsterBattle extends React.Component {
                             <div className="experience-container">
                                 Each crew member has earned {this.state.experienceGained} experience
                             </div>} 
-                            <div className="portraits-container">
-                                {Object.values(this.state.battleData).filter(e=>!e.dead && !e.isMonster && !e.isMinion).map((crewMember, i) => {
-                                    return <div key={i} className="single-portrait-container">
-                                        <div className="portrait" style={{backgroundImage: `url(${crewMember.portrait})`}}></div>
-                                        {this.props.crewManager.calculateExpPercentage(crewMember) >= 100 && <Canvas 
-                                        className="level-up-canvas"
-                                        width={80}
-                                        height={80}
-                                        draw={this.draw}
-                                        />}
-                                        <div className="experience-bar-container">
-                                            <div className="experience-bar" style={{width: `${this.props.crewManager.calculateExpPercentage(crewMember)}%`}}></div>
+                            { !this.state.suppressSummaryPortraits && (
+                                <div className="portraits-container">
+                                    {Object.values(this.state.battleData).filter(e=>!e.dead && !e.isMonster && !e.isMinion).map((crewMember, i) => {
+                                        return <div key={i} className="single-portrait-container">
+                                            <div className="portrait" style={{backgroundImage: `url(${crewMember.portrait})`}}></div>
+                                            {this.props.crewManager.calculateExpPercentage(crewMember) >= 100 && <Canvas 
+                                            className="level-up-canvas"
+                                            width={80}
+                                            height={80}
+                                            draw={this.draw}
+                                            />}
+                                            <div className="experience-bar-container">
+                                                <div className="experience-bar" style={{width: `${this.props.crewManager.calculateExpPercentage(crewMember)}%`}}></div>
+                                            </div>
                                         </div>
-                                    </div>
-                                })}
-                                {Object.values(this.state.battleData).filter(e=>e.dead && !e.isMonster && !e.isMinion).map((crewMember, i) => {
-                                    return <div key={i} className="single-portrait-container dead-member">
-                                        <div className="portrait" style={{backgroundImage: `url(${crewMember.portrait})`}}>
-                                            <div className="skull-image" style={{backgroundImage: `url(${images['whiteskull']})`}}></div>
+                                    })}
+                                    {Object.values(this.state.battleData).filter(e=>e.dead && !e.isMonster && !e.isMinion).map((crewMember, i) => {
+                                        return <div key={i} className="single-portrait-container dead-member">
+                                            <div className="portrait" style={{backgroundImage: `url(${crewMember.portrait})`}}>
+                                                <div className="skull-image" style={{backgroundImage: `url(${images['whiteskull']})`}}></div>
+                                            </div>
                                         </div>
-                                    </div>
-                                })}
-                            </div>
+                                    })}
+                                </div>
+                            )}
                         </div>
                         <div className="button-row">
                             <div className="confirm-button" onClick={() => this.confirmClicked()}>OK</div>

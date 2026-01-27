@@ -21,6 +21,7 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
     this.missesTarget = utilMethods.missesTarget;
     this.hitsTarget = utilMethods.hitsTarget;
     this.hitsCombatant = utilMethods.hitsCombatant;
+    this.useConsumable = utilMethods.useConsumable;
     // Override targetKilled to match monster/minion death animation and removal
     this.targetKilled = (target) => {
         // Blue ripple animation on death
@@ -303,6 +304,16 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                         }
                     break;
                     case 2:
+                        // If low HP, attempt to consume a health potion before other actions
+                        if (caller.hp < (caller.starting_hp * 0.4) && this.useConsumable && Array.isArray(caller.inventory) && caller.inventory.length) {
+                            const pIdx = caller.inventory.findIndex(i => i && (i.effect === 'health gain' || (i.name && i.name.toLowerCase().includes('potion'))));
+                            if (pIdx !== -1) {
+                                const item = caller.inventory.splice(pIdx, 1)[0];
+                                try { this.useConsumable(item, caller); } catch (e) {}
+                                try { if (typeof this.broadcastDataUpdate === 'function') this.broadcastDataUpdate(caller); } catch (e) {}
+                                break;
+                            }
+                        }
                         if (target && targetHasMoreThanHalfHp &&  this.useSpell(caller, combatants)) {
                             break;
                         }
@@ -316,6 +327,16 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
     // Abstracted glyph action block for center-spellcaster era 2
     
                     case 3:
+                        // era 3: attempt to use a health potion if dangerously low
+                        if (caller.hp < (caller.starting_hp * 0.4) && this.useConsumable && Array.isArray(caller.inventory) && caller.inventory.length) {
+                            const pIdx = caller.inventory.findIndex(i => i && (i.effect === 'health gain' || (i.name && i.name.toLowerCase().includes('potion'))));
+                            if (pIdx !== -1) {
+                                const item = caller.inventory.splice(pIdx, 1)[0];
+                                try { this.useConsumable(item, caller); } catch (e) {}
+                                try { if (typeof this.broadcastDataUpdate === 'function') this.broadcastDataUpdate(caller); } catch (e) {}
+                                break;
+                            }
+                        }
                         if(enemyIsAdjacent) {
                             data.methods.evadeBack(caller, combatants);
                         } else {
@@ -327,6 +348,16 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                         }
                     break;
                     case 4:
+                        // era 4: attempt to use a health potion if dangerously low
+                        if (caller.hp < (caller.starting_hp * 0.4) && this.useConsumable && Array.isArray(caller.inventory) && caller.inventory.length) {
+                            const pIdx = caller.inventory.findIndex(i => i && (i.effect === 'health gain' || (i.name && i.name.toLowerCase().includes('potion'))));
+                            if (pIdx !== -1) {
+                                const item = caller.inventory.splice(pIdx, 1)[0];
+                                try { this.useConsumable(item, caller); } catch (e) {}
+                                try { if (typeof this.broadcastDataUpdate === 'function') this.broadcastDataUpdate(caller); } catch (e) {}
+                                break;
+                            }
+                        }
                         if(enemyIsAdjacent) {
                             data.methods.evadeBack(caller, combatants);
                         } else {

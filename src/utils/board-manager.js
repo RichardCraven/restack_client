@@ -1,3 +1,5 @@
+import { getMeta } from './session-handler';
+
 export function BoardManager(){
     this.pickRandom = (array) => {
         let index = Math.floor(Math.random() * array.length)
@@ -442,9 +444,12 @@ export function BoardManager(){
     }
     this.placePlayer = (coordinates) => {
         let index = this.getIndexFromCoordinates(coordinates)
-        this.overlayTiles[index].image = 'avatar'
+        let meta = {};
+        try { meta = getMeta() || {}; } catch (e) { meta = {}; }
+        const playerImage = (meta && meta.camping) ? 'camp' : 'avatar';
+        this.overlayTiles[index].image = playerImage
         this.tiles[index].playerTile = true;
-        this.tiles[index].image = 'avatar'
+        this.tiles[index].image = playerImage
     }
     this.isMonster = (tile => {
         if (!tile) return false;
@@ -828,8 +833,11 @@ export function BoardManager(){
         if(interaction === 'way_down'){
             this.handlePassingThroughWayDown();
         }
-        this.overlayTiles.forEach(t=>t.image = null)
-        this.overlayTiles[this.getIndexFromCoordinates(this.playerTile.location)].image = 'avatar'
+    this.overlayTiles.forEach(t=>t.image = null)
+    let meta = {};
+    try { meta = getMeta() || {}; } catch (e) { meta = {}; }
+    const playerImage = (meta && meta.camping) ? 'camp' : 'avatar';
+    this.overlayTiles[this.getIndexFromCoordinates(this.playerTile.location)].image = playerImage
         this.checkAdjacency();
     }
     this.moveUp = () => {

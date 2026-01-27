@@ -20,6 +20,7 @@ export function Monk(data, utilMethods, animationManager, overlayManager){
     this.missesTarget = utilMethods.missesTarget;
     this.hitsTarget = utilMethods.hitsTarget;
     this.hitsCombatant = utilMethods.hitsCombatant;
+    this.useConsumable = utilMethods.useConsumable;
     this.targetKilled = utilMethods.targetKilled;
 
     this.isFriendly = (e) => {
@@ -64,6 +65,17 @@ export function Monk(data, utilMethods, animationManager, overlayManager){
                         data.methods.closeTheGap(caller, combatants)
                     break;
                     case 2:
+                        // If low HP, attempt to consume a health consumable before acting
+                        if (caller.hp < (caller.starting_hp * 0.4) && this.useConsumable && Array.isArray(caller.inventory) && caller.inventory.length) {
+                            const pIdx = caller.inventory.findIndex(i => i && (i.effect === 'health gain' || (i.name && i.name.toLowerCase().includes('potion'))));
+                            if (pIdx !== -1) {
+                                const item = caller.inventory.splice(pIdx, 1)[0];
+                                try { this.useConsumable(item, caller); } catch (e) {}
+                                // broadcast update so UI re-renders
+                                try { if (typeof this.broadcastDataUpdate === 'function') this.broadcastDataUpdate(caller); } catch (e) {}
+                                break;
+                            }
+                        }
                         data.methods.closeTheGap(caller, combatants)
                     break;
                     case 3:
@@ -82,6 +94,16 @@ export function Monk(data, utilMethods, animationManager, overlayManager){
                     case 1:
                     case 2:
                     case 3:
+                        // era 3: try consumable if low on hp
+                        if (caller.hp < (caller.starting_hp * 0.4) && this.useConsumable && Array.isArray(caller.inventory) && caller.inventory.length) {
+                            const pIdx = caller.inventory.findIndex(i => i && (i.effect === 'health gain' || (i.name && i.name.toLowerCase().includes('potion'))));
+                            if (pIdx !== -1) {
+                                const item = caller.inventory.splice(pIdx, 1)[0];
+                                try { this.useConsumable(item, caller); } catch (e) {}
+                                try { if (typeof this.broadcastDataUpdate === 'function') this.broadcastDataUpdate(caller); } catch (e) {}
+                                break;
+                            }
+                        }
                         this.triggerChargingUp(caller);
                         break;
                     case 4:
