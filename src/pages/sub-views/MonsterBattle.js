@@ -47,13 +47,7 @@ class MonsterBattle extends React.Component {
     getGameSpeed = () => {
         return this.props.combatManager?.FIGHT_INTERVAL;
     }
-    componentDidMount() {
-    // ...existing code...
-    }
-
-    componentWillUnmount() {
-    // ...existing code...
-    }
+    // lifecycle methods implemented further below
 
     // All keydown logic removed; now handled in CombatSimulator
 
@@ -116,6 +110,8 @@ class MonsterBattle extends React.Component {
     }
     constructor(props){
         super(props)
+        // mount flag to avoid setState on unmounted component warnings
+        this._isMounted = false;
         this.state = {
             message: '',
             combatStarted : false,
@@ -163,8 +159,15 @@ class MonsterBattle extends React.Component {
         this._suppressPersistFinalHP = false;
         // Internal flag to ensure we only inject wizard spells once for simulation battles
         this._wizardSpellsEnsured = false;
+        // Track timers/intervals created by this component so we can clear them on unmount
+        this._timers = [];
+        this._intervals = [];
+        this._setTimeout = (fn, t) => { const id = setTimeout(fn, t); try { this._timers.push(id); } catch(e){}; return id };
+        this._setInterval = (fn, t) => { const id = setInterval(fn, t); try { this._intervals.push(id); } catch(e){}; return id };
     }
     componentDidMount(){
+        // mark mounted so async callbacks can safely call setState
+        this._isMounted = true;
         this.props.combatManager.initialize();
         this.props.combatManager.connectOverlayManager(this.props.overlayManager)
         this.props.combatManager.connectAnimationManager(this.props.animationManager);
@@ -177,7 +180,7 @@ class MonsterBattle extends React.Component {
                 // debugger
                 this.setState({ teleportingFighterId: caller.id });
                 // Optionally clear after a tick for animation
-                setTimeout(() => {
+                this._setTimeout(() => {
                     this.setState({ teleportingFighterId: null });
                 }, 100);
             };
@@ -209,7 +212,7 @@ class MonsterBattle extends React.Component {
         // Ensure both removal and selection logic are called for all combatants
         this.props.combatManager.establishOnFighterDeathCallback((id) => {
             // Wait for the death animation duration before removing
-            setTimeout(() => {
+            this._setTimeout(() => {
                 this.removeDeadCombatantAfterDelay(id);
             }, DEATH_ANIMATION_DURATION);
             this.handleFighterDeath(id);
@@ -259,6 +262,16 @@ class MonsterBattle extends React.Component {
             })
         }
         // key handling moved to parent DungeonPage
+    }
+    componentWillUnmount() {
+        // mark unmounted to prevent async callbacks attempting setState
+        try { this._isMounted = false; } catch(e){}
+        // Best-effort: disconnect combat manager callbacks so no further calls come in
+        try { if (this.props && this.props.combatManager && typeof this.props.combatManager.shutdown === 'function') this.props.combatManager.shutdown(); } catch(e){}
+        try { if (this.props && this.props.combatManager && typeof this.props.combatManager.disconnectOverlayManager === 'function') this.props.combatManager.disconnectOverlayManager(); } catch(e){}
+        // Clear any timers/intervals this component created
+        try { if (Array.isArray(this._timers)) { this._timers.forEach(t => clearTimeout(t)); this._timers = []; } } catch(e){}
+        try { if (Array.isArray(this._intervals)) { this._intervals.forEach(i => clearInterval(i)); this._intervals = []; } } catch(e){}
     }
     monster = () => {
         // console.log('monster: ', this.state.battleData[this.props.monster.id]);
@@ -313,14 +326,14 @@ class MonsterBattle extends React.Component {
     // }
     milliDelay = (numMilliseconds) => {
         return new Promise((resolve) => {
-            setTimeout(()=>{
+            this._setTimeout(()=>{
                 resolve(numMilliseconds, ' complete')
             }, numMilliseconds)
         })
     }
     morphPortrait = () => {
         let stringBase = 'witch_p1_', count = 1, string;
-        const morphInterval = setInterval(()=>{
+        const morphInterval = this._setInterval(()=>{
             string = stringBase+count;
             this.setState({
                 monsterPortrait: images[string]
@@ -715,7 +728,7 @@ class MonsterBattle extends React.Component {
             experienceGained = this.props.monster.level * 10;
             goldGained = Math.floor(Math.random() * experienceGained);
             this.props.inventoryManager.addCurrency({type: 'gold', amount: goldGained})
-            setTimeout(()=>{
+            this._setTimeout(()=>{
                 console.log('timeout triggered');
                 this.props.crewManager.addExperience(liveCrew, experienceGained);
                 let meta = getMeta();
@@ -740,7 +753,9 @@ class MonsterBattle extends React.Component {
                 meta.deathTracker = deaths;
                 try { storeMeta(meta); } catch(e) {}
                 try { updateUserRequest(getUserId(), meta).catch(()=>{}); } catch(e) {}
-
+                    // Notify parent (DungeonPage) so UI elements like death-tracker can refresh
+                    try { if (this.props && typeof this.props.onDeathTrackerChanged === 'function') this.props.onDeathTrackerChanged(deaths); } catch(e) {}
+                console.log('DEATHS: ', deaths);
                 if (deaths >= 3) {
                     // Final death: clear dungeon and crew now, persist, then launch final death sequence.
                     try {
@@ -757,6 +772,7 @@ class MonsterBattle extends React.Component {
                     meta.location = null;
                     meta.inventory = { items: [], gold: 0, shimmering_dust: 0, totems: 0 };
                     meta.crew = [];
+                    meta.deathTracker = 0;
                     try { storeMeta(meta); } catch(e) {}
                     try { updateUserRequest(getUserId(), meta).catch(()=>{}); } catch(e) {}
                     try { this.props.crewManager.initializeCrew([]); } catch(e) {}
@@ -778,51 +794,20 @@ class MonsterBattle extends React.Component {
                     this._suppressPersistFinalHP = true;
 
                     // Set a state flag so the summary-panel rendering hides portraits
-                    try { this.setState({ suppressSummaryPortraits: true }); } catch(e) {}
+                    try { if (this._isMounted) this.setState({ suppressSummaryPortraits: true }); } catch(e) {}
 
-                    // After a short delay, close summary, launch death sequence, then restore crew and respawn
-                    setTimeout(async () => {
-                        try { this.setState({ showSummaryPanel: false, suppressSummaryPortraits: false }); } catch(e) {}
-                        // Launch death narrative
-                        try { this.launchDeathSequence(); } catch(e) {}
+                    // After a short delay, close summary, restore crew and respawn (do NOT navigate to death scene for non-final deaths)
+                    this._setTimeout(async () => {
+                        try { if (this._isMounted) this.setState({ showSummaryPanel: false, suppressSummaryPortraits: false }); } catch(e) {}
 
-                        // Perform respawn & restore (best-effort)
-                        try {
-                            const meta2 = getMeta();
-                            if (meta2 && Array.isArray(meta2.crew)) {
-                                meta2.crew.forEach(c => {
-                                    if (!c) return;
-                                    c.hp = 1;
-                                    c.dead = false;
-                                });
-                                try { storeMeta(meta2); } catch(e) {}
-                                try { updateUserRequest(getUserId(), meta2).catch(()=>{}); } catch(e) {}
-                                try { this.props.crewManager.initializeCrew(meta2.crew); } catch(e) {}
-                                try { if (this.props.saveUserData) this.props.saveUserData(); } catch(e) {}
-
-                                // Notify parent UI for each crew member so DungeonPage updates portrait overlays
-                                try {
-                                    if (this.props && typeof this.props.onFighterUpdate === 'function') {
-                                        meta2.crew.forEach(c => {
-                                            try { this.props.onFighterUpdate(c); } catch (inner) {}
-                                        });
-                                    }
-                                } catch (inner) { }
-                            }
-
-                            // Try to respawn the player at spawn point
-                            try {
-                                if (meta2 && meta2.location) {
-                                    this.props.boardManager.initializeTilesFromMap(meta2.location.boardIndex, meta2.location.tileIndex);
-                                }
-                            } catch (inner) { console.warn('group-death: respawn failed', inner); }
-                        } catch (inner) { console.warn('group-death: restore failed', inner); }
+                        this.props.battleOver('respawn');
+                          
 
                         // allow later persistence block to run normally again
                         this._suppressPersistFinalHP = false;
                     }, 3000);
                     // Show the summary panel now (it will be visible until the timeout closes it)
-                    try { this.setState({ showSummaryPanel: true }); } catch(e) {}
+                    try { if (this._isMounted) this.setState({ showSummaryPanel: true }); } catch(e) {}
                 }
             } catch (err) {
                 console.warn('group-death handler failed, falling back to death scene', err);

@@ -31,6 +31,7 @@ export function CrewManager(){
     this.crew = [];
     
     this.initializeCrew = (crew) => {
+        //called everytime game loads, not just first time
         this.crew = [];
         console.log('initializing crew: ', crew, 'this is where specialActions are checked and marked available if their endDate has passed');
         const colors = ['#b710d5', '#6495ed', '#73b746', '#f4d013'];
@@ -112,11 +113,23 @@ export function CrewManager(){
     }
 
     this.calculateExpPercentage = (crewMember) => {
-        let foundMember = this.crew.find(e=>e.name === crewMember.name)
-        let nextLevelExp = EXP_TABLE[foundMember.level]
-        let percentage = Math.ceil(((foundMember.stats.experience - EXP_TABLE[foundMember.level-1]) / (nextLevelExp - EXP_TABLE[foundMember.level-1])) * 100);
-        if(percentage > 100) percentage = 100;
-        return percentage;
+        try {
+            if(!crewMember) return 0;
+            let foundMember = this.crew.find(e => e && (e.name === crewMember.name || e.id === crewMember.id));
+            if(!foundMember || !foundMember.stats) return 0;
+            const level = (typeof foundMember.level === 'number' && foundMember.level >= 0) ? foundMember.level : 0;
+            const nextLevelExp = (typeof EXP_TABLE[level] !== 'undefined') ? EXP_TABLE[level] : EXP_TABLE[EXP_TABLE.length - 1];
+            const prevLevelExp = level > 0 ? EXP_TABLE[level - 1] : 0;
+            const experience = typeof foundMember.stats.experience === 'number' ? foundMember.stats.experience : 0;
+            const denom = (nextLevelExp - prevLevelExp) || 1;
+            let percentage = Math.ceil(((experience - prevLevelExp) / denom) * 100);
+            if (percentage > 100) percentage = 100;
+            if (percentage < 0) percentage = 0;
+            return percentage;
+        } catch (err) {
+            console.warn('calculateExpPercentage error', err, crewMember);
+            return 0;
+        }
     }
 
     this.beginSpecialAction = (member, actionType, actionSubtype) => {
@@ -162,7 +175,7 @@ export function CrewManager(){
             name: 'Zildjikan',
             id: 33344,
             level: 1,
-            stats: { str: 3, int: 7, dex: 5, vit: 4, fort: 7, hp: 17, atk: 12, baseDef: 9, energy: 100, experience: 0 },
+            stats: { str: 3, int: 7, dex: 5, vit: 4, fort: 7, hp: 17, atk: 12, baseDef: 9, energy: 100, experience: 0, speed: 5, luck: 4, willpower: 7, energyRegen: 2 },
             // stats: { str: 3, int: 7, dex: 5, vit: 4, fort: 7, hp: 5, atk: 12, baseDef: 9, energy: 100, experience: 0 },
             portrait: images['wizard_portrait'],
             inventory: [],
@@ -181,7 +194,7 @@ export function CrewManager(){
             name: 'Sardonis',
             id: 123,
             level: 1,
-            stats: { str: 8, int: 5, dex: 6, vit: 4, fort: 7, hp: 25, atk: 8, baseDef: 12, energy: 0, experience: 0 },
+            stats: { str: 8, int: 5, dex: 6, vit: 4, fort: 7, hp: 25, atk: 8, baseDef: 12, energy: 0, experience: 0, speed: 4, luck: 3, willpower: 5, energyRegen: 1 },
             // stats: { str: 8, int: 5, dex: 6, vit: 4, fort: 7, hp: 5, atk: 8, baseDef: 12, energy: 0, experience: 0 },
             portrait: images['soldier_portrait'],
             inventory: [],
@@ -202,8 +215,7 @@ export function CrewManager(){
             name: 'Yu',
             id: 8080,
             level: 1,
-            stats: { str: 5, int: 6, dex: 7, vit: 4, fort: 7, hp: 23, atk: 6, baseDef: 11, energy: 0, experience: 0 },
-            // stats: { str: 5, int: 6, dex: 7, vit: 4, fort: 7, hp: 5, atk: 6, baseDef: 11, energy: 0, experience: 0 },
+            stats: { str: 5, int: 6, dex: 7, vit: 4, fort: 7, hp: 23, atk: 6, baseDef: 11, energy: 0, experience: 0, speed: 6, luck: 5, willpower: 6, energyRegen: 2 },
             portrait: images['monk_portrait'],
             inventory: [],
             passives: ['diamond_skin'],
@@ -221,7 +233,7 @@ export function CrewManager(){
             name: 'Loryastes',
             id: 456,
             level: 1,
-            stats: { str: 3, int: 7, dex: 5, vit: 4, fort: 7, hp: 19, atk: 4, baseDef: 5, energy: 0, experience: 0 },
+            stats: { str: 3, int: 7, dex: 5, vit: 4, fort: 7, hp: 19, atk: 4, baseDef: 5, energy: 0, experience: 0, speed: 5, luck: 4, willpower: 7, energyRegen: 2 },
             portrait: images['sage_portrait'],
             inventory: [],
             specials: ['healing_hymn'],
@@ -239,7 +251,7 @@ export function CrewManager(){
             name: 'Tyra',
             id: 789,
             level: 1,
-            stats: { str: 5, int: 5, dex: 6, vit: 6, fort: 3, hp: 22, atk: 6, baseDef: 10, energy: 0, experience: 0 },
+            stats: { str: 5, int: 5, dex: 6, vit: 6, fort: 3, hp: 22, atk: 6, baseDef: 10, energy: 0, experience: 0, speed: 7, luck: 6, willpower: 5, energyRegen: 1 },
             portrait: images['rogue_portrait'],
             inventory: [],
             specials: ['deadeye_shot'],
@@ -257,7 +269,7 @@ export function CrewManager(){
             name: 'Ulaf',
             id: 8822,
             level: 1,
-            stats: { str: 8, int: 3, dex: 4, vit: 6, fort: 6, hp: 27, atk: 9, baseDef: 12, energy: 0, experience: 0 },
+            stats: { str: 8, int: 3, dex: 4, vit: 6, fort: 6, hp: 27, atk: 9, baseDef: 12, energy: 0, experience: 0, speed: 5, luck: 4, willpower: 6, energyRegen: 2 },
             portrait: images['barbarian_portrait'],
             inventory: [],
             specials: ['berserker_rage'],

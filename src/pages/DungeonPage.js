@@ -186,7 +186,11 @@ class DungeonPage extends React.Component {
                     }}>
                         {/* placeholder used by canvas to draw high-frequency progress overlays */}
                         {(() => {
-                            const placeholderId = `po-${this._nextPlaceholderId++}`;
+                            // Use a stable placeholder id so the DOM node isn't recreated on every render.
+                            // Recreating the node caused the canvas overlay to flicker when it tried to
+                            // draw into a rapidly-unmounting element. Use the character id/type and
+                            // action type to form a stable key.
+                            const placeholderId = `po-${character.id || character.type}-${action.type}`;
                             const start = activeAction ? activeAction.startDate : '';
                             const end = activeAction ? activeAction.endDate : '';
                             return (
@@ -348,6 +352,11 @@ class DungeonPage extends React.Component {
             shiftDown: false,
             showFullScreen: false
         }
+        // Track timers/intervals created by this component so we can clear on unmount
+        this._timers = [];
+        this._intervals = [];
+        this._setTimeout = (fn, t) => { const id = setTimeout(fn, t); try { this._timers.push(id); } catch(e){}; return id };
+        this._setInterval = (fn, t) => { const id = setInterval(fn, t); try { this._intervals.push(id); } catch(e){}; return id };
     }
     
     componentWillMount(){
@@ -361,6 +370,7 @@ class DungeonPage extends React.Component {
             arr.push([])
         }
         const meta = getMeta();
+        console.log('META:', meta);
         // meta.crew[0].stats.hp = 1000;
         // remove this after debugging ^
 
@@ -401,9 +411,21 @@ class DungeonPage extends React.Component {
             }
         })
     }
+
+    handleDeathTrackerChanged = (deaths) => {
+        try {
+            const meta = getMeta() || {};
+            meta.deathTracker = deaths;
+            storeMeta(meta);
+            // trigger a re-render so UI elements that read meta will update
+            this.forceUpdate();
+        } catch (e) {
+            console.warn('handleDeathTrackerChanged failed', e);
+        }
+    }
     componentDidMount(){
         // Real-time check for completed special actions
-        this.realTimeSpecialActionCheckInterval = setInterval(() => {
+    this.realTimeSpecialActionCheckInterval = this._setInterval(() => {
             // Use centralized helper to find finished actions and optionally mark them notified
             const { updates, modified, numeralUpdate } = this.checkAndCollectFinishedSpecialActions({ markNotified: true });
 
@@ -429,7 +451,7 @@ class DungeonPage extends React.Component {
                         try {
                             if (this.prepCompleteTimeout) clearTimeout(this.prepCompleteTimeout);
                         } catch (e) {}
-                        this.prepCompleteTimeout = setTimeout(() => {
+                        this.prepCompleteTimeout = this._setTimeout(() => {
                             if (this.state.modalType === 'PrepComplete' && this.state.showModal) {
                                 this.onUpdateModalClosed();
                             }
@@ -483,7 +505,7 @@ class DungeonPage extends React.Component {
                     } catch (e) {}
                 }
             }
-        }, 100);
+    }, 100);
         // Create a full-page canvas used to draw cooldown overlays at high frequency
         try {
             if (!this.cooldownCanvas) {
@@ -525,13 +547,13 @@ class DungeonPage extends React.Component {
                     // lock movement hotkeys while rehydrated camping is active
                     try { this.setState({ keysLocked: true }); } catch(e) {}
                     // schedule endCamp after the remaining time
-                    try { this.campTimeout = setTimeout(() => { try { this.endCamp(); } catch(e){ console.warn('endCamp timeout failed during rehydrate', e); } }, remaining + 200); } catch(e){}
+                    try { this.campTimeout = this._setTimeout(() => { try { this.endCamp(); } catch(e){ console.warn('endCamp timeout failed during rehydrate', e); } }, remaining + 200); } catch(e){}
                     // refresh player visuals and overlay tiles
                     try{ if (this.props.boardManager && typeof this.props.boardManager.placePlayer === 'function') this.props.boardManager.placePlayer(this.props.boardManager.playerTile.location); } catch(e){}
                     try{ this.setState({ overlayTiles: this.props.boardManager.overlayTiles }); } catch(e){}
                 } else {
                     // expired while offline / between reloads: end immediately
-                    try { setTimeout(() => { try { this.endCamp(); } catch(e){} }, 50); } catch(e){}
+                    try { this._setTimeout(() => { try { this.endCamp(); } catch(e){} }, 50); } catch(e){}
                 }
             }
         } catch(e) {}
@@ -561,7 +583,7 @@ class DungeonPage extends React.Component {
             this.handleResize();
         } catch (e) {}
         
-        let respawnInterval = setInterval(()=>{
+    let respawnInterval = this._setInterval(()=>{
             // let meta = getMeta();
             // let respawn = new Date(meta.respawnDate);
             // if()
@@ -644,13 +666,14 @@ class DungeonPage extends React.Component {
         }
     }
     componentWillUnmount(){
-        if (this.realTimeSpecialActionCheckInterval) {
-            clearInterval(this.realTimeSpecialActionCheckInterval);
-        }
-        if (this.prepCompleteTimeout) {
-            clearTimeout(this.prepCompleteTimeout);
-            this.prepCompleteTimeout = null;
-        }
+        // Clear any timers/intervals created via helpers
+        try { if (Array.isArray(this._timers)) { this._timers.forEach(t => clearTimeout(t)); this._timers = []; } } catch(e){}
+        try { if (Array.isArray(this._intervals)) { this._intervals.forEach(i => clearInterval(i)); this._intervals = []; } } catch(e){}
+        // Backwards compat: clear any direct references as well
+        try { if (this.realTimeSpecialActionCheckInterval) { clearInterval(this.realTimeSpecialActionCheckInterval); } } catch(e){}
+        try { if (this.prepCompleteTimeout) { clearTimeout(this.prepCompleteTimeout); this.prepCompleteTimeout = null; } } catch(e){}
+        try { if (this.campTimeout) { clearTimeout(this.campTimeout); this.campTimeout = null; } } catch(e){}
+        try { if (this.state && this.state.respawnUpdateInterval) { clearInterval(this.state.respawnUpdateInterval); } } catch(e){}
         // stop canvas animation and remove canvas
         try {
             if (this.cooldownAnimationFrame) {
@@ -879,7 +902,7 @@ class DungeonPage extends React.Component {
         foundIndex = this.props.inventoryManager.inventory.findIndex(e=> e.name === item.name);
         foundItem.animation = 'consumed';
         this.forceUpdate();
-        setTimeout(()=>{
+        this._setTimeout(()=>{
             foundItem.animation = '';
             this.props.inventoryManager.removeItemByIndex(foundIndex)
             this.forceUpdate();
@@ -1047,7 +1070,7 @@ class DungeonPage extends React.Component {
         window.addEventListener('resize', this.handleResize.bind(this));
     }
     startSaveInterval = () => {
-        let intervalId = setInterval( async () => {
+        let intervalId = this._setInterval( async () => {
             this.setState(()=>{
                 return {
                     showMessage : true
@@ -1065,7 +1088,7 @@ class DungeonPage extends React.Component {
                 messageToDisplay: message
             }
         })
-        setTimeout(() => {
+        this._setTimeout(() => {
             this.setState(()=>{
                 return {
                     showMessage : false
@@ -1418,7 +1441,7 @@ class DungeonPage extends React.Component {
     }
     learnNewRitual = (magicUser) => {
         this.setState({ritualWrecked: true})
-        setTimeout(()=>{
+        this._setTimeout(()=>{
             this.setState({ritualWrecked: false}) 
         }, 1500)
     }
@@ -1466,10 +1489,13 @@ class DungeonPage extends React.Component {
             nextIndex = (currentIndex + 1) % crew.length;
         }
 
-        // clear selection on all crew
+    // clear selection on all crew
         crew.forEach(c => c.selected = false);
         const foundMember = crew[nextIndex];
         foundMember.selected = true;
+
+    // debug: log the selected member when cycling (Tab) so dev can inspect available stats
+    try { console.log('cycleSelectedCrewMember selected:', foundMember); } catch (e) {}
 
         // persist selection to meta so other parts of the app see it
         try{
@@ -1661,7 +1687,8 @@ class DungeonPage extends React.Component {
                 // board is null -- investigate
                 debugger
             }
-            
+            meta.selectedDungeon = selectedDungeon;
+            meta.spawnPoint = spawnPoint;
             meta.location = {
                 boardIndex: spawnPoint.miniboardIndex,
                 tileIndex: spawnPoint.id,
@@ -1716,7 +1743,7 @@ class DungeonPage extends React.Component {
             })
             const firstCrewMember = this.props.crewManager.crew[0];
             this.handleMemberClick({data:firstCrewMember})
-            setTimeout(()=>{
+            this._setTimeout(()=>{
                 this.toggleLeftSidePanel();
                 this.toggleRightSidePanel();
             }, 1000)
@@ -1859,7 +1886,7 @@ class DungeonPage extends React.Component {
                 if (!this.cooldownAnimationFrame) this.cooldownAnimationFrame = requestAnimationFrame(this.drawCooldowns);
             } catch (e) {}
             // schedule end
-            try { this.campTimeout = setTimeout(() => { try { this.endCamp(); } catch(e){ console.warn('endCamp timeout failed', e); } }, durationSeconds*1000 + 200); } catch(e){}
+            try { this.campTimeout = this._setTimeout(() => { try { this.endCamp(); } catch(e){ console.warn('endCamp timeout failed', e); } }, durationSeconds*1000 + 200); } catch(e){}
         } catch (err) { console.warn('setUpCamp error', err); }
     }
 
@@ -1906,6 +1933,7 @@ class DungeonPage extends React.Component {
         return text.charAt(0).toUpperCase() + text.slice(1);
     }
     battleOver = (result) => {
+        console.log('battle over result: ', result);
         if(result === 'win'){
             this.props.boardManager.removeDefeatedMonsterTile(this.state.monsterBattleTileId)
             this.props.crewManager.checkForLevelUp(this.props.crewManager.crew)
@@ -1913,6 +1941,55 @@ class DungeonPage extends React.Component {
             meta.crew = this.props.crewManager.crew;
             storeMeta(meta)
             this.props.saveUserData()
+        } else if(result === 'respawn'){
+                  // Try to respawn the player at spawn point (guard against missing boardManager)
+                  const meta2 = getMeta();
+                    if (meta2 && Array.isArray(meta2.crew)) {
+                        meta2.crew.forEach(c => {
+                            if (!c) return;
+                            c.hp = 1;
+                            c.dead = false;
+                        });
+                        const spawnPoint = meta2.spawnPoint;
+                        console.log('spawn point: ', spawnPoint);
+                        const selectedDungeon = meta2.selectedDungeon;
+                        let sp = spawnPoint.locationCode.split('_');
+                        const levelId =  spawnPoint.level;
+                        const level = selectedDungeon.levels.find(e=>e.id === levelId)
+                        const miniboardIndex = spawnPoint.miniboardIndex
+                        const orientation = sp[4];
+                        const spawnTileIndex = spawnPoint.id;
+                        const board = orientation === 'F' ? level.front.miniboards[miniboardIndex] : (orientation === 'B' ? level.back.miniboards[miniboardIndex] : null)
+
+                        meta2.location = {
+                            boardIndex: spawnPoint.miniboardIndex,
+                            tileIndex: spawnPoint.id,
+                            levelId,
+                            orientation
+                        }
+                        try { storeMeta(meta2); } catch(e) {}
+                        try { this.props.crewManager.initializeCrew(meta2.crew); } catch(e) {}
+                        try { if (this.props.saveUserData) this.props.saveUserData(); } catch(e) {}
+
+                        // // Notify parent UI for each crew member so DungeonPage updates portrait overlays
+                        // try {
+                        //     if (this.props && typeof this.props.onFighterUpdate === 'function') {
+                        //         meta2.crew.forEach(c => {
+                        //             try { this.props.onFighterUpdate(c); } catch (inner) {}
+                        //         });
+                        //     }
+                        // } catch (inner) { }
+                    }
+            try {
+                
+                console.log('current location: ', meta2.location);
+                // debugger
+                if (meta2 && meta2.location && this.props && this.props.boardManager && typeof this.props.boardManager.initializeTilesFromMap === 'function') {
+                    this.props.boardManager.initializeTilesFromMap(meta2.location.boardIndex, meta2.location.tileIndex);
+                } else {
+                    console.warn('group-death: cannot respawn - boardManager or initializeTilesFromMap missing');
+                }
+            } catch (inner) { console.warn('group-death: respawn failed', inner); }
         }
         this.setState({
             keysLocked : false,
@@ -2298,7 +2375,7 @@ class DungeonPage extends React.Component {
                         </div>
                         <div className="equipment-panel">
                             {/* Replaced with a direct copy of the `.crew-body` from the inventory popup */}
-                            <div className='crew-body' style={{backgroundImage: `url(${images.body_male})`, filter: 'invert(1)', backgroundSize: '130%'}}>
+                            <div className='crew-body' style={{backgroundImage: `url(${images.body_male})`, filter: 'invert(1)', backgroundSize: '130%', marginTop: '-16px'}}>
                                 {/* equip slots: chest, right-hand, left-hand, head, ancillary-left, ancillary-right */}
                                 {(() => {
                                     const selected = this.state.selectedCrewMember || {};
@@ -2401,6 +2478,7 @@ class DungeonPage extends React.Component {
                             </div>
                             {/* left-body-preview mirror (kept for legacy styling hooks) */}
                             <div className='left-body-preview' style={{backgroundImage: `url(${images.body_male})`, backgroundSize: '130%'}}></div>
+                            {/* stats display area removed from left panel (kept only in inventory popup) */}
                         </div>
                         <div className="description-panel">
                             {this.state.descriptionText}
@@ -2582,7 +2660,7 @@ class DungeonPage extends React.Component {
                             }
                             return (
                                 <div className="crew-action-item action-row" style={{display:'flex', gap:8}}>
-                                    <div onClick={() => this.setUpCamp()} style={{cursor:'pointer'}}>Set Up Camp</div>
+                                    <div onClick={() => this.setUpCamp()} style={{cursor:'pointer', paddingLeft: '15px'}}>Set Up Camp</div>
                                 </div>
                             );
                         })()}
@@ -2692,6 +2770,7 @@ class DungeonPage extends React.Component {
                 setNarrativeSequence={this.props.setNarrativeSequence}
                 useConsumableFromInventory={this.useConsumableFromInventory}
                 onFighterUpdate={this.handleFighterUpdateFromBattle}
+                onDeathTrackerChanged={this.handleDeathTrackerChanged}
             ></MonsterBattle>}
 
             <CModal className='inventory-modal' alignment='center' visible={this.state.showInventoryPopup} onClose={() => this.setState({ showInventoryPopup: false })}>
@@ -2723,7 +2802,8 @@ class DungeonPage extends React.Component {
                                         filter: 'invert(1)',
                                         backgroundSize: '130%',
                                         opacity: isSelected ? 1 : 0.5,
-                                        pointerEvents: isSelected ? 'auto' : 'none'
+                                        pointerEvents: isSelected ? 'auto' : 'none',
+                                        marginTop: '-16px'
                                     }}>
                                         {/* equip slots: chest, right-hand, left-hand, head, and ancillary */}
                                         {(() => {
@@ -2823,6 +2903,31 @@ class DungeonPage extends React.Component {
                                                 </>
                                             )
                                         })()}
+                                    </div>
+                                    <div className="stats-display" style={{width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', padding: '8px', boxSizing: 'border-box', marginTop: '-38px', opacity: isSelected ? 1 : 0.5}}>
+                                        {[
+                                            'attack',
+                                            'defense',
+                                            'speed',
+                                            'luck',
+                                            'willpower',
+                                            'hp',
+                                            'energy max',
+                                            'energy regeneration'
+                                        ].map((key) => {
+                                            let value = 0;
+                                            try {
+                                                if (key === 'attack') value = (member && member.stats && typeof member.stats.atk === 'number') ? member.stats.atk : 0;
+                                                else if (key === 'defense') value = (member && member.stats && typeof member.stats.baseDef === 'number') ? member.stats.baseDef : 0;
+                                                else if (key === 'hp') value = (member && member.stats && typeof member.stats.hp === 'number') ? member.stats.hp : 0;
+                                            } catch (e) {}
+                                            return (
+                                                <div key={key} className="stat-line" style={{display: 'flex', justifyContent: 'space-between', width: '100%', padding: '2px 0'}}>
+                                                    <span className="stat-name">{key === 'hp' ? 'hp max' : key}</span>
+                                                    <span className="stat-value">{value}</span>
+                                                </div>
+                                            )
+                                        })}
                                     </div>
                                 </div>
                             )

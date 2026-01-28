@@ -320,7 +320,7 @@ import body_male from '../assets/icons/figures/body_man.png'
 import body_female from '../assets/icons/figures/body_fem.png'
 
 //camp
-import camp from '../assets/icons/misc/camp/camp-1.png'
+import camp from '../assets/icons/misc/camp/camp-2.png'
 
 export {
     hand_1,

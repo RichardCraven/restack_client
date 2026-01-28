@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react'
+import React, {useState, useEffect, useRef} from 'react'
 
 import { Redirect } from "react-router-dom";
 
@@ -308,11 +308,15 @@ export default function NarrativeSequence(props) {
         }
     ]
 
+    // Track timers so we can clear them if the component unmounts
+    const timersRef = useRef([]);
+
     const delay = (numSeconds) => {
         return new Promise((resolve) => {
-            setTimeout(()=>{
+            const id = setTimeout(()=>{
                 resolve(numSeconds, ' complete')
             }, numSeconds * 1000)
+            try { timersRef.current.push(id); } catch(e){}
         })
     }
 
@@ -393,10 +397,11 @@ export default function NarrativeSequence(props) {
                         delay(1).then(()=>{
                             
                             setFadeOutLastFrame(true);
-                            setTimeout(()=>{
+                            const __id = setTimeout(()=>{
                                 props.endDeathSequence();
                                 setNavToLanding(true)
                             }, 700)
+                            try { timersRef.current.push(__id); } catch(e){}
                         })
                     })
                     break;
@@ -435,6 +440,14 @@ export default function NarrativeSequence(props) {
     }
     // [deathSequence, introSequence, props]
   }, [])
+
+    // cleanup timers on unmount
+    useEffect(() => {
+        return () => {
+            try { timersRef.current.forEach(id => clearTimeout(id)); } catch(e){}
+            timersRef.current = [];
+        }
+    }, [])
 
   return (
     <div className="intro-pane pane">

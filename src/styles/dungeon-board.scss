@@ -129,7 +129,7 @@
             display: flex;
             justify-content: flex-start;
             align-items: center;
-            padding-left: 21px;
+            // padding-left: 21px;
             &.expanded{
                 min-height: 50px;
             }
@@ -150,11 +150,16 @@
                 display: flex;
                 align-items: center;
                 gap: 8px;
+                height: 100%;
+                width: 100%;
             }
             .camp-label {
-                display: inline-block;
+                display: flex;
                 line-height: 20px;
                 padding: 4px 6px;
+                height: 100%;
+                width: 100%;
+                align-items: center;
             }
             .progress-overlay.debug-placeholder{
                 position: absolute;
@@ -789,6 +794,7 @@
                     margin-top: 8px;
                     flex: 0 0 auto;
                     position: relative;
+                    margin-top: -16px;
                 }
                 /* replicate equip-slot styling from inventory-modal so slots show in left panel */
                 .equip-slot{

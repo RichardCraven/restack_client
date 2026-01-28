@@ -456,8 +456,8 @@ export function MonsterManager(){
                 dex:4,
                 vit:5,
                 fort:5,
-                hp: 25,
-                atk: 5,
+                hp: 250,
+                atk: 25,
                 baseDef: 7
             },
             level: 3,
