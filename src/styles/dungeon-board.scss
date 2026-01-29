@@ -77,7 +77,7 @@
         }
     }
     .right-side-panel{
-        overflow: hidden;
+        overflow: visible;
         height: 100%;
         padding-top: 25px;
         // border: 1px solid transparent;
@@ -87,7 +87,7 @@
         // min-width: 0px;
         min-width: 200px;
         transition: all 1s;
-        overflow: scroll;
+    overflow: visible;
         right: -211px;
         &.expanded{
             right: 0;
@@ -211,6 +211,13 @@
                 align-items: center;
                 gap: 8px;
                 padding: 8px;
+                position: relative;
+                /* Per-skull wrapper + tooltip */
+                .death-skull-wrapper{
+                    position: relative;
+                    display: inline-block;
+                    outline: none;
+                }
                 .death-skull{
                     width: 32px;
                     height: 32px;
@@ -219,6 +226,8 @@
                     opacity: 0.95;
                     filter: invert(1);
                 }
+                /* Portal tooltip (rendered into death-tracker container or document.body). Position is set inline depending on portal target. */
+                /* Using native browser tooltip via title attribute on .death-skull-wrapper; no custom tooltip styles needed */
             }
             .crew-tile-container{
                 width: 100%;
@@ -837,6 +846,28 @@
                     top: 24%;
                     transform: translate(0, -50%);
                 }
+                /* bottom-left slot mirrored from inventory modal */
+                    .crew-body .slot-pet{
+                        left: 9%;
+                        bottom: 14%;
+                        transform: translate(0, 0);
+                    }
+                    .crew-body .equip-slot.slot-pet .pet-overlay{
+                        position: absolute;
+                        right: -8px;
+                        bottom: -8px;
+                        width: 20px;
+                        height: 20px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        background: rgba(0,0,0,0.6);
+                        color: #fff;
+                        font-size: 12px;
+                        border-radius: 50%;
+                        pointer-events: none;
+                        z-index: 40;
+                    }
                 .equipment-line{
                     display: flex;
                     align-items: center;

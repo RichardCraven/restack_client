@@ -59,11 +59,11 @@ export function InventoryManager(){
     this.weapons_names = [
         'axe',
         'flail',
-        'scepter',
         'scimitar',
         'spear',
         'sword',
-        'longbow'
+        'longbow',
+        'scepter',
     ]
     this.potions_names = [
         'minor_health_potion',
@@ -162,7 +162,7 @@ export function InventoryManager(){
             description: 'The basic axe does 3 damage'
         },
         flail: {
-            damage: 3,
+            damage: 5,
             icon: 'flail',
             type: 'weapon',
             subtype: 'crushing',
@@ -173,7 +173,7 @@ export function InventoryManager(){
             description: 'The basic flail does 3 damage'
         },
         spear: {
-            damage: 3,
+            damage: 5,
             icon: 'spear',
             type: 'weapon',
             subtype: 'cutting',
@@ -184,7 +184,7 @@ export function InventoryManager(){
             description: 'The basic spear does 3 damage'
         },
         sword: {
-            damage: 3,
+            damage: 4,
             icon: 'sword',
             type: 'weapon',
             subtype: 'cutting',

@@ -1,5 +1,17 @@
 import * as images from '../utils/images'
 
+const getMinorWeapon = () => {
+    const arr = ['axe',
+        'flail',
+        'scimitar',
+        'spear',
+        'sword',
+        'longbow']
+    return arr
+}
+const getMajorWeapon = () => {
+    const arr = ['scepter']
+}
 export function MonsterManager(){
     this.pickRandom = (array) => {
         let index = Math.floor(Math.random() * array.length)
@@ -456,8 +468,8 @@ export function MonsterManager(){
                 dex:4,
                 vit:5,
                 fort:5,
-                hp: 250,
-                atk: 25,
+                hp: 25,
+                atk: 5,
                 baseDef: 7
             },
             level: 3,
@@ -469,14 +481,15 @@ export function MonsterManager(){
             minions: ['skeleton', 'skeleton'],
             weaknesses: ['fire'],
             drops: [
-                {item: 'minor_health_potion', percentChance: 55},
-                {item: 'sword', percentChance: 85},
-                {item: 'nukta_amulet', percentChance: 85},
-                {item: 'basic_helm', percentChance: 75},
-                {item: 'scarab_charm', percentChance: 55},
-                {item: 'seeing_shield', percentChance: 85},
-                {item: 'glindas_wand', percentChance: 85},
-                {item: 'zul_mask', percentChance: 75}
+                {item: 'minor_health_potion', percentChance: 5},
+                {item: this.pickRandom(getMinorWeapon()), percentChance: 40}
+                // {item: 'sword', percentChance: 85},
+                // {item: 'nukta_amulet', percentChance: 85},
+                // {item: 'basic_helm', percentChance: 75},
+                // {item: 'scarab_charm', percentChance: 55},
+                // {item: 'seeing_shield', percentChance: 85},
+                // {item: 'glindas_wand', percentChance: 85},
+                // {item: 'zul_mask', percentChance: 75}
             ]
         }
     }

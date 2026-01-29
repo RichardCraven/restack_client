@@ -1,4 +1,5 @@
 import React from 'react';
+
 import { INTERVALS } from '../utils/shared-constants';
 import '../styles/dungeon-board.scss'
 import Tile from '../components/tile'
@@ -352,12 +353,15 @@ class DungeonPage extends React.Component {
             shiftDown: false,
             showFullScreen: false
         }
+    // Native browser tooltip will be used for death-tracker; no custom tooltip state required.
         // Track timers/intervals created by this component so we can clear on unmount
         this._timers = [];
         this._intervals = [];
         this._setTimeout = (fn, t) => { const id = setTimeout(fn, t); try { this._timers.push(id); } catch(e){}; return id };
         this._setInterval = (fn, t) => { const id = setInterval(fn, t); try { this._intervals.push(id); } catch(e){}; return id };
     }
+
+    // Reverted to native browser tooltip; no custom tooltip lifecycle is necessary.
     
     componentWillMount(){
         let tileSize = this.getTileSize(),
@@ -408,8 +412,8 @@ class DungeonPage extends React.Component {
                 updates,
                 modalType: updates.length > 0 ? 'Updates' : '',
                 showModal: updates.length > 0
-            }
-        })
+            };
+        });
     }
 
     handleDeathTrackerChanged = (deaths) => {
@@ -424,6 +428,26 @@ class DungeonPage extends React.Component {
         }
     }
     componentDidMount(){
+        // Migration: normalize legacy equippedSlot keys to 'pet'
+        try {
+            const metaForMigration = getMeta() || {};
+            let migrated = false;
+            (metaForMigration.crew || []).forEach(member => {
+                (member.inventory || []).forEach(item => {
+                    try {
+                        if (item && item.equippedSlot === 'bottom-left') {
+                            item.equippedSlot = 'pet';
+                            migrated = true;
+                        }
+                    } catch (e) {}
+                });
+            });
+            if (migrated) {
+                try { storeMeta(metaForMigration); } catch (e) {}
+                try { updateUserRequest(getUserId(), metaForMigration).catch(()=>{}); } catch (e) {}
+            }
+        } catch (e) {}
+
         // Real-time check for completed special actions
     this.realTimeSpecialActionCheckInterval = this._setInterval(() => {
             // Use centralized helper to find finished actions and optionally mark them notified
@@ -1385,6 +1409,7 @@ class DungeonPage extends React.Component {
     }
     handleClick = (tile) => {
         // nothing
+        console.log('tile: ', tile);
     }
     handleOverlayClick = (tile, event) => {
         if(!this.state.minimapPlaceMapMarkerStarted) return
@@ -2379,11 +2404,15 @@ class DungeonPage extends React.Component {
                                 {/* equip slots: chest, right-hand, left-hand, head, ancillary-left, ancillary-right */}
                                 {(() => {
                                     const selected = this.state.selectedCrewMember || {};
-                                    const findEquipped = (slot) => (selected.inventory || []).find(i => i.equippedSlot === slot);
+                                    const findEquipped = (slot) => {
+                                        const slotsToCheck = (slot === 'pet' || slot === 'bottom-left') ? ['pet','bottom-left'] : [slot];
+                                        return (selected.inventory || []).find(i => slotsToCheck.includes(i.equippedSlot));
+                                    };
                                     const chest = findEquipped('chest');
                                     const right = findEquipped('right');
                                     const left = findEquipped('left');
                                     const head = findEquipped('head');
+                                    const bottomLeft = findEquipped('pet');
                                     const ancillaryLeft = findEquipped('ancillary-left');
                                     const ancillaryRight = findEquipped('ancillary-right');
                                     return (
@@ -2469,6 +2498,20 @@ class DungeonPage extends React.Component {
                                                     editMode={false}
                                                     type={'inventory-tile'}
                                                     handleClick={() => this.handleEquipmentItemClick(ancillaryRight)}
+                                                    handleHover={this.handleInventoryTileHover}
+                                                />
+                                            )}</div>
+                                            <div className='equip-slot slot-pet'>{bottomLeft && (
+                                                <Tile
+                                                    id={bottomLeft.id}
+                                                    data={bottomLeft}
+                                                    tileSize={this.state.tileSize}
+                                                    image={bottomLeft.icon}
+                                                    contains={bottomLeft.name ? bottomLeft.name.replace(' ', '_') : null}
+                                                    color={bottomLeft.color}
+                                                    editMode={false}
+                                                    type={'inventory-tile'}
+                                                    handleClick={() => this.handleEquipmentItemClick(bottomLeft)}
                                                     handleHover={this.handleInventoryTileHover}
                                                 />
                                             )}</div>
@@ -2586,6 +2629,31 @@ class DungeonPage extends React.Component {
                 </div>
                 <div className="crew-container">
                     <div className="title">Crew</div>
+                    {/* Death tracker: shows skull icons for recent group deaths (meta.deathTracker) */}
+                    {(() => {
+                        try {
+                            const meta = getMeta() || {};
+                            const deaths = meta.deathTracker || 0;
+                            const tooltip = 'Your crew has met death and been spared. If this happens thrice, your journey is over';
+                            // Always render the container (so the portal ref exists and the UI is inspectable)
+                            // but only render skulls when deaths > 0
+                                return (
+                                <div className="death-tracker" aria-label={deaths > 0 ? tooltip : 'No recent group deaths'}>
+                                    {deaths > 0 && new Array(deaths).fill(0).map((_, idx) => (
+                                        <div
+                                            key={idx}
+                                            className="death-skull-wrapper"
+                                            tabIndex={0}
+                                            title={tooltip}
+                                            aria-label={tooltip}
+                                        >
+                                            <div className="death-skull" style={{backgroundImage: `url(${images['whiteskull']})`}}></div>
+                                        </div>
+                                    ))}
+                                </div>
+                            );
+                        } catch (e) { return null; }
+                    })()}
                     <div className="crew-tile-container">
                         {   this.props.crewManager.crew &&
                             this.props.crewManager.crew.map((member, i) => {
@@ -2807,11 +2875,15 @@ class DungeonPage extends React.Component {
                                     }}>
                                         {/* equip slots: chest, right-hand, left-hand, head, and ancillary */}
                                         {(() => {
-                                            const findEquipped = (m, slot) => (m.inventory || []).find(i => i.equippedSlot === slot);
+                                            const findEquipped = (m, slot) => {
+                                                const slotsToCheck = (slot === 'pet' || slot === 'bottom-left') ? ['pet', 'bottom-left'] : [slot];
+                                                return (m.inventory || []).find(i => slotsToCheck.includes(i.equippedSlot));
+                                            };
                                             const chest = findEquipped(member, 'chest');
                                             const right = findEquipped(member, 'right');
                                             const left = findEquipped(member, 'left');
                                             const head = findEquipped(member, 'head');
+                                            const bottomLeft = findEquipped(member, 'pet');
                                             const ancillaryLeft = findEquipped(member, 'ancillary-left');
                                             const ancillaryRight = findEquipped(member, 'ancillary-right');
                                             return (
@@ -2900,6 +2972,23 @@ class DungeonPage extends React.Component {
                                                             handleHover={this.handleInventoryTileHover}
                                                         />
                                                     )}</div>
+                                    <div className='equip-slot slot-pet' style={{border: isSelected && bottomLeft ? '2px solid #782d7b' : undefined}}>{bottomLeft && (
+                                                        <>
+                                                        <Tile
+                                                            id={bottomLeft.id}
+                                                            data={bottomLeft}
+                                                            tileSize={this.state.tileSize}
+                                                            image={bottomLeft.icon}
+                                                            contains={bottomLeft.name ? bottomLeft.name.replace(' ', '_') : null}
+                                                            color={bottomLeft.color}
+                                                            editMode={false}
+                                                            type={'inventory-tile'}
+                                                            handleClick={() => isSelected ? this.handleEquipmentItemClick(bottomLeft) : null}
+                                                            handleHover={this.handleInventoryTileHover}
+                                                        />
+                                                        <div className="pet-overlay" aria-hidden="true">🐾</div>
+                                                        </>
+                                                    )}</div>
                                                 </>
                                             )
                                         })()}
@@ -2932,6 +3021,9 @@ class DungeonPage extends React.Component {
                                 </div>
                             )
                         })}
+                    </div>
+                    <div className="inventory-descriptor-panel">
+                        TESTING 123
                     </div>
                     <div className='inventory-strip'>
                         {(() => {

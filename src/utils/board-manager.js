@@ -469,10 +469,14 @@ export function BoardManager(){
             case 'way_down':
                 return 'way_down';
             case 'monster':
-                // pass subtype string to monster handler
-                this.setMonster(subtype)
-                this.triggerMonsterBattle(true, destinationTile.id)
-                return 'impassable';
+                // For monsters: do NOT block movement (previous behavior returned 'impassable').
+                // Instead, signal the caller that this is a monster so the caller can
+                // complete the player move and then initiate the encounter. This
+                // ensures the player actually moves onto the tile before combat
+                // begins (expected UX).
+                this.setMonster(subtype);
+                this.triggerMonsterBattle(true, destinationTile.id);
+                return 'monster';
             case 'minor_gate':
                 this.handleGate(destinationTile);
                 return 'impassable';
@@ -832,6 +836,16 @@ export function BoardManager(){
         }
         if(interaction === 'way_down'){
             this.handlePassingThroughWayDown();
+        }
+        // If the destination contained a monster, initiate the encounter AFTER
+        // the player has been moved onto the tile so the UI/game state shows
+        // the player standing on the monster tile before combat begins.
+        if (interaction === 'monster') {
+            try {
+                const subtype = this.getContainsSubtype(destinationTile.contains);
+                this.setMonster(subtype);
+            } catch (e) { /* best-effort */ }
+            try { this.triggerMonsterBattle(true, destinationTile.id); } catch (e) { /* best-effort */ }
         }
     this.overlayTiles.forEach(t=>t.image = null)
     let meta = {};

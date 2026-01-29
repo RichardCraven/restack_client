@@ -53,11 +53,11 @@ export function Sphinx(data, utilMethods, animationManager, overlayManager){
                     
                     switch(caller.eraIndex){
                         case 0:
-                            data.methods.centerBack(caller)
+                            data.methods.centerBack(caller, combatants)
                         break;
                         case 1:
                             if(window.pickRandom([true,true, false])){
-                                data.methods.centerBack(caller)
+                                data.methods.centerBack(caller, combatants)
                                 
                             } else {
                                 if(window.pickRandom([true,false])){
@@ -68,11 +68,11 @@ export function Sphinx(data, utilMethods, animationManager, overlayManager){
                             }
                         break;
                         case 2:
-                            data.methods.centerBack(caller)
+                            data.methods.centerBack(caller, combatants)
                         break;
                         case 3:
                             if(window.pickRandom([true,true, false])){
-                                data.methods.centerBack(caller)
+                                data.methods.centerBack(caller, combatants)
                                 
                             } else {
                                 if(window.pickRandom([true,false])){
@@ -83,7 +83,7 @@ export function Sphinx(data, utilMethods, animationManager, overlayManager){
                             }
                         break;
                         case 4:
-                            data.methods.centerBack(caller)
+                            data.methods.centerBack(caller, combatants)
                         break;
                         default: 
                         break;

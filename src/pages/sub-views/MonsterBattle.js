@@ -756,7 +756,7 @@ class MonsterBattle extends React.Component {
                     // Notify parent (DungeonPage) so UI elements like death-tracker can refresh
                     try { if (this.props && typeof this.props.onDeathTrackerChanged === 'function') this.props.onDeathTrackerChanged(deaths); } catch(e) {}
                 console.log('DEATHS: ', deaths);
-                if (deaths >= 3) {
+                if (deaths >= 300) {
                     // Final death: clear dungeon and crew now, persist, then launch final death sequence.
                     try {
                         if (meta.dungeonId) {
