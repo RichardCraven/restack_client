@@ -1,4 +1,5 @@
-import { getMeta } from './session-handler';
+import { getMeta, storeMeta } from './session-handler';
+import { MonsterManager } from './monster-manager';
 
 export function BoardManager(){
     this.pickRandom = (array) => {
@@ -80,6 +81,15 @@ export function BoardManager(){
         // 'black_banshee','black_wraith', 'manticore','black_minotaur'
     ];
     this.availableItems = [];
+    // Known monster keys from the comprehensive MonsterManager. Use this
+    // in cleanup to detect monster keys that may not be present in the
+    // lightweight `monstersArr` array (which is curated / sometimes pared down).
+    try {
+        const mm = new MonsterManager();
+        this.knownMonsterKeys = Object.keys(mm.monsters || {});
+    } catch (e) {
+        this.knownMonsterKeys = [];
+    }
     this.activeInteractionTile = null;
     this.pending = null;
 
@@ -170,7 +180,7 @@ export function BoardManager(){
         }
         // string legacy format
         if (typeof contains === 'string') {
-            if (this.monstersArr.includes(contains)) return 'monster';
+            if ((this.monstersArr && this.monstersArr.includes(contains)) || (this.knownMonsterKeys && this.knownMonsterKeys.includes(contains))) return 'monster';
             return contains;
         }
         return null;
@@ -242,6 +252,47 @@ export function BoardManager(){
         });
         return changed;
     }
+
+    // Cleanup helper available to all load paths: normalize malformed monster
+    // tile shapes on a specific board object (board.tiles). Returns an array
+    // of restructured tile ids (empty if nothing changed).
+    this.cleanupMalformedMonsterTiles = (boardToClean) => {
+        const changedIds = [];
+        if (!boardToClean || !boardToClean.tiles) return changedIds;
+        boardToClean.tiles.forEach((t) => {
+            if (!t) return;
+            const raw = t.contains;
+            // string -> monster key
+            if (typeof raw === 'string') {
+                if ((this.monstersArr && this.monstersArr.includes(raw)) || (this.knownMonsterKeys && this.knownMonsterKeys.includes(raw))) {
+                    console.log('Restructuring malformed monster tile (string->object):', t.id, raw);
+                    t.contains = { type: 'monster', subtype: raw };
+                    changedIds.push(t.id);
+                } else if (raw === 'monster') {
+                    console.log('Restructuring legacy monster tile (assigning subtype):', t.id, raw);
+                    t.contains = { type: 'monster', subtype: this.getRandomMonster() };
+                    changedIds.push(t.id);
+                }
+            } else if (raw && typeof raw === 'object') {
+                if ((!raw.type || raw.type === null) && raw.subtype && ((this.monstersArr && this.monstersArr.includes(raw.subtype)) || (this.knownMonsterKeys && this.knownMonsterKeys.includes(raw.subtype)))) {
+                    console.log('Restructuring malformed monster tile (object missing type):', t.id, raw);
+                    t.contains = { type: 'monster', subtype: raw.subtype };
+                    changedIds.push(t.id);
+                }
+                if (raw.type === 'monster' && (!raw.subtype || raw.subtype === null)) {
+                    console.log('Restructuring monster tile (missing subtype):', t.id, raw);
+                    t.contains = { type: 'monster', subtype: this.getRandomMonster() };
+                    changedIds.push(t.id);
+                }
+                if (raw.type && typeof raw.type === 'string' && ((this.monstersArr && this.monstersArr.includes(raw.type)) || (this.knownMonsterKeys && this.knownMonsterKeys.includes(raw.type)))) {
+                    console.log('Restructuring malformed monster tile (type contains monster key):', t.id, raw);
+                    t.contains = { type: 'monster', subtype: raw.type };
+                    changedIds.push(t.id);
+                }
+            }
+        });
+        return changedIds;
+    }
     this.establishAvailableItems = (items) => {
         this.availableItems = items;
     }
@@ -265,6 +316,8 @@ export function BoardManager(){
     }
     this.setDungeon = (dungeon) => {
         this.dungeon = dungeon;
+        // summary of changes made by cleanup (array of {boardId, changedIds})
+        let changedTilesSummary = [];
         // Normalize any legacy string-based contains into object shape
         try {
             const changed = this.normalizeDungeon();
@@ -272,9 +325,45 @@ export function BoardManager(){
             if (changed && this.updateDungeon) {
                 this.updateDungeon(this.dungeon);
             }
+            // After normalizing, run a broader cleanup pass across all boards
+            // in the dungeon to catch any malformed monster tiles saved in
+            // older formats. Use the reusable cleanup helper which returns
+            // changed tile ids per board.
+            try {
+                let anyChanges = false;
+                const changedTilesSummary = [];
+                if (this.dungeon && Array.isArray(this.dungeon.levels)) {
+                    this.dungeon.levels.forEach(level => {
+                        ['front','back'].forEach(planeKey => {
+                            const plane = level[planeKey];
+                            if (plane && Array.isArray(plane.miniboards)) {
+                                plane.miniboards.forEach(board => {
+                                    try {
+                                        const changedIds = this.cleanupMalformedMonsterTiles(board);
+                                        if (changedIds && changedIds.length) {
+                                            anyChanges = true;
+                                            changedTilesSummary.push({ boardId: board.id, changedIds });
+                                        }
+                                    } catch (e) {}
+                                });
+                            }
+                        });
+                    });
+                }
+                if (anyChanges) {
+                    console.log('Monster tile cleanup applied during setDungeon:', changedTilesSummary);
+                    try { if (this.updateDungeon) this.updateDungeon(this.dungeon); } catch (e) { console.warn('updateDungeon failed during setDungeon cleanup', e); }
+                    try {
+                        const meta = getMeta() || {};
+                        meta.lastMonsterTileCleanup = new Date().toISOString();
+                        try { storeMeta(meta); } catch (e) { console.warn('storeMeta failed during setDungeon cleanup', e); }
+                    } catch (e) {}
+                }
+            } catch (e) {}
         } catch (e) {
             // ignore normalization errors
         }
+            return changedTilesSummary;
     }
     this.setCurrentLevel = (level) => {
         this.currentLevel = level;
@@ -300,6 +389,12 @@ export function BoardManager(){
         // console.log('templateLevel');
         // Make sure templateBoard is normalized for legacy templates
         try { this.normalizeBoardTiles(templateBoard); } catch (e) {}
+        try {
+            const tplChanged = this.cleanupMalformedMonsterTiles(templateBoard);
+            if (tplChanged && tplChanged.length) {
+                console.log('Normalized templateBoard tiles before respawn:', tplChanged);
+            }
+        } catch (e) {}
     
         if (!templateBoard) {
             // nothing to respawn from - template didn't contain a matching plane/board
@@ -377,8 +472,46 @@ export function BoardManager(){
         let spawnCoords = this.getCoordinatesFromIndex(spawnTileIndex);
     let board = this.currentOrientation === 'F' ? this.currentLevel.front.miniboards[boardIndex] : this.currentLevel.back.miniboards[boardIndex]
 
-    // Normalize the board tiles in-place (backwards-compatibility)
+        // Normalize the board tiles in-place (backwards-compatibility)
     try { this.normalizeBoardTiles(board); } catch (e) {}
+
+        // Cleanup malformed monster tile shapes that may have been saved in
+        // older formats. Ensure every monster tile has the canonical object
+        // shape: { type: 'monster', subtype: '<monster_key>' }.
+        try {
+            const changedIds = this.cleanupMalformedMonsterTiles(board);
+            if (changedIds && changedIds.length) {
+                // Persist changes back into dungeon structure and session meta
+                try {
+                    if (this.currentOrientation === 'F') {
+                        const levelEntry = this.dungeon.levels.find(e => e.id === this.currentLevel.id);
+                        if (levelEntry && levelEntry.front && levelEntry.front.miniboards) {
+                            const b = levelEntry.front.miniboards.find(bi => bi.id === this.currentBoard.id);
+                            if (b && b.tiles) {
+                                b.tiles = board.tiles;
+                            }
+                        }
+                    } else {
+                        const levelEntry = this.dungeon.levels.find(e => e.id === this.currentLevel.id);
+                        if (levelEntry && levelEntry.back && levelEntry.back.miniboards) {
+                            const b = levelEntry.back.miniboards.find(bi => bi.id === this.currentBoard.id);
+                            if (b && b.tiles) {
+                                b.tiles = board.tiles;
+                            }
+                        }
+                    }
+                } catch (e) { /* best-effort reflection */ }
+
+                try { if (this.updateDungeon) this.updateDungeon(this.dungeon); } catch (e) { console.warn('updateDungeon failed during cleanup', e); }
+                try {
+                    const meta = getMeta() || {};
+                    meta.lastMonsterTileCleanup = new Date().toISOString();
+                    try { storeMeta(meta); } catch (e) { console.warn('storeMeta failed during cleanup', e); }
+                } catch (e) {}
+            }
+        } catch (e) {}
+
+        
 
         this.currentBoard = board;
         this.tiles = [];
@@ -459,6 +592,34 @@ export function BoardManager(){
         return this.monstersArr.includes(c);
     })
     this.handleInteraction = (destinationTile) => {
+        // Defensive normalization: ensure destinationTile.contains has the
+        // canonical shape { type: 'monster'|'item'|..., subtype: 'key'|null }
+        try {
+            const raw = destinationTile && destinationTile.contains;
+            if (raw && typeof raw === 'string') {
+                // legacy string form: either a monster key or a type name
+                if (this.monstersArr.includes(raw)) {
+                    destinationTile.contains = { type: 'monster', subtype: raw };
+                } else if (raw === 'monster') {
+                    destinationTile.contains = { type: 'monster', subtype: this.getRandomMonster() };
+                } else {
+                    destinationTile.contains = { type: raw, subtype: null };
+                }
+            } else if (raw && typeof raw === 'object') {
+                // If an object with only a subtype was provided (e.g. { subtype: 'gorgon' })
+                // assume it's a monster when the subtype matches known monster keys.
+                if ((!raw.type || raw.type === null) && raw.subtype) {
+                    if (this.monstersArr.includes(raw.subtype)) {
+                        destinationTile.contains = { type: 'monster', subtype: raw.subtype };
+                    } else {
+                        destinationTile.contains = { type: raw.type || null, subtype: raw.subtype || null };
+                    }
+                }
+            }
+        } catch (e) {
+            // best-effort normalization; fall through
+        }
+
         const type = this.getContainsType(destinationTile.contains);
         const subtype = this.getContainsSubtype(destinationTile.contains);
         switch(type){
@@ -469,13 +630,11 @@ export function BoardManager(){
             case 'way_down':
                 return 'way_down';
             case 'monster':
-                // For monsters: do NOT block movement (previous behavior returned 'impassable').
-                // Instead, signal the caller that this is a monster so the caller can
-                // complete the player move and then initiate the encounter. This
-                // ensures the player actually moves onto the tile before combat
-                // begins (expected UX).
-                this.setMonster(subtype);
-                this.triggerMonsterBattle(true, destinationTile.id);
+                // For monsters: do NOT start combat here or block movement.
+                // Normalize shape is handled above; return 'monster' so the
+                // caller (move()) can complete the player movement and then
+                // initiate the encounter. That ordering ensures the player
+                // visibly occupies the tile before the battle UI appears.
                 return 'monster';
             case 'minor_gate':
                 this.handleGate(destinationTile);

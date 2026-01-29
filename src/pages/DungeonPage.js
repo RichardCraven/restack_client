@@ -1787,7 +1787,12 @@ class DungeonPage extends React.Component {
         }
         const dungeon = JSON.parse(res.data[0].content)
         dungeon.id = res.data[0]._id;
-        this.props.boardManager.setDungeon(dungeon)
+        const cleanupSummary = this.props.boardManager.setDungeon(dungeon)
+        console.log('DungeonPage.loadExistingDungeon: called boardManager.setDungeon; cleanupSummary:', cleanupSummary);
+        try {
+            const metaAfter = getMeta() || {};
+            if (metaAfter.lastMonsterTileCleanup) console.log('DungeonPage.loadExistingDungeon: meta.lastMonsterTileCleanup =', metaAfter.lastMonsterTileCleanup);
+        } catch (e) {}
         this.props.boardManager.setCurrentLevel(dungeon.levels.find(l=> l.id === meta.location.levelId));
         this.props.boardManager.setCurrentOrientation(meta.location.orientation);
         this.props.boardManager.initializeTilesFromMap(meta.location.boardIndex, meta.location.tileIndex);
