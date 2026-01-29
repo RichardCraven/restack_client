@@ -322,6 +322,24 @@ import body_female from '../assets/icons/figures/body_fem.png'
 //camp
 import camp from '../assets/icons/misc/camp/camp-2.png'
 
+//terrain
+import terrain_1 from '../assets/icons/terrain/stone-1.png'
+import terrain_2 from '../assets/icons/terrain/stone-2.png'
+import terrain_3 from '../assets/icons/terrain/stone-3.png'
+import terrain_4 from '../assets/icons/terrain/stone-4.png'
+import terrain_5 from '../assets/icons/terrain/stone-5.png'
+import terrain_6 from '../assets/icons/terrain/stone-6.png'
+import terrain_7 from '../assets/icons/terrain/stone-7.png'
+import terrain_8 from '../assets/icons/terrain/stone-8.png'
+import terrain_9 from '../assets/icons/terrain/stone-9.png'
+import terrain_10 from '../assets/icons/terrain/stone-10.png'
+import terrain_11 from '../assets/icons/terrain/stone-11.png'
+import terrain_12 from '../assets/icons/terrain/stone-12.png'
+import terrain_13 from '../assets/icons/terrain/stone-13.png'
+import terrain_14 from '../assets/icons/terrain/stone-14.png'
+import terrain_15 from '../assets/icons/terrain/stone-15.png'
+import terrain_16 from '../assets/icons/terrain/stone-16.png'
+
 export {
     hand_1,
     hand_2,
@@ -587,6 +605,23 @@ export {
 
     body_male,
     body_female, 
+
+    terrain_1,
+    terrain_2,
+    terrain_3,
+    terrain_4,
+    terrain_5,
+    terrain_6,
+    terrain_7,
+    terrain_8,
+    terrain_9,
+    terrain_10,
+    terrain_11,
+    terrain_12,
+    terrain_13,
+    terrain_14,
+    terrain_15,
+    terrain_16,
 
     camp
 };
