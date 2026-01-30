@@ -1669,10 +1669,12 @@ export function CombatManager(){
 
         // trigger rocked animation on severe (critical) hits
         if (criticalHit && typeof combatantHit.rockAnimationOn === 'function') {
-            // combatantHit.rockAnimationOn();
-            // setTimeout(() => {
-            //     if (typeof combatantHit.rockAnimationOff === 'function') combatantHit.rockAnimationOff();
-            // }, ROCK_DURATION);
+            try {
+                combatantHit.rockAnimationOn();
+            } catch (e) {}
+            setTimeout(() => {
+                if (typeof combatantHit.rockAnimationOff === 'function') combatantHit.rockAnimationOff();
+            }, ROCK_DURATION);
         }
 
         if (typeof this.updateData === 'function') {

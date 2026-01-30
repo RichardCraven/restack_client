@@ -1,7 +1,18 @@
 function copy(item){
     return JSON.parse(JSON.stringify(item))
 }
-
+const swords = [
+    'longsword_sword',
+    'broadsword_sword',
+    'claymore_sword',
+    'katana_sword',
+    'rapier_sword',
+    'falchion_sword',
+    'cutlass_sword',
+    'gladius_sword',
+    'greatsword_sword',
+    'shortsword_sword',
+]
 export function InventoryManager(){
     this.tiles = [];
     this.gold = 0;

@@ -945,17 +945,70 @@ class DungeonPage extends React.Component {
     refreshTiles = () => {
         let newTiles = this.props.boardManager.tiles,
             newOverlayTiles = this.props.boardManager.overlayTiles
+
+        // Ensure each visible (non-void) tile has a randomly chosen terrain background
+        try {
+            if (Array.isArray(newTiles) && this.props.boardManager && typeof this.props.boardManager.getContainsType === 'function') {
+                for (let i = 0; i < newTiles.length; i++) {
+                    const t = newTiles[i];
+                    if (!t) continue;
+                    const containsType = this.props.boardManager.getContainsType(t.contains);
+                    // skip void tiles or currently hidden (black) tiles — fog-of-war will mark hidden tiles as black
+                    if (containsType === 'void' || t.color === 'black') continue;
+                    // do not override an existing terrain assignment so reloads keep the same visuals
+                    if (!t.terrain) {
+                        const n = Math.floor(Math.random() * 16) + 1;
+                        t.terrain = `terrain_${n}`;
+                    }
+                }
+            }
+        } catch (e) {
+            // defensive: if anything goes wrong, don't block the refresh
+            console.warn('refreshTiles: failed to assign terrain:', e);
+        }
+
         this.setState({
             tiles: newTiles,
             overlayTiles: newOverlayTiles
         })
     }
     triggerMonsterBattle = (bool, tileId) => {
-        this.setState({
-            keysLocked: bool,
-            inMonsterBattle: bool,
-            monsterBattleTileId: tileId
-        })
+        // When entering combat: remember current side-panel state and
+        // collapse both panels. On exit, restore the saved state.
+        try {
+            if (bool) {
+                // entering combat - save previous panel expand/collapse state
+                this._preCombatPanels = {
+                    left: !!this.state.leftPanelExpanded,
+                    right: !!this.state.rightPanelExpanded
+                };
+                this.setState({
+                    keysLocked: bool,
+                    inMonsterBattle: bool,
+                    monsterBattleTileId: tileId,
+                    leftPanelExpanded: false,
+                    rightPanelExpanded: false
+                });
+            } else {
+                // exiting combat - restore previous panel state if we saved it
+                const prev = this._preCombatPanels || { left: false, right: false };
+                this.setState({
+                    keysLocked: bool,
+                    inMonsterBattle: bool,
+                    monsterBattleTileId: tileId,
+                    leftPanelExpanded: !!prev.left,
+                    rightPanelExpanded: !!prev.right
+                });
+                this._preCombatPanels = null;
+            }
+        } catch (e) {
+            // Fallback to original behavior if anything goes wrong
+            this.setState({
+                keysLocked: bool,
+                inMonsterBattle: bool,
+                monsterBattleTileId: tileId
+            })
+        }
     }
     setMonster = (monsterString) => {
         // monsterString = 'beholder'
@@ -2770,6 +2823,7 @@ class DungeonPage extends React.Component {
                         image={tile.image ? tile.image : null}
                         imageOverride={tile.image && tile.image.includes('/') ? tile.image : null}
                         contains={tile.contains}
+                        terrain={tile.terrain}
                         color={tile.color ? tile.color : 'lightgrey'}
                         borders={tile.borders}
                         coordinates={tile.coordinates}
@@ -2797,6 +2851,7 @@ class DungeonPage extends React.Component {
                         image={tile.image ? tile.image : (tile.icon ? tile.icon : null)}
                         imageOverride={tile.image && tile.image.includes('/') ? tile.image : null}
                         contains={tile.contains}
+                        terrain={tile.terrain}
                         color={tile.color ? tile.color : 'lightgrey'}
                         borders={tile.borders}
                         coordinates={tile.coordinates}
