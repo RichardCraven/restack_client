@@ -404,7 +404,12 @@ export function BoardManager(){
 
         templateBoard.tiles.forEach(templateTile=>{
             let equivalentTile = currentLevel.miniboards[this.playerTile.boardIndex].tiles.find(tile=> tile.id === templateTile.id)
-            if(this.getContainsType(templateTile.contains) === 'monster' && !this.isMonster(equivalentTile) && this.getIndexFromCoordinates(this.playerTile.location) !== templateTile.id) {
+            // Defensive: do not respawn monsters on the player's current tile
+            const playerIdx = this.getIndexFromCoordinates(this.playerTile.location);
+            if (templateTile && templateTile.id === playerIdx) return;
+            if (this.tiles && this.tiles[templateTile.id] && this.tiles[templateTile.id].playerTile) return;
+
+            if(this.getContainsType(templateTile.contains) === 'monster' && !this.isMonster(equivalentTile) && playerIdx !== templateTile.id) {
                 // assign a monster object shape — prefer the template's subtype when available
                 const monsterSubtype = this.getContainsSubtype(templateTile.contains) || this.getRandomMonster();
                 equivalentTile.contains = { type: 'monster', subtype: monsterSubtype };

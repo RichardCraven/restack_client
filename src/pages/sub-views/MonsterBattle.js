@@ -217,6 +217,23 @@ class MonsterBattle extends React.Component {
             }, DEATH_ANIMATION_DURATION);
             this.handleFighterDeath(id);
         });
+
+        // Wire up inventory callbacks so AI can read and consume communal/personal potions
+        try {
+            if (this.props.combatManager && typeof this.props.combatManager.establishGetCurrentInventoryCallback === 'function') {
+                // Return the actual inventory objects (inventory) not the list of item keys (items)
+                this.props.combatManager.establishGetCurrentInventoryCallback(() => {
+                    try { return (this.props.inventoryManager && Array.isArray(this.props.inventoryManager.inventory)) ? this.props.inventoryManager.inventory : []; } catch (e) { return []; }
+                });
+            }
+        } catch (e) {}
+        try {
+            if (this.props.combatManager && typeof this.props.combatManager.establishUseConsumableCallback === 'function') {
+                this.props.combatManager.establishUseConsumableCallback((item) => {
+                    try { if (this.props.useConsumableFromInventory) this.props.useConsumableFromInventory(item); } catch (e) { console.warn('useConsumableCallback failed', e); }
+                });
+            }
+        } catch (e) {}
         
         //overlay manager callbacks
         // this.establishInitializeOverlayManagerCallback();
@@ -855,13 +872,17 @@ class MonsterBattle extends React.Component {
             console.warn('Failed to persist final battle HP to meta', err);
         }
 
+        // Ensure suppressSummaryPortraits is only true for the special group-death flow
+        // (that flow sets this._suppressPersistFinalHP and this.state.suppressSummaryPortraits
+        //  earlier). For all other outcomes make sure portraits are shown.
         this.setState({
             showSummaryPanel: true,
             goldGained,
             experienceGained,
             itemsGained,
             summaryMessage,
-            battleResult
+            battleResult,
+            suppressSummaryPortraits: !!this._suppressPersistFinalHP
         })
     }
     launchDeathSequence = () => {
@@ -1352,8 +1373,9 @@ class MonsterBattle extends React.Component {
                             { !this.state.suppressSummaryPortraits && (
                                 <div className="portraits-container">
                                     {Object.values(this.state.battleData).filter(e=>!e.dead && !e.isMonster && !e.isMinion).map((crewMember, i) => {
+                                        const portraitUrl = images[crewMember.portrait] || crewMember.portrait;
                                         return <div key={i} className="single-portrait-container">
-                                            <div className="portrait" style={{backgroundImage: `url(${crewMember.portrait})`}}></div>
+                                            <div className="portrait" style={{backgroundImage: `url(${portraitUrl})`}}></div>
                                             {this.props.crewManager.calculateExpPercentage(crewMember) >= 100 && <Canvas 
                                             className="level-up-canvas"
                                             width={80}
@@ -1366,8 +1388,9 @@ class MonsterBattle extends React.Component {
                                         </div>
                                     })}
                                     {Object.values(this.state.battleData).filter(e=>e.dead && !e.isMonster && !e.isMinion).map((crewMember, i) => {
+                                        const portraitUrl = images[crewMember.portrait] || crewMember.portrait;
                                         return <div key={i} className="single-portrait-container dead-member">
-                                            <div className="portrait" style={{backgroundImage: `url(${crewMember.portrait})`}}>
+                                            <div className="portrait" style={{backgroundImage: `url(${portraitUrl})`}}>
                                                 <div className="skull-image" style={{backgroundImage: `url(${images['whiteskull']})`}}></div>
                                             </div>
                                         </div>

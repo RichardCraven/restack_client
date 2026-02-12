@@ -494,9 +494,8 @@ export function CombatManager(){
                 caller.pendingAttack = instruction.selectedAction;
                 caller.attack();
             break;
-            default:
-                console.log('no valid action type sepcificied');
-                debugger
+        default:
+            console.log('no valid action type sepcificied');
         }
         caller.action_queue.shift();
     }
@@ -659,7 +658,6 @@ export function CombatManager(){
             break;
             default:
                 console.log('somehow attack had no range');
-                debugger
             break;
         }
         return !!res;
@@ -1053,10 +1051,9 @@ export function CombatManager(){
             return
         }
 
-        // this should only happern for minions with no ai
+    // this should only happern for minions with no ai
 
-        debugger
-        return
+    return
 
 
 
@@ -1316,10 +1313,9 @@ export function CombatManager(){
         target.targettedBy.push(caller.id)
         const attack = this.chooseAttackType(caller, target);
         caller.targetId = target.id
-        if(!attack){
+            if(!attack){
             console.log('whoa! about to assign an undefined attackj to pending');
             console.log('details: ', 'caller:',caller,'target', target);
-            debugger
         }
         caller.pendingAttack = attack;
         if(caller.targetId){
@@ -1998,7 +1994,6 @@ export function CombatManager(){
     }
     // Allow AI to consume consumables and notify UI (DungeonPage) to remove one item
     utilMethods.useConsumable = (item, user) => {
-        console.log('in useConsumabkle', item, user);
         try {
             // Apply the item effect to the combatant
             this.itemUsed(item, user);

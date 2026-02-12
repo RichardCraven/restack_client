@@ -22,6 +22,7 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
     this.hitsTarget = utilMethods.hitsTarget;
     this.hitsCombatant = utilMethods.hitsCombatant;
     this.useConsumable = utilMethods.useConsumable;
+    this.getCurrentInventory = utilMethods.getCurrentInventory;
     // Override targetKilled to match monster/minion death animation and removal
     this.targetKilled = (target) => {
         // Blue ripple animation on death
@@ -249,9 +250,34 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
         }
         return false;
     }
+    this.tryUseConsumableForHeal = (caller) => {
+        try {
+            if (!caller || typeof caller.hp === 'undefined' || typeof caller.starting_hp === 'undefined') return false;
+            // threshold: 50% of starting HP
+            if (!(caller.hp < (caller.starting_hp * 0.5))) return false;
+            if (!this.useConsumable) return false;
+            const groupInv = (typeof this.getCurrentInventory === 'function') ? this.getCurrentInventory() : (Array.isArray(caller.inventory) ? caller.inventory : []);
+            if (!groupInv || !groupInv.length) return false;
+            const pIdx = groupInv.findIndex(i => i && (i.effect === 'health gain' || (i.name && i.name.toLowerCase().includes('potion'))));
+            if (pIdx === -1) return false;
+            const isGroup = (typeof this.getCurrentInventory === 'function');
+            let item;
+            if (!isGroup && Array.isArray(caller.inventory)) {
+                item = caller.inventory.splice(pIdx, 1)[0];
+            } else {
+                item = groupInv[pIdx];
+            }
+            console.log('AI using consumable item', item);
+            try { this.useConsumable(item, caller); } catch (e) {}
+            try { if (typeof this.broadcastDataUpdate === 'function') this.broadcastDataUpdate(caller); } catch (e) {}
+            return true;
+        } catch (err) {
+            console.warn('tryUseConsumableForHeal failed', err);
+            return false;
+        }
+    };
     this.processMove = (caller, combatants) => {
         if (typeof caller.moveCooldown === 'undefined') {
-            debugger;
             throw new Error('moveCooldown must be defined for all units');
         }
         caller.onMoveCooldown = true;
@@ -290,6 +316,7 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                         }
                     break;
                     case 1:
+                        this.tryUseConsumableForHeal(caller);
                         if (target && targetHasMoreThanHalfHp && this.useSpell(caller, combatants)) {
                             break;
                         }
@@ -305,15 +332,7 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                     break;
                     case 2:
                         // If low HP, attempt to consume a health potion before other actions
-                        if (caller.hp < (caller.starting_hp * 0.4) && this.useConsumable && Array.isArray(caller.inventory) && caller.inventory.length) {
-                            const pIdx = caller.inventory.findIndex(i => i && (i.effect === 'health gain' || (i.name && i.name.toLowerCase().includes('potion'))));
-                            if (pIdx !== -1) {
-                                const item = caller.inventory.splice(pIdx, 1)[0];
-                                try { this.useConsumable(item, caller); } catch (e) {}
-                                try { if (typeof this.broadcastDataUpdate === 'function') this.broadcastDataUpdate(caller); } catch (e) {}
-                                break;
-                            }
-                        }
+                        this.tryUseConsumableForHeal(caller);
                         if (target && targetHasMoreThanHalfHp &&  this.useSpell(caller, combatants)) {
                             break;
                         }
@@ -328,15 +347,7 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
     
                     case 3:
                         // era 3: attempt to use a health potion if dangerously low
-                        if (caller.hp < (caller.starting_hp * 0.4) && this.useConsumable && Array.isArray(caller.inventory) && caller.inventory.length) {
-                            const pIdx = caller.inventory.findIndex(i => i && (i.effect === 'health gain' || (i.name && i.name.toLowerCase().includes('potion'))));
-                            if (pIdx !== -1) {
-                                const item = caller.inventory.splice(pIdx, 1)[0];
-                                try { this.useConsumable(item, caller); } catch (e) {}
-                                try { if (typeof this.broadcastDataUpdate === 'function') this.broadcastDataUpdate(caller); } catch (e) {}
-                                break;
-                            }
-                        }
+                        this.tryUseConsumableForHeal(caller);
                         if(enemyIsAdjacent) {
                             data.methods.evadeBack(caller, combatants);
                         } else {
@@ -349,15 +360,7 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                     break;
                     case 4:
                         // era 4: attempt to use a health potion if dangerously low
-                        if (caller.hp < (caller.starting_hp * 0.4) && this.useConsumable && Array.isArray(caller.inventory) && caller.inventory.length) {
-                            const pIdx = caller.inventory.findIndex(i => i && (i.effect === 'health gain' || (i.name && i.name.toLowerCase().includes('potion'))));
-                            if (pIdx !== -1) {
-                                const item = caller.inventory.splice(pIdx, 1)[0];
-                                try { this.useConsumable(item, caller); } catch (e) {}
-                                try { if (typeof this.broadcastDataUpdate === 'function') this.broadcastDataUpdate(caller); } catch (e) {}
-                                break;
-                            }
-                        }
+                        this.tryUseConsumableForHeal(caller);
                         if(enemyIsAdjacent) {
                             data.methods.evadeBack(caller, combatants);
                         } else {
@@ -424,7 +427,7 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
         if(caller.pendingAttack.name === 'meditate'){
             data.methods.moveTowardsCloseFriendlyTarget(caller, combatants)
         } else if(caller.pendingAttack.name === 'cane_strike'){
-            debugger
+            
         }
 
         // data.methods.moveTowardsCloseEnemyTarget(caller, combatants)

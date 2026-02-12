@@ -4,6 +4,7 @@ import { INTERVALS } from '../utils/shared-constants';
 import '../styles/dungeon-board.scss'
 import Tile from '../components/tile'
 import MonsterBattle from './sub-views/MonsterBattle';
+import CardDuel from './sub-views/CardDuel';
 import ExpositionPane from './sub-views/ExpositionPane';
 import {
     loadAllDungeonsRequest,
@@ -352,6 +353,10 @@ class DungeonPage extends React.Component {
             ritualWrecked: false,
             shiftDown: false,
             showFullScreen: false
+            , showCardDuelModal: false
+            , cardDuelTileId: null
+            , toastMessage: null
+            , prototypeTasksOpen: false
         }
     // Native browser tooltip will be used for death-tracker; no custom tooltip state required.
         // Track timers/intervals created by this component so we can clear on unmount
@@ -426,6 +431,32 @@ class DungeonPage extends React.Component {
         } catch (e) {
             console.warn('handleDeathTrackerChanged failed', e);
         }
+    }
+
+    // --- Card Duel modal helpers ---
+    openCardDuel = (tileId) => {
+        this.setState({ showCardDuelModal: true, cardDuelTileId: tileId, toastMessage: null });
+    }
+
+    closeCardDuel = () => {
+        this.setState({ showCardDuelModal: false, cardDuelTileId: null });
+    }
+
+    handleCardDuelFinish = (result) => {
+        try{
+            if(result && result.winner === 'player'){
+                console.log('you win');
+            } else if(result && result.winner === 'reaper'){
+                // Surface a toast informing of the pending tax, but DO NOT apply it here.
+                const taxPercent = 25;
+                this.setState({ toastMessage: `You lost the duel — pending tax ${taxPercent}% gold (NOT applied in test)` });
+            }
+        } catch(e){ console.warn('handleCardDuelFinish failed', e); }
+        this.closeCardDuel();
+    }
+
+    togglePrototypeTasks = () => {
+        this.setState(prev => ({ prototypeTasksOpen: !prev.prototypeTasksOpen }));
     }
     componentDidMount(){
         // Migration: normalize legacy equippedSlot keys to 'pet'
@@ -2067,13 +2098,54 @@ class DungeonPage extends React.Component {
                 
                 console.log('current location: ', meta2.location);
                 // debugger
-                if (meta2 && meta2.location && this.props && this.props.boardManager && typeof this.props.boardManager.initializeTilesFromMap === 'function') {
-                    this.props.boardManager.initializeTilesFromMap(meta2.location.boardIndex, meta2.location.tileIndex);
+                if (meta2 && meta2.location && this.props && this.props.boardManager) {
+                    try {
+                        const bm = this.props.boardManager;
+                        // Place the player at the saved location without reinitializing the
+                        // entire board (which could reintroduce removed items). Then
+                        // respawn monsters only using the boardManager.respawnMonsters
+                        // method which only affects monster tiles.
+                        if (typeof bm.getCoordinatesFromIndex === 'function' && typeof bm.placePlayer === 'function') {
+                            const coords = bm.getCoordinatesFromIndex(meta2.location.tileIndex);
+                            bm.placePlayer(coords);
+                        }
+                        try {
+                            // Use the manager's own dungeon/template to respawn monsters.
+                            if (typeof bm.respawnMonsters === 'function') bm.respawnMonsters(bm.dungeon || {});
+                        } catch (inner) { console.warn('respawnMonsters failed', inner); }
+                        try { if (typeof this.setState === 'function') this.setState({ overlayTiles: bm.overlayTiles, tiles: bm.tiles }); } catch(e){}
+                    } catch (inner) {
+                        console.warn('group-death: respawn failed', inner);
+                    }
                 } else {
-                    console.warn('group-death: cannot respawn - boardManager or initializeTilesFromMap missing');
+                    console.warn('group-death: cannot respawn - boardManager missing');
                 }
             } catch (inner) { console.warn('group-death: respawn failed', inner); }
         }
+        try {
+            // If we saved the pre-combat panel state, restore it now so the UI returns
+            // to the same expanded/collapsed configuration the player had before combat.
+            if (this._preCombatPanels) {
+                const prev = this._preCombatPanels;
+                try {
+                    this.setState({
+                        leftPanelExpanded: !!prev.left,
+                        rightPanelExpanded: !!prev.right
+                    });
+                } catch (e) {}
+                try {
+                    const meta = getMeta() || {};
+                    meta.leftExpanded = !!prev.left;
+                    meta.rightExpanded = !!prev.right;
+                    try { storeMeta(meta); } catch (e) {}
+                    try { updateUserRequest(getUserId(), meta).catch(()=>{}); } catch(e) {}
+                } catch (inner) {}
+                this._preCombatPanels = null;
+            }
+        } catch (err) {
+            console.warn('battleOver: failed to restore panel state', err);
+        }
+
         this.setState({
             keysLocked : false,
             inMonsterBattle: false
@@ -2687,6 +2759,12 @@ class DungeonPage extends React.Component {
                 </div>
                 <div className="crew-container">
                     <div className="title">Crew</div>
+                    {/* Prototype tasks toggle (user-requested visible hook) */}
+                    <div className="prototype-tasks-toggle" onClick={this.togglePrototypeTasks} style={{cursor:'pointer', fontSize:12, color:'#ccc', marginBottom:6}}>Prototype Tasks</div>
+                    {this.state.prototypeTasksOpen && <div className="prototype-tasks-panel" style={{background:'#1b1b1b', padding:6, borderRadius:4, marginBottom:8}}>
+                        <div style={{fontSize:12, color:'#fff'}}>improve prototype package</div>
+                    </div>}
+
                     {/* Death tracker: shows skull icons for recent group deaths (meta.deathTracker) */}
                     {(() => {
                         try {
@@ -2704,6 +2782,9 @@ class DungeonPage extends React.Component {
                                             tabIndex={0}
                                             title={tooltip}
                                             aria-label={tooltip}
+                                            role="button"
+                                            onClick={() => this.openCardDuel(idx)}
+                                            style={{cursor: 'pointer'}}
                                         >
                                             <div className="death-skull" style={{backgroundImage: `url(${images['whiteskull']})`}}></div>
                                         </div>
@@ -2712,6 +2793,17 @@ class DungeonPage extends React.Component {
                             );
                         } catch (e) { return null; }
                     })()}
+                    {this.state.toastMessage && <div className="dungeon-toast" style={{marginTop:8, padding:8, background:'#2b1b1b', color:'#f0d', borderRadius:4}}>{this.state.toastMessage}</div>}
+
+                    {/* Card duel modal (opens when clicking a death skull) */}
+                    <CModal visible={this.state.showCardDuelModal} onClose={this.closeCardDuel} backdrop={true} size="lg">
+                        <CModalHeader>
+                            <CModalTitle>Fire of Circulation — Duel</CModalTitle>
+                        </CModalHeader>
+                        <CModalBody>
+                            <CardDuel onFinish={this.handleCardDuelFinish} saveUserData={this.props.saveUserData} />
+                        </CModalBody>
+                    </CModal>
                     <div className="crew-tile-container">
                         {   this.props.crewManager.crew &&
                             this.props.crewManager.crew.map((member, i) => {

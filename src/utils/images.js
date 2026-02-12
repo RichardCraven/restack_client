@@ -74,6 +74,7 @@ import golden_demon from '../assets/icons/monsters/demons/golden_demon.png'
 import kabuki_demon from '../assets/portraits/monsters/variations/kabuki_demon/kabuki_demon1.png'
 import kabuki_demon_portrait from '../assets/portraits/monsters/variations/kabuki_demon/kabuki_demon1.png'
 import kabuki_demon_minion_portrait from '../assets/portraits/monsters/variations/kabuki_demon/kabuki_demon_minion.png'
+import kabuki_demon_minion from '../assets/portraits/monsters/variations/kabuki_demon/kabuki_demon_minion.png'
 
 import arrowUp from '../assets/graphics/arrow_up.png'
 import arrowDown from '../assets/graphics/arrow_down.png'
@@ -214,6 +215,8 @@ import sphinx_portrait2 from '../assets/portraits/monsters/sphinx2.png'
 import wyvern_portrait from '../assets/portraits/monsters/wyvern.png'
 import wyvern_portrait2 from '../assets/portraits/monsters/wyvern2.png'
 import djinn_portrait from '../assets/portraits/monsters/djinn.png'
+
+import vampire from '../assets/portraits/monsters/vampire.png'
 import vampire_portrait from '../assets/portraits/monsters/vampire.png'
 import troll_portrait from '../assets/portraits/monsters/troll.png'
 import wraith_portrait from '../assets/portraits/monsters/wraith.png'
@@ -554,6 +557,7 @@ export {
 
     kabuki_demon_portrait,
     kabuki_demon_minion_portrait,
+    kabuki_demon_minion,
 
 
     bow_and_arrow,
@@ -625,5 +629,6 @@ export {
     terrain_15,
     terrain_16,
 
-    camp
+    camp,
+    vampire
 };
