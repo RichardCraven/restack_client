@@ -4,11 +4,14 @@ import '../../styles/monster-battle.scss'
 import * as images from '../../utils/images'
 // import AnimationTile from '../../components/animation-tile';
 import AnimationGrid from '../../components/animation-grid';
+import { CModal } from '@coreui/react';
+import '../../styles/inventory-modal.scss';
 import { Redirect } from "react-router-dom";
 import {storeMeta, getMeta, getUserId, getUserName} from '../../utils/session-handler';
 import {
-    updateUserRequest
-  } from '../../utils/api-handler';
+        updateUserRequest,
+        deleteDungeonRequest
+    } from '../../utils/api-handler';
 import Canvas from '../../components/Canvas/canvas'
 import Overlay from '../../components/Overlay'
 import CanvasMagicMissile from '../../components/Canvas/canvas_magic_missile'
@@ -44,13 +47,7 @@ class MonsterBattle extends React.Component {
     getGameSpeed = () => {
         return this.props.combatManager?.FIGHT_INTERVAL;
     }
-    componentDidMount() {
-    // ...existing code...
-    }
-
-    componentWillUnmount() {
-    // ...existing code...
-    }
+    // lifecycle methods implemented further below
 
     // All keydown logic removed; now handled in CombatSimulator
 
@@ -66,6 +63,30 @@ class MonsterBattle extends React.Component {
     // Allow AI to fire glyphs without requiring the fighter to be selected
     fireSpecialForAI = (fighter, glyph = null) => {
         if (glyph) {
+            console.log('oooooooooo in here..........');
+            // If a consumable/spell glyph was provided by AI, remove one
+            // instance from the fighter's consumable specialActions so the
+            // UI reflects the usage immediately. Use a best-effort match by
+            // reference, subtype, or name.
+            try {
+                if (fighter && Array.isArray(fighter.specialActions)) {
+                    const matchIndex = fighter.specialActions.findIndex(sa => {
+                        if (!sa) return false;
+                        if (sa === glyph) return true;
+                        if (glyph.subtype && sa.subtype && sa.subtype === glyph.subtype) return true;
+                        if (glyph.name && sa.name && sa.name === glyph.name) return true;
+                        return false;
+                    });
+                    if (matchIndex !== -1) {
+                        fighter.specialActions.splice(matchIndex, 1);
+                        // Notify local component state to re-render immediately
+                        try { this.applyFighterUpdate(fighter); } catch (err) { console.warn('applyFighterUpdate failed', err); }
+                    }
+                }
+            } catch (err) {
+                console.warn('fireSpecialForAI: failed to remove glyph from fighter.specialActions', err);
+            }
+
             this.fireGlyph(glyph, fighter);
         } else {
             // fallback: set selectedFighter for other specials
@@ -89,6 +110,8 @@ class MonsterBattle extends React.Component {
     }
     constructor(props){
         super(props)
+        // mount flag to avoid setState on unmounted component warnings
+        this._isMounted = false;
         this.state = {
             message: '',
             combatStarted : false,
@@ -114,6 +137,9 @@ class MonsterBattle extends React.Component {
             draggingFighter: null,
             ghostPortraitMatrix: [],
             showSummaryPanel: false,
+            suppressSummaryPortraits: false,
+            // Inventory popup visibility
+            showInventoryPopup: false,
             summaryMessage: '',
             experienceGained: null,
             goldGained: null,
@@ -129,8 +155,25 @@ class MonsterBattle extends React.Component {
                magicMissile_targetLaneDiff: 0,
             teleportingFighterId: null
         }
+        // Internal flags for special group-death flow
+        this._suppressPersistFinalHP = false;
+        // Internal flag to ensure we only inject wizard spells once for simulation battles
+        this._wizardSpellsEnsured = false;
+        // Track timers/intervals created by this component so we can clear them on unmount
+        this._timers = [];
+        this._intervals = [];
+        this._setTimeout = (fn, t) => { const id = setTimeout(fn, t); try { this._timers.push(id); } catch(e){}; return id };
+        this._setInterval = (fn, t) => { const id = setInterval(fn, t); try { this._intervals.push(id); } catch(e){}; return id };
     }
     componentDidMount(){
+        // mark mounted so async callbacks can safely call setState
+        this._isMounted = true;
+    // Reset any previous group-death suppression flag and one-time guards
+    // when mounting a new battle. This prevents prior battle state from
+    // affecting subsequent battles if the component instance is reused.
+    this._suppressPersistFinalHP = false;
+    this._gameOverHandled = false;
+    this._goldAwarded = false;
         this.props.combatManager.initialize();
         this.props.combatManager.connectOverlayManager(this.props.overlayManager)
         this.props.combatManager.connectAnimationManager(this.props.animationManager);
@@ -143,7 +186,7 @@ class MonsterBattle extends React.Component {
                 // debugger
                 this.setState({ teleportingFighterId: caller.id });
                 // Optionally clear after a tick for animation
-                setTimeout(() => {
+                this._setTimeout(() => {
                     this.setState({ teleportingFighterId: null });
                 }, 100);
             };
@@ -175,11 +218,28 @@ class MonsterBattle extends React.Component {
         // Ensure both removal and selection logic are called for all combatants
         this.props.combatManager.establishOnFighterDeathCallback((id) => {
             // Wait for the death animation duration before removing
-            setTimeout(() => {
+            this._setTimeout(() => {
                 this.removeDeadCombatantAfterDelay(id);
             }, DEATH_ANIMATION_DURATION);
             this.handleFighterDeath(id);
         });
+
+        // Wire up inventory callbacks so AI can read and consume communal/personal potions
+        try {
+            if (this.props.combatManager && typeof this.props.combatManager.establishGetCurrentInventoryCallback === 'function') {
+                // Return the actual inventory objects (inventory) not the list of item keys (items)
+                this.props.combatManager.establishGetCurrentInventoryCallback(() => {
+                    try { return (this.props.inventoryManager && Array.isArray(this.props.inventoryManager.inventory)) ? this.props.inventoryManager.inventory : []; } catch (e) { return []; }
+                });
+            }
+        } catch (e) {}
+        try {
+            if (this.props.combatManager && typeof this.props.combatManager.establishUseConsumableCallback === 'function') {
+                this.props.combatManager.establishUseConsumableCallback((item) => {
+                    try { if (this.props.useConsumableFromInventory) this.props.useConsumableFromInventory(item); } catch (e) { console.warn('useConsumableCallback failed', e); }
+                });
+            }
+        } catch (e) {}
         
         //overlay manager callbacks
         // this.establishInitializeOverlayManagerCallback();
@@ -204,6 +264,18 @@ class MonsterBattle extends React.Component {
             monsterPortrait: this.props.monster.portrait
         })
 
+        // Wire the MonsterBattle component instance into the AI roster so
+        // fighter profiles (e.g. Wizard) can call back to update UI state
+        // directly. This is a best-effort hookup; other pages (CombatSimulator)
+        // may also wire the ref.
+        try {
+            if (this.props.combatManager && this.props.combatManager.fighterAI && this.props.combatManager.fighterAI.roster && this.props.combatManager.fighterAI.roster.wizard) {
+                this.props.combatManager.fighterAI.roster.wizard.monsterBattleRef = this;
+            }
+        } catch (err) {
+            console.warn('failed to wire monsterBattleRef to wizard AI', err);
+        }
+
         let arrowUp = new Image()
         arrowUp.src = images['arrowUp']
         let that = this;
@@ -212,6 +284,17 @@ class MonsterBattle extends React.Component {
                 arrowUpImage: arrowUp
             })
         }
+        // key handling moved to parent DungeonPage
+    }
+    componentWillUnmount() {
+        // mark unmounted to prevent async callbacks attempting setState
+        try { this._isMounted = false; } catch(e){}
+        // Best-effort: disconnect combat manager callbacks so no further calls come in
+        try { if (this.props && this.props.combatManager && typeof this.props.combatManager.shutdown === 'function') this.props.combatManager.shutdown(); } catch(e){}
+        try { if (this.props && this.props.combatManager && typeof this.props.combatManager.disconnectOverlayManager === 'function') this.props.combatManager.disconnectOverlayManager(); } catch(e){}
+        // Clear any timers/intervals this component created
+        try { if (Array.isArray(this._timers)) { this._timers.forEach(t => clearTimeout(t)); this._timers = []; } } catch(e){}
+        try { if (Array.isArray(this._intervals)) { this._intervals.forEach(i => clearInterval(i)); this._intervals = []; } } catch(e){}
     }
     monster = () => {
         // console.log('monster: ', this.state.battleData[this.props.monster.id]);
@@ -266,14 +349,14 @@ class MonsterBattle extends React.Component {
     // }
     milliDelay = (numMilliseconds) => {
         return new Promise((resolve) => {
-            setTimeout(()=>{
+            this._setTimeout(()=>{
                 resolve(numMilliseconds, ' complete')
             }, numMilliseconds)
         })
     }
     morphPortrait = () => {
         let stringBase = 'witch_p1_', count = 1, string;
-        const morphInterval = setInterval(()=>{
+        const morphInterval = this._setInterval(()=>{
             string = stringBase+count;
             this.setState({
                 monsterPortrait: images[string]
@@ -460,7 +543,27 @@ class MonsterBattle extends React.Component {
         const clonedBattleData = JSON.parse(JSON.stringify(battleData));
 
         // Ensure wizards have at least 3 "magic missile" spells available in their specialActions
-        this.ensureWizardSpells(clonedBattleData);
+        // Only for simulation-originated battles, and only once per component instance.
+        if (this.props.isSimulation && !this._wizardSpellsEnsured) {
+            this.ensureWizardSpells(clonedBattleData);
+            this._wizardSpellsEnsured = true;
+        }
+
+        // Normalize battleData entries to ensure UI rendering doesn't get tripped
+        // by missing fields (portrait, damageIndicators). This helps avoid
+        // empty portrait placeholders if an upstream producer omitted the field.
+        try {
+            Object.values(clonedBattleData).forEach(entry => {
+                if (!entry) return;
+                if (typeof entry.portrait === 'undefined' || entry.portrait === null) {
+                    // Use canonical avatar fallback
+                    entry.portrait = images['avatar'];
+                }
+                if (!Array.isArray(entry.damageIndicators)) entry.damageIndicators = [];
+            });
+        } catch (err) {
+            console.warn('updateBattleData: normalization failed', err);
+        }
 
         this.setState({
             battleData: clonedBattleData
@@ -482,6 +585,67 @@ class MonsterBattle extends React.Component {
                 }
             }
         })
+        // NOTE: persistence of HP/dead should only occur when combat ends
+        // to avoid excessive writes; see gameOver for persistence logic.
+    }
+
+    // Allow external callers (AI helpers) to push an update for a single
+    // fighter object into MonsterBattle's internal `battleData` state and
+    // trigger a re-render. This is used by fighter AIs (e.g. Wizard) to
+    // notify the UI that a fighter's consumable `specialActions` changed so
+    // the interaction pane updates immediately.
+    applyFighterUpdate = (fighter) => {
+        if (!fighter || !fighter.id) return;
+        console.log('applyFighterUpdate called for fighter', fighter && fighter.id);
+        try {
+            // Clone existing battleData to ensure React sees the new reference
+            const battleData = Object.assign({}, this.state.battleData);
+            // Merge/replace the fighter entry with a shallow-cloned copy
+            battleData[fighter.id] = JSON.parse(JSON.stringify(fighter));
+            const newState = { battleData };
+            // If the updated fighter is currently selected, keep selectedFighter
+            // in-sync with the authoritative object.
+            if (this.state.selectedFighter && this.state.selectedFighter.id === fighter.id) {
+                newState.selectedFighter = battleData[fighter.id];
+            }
+            this.setState(newState);
+
+            // Also persist consumable specialActions back to the global meta so
+            // the DungeonPage and other pages reflect the updated counts immediately.
+            try {
+                // Notify parent (DungeonPage) if it provided a handler so it can
+                // update its own state/selectedCrewMember immediately.
+                try {
+                    if (this.props && typeof this.props.onFighterUpdate === 'function') {
+                        try { this.props.onFighterUpdate(battleData[fighter.id]); } catch(e){}
+                    }
+                } catch(e){}
+                const meta = getMeta();
+                if (meta && Array.isArray(meta.crew)) {
+                    const idx = meta.crew.findIndex(c => c && c.id === fighter.id);
+                    if (idx !== -1) {
+                        // copy the specialActions from the updated fighter into meta
+                        meta.crew[idx].specialActions = JSON.parse(JSON.stringify(battleData[fighter.id].specialActions || []));
+                        storeMeta(meta);
+                        // fire-and-forget server update to persist the change
+                        try { updateUserRequest(getUserId(), meta).catch(()=>{}); } catch(e){}
+                    }
+                }
+            } catch (err) {
+                console.warn('applyFighterUpdate: failed to persist specialActions to meta', err);
+            }
+        } catch (err) {
+            console.warn('applyFighterUpdate failed', err);
+        }
+    }
+
+    // Public helper to toggle the inventory popup from parent via ref
+    toggleInventory = () => {
+        try {
+            this.setState((prev) => ({ showInventoryPopup: !prev.showInventoryPopup }));
+        } catch (err) {
+            console.warn('toggleInventory failed', err);
+        }
     }
 
     // Ensure each wizard combatant has at least 3 magic missile spells in their specialActions
@@ -492,17 +656,52 @@ class MonsterBattle extends React.Component {
                 if (!combatant) return;
                 if (combatant.type !== 'wizard') return;
                 if (!combatant.specialActions) combatant.specialActions = [];
+                // Diagnostic: log if any incoming specialActions already have cooldown_position === 3
+                try {
+                    if (combatant.specialActions.some(sa => sa && sa.cooldown_position === 3)) {
+                        console.warn('ensureWizardSpells: combatant with specialActions containing cooldown_position===3', combatant.id || combatant.name, combatant.specialActions.filter(sa => sa && sa.cooldown_position === 3));
+                        console.trace();
+                    }
+                } catch (err) {
+                    console.debug('ensureWizardSpells diagnostic error', err);
+                }
                 const existing = combatant.specialActions.filter(sa => sa && sa.type === 'spell' && (sa.subtype === 'magic missile' || (sa.name && sa.name.toLowerCase().includes('magic missile'))));
                 const needed = Math.max(0, 3 - existing.length);
                 for (let i = 0; i < needed; i++) {
-                    combatant.specialActions.push({
+                    const newSpell = {
                         type: 'spell',
                         subtype: 'magic missile',
                         name: 'magic missile',
                         iconUrl: images['magic_missile'] || '',
                         selected: false,
                         cooldown_position: 100
-                    });
+                    };
+                    // If a combatManager is available, merge in any canonical
+                    // definition fields (energy_cost, cooldown, damage, etc.) so
+                    // AI paths that expect those properties see them on the
+                    // created specialAction objects.
+                    try {
+                        const cm = this.props && this.props.combatManager;
+                        const def = cm && (cm.specialsMatrix && cm.specialsMatrix['magic_missile'] || cm.attacksMatrix && cm.attacksMatrix['magic_missile']);
+                        if (def) {
+                            ['energy_cost', 'cooldown', 'damage', 'effect', 'level', 'icon'].forEach(k => {
+                                if (typeof def[k] !== 'undefined' && typeof newSpell[k] === 'undefined') {
+                                    newSpell[k] = def[k];
+                                }
+                            });
+                        }
+                    } catch (err) {
+                        console.debug('ensureWizardSpells merge diagnostic error', err);
+                    }
+                    // Diagnostic: log inserted spells so we can trace creation time
+                    try {
+                        console.info('ensureWizardSpells: inserting magic-missile specialAction for', combatant.id || combatant.name, newSpell);
+                        // lightweight stack trace to find caller path
+                        console.trace();
+                    } catch (err) {
+                        console.debug('ensureWizardSpells insert diagnostic error', err);
+                    }
+                    combatant.specialActions.push(newSpell);
                 }
             } catch (err) {
                 // defensive: don't break update if something unexpected exists
@@ -540,6 +739,14 @@ class MonsterBattle extends React.Component {
     gameOver = (outcome) => {
         console.log('outcome', outcome);
 
+        // Ensure gameOver runs only once per battle instance to avoid duplicate
+        // awards or duplicated UI flows when multiple gameOver triggers fire.
+        if (this._gameOverHandled) {
+            console.log('gameOver: already handled, skipping duplicate call for', outcome);
+            return;
+        }
+        this._gameOverHandled = true;
+
         this.props.overlayManager.reset();
         this.props.combatManager.reset();
 
@@ -548,11 +755,20 @@ class MonsterBattle extends React.Component {
             this.props.exitSimulator();
             return
         }
+
+        // Attempt to use the freshest battleData available. Prefer component state
+        // (updated via updateBattleData). If that's empty (race), fall back to the
+        // authoritative combatManager.combatants snapshot.
+        let latestBattleData = (this.state.battleData && Object.keys(this.state.battleData).length) ? this.state.battleData : (this.props.combatManager && this.props.combatManager.combatants ? JSON.parse(JSON.stringify(this.props.combatManager.combatants)) : {});
+
         let experienceGained,
             goldGained,
             itemsGained,
             crewWins = outcome === 'crewWins',
-            summaryMessage, battleResult, liveCrew = Object.values(this.state.battleData).filter(e=>!e.dead && !e.isMinion && !e.isMonster);
+            summaryMessage, battleResult;
+
+        // liveCrew should be derived from the freshest snapshot
+        let liveCrew = Object.values(latestBattleData).filter(e=>!e.dead && !e.isMinion && !e.isMonster);
         if(crewWins){
             battleResult = 'win';
             summaryMessage = 'The enemy is no more!';
@@ -560,16 +776,32 @@ class MonsterBattle extends React.Component {
                 itemsGained = [];
                 this.props.monster.drops.forEach(e=>{
                     let d = Math.random();
+                    console.log('drop calculation for', e, 'random num: ', d, 'vs', e.percentChance, 'and actual calc for perc: ', e.percentChance*.01);
                     if(d < e.percentChance*.01) itemsGained.push(e.item)
                 })
                 this.props.inventoryManager.addItemsByName(itemsGained)
             }
             experienceGained = this.props.monster.level * 10;
             goldGained = Math.floor(Math.random() * experienceGained);
-            this.props.inventoryManager.addCurrency({type: 'gold', amount: goldGained})
-            setTimeout(()=>{
+            console.log('gameOver: crewWins computed goldGained=', goldGained);
+            // Defensive: log inventory/gold state before adding to help trace duplicate updates
+            try { console.log('gameOver: inventoryManager before addCurrency', this.props.inventoryManager && this.props.inventoryManager.inventory, this.props.inventoryManager && this.props.inventoryManager.currency); } catch(e){}
+            // Ensure we only award gold once per battle
+            if (!this._goldAwarded) {
+                try {
+                    this.props.inventoryManager.addCurrency({type: 'gold', amount: goldGained})
+                    this._goldAwarded = true;
+                    console.log('gameOver: addCurrency called for', goldGained);
+                } catch (err) {
+                    console.warn('gameOver: addCurrency failed', err);
+                }
+            } else {
+                console.log('gameOver: gold already awarded, skipping addCurrency for', goldGained);
+            }
+            this._setTimeout(()=>{
                 console.log('timeout triggered');
-                this.props.crewManager.addExperience(liveCrew, experienceGained);
+                // Use latest liveCrew snapshot when awarding experience
+                try { this.props.crewManager.addExperience(liveCrew, experienceGained); } catch(e) { console.warn('addExperience failed', e); }
                 let meta = getMeta();
                 meta.crew = this.props.crewManager.crew;
                 storeMeta(meta)
@@ -581,8 +813,131 @@ class MonsterBattle extends React.Component {
         } else {
             battleResult = 'loss'
             summaryMessage = 'Death has come for you and yours.'
-            this.launchDeathSequence();
+            // Implement group-death handling: track group deaths in meta.deathTracker.
+            // On non-final deaths: increment counter, restore crew HP to 1, respawn at dungeon spawn,
+            // and show the summary panel (do NOT navigate to the death scene).
+            // On the third full-group death: clear dungeon and crew, persist, then run the final death sequence.
+            try {
+                const meta = getMeta();
+                let deaths = meta.deathTracker || 0;
+                deaths = deaths + 1;
+                meta.deathTracker = deaths;
+                try { storeMeta(meta); } catch(e) {}
+                try { updateUserRequest(getUserId(), meta).catch(()=>{}); } catch(e) {}
+                    // Notify parent (DungeonPage) so UI elements like death-tracker can refresh
+                    try { if (this.props && typeof this.props.onDeathTrackerChanged === 'function') this.props.onDeathTrackerChanged(deaths); } catch(e) {}
+                console.log('DEATHS: ', deaths);
+                if (deaths >= 300) {
+                    // Final death: clear dungeon and crew now, persist, then launch final death sequence.
+                    try {
+                        if (meta.dungeonId) {
+                            // best-effort delete remote dungeon
+                            try { deleteDungeonRequest(meta.dungeonId).catch(()=>{}); } catch(e) {}
+                        }
+                    } catch (inner) {}
+                    try {
+                        this.props.boardManager.dungeon.id = null;
+                    } catch(e) {}
+                    try { this.props.inventoryManager.inventory = []; } catch(e) {}
+                    meta.dungeonId = null;
+                    meta.location = null;
+                    meta.inventory = { items: [], gold: 0, shimmering_dust: 0, totems: 0 };
+                    meta.crew = [];
+                    meta.deathTracker = 0;
+                    try { storeMeta(meta); } catch(e) {}
+                    try { updateUserRequest(getUserId(), meta).catch(()=>{}); } catch(e) {}
+                    try { this.props.crewManager.initializeCrew([]); } catch(e) {}
+                    try { if (this.props.saveUserData) this.props.saveUserData(); } catch(e) {}
+
+                    // Now run the usual final death sequence which navigates to the death scene
+                    this.launchDeathSequence();
+                } else {
+                    // We will show the battle summary (without portraits), wait 3s, then launch
+                    // the death narrative and perform the respawn & restore so the narrative
+                    // plays before the crew are moved/cleared in the UI.
+                    try {
+                        // persist the incremented death tracker now
+                        try { storeMeta(meta); } catch(e) {}
+                        try { updateUserRequest(getUserId(), meta).catch(()=>{}); } catch(e) {}
+                    } catch (inner) {}
+
+                    // Suppress the later "persist final HP" block so it does not overwrite our planned restore
+                    this._suppressPersistFinalHP = true;
+
+                    // Set a state flag so the summary-panel rendering hides portraits
+                    try { if (this._isMounted) this.setState({ suppressSummaryPortraits: true }); } catch(e) {}
+
+                    // After a short delay, close summary, restore crew and respawn (do NOT navigate to death scene for non-final deaths)
+                    this._setTimeout(async () => {
+                        try { if (this._isMounted) this.setState({ showSummaryPanel: false, suppressSummaryPortraits: false }); } catch(e) {}
+
+                    this.props.battleOver('respawn');
+                          
+
+                        // allow later persistence block to run normally again
+                        this._suppressPersistFinalHP = false;
+                    }, 3000);
+                    // Show the summary panel now (it will be visible until the timeout closes it)
+                    try { if (this._isMounted) this.setState({ showSummaryPanel: true }); } catch(e) {}
+                }
+            } catch (err) {
+                console.warn('group-death handler failed, falling back to death scene', err);
+                this.launchDeathSequence();
+            }
         }
+
+        // Persist final HP and dead state for crew once when combat ends
+        try {
+            // If a group-death flow is in-progress, skip persisting final HP (we'll restore later)
+            if (this._suppressPersistFinalHP) {
+                // do nothing
+            } else {
+                const meta = getMeta();
+                if (meta && Array.isArray(meta.crew)) {
+                    let modified = false;
+                    const battleEntries = this.state.battleData || {};
+                    Object.values(battleEntries).forEach(entry => {
+                        try {
+                            if (!entry) return;
+                            if (entry.isMonster || entry.isMinion) return;
+                            const idx = meta.crew.findIndex(c => c && c.id === entry.id);
+                            if (idx !== -1) {
+                                if (typeof entry.hp !== 'undefined' && meta.crew[idx].hp !== entry.hp) {
+                                    meta.crew[idx].hp = entry.hp;
+                                    modified = true;
+                                }
+                                if (typeof entry.dead !== 'undefined' && meta.crew[idx].dead !== entry.dead) {
+                                    meta.crew[idx].dead = !!entry.dead;
+                                    modified = true;
+                                }
+                            }
+                            // notify parent so DungeonPage immediately reflects final HP/dead
+                            try { if (this.props && typeof this.props.onFighterUpdate === 'function') this.props.onFighterUpdate(entry); } catch(e) {}
+                        } catch (inner) {}
+                    });
+                    if (modified) {
+                        try { storeMeta(meta); } catch (e) {}
+                        try { updateUserRequest(getUserId(), meta).catch(()=>{}); } catch(e) {}
+                        try { if (this.props.saveUserData) this.props.saveUserData(); } catch(e) {}
+                    }
+                }
+            }
+        } catch (err) {
+            console.warn('Failed to persist final battle HP to meta', err);
+        }
+
+        // Ensure suppressSummaryPortraits is only true for the special group-death flow
+        // (that flow sets this._suppressPersistFinalHP and this.state.suppressSummaryPortraits
+        //  earlier). For all other outcomes make sure portraits are shown.
+        // Add debug logging to help trace missing portraits and repeated gold updates.
+        try {
+            console.log('gameOver: _suppressPersistFinalHP=', !!this._suppressPersistFinalHP);
+            // Print brief portrait info from battleData for inspection
+            try {
+                const portraits = Object.values(this.state.battleData || {}).map(b => ({ id: b && b.id, portrait: b && b.portrait }));
+                console.log('gameOver: battleData portraits snapshot=', portraits);
+            } catch (inner) { console.warn('gameOver: failed to snapshot battleData portraits', inner); }
+        } catch (e) {}
 
         this.setState({
             showSummaryPanel: true,
@@ -590,7 +945,8 @@ class MonsterBattle extends React.Component {
             experienceGained,
             itemsGained,
             summaryMessage,
-            battleResult
+            battleResult,
+            suppressSummaryPortraits: !!this._suppressPersistFinalHP
         })
     }
     launchDeathSequence = () => {
@@ -662,6 +1018,34 @@ class MonsterBattle extends React.Component {
                 selectedFighter: null
             })
             return
+        }
+        // Persist death immediately so dungeon/meta reflects 0 HP even if the
+        // combat manager removes the fighter from battleData shortly after.
+        try {
+            const entry = this.state.battleData && this.state.battleData[id] ? this.state.battleData[id] : { id };
+            // mark dead and hp=0 locally
+            entry.dead = true;
+            entry.hp = 0;
+            // update meta
+            try {
+                const meta = getMeta();
+                if (meta && Array.isArray(meta.crew)) {
+                    const idx = meta.crew.findIndex(c => c && c.id === id);
+                    if (idx !== -1) {
+                        meta.crew[idx].hp = 0;
+                        meta.crew[idx].dead = true;
+                        try { storeMeta(meta); } catch (e) {}
+                        try { updateUserRequest(getUserId(), meta).catch(()=>{}); } catch(e) {}
+                        try { if (this.props.saveUserData) this.props.saveUserData(); } catch(e) {}
+                    }
+                }
+            } catch (inner) {
+                console.warn('handleFighterDeath: failed to persist meta', inner);
+            }
+            // notify parent immediately so UI updates
+            try { if (this.props && typeof this.props.onFighterUpdate === 'function') this.props.onFighterUpdate(entry); } catch(e) {}
+        } catch (err) {
+            console.warn('handleFighterDeath persistence failed', err);
         }
         if(this.state.selectedFighter && this.state.selectedFighter.id === id){
             const liveFighters = this.props.combatManager.getLiveFighters();
@@ -824,16 +1208,7 @@ class MonsterBattle extends React.Component {
                 // }, 500)
 
 
-                // this.setState({
-                //     magicMissile_fire: true,
-                //     magicMissile_targetDistance: targetDistance,
-                //     magicMissile_targetLaneDiff: laneDiff,
-                // })
-                // setTimeout(()=>{
-                //     this.setState({
-                //         magicMissile_connectParticles: false
-                //     })
-                // },1000)
+                
                 
                 
                 // setTimeout(()=>{
@@ -1059,34 +1434,62 @@ class MonsterBattle extends React.Component {
                             <div className="experience-container">
                                 Each crew member has earned {this.state.experienceGained} experience
                             </div>} 
-                            <div className="portraits-container">
-                                {Object.values(this.state.battleData).filter(e=>!e.dead && !e.isMonster && !e.isMinion).map((crewMember, i) => {
-                                    return <div key={i} className="single-portrait-container">
-                                        <div className="portrait" style={{backgroundImage: `url(${crewMember.portrait})`}}></div>
-                                        {this.props.crewManager.calculateExpPercentage(crewMember) >= 100 && <Canvas 
-                                        className="level-up-canvas"
-                                        width={80}
-                                        height={80}
-                                        draw={this.draw}
-                                        />}
-                                        <div className="experience-bar-container">
-                                            <div className="experience-bar" style={{width: `${this.props.crewManager.calculateExpPercentage(crewMember)}%`}}></div>
-                                        </div>
-                                    </div>
-                                })}
-                                {Object.values(this.state.battleData).filter(e=>e.dead && !e.isMonster && !e.isMinion).map((crewMember, i) => {
-                                    return <div key={i} className="single-portrait-container dead-member">
-                                        <div className="portrait" style={{backgroundImage: `url(${crewMember.portrait})`}}>
-                                            <div className="skull-image" style={{backgroundImage: `url(${images['whiteskull']})`}}></div>
-                                        </div>
-                                    </div>
-                                })}
-                            </div>
+                            { !this.state.suppressSummaryPortraits && (
+                                <div className="portraits-container">
+                                    {Object.values(this.state.battleData).filter(e=>!e.dead && !e.isMonster && !e.isMinion).map((crewMember, i) => {
+                                        // Defensive portrait resolution with avatar fallback
+                                        const portraitUrl = images[crewMember.portrait] || crewMember.portrait || images['avatar'];
+                                        return (
+                                            <div key={i} className="single-portrait-container">
+                                                <div className="portrait" style={{backgroundImage: `url(${portraitUrl})`}}></div>
+                                                {this.props.crewManager.calculateExpPercentage(crewMember) >= 100 && (
+                                                    <Canvas 
+                                                        className="level-up-canvas"
+                                                        width={80}
+                                                        height={80}
+                                                        draw={this.draw}
+                                                    />
+                                                )}
+                                                <div className="experience-bar-container">
+                                                    <div className="experience-bar" style={{width: `${this.props.crewManager.calculateExpPercentage(crewMember)}%`}}></div>
+                                                </div>
+                                            </div>
+                                        )
+                                    })}
+                                    {Object.values(this.state.battleData).filter(e=>e.dead && !e.isMonster && !e.isMinion).map((crewMember, i) => {
+                                        const portraitUrl = images[crewMember.portrait] || crewMember.portrait || images['avatar'];
+                                        return (
+                                            <div key={i} className="single-portrait-container dead-member">
+                                                <div className="portrait" style={{backgroundImage: `url(${portraitUrl})`}}>
+                                                    <div className="skull-image" style={{backgroundImage: `url(${images['whiteskull']})`}}></div>
+                                                </div>
+                                            </div>
+                                        )
+                                    })}
+                                </div>
+                            )}
                         </div>
                         <div className="button-row">
                             <div className="confirm-button" onClick={() => this.confirmClicked()}>OK</div>
                         </div>
                     </div>}
+
+                    <CModal className='inventory-modal' alignment='center' visible={this.state.showInventoryPopup} onClose={() => this.setState({ showInventoryPopup: false })}>
+                        <div className='inventory-content'>
+                            <div className='inventory-title'>Inventory</div>
+                            <div className='crew-panels'>
+                                {(this.props.crew || []).map((member, idx) => {
+                                    const portraitUrl = images[member.portrait] || member.portrait;
+                                    return (
+                                        <div className='crew-panel' key={member.id || idx}>
+                                            <div className='crew-portrait' style={{backgroundImage: `url(${portraitUrl})`}}></div>
+                                            <div className='crew-body' style={{backgroundImage: `url(${images.body_male})`}}></div>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        </div>
+                    </CModal>
 
                     {(this.state.message) && <div className="message-container">
                                 {this.state.message}
@@ -1234,10 +1637,10 @@ class MonsterBattle extends React.Component {
                             <div className="interaction-header">Specials</div>
                             <div className="interaction-tooltip">{this.state.hoveredSpecialTile}</div>
                             <div className="interaction-tile-container">
-                                {this.state.selectedFighter?.specials.map((a, i)=>{
-                                    return <div key={i} className='interaction-tile-wrapper'>
+                                {this.state.selectedFighter?.specials?.map((a, i)=>{
+                                    return a && <div key={i} className='interaction-tile-wrapper'>
                                                 <div 
-                                                style={{backgroundImage: "url(" + a.icon + "), radial-gradient(white 40%, black 80%)", cursor: 'pointer'}} 
+                                                style={{backgroundImage: "url(" + a?.icon + "), radial-gradient(white 40%, black 80%)", cursor: 'pointer'}} 
                                                 className={`interaction-tile special ${a.selected ? 'selected' : ''}`}
                                                 onClick={() => this.specialTileClicked(a)} 
                                                 onMouseEnter={() => this.specialTileHovered(a)} 
@@ -1271,13 +1674,13 @@ class MonsterBattle extends React.Component {
                                         return (
                                             <div key={type} className='interaction-tile-wrapper' style={{position: 'relative'}}>
                                                 <div
-                                                    style={{ backgroundImage: `url(${spellUnit.iconUrl}), radial-gradient(white 40%, black 80%)`, cursor: 'pointer' }}
+                                                    style={{ backgroundImage: `url(${spellUnit.iconUrl}), radial-gradient(white 0%, black 60%)`, cursor: 'pointer' }}
                                                     className={`interaction-tile special ${spellUnit.selected ? 'selected' : ''}`}
                                                     onClick={() => this.fireSpell(spellUnit)}
                                                     onMouseEnter={() => this.spellTileHovered(spellUnit)}
                                                     onMouseLeave={() => this.spellTileHovered(null)}>
                                                 </div>
-                                                {count > 1 && (
+                                                {count > 0 && (
                                                     <div className={`stack-badge small`}>{romanNumerals[Math.min(count, 5)]}</div>
                                                 )}
                                             </div>

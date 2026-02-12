@@ -3,6 +3,7 @@ import * as images from '../utils/images'
 import { FighterAI } from './fighter-ai/fighter-ai'
 import { MonsterAI } from './monster-ai/monster-ai'
 import {createFighter, test} from './factories'
+import specialsMatrix from './specials-matrix'
 import { cilLifeRing } from '@coreui/icons'
 import { INTERVALS, ROCK_DURATION, CRIT_THRESHOLD_DEFAULT, CRIT_THRESHOLD_INCREASED, CRITICAL_DAMAGE_MULTIPLIER } from './shared-constants';
 // import test from './factories'
@@ -286,102 +287,52 @@ export function CombatManager(){
         }
     }
 
-    this.specialsMatrix = {
-        deadeye_shot: {
-            name: 'deadeye shot',
-            type: 'special',
-            icon: images['evilai_charm'],
-            cooldown: 10,
-            damage: 10,
-            effect: ['damage_single_target'],
-            level: 1
-        },
-        berserker_rage: {
-            name: 'berserker rage',
-            type: 'special',
-            icon: images['demonskull_charm'],
-            cooldown: 10,
-            effect: ['buff_self', 'nerf_self'],
-            duration: 18,
-            buff: {
-                increase_stats: {
-                    stats: [
-                        {stat: 'str', amount: 5},
-                        {stat:'dex',amount:3},
-                        {stat: 'atk', amount: 7}
-                    ]
+    // Use the centralized canonical specials matrix so other modules import
+    // the same authoritative data. Keep on the instance for compatibility.
+    this.specialsMatrix = specialsMatrix;
+
+    // Sync any already-instantiated combatants' specials/specialActions
+    // with the canonical matrix to avoid stale data.
+    this.syncSpecials = () => {
+        try {
+            Object.values(this.combatants).forEach(combatant => {
+                if (!combatant) return;
+                // Normalize `specials` (learned/innate specials)
+                if (Array.isArray(combatant.specials)) {
+                    try {
+                        combatant.specials = this.formatSpecials(combatant.specials);
+                    } catch (err) {
+                        console.warn('syncSpecials: failed to format specials for', combatant.id, err);
+                    }
                 }
-            },
-            nerf: {
-                decrease_stats:{
-                    stats: [
-                        {stat: 'int', amount: 3}
-                    ]
+
+                // Normalize `specialActions` (consumable instances) while
+                // preserving instance-specific fields (count, id, etc.)
+                if (Array.isArray(combatant.specialActions)) {
+                    combatant.specialActions = combatant.specialActions.map(sa => {
+                        if (!sa) return sa;
+                        if (typeof sa === 'string') {
+                            return this.formatSpecials([sa])[0] || sa;
+                        }
+                        // Try to resolve by common keys
+                        const lookupKey = sa.key || sa.name || sa.subtype || (sa.type === 'special' && sa.name) || null;
+                        const canonical = lookupKey ? this.formatSpecials([lookupKey])[0] : null;
+                        if (canonical) {
+                            // Keep prefs from instance (counts, dynamic props) but
+                            // merge canonical data for missing fields.
+                            const instanceProps = {};
+                            ['count','uses','id','cooldown_position','romanCount','stackCount'].forEach(k => {
+                                if (sa[k] !== undefined) instanceProps[k] = sa[k];
+                            });
+                            return Object.assign({}, canonical, instanceProps);
+                        }
+                        return sa;
+                    });
                 }
-            },
-            level: 1
-        },
-        healing_hymn: {
-            name: 'healing hymn',
-            type: 'special',
-            icon: images['lundi_charm'],
-            effect: ['buff_all_friendly'],
-            buff: {
-                heal: {
-                    amount: 12 
-                }
-            },
-            cooldown: 12,
-            level: 1
-        },
-        reveal_weakness: {
-            name: 'reveal weakness',
-            type: 'special',
-            icon: images['hamsa_charm'],
-            cooldown: 12,
-            effect: ['special'],
-            special_instructions: 'reveal all monsters weaknesses',
-            level: 1
-        },
-        flying_lotus: {
-            name: 'flying lotus',
-            type: 'special',
-            icon: images['lundi_charm'],
-            cooldown: 11,
-            damage: 15,
-            effect: ['damage_single_target', 'special'],
-            special_instructions: 'target has 50% chance to be stunned for 1 sec * $str',
-            level: 1
-        },
-        shield_wall: {
-            name: 'shield wall',
-            type: 'special',
-            icon: images['beetle_charm'],
-            cooldown: 11,
-            effect: ['special'],
-            special_instructions: 'shield all members for three hits',
-            level: 1
-        },
-        ice_blast: {
-            name: 'ice blast',
-            type: 'special',
-            icon: images['ice_blast'],
-            cooldown: 11,
-            damage: 8,
-            effect: ['damage_single_target', 'special'],
-            special_instructions: 'each enemy has a 40% chance to be frozen',
-            level: 1
-        },
-        fire_blast: {
-            name: 'fire blast',
-            type: 'special',
-            icon: images['fire_blast'],
-            cooldown: 11,
-            damage: 8,
-            effect: ['damage_multi_target', 'special'],
-            special_instructions: 'each enemy has a 40% chance to be lit aflame',
-            level: 1
-        },
+            });
+        } catch (e) {
+            console.warn('syncSpecials failed', e);
+        }
     }
     
     
@@ -472,9 +423,63 @@ export function CombatManager(){
         })
     }
     this.formatSpecials = (stringArray) => {
-        return stringArray.map(e=>{
-            return this.specialsMatrix[e]
-        })
+        // Defensive formatter: accept either an array of keys (strings) or
+        // an array of already-formatted special objects. Return an array of
+        // special objects (cloned) and tolerate malformed inputs.
+        if (!Array.isArray(stringArray)) return [];
+        const mapped = stringArray.map(keyOrObj => {
+            
+            if (!keyOrObj) return undefined;
+            if (typeof keyOrObj === 'string') {
+                const def = this.specialsMatrix[keyOrObj];
+                if (!def) {
+                    console.warn('formatSpecials: unknown special key', keyOrObj);
+                    return undefined;
+                }
+                return clone(def);
+            }
+            if (typeof keyOrObj === 'object') {
+                // assume already formatted; return as-is (clone to be safe)
+                return clone(keyOrObj);
+            }
+            return undefined;
+        });
+        try {
+            console.log('returning ', mapped);
+        } catch (e) {}
+        return mapped;
+    }
+    // Resolve a special by key from either a caller's `specials` array or an
+    // arbitrary array of keys/objects. This centralizes the logic so callers
+    // (AI modules, UI) can reliably obtain a canonical special object.
+    this.resolveSpecial = (callerOrArray, specialKey) => {
+        const key = (specialKey || '').toString();
+        const normalized = key.replace(/\s+/g, '_').toLowerCase();
+        let arr = null;
+        if (callerOrArray) {
+            if (Array.isArray(callerOrArray.specials)) arr = callerOrArray.specials;
+            else if (Array.isArray(callerOrArray)) arr = callerOrArray;
+        }
+        if (!Array.isArray(arr)) return null;
+
+        for (let s of arr) {
+            if (!s) continue;
+            if (typeof s === 'string') {
+                const sNorm = s.replace(/\s+/g, '_').toLowerCase();
+                if (s.toLowerCase() === key.toLowerCase() || sNorm === normalized) {
+                    const expanded = this.formatSpecials([s]);
+                    if (Array.isArray(expanded) && expanded[0]) return expanded[0];
+                    return { name: key };
+                }
+            } else if (typeof s === 'object') {
+                if (s.name && (s.name.toLowerCase() === key.toLowerCase() || s.name.toLowerCase() === normalized)) return s;
+                if (s.key && s.key.toLowerCase() === normalized) return s;
+            }
+        }
+
+        const expanded = this.formatSpecials([normalized]);
+        if (Array.isArray(expanded) && expanded[0]) return expanded[0];
+        return null;
     }
     this.processActionQueue = (caller) => {
         const action = caller.action_queue[0],
@@ -489,9 +494,8 @@ export function CombatManager(){
                 caller.pendingAttack = instruction.selectedAction;
                 caller.attack();
             break;
-            default:
-                console.log('no valid action type sepcificied');
-                debugger
+        default:
+            console.log('no valid action type sepcificied');
         }
         caller.action_queue.shift();
     }
@@ -511,6 +515,7 @@ export function CombatManager(){
             getCombatant: this.getCombatant,
             formatAttacks: this.formatAttacks,
             formatSpecials: this.formatSpecials,
+            resolveSpecial: this.resolveSpecial,
             initiateAttack: this.initiateAttack,
             checkOverlap: this.checkOverlap,
             handleOverlap: this.handleOverlap,
@@ -525,7 +530,12 @@ export function CombatManager(){
         this.combatants = {};
         const colors_withColorSquare = [' #b710d5',' #6495ed',' #73b746',' #f4d013']
         const colors = ['#b710d5', '#6495ed', '#73b746', '#f4d013']
+
         this.data.crew.forEach((e, index) => {
+            // Do not add dead crew members to combat — they should not participate
+            if (e && (e.dead === true || e.hp === 0)) {
+                return;
+            }
             e.coordinates = {x:0,y:0}
             e.coordinates.y = index;
             e.coordinates.x = 0;
@@ -534,12 +544,22 @@ export function CombatManager(){
             // e.manualMovesTotal = 25
             e.manualMovesTotal = 100
             e.color = colors[index]
+
+            e.specialActions && e.specialActions.forEach(action => {
+                action.cooldown_position = 100;
+            })
             this.combatants[e.id] = createFighter(e, callbacks, this.FIGHT_INTERVAL);
         })
+
         this.data.monster.coordinates = {x:0,y:0}
         this.data.monster.coordinates.y = 2;
         this.data.monster.coordinates.x = MAX_DEPTH;
         this.data.monster.isMonster = true;
+        if(this.data.monster.specials){
+            // console.log('monster specials: ', this.data.monster.specials);
+        }
+        
+        
         // this.data.monster.coordinates = {x:MAX_DEPTH, y:2}
         let monster = createFighter(this.data.monster, callbacks, this.FIGHT_INTERVAL);
         monster.isMonster = true;
@@ -559,6 +579,24 @@ export function CombatManager(){
                 this.combatants[m.id] = m;
             })
         }
+
+        // Start cooldowns for any formatted specials now that fighters are created
+        // Ensure combatants' specials reflect the canonical matrix to avoid
+        // using stale values persisted from earlier runs.
+        try { this.syncSpecials(); } catch (e) { console.warn('syncSpecials error', e); }
+
+        Object.values(this.combatants).forEach(combatant => {
+            if (combatant.specials && Array.isArray(combatant.specials)) {
+                combatant.specials.forEach(action => {
+                    try {
+                        this.kickoffSpecialCooldown(action);
+                    } catch (err) {
+                        // non-fatal: log and continue
+                        console.warn('kickoffSpecialCooldown error for', combatant.id, err);
+                    }
+                });
+            }
+        });
 
         // Ensure all fighters use the correct interval
         this.updateAllFightIntervals(this.FIGHT_INTERVAL);
@@ -589,28 +627,29 @@ export function CombatManager(){
         if(!target){
             return
         }
-    // Use only x-differential for range, as facing is now left/right only
-    const differential = Math.abs(caller.coordinates.x - target.coordinates.x);
-        // 1 means target is right in front of you
+    // Compute x and y differences explicitly so we can correctly check orthogonal adjacency
+    const dx = Math.abs(caller.coordinates.x - target.coordinates.x);
+    const dy = Math.abs(caller.coordinates.y - target.coordinates.y);
 
-        let res;
-        res = differential <= 3;
+    // 1 in either axis indicates adjacent in that axis
+    let res;
+    res = dx <= 3;
 
-        switch(caller.pendingAttack.range){
+    switch(caller.pendingAttack.range){
             case 'self':
                 res = true;
             break;
             case 'close':
-                if(caller.name === "LORYASTES" && DEBUG_STEPS){
-
-                }
-                // Close means horizontally adjacent (differential === 1)
-                // or vertically adjacent in the same column (differential === 0 && verticalDiff === 1)
-                const verticalDiff = Math.abs(caller.coordinates.y - target.coordinates.y);
-                res = differential === 1 || (differential === 0 && verticalDiff === 1);
+                // Close means orthogonally adjacent (left/right OR up/down), not diagonal.
+                // dx === 1 && dy === 0 -> horizontal neighbor
+                // dx === 0 && dy === 1 -> vertical neighbor
+                res = (dx === 1 && dy === 0) || (dx === 0 && dy === 1);
             break;
             case 'medium':
-                res = differential > 1 && differential <= 3;
+                        // Medium range: primarily based on horizontal (x) distance from caller
+                        // Use the x-axis differential (dx) to decide if the target is within
+                        // medium reach (greater than close but within medium range).
+                        res = dx > 1 && dx <= 3;
             break;
             case 'far':
                 // if(caller.type === 'sphinx'){
@@ -620,7 +659,6 @@ export function CombatManager(){
             break;
             default:
                 console.log('somehow attack had no range');
-                debugger
             break;
         }
         return !!res;
@@ -629,9 +667,11 @@ export function CombatManager(){
         return Object.values(this.combatants).filter(e=> !e.isMonster && !e.isMinion && !e.dead)
     }
     this.itemUsed = (item, userInput) => {
+        console.log('item used, ', item);
         const user = this.combatants[userInput.id];
         switch(item.effect){
             case 'health gain': 
+                console.log('inside health gain')
                 const healthGain = Math.ceil(user.starting_hp * 0.01 * item.amount)
                 user.hp += healthGain
                 if(user.hp > user.starting_hp) user.hp = user.starting_hp
@@ -707,6 +747,12 @@ export function CombatManager(){
         fighter.action_queue.push(action)
     }
     this.goToDestination = (caller) => {
+        // Defensive: if the caller is already dead (killed just before moving),
+        // abort the move so dead units don't appear to reposition.
+        if (!caller || caller.dead) {
+            console.warn('goToDestination aborted for dead or missing caller:', caller && caller.id);
+            return;
+        }
         caller.coordinates.x = caller.destinationCoordinates.x;
         caller.coordinates.y = caller.destinationCoordinates.y;
         caller.coordinates = {x: caller.destinationCoordinates.x, y: caller.destinationCoordinates.y}
@@ -1006,10 +1052,9 @@ export function CombatManager(){
             return
         }
 
-        // this should only happern for minions with no ai
+    // this should only happern for minions with no ai
 
-        debugger
-        return
+    return
 
 
 
@@ -1103,6 +1148,30 @@ export function CombatManager(){
                 scopeVar += 100;
                 ratio = Math.ceil((scopeVar / totalTime) * 100);
                 atk['cooldown_position'] = ratio;
+            }
+            if(ratio >= 100){
+                scopeVar = 0;
+                // console.log(caller.type, 'done with cooldown for ', atk);
+                clearInterval(intervalRef)
+            }
+        },100)
+    }
+    this.kickoffSpecialCooldown = (specialAction) => {
+        if(!specialAction) return
+
+        specialAction['cooldown_position'] = 0;
+        let totalTime = specialAction.cooldown * 1000;
+        let scopeVar = 0, that = this;
+        // caller.onGeneralAttackCooldown = true;
+        // const generalAttackCooldown = setTimeout(()=>{
+        //     caller.onGeneralAttackCooldown = false;
+        // }, generalCooldown)
+        const intervalRef = setInterval(()=>{
+            let ratio = 0;
+            if(!that.combatPaused){
+                scopeVar += 100;
+                ratio = Math.ceil((scopeVar / totalTime) * 100);
+                specialAction['cooldown_position'] = ratio;
             }
             if(ratio >= 100){
                 scopeVar = 0;
@@ -1245,10 +1314,9 @@ export function CombatManager(){
         target.targettedBy.push(caller.id)
         const attack = this.chooseAttackType(caller, target);
         caller.targetId = target.id
-        if(!attack){
+            if(!attack){
             console.log('whoa! about to assign an undefined attackj to pending');
             console.log('details: ', 'caller:',caller,'target', target);
-            debugger
         }
         caller.pendingAttack = attack;
         if(caller.targetId){
@@ -1400,9 +1468,12 @@ export function CombatManager(){
             if(combatant.coordinates.x > MAX_DEPTH) combatant.coordinates.x = MAX_DEPTH;
             if(combatant.coordinates.x < 0)combatant.coordinates.x = 0;
         // },800)
-        if(combatant.dead){
-            console.log('why are you trying to check overlap of a dead guy???');
-            debugger
+        if (combatant.dead) {
+            // Defensive: checkOverlap should never be invoked for dead combatants.
+            // Instead of breaking in the debugger, clear overlap and return.
+            console.warn('checkOverlap called for dead combatant:', combatant && combatant.id);
+            combatant.hasOverlap = false;
+            return;
         }
         const liveCombatants = Object.values(this.combatants).filter(e=> (e.id !== combatant.id && !e.dead));
         if(liveCombatants.some(e=>e.coordinates.x === combatant.coordinates.x && e.coordinates.y === combatant.coordinates.y)){
@@ -1539,6 +1610,12 @@ export function CombatManager(){
         return Object.values(this.combatants).filter(c=>c.id!==caller.id).some(e=>JSON.stringify(e.coordinates) == JSON.stringify(coords))
     }
     this.hitsCombatant = (caller, combatantHit, supplementalData = null, options = {}) => {
+        if(caller.type === 'wizard'){
+            console.log('WIZARD HITS');
+        }
+        if(supplementalData){
+            console.log('supplementalData: ', supplementalData);
+        }
         // Unified damage application used by many attack paths.
         // options.forceCritical: boolean to force a critical hit
         // supplementalData.increasedCritChance: legacy flag that increases crit chance
@@ -1551,26 +1628,63 @@ export function CombatManager(){
             criticalHit = r * 100 > threshold;
         }
 
-        let damage = criticalHit ? caller.atk * CRITICAL_DAMAGE_MULTIPLIER : caller.atk;
+        // Determine base damage. If supplementalData (special) provides a damage
+        // field, prefer that as the baseline. Otherwise compute damage using
+        // the caller's atk and any equipped weapon percent (weapon.damage is
+        // now expressed in percentage-points, e.g. 30 === +30% of atk).
+        const isSpecial = supplementalData && typeof supplementalData === 'object' && (typeof supplementalData.damage === 'number' || typeof supplementalData.base_damage === 'number' || supplementalData.energy_cost || supplementalData.effect);
+        let baseDamage;
+        if (isSpecial) {
+            baseDamage = (typeof supplementalData.damage === 'number') ? supplementalData.damage : ((typeof supplementalData.base_damage === 'number') ? supplementalData.base_damage : caller.atk);
+        } else {
+            // find equipped weapon (right/left) or by equippedBy marker
+            let weaponPercent = 0;
+            try {
+                const inv = caller.inventory || [];
+                const weapon = inv.find(i => i && i.type === 'weapon' && (i.equippedSlot === 'right' || i.equippedSlot === 'left' || i.equippedBy === caller.id));
+                if (weapon && typeof weapon.damage === 'number') weaponPercent = weapon.damage;
+            } catch (e) {
+                // defensive: ignore inventory errors and treat as no weapon
+                weaponPercent = 0;
+            }
+            baseDamage = caller.atk + Math.floor((caller.atk * (weaponPercent || 0)) / 100);
+        }
 
-        if (!caller.pendingAttack) {
+        let damage = criticalHit ? baseDamage * CRITICAL_DAMAGE_MULTIPLIER : baseDamage;
+
+        // Determine attack type for weakness checks: prefer pendingAttack.type, but
+        // if this is a special use supplementalData.type when available.
+        const attackType = (caller.pendingAttack && caller.pendingAttack.type) || (supplementalData && supplementalData.type) || null;
+
+        if (!caller.pendingAttack && !isSpecial) {
             console.log('HOW CAN YOU HIT WITH NO PENDING ATTACK??>', caller);
         } else {
-            if (combatantHit.weaknesses.includes[caller.pendingAttack.type]) {
+            if (attackType && Array.isArray(combatantHit.weaknesses) && combatantHit.weaknesses.includes(attackType)) {
                 damage += Math.floor(damage / 2);
             }
         }
+            // Apply equipped armor percent reduction (if any) to the damage
+            let armorPercentTarget = 0;
+            try {
+                const inv = combatantHit.inventory || [];
+                armorPercentTarget = inv.filter(i => i && i.type === 'armor' && (i.equippedSlot || i.equippedBy === combatantHit.id)).reduce((acc, a) => acc + (typeof a.armor === 'number' ? a.armor : 0), 0);
+            } catch (e) { armorPercentTarget = 0 }
+            if (armorPercentTarget > 0) {
+                const reduction = Math.floor(damage * (armorPercentTarget / 100));
+                damage = Math.max(0, damage - reduction);
+            }
 
-        caller.readout.result = `${caller.name} hits ${combatantHit.name} for ${damage} damage`;
-        combatantHit.hp -= damage;
+            // Save readout and apply damage
+            caller.readout.result = `${caller.name} hits ${combatantHit.name} for ${damage} damage`;
+            combatantHit.hp -= damage;
         combatantHit.damageIndicators.push(damage);
-        caller.energy += caller.stats.fort * 3 + (1 / 2 * caller.level);
+        caller.energy += caller.stats.fort * 1 + (1 / 2 * caller.level);
         if (caller.energy > 100) caller.energy = 100;
 
         // compute sourceDirection for animation purposes
         const sourceDirection = caller.coordinates.x < combatantHit.coordinates.x ? 'left' : (caller.coordinates.x > combatantHit.coordinates.x ? 'right' : (caller.coordinates.y > combatantHit.coordinates.y ? 'bottom' : 'top'));
 
-        // set unified wounded object
+        // set unified wounded objectF
         combatantHit.wounded = {
             severity: criticalHit ? 'severe' : 'minor',
             damage,
@@ -1579,10 +1693,12 @@ export function CombatManager(){
 
         // trigger rocked animation on severe (critical) hits
         if (criticalHit && typeof combatantHit.rockAnimationOn === 'function') {
-            // combatantHit.rockAnimationOn();
-            // setTimeout(() => {
-            //     if (typeof combatantHit.rockAnimationOff === 'function') combatantHit.rockAnimationOff();
-            // }, ROCK_DURATION);
+            try {
+                combatantHit.rockAnimationOn();
+            } catch (e) {}
+            setTimeout(() => {
+                if (typeof combatantHit.rockAnimationOff === 'function') combatantHit.rockAnimationOff();
+            }, ROCK_DURATION);
         }
 
         if (typeof this.updateData === 'function') {
@@ -1641,53 +1757,9 @@ export function CombatManager(){
                 this.updateData(clone(this.combatants));
             }
         }, ROCK_DURATION);
-
-        // NEED TO HANDLE CRIT FROM TOP AND BOTTOM
-
-        if(caller.coordinates.x < combatantHit.coordinates.x){
-            combatantHit.wounded.sourceDirection = 'left';
-            if(criticalHit){
-                const {E} = this.getSurroundings(combatantHit.coordinates),
-                someoneElseIsInCoords = this.someoneElseIsInCoords(combatantHit.coordinates, E);
-                if(!someoneElseIsInCoords && combatantHit.coordinates.x !== MAX_DEPTH){
-                    combatantHit.coordinates.x++
-                    this.checkOverlap(combatantHit)
-                }
-            }
-        } else if((caller.coordinates.x === combatantHit.coordinates.x) && caller.coordinates.y > combatantHit.coordinates.y){
-            combatantHit.wounded.sourceDirection = 'bottom';
-            if(criticalHit){
-                const {S} = this.getSurroundings(combatantHit.coordinates),
-                someoneElseIsInCoords = this.someoneElseIsInCoords(combatantHit, S);
-                if(!someoneElseIsInCoords && combatantHit.coordinates.y !== 0){
-                    combatantHit.coordinates.y--
-                    this.checkOverlap(combatantHit)
-                }
-            }
-        } else if((caller.coordinates.x === combatantHit.coordinates.x) && caller.coordinates.y < combatantHit.coordinates.y){
-            combatantHit.wounded.sourceDirection = 'top';
-            if(criticalHit){
-                const {S} = this.getSurroundings(combatantHit.coordinates),
-                someoneElseIsInCoords = this.someoneElseIsInCoords(combatantHit, S);
-                if(!someoneElseIsInCoords && combatantHit.coordinates.y !== MAX_LANES-1){
-                    combatantHit.coordinates.y++
-                    this.checkOverlap(combatantHit)
-                }
-            }
-        } else if(caller.coordinates.x > combatantHit.coordinates.x){
-            combatantHit.wounded.sourceDirection = 'right';
-            if(criticalHit){
-                const {W} = this.getSurroundings(combatantHit.coordinates),
-                someoneElseIsInCoords = this.someoneElseIsInCoords(combatantHit, W);
-                if(!someoneElseIsInCoords && combatantHit.coordinates.x !== 0){
-                    combatantHit.coordinates.x--
-                    this.checkOverlap(combatantHit)
-                }
-            }
-
-        }
+        // (Critical movement handled above; duplicated block removed)
         
-
+        
         if(combatantHit.hp <= 0){
             combatantHit.hp = 0;
             if(caller.targetId === combatantHit.id) caller.targetId = null;
@@ -1709,7 +1781,18 @@ export function CombatManager(){
         // Otherwise, fallback to the original logic (for non-monster/minion targets)
         let r = Math.random();
         let criticalHit = false;
-        let damage = criticalHit ? caller.atk*3 : caller.atk;
+        // For non-monster/non-minion targets, compute base using equipped
+        // weapon percentage (if any) so fighters without weapons still use atk.
+        let weaponPercent = 0;
+        try {
+            const inv = caller.inventory || [];
+            const weapon = inv.find(i => i && i.type === 'weapon' && (i.equippedSlot === 'right' || i.equippedSlot === 'left' || i.equippedBy === caller.id));
+            if (weapon && typeof weapon.damage === 'number') weaponPercent = weapon.damage;
+        } catch (e) {
+            weaponPercent = 0;
+        }
+        const base = caller.atk + Math.floor((caller.atk * (weaponPercent || 0)) / 100);
+        let damage = criticalHit ? base * CRITICAL_DAMAGE_MULTIPLIER : base;
         let sourceDirection = 'left';
         if (caller.coordinates.x < target.coordinates.x) {
             sourceDirection = 'left';
@@ -1728,13 +1811,24 @@ export function CombatManager(){
         if(target.weaknesses.includes[caller.pendingAttack.type]){
             damage += Math.floor(damage/2);
         }
+        // Apply equipped armor percent reduction (if any) to the damage for non-monster targets
+        let armorPercentTarget = 0;
+        try {
+            const inv = target.inventory || [];
+            armorPercentTarget = inv.filter(i => i && i.type === 'armor' && (i.equippedSlot || i.equippedBy === target.id)).reduce((acc, a) => acc + (typeof a.armor === 'number' ? a.armor : 0), 0);
+        } catch (e) { armorPercentTarget = 0 }
+        if (armorPercentTarget > 0) {
+            const reduction = Math.floor(damage * (armorPercentTarget / 100));
+            damage = Math.max(0, damage - reduction);
+        }
+
         caller.readout.result = `${caller.name} hits ${target.name} for ${damage} damage`;
         target.hp -= damage;
         target.damageIndicators.push(damage);
         if (typeof this.updateData === 'function') {
             this.updateData(clone(this.combatants));
         }
-        caller.energy += caller.stats.fort * 3 + (1/2 * caller.level);
+        caller.energy += caller.stats.fort * 1 + (1/2 * caller.level);
         if(caller.energy > 100) caller.energy = 100;
         if(target.hp <= 0){
             target.hp = 0;
@@ -1826,9 +1920,19 @@ export function CombatManager(){
     }
 
     this.targetKilled = (combatant) => {
+    // Ensure the combatant stops all activity immediately.
     combatant.aiming = false;
+    combatant.active = false;
+    combatant.attacking = combatant.attackingReverse = false;
+    combatant.pendingAttack = null;
+    combatant.destinationCoordinates = null;
+    if (Array.isArray(combatant.action_queue)) combatant.action_queue.length = 0;
+    combatant.manualControl = false;
+    combatant.manualMovesCurrent = 0;
     combatant.dead = true;
-        combatant.locked = combatant.frozen = false;
+        // Lock the combatant to prevent any further movement/turns.
+        combatant.locked = true;
+        combatant.frozen = false;
         // Immediately clear targettedBy so reticle is removed
         if (Array.isArray(combatant.targettedBy)) {
             combatant.targettedBy = [];
@@ -1852,7 +1956,15 @@ export function CombatManager(){
             })
             this.combatOver = true;
 
+            // Diagnostic logging to help trace duplicate gameOver triggers
+            try {
+                const remainingMonsters = Object.values(this.combatants).filter(e => (e.isMonster || e.isMinion) && !e.dead).map(m => m.id);
+                const remainingCrew = Object.values(this.combatants).filter(e => !e.isMonster && !e.isMinion && !e.dead).map(c => c.id);
+                console.log('targetKilled: allMonstersDead=', allMonstersDead, 'allCrewDead=', allCrewDead, 'remainingMonsters=', remainingMonsters, 'remainingCrew=', remainingCrew, 'outcome=', outcome);
+            } catch (err) { console.warn('targetKilled: diagnostic logging failed', err); }
+
             setTimeout(()=>{
+                try { console.log('combat-manager: invoking gameOver callback with outcome=', outcome); } catch(e){}
                 this.gameOver(outcome)
             }, 2000)
         }
@@ -1938,6 +2050,30 @@ export function CombatManager(){
         hitsCombatant: this.hitsCombatant,
         targetKilled: this.targetKilled
     }
+    // Allow AI to consume consumables and notify UI (DungeonPage) to remove one item
+    utilMethods.useConsumable = (item, user) => {
+        try {
+            // Apply the item effect to the combatant
+            this.itemUsed(item, user);
+        } catch (e) { console.warn('useConsumable: itemUsed failed', e); }
+        try {
+            if (this.useConsumableCallback) this.useConsumableCallback(item);
+        } catch (e) { console.warn('useConsumable: useConsumableCallback failed', e); }
+        try { if (typeof this.broadcastDataUpdate === 'function') this.broadcastDataUpdate(user); } catch (e) {}
+    }
+    // Allow AI to query the current (communal) inventory via a registered callback
+    utilMethods.getCurrentInventory = () => {
+        try {
+            return (this.getCurrentInventoryCallback && typeof this.getCurrentInventoryCallback === 'function') ? this.getCurrentInventoryCallback() : [];
+        } catch (e) { return []; }
+    }
     this.fighterAI.connectUtilMethods(utilMethods)
     this.monsterAI.connectUtilMethods(utilMethods)
+
+    this.establishUseConsumableCallback = (cb) => {
+        this.useConsumableCallback = cb;
+    }
+    this.establishGetCurrentInventoryCallback = (cb) => {
+        this.getCurrentInventoryCallback = cb;
+    }
 }

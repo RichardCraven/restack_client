@@ -1,3 +1,8 @@
+const pickRandom = (array) => {
+    let index = Math.floor(Math.random() * array.length)
+    return array[index]
+}
+
 export function Wizard(data, utilMethods, animationManager, overlayManager){
     // Reference to MonsterBattle component for AI-triggered glyph casting
     this.monsterBattleRef = null;
@@ -16,6 +21,8 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
     this.missesTarget = utilMethods.missesTarget;
     this.hitsTarget = utilMethods.hitsTarget;
     this.hitsCombatant = utilMethods.hitsCombatant;
+    this.useConsumable = utilMethods.useConsumable;
+    this.getCurrentInventory = utilMethods.getCurrentInventory;
     // Override targetKilled to match monster/minion death animation and removal
     this.targetKilled = (target) => {
         // Blue ripple animation on death
@@ -124,6 +131,7 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
     return attack;
     }
     this.useSpell = (caller, combatants) => {
+        console.log('USE SPELL', caller);
         // const getGlyph = () => {
 
         // }
@@ -134,8 +142,17 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
         const magicMissile = caller.specialActions && caller.specialActions.find(
             a => a.type === 'spell' && a.subtype === 'magic missile'
         );
-
-        if (magicMissile && (!magicMissile.cooldown_position || magicMissile.cooldown_position === 0)) {
+        // Ensure defaults: energy_cost and movement_point_cost
+        if (magicMissile) {
+            if (typeof magicMissile.energy_cost === 'undefined') magicMissile.energy_cost = 30;
+            // movement point cost is 1/4 of the fighter's movementPointsMax (or manualMovesTotal fallback)
+            const maxPts = (typeof caller.movementPointsMax === 'number') ? caller.movementPointsMax : (caller.manualMovesTotal || 1);
+            if (typeof magicMissile.movement_point_cost === 'undefined') magicMissile.movement_point_cost = Math.ceil(maxPts * 0.25);
+        }
+        console.log('magic missile: ', magicMissile, 'cooldown: ', magicMissile ? magicMissile.cooldown_position : 'N/A');
+        // Three conditions to cast: cooldown_position===100, enough energy, and enough movement points
+        const magicMissileAvailable = magicMissile && (magicMissile.cooldown_position === 100) && (typeof magicMissile.energy_cost === 'number' ? caller.energy >= magicMissile.energy_cost : true) && (typeof magicMissile.movement_point_cost === 'number' ? ((typeof caller.movementPointsCurrent === 'number' ? caller.movementPointsCurrent : caller.manualMovesCurrent || 0) >= magicMissile.movement_point_cost) : true);
+        if (magicMissileAvailable) {
             // Acquire a target (closest enemy)
             const liveEnemies = Object.values(combatants).filter(e => !e.dead && (e.isMonster || e.isMinion));
             if (liveEnemies.length > 0) {
@@ -149,18 +166,118 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                 } else if (this.useSpellMagicMissile) {
                     this.useSpellMagicMissile(caller, target, magicMissile);
                 } else {
+                    console.log('about to TREIGGER magic missile, this.monsterBattleRef: ', this.monsterBattleRef);
+                    caller.specialActions = caller.specialActions.filter(a => a !== magicMissile)
+                    // notify host/owner that caller data changed so UI can re-render
+                    if (typeof this.broadcastDataUpdate === 'function') {
+                        try {
+                            this.broadcastDataUpdate(caller);
+                        } catch (e) {
+                            try { this.broadcastDataUpdate(); } catch (e2) { /* ignore */ }
+                        }
+                    }
+                    // Additionally, if a MonsterBattle ref is wired in, call its
+                    // update hook so the component can reconcile the change and
+                    // refresh the interaction pane count directly.
+                    if (this.monsterBattleRef && typeof this.monsterBattleRef.applyFighterUpdate === 'function') {
+                        try {
+                            this.monsterBattleRef.applyFighterUpdate(caller);
+                        } catch (err) {
+                            console.warn('monsterBattleRef.applyFighterUpdate failed', err);
+                        }
+                    }
+                    // Deduct energy as defined by the special
+                    caller.energy -= (magicMissile.energy_cost || 50);
+                    // Reduce move points by the special's movement_point_cost so UI updates
+                    try {
+                        const reduce = magicMissile.movement_point_cost || Math.ceil(((typeof caller.movementPointsMax === 'number' ? caller.movementPointsMax : (caller.manualMovesTotal || 1)) * 0.25));
+                        caller.manualMovesCurrent = Math.max(0, (caller.manualMovesCurrent || 0) - reduce);
+                        caller.movementPointsCurrent = Math.max(0, (caller.movementPointsCurrent || 0) - reduce);
+                        if (typeof this.broadcastDataUpdate === 'function') this.broadcastDataUpdate(caller);
+                        if (this.monsterBattleRef && typeof this.monsterBattleRef.applyFighterUpdate === 'function') {
+                            try { this.monsterBattleRef.applyFighterUpdate(caller); } catch (err) { /* ignore */ }
+                        }
+                    } catch (err) { /* non-fatal */ }
                     this.triggerMagicMissile(caller, target, 1500);
+                    console.log('now speical actions: ', caller.specialActions);
                 }
-                magicMissile.cooldown_position = magicMissile.cooldown || 3;
+                // magicMissile.cooldown_position = magicMissile.cooldown || 3;
                 // console.log('spell available');
                 return true;
             }
         }
+        if(caller.energy > 50){
+            const pickRandomSpecial = () => {
+                const availableSpecials = caller.specials.filter(e=>e.cooldown_position >= 100)
+                const special = pickRandom(availableSpecials)
+                return special
+            }
+            const special = pickRandomSpecial();
+            const target = Object.values(combatants).find(e=>e.id === caller.targetId)
+            // Before invoking a chosen special, ensure it meets the three conditions
+            if (special) {
+                if (typeof special.energy_cost === 'undefined') special.energy_cost = special.energy_cost || 30;
+                const maxPts = (typeof caller.movementPointsMax === 'number') ? caller.movementPointsMax : (caller.manualMovesTotal || 1);
+                if (typeof special.movement_point_cost === 'undefined') special.movement_point_cost = Math.ceil(maxPts * 0.25);
+                const canCast = special.cooldown_position >= 100 && (caller.energy >= (special.energy_cost || 0)) && ((typeof caller.movementPointsCurrent === 'number' ? caller.movementPointsCurrent : caller.manualMovesCurrent || 0) >= (special.movement_point_cost || 0));
+                if (canCast) {
+                    // Deduct energy and movement points
+                    try {
+                        caller.energy -= (special.energy_cost || 0);
+                        const reduce = special.movement_point_cost || Math.ceil(maxPts * 0.25);
+                        caller.manualMovesCurrent = Math.max(0, (caller.manualMovesCurrent || 0) - reduce);
+                        caller.movementPointsCurrent = Math.max(0, (caller.movementPointsCurrent || 0) - reduce);
+                        if (typeof this.broadcastDataUpdate === 'function') this.broadcastDataUpdate(caller);
+                        if (this.monsterBattleRef && typeof this.monsterBattleRef.applyFighterUpdate === 'function') {
+                            try { this.monsterBattleRef.applyFighterUpdate(caller); } catch (err) { /* ignore */ }
+                        }
+                    } catch (err) {}
+                    switch(special.name){
+                        case "ice blast":
+                            this.triggerIceBlast(caller, target);
+                            break;
+                        case "fire blast":
+                            this.triggerFireBlast(caller, target);
+                            break;
+                        default:
+                            // fallback: try to trigger by name if supported
+                            if (special.name && special.name.toLowerCase().includes('fire')) this.triggerFireBlast(caller, target);
+                            else if (special.name && special.name.toLowerCase().includes('ice')) this.triggerIceBlast(caller, target);
+                            break;
+                    }
+                }
+            }
+        }
         return false;
     }
+    this.tryUseConsumableForHeal = (caller) => {
+        try {
+            if (!caller || typeof caller.hp === 'undefined' || typeof caller.starting_hp === 'undefined') return false;
+            // threshold: 50% of starting HP
+            if (!(caller.hp < (caller.starting_hp * 0.5))) return false;
+            if (!this.useConsumable) return false;
+            const groupInv = (typeof this.getCurrentInventory === 'function') ? this.getCurrentInventory() : (Array.isArray(caller.inventory) ? caller.inventory : []);
+            if (!groupInv || !groupInv.length) return false;
+            const pIdx = groupInv.findIndex(i => i && (i.effect === 'health gain' || (i.name && i.name.toLowerCase().includes('potion'))));
+            if (pIdx === -1) return false;
+            const isGroup = (typeof this.getCurrentInventory === 'function');
+            let item;
+            if (!isGroup && Array.isArray(caller.inventory)) {
+                item = caller.inventory.splice(pIdx, 1)[0];
+            } else {
+                item = groupInv[pIdx];
+            }
+            console.log('AI using consumable item', item);
+            try { this.useConsumable(item, caller); } catch (e) {}
+            try { if (typeof this.broadcastDataUpdate === 'function') this.broadcastDataUpdate(caller); } catch (e) {}
+            return true;
+        } catch (err) {
+            console.warn('tryUseConsumableForHeal failed', err);
+            return false;
+        }
+    };
     this.processMove = (caller, combatants) => {
         if (typeof caller.moveCooldown === 'undefined') {
-            debugger;
             throw new Error('moveCooldown must be defined for all units');
         }
         caller.onMoveCooldown = true;
@@ -184,10 +301,11 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                 spellAvailable = caller.specialActions && caller.specialActions.find(action => action.type === 'spell' && action.available);
                 // debugger
                 
-                // if (target && targetHasMoreThanHalfHp && this.useSpell(caller, combatants)) {
-                // if (target && this.useSpell(caller, combatants)) {
-                //     break;
-                // }
+
+                const magicMissile = caller.specialActions && caller.specialActions.find(
+                    a => a.type === 'spell' && a.subtype === 'magic missile'
+                );
+
 
                 switch(caller.eraIndex){
                     case 0:
@@ -198,6 +316,7 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                         }
                     break;
                     case 1:
+                        this.tryUseConsumableForHeal(caller);
                         if (target && targetHasMoreThanHalfHp && this.useSpell(caller, combatants)) {
                             break;
                         }
@@ -212,6 +331,8 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                         }
                     break;
                     case 2:
+                        // If low HP, attempt to consume a health potion before other actions
+                        this.tryUseConsumableForHeal(caller);
                         if (target && targetHasMoreThanHalfHp &&  this.useSpell(caller, combatants)) {
                             break;
                         }
@@ -225,6 +346,8 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
     // Abstracted glyph action block for center-spellcaster era 2
     
                     case 3:
+                        // era 3: attempt to use a health potion if dangerously low
+                        this.tryUseConsumableForHeal(caller);
                         if(enemyIsAdjacent) {
                             data.methods.evadeBack(caller, combatants);
                         } else {
@@ -236,6 +359,8 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                         }
                     break;
                     case 4:
+                        // era 4: attempt to use a health potion if dangerously low
+                        this.tryUseConsumableForHeal(caller);
                         if(enemyIsAdjacent) {
                             data.methods.evadeBack(caller, combatants);
                         } else {
@@ -302,7 +427,7 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
         if(caller.pendingAttack.name === 'meditate'){
             data.methods.moveTowardsCloseFriendlyTarget(caller, combatants)
         } else if(caller.pendingAttack.name === 'cane_strike'){
-            debugger
+            
         }
 
         // data.methods.moveTowardsCloseEnemyTarget(caller, combatants)
@@ -316,7 +441,7 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
         }
     }
     this.triggerMagicMissile = (caller, target, travelTime) => {
-
+        console.log('triggering***');
         // Trigger the animation when the spell is cast
         if (this.animationManager && caller && target) {
             this.animationManager.magicMissile(caller.coordinates, target.coordinates);
@@ -424,7 +549,55 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
     }
     this.triggerIceBlast = (caller, target) => {
         const callerCoords = caller.coordinates, targetCoords = target.coordinates;
-        const iceBlast = caller.specials.find(e=>e.name === "ice blast")
+        // Defensive resolution for ice blast (same rationale as fireBlast)
+        const resolveLocalSpecial = (caller, specialKey) => {
+            const key = (specialKey || '').toString();
+            const normalized = key.replace(/\s+/g, '_').toLowerCase();
+            if (!Array.isArray(caller.specials)) return null;
+            for (let s of caller.specials) {
+                if (!s) continue;
+                if (typeof s === 'string') {
+                    const sNorm = s.replace(/\s+/g, '_').toLowerCase();
+                    if (s.toLowerCase() === key.toLowerCase() || sNorm === normalized) {
+                        if (data && data.methods && typeof data.methods.formatSpecials === 'function') {
+                            const expanded = data.methods.formatSpecials([s]);
+                            if (Array.isArray(expanded) && expanded[0]) return expanded[0];
+                        }
+                        return { name: key };
+                    }
+                } else if (typeof s === 'object') {
+                    if (s.name && (s.name.toLowerCase() === key.toLowerCase() || s.name.toLowerCase() === normalized)) return s;
+                    if (s.key && s.key.toLowerCase() === normalized) return s;
+                }
+            }
+            if (data && data.methods && typeof data.methods.formatSpecials === 'function') {
+                const expanded = data.methods.formatSpecials([normalized]);
+                if (Array.isArray(expanded) && expanded[0]) return expanded[0];
+            }
+            return null;
+        }
+
+        let iceBlast = null;
+        if (data && data.methods && typeof data.methods.resolveSpecial === 'function') {
+            iceBlast = data.methods.resolveSpecial(caller, 'ice blast');
+        }
+        if (!iceBlast && Array.isArray(caller.specials)) {
+            iceBlast = caller.specials.find(s => {
+                if (!s) return false;
+                if (typeof s === 'string') return s.toLowerCase().includes('ice');
+                if (typeof s === 'object' && s.name) return s.name.toLowerCase().includes('ice');
+                return false;
+            }) || null;
+        }
+        if (!iceBlast) {
+            console.warn('triggerIceBlast: could not resolve ice blast special for', caller && (caller.id || caller.name));
+            return;
+        }
+        if (typeof iceBlast.energy_cost === 'undefined') {
+            console.warn('triggerIceBlast: energy_cost missing on resolved iceBlast, falling back to 50', iceBlast);
+            iceBlast.energy_cost = 50;
+        }
+        caller.energy -= iceBlast.energy_cost;
         // lvl 1 -> 1 TC, 1x damage
         // lvl 2 -> 1 TC, 1.5x damage
         // lvl 3 -> 2 TC, 1.75x damage
@@ -438,16 +611,238 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
             4: {TC: 2, multiplier: 2},
             5: {TC: 3, multiplier: 2.5},
         }
-        
+        this.animationManager.magicCircle(caller.coordinates, target.coordinates, {
+            // fire the hit logic when the circle visual reaches the target
+            onComplete: () => {
+                try {
+                    if (!caller || !target) return;
+                    if (typeof this.hitsCombatant === 'function') {
+                        try {
+                            this.hitsCombatant(caller, target, iceBlast);
+                            return;
+                        } catch (err) {
+                            try {
+                                this.hitsCombatant(caller, target);
+                                return;
+                            } catch (err2) {
+                                console.warn('hitsCombatant failed when applying iceBlast, falling back to inline damage', err2);
+                            }
+                        }
+                    }
+
+                    // Inline fallback damage calculation using iceBlast.damage and levelMatrix
+                    const level = (iceBlast && (iceBlast.level || iceBlast.lvl)) || 1;
+                    const multiplier = (levelMatrix[level] && levelMatrix[level].multiplier) || levelMatrix[1].multiplier;
+                    const baseDamage = (iceBlast && (typeof iceBlast.damage === 'number' ? iceBlast.damage : (iceBlast.base_damage || null))) || ((caller && caller.atk) || 1);
+                    const r = Math.random();
+                    const critical = r * 100 > 80;
+                    const damage = Math.round((critical ? baseDamage * multiplier * 3 : baseDamage * multiplier));
+                    if (!Array.isArray(target.damageIndicators)) target.damageIndicators = [];
+                    target.damageIndicators.push(damage);
+                    target.hp -= damage;
+                    if (target.hp <= 0) {
+                        target.hp = 0;
+                        caller.targetId = null;
+                        this.targetKilled(target);
+                    }
+                } catch (err) {
+                    console.warn('triggerIceBlast onComplete handler failed', err);
+                }
+            },
+            // halve perTileMs to make fireball/magic visuals faster
+            perTileMs: 80
+        })
+
+
+    }
+    this.triggerFireBlast = (caller, target) => {
+        const callerCoords = caller.coordinates, targetCoords = target.coordinates;
+        // Prefer the centralized resolver when available.
+        let fireBlast = null;
+        if (data && data.methods && typeof data.methods.resolveSpecial === 'function') {
+            fireBlast = data.methods.resolveSpecial(caller, 'fire blast');
+        }
+        // Fallback: shallow find on caller.specials
+        if (!fireBlast && Array.isArray(caller.specials)) {
+            fireBlast = caller.specials.find(s => {
+                if (!s) return false;
+                if (typeof s === 'string') return s.toLowerCase().includes('fire');
+                if (typeof s === 'object' && s.name) return s.name.toLowerCase().includes('fire');
+                return false;
+            }) || null;
+        }
+        if (!fireBlast) {
+            console.warn('triggerFireBlast: could not resolve fire blast special for', caller && (caller.id || caller.name));
+            return;
+        }
+        if (typeof fireBlast.energy_cost === 'undefined') {
+            console.warn('triggerFireBlast: energy_cost missing on resolved fireBlast, falling back to 30', fireBlast);
+            fireBlast.energy_cost = 30;
+        }
+        console.log('fireBlast.energy_cost', fireBlast.energy_cost);
+        caller.energy -= fireBlast.energy_cost;
+        // lvl 1 -> 2 TC, 2x damage
+        // lvl 2 -> 2 TC, 2.5x damage
+        // lvl 3 -> 3 TC, 3x damage
+        // lvl 4 -> 3 TC, 3.5x damage
+        // lvl 5 -> 4 TC, 4x damage
+
+        const levelMatrix = {
+            1: {TC: 2, multiplier: 2},
+            2: {TC: 2, multiplier: 2.5},
+            3: {TC: 3, multiplier: 3},
+            4: {TC: 3, multiplier: 3.5},
+            5: {TC: 4, multiplier: 4},
+        }
+    this.animationManager.fireball(caller.coordinates, target.coordinates, {
+            // when animation reaches the target, invoke hit callback
+            onComplete: () => {
+        console.log('triggerFireBlast: fireball reached target for', caller && (caller.id || caller.name), 'target', target && (target.id || target.name));
+                try {
+                    if (!caller || !target) return;
+                    // Prefer centralized handler if available. Pass the resolved special so handlers
+                    // that support it can use canonical damage/TC/etc.
+                    if (typeof this.hitsCombatant === 'function') {
+                        // Many callers use hitsCombatant(caller, target). Passing the special as a third
+                        // argument is a non-breaking enhancement for handlers that accept it.
+                        try {
+                            this.hitsCombatant(caller, target, fireBlast);
+                            return;
+                        } catch (err) {
+                            // If the handler doesn't accept the third arg, fall back to two-arg call
+                            try {
+                                this.hitsCombatant(caller, target);
+                                return;
+                            } catch (err2) {
+                                console.warn('hitsCombatant failed when applying fireBlast, falling back to inline damage', err2);
+                            }
+                        }
+                    }
+
+                    // Fallback: inline damage application using the levelMatrix defined above
+                    const level = (fireBlast && (fireBlast.level || fireBlast.lvl)) || 1;
+                    const multiplier = (levelMatrix[level] && levelMatrix[level].multiplier) || levelMatrix[1].multiplier;
+                    // Prefer canonical damage from the special definition. Fall back to caller.atk if missing.
+                    const baseDamage = (fireBlast && (typeof fireBlast.damage === 'number' ? fireBlast.damage : (fireBlast.base_damage || null))) || ((caller && caller.atk) || 1);
+                    const r = Math.random();
+                    const critical = r * 100 > 80;
+                    const damage = Math.round((critical ? baseDamage * multiplier * 3 : baseDamage * multiplier));
+                    if (!Array.isArray(target.damageIndicators)) target.damageIndicators = [];
+                    target.damageIndicators.push(damage);
+                    target.hp -= damage;
+                    if (target.hp <= 0) {
+                        target.hp = 0;
+                        caller.targetId = null;
+                        this.targetKilled(target);
+                    }
+                } catch (err) {
+                    console.warn('triggerFireBlast onComplete handler failed', err);
+                }
+            },
+            // halve perTileMs to make fireball/magic visuals faster
+            perTileMs: 40
+        })
     }
     this.initiateAttack = async (caller, manualAttack, combatants) => {
         if(!caller) return
-        const target = combatants[caller.targetId];
+        const target = combatants ? combatants[caller.targetId] : null;
+        // Helper: check for any friendly combatant strictly between caller and target on same row
+        const friendlyInLineBetween = (caller, target, combatants) => {
+            if(!caller || !target || !combatants) return false;
+            if (caller.coordinates.y !== target.coordinates.y) return false;
+            const y = caller.coordinates.y;
+            const startX = Math.min(caller.coordinates.x, target.coordinates.x) + 1;
+            const endX = Math.max(caller.coordinates.x, target.coordinates.x) - 1;
+            if (startX > endX) return false;
+            for (let x = startX; x <= endX; x++) {
+                const found = Object.values(combatants).find(e => e && !e.dead && e.coordinates.x === x && e.coordinates.y === y);
+                if (found && (!found.isMonster && !found.isMinion)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        // Helper: find an enemy on the same row that has a clear path (no friendlies between)
+        const findEnemyWithClearPath = (caller, combatants, preferDirection = null) => {
+            if(!caller || !combatants) return null;
+            const y = caller.coordinates.y;
+            const enemies = Object.values(combatants).filter(e => e && !e.dead && (e.isMonster || e.isMinion) && e.coordinates.y === y);
+            if(enemies.length === 0) return null;
+            // Sort by distance from caller
+            enemies.sort((a,b) => Math.abs(a.coordinates.x - caller.coordinates.x) - Math.abs(b.coordinates.x - caller.coordinates.x));
+            // If preferDirection provided ('left' or 'right'), try those first
+            if (preferDirection === 'right') {
+                const rightFirst = enemies.filter(e => e.coordinates.x > caller.coordinates.x).sort((a,b)=>a.coordinates.x - b.coordinates.x);
+                for (const cand of rightFirst) {
+                    const startX = Math.min(caller.coordinates.x, cand.coordinates.x) + 1;
+                    const endX = Math.max(caller.coordinates.x, cand.coordinates.x) - 1;
+                    let blocked = false;
+                    for (let x = startX; x <= endX; x++) {
+                        const found = Object.values(combatants).find(c => c && !c.dead && c.coordinates.x === x && c.coordinates.y === y);
+                        if (found && (!found.isMonster && !found.isMinion)) { blocked = true; break; }
+                    }
+                    if (!blocked) return cand;
+                }
+            } else if (preferDirection === 'left') {
+                const leftFirst = enemies.filter(e => e.coordinates.x < caller.coordinates.x).sort((a,b)=>b.coordinates.x - a.coordinates.x);
+                for (const cand of leftFirst) {
+                    const startX = Math.min(caller.coordinates.x, cand.coordinates.x) + 1;
+                    const endX = Math.max(caller.coordinates.x, cand.coordinates.x) - 1;
+                    let blocked = false;
+                    for (let x = startX; x <= endX; x++) {
+                        const found = Object.values(combatants).find(c => c && !c.dead && c.coordinates.x === x && c.coordinates.y === y);
+                        if (found && (!found.isMonster && !found.isMinion)) { blocked = true; break; }
+                    }
+                    if (!blocked) return cand;
+                }
+            }
+            // Fallback: any enemy with clear path
+            for (const cand of enemies) {
+                const startX = Math.min(caller.coordinates.x, cand.coordinates.x) + 1;
+                const endX = Math.max(caller.coordinates.x, cand.coordinates.x) - 1;
+                let blocked = false;
+                for (let x = startX; x <= endX; x++) {
+                    const found = Object.values(combatants).find(c => c && !c.dead && c.coordinates.x === x && c.coordinates.y === y);
+                    if (found && (!found.isMonster && !found.isMinion)) { blocked = true; break; }
+                }
+                if (!blocked) return cand;
+            }
+            return null;
+        }
         if(manualAttack){
             if(caller.pendingAttack && caller.pendingAttack.cooldown_position < 99){
                 console.log('pending attack not charged fully');
                 return
             } else if (caller.pendingAttack && caller.pendingAttack.cooldown_position === 100){
+                // For manual beam attacks, check the line of fire along the wizard's facing for any friendlies
+                if (combatants) {
+                    const facing = caller.facing || 'right';
+                    // If there's a friendly in the direct beam path, try to find another enemy in the lane with a clear path
+                    const firstEnemyClear = findEnemyWithClearPath(caller, combatants, facing === 'right' ? 'right' : 'left');
+                    if (!firstEnemyClear) {
+                        // no clear enemy in preferred direction; try opposite direction
+                        const opposite = facing === 'right' ? 'left' : 'right';
+                        const alt = findEnemyWithClearPath(caller, combatants, opposite);
+                        if (alt) {
+                            // Fire beam towards alt enemy
+                            let combatantHit = await this.triggerBeamAttack(caller.coordinates, alt.coordinates);
+                            if (combatantHit) {
+                                try { this.hitsCombatant(caller, combatantHit); } catch (err) { this.hitsCombatant(caller, combatantHit); }
+                            } else {
+                                this.missesTarget(caller);
+                            }
+                            this.kickoffAttackCooldown(caller);
+                            return;
+                        }
+                        // No valid alternative enemy with clear path; treat as miss
+                        this.missesTarget(caller);
+                        this.kickoffAttackCooldown(caller);
+                        return;
+                    } else {
+                        // There is at least one enemy with a clear path in preferred direction; fire normally (beam will hit first occupant)
+                    }
+                }
                 let combatantHit = await this.triggerBeamAttackManual(caller.coordinates)
                 if(combatantHit){
                     // Delegate to centralized hitsCombatant so damage, crits, and animations are consistent
@@ -473,6 +868,21 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
             switch(caller.pendingAttack.name){
                 case 'energy blast':
                     if(laneDiff === 0){
+                        // If there's any friendly between caster and target on same plane, try to retarget
+                        if (friendlyInLineBetween(caller, target, combatants)) {
+                            // Prefer enemies in the original direction
+                            const preferDir = (target.coordinates.x > caller.coordinates.x) ? 'right' : 'left';
+                            const alt = findEnemyWithClearPath(caller, combatants, preferDir);
+                            if (alt) {
+                                target = alt;
+                                caller.targetId = alt.id;
+                            } else {
+                                // No alternative enemy with a clear path; treat as miss
+                                this.missesTarget(caller);
+                                this.kickoffAttackCooldown(caller);
+                                break;
+                            }
+                        }
                         let combatantHit  = await this.triggerBeamAttack(caller.coordinates, target.coordinates);
                         if(combatantHit){
                             // Apply unified wounded/damage logic for AI beam hit

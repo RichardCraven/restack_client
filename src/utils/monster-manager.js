@@ -1,5 +1,17 @@
 import * as images from '../utils/images'
 
+const getMinorWeapon = () => {
+    const arr = ['axe',
+        'flail',
+        'scimitar',
+        'spear',
+        'sword',
+        'longbow']
+    return arr
+}
+const getMajorWeapon = () => {
+    const arr = ['scepter']
+}
 export function MonsterManager(){
     this.pickRandom = (array) => {
         let index = Math.floor(Math.random() * array.length)
@@ -368,7 +380,7 @@ export function MonsterManager(){
             type: 'goblin',
             key: 'goblin',
             image_names: ['goblin'],
-            monster_names: ['Wiggit', 'Miggi'],
+            monster_names: ['Wiggit', 'Miggi', "Gurnak"],
             stats: {
                 str: 4,
                 int:2,
@@ -402,7 +414,7 @@ export function MonsterManager(){
                 vit:8,
                 fort:6,
                 hp: 40,
-                atk: 7,
+                atk: 10,
                 baseDef: 13
             },
             level: 6,
@@ -429,8 +441,8 @@ export function MonsterManager(){
                 dex:4,
                 vit:10,
                 fort:2,
-                hp: 58,
-                atk: 7,
+                hp: 78,
+                atk: 10,
                 baseDef: 13
             },
             level: 6,
@@ -469,7 +481,15 @@ export function MonsterManager(){
             minions: ['skeleton', 'skeleton'],
             weaknesses: ['fire'],
             drops: [
-                {item: 'minor_health_potion', percentChance: 55}
+                {item: 'minor_health_potion', percentChance: 5},
+                {item: this.pickRandom(getMinorWeapon()), percentChance: 40}
+                // {item: 'sword', percentChance: 85},
+                // {item: 'nukta_amulet', percentChance: 85},
+                // {item: 'basic_helm', percentChance: 75},
+                // {item: 'scarab_charm', percentChance: 55},
+                // {item: 'seeing_shield', percentChance: 85},
+                // {item: 'glindas_wand', percentChance: 85},
+                // {item: 'zul_mask', percentChance: 75}
             ]
         }
     }

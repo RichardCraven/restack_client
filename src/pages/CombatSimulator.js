@@ -125,6 +125,7 @@ class CrewManagerPage extends React.Component{
     }
 
     wireMonsterBattleRefToWizardAI = () => {
+        console.log('wire monster battle ref');
         if (
             this.monsterBattleComponentRef.current &&
             this.props.combatManager &&
@@ -132,6 +133,7 @@ class CrewManagerPage extends React.Component{
             this.props.combatManager.fighterAI.roster &&
             this.props.combatManager.fighterAI.roster.wizard
         ) {
+            console.log('CONNECTING');
             this.props.combatManager.fighterAI.roster.wizard.monsterBattleRef = this.monsterBattleComponentRef.current;
         }
   }

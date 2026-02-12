@@ -51,6 +51,13 @@ export function FighterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
             hitsCombatant: this.hitsCombatant,
             targetKilled: this.targetKilled
         }
+        // Pass through optional helpers (e.g., useConsumable) when present on utilMethods
+        if (typeof utilMethods.useConsumable === 'function') {
+            this.utilMethods.useConsumable = utilMethods.useConsumable;
+        }
+        if (typeof utilMethods.getCurrentInventory === 'function') {
+            this.utilMethods.getCurrentInventory = utilMethods.getCurrentInventory;
+        }
     }
     this.initializeRoster = (animationManager) => {
         this.roster = {

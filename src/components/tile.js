@@ -29,6 +29,14 @@ export default function Tile(props) {
         }
         return null;
     }
+    // derive hp and maxHp from props or nested data so callers can pass either shape
+    const hpVal = (typeof props.hp === 'number') ? props.hp : (props.data && typeof props.data.hp === 'number' ? props.data.hp : undefined);
+    let maxHpVal = (typeof props.maxHp === 'number') ? props.maxHp : (props.data && props.data.stats && typeof props.data.stats.hp === 'number' ? props.data.stats.hp : (props.data && typeof props.data.max_hp === 'number' ? props.data.max_hp : (props.data && typeof props.data.starting_hp === 'number' ? props.data.starting_hp : undefined)));
+    // If caller only provides current HP (no max), treat max as current so the bar renders full.
+    if (typeof hpVal === 'number' && typeof maxHpVal !== 'number') {
+        maxHpVal = hpVal;
+    }
+
     return (
         <div style={{
             pointerEvents: props.passThrough ? 'none' : 'inherit',
@@ -37,7 +45,8 @@ export default function Tile(props) {
             cursor: props.cursor ? props.cursor : 'pointer',
             height: props.tileSize+'px',
             width: props.tileSize+'px',
-            backgroundImage: props.imageOverride ? "url(" + props.imageOverride + ")" : "url(" + images[props.image] + ")",
+            // keep a base background color (type color) — the portrait is rendered in a child so
+            // we can show an HP-fill that uses the same color as a vertical meter
             backgroundColor: 
                 props.backgroundColor ? props.backgroundColor :
                 (props.hovered && props.type === 'board-tile') ? 
@@ -45,13 +54,10 @@ export default function Tile(props) {
                 ( props.type === 'overlay-tile' ? 
                     'transparent': 
                     (props.isActiveInventory && props.type === 'inventory-tile' ? 'lightgreen' : props.color)),
-            backgroundSize: props.image === 'avatar' ? '100% 80%' : '100% 100%',
-            backgroundPosition: props.image === 'avatar' ? 'center bottom' : 'inherit',
-            // background-size: 100% 80%;
-    // background-position: center bottom;
-            backgroundRepeat: 'no-repeat',
+            // portrait and overlays are handled by child elements so we can layer an HP meter behind
             fontSize: '0.7em',
             position: 'relative',
+            overflow: 'hidden',
             borderLeft: (props.type === 'palette-tile' && !props.hovered) ? '2px solid transparent' : 
             (props.type === 'palette-tile' && props.hovered ? '2px solid red' : ((props.borders && props.borders.left) ? props.borders.left : '1px solid transparent')),
             borderRight: (props.borders && props.borders.right) ? props.borders.right : '1px solid transparent',
@@ -92,11 +98,40 @@ export default function Tile(props) {
             }}
             className={`tile ${props.className}`}
         >
+           {/* HP fill: rendered as a vertical fill using the tile's color when hp & maxHp are provided */}
+         { (typeof hpVal === 'number' && typeof maxHpVal === 'number') && (() => {
+             // Render a visible left-side vertical HP bar so it shows even when the portrait
+             // image is fully opaque. This acts as the "background" HP meter while keeping
+             // the portrait visible. Width is small so it reads as a meter but you can
+             // change it by passing props.hpBarWidth (percent number).
+             const pct = Math.max(0, Math.min(1, maxHpVal <= 0 ? 0 : hpVal / maxHpVal));
+             const heightPct = Math.round(pct * 100);
+             const barWidthPct = (typeof props.hpBarWidth === 'number') ? props.hpBarWidth : 10;
+                         return <div className="hp-fill" style={{position: 'absolute', left: 0, bottom: 0, width: `${barWidthPct}%`, height: `${heightPct}%`, backgroundColor: props.color || '#888', opacity: 0.95, zIndex: 2, transition: 'height 250ms linear', boxShadow: 'inset 2px 0 6px rgba(0,0,0,0.25)'}}></div>
+         })()}
+
+                     {/* Terrain background: chosen per-tile (terrain_1..terrain_16) and rendered beneath portrait/items */}
+                     { props.terrain && props.color !== 'black' && (() => {
+                         let terrainUrl = (props.terrain && props.terrain.includes('/')) ? props.terrain : (images[props.terrain] || null);
+                         return <div className="terrain-bg" style={{position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundImage: terrainUrl ? `url(${terrainUrl})` : 'none', backgroundSize: 'cover', backgroundRepeat: 'no-repeat', backgroundPosition: 'center center', zIndex: 0, opacity: 0.5}} />
+                     })()}
+
+                     {/* Portrait sits above the hp-fill and terrain so the image remains visible */}
+                     <div className="portrait" style={{position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundImage: props.imageOverride ? "url(" + props.imageOverride + ")" : "url(" + images[props.image] + ")", backgroundSize: props.image === 'avatar' ? '100% 80%' : '100% 100%', backgroundPosition: props.image === 'avatar' ? 'center bottom' : 'inherit', backgroundRepeat: 'no-repeat', zIndex: 3}} />
+
+           {/* Dead overlay: visible when data.dead === true */}
+           { props.data && props.data.dead && (
+                <div className="dead-overlay" style={{position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: Math.max(12, (props.tileSize / 3)) + 'px', zIndex: 3}}>
+                    {/* simple skull mark — keeps UI minimal */}
+                    ☠
+                </div>
+           )}
+
            {props.showCoordinates && (() => {
                 const displayCoords = getDisplayCoords(props.coordinates);
                 if (!displayCoords) return null;
                 return (
-                    <div style={{color: 'yellow', userSelect: 'none'}}>
+                    <div style={{color: 'yellow', userSelect: 'none', position: 'absolute', zIndex: 4}}>
                         {displayCoords[0]},{displayCoords[1]} <span style={{color: 'red'}}>{props.index}</span>
                     </div>
                 )

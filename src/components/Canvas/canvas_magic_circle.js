@@ -7,7 +7,7 @@ const CanvasMagicCircle = ({ center, radius = 1.2, numParticles = 12, color = 'a
     const safeWidth = typeof width === 'number' && !isNaN(width) ? width : 200;
     const safeHeight = typeof height === 'number' && !isNaN(height) ? height : 200;
     const canvasRef = useRef(null)
-    console.log('IN MAGIC CIRCLE!!! data:', { center, radius, numParticles, color, width, height });
+    
     // Animate particles rotating around the center
     const angleRef = useRef(0);
     useEffect(() => {

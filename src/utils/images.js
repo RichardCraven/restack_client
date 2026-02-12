@@ -26,7 +26,7 @@ import fist_punch from '../assets/icons/combat-icons/__fist-punch.png';
 import monster from '../assets/icons/monster.png'
 import avatar from '../assets/icons/avatar.png'
 import avatar_white from '../assets/icons/avatar_white.png'
-import beholder from '../assets/icons/monsters/beholder.png'
+import beholder from '../assets/portraits/monsters/beholder.png'
 import black_banshee from '../assets/icons/monsters/black_banshee.png'
 import black_djinn from '../assets/icons/monsters/black_djinn.png'
 import black_gorgon from '../assets/icons/monsters/black_gorgon.png'
@@ -36,20 +36,20 @@ import black_vampire from '../assets/icons/monsters/black_vampire.png'
 import black_wraith from '../assets/icons/monsters/black_wraith.png'
 import dragon from '../assets/icons/monsters/dragon.png'
 import giant_scorpion from '../assets/icons/monsters/giant_scorpion.png'
-import goblin from '../assets/icons/monsters/goblin.png'
+import goblin from '../assets/portraits/monsters/goblin.png'
 import horror from '../assets/icons/monsters/horror.png'
 import imp_overlord from '../assets/icons/monsters/imp_overlord.png'
 import imp from '../assets/icons/monsters/imp.png'
 import manticore from '../assets/icons/monsters/manticore.png'
-import mummy from '../assets/icons/monsters/mummy.png'
+import mummy from '../assets/portraits/monsters/mummy.png'
 import naiad from '../assets/icons/monsters/naiad.png'
 
 // import ogre from '../assets/icons/monsters/ogre.png'
 import ogre from '../assets/portraits/monsters/ogre.png'
 
-import skeleton from '../assets/icons/monsters/skeleton.png'
-import sphinx from '../assets/icons/monsters/sphinx.png'
-import troll from '../assets/icons/monsters/troll.png'
+import skeleton from '../assets/portraits/monsters/skeleton.png'
+import sphinx from '../assets/portraits/monsters/sphinx.png'
+import troll from '../assets/portraits/monsters/troll.png'
 // import white_banshee from '../assets/icons/monsters/white_banshee.png'
 // import white_djinn from '../assets/icons/monsters/white_djinn.png'
 // import white_gorgon from '../assets/icons/monsters/white_gorgon.png'
@@ -57,7 +57,7 @@ import troll from '../assets/icons/monsters/troll.png'
 // import white_minotaur from '../assets/icons/monsters/white_minotaur.png'
 // import white_wraith from '../assets/icons/monsters/white_wraith.png'
 // import white_vampire from '../assets/icons/monsters/white_vampire.png'
-import wyvern from '../assets/icons/monsters/wyvern.png'
+import wyvern from '../assets/portraits/monsters/wyvern.png'
 import wyvern_alt from '../assets/icons/monsters/wyvern_alt.png'
 
 // devils
@@ -71,9 +71,10 @@ import zul_devil from '../assets/icons/monsters/devils/zul_devil.png'
 import black_demon from '../assets/icons/monsters/demons/black_demon.png'
 
 import golden_demon from '../assets/icons/monsters/demons/golden_demon.png'
-import kabuki_demon from '../assets/icons/monsters/demons/kabuki_demon.png'
+import kabuki_demon from '../assets/portraits/monsters/variations/kabuki_demon/kabuki_demon1.png'
 import kabuki_demon_portrait from '../assets/portraits/monsters/variations/kabuki_demon/kabuki_demon1.png'
 import kabuki_demon_minion_portrait from '../assets/portraits/monsters/variations/kabuki_demon/kabuki_demon_minion.png'
+import kabuki_demon_minion from '../assets/portraits/monsters/variations/kabuki_demon/kabuki_demon_minion.png'
 
 import arrowUp from '../assets/graphics/arrow_up.png'
 import arrowDown from '../assets/graphics/arrow_down.png'
@@ -187,12 +188,12 @@ import wide_skull from '../assets/icons/misc/wide_skull.png'
 
 // crew
 import archer from '../assets/icons/crew_icons/archer.png'
-import barbarian from '../assets/icons/crew_icons/barbarian.png'
-import monk from '../assets/icons/crew_icons/monk.png'
-import soldier from '../assets/icons/crew_icons/soldier.png'
-import wizard from '../assets/icons/crew_icons/wizard.png'
-import rogue from '../assets/icons/crew_icons/rogue.png'
-import sage from '../assets/icons/crew_icons/sage.png'
+import barbarian from '../assets/portraits/crew/barbarian/barbarian_compressed.png'
+import monk from '../assets/portraits/crew/monk/monk_compressed.png'
+import soldier from '../assets/portraits/crew/soldier/soldier_compressed.png'
+import wizard from '../assets/portraits/crew/wizard/wizard_compressed.png'
+import rogue from '../assets/portraits/crew/rogue/rogue_compressed.png'
+import sage from '../assets/portraits/crew/sage/sage_compressed.png'
 import sorceress from '../assets/icons/crew_icons/sorceress.png'
 
 import viking1 from '../assets/icons/crew_icons/viking1.png'
@@ -214,6 +215,8 @@ import sphinx_portrait2 from '../assets/portraits/monsters/sphinx2.png'
 import wyvern_portrait from '../assets/portraits/monsters/wyvern.png'
 import wyvern_portrait2 from '../assets/portraits/monsters/wyvern2.png'
 import djinn_portrait from '../assets/portraits/monsters/djinn.png'
+
+import vampire from '../assets/portraits/monsters/vampire.png'
 import vampire_portrait from '../assets/portraits/monsters/vampire.png'
 import troll_portrait from '../assets/portraits/monsters/troll.png'
 import wraith_portrait from '../assets/portraits/monsters/wraith.png'
@@ -221,8 +224,8 @@ import skeleton_portrait from '../assets/portraits/monsters/skeleton.png'
 
 
 //MID JOURNEY
-import goat_demon from '../assets/icons/monsters/mj_icons/goat_demon.png'
-import gorgon from '../assets/icons/monsters/mj_icons/gorgon.png'
+import goat_demon from '../assets/portraits/monsters/goat_demon.png'
+import gorgon from '../assets/portraits/monsters/gorgon.png'
 
 import gorgon_portrait from '../assets/portraits/monsters/gorgon.png'
 import goat_demon_portrait from '../assets/portraits/monsters/goat_demon.png'
@@ -258,6 +261,7 @@ import witch_p1_8 from '../assets/portraits/monsters/variations/witch/type1/witc
 
 import beholder_portrait from '../assets/portraits/monsters/beholder.png'
 import beholder_minion_portrait from '../assets/portraits/monsters/beholder_minion.png'
+import beholder_minion from '../assets/portraits/monsters/beholder_minion.png'
 
 //combat images
 import bow_and_arrow from '../assets/icons/items/combat-icons/bow_arrow.png'
@@ -315,6 +319,31 @@ import fire_blast from '../assets/icons/combat-icons/specials/wizard/fire_blast.
 import magic_missile from '../assets/icons/misc/cycle.png'
 import magic_missile_inverted from '../assets/icons/misc/cycle_inverted.png'
 
+// body
+import body_male from '../assets/icons/figures/body_man.png'
+import body_female from '../assets/icons/figures/body_fem.png'
+
+//camp
+import camp from '../assets/icons/misc/camp/camp-2.png'
+
+//terrain
+import terrain_1 from '../assets/icons/terrain/stone-1.png'
+import terrain_2 from '../assets/icons/terrain/stone-2.png'
+import terrain_3 from '../assets/icons/terrain/stone-3.png'
+import terrain_4 from '../assets/icons/terrain/stone-4.png'
+import terrain_5 from '../assets/icons/terrain/stone-5.png'
+import terrain_6 from '../assets/icons/terrain/stone-6.png'
+import terrain_7 from '../assets/icons/terrain/stone-7.png'
+import terrain_8 from '../assets/icons/terrain/stone-8.png'
+import terrain_9 from '../assets/icons/terrain/stone-9.png'
+import terrain_10 from '../assets/icons/terrain/stone-10.png'
+import terrain_11 from '../assets/icons/terrain/stone-11.png'
+import terrain_12 from '../assets/icons/terrain/stone-12.png'
+import terrain_13 from '../assets/icons/terrain/stone-13.png'
+import terrain_14 from '../assets/icons/terrain/stone-14.png'
+import terrain_15 from '../assets/icons/terrain/stone-15.png'
+import terrain_16 from '../assets/icons/terrain/stone-16.png'
+
 export {
     hand_1,
     hand_2,
@@ -343,6 +372,7 @@ export {
     avatar_white,
     beholder,
     beholder_portrait,
+    beholder_minion,
     beholder_minion_portrait,
     black_banshee,
     black_djinn,
@@ -527,6 +557,7 @@ export {
 
     kabuki_demon_portrait,
     kabuki_demon_minion_portrait,
+    kabuki_demon_minion,
 
 
     bow_and_arrow,
@@ -576,5 +607,28 @@ export {
     whiteskull,
 
     ice_blast,
-    fire_blast
+    fire_blast,
+
+    body_male,
+    body_female, 
+
+    terrain_1,
+    terrain_2,
+    terrain_3,
+    terrain_4,
+    terrain_5,
+    terrain_6,
+    terrain_7,
+    terrain_8,
+    terrain_9,
+    terrain_10,
+    terrain_11,
+    terrain_12,
+    terrain_13,
+    terrain_14,
+    terrain_15,
+    terrain_16,
+
+    camp,
+    vampire
 };

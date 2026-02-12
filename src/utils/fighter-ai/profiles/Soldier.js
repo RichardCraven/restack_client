@@ -17,6 +17,8 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
     this.missesTarget = utilMethods.missesTarget;
     this.hitsTarget = utilMethods.hitsTarget;
     this.hitsCombatant = utilMethods.hitsCombatant;
+    this.useConsumable = utilMethods.useConsumable;
+    this.getCurrentInventory = utilMethods.getCurrentInventory;
 
     this.isFriendly = (e) => {
         return !e.isMonster && !e.isMinion;
@@ -205,9 +207,41 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
 
     return adjacentEnemies >= 3;
 }
+    // Attempt to find and use a healing consumable for the caller.
+    // Returns true if a consumable was used (so caller's behavior can break/stop).
+    this.tryUseConsumableForHeal = (caller) => {
+        console.log('tryUseConsumableForHeal, inventory: ', this.getCurrentInventory());
+        try {
+            if (!caller || typeof caller.hp === 'undefined' || typeof caller.starting_hp === 'undefined') return false;
+            console.log(`Caller HP: ${caller.hp}, Starting HP: ${caller.starting_hp}`);
+            // threshold: 50% of starting HP
+            if (!(caller.hp < (caller.starting_hp * 0.5))) return false;
+            if (!this.useConsumable) return false;
+            const groupInv = (typeof this.getCurrentInventory === 'function') ? this.getCurrentInventory() : (Array.isArray(caller.inventory) ? caller.inventory : []);
+            if (!groupInv || !groupInv.length) return false;
+            const pIdx = groupInv.findIndex(i => i && (i.effect === 'health gain' || (i.name && i.name.toLowerCase().includes('potion'))));
+            // no potion found
+            console.log('potion index: ', pIdx);
+            if (pIdx === -1) return false;
+            const isGroup = (typeof this.getCurrentInventory === 'function');
+            let item;
+            if (!isGroup && Array.isArray(caller.inventory)) {
+                item = caller.inventory.splice(pIdx, 1)[0];
+            } else {
+                item = groupInv[pIdx];
+            }
+            try { this.useConsumable(item, caller); } catch (e) {}
+            try { if (typeof this.broadcastDataUpdate === 'function') this.broadcastDataUpdate(caller); } catch (e) {}
+            return true;
+        } catch (err) {
+            console.warn('tryUseConsumableForHeal failed', err);
+            return false;
+        }
+    }
     this.processMove = (caller, combatants) => {
+        // console.log('current inventory: ', this.getCurrentInventory());
+        // debugger
         if (typeof caller.moveCooldown === 'undefined') {
-            debugger;
             throw new Error('moveCooldown must be defined for all units');
         }
         caller.onMoveCooldown = true;
@@ -219,6 +253,7 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
 
         switch(caller.behaviorSequence){
             case 'brawler':
+                console.log('soldier era: ', caller.eraIndex);
                 switch(caller.eraIndex){
                     case 0:
                         if(this.isSurrounded(caller, combatants)){
@@ -246,9 +281,11 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
                             });
                             break;
                         }
+                        this.tryUseConsumableForHeal(caller);
                         data.methods.closeTheGap(caller, combatants)
                     break;
                     case 2:
+                        console.log('era 2');
                         if(this.isSurrounded(caller, combatants)){
                             console.log('soldier is surrounded, do spin move. combatants:', combatants);
                             this.triggerSpinAttack(caller, combatants).then((combatantHit)=>{
@@ -260,6 +297,9 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
                             });
                             break;
                         }
+                        console.log('attempt to drink', caller.hp, 'vs ', caller.starting_hp * 0.5);
+                        // Era 2: attempt to drink a health potion if low (50% threshold)
+                        this.tryUseConsumableForHeal(caller);
                         data.methods.closeTheGap(caller, combatants)
                     break;
                     case 3:
@@ -274,6 +314,7 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
                             });
                             break;
                         }
+                        this.tryUseConsumableForHeal(caller);
                         data.methods.closeTheGap(caller, combatants)
                     break;
                     case 4:
@@ -288,6 +329,7 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
                             });
                             break;
                         }
+                        this.tryUseConsumableForHeal(caller);
                         data.methods.closeTheGap(caller, combatants)
                     break;
                     default: 
@@ -340,7 +382,6 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
     }
     this.initiateAttack = async (caller, manualAttack, combatants) => {
         if (typeof caller.moveCooldown === 'undefined') {
-            debugger;
             throw new Error('moveCooldown must be defined for all units');
         }
         caller.onMoveCooldown = true;

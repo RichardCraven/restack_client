@@ -287,8 +287,8 @@ export const MovementMethods = {
         const enemyTarget = Object.values(combatants).find(e=>e.id === caller.targetId);
         const {N,E,S,W,NW,SW,NE,SE} = getSurroundings(caller.coordinates)
 
-        let centerTile;
-        if(PC_TYPES.includes(caller.type)){
+    let centerTile;
+    if(PC_TYPES.includes(caller.type)){
             // PC always go to x:1
             // let newCoords = JSON.parse(JSON.stringify(caller.coordinates))
             // newCoords.x = 1;
@@ -296,7 +296,7 @@ export const MovementMethods = {
             // if(newCoords.x < 0) newCoords.x = 0
             // caller.coordinates = newCoords;
             // return
-            let centerTile = {x: 1, y: 2}
+            centerTile = {x: 1, y: 2}
         } else {
             // NPC always go to x:6
             // let newCoords = JSON.parse(JSON.stringify(caller.coordinates))
@@ -305,7 +305,7 @@ export const MovementMethods = {
             // if(newCoords.x < 0) newCoords.x = 0
             // caller.coordinates = newCoords;
             // return
-            let centerTile = {x: 6, y: 2}
+            centerTile = {x: 6, y: 2}
         }
         // let centerTile = {x: 1, y: 2}
         let targetTile = centerTile;

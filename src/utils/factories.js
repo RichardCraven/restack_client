@@ -22,10 +22,21 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
     } = callbacks;
     // Determine initial facing: right for fighters, left for monsters/minions
     let initialFacing = 'right';
-    console.log('fighter in createFighter: ', fighter);
     if (fighter.isMonster || fighter.isMinion) {
         // console.log('*****fighter: ', fighter);
         initialFacing = 'left';
+    }
+    // Diagnostic instrumentation: if any incoming specialActions carry an unexpected
+    // cooldown_position === 3, log them with a stack trace so we can find the creation site.
+    try {
+        if (fighter.specialActions && fighter.specialActions.some(s => s && s.cooldown_position === 3)) {
+            console.warn('createFighter: incoming specialActions with cooldown_position===3 for fighter:', fighter.id || fighter.name, fighter.specialActions.filter(s => s && s.cooldown_position === 3));
+            // Print stack to help locate who created/modified these objects at runtime
+            console.trace();
+        }
+    } catch (err) {
+        // Non-fatal diagnostic — don't break the game if console access fails
+        // console.debug('createFighter diagnostic error', err);
     }
     return {
         name: fighter.name,
@@ -34,8 +45,10 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
         id: fighter.id,
         portrait: fighter.portrait,
         level: fighter.level,
-        hp: fighter.stats.hp,
-        starting_hp: fighter.stats.hp,
+    // Use incoming current hp if provided (persisted from DungeonPage), otherwise default to stats.hp
+    hp: (typeof fighter.hp === 'number') ? fighter.hp : fighter.stats.hp,
+    // starting_hp represents the max HP for the fighter (may be provided or fall back to stats.hp)
+    starting_hp: (typeof fighter.starting_hp === 'number') ? fighter.starting_hp : fighter.stats.hp,
         energy: 100,
         tempo: 1,
         atk: fighter.stats.atk,
@@ -49,7 +62,8 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
             hp: fighter.stats.hp,
             atk: fighter.stats.atk
         },
-        inventory: fighter.inventory,
+    inventory: fighter.inventory,
+    dead: !!fighter.dead,
         weaknesses: fighter.weaknesses,
         targetId: null,
         position: fighter.coordinates.y,
@@ -61,9 +75,9 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
         attackingReverse: false,
         healing: false,
         missed: false,
-        attacks: formatAttacks(fighter.attacks),
-        specials: formatSpecials(fighter.specials),
-    specialActions: fighter.specialActions, // Now uses flat structure: type, name, iconUrl, subtype, etc.
+    attacks: formatAttacks(fighter.attacks),
+    specials: (typeof formatSpecials === 'function') ? formatSpecials(fighter.specials || []) : (fighter.specials || []),
+        specialActions: fighter.specialActions, // Now uses flat structure: type, name, iconUrl, subtype, etc.
         targettedBy: [],
         combatPaused: false,
         readout: {action:'', result: ''},
@@ -78,8 +92,11 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
         manualCount: 0,
         timeAhead: null,
         damageIndicators: [],
-        manualMovesTotal: fighter.manualMovesTotal,
-        manualMovesCurrent: fighter.manualMovesCurrent,
+    manualMovesTotal: fighter.manualMovesTotal,
+    manualMovesCurrent: fighter.manualMovesCurrent,
+    // New alias fields for broader use: movement points apply to both manual and AI
+    movementPointsMax: typeof fighter.manualMovesTotal === 'number' ? fighter.manualMovesTotal : fighter.manualMovesTotal,
+    movementPointsCurrent: typeof fighter.manualMovesCurrent === 'number' ? fighter.manualMovesCurrent : fighter.manualMovesCurrent,
         frozenPoints: 0,
         targetAcquired: null,
         movesPerTurnCycle: fighter.stats.dex * 2,
@@ -121,6 +138,15 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
                 this.skip();
                 return
             }
+            // Ensure AI attack consumes move points similarly to manual attack
+            try {
+                const cost = 2; // match manualAttack reduction
+                this.manualMovesCurrent = Math.max(0, (this.manualMovesCurrent || 0) - cost);
+                this.movementPointsCurrent = Math.max(0, (this.movementPointsCurrent || 0) - cost);
+                if (typeof broadcastDataUpdate === 'function') broadcastDataUpdate(this);
+            } catch (err) {
+                // non-fatal
+            }
             initiateAttack(this);
         },
         manualAttack: function(){
@@ -154,7 +180,14 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
         },
         move: function(){
             //only ever triggered from turn cycle AI method
-            
+            // AI moves should also consume one manual move point so the
+            // manual-moves UI reflects AI actions.
+            try {
+                const cost = 1;
+                this.manualMovesCurrent = Math.max(0, (this.manualMovesCurrent || 0) - cost);
+                this.movementPointsCurrent = Math.max(0, (this.movementPointsCurrent || 0) - cost);
+                if (typeof broadcastDataUpdate === 'function') broadcastDataUpdate(this);
+            } catch (err) {}
             processMove(this);
         },
         setToFrozen: function(val){
@@ -180,6 +213,9 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
                 
                 this.manualMovesCurrent += this.manualMovesTotal/2000
                 if(this.manualMovesCurrent > this.manualMovesTotal) this.manualMovesCurrent = this.manualMovesTotal
+                // mirror into movementPoints
+                this.movementPointsCurrent = this.manualMovesCurrent;
+                this.movementPointsMax = this.manualMovesTotal;
                 
                 const _selected = getSelectedFighter && getSelectedFighter();
                 // Do not let mere selection of a fighter pause AI. Only when the

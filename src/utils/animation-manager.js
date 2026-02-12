@@ -279,6 +279,22 @@ export function AnimationManager(){
         };
         this.canvasAnimations.push(ref);
         this.update();
+
+        // Optional arrival callback: compute arrival time based on tiles to travel
+        const onComplete = typeof options.onComplete === 'function' ? options.onComplete : null;
+        const tilesToTravel = Math.abs(targetDistance) || 0;
+        const perTileMs = typeof options.perTileMs === 'number' ? options.perTileMs : 300;
+        const arrivalMs = Math.max(100, tilesToTravel * perTileMs);
+        if (onComplete) {
+            setTimeout(() => {
+                try {
+                    onComplete();
+                } catch (err) {
+                    console.warn('magicCircle onComplete handler threw', err);
+                }
+            }, arrivalMs);
+        }
+
         setTimeout(() => {
             let e = this.canvasAnimations.find(c => c === ref);
             this.canvasAnimations = this.canvasAnimations.filter(v => v !== e);
@@ -287,7 +303,7 @@ export function AnimationManager(){
     }
         // Magic Triangle Animation: triangle of particles at midpoint between source and target
     this.magicTriangle = (sourceCoords, targetCoords, options = {}) => {
-        console.log('MAGIC TRIANGLE ANIMATION REQUESTED, targetCoords', targetCoords);
+        console.log('MAGIC TRIANGLE ANIMATION REQUESTED, targetCoords', sourceCoords, targetCoords, options);
         // debugger
         // Center the triangle at the destination tile
         // Draw triangle at the center of the canvas, but animate canvas from origin to destination
@@ -314,6 +330,76 @@ export function AnimationManager(){
         };
         this.canvasAnimations.push(ref);
         this.update();
+        const onComplete = typeof options.onComplete === 'function' ? options.onComplete : null;
+
+        // Compute an arrival time (when the animated triangle should reach
+        // the target) based on horizontal distance in tiles. This lets us
+        // fire onComplete exactly when the visual reaches its destination
+        // rather than waiting the full particle lifetime (`duration`).
+        const tilesToTravel = Math.abs(targetDistance) || 0;
+        const perTileMs = typeof options.perTileMs === 'number' ? options.perTileMs : 300; // ms per tile
+        const arrivalMs = Math.max(100, tilesToTravel * perTileMs);
+
+        if (onComplete) {
+            setTimeout(() => {
+                try {
+                    onComplete();
+                } catch (err) {
+                    console.warn('magicTriangle onComplete handler threw', err);
+                }
+            }, arrivalMs);
+        }
+
+        // Remove the canvas animation after the full visual lifetime
+        setTimeout(() => {
+            let e = this.canvasAnimations.find(c => c === ref);
+            this.canvasAnimations = this.canvasAnimations.filter(v => v !== e);
+            this.update();
+        }, duration);
+    }
+    this.fireball = (sourceCoords, targetCoords, options = {}) => {
+        // Very similar to magicTriangle but renders a fireball canvas component
+    const numParticles = options.numParticles || 50;
+    const radius = options.radius || 1.8;
+    // Make fireball noticeably faster by default (shorter visual lifetime)
+    // and reduce per-tile travel time so long-range fireballs don't crawl.
+    // Halve the default visual lifetime so fireball appears twice as fast by default
+    const duration = options.duration || 400;
+        const origin = sourceCoords;
+        const targetDistance = this.getDistanceToTarget(sourceCoords, targetCoords);
+        const targetLaneDiff = this.getVerticalDistanceToTarget(sourceCoords, targetCoords);
+        const ref = {
+            type: 'fireball',
+            center: { x: 0.5, y: 0.5 },
+            radius,
+            numParticles,
+            duration,
+            color: options.color || 'red',
+            origin,
+            targetDistance,
+            targetLaneDiff,
+            dest: { x: targetCoords.x, y: targetCoords.y }
+        };
+        this.canvasAnimations.push(ref);
+        this.update();
+
+        const onComplete = typeof options.onComplete === 'function' ? options.onComplete : null;
+        const tilesToTravel = Math.abs(targetDistance) || 0;
+    // Reduce per-tile travel time to double travel speed (ms per tile)
+    const perTileMs = typeof options.perTileMs === 'number' ? options.perTileMs : 60;
+        const arrivalMs = Math.max(100, tilesToTravel * perTileMs);
+
+        if (onComplete) {
+            setTimeout(() => {
+                try {
+                    onComplete();
+                } catch (err) {
+                    console.warn('fireball onComplete handler threw', err);
+                }
+            }, arrivalMs);
+        }
+
+        // Remove after full visual lifetime
         setTimeout(() => {
             let e = this.canvasAnimations.find(c => c === ref);
             this.canvasAnimations = this.canvasAnimations.filter(v => v !== e);

@@ -1,7 +1,18 @@
 function copy(item){
     return JSON.parse(JSON.stringify(item))
 }
-
+const swords = [
+    'longsword_sword',
+    'broadsword_sword',
+    'claymore_sword',
+    'katana_sword',
+    'rapier_sword',
+    'falchion_sword',
+    'cutlass_sword',
+    'gladius_sword',
+    'greatsword_sword',
+    'shortsword_sword',
+]
 export function InventoryManager(){
     this.tiles = [];
     this.gold = 0;
@@ -59,11 +70,21 @@ export function InventoryManager(){
     this.weapons_names = [
         'axe',
         'flail',
-        'scepter',
         'scimitar',
         'spear',
         'sword',
-        'longbow'
+        'longbow',
+        'scepter',
+        'longsword_sword',
+        'broadsword_sword',
+        'claymore_sword',
+        'katana_sword',
+        'rapier_sword',
+        'falchion_sword',
+        'cutlass_sword',
+        'gladius_sword',
+        'greatsword_sword',
+        'shortsword_sword',
     ]
     this.potions_names = [
         'minor_health_potion',
@@ -96,7 +117,7 @@ export function InventoryManager(){
     this.consumables = {
         minor_health_potion: {
             effect: 'health gain',
-            amount: 55,
+            amount: 20,
             icon: 'potion',
             type: 'consumable',
             name: 'minor health potion',
@@ -106,7 +127,7 @@ export function InventoryManager(){
         },
         major_health_potion: {
             effect: 'health gain',
-            amount: 80,
+            amount: 40,
             icon: 'potion',
             type: 'consumable',
             name: 'major health potion',
@@ -151,7 +172,7 @@ export function InventoryManager(){
     }
     this.weapons = {
         axe: {
-            damage: 3,
+            damage: 30,
             icon: 'axe',
             type: 'weapon',
             subtype: 'cutting',
@@ -159,10 +180,10 @@ export function InventoryManager(){
             range: 'close',
             equippedBy: null,
             animation: null,
-            description: 'The basic axe does 3 damage'
+            description: 'The basic axe does 30 (percent points)'
         },
         flail: {
-            damage: 3,
+            damage: 50,
             icon: 'flail',
             type: 'weapon',
             subtype: 'crushing',
@@ -170,10 +191,10 @@ export function InventoryManager(){
             range: 'close',
             equippedBy: null,
             animation: null,
-            description: 'The basic flail does 3 damage'
+            description: 'The basic flail does 50 (percent points)'
         },
         spear: {
-            damage: 3,
+            damage: 50,
             icon: 'spear',
             type: 'weapon',
             subtype: 'cutting',
@@ -181,10 +202,10 @@ export function InventoryManager(){
             range: 'medium',
             equippedBy: null,
             animation: null,
-            description: 'The basic spear does 3 damage'
+            description: 'The basic spear does 50 (percent points)'
         },
         sword: {
-            damage: 3,
+            damage: 40,
             icon: 'sword',
             type: 'weapon',
             subtype: 'cutting',
@@ -192,10 +213,10 @@ export function InventoryManager(){
             range: 'close',
             equippedBy: null,
             animation: null,
-            description: 'The basic sword does 3 damage'
+            description: 'The basic sword does 40 (percent points)'
         },
         scimitar: {
-            damage: 3,
+            damage: 30,
             icon: 'scimitar',
             type: 'weapon',
             subtype: 'cutting',
@@ -203,10 +224,10 @@ export function InventoryManager(){
             range: 'close',
             equippedBy: null,
             animation: null,
-            description: 'The basic scimitar does 3 damage'
+            description: 'The basic scimitar does 30 (percent points)'
         },
         scepter: {
-            damage: 3,
+            damage: 30,
             icon: 'scepter',
             type: 'weapon',
             subtype: 'crushing',
@@ -214,10 +235,10 @@ export function InventoryManager(){
             range: 'close',
             equippedBy: null,
             animation: null,
-            description: 'The basic scepter does 3 damage'
+            description: 'The basic scepter does 30 (percent points)'
         },
         longbow: {
-            damage: 3,
+            damage: 30,
             icon: 'longbow',
             type: 'weapon',
             subtype: 'cutting',
@@ -225,80 +246,191 @@ export function InventoryManager(){
             range: 'far',
             equippedBy: null,
             animation: null,
-            description: 'The basic longbow does 3 damage'
+            description: 'The basic longbow does 30 (percent points)'
+        }
+        ,
+        longsword_sword: {
+            damage: 45,
+            icon: 'longsword',
+            type: 'weapon',
+            subtype: 'cutting',
+            name: 'longsword',
+            range: 'close',
+            equippedBy: null,
+            animation: null,
+            description: 'The longsword does 45 (percent points)'
+        },
+        broadsword_sword: {
+            damage: 50,
+            icon: 'broadsword',
+            type: 'weapon',
+            subtype: 'cutting',
+            name: 'broadsword',
+            range: 'close',
+            equippedBy: null,
+            animation: null,
+            description: 'The broadsword does 50 (percent points)'
+        },
+        claymore_sword: {
+            damage: 60,
+            icon: 'claymore',
+            type: 'weapon',
+            subtype: 'cutting',
+            name: 'claymore',
+            range: 'close',
+            equippedBy: null,
+            animation: null,
+            description: 'The claymore does 60 (percent points)'
+        },
+        katana_sword: {
+            damage: 55,
+            icon: 'katana',
+            type: 'weapon',
+            subtype: 'cutting',
+            name: 'katana',
+            range: 'close',
+            equippedBy: null,
+            animation: null,
+            description: 'The katana does 55 (percent points)'
+        },
+        rapier_sword: {
+            damage: 35,
+            icon: 'rapier',
+            type: 'weapon',
+            subtype: 'cutting',
+            name: 'rapier',
+            range: 'close',
+            equippedBy: null,
+            animation: null,
+            description: 'The rapier does 35 (percent points)'
+        },
+        falchion_sword: {
+            damage: 45,
+            icon: 'falchion',
+            type: 'weapon',
+            subtype: 'cutting',
+            name: 'falchion',
+            range: 'close',
+            equippedBy: null,
+            animation: null,
+            description: 'The falchion does 45 (percent points)'
+        },
+        cutlass_sword: {
+            damage: 30,
+            icon: 'cutlass',
+            type: 'weapon',
+            subtype: 'cutting',
+            name: 'cutlass',
+            range: 'close',
+            equippedBy: null,
+            animation: null,
+            description: 'The cutlass does 30 (percent points)'
+        },
+        gladius_sword: {
+            damage: 40,
+            icon: 'gladius',
+            type: 'weapon',
+            subtype: 'cutting',
+            name: 'gladius',
+            range: 'close',
+            equippedBy: null,
+            animation: null,
+            description: 'The gladius does 40 (percent points)'
+        },
+        greatsword_sword: {
+            damage: 70,
+            icon: 'greatsword',
+            type: 'weapon',
+            subtype: 'cutting',
+            name: 'greatsword',
+            range: 'close',
+            equippedBy: null,
+            animation: null,
+            description: 'The greatsword does 70 (percent points)'
+        },
+        shortsword_sword: {
+            damage: 25,
+            icon: 'shortsword',
+            type: 'weapon',
+            subtype: 'cutting',
+            name: 'shortsword',
+            range: 'close',
+            equippedBy: null,
+            animation: null,
+            description: 'The shortsword does 25 (percent points)'
         }
     }
     
     this.armor= {
         basic_helm: {
-            armor: 3,
+            armor: 30,
             type: 'armor',
             icon: 'basic_helm',
             name: 'basic helm',
             equippedBy: null,
             subtype: 'helm',
             animation: null,
-            description: 'The basic helm absorbs 3 damage'
+            description: 'The basic helm absorbs 30 (percent points)'
         },
         cretan_helm: {
-            armor: 4,
+            armor: 40,
             type: 'armor',
             icon: 'cretan_helm',
             name: 'cretan helm',
             equippedBy: null,
             subtype: 'helm',
             animation: null,
-            description: 'The cretan helm absorbs 4 damage'
+            description: 'The cretan helm absorbs 40 (percent points)'
         },
         knight_helm: {
-            armor: 5,
+            armor: 50,
             type: 'armor',
             icon: 'knight_helm',
             name: 'knight helm',
             equippedBy: null,
             subtype: 'helm',
             animation: null,
-            description: `The knight's helm absorbs 5 damage`
+            description: `The knight's helm absorbs 50 (percent points)`
         },
         legionaire_helm: {
-            armor: 6,
+            armor: 60,
             type: 'armor',
             icon: 'legionaire_helm',
             name: 'legionaire helm',
             equippedBy: null,
             subtype: 'helm',
             animation: null,
-            description: `The legionaire's helm absorbs 6 damage`
+            description: `The legionaire's helm absorbs 60 (percent points)`
         },
         spartan_helm: {
-            armor: 7,
+            armor: 70,
             type: 'armor',
             icon: 'spartan_helm',
             name: 'spartan helm',
             equippedBy: null,
             animation: null,
             subtype: 'helm',
-            description: `The spartan's helm absorbs 7 damage`
+            description: `The spartan's helm absorbs 70 (percent points)`
         },
         basic_shield: {
-            armor: 4,
+            armor: 40,
             type: 'armor',
             subtype: 'shield',
             icon: 'basic_shield',
             name: 'basic shield',
             equippedBy: null,
             animation: null,
-            description: `The basic shield absorbs 4 damage`
+            description: `The basic shield absorbs 40 (percent points)`
         },
         seeing_shield: {
-            armor: 6,
+            armor: 60,
             type: 'armor',
             subtype: 'shield',
             icon: 'seeing_shield',
             name: 'seeing shield',
             equippedBy: null,
             animation: null,
-            description: `The seeing shield absorbs 6 damage, and increases sight radius by 1`
+            description: `The seeing shield absorbs 60 (percent points), and increases sight radius by 1`
         }
     }
     
@@ -446,22 +578,26 @@ export function InventoryManager(){
             description: `Nukta amulets have a power of 9. Doubles experience gained for wearer, -3 to all stats`
         }
     }
-
-    this.ornaments = {
+    // Move mask/ornament items into the magical collection so they are available
+    // via the same initialization loop as other magical items. This replaces
+    // the previous `this.ornaments` object.
+    this.magical = Object.assign({}, this.magical, {
         mardi_mask: {
             power: 1,
             icon: 'mardi_mask',
             type: 'ancillary',
             name: 'mardi mask',
+            subtype: 'mask',
             equippedBy: null,
             animation: null,
-            description: `Court masks have a power of 1 and a give +15 max hp. <br /> Passive: 10% chance of healing 15 hp on being hit.`
+            description: `Court     masks have a power of 1 and a give +15 max hp. <br /> Passive: 10% chance of healing 15 hp on being hit.`
         },
         court_mask: {
             power: 1,
             icon: 'court_mask',
             type: 'ancillary',
             name: 'court mask',
+            subtype: 'mask',
             equippedBy: null,
             animation: null,
             description: `Court masks have a power of 1 and a give +1 magic resistance to the wearer. <br /> Passive: 80% chance of negating an enemy hex if wearer is within 4 tiles of caster.`
@@ -471,6 +607,7 @@ export function InventoryManager(){
             icon: 'zul_mask',
             type: 'ancillary',
             name: 'zul mask',
+            subtype: 'mask',
             equippedBy: null,
             animation: null,
             description: `Zul masks have a power of 2 and a give immunity from demobilization and mind control. <br /> Passive: 50% chance of negating a successful hit on wearer and teleporting to a random empty space`
@@ -480,6 +617,7 @@ export function InventoryManager(){
             icon: 'bundu_mask',
             type: 'ancillary',
             name: 'bundu mask',
+            subtype: 'mask',
             equippedBy: null,
             animation: null,
             description: `Bundu masks have a power of 2 and a give +2 magic resistance to the wearer. <br /> Passive: 80% chance of negating an enemy hex if wearer is within 3 tiles of caster.`
@@ -489,6 +627,7 @@ export function InventoryManager(){
             icon: 'lundi_mask',
             type: 'ancillary',
             name: 'lundi mask',
+            subtype: 'mask',
             equippedBy: null,
             animation: null,
             description: `Lundi masks have a power of 3 and a give +4 magic resistance to the wearer. <br /> Passive: If a boon is cast, 50% to recast after 5 seconds.`
@@ -498,11 +637,12 @@ export function InventoryManager(){
             icon: 'solomon_mask',
             type: 'ancillary',
             name: 'solomon mask',
+            subtype: 'mask',
             equippedBy: null,
             animation: null,
             description: `Solomon masks have a power of 5 and a give +10 magic resistance to the wearer. <br /> Passive: 1/2 cooldown time for all of wearer's skills, 2x gold drop.`
         }
-    }
+    });
     this.misc = {
         ornate_key: {
             icon: 'ornate_key',
@@ -546,9 +686,8 @@ export function InventoryManager(){
         for(let key in this.consumables){
             this.allItems[key] = this.consumables[key]
         }
-        for(let key in this.ornaments){
-            this.allItems[key] = this.ornaments[key]
-        }
+        // Masks/ornaments were merged into `this.magical` above. We no longer
+        // iterate `this.ornaments` here.
         for(let key in this.armor){
             this.allItems[key] = this.armor[key]
         }
