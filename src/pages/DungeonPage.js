@@ -293,6 +293,7 @@ class DungeonPage extends React.Component {
     constructor(props){
         super(props)
         this.monsterBattleComponentRef = React.createRef()
+        this.playerFloatRef = React.createRef()
         // internal registry of active placeholders (id -> { el, start:Date, end:Date })
         this._placeholderRegistry = new Map();
         this._nextPlaceholderId = 1;
@@ -357,6 +358,12 @@ class DungeonPage extends React.Component {
             , cardDuelTileId: null
             , toastMessage: null
             , prototypeTasksOpen: false
+            // floating player animation state
+            , playerFloatVisible: false
+            , playerFloatStyle: { left: 0, top: 0, transform: 'translate(0px, 0px)' }
+            , playerAnimating: false
+            , animOriginIndex: null
+            , animDestIndex: null
         }
     // Native browser tooltip will be used for death-tracker; no custom tooltip state required.
         // Track timers/intervals created by this component so we can clear on unmount
@@ -651,6 +658,162 @@ class DungeonPage extends React.Component {
 
         
         this.checkDungeon();
+    }
+
+    // Compute pixel position (left, top) for a tile index within the board
+    getPixelForIndex = (index) => {
+        const tileSize = this.state.tileSize || 0;
+        const col = index % 15;
+        const row = Math.floor(index / 15);
+        return { left: col * tileSize, top: row * tileSize };
+    }
+
+    // High-level move handler that performs a two-stage animation for within-board moves.
+    handleDirectionalMove = (direction) => {
+    // Total move duration in ms (two stages). Change this to tune speed.
+    const TOTAL_MOVE_MS = 62; // total across both stages (now ~62ms => ~31ms per half)
+    const HALF_MS = Math.round(TOTAL_MOVE_MS / 2);
+    const BUFFER_MS = 4; // small buffer for timeouts
+        try {
+            const bm = this.props.boardManager;
+            const curCoords = bm.playerTile.location;
+            // detect board-edge moves and fall back to immediate boardManager methods
+            if (direction === 'up' && curCoords[0] === 15) {
+                bm.moveUp();
+                this.setState({ tiles: [...bm.tiles], overlayTiles: bm.overlayTiles });
+                return;
+            }
+            if (direction === 'down' && curCoords[0] === 29) {
+                bm.moveDown();
+                this.setState({ tiles: [...bm.tiles], overlayTiles: bm.overlayTiles });
+                return;
+            }
+            if (direction === 'left' && curCoords[1] === 15) {
+                bm.moveLeft();
+                this.setState({ tiles: [...bm.tiles], overlayTiles: bm.overlayTiles });
+                return;
+            }
+            if (direction === 'right' && curCoords[1] === 29) {
+                bm.moveRight();
+                this.setState({ tiles: [...bm.tiles], overlayTiles: bm.overlayTiles });
+                return;
+            }
+
+            // compute destination coordinates (mirror of BoardManager.move switch)
+            let destCoords = [curCoords[0], curCoords[1]];
+            switch (direction) {
+                case 'up': destCoords = [curCoords[0] - 1, curCoords[1]]; break;
+                case 'down': destCoords = [curCoords[0] + 1, curCoords[1]]; break;
+                case 'left': destCoords = [curCoords[0], curCoords[1] - 1]; break;
+                case 'right': destCoords = [curCoords[0], curCoords[1] + 1]; break;
+                default: break;
+            }
+
+            const originIndex = bm.getIndexFromCoordinates(curCoords);
+            const destIndex = bm.getIndexFromCoordinates(destCoords);
+            // Defensive: if destination is invalid (e.g. void) do not begin transition
+            try {
+                const destTile = bm.tiles[destIndex];
+                if (!destTile || bm.getContainsType(destTile.contains) === 'void') return;
+            } catch (e) {}
+            const originPixel = this.getPixelForIndex(originIndex);
+            const destPixel = this.getPixelForIndex(destIndex);
+
+            const deltaX = destPixel.left - originPixel.left;
+            const deltaY = destPixel.top - originPixel.top;
+
+            // Choose image for floating player (camp or avatar)
+            let meta = {};
+            try { meta = getMeta() || {}; } catch (e) { meta = {}; }
+            const playerImgKey = (meta && meta.camping) ? 'camp' : 'avatar';
+
+            // Compute board DOM position so we can place the floating element in viewport coordinates
+            let boardRect = null;
+            try {
+                const boardEl = document.querySelector('.center-board-wrapper .board');
+                boardRect = boardEl ? boardEl.getBoundingClientRect() : null;
+            } catch (e) { boardRect = null }
+
+            // Place floating element at origin (use fixed coords so it's viewport-aligned)
+            const floatLeft = (boardRect ? Math.round(boardRect.left) : 0) + originPixel.left;
+            const floatTop = (boardRect ? Math.round(boardRect.top) : 0) + originPixel.top;
+
+            this.setState({
+                playerFloatVisible: true,
+                playerAnimating: true,
+                animOriginIndex: originIndex,
+                animDestIndex: destIndex,
+                playerFloatStyle: {
+                    left: floatLeft,
+                    top: floatTop,
+                    transform: `translate(0px, 0px)`,
+                    backgroundImage: `url(${images[playerImgKey]})`
+                }
+            }, () => {
+                // allow the browser to paint initial position, then animate to halfway
+                requestAnimationFrame(() => {
+                        // first half: move to midpoint over HALF_MS
+                        const halfX = Math.round(deltaX / 2);
+                        const halfY = Math.round(deltaY / 2);
+                        if (this.playerFloatRef.current) {
+                            const el = this.playerFloatRef.current;
+                            el.style.transition = `transform ${HALF_MS}ms ease`;
+                            el.style.transform = `translate(${halfX}px, ${halfY}px)`;
+                        }
+
+                        // at halfway, update logical position (call boardManager move) and then continue animation
+                        setTimeout(() => {
+                        // invoke the same movement method on the board manager so all logic (interactions, fog, battles)
+                        // is executed at the halfway mark (player now "on" destination logically)
+                        switch (direction) {
+                            case 'up': bm.moveUp(); break;
+                            case 'down': bm.moveDown(); break;
+                            case 'left': bm.moveLeft(); break;
+                            case 'right': bm.moveRight(); break;
+                            default: break;
+                        }
+                        // refresh tiles in state to reflect boardManager changes
+                        try { this.setState({ tiles: [...bm.tiles], overlayTiles: bm.overlayTiles }); } catch (e) {}
+
+                        // continue animation to final position over remaining HALF_MS
+                        requestAnimationFrame(() => {
+                            if (this.playerFloatRef.current) {
+                                const el = this.playerFloatRef.current;
+                                el.style.transition = `transform ${HALF_MS}ms ease`;
+                                el.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+                            }
+                        });
+
+                        // cleanup after complete
+                        setTimeout(() => {
+                            // hide floating element and reset
+                            this.setState({ playerFloatVisible: false, playerAnimating: false, animOriginIndex: null, animDestIndex: null });
+                            if (this.playerFloatRef.current) {
+                                const el = this.playerFloatRef.current;
+                                el.style.transition = '';
+                                el.style.transform = 'translate(0px, 0px)';
+                            }
+                        }, HALF_MS + BUFFER_MS);
+
+                    }, HALF_MS + BUFFER_MS);
+                });
+            });
+
+        } catch (e) {
+            console.warn('handleDirectionalMove failed', e);
+            // Fallback: perform immediate move
+            try {
+                const bm = this.props.boardManager;
+                switch (direction) {
+                    case 'up': bm.moveUp(); break;
+                    case 'down': bm.moveDown(); break;
+                    case 'left': bm.moveLeft(); break;
+                    case 'right': bm.moveRight(); break;
+                    default: break;
+                }
+                this.setState({ tiles: [...bm.tiles], overlayTiles: bm.overlayTiles });
+            } catch (err) {}
+        }
     }
     checkDungeon = async () => {
         const allDungeons = await loadAllDungeonsRequest();
@@ -1322,48 +1485,20 @@ class DungeonPage extends React.Component {
         break;
             case 'ArrowUp':
                 if(this.state.keysLocked) return
-                this.props.boardManager.moveUp();
-                newTiles = [...this.props.boardManager.tiles]
-                overlayTiles = this.props.boardManager.overlayTiles;
-                this.setState({
-                    tiles: newTiles,
-                    overlayTiles,
-                    showDarkMask: this.props.boardManager.setCurrentOrientation === 'B'
-                })
+                this.handleDirectionalMove('up')
                 
             break;
             case 'ArrowDown':
                 if(this.state.keysLocked) return
-                this.props.boardManager.moveDown();
-                newTiles = [...this.props.boardManager.tiles]
-                overlayTiles = this.props.boardManager.overlayTiles;
-                this.setState({
-                    tiles: newTiles,
-                    overlayTiles,
-                    showDarkMask: this.props.boardManager.setCurrentOrientation === 'B'
-                })
+                this.handleDirectionalMove('down')
             break;
             case 'ArrowLeft':
                 if(this.state.keysLocked) return
-                this.props.boardManager.moveLeft();
-                newTiles = [...this.props.boardManager.tiles]
-                overlayTiles = this.props.boardManager.overlayTiles;
-                this.setState({
-                    tiles: newTiles,
-                    overlayTiles,
-                    showDarkMask: this.props.boardManager.setCurrentOrientation === 'B'
-                })
+                this.handleDirectionalMove('left')
             break;
             case 'ArrowRight':
                 if(this.state.keysLocked) return
-                this.props.boardManager.moveRight();
-                newTiles = [...this.props.boardManager.tiles]
-                overlayTiles = this.props.boardManager.overlayTiles;
-                this.setState({
-                    tiles: newTiles,
-                    overlayTiles,
-                    showDarkMask: this.props.boardManager.setCurrentOrientation === 'B'
-                })
+                this.handleDirectionalMove('right')
             break;
             default:
                 // nathin
@@ -2924,13 +3059,16 @@ class DungeonPage extends React.Component {
                     pointerEvents: this.state.minimapPlaceMapMarkerStarted ? 'auto' : 'none'
                     }}>
                     {this.state.overlayTiles && this.state.overlayTiles.map((tile, i) => {
+                        // suppress the player's static avatar on origin/destination while animating
+                        let overlayImage = tile.image ? tile.image : null;
+                        if (this.state.playerAnimating && (i === this.state.animOriginIndex || i === this.state.animDestIndex)) overlayImage = null;
                         return <Tile 
                         key={i}
                         id={i}
                         cursor={this.state.minimapPlaceMapMarkerStarted ? 'crosshair' : 'default'}
                         tileSize={this.state.tileSize}
-                        image={tile.image ? tile.image : null}
-                        imageOverride={tile.image && tile.image.includes('/') ? tile.image : null}
+                        image={overlayImage}
+                        imageOverride={overlayImage && overlayImage.includes('/') ? overlayImage : null}
                         contains={tile.contains}
                         terrain={tile.terrain}
                         color={tile.color ? tile.color : 'lightgrey'}
@@ -2953,12 +3091,15 @@ class DungeonPage extends React.Component {
                     backgroundColor: 'white'
                     }}>
                     {this.state.tiles && this.state.tiles.map((tile, i) => {
+                        // suppress the player's static avatar on origin/destination while animating
+                        let boardImage = tile.image ? tile.image : (tile.icon ? tile.icon : null);
+                        if (this.state.playerAnimating && (i === this.state.animOriginIndex || i === this.state.animDestIndex)) boardImage = null;
                         return <Tile 
                         key={i}
                         cursor={this.state.minimapPlaceMapMarkerStarted ? 'crosshair' : 'default'}
                         tileSize={this.state.tileSize}
-                        image={tile.image ? tile.image : (tile.icon ? tile.icon : null)}
-                        imageOverride={tile.image && tile.image.includes('/') ? tile.image : null}
+                        image={boardImage}
+                        imageOverride={boardImage && boardImage.includes ? (boardImage.includes('/') ? boardImage : null) : null}
                         contains={tile.contains}
                         terrain={tile.terrain}
                         color={tile.color ? tile.color : 'lightgrey'}
@@ -2975,6 +3116,29 @@ class DungeonPage extends React.Component {
                     })}
                 </div>
             </div>}
+
+            {/* Floating player overlay element used for two-stage movement animation */}
+            {this.state.playerFloatVisible && (
+                <div
+                    ref={this.playerFloatRef}
+                    className="floating-player"
+                    aria-hidden="true"
+                    style={{
+                        position: 'fixed',
+                        left: this.state.playerFloatStyle.left,
+                        top: this.state.playerFloatStyle.top,
+                        width: this.state.tileSize,
+                        height: this.state.tileSize,
+                        backgroundSize: 'contain',
+                        backgroundRepeat: 'no-repeat',
+                        backgroundPosition: 'center',
+                        pointerEvents: 'none',
+                        transform: this.state.playerFloatStyle.transform,
+                        zIndex: 9999,
+                        backgroundImage: this.state.playerFloatStyle.backgroundImage
+                    }}
+                />
+            )}
             
             
             {/* /// ANIMATION GRID ///  */}

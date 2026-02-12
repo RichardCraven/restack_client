@@ -991,6 +991,13 @@
     box-sizing: content-box;
     // pointer-events: none;
 }
+
+.floating-player{
+    will-change: transform;
+    /* transition will be set inline to match JS-configured duration */
+    transition: none;
+    pointer-events: none;
+}
 .board{
     // border: 1px solid black;
     display: flex !important;
