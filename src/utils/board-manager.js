@@ -351,7 +351,6 @@ export function BoardManager(){
                     });
                 }
                 if (anyChanges) {
-                    console.log('Monster tile cleanup applied during setDungeon:', changedTilesSummary);
                     try { if (this.updateDungeon) this.updateDungeon(this.dungeon); } catch (e) { console.warn('updateDungeon failed during setDungeon cleanup', e); }
                     try {
                         const meta = getMeta() || {};
@@ -372,7 +371,6 @@ export function BoardManager(){
         this.currentOrientation = orientation;
     }
     this.respawnMonsters = (template) => {
-        console.log('respawn monsters, template: ', template);
         if(!template || !template.levels) return
         let currentOrientation = this.currentOrientation
         let currentLevel = currentOrientation === 'F' ? this.currentLevel.front : this.currentLevel.back
@@ -391,9 +389,6 @@ export function BoardManager(){
         try { this.normalizeBoardTiles(templateBoard); } catch (e) {}
         try {
             const tplChanged = this.cleanupMalformedMonsterTiles(templateBoard);
-            if (tplChanged && tplChanged.length) {
-                console.log('Normalized templateBoard tiles before respawn:', tplChanged);
-            }
         } catch (e) {}
     
         if (!templateBoard) {

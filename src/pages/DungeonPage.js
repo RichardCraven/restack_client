@@ -3207,14 +3207,14 @@ class DungeonPage extends React.Component {
                                                     {key === 'attack' ? (
                                                         <span className="stat-value" style={{display: 'flex', alignItems: 'center', gap: 6}}>
                                                             {weaponPercent > 0 && (
-                                                                <span style={{color: 'lightgreen', fontWeight: 600, marginRight: 6}}>{`+${weaponPercent}%`}</span>
+                                                                <span className="stat-percent">{`+${weaponPercent}%`}</span>
                                                             )}
                                                             <span>{value}</span>
                                                         </span>
                                                     ) : key === 'defense' ? (
                                                         <span className="stat-value" style={{display: 'flex', alignItems: 'center', gap: 6}}>
                                                             {armorPercent > 0 && (
-                                                                <span style={{color: 'lightgreen', fontWeight: 600, marginRight: 6}}>{`+${armorPercent}%`}</span>
+                                                                <span className="stat-percent">{`+${armorPercent}%`}</span>
                                                             )}
                                                             <span>{value}</span>
                                                         </span>

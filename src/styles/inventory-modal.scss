@@ -300,3 +300,19 @@
     justify-content: center;
     white-space: nowrap;
 }
+
+/* Percent modifier shown next to stat values (we use percent-points like +30%) */
+.inventory-popup .stat-percent,
+.inventory-modal .stat-percent{
+    color: lightgreen;
+    font-weight: 600;
+    margin-right: 6px;
+}
+
+/* Ensure stat-value container aligns percent and number */
+.inventory-popup .stat-line .stat-value,
+.inventory-modal .stat-line .stat-value{
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}

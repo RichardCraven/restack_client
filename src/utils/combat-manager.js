@@ -1663,10 +1663,20 @@ export function CombatManager(){
                 damage += Math.floor(damage / 2);
             }
         }
+            // Apply equipped armor percent reduction (if any) to the damage
+            let armorPercentTarget = 0;
+            try {
+                const inv = combatantHit.inventory || [];
+                armorPercentTarget = inv.filter(i => i && i.type === 'armor' && (i.equippedSlot || i.equippedBy === combatantHit.id)).reduce((acc, a) => acc + (typeof a.armor === 'number' ? a.armor : 0), 0);
+            } catch (e) { armorPercentTarget = 0 }
+            if (armorPercentTarget > 0) {
+                const reduction = Math.floor(damage * (armorPercentTarget / 100));
+                damage = Math.max(0, damage - reduction);
+            }
 
-        // Save readout and apply damage
-        caller.readout.result = `${caller.name} hits ${combatantHit.name} for ${damage} damage`;
-        combatantHit.hp -= damage;
+            // Save readout and apply damage
+            caller.readout.result = `${caller.name} hits ${combatantHit.name} for ${damage} damage`;
+            combatantHit.hp -= damage;
         combatantHit.damageIndicators.push(damage);
         caller.energy += caller.stats.fort * 1 + (1 / 2 * caller.level);
         if (caller.energy > 100) caller.energy = 100;
@@ -1801,6 +1811,17 @@ export function CombatManager(){
         if(target.weaknesses.includes[caller.pendingAttack.type]){
             damage += Math.floor(damage/2);
         }
+        // Apply equipped armor percent reduction (if any) to the damage for non-monster targets
+        let armorPercentTarget = 0;
+        try {
+            const inv = target.inventory || [];
+            armorPercentTarget = inv.filter(i => i && i.type === 'armor' && (i.equippedSlot || i.equippedBy === target.id)).reduce((acc, a) => acc + (typeof a.armor === 'number' ? a.armor : 0), 0);
+        } catch (e) { armorPercentTarget = 0 }
+        if (armorPercentTarget > 0) {
+            const reduction = Math.floor(damage * (armorPercentTarget / 100));
+            damage = Math.max(0, damage - reduction);
+        }
+
         caller.readout.result = `${caller.name} hits ${target.name} for ${damage} damage`;
         target.hp -= damage;
         target.damageIndicators.push(damage);
@@ -1935,7 +1956,15 @@ export function CombatManager(){
             })
             this.combatOver = true;
 
+            // Diagnostic logging to help trace duplicate gameOver triggers
+            try {
+                const remainingMonsters = Object.values(this.combatants).filter(e => (e.isMonster || e.isMinion) && !e.dead).map(m => m.id);
+                const remainingCrew = Object.values(this.combatants).filter(e => !e.isMonster && !e.isMinion && !e.dead).map(c => c.id);
+                console.log('targetKilled: allMonstersDead=', allMonstersDead, 'allCrewDead=', allCrewDead, 'remainingMonsters=', remainingMonsters, 'remainingCrew=', remainingCrew, 'outcome=', outcome);
+            } catch (err) { console.warn('targetKilled: diagnostic logging failed', err); }
+
             setTimeout(()=>{
+                try { console.log('combat-manager: invoking gameOver callback with outcome=', outcome); } catch(e){}
                 this.gameOver(outcome)
             }, 2000)
         }

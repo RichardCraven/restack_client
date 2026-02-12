@@ -168,6 +168,12 @@ class MonsterBattle extends React.Component {
     componentDidMount(){
         // mark mounted so async callbacks can safely call setState
         this._isMounted = true;
+    // Reset any previous group-death suppression flag and one-time guards
+    // when mounting a new battle. This prevents prior battle state from
+    // affecting subsequent battles if the component instance is reused.
+    this._suppressPersistFinalHP = false;
+    this._gameOverHandled = false;
+    this._goldAwarded = false;
         this.props.combatManager.initialize();
         this.props.combatManager.connectOverlayManager(this.props.overlayManager)
         this.props.combatManager.connectAnimationManager(this.props.animationManager);
@@ -543,6 +549,22 @@ class MonsterBattle extends React.Component {
             this._wizardSpellsEnsured = true;
         }
 
+        // Normalize battleData entries to ensure UI rendering doesn't get tripped
+        // by missing fields (portrait, damageIndicators). This helps avoid
+        // empty portrait placeholders if an upstream producer omitted the field.
+        try {
+            Object.values(clonedBattleData).forEach(entry => {
+                if (!entry) return;
+                if (typeof entry.portrait === 'undefined' || entry.portrait === null) {
+                    // Use canonical avatar fallback
+                    entry.portrait = images['avatar'];
+                }
+                if (!Array.isArray(entry.damageIndicators)) entry.damageIndicators = [];
+            });
+        } catch (err) {
+            console.warn('updateBattleData: normalization failed', err);
+        }
+
         this.setState({
             battleData: clonedBattleData
         }, () => {
@@ -717,6 +739,14 @@ class MonsterBattle extends React.Component {
     gameOver = (outcome) => {
         console.log('outcome', outcome);
 
+        // Ensure gameOver runs only once per battle instance to avoid duplicate
+        // awards or duplicated UI flows when multiple gameOver triggers fire.
+        if (this._gameOverHandled) {
+            console.log('gameOver: already handled, skipping duplicate call for', outcome);
+            return;
+        }
+        this._gameOverHandled = true;
+
         this.props.overlayManager.reset();
         this.props.combatManager.reset();
 
@@ -725,11 +755,20 @@ class MonsterBattle extends React.Component {
             this.props.exitSimulator();
             return
         }
+
+        // Attempt to use the freshest battleData available. Prefer component state
+        // (updated via updateBattleData). If that's empty (race), fall back to the
+        // authoritative combatManager.combatants snapshot.
+        let latestBattleData = (this.state.battleData && Object.keys(this.state.battleData).length) ? this.state.battleData : (this.props.combatManager && this.props.combatManager.combatants ? JSON.parse(JSON.stringify(this.props.combatManager.combatants)) : {});
+
         let experienceGained,
             goldGained,
             itemsGained,
             crewWins = outcome === 'crewWins',
-            summaryMessage, battleResult, liveCrew = Object.values(this.state.battleData).filter(e=>!e.dead && !e.isMinion && !e.isMonster);
+            summaryMessage, battleResult;
+
+        // liveCrew should be derived from the freshest snapshot
+        let liveCrew = Object.values(latestBattleData).filter(e=>!e.dead && !e.isMinion && !e.isMonster);
         if(crewWins){
             battleResult = 'win';
             summaryMessage = 'The enemy is no more!';
@@ -744,10 +783,25 @@ class MonsterBattle extends React.Component {
             }
             experienceGained = this.props.monster.level * 10;
             goldGained = Math.floor(Math.random() * experienceGained);
-            this.props.inventoryManager.addCurrency({type: 'gold', amount: goldGained})
+            console.log('gameOver: crewWins computed goldGained=', goldGained);
+            // Defensive: log inventory/gold state before adding to help trace duplicate updates
+            try { console.log('gameOver: inventoryManager before addCurrency', this.props.inventoryManager && this.props.inventoryManager.inventory, this.props.inventoryManager && this.props.inventoryManager.currency); } catch(e){}
+            // Ensure we only award gold once per battle
+            if (!this._goldAwarded) {
+                try {
+                    this.props.inventoryManager.addCurrency({type: 'gold', amount: goldGained})
+                    this._goldAwarded = true;
+                    console.log('gameOver: addCurrency called for', goldGained);
+                } catch (err) {
+                    console.warn('gameOver: addCurrency failed', err);
+                }
+            } else {
+                console.log('gameOver: gold already awarded, skipping addCurrency for', goldGained);
+            }
             this._setTimeout(()=>{
                 console.log('timeout triggered');
-                this.props.crewManager.addExperience(liveCrew, experienceGained);
+                // Use latest liveCrew snapshot when awarding experience
+                try { this.props.crewManager.addExperience(liveCrew, experienceGained); } catch(e) { console.warn('addExperience failed', e); }
                 let meta = getMeta();
                 meta.crew = this.props.crewManager.crew;
                 storeMeta(meta)
@@ -817,7 +871,7 @@ class MonsterBattle extends React.Component {
                     this._setTimeout(async () => {
                         try { if (this._isMounted) this.setState({ showSummaryPanel: false, suppressSummaryPortraits: false }); } catch(e) {}
 
-                        this.props.battleOver('respawn');
+                    this.props.battleOver('respawn');
                           
 
                         // allow later persistence block to run normally again
@@ -875,6 +929,16 @@ class MonsterBattle extends React.Component {
         // Ensure suppressSummaryPortraits is only true for the special group-death flow
         // (that flow sets this._suppressPersistFinalHP and this.state.suppressSummaryPortraits
         //  earlier). For all other outcomes make sure portraits are shown.
+        // Add debug logging to help trace missing portraits and repeated gold updates.
+        try {
+            console.log('gameOver: _suppressPersistFinalHP=', !!this._suppressPersistFinalHP);
+            // Print brief portrait info from battleData for inspection
+            try {
+                const portraits = Object.values(this.state.battleData || {}).map(b => ({ id: b && b.id, portrait: b && b.portrait }));
+                console.log('gameOver: battleData portraits snapshot=', portraits);
+            } catch (inner) { console.warn('gameOver: failed to snapshot battleData portraits', inner); }
+        } catch (e) {}
+
         this.setState({
             showSummaryPanel: true,
             goldGained,
@@ -1373,27 +1437,34 @@ class MonsterBattle extends React.Component {
                             { !this.state.suppressSummaryPortraits && (
                                 <div className="portraits-container">
                                     {Object.values(this.state.battleData).filter(e=>!e.dead && !e.isMonster && !e.isMinion).map((crewMember, i) => {
-                                        const portraitUrl = images[crewMember.portrait] || crewMember.portrait;
-                                        return <div key={i} className="single-portrait-container">
-                                            <div className="portrait" style={{backgroundImage: `url(${portraitUrl})`}}></div>
-                                            {this.props.crewManager.calculateExpPercentage(crewMember) >= 100 && <Canvas 
-                                            className="level-up-canvas"
-                                            width={80}
-                                            height={80}
-                                            draw={this.draw}
-                                            />}
-                                            <div className="experience-bar-container">
-                                                <div className="experience-bar" style={{width: `${this.props.crewManager.calculateExpPercentage(crewMember)}%`}}></div>
+                                        // Defensive portrait resolution with avatar fallback
+                                        const portraitUrl = images[crewMember.portrait] || crewMember.portrait || images['avatar'];
+                                        return (
+                                            <div key={i} className="single-portrait-container">
+                                                <div className="portrait" style={{backgroundImage: `url(${portraitUrl})`}}></div>
+                                                {this.props.crewManager.calculateExpPercentage(crewMember) >= 100 && (
+                                                    <Canvas 
+                                                        className="level-up-canvas"
+                                                        width={80}
+                                                        height={80}
+                                                        draw={this.draw}
+                                                    />
+                                                )}
+                                                <div className="experience-bar-container">
+                                                    <div className="experience-bar" style={{width: `${this.props.crewManager.calculateExpPercentage(crewMember)}%`}}></div>
+                                                </div>
                                             </div>
-                                        </div>
+                                        )
                                     })}
                                     {Object.values(this.state.battleData).filter(e=>e.dead && !e.isMonster && !e.isMinion).map((crewMember, i) => {
-                                        const portraitUrl = images[crewMember.portrait] || crewMember.portrait;
-                                        return <div key={i} className="single-portrait-container dead-member">
-                                            <div className="portrait" style={{backgroundImage: `url(${portraitUrl})`}}>
-                                                <div className="skull-image" style={{backgroundImage: `url(${images['whiteskull']})`}}></div>
+                                        const portraitUrl = images[crewMember.portrait] || crewMember.portrait || images['avatar'];
+                                        return (
+                                            <div key={i} className="single-portrait-container dead-member">
+                                                <div className="portrait" style={{backgroundImage: `url(${portraitUrl})`}}>
+                                                    <div className="skull-image" style={{backgroundImage: `url(${images['whiteskull']})`}}></div>
+                                                </div>
                                             </div>
-                                        </div>
+                                        )
                                     })}
                                 </div>
                             )}
