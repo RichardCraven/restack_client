@@ -75,6 +75,16 @@ export function InventoryManager(){
         'sword',
         'longbow',
         'scepter',
+        'longsword_sword',
+        'broadsword_sword',
+        'claymore_sword',
+        'katana_sword',
+        'rapier_sword',
+        'falchion_sword',
+        'cutlass_sword',
+        'gladius_sword',
+        'greatsword_sword',
+        'shortsword_sword',
     ]
     this.potions_names = [
         'minor_health_potion',
@@ -162,7 +172,7 @@ export function InventoryManager(){
     }
     this.weapons = {
         axe: {
-            damage: 3,
+            damage: 30,
             icon: 'axe',
             type: 'weapon',
             subtype: 'cutting',
@@ -170,10 +180,10 @@ export function InventoryManager(){
             range: 'close',
             equippedBy: null,
             animation: null,
-            description: 'The basic axe does 3 damage'
+            description: 'The basic axe does 30 (percent points)'
         },
         flail: {
-            damage: 5,
+            damage: 50,
             icon: 'flail',
             type: 'weapon',
             subtype: 'crushing',
@@ -181,10 +191,10 @@ export function InventoryManager(){
             range: 'close',
             equippedBy: null,
             animation: null,
-            description: 'The basic flail does 3 damage'
+            description: 'The basic flail does 50 (percent points)'
         },
         spear: {
-            damage: 5,
+            damage: 50,
             icon: 'spear',
             type: 'weapon',
             subtype: 'cutting',
@@ -192,10 +202,10 @@ export function InventoryManager(){
             range: 'medium',
             equippedBy: null,
             animation: null,
-            description: 'The basic spear does 3 damage'
+            description: 'The basic spear does 50 (percent points)'
         },
         sword: {
-            damage: 4,
+            damage: 40,
             icon: 'sword',
             type: 'weapon',
             subtype: 'cutting',
@@ -203,10 +213,10 @@ export function InventoryManager(){
             range: 'close',
             equippedBy: null,
             animation: null,
-            description: 'The basic sword does 3 damage'
+            description: 'The basic sword does 40 (percent points)'
         },
         scimitar: {
-            damage: 3,
+            damage: 30,
             icon: 'scimitar',
             type: 'weapon',
             subtype: 'cutting',
@@ -214,10 +224,10 @@ export function InventoryManager(){
             range: 'close',
             equippedBy: null,
             animation: null,
-            description: 'The basic scimitar does 3 damage'
+            description: 'The basic scimitar does 30 (percent points)'
         },
         scepter: {
-            damage: 3,
+            damage: 30,
             icon: 'scepter',
             type: 'weapon',
             subtype: 'crushing',
@@ -225,10 +235,10 @@ export function InventoryManager(){
             range: 'close',
             equippedBy: null,
             animation: null,
-            description: 'The basic scepter does 3 damage'
+            description: 'The basic scepter does 30 (percent points)'
         },
         longbow: {
-            damage: 3,
+            damage: 30,
             icon: 'longbow',
             type: 'weapon',
             subtype: 'cutting',
@@ -236,80 +246,191 @@ export function InventoryManager(){
             range: 'far',
             equippedBy: null,
             animation: null,
-            description: 'The basic longbow does 3 damage'
+            description: 'The basic longbow does 30 (percent points)'
+        }
+        ,
+        longsword_sword: {
+            damage: 45,
+            icon: 'longsword',
+            type: 'weapon',
+            subtype: 'cutting',
+            name: 'longsword',
+            range: 'close',
+            equippedBy: null,
+            animation: null,
+            description: 'The longsword does 45 (percent points)'
+        },
+        broadsword_sword: {
+            damage: 50,
+            icon: 'broadsword',
+            type: 'weapon',
+            subtype: 'cutting',
+            name: 'broadsword',
+            range: 'close',
+            equippedBy: null,
+            animation: null,
+            description: 'The broadsword does 50 (percent points)'
+        },
+        claymore_sword: {
+            damage: 60,
+            icon: 'claymore',
+            type: 'weapon',
+            subtype: 'cutting',
+            name: 'claymore',
+            range: 'close',
+            equippedBy: null,
+            animation: null,
+            description: 'The claymore does 60 (percent points)'
+        },
+        katana_sword: {
+            damage: 55,
+            icon: 'katana',
+            type: 'weapon',
+            subtype: 'cutting',
+            name: 'katana',
+            range: 'close',
+            equippedBy: null,
+            animation: null,
+            description: 'The katana does 55 (percent points)'
+        },
+        rapier_sword: {
+            damage: 35,
+            icon: 'rapier',
+            type: 'weapon',
+            subtype: 'cutting',
+            name: 'rapier',
+            range: 'close',
+            equippedBy: null,
+            animation: null,
+            description: 'The rapier does 35 (percent points)'
+        },
+        falchion_sword: {
+            damage: 45,
+            icon: 'falchion',
+            type: 'weapon',
+            subtype: 'cutting',
+            name: 'falchion',
+            range: 'close',
+            equippedBy: null,
+            animation: null,
+            description: 'The falchion does 45 (percent points)'
+        },
+        cutlass_sword: {
+            damage: 30,
+            icon: 'cutlass',
+            type: 'weapon',
+            subtype: 'cutting',
+            name: 'cutlass',
+            range: 'close',
+            equippedBy: null,
+            animation: null,
+            description: 'The cutlass does 30 (percent points)'
+        },
+        gladius_sword: {
+            damage: 40,
+            icon: 'gladius',
+            type: 'weapon',
+            subtype: 'cutting',
+            name: 'gladius',
+            range: 'close',
+            equippedBy: null,
+            animation: null,
+            description: 'The gladius does 40 (percent points)'
+        },
+        greatsword_sword: {
+            damage: 70,
+            icon: 'greatsword',
+            type: 'weapon',
+            subtype: 'cutting',
+            name: 'greatsword',
+            range: 'close',
+            equippedBy: null,
+            animation: null,
+            description: 'The greatsword does 70 (percent points)'
+        },
+        shortsword_sword: {
+            damage: 25,
+            icon: 'shortsword',
+            type: 'weapon',
+            subtype: 'cutting',
+            name: 'shortsword',
+            range: 'close',
+            equippedBy: null,
+            animation: null,
+            description: 'The shortsword does 25 (percent points)'
         }
     }
     
     this.armor= {
         basic_helm: {
-            armor: 3,
+            armor: 30,
             type: 'armor',
             icon: 'basic_helm',
             name: 'basic helm',
             equippedBy: null,
             subtype: 'helm',
             animation: null,
-            description: 'The basic helm absorbs 3 damage'
+            description: 'The basic helm absorbs 30 (percent points)'
         },
         cretan_helm: {
-            armor: 4,
+            armor: 40,
             type: 'armor',
             icon: 'cretan_helm',
             name: 'cretan helm',
             equippedBy: null,
             subtype: 'helm',
             animation: null,
-            description: 'The cretan helm absorbs 4 damage'
+            description: 'The cretan helm absorbs 40 (percent points)'
         },
         knight_helm: {
-            armor: 5,
+            armor: 50,
             type: 'armor',
             icon: 'knight_helm',
             name: 'knight helm',
             equippedBy: null,
             subtype: 'helm',
             animation: null,
-            description: `The knight's helm absorbs 5 damage`
+            description: `The knight's helm absorbs 50 (percent points)`
         },
         legionaire_helm: {
-            armor: 6,
+            armor: 60,
             type: 'armor',
             icon: 'legionaire_helm',
             name: 'legionaire helm',
             equippedBy: null,
             subtype: 'helm',
             animation: null,
-            description: `The legionaire's helm absorbs 6 damage`
+            description: `The legionaire's helm absorbs 60 (percent points)`
         },
         spartan_helm: {
-            armor: 7,
+            armor: 70,
             type: 'armor',
             icon: 'spartan_helm',
             name: 'spartan helm',
             equippedBy: null,
             animation: null,
             subtype: 'helm',
-            description: `The spartan's helm absorbs 7 damage`
+            description: `The spartan's helm absorbs 70 (percent points)`
         },
         basic_shield: {
-            armor: 4,
+            armor: 40,
             type: 'armor',
             subtype: 'shield',
             icon: 'basic_shield',
             name: 'basic shield',
             equippedBy: null,
             animation: null,
-            description: `The basic shield absorbs 4 damage`
+            description: `The basic shield absorbs 40 (percent points)`
         },
         seeing_shield: {
-            armor: 6,
+            armor: 60,
             type: 'armor',
             subtype: 'shield',
             icon: 'seeing_shield',
             name: 'seeing shield',
             equippedBy: null,
             animation: null,
-            description: `The seeing shield absorbs 6 damage, and increases sight radius by 1`
+            description: `The seeing shield absorbs 60 (percent points), and increases sight radius by 1`
         }
     }
     

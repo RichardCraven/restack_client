@@ -627,28 +627,29 @@ export function CombatManager(){
         if(!target){
             return
         }
-    // Use only x-differential for range, as facing is now left/right only
-    const differential = Math.abs(caller.coordinates.x - target.coordinates.x);
-        // 1 means target is right in front of you
+    // Compute x and y differences explicitly so we can correctly check orthogonal adjacency
+    const dx = Math.abs(caller.coordinates.x - target.coordinates.x);
+    const dy = Math.abs(caller.coordinates.y - target.coordinates.y);
 
-        let res;
-        res = differential <= 3;
+    // 1 in either axis indicates adjacent in that axis
+    let res;
+    res = dx <= 3;
 
-        switch(caller.pendingAttack.range){
+    switch(caller.pendingAttack.range){
             case 'self':
                 res = true;
             break;
             case 'close':
-                if(caller.name === "LORYASTES" && DEBUG_STEPS){
-
-                }
-                // Close means horizontally adjacent (differential === 1)
-                // or vertically adjacent in the same column (differential === 0 && verticalDiff === 1)
-                const verticalDiff = Math.abs(caller.coordinates.y - target.coordinates.y);
-                res = differential === 1 || (differential === 0 && verticalDiff === 1);
+                // Close means orthogonally adjacent (left/right OR up/down), not diagonal.
+                // dx === 1 && dy === 0 -> horizontal neighbor
+                // dx === 0 && dy === 1 -> vertical neighbor
+                res = (dx === 1 && dy === 0) || (dx === 0 && dy === 1);
             break;
             case 'medium':
-                res = differential > 1 && differential <= 3;
+                        // Medium range: primarily based on horizontal (x) distance from caller
+                        // Use the x-axis differential (dx) to decide if the target is within
+                        // medium reach (greater than close but within medium range).
+                        res = dx > 1 && dx <= 3;
             break;
             case 'far':
                 // if(caller.type === 'sphinx'){
@@ -1628,9 +1629,26 @@ export function CombatManager(){
         }
 
         // Determine base damage. If supplementalData (special) provides a damage
-        // field, prefer that as the baseline. Otherwise fall back to caller.atk.
+        // field, prefer that as the baseline. Otherwise compute damage using
+        // the caller's atk and any equipped weapon percent (weapon.damage is
+        // now expressed in percentage-points, e.g. 30 === +30% of atk).
         const isSpecial = supplementalData && typeof supplementalData === 'object' && (typeof supplementalData.damage === 'number' || typeof supplementalData.base_damage === 'number' || supplementalData.energy_cost || supplementalData.effect);
-        const baseDamage = isSpecial ? (typeof supplementalData.damage === 'number' ? supplementalData.damage : (typeof supplementalData.base_damage === 'number' ? supplementalData.base_damage : caller.atk)) : caller.atk;
+        let baseDamage;
+        if (isSpecial) {
+            baseDamage = (typeof supplementalData.damage === 'number') ? supplementalData.damage : ((typeof supplementalData.base_damage === 'number') ? supplementalData.base_damage : caller.atk);
+        } else {
+            // find equipped weapon (right/left) or by equippedBy marker
+            let weaponPercent = 0;
+            try {
+                const inv = caller.inventory || [];
+                const weapon = inv.find(i => i && i.type === 'weapon' && (i.equippedSlot === 'right' || i.equippedSlot === 'left' || i.equippedBy === caller.id));
+                if (weapon && typeof weapon.damage === 'number') weaponPercent = weapon.damage;
+            } catch (e) {
+                // defensive: ignore inventory errors and treat as no weapon
+                weaponPercent = 0;
+            }
+            baseDamage = caller.atk + Math.floor((caller.atk * (weaponPercent || 0)) / 100);
+        }
 
         let damage = criticalHit ? baseDamage * CRITICAL_DAMAGE_MULTIPLIER : baseDamage;
 
@@ -1753,7 +1771,18 @@ export function CombatManager(){
         // Otherwise, fallback to the original logic (for non-monster/minion targets)
         let r = Math.random();
         let criticalHit = false;
-        let damage = criticalHit ? caller.atk*3 : caller.atk;
+        // For non-monster/non-minion targets, compute base using equipped
+        // weapon percentage (if any) so fighters without weapons still use atk.
+        let weaponPercent = 0;
+        try {
+            const inv = caller.inventory || [];
+            const weapon = inv.find(i => i && i.type === 'weapon' && (i.equippedSlot === 'right' || i.equippedSlot === 'left' || i.equippedBy === caller.id));
+            if (weapon && typeof weapon.damage === 'number') weaponPercent = weapon.damage;
+        } catch (e) {
+            weaponPercent = 0;
+        }
+        const base = caller.atk + Math.floor((caller.atk * (weaponPercent || 0)) / 100);
+        let damage = criticalHit ? base * CRITICAL_DAMAGE_MULTIPLIER : base;
         let sourceDirection = 'left';
         if (caller.coordinates.x < target.coordinates.x) {
             sourceDirection = 'left';

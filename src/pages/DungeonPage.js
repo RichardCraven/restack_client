@@ -1780,6 +1780,8 @@ class DungeonPage extends React.Component {
         // spawnPoint = selectedDungeon.spawn_points[Math.floor(Math.random()*spawnList.length)]
         // ^ need to populate spawnList
         spawnPoint = selectedDungeon.spawn_points[0]
+
+
         this.props.inventoryManager.initializeItems()
     // spawnpoint selected
         if(spawnPoint){
@@ -1863,6 +1865,21 @@ class DungeonPage extends React.Component {
     }
     loadExistingDungeon = async (dungeonId) => {
         const meta = getMeta();
+
+        // clear death tracker if you want:
+        
+        // try {
+        //     meta.deathTracker = 0;
+        //     storeMeta(meta);
+        //     await updateUserRequest(getUserId(), meta).catch(()=>{});
+        //     // Notify local UI/state handlers immediately so death-tracker visuals update.
+        //     try { if (typeof this.handleDeathTrackerChanged === 'function') this.handleDeathTrackerChanged(0); } catch(e){}
+        //     console.log('meta cleared: , meta:', meta);
+        // } catch (e) {
+        //     // best-effort: still persist locally
+        //     try { meta.deathTracker = 0; storeMeta(meta); } catch (inner) {}
+        // }
+
         const res = await loadDungeonRequest(dungeonId);
         if(res.data && res.data.length === 0){
             // cached dungeon deleted; go to first time flow
@@ -3162,10 +3179,48 @@ class DungeonPage extends React.Component {
                                                 else if (key === 'defense') value = (member && member.stats && typeof member.stats.baseDef === 'number') ? member.stats.baseDef : 0;
                                                 else if (key === 'hp') value = (member && member.stats && typeof member.stats.hp === 'number') ? member.stats.hp : 0;
                                             } catch (e) {}
+
+                                            // compute equipped weapon percent bonus (sum of equipped weapons)
+                                            let weaponPercent = 0;
+                                            // compute equipped armor percent bonus (sum of equipped armor pieces)
+                                            let armorPercent = 0;
+                                            try {
+                                                if (member && Array.isArray(member.inventory)) {
+                                                    if (key === 'attack') {
+                                                        const equippedWeapons = member.inventory.filter(i => i && i.type === 'weapon' && (i.equippedSlot === 'right' || i.equippedSlot === 'left' || i.equippedBy === member.id));
+                                                        if (equippedWeapons.length) {
+                                                            weaponPercent = equippedWeapons.reduce((acc, w) => acc + (typeof w.damage === 'number' ? w.damage : 0), 0);
+                                                        }
+                                                    }
+                                                    if (key === 'defense') {
+                                                        const equippedArmor = member.inventory.filter(i => i && i.type === 'armor' && (i.equippedSlot || i.equippedBy === member.id));
+                                                        if (equippedArmor.length) {
+                                                            armorPercent = equippedArmor.reduce((acc, a) => acc + (typeof a.armor === 'number' ? a.armor : 0), 0);
+                                                        }
+                                                    }
+                                                }
+                                            } catch (e) { weaponPercent = 0; armorPercent = 0 }
+
                                             return (
                                                 <div key={key} className="stat-line" style={{display: 'flex', justifyContent: 'space-between', width: '100%', padding: '2px 0'}}>
                                                     <span className="stat-name">{key === 'hp' ? 'hp max' : key}</span>
-                                                    <span className="stat-value">{value}</span>
+                                                    {key === 'attack' ? (
+                                                        <span className="stat-value" style={{display: 'flex', alignItems: 'center', gap: 6}}>
+                                                            {weaponPercent > 0 && (
+                                                                <span style={{color: 'lightgreen', fontWeight: 600, marginRight: 6}}>{`+${weaponPercent}%`}</span>
+                                                            )}
+                                                            <span>{value}</span>
+                                                        </span>
+                                                    ) : key === 'defense' ? (
+                                                        <span className="stat-value" style={{display: 'flex', alignItems: 'center', gap: 6}}>
+                                                            {armorPercent > 0 && (
+                                                                <span style={{color: 'lightgreen', fontWeight: 600, marginRight: 6}}>{`+${armorPercent}%`}</span>
+                                                            )}
+                                                            <span>{value}</span>
+                                                        </span>
+                                                    ) : (
+                                                        <span className="stat-value">{value}</span>
+                                                    )}
                                                 </div>
                                             )
                                         })}

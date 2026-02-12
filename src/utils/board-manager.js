@@ -538,6 +538,12 @@ export function BoardManager(){
             if (tile.contains && tile.contains.type === 'monster' && !tile.contains.subtype) {
                 tile.contains.subtype = this.getRandomMonster();
             }
+            // Defensive: if this tile is the configured spawn tile (where the player will be placed),
+            // do not spawn a monster here. This prevents both a player and a monster occupying the same
+            // tile on initial load. Only clear monster-type contains to preserve items/doors/etc.
+            if (typeof spawnTileIndex !== 'undefined' && tile.id === spawnTileIndex && this.getContainsType(tile.contains) === 'monster') {
+                tile.contains = null;
+            }
             // for lantern legacy random item, ensure subtype is present
             if (tile.contains && tile.contains.type === 'item' && !tile.contains.subtype && tile.original && tile.original === 'lantern') {
                 tile.contains.subtype = getRandomItem();

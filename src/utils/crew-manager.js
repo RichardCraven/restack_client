@@ -36,8 +36,9 @@ export function CrewManager(){
         console.log('initializing crew: ', crew, 'this is where specialActions are checked and marked available if their endDate has passed');
         const colors = ['#b710d5', '#6495ed', '#73b746', '#f4d013'];
         crew.forEach((member, index)=> { 
-            // console.log('special actions: ', member.specialActions);
-            if(!member.specialActions) return
+            // Ensure specialActions exists; some persisted meta may omit this field.
+            // Default to an empty array so initialization doesn't skip the member.
+            member.specialActions = member.specialActions || [];
             // Diagnostic: detect any specialActions that already have cooldown_position === 3
             try {
                 if (member.specialActions.some(a => a && a.cooldown_position === 3)) {
