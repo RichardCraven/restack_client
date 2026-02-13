@@ -144,6 +144,8 @@ export function Monk(data, utilMethods, animationManager, overlayManager){
                     MAX_DEPTH: this.MAX_DEPTH,
                     MAX_LANES: this.MAX_LANES,
                     chooseAttackType: this.chooseAttackType.bind(this),
+                    // Pass shared AI helper methods (includes someoneIsInCoords/isAvailableToMoveInto)
+                    methods: data.methods
                 });
                 break;
             }

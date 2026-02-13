@@ -923,10 +923,9 @@ export function CombatManager(){
             case 'up':
                 if(fighter.coordinates.y === 0) return;
                 pendingCoordinates = {x: fighter.coordinates.x , y: fighter.coordinates.y-1}
-                spaceOccupier = Object.values(this.combatants).find(e=>{
-                    return e.coordinates.x === pendingCoordinates.x && e.coordinates.y === pendingCoordinates.y && !e.dead
-                })
-                if(spaceOccupier) return
+                // respect virtual occupancy (occupiedCoords) and ignore dead combatants
+                spaceOccupier = this.coordinatesOccupied(pendingCoordinates)
+                if(spaceOccupier && !spaceOccupier.dead) return
                 fighter.coordinates.y--
                 fighter.manualMovesCurrent--
                 fighter.manualMoveCooldown()
@@ -935,10 +934,9 @@ export function CombatManager(){
             case 'down':
                 if(fighter.coordinates.y >= MAX_LANES - 1) return
                 pendingCoordinates = {x: fighter.coordinates.x , y: fighter.coordinates.y+1}
-                spaceOccupier = Object.values(this.combatants).find(e=>{
-                    return e.coordinates.x === pendingCoordinates.x && e.coordinates.y === pendingCoordinates.y && !e.dead
-                })
-                if(spaceOccupier) return
+                // respect virtual occupancy (occupiedCoords) and ignore dead combatants
+                spaceOccupier = this.coordinatesOccupied(pendingCoordinates)
+                if(spaceOccupier && !spaceOccupier.dead) return
                 fighter.coordinates.y++
                 console.log(fighter.type, 'fighter.coordinates.y: ', fighter.coordinates.y);
                 fighter.manualMovesCurrent--
@@ -948,10 +946,9 @@ export function CombatManager(){
             case 'right':
                 if(fighter.coordinates.x === MAX_DEPTH) return
                 pendingCoordinates = {x: fighter.coordinates.x+1 , y: fighter.coordinates.y}
-                spaceOccupier = Object.values(this.combatants).find(e=>{
-                    return e.coordinates.x === pendingCoordinates.x && e.coordinates.y === pendingCoordinates.y && !e.dead
-                })
-                if(spaceOccupier) return
+                // respect virtual occupancy (occupiedCoords) and ignore dead combatants
+                spaceOccupier = this.coordinatesOccupied(pendingCoordinates)
+                if(spaceOccupier && !spaceOccupier.dead) return
                 
                 fighter.coordinates.x++
                 fighter.manualMovesCurrent--
@@ -961,10 +958,9 @@ export function CombatManager(){
             case 'left':
                 if(fighter.coordinates.x === 0) return
                 pendingCoordinates = {x: fighter.coordinates.x-1 , y: fighter.coordinates.y}
-                spaceOccupier = Object.values(this.combatants).find(e=>{
-                    return e.coordinates.x === pendingCoordinates.x && e.coordinates.y === pendingCoordinates.y && !e.dead
-                })
-                if(spaceOccupier) return
+                // respect virtual occupancy (occupiedCoords) and ignore dead combatants
+                spaceOccupier = this.coordinatesOccupied(pendingCoordinates)
+                if(spaceOccupier && !spaceOccupier.dead) return
                 fighter.coordinates.x--
                 fighter.manualMovesCurrent--
                 fighter.manualMoveCooldown()
@@ -1432,8 +1428,47 @@ export function CombatManager(){
             newPosition = caller.coordinates.y
         }
         const newCoordinates = {x: newDepth, y: newPosition}
+        // If the intended tile is occupied, attempt a diagonal forward move toward
+        // the target. If that is blocked, try the other diagonal, then attempt
+        // to route around by moving down or up at the caller's current depth.
         if(coordinatesOccupiedBy(newCoordinates)){
-            return
+            const target = this.combatants[caller.targetId];
+            const verticalDir = target ? Math.sign(target.coordinates.y - caller.coordinates.y) : 0;
+            // Prefer a diagonal that moves toward the target vertically.
+            const diagY = (typeof newPosition === 'number' ? newPosition : caller.coordinates.y) + (verticalDir !== 0 ? verticalDir : 1);
+            const diag = { x: newDepth, y: diagY };
+            const oppositeDiagY = (typeof newPosition === 'number' ? newPosition : caller.coordinates.y) - (verticalDir !== 0 ? verticalDir : 1);
+            const oppDiag = { x: newDepth, y: oppositeDiagY };
+
+            const inBounds = (c) => {
+                if(c.x === undefined || c.y === undefined) return false;
+                if(c.x < 0 || c.y < 0) return false;
+                if(c.x > MAX_DEPTH) return false;
+                if(c.y > MAX_LANES) return false;
+                return true;
+            }
+
+            if(inBounds(diag) && !coordinatesOccupiedBy(diag)){
+                newPosition = diag.y;
+                newDepth = diag.x;
+            } else if(inBounds(oppDiag) && !coordinatesOccupiedBy(oppDiag)){
+                newPosition = oppDiag.y;
+                newDepth = oppDiag.x;
+            } else {
+                // Try to move vertically in-place to route around (down then up)
+                const tryDown = { x: caller.coordinates.x, y: caller.coordinates.y + 1 };
+                const tryUp = { x: caller.coordinates.x, y: caller.coordinates.y - 1 };
+                if(inBounds(tryDown) && !coordinatesOccupiedBy(tryDown)){
+                    newDepth = tryDown.x;
+                    newPosition = tryDown.y;
+                } else if(inBounds(tryUp) && !coordinatesOccupiedBy(tryUp)){
+                    newDepth = tryUp.x;
+                    newPosition = tryUp.y;
+                } else {
+                    // Couldn't find an alternate route; abort movement this tick.
+                    return
+                }
+            }
         }
 
         if(liveCombatants.some(e=>e.coordinates.y === newPosition && e.coordinates.x === newDepth)){
@@ -1704,20 +1739,21 @@ export function CombatManager(){
                 damage += Math.floor(damage / 2);
             }
         }
-            // Apply equipped armor percent reduction (if any) to the damage
-            let armorPercentTarget = 0;
-            try {
-                const inv = combatantHit.inventory || [];
-                armorPercentTarget = inv.filter(i => i && i.type === 'armor' && (i.equippedSlot || i.equippedBy === combatantHit.id)).reduce((acc, a) => acc + (typeof a.armor === 'number' ? a.armor : 0), 0);
-            } catch (e) { armorPercentTarget = 0 }
-            if (armorPercentTarget > 0) {
-                const reduction = Math.floor(damage * (armorPercentTarget / 100));
-                damage = Math.max(0, damage - reduction);
-            }
+        // Apply equipped armor percent reduction (if any) to the damage
+        let armorPercentTarget = 0;
+        try {
+            const inv = combatantHit.inventory || [];
+            armorPercentTarget = inv.filter(i => i && i.type === 'armor' && (i.equippedSlot || i.equippedBy === combatantHit.id)).reduce((acc, a) => acc + (typeof a.armor === 'number' ? a.armor : 0), 0);
+        } catch (e) { armorPercentTarget = 0 }
+        if (armorPercentTarget > 0) {
+            const reduction = Math.floor(damage * (armorPercentTarget / 100));
+            damage = Math.max(0, damage - reduction);
+            console.log('armor reduction applied, ', armorPercentTarget, '% reduced damage by', reduction, 'to', damage);
+        }
 
-            // Save readout and apply damage
-            caller.readout.result = `${caller.name} hits ${combatantHit.name} for ${damage} damage`;
-            combatantHit.hp -= damage;
+        // Save readout and apply damage
+        caller.readout.result = `${caller.name} hits ${combatantHit.name} for ${damage} damage`;
+        combatantHit.hp -= damage;
         combatantHit.damageIndicators.push(damage);
         caller.energy += caller.stats.fort * 1 + (1 / 2 * caller.level);
         if (caller.energy > 100) caller.energy = 100;

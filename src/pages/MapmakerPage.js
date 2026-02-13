@@ -501,8 +501,16 @@ class MapMakerPage extends React.Component {
         })
       } else if(pinned){
         let arr = [...this.state.tiles];
-        // Store new contains shape for placed tiles. Use pinned.optionType or image as type if needed.
-        arr[tile.id].contains = { type: pinned.optionType || pinned.image || pinned.type || 'misc', subtype: pinned.image }
+        // Store new contains shape for placed tiles. Prefer canonical shapes:
+        // - Keys should be stored as items with subtype (e.g. {type: 'item', subtype: 'minor_key'})
+        // - Monsters/gates are handled above. Fallback to pinned.optionType/image when needed.
+        const rawType = pinned.optionType || pinned.image || pinned.type || 'misc';
+        const normalizedType = String(rawType).replace(/\s+/g, '_');
+        let containsObj = { type: normalizedType, subtype: pinned.image };
+        if (String(normalizedType).indexOf('key') !== -1 || String(pinned.image).indexOf('key') !== -1) {
+          containsObj = { type: 'item', subtype: String(pinned.image || normalizedType).replace(/\s+/g,'_') };
+        }
+        arr[tile.id].contains = containsObj;
         arr[tile.id].image = pinned.image
         console.log('in final pin block, pinned: ', pinned);
         this.setState({

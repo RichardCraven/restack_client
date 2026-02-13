@@ -24,7 +24,7 @@ const MAX_DEPTH = 7;
 const NUM_COLUMNS = 8;
 // ^ means 8 squares, account for depth of 0 is far left
 
-const MAX_ROWS = 5;
+const MAX_ROWS = 6;
 const TILE_SIZE = 100;
 const SHOW_TILE_BORDERS = true;
 const SHOW_COMBAT_BORDER_COLORS = false;
@@ -63,7 +63,6 @@ class MonsterBattle extends React.Component {
     // Allow AI to fire glyphs without requiring the fighter to be selected
     fireSpecialForAI = (fighter, glyph = null) => {
         if (glyph) {
-            console.log('oooooooooo in here..........');
             // If a consumable/spell glyph was provided by AI, remove one
             // instance from the fighter's consumable specialActions so the
             // UI reflects the usage immediately. Use a best-effort match by
@@ -166,6 +165,8 @@ class MonsterBattle extends React.Component {
         this._setInterval = (fn, t) => { const id = setInterval(fn, t); try { this._intervals.push(id); } catch(e){}; return id };
     }
     componentDidMount(){
+        console.log('MonsterBattle mounted with props: ', this.props);
+
         // mark mounted so async callbacks can safely call setState
         this._isMounted = true;
     // Reset any previous group-death suppression flag and one-time guards
@@ -182,7 +183,6 @@ class MonsterBattle extends React.Component {
         const monkAI = this.props.combatManager.fighterAI?.roster?.monk;
         if (monkAI) {
             monkAI.onTeleport = (caller) => {
-                console.log('Monk teleported: ', caller.id);
                 // debugger
                 this.setState({ teleportingFighterId: caller.id });
                 // Optionally clear after a tick for animation
@@ -193,7 +193,7 @@ class MonsterBattle extends React.Component {
         }
 
         let arr = [], ghostPortraitMatrix = [];
-        for(let i = 0; i < 5*NUM_COLUMNS; i++){
+    for(let i = 0; i < MAX_ROWS*NUM_COLUMNS; i++){
             let x = i%NUM_COLUMNS,
             y = Math.floor(i/NUM_COLUMNS)
             arr.push({
@@ -405,20 +405,16 @@ class MonsterBattle extends React.Component {
 
         if(currentSpecialIndex >= 0){
             
-            console.log('hmm ', specials[currentSpecialIndex + 1]);
             if(specials[currentSpecialIndex + 1]){
-                console.log('specials[currentSpecialIndex + 1]', specials[currentSpecialIndex + 1]);
                 specials[currentSpecialIndex + 1].selected = true;
             } else {
                 // all cleared
-                console.log('all cleared');
             }
         } else {
             specials[0].selected = true;
         }
     }
     selectConsumableSpecial = () => {
-        console.log('consumable');
         let selectedFighter = this.state.selectedFighter;
         let specials = selectedFighter?.specials;
         let consumableSpecials = selectedFighter?.specialActions;
@@ -426,20 +422,15 @@ class MonsterBattle extends React.Component {
         let currentSpecialIndex = consumableSpecials.findIndex(a=> a.selected);
         consumableSpecials.forEach(a=>a.selected = false)
         if(specials) specials.forEach(a=>a.selected = false)
-            console.log('currentSpecialIndex', currentSpecialIndex);
+            // currentSpecialIndex available for diagnostics
         // console.log('consumableSpecials: ', consumableSpecials, 'currentindex: ', currentSpecialIndex);
         if(currentSpecialIndex >= 0){
-            console.log('hmm index', currentSpecialIndex + 1, consumableSpecials[currentSpecialIndex + 1]);
             if(consumableSpecials[currentSpecialIndex + 1]){
-                // console.log('specials[currentSpecialIndex + 1]', consumableSpecials[currentSpecialIndex + 1]);
-                console.log('SET next');
                 consumableSpecials[currentSpecialIndex + 1].selected = true;
             } else {
                 // all cleared
-                console.log('all cleared');
             }
         } else {
-            console.log('set 0');
             consumableSpecials[0].selected = true;
         }
     }
@@ -459,11 +450,8 @@ class MonsterBattle extends React.Component {
     }
     fighterPortraitClicked = (id) => {
     const selectedFighter = this.state.battleData[id];
-    console.log('fighter clicked: ', selectedFighter, this.state.animationOverlays[id]);
     let val = (this.getFighterDetails(selectedFighter)?.coordinates.x * 100) + (selectedFighter?.facing === 'right' ? 0 : (100 - (this.props.combatManager.getRangeWidthVal(selectedFighter) * 100) ))
     selectedFighter.portrait = this.props.crew.find(e=>e.id === id).portrait
-
-        console.log('setting selected fighter: ', selectedFighter);
         if(this.state.showCrosshair){
             this.props.combatManager.queueAction(this.state.selectedFighter.id, id, this.state.selectedAttack)
             this.setState({
@@ -596,7 +584,6 @@ class MonsterBattle extends React.Component {
     // the interaction pane updates immediately.
     applyFighterUpdate = (fighter) => {
         if (!fighter || !fighter.id) return;
-        console.log('applyFighterUpdate called for fighter', fighter && fighter.id);
         try {
             // Clone existing battleData to ensure React sees the new reference
             const battleData = Object.assign({}, this.state.battleData);
@@ -737,12 +724,12 @@ class MonsterBattle extends React.Component {
         })
     }
     gameOver = (outcome) => {
-        console.log('outcome', outcome);
+    // outcome received
 
         // Ensure gameOver runs only once per battle instance to avoid duplicate
         // awards or duplicated UI flows when multiple gameOver triggers fire.
         if (this._gameOverHandled) {
-            console.log('gameOver: already handled, skipping duplicate call for', outcome);
+            // already handled
             return;
         }
         this._gameOverHandled = true;
@@ -751,7 +738,7 @@ class MonsterBattle extends React.Component {
         this.props.combatManager.reset();
 
         if(this.props.isSimulation){
-            console.log('exit simulation');
+            // exit simulation
             this.props.exitSimulator();
             return
         }
@@ -776,30 +763,26 @@ class MonsterBattle extends React.Component {
                 itemsGained = [];
                 this.props.monster.drops.forEach(e=>{
                     let d = Math.random();
-                    console.log('drop calculation for', e, 'random num: ', d, 'vs', e.percentChance, 'and actual calc for perc: ', e.percentChance*.01);
                     if(d < e.percentChance*.01) itemsGained.push(e.item)
                 })
                 this.props.inventoryManager.addItemsByName(itemsGained)
             }
             experienceGained = this.props.monster.level * 10;
             goldGained = Math.floor(Math.random() * experienceGained);
-            console.log('gameOver: crewWins computed goldGained=', goldGained);
             // Defensive: log inventory/gold state before adding to help trace duplicate updates
-            try { console.log('gameOver: inventoryManager before addCurrency', this.props.inventoryManager && this.props.inventoryManager.inventory, this.props.inventoryManager && this.props.inventoryManager.currency); } catch(e){}
+            try { /* inventory snapshot suppressed */ } catch(e){}
             // Ensure we only award gold once per battle
-            if (!this._goldAwarded) {
+                    if (!this._goldAwarded) {
                 try {
                     this.props.inventoryManager.addCurrency({type: 'gold', amount: goldGained})
                     this._goldAwarded = true;
-                    console.log('gameOver: addCurrency called for', goldGained);
                 } catch (err) {
                     console.warn('gameOver: addCurrency failed', err);
                 }
             } else {
-                console.log('gameOver: gold already awarded, skipping addCurrency for', goldGained);
+                // gold already awarded, skipping
             }
             this._setTimeout(()=>{
-                console.log('timeout triggered');
                 // Use latest liveCrew snapshot when awarding experience
                 try { this.props.crewManager.addExperience(liveCrew, experienceGained); } catch(e) { console.warn('addExperience failed', e); }
                 let meta = getMeta();
@@ -826,7 +809,7 @@ class MonsterBattle extends React.Component {
                 try { updateUserRequest(getUserId(), meta).catch(()=>{}); } catch(e) {}
                     // Notify parent (DungeonPage) so UI elements like death-tracker can refresh
                     try { if (this.props && typeof this.props.onDeathTrackerChanged === 'function') this.props.onDeathTrackerChanged(deaths); } catch(e) {}
-                console.log('DEATHS: ', deaths);
+                // deaths count incremented
                 if (deaths >= 300) {
                     // Final death: clear dungeon and crew now, persist, then launch final death sequence.
                     try {
@@ -931,11 +914,11 @@ class MonsterBattle extends React.Component {
         //  earlier). For all other outcomes make sure portraits are shown.
         // Add debug logging to help trace missing portraits and repeated gold updates.
         try {
-            console.log('gameOver: _suppressPersistFinalHP=', !!this._suppressPersistFinalHP);
+            // debug: _suppressPersistFinalHP state
             // Print brief portrait info from battleData for inspection
             try {
                 const portraits = Object.values(this.state.battleData || {}).map(b => ({ id: b && b.id, portrait: b && b.portrait }));
-                console.log('gameOver: battleData portraits snapshot=', portraits);
+                // portrait snapshot suppressed
             } catch (inner) { console.warn('gameOver: failed to snapshot battleData portraits', inner); }
         } catch (e) {}
 
@@ -1093,17 +1076,17 @@ class MonsterBattle extends React.Component {
     }
     combatInventoryTileClicked = (val) => {
         this.props.combatManager.itemUsed(val, this.state.selectedFighter)
-        console.log('this.is simulationL ', this.props.isSimulation);
+    // simulation flag inspected
         // if(!this.props.isSimulation) this.props.useConsumableFromInventory(val);
         this.props.useConsumableFromInventory(val);
     }
     specialTileClicked = (val) => {
-        console.log('special tile clicked: ', val);
+    // special tile clicked
         let finalVal;
         if(val !== null && typeof val === 'string'){
             val = val.replaceAll('_', ' ')
         }
-        console.log('val: ', val);
+    // special tile value
         this.fireSpecial(val)
 
         // if(val === 'glyph'){
@@ -1115,7 +1098,7 @@ class MonsterBattle extends React.Component {
     }
     manualFire = () => {
         if(!this.state.selectedFighter) return
-        console.log(this.state.selectedFighter.type, 'manual fire');
+    // manual fire invoked
         let consumableSpecialSelected;
 
         let selectedFighter = this.state.selectedFighter;
@@ -1126,7 +1109,7 @@ class MonsterBattle extends React.Component {
 
         if(selectedSpecial){
             if(this.state.selectedFighter.energy < 100){
-                console.log('bnot enough energy');
+                // not enough energy
                 return
             }
             // (Teleport effect will now be triggered only on actual teleport, not on special selection)
@@ -1138,14 +1121,13 @@ class MonsterBattle extends React.Component {
             }
             consumableSpecials.forEach(a=>a.selected=false)
         } else {
-            console.log('manual attack');
+            // manual attack
             this.props.combatManager.fighterManualAttack()
         }
     }
     fireSpecial = (special) => {
         if(!this.state.selectedFighter) return
-        console.log(this.state.selectedFighter.type, 'fire special', special );
-        console.log('handle this');
+    // firing special
         // debugger
         let consumableSpecialSelected;
 
@@ -1169,12 +1151,12 @@ class MonsterBattle extends React.Component {
     }
     // Accept optional fighter argument for AI path
     fireGlyph = (glyph, fighterOverride = null) => {
-        console.log('glyph firing', glyph, 'fighterOverride', fighterOverride);
+    // glyph firing
         // Use override if provided (AI), else fall back to selectedFighter (manual)
         const selectedFighter = fighterOverride || this.state.selectedFighter;
         switch(glyph.subtype){
             case 'magic missile':
-                console.log('!', this.props.animationManager);
+                // animation manager check
                 //     magicMissile_targetLaneDiff: 0
                 // })
 
@@ -1190,14 +1172,14 @@ class MonsterBattle extends React.Component {
 
 
                 let target = this.props.combatManager.getCombatant(selectedFighter.targetId)
-                console.log('target: ', target);
+                // target resolved
                 if(!target) return
                 // let targetDistance = this.props.combatManager.getDistanceToTarget(this.state.selectedFighter, target)
                 // let laneDiff = this.props.combatManager.getLaneDifferenceToTarget(this.state.selectedFighter, target)
 
                 // console.log('laneDiff: ', laneDiff);
                 const travelTime = 1500
-                console.log('about to trigger from fighgter AI');
+                // triggering magic missile via AI
                 this.props.combatManager.fighterAI.roster['wizard'].triggerMagicMissile(selectedFighter, target, travelTime)
                 // this.props.combatManager.lockFighter(this.state.selectedFighter.id)
 
@@ -1221,7 +1203,7 @@ class MonsterBattle extends React.Component {
                 // ^ travel time + 1 second of damage animation
             break;
             default:
-                console.log('huh?');
+                // unknown glyph subtype
         }
     }
     specialTileHovered = (val) => {
@@ -1234,7 +1216,7 @@ class MonsterBattle extends React.Component {
     // Logs a small message and updates hoveredSpellTile for the tooltip.
     spellTileHovered = (val) => {
         const label = val ? (val.subtype || val.name || 'unknown') : 'none';
-        console.log(`spell ${label} hovered`);
+    // spell hovered
         this.setState({ hoveredSpellTile: val ? (val.subtype || val.name) : null });
     }
     glyphTileHovered = (val) => {
@@ -1265,7 +1247,7 @@ class MonsterBattle extends React.Component {
         // console.log('should be Sadronis: ', this.state.battleData[targettedBy]);\
         
         const selectedMonster = this.state.battleData[id];
-        console.log('monster', selectedMonster);
+    // monster selected
         if(this.state.showCrosshair){
             this.props.combatManager.queueAction(this.state.selectedFighter.id, id, this.state.selectedAttack)
             this.setState({
@@ -1365,7 +1347,7 @@ class MonsterBattle extends React.Component {
             break;
         }
         if(monster.pendingAttack.name === 'magic missile'){
-            console.log('should not have gotten here');
+            // unexpected path reached
             debugger
         }
         switch(monster.pendingAttack.range){

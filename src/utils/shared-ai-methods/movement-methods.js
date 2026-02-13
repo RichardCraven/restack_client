@@ -197,7 +197,14 @@ const goTowards = (caller, combatants, targetTile) => {
             } else if(isAvailableToMoveInto(NE, combatants)){
                 newCoords = NE
             } else {
-                return
+                // fallback: vertical blocked and side-steps blocked — try moving horizontally toward target
+                const horizDir = targetTile.x > caller.coordinates.x ? 1 : -1;
+                const horiz = { x: caller.coordinates.x + horizDir, y: caller.coordinates.y };
+                if (isAvailableToMoveInto(horiz, combatants)) {
+                    newCoords = horiz;
+                } else {
+                    return
+                }
             }
         } else {
             // space available go N
@@ -215,7 +222,14 @@ const goTowards = (caller, combatants, targetTile) => {
             } else if(isAvailableToMoveInto(SE, combatants)){
                 newCoords = SE
             } else {
-                return
+                // fallback: vertical blocked and side-steps blocked — try moving horizontally toward target
+                const horizDir = targetTile.x > caller.coordinates.x ? 1 : -1;
+                const horiz = { x: caller.coordinates.x + horizDir, y: caller.coordinates.y };
+                if (isAvailableToMoveInto(horiz, combatants)) {
+                    newCoords = horiz;
+                } else {
+                    return
+                }
             }
         } else {
             // space available go South

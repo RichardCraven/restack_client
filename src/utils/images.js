@@ -215,6 +215,7 @@ import sphinx_portrait2 from '../assets/portraits/monsters/sphinx2.png'
 import wyvern_portrait from '../assets/portraits/monsters/wyvern.png'
 import wyvern_portrait2 from '../assets/portraits/monsters/wyvern2.png'
 import djinn_portrait from '../assets/portraits/monsters/djinn.png'
+import djinn from '../assets/portraits/monsters/djinn.png'
 
 import vampire from '../assets/portraits/monsters/vampire.png'
 import vampire_portrait from '../assets/portraits/monsters/vampire.png'
@@ -324,7 +325,7 @@ import body_male from '../assets/icons/figures/body_man.png'
 import body_female from '../assets/icons/figures/body_fem.png'
 
 //camp
-import camp from '../assets/icons/misc/camp/camp-2.png'
+import camp from '../assets/icons/misc/camp/camp.png'
 
 //terrain
 import terrain_1 from '../assets/icons/terrain/stone-1.png'
@@ -343,6 +344,62 @@ import terrain_13 from '../assets/icons/terrain/stone-13.png'
 import terrain_14 from '../assets/icons/terrain/stone-14.png'
 import terrain_15 from '../assets/icons/terrain/stone-15.png'
 import terrain_16 from '../assets/icons/terrain/stone-16.png'
+
+import axe_1 from '../assets/icons/items/weapons/axes/Axe_01.png';
+import axe_2 from '../assets/icons/items/weapons/axes/Axe_02.png';
+import axe_3 from '../assets/icons/items/weapons/axes/Axe_03.png';
+import axe_4 from '../assets/icons/items/weapons/axes/Axe_04.png';
+import axe_5 from '../assets/icons/items/weapons/axes/Axe_05.png';
+import axe_6 from '../assets/icons/items/weapons/axes/Axe_06.png';
+import axe_7 from '../assets/icons/items/weapons/axes/Axe_07.png';
+import axe_8 from '../assets/icons/items/weapons/axes/Axe_08.png';
+import axe_9 from '../assets/icons/items/weapons/axes/Axe_09.png';
+import axe_10 from '../assets/icons/items/weapons/axes/Axe_10.png';
+import axe_11 from '../assets/icons/items/weapons/axes/Axe_11.png';
+import axe_12 from '../assets/icons/items/weapons/axes/Axe_12.png';
+import axe_13 from '../assets/icons/items/weapons/axes/Axe_13.png';
+import axe_14 from '../assets/icons/items/weapons/axes/Axe_14.png';
+import axe_15 from '../assets/icons/items/weapons/axes/Axe_15.png';
+import axe_16 from '../assets/icons/items/weapons/axes/Axe_16.png';
+import axe_17 from '../assets/icons/items/weapons/axes/Axe_17.png';
+import axe_18 from '../assets/icons/items/weapons/axes/Axe_18.png';
+import axe_19 from '../assets/icons/items/weapons/axes/Axe_19.png';
+import axe_20 from '../assets/icons/items/weapons/axes/Axe_20.png';
+import axe_21 from '../assets/icons/items/weapons/axes/Axe_21.png';
+import axe_22 from '../assets/icons/items/weapons/axes/Axe_22.png';
+import axe_23 from '../assets/icons/items/weapons/axes/Axe_23.png';
+import axe_24 from '../assets/icons/items/weapons/axes/Axe_24.png';
+import axe_25 from '../assets/icons/items/weapons/axes/Axe_25.png';
+import axe_26 from '../assets/icons/items/weapons/axes/Axe_26.png';
+import axe_27 from '../assets/icons/items/weapons/axes/Axe_27.png';
+import axe_28 from '../assets/icons/items/weapons/axes/Axe_28.png';
+import axe_29 from '../assets/icons/items/weapons/axes/Axe_29.png';
+import axe_30 from '../assets/icons/items/weapons/axes/Axe_30.png';
+import axe_31 from '../assets/icons/items/weapons/axes/Axe_31.png';
+import axe_32 from '../assets/icons/items/weapons/axes/Axe_32.png';
+import axe_33 from '../assets/icons/items/weapons/axes/Axe_33.png';
+import axe_34 from '../assets/icons/items/weapons/axes/Axe_34.png';
+import axe_35 from '../assets/icons/items/weapons/axes/Axe_35.png';
+import axe_36 from '../assets/icons/items/weapons/axes/Axe_36.png';
+import axe_37 from '../assets/icons/items/weapons/axes/Axe_37.png';
+import axe_38 from '../assets/icons/items/weapons/axes/Axe_38.png';
+import axe_39 from '../assets/icons/items/weapons/axes/Axe_39.png';
+import axe_40 from '../assets/icons/items/weapons/axes/Axe_40.png';
+import axe_41 from '../assets/icons/items/weapons/axes/Axe_41.png';
+import axe_42 from '../assets/icons/items/weapons/axes/Axe_42.png';
+import axe_43 from '../assets/icons/items/weapons/axes/Axe_43.png';
+import axe_44 from '../assets/icons/items/weapons/axes/Axe_44.png';
+import axe_45 from '../assets/icons/items/weapons/axes/Axe_45.png';
+import axe_46 from '../assets/icons/items/weapons/axes/Axe_46.png';
+import axe_47 from '../assets/icons/items/weapons/axes/Axe_47.png';
+import axe_48 from '../assets/icons/items/weapons/axes/Axe_48.png';
+import axe_49 from '../assets/icons/items/weapons/axes/Axe_49.png';
+import axe_50 from '../assets/icons/items/weapons/axes/Axe_50.png';
+import axe_51 from '../assets/icons/items/weapons/axes/Axe_51.png';
+import axe_52 from '../assets/icons/items/weapons/axes/Axe_52.png';
+import axe_53 from '../assets/icons/items/weapons/axes/Axe_53.png';
+
+
 
 export {
     hand_1,
@@ -472,6 +529,61 @@ export {
     spear_upright,
     spear_white,
     spear_upright_white,
+
+    /* Axe variants (numbered) */
+    axe_1,
+    axe_2,
+    axe_3,
+    axe_4,
+    axe_5,
+    axe_6,
+    axe_7,
+    axe_8,
+    axe_9,
+    axe_10,
+    axe_11,
+    axe_12,
+    axe_13,
+    axe_14,
+    axe_15,
+    axe_16,
+    axe_17,
+    axe_18,
+    axe_19,
+    axe_20,
+    axe_21,
+    axe_22,
+    axe_23,
+    axe_24,
+    axe_25,
+    axe_26,
+    axe_27,
+    axe_28,
+    axe_29,
+    axe_30,
+    axe_31,
+    axe_32,
+    axe_33,
+    axe_34,
+    axe_35,
+    axe_36,
+    axe_37,
+    axe_38,
+    axe_39,
+    axe_40,
+    axe_41,
+    axe_42,
+    axe_43,
+    axe_44,
+    axe_45,
+    axe_46,
+    axe_47,
+    axe_48,
+    axe_49,
+    axe_50,
+    axe_51,
+    axe_52,
+    axe_53,
 
     closed_door,
     open_door,
@@ -630,5 +742,6 @@ export {
     terrain_16,
 
     camp,
-    vampire
+    vampire,
+    djinn
 };

@@ -349,6 +349,7 @@ class DungeonPage extends React.Component {
             showModal: false,
             updates: [],
             timeToRespawn: '',
+            itemTimeToRespawn: '',
             respawnUpdateInterval: null,
             monsterBattleTileId: null,
             setMemberRitualOptions: null,
@@ -358,7 +359,6 @@ class DungeonPage extends React.Component {
             , showCardDuelModal: false
             , cardDuelTileId: null
             , toastMessage: null
-            , prototypeTasksOpen: false
             // floating player animation state
             , playerFloatVisible: false
             , playerFloatStyle: { left: 0, top: 0, transform: 'translate3d(0px, 0px, 0px)' }
@@ -463,9 +463,6 @@ class DungeonPage extends React.Component {
         this.closeCardDuel();
     }
 
-    togglePrototypeTasks = () => {
-        this.setState(prev => ({ prototypeTasksOpen: !prev.prototypeTasksOpen }));
-    }
     componentDidMount(){
         // Migration: normalize legacy equippedSlot keys to 'pet'
         try {
@@ -862,10 +859,13 @@ class DungeonPage extends React.Component {
         // const selectedDungeon = dungeons.find(e=>e.name === 'Primari');
     }
     handleRespawnTime = () => {
-        let meta = getMeta();
-        if(!meta.respawnDate){
-            this.setNewRespawnDate();
-        } else {
+        const meta = getMeta() || {};
+        // Ensure both monster and item respawn dates exist
+        if (!meta.respawnDate) this.setNewRespawnDate();
+        if (!meta.itemRespawnDate) this.setNewItemRespawnDate();
+
+        // Monster respawn timer
+        try {
             let respawn = new Date(meta.respawnDate);
             let now = new Date();
             let diffInMinutes = diff_minutes(respawn, now)
@@ -880,10 +880,41 @@ class DungeonPage extends React.Component {
                 respawnString = ''
                 this.setNewRespawnDate();
             }
-            this.setState({
-                timeToRespawn: respawnString,
-            })
-        }
+            this.setState({ timeToRespawn: respawnString });
+        } catch (e) {}
+
+        // Item respawn timer (3x monster)
+        try {
+            let irespawn = new Date(meta.itemRespawnDate);
+            let now2 = new Date();
+            let idiffInMinutes = diff_minutes(irespawn, now2)
+            let idiffInSeconds = diff_seconds(irespawn, now2)
+            let itemRespawnString = ''
+            if(idiffInMinutes > 1){
+                itemRespawnString = `${idiffInMinutes} m`
+            } else if(idiffInMinutes < 2 && idiffInSeconds > 1){
+                itemRespawnString = `${idiffInSeconds} s`
+            } else {
+                this.respawnItems();
+                itemRespawnString = ''
+                this.setNewItemRespawnDate();
+            }
+            this.setState({ itemTimeToRespawn: itemRespawnString });
+        } catch (e) {}
+    }
+
+    setNewItemRespawnDate = () => {
+        // Item respawn interval is 3x monster respawn (monster uses 1 minute by default)
+        let soon = new Date().addMinutes(3)
+        let meta = getMeta() || {};
+        meta.itemRespawnDate = soon;
+        try { storeMeta(meta); } catch (e) {}
+
+        let respawn = new Date(soon);
+        let now = new Date();
+        let diffInMinutes = diff_minutes(respawn, now);
+        let respawnString = `${diffInMinutes} m`
+        this.setState({ itemTimeToRespawn: respawnString });
     }
     respawnMonsters = async () => {
         let dungeons = [],
@@ -915,6 +946,35 @@ class DungeonPage extends React.Component {
             }
         } catch (e) {
             console.warn('Error triggering respawnMonsters', e);
+        }
+    }
+    respawnItems = async () => {
+        let dungeons = [],
+        selectedDungeon;
+        const allDungeons = await loadAllDungeonsRequest();
+
+        allDungeons.data.forEach((e, i) => {
+            let d = JSON.parse(e.content)
+            d.id = e._id
+            dungeons.push(d)
+        })
+        selectedDungeon = dungeons[0];
+        try {
+            if (this.props.boardManager && typeof this.props.boardManager.respawnItems === 'function') {
+                this.props.boardManager.respawnItems(selectedDungeon)
+            }
+            // Persist meta after an item respawn event so UI/session state is saved
+            try {
+                const meta = getMeta();
+                storeMeta(meta);
+            } catch (e) {}
+            if (this.props.saveUserData) {
+                try {
+                    this.props.saveUserData();
+                } catch (e) {}
+            }
+        } catch (e) {
+            console.warn('Error triggering respawnItems', e);
         }
     }
     componentWillUnmount(){
@@ -1460,6 +1520,29 @@ class DungeonPage extends React.Component {
             }
         } catch (err) {
             // ignore key handling errors
+        }
+
+        // Ensure Tab navigation still works while keys are locked (camping).
+        // Use event.shiftKey / event.ctrlKey so held-modifier state is respected
+        // even when key state (this.state.shiftDown) may not be updated while keys are locked.
+        if (event.key === 'Tab') {
+            // debug: ensure Tab is being received while camping
+            try { console.debug('[DungeonPage] Tab pressed, keysLocked=', this.state.keysLocked, 'inMonsterBattle=', this.state.inMonsterBattle, 'shiftKey=', event.shiftKey); } catch(e) {}
+            event.preventDefault();
+            if (this.state.inMonsterBattle) {
+                if (event.shiftKey) {
+                    if (this.monsterBattleComponentRef.current) this.monsterBattleComponentRef.current.tabToRetarget();
+                } else if (event.ctrlKey) {
+                    // reserved for future
+                } else {
+                    if (this.monsterBattleComponentRef.current) this.monsterBattleComponentRef.current.tabToFighter();
+                }
+            } else {
+                // Dungeon-level tab handling: cycle selected crew member when not in a monster battle
+                const direction = event.shiftKey ? 'prev' : 'next';
+                this.cycleSelectedCrewMember(direction);
+            }
+            return;
         }
 
         if(this.state.keysLocked && this.state.inMonsterBattle){
@@ -2791,6 +2874,7 @@ class DungeonPage extends React.Component {
                         {this.state.minimap.map((e,i)=>{
                             return <div className={`minimap-tile 
                             ${this.state.minimap[i].active ? 'active' : ''}
+                            ${this.props.boardManager && this.props.boardManager.currentOrientation === 'B' && this.state.minimap[i].active ? 'backside' : ''}
                             ${this.state.minimapZoomedTile === i ? 'zoomed' : ''}
                             ${this.state.minimapZoomedTile === i && i === 0 ? 'topLeft' : ''}
                             ${this.state.minimapZoomedTile === i && i === 1 ? 'topMid' : ''}
@@ -2808,6 +2892,8 @@ class DungeonPage extends React.Component {
                                     left: this.calcPlayerIndicatorLeft(),
                                     top: this.calcPlayerIndicatorTop()
                                 }}></div>}
+
+                                {/* per-tile backside badge removed in favor of a single centralized indicator */}
 
                                 {/* // enemies // */}
                                 {this.state.minimapIndicators[i] && this.state.minimapIndicators[i].enemies.map((indicator,idx)=>{
@@ -2842,6 +2928,11 @@ class DungeonPage extends React.Component {
                             </div>
                         })}
                     </div>
+                    {/* Backside indicator: shows centered text when the board is on the backside plane */}
+                    
+                        <div className="backside-indicator">
+                            {this.props.boardManager && this.props.boardManager.currentOrientation === 'B' && <span>backside</span>}
+                        </div>
                     <div className={`tray-wrapper ${this.state.minimapZoomedTile !== null ? (this.state.minimapMarkerTrayOpen ? 'double-expanded' : 'expanded') : ''}`}>
                         {/* <button className="one" onClick={() => this.setState({minimapZoomedTile: null, minimapMarkerTrayOpen: false})}>Zoom Out</button> */}
                         {/* <button className="one" onClick={() => this.beginMarkingMap()}>Mark Map</button> */}
@@ -2880,12 +2971,7 @@ class DungeonPage extends React.Component {
                     </div>
                 </div>
                 <div className="crew-container">
-                    <div className="title">Crew</div>
-                    {/* Prototype tasks toggle (user-requested visible hook) */}
-                    <div className="prototype-tasks-toggle" onClick={this.togglePrototypeTasks} style={{cursor:'pointer', fontSize:12, color:'#ccc', marginBottom:6}}>Prototype Tasks</div>
-                    {this.state.prototypeTasksOpen && <div className="prototype-tasks-panel" style={{background:'#1b1b1b', padding:6, borderRadius:4, marginBottom:8}}>
-                        <div style={{fontSize:12, color:'#fff'}}>improve prototype package</div>
-                    </div>}
+                    {/* <div className="title">Crew</div> */}
 
                     {/* Death tracker: shows skull icons for recent group deaths (meta.deathTracker) */}
                     {(() => {
@@ -2895,9 +2981,10 @@ class DungeonPage extends React.Component {
                             const tooltip = 'Your crew has met death and been spared. If this happens thrice, your journey is over';
                             // Always render the container (so the portal ref exists and the UI is inspectable)
                             // but only render skulls when deaths > 0
+                                if (!deaths || deaths <= 0) return null;
                                 return (
-                                <div className="death-tracker" aria-label={deaths > 0 ? tooltip : 'No recent group deaths'}>
-                                    {deaths > 0 && new Array(deaths).fill(0).map((_, idx) => (
+                                <div className="death-tracker" aria-label={tooltip}>
+                                    {new Array(deaths).fill(0).map((_, idx) => (
                                         <div
                                             key={idx}
                                             className="death-skull-wrapper"
@@ -3019,10 +3106,15 @@ class DungeonPage extends React.Component {
                 <div className="message-container">
                     {this.state.messageToDisplay}
                 </div>
-                <div className="respawn-message-container">
-                    <div className="hourglass-icon" style={{
-                        backgroundImage: `url(${images['hourglass1']})`
-                    }}></div>{this.state.timeToRespawn}
+                <div className="respawn-message-container" style={{display: 'flex', alignItems: 'center', gap: 8}}>
+                    <div style={{display: 'flex', alignItems: 'center', gap: 6}}>
+                        <div style={{width: 10, height: 10, borderRadius: 10, background: 'red'}}></div>
+                        <div style={{fontSize: 12}}>{this.state.timeToRespawn}</div>
+                    </div>
+                    <div style={{display: 'flex', alignItems: 'center', gap: 6}}>
+                        <div style={{width: 10, height: 10, borderRadius: 10, background: 'gold'}}></div>
+                        <div style={{fontSize: 12}}>{this.state.itemTimeToRespawn}</div>
+                    </div>
                 </div>
                 <div  className="overlay-board" style={{
                     width: this.state.boardSize+'px', height: this.state.boardSize+ 'px',
@@ -3340,19 +3432,37 @@ class DungeonPage extends React.Component {
                                                 <div key={key} className="stat-line" style={{display: 'flex', justifyContent: 'space-between', width: '100%', padding: '2px 0'}}>
                                                     <span className="stat-name">{key === 'hp' ? 'hp max' : key}</span>
                                                     {key === 'attack' ? (
-                                                        <span className="stat-value" style={{display: 'flex', alignItems: 'center', gap: 6}}>
-                                                            {weaponPercent > 0 && (
-                                                                <span className="stat-percent">{`+${weaponPercent}%`}</span>
-                                                            )}
-                                                            <span>{value}</span>
-                                                        </span>
+                                                        (() => {
+                                                            const percent = weaponPercent;
+                                                            const boosted = percent > 0 ? (value * (1 + percent / 100)) : null;
+                                                            return (
+                                                                <span className="stat-value" style={{display: 'flex', alignItems: 'center', gap: 6}}>
+                                                                    {percent > 0 && (
+                                                                        <span className="stat-percent">{`+${percent}%`}</span>
+                                                                    )}
+                                                                    <span className="stat-base">{value}</span>
+                                                                    {boosted !== null && (
+                                                                        <span className="stat-boosted" style={{color: 'lightgreen'}}>{boosted.toFixed(2)}</span>
+                                                                    )}
+                                                                </span>
+                                                            )
+                                                        })()
                                                     ) : key === 'defense' ? (
-                                                        <span className="stat-value" style={{display: 'flex', alignItems: 'center', gap: 6}}>
-                                                            {armorPercent > 0 && (
-                                                                <span className="stat-percent">{`+${armorPercent}%`}</span>
-                                                            )}
-                                                            <span>{value}</span>
-                                                        </span>
+                                                        (() => {
+                                                            const percent = armorPercent;
+                                                            const boosted = percent > 0 ? (value * (1 + percent / 100)) : null;
+                                                            return (
+                                                                <span className="stat-value" style={{display: 'flex', alignItems: 'center', gap: 6}}>
+                                                                    {percent > 0 && (
+                                                                        <span className="stat-percent">{`+${percent}%`}</span>
+                                                                    )}
+                                                                    <span className="stat-base">{value}</span>
+                                                                    {boosted !== null && (
+                                                                        <span className="stat-boosted" style={{color: 'lightgreen'}}>{boosted.toFixed(2)}</span>
+                                                                    )}
+                                                                </span>
+                                                            )
+                                                        })()
                                                     ) : (
                                                         <span className="stat-value">{value}</span>
                                                     )}

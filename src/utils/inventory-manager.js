@@ -13,6 +13,35 @@ const swords = [
     'greatsword_sword',
     'shortsword_sword',
 ]
+
+const axes = [
+    'woodcutters_axe',
+    'bloodcleaver_axe',
+    'hillbiter_axe',
+    'ironcleaver_axe',
+    'rune_axe',
+    'timberfall_axe',
+    'grovehack_axe',
+    'stormsplitter_axe',
+    'bonecutter_axe',
+    'frostedge_axe',
+    'emberchop_axe',
+    'razorfang_axe',
+    'stonebreaker_axe',
+    'mossreaper_axe',
+    'warcleaver_axe',
+    'blackroot_axe',
+    'dawnsplitter_axe',
+    'duskbane_axe',
+    'thunderhewer_axe',
+    'skullsplitter_axe',
+    'giantsbane_axe',
+    'vinecutter_axe',
+    'obsidian_axe',
+    'ashwood_axe',
+    'drakebane_axe'
+];
+
 export function InventoryManager(){
     this.tiles = [];
     this.gold = 0;
@@ -67,8 +96,7 @@ export function InventoryManager(){
         'minor_key',
         'major_key'
     ]
-    this.weapons_names = [
-        'axe',
+    this.weapons_names = axes.concat([
         'flail',
         'scimitar',
         'spear',
@@ -85,7 +113,7 @@ export function InventoryManager(){
         'gladius_sword',
         'greatsword_sword',
         'shortsword_sword',
-    ]
+    ]);
     this.potions_names = [
         'minor_health_potion',
         'major_health_potion',
@@ -171,18 +199,36 @@ export function InventoryManager(){
         },
     }
     this.weapons = {
-        axe: {
-            damage: 30,
-            icon: 'axe',
-            type: 'weapon',
-            subtype: 'cutting',
-            name: 'axe',
-            range: 'close',
-            equippedBy: null,
-            animation: null,
-            description: 'The basic axe does 30 (percent points)'
-        },
-        flail: {
+    /* named axes mapped to numbered axe icons */
+    woodcutters_axe: { damage: 30, icon: 'axe_1', type: 'weapon', subtype: 'cutting', tier: 1, name: "Woodcutter's Axe", range: 'close', equippedBy: null, animation: null, description: "A sturdy woodcutter's axe (30 percent points)" },
+    bloodcleaver_axe: { damage: 32, icon: 'axe_2', type: 'weapon', subtype: 'cutting', tier: 1, name: "Bloodcleaver Axe", range: 'close', equippedBy: null, animation: null, description: 'A vicious cleaver (32 percent points)' },
+    hillbiter_axe: { damage: 34, icon: 'axe_3', type: 'weapon', subtype: 'cutting', tier: 1, name: 'Hillbiter Axe', range: 'close', equippedBy: null, animation: null, description: 'A hillbiter axe (34 percent points)' },
+    ironcleaver_axe: { damage: 36, icon: 'axe_4', type: 'weapon', subtype: 'cutting', tier: 1, name: 'Ironcleaver Axe', range: 'close', equippedBy: null, animation: null, description: 'An iron cleaver (36 percent points)' },
+    rune_axe: { damage: 38, icon: 'axe_5', type: 'weapon', subtype: 'cutting', tier: 1, name: 'Rune Axe', range: 'close', equippedBy: null, animation: null, description: 'A rune-etched axe (38 percent points)' },
+    timberfall_axe: { damage: 40, icon: 'axe_6', type: 'weapon', subtype: 'cutting', tier: 1, name: 'Timberfall Axe', range: 'close', equippedBy: null, animation: null, description: 'A timberfall axe (40 percent points)' },
+    grovehack_axe: { damage: 42, icon: 'axe_7', type: 'weapon', subtype: 'cutting', tier: 1, name: 'Grovehack Axe', range: 'close', equippedBy: null, animation: null, description: 'A grovehack axe (42 percent points)' },
+    stormsplitter_axe: { damage: 44, icon: 'axe_8', type: 'weapon', subtype: 'cutting', tier: 1, name: 'Stormsplitter Axe', range: 'close', equippedBy: null, animation: null, description: 'A stormsplitter axe (44 percent points)' },
+    bonecutter_axe: { damage: 46, icon: 'axe_9', type: 'weapon', subtype: 'cutting', tier: 1, name: 'Bonecutter Axe', range: 'close', equippedBy: null, animation: null, description: 'A bonecutter axe (46 percent points)' },
+    frostedge_axe: { damage: 48, icon: 'axe_10', type: 'weapon', subtype: 'cutting', tier: 1, name: 'Frostedge Axe', range: 'close', equippedBy: null, animation: null, description: 'A frostedge axe (48 percent points)' },
+    emberchop_axe: { damage: 50, icon: 'axe_11', type: 'weapon', subtype: 'cutting', tier: 1, name: 'Emberchop Axe', range: 'close', equippedBy: null, animation: null, description: 'An emberchop axe (50 percent points)' },
+    
+    razorfang_axe: { damage: 72, icon: 'axe_12', type: 'weapon', subtype: 'cutting', tier: 2, name: 'Razorfang Axe', range: 'close', equippedBy: null, animation: null, description: 'A razorfang axe (52 percent points)' },
+    stonebreaker_axe: { damage: 74, icon: 'axe_13', type: 'weapon', subtype: 'cutting', tier: 2, name: 'Stonebreaker Axe', range: 'close', equippedBy: null, animation: null, description: 'A stonebreaker axe (54 percent points)' },
+    mossreaper_axe: { damage: 80, icon: 'axe_14', type: 'weapon', subtype: 'cutting', tier: 2, name: 'Mossreaper Axe', range: 'close', equippedBy: null, animation: null, description: 'A mossreaper axe (56 percent points)' },
+    warcleaver_axe: { damage: 86, icon: 'axe_15', type: 'weapon', subtype: 'cutting', tier: 2, name: 'Warcleaver Axe', range: 'close', equippedBy: null, animation: null, description: 'A warcleaver axe (58 percent points)' },
+    blackroot_axe: { damage: 90, icon: 'axe_16', type: 'weapon', subtype: 'cutting', tier: 2, name: 'Blackroot Axe', range: 'close', equippedBy: null, animation: null, description: 'A blackroot axe (60 percent points)' },
+    dawnsplitter_axe: { damage: 95, icon: 'axe_17', type: 'weapon', subtype: 'cutting', tier: 2, name: 'Dawnsplitter Axe', range: 'close', equippedBy: null, animation: null, description: 'A dawnsplitter axe (62 percent points)' },
+    duskbane_axe: { damage: 100, icon: 'axe_18', type: 'weapon', subtype: 'cutting', tier: 2, name: 'Duskbane Axe', range: 'close', equippedBy: null, animation: null, description: 'A dusk-bane axe (64 percent points)' },
+
+    thunderhewer_axe: { damage: 120, icon: 'axe_19', type: 'weapon', subtype: 'cutting', tier: 3, name: 'Thunderhewer Axe', range: 'close', equippedBy: null, animation: null, description: 'A thunderhewer axe (66 percent points)' },
+    skullsplitter_axe: { damage: 140, icon: 'axe_20', type: 'weapon', subtype: 'cutting', tier: 3, name: 'Skullsplitter Axe', range: 'close', equippedBy: null, animation: null, description: 'A skullsplitter axe (68 percent points)' },
+    giantsbane_axe: { damage: 160, icon: 'axe_21', type: 'weapon', subtype: 'cutting', tier: 3, name: 'Giantsbane Axe', range: 'close', equippedBy: null, animation: null, description: 'A giantsbane axe (70 percent points)' },
+    vinecutter_axe: { damage: 170, icon: 'axe_22', type: 'weapon', subtype: 'cutting', tier: 3, name: 'Vinecutter Axe', range: 'close', equippedBy: null, animation: null, description: 'A vinecutter axe (72 percent points)' },
+    obsidian_axe: { damage: 180, icon: 'axe_23', type: 'weapon', subtype: 'cutting', tier: 3, name: 'Obsidian Axe', range: 'close', equippedBy: null, animation: null, description: 'An obsidian axe (74 percent points)' },
+    ashwood_axe: { damage: 190, icon: 'axe_24', type: 'weapon', subtype: 'cutting', tier: 3, name: 'Ashwood Axe', range: 'close', equippedBy: null, animation: null, description: 'An ashwood axe (76 percent points)' },
+    drakebane_axe: { damage: 200, icon: 'axe_25', type: 'weapon', subtype: 'cutting', tier: 3, name: 'Drakebane Axe', range: 'close', equippedBy: null, animation: null, description: 'A drakebane axe (78 percent points)' },
+
+    flail: {
             damage: 50,
             icon: 'flail',
             type: 'weapon',

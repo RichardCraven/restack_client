@@ -118,6 +118,32 @@
                 }
                 
             }
+            /* Ensure crew tiles render as a horizontal row on the right-side panel too */
+            .crew-tile-container{
+                width: 200px;
+                display: flex;
+                flex-wrap: wrap;
+                .sub-container{
+                    position: relative;
+                    .hover-message{
+                        color: white;
+                        position: absolute;
+                        font-size: 9px;
+                        top: -7px;
+                        left: 5px;
+                    }
+                    .tile.crew-tile{
+                        margin: 5px;
+                        background-color: lightgrey;
+                        &:hover{
+                            background-color: rgb(151, 176, 208) !important;
+                        }
+                        &.active{
+                            background-color: #f9b115 !important;
+                        }
+                    }
+                }
+            }
         }
         .actions-tray{
             color: white;
@@ -227,27 +253,34 @@
                     outline: none;
                 }
                 .death-skull{
-                    width: 32px;
-                    height: 32px;
-                    background-size: contain;
-                    background-repeat: no-repeat;
-                    opacity: 0.95;
-                    filter: invert(1);
-                }
-                /* Portal tooltip (rendered into death-tracker container or document.body). Position is set inline depending on portal target. */
-                /* Using native browser tooltip via title attribute on .death-skull-wrapper; no custom tooltip styles needed */
-            }
-            .crew-tile-container{
-                width: 100%;
-                display: flex;
-                flex-direction: row;
-                flex-wrap: nowrap; /* keep tiles on a single row */
-                gap: 8px;
-                overflow-x: auto; /* allow horizontal scrolling if too many */
-                padding: 8px;
-                .sub-container{
-                    position: relative;
-                    flex: 0 0 auto; /* prevent stretching */
+                        width: 100%;
+                        height: 40px;
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+                        padding: 8px;
+                        position: relative;
+                        /* entrance animation when tracker appears */
+                        animation: deathTrackerFade 320ms ease-out;
+
+                        /* Per-skull wrapper + tooltip */
+                        .death-skull-wrapper{
+                            position: relative;
+                            display: inline-block;
+                            outline: none;
+                            transform-origin: center center;
+                            animation: deathSkullPop 360ms cubic-bezier(.2,.8,.2,1);
+                        }
+                        .death-skull{
+                            width: 32px;
+                            height: 32px;
+                            background-size: contain;
+                            background-repeat: no-repeat;
+                            opacity: 0.95;
+                            filter: invert(1);
+                            /* slight drop shadow for contrast */
+                            box-shadow: 0 1px 3px rgba(0,0,0,0.45);
+                        }
                     .hover-message{
                         color: white;
                         position: absolute;
@@ -285,6 +318,8 @@
             flex-wrap: wrap;
             justify-content: center;
             position: relative;
+            /* space below map-wrapper for the backside indicator */
+            margin-bottom: 6px;
             .level-indicator{
                 position: absolute;
                 border: 1px solid #2a2929;
@@ -313,6 +348,42 @@
                 width: 50px;
                 background: black;
                 transition: transform 1s;
+                &.backside{
+                    background: #2c384af2;
+                    /* When active and backside, emphasize with a subtle dashed border */
+                    &.active{
+                        border: 2px dashed rgba(255,255,255,0.08);
+                        box-shadow: inset 0 0 6px rgba(0,0,0,0.45);
+                    }
+                    /* Small badge that indicates the backside state */
+                /* entrance keyframes */
+                @keyframes deathTrackerFade{
+                    from { opacity: 0; transform: translateY(-6px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+                @keyframes deathSkullPop{
+                    0% { transform: scale(0.6); opacity: 0; }
+                    60% { transform: scale(1.08); opacity: 1; }
+                    100% { transform: scale(1); }
+                }
+                    .backside-badge{
+                        position: absolute;
+                        top: 4px;
+                        right: 4px;
+                        height: 14px;
+                        width: 14px;
+                        border-radius: 50%;
+                        background: rgba(0,0,0,0.6);
+                        color: #fff;
+                        font-size: 10px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        border: 1px solid rgba(255,255,255,0.12);
+                        z-index: 5;
+                        pointer-events: none;
+                    }
+                }
                 &:hover{
                     cursor: pointer;
                     border: 1px solid rgba(253, 224, 224, 0.523);
@@ -381,6 +452,19 @@
                     }
                 }
             }
+        }
+        .backside-indicator{
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            text-transform: lowercase;
+            pointer-events: none;
+            margin: 6px;
+            padding-left: 4px;
+            width: 100%;
         }
         .tray-wrapper{
             width: 100%;
@@ -516,6 +600,13 @@
                 padding: 0px 25px;
                 span.stat-value{
                     margin-left: 10px;
+                    font-size: 12px;
+                }
+                /* ensure numeric values align vertically in the left crew info */
+                span.stat-value{
+                    display: inline-block;
+                    min-width: 36px;
+                    text-align: right;
                 }
             }
             .portrait-wrapper{

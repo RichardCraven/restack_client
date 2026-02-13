@@ -300,6 +300,7 @@ combatKeyDownHandler = (event) => {
             if(this.monsterBattleComponentRef.current) this.monsterBattleComponentRef.current.selectConsumableSpecial();
         break;
         case 'Tab':
+            try { console.debug('[CombatSimulator] Tab pressed, shiftDown=', this.state.shiftDown, 'ctrlDown=', this.state.ctrlDown); } catch(e) {}
             event.preventDefault();
             if(this.state.shiftDown){
                 if(this.monsterBattleComponentRef.current) this.monsterBattleComponentRef.current.tabToRetarget();

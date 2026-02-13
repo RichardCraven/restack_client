@@ -18,12 +18,30 @@ function attackFromTheBack(caller, combatants, data) {
     let foundBackTarget = false;
     // Sort enemies by depth (closest to front)
     const sortedByDepth = [...liveEnemies].sort((a, b) => a.depth - b.depth);
+    const isOccupied = (coords) => {
+        // Prefer combat-manager-provided helper when available
+        if (data && data.methods && typeof data.methods.someoneIsInCoords === 'function') {
+            try { return !!data.methods.someoneIsInCoords(coords, combatants); } catch (e) {}
+        }
+        // Fallback: check both direct coordinates and occupiedCoords arrays
+        return Object.values(combatants).some(e => {
+            try {
+                if (!e) return false;
+                if (e.coordinates && e.coordinates.x === coords.x && e.coordinates.y === coords.y) return true;
+                if (Array.isArray(e.occupiedCoords) && e.occupiedCoords.some(c => c.x === coords.x && c.y === coords.y)) return true;
+                return false;
+            } catch (err) { return false; }
+        });
+    }
+
     for (const enemy of sortedByDepth) {
         const desiredX = enemy.coordinates.x + 1;
         const desiredY = enemy.coordinates.y;
         const isWithinBounds = desiredX < data.MAX_DEPTH;
-        const occupied = Object.values(combatants).some(e => !e.dead && e.coordinates.x === desiredX && e.coordinates.y === desiredY);
-        console.log('attackFromTheBack: considering enemy', { id: enemy.id, name: enemy.name, enemyCoords: enemy.coordinates, desiredX, desiredY, isWithinBounds, occupied });
+        // Prefer AI helper that knows about occupiedCoords / virtual occupancy
+        // Prefer AI helper that knows about occupiedCoords / virtual occupancy
+        const occupied = isOccupied({ x: desiredX, y: desiredY });
+        // If the desired tile is within bounds and not occupied (including virtual occupancy), consider it
         if (isWithinBounds && !occupied) {
             // Move only one space per turn toward the desired position
             const dx = desiredX - caller.coordinates.x;
@@ -36,26 +54,25 @@ function attackFromTheBack(caller, combatants, data) {
                 nextY += Math.sign(dy);
             }
             // Only move if the next tile is not occupied
-            const nextOccupied = Object.values(combatants).some(e => !e.dead && e.coordinates.x === nextX && e.coordinates.y === nextY);
+            const nextOccupied = isOccupied({ x: nextX, y: nextY });
             if (!nextOccupied) {
-                console.log('attackFromTheBack: moving caller', { callerId: caller.id, from: { x: caller.coordinates.x, y: caller.coordinates.y }, to: { x: nextX, y: nextY }, enemyId: enemy.id });
+                // move caller one step toward desired spot
                 caller.coordinates.x = nextX;
                 caller.coordinates.y = nextY;
             } else {
-                console.log('attackFromTheBack: next tile occupied, skipping move', { callerId: caller.id, nextX, nextY });
+                // next tile is occupied (including virtual occupancy) - skip move
             }
             caller.facing = 'left';
             // Only set a pending attack if the caller is now adjacent to the enemy
             const adjX = Math.abs(caller.coordinates.x - enemy.coordinates.x);
             const adjY = Math.abs(caller.coordinates.y - enemy.coordinates.y);
-            if (adjX <= 1 && adjY === 0) {
-                if (typeof data.chooseAttackType === 'function') {
-                    caller.pendingAttack = data.chooseAttackType(caller, enemy);
-                    console.log('attackFromTheBack: pendingAttack set', { callerId: caller.id, pendingAttack: caller.pendingAttack && caller.pendingAttack.name });
+                if (adjX <= 1 && adjY === 0) {
+                    if (typeof data.chooseAttackType === 'function') {
+                        caller.pendingAttack = data.chooseAttackType(caller, enemy);
+                    }
+                } else {
+                    // not in range after move
                 }
-            } else {
-                console.log('attackFromTheBack: not in attack range after move', { callerId: caller.id, callerCoords: caller.coordinates, enemyCoords: enemy.coordinates });
-            }
             caller.targetId = enemy.id;
             foundBackTarget = true;
             break;
@@ -66,13 +83,13 @@ function attackFromTheBack(caller, combatants, data) {
         const sortedByBack = [...liveEnemies].sort((a, b) => b.coordinates.x - a.coordinates.x);
         let placed = false;
             for (const enemy of sortedByBack) {
-                console.log('attackFromTheBack (fallback): evaluating enemy', { id: enemy.id, name: enemy.name, coords: enemy.coordinates });
+                // fallback: evaluating enemy
             // Try to move above or below the enemy if can't go past their column
             const aboveY = enemy.coordinates.y - 1;
             const belowY = enemy.coordinates.y + 1;
             const x = enemy.coordinates.x;
             // Try above (move only one space per turn)
-                if (aboveY >= 0 && !Object.values(combatants).some(e => !e.dead && e.coordinates.x === x && e.coordinates.y === aboveY)) {
+            if (aboveY >= 0 && !isOccupied({ x, y: aboveY })) {
                 // Move caller one space toward aboveY if not already there
                 let nextY = caller.coordinates.y;
                 if (nextY > aboveY) {
@@ -82,12 +99,12 @@ function attackFromTheBack(caller, combatants, data) {
                 } else {
                     nextY = aboveY;
                 }
-                if (!Object.values(combatants).some(e => !e.dead && e.coordinates.x === x && e.coordinates.y === nextY)) {
-                    console.log('attackFromTheBack: placing caller above enemy', { callerId: caller.id, to: { x, y: nextY }, enemyId: enemy.id });
+                if (!isOccupied({ x, y: nextY })) {
+                    // place caller above enemy
                     caller.coordinates.x = x;
                     caller.coordinates.y = nextY;
                 } else {
-                    console.log('attackFromTheBack: desired above position occupied', { x, nextY });
+                    // desired above position occupied
                 }
                 caller.facing = 'left';
                 // Only set pending attack if in adjacency after placement
@@ -95,16 +112,16 @@ function attackFromTheBack(caller, combatants, data) {
                     if (typeof data.chooseAttackType === 'function') {
                         caller.pendingAttack = data.chooseAttackType(caller, enemy);
                     }
-                    console.log('attackFromTheBack: pendingAttack set after above placement', { callerId: caller.id, pendingAttack: caller.pendingAttack && caller.pendingAttack.name });
+                    // pendingAttack set after above placement
                 } else {
-                    console.log('attackFromTheBack: not adjacent after above placement', { callerCoords: caller.coordinates, enemyCoords: enemy.coordinates });
+                    // not adjacent after above placement
                 }
                 caller.targetId = enemy.id;
                 placed = true;
                 break;
             }
             // Try below (move only one space per turn)
-            if (belowY < data.MAX_LANES && !Object.values(combatants).some(e => !e.dead && e.coordinates.x === x && e.coordinates.y === belowY)) {
+            if (belowY < data.MAX_LANES && !isOccupied({ x, y: belowY })) {
                 let nextY = caller.coordinates.y;
                 if (nextY < belowY) {
                     nextY += 1;
@@ -113,21 +130,21 @@ function attackFromTheBack(caller, combatants, data) {
                 } else {
                     nextY = belowY;
                 }
-                if (!Object.values(combatants).some(e => !e.dead && e.coordinates.x === x && e.coordinates.y === nextY)) {
-                    console.log('attackFromTheBack: placing caller below enemy', { callerId: caller.id, to: { x, y: nextY }, enemyId: enemy.id });
+                if (!isOccupied({ x, y: nextY })) {
+                    // place caller below enemy
                     caller.coordinates.x = x;
                     caller.coordinates.y = nextY;
                 } else {
-                    console.log('attackFromTheBack: desired below position occupied', { x, nextY });
+                    // desired below position occupied
                 }
                 caller.facing = 'left';
                 if (Math.abs(caller.coordinates.x - enemy.coordinates.x) <= 1 && Math.abs(caller.coordinates.y - enemy.coordinates.y) === 0) {
                     if (typeof data.chooseAttackType === 'function') {
                         caller.pendingAttack = data.chooseAttackType(caller, enemy);
                     }
-                    console.log('attackFromTheBack: pendingAttack set after below placement', { callerId: caller.id, pendingAttack: caller.pendingAttack && caller.pendingAttack.name });
+                    // pendingAttack set after below placement
                 } else {
-                    console.log('attackFromTheBack: not adjacent after below placement', { callerCoords: caller.coordinates, enemyCoords: enemy.coordinates });
+                    // not adjacent after below placement
                 }
                 caller.targetId = enemy.id;
                 placed = true;

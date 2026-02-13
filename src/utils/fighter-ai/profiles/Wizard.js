@@ -131,7 +131,6 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
     return attack;
     }
     this.useSpell = (caller, combatants) => {
-        console.log('USE SPELL', caller);
         // const getGlyph = () => {
 
         // }
@@ -149,7 +148,7 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
             const maxPts = (typeof caller.movementPointsMax === 'number') ? caller.movementPointsMax : (caller.manualMovesTotal || 1);
             if (typeof magicMissile.movement_point_cost === 'undefined') magicMissile.movement_point_cost = Math.ceil(maxPts * 0.25);
         }
-        console.log('magic missile: ', magicMissile, 'cooldown: ', magicMissile ? magicMissile.cooldown_position : 'N/A');
+        
         // Three conditions to cast: cooldown_position===100, enough energy, and enough movement points
         const magicMissileAvailable = magicMissile && (magicMissile.cooldown_position === 100) && (typeof magicMissile.energy_cost === 'number' ? caller.energy >= magicMissile.energy_cost : true) && (typeof magicMissile.movement_point_cost === 'number' ? ((typeof caller.movementPointsCurrent === 'number' ? caller.movementPointsCurrent : caller.manualMovesCurrent || 0) >= magicMissile.movement_point_cost) : true);
         if (magicMissileAvailable) {
@@ -166,7 +165,7 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                 } else if (this.useSpellMagicMissile) {
                     this.useSpellMagicMissile(caller, target, magicMissile);
                 } else {
-                    console.log('about to TREIGGER magic missile, this.monsterBattleRef: ', this.monsterBattleRef);
+                    
                     caller.specialActions = caller.specialActions.filter(a => a !== magicMissile)
                     // notify host/owner that caller data changed so UI can re-render
                     if (typeof this.broadcastDataUpdate === 'function') {
@@ -199,7 +198,7 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                         }
                     } catch (err) { /* non-fatal */ }
                     this.triggerMagicMissile(caller, target, 1500);
-                    console.log('now speical actions: ', caller.specialActions);
+                    
                 }
                 // magicMissile.cooldown_position = magicMissile.cooldown || 3;
                 // console.log('spell available');

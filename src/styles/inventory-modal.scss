@@ -310,7 +310,6 @@
 .inventory-modal .stat-percent{
     color: lightgreen;
     font-weight: 600;
-    margin-right: 6px;
 }
 
 /* Ensure stat-value container aligns percent and number */
@@ -318,5 +317,21 @@
 .inventory-modal .stat-line .stat-value{
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 0px;
+    font-size: 12px;
+}
+
+/* Ensure numeric values align vertically: reserve a minimum width and right-align digits */
+.inventory-popup .stat-line .stat-base,
+.inventory-modal .stat-line .stat-base{
+    display: inline-block;
+    min-width: 20px; /* wide enough for two digits + spacing */
+    text-align: right;
+}
+
+.inventory-popup .stat-line .stat-boosted,
+.inventory-modal .stat-line .stat-boosted{
+    display: inline-block;
+    min-width: 36px;
+    text-align: right;
 }

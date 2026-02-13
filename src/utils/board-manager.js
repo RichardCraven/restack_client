@@ -223,17 +223,22 @@ export function BoardManager(){
             const legacy = t.contains;
             // Handle legacy strings
             if (typeof legacy === 'string') {
-                if (legacy === 'monster') {
+                // normalize space-separated names to underscore form for consistency
+                const normalizedLegacy = legacy.replace(/\s+/g, '_');
+                if (normalizedLegacy === 'monster') {
                     t.contains = { type: 'monster', subtype: this.getRandomMonster() };
-                } else if (this.monstersArr.includes(legacy)) {
-                    t.contains = { type: 'monster', subtype: legacy };
-                } else if (legacy === 'gate') {
+                } else if (this.monstersArr.includes(normalizedLegacy) || this.knownMonsterKeys.includes(normalizedLegacy)) {
+                    t.contains = { type: 'monster', subtype: normalizedLegacy };
+                } else if (normalizedLegacy === 'gate') {
                     t.contains = { type: 'gate', subtype: 'minor' };
-                } else if (legacy === 'lantern') {
+                } else if (normalizedLegacy === 'lantern') {
                     t.contains = { type: 'item', subtype: (this.pickRandom(this.availableItems) || null) };
+                } else if (normalizedLegacy.indexOf('key') !== -1) {
+                    // any key-like legacy string (e.g. 'minor_key' or 'minor key') -> item with subtype
+                    t.contains = { type: 'item', subtype: normalizedLegacy };
                 } else {
                     // generic mapping: keep type as legacy and no subtype
-                    t.contains = { type: legacy, subtype: null };
+                    t.contains = { type: normalizedLegacy, subtype: null };
                 }
             } else {
                 // null/undefined -> leave as null
@@ -402,15 +407,36 @@ export function BoardManager(){
         }
 
         templateBoard.tiles.forEach(templateTile=>{
-            let equivalentTile = currentLevel.miniboards[this.playerTile.boardIndex].tiles.find(tile=> tile.id === templateTile.id)
+            let equivalentTile = currentLevel.miniboards && currentLevel.miniboards[this.playerTile.boardIndex]
+                && currentLevel.miniboards[this.playerTile.boardIndex].tiles
+                ? currentLevel.miniboards[this.playerTile.boardIndex].tiles.find(tile=> tile.id === templateTile.id)
+                : null;
             // Defensive: do not respawn monsters on the player's current tile
             const playerIdx = this.getIndexFromCoordinates(this.playerTile.location);
             if (templateTile && templateTile.id === playerIdx) return;
             if (this.tiles && this.tiles[templateTile.id] && this.tiles[templateTile.id].playerTile) return;
 
-            if(this.getContainsType(templateTile.contains) === 'monster' && !this.isMonster(equivalentTile) && playerIdx !== templateTile.id) {
+            if(this.getContainsType(templateTile.contains) === 'monster' && playerIdx !== templateTile.id) {
+                // If we couldn't locate an equivalent tile in the current board, skip this entry
+                if (!equivalentTile) {
+                    // defensive: should not happen but don't throw
+                    console.debug('respawnMonsters: no equivalent tile found for templateTile.id', templateTile && templateTile.id);
+                    return;
+                }
+                // If there's already a monster present, don't overwrite it
+                if (this.isMonster(equivalentTile)) return;
+
                 // assign a monster object shape — prefer the template's subtype when available
-                const monsterSubtype = this.getContainsSubtype(templateTile.contains) || this.getRandomMonster();
+                let monsterSubtype = this.getContainsSubtype(templateTile.contains) || null;
+                // Validate subtype: prefer knownMonsterKeys or this.monstersArr; fallback to random
+                const subtypeIsKnown = monsterSubtype && (this.monstersArr.includes(monsterSubtype) || (Array.isArray(this.knownMonsterKeys) && this.knownMonsterKeys.includes(monsterSubtype)));
+                if (!subtypeIsKnown) {
+                    if (Array.isArray(this.knownMonsterKeys) && this.knownMonsterKeys.length) {
+                        monsterSubtype = this.knownMonsterKeys.includes(monsterSubtype) ? monsterSubtype : this.getRandomMonster();
+                    } else {
+                        monsterSubtype = this.getRandomMonster();
+                    }
+                }
                 equivalentTile.contains = { type: 'monster', subtype: monsterSubtype };
                 equivalentTile.image = this.getImageForContains(equivalentTile.contains);
                 // Determine a color for the respawned tile. Prefer the template's color, then
@@ -463,6 +489,93 @@ export function BoardManager(){
         try { this._markLargeMonsterStacking(this.tiles); } catch (e) {}
         try { if (this.updateDungeon) this.updateDungeon(this.dungeon); } catch (e) {}
         // Recompute fog-of-war visibility after respawn so newly-placed monsters are visible when appropriate
+        try {
+            const playerIdx = this.getIndexFromCoordinates(this.playerTile.location);
+            if (this.tiles[playerIdx]) this.handleFogOfWar(this.tiles[playerIdx]);
+        } catch (e) {}
+        try { if (this.refreshTiles) this.refreshTiles(); } catch (e) {}
+    }
+    // Respawn items based on a template (separate flow from monsters)
+    this.respawnItems = (template) => {
+        if(!template || !template.levels) return
+        let currentOrientation = this.currentOrientation
+        let currentLevel = currentOrientation === 'F' ? this.currentLevel.front : this.currentLevel.back
+        let foundTemplatePlane;
+        template.levels.forEach((templateLevel, templateIndex)=>{
+            let front = templateLevel.front
+            let back = templateLevel.back
+            let relevantPlane = currentOrientation === 'F' ? front : back
+            if(relevantPlane.name === currentLevel.name){
+                foundTemplatePlane = relevantPlane
+            }
+        })
+        let templateBoard = foundTemplatePlane && foundTemplatePlane.miniboards && foundTemplatePlane.miniboards[this.playerTile.boardIndex]
+        // Normalize the templateBoard for legacy shapes
+        try { this.normalizeBoardTiles(templateBoard); } catch (e) {}
+        try { const tplChanged = this.cleanupMalformedMonsterTiles(templateBoard); } catch (e) {}
+
+        if (!templateBoard) {
+            try { console.warn('respawnItems: no templateBoard found for current boardIndex', this.playerTile && this.playerTile.boardIndex); } catch (e) {}
+            return;
+        }
+
+        templateBoard.tiles.forEach(templateTile=>{
+            let equivalentTile = currentLevel.miniboards[this.playerTile.boardIndex].tiles.find(tile=> tile.id === templateTile.id)
+            // Defensive: do not respawn items on the player's current tile
+            const playerIdx = this.getIndexFromCoordinates(this.playerTile.location);
+            if (templateTile && templateTile.id === playerIdx) return;
+            if (this.tiles && this.tiles[templateTile.id] && this.tiles[templateTile.id].playerTile) return;
+
+            // Only consider item-type template tiles and do not overwrite existing non-null contains
+            if(this.getContainsType(templateTile.contains) === 'item' && (!equivalentTile.contains || this.getContainsType(equivalentTile.contains) === 'void')) {
+                // assign an item object shape — prefer the template's subtype when available
+                const itemSubtype = this.getContainsSubtype(templateTile.contains) || this.getRandomItem();
+                equivalentTile.contains = { type: 'item', subtype: itemSubtype };
+                equivalentTile.image = this.getImageForContains(equivalentTile.contains);
+
+                // Determine a color for the respawned tile. Prefer the template's color, then
+                // the current board definition, otherwise leave as-is.
+                try {
+                    const templateColor = templateTile && templateTile.color;
+                    const boardColor = this.currentBoard && this.currentBoard.tiles && this.currentBoard.tiles[templateTile.id] && this.currentBoard.tiles[templateTile.id].color;
+                    const isValidColor = (c) => (c !== null && c !== undefined && c !== '' && c !== 'black');
+                    const colorToUse = isValidColor(templateColor) ? templateColor : (isValidColor(boardColor) ? boardColor : null);
+                    if (colorToUse) {
+                        equivalentTile.color = colorToUse;
+                        try {
+                            if (this.currentBoard && this.currentBoard.tiles && this.currentBoard.tiles[templateTile.id]) {
+                                this.currentBoard.tiles[templateTile.id].color = colorToUse;
+                            }
+                            if (this.currentOrientation === 'F') {
+                                const levelEntry = this.dungeon.levels.find(e => e.id === this.currentLevel.id);
+                                if (levelEntry && levelEntry.front && levelEntry.front.miniboards) {
+                                    const b = levelEntry.front.miniboards.find(bi => bi.id === this.currentBoard.id);
+                                    if (b && b.tiles && b.tiles[templateTile.id]) b.tiles[templateTile.id].color = colorToUse;
+                                }
+                            } else {
+                                const levelEntry = this.dungeon.levels.find(e => e.id === this.currentLevel.id);
+                                if (levelEntry && levelEntry.back && levelEntry.back.miniboards) {
+                                    const b = levelEntry.back.miniboards.find(bi => bi.id === this.currentBoard.id);
+                                    if (b && b.tiles && b.tiles[templateTile.id]) b.tiles[templateTile.id].color = colorToUse;
+                                }
+                            }
+                        } catch (e) {}
+                    }
+                } catch (e) {}
+
+                // reflect into dungeon structure so persistence will work
+                try {
+                    if (this.currentOrientation === 'F') {
+                        this.dungeon.levels.find(e=>e.id === this.currentLevel.id).front.miniboards.find(b=>b.id === this.currentBoard.id).tiles[templateTile.id].contains = equivalentTile.contains;
+                    } else {
+                        this.dungeon.levels.find(e=>e.id === this.currentLevel.id).back.miniboards.find(b=>b.id === this.currentBoard.id).tiles[templateTile.id].contains = equivalentTile.contains;
+                    }
+                } catch (e) {}
+                this.tiles[templateTile.id] = equivalentTile;
+            }
+        })
+
+        try { if (this.updateDungeon) this.updateDungeon(this.dungeon); } catch (e) {}
         try {
             const playerIdx = this.getIndexFromCoordinates(this.playerTile.location);
             if (this.tiles[playerIdx]) this.handleFogOfWar(this.tiles[playerIdx]);
@@ -531,9 +644,12 @@ export function BoardManager(){
             let tile = board.tiles[i]
             // ensure tile.contains is object-shaped (normalizeBoardTiles already attempted this)
             if (typeof tile.contains === 'string') {
-                // defensive fallback
-                if (tile.contains === 'monster') tile.contains = { type: 'monster', subtype: this.getRandomMonster() };
-                else tile.contains = { type: tile.contains, subtype: null };
+                // defensive fallback: normalize key-like strings into item objects
+                const raw = tile.contains;
+                const normalized = raw.replace(/\s+/g, '_');
+                if (normalized === 'monster') tile.contains = { type: 'monster', subtype: this.getRandomMonster() };
+                else if (normalized.indexOf('key') !== -1) tile.contains = { type: 'item', subtype: normalized };
+                else tile.contains = { type: normalized, subtype: null };
             }
             // for monster entries with missing subtype, assign one
             if (tile.contains && tile.contains.type === 'monster' && !tile.contains.subtype) {
@@ -654,11 +770,14 @@ export function BoardManager(){
         try {
             const raw = destinationTile && destinationTile.contains;
             if (raw && typeof raw === 'string') {
-                // legacy string form: either a monster key or a type name
+                // legacy string form: either a monster key, a key/item, or a type name
                 if (this.monstersArr.includes(raw)) {
                     destinationTile.contains = { type: 'monster', subtype: raw };
                 } else if (raw === 'monster') {
                     destinationTile.contains = { type: 'monster', subtype: this.getRandomMonster() };
+                } else if (typeof raw === 'string' && raw.indexOf('key') !== -1) {
+                    // treat any '*_key' or key-like string as an item (so it can be picked up)
+                    destinationTile.contains = { type: 'item', subtype: raw };
                 } else {
                     destinationTile.contains = { type: raw, subtype: null };
                 }
@@ -671,6 +790,11 @@ export function BoardManager(){
                     } else {
                         destinationTile.contains = { type: raw.type || null, subtype: raw.subtype || null };
                     }
+                } else if (raw.type && typeof raw.type === 'string' && raw.type.indexOf('key') !== -1) {
+                    // objects that specify a key-like type (e.g. { type: 'minor_key' })
+                    // should be treated as items so pickup logic runs. Preserve the
+                    // specific key string in subtype so callers can distinguish variants.
+                    destinationTile.contains = { type: 'item', subtype: raw.type };
                 }
             }
         } catch (e) {
@@ -697,6 +821,7 @@ export function BoardManager(){
                 this.handleGate(destinationTile);
                 return 'impassable';
             case 'item':
+                console.log('picked up item');
                 // destinationTile.contains may be object; callers expect string contains
                 try {
                     const tileForCallback = Object.assign({}, destinationTile, { contains: subtype });
@@ -728,6 +853,7 @@ export function BoardManager(){
                 this.removeTileFromBoard(destinationTile)
             break;
             case 'treasure':
+                console.log('picked up treasure');
                 let treasureFactor, treasureNum = Math.random();
                 if(treasureNum > .85){
                     treasureFactor = 4
