@@ -346,6 +346,25 @@ export function CombatManager(){
         this.combatOver = false;
     }
 
+    // Helper: set occupiedCoords for a combatant, honoring large monsters that
+    // should occupy the tile above them as well.
+    this._setCombatantOccupiedCoords = (combatant) => {
+        if(!combatant) return;
+        try {
+            combatant.occupiedCoords = [];
+            if (combatant.coordinates) combatant.occupiedCoords.push(combatant.coordinates);
+            // Lightweight large-monster detection: allow combatant.large flag or known subtype keys
+            const LARGE_COMBAT_KEYS = ['dragon','beholder','ogre','sphinx','manticore','wyvern','wyvern_alt'];
+            const isLarge = (typeof combatant.large === 'boolean' && combatant.large === true) || (combatant.type && LARGE_COMBAT_KEYS.includes(combatant.type));
+            if (isLarge) {
+                const above = { x: combatant.coordinates.x, y: combatant.coordinates.y - 1 };
+                if (above.y >= 0) combatant.occupiedCoords.push(above);
+            }
+        } catch (e) {
+            // best-effort
+        }
+    }
+
     this.combatants = {};
 
     this.initializeOverlayManager = (combatants) => {
@@ -549,6 +568,8 @@ export function CombatManager(){
                 action.cooldown_position = 100;
             })
             this.combatants[e.id] = createFighter(e, callbacks, this.FIGHT_INTERVAL);
+            // mark occupiedCoords for multi-tile occupancy (large creature support)
+            try { this._setCombatantOccupiedCoords(this.combatants[e.id]); } catch (err) {}
         })
 
         this.data.monster.coordinates = {x:0,y:0}
@@ -561,9 +582,10 @@ export function CombatManager(){
         
         
         // this.data.monster.coordinates = {x:MAX_DEPTH, y:2}
-        let monster = createFighter(this.data.monster, callbacks, this.FIGHT_INTERVAL);
-        monster.isMonster = true;
-        this.combatants[monster.id] = monster;
+    let monster = createFighter(this.data.monster, callbacks, this.FIGHT_INTERVAL);
+    monster.isMonster = true;
+    this.combatants[monster.id] = monster;
+    try { this._setCombatantOccupiedCoords(this.combatants[monster.id]); } catch (err) {}
 
         if(this.data.minions){
             let position = MAX_LANES-1;
@@ -577,6 +599,7 @@ export function CombatManager(){
                 let m = createFighter(e, callbacks, this.FIGHT_INTERVAL)
                 m.isMinion = true;
                 this.combatants[m.id] = m;
+                try { this._setCombatantOccupiedCoords(this.combatants[m.id]); } catch (err) {}
             })
         }
 
@@ -753,9 +776,10 @@ export function CombatManager(){
             console.warn('goToDestination aborted for dead or missing caller:', caller && caller.id);
             return;
         }
-        caller.coordinates.x = caller.destinationCoordinates.x;
-        caller.coordinates.y = caller.destinationCoordinates.y;
-        caller.coordinates = {x: caller.destinationCoordinates.x, y: caller.destinationCoordinates.y}
+    caller.coordinates.x = caller.destinationCoordinates.x;
+    caller.coordinates.y = caller.destinationCoordinates.y;
+    caller.coordinates = {x: caller.destinationCoordinates.x, y: caller.destinationCoordinates.y}
+    try { this._setCombatantOccupiedCoords(caller); } catch (e) {}
         this.fighterMovedToDestination(caller.destinationCoordinates);
         caller.destinationCoordinates = null;
         caller.attacking = caller.attackingReverse = false;
@@ -1245,6 +1269,7 @@ export function CombatManager(){
     }
     this.updateCoordinates = (caller) => {
         caller.coordinates = {x: caller.coordinates.x, y: caller.coordinates.y}
+        try { this._setCombatantOccupiedCoords(caller); } catch (e) {}
     }
     this.acquireTarget = (caller, targetToAvoid = null) => {
         if(this.combatPaused || caller.dead) return;
@@ -1365,10 +1390,12 @@ export function CombatManager(){
     try { this.recalculateFacing(caller); } catch (e) {}
         if(this.fighterAI.roster[caller.type]){
             this.fighterAI.roster[caller.type].processMove(caller, this.combatants, this.hitsTarget, this.missesTarget);
+            try { this._setCombatantOccupiedCoords(caller); } catch (e) {}
             return
         }
         if(this.monsterAI.roster[caller.type]){
             this.monsterAI.roster[caller.type].processMove(caller, this.combatants, this.hitsTarget, this.missesTarget);
+            try { this._setCombatantOccupiedCoords(caller); } catch (e) {}
             return
         }
 
@@ -1580,7 +1607,14 @@ export function CombatManager(){
         this.broadcastDataUpdate();
     }
     this.coordinatesOccupied = (coordinates) => {
-        return Object.values(this.combatants).find(e=> e.coordinates.x === coordinates.x && e.coordinates.y === coordinates.y)
+        return Object.values(this.combatants).find(e=>{
+            try {
+                if(!e) return false;
+                if (e.coordinates && e.coordinates.x === coordinates.x && e.coordinates.y === coordinates.y) return true;
+                if (Array.isArray(e.occupiedCoords)) return e.occupiedCoords.some(c => c.x === coordinates.x && c.y === coordinates.y);
+                return false;
+            } catch (err) { return false; }
+        })
     }
     this.clearTargetListById = (targetId) => {
         const combatants = Object.values(this.combatants)
@@ -1603,7 +1637,14 @@ export function CombatManager(){
         return {N,S,E,W,NW,NE,SW,SE}
     }
     this.someoneIsInCoords = (coords)=>{
-        return Object.values(this.combatants).some(e=>JSON.stringify(e.coordinates) == JSON.stringify(coords))
+        return Object.values(this.combatants).some(e=>{
+            try {
+                if(!e) return false;
+                if (e.coordinates && JSON.stringify(e.coordinates) === JSON.stringify(coords)) return true;
+                if (Array.isArray(e.occupiedCoords)) return e.occupiedCoords.some(c => JSON.stringify(c) === JSON.stringify(coords));
+                return false;
+            } catch (err) { return false; }
+        })
     }
     this.someoneElseIsInCoords = (caller, coords)=>{
         // console.log('In someoneelse... Object.values(this.combatants).filter(c=>c.id!==caller.id)', Object.values(this.combatants).filter(c=>c.id!==caller.id), 'JSON.stringify(coords)', JSON.stringify(coords));

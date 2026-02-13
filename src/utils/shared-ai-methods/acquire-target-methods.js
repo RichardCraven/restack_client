@@ -19,11 +19,25 @@ const getSurroundings = (coords) => {
 };
 
 const someoneIsInCoords = function(coords) {
-    return Object.values(this.combatants).some(e => JSON.stringify(e.coordinates) === JSON.stringify(coords));
+    return Object.values(this.combatants).some(e => {
+        try {
+            if (!e) return false;
+            if (e.coordinates && JSON.stringify(e.coordinates) === JSON.stringify(coords)) return true;
+            if (Array.isArray(e.occupiedCoords)) return e.occupiedCoords.some(c => JSON.stringify(c) === JSON.stringify(coords));
+            return false;
+        } catch (err) { return false; }
+    });
 };
 
 const someoneElseIsInCoords = function(caller, coords) {
-    return Object.values(this.combatants).filter(c => c.id !== caller.id).some(e => JSON.stringify(e.coordinates) === JSON.stringify(coords));
+    return Object.values(this.combatants).filter(c => c.id !== caller.id).some(e => {
+        try {
+            if (!e) return false;
+            if (e.coordinates && JSON.stringify(e.coordinates) === JSON.stringify(coords)) return true;
+            if (Array.isArray(e.occupiedCoords)) return e.occupiedCoords.some(c => JSON.stringify(c) === JSON.stringify(coords));
+            return false;
+        } catch (err) { return false; }
+    });
 };
 
 export const AcquireTargetMethods = {

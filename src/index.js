@@ -13,6 +13,15 @@ import { CombatManager } from './utils/combat-manager'
 import { AnimationManager } from './utils/animation-manager'
 import { OverlayManager } from './utils/overlay-manager';
 
+// Quiet noisy console.log/debug output across the app while developing.
+// This intentionally preserves console.warn/error while silencing verbose logs.
+// try {
+//   if (typeof console !== 'undefined') {
+//     console.log = function() {};
+//     console.debug = function() {};
+//   }
+// } catch (e) {}
+
 const boardManager = new BoardManager();
 const inventoryManager = new InventoryManager();
 const crewManager = new CrewManager();

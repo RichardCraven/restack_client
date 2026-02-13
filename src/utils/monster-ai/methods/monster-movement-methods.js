@@ -17,7 +17,14 @@ const getSurroundings = (coords) => {
     return {N,S,E,W,NW,NE,SW,SE}
 }
 const someoneIsInCoords = (coords)=>{
-    return Object.values(this.combatants).some(e=>JSON.stringify(e.coordinates) == JSON.stringify(coords))
+    return Object.values(this.combatants).some(e=>{
+        try {
+            if(!e) return false;
+            if (e.coordinates && JSON.stringify(e.coordinates) === JSON.stringify(coords)) return true;
+            if (Array.isArray(e.occupiedCoords)) return e.occupiedCoords.some(c => JSON.stringify(c) === JSON.stringify(coords));
+            return false;
+        } catch (err) { return false; }
+    })
 }
 const someoneElseIsInCoords = (caller, coords)=>{
     return Object.values(this.combatants).filter(c=>c.id!==caller.id).some(e=>JSON.stringify(e.coordinates) == JSON.stringify(coords))
@@ -129,7 +136,14 @@ export const MonsterMovementMethods = {
             let newCoords = JSON.parse(JSON.stringify(coords))
 
             let someoneIsInCoords = (coords)=>{
-                return Object.values(combatants).filter(c=>c.id!==caller.id).some(e=>JSON.stringify(e.coordinates) == JSON.stringify(coords))
+                return Object.values(combatants).filter(c=>c.id!==caller.id).some(e=>{
+                    try {
+                        if(!e) return false;
+                        if (e.coordinates && JSON.stringify(e.coordinates) === JSON.stringify(coords)) return true;
+                        if (Array.isArray(e.occupiedCoords)) return e.occupiedCoords.some(c => JSON.stringify(c) === JSON.stringify(coords));
+                        return false;
+                    } catch (err) { return false; }
+                })
             }
             const targetIsInCoords = (coords)=>{
                 return JSON.stringify(targetTile) == JSON.stringify(coords);

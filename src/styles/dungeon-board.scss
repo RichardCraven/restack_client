@@ -182,6 +182,14 @@
                 animation-fill-mode: forwards;
                 height: 100%;
             }
+            /* Non-animated static class used when JS controls width. Provides background and a subtle width transition. */
+            .progress-overlay.camp-static{
+                background-color: rgba(249,177,21,0.45);
+                /* start at zero width; JS will set inline width */
+                width: 0%;
+                height: 100%;
+                transition: width 0.6s linear;
+            }
             @keyframes campProgress{
                 from { width: 0%; }
                 to { width: 100%; }

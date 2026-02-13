@@ -81,6 +81,10 @@ export function BoardManager(){
         // 'black_banshee','black_wraith', 'manticore','black_minotaur'
     ];
     this.availableItems = [];
+    // List of monster subtypes that should occupy two vertical tiles (boss portraits)
+    this.largeMonsterKeys = [
+        'dragon', 'beholder', 'ogre', 'sphinx', 'manticore', 'wyvern', 'wyvern_alt'
+    ];
     // Known monster keys from the comprehensive MonsterManager. Use this
     // in cleanup to detect monster keys that may not be present in the
     // lightweight `monstersArr` array (which is curated / sometimes pared down).
@@ -455,6 +459,8 @@ export function BoardManager(){
                 this.tiles[templateTile.id] = equivalentTile;
             }
         })
+        // After respawning monsters, ensure large-monster stacking markers are recomputed
+        try { this._markLargeMonsterStacking(this.tiles); } catch (e) {}
         try { if (this.updateDungeon) this.updateDungeon(this.dungeon); } catch (e) {}
         // Recompute fog-of-war visibility after respawn so newly-placed monsters are visible when appropriate
         try {
@@ -569,6 +575,11 @@ export function BoardManager(){
                 borders: null
             })
         }
+        // After tiles constructed, mark any large/boss monsters that should occupy
+        // the tile above them (so other fighters/minions cannot move into that space).
+        try {
+            this._markLargeMonsterStacking(this.tiles);
+        } catch (e) {}
         // persist any normalizations made to the dungeon tiles
         try { if (this.updateDungeon) this.updateDungeon(this.dungeon); } catch (e) {}
         for(let j = 0; j < 15; j++){
@@ -580,6 +591,46 @@ export function BoardManager(){
         this.handleFogOfWar(this.tiles[this.getIndexFromCoordinates(this.playerTile.location)])
         // Ensure adjacency/overlay indicators are computed immediately after initializing a new board
         try { this.checkAdjacency(); } catch (e) {}
+    }
+
+    // Mark tiles that are blocked because a large monster occupies the tile below them.
+    this._markLargeMonsterStacking = (tilesArr) => {
+        if (!Array.isArray(tilesArr)) return;
+        // Clear any existing markers before recomputing so we don't leave stale flags
+        try {
+            for (let ii = 0; ii < tilesArr.length; ii++) {
+                if (!tilesArr[ii]) continue;
+                try { delete tilesArr[ii].blockedByLargeMonster; } catch (e) {}
+                try { delete tilesArr[ii].blocksAbove; } catch (e) {}
+                try { if (this.overlayTiles && this.overlayTiles[ii]) delete this.overlayTiles[ii].blockedByLargeMonster; } catch (e) {}
+            }
+        } catch (e) {}
+        for (let i = 0; i < tilesArr.length; i++) {
+            try {
+                const t = tilesArr[i];
+                if (!t || !t.contains) continue;
+                const ctype = this.getContainsType(t.contains);
+                const csub = this.getContainsSubtype(t.contains);
+                const isMonster = ctype === 'monster';
+                const isLarge = isMonster && (
+                    // explicit large flag on the contains object
+                    (typeof t.contains.large === 'boolean' && t.contains.large === true) ||
+                    // subtype in configured large keys
+                    (csub && this.largeMonsterKeys.includes(csub))
+                );
+                if (isLarge) {
+                    // tile above is id - 15 (if within board)
+                    const aboveId = t.id - 15;
+                    if (aboveId >= 0 && tilesArr[aboveId]) {
+                        tilesArr[aboveId].blockedByLargeMonster = t.id;
+                        // also reflect into overlayTiles if present
+                        try { if (this.overlayTiles && this.overlayTiles[aboveId]) this.overlayTiles[aboveId].blockedByLargeMonster = t.id; } catch (e) {}
+                        // mark original tile so removal/cleanup can clear above
+                        tilesArr[i].blocksAbove = true;
+                    }
+                }
+            } catch (e) {}
+        }
     }
     this.placePlayer = (coordinates) => {
         let index = this.getIndexFromCoordinates(coordinates)
@@ -756,6 +807,18 @@ export function BoardManager(){
             tile.color = 'white';
         // }
         this.tiles[tile.id] = tile;
+        // If this tile used to block the tile above (large monster), clear that marker
+        try {
+            if (tile.blocksAbove) {
+                const aboveId = tile.id - 15;
+                if (aboveId >= 0 && this.tiles[aboveId]) {
+                    try { delete this.tiles[aboveId].blockedByLargeMonster; } catch (e) {}
+                    try { if (this.overlayTiles && this.overlayTiles[aboveId]) delete this.overlayTiles[aboveId].blockedByLargeMonster; } catch (e) {}
+                }
+                // clear the flag on the originating tile as well
+                try { delete this.tiles[tile.id].blocksAbove; } catch (e) {}
+            }
+        } catch (e) {}
         // Persist the cleared contains and ensure the dungeon/currentBoard tile has a usable color
         try {
             // Update the in-memory currentBoard entry so fog uses the right color immediately
@@ -962,6 +1025,14 @@ export function BoardManager(){
         const destinationIndex = this.getIndexFromCoordinates(destinationCoords),
         destinationTile = this.tiles[destinationIndex];
                 if(this.getContainsType(destinationTile.contains) === 'void') return
+                // Prevent movement into tiles that are logically occupied by a large monster
+                try {
+                    if (destinationTile && destinationTile.blockedByLargeMonster) {
+                        // Optionally notify the user if a messaging callback is present
+                        try { if (this.messaging) this.messaging('That space is occupied by a large creature.'); } catch (e) {}
+                        return
+                    }
+                } catch (e) {}
         let interaction = '';
         if(destinationTile.contains){
           interaction = this.handleInteraction(destinationTile)

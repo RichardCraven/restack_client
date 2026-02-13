@@ -20,10 +20,14 @@
     justify-content: center;
     box-sizing: border-box;
 }
+.modal.inventory-modal{
+    overflow: hidden;
+}
 /* Override CoreUI modal max-width for inventory modal/dialog instances */
 .inventory-modal .modal-dialog,
 .inventory-popup .modal-dialog{
     max-width: 750px !important;
+    margin: 0 auto !important; /* center the modal dialog */
 }
 .modal-backdrop{
     /* dark translucent backdrop so page behind modal is dimmed (not white) */

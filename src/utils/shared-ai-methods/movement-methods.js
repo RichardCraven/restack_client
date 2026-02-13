@@ -52,7 +52,16 @@ const getSurroundings = (coords) => {
 const PC_TYPES = ['soldier','rogue','wizard', 'monk', 'sage', 'barbarian']
 const someoneIsInCoords = (coords, combatants)=>{
     if(!combatants) return false
-    return Object.values(combatants).some(e=>JSON.stringify(e.coordinates) == JSON.stringify(coords))
+    return Object.values(combatants).some(e=>{
+        try {
+            if(!e) return false;
+            if (e.coordinates && JSON.stringify(e.coordinates) === JSON.stringify(coords)) return true;
+            if (Array.isArray(e.occupiedCoords)) {
+                return e.occupiedCoords.some(c => JSON.stringify(c) === JSON.stringify(coords));
+            }
+            return false;
+        } catch (err) { return false; }
+    })
 }
 const isOutOfBounds = (coords) => {
     return coords.x >= MAX_DEPTH || coords.y > MAX_LANES || coords.x < 0 || coords.y < 0

@@ -14,6 +14,7 @@ import {
     addDungeonRequest
   } from '../utils/api-handler';
 import {storeMeta, getMeta, getUserId, getUserName} from '../utils/session-handler';
+import * as CampManager from '../utils/camp-manager';
 import { cilCaretRight, cilCaretLeft, cilMenu} from '@coreui/icons';
 import  CIcon  from '@coreui/icons-react';
 
@@ -360,7 +361,7 @@ class DungeonPage extends React.Component {
             , prototypeTasksOpen: false
             // floating player animation state
             , playerFloatVisible: false
-            , playerFloatStyle: { left: 0, top: 0, transform: 'translate(0px, 0px)' }
+            , playerFloatStyle: { left: 0, top: 0, transform: 'translate3d(0px, 0px, 0px)' }
             , playerAnimating: false
             , animOriginIndex: null
             , animDestIndex: null
@@ -735,8 +736,9 @@ class DungeonPage extends React.Component {
             } catch (e) { boardRect = null }
 
             // Place floating element at origin (use fixed coords so it's viewport-aligned)
-            const floatLeft = (boardRect ? Math.round(boardRect.left) : 0) + originPixel.left;
-            const floatTop = (boardRect ? Math.round(boardRect.top) : 0) + originPixel.top;
+            // Keep floats (no rounding) to avoid sub-pixel jumps during transform.
+            const floatLeft = (boardRect ? boardRect.left : 0) + originPixel.left;
+            const floatTop = (boardRect ? boardRect.top : 0) + originPixel.top;
 
             this.setState({
                 playerFloatVisible: true,
@@ -746,56 +748,88 @@ class DungeonPage extends React.Component {
                 playerFloatStyle: {
                     left: floatLeft,
                     top: floatTop,
-                    transform: `translate(0px, 0px)`,
+                    transform: `translate3d(0px, 0px, 0px)`,
                     backgroundImage: `url(${images[playerImgKey]})`
                 }
             }, () => {
                 // allow the browser to paint initial position, then animate to halfway
                 requestAnimationFrame(() => {
                         // first half: move to midpoint over HALF_MS
-                        const halfX = Math.round(deltaX / 2);
-                        const halfY = Math.round(deltaY / 2);
+                        const halfX = (deltaX / 2);
+                        const halfY = (deltaY / 2);
                         if (this.playerFloatRef.current) {
                             const el = this.playerFloatRef.current;
-                            el.style.transition = `transform ${HALF_MS}ms ease`;
-                            el.style.transform = `translate(${halfX}px, ${halfY}px)`;
+                            // Use translate3d for GPU acceleration and keep sub-pixel precision
+                            el.style.willChange = 'transform';
+                            el.style.transition = `transform ${HALF_MS}ms cubic-bezier(.2,0,.1,1)`;
+                            el.style.transform = `translate3d(${halfX.toFixed(2)}px, ${halfY.toFixed(2)}px, 0px)`;
                         }
 
                         // at halfway, update logical position (call boardManager move) and then continue animation
                         setTimeout(() => {
-                        // invoke the same movement method on the board manager so all logic (interactions, fog, battles)
-                        // is executed at the halfway mark (player now "on" destination logically)
-                        switch (direction) {
-                            case 'up': bm.moveUp(); break;
-                            case 'down': bm.moveDown(); break;
-                            case 'left': bm.moveLeft(); break;
-                            case 'right': bm.moveRight(); break;
-                            default: break;
-                        }
-                        // refresh tiles in state to reflect boardManager changes
-                        try { this.setState({ tiles: [...bm.tiles], overlayTiles: bm.overlayTiles }); } catch (e) {}
+                            // current absolute position of overlay (before board changes)
+                            const halfX = (deltaX / 2);
+                            const halfY = (deltaY / 2);
+                            const currentAbsLeft = floatLeft + halfX;
+                            const currentAbsTop = floatTop + halfY;
 
-                        // continue animation to final position over remaining HALF_MS
-                        requestAnimationFrame(() => {
-                            if (this.playerFloatRef.current) {
-                                const el = this.playerFloatRef.current;
-                                el.style.transition = `transform ${HALF_MS}ms ease`;
-                                el.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+                            // perform logical move first (this may change board DOM/layout)
+                            switch (direction) {
+                                case 'up': bm.moveUp(); break;
+                                case 'down': bm.moveDown(); break;
+                                case 'left': bm.moveLeft(); break;
+                                case 'right': bm.moveRight(); break;
+                                default: break;
                             }
-                        });
 
-                        // cleanup after complete
-                        setTimeout(() => {
-                            // hide floating element and reset
-                            this.setState({ playerFloatVisible: false, playerAnimating: false, animOriginIndex: null, animDestIndex: null });
-                            if (this.playerFloatRef.current) {
-                                const el = this.playerFloatRef.current;
-                                el.style.transition = '';
-                                el.style.transform = 'translate(0px, 0px)';
+                            // refresh tiles in state to reflect boardManager changes, then re-anchor overlay
+                            try {
+                                this.setState({ tiles: [...bm.tiles], overlayTiles: bm.overlayTiles }, () => {
+                                    try {
+                                        const el = this.playerFloatRef.current;
+                                        // compute new board/destination absolute position after DOM update
+                                        let newBoardRect = null;
+                                        try {
+                                            const boardEl = document.querySelector('.center-board-wrapper .board');
+                                            newBoardRect = boardEl ? boardEl.getBoundingClientRect() : null;
+                                        } catch (e) { newBoardRect = null }
+                                        const newDestAbsLeft = (newBoardRect ? newBoardRect.left : 0) + destPixel.left;
+                                        const newDestAbsTop = (newBoardRect ? newBoardRect.top : 0) + destPixel.top;
+
+                                        if (el) {
+                                            // Re-anchor overlay at its current visual spot by moving left/top and clearing transform
+                                            el.style.transition = 'none';
+                                            el.style.left = `${currentAbsLeft}px`;
+                                            el.style.top = `${currentAbsTop}px`;
+                                            el.style.transform = 'translate3d(0px, 0px, 0px)';
+                                            // force reflow so subsequent transition is applied cleanly
+                                            void el.offsetHeight;
+
+                                            // compute remaining delta to destination in absolute coordinates
+                                            const remainingX = newDestAbsLeft - currentAbsLeft;
+                                            const remainingY = newDestAbsTop - currentAbsTop;
+
+                                            // animate remaining distance
+                                            el.style.transition = `transform ${HALF_MS}ms cubic-bezier(.2,0,.1,1)`;
+                                            el.style.transform = `translate3d(${remainingX.toFixed(2)}px, ${remainingY.toFixed(2)}px, 0px)`;
+                                        }
+
+                                        // cleanup after remaining animation completes
+                                        setTimeout(() => {
+                                            this.setState({ playerFloatVisible: false, playerAnimating: false, animOriginIndex: null, animDestIndex: null });
+                                            if (this.playerFloatRef.current) {
+                                                const el2 = this.playerFloatRef.current;
+                                                el2.style.transition = '';
+                                                el2.style.transform = 'translate3d(0px, 0px, 0px)';
+                                                el2.style.willChange = 'auto';
+                                            }
+                                        }, HALF_MS + BUFFER_MS);
+                                    } catch (e) { console.warn('post-move anchoring failed', e); }
+                                });
+                            } catch (e) {
+                                console.warn('failed to setState after move', e);
                             }
                         }, HALF_MS + BUFFER_MS);
-
-                    }, HALF_MS + BUFFER_MS);
                 });
             });
 
@@ -2122,78 +2156,14 @@ class DungeonPage extends React.Component {
         this.setState({ crewActionsTrayExpanded: newVal });
     }
 
-    // Start camping. Accepts optional durationSeconds (number). If called as an event handler,
-    // the first param may be an event object; use default when not provided.
+    // Delegates camping start to CampManager
     setUpCamp = async (maybeDuration) => {
-        let durationSeconds = 180;
-        try { if (typeof maybeDuration === 'number') durationSeconds = maybeDuration; } catch(e){}
-        try {
-            try { if (this.campTimeout) { clearTimeout(this.campTimeout); this.campTimeout = null; } } catch (e) {}
-            let meta = getMeta() || {};
-            const now = new Date();
-            meta.camping = true;
-            meta.campingStart = now.toISOString();
-            meta.campingEnd = new Date(now.getTime() + durationSeconds * 1000).toISOString();
-            storeMeta(meta);
-            try { await updateUserRequest(getUserId(), meta); } catch (e) {}
-            // Persist meta via the higher-level save helper so location and session
-            // state are stored consistently (ensures position is saved on refresh).
-            try { if (this.props.saveUserData) await this.props.saveUserData(); } catch (e) {}
-            // camping started
-            // lock movement hotkeys while camping
-            try { this.setState({ keysLocked: true }); } catch(e) {}
-            if (this.props.boardManager && typeof this.props.boardManager.placePlayer === 'function') {
-                try{ this.props.boardManager.placePlayer(this.props.boardManager.playerTile.location); } catch(e){}
-            }
-            this.setState({ overlayTiles: this.props.boardManager.overlayTiles });
-            // ensure continuous draw loop while camping to avoid flashing
-            try {
-                this._forcedDraw = true;
-                if (!this.cooldownAnimationFrame) this.cooldownAnimationFrame = requestAnimationFrame(this.drawCooldowns);
-            } catch (e) {}
-            // schedule end
-            try { this.campTimeout = this._setTimeout(() => { try { this.endCamp(); } catch(e){ console.warn('endCamp timeout failed', e); } }, durationSeconds*1000 + 200); } catch(e){}
-        } catch (err) { console.warn('setUpCamp error', err); }
+        return CampManager.setUpCamp(this, maybeDuration);
     }
 
-    // End camping immediately and apply restorative effects
+    // Delegates camping end to CampManager
     endCamp = async () => {
-        try {
-            try { if (this.campTimeout) { clearTimeout(this.campTimeout); this.campTimeout = null; } } catch (e) {}
-            let m = getMeta() || {};
-            m.camping = false;
-            delete m.campingStart;
-            delete m.campingEnd;
-            try {
-                const crew = (this.props.crewManager && this.props.crewManager.crew) || [];
-                crew.forEach(member => {
-                    if (!member) return;
-                    if (member.dead) { member.dead = false; member.hp = 1; }
-                    else { try { member.hp = (member.stats && typeof member.stats.hp === 'number') ? member.stats.hp : member.hp || 0; } catch(e){} }
-                });
-                m.crew = crew;
-                try { if (this.props.crewManager) this.props.crewManager.crew = m.crew; } catch(e){}
-            } catch(e){}
-            storeMeta(m);
-            try { await updateUserRequest(getUserId(), m); } catch(e){}
-            if (this.props.boardManager && typeof this.props.boardManager.placePlayer === 'function') {
-                try{ this.props.boardManager.placePlayer(this.props.boardManager.playerTile.location); } catch(e){}
-            }
-            this.setState({ overlayTiles: this.props.boardManager.overlayTiles, selectedCrewMember: this.state.selectedCrewMember });
-            try { if (this.props.saveUserData) this.props.saveUserData(); } catch(e){}
-            // camping ended and crew restored
-            // unlock movement hotkeys
-            try { this.setState({ keysLocked: false }); } catch(e) {}
-            // stop forced draw loop and clear canvas
-            try {
-                this._forcedDraw = false;
-                if (this.cooldownAnimationFrame) { cancelAnimationFrame(this.cooldownAnimationFrame); this.cooldownAnimationFrame = null; }
-                if (this.cooldownCanvas) {
-                    const ctx = this.cooldownCanvas.getContext && this.cooldownCanvas.getContext('2d');
-                    if (ctx) ctx.clearRect(0, 0, this.cooldownCanvas.width, this.cooldownCanvas.height);
-                }
-            } catch (e) {}
-        } catch (err) { console.warn('endCamp error', err); }
+        return CampManager.endCamp(this);
     }
     uppercaseFirstLetter = (text) => {
         return text.charAt(0).toUpperCase() + text.slice(1);
@@ -3001,6 +2971,7 @@ class DungeonPage extends React.Component {
                                 // compute total and elapsed seconds so we can use a negative animationDelay
                                 const totalSeconds = (startDate && endDate) ? Math.max(0, (endDate - startDate) / 1000) : 0;
                                 const elapsedSeconds = (startDate) ? Math.max(0, (now - startDate) / 1000) : 0;
+                                const pct = (totalSeconds > 0) ? Math.min(1, elapsedSeconds / totalSeconds) : 0;
                                 // use a stable id so the placeholder element is not recreated each render
                                 const placeholderId = 'camp-progress-placeholder';
                                 return (
@@ -3010,10 +2981,10 @@ class DungeonPage extends React.Component {
                                             <div
                                                 id={placeholderId}
                                                 ref={el => this.placeholderRef(el, placeholderId, start, end)}
-                                                className={`progress-overlay progress-overlay-placeholder debug-placeholder camp-anim`}
+                                                className={`progress-overlay progress-overlay-placeholder debug-placeholder camp-static`}
                                                 data-start={start}
                                                 data-end={end}
-                                                style={{ animationDuration: `${totalSeconds}s`, animationDelay: `-${elapsedSeconds}s` }}
+                                                style={{ width: `${Math.round(pct * 100)}%` }}
                                             ></div>
                                             <div
                                                 onClick={() => this.endCamp()}
