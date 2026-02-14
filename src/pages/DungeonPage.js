@@ -294,6 +294,7 @@ class DungeonPage extends React.Component {
     constructor(props){
         super(props)
         this.monsterBattleComponentRef = React.createRef()
+        this.devConsoleInputRef = React.createRef()
         this.playerFloatRef = React.createRef()
         // internal registry of active placeholders (id -> { el, start:Date, end:Date })
         this._placeholderRegistry = new Map();
@@ -365,6 +366,9 @@ class DungeonPage extends React.Component {
             , playerAnimating: false
             , animOriginIndex: null
             , animDestIndex: null
+            , devConsoleOpen: false
+            , devConsoleInput: ''
+            , devConsoleOutput: []
         }
     // Native browser tooltip will be used for death-tracker; no custom tooltip state required.
         // Track timers/intervals created by this component so we can clear on unmount
@@ -1009,6 +1013,47 @@ class DungeonPage extends React.Component {
         clearInterval(this.state.intervalId)
     }
 
+    // Dev console handlers
+    handleDevConsoleInputChange = (e) => {
+        this.setState({ devConsoleInput: e.target.value });
+    }
+
+    handleDevConsoleKeyDown = (e) => {
+        if (e.key === 'Enter') {
+            const raw = (this.state.devConsoleInput || '').trim();
+            const cmd = raw.toLowerCase();
+            // built-in commands
+            const monsterCommands = ['monster-spawn','monsterspawn','mspawn'];
+            const itemCommands = ['item-spawn','itemspawn','ispawn'];
+
+            if (monsterCommands.includes(cmd)) {
+                // trigger monster spawn without touching timers
+                try {
+                    this.respawnMonsters();
+                    this.setState(prev => ({ devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, 'Triggered monster spawn (dev console)'], devConsoleInput: '' }));
+                } catch (err) {
+                    this.setState(prev => ({ devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, `Error: ${err && err.message ? err.message : err}`], devConsoleInput: '' }));
+                }
+            } else if (itemCommands.includes(cmd)) {
+                try {
+                    this.respawnItems();
+                    this.setState(prev => ({ devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, 'Triggered item spawn (dev console)'], devConsoleInput: '' }));
+                } catch (err) {
+                    this.setState(prev => ({ devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, `Error: ${err && err.message ? err.message : err}`], devConsoleInput: '' }));
+                }
+            } else {
+                // unknown command: echo
+                this.setState(prev => ({ devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, `Unknown command: ${raw}`], devConsoleInput: '' }));
+            }
+            // keep focus
+            try { if (this.devConsoleInputRef.current) this.devConsoleInputRef.current.focus(); } catch (err) {}
+            e.preventDefault();
+        } else if (e.key === 'Escape') {
+            // close console
+            this.setState({ devConsoleOpen: false });
+        }
+    }
+
     // Draw cooldown overlays onto the full-page canvas. This runs on requestAnimationFrame
     drawCooldowns = (timestamp) => {
         // throttle to _fpsLimit
@@ -1481,6 +1526,19 @@ class DungeonPage extends React.Component {
     }
 
     keyDownHandler = (event) => {
+        // Toggle dev console with Shift+Space
+        try {
+            if ((event.code === 'Space' || event.key === ' ') && event.shiftKey) {
+                event.preventDefault();
+                this.setState(prev => ({ devConsoleOpen: !prev.devConsoleOpen }), () => {
+                    if (this.state.devConsoleOpen) {
+                        // focus input after open
+                        try { setTimeout(() => { if (this.devConsoleInputRef.current) this.devConsoleInputRef.current.focus(); }, 0); } catch (e) {}
+                    }
+                });
+                return;
+            }
+        } catch (e) {}
         // Allow global 'i' to toggle MonsterBattle inventory when a battle is active
         try {
             const maybeKey = event.key;
@@ -2863,6 +2921,32 @@ class DungeonPage extends React.Component {
                         </div>
                 </div>}
             </div>
+            {/* Dev console panel (toggled with Shift+Space) */}
+            {this.state.devConsoleOpen && (
+                <div className="dev-console">
+                    <div className="dev-console-inner">
+                        <div className="dev-console-left">
+                            <input
+                                ref={this.devConsoleInputRef}
+                                className="dev-console-input"
+                                value={this.state.devConsoleInput}
+                                onChange={this.handleDevConsoleInputChange}
+                                onKeyDown={this.handleDevConsoleKeyDown}
+                                placeholder="type command..."
+                            />
+                            <div className="dev-console-typed">{this.state.devConsoleInput}</div>
+                        </div>
+                        <div className="dev-console-divider" />
+                        <div className="dev-console-right">
+                            <div className="dev-console-output">
+                                {this.state.devConsoleOutput.map((line, idx) => (
+                                    <div key={idx} className="dev-console-line">{line}</div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
             <div className={`right-side-panel ${this.state.rightPanelExpanded ? 'expanded' : ''}`}>
                 <div className="minimap-container">
                     <div className="map-wrapper">

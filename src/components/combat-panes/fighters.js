@@ -206,19 +206,21 @@ export default function FightersCombatGrid(props) {
                                                     </div>
                                                 })}
                                             </div>
-                                            {/* Always show circular progress for each fighter; percentage driven by manualMovesCurrent */}
-                                            <div className={`circular-progress ${props.selectedFighter?.id === fighter.id && !fighter.dead ? 'selected' : ''}`} style={{
-                                                background: `conic-gradient(${props.getManualMovementArcColor(props.getFighterDetails(fighter))} ${props.getManualMovementArc(props.getFighterDetails(fighter))}deg, black 0deg)`,
-                                            }}  data-inner-circle-color="lightgrey" data-percentage={(() => {
-                                                const fd = props.getFighterDetails(fighter) || {};
-                                                // Prefer new movementPoints fields, fall back to manualMoves for compatibility
-                                                const current = (typeof fd.movementPointsCurrent === 'number') ? fd.movementPointsCurrent : fd.manualMovesCurrent || 0;
-                                                const total = (typeof fd.movementPointsMax === 'number') ? fd.movementPointsMax : fd.manualMovesTotal || 1;
-                                                const pct = total ? Math.round((current) / total * 100) : 0;
-                                                return pct;
-                                            })()} data-progress-color="crimson" data-bg-color="black">
-                                                <div className="inner-circle"></div>
-                                            </div>
+                                            {/* Only show circular progress for the manually selected fighter */}
+                                            {props.selectedFighter?.id === fighter.id && !fighter.dead && (
+                                                <div className={`circular-progress selected`} style={{
+                                                    background: `conic-gradient(${props.getManualMovementArcColor(props.getFighterDetails(fighter))} ${props.getManualMovementArc(props.getFighterDetails(fighter))}deg, black 0deg)`,
+                                                }}  data-inner-circle-color="lightgrey" data-percentage={(() => {
+                                                    const fd = props.getFighterDetails(fighter) || {};
+                                                    // Prefer new movementPoints fields, fall back to manualMoves for compatibility
+                                                    const current = (typeof fd.movementPointsCurrent === 'number') ? fd.movementPointsCurrent : fd.manualMovesCurrent || 0;
+                                                    const total = (typeof fd.movementPointsMax === 'number') ? fd.movementPointsMax : fd.manualMovesTotal || 1;
+                                                    const pct = total ? Math.round((current) / total * 100) : 0;
+                                                    return pct;
+                                                })()} data-progress-color="crimson" data-bg-color="black">
+                                                    <div className="inner-circle"></div>
+                                                </div>
+                                            )}
                                         </div>
                                         <div className="hp-bar">
                                         {!props.getFighterDetails(fighter)?.dead && <div className="red-fill" 

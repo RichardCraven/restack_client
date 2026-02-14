@@ -221,6 +221,7 @@ import vampire from '../assets/portraits/monsters/vampire.png'
 import vampire_portrait from '../assets/portraits/monsters/vampire.png'
 import troll_portrait from '../assets/portraits/monsters/troll.png'
 import wraith_portrait from '../assets/portraits/monsters/wraith.png'
+import wraith from '../assets/portraits/monsters/wraith.png'
 import skeleton_portrait from '../assets/portraits/monsters/skeleton.png'
 
 
@@ -743,5 +744,6 @@ export {
 
     camp,
     vampire,
-    djinn
+    djinn,
+    wraith
 };
