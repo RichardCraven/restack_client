@@ -14,7 +14,14 @@ const EXP_TABLE = [
     700,
     1500,
     3200,
-    7000
+    7000,
+    15000,
+    31000,
+    60000,
+    120000,
+    250000,
+    500000,
+    1000000
 ]
 
 export function CrewManager(){
@@ -76,43 +83,114 @@ export function CrewManager(){
             let member = this.crew.find(c=>c.type === m.type)
             member.stats.experience += experienceValue
         })
+        // After awarding experience, immediately check for level-up so stats
+        // and level are applied right away (not deferred to initializeCrew).
+        try {
+            this.checkForLevelUp(memberArray);
+        } catch (err) {
+            console.warn('addExperience: checkForLevelUp failed', err);
+        }
     }
 
     this.checkForLevelUp = (memberArray) => {
-        memberArray.forEach(m=>{
-            let nextLevelExp = EXP_TABLE[m.level]
-            let member = this.crew.find(c=>c.type === m.type)
-            if(member.stats.experience >= nextLevelExp){
-                this.levelUp(member)
+        // For each provided member descriptor (usually from battle snapshot), find
+        // the authoritative crew member and apply level-ups repeatedly until
+        // their experience no longer meets the next-level threshold. This
+        // supports multi-level jumps from large XP awards.
+        memberArray.forEach(m => {
+            try {
+                const member = this.crew.find(c => c && (c.type === m.type || c.id === m.id || c.name === m.name));
+                if (!member || !member.stats) return;
+                // ensure tracking arrays exist
+                member._recentLevelGains = member._recentLevelGains || [];
+                // loop while the member has enough experience for the next level
+                while (true) {
+                    const level = (typeof member.level === 'number' && member.level >= 0) ? member.level : 0;
+                    const nextLevelExp = (typeof EXP_TABLE[level] !== 'undefined') ? EXP_TABLE[level] : EXP_TABLE[EXP_TABLE.length - 1];
+                    if (member.stats.experience >= nextLevelExp) {
+                        console.log(member, 'levelled up! current level: ', member.level, 'experience: ', member.stats.experience, 'next level exp: ', nextLevelExp);
+                        // levelUp will record the gain object and set justLeveled
+                        this.levelUp(member);
+                        // continue loop in case a single award grants multiple levels
+                        continue;
+                    }
+                    break;
+                }
+            } catch (err) {
+                console.warn('checkForLevelUp: per-member processing failed', err, m);
             }
         })
     }
 
     this.levelUp = (crewMember) => {
-        switch(crewMember.type){
+        // Return a small object describing which stats were increased so the
+        // UI can show precise gains. Also set a `justLeveled` flag and record
+        // the recent gains on the crew member for later display.
+        const gains = {};
+        switch (crewMember.type) {
             case 'wizard':
-                crewMember.stats.int++
-            break;
+                crewMember.stats.int = (crewMember.stats.int || 0) + 1;
+                gains.int = 1;
+                break;
             case 'rogue':
-                crewMember.stats.dex++
-            break;
+                crewMember.stats.dex = (crewMember.stats.dex || 0) + 1;
+                gains.dex = 1;
+                break;
             case 'sage':
-                crewMember.stats.int++
-            break;
+                crewMember.stats.int = (crewMember.stats.int || 0) + 1;
+                gains.int = (gains.int || 0) + 1;
+                break;
             case 'monk':
-                crewMember.stats.dex++
-            break;
+                crewMember.stats.dex = (crewMember.stats.dex || 0) + 1;
+                gains.dex = (gains.dex || 0) + 1;
+                break;
             case 'soldier':
-                crewMember.stats.str++
-            break;
+                crewMember.stats.str = (crewMember.stats.str || 0) + 1;
+                gains.str = 1;
+                break;
             case 'barbarian':
-                crewMember.stats.str++
-            break;
+                crewMember.stats.str = (crewMember.stats.str || 0) + 1;
+                gains.str = (gains.str || 0) + 1;
+                break;
+            default:
+                // Fallback: give +1 to fort if type unknown
+                crewMember.stats.fort = (crewMember.stats.fort || 0) + 1;
+                gains.fort = 1;
+                break;
         }
-        crewMember.level++
-
+        crewMember.level = (typeof crewMember.level === 'number' ? crewMember.level : 0) + 1;
+        // mark and record recent gains for UI consumption
+        crewMember.justLeveled = true;
+        crewMember._recentLevelGains = crewMember._recentLevelGains || [];
+        crewMember._recentLevelGains.push(gains);
+        return gains;
     }
 
+
+    // Clear the justLeveled flag and recent gains for a crew member (UI should
+    // call this after the summary/animation has been displayed).
+    this.clearLevelFlags = (crewMember) => {
+        try {
+            if (!crewMember) return;
+            crewMember.justLeveled = false;
+            crewMember._recentLevelGains = [];
+        } catch (err) {
+            console.warn('clearLevelFlags failed', err, crewMember);
+        }
+    }
+
+    // Convenience to clear flags for all crew members
+    this.clearAllLevelFlags = () => {
+        try {
+            this.crew.forEach(m => {
+                if (!m) return;
+                m.justLeveled = false;
+                m._recentLevelGains = [];
+            })
+        } catch (err) {
+            console.warn('clearAllLevelFlags failed', err);
+        }
+    }
     this.calculateExpPercentage = (crewMember) => {
         try {
             if(!crewMember) return 0;

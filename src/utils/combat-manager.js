@@ -355,11 +355,26 @@ export function CombatManager(){
             if (combatant.coordinates) combatant.occupiedCoords.push(combatant.coordinates);
             // Lightweight large-monster detection: allow combatant.large flag or known subtype keys
             const LARGE_COMBAT_KEYS = ['dragon','beholder','ogre','sphinx','manticore','wyvern','wyvern_alt'];
-            const isLarge = (typeof combatant.large === 'boolean' && combatant.large === true) || (combatant.type && LARGE_COMBAT_KEYS.includes(combatant.type));
+            // Treat as large if explicitly marked, if type is known-large, or if
+            // the combatant has a size/scale >= 2 (common sprite/scaling markers).
+            const isLarge = (
+                // explicit flag
+                (typeof combatant.large === 'boolean' && combatant.large === true)
+                // fallback for historically-known large types
+                || (combatant.type && LARGE_COMBAT_KEYS.includes(combatant.type))
+                // scaled or sized sprites
+                || (typeof combatant.size === 'number' && combatant.size >= 2)
+                || (typeof combatant.scale === 'number' && combatant.scale >= 2)
+                // treat the main monster (the battle's primary monster) as "large" so
+                // it virtually occupies the tile above it. Minions (isMinion===true)
+                // will not be treated as large.
+                || (combatant.isMonster === true && combatant.isMinion !== true)
+            );
             if (isLarge) {
                 const above = { x: combatant.coordinates.x, y: combatant.coordinates.y - 1 };
                 if (above.y >= 0) combatant.occupiedCoords.push(above);
             }
+            // debug logs removed
         } catch (e) {
             // best-effort
         }
@@ -463,9 +478,7 @@ export function CombatManager(){
             }
             return undefined;
         });
-        try {
-            console.log('returning ', mapped);
-        } catch (e) {}
+        // debug logs removed
         return mapped;
     }
     // Resolve a special by key from either a caller's `specials` array or an
@@ -909,66 +922,103 @@ export function CombatManager(){
     this.moveFighterOneSpace = (direction) => {
         let pendingCoordinates, spaceOccupier;
 
-        if(!this.selectedFighter) return 
-        const fighter = this.combatants[this.selectedFighter.id]
-        if(!fighter || fighter.dead || fighter.locked) return;
-        if(fighter.manualMovesCurrent < 1){
-            return
-        } else {
-            // fighter.manualMovesCurrent--
-            // console.log('restart manual');
-            // fighter.restartTurnCycle();
+        // debug logs removed
+
+        if(!this.selectedFighter) {
+            try { console.warn('moveFighterOneSpace: no selectedFighter'); } catch(e){}
+            return;
         }
+
+        const fighter = this.combatants[this.selectedFighter.id]
+
+        if(!fighter) {
+            try { console.warn('moveFighterOneSpace: selected fighter not found in combatants'); } catch(e){}
+            return;
+        }
+        if(fighter.dead) {
+            try { console.warn('moveFighterOneSpace: fighter is dead, move aborted'); } catch(e){}
+            return;
+        }
+        if(fighter.locked) {
+            try { console.warn('moveFighterOneSpace: fighter is locked, move aborted'); } catch(e){}
+            return;
+        }
+        if(typeof fighter.manualMovesCurrent === 'number' && fighter.manualMovesCurrent < 1){
+            try { console.warn('moveFighterOneSpace: no manual moves left (manualMovesCurrent=', fighter.manualMovesCurrent, ')'); } catch(e){}
+            return
+        }
+
+        // compute pending coordinates, occupancy, and decision for each direction
         switch(direction){
             case 'up':
-                if(fighter.coordinates.y === 0) return;
+                if(fighter.coordinates.y === 0) {
+                    console.warn('moveFighterOneSpace: already at top row (y=0)');
+                    break;
+                }
                 pendingCoordinates = {x: fighter.coordinates.x , y: fighter.coordinates.y-1}
-                // respect virtual occupancy (occupiedCoords) and ignore dead combatants
-                spaceOccupier = this.coordinatesOccupied(pendingCoordinates)
-                if(spaceOccupier && !spaceOccupier.dead) return
+                try { spaceOccupier = this.coordinatesOccupied(pendingCoordinates) } catch(e){ spaceOccupier = null; console.warn('coordinatesOccupied threw', e) }
+                if(spaceOccupier && !spaceOccupier.dead) {
+                    console.warn('move blocked: space occupied by', spaceOccupier);
+                    break;
+                }
                 fighter.coordinates.y--
                 fighter.manualMovesCurrent--
-                fighter.manualMoveCooldown()
-                fighter.restartTurnCycle();
+                try { fighter.manualMoveCooldown && fighter.manualMoveCooldown(); } catch(e){}
+                try { fighter.restartTurnCycle && fighter.restartTurnCycle(); } catch(e){}
             break;
             case 'down':
-                if(fighter.coordinates.y >= MAX_LANES - 1) return
+                if(fighter.coordinates.y >= MAX_LANES - 1) {
+                    console.warn('moveFighterOneSpace: already at bottom row (y >= MAX_LANES-1)');
+                    break;
+                }
                 pendingCoordinates = {x: fighter.coordinates.x , y: fighter.coordinates.y+1}
-                // respect virtual occupancy (occupiedCoords) and ignore dead combatants
-                spaceOccupier = this.coordinatesOccupied(pendingCoordinates)
-                if(spaceOccupier && !spaceOccupier.dead) return
+                try { spaceOccupier = this.coordinatesOccupied(pendingCoordinates) } catch(e){ spaceOccupier = null; console.warn('coordinatesOccupied threw', e) }
+                if(spaceOccupier && !spaceOccupier.dead) {
+                    console.warn('move blocked: space occupied by', spaceOccupier);
+                    break;
+                }
                 fighter.coordinates.y++
-                console.log(fighter.type, 'fighter.coordinates.y: ', fighter.coordinates.y);
                 fighter.manualMovesCurrent--
-                fighter.manualMoveCooldown()
-                fighter.restartTurnCycle();
+                try { fighter.manualMoveCooldown && fighter.manualMoveCooldown(); } catch(e){}
+                try { fighter.restartTurnCycle && fighter.restartTurnCycle(); } catch(e){}
             break;
             case 'right':
-                if(fighter.coordinates.x === MAX_DEPTH) return
+                if(fighter.coordinates.x === MAX_DEPTH) {
+                    console.warn('moveFighterOneSpace: already at max depth (x == MAX_DEPTH)');
+                    break;
+                }
                 pendingCoordinates = {x: fighter.coordinates.x+1 , y: fighter.coordinates.y}
-                // respect virtual occupancy (occupiedCoords) and ignore dead combatants
-                spaceOccupier = this.coordinatesOccupied(pendingCoordinates)
-                if(spaceOccupier && !spaceOccupier.dead) return
-                
+                try { spaceOccupier = this.coordinatesOccupied(pendingCoordinates) } catch(e){ spaceOccupier = null; console.warn('coordinatesOccupied threw', e) }
+                if(spaceOccupier && !spaceOccupier.dead) {
+                    console.warn('move blocked: space occupied by', spaceOccupier);
+                    break;
+                }
                 fighter.coordinates.x++
                 fighter.manualMovesCurrent--
-                fighter.manualMoveCooldown()
-                fighter.restartTurnCycle();
+                try { fighter.manualMoveCooldown && fighter.manualMoveCooldown(); } catch(e){}
+                try { fighter.restartTurnCycle && fighter.restartTurnCycle(); } catch(e){}
             break;
             case 'left':
-                if(fighter.coordinates.x === 0) return
+                if(fighter.coordinates.x === 0) {
+                    console.warn('moveFighterOneSpace: already at leftmost (x == 0)');
+                    break;
+                }
                 pendingCoordinates = {x: fighter.coordinates.x-1 , y: fighter.coordinates.y}
-                // respect virtual occupancy (occupiedCoords) and ignore dead combatants
-                spaceOccupier = this.coordinatesOccupied(pendingCoordinates)
-                if(spaceOccupier && !spaceOccupier.dead) return
+                try { spaceOccupier = this.coordinatesOccupied(pendingCoordinates) } catch(e){ spaceOccupier = null; console.warn('coordinatesOccupied threw', e) }
+                if(spaceOccupier && !spaceOccupier.dead) {
+                    console.warn('move blocked: space occupied by', spaceOccupier);
+                    break;
+                }
                 fighter.coordinates.x--
                 fighter.manualMovesCurrent--
-                fighter.manualMoveCooldown()
+                try { fighter.manualMoveCooldown && fighter.manualMoveCooldown(); } catch(e){}
             break;
             default:
+                console.warn('moveFighterOneSpace: unknown direction', direction);
             break;
         }
-        fighter.restartTurnCycle()
+
+        try { this.broadcastDataUpdate && this.broadcastDataUpdate(); } catch(e){}
     }
     // this.fighterFacingRight = (caller) => {
     //     const f = this.combatants[caller.id]
@@ -1642,14 +1692,31 @@ export function CombatManager(){
         this.broadcastDataUpdate();
     }
     this.coordinatesOccupied = (coordinates) => {
-        return Object.values(this.combatants).find(e=>{
-            try {
-                if(!e) return false;
-                if (e.coordinates && e.coordinates.x === coordinates.x && e.coordinates.y === coordinates.y) return true;
-                if (Array.isArray(e.occupiedCoords)) return e.occupiedCoords.some(c => c.x === coordinates.x && c.y === coordinates.y);
-                return false;
-            } catch (err) { return false; }
-        })
+        try {
+            const combatants = Object.values(this.combatants || {});
+            for (let i = 0; i < combatants.length; i++) {
+                const e = combatants[i];
+                try {
+                    if (!e) continue;
+                    if (e.coordinates && e.coordinates.x === coordinates.x && e.coordinates.y === coordinates.y) {
+                        return e;
+                    }
+                    if (Array.isArray(e.occupiedCoords)) {
+                        for (let j = 0; j < e.occupiedCoords.length; j++) {
+                            const c = e.occupiedCoords[j];
+                            if (c && c.x === coordinates.x && c.y === coordinates.y) {
+                                return e;
+                            }
+                        }
+                    }
+                } catch (err) {
+                    // continue to next combatant
+                }
+            }
+        } catch (err) {
+            console.warn('coordinatesOccupied: unexpected error', err);
+        }
+        return null;
     }
     this.clearTargetListById = (targetId) => {
         const combatants = Object.values(this.combatants)

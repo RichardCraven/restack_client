@@ -11,6 +11,46 @@
     transition-duration: 0s !important;
     transition-delay: 0s !important;
 }
+
+/* Level-up gain badges shown over portraits in the summary panel. */
+.single-portrait-container {
+    position: relative;
+}
+
+.single-portrait-container .level-gains {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: -6px; /* slightly below the portrait */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    pointer-events: none; /* let clicks pass through to portrait/OK button */
+    z-index: 30;
+}
+
+.single-portrait-container .gain-item {
+    background: rgba(0, 0, 0, 0.6);
+    color: #fff;
+    font-size: 11px;
+    padding: 3px 6px;
+    border-radius: 10px;
+    margin-top: 4px;
+    min-width: 34px;
+    text-align: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+}
+
+/* Slight animation so gains feel lively */
+.single-portrait-container .gain-item {
+    animation: gainPop 420ms ease forwards;
+}
+
+@keyframes gainPop {
+    0% { transform: translateY(6px) scale(0.96); opacity: 0; }
+    65% { transform: translateY(-2px) scale(1.03); opacity: 1; }
+    100% { transform: translateY(0) scale(1); opacity: 1; }
+}
         // Disable portrait/fighter transitions when teleporting
         .animation-tile.instant-teleport .portrait-wrapper,
         .animation-tile.instant-teleport .fighter-portrait {

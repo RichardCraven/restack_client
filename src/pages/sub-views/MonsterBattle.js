@@ -286,6 +286,35 @@ class MonsterBattle extends React.Component {
         }
         // key handling moved to parent DungeonPage
     }
+    componentDidUpdate(prevProps, prevState) {
+        // When the summary panel appears, schedule clearing of any
+        // `justLeveled` flags recorded on crew members so the arrow and
+        // gain details are only visible temporarily. We clear the flags on
+        // the authoritative CrewManager and then force a re-render.
+        try {
+            if (!prevState.showSummaryPanel && this.state.showSummaryPanel) {
+                const crew = (this.props.crewManager && Array.isArray(this.props.crewManager.crew)) ? this.props.crewManager.crew : [];
+                crew.forEach((m) => {
+                    if (m && m.justLeveled) {
+                        // schedule clearing after the summary animation/timeout
+                        this._setTimeout(() => {
+                            try {
+                                if (this.props.crewManager && typeof this.props.crewManager.clearLevelFlags === 'function') {
+                                    this.props.crewManager.clearLevelFlags(m);
+                                }
+                                // ensure UI updates
+                                try { this.forceUpdate(); } catch(e){}
+                            } catch (err) {
+                                console.warn('Failed to clear level flags for member', m, err);
+                            }
+                        }, 3500);
+                    }
+                });
+            }
+        } catch (err) {
+            console.warn('componentDidUpdate: level-flag clearing failed', err);
+        }
+    }
     componentWillUnmount() {
         // mark unmounted to prevent async callbacks attempting setState
         try { this._isMounted = false; } catch(e){}
@@ -1421,10 +1450,26 @@ class MonsterBattle extends React.Component {
                                     {Object.values(this.state.battleData).filter(e=>!e.dead && !e.isMonster && !e.isMinion).map((crewMember, i) => {
                                         // Defensive portrait resolution with avatar fallback
                                         const portraitUrl = images[crewMember.portrait] || crewMember.portrait || images['avatar'];
+                                        // authoritative crew member stored in crewManager (may contain justLeveled and recent gains)
+                                        const cmMember = (this.props.crewManager && Array.isArray(this.props.crewManager.crew)) ? this.props.crewManager.crew.find(c => c && (c.id === crewMember.id || c.name === crewMember.name)) : null;
+                                        const percent = this.props.crewManager.calculateExpPercentage(crewMember);
+                                        const shouldShowArrow = (cmMember && cmMember.justLeveled) || percent >= 100;
+                                        // aggregate recent gains into a single object for display
+                                        let gainsAgg = null;
+                                        try {
+                                            if (cmMember && Array.isArray(cmMember._recentLevelGains) && cmMember._recentLevelGains.length) {
+                                                gainsAgg = {};
+                                                cmMember._recentLevelGains.forEach(g => {
+                                                    Object.keys(g).forEach(k => {
+                                                        gainsAgg[k] = (gainsAgg[k] || 0) + (g[k] || 0);
+                                                    });
+                                                });
+                                            }
+                                        } catch (err) { gainsAgg = null }
                                         return (
                                             <div key={i} className="single-portrait-container">
                                                 <div className="portrait" style={{backgroundImage: `url(${portraitUrl})`}}></div>
-                                                {this.props.crewManager.calculateExpPercentage(crewMember) >= 100 && (
+                                                {shouldShowArrow && (
                                                     <Canvas 
                                                         className="level-up-canvas"
                                                         width={80}
@@ -1432,8 +1477,15 @@ class MonsterBattle extends React.Component {
                                                         draw={this.draw}
                                                     />
                                                 )}
+                                                {gainsAgg && Object.keys(gainsAgg).length > 0 && (
+                                                    <div className="level-gains">
+                                                        {Object.keys(gainsAgg).map((k, idx) => (
+                                                            <div key={idx} className="gain-item">{k.toUpperCase()} +{gainsAgg[k]}</div>
+                                                        ))}
+                                                    </div>
+                                                )}
                                                 <div className="experience-bar-container">
-                                                    <div className="experience-bar" style={{width: `${this.props.crewManager.calculateExpPercentage(crewMember)}%`}}></div>
+                                                    <div className="experience-bar" style={{width: `${percent}%`}}></div>
                                                 </div>
                                             </div>
                                         )
