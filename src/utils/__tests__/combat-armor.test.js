@@ -20,7 +20,7 @@ describe('CombatManager armor percent reduction', () => {
       name: 'Defender',
       hp: 200,
       damageIndicators: [],
-      stats: { dex: 1, baseDef: 5 },
+  stats: { dex: 1, def: 5 },
       coordinates: { x: 1, y: 0 },
       inventory: [
         { type: 'armor', armor: 50, equippedSlot: 'head', name: 'helm' }

@@ -67,13 +67,100 @@ export function CrewManager(){
                 member.color = member.color || colors[index % colors.length];
             } catch(e){}
             if(this.memberTypes.includes(member.image)){
+                // Ensure base stats are present and normalized to the four main stats
+                member.stats = member.stats || {};
+                member.stats.str = typeof member.stats.str === 'number' ? member.stats.str : (member.stats.str || 1);
+                member.stats.dex = typeof member.stats.dex === 'number' ? member.stats.dex : (member.stats.dex || 1);
+                member.stats.fort = typeof member.stats.fort === 'number' ? member.stats.fort : (member.stats.fort || 1);
+                member.stats.int = typeof member.stats.int === 'number' ? member.stats.int : (member.stats.int || 1);
+                member.stats.experience = typeof member.stats.experience === 'number' ? member.stats.experience : 0;
+                // compute derived/substats from base stats
+                try { this.computeDerivedStats(member); } catch(e) { console.warn('computeDerivedStats failed', e, member); }
                 this.crew.push(member)
             }
         })
         this.checkForLevelUp(this.crew)
     }
 
+    // stat constituent matrix and derivation rules
+    this.statConstituents = {
+        attack: {
+            monk: ['dex','str'],
+            barbarian: ['str'],
+            soldier: ['str','fort'],
+            wizard: ['int'],
+            rogue: ['dex','str'],
+            sage: ['fort']
+        },
+        defense: {
+            monk: ['dex'],
+            barbarian: ['str','fort'],
+            soldier: ['str','dex'],
+            wizard: ['dex','str'],
+            rogue: ['str','fort'],
+            sage: ['str','fort']
+        },
+        hp: { all: ['fort'] },
+        energy: { all: ['fort'] },
+        willpower: { all: ['int'] },
+        speed: { all: ['dex'] }
+    }
+
+    // Compute derived substats for a crew member based on their base stats and class
+    this.computeDerivedStats = (member) => {
+        if(!member || !member.stats) return;
+        const s = member.stats;
+        const get = (k) => (typeof s[k] === 'number' ? s[k] : 0);
+        const combine = (primaryKey, secondaryKey) => {
+            const p = get(primaryKey);
+            if (secondaryKey) {
+                const sec = get(secondaryKey);
+                return p + Math.floor(sec / 2);
+            }
+            return p + Math.floor(p / 2);
+        }
+
+        // Attack
+        let atkCon = this.statConstituents.attack[member.type];
+        if(!atkCon) atkCon = ['str'];
+        if(atkCon.length === 2){
+            s.atk = combine(atkCon[0], atkCon[1]);
+        } else {
+            s.atk = combine(atkCon[0]);
+        }
+
+        // Defense (rename will be 'def')
+        let defCon = this.statConstituents.defense[member.type];
+        if(!defCon) defCon = ['fort'];
+        if(defCon.length === 2){
+            s.def = combine(defCon[0], defCon[1]);
+        } else {
+            s.def = combine(defCon[0]);
+        }
+
+        // HP (max hitpoints)
+        const hpCon = this.statConstituents.hp.all[0];
+        s.hp = combine(hpCon);
+        member.starting_hp = s.hp;
+
+        // Energy (max energy)
+        const enCon = this.statConstituents.energy.all[0];
+        s.energy = combine(enCon);
+
+        // Willpower
+        const wpCon = this.statConstituents.willpower.all[0];
+        s.willpower = combine(wpCon);
+
+        // Speed
+        const spCon = this.statConstituents.speed.all[0];
+        s.speed = combine(spCon);
+
+        // ensure experience exists
+        s.experience = typeof s.experience === 'number' ? s.experience : 0;
+    }
+
     this.addCrewMember = (member) => {
+        try { this.computeDerivedStats(member); } catch(e) { console.warn('addCrewMember: computeDerivedStats failed', e, member); }
         this.crew.push(member)
     }
 
@@ -163,6 +250,8 @@ export function CrewManager(){
         crewMember.justLeveled = true;
         crewMember._recentLevelGains = crewMember._recentLevelGains || [];
         crewMember._recentLevelGains.push(gains);
+    // Recompute derived stats after base stat increases
+    try { this.computeDerivedStats(crewMember); } catch (e) { console.warn('levelUp: computeDerivedStats failed', e, crewMember); }
         return gains;
     }
 
@@ -254,8 +343,7 @@ export function CrewManager(){
             name: 'Zildjikan',
             id: 33344,
             level: 1,
-            stats: { str: 3, int: 7, dex: 5, vit: 4, fort: 7, hp: 17, atk: 12, baseDef: 9, energy: 100, experience: 0, speed: 5, luck: 4, willpower: 7, energyRegen: 2 },
-            // stats: { str: 3, int: 7, dex: 5, vit: 4, fort: 7, hp: 5, atk: 12, baseDef: 9, energy: 100, experience: 0 },
+            stats: { str: 3, int: 7, dex: 5, fort: 7, experience: 0 },
             portrait: images['wizard_portrait'],
             inventory: [],
             specials: ['ice_blast', 'fire_blast'],
@@ -273,8 +361,7 @@ export function CrewManager(){
             name: 'Sardonis',
             id: 123,
             level: 1,
-            stats: { str: 8, int: 5, dex: 6, vit: 4, fort: 7, hp: 25, atk: 8, baseDef: 12, energy: 0, experience: 0, speed: 4, luck: 3, willpower: 5, energyRegen: 1 },
-            // stats: { str: 8, int: 5, dex: 6, vit: 4, fort: 7, hp: 5, atk: 8, baseDef: 12, energy: 0, experience: 0 },
+            stats: { str: 8, int: 5, dex: 6, fort: 7, experience: 0 },
             portrait: images['soldier_portrait'],
             inventory: [],
             passives: ['inspiring_force'],
@@ -294,7 +381,7 @@ export function CrewManager(){
             name: 'Yu',
             id: 8080,
             level: 1,
-            stats: { str: 5, int: 6, dex: 7, vit: 4, fort: 7, hp: 23, atk: 6, baseDef: 11, energy: 0, experience: 0, speed: 6, luck: 5, willpower: 6, energyRegen: 2 },
+            stats: { str: 5, int: 6, dex: 7, fort: 7, experience: 0 },
             portrait: images['monk_portrait'],
             inventory: [],
             passives: ['diamond_skin'],
@@ -312,7 +399,7 @@ export function CrewManager(){
             name: 'Loryastes',
             id: 456,
             level: 1,
-            stats: { str: 3, int: 7, dex: 5, vit: 4, fort: 7, hp: 19, atk: 4, baseDef: 5, energy: 0, experience: 0, speed: 5, luck: 4, willpower: 7, energyRegen: 2 },
+            stats: { str: 3, int: 7, dex: 5, fort: 7, experience: 0 },
             portrait: images['sage_portrait'],
             inventory: [],
             specials: ['healing_hymn'],
@@ -330,7 +417,7 @@ export function CrewManager(){
             name: 'Tyra',
             id: 789,
             level: 1,
-            stats: { str: 5, int: 5, dex: 6, vit: 6, fort: 3, hp: 22, atk: 6, baseDef: 10, energy: 0, experience: 0, speed: 7, luck: 6, willpower: 5, energyRegen: 1 },
+            stats: { str: 5, int: 5, dex: 6, fort: 3, experience: 0 },
             portrait: images['rogue_portrait'],
             inventory: [],
             specials: ['deadeye_shot'],
@@ -348,7 +435,7 @@ export function CrewManager(){
             name: 'Ulaf',
             id: 8822,
             level: 1,
-            stats: { str: 8, int: 3, dex: 4, vit: 6, fort: 6, hp: 27, atk: 9, baseDef: 12, energy: 0, experience: 0, speed: 5, luck: 4, willpower: 6, energyRegen: 2 },
+            stats: { str: 8, int: 3, dex: 4, fort: 6, experience: 0 },
             portrait: images['barbarian_portrait'],
             inventory: [],
             specials: ['berserker_rage'],

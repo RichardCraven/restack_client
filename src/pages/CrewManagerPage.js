@@ -175,7 +175,7 @@ goBack = () => {
                         <div className="stat">Strength: {this.state.selectedCrewMember.stats.str}</div>
                         <div className="stat">Dexterity: {this.state.selectedCrewMember.stats.dex}</div>
                         <div className="stat">Intelligence: {this.state.selectedCrewMember.stats.int}</div>
-                        <div className="stat">Vitality: {this.state.selectedCrewMember.stats.vit}</div>
+                        {/* Vitality removed */}
                         <div className="stat">Fortitude: {this.state.selectedCrewMember.stats.fort}</div>
                     </div>}
                     {this.state.selectedCrewMember && <div className="abilities-pane">

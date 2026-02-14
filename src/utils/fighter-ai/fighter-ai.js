@@ -227,7 +227,7 @@ export function FighterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
     //         if(!caller) return
     //         const target = combatants[caller.targetId];
     //         if(!target) return
-    //         let defenseFactor = target.stats.dex ** 2 + target.stats.baseDef;
+    //         let defenseFactor = target.stats.dex ** 2 + target.stats.def;
     //         if(defenseFactor > 99) defenseFactor = 90;
     //         let attackFactor = Math.floor(Math.sqrt(caller.atk));
     //         const results = [], diceRoll = function(){

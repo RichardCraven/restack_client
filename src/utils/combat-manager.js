@@ -1153,7 +1153,7 @@ export function CombatManager(){
                 }
             }
         }
-        let defenseFactor = target.stats.dex ** 2 + target.stats.baseDef;
+    let defenseFactor = target.stats.dex ** 2 + (target.stats.def || 0);
         if(defenseFactor > 99) defenseFactor = 90;
         let attackFactor = Math.floor(Math.sqrt(caller.atk));
 

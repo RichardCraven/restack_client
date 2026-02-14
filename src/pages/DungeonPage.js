@@ -2781,7 +2781,7 @@ class DungeonPage extends React.Component {
                         <div className="stat-line"> <span className="stat-name">Strength</span>  <span className='stat-value'>{this.state.selectedCrewMember.stats.str} </span> </div>
                         <div className="stat-line">Dexterity <span className='stat-value'> {this.state.selectedCrewMember.stats.dex} </span></div>
                         <div className="stat-line">Intelligence <span className='stat-value'>{this.state.selectedCrewMember.stats.int} </span></div>
-                        <div className="stat-line">Vitality <span className='stat-value'>{this.state.selectedCrewMember.stats.vit} </span></div>
+                        {/* Vitality removed */}
                         <div className="stat-line">Fortitude <span className='stat-value'> {this.state.selectedCrewMember.stats.fort} </span></div>
                         <div className="icon-container menu" onClick={this.toggleActionsTray}>
                             <CIcon icon={cilMenu} className={`menu-icon ${this.state.leftPanelExpanded ? 'expanded' : ''}`} size="sm"/>
@@ -3487,7 +3487,7 @@ class DungeonPage extends React.Component {
                                             let value = 0;
                                             try {
                                                 if (key === 'attack') value = (member && member.stats && typeof member.stats.atk === 'number') ? member.stats.atk : 0;
-                                                else if (key === 'defense') value = (member && member.stats && typeof member.stats.baseDef === 'number') ? member.stats.baseDef : 0;
+                                                else if (key === 'defense') value = (member && member.stats && typeof member.stats.def === 'number') ? member.stats.def : 0;
                                                 else if (key === 'hp') value = (member && member.stats && typeof member.stats.hp === 'number') ? member.stats.hp : 0;
                                             } catch (e) {}
 

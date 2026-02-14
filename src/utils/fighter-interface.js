@@ -25,7 +25,7 @@
  * @property {string} name
  * @property {number} id
  * @property {number} level
- * @property {Object} stats - Fighter stats (str, int, dex, vit, fort, hp, atk, baseDef, energy, experience)
+ * @property {Object} stats - Fighter stats (str, int, dex, fort, hp, atk, def, energy, experience)
  * @property {string} portrait
  * @property {Array} inventory
  * @property {Array<string>} specials - Special abilities (string names; may be objects in future)

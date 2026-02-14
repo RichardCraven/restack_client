@@ -28,11 +28,10 @@ export function MonsterManager(){
                 str: 10,
                 int:12,
                 dex:5,
-                vit:7,
                 fort:5,
                 hp: 160,
                 atk: 13,
-                baseDef: 8
+                def: 8
             },
             level: 12,
             portrait: images['witch_p1_1'],
@@ -56,11 +55,10 @@ export function MonsterManager(){
                 str: 10,
                 int: 10,
                 dex:6,
-                vit:9,
                 fort:5,
                 hp: 110,
                 atk: 15,
-                baseDef: 5
+                def: 5
             },
             level: 14,
             portrait: images['beholder_portrait'],
@@ -86,11 +84,10 @@ export function MonsterManager(){
                 str: 5,
                 int: 5,
                 dex:3,
-                vit:3,
                 fort:2,
                 hp: 60,
                 atk: 7,
-                baseDef: 2
+                def: 2
             },
             level: 5,
             portrait: images['beholder_minion_portrait'],
@@ -110,11 +107,10 @@ export function MonsterManager(){
                 str: 13,
                 int: 12,
                 dex:8,
-                vit:8,
                 fort:7,
                 hp: 140,
                 atk: 13,
-                baseDef: 3
+                def: 3
             },
             level: 15,
             portrait: images['kabuki_demon_portrait'],
@@ -139,11 +135,10 @@ export function MonsterManager(){
                 str: 6,
                 int: 2,
                 dex:4,
-                vit:4,
                 fort:3,
                 hp: 50,
                 atk: 5,
-                baseDef: 3
+                def: 3
             },
             level: 4,
             portrait: images['kabuki_demon_minion_portrait'],
@@ -163,11 +158,10 @@ export function MonsterManager(){
                 str: 7,
                 int:7,
                 dex:6,
-                vit:6,
                 fort:6,
                 hp: 84,
                 atk: 9,
-                baseDef: 12
+                def: 12
             },
             level: 10,
             portrait: images['vampire_portrait'],
@@ -190,11 +184,10 @@ export function MonsterManager(){
                 str: 7,
                 int:7,
                 dex:6,
-                vit:6,
                 fort:6,
                 hp: 72,
                 atk: 9,
-                baseDef: 11
+                def: 11
             },
             level: 8,
             portrait: images['ogre_portrait'],
@@ -216,11 +209,10 @@ export function MonsterManager(){
                 str: 8,
                 int:5,
                 dex:4,
-                vit:5,
                 fort:7,
                 hp: 62,
                 atk: 8,
-                baseDef: 9
+                def: 9
             },
             level: 9,
             portrait: images['gorgon_portrait'],
@@ -243,11 +235,10 @@ export function MonsterManager(){
                 str: 9,
                 int:6,
                 dex:5,
-                vit:9,
                 fort:8,
                 hp: 92,
                 atk: 11,
-                baseDef: 11
+                def: 11
             },
             level: 11,
             portrait: images['goat_demon_portrait'],
@@ -271,11 +262,10 @@ export function MonsterManager(){
                 str: 7,
                 int:7,
                 dex:6,
-                vit:6,
                 fort:6,
                 hp: 82,
                 atk: 9,
-                baseDef: 8
+                def: 8
             },
             level: 8,
             portrait: images['wraith_portrait'],
@@ -297,11 +287,10 @@ export function MonsterManager(){
                 str: 10,
                 int:9,
                 dex:7,
-                vit:8,
                 fort:8,
                 hp: 255,
                 atk: 18,
-                baseDef: 17
+                def: 17
             },
             level: 16,
             portrait: images[this.pickRandom(['wyvern_portrait', 'wyvern_portrait2'])],
@@ -325,11 +314,10 @@ export function MonsterManager(){
                 str: 8,
                 int:11,
                 dex:7,
-                vit:9,
                 fort:8,
                 hp: 175,
                 atk: 10,
-                baseDef: 11
+                def: 11
             },
             level: 19,
             portrait: images['djinn_portrait'],
@@ -353,12 +341,11 @@ export function MonsterManager(){
                 str: 5,
                 int:12,
                 dex:7,
-                vit:10,
                 fort:10,
                 hp: 325,
                 atk: 13,
                 // atk: 2,
-                baseDef: 13
+                def: 13
             },
             level: 29,
             // portrait: images[this.pickRandom(['sphinx_portrait', 'sphinx_portrait2'])],
@@ -385,11 +372,10 @@ export function MonsterManager(){
                 str: 4,
                 int:2,
                 dex:6,
-                vit:4,
                 fort:3,
                 hp: 38,
                 atk: 3,
-                baseDef: 5
+                def: 5
             },
             level: 2,
             portrait: images['goblin_portrait'],
@@ -411,11 +397,10 @@ export function MonsterManager(){
                 str: 8,
                 int:4,
                 dex:4,
-                vit:8,
                 fort:6,
                 hp: 80,
                 atk: 10,
-                baseDef: 13
+                def: 13
             },
             level: 6,
             portrait: images['mummy_portrait'],
@@ -439,11 +424,10 @@ export function MonsterManager(){
                 str: 6,
                 int:4,
                 dex:4,
-                vit:10,
                 fort:2,
                 hp: 78,
                 atk: 10,
-                baseDef: 13
+                def: 13
             },
             level: 6,
             portrait: images['troll_portrait'],
@@ -466,11 +450,10 @@ export function MonsterManager(){
                 str: 4,
                 int:1,
                 dex:4,
-                vit:5,
                 fort:5,
                 hp: 35,
                 atk: 5,
-                baseDef: 7
+                def: 7
             },
             level: 3,
             portrait: images['skeleton_portrait'],

@@ -54,11 +54,10 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
         atk: fighter.stats.atk,
         stats: {
             str: fighter.stats.str,
-            vit: fighter.stats.vit,
             fort: fighter.stats.fort,
             dex: fighter.stats.dex,
             int: fighter.stats.int,
-            baseDef: fighter.stats.baseDef,
+            def: fighter.stats.def,
             hp: fighter.stats.hp,
             atk: fighter.stats.atk
         },
