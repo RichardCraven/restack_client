@@ -1150,7 +1150,34 @@ class MonsterBattle extends React.Component {
             }
             consumableSpecials.forEach(a=>a.selected=false)
         } else {
-            // manual attack
+            // manual attack: ensure the authoritative combatant has a pendingAttack selected
+            try {
+                const sel = this.state.selectedFighter;
+                if (sel && this.props.combatManager && typeof this.props.combatManager.getCombatant === 'function') {
+                    const cmF = this.props.combatManager.getCombatant(sel.id);
+                    if (cmF) {
+                        // If no pending attack is set, choose one using the combat manager helper
+                        if (!cmF.pendingAttack) {
+                            const target = (cmF.targetId) ? this.props.combatManager.getCombatant(cmF.targetId) : null;
+                            try {
+                                if (typeof this.props.combatManager.chooseAttackType === 'function') {
+                                    this.props.combatManager.chooseAttackType(cmF, target);
+                                } else if (Array.isArray(cmF.attacks) && cmF.attacks.length) {
+                                    cmF.pendingAttack = cmF.attacks.find(a => a.cooldown_position === 100) || cmF.attacks[0];
+                                }
+                            } catch (e) {
+                                // defensive fallback
+                                if (Array.isArray(cmF.attacks) && cmF.attacks.length) {
+                                    cmF.pendingAttack = cmF.attacks.find(a => a.cooldown_position === 100) || cmF.attacks[0];
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (err) {
+                console.warn('manualFire: failed to ensure pendingAttack', err);
+            }
+            // invoke the combat manager's manual attack which calls into the fighter
             this.props.combatManager.fighterManualAttack()
         }
     }

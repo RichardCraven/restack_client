@@ -30,7 +30,7 @@ export function MonsterManager(){
                 dex:5,
                 vit:7,
                 fort:5,
-                hp: 60,
+                hp: 160,
                 atk: 13,
                 baseDef: 8
             },
@@ -88,7 +88,7 @@ export function MonsterManager(){
                 dex:3,
                 vit:3,
                 fort:2,
-                hp: 40,
+                hp: 60,
                 atk: 7,
                 baseDef: 2
             },
@@ -112,7 +112,7 @@ export function MonsterManager(){
                 dex:8,
                 vit:8,
                 fort:7,
-                hp: 120,
+                hp: 140,
                 atk: 13,
                 baseDef: 3
             },
@@ -141,7 +141,7 @@ export function MonsterManager(){
                 dex:4,
                 vit:4,
                 fort:3,
-                hp: 20,
+                hp: 50,
                 atk: 5,
                 baseDef: 3
             },
@@ -192,7 +192,7 @@ export function MonsterManager(){
                 dex:6,
                 vit:6,
                 fort:6,
-                hp: 52,
+                hp: 72,
                 atk: 9,
                 baseDef: 11
             },
@@ -218,7 +218,7 @@ export function MonsterManager(){
                 dex:4,
                 vit:5,
                 fort:7,
-                hp: 42,
+                hp: 62,
                 atk: 8,
                 baseDef: 9
             },
@@ -245,7 +245,7 @@ export function MonsterManager(){
                 dex:5,
                 vit:9,
                 fort:8,
-                hp: 82,
+                hp: 92,
                 atk: 11,
                 baseDef: 11
             },
@@ -273,7 +273,7 @@ export function MonsterManager(){
                 dex:6,
                 vit:6,
                 fort:6,
-                hp: 42,
+                hp: 82,
                 atk: 9,
                 baseDef: 8
             },
@@ -299,7 +299,7 @@ export function MonsterManager(){
                 dex:7,
                 vit:8,
                 fort:8,
-                hp: 155,
+                hp: 255,
                 atk: 18,
                 baseDef: 17
             },
@@ -387,7 +387,7 @@ export function MonsterManager(){
                 dex:6,
                 vit:4,
                 fort:3,
-                hp: 18,
+                hp: 38,
                 atk: 3,
                 baseDef: 5
             },
@@ -413,7 +413,7 @@ export function MonsterManager(){
                 dex:4,
                 vit:8,
                 fort:6,
-                hp: 40,
+                hp: 80,
                 atk: 10,
                 baseDef: 13
             },
@@ -468,7 +468,7 @@ export function MonsterManager(){
                 dex:4,
                 vit:5,
                 fort:5,
-                hp: 25,
+                hp: 35,
                 atk: 5,
                 baseDef: 7
             },
