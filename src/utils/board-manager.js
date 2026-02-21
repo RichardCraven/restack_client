@@ -2,6 +2,12 @@ import { getMeta, storeMeta } from './session-handler';
 import { MonsterManager } from './monster-manager';
 
 export function BoardManager(){
+    // By default, large-monster blocking (marking the tile above a large monster
+    // as impassable) is disabled for the dungeon board. It was intended for
+    // combat boards where large monsters occupy multiple tiles. Set
+    // `largeMonsterBlockingEnabled = true` only when a board instance is used
+    // for combat overlays.
+    this.largeMonsterBlockingEnabled = false;
     this.pickRandom = (array) => {
         let index = Math.floor(Math.random() * array.length)
         return array[index]
@@ -691,10 +697,13 @@ export function BoardManager(){
                 borders: null
             })
         }
-        // After tiles constructed, mark any large/boss monsters that should occupy
-        // the tile above them (so other fighters/minions cannot move into that space).
+        // After tiles constructed, optionally mark any large/boss monsters that should
+        // occupy the tile above them (so other fighters/minions cannot move into that space).
+        // This behavior is disabled by default for the dungeon board because it
+        // interferes with normal player movement (large-monster stacking is intended
+        // primarily for combat boards). To enable, set `boardManager.largeMonsterBlockingEnabled = true`.
         try {
-            this._markLargeMonsterStacking(this.tiles);
+            if (this.largeMonsterBlockingEnabled) this._markLargeMonsterStacking(this.tiles);
         } catch (e) {}
         // persist any normalizations made to the dungeon tiles
         try { if (this.updateDungeon) this.updateDungeon(this.dungeon); } catch (e) {}
@@ -887,7 +896,7 @@ export function BoardManager(){
                         })
                     break;
                     case 2:
-                        treasureItems = ['minor_key', 'scimitar', 'cretan_helm', 'major_health_potion']
+                        treasureItems = ['minor_key', 'cretan_helm', 'major_health_potion']
                         this.addTreasureToInventory({
                             item: this.pickRandom(treasureItems),
                             currency: {

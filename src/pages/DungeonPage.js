@@ -21,6 +21,7 @@ import  CIcon  from '@coreui/icons-react';
 import { CButton, CFormSelect, CFormInput, CModal, CModalHeader, CModalTitle, CModalBody, CTabPane, CTabContent} from '@coreui/react';
 import * as images from '../utils/images'
 import '../styles/inventory-modal.scss'
+import '../styles/quests-modal.scss'
 
 // helper: convert 3/6-digit hex to rgba string
 function hexToRgba(hex, alpha = 1){
@@ -369,6 +370,7 @@ class DungeonPage extends React.Component {
             , devConsoleOpen: false
             , devConsoleInput: ''
             , devConsoleOutput: []
+            , showQuestsPopup: false
         }
     // Native browser tooltip will be used for death-tracker; no custom tooltip state required.
         // Track timers/intervals created by this component so we can clear on unmount
@@ -517,6 +519,9 @@ class DungeonPage extends React.Component {
         } catch(e) {}
         // Real-time check for completed special actions
     this.realTimeSpecialActionCheckInterval = this._setInterval(() => {
+        // If quests popup is visible, suppress other modals/notifications so
+        // the quests UI takes precedence.
+        try { if (this.state.showQuestsPopup) return; } catch(e) {}
             // Use centralized helper to find finished actions and optionally mark them notified
             const { updates, modified, numeralUpdate } = this.checkAndCollectFinishedSpecialActions({ markNotified: true });
 
@@ -931,6 +936,16 @@ class DungeonPage extends React.Component {
                 this.setNewItemRespawnDate();
             }
             this.setState({ itemTimeToRespawn: itemRespawnString });
+        } catch (e) {}
+        // Show quests popup on first load — only if the user hasn't seen it before
+        try {
+            // Use an in-memory/session flag so the popup will reappear on full page reload.
+            if (!this.seenQuests) {
+                // Defer so other initialization completes
+                this.questsPopupTimeout = this._setTimeout(() => {
+                    try { this.setState({ showQuestsPopup: true }); } catch(e) {}
+                }, 100);
+            }
         } catch (e) {}
     }
 
@@ -2757,6 +2772,16 @@ class DungeonPage extends React.Component {
             showModal: true
         })
     }
+
+    handleCloseQuestsPopup = () => {
+        try {
+            // Mark as seen for this session only so a full page refresh will show it again
+            this.seenQuests = true;
+        } catch (e) {}
+        // Clear any pending scheduled popup to avoid it reopening
+        try { if (this.questsPopupTimeout) { clearTimeout(this.questsPopupTimeout); this.questsPopupTimeout = null; } } catch(e){}
+        try { this.setState({ showQuestsPopup: false }); } catch(e){}
+    }
     render(){
         return (
         <div className={`dungeon-container ${this.state.ritualWrecked ? 'wrecked' : ''}`}>
@@ -2770,6 +2795,48 @@ class DungeonPage extends React.Component {
                     handleCrewTileHover={this.handleCrewTileHover}
                     setMemberRitualOptions={this.state.setMemberRitualOptions}
                 />
+            </CModal>
+            {/* Quests popup: shown on initial load; takes precedence over other modals */}
+            <CModal className={'quests-modal'} alignment="center" visible={this.state.showQuestsPopup} onClose={this.handleCloseQuestsPopup} backdrop={true}>
+                <CModalHeader>
+                    <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%'}}>
+                        <CModalTitle>Quests</CModalTitle>
+                        <button aria-label="Close quests" className="quests-close" onClick={this.handleCloseQuestsPopup} style={{background: 'transparent', border: 'none', color: '#fff', fontSize: 20}}>✕</button>
+                    </div>
+                </CModalHeader>
+                <CModalBody>
+                    {(() => {
+                        // pick an icon from the first known weapon entry via its declared icon name
+                        let swordIcon = images['sword'] || null;
+                        try {
+                            const im = this.props.inventoryManager;
+                            const names = im && Array.isArray(im.weapons_names) ? im.weapons_names : [];
+                            // find the first weapon key that resolves to a weapon with an icon property
+                            const firstKey = names.find(k => im && im.weapons && im.weapons[k] && im.weapons[k].icon);
+                            if (firstKey) {
+                                const iconName = im.weapons[firstKey].icon;
+                                if (iconName && images[iconName]) {
+                                    swordIcon = images[iconName];
+                                }
+                            }
+                        } catch (e) {
+                            // swallow - fallback will be used
+                        }
+                        const panels = [1,2,3];
+                        return (
+                            <div className="quests-grid" style={{display:'flex', gap: 12, justifyContent: 'center'}}>
+                                {panels.map((p) => (
+                                    <div key={p} className="quest-panel" style={{width: 220, padding: 12, background: '#222', color: '#fff', borderRadius: 6, boxShadow: '0 2px 6px rgba(0,0,0,0.6)'}}>
+                                        <div style={{height: 80, display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+                                            <div style={{width:60, height:60, backgroundImage: swordIcon ? `url(${swordIcon})` : 'none', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', backgroundPosition: 'center'}} />
+                                        </div>
+                                        <div style={{paddingTop:8}}>Placeholder quest description #{p}. Complete tasks to earn rewards.</div>
+                                    </div>
+                                ))}
+                            </div>
+                        )
+                    })()}
+                </CModalBody>
             </CModal>
             {/* <ExpositionPane></ExpositionPane> */}
             {this.props.boardManager.currentOrientation === 'B' && <div className="dark-mask"></div>}
