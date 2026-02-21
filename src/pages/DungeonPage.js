@@ -1142,6 +1142,19 @@ class DungeonPage extends React.Component {
                     e.preventDefault();
                     return;
                 }
+                // list available commands
+                if (cmd === 'list' || cmd === 'help') {
+                    const commands = [
+                        'monster-spawn / monsterspawn / mspawn',
+                        'item-spawn / itemspawn / ispawn',
+                        'fullhealth / full-health / revive',
+                        'list / help'
+                    ];
+                    this.setState(prev => ({ devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, ...commands], devConsoleInput: '' }));
+                    try { if (this.devConsoleInputRef.current) this.devConsoleInputRef.current.focus(); } catch (err) {}
+                    e.preventDefault();
+                    return;
+                }
                 // unknown command: echo
                 this.setState(prev => ({ devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, `Unknown command: ${raw}`], devConsoleInput: '' }));
             }

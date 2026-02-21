@@ -168,7 +168,7 @@ export function MonsterManager(){
             image_names: ['ogre'],
             monster_names: ['Uggo', 'Tubodu', 'Gumluk'],
             stats: {
-                hp: 72,
+                hp: 172,
                 atk: 9,
                 def: 11,
                 speed: 10,

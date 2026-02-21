@@ -292,57 +292,48 @@
                 gap: 8px;
                 padding: 8px;
                 position: relative;
-                /* Per-skull wrapper + tooltip */
+                /* entrance animation when tracker appears */
+                animation: deathTrackerFade 320ms ease-out;
+
+                /* Wrapper for each skull */
                 .death-skull-wrapper{
                     position: relative;
                     display: inline-block;
                     outline: none;
+                    transform-origin: center center;
+                    animation: deathSkullPop 360ms cubic-bezier(.2,.8,.2,1);
                 }
-                .death-skull{
-                        width: 100%;
-                        height: 40px;
-                        display: flex;
-                        align-items: center;
-                        gap: 8px;
-                        padding: 8px;
-                        position: relative;
-                        /* entrance animation when tracker appears */
-                        animation: deathTrackerFade 320ms ease-out;
 
-                        /* Per-skull wrapper + tooltip */
-                        .death-skull-wrapper{
-                            position: relative;
-                            display: inline-block;
-                            outline: none;
-                            transform-origin: center center;
-                            animation: deathSkullPop 360ms cubic-bezier(.2,.8,.2,1);
-                        }
-                        .death-skull{
-                            width: 32px;
-                            height: 32px;
-                            background-size: contain;
-                            background-repeat: no-repeat;
-                            opacity: 0.95;
-                            filter: invert(1);
-                            /* slight drop shadow for contrast */
-                            box-shadow: 0 1px 3px rgba(0,0,0,0.45);
-                        }
-                    .hover-message{
-                        color: white;
-                        position: absolute;
-                        font-size: 9px;
-                        top: -7px;
-                        left: 5px;
+                /* The skull icon itself */
+                .death-skull{
+                    width: 32px;
+                    height: 32px;
+                    background-size: contain;
+                    background-repeat: no-repeat;
+                    background-position: center center;
+                    opacity: 0.95;
+                    filter: invert(1);
+                    /* slight drop shadow for contrast */
+                    box-shadow: 0 1px 3px rgba(0,0,0,0.45);
+                    padding: 0;
+                }
+
+                .hover-message{
+                    color: white;
+                    position: absolute;
+                    font-size: 9px;
+                    top: -7px;
+                    left: 5px;
+                }
+
+                .tile.crew-tile{
+                    margin: 2px;
+                    background-color: lightgrey;
+                    &:hover{
+                        background-color: rgb(151, 176, 208) !important;
                     }
-                    .tile.crew-tile{
-                        margin: 2px;
-                        background-color: lightgrey;
-                        &:hover{
-                            background-color: rgb(151, 176, 208) !important;
-                        }
-                        &.active{
-                            background-color: #f9b115 !important;
-                        }
+                    &.active{
+                        background-color: #f9b115 !important;
                     }
                 }
             }
@@ -580,9 +571,6 @@
             left: 0;
             border-right: 1px solid lightgrey;
             // min-width: 200px;
-            .crew{
-                // right: 20px;
-            }
         }
         
         .crew-container{
@@ -735,12 +723,7 @@
                             border-radius: 28px 0px 0px 28px;
                             transform-origin: right;
                         }
-                        .left{
-                            // border-right: 0;
-                        }
-                        .right{
-                            // border-left: 0;
-                        }
+                        /* left/right pseudo elements intentionally no-op (kept for future tweaks) */
                     }
                     .progress {
                         width: 200px;

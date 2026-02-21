@@ -491,8 +491,11 @@ export function BoardManager(){
                 this.tiles[templateTile.id] = equivalentTile;
             }
         })
-        // After respawning monsters, ensure large-monster stacking markers are recomputed
-        try { this._markLargeMonsterStacking(this.tiles); } catch (e) {}
+    // After respawning monsters, recompute large-monster stacking markers
+    // only when the board instance explicitly enables that behavior. The
+    // dungeon board defaults to disabled because it should not block
+    // normal player movement; combat overlays may enable blocking.
+    try { if (this.largeMonsterBlockingEnabled) this._markLargeMonsterStacking(this.tiles); } catch (e) {}
         try { if (this.updateDungeon) this.updateDungeon(this.dungeon); } catch (e) {}
         // Recompute fog-of-war visibility after respawn so newly-placed monsters are visible when appropriate
         try {
@@ -648,6 +651,12 @@ export function BoardManager(){
     
         for(let i = 0; i< board.tiles.length; i++){
             let tile = board.tiles[i]
+            // Defensive: clear any persisted large-monster blocking markers so
+            // dungeon boards are not accidentally blocked by stale flags saved
+            // into the dungeon data. Large-monster blocking should be explicit
+            // and enabled only for combat overlays.
+            try { delete tile.blockedByLargeMonster; } catch (e) {}
+            try { delete tile.blocksAbove; } catch (e) {}
             // ensure tile.contains is object-shaped (normalizeBoardTiles already attempted this)
             if (typeof tile.contains === 'string') {
                 // defensive fallback: normalize key-like strings into item objects

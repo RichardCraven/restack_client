@@ -325,11 +325,17 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
                 switch(eraIndex){
                     case 0: 
                         if(!this.targetId) acquireTarget(this);
-                        eraMove();
-                        if(this.tempo > 10){
-                            
-                            eraAttack();
-                        }
+                            eraMove();
+                            if(this.tempo > 10){
+                                    // Ensure the chosen attack is assigned to pendingAttack so
+                                    // subsequent range checks and initiateAttack have the
+                                    // correct context. Previously chooseAttackType was being
+                                    // invoked without storing its result, which left
+                                    // pendingAttack null and prevented generic monsters
+                                    // from ever attacking.
+                                    if(!this.pendingAttack) this.pendingAttack = chooseAttackType(this, target);
+                                    eraAttack();
+                                }
                     break;
                     case 1: 
                         eraMove();
