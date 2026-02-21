@@ -1153,7 +1153,9 @@ export function CombatManager(){
                 }
             }
         }
-    let defenseFactor = target.stats.dex ** 2 + (target.stats.def || 0);
+    // Use speed (derived substat) for defensive agility. Fall back to dex if present for crew.
+    const targetSpeed = (target.stats && (typeof target.stats.speed === 'number')) ? target.stats.speed : (target.stats && target.stats.dex) || 1;
+    let defenseFactor = targetSpeed ** 2 + (target.stats.def || 0);
         if(defenseFactor > 99) defenseFactor = 90;
         let attackFactor = Math.floor(Math.sqrt(caller.atk));
 
@@ -1204,7 +1206,9 @@ export function CombatManager(){
     this.kickoffAttackCooldown = (caller) => {
         const atk = caller.pendingAttack;
         if(!atk) return
-        const generalCooldown = (10/caller.stats.dex) * 1000
+    // Use speed for cooldown calculations (monsters use speed, fighters may have dex-derived speed)
+    const callerSpeed = (caller.stats && (typeof caller.stats.speed === 'number') && caller.stats.speed > 0) ? caller.stats.speed : ((caller.stats && (typeof caller.stats.dex === 'number') && caller.stats.dex > 0) ? caller.stats.dex : 1);
+    const generalCooldown = (10 / callerSpeed) * 1000
         atk['cooldown_position'] = 0;
         let totalTime = atk.cooldown * 1000;
         let scopeVar = 0, that = this;

@@ -857,9 +857,9 @@ export function BoardManager(){
                 let treasureFactor, treasureNum = Math.random();
                 if(treasureNum > .85){
                     treasureFactor = 4
-                } else if(treasureNum > .60){
+                } else if(treasureNum > .65){
                     treasureFactor = 3
-                } else if(treasureNum > .35){
+                } else if(treasureNum > .40){
                     treasureFactor = 2
                 } else{
                     treasureFactor = 1

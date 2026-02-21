@@ -54,14 +54,18 @@ class UserProfilePage extends React.Component{
       this.props.boardManager.dungeon.id = null;
       this.props.inventoryManager.inventory = [];
 
-      meta.dungeonId = null;
-      meta.location = null
-      meta.inventory = { 
-        items: [], 
-        gold: 0,
-        shimmering_dust: 0,
-        totems: 0
-      }
+            // clear dungeon and crew
+            meta.dungeonId = null;
+            meta.location = null
+            meta.inventory = { 
+              items: [], 
+              gold: 0,
+              shimmering_dust: 0,
+              totems: 0
+            }
+            // also clear crew when clearing the dungeon
+            meta.crew = [];
+            try { this.props.crewManager.initializeCrew([]); } catch(e) { try { this.props.crewManager.crew = []; } catch(e) {} }
       await updateUserRequest(getUserId(), meta)
       storeMeta(meta);
       
@@ -78,6 +82,9 @@ class UserProfilePage extends React.Component{
         shimmering_dust: 0,
         totems: 0
       }
+      // also clear crew when clearing the dungeon
+      meta.crew = [];
+      try { this.props.crewManager.initializeCrew([]); } catch(e) { try { this.props.crewManager.crew = []; } catch(e) {} }
       await updateUserRequest(getUserId(), meta)
       storeMeta(meta);
       

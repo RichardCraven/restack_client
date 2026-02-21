@@ -59,7 +59,13 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
             int: fighter.stats.int,
             def: fighter.stats.def,
             hp: fighter.stats.hp,
-            atk: fighter.stats.atk
+            atk: fighter.stats.atk,
+            // Include derived substats if present (speed/willpower). If not
+            // provided, they'll be computed below via fallbacks where needed.
+            // Ensure a numeric speed exists for tempo math: prefer explicit speed,
+            // fall back to dex if available, otherwise default to 1.
+            speed: (typeof fighter.stats.speed === 'number') ? fighter.stats.speed : ((typeof fighter.stats.dex === 'number') ? fighter.stats.dex : 1),
+            willpower: (typeof fighter.stats.willpower === 'number') ? fighter.stats.willpower : undefined
         },
     inventory: fighter.inventory,
     dead: !!fighter.dead,
@@ -98,9 +104,12 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
     movementPointsCurrent: typeof fighter.manualMovesCurrent === 'number' ? fighter.manualMovesCurrent : fighter.manualMovesCurrent,
         frozenPoints: 0,
         targetAcquired: null,
-        movesPerTurnCycle: fighter.stats.dex * 2,
+    // Use dex when available, otherwise fall back to speed (monsters) or 1.
+    // Use explicit numeric checks to avoid treating 0/undefined incorrectly.
+    movesPerTurnCycle: ( ((typeof fighter.stats.dex === 'number' && fighter.stats.dex > 0) ? fighter.stats.dex : ((typeof fighter.stats.speed === 'number' && fighter.stats.speed > 0) ? fighter.stats.speed : 1)) ) * 2,
         movesLeft: 0,
-        moveCooldown: 1/fighter.dex * 5000, // Higher dex = lower cooldown
+    // Compute moveCooldown from dex (fighters) or speed (monsters). Default to 1 to avoid NaN.
+    moveCooldown: 1 / ( ((typeof fighter.stats.dex === 'number' && fighter.stats.dex > 0) ? fighter.stats.dex : ((typeof fighter.stats.speed === 'number' && fighter.stats.speed > 0) ? fighter.stats.speed : 1)) ) * 5000, // Higher dex/speed = lower cooldown
         eras: [
             {
                 moved: false,
@@ -196,7 +205,10 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
         },
         turnCycle: function(){
             let count = 0;
-            let factor = (1/this.stats.dex * 25)
+            // Use dex when present (crew), otherwise fall back to speed (monsters). Default to 1.
+            // Prefer a positive dex value; fall back to a positive speed value; otherwise default to 1
+            const effectiveStat = (this.stats && (typeof this.stats.dex === 'number') && this.stats.dex > 0) ? this.stats.dex : ((this.stats && (typeof this.stats.speed === 'number') && this.stats.speed > 0) ? this.stats.speed : 1);
+            let factor = (1 / effectiveStat * 25)
             let increment = (1 / factor)
             if(this.hasOverlap) handleOverlap(this)
 

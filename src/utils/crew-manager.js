@@ -74,6 +74,12 @@ export function CrewManager(){
                 member.stats.fort = typeof member.stats.fort === 'number' ? member.stats.fort : (member.stats.fort || 1);
                 member.stats.int = typeof member.stats.int === 'number' ? member.stats.int : (member.stats.int || 1);
                 member.stats.experience = typeof member.stats.experience === 'number' ? member.stats.experience : 0;
+                // initialize baseHp per-class (barbarian gets a slightly higher base)
+                if (typeof member.stats.baseHp !== 'number') {
+                    // prefer explicit member.type but fall back to image for older persisted objects
+                    const cls = member.type || member.image;
+                    member.stats.baseHp = (cls === 'barbarian') ? 12 : 10;
+                }
                 // compute derived/substats from base stats
                 try { this.computeDerivedStats(member); } catch(e) { console.warn('computeDerivedStats failed', e, member); }
                 this.crew.push(member)
@@ -138,10 +144,13 @@ export function CrewManager(){
             s.def = combine(defCon[0]);
         }
 
-        // HP (max hitpoints)
-        const hpCon = this.statConstituents.hp.all[0];
-        s.hp = combine(hpCon);
-        member.starting_hp = s.hp;
+    // HP (max hitpoints) = baseHp + fortitude-derived contribution
+    const hpCon = this.statConstituents.hp.all[0];
+    const fortContribution = combine(hpCon);
+    // ensure baseHp exists (should be set during initialization/add)
+    const baseHp = (typeof s.baseHp === 'number') ? s.baseHp : 10;
+    s.hp = baseHp + fortContribution;
+    member.starting_hp = s.hp;
 
         // Energy (max energy)
         const enCon = this.statConstituents.energy.all[0];
@@ -160,6 +169,16 @@ export function CrewManager(){
     }
 
     this.addCrewMember = (member) => {
+        // ensure stats and baseHp exist for newly added members
+        try {
+            member.stats = member.stats || {};
+            if (typeof member.stats.baseHp !== 'number') {
+                const cls = member.type || member.image;
+                member.stats.baseHp = (cls === 'barbarian') ? 12 : 10;
+            }
+        } catch (e) {
+            console.warn('addCrewMember: failed to ensure baseHp', e, member);
+        }
         try { this.computeDerivedStats(member); } catch(e) { console.warn('addCrewMember: computeDerivedStats failed', e, member); }
         this.crew.push(member)
     }
@@ -250,7 +269,12 @@ export function CrewManager(){
         crewMember.justLeveled = true;
         crewMember._recentLevelGains = crewMember._recentLevelGains || [];
         crewMember._recentLevelGains.push(gains);
-    // Recompute derived stats after base stat increases
+    // Increase baseHp by 5 on level-up, then recompute derived stats
+    try {
+        crewMember.stats.baseHp = (typeof crewMember.stats.baseHp === 'number') ? crewMember.stats.baseHp + 5 : ((crewMember.type === 'barbarian') ? 12 + 5 : 10 + 5);
+    } catch (e) {
+        console.warn('levelUp: failed to increment baseHp', e, crewMember);
+    }
     try { this.computeDerivedStats(crewMember); } catch (e) { console.warn('levelUp: computeDerivedStats failed', e, crewMember); }
         return gains;
     }
@@ -343,7 +367,7 @@ export function CrewManager(){
             name: 'Zildjikan',
             id: 33344,
             level: 1,
-            stats: { str: 3, int: 7, dex: 5, fort: 7, experience: 0 },
+            stats: { str: 3, int: 7, dex: 5, fort: 7, baseHp: 10, experience: 0 },
             portrait: images['wizard_portrait'],
             inventory: [],
             specials: ['ice_blast', 'fire_blast'],
@@ -361,7 +385,7 @@ export function CrewManager(){
             name: 'Sardonis',
             id: 123,
             level: 1,
-            stats: { str: 8, int: 5, dex: 6, fort: 7, experience: 0 },
+            stats: { str: 8, int: 5, dex: 6, fort: 7, baseHp: 10, experience: 0 },
             portrait: images['soldier_portrait'],
             inventory: [],
             passives: ['inspiring_force'],
@@ -381,7 +405,7 @@ export function CrewManager(){
             name: 'Yu',
             id: 8080,
             level: 1,
-            stats: { str: 5, int: 6, dex: 7, fort: 7, experience: 0 },
+            stats: { str: 5, int: 6, dex: 7, fort: 7, baseHp: 10, experience: 0 },
             portrait: images['monk_portrait'],
             inventory: [],
             passives: ['diamond_skin'],
@@ -399,7 +423,7 @@ export function CrewManager(){
             name: 'Loryastes',
             id: 456,
             level: 1,
-            stats: { str: 3, int: 7, dex: 5, fort: 7, experience: 0 },
+            stats: { str: 3, int: 7, dex: 5, fort: 7, baseHp: 10, experience: 0 },
             portrait: images['sage_portrait'],
             inventory: [],
             specials: ['healing_hymn'],
@@ -417,7 +441,7 @@ export function CrewManager(){
             name: 'Tyra',
             id: 789,
             level: 1,
-            stats: { str: 5, int: 5, dex: 6, fort: 3, experience: 0 },
+            stats: { str: 5, int: 5, dex: 6, fort: 3, baseHp: 10, experience: 0 },
             portrait: images['rogue_portrait'],
             inventory: [],
             specials: ['deadeye_shot'],
@@ -435,7 +459,7 @@ export function CrewManager(){
             name: 'Ulaf',
             id: 8822,
             level: 1,
-            stats: { str: 8, int: 3, dex: 4, fort: 6, experience: 0 },
+            stats: { str: 8, int: 3, dex: 4, fort: 6, baseHp: 12, experience: 0 },
             portrait: images['barbarian_portrait'],
             inventory: [],
             specials: ['berserker_rage'],

@@ -136,8 +136,6 @@ import scepter_upright from '../assets/icons/items/weapons/scepter_upright.png'
 import scepter_white from '../assets/icons/items/weapons/scepter_white.png'
 import scepter from '../assets/icons/items/weapons/scepter.png'
 
-
-import scimitar from '../assets/icons/items/weapons/scimitar.png'
 import spear_upright_white from '../assets/icons/items/weapons/spear_upright_white.png'
 import spear_upright from '../assets/icons/items/weapons/spear_upright.png'
 import spear_white from '../assets/icons/items/weapons/spear_white.png'
@@ -146,6 +144,33 @@ import sword_upright_white from '../assets/icons/items/weapons/sword_upright_whi
 import sword_upright from '../assets/icons/items/weapons/sword_upright.png'
 import sword_white from '../assets/icons/items/weapons/sword_white.png'
 import sword from '../assets/icons/items/weapons/sword.png'
+
+
+// swords (individual icons)
+import longsword from '../assets/icons/items/weapons/swords/longsword.png'
+import broadsword from '../assets/icons/items/weapons/swords/broadsword.png'
+import claymore from '../assets/icons/items/weapons/swords/claymore.png'
+import katana from '../assets/icons/items/weapons/swords/katana.png'
+import falchion from '../assets/icons/items/weapons/swords/falchion.png'
+import cutlass from '../assets/icons/items/weapons/swords/cutlass.png'
+import gladius from '../assets/icons/items/weapons/swords/gladius.png'
+import greatsword from '../assets/icons/items/weapons/swords/greatsword.png'
+import shortsword from '../assets/icons/items/weapons/swords/shortsword.png'
+import wyrmsbane from '../assets/icons/items/weapons/swords/wyrmsbane.png'
+import doomreaver from '../assets/icons/items/weapons/swords/doomreaver.png'
+import nightfall from '../assets/icons/items/weapons/swords/nightfall.png'
+import dreadedge from '../assets/icons/items/weapons/swords/dreadedge.png'
+import sunsteel from '../assets/icons/items/weapons/swords/sunsteel.png'
+import voidrender from '../assets/icons/items/weapons/swords/voidrender.png'
+import warlords_cleaver from '../assets/icons/items/weapons/swords/warlords_cleaver.png'
+import emberbrand from '../assets/icons/items/weapons/swords/emberbrand.png'
+import frostbite from '../assets/icons/items/weapons/swords/frostbite.png'
+import bloodsong from '../assets/icons/items/weapons/swords/bloodsong.png'
+import shadowfang from '../assets/icons/items/weapons/swords/shadowfang.png'
+import skymourne from '../assets/icons/items/weapons/swords/skymourne.png'
+import opalveil from '../assets/icons/items/weapons/swords/opalveil.png'
+import titans_claw from '../assets/icons/items/weapons/swords/titans_claw.png'
+import entropy from '../assets/icons/items/weapons/swords/entropy.png'
 
 // portals
 import closed_door from '../assets/icons/portals/closed_door.png';
@@ -400,8 +425,6 @@ import axe_51 from '../assets/icons/items/weapons/axes/Axe_51.png';
 import axe_52 from '../assets/icons/items/weapons/axes/Axe_52.png';
 import axe_53 from '../assets/icons/items/weapons/axes/Axe_53.png';
 
-
-
 export {
     hand_1,
     hand_2,
@@ -521,7 +544,6 @@ export {
     scepter_upright,
     scepter_upright_white,
     scepter_white,
-    scimitar,
     sword,
     sword_upright,
     sword_upright_white,
@@ -585,6 +607,31 @@ export {
     axe_51,
     axe_52,
     axe_53,
+
+    longsword,
+    broadsword,
+    claymore,
+    katana,
+    falchion,
+    cutlass,
+    gladius,
+    greatsword,
+    shortsword,
+    wyrmsbane,
+    doomreaver,
+    nightfall,
+    dreadedge,
+    sunsteel,
+    voidrender,
+    warlords_cleaver,
+    emberbrand,
+    frostbite,
+    bloodsong,
+    shadowfang,
+    skymourne,
+    opalveil,
+    titans_claw,
+    entropy,
 
     closed_door,
     open_door,

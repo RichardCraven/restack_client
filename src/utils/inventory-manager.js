@@ -1,17 +1,36 @@
 function copy(item){
-    return JSON.parse(JSON.stringify(item))
+    // Guard against undefined/null inputs — JSON.stringify(undefined) -> undefined
+    // which makes JSON.parse throw. Return null for missing items so callers
+    // can choose to skip them.
+    if (item === undefined || item === null) return null;
+    return JSON.parse(JSON.stringify(item));
 }
 const swords = [
     'longsword_sword',
     'broadsword_sword',
+    'golden_gladius_sword',
     'claymore_sword',
     'katana_sword',
-    'rapier_sword',
     'falchion_sword',
     'cutlass_sword',
     'gladius_sword',
     'greatsword_sword',
     'shortsword_sword',
+    'wyrmsbane_sword',
+    'doomreaver_sword',
+    'nightfall_sword',
+    'dreadedge_sword',
+    'sunsteel_sword',
+    'voidrender_sword',
+    'warlords_cleaver_sword',
+    'emberbrand_sword',
+    'frostbite_sword',
+    'bloodsong_sword',
+    'shadowfang_sword',
+    'skymourne_sword',
+    'opalveil_sword',
+    'titans_claw_sword',
+    'entropy_sword',
 ]
 
 const axes = [
@@ -98,21 +117,35 @@ export function InventoryManager(){
     ]
     this.weapons_names = axes.concat([
         'flail',
-        'scimitar',
         'spear',
         'sword',
         'longbow',
         'scepter',
-        'longsword_sword',
-        'broadsword_sword',
-        'claymore_sword',
-        'katana_sword',
-        'rapier_sword',
-        'falchion_sword',
-        'cutlass_sword',
-        'gladius_sword',
-        'greatsword_sword',
-        'shortsword_sword',
+    'longsword_sword',
+    'broadsword_sword',
+    'golden_gladius_sword',
+    'claymore_sword',
+    'katana_sword',
+    'falchion_sword',
+    'cutlass_sword',
+    'gladius_sword',
+    'greatsword_sword',
+    'shortsword_sword',
+    'wyrmsbane_sword',
+    'doomreaver_sword',
+    'nightfall_sword',
+    'dreadedge_sword',
+    'sunsteel_sword',
+    'voidrender_sword',
+    'warlords_cleaver_sword',
+    'emberbrand_sword',
+    'frostbite_sword',
+    'bloodsong_sword',
+    'shadowfang_sword',
+    'skymourne_sword',
+    'opalveil_sword',
+    'titans_claw_sword',
+    'entropy_sword',
     ]);
     this.potions_names = [
         'minor_health_potion',
@@ -228,183 +261,100 @@ export function InventoryManager(){
     ashwood_axe: { damage: 190, icon: 'axe_24', type: 'weapon', subtype: 'cutting', tier: 3, name: 'Ashwood Axe', range: 'close', equippedBy: null, animation: null, description: 'An ashwood axe (76 percent points)' },
     drakebane_axe: { damage: 200, icon: 'axe_25', type: 'weapon', subtype: 'cutting', tier: 3, name: 'Drakebane Axe', range: 'close', equippedBy: null, animation: null, description: 'A drakebane axe (78 percent points)' },
 
-    flail: {
-            damage: 50,
-            icon: 'flail',
-            type: 'weapon',
-            subtype: 'crushing',
-            name: 'flail',
-            range: 'close',
-            equippedBy: null,
-            animation: null,
-            description: 'The basic flail does 50 (percent points)'
-        },
-        spear: {
-            damage: 50,
-            icon: 'spear',
-            type: 'weapon',
-            subtype: 'cutting',
-            name: 'spear',
-            range: 'medium',
-            equippedBy: null,
-            animation: null,
-            description: 'The basic spear does 50 (percent points)'
-        },
-        sword: {
-            damage: 40,
-            icon: 'sword',
-            type: 'weapon',
-            subtype: 'cutting',
-            name: 'sword',
-            range: 'close',
-            equippedBy: null,
-            animation: null,
-            description: 'The basic sword does 40 (percent points)'
-        },
-        scimitar: {
-            damage: 30,
-            icon: 'scimitar',
-            type: 'weapon',
-            subtype: 'cutting',
-            name: 'scimitar',
-            range: 'close',
-            equippedBy: null,
-            animation: null,
-            description: 'The basic scimitar does 30 (percent points)'
-        },
-        scepter: {
-            damage: 30,
-            icon: 'scepter',
-            type: 'weapon',
-            subtype: 'crushing',
-            name: 'scepter',
-            range: 'close',
-            equippedBy: null,
-            animation: null,
-            description: 'The basic scepter does 30 (percent points)'
-        },
-        longbow: {
-            damage: 30,
-            icon: 'longbow',
-            type: 'weapon',
-            subtype: 'cutting',
-            name: 'longbow',
-            range: 'far',
-            equippedBy: null,
-            animation: null,
-            description: 'The basic longbow does 30 (percent points)'
-        }
-        ,
-        longsword_sword: {
-            damage: 45,
-            icon: 'longsword',
-            type: 'weapon',
-            subtype: 'cutting',
-            name: 'longsword',
-            range: 'close',
-            equippedBy: null,
-            animation: null,
-            description: 'The longsword does 45 (percent points)'
-        },
-        broadsword_sword: {
-            damage: 50,
-            icon: 'broadsword',
-            type: 'weapon',
-            subtype: 'cutting',
-            name: 'broadsword',
-            range: 'close',
-            equippedBy: null,
-            animation: null,
-            description: 'The broadsword does 50 (percent points)'
-        },
-        claymore_sword: {
-            damage: 60,
-            icon: 'claymore',
-            type: 'weapon',
-            subtype: 'cutting',
-            name: 'claymore',
-            range: 'close',
-            equippedBy: null,
-            animation: null,
-            description: 'The claymore does 60 (percent points)'
-        },
-        katana_sword: {
-            damage: 55,
-            icon: 'katana',
-            type: 'weapon',
-            subtype: 'cutting',
-            name: 'katana',
-            range: 'close',
-            equippedBy: null,
-            animation: null,
-            description: 'The katana does 55 (percent points)'
-        },
-        rapier_sword: {
-            damage: 35,
-            icon: 'rapier',
-            type: 'weapon',
-            subtype: 'cutting',
-            name: 'rapier',
-            range: 'close',
-            equippedBy: null,
-            animation: null,
-            description: 'The rapier does 35 (percent points)'
-        },
-        falchion_sword: {
-            damage: 45,
-            icon: 'falchion',
-            type: 'weapon',
-            subtype: 'cutting',
-            name: 'falchion',
-            range: 'close',
-            equippedBy: null,
-            animation: null,
-            description: 'The falchion does 45 (percent points)'
-        },
-        cutlass_sword: {
-            damage: 30,
-            icon: 'cutlass',
-            type: 'weapon',
-            subtype: 'cutting',
-            name: 'cutlass',
-            range: 'close',
-            equippedBy: null,
-            animation: null,
-            description: 'The cutlass does 30 (percent points)'
-        },
-        gladius_sword: {
-            damage: 40,
-            icon: 'gladius',
-            type: 'weapon',
-            subtype: 'cutting',
-            name: 'gladius',
-            range: 'close',
-            equippedBy: null,
-            animation: null,
-            description: 'The gladius does 40 (percent points)'
-        },
-        greatsword_sword: {
-            damage: 70,
-            icon: 'greatsword',
-            type: 'weapon',
-            subtype: 'cutting',
-            name: 'greatsword',
-            range: 'close',
-            equippedBy: null,
-            animation: null,
-            description: 'The greatsword does 70 (percent points)'
-        },
-        shortsword_sword: {
-            damage: 25,
-            icon: 'shortsword',
-            type: 'weapon',
-            subtype: 'cutting',
-            name: 'shortsword',
-            range: 'close',
-            equippedBy: null,
-            animation: null,
-            description: 'The shortsword does 25 (percent points)'
-        }
+    
+    shortsword_sword: { damage: 25, icon: 'shortsword', type: 'weapon', subtype: 'cutting', tier: 1, name: 'shortsword', range: 'close', equippedBy: null, animation: null, description: 'The shortsword does 25 (percent points)' },
+    cutlass_sword: { damage: 30, icon: 'cutlass', type: 'weapon', subtype: 'cutting', tier: 1, name: 'cutlass', range: 'close', equippedBy: null, animation: null, description: 'The cutlass does 30 (percent points)' },
+    gladius_sword: { damage: 40, icon: 'gladius', type: 'weapon', subtype: 'cutting', tier: 1, name: 'gladius', range: 'close', equippedBy: null, animation: null, description: 'The gladius does 40 (percent points)' },
+    falchion_sword: { damage: 45, icon: 'falchion', type: 'weapon', subtype: 'cutting', tier: 1, name: 'falchion', range: 'close', equippedBy: null, animation: null, description: 'The falchion does 45 (percent points)' },
+    longsword_sword: { damage: 45, icon: 'longsword', type: 'weapon', subtype: 'cutting', tier: 1, name: 'longsword', range: 'close', equippedBy: null, animation: null, description: 'The longsword does 45 (percent points)' },
+    broadsword_sword: { damage: 50, icon: 'broadsword', type: 'weapon', subtype: 'cutting', tier: 1, name: 'broadsword', range: 'close', equippedBy: null, animation: null, description: 'The broadsword does 50 (percent points)' },
+    golden_gladius_sword: { damage: 55, icon: 'gladius', type: 'weapon', subtype: 'cutting', tier: 1, name: 'gladius', range: 'close', equippedBy: null, animation: null, description: 'The gladius does 40 (percent points)' },
+    
+    
+    wyrmsbane_sword: { damage: 52, icon: 'wyrmsbane', type: 'weapon', subtype: 'cutting', tier: 1, name: 'wyrmsbane', range: 'close', equippedBy: null, animation: null, description: 'The wyrmsbane does 52 (percent points)' },
+    katana_sword: { damage: 55, icon: 'katana', type: 'weapon', subtype: 'cutting', tier: 1, name: 'katana', range: 'close', equippedBy: null, animation: null, description: 'The katana does 55 (percent points)' },
+    claymore_sword: { damage: 60, icon: 'claymore', type: 'weapon', subtype: 'cutting', tier: 1, name: 'claymore', range: 'close', equippedBy: null, animation: null, description: 'The claymore does 60 (percent points)' },
+    greatsword_sword: { damage: 70, icon: 'greatsword', type: 'weapon', subtype: 'cutting', tier: 1, name: 'greatsword', range: 'close', equippedBy: null, animation: null, description: 'The greatsword does 70 (percent points)' },
+    doomreaver_sword: { damage: 78, icon: 'doomreaver', type: 'weapon', subtype: 'cutting', tier: 2, name: 'doomreaver', range: 'close', equippedBy: null, animation: null, description: 'The doomreaver does 78 (percent points)' },
+    nightfall_sword: { damage: 82, icon: 'nightfall', type: 'weapon', subtype: 'cutting', tier: 2, name: 'nightfall', range: 'close', equippedBy: null, animation: null, description: 'The nightfall does 82 (percent points)' },
+    dreadedge_sword: { damage: 88, icon: 'dreadedge', type: 'weapon', subtype: 'cutting', tier: 2, name: 'dreadedge', range: 'close', equippedBy: null, animation: null, description: 'The dreadedge does 88 (percent points)' },
+    sunsteel_sword: { damage: 95, icon: 'sunsteel', type: 'weapon', subtype: 'cutting', tier: 2, name: 'sunsteel', range: 'close', equippedBy: null, animation: null, description: 'The sunsteel does 95 (percent points)' },
+    voidrender_sword: { damage: 100, icon: 'voidrender', type: 'weapon', subtype: 'cutting', tier: 2, name: 'voidrender', range: 'close', equippedBy: null, animation: null, description: 'The voidrender does 100 (percent points)' },
+    warlords_cleaver_sword: { damage: 105, icon: 'warlords_cleaver', type: 'weapon', subtype: 'cutting', tier: 2, name: 'warlords_cleaver', range: 'close', equippedBy: null, animation: null, description: 'The warlords_cleaver does 105 (percent points)' },
+    emberbrand_sword: { damage: 110, icon: 'emberbrand', type: 'weapon', subtype: 'cutting', tier: 2, name: 'emberbrand', range: 'close', equippedBy: null, animation: null, description: 'The emberbrand does 110 (percent points)' },
+    frostbite_sword: { damage: 130, icon: 'frostbite', type: 'weapon', subtype: 'cutting', tier: 3, name: 'frostbite', range: 'close', equippedBy: null, animation: null, description: 'The frostbite does 130 (percent points)' },
+    bloodsong_sword: { damage: 140, icon: 'bloodsong', type: 'weapon', subtype: 'cutting', tier: 3, name: 'bloodsong', range: 'close', equippedBy: null, animation: null, description: 'The bloodsong does 140 (percent points)' },
+    shadowfang_sword: { damage: 150, icon: 'shadowfang', type: 'weapon', subtype: 'cutting', tier: 3, name: 'shadowfang', range: 'close', equippedBy: null, animation: null, description: 'The shadowfang does 150 (percent points)' },
+    skymourne_sword: { damage: 160, icon: 'skymourne', type: 'weapon', subtype: 'cutting', tier: 3, name: 'skymourne', range: 'close', equippedBy: null, animation: null, description: 'The skymourne does 160 (percent points)' },
+    opalveil_sword: { damage: 170, icon: 'opalveil', type: 'weapon', subtype: 'cutting', tier: 3, name: 'opalveil', range: 'close', equippedBy: null, animation: null, description: 'The opalveil does 170 (percent points)' },
+    titans_claw_sword: { damage: 180, icon: 'titans_claw', type: 'weapon', subtype: 'cutting', tier: 3, name: 'titans_claw', range: 'close', equippedBy: null, animation: null, description: 'The titans_claw does 180 (percent points)' },
+    entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting', tier: 3, name: 'entropy', range: 'close', equippedBy: null, animation: null, description: 'The entropy does 190 (percent points)' },
+    // flail: {
+    //         damage: 50,
+    //         icon: 'flail',
+    //         type: 'weapon',
+    //         subtype: 'crushing',
+    //         name: 'flail',
+    //         range: 'close',
+    //         equippedBy: null,
+    //         animation: null,
+    //         description: 'The basic flail does 50 (percent points)'
+    // },
+    // spear: {
+    //     damage: 50,
+    //     icon: 'spear',
+    //     type: 'weapon',
+    //     subtype: 'cutting',
+    //     name: 'spear',
+    //     range: 'medium',
+    //     equippedBy: null,
+    //     animation: null,
+    //     description: 'The basic spear does 50 (percent points)'
+    // },
+    // sword: {
+    //     damage: 40,
+    //     icon: 'sword',
+    //     type: 'weapon',
+    //     subtype: 'cutting',
+    //     name: 'sword',
+    //     range: 'close',
+    //     equippedBy: null,
+    //     animation: null,
+    //     description: 'The basic sword does 40 (percent points)'
+    // },
+    // scimitar: {
+    //     damage: 30,
+    //     icon: 'scimitar',
+    //     type: 'weapon',
+    //     subtype: 'cutting',
+    //     name: 'scimitar',
+    //     range: 'close',
+    //     equippedBy: null,
+    //     animation: null,
+    //     description: 'The basic scimitar does 30 (percent points)'
+    // },
+    // scepter: {
+    //     damage: 30,
+    //     icon: 'scepter',
+    //     type: 'weapon',
+    //     subtype: 'crushing',
+    //     name: 'scepter',
+    //     range: 'close',
+    //     equippedBy: null,
+    //     animation: null,
+    //     description: 'The basic scepter does 30 (percent points)'
+    // },
+    // longbow: {
+    //     damage: 30,
+    //     icon: 'longbow',
+    //     type: 'weapon',
+    //     subtype: 'cutting',
+    //     name: 'longbow',
+    //     range: 'far',
+    //     equippedBy: null,
+    //     animation: null,
+    //     description: 'The basic longbow does 30 (percent points)'
+    // },
     }
     
     this.armor= {
@@ -755,13 +705,16 @@ export function InventoryManager(){
         } else {
             this.inventory = data.items.map(e=> {
                 const equippedBy = e.equippedBy;
-                let v;
-                if(this.allItems[(e.name.replaceAll(' ', '_'))]){
-                    v = copy(this.allItems[e.name.replaceAll(' ', '_')]);
-                    v.equippedBy = equippedBy;
+                const key = (e.name || '').replaceAll(' ', '_');
+                if(this.allItems[key]){
+                    const v = copy(this.allItems[key]);
+                    if (v) v.equippedBy = equippedBy;
+                    return v;
+                } else {
+                    console.warn('InventoryManager: unknown saved item key:', key);
+                    return null;
                 }
-                return v;
-            })
+            }).filter(v => v !== null);
             this.gold = data.gold;
             this.shimmering_dust = data.shimmering_dust;
             this.totems = data.totems;
@@ -769,9 +722,13 @@ export function InventoryManager(){
     }
     this.addItemsByName = (items) => {
         let arr = [];
-        
         items.forEach(e=>{
-            arr.push(copy(this.allItems[e]))
+            if (this.allItems[e]) {
+                const v = copy(this.allItems[e]);
+                if (v) arr.push(v);
+            } else {
+                console.warn('addItemsByName: unknown item key:', e);
+            }
         })
         this.inventory = this.inventory.concat(arr);
     }

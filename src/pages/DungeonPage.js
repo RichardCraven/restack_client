@@ -487,7 +487,34 @@ class DungeonPage extends React.Component {
                 try { updateUserRequest(getUserId(), metaForMigration).catch(()=>{}); } catch (e) {}
             }
         } catch (e) {}
-
+        
+        // One-time debug initializer: add one of each sword to the player's inventory
+        try {
+            const metaDebug = getMeta() || {};
+            // Only run once: if debug flag is falsy, add swords and mark debug true
+            if (!metaDebug.debug && this.props && this.props.inventoryManager) {
+                try {
+                    const im = this.props.inventoryManager;
+                    // pick weapon keys that look like swords
+                    const swordKeys = (im.weapons_names || []).filter(k => typeof k === 'string' && k.endsWith('_sword'));
+                    if (swordKeys.length > 0) {
+                        im.addItemsByName(swordKeys);
+                        // persist inventory into meta and mark debug
+                        metaDebug.inventory = {
+                            items: im.inventory,
+                            gold: im.gold,
+                            shimmering_dust: im.shimmering_dust,
+                            totems: im.totems
+                        };
+                        metaDebug.debug = true;
+                        try { storeMeta(metaDebug); } catch(e) {}
+                        try { updateUserRequest(getUserId(), metaDebug).catch(()=>{}); } catch(e) {}
+                        // Trigger any higher-level save handler if provided
+                        try { if (this.props.saveUserData) this.props.saveUserData(); } catch(e) {}
+                    }
+                } catch(e) { console.warn('One-time debug sword initialization failed', e); }
+            }
+        } catch(e) {}
         // Real-time check for completed special actions
     this.realTimeSpecialActionCheckInterval = this._setInterval(() => {
             // Use centralized helper to find finished actions and optionally mark them notified
@@ -932,8 +959,18 @@ class DungeonPage extends React.Component {
             dungeons.push(d)
         })
         selectedDungeon = dungeons[0];
+        // Fallback: if no saved templates are available, try using the current in-memory dungeon
+        if (!selectedDungeon) {
+            try {
+                selectedDungeon = (this.props && this.props.boardManager && this.props.boardManager.dungeon) || this.dungeon || null;
+            } catch (e) { selectedDungeon = null }
+        }
         try {
-            this.props.boardManager.respawnMonsters(selectedDungeon)
+            if (this.props.boardManager && typeof this.props.boardManager.respawnMonsters === 'function') {
+                this.props.boardManager.respawnMonsters(selectedDungeon)
+            } else {
+                console.warn('respawnMonsters: boardManager.respawnMonsters not available');
+            }
             // Persist meta after a respawn event so UI/session state is saved
             try {
                 const meta = getMeta();
@@ -1026,7 +1063,11 @@ class DungeonPage extends React.Component {
             const monsterCommands = ['monster-spawn','monsterspawn','mspawn'];
             const itemCommands = ['item-spawn','itemspawn','ispawn'];
 
-            if (monsterCommands.includes(cmd)) {
+            // Allow commands with optional args, e.g. "mspawn 1" or "mspawn:1"
+            const monsterCommandMatch = monsterCommands.find(c => cmd.startsWith(c));
+            const itemCommandMatch = itemCommands.find(c => cmd.startsWith(c));
+
+            if (monsterCommandMatch) {
                 // trigger monster spawn without touching timers
                 try {
                     this.respawnMonsters();
@@ -1034,7 +1075,7 @@ class DungeonPage extends React.Component {
                 } catch (err) {
                     this.setState(prev => ({ devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, `Error: ${err && err.message ? err.message : err}`], devConsoleInput: '' }));
                 }
-            } else if (itemCommands.includes(cmd)) {
+            } else if (itemCommandMatch) {
                 try {
                     this.respawnItems();
                     this.setState(prev => ({ devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, 'Triggered item spawn (dev console)'], devConsoleInput: '' }));
@@ -1042,6 +1083,50 @@ class DungeonPage extends React.Component {
                     this.setState(prev => ({ devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, `Error: ${err && err.message ? err.message : err}`], devConsoleInput: '' }));
                 }
             } else {
+                // Developer: restore full health to all crew
+                if (cmd === 'fullhealth' || cmd === 'full-health' || cmd === 'revive') {
+                    try {
+                        const cm = this.props.crewManager;
+                        if (cm && Array.isArray(cm.crew)) {
+                            cm.crew.forEach(m => {
+                                try {
+                                    // Prefer derived max hp from stats.hp or starting_hp
+                                    const maxHp = (m && m.stats && typeof m.stats.hp === 'number') ? m.stats.hp : (typeof m.starting_hp === 'number' ? m.starting_hp : 1);
+                                    m.hp = maxHp;
+                                    m.dead = false;
+                                } catch (inner) {}
+                            });
+                        }
+                        const meta = getMeta() || {};
+                        if (Array.isArray(meta.crew) && this.props.crewManager && Array.isArray(this.props.crewManager.crew)) {
+                            meta.crew = this.props.crewManager.crew.map(m => {
+                                try {
+                                    const maxHp = (m && m.stats && typeof m.stats.hp === 'number') ? m.stats.hp : (typeof m.starting_hp === 'number' ? m.starting_hp : 1);
+                                    m.hp = maxHp;
+                                    m.dead = false;
+                                } catch (inner) {}
+                                return m;
+                            });
+                        }
+                        try { storeMeta(meta); } catch(e){}
+                        try { updateUserRequest(getUserId(), meta).catch(()=>{}); } catch(e){}
+                        try { if (typeof this.props.saveUserData === 'function') this.props.saveUserData(); } catch(e){}
+                        // Refresh selectedCrewMember and UI
+                        try {
+                            if (this.state.selectedCrewMember && this.state.selectedCrewMember.id) {
+                                const updated = (this.props.crewManager && Array.isArray(this.props.crewManager.crew)) ? this.props.crewManager.crew.find(c => c && c.id === this.state.selectedCrewMember.id) : null;
+                                if (updated) this.setState({ selectedCrewMember: { ...updated } });
+                            }
+                            this.forceUpdate();
+                        } catch(e){}
+                        this.setState(prev => ({ devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, 'All crew restored to full health'], devConsoleInput: '' }));
+                    } catch (err) {
+                        this.setState(prev => ({ devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, `Error: ${err && err.message ? err.message : err}`], devConsoleInput: '' }));
+                    }
+                    try { if (this.devConsoleInputRef.current) this.devConsoleInputRef.current.focus(); } catch (err) {}
+                    e.preventDefault();
+                    return;
+                }
                 // unknown command: echo
                 this.setState(prev => ({ devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, `Unknown command: ${raw}`], devConsoleInput: '' }));
             }
@@ -1540,7 +1625,14 @@ class DungeonPage extends React.Component {
             }
         } catch (e) {}
         // Allow global 'i' to toggle MonsterBattle inventory when a battle is active
+        // If the developer console is open, disable all hotkeys here (except Shift+Space
+        // which is handled above). This prevents typed commands like 'revive' from
+        // being intercepted by global shortcuts (e.g. 'i' toggling inventory).
         try {
+            if (this.state.devConsoleOpen) {
+                // Let the focused input handle its own key events (handleDevConsoleKeyDown)
+                return;
+            }
             const maybeKey = event.key;
             // Enter should confirm summary panel when visible inside MonsterBattle
             if ((maybeKey === 'Enter' || maybeKey === 'Return') && this.state.inMonsterBattle && this.monsterBattleComponentRef && this.monsterBattleComponentRef.current) {
@@ -2349,13 +2441,19 @@ class DungeonPage extends React.Component {
                         try { if (this.props.saveUserData) this.props.saveUserData(); } catch(e) {}
 
                         // // Notify parent UI for each crew member so DungeonPage updates portrait overlays
-                        // try {
-                        //     if (this.props && typeof this.props.onFighterUpdate === 'function') {
-                        //         meta2.crew.forEach(c => {
-                        //             try { this.props.onFighterUpdate(c); } catch (inner) {}
-                        //         });
-                        //     }
-                        // } catch (inner) { }
+                        // Ensure UI reflects restored crew state (hp/dead flags). Force a re-render
+                        // and update any selectedCrewMember references so portrait overlays refresh.
+                        try {
+                            // Update selectedCrewMember if present
+                            if (this.state.selectedCrewMember && this.state.selectedCrewMember.id) {
+                                const updated = (this.props.crewManager && Array.isArray(this.props.crewManager.crew)) ? this.props.crewManager.crew.find(c => c && c.id === this.state.selectedCrewMember.id) : null;
+                                if (updated) {
+                                    try { this.setState({ selectedCrewMember: { ...updated } }); } catch(e) {}
+                                }
+                            }
+                            // Force update to refresh crew tiles and death overlays
+                            try { this.forceUpdate(); } catch(e) {}
+                        } catch (inner) { console.warn('post-respawn UI refresh failed', inner); }
                     }
             try {
                 

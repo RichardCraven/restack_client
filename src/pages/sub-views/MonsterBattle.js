@@ -179,6 +179,23 @@ class MonsterBattle extends React.Component {
         this.props.combatManager.connectOverlayManager(this.props.overlayManager)
         this.props.combatManager.connectAnimationManager(this.props.animationManager);
 
+        // Log computed movement-related stats for debugging (speed/dex/moveCooldown)
+        try {
+            const cm = this.props.combatManager;
+            if (cm && cm.combatants) {
+                const speeds = Object.values(cm.combatants).map(c => ({
+                    id: c.id,
+                    name: c.name,
+                    type: c.type,
+                    dex: c.stats && c.stats.dex,
+                    speed: c.stats && c.stats.speed,
+                    moveCooldown: c.moveCooldown,
+                    movesPerTurnCycle: c.movesPerTurnCycle
+                }));
+                console.log('Initial combatant movement stats:', speeds);
+            }
+        } catch (e) { console.warn('Failed to log initial combatant speeds', e); }
+
         // Wire Monk teleport callback to set teleportingFighterId
         const monkAI = this.props.combatManager.fighterAI?.roster?.monk;
         if (monkAI) {
@@ -263,6 +280,23 @@ class MonsterBattle extends React.Component {
             combatTiles: arr, ghostPortraitMatrix,
             monsterPortrait: this.props.monster.portrait
         })
+
+        // Log again after initializeCombat so we capture populated combatants
+        try {
+            const cm2 = this.props.combatManager;
+            if (cm2 && cm2.combatants) {
+                const speeds2 = Object.values(cm2.combatants).map(c => ({
+                    id: c.id,
+                    name: c.name,
+                    type: c.type,
+                    dex: c.stats && c.stats.dex,
+                    speed: c.stats && c.stats.speed,
+                    moveCooldown: c.moveCooldown,
+                    movesPerTurnCycle: c.movesPerTurnCycle
+                }));
+                console.log('Initial combatant movement stats (after initializeCombat):', speeds2);
+            }
+        } catch (e) { console.warn('Failed to log post-initialize combatant speeds', e); }
 
         // Wire the MonsterBattle component instance into the AI roster so
         // fighter profiles (e.g. Wizard) can call back to update UI state

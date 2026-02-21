@@ -3,7 +3,6 @@ import * as images from '../utils/images'
 const getMinorWeapon = () => {
     const arr = ['axe',
         'flail',
-        'scimitar',
         'spear',
         'sword',
         'longbow']
@@ -23,15 +22,13 @@ export function MonsterManager(){
             type: 'witch',
             key: 'witch',
             image_names: ['witch_p1_1'],
-            monster_names: ['Rhea', 'Eundu'],
+            monster_names: ['Rhea', 'BabaYaga'],
             stats: {
-                str: 10,
-                int:12,
-                dex:5,
-                fort:5,
                 hp: 160,
                 atk: 13,
-                def: 8
+                def: 8,
+                speed: 10,
+                willpower: 0
             },
             level: 12,
             portrait: images['witch_p1_1'],
@@ -52,13 +49,11 @@ export function MonsterManager(){
             image_names: ['beholder'],
             monster_names: ['Nirnuceks', 'Adalak', 'Vemrindon', 'Sardaresh'],
             stats: {
-                str: 10,
-                int: 10,
-                dex:6,
-                fort:5,
                 hp: 110,
                 atk: 15,
-                def: 5
+                def: 5,
+                speed: 10,
+                willpower: 0
             },
             level: 14,
             portrait: images['beholder_portrait'],
@@ -81,13 +76,11 @@ export function MonsterManager(){
             image_names: ['beholder_minion'],
             monster_names: ['Nirnuceks', 'Adalak', 'Vemrindon'],
             stats: {
-                str: 5,
-                int: 5,
-                dex:3,
-                fort:2,
                 hp: 60,
                 atk: 7,
-                def: 2
+                def: 2,
+                speed: 10,
+                willpower: 0
             },
             level: 5,
             portrait: images['beholder_minion_portrait'],
@@ -104,13 +97,11 @@ export function MonsterManager(){
             image_names: ['kabuki_demon_portrait'],
             monster_names: ['Ikiro', 'Jimbu'],
             stats: {
-                str: 13,
-                int: 12,
-                dex:8,
-                fort:7,
                 hp: 140,
                 atk: 13,
-                def: 3
+                def: 3,
+                speed: 10,
+                willpower: 0
             },
             level: 15,
             portrait: images['kabuki_demon_portrait'],
@@ -132,13 +123,11 @@ export function MonsterManager(){
             image_names: ['kabuki_demon_minion'],
             monster_names: ['Ikiro', 'Jimbu'],
             stats: {
-                str: 6,
-                int: 2,
-                dex:4,
-                fort:3,
                 hp: 50,
                 atk: 5,
-                def: 3
+                def: 3,
+                speed: 10,
+                willpower: 0
             },
             level: 4,
             portrait: images['kabuki_demon_minion_portrait'],
@@ -155,13 +144,11 @@ export function MonsterManager(){
             image_names: ['black_vampire'],
             monster_names: ['Vukodlak', 'Morias', 'Roterach'],
             stats: {
-                str: 7,
-                int:7,
-                dex:6,
-                fort:6,
                 hp: 84,
                 atk: 9,
-                def: 12
+                def: 12,
+                speed: 10,
+                willpower: 0
             },
             level: 10,
             portrait: images['vampire_portrait'],
@@ -181,13 +168,11 @@ export function MonsterManager(){
             image_names: ['ogre'],
             monster_names: ['Uggo', 'Tubodu', 'Gumluk'],
             stats: {
-                str: 7,
-                int:7,
-                dex:6,
-                fort:6,
                 hp: 72,
                 atk: 9,
-                def: 11
+                def: 11,
+                speed: 10,
+                willpower: 0
             },
             level: 8,
             portrait: images['ogre_portrait'],
@@ -206,13 +191,11 @@ export function MonsterManager(){
             image_names: ['gorgon'],
             monster_names: ['Lithios', 'Merkaba', 'Axolus'],
             stats: {
-                str: 8,
-                int:5,
-                dex:4,
-                fort:7,
                 hp: 62,
                 atk: 8,
-                def: 9
+                def: 9,
+                speed: 10,
+                willpower: 0
             },
             level: 9,
             portrait: images['gorgon_portrait'],
@@ -232,13 +215,11 @@ export function MonsterManager(){
             image_names: ['goat_demon'],
             monster_names: ['ur-Xulu', 'ur-Baba', 'ur-Zuzu'],
             stats: {
-                str: 9,
-                int:6,
-                dex:5,
-                fort:8,
                 hp: 92,
                 atk: 11,
-                def: 11
+                def: 11,
+                speed: 10,
+                willpower: 0
             },
             level: 11,
             portrait: images['goat_demon_portrait'],
@@ -259,13 +240,11 @@ export function MonsterManager(){
             image_names: ['wraith'],
             monster_names: ['Sicirath', 'Olnuk', 'Ygra'],
             stats: {
-                str: 7,
-                int:7,
-                dex:6,
-                fort:6,
                 hp: 82,
                 atk: 9,
-                def: 8
+                def: 8,
+                speed: 10,
+                willpower: 0
             },
             level: 8,
             portrait: images['wraith_portrait'],
@@ -284,13 +263,11 @@ export function MonsterManager(){
             image_names: ['dragon'],
             monster_names: ['Theraxes', 'Daedron', 'Kykerod'],
             stats: {
-                str: 10,
-                int:9,
-                dex:7,
-                fort:8,
                 hp: 255,
                 atk: 18,
-                def: 17
+                def: 17,
+                speed: 10,
+                willpower: 0
             },
             level: 16,
             portrait: images[this.pickRandom(['wyvern_portrait', 'wyvern_portrait2'])],
@@ -311,13 +288,11 @@ export function MonsterManager(){
             image_names: ['djinn'],
             monster_names: ['Murmeros', 'Ixcalot', 'il Hagan'],
             stats: {
-                str: 8,
-                int:11,
-                dex:7,
-                fort:8,
                 hp: 175,
                 atk: 10,
-                def: 11
+                def: 11,
+                speed: 10,
+                willpower: 0
             },
             level: 19,
             portrait: images['djinn_portrait'],
@@ -338,14 +313,12 @@ export function MonsterManager(){
             image_names: ['sphinx'],
             monster_names: ['Nunufet', 'Ipalot', 'Vizieros'],
             stats: {
-                str: 5,
-                int:12,
-                dex:7,
-                fort:10,
                 hp: 325,
                 atk: 13,
                 // atk: 2,
-                def: 13
+                def: 13,
+                speed: 10,
+                willpower: 0
             },
             level: 29,
             // portrait: images[this.pickRandom(['sphinx_portrait', 'sphinx_portrait2'])],
@@ -369,13 +342,11 @@ export function MonsterManager(){
             image_names: ['goblin'],
             monster_names: ['Wiggit', 'Miggi', "Gurnak"],
             stats: {
-                str: 4,
-                int:2,
-                dex:6,
-                fort:3,
                 hp: 38,
                 atk: 3,
-                def: 5
+                def: 5,
+                speed: 10,
+                willpower: 0
             },
             level: 2,
             portrait: images['goblin_portrait'],
@@ -394,13 +365,11 @@ export function MonsterManager(){
             image_names: ['mummy'],
             monster_names: ['Kufu', 'Razeset'],
             stats: {
-                str: 8,
-                int:4,
-                dex:4,
-                fort:6,
                 hp: 80,
                 atk: 10,
-                def: 13
+                def: 13,
+                speed: 10,
+                willpower: 0
             },
             level: 6,
             portrait: images['mummy_portrait'],
@@ -421,13 +390,11 @@ export function MonsterManager(){
             image_names: ['troll'],
             monster_names: ['Mundzungu', 'Wugum'],
             stats: {
-                str: 6,
-                int:4,
-                dex:4,
-                fort:2,
                 hp: 78,
                 atk: 10,
-                def: 13
+                def: 13,
+                speed: 10,
+                willpower: 0
             },
             level: 6,
             portrait: images['troll_portrait'],
@@ -447,13 +414,11 @@ export function MonsterManager(){
             image_names: ['skeleton'],
             monster_names: ['bones'],
             stats: {
-                str: 4,
-                int:1,
-                dex:4,
-                fort:5,
                 hp: 35,
                 atk: 5,
-                def: 7
+                def: 7,
+                speed: 10,
+                willpower: 0
             },
             level: 3,
             portrait: images['skeleton_portrait'],
