@@ -1155,8 +1155,11 @@ export function CombatManager(){
         }
     // Use speed (derived substat) for defensive agility. Fall back to dex if present for crew.
     const targetSpeed = (target.stats && (typeof target.stats.speed === 'number')) ? target.stats.speed : (target.stats && target.stats.dex) || 1;
-    let defenseFactor = targetSpeed ** 2 + (target.stats.def || 0);
-        if(defenseFactor > 99) defenseFactor = 90;
+    // Previous quadratic scaling (speed ** 2) made high-speed combatants nearly invincible
+    // because defense grew quickly. Use a gentler linear scaling so attacks have a
+    // reasonable chance to connect: defense = speed * 4 + flat_def.
+    let defenseFactor = (targetSpeed * 4) + (target.stats.def || 0);
+    if (defenseFactor > 99) defenseFactor = 90;
         let attackFactor = Math.floor(Math.sqrt(caller.atk));
 
         const results = [], diceRoll = function(){
@@ -1167,8 +1170,10 @@ export function CombatManager(){
             results.push(diceRoll())
         }
         const connects = results.some(e=>e>defenseFactor);
-        if(caller.type === 'monk'){
-            console.log('monk initiates attack. attackFactor: ', attackFactor, 'connects: ', connects, 'with target: ', target);
+        // Helpful debug: print attack resolution details for skeletons/monks to diagnose
+        // stalemate cases. Kept narrowly targeted to avoid spam in other combat.
+        if (caller && (caller.type === 'skeleton' || caller.type === 'monk')) {
+            console.debug('attack resolution', { attacker: caller.name || caller.type, atk: caller.atk, attackFactor, connects, target: target && (target.name || target.type), defenseFactor, rolls: results.slice(0,5) });
         }
         if(!caller.pendingAttack){
             console.log('WHOOA there. someone is trying to attack with nothing');
@@ -1956,8 +1961,10 @@ export function CombatManager(){
             damage,
             sourceDirection
         };
-        if(target.weaknesses.includes[caller.pendingAttack.type]){
-            damage += Math.floor(damage/2);
+        if(Array.isArray(target.weaknesses) && caller.pendingAttack && typeof caller.pendingAttack.type === 'string'){
+            if(target.weaknesses.includes(caller.pendingAttack.type)){
+                damage += Math.floor(damage/2);
+            }
         }
         // Apply equipped armor percent reduction (if any) to the damage for non-monster targets
         let armorPercentTarget = 0;

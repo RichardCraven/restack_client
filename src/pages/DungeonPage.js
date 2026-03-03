@@ -397,6 +397,13 @@ class DungeonPage extends React.Component {
         // meta.crew[0].stats.hp = 1000;
         // remove this after debugging ^
 
+        // Initialize crew-level resource stats if not yet set
+        if (meta) {
+            let metaDirty = false;
+            if (typeof meta.food !== 'number') { meta.food = 55; metaDirty = true; }
+            if (typeof meta.resolve !== 'number') { meta.resolve = 100; metaDirty = true; }
+            if (metaDirty) { try { storeMeta(meta); } catch(e) {} }
+        }
 
         // const meta = null
         this.props.boardManager.establishAvailableItems(this.props.inventoryManager.items);
@@ -2334,8 +2341,10 @@ class DungeonPage extends React.Component {
         level.active = true;
         minimap[meta.location.boardIndex].active = true;
         
-        let orientation = this.props.boardManager.currentOrientation;
-        let indicatorsGroup = meta.minimapIndicators && meta.minimapIndicators.find(e=>e.level === level.id && e.orientation === orientation);
+    let orientation = this.props.boardManager.currentOrientation;
+    // Ensure meta.minimapIndicators is always an array before using it.
+    if (!meta.minimapIndicators || !Array.isArray(meta.minimapIndicators)) meta.minimapIndicators = [];
+    let indicatorsGroup = meta.minimapIndicators.find(e=>e.level === level.id && e.orientation === orientation);
 
         if(!indicatorsGroup){
             let newIndicators = []
@@ -2818,37 +2827,26 @@ class DungeonPage extends React.Component {
                     </div>
                 </CModalHeader>
                 <CModalBody>
-                    {(() => {
-                        // pick an icon from the first known weapon entry via its declared icon name
-                        let swordIcon = images['sword'] || null;
-                        try {
-                            const im = this.props.inventoryManager;
-                            const names = im && Array.isArray(im.weapons_names) ? im.weapons_names : [];
-                            // find the first weapon key that resolves to a weapon with an icon property
-                            const firstKey = names.find(k => im && im.weapons && im.weapons[k] && im.weapons[k].icon);
-                            if (firstKey) {
-                                const iconName = im.weapons[firstKey].icon;
-                                if (iconName && images[iconName]) {
-                                    swordIcon = images[iconName];
-                                }
-                            }
-                        } catch (e) {
-                            // swallow - fallback will be used
-                        }
-                        const panels = [1,2,3];
-                        return (
-                            <div className="quests-grid" style={{display:'flex', gap: 12, justifyContent: 'center'}}>
-                                {panels.map((p) => (
-                                    <div key={p} className="quest-panel" style={{width: 220, padding: 12, background: '#222', color: '#fff', borderRadius: 6, boxShadow: '0 2px 6px rgba(0,0,0,0.6)'}}>
-                                        <div style={{height: 80, display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
-                                            <div style={{width:60, height:60, backgroundImage: swordIcon ? `url(${swordIcon})` : 'none', backgroundSize: 'contain', backgroundRepeat: 'no-repeat', backgroundPosition: 'center'}} />
-                                        </div>
-                                        <div style={{paddingTop:8}}>Placeholder quest description #{p}. Complete tasks to earn rewards.</div>
-                                    </div>
-                                ))}
-                            </div>
-                        )
-                    })()}
+                    <div className="quests-grid" style={{display:'flex', flexDirection:'row', flexWrap:'nowrap', gap: 16, justifyContent: 'center'}}>
+                        {/* Go Here quest */}
+                        <div className="quest-panel" style={{width: 220, padding: 14, background: '#1a2535', color: '#fff', borderRadius: 6, boxShadow: '0 2px 8px rgba(0,0,0,0.7)', borderTop: '3px solid #4a90d9'}}>
+                            <div style={{fontSize: 36, textAlign: 'center', marginBottom: 8}}>🗺️</div>
+                            <div style={{fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: '#4a90d9', marginBottom: 6}}>Go Here</div>
+                            <div style={{fontSize: 12, color: '#ccc', lineHeight: 1.5}}>Travel to the deepest floor of the dungeon. Explore every corner before returning.</div>
+                        </div>
+                        {/* Kill Them quest */}
+                        <div className="quest-panel" style={{width: 220, padding: 14, background: '#2a1515', color: '#fff', borderRadius: 6, boxShadow: '0 2px 8px rgba(0,0,0,0.7)', borderTop: '3px solid #c0392b'}}>
+                            <div style={{fontSize: 36, textAlign: 'center', marginBottom: 8}}>⚔️</div>
+                            <div style={{fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: '#e74c3c', marginBottom: 6}}>Kill Them</div>
+                            <div style={{fontSize: 12, color: '#ccc', lineHeight: 1.5}}>Defeat 5 monsters before the next dawn. Leave none standing in your path.</div>
+                        </div>
+                        {/* Find This quest */}
+                        <div className="quest-panel" style={{width: 220, padding: 14, background: '#162216', color: '#fff', borderRadius: 6, boxShadow: '0 2px 8px rgba(0,0,0,0.7)', borderTop: '3px solid #27ae60'}}>
+                            <div style={{fontSize: 36, textAlign: 'center', marginBottom: 8}}>🔍</div>
+                            <div style={{fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: '#2ecc71', marginBottom: 6}}>Find This</div>
+                            <div style={{fontSize: 12, color: '#ccc', lineHeight: 1.5}}>Locate the hidden relic on floor 3. It may be concealed behind a secret passage.</div>
+                        </div>
+                    </div>
                 </CModalBody>
             </CModal>
             {/* <ExpositionPane></ExpositionPane> */}
@@ -3275,6 +3273,23 @@ class DungeonPage extends React.Component {
                             <CardDuel onFinish={this.handleCardDuelFinish} saveUserData={this.props.saveUserData} />
                         </CModalBody>
                     </CModal>
+                    {/* Quicklook Panel: crew-wide stats summary */}
+                    {(() => {
+                        const meta = getMeta() || {};
+                        const crew = this.props.crewManager.crew || [];
+                        const totalAtk = crew.reduce((sum, m) => sum + (m && m.stats && typeof m.stats.atk === 'number' ? m.stats.atk : 0), 0);
+                        const totalDef = crew.reduce((sum, m) => sum + (m && m.stats && typeof m.stats.def === 'number' ? m.stats.def : 0), 0);
+                        const food = typeof meta.food === 'number' ? meta.food : 55;
+                        const resolve = typeof meta.resolve === 'number' ? meta.resolve : 100;
+                        return (
+                            <div className="quicklook-panel">
+                                <div className="ql-row"><span className="ql-label">⚔ Attack</span><span className="ql-value">{totalAtk}</span></div>
+                                <div className="ql-row"><span className="ql-label">🛡 Defense</span><span className="ql-value">{totalDef}</span></div>
+                                <div className="ql-row"><span className="ql-label">🍖 Food</span><span className="ql-value">{food}</span></div>
+                                <div className="ql-row"><span className="ql-label">✊ Resolve</span><span className="ql-value">{resolve}</span></div>
+                            </div>
+                        );
+                    })()}
                     <div className="crew-tile-container">
                         {   this.props.crewManager.crew &&
                             this.props.crewManager.crew.map((member, i) => {
