@@ -148,8 +148,13 @@ class MapMakerPage extends React.Component {
       loadingData: true,
       imagesMatrix: {},
       selectedThingTitle: '',
-      showPlanesNames: false
+      showPlanesNames: false,
+      // Dev console
+      devConsoleOpen: false,
+      devConsoleInput: '',
+      devConsoleOutput: []
     };
+    this.devConsoleInputRef = React.createRef();
   }
   
 
@@ -232,6 +237,24 @@ class MapMakerPage extends React.Component {
       }
     })
     this.nameFilterClicked();
+    // Dev console keyboard toggle
+    this._devConsoleKeyHandler = (e) => {
+      if (e.key === ' ' && e.shiftKey) {
+        this.setState(prev => ({ devConsoleOpen: !prev.devConsoleOpen }), () => {
+          if (this.state.devConsoleOpen && this.devConsoleInputRef.current) {
+            this.devConsoleInputRef.current.focus();
+          }
+        });
+        e.preventDefault();
+      }
+    };
+    document.addEventListener('keydown', this._devConsoleKeyHandler);
+  }
+
+  componentWillUnmount() {
+    if (this._devConsoleKeyHandler) {
+      document.removeEventListener('keydown', this._devConsoleKeyHandler);
+    }
   }
   getTileSize(){
     const h = Math.floor((window.innerHeight/17));
@@ -244,6 +267,52 @@ class MapMakerPage extends React.Component {
     }
     return tsize;
   }
+
+  handleDevConsoleInputChange = (e) => {
+    this.setState({ devConsoleInput: e.target.value });
+  }
+
+  handleDevConsoleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      const raw = (this.state.devConsoleInput || '').trim();
+      const cmd = raw.toLowerCase();
+
+      if (cmd === 'back to dungeon' || cmd === 'back') {
+        this.setState(prev => ({
+          devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, 'Returning to dungeon...'],
+          devConsoleInput: ''
+        }));
+        setTimeout(() => { window.location.href = '/dungeon'; }, 400);
+        e.preventDefault();
+        return;
+      }
+
+      if (cmd === 'list' || cmd === 'help') {
+        const commands = [
+          'back to dungeon / back — return to dungeon page',
+          'list / help — show available commands',
+        ];
+        this.setState(prev => ({
+          devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, ...commands],
+          devConsoleInput: ''
+        }));
+        try { if (this.devConsoleInputRef.current) this.devConsoleInputRef.current.focus(); } catch(_) {}
+        e.preventDefault();
+        return;
+      }
+
+      this.setState(prev => ({
+        devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, `Unknown command: ${raw}`],
+        devConsoleInput: ''
+      }));
+      try { if (this.devConsoleInputRef.current) this.devConsoleInputRef.current.focus(); } catch(_) {}
+      e.preventDefault();
+
+    } else if (e.key === 'Escape') {
+      this.setState({ devConsoleOpen: false });
+    }
+  }
+
   // addNewPlane = async () =>
   addNewDungeon = () => {
     console.log('add new dungeon');
@@ -580,7 +649,7 @@ class MapMakerPage extends React.Component {
   }
 
   expandCollapseBoardFolders= (folderTitle) => {
-    let matrix = this.state.boardsFoldersExpanded;
+    const matrix = { ...this.state.boardsFoldersExpanded };
     matrix[folderTitle] = !matrix[folderTitle];
     this.setState(() => { return {boardsFoldersExpanded: matrix}})
   }
@@ -1123,6 +1192,31 @@ class MapMakerPage extends React.Component {
         boardsFolders,
         boardsFoldersExpanded
       }
+    }, () => {
+      // Check for cross-page dev console handoff
+      try {
+        const handoffRaw = sessionStorage.getItem('devConsoleHandoff');
+        if (handoffRaw) {
+          const handoff = JSON.parse(handoffRaw);
+          sessionStorage.removeItem('devConsoleHandoff');
+          if (handoff.consoleOpen) {
+            this.setState({ devConsoleOpen: true }, () => {
+              try { if (this.devConsoleInputRef.current) this.devConsoleInputRef.current.focus(); } catch(_) {}
+            });
+          }
+          if (handoff.boardId) {
+            setTimeout(() => {
+              const boardRef = this.findBoardRefInFolders(handoff.boardId);
+              if (boardRef) {
+                this.loadBoard(boardRef);
+                this.setState(prev => ({
+                  devConsoleOutput: [...prev.devConsoleOutput, `Opened board: "${boardRef.name}"`]
+                }));
+              }
+            }, 0);
+          }
+        }
+      } catch(_) {}
     })
   }
 
@@ -2539,6 +2633,33 @@ class MapMakerPage extends React.Component {
 
           </div>
         </div>
+
+      {/* Dev console panel — toggle with Shift+Space */}
+      {this.state.devConsoleOpen && (
+        <div className="dev-console">
+          <div className="dev-console-inner">
+            <div className="dev-console-left">
+              <input
+                ref={this.devConsoleInputRef}
+                className="dev-console-input"
+                value={this.state.devConsoleInput}
+                onChange={this.handleDevConsoleInputChange}
+                onKeyDown={this.handleDevConsoleKeyDown}
+                placeholder="type command..."
+              />
+              <div className="dev-console-typed">{this.state.devConsoleInput}</div>
+            </div>
+            <div className="dev-console-divider" />
+            <div className="dev-console-right">
+              <div className="dev-console-output">
+                {this.state.devConsoleOutput.map((line, idx) => (
+                  <div key={idx} className="dev-console-line">{line}</div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       </div>
     )
 

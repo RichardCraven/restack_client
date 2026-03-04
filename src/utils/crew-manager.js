@@ -66,7 +66,7 @@ export function CrewManager(){
             try{
                 member.color = member.color || colors[index % colors.length];
             } catch(e){}
-            if(this.memberTypes.includes(member.image)){
+            if(this.memberTypes.includes(member.image) || this.memberTypes.includes(member.type)){
                 // Ensure base stats are present and normalized to the four main stats
                 member.stats = member.stats || {};
                 member.stats.str = typeof member.stats.str === 'number' ? member.stats.str : (member.stats.str || 1);
@@ -83,6 +83,8 @@ export function CrewManager(){
                 // compute derived/substats from base stats
                 try { this.computeDerivedStats(member); } catch(e) { console.warn('computeDerivedStats failed', e, member); }
                 this.crew.push(member)
+            } else {
+                console.warn('initializeCrew: REJECTED member — image:', member.image, 'type:', member.type, 'name:', member.name, 'full object:', JSON.stringify(member).slice(0, 300));
             }
         })
         this.checkForLevelUp(this.crew)

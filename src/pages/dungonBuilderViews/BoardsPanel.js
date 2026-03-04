@@ -17,6 +17,21 @@ class BoardsPanel extends React.Component {
     // no-op mapping removed; state initialization kept minimal
     }
 
+    shouldComponentUpdate(nextProps) {
+        // The panel content only changes when the boards data, folder structure,
+        // filter state, or sizing actually changes — not when a dropdown elsewhere
+        // opens/closes or an unrelated part of MapmakerPage re-renders.
+        return (
+            nextProps.boards !== this.props.boards ||
+            nextProps.boardsFolders !== this.props.boardsFolders ||
+            nextProps.boardsFoldersExpanded !== this.props.boardsFoldersExpanded ||
+            nextProps.compatibilityMatrix !== this.props.compatibilityMatrix ||
+            nextProps.loadedBoard !== this.props.loadedBoard ||
+            nextProps.tileSize !== this.props.tileSize ||
+            nextProps.boardSize !== this.props.boardSize
+        );
+    }
+
     render (){
         return (
             <div className="left-palette  palette boards-palette" style={{

@@ -32,6 +32,8 @@ const [showCoordinates, setShowCoordinates] = useState(false)
 const [allUsers, setAllUsers] = useState([])
 const [showToolbar, setShowToolbar] = useState(true)
 const [narrativeSequenceType, setNarrativeSequenceType] = useState('')
+const dungeonMessagingRef = React.useRef(null)
+const saveUserDataRef = React.useRef(null)
 const history = useHistory();
 useEffect(() => {
   // ...existing code...
@@ -50,6 +52,17 @@ useEffect(() => {
 }, [])
 useEffect(()=>{
 }, [allUsers])
+
+useEffect(() => {
+  const handleKeyDown = (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+      e.preventDefault();
+      if (saveUserDataRef.current) saveUserDataRef.current();
+    }
+  };
+  window.addEventListener('keydown', handleKeyDown);
+  return () => window.removeEventListener('keydown', handleKeyDown);
+}, [])
 
 
 const logout = () => {
@@ -107,8 +120,8 @@ const refreshAllUsers = () => {
 const saveUserData = async () => {
   // ...existing code...
   setMenuTrayExpanded(false);
-  if(props.boardManager.boardIndex === null) return
-  if(!props.boardManager.dungeon.id) return
+  if(!props.boardManager.dungeon || !props.boardManager.dungeon.id) return
+  if(!props.boardManager.playerTile || !props.boardManager.playerTile.location) return
   const meta = getMeta()
   const userId = getUserId();
 
@@ -134,7 +147,9 @@ const saveUserData = async () => {
   meta.dungeonId = props.boardManager.dungeon.id;
   await updateUserRequest(userId, meta)
   sessionStorage.setItem('metadata', JSON.stringify(meta));
+  if (dungeonMessagingRef.current) dungeonMessagingRef.current('Progress saved')
 }
+saveUserDataRef.current = saveUserData;
 const goHome = () => {
   setMenuTrayExpanded(false);
   saveUserData();
@@ -219,7 +234,7 @@ const toggleMenuTray = () => {
           )}/>
           <Route exact path="/dungeon" render={() => (
             !loggedIn ? <Redirect to="/login" /> :
-              <DungeonPage {...props} saveUserData={saveUserData} setNarrativeSequence={setNarrativeSequence} showCoordinates={showCoordinates}/>
+              <DungeonPage {...props} saveUserData={saveUserData} setNarrativeSequence={setNarrativeSequence} showCoordinates={showCoordinates} registerMessaging={(fn) => { dungeonMessagingRef.current = fn }}/>
           )
           }/>
 

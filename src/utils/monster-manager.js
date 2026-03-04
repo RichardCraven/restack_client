@@ -1,16 +1,34 @@
 import * as images from '../utils/images'
 
-const getMinorWeapon = () => {
-    const arr = ['axe',
-        'flail',
-        'spear',
-        'sword',
-        'longbow']
-    return arr
-}
-const getMajorWeapon = () => {
-    const arr = ['scepter']
-}
+// ── Tier weapon pools ────────────────────────────────────────────────────────
+const TIER1_WEAPONS = [
+    'woodcutters_axe', 'bloodcleaver_axe', 'hillbiter_axe', 'ironcleaver_axe',
+    'rune_axe', 'timberfall_axe', 'grovehack_axe', 'stormsplitter_axe',
+    'bonecutter_axe', 'frostedge_axe', 'emberchop_axe',
+    'shortsword_sword', 'cutlass_sword', 'gladius_sword', 'falchion_sword',
+    'longsword_sword', 'broadsword_sword', 'golden_gladius_sword',
+    'wyrmsbane_sword', 'katana_sword', 'claymore_sword', 'greatsword_sword',
+];
+const TIER2_WEAPONS = [
+    'razorfang_axe', 'stonebreaker_axe', 'mossreaper_axe', 'warcleaver_axe',
+    'blackroot_axe', 'dawnsplitter_axe', 'duskbane_axe',
+    'doomreaver_sword', 'nightfall_sword', 'dreadedge_sword', 'sunsteel_sword',
+    'voidrender_sword', 'warlords_cleaver_sword', 'emberbrand_sword',
+];
+const TIER3_WEAPONS = [
+    'thunderhewer_axe', 'skullsplitter_axe', 'giantsbane_axe', 'vinecutter_axe',
+    'obsidian_axe', 'ashwood_axe', 'drakebane_axe',
+    'frostbite_sword', 'bloodsong_sword', 'shadowfang_sword', 'skymourne_sword',
+    'opalveil_sword', 'titans_claw_sword', 'entropy_sword',
+];
+// No tier-4 weapons exist yet — use tier 3 pool
+const TIER4_WEAPONS = TIER3_WEAPONS;
+
+const TIER1_POTION = 'minor_health_potion';
+const TIER2_POTION = 'major_health_potion';
+const TIER3_POTION = 'grand_health_potion';
+const TIER4_POTION = 'grand_health_potion';
+
 export function MonsterManager(){
     this.pickRandom = (array) => {
         let index = Math.floor(Math.random() * array.length)
@@ -18,105 +36,58 @@ export function MonsterManager(){
     }
     this.battleMonster = null;
     this.monsters = {
-        witch: {
-            type: 'witch',
-            key: 'witch',
-            image_names: ['witch_p1_1'],
-            monster_names: ['Rhea', 'BabaYaga'],
+        // ── Level 2 ──────────────────────────────────────────────────────
+        goblin: {
+            type: 'goblin',
+            key: 'goblin',
+            image_names: ['goblin'],
+            monster_names: ['Wiggit', 'Miggi', "Gurnak"],
             stats: {
-                hp: 160,
-                atk: 13,
-                def: 8,
-                speed: 10,
-                willpower: 0
-            },
-            level: 12,
-            portrait: images['witch_p1_1'],
-            greetings: ['Thy blood is quickening'],
-            deathCries: ['Mercy'],
-            specials: ['obliterate', 'flying', 'invisibility'],
-            attacks: ['void_lance', 'magic_missile'],
-            weaknesses: ['arcane', 'holy-aura'],
-            drops: [
-                {item: 'volkas_wand', percentChance: 35},
-                {item: 'maerlyns_rod', percentChance: 35},
-                {item: 'evilai_charm', percentChance: 35}
-            ]
-        },
-        beholder: {
-            type: 'beholder',
-            key: 'beholder',
-            image_names: ['beholder'],
-            monster_names: ['Nirnuceks', 'Adalak', 'Vemrindon', 'Sardaresh'],
-            stats: {
-                hp: 110,
-                atk: 15,
+                hp: 38,
+                atk: 3,
                 def: 5,
                 speed: 10,
                 willpower: 0
             },
-            level: 14,
-            portrait: images['beholder_portrait'],
-            greetings: ['Vukudaj kolo gurdu'],
-            deathCries: ['Urdu meklak milnaurku...'],
-            specials: ['obliterate', 'flying', 'invisibility'],
-            attacks: ['void_lance', 'magic_missile'],
-            // attacks: ['magic_missile'],
-            weaknesses: ['arcane', 'holy-aura'],
-            minions: ['beholder_minion', 'beholder_minion'],
+            level: 2,
+            portrait: images['goblin_portrait'],
+            greetings: ['bones for my master!'],
+            deathCries: ['nooooooo'],
+            specials: ['zealotry'],
+            attacks: ['claws', 'bite'],
+            weaknesses: ['crushing', 'cutting', 'fire', 'electricity'],
             drops: [
-                {item: 'volkas_wand', percentChance: 35},
-                {item: 'maerlyns_rod', percentChance: 35},
-                {item: 'evilai_charm', percentChance: 35}
+                {item: TIER1_POTION, percentChance: 35},
+                {item: this.pickRandom(TIER1_WEAPONS), percentChance: 35},
             ]
         },
-        beholder_minion: {
-            type: 'beholder_minion',
-            key: 'beholder_minion',
-            image_names: ['beholder_minion'],
-            monster_names: ['Nirnuceks', 'Adalak', 'Vemrindon'],
+        // ── Level 3 ──────────────────────────────────────────────────────
+        skeleton: {
+            type: 'skeleton',
+            key: 'skeleton',
+            image_names: ['skeleton'],
+            monster_names: ['bones'],
             stats: {
-                hp: 60,
-                atk: 7,
-                def: 2,
+                hp: 35,
+                atk: 5,
+                def: 7,
                 speed: 10,
                 willpower: 0
             },
-            level: 5,
-            portrait: images['beholder_minion_portrait'],
-            greetings: ['Vukdaj kolo gurdu'],
-            deathCries: ['Urdu meklak milnaurku...'],
-            specials: ['obliterate', 'flying', 'invisibility'],
-            attacks: ['void_lance', 'magic_missile'],
-            weaknesses: ['arcane', 'holy-aura'],
-            drops: []
-        },
-        kabuki_demon: {
-            type: 'demon',
-            key: 'kabuki_demon',
-            image_names: ['kabuki_demon_portrait'],
-            monster_names: ['Ikiro', 'Jimbu'],
-            stats: {
-                hp: 140,
-                atk: 13,
-                def: 3,
-                speed: 10,
-                willpower: 0
-            },
-            level: 15,
-            portrait: images['kabuki_demon_portrait'],
-            greetings: ['Assaaa'],
-            deathCries: ['No! Impossible!'],
-            specials: ['obliterate', 'flying', 'invisibility'],
-            attacks: ['void_lance', 'magic_missile'],
-            weaknesses: ['arcane', 'holy-aura'],
-            minions: ['kabuki_demon_minion', 'kabuki_demon_minion'],
+            level: 3,
+            portrait: images['skeleton_portrait'],
+            greetings: ['*screech*'],
+            deathCries: ['*screech*'],
+            specials: ['induce_fear'],
+            attacks: ['claws', 'claws', 'claws'],
+            minions: ['skeleton', 'skeleton'],
+            weaknesses: ['fire'],
             drops: [
-                {item: 'volkas_wand', percentChance: 35},
-                {item: 'maerlyns_rod', percentChance: 35},
-                {item: 'evilai_charm', percentChance: 35}
+                {item: TIER1_POTION, percentChance: 35},
+                {item: this.pickRandom(TIER1_WEAPONS), percentChance: 35},
             ]
         },
+        // ── Level 4 (minion) ─────────────────────────────────────────────
         kabuki_demon_minion: {
             type: 'demon',
             key: 'kabuki_demon_minion',
@@ -136,30 +107,109 @@ export function MonsterManager(){
             specials: ['obliterate', 'flying', 'invisibility'],
             attacks: ['void_lance', 'magic_missile'],
             weaknesses: ['arcane', 'holy-aura'],
-            drops: []
+            drops: [
+                {item: TIER1_POTION, percentChance: 35},
+                {item: this.pickRandom(TIER1_WEAPONS), percentChance: 35},
+            ]
         },
-        vampire: {
-            type: 'vampire',
-            key: 'vampire',
-            image_names: ['black_vampire'],
-            monster_names: ['Vukodlak', 'Morias', 'Roterach'],
+        // ── Level 5 (minion) ─────────────────────────────────────────────
+        beholder_minion: {
+            type: 'beholder_minion',
+            key: 'beholder_minion',
+            image_names: ['beholder_minion'],
+            monster_names: ['Nirnuceks', 'Adalak', 'Vemrindon'],
             stats: {
-                hp: 84,
-                atk: 9,
-                def: 12,
+                hp: 60,
+                atk: 7,
+                def: 2,
                 speed: 10,
                 willpower: 0
             },
-            level: 10,
-            portrait: images['vampire_portrait'],
-            greetings: ['My hunger sees you'],
-            deathCries: ['Peace at last...'],
+            level: 5,
+            portrait: images['beholder_minion_portrait'],
+            greetings: ['Vukdaj kolo gurdu'],
+            deathCries: ['Urdu meklak milnaurku...'],
             specials: ['obliterate', 'flying', 'invisibility'],
-            attacks: ['claws', 'bite'],
+            attacks: ['void_lance', 'magic_missile'],
             weaknesses: ['arcane', 'holy-aura'],
             drops: [
-                {item: 'court_mask', percentChance: 35},
-                {item: 'minor_health_potion', percentChance: 55},
+                {item: TIER1_POTION, percentChance: 35},
+                {item: this.pickRandom(TIER1_WEAPONS), percentChance: 35},
+            ]
+        },
+        // ── Level 6 ──────────────────────────────────────────────────────
+        troll: {
+            type: 'troll',
+            key: 'troll',
+            image_names: ['troll'],
+            monster_names: ['Mundzungu', 'Wugum'],
+            stats: {
+                hp: 78,
+                atk: 10,
+                def: 13,
+                speed: 10,
+                willpower: 0
+            },
+            level: 6,
+            portrait: images['troll_portrait'],
+            greetings: ['you stink of fresh meat'],
+            deathCries: ['*gurgle*'],
+            specials: ['regenerate'],
+            attacks: ['crush', 'bite', 'tackle'],
+            weaknesses: ['fire'],
+            drops: [
+                {item: TIER1_POTION, percentChance: 35},
+                {item: this.pickRandom(TIER1_WEAPONS), percentChance: 35},
+            ]
+        },
+        mummy: {
+            type: 'mummy',
+            key: 'mummy',
+            image_names: ['mummy'],
+            monster_names: ['Kufu', 'Razeset'],
+            stats: {
+                hp: 80,
+                atk: 10,
+                def: 13,
+                speed: 10,
+                willpower: 0
+            },
+            level: 6,
+            portrait: images['mummy_portrait'],
+            greetings: ['time is unravelling'],
+            deathCries: ['at last'],
+            specials: ['induce_fear'],
+            attacks: ['grasp', 'energy_drain'],
+            weaknesses: ['arcane', 'fire', 'electricity'],
+            minions: ['skeleton', 'skeleton'],
+            drops: [
+                {item: TIER1_POTION, percentChance: 35},
+                {item: this.pickRandom(TIER1_WEAPONS), percentChance: 35},
+            ]
+        },
+        // ── Level 8 ──────────────────────────────────────────────────────
+        wraith: {
+            type: 'wraith',
+            key: 'wraith',
+            image_names: ['wraith'],
+            monster_names: ['Sicirath', 'Olnuk', 'Ygra'],
+            stats: {
+                hp: 82,
+                atk: 9,
+                def: 8,
+                speed: 10,
+                willpower: 0
+            },
+            level: 8,
+            portrait: images['wraith_portrait'],
+            greetings: ['*hissssss*', 'come to the silence'],
+            deathCries: ['*screams*'],
+            specials: ['banshee wail'],
+            attacks: ['grasp', 'energy_drain'],
+            weaknesses: ['holy', 'psionic'],
+            drops: [
+                {item: TIER1_POTION, percentChance: 35},
+                {item: this.pickRandom(TIER1_WEAPONS), percentChance: 35},
             ]
         },
         ogre: {
@@ -182,9 +232,11 @@ export function MonsterManager(){
             attacks: ['crush', 'bite', 'tackle'],
             weaknesses: ['fire', 'psionic'],
             drops: [
-                {item: 'minor_health_potion', percentChance: 55},
+                {item: TIER1_POTION, percentChance: 35},
+                {item: this.pickRandom(TIER1_WEAPONS), percentChance: 35},
             ]
         },
+        // ── Level 9 ──────────────────────────────────────────────────────
         gorgon: {
             type: 'gorgon',
             key: 'gorgon',
@@ -205,10 +257,36 @@ export function MonsterManager(){
             attacks: ['snake_strike', 'bite'],
             weaknesses: ['ice', 'psionic'],
             drops: [
-                {item: 'minor_health_potion', percentChance: 55},
-                {item: 'lundi_amulet', percentChance: 25}
+                {item: TIER1_POTION, percentChance: 35},
+                {item: this.pickRandom(TIER1_WEAPONS), percentChance: 35},
             ]
         },
+        // ── Level 10 ─────────────────────────────────────────────────────
+        vampire: {
+            type: 'vampire',
+            key: 'vampire',
+            image_names: ['black_vampire'],
+            monster_names: ['Vukodlak', 'Morias', 'Roterach'],
+            stats: {
+                hp: 84,
+                atk: 9,
+                def: 12,
+                speed: 10,
+                willpower: 0
+            },
+            level: 10,
+            portrait: images['vampire_portrait'],
+            greetings: ['My hunger sees you'],
+            deathCries: ['Peace at last...'],
+            specials: ['obliterate', 'flying', 'invisibility'],
+            attacks: ['claws', 'bite'],
+            weaknesses: ['arcane', 'holy-aura'],
+            drops: [
+                {item: TIER2_POTION, percentChance: 35},
+                {item: this.pickRandom(TIER2_WEAPONS), percentChance: 35},
+            ]
+        },
+        // ── Level 11 ─────────────────────────────────────────────────────
         goat_demon: {
             type: 'demon',
             key: 'goat_demon',
@@ -230,58 +308,89 @@ export function MonsterManager(){
             weaknesses: ['ice', 'psionic'],
             minions: ['goblin', 'goblin'],
             drops: [
-                {item: 'minor_health_potion', percentChance: 55},
-                {item: 'lundi_amulet', percentChance: 25}
+                {item: TIER2_POTION, percentChance: 35},
+                {item: this.pickRandom(TIER2_WEAPONS), percentChance: 35},
             ]
         },
-        wraith: {
-            type: 'wraith',
-            key: 'wraith',
-            image_names: ['wraith'],
-            monster_names: ['Sicirath', 'Olnuk', 'Ygra'],
+        // ── Level 12 ─────────────────────────────────────────────────────
+        witch: {
+            type: 'witch',
+            key: 'witch',
+            image_names: ['witch_p1_1'],
+            monster_names: ['Rhea', 'BabaYaga'],
             stats: {
-                hp: 82,
-                atk: 9,
+                hp: 160,
+                atk: 13,
                 def: 8,
                 speed: 10,
                 willpower: 0
             },
-            level: 8,
-            portrait: images['wraith_portrait'],
-            greetings: ['*hissssss*', 'come to the silence'],
-            deathCries: ['*screams*'],
-            specials: ['banshee wail'],
-            attacks: ['grasp', 'energy_drain'],
-            weaknesses: ['holy', 'psionic'],
+            level: 12,
+            portrait: images['witch_p1_1'],
+            greetings: ['Thy blood is quickening'],
+            deathCries: ['Mercy'],
+            specials: ['obliterate', 'flying', 'invisibility'],
+            attacks: ['void_lance', 'magic_missile'],
+            weaknesses: ['arcane', 'holy-aura'],
             drops: [
-                {item: 'lundi_amulet', percentChance: 25}
+                {item: TIER2_POTION, percentChance: 35},
+                {item: this.pickRandom(TIER2_WEAPONS), percentChance: 35},
             ]
         },
-        dragon: {
-            type: 'dragon',
-            key: 'dragon',
-            image_names: ['dragon'],
-            monster_names: ['Theraxes', 'Daedron', 'Kykerod'],
+        // ── Level 14 ─────────────────────────────────────────────────────
+        beholder: {
+            type: 'beholder',
+            key: 'beholder',
+            image_names: ['beholder'],
+            monster_names: ['Nirnuceks', 'Adalak', 'Vemrindon', 'Sardaresh'],
             stats: {
-                hp: 255,
-                atk: 18,
-                def: 17,
+                hp: 110,
+                atk: 15,
+                def: 5,
                 speed: 10,
                 willpower: 0
             },
-            level: 16,
-            portrait: images[this.pickRandom(['wyvern_portrait', 'wyvern_portrait2'])],
-            greetings: ['*roar*'],
-            deathCries: ['*scream*'],
-            specials: ['firestorm'],
-            attacks: ['claws', 'bite', 'fire_breath'],
-            weaknesses: ['psionic'],
+            level: 14,
+            portrait: images['beholder_portrait'],
+            greetings: ['Vukudaj kolo gurdu'],
+            deathCries: ['Urdu meklak milnaurku...'],
+            specials: ['obliterate', 'flying', 'invisibility'],
+            attacks: ['void_lance', 'magic_missile'],
+            // attacks: ['magic_missile'],
+            weaknesses: ['arcane', 'holy-aura'],
+            minions: ['beholder_minion', 'beholder_minion'],
             drops: [
-                {item: 'major_key', percentChance: 45},
-                {item: 'glindas_wand', percentChance: 25},
-                {item: 'major_health_potion', percentChance: 75},
+                {item: TIER2_POTION, percentChance: 35},
+                {item: this.pickRandom(TIER2_WEAPONS), percentChance: 35},
             ]
         },
+        // ── Level 15 ─────────────────────────────────────────────────────
+        kabuki_demon: {
+            type: 'demon',
+            key: 'kabuki_demon',
+            image_names: ['kabuki_demon_portrait'],
+            monster_names: ['Ikiro', 'Jimbu'],
+            stats: {
+                hp: 140,
+                atk: 13,
+                def: 3,
+                speed: 10,
+                willpower: 0
+            },
+            level: 15,
+            portrait: images['kabuki_demon_portrait'],
+            greetings: ['Assaaa'],
+            deathCries: ['No! Impossible!'],
+            specials: ['obliterate', 'flying', 'invisibility'],
+            attacks: ['void_lance', 'magic_missile'],
+            weaknesses: ['arcane', 'holy-aura'],
+            minions: ['kabuki_demon_minion', 'kabuki_demon_minion'],
+            drops: [
+                {item: TIER2_POTION, percentChance: 35},
+                {item: this.pickRandom(TIER2_WEAPONS), percentChance: 35},
+            ]
+        },
+        // ── Level 19 ─────────────────────────────────────────────────────
         djinn: {
             type: 'djinn',
             key: 'djinn',
@@ -302,11 +411,11 @@ export function MonsterManager(){
             attacks: ['claws', 'void_lance', 'fire_breath'],
             weaknesses: ['arcane'],
             drops: [
-                {item: 'minor_key', percentChance: 35},
-                {item: 'bundu_mask', percentChance: 55},
-                {item: 'major_health_potion', percentChance: 75}
+                {item: TIER2_POTION, percentChance: 35},
+                {item: this.pickRandom(TIER2_WEAPONS), percentChance: 35},
             ]
         },
+        // ── Level 29 ─────────────────────────────────────────────────────
         sphinx: {
             type: 'sphinx',
             key: 'sphinx',
@@ -331,115 +440,35 @@ export function MonsterManager(){
             weaknesses: ['arcane'],
             minions: ['djinn'],
             drops: [
-                {item: 'scarab_charm', percentChance: 85},
-                {item: 'nukta_amulet', percentChance: 35},
-                {item: 'major_health_potion', percentChance: 75}
+                {item: TIER3_POTION, percentChance: 35},
+                {item: this.pickRandom(TIER3_WEAPONS), percentChance: 35},
             ]
         },
-        goblin: {
-            type: 'goblin',
-            key: 'goblin',
-            image_names: ['goblin'],
-            monster_names: ['Wiggit', 'Miggi', "Gurnak"],
+        // ── Level 30 ─────────────────────────────────────────────────────
+        dragon: {
+            type: 'dragon',
+            key: 'dragon',
+            image_names: ['dragon'],
+            monster_names: ['Theraxes', 'Daedron', 'Kykerod'],
             stats: {
-                hp: 38,
-                atk: 3,
-                def: 5,
+                hp: 325,
+                atk: 20,
+                def: 17,
                 speed: 10,
                 willpower: 0
             },
-            level: 2,
-            portrait: images['goblin_portrait'],
-            greetings: ['bones for my master!'],
-            deathCries: ['nooooooo'],
-            specials: ['zealotry'],
-            attacks: ['claws', 'bite'],
-            weaknesses: ['crushing', 'cutting', 'fire', 'electricity'],
+            level: 30,
+            portrait: images[this.pickRandom(['wyvern_portrait', 'wyvern_portrait2'])],
+            greetings: ['*roar*'],
+            deathCries: ['*scream*'],
+            specials: ['firestorm'],
+            attacks: ['claws', 'bite', 'fire_breath'],
+            weaknesses: ['psionic'],
             drops: [
-                {item: 'minor_health_potion', percentChance: 45}
+                {item: TIER4_POTION, percentChance: 35},
+                {item: this.pickRandom(TIER4_WEAPONS), percentChance: 35},
             ]
         },
-        mummy: {
-            type: 'mummy',
-            key: 'mummy',
-            image_names: ['mummy'],
-            monster_names: ['Kufu', 'Razeset'],
-            stats: {
-                hp: 80,
-                atk: 10,
-                def: 13,
-                speed: 10,
-                willpower: 0
-            },
-            level: 6,
-            portrait: images['mummy_portrait'],
-            greetings: ['time is unravelling'],
-            deathCries: ['at last'],
-            specials: ['induce_fear'],
-            attacks: ['grasp', 'energy_drain'],
-            weaknesses: ['arcane', 'fire', 'electricity'],
-            minions: ['skeleton', 'skeleton'],
-            drops: [
-                {item: 'scarab_charm', percentChance: 55},
-                {item: 'minor_health_potion', percentChance: 55}
-            ]
-        },
-        troll: {
-            type: 'troll',
-            key: 'troll',
-            image_names: ['troll'],
-            monster_names: ['Mundzungu', 'Wugum'],
-            stats: {
-                hp: 78,
-                atk: 10,
-                def: 13,
-                speed: 10,
-                willpower: 0
-            },
-            level: 6,
-            portrait: images['troll_portrait'],
-            greetings: ['you stink of fresh meat'],
-            deathCries: ['*gurgle*'],
-            specials: ['regenerate'],
-            attacks: ['crush', 'bite', 'tackle'],
-            weaknesses: ['fire'],
-            drops: [
-                {item: 'zul_mask', percentChance: 15},
-                {item: 'minor_health_potion', percentChance: 55}
-            ]
-        },
-        skeleton: {
-            type: 'skeleton',
-            key: 'skeleton',
-            image_names: ['skeleton'],
-            monster_names: ['bones'],
-            stats: {
-                hp: 35,
-                atk: 5,
-                def: 7,
-                speed: 10,
-                willpower: 0
-            },
-            level: 3,
-            portrait: images['skeleton_portrait'],
-            greetings: ['*screech*'],
-            deathCries: ['*screech*'],
-            specials: ['induce_fear'],
-            attacks: ['claws', 'claws', 'claws'],
-            minions: ['skeleton', 'skeleton'],
-            weaknesses: ['fire'],
-            drops: [
-                {item: 'minor_health_potion', percentChance: 5},
-                {item: this.pickRandom(getMinorWeapon()), percentChance: 40}
-                // {item: 'sword', percentChance: 85},
-                // {item: 'nukta_amulet', percentChance: 85},
-                // {item: 'basic_helm', percentChance: 75},
-                // {item: 'scarab_charm', percentChance: 55},
-                // {item: 'seeing_shield', percentChance: 85},
-                // {item: 'glindas_wand', percentChance: 85},
-                // {item: 'zul_mask', percentChance: 75}
-            ]
-        }
     }
     let count = 100;
     for(let key in this.monsters){

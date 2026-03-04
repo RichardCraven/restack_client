@@ -20,18 +20,22 @@ class DungeonView extends React.Component {
         hoveredPlane : null
       }
     }
-    
-    // componentDidMount(){
-    // }
-    // componentDidUpdate(){
-        
-    // ...existing code...
-    //     let thing = this.props.loadedDungeon?.levels.sort((a,b) => b.id - a.id).map((level,levelIndex)=>level)
-    // ...existing code...
-    // }
 
-
-    timer;
+    shouldComponentUpdate(nextProps) {
+        // Prevent re-rendering the entire dungeon tile grid when only unrelated
+        // parent state changes (e.g. a dropdown toggling open/closed).
+        // The dungeon content changes only when these specific props change.
+        return (
+            nextProps.loadedDungeon !== this.props.loadedDungeon ||
+            nextProps.overlayData !== this.props.overlayData ||
+            nextProps.hoveredDungeonSection !== this.props.hoveredDungeonSection ||
+            nextProps.dungeons !== this.props.dungeons ||
+            nextProps.loadingData !== this.props.loadingData ||
+            nextProps.tileSize !== this.props.tileSize ||
+            nextProps.boardSize !== this.props.boardSize ||
+            nextProps.imagesMatrix !== this.props.imagesMatrix
+        );
+    }
     onClickHandler = event => {
         clearTimeout(this.timer);
  
@@ -62,7 +66,103 @@ class DungeonView extends React.Component {
         let imageTypes = ['way_up', 'way_down']
         return passagesArray.filter(p=>imageTypes.includes((typeof p.contains === 'object' && p.contains !== null) ? p.contains.type : p.contains)).length
     }
+    // drawPlane: single-canvas replacement for the 9 per-board canvases.
+    // Draws all passage overlays for an entire plane (front or back) in one RAF loop.
+    drawPlane = (ctx, frameCount, data) => {
+        // Throttle to ~20fps — same as draw()
+        if (frameCount > 1 && frameCount % 3 !== 0) return;
+
+        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+
+        // Only paint when overlay is active
+        if (!this.props.overlayData) return;
+
+        const levelData = this.props.overlayData.find(x => x.id === data.levelId);
+        if (!levelData) return;
+
+        const planeSize = this.props.tileSize * 2;  // size of one micro-board
+        const unit = planeSize / 15;                // size of one tile within a micro-board
+        // col/row grid positions for the 9 boards (0-indexed)
+        const cols = [0,1,2, 0,1,2, 0,1,2];
+        const rows = [0,0,0, 1,1,1, 2,2,2];
+
+        const passages = data.orientation === 'front'
+            ? levelData.frontPassages
+            : levelData.backPassages;
+
+        passages.forEach((p, index) => {
+            const boardIndex = p.miniboardIndex;
+            if (typeof boardIndex !== 'number') return;
+
+            // pixel origin of this board within the full-plane canvas
+            const originX = cols[boardIndex] * planeSize;
+            const originY = rows[boardIndex] * planeSize;
+
+            const px = originX + unit * p.coordinates[0] + unit / 2;
+            const py = originY + unit * p.coordinates[1] + unit / 2;
+
+            const isConnected = levelData.connected.some(c => c.locationCode === p.locationCode);
+            const pType = (typeof p.contains === 'object' && p.contains !== null) ? p.contains.type : p.contains;
+
+            if (pType === 'door' && isConnected) {
+                const dx = originX + unit * p.coordinates[0] - 0.5 * unit - (Math.sin(frameCount * 0.04) ** 2 * 2);
+                const dy = originY + unit * p.coordinates[1];
+                const size = 20 + Math.sin(frameCount * 0.04) ** 2 * 5;
+                ctx.drawImage(this.props.imagesMatrix['doorImg'], dx, dy, size, size);
+
+            } else if (pType === 'way_up') {
+                const dx = originX + unit * p.coordinates[0] - 0.5 * unit - (Math.sin(frameCount * 0.04) ** 2 * 2);
+                const dy = originY + unit * p.coordinates[1];
+                const size = 20 + Math.sin(frameCount * 0.04) ** 2 * 5;
+                const imageKey = isConnected ? 'arrowUpImg' : 'arrowUpImgInvalid';
+                ctx.drawImage(this.props.imagesMatrix[imageKey], dx, dy, size, size);
+
+            } else if (pType === 'way_down') {
+                const dx = originX + unit * p.coordinates[0] - 0.5 * unit - (Math.sin(frameCount * 0.04) ** 2 * 2);
+                const dy = originY + unit * p.coordinates[1];
+                const size = 20 + Math.sin(frameCount * 0.04) ** 2 * 5;
+                const imageKey = isConnected ? 'arrowDownImg' : 'arrowDownImgInvalid';
+                ctx.drawImage(this.props.imagesMatrix[imageKey], dx, dy, size, size);
+
+            } else if (pType === 'spawn_point') {
+                // cx/cy = center of this tile in the full-plane canvas
+                const cx = originX + unit * p.coordinates[0] + unit * 0.5;
+                const cy = originY + unit * p.coordinates[1] + unit * 0.5;
+
+                if (frameCount === 3) {
+                    console.log('[spawn_point] boardIndex:', boardIndex, 'coords:', p.coordinates, 'unit:', unit.toFixed(2), 'cx:', cx.toFixed(1), 'cy:', cy.toFixed(1), 'canvasW:', ctx.canvas.width, 'canvasH:', ctx.canvas.height);
+                }
+
+                // DIAGNOSTIC: big red pulsing dot
+                const pulse = 0.5 + 0.5 * Math.sin(frameCount * 0.1);
+                const radius = 14 + pulse * 8; // 14–22px, unmissable
+
+                ctx.beginPath();
+                ctx.arc(cx, cy, radius, 0, 2 * Math.PI);
+                ctx.fillStyle = `rgba(255, 0, 0, ${0.7 + pulse * 0.3})`;
+                ctx.fill();
+
+                ctx.beginPath();
+                ctx.arc(cx, cy, radius + 4, 0, 2 * Math.PI);
+                ctx.strokeStyle = `rgba(255, 80, 80, ${0.5 + pulse * 0.4})`;
+                ctx.lineWidth = 3;
+                ctx.stroke();
+
+            } else {
+                // Generic pulsing dot (door unconnected, or unknown type)
+                ctx.beginPath();
+                ctx.fillStyle = this.getPassageColors(p.contains);
+                ctx.arc(px, py, 3.5 * Math.sin(frameCount * 0.03 + index) ** 2 + 3.5, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+        });
+    }
+
     draw = (ctx, frameCount, data) => {
+        // Throttle: only repaint every ~3rd frame (~20fps) to reduce GPU work.
+        // Static canvases (no passages) bail out immediately after the first clear anyway.
+        if (frameCount > 1 && frameCount % 3 !== 0) return;
+
         ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
         const levelData = this.props.overlayData?.find(x=>x.id === data.levelId);
         if(levelData){
@@ -135,20 +235,40 @@ class DungeonView extends React.Component {
                         // ctx.drawImage(this.props.imagesMatrix[imageKey], 120, 120, size, size);
                         ctx.drawImage(this.props.imagesMatrix[imageKey], x, y, size, size);
                     } else if(pType === 'spawn_point'){
-                        let x = unit*p.coordinates[0] - 0.5*unit - (Math.sin(frameCount * 0.04)**2 * 2)
-                        let y = unit*p.coordinates[1]
-                        let size = 20 + Math.sin(frameCount * 0.04)**2 * 5
-                        let imageKey = 'spawnPointImg'
-                   
-                        if(data.levelId === 1 && data.orientation === 'front' && data.index === 4){
-                            // ...existing code...
-                            // x = 10; y = 10
-                            // ...existing code...
-                            // ...existing code...
-                            // ...existing code...
+                        // Center the icon on the tile position
+                        const iconSize = 16;
+                        const cx = unit * p.coordinates[0] + unit * 0.5;
+                        const cy = unit * p.coordinates[1] + unit * 0.5;
+                        const ix = cx - iconSize / 2;
+                        const iy = cy - iconSize / 2;
+
+                        // Outer pulsing ring (slow breathe, distinct teal color)
+                        const ringPulse = 0.5 + 0.5 * Math.sin(frameCount * 0.05);
+                        const ringRadius = unit * 0.45 + ringPulse * unit * 0.15;
+                        ctx.beginPath();
+                        ctx.arc(cx, cy, ringRadius, 0, 2 * Math.PI);
+                        ctx.strokeStyle = `rgba(0, 230, 200, ${0.3 + ringPulse * 0.5})`;
+                        ctx.lineWidth = 1.5;
+                        ctx.stroke();
+
+                        // Inner filled circle (solid teal)
+                        ctx.beginPath();
+                        ctx.arc(cx, cy, unit * 0.18, 0, 2 * Math.PI);
+                        ctx.fillStyle = 'rgba(0, 200, 180, 0.75)';
+                        ctx.fill();
+
+                        // Icon image centered on the tile
+                        const imageKey = 'spawnPointImg';
+                        if (this.props.imagesMatrix && this.props.imagesMatrix[imageKey]) {
+                            ctx.drawImage(this.props.imagesMatrix[imageKey], ix, iy, iconSize, iconSize);
                         }
-                        // ctx.drawImage(this.props.imagesMatrix[imageKey], 120, 120, size, size);
-                        ctx.drawImage(this.props.imagesMatrix[imageKey], x, y, size, size);
+
+                        // "SPAWN" label below the icon
+                        ctx.font = `bold ${Math.max(5, unit * 0.28)}px sans-serif`;
+                        ctx.fillStyle = 'rgba(0, 240, 210, 0.95)';
+                        ctx.textAlign = 'center';
+                        ctx.fillText('SPAWN', cx, cy + iconSize * 0.65 + unit * 0.3);
+                        ctx.textAlign = 'left'; // reset
                     } else {
                         ctx.beginPath()
                         let minVal = 3.5;
@@ -312,7 +432,7 @@ class DungeonView extends React.Component {
                                             </div>}
                                         </div>
                                         <div className="plane-board-displays-wrapper">
-                                            {level.passages && level.passages.upwardPassages.filter(e=>e.orientation === 'front').length > 0 && <div className="front-upwards-connecting-canvas-wrapper">
+                                            {level.passages && level.passages.upwardPassages.filter(e=>e.orientation === 'front').length > 0 && this.props.overlayData && <div className="front-upwards-connecting-canvas-wrapper">
                                                 <Canvas 
                                                 className="doubletall-canvas"
                                                 width={this.props.tileSize*6}
@@ -321,7 +441,7 @@ class DungeonView extends React.Component {
                                                 data={{index: null, levelId: level.id, orientation: 'doubletall_F'}}
                                                 />
                                             </div>}
-                                            {level.passages && level.passages.upwardPassages.filter(e=>e.orientation === 'back').length > 0 && <div className="back-upwards-connecting-canvas-wrapper">
+                                            {level.passages && level.passages.upwardPassages.filter(e=>e.orientation === 'back').length > 0 && this.props.overlayData && <div className="back-upwards-connecting-canvas-wrapper">
                                                 <Canvas 
                                                 className="doubletall-canvas"
                                                 width={this.props.tileSize*6}
@@ -331,7 +451,7 @@ class DungeonView extends React.Component {
                                                 />
                                             </div>}
                                             <div className="horizontal-connecting-canvas-wrapper">
-                                               {<Canvas 
+                                               {this.props.overlayData && <Canvas 
                                                 className="doublewide-canvas"
                                                 width={this.props.tileSize*12}
                                                 height={this.props.tileSize*6}
@@ -371,16 +491,13 @@ class DungeonView extends React.Component {
                                                         width: this.props.tileSize*6
                                                     }}
                                                     >
-                                                        {[1,2,3,4,5,6,7,8,9].map((e,i)=>{
-                                                        return <Canvas 
-                                                            key={i}
-                                                            width={this.props.tileSize*2}
-                                                            height={this.props.tileSize*2}
-
-                                                            draw={this.draw}
-                                                            data={{index: i, levelId: level.id, orientation: 'front'}}
-                                                            />
-                                                        })}
+                                                        {/* Fix 1+2: single full-plane canvas, only rendered when overlayData is active */}
+                                                        {this.props.overlayData && <Canvas
+                                                            width={this.props.tileSize*6}
+                                                            height={this.props.tileSize*6}
+                                                            draw={this.drawPlane}
+                                                            data={{levelId: level.id, orientation: 'front'}}
+                                                        />}
                                                     </div>
                                                     {level.front.miniboards.map((board, i) => {
                                                     return    <div 
@@ -460,15 +577,13 @@ class DungeonView extends React.Component {
                                                     }}
                                                     onDrop={(event)=>{this.props.onDropDungeon(levelIndex, 'front')}}
                                                     >
-                                                        {[1,2,3,4,5,6,7,8,9].map((e,i)=>{
-                                                        return <Canvas 
-                                                            key={i}
-                                                            width={this.props.tileSize*2}
-                                                            height={this.props.tileSize*2}
-                                                            draw={this.draw}
-                                                            data={{index: i, levelId: level.id, orientation: 'back'}}
-                                                            />
-                                                        })}
+                                                        {/* Fix 1+2: single full-plane canvas, only rendered when overlayData is active */}
+                                                        {this.props.overlayData && <Canvas
+                                                            width={this.props.tileSize*6}
+                                                            height={this.props.tileSize*6}
+                                                            draw={this.drawPlane}
+                                                            data={{levelId: level.id, orientation: 'back'}}
+                                                        />}
                                                     </div>
                                                     {level.back.miniboards.map((board, i) => {
                                                     return    <div 

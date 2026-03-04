@@ -2,9 +2,16 @@ import React, { useRef, useEffect } from 'react'
 
 const Canvas = props => {
   
-    const { draw } = props
     const canvasRef = useRef(null)
+    // Keep a stable ref to the latest draw function and data so the RAF loop
+    // never needs to restart when the parent re-renders.  The useEffect runs
+    // only once (on mount) and the cleanup only fires on unmount.
+    const drawRef = useRef(props.draw)
+    const dataRef = useRef(props.data)
 
+    // Sync the refs every render — no new RAF loop needed.
+    drawRef.current = props.draw
+    dataRef.current = props.data
 
     useEffect(() => {
         const canvas = canvasRef.current
@@ -12,22 +19,23 @@ const Canvas = props => {
         let frameCount = 0
         let animationFrameId
         
-        //Our draw came here
         const render = () => {
-        frameCount++
-        if(props.data){
-            draw(context, frameCount, props.data)
-        } else {
-            draw(context, frameCount)
-        }
-        animationFrameId = window.requestAnimationFrame(render)
+            frameCount++
+            if (dataRef.current) {
+                drawRef.current(context, frameCount, dataRef.current)
+            } else {
+                drawRef.current(context, frameCount)
+            }
+            animationFrameId = window.requestAnimationFrame(render)
         }
         render()
         
         return () => {
             window.cancelAnimationFrame(animationFrameId)
         }
-    }, [draw, props.data])
+    // Empty dep array: start the loop once on mount, stop it on unmount.
+    // drawRef/dataRef are always current without being deps.
+    }, [])
   
     return <canvas height={props.height} width={props.width} ref={canvasRef}/>
 }

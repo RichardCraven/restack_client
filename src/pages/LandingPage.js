@@ -40,8 +40,12 @@ export default function LandingPage(props) {
   }
 
   const enterClicked = () => {
-    if(showWarning) return
     const meta = getMeta();
+    if(!meta || !meta.crew || meta.crew.length === 0){
+      setShowWarning(true)
+      return
+    }
+    if(showWarning) return
     console.log('enter clicked, meta: ', meta);
     if(meta.dungeonId){
       setNavDungeon(!showWarning)

@@ -371,6 +371,7 @@ class DungeonPage extends React.Component {
             , devConsoleInput: ''
             , devConsoleOutput: []
             , showQuestsPopup: false
+            , campWarningMessage: null
         }
     // Native browser tooltip will be used for death-tracker; no custom tooltip state required.
         // Track timers/intervals created by this component so we can clear on unmount
@@ -410,6 +411,7 @@ class DungeonPage extends React.Component {
 
         
         if(!meta || !meta.dungeonId){
+            console.log('DungeonPage.componentWillMount: no dungeonId, calling initializeCrew with meta.crew=', meta && meta.crew);
             this.props.crewManager.initializeCrew(meta.crew);
             this.loadNewDungeon();
         } else {
@@ -417,9 +419,14 @@ class DungeonPage extends React.Component {
 
             // this.props.inventoryManager.addItem(this.props.inventoryManager.allItems['minor_key'])
 
+            console.log('DungeonPage.componentWillMount: dungeonId=', meta.dungeonId, 'calling initializeCrew with meta.crew=', meta.crew);
             this.props.crewManager.initializeCrew(meta.crew);
             this.loadExistingDungeon(meta.dungeonId)
         }
+        // Set selectedCrewMember synchronously here (crew was just initialized above).
+        // loadExistingDungeon is async so its setState races; setting it now ensures the
+        // crew panel renders immediately without waiting for the dungeon fetch to resolve.
+        const initialSelectedCrewMember = (meta && meta.crew && meta.crew.find(c => c.selected)) || (meta && meta.crew && meta.crew[0]) || {};
         const minimap = [];
         for(let i = 0; i<9; i++){
             minimap.push({active: false})
@@ -429,6 +436,8 @@ class DungeonPage extends React.Component {
         const { updates, modified } = this.checkAndCollectFinishedSpecialActions({ markNotified: false });
         this.setState((state, props) => {
             return {
+                tileSize,
+                boardSize,
                 leftPanelExpanded: meta?.leftExpanded,
                 rightPanelExpanded: meta?.rightExpanded,
                 // persist/rehydrate crew actions tray expanded state
@@ -436,8 +445,15 @@ class DungeonPage extends React.Component {
                 crewSize: meta.crew.length,
                 minimap,
                 updates,
-                modalType: updates.length > 0 ? 'Updates' : '',
-                showModal: updates.length > 0
+                selectedCrewMember: initialSelectedCrewMember,
+                actionsTrayExpanded: initialSelectedCrewMember ? initialSelectedCrewMember.actionsTrayExpanded : false,
+                actionMenuTypeExpanded: initialSelectedCrewMember ? initialSelectedCrewMember.actionMenuTypeExpanded : false,
+                // Do NOT open the modal at mount time — the CModal 'modal-open' body class
+                // from an immediately-visible modal can persist and trap all clicks if a
+                // second modal (quests popup) opens before CoreUI finishes the close animation.
+                // The interval will show it once the dungeon is loaded.
+                modalType: '',
+                showModal: false
             };
         });
     }
@@ -526,9 +542,9 @@ class DungeonPage extends React.Component {
         } catch(e) {}
         // Real-time check for completed special actions
     this.realTimeSpecialActionCheckInterval = this._setInterval(() => {
-        // If quests popup is visible, suppress other modals/notifications so
-        // the quests UI takes precedence.
-        try { if (this.state.showQuestsPopup) return; } catch(e) {}
+        // If quests popup is visible, or another modal is already open, suppress
+        // additional modals so they don't stack (two CModal backdrops trap all clicks).
+        try { if (this.state.showQuestsPopup || this.state.showModal) return; } catch(e) {}
             // Use centralized helper to find finished actions and optionally mark them notified
             const { updates, modified, numeralUpdate } = this.checkAndCollectFinishedSpecialActions({ markNotified: true });
 
@@ -656,6 +672,18 @@ class DungeonPage extends React.Component {
                     try{ this.setState({ overlayTiles: this.props.boardManager.overlayTiles }); } catch(e){}
                 } else {
                     // expired while offline / between reloads: end immediately
+                    // Clear the stale camping flags from meta now so the player is not
+                    // left locked on reload if endCamp throws (boardManager not ready yet).
+                    try {
+                        const staleMeta = getMeta() || {};
+                        staleMeta.camping = false;
+                        delete staleMeta.campingStart;
+                        delete staleMeta.campingEnd;
+                        storeMeta(staleMeta);
+                    } catch(e) {}
+                    // Unlock keys synchronously — endCamp may throw if boardManager isn't
+                    // initialized yet (loadExistingDungeon is still in flight at this point).
+                    try { this.setState({ keysLocked: false }); } catch(e) {}
                     try { this._setTimeout(() => { try { this.endCamp(); } catch(e){} }, 50); } catch(e){}
                 }
             }
@@ -699,6 +727,12 @@ class DungeonPage extends React.Component {
 
         
         this.checkDungeon();
+
+        // Register this component's displayMessage with App so external callers
+        // (e.g. the Save button) can post messages to the dungeon message container.
+        if (typeof this.props.registerMessaging === 'function') {
+            this.props.registerMessaging(this.displayMessage);
+        }
     }
 
     // Compute pixel position (left, top) for a tile index within the board
@@ -948,10 +982,11 @@ class DungeonPage extends React.Component {
         try {
             // Use an in-memory/session flag so the popup will reappear on full page reload.
             if (!this.seenQuests) {
-                // Defer so other initialization completes
+                // Defer slightly longer than the special-actions interval (100ms) so the
+                // showQuestsPopup guard is already true before any PrepComplete modal fires.
                 this.questsPopupTimeout = this._setTimeout(() => {
                     try { this.setState({ showQuestsPopup: true }); } catch(e) {}
-                }, 100);
+                }, 300);
             }
         } catch (e) {}
     }
@@ -1155,9 +1190,34 @@ class DungeonPage extends React.Component {
                         'monster-spawn / monsterspawn / mspawn',
                         'item-spawn / itemspawn / ispawn',
                         'fullhealth / full-health / revive',
+                        'open board — jump to mapmaker board view for current board',
                         'list / help'
                     ];
                     this.setState(prev => ({ devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, ...commands], devConsoleInput: '' }));
+                    try { if (this.devConsoleInputRef.current) this.devConsoleInputRef.current.focus(); } catch (err) {}
+                    e.preventDefault();
+                    return;
+                }
+                // open board — navigate to mapmaker board view for the current board
+                if (cmd === 'open board') {
+                    try {
+                        const board = this.props.boardManager && this.props.boardManager.currentBoard;
+                        if (!board || !board.id) {
+                            this.setState(prev => ({ devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, 'Error: no current board loaded'], devConsoleInput: '' }));
+                        } else {
+                            // Persist handoff data so MapmakerPage picks it up on mount
+                            sessionStorage.setItem('devConsoleHandoff', JSON.stringify({
+                                boardId: board.id,
+                                returnTo: 'dungeon',
+                                consoleOpen: true
+                            }));
+                            this.setState(prev => ({ devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, `Opening board "${board.name}" in mapmaker...`], devConsoleInput: '' }));
+                            // Short delay so the output is visible before navigating
+                            setTimeout(() => { window.location.href = '/mapmaker'; }, 400);
+                        }
+                    } catch (err) {
+                        this.setState(prev => ({ devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, `Error: ${err && err.message ? err.message : err}`], devConsoleInput: '' }));
+                    }
                     try { if (this.devConsoleInputRef.current) this.devConsoleInputRef.current.focus(); } catch (err) {}
                     e.preventDefault();
                     return;
@@ -1390,7 +1450,7 @@ class DungeonPage extends React.Component {
         await updateDungeonRequest(dungeon.id, dungeon);
     }
     messaging = (message) => {
-        this.displayMessageAndHold(message)
+        this.displayMessage(message)
     }
     setPending = (pendingState) => {
         this.setState({pending: pendingState})
@@ -1624,7 +1684,7 @@ class DungeonPage extends React.Component {
                     showMessage : false
                 }
             })
-        },3900)
+        },2500)
     }
     displayMessageAndHold = (message) => {
         this.setState(()=>{
@@ -2331,15 +2391,113 @@ class DungeonPage extends React.Component {
             const metaAfter = getMeta() || {};
             if (metaAfter.lastMonsterTileCleanup) console.log('DungeonPage.loadExistingDungeon: meta.lastMonsterTileCleanup =', metaAfter.lastMonsterTileCleanup);
         } catch (e) {}
-        this.props.boardManager.setCurrentLevel(dungeon.levels.find(l=> l.id === meta.location.levelId));
+
+        // If meta.location is missing or incomplete, derive safe defaults from the dungeon data
+        if (!meta.location || meta.location.levelId == null) {
+            console.warn('DungeonPage.loadExistingDungeon: meta.location missing — deriving defaults from dungeon data', meta);
+            const firstLevel = dungeon.levels && dungeon.levels[0];
+            // Try to use the dungeon's stored spawn point for a sensible starting tile
+            const spawnFallback = dungeon.spawn_points && dungeon.spawn_points[0];
+            const fallbackTileIndex = spawnFallback ? spawnFallback.id : 112; // 112 = center of 15x15 board
+            const fallbackBoardIndex = spawnFallback ? (spawnFallback.miniboardIndex || 0) : 0;
+            const fallbackOrientation = spawnFallback ? (spawnFallback.locationCode && spawnFallback.locationCode.split('_')[4]) || 'F' : 'F';
+            meta.location = {
+                levelId: firstLevel ? firstLevel.id : null,
+                orientation: fallbackOrientation,
+                boardIndex: fallbackBoardIndex,
+                tileIndex: fallbackTileIndex
+            };
+        }
+        // If tileIndex is 0 (top-left corner — almost never a real spawn), try to find a
+        // spawn point on the same level, or scan the board for a walkable tile near center.
+        // We do NOT cross levels — using a spawn from level 0 when the player is on level 2
+        // would place them on the wrong miniboard entirely.
+        if (meta.location.tileIndex === 0 || meta.location.tileIndex == null) {
+            const levelId = meta.location.levelId;
+            const levelSpawn = dungeon.spawn_points && dungeon.spawn_points.find(
+                sp => sp.level === levelId || sp.level === Number(levelId)
+            );
+            if (levelSpawn && levelSpawn.id) {
+                console.log('DungeonPage.loadExistingDungeon: tileIndex was 0/null, replacing with same-level spawn point id', levelSpawn.id, 'level', levelSpawn.level);
+                meta.location.tileIndex = levelSpawn.id;
+                meta.location.boardIndex = levelSpawn.miniboardIndex != null ? levelSpawn.miniboardIndex : meta.location.boardIndex;
+            } else {
+                // No spawn on this level — find the first walkable (non-void) tile scanning
+                // outward from center (112) so the player doesn't land in a void.
+                try {
+                    const coerceId = meta.location.levelId != null ? Number(meta.location.levelId) : null;
+                    const lvl = dungeon.levels.find(l => Number(l.id) === coerceId) || dungeon.levels[0];
+                    const boardIdx = meta.location.boardIndex || 0;
+                    const orientation = meta.location.orientation || 'F';
+                    const plane = orientation === 'F' ? lvl.front : lvl.back;
+                    const boardTiles = plane && plane.miniboards && plane.miniboards[boardIdx] && plane.miniboards[boardIdx].tiles;
+                    let foundTile = null;
+                    if (boardTiles) {
+                        // scan from center outward
+                        const order = [112, 97, 127, 111, 113, 96, 98, 126, 128, 82, 142, 110, 114];
+                        for (const idx of order) {
+                            const t = boardTiles[idx];
+                            if (t && t.type !== 'void' && (!t.contains || t.contains.type !== 'void') && t.color !== 'void') {
+                                foundTile = idx;
+                                break;
+                            }
+                        }
+                        // if still null, do a full scan
+                        if (foundTile == null) {
+                            for (let i = 0; i < boardTiles.length; i++) {
+                                const t = boardTiles[i];
+                                if (t && t.type !== 'void' && (!t.contains || t.contains.type !== 'void')) {
+                                    foundTile = i;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    meta.location.tileIndex = foundTile != null ? foundTile : 112;
+                    console.log('DungeonPage.loadExistingDungeon: tileIndex was 0/null, scanned for walkable tile, using', meta.location.tileIndex);
+                } catch (e) {
+                    meta.location.tileIndex = 112;
+                    console.log('DungeonPage.loadExistingDungeon: tileIndex scan failed, using center tile 112');
+                }
+            }
+        }
+        console.log('DungeonPage.loadExistingDungeon: meta.location =', JSON.stringify(meta.location));
+        // Coerce levelId to a number for comparison — it may have been serialised as a string
+        const targetLevelId = meta.location.levelId != null ? Number(meta.location.levelId) : null;
+        const dungeonLevel = dungeon.levels.find(l => Number(l.id) === targetLevelId) || dungeon.levels[0];
+        console.log('DungeonPage.loadExistingDungeon: dungeonLevel =', dungeonLevel ? dungeonLevel.id : null, '| dungeon.levels ids:', dungeon.levels && dungeon.levels.map(l=>l.id));
+        if (!dungeonLevel) {
+            console.error('DungeonPage.loadExistingDungeon: dungeon has no levels, cannot initialize board');
+            return;
+        }
+        // Patch meta.location so the rest of the function uses the resolved id
+        meta.location.levelId = dungeonLevel.id;
+
+        this.props.boardManager.setCurrentLevel(dungeonLevel);
         this.props.boardManager.setCurrentOrientation(meta.location.orientation);
-        this.props.boardManager.initializeTilesFromMap(meta.location.boardIndex, meta.location.tileIndex);
+        console.log('DungeonPage.loadExistingDungeon: calling initializeTilesFromMap boardIndex=', meta.location.boardIndex, 'tileIndex=', meta.location.tileIndex);
+        try {
+            this.props.boardManager.initializeTilesFromMap(meta.location.boardIndex, meta.location.tileIndex);
+            console.log('DungeonPage.loadExistingDungeon: initializeTilesFromMap complete, tiles.length=', this.props.boardManager.tiles && this.props.boardManager.tiles.length);
+        } catch (initErr) {
+            console.error('DungeonPage.loadExistingDungeon: initializeTilesFromMap THREW:', initErr);
+            return;
+        }
         const minimap = this.state.minimap,
         levels = this.state.levelTracker;
-        let level = levels.find(e => e.id === meta.location.levelId);
+        let level = levels.find(e => Number(e.id) === Number(meta.location.levelId));
+        if (!level) {
+            console.warn('DungeonPage.loadExistingDungeon: levelId not found in levelTracker, falling back to first entry', meta.location.levelId, levels);
+            level = levels[0];
+        }
+        if (!level) {
+            console.error('DungeonPage.loadExistingDungeon: no levels in levelTracker, cannot continue');
+            return;
+        }
         levels.forEach(e=>e.active = false)
         level.active = true;
-        minimap[meta.location.boardIndex].active = true;
+        const safeBoardIndex = meta.location.boardIndex != null ? meta.location.boardIndex : 0;
+        if (minimap[safeBoardIndex]) minimap[safeBoardIndex].active = true;
         
     let orientation = this.props.boardManager.currentOrientation;
     // Ensure meta.minimapIndicators is always an array before using it.
@@ -2436,10 +2594,12 @@ class DungeonPage extends React.Component {
         return CampManager.endCamp(this);
     }
     uppercaseFirstLetter = (text) => {
+        if (!text) return '';
         return text.charAt(0).toUpperCase() + text.slice(1);
     }
     battleOver = (result) => {
-        console.log('battle over result: ', result);
+        const monsterLabel = this.state.monster ? (this.state.monster.name || this.state.monster.type || 'unknown monster') : 'unknown monster';
+        console.log('battle over result: ', result, '| monster:', monsterLabel);
         if(result === 'win'){
             this.props.boardManager.removeDefeatedMonsterTile(this.state.monsterBattleTileId)
             this.props.crewManager.checkForLevelUp(this.props.crewManager.crew)
@@ -2767,7 +2927,7 @@ class DungeonPage extends React.Component {
                 this.props.crewManager.crew = crew;
                 storeMeta(meta);
                 this.props.saveUserData();
-                this.setState({showModal: false})
+                this.setState({showModal: false}, () => this._cleanupModalBodyClass())
             break;
             case 'PrepComplete':
                 // In-session preparation completion modal — clear auto-dismiss timeout and close
@@ -2775,12 +2935,26 @@ class DungeonPage extends React.Component {
                     clearTimeout(this.prepCompleteTimeout);
                     this.prepCompleteTimeout = null;
                 }
-                this.setState({ showModal: false });
+                this.setState({ showModal: false }, () => this._cleanupModalBodyClass());
             break;
             case 'Magic':
-                this.setState({keysLocked: false})
+                this.setState({keysLocked: false}, () => this._cleanupModalBodyClass())
             break;
         }
+    }
+
+    // CoreUI CModal adds 'modal-open' + 'overflow:hidden' to <body> while any modal is
+    // visible. If two modals open/close in rapid succession the class can be left behind
+    // even after all modals are dismissed. Call this after every modal close to force-
+    // clean it up whenever no modal is actually open.
+    _cleanupModalBodyClass = () => {
+        try {
+            if (!this.state.showModal && !this.state.showQuestsPopup) {
+                document.body.classList.remove('modal-open');
+                document.body.style.overflow = '';
+                document.body.style.paddingRight = '';
+            }
+        } catch (e) {}
     }
     checkWhichSideOfBoard = () => {
         let side = this.props.boardManager.playerTile.location[0] < 22 ? 'top' : 'bottom'
@@ -2802,7 +2976,7 @@ class DungeonPage extends React.Component {
         } catch (e) {}
         // Clear any pending scheduled popup to avoid it reopening
         try { if (this.questsPopupTimeout) { clearTimeout(this.questsPopupTimeout); this.questsPopupTimeout = null; } } catch(e){}
-        try { this.setState({ showQuestsPopup: false }); } catch(e){}
+        try { this.setState({ showQuestsPopup: false }, () => this._cleanupModalBodyClass()); } catch(e){}
     }
     render(){
         return (
@@ -2928,7 +3102,7 @@ class DungeonPage extends React.Component {
                                 })()}
                             </div>
                         </div>
-                        <div className="name-line">{this.state.selectedCrewMember.name} the {this.uppercaseFirstLetter(this.state.selectedCrewMember.type)}</div>
+                        <div className="name-line">{this.state.selectedCrewMember.name} the {this.uppercaseFirstLetter(this.state.selectedCrewMember.type || this.state.selectedCrewMember.image)}</div>
                         {/* HP bar (hp-line-container) - shows current HP proportion */}
                         {(() => {
                             const selected = this.state.selectedCrewMember || {};
@@ -2954,11 +3128,11 @@ class DungeonPage extends React.Component {
                                 <div className="stat-line"> <span className="stat-name">Max HP</span>  <span className='stat-value'>{maxHp} </span> </div>
                             )
                         })()}
-                        <div className="stat-line"> <span className="stat-name">Strength</span>  <span className='stat-value'>{this.state.selectedCrewMember.stats.str} </span> </div>
-                        <div className="stat-line">Dexterity <span className='stat-value'> {this.state.selectedCrewMember.stats.dex} </span></div>
-                        <div className="stat-line">Intelligence <span className='stat-value'>{this.state.selectedCrewMember.stats.int} </span></div>
+                        <div className="stat-line"> <span className="stat-name">Strength</span>  <span className='stat-value'>{this.state.selectedCrewMember.stats?.str} </span> </div>
+                        <div className="stat-line">Dexterity <span className='stat-value'> {this.state.selectedCrewMember.stats?.dex} </span></div>
+                        <div className="stat-line">Intelligence <span className='stat-value'>{this.state.selectedCrewMember.stats?.int} </span></div>
                         {/* Vitality removed */}
-                        <div className="stat-line">Fortitude <span className='stat-value'> {this.state.selectedCrewMember.stats.fort} </span></div>
+                        <div className="stat-line">Fortitude <span className='stat-value'> {this.state.selectedCrewMember.stats?.fort} </span></div>
                         <div className="icon-container menu" onClick={this.toggleActionsTray}>
                             <CIcon icon={cilMenu} className={`menu-icon ${this.state.leftPanelExpanded ? 'expanded' : ''}`} size="sm"/>
                             Actions
@@ -3364,8 +3538,13 @@ class DungeonPage extends React.Component {
                                 );
                             }
                             return (
-                                <div className="crew-action-item action-row" style={{display:'flex', gap:8}}>
+                                <div className="crew-action-item action-row" style={{display:'flex', flexDirection:'column', gap:6}}>
                                     <div onClick={() => this.setUpCamp()} style={{cursor:'pointer', paddingLeft: '15px'}}>Set Up Camp</div>
+                                    {this.state.campWarningMessage && (
+                                        <div style={{paddingLeft: 15, fontSize: 11, color: '#e74c3c', lineHeight: 1.4}}>
+                                            {this.state.campWarningMessage}
+                                        </div>
+                                    )}
                                 </div>
                             );
                         })()}
@@ -3380,7 +3559,7 @@ class DungeonPage extends React.Component {
                     opacity: this.state.tiles.length > 0 ? 1 : 0,
                     transition: 'opacity 1s'
                     }} className={`center-board-wrapper ${this.state.minimapPlaceMapMarkerStarted ? 'show-map-marker-cursor' : ''}`}>
-                <div className="message-container">
+                <div className="message-container" style={{opacity: this.state.showMessage ? 1 : 0, transition: 'opacity 0.5s'}}>
                     {this.state.messageToDisplay}
                 </div>
                 <div className="respawn-message-container" style={{display: 'flex', alignItems: 'center', gap: 8}}>

@@ -2,7 +2,7 @@ import React from 'react';
 import * as images from '../utils/images'
 
 
-export default function Tile(props) {
+function Tile(props) {
     if(props.image === 'void_fill'){
         console.log('void fill ', images[props.image]);
     }
@@ -139,3 +139,11 @@ export default function Tile(props) {
         </div>
     )
 }
+
+// Memoize so the thousands of read-only dungeon-view tiles don't re-render on
+// every parent state change (e.g. dropdown open/close).  Tile content never
+// changes mid-render in the dungeon preview — only tileSize, image, color, and
+// coordinates matter.  All other props that Tile receives in DungeonView are
+// stable primitives (false / null / 'board-tile'), so the shallow comparison
+// is reliable and cheap.
+export default React.memo(Tile);

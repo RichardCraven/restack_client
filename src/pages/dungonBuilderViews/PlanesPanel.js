@@ -39,6 +39,21 @@ class PlanesPanel extends React.Component {
         }
     }
 
+    shouldComponentUpdate(nextProps, nextState) {
+        // Only re-render when plane data, sizing, or hover state actually changes.
+        // Prevents the full plane-tile VDOM rebuild on every unrelated parent render
+        // (e.g. a dropdown opening elsewhere in MapmakerPage).
+        return (
+            nextProps.planes !== this.props.planes ||
+            nextProps.loadedPlane !== this.props.loadedPlane ||
+            nextProps.tileSize !== this.props.tileSize ||
+            nextProps.boardSize !== this.props.boardSize ||
+            nextProps.showPlanesNames !== this.props.showPlanesNames ||
+            nextProps.adjacencyHoverIdx !== this.props.adjacencyHoverIdx ||
+            nextState.hoveredPlane !== this.state.hoveredPlane
+        );
+    }
+
     render (){
         return (
             <div className="palette right-palette" 

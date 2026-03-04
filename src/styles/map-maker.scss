@@ -28,6 +28,7 @@ $bot-level-zIndex: 2; // doubletall containers
     flex-flow: row wrap;
     align-content: center;
     justify-content: center;
+    position: relative;
     &:hover{
         cursor: pointer;
     }
@@ -636,8 +637,11 @@ ul.dropdown-menu.show{
                     position: relative;
                     .canvas-overlay-container{
                         position: absolute;
+                        top: 0;
+                        left: 0;
                         z-index: $top-level-zIndex;
                         display: flex;
+                        pointer-events: none;
                         
                         // background-color: red;
                         canvas{

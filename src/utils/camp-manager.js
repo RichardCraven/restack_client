@@ -15,6 +15,26 @@ export async function setUpCamp(component, maybeDuration) {
         } catch (e) {}
         try { if (component.campInterval) { try { clearInterval(component.campInterval); } catch(e){} component.campInterval = null; } } catch(e){}
         let meta = getMeta() || {};
+
+        // --- Food cost check ---
+        // Cost = sum of (3 + member.level) for each crew member
+        const crew = (component.props.crewManager && component.props.crewManager.crew) || [];
+        const foodCost = crew.reduce((sum, m) => sum + (3 + (typeof m.level === 'number' ? m.level : 1)), 0);
+        const currentFood = typeof meta.food === 'number' ? meta.food : 55;
+        if (currentFood < foodCost) {
+            try {
+                component.setState({ campWarningMessage: `Not enough food to camp (need ${foodCost}, have ${currentFood})` });
+                // auto-clear after 4s
+                const setTimeoutFn = (component._setTimeout && typeof component._setTimeout === 'function') ? component._setTimeout : setTimeout;
+                setTimeoutFn(() => { try { component.setState({ campWarningMessage: null }); } catch(e){} }, 4000);
+            } catch(e) {}
+            return; // block camping
+        }
+        // Deduct food cost
+        meta.food = currentFood - foodCost;
+        console.log(`[CampManager] food cost: -${foodCost} (remaining: ${meta.food})`);
+        // --- End food cost ---
+
         const now = new Date();
         meta.camping = true;
         meta.campingStart = now.toISOString();
@@ -86,7 +106,19 @@ export async function endCamp(component) {
         if (component.props.boardManager && typeof component.props.boardManager.placePlayer === 'function') {
             try{ component.props.boardManager.placePlayer(component.props.boardManager.playerTile.location); } catch(e){}
         }
-        try { component.setState({ overlayTiles: component.props.boardManager.overlayTiles, selectedCrewMember: component.state.selectedCrewMember }); } catch(e){}
+        try {
+            // Re-read the selectedCrewMember from the freshly-mutated crew array so the
+            // dead overlay and HP bar reflect the restored state immediately.
+            const updatedSelected = (() => {
+                try {
+                    const prev = component.state.selectedCrewMember;
+                    if (!prev) return prev;
+                    const crew = (component.props.crewManager && component.props.crewManager.crew) || [];
+                    return crew.find(c => c.id === prev.id) || prev;
+                } catch(e) { return component.state.selectedCrewMember; }
+            })();
+            component.setState({ overlayTiles: component.props.boardManager.overlayTiles, selectedCrewMember: updatedSelected });
+        } catch(e){}
         try { if (component.props.saveUserData) component.props.saveUserData(); } catch(e){}
         // camping ended and crew restored
         // unlock movement hotkeys

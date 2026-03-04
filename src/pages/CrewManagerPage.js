@@ -48,7 +48,18 @@ class CrewManagerPage extends React.Component{
     let selectedCrew = [];
     // ...existing code...
     if(meta && meta.crew && meta.crew.length){
-        meta.crew.forEach((e,i)=>selectedCrew[i] = e)
+        // Re-hydrate portrait from the live adventurers list so stale sessionStorage
+        // URLs (from a previous webpack build) don't cause blank portraits in the tray.
+        const adventurers = this.props.crewManager.adventurers || [];
+        meta.crew.forEach((e,i) => {
+            const template = adventurers.find(a =>
+                (a.id && a.id === e.id) ||
+                (a.image && a.image === (e.image || e.type)) ||
+                (a.type && a.type === (e.type || e.image))
+            );
+            if (template) e.portrait = template.portrait;
+            selectedCrew[i] = e;
+        });
     }
     this.setState({
         options,
@@ -172,33 +183,33 @@ goBack = () => {
                         </div>
                     </div>}
                     {this.state.selectedCrewMember && <div className="stats-pane">
-                        <div className="stat">Strength: {this.state.selectedCrewMember.stats.str}</div>
-                        <div className="stat">Dexterity: {this.state.selectedCrewMember.stats.dex}</div>
-                        <div className="stat">Intelligence: {this.state.selectedCrewMember.stats.int}</div>
+                        <div className="stat">Strength: {this.state.selectedCrewMember.stats?.str}</div>
+                        <div className="stat">Dexterity: {this.state.selectedCrewMember.stats?.dex}</div>
+                        <div className="stat">Intelligence: {this.state.selectedCrewMember.stats?.int}</div>
                         {/* Vitality removed */}
-                        <div className="stat">Fortitude: {this.state.selectedCrewMember.stats.fort}</div>
+                        <div className="stat">Fortitude: {this.state.selectedCrewMember.stats?.fort}</div>
                     </div>}
                     {this.state.selectedCrewMember && <div className="abilities-pane">
                         <div className="attacks">Attacks: &nbsp;
-                            {this.state.selectedCrewMember.attacks.map((e,i)=> {
+                            {(this.state.selectedCrewMember.attacks || []).map((e,i)=> {
                                 const name = typeof e === 'object' && e !== null ? e.name : e;
                                 return <div key={i}>{ name }{i !== this.state.selectedCrewMember.attacks.length-1 ?  ',' : ''} &nbsp; </div>
                             })}
                         </div>
                         <div className="specials">Specials: &nbsp;
-                            {this.state.selectedCrewMember.specials.map((e,i)=> {
+                            {(this.state.selectedCrewMember.specials || []).map((e,i)=> {
                                 const name = typeof e === 'object' && e !== null ? e.name : e;
                                 return <div key={i}>{ name }{i !== this.state.selectedCrewMember.specials.length-1 ?  ',' : ''} &nbsp; </div>
                             })}
                         </div>
                         <div className="passives">Passives: &nbsp;
-                            {this.state.selectedCrewMember.passives.map((e,i)=> {
+                            {(this.state.selectedCrewMember.passives || []).map((e,i)=> {
                                 const name = typeof e === 'object' && e !== null ? e.name : e;
                                 return <div key={i}>{ name }{i !== this.state.selectedCrewMember.passives.length-1 ?  ',' : ''} &nbsp; </div>
                             })}
                         </div>
                         <div className="weaknesses">Weaknesses: &nbsp;
-                            {this.state.selectedCrewMember.weaknesses.map((e,i)=> {
+                            {(this.state.selectedCrewMember.weaknesses || []).map((e,i)=> {
                                 const name = typeof e === 'object' && e !== null ? e.name : e;
                                 return <div key={i}>{ name }{i !== this.state.selectedCrewMember.weaknesses.length-1 ?  ',' : ''} &nbsp; </div>
                             })}

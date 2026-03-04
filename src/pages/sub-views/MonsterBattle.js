@@ -142,6 +142,8 @@ class MonsterBattle extends React.Component {
             summaryMessage: '',
             experienceGained: null,
             goldGained: null,
+            foodGained: 0,
+            levelTransitions: {},
             battleResult: null,
             monsterPortrait: '',
             navToDeathScene: false,
@@ -813,6 +815,7 @@ class MonsterBattle extends React.Component {
 
         let experienceGained,
             goldGained,
+            foodGained = 0,
             itemsGained,
             crewWins = outcome === 'crewWins',
             summaryMessage, battleResult;
@@ -834,6 +837,25 @@ class MonsterBattle extends React.Component {
             goldGained = Math.floor(Math.random() * experienceGained);
             // Defensive: log inventory/gold state before adding to help trace duplicate updates
             try { /* inventory snapshot suppressed */ } catch(e){}
+            // Food reward: 40% chance 5-15, 20% chance 20-30, 5% chance 40-60
+            try {
+                const foodRoll = Math.random();
+                let foodRolled = 0;
+                if (foodRoll < 0.05) {
+                    foodRolled = Math.floor(Math.random() * 21) + 40; // 40-60
+                } else if (foodRoll < 0.25) {
+                    foodRolled = Math.floor(Math.random() * 11) + 20; // 20-30
+                } else if (foodRoll < 0.65) {
+                    foodRolled = Math.floor(Math.random() * 11) + 5;  // 5-15
+                }
+                if (foodRolled > 0) {
+                    foodGained = foodRolled;
+                    const metaFood = getMeta() || {};
+                    metaFood.food = (typeof metaFood.food === 'number' ? metaFood.food : 55) + foodGained;
+                    try { storeMeta(metaFood); } catch(e) {}
+                    console.log(`[Combat] food reward: +${foodGained} (total: ${metaFood.food})`);
+                }
+            } catch(e) { console.warn('food reward failed', e); }
             // Ensure we only award gold once per battle
                     if (!this._goldAwarded) {
                 try {
@@ -846,12 +868,32 @@ class MonsterBattle extends React.Component {
                 // gold already awarded, skipping
             }
             this._setTimeout(()=>{
+                // Snapshot levels before awarding XP so we can show before→after
+                const levelsBefore = {};
+                try {
+                    (this.props.crewManager.crew || []).forEach(c => {
+                        if (c && c.id) levelsBefore[c.id] = typeof c.level === 'number' ? c.level : 0;
+                    });
+                } catch(e) {}
                 // Use latest liveCrew snapshot when awarding experience
                 try { this.props.crewManager.addExperience(liveCrew, experienceGained); } catch(e) { console.warn('addExperience failed', e); }
+                // Build level transitions map for display
+                const levelTransitions = {};
+                try {
+                    (this.props.crewManager.crew || []).forEach(c => {
+                        if (!c || !c.id) return;
+                        const before = levelsBefore[c.id];
+                        const after = typeof c.level === 'number' ? c.level : 0;
+                        if (typeof before === 'number' && after > before) {
+                            levelTransitions[c.id] = { from: before, to: after };
+                        }
+                    });
+                } catch(e) {}
                 let meta = getMeta();
                 meta.crew = this.props.crewManager.crew;
                 storeMeta(meta)
                 updateUserRequest();
+                this.setState({ levelTransitions });
                 this.forceUpdate();
             },1000)
 
@@ -988,6 +1030,7 @@ class MonsterBattle extends React.Component {
         this.setState({
             showSummaryPanel: true,
             goldGained,
+            foodGained,
             experienceGained,
             itemsGained,
             summaryMessage,
@@ -1501,7 +1544,12 @@ class MonsterBattle extends React.Component {
                             <div className="experience-container">
                                 You found {this.state.goldGained} gold
                             </div>
-                            } 
+                            }
+                            {this.state.foodGained > 0 &&
+                            <div className="experience-container">
+                                Your crew foraged {this.state.foodGained} food
+                            </div>
+                            }
                             {this.state.experienceGained > 0 && 
                             <div className="experience-container">
                                 Each crew member has earned {this.state.experienceGained} experience
@@ -1543,6 +1591,11 @@ class MonsterBattle extends React.Component {
                                                         {Object.keys(gainsAgg).map((k, idx) => (
                                                             <div key={idx} className="gain-item">{k.toUpperCase()} +{gainsAgg[k]}</div>
                                                         ))}
+                                                    </div>
+                                                )}
+                                                {this.state.levelTransitions[crewMember.id] && (
+                                                    <div className="level-transition">
+                                                        Lvl {this.state.levelTransitions[crewMember.id].from} → {this.state.levelTransitions[crewMember.id].to}
                                                     </div>
                                                 )}
                                                 <div className="experience-bar-container">

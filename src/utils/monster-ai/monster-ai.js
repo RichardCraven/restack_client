@@ -1,6 +1,7 @@
 import { Djinn } from './profiles/Djinn'
 import { Sphinx } from './profiles/Sphinx'
 import { Skeleton } from './profiles/Skeleton'
+import { Goblin } from './profiles/Goblin'
 import {Methods, getSurroundings} from '../shared-ai-methods/basic-methods';
 import {MovementMethods} from '../shared-ai-methods/movement-methods';
 
@@ -53,7 +54,8 @@ export function MonsterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
         this.roster = {
             djinn: new Djinn(data, this.utilMethods, this.animationManager, this.overlayManager),
             sphinx: new Sphinx(data, this.utilMethods, this.animationManager, this.overlayManager),
-            skeleton: new Skeleton(data, this.utilMethods, this.animationManager, this.overlayManager)
+            skeleton: new Skeleton(data, this.utilMethods, this.animationManager, this.overlayManager),
+            goblin: new Goblin(data, this.utilMethods, this.animationManager, this.overlayManager)
         }
     }
 

@@ -32,54 +32,58 @@
         }
     }
 
-    /* Dev console styles */
-    .dev-console {
-        position: fixed;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: white;
-        border-top: 1px solid #ddd;
-        z-index: 3000;
-        box-shadow: 0 -2px 8px rgba(0,0,0,0.12);
-    }
-    .dev-console-inner {
-        display: flex;
-        max-height: 220px;
-        height: 180px;
-    }
-    .dev-console-left, .dev-console-right {
-        flex: 1 1 50%;
-        padding: 12px;
-        overflow: auto;
-    }
-    .dev-console-divider {
-        width: 1px;
-        background: #e6e6e6;
-    }
-    .dev-console-input {
-        width: 100%;
-        border: none;
-        outline: none;
-        font-size: 14px;
-        padding: 6px 8px;
-        box-sizing: border-box;
-    }
-    .dev-console-typed {
-        margin-top: 8px;
-        color: #333;
-        font-family: monospace;
-        white-space: pre-wrap;
-    }
-    .dev-console-output {
-        font-family: monospace;
-        color: #111;
-        white-space: pre-wrap;
-    }
-    .dev-console-line { margin-bottom: 4px; }
+    /* Dev console styles — moved to root scope so other pages can use them */
+}
+
+/* Dev console — shared across DungeonPage and MapmakerPage */
+.dev-console {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: white;
+    border-top: 1px solid #ddd;
+    z-index: 3000;
+    box-shadow: 0 -2px 8px rgba(0,0,0,0.12);
+}
+.dev-console-inner {
+    display: flex;
+    max-height: 220px;
+    height: 180px;
+}
+.dev-console-left, .dev-console-right {
+    flex: 1 1 50%;
+    padding: 12px;
+    overflow: auto;
+}
+.dev-console-divider {
+    width: 1px;
+    background: #e6e6e6;
+}
+.dev-console-input {
+    width: 100%;
+    border: none;
+    outline: none;
+    font-size: 14px;
+    padding: 6px 8px;
+    box-sizing: border-box;
+}
+.dev-console-typed {
+    margin-top: 8px;
+    color: #333;
+    font-family: monospace;
+    white-space: pre-wrap;
+}
+.dev-console-output {
+    font-family: monospace;
+    color: #111;
+    white-space: pre-wrap;
+}
+.dev-console-line { margin-bottom: 4px; }
+
+// Resume remaining .dungeon-container child rules
+.dungeon-container {
     .tile.inventory-tile.equipment{
-        background-color: white;
-        margin: 0;
         // height: 55px;
         // width: 55px;
         &.empty{
