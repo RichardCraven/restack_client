@@ -45,10 +45,9 @@ export default function LandingPage(props) {
       setShowWarning(true)
       return
     }
-    if(showWarning) return
     console.log('enter clicked, meta: ', meta);
     if(meta.dungeonId){
-      setNavDungeon(!showWarning)
+      setNavDungeon(true)
     } else {  
       console.log('show intro sequence');
 
@@ -71,7 +70,7 @@ export default function LandingPage(props) {
           { navToUsermanager && <Redirect to='/usermanager'/> }
           { navToCombatSimulator && <Redirect to='/combatSimulator'/> }
           <div className="landing-buttons-container">
-            {showWarning && <span className="warning">Cannot enter dungeon without a crew</span>}
+            {showWarning && <span className="warning" style={{pointerEvents: 'none'}}>Cannot enter dungeon without a crew</span>}
             <div className={`landing-button enter-dungeon ${showWarning ? 'disabled' : ''}`} onMouseEnter={() => checkForCrew()} onMouseLeave={() => setShowWarning(false)} onClick={() => enterClicked()}>Enter</div>
             <div className="landing-button shop"  onClick={() => setNavCrew(true)} >Crew</div>
             <div className="landing-button user-data" onClick={() => setNavUserProfile(true)}>Profile</div>

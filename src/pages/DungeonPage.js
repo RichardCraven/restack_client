@@ -403,6 +403,8 @@ class DungeonPage extends React.Component {
             let metaDirty = false;
             if (typeof meta.food !== 'number') { meta.food = 55; metaDirty = true; }
             if (typeof meta.resolve !== 'number') { meta.resolve = 100; metaDirty = true; }
+            // DEV: force deathTracker to 2 on load so the next battle loss triggers final death
+            // meta.deathTracker = 2; metaDirty = true;
             if (metaDirty) { try { storeMeta(meta); } catch(e) {} }
         }
 
@@ -1190,10 +1192,43 @@ class DungeonPage extends React.Component {
                         'monster-spawn / monsterspawn / mspawn',
                         'item-spawn / itemspawn / ispawn',
                         'fullhealth / full-health / revive',
+                        'food — fill food count to 55',
+                        'kill reset — reset death tracker to 0',
                         'open board — jump to mapmaker board view for current board',
                         'list / help'
                     ];
                     this.setState(prev => ({ devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, ...commands], devConsoleInput: '' }));
+                    try { if (this.devConsoleInputRef.current) this.devConsoleInputRef.current.focus(); } catch (err) {}
+                    e.preventDefault();
+                    return;
+                }
+                // kill reset — reset death tracker to 0
+                if (cmd === 'kill reset') {
+                    try {
+                        this.handleDeathTrackerChanged(0);
+                        try { updateUserRequest(getUserId(), getMeta()).catch(()=>{}); } catch(e){}
+                        try { if (typeof this.props.saveUserData === 'function') this.props.saveUserData(); } catch(e){}
+                        this.setState(prev => ({ devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, 'Death tracker reset to 0'], devConsoleInput: '' }));
+                    } catch (err) {
+                        this.setState(prev => ({ devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, `Error: ${err && err.message ? err.message : err}`], devConsoleInput: '' }));
+                    }
+                    try { if (this.devConsoleInputRef.current) this.devConsoleInputRef.current.focus(); } catch (err) {}
+                    e.preventDefault();
+                    return;
+                }
+                // food — fill food count to 55 and save
+                if (cmd === 'food') {
+                    try {
+                        const meta = getMeta() || {};
+                        meta.food = 55;
+                        try { storeMeta(meta); } catch(e){}
+                        try { updateUserRequest(getUserId(), meta).catch(()=>{}); } catch(e){}
+                        try { if (typeof this.props.saveUserData === 'function') this.props.saveUserData(); } catch(e){}
+                        try { this.forceUpdate(); } catch(e){}
+                        this.setState(prev => ({ devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, 'Food set to 55'], devConsoleInput: '' }));
+                    } catch (err) {
+                        this.setState(prev => ({ devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, `Error: ${err && err.message ? err.message : err}`], devConsoleInput: '' }));
+                    }
                     try { if (this.devConsoleInputRef.current) this.devConsoleInputRef.current.focus(); } catch (err) {}
                     e.preventDefault();
                     return;
@@ -1341,6 +1376,20 @@ class DungeonPage extends React.Component {
                 const s = start ? new Date(start) : null;
                 const e = end ? new Date(end) : null;
                 this._placeholderRegistry.set(id, { el, start: s, end: e });
+                // For CSS-animated elements (camp-anim), set animationDuration and animationDelay
+                // imperatively on first mount so React re-renders never touch those properties.
+                // Changing animationDelay on an already-running element restarts the animation,
+                // causing the visible jumps. We only set it if not already applied.
+                try {
+                    if (el.classList && el.classList.contains('camp-anim') && !el._campAnimApplied) {
+                        const now = new Date();
+                        const totalSeconds = (s && e) ? Math.max(0, (e - s) / 1000) : 0;
+                        const elapsedSeconds = s ? Math.max(0, (now - s) / 1000) : 0;
+                        el.style.animationDuration = `${totalSeconds}s`;
+                        el.style.animationDelay = `-${elapsedSeconds}s`;
+                        el._campAnimApplied = true;
+                    }
+                } catch (e) {}
                 // try { console.log(`placeholderRef: registered ${id} start=${s} end=${e}`); } catch(e){}
                 // ensure the draw loop is running when a new active placeholder is registered
                 try {
@@ -2056,7 +2105,10 @@ class DungeonPage extends React.Component {
         if(!member.data){
             return
         }
-        let foundMember = this.props.crewManager.crew.find(e=>e.type === member.data.type);
+        // Match by type first, fall back to id so restored crew objects (which may have
+        // been rebuilt by initializeCrew and only carry id) are still found.
+        let foundMember = this.props.crewManager.crew.find(e => e.type === member.data.type)
+                       || this.props.crewManager.crew.find(e => e.id === member.data.id);
         if(foundMember){
             this.props.crewManager.crew.forEach(c=>{
                 c.selected = false;
@@ -2071,11 +2123,11 @@ class DungeonPage extends React.Component {
         } else {
             val = member.data;
         }
-        
+
         this.setState({
             selectedCrewMember: val,
-            actionsTrayExpanded: foundMember.actionsTrayExpanded,
-            actionMenuTypeExpanded: foundMember.actionMenuTypeExpanded
+            actionsTrayExpanded: foundMember ? foundMember.actionsTrayExpanded : false,
+            actionMenuTypeExpanded: foundMember ? foundMember.actionMenuTypeExpanded : false
         })
     }
 
@@ -2084,9 +2136,13 @@ class DungeonPage extends React.Component {
         const crew = (this.props.crewManager && this.props.crewManager.crew) || [];
         if(!crew || crew.length === 0) return;
 
-        const currentType = this.state.selectedCrewMember && this.state.selectedCrewMember.type;
+        const current = this.state.selectedCrewMember;
+        const currentType = current && current.type;
+        const currentId   = current && current.id;
         let currentIndex = crew.findIndex(c => c.type === currentType);
-        if(currentIndex === -1) currentIndex = 0;
+        // Fall back to id match in case type is missing or was rebuilt differently
+        if (currentIndex === -1 && currentId) currentIndex = crew.findIndex(c => c.id === currentId);
+        if (currentIndex === -1) currentIndex = 0;
 
         let nextIndex = 0;
         if(direction === 'prev'){
@@ -2591,7 +2647,13 @@ class DungeonPage extends React.Component {
 
     // Delegates camping end to CampManager
     endCamp = async () => {
-        return CampManager.endCamp(this);
+        console.log('[DungeonPage.endCamp] wrapper called');
+        await CampManager.endCamp(this);
+        console.log('[DungeonPage.endCamp] CampManager.endCamp resolved, calling forceUpdate');
+        // After endCamp resolves, force another re-render so crew tiles pick up
+        // the restored hp values from the new member objects in crewManager.crew.
+        try { this.forceUpdate(); } catch(e) {}
+        setTimeout(() => { try { this.forceUpdate(); } catch(e) {} }, 50);
     }
     uppercaseFirstLetter = (text) => {
         if (!text) return '';
@@ -2619,38 +2681,72 @@ class DungeonPage extends React.Component {
                         const spawnPoint = meta2.spawnPoint;
                         console.log('spawn point: ', spawnPoint);
                         const selectedDungeon = meta2.selectedDungeon;
-                        let sp = spawnPoint.locationCode.split('_');
-                        const levelId =  spawnPoint.level;
-                        const level = selectedDungeon.levels.find(e=>e.id === levelId)
-                        const miniboardIndex = spawnPoint.miniboardIndex
-                        const orientation = sp[4];
-                        const spawnTileIndex = spawnPoint.id;
-                        const board = orientation === 'F' ? level.front.miniboards[miniboardIndex] : (orientation === 'B' ? level.back.miniboards[miniboardIndex] : null)
+                        if (spawnPoint && spawnPoint.locationCode && selectedDungeon) {
+                            let sp = spawnPoint.locationCode.split('_');
+                            const levelId =  spawnPoint.level;
+                            const level = selectedDungeon.levels.find(e=>e.id === levelId)
+                            const miniboardIndex = spawnPoint.miniboardIndex
+                            const orientation = sp[4];
+                            const spawnTileIndex = spawnPoint.id;
+                            const board = orientation === 'F' ? level.front.miniboards[miniboardIndex] : (orientation === 'B' ? level.back.miniboards[miniboardIndex] : null)
 
-                        meta2.location = {
-                            boardIndex: spawnPoint.miniboardIndex,
-                            tileIndex: spawnPoint.id,
-                            levelId,
-                            orientation
+                            meta2.location = {
+                                boardIndex: spawnPoint.miniboardIndex,
+                                tileIndex: spawnPoint.id,
+                                levelId,
+                                orientation
+                            }
+                        } else {
+                            console.warn('battleOver respawn: no spawnPoint in meta — keeping current location');
                         }
+                        // Re-fetch meta so we don't overwrite values (e.g. deathTracker) written
+                        // by gameOver in MonsterBattle between when we fetched meta2 and now.
+                        const freshMeta = getMeta();
+                        meta2.deathTracker = freshMeta.deathTracker;
                         try { storeMeta(meta2); } catch(e) {}
                         try { this.props.crewManager.initializeCrew(meta2.crew); } catch(e) {}
+                        // Explicitly clear dead/hp on crewManager.crew as a second pass — initializeCrew
+                        // rebuilds from meta2.crew (hp=1/dead=false) but any in-flight callbacks from
+                        // combat may have mutated the objects. Force-clear here so the Tile dead-overlay
+                        // and HP bar render correctly immediately after respawn.
+                        // Also set the suppress flag so handleFighterUpdateFromBattle ignores dead/hp
+                        // writes from any lingering battle callbacks during the cleanup window.
+                        this._suppressFighterDeadHpUpdates = true;
+                        try {
+                            if (this.props.crewManager && Array.isArray(this.props.crewManager.crew)) {
+                                this.props.crewManager.crew.forEach(c => {
+                                    if (!c) return;
+                                    c.hp = 1;
+                                    c.dead = false;
+                                });
+                            }
+                        } catch(e) {}
                         try { if (this.props.saveUserData) this.props.saveUserData(); } catch(e) {}
 
                         // // Notify parent UI for each crew member so DungeonPage updates portrait overlays
                         // Ensure UI reflects restored crew state (hp/dead flags). Force a re-render
                         // and update any selectedCrewMember references so portrait overlays refresh.
-                        try {
-                            // Update selectedCrewMember if present
-                            if (this.state.selectedCrewMember && this.state.selectedCrewMember.id) {
-                                const updated = (this.props.crewManager && Array.isArray(this.props.crewManager.crew)) ? this.props.crewManager.crew.find(c => c && c.id === this.state.selectedCrewMember.id) : null;
-                                if (updated) {
-                                    try { this.setState({ selectedCrewMember: { ...updated } }); } catch(e) {}
+                        const refreshCrewUI = () => {
+                            try {
+                                // Update selectedCrewMember if present — read from the now-clean crewManager.crew
+                                if (this.state.selectedCrewMember && this.state.selectedCrewMember.id) {
+                                    const updated = (this.props.crewManager && Array.isArray(this.props.crewManager.crew)) ? this.props.crewManager.crew.find(c => c && c.id === this.state.selectedCrewMember.id) : null;
+                                    if (updated) {
+                                        try { this.setState({ selectedCrewMember: { ...updated, hp: 1, dead: false } }); } catch(e) {}
+                                    }
                                 }
-                            }
-                            // Force update to refresh crew tiles and death overlays
-                            try { this.forceUpdate(); } catch(e) {}
-                        } catch (inner) { console.warn('post-respawn UI refresh failed', inner); }
+                                // Force update to refresh crew tiles and death overlays
+                                try { this.forceUpdate(); } catch(e) {}
+                            } catch (inner) { console.warn('post-respawn UI refresh failed', inner); }
+                        };
+                        // Run immediately, then again after a tick so any in-flight battle
+                        // callbacks that may race with the respawn are also overridden.
+                        refreshCrewUI();
+                        setTimeout(() => {
+                            refreshCrewUI();
+                            // Safe to re-enable dead/hp updates from battle callbacks now
+                            this._suppressFighterDeadHpUpdates = false;
+                        }, 0);
                     }
             try {
                 
@@ -2862,20 +2958,28 @@ class DungeonPage extends React.Component {
     handleFighterUpdateFromBattle = (fighter) => {
         if (!fighter || !fighter.id) return;
         try {
-            // Update crewManager's copy
+            // Update crewManager's copy — replace the array slot with a new spread object
+            // so React.memo on Tile sees a changed `data` prop reference and re-renders.
             if (this.props.crewManager && Array.isArray(this.props.crewManager.crew)) {
                 const idx = this.props.crewManager.crew.findIndex(c => c && c.id === fighter.id);
                 if (idx !== -1) {
-                    this.props.crewManager.crew[idx].specialActions = JSON.parse(JSON.stringify(fighter.specialActions || []));
-                    // Also update hp/dead if provided by combat
-                    if (typeof fighter.hp !== 'undefined') this.props.crewManager.crew[idx].hp = fighter.hp;
-                    if (typeof fighter.dead !== 'undefined') this.props.crewManager.crew[idx].dead = !!fighter.dead;
+                    const cur = this.props.crewManager.crew[idx];
+                    const updates = { specialActions: JSON.parse(JSON.stringify(fighter.specialActions || [])) };
+                    // Skip dead/hp writes during respawn so battle-end callbacks can't clobber the restored state
+                    if (!this._suppressFighterDeadHpUpdates) {
+                        if (typeof fighter.hp !== 'undefined') updates.hp = fighter.hp;
+                        if (typeof fighter.dead !== 'undefined') updates.dead = !!fighter.dead;
+                    }
+                    this.props.crewManager.crew[idx] = { ...cur, ...updates };
                 }
             }
 
-            // If this fighter is currently selected, update selectedCrewMember state so UI updates immediately
+            // If this fighter is currently selected, update selectedCrewMember state so UI updates immediately.
+            // Either way, forceUpdate so the crew tile list re-renders with the new member object reference.
             if (this.state.selectedCrewMember && this.state.selectedCrewMember.id === fighter.id) {
-                this.setState({ selectedCrewMember: { ...this.state.selectedCrewMember, specialActions: JSON.parse(JSON.stringify(fighter.specialActions || [])), hp: (typeof fighter.hp !== 'undefined' ? fighter.hp : this.state.selectedCrewMember.hp), dead: (typeof fighter.dead !== 'undefined' ? !!fighter.dead : this.state.selectedCrewMember.dead) } });
+                this.setState({ selectedCrewMember: { ...this.state.selectedCrewMember, specialActions: JSON.parse(JSON.stringify(fighter.specialActions || [])), ...(!this._suppressFighterDeadHpUpdates && { hp: (typeof fighter.hp !== 'undefined' ? fighter.hp : this.state.selectedCrewMember.hp), dead: (typeof fighter.dead !== 'undefined' ? !!fighter.dead : this.state.selectedCrewMember.dead) }) } });
+            } else {
+                try { this.forceUpdate(); } catch(e) {}
             }
 
             // Persist to meta as well
@@ -2885,8 +2989,10 @@ class DungeonPage extends React.Component {
                     const mIdx = meta.crew.findIndex(c => c && c.id === fighter.id);
                     if (mIdx !== -1) {
                         meta.crew[mIdx].specialActions = JSON.parse(JSON.stringify(fighter.specialActions || []));
-                        if (typeof fighter.hp !== 'undefined') meta.crew[mIdx].hp = fighter.hp;
-                        if (typeof fighter.dead !== 'undefined') meta.crew[mIdx].dead = !!fighter.dead;
+                        if (!this._suppressFighterDeadHpUpdates) {
+                            if (typeof fighter.hp !== 'undefined') meta.crew[mIdx].hp = fighter.hp;
+                            if (typeof fighter.dead !== 'undefined') meta.crew[mIdx].dead = !!fighter.dead;
+                        }
                         storeMeta(meta);
                         if (typeof this.props.saveUserData === 'function') this.props.saveUserData();
                     }
@@ -3503,26 +3609,18 @@ class DungeonPage extends React.Component {
                             if (camping) {
                                 const start = meta.campingStart || '';
                                 const end = meta.campingEnd || '';
-                                const now = new Date();
-                                const startDate = start ? new Date(start) : null;
-                                const endDate = end ? new Date(end) : null;
-                                // compute total and elapsed seconds so we can use a negative animationDelay
-                                const totalSeconds = (startDate && endDate) ? Math.max(0, (endDate - startDate) / 1000) : 0;
-                                const elapsedSeconds = (startDate) ? Math.max(0, (now - startDate) / 1000) : 0;
-                                const pct = (totalSeconds > 0) ? Math.min(1, elapsedSeconds / totalSeconds) : 0;
                                 // use a stable id so the placeholder element is not recreated each render
                                 const placeholderId = 'camp-progress-placeholder';
                                 return (
                                     <div className="crew-action-item action-row" style={{position:'relative'}}>
-                                        <div className="camp-label" style={{position: 'relative'}}>
-                                            Recuperating in Camp...
+                                        <div className="camp-label">
+                                            <span style={{position: 'relative', zIndex: 2}}>Recuperating in Camp...</span>
                                             <div
                                                 id={placeholderId}
                                                 ref={el => this.placeholderRef(el, placeholderId, start, end)}
-                                                className={`progress-overlay progress-overlay-placeholder debug-placeholder camp-static`}
+                                                className={`progress-overlay camp-anim`}
                                                 data-start={start}
                                                 data-end={end}
-                                                style={{ width: `${Math.round(pct * 100)}%` }}
                                             ></div>
                                             <div
                                                 onClick={() => this.endCamp()}

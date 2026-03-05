@@ -1185,22 +1185,27 @@ export function BoardManager(){
        
                 tile.image = this.getImageForContains(tile.contains);
         
-
-        switch(direction){
-            case 'up':
-                this.playerTile.location[0] = (this.playerTile.location[0]- 1)
-            break;
-            case 'down':
-                this.playerTile.location[0] = (this.playerTile.location[0]+ 1)
-            break;
-            case 'left':
-                this.playerTile.location[1] = (this.playerTile.location[1]- 1)
-            break;
-            case 'right':
-                this.playerTile.location[1] = (this.playerTile.location[1]+ 1)
-            break;
-            default:
-            break;
+        // For monster encounters: do NOT advance playerTile.location onto the monster's
+        // tile. The player stays on the pre-encounter tile so that if they lose combat
+        // they return to the correct (safe) position. On victory, removeDefeatedMonsterTile
+        // clears the monster tile and the player is already adjacent.
+        if (interaction !== 'monster') {
+            switch(direction){
+                case 'up':
+                    this.playerTile.location[0] = (this.playerTile.location[0]- 1)
+                break;
+                case 'down':
+                    this.playerTile.location[0] = (this.playerTile.location[0]+ 1)
+                break;
+                case 'left':
+                    this.playerTile.location[1] = (this.playerTile.location[1]- 1)
+                break;
+                case 'right':
+                    this.playerTile.location[1] = (this.playerTile.location[1]+ 1)
+                break;
+                default:
+                break;
+            }
         }
         // Recompute fog after updating the player's location so fog centers on the player
         try {

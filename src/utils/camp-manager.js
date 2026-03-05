@@ -58,7 +58,18 @@ export async function setUpCamp(component, maybeDuration) {
         } catch (e) {}
         // schedule end
         try {
-            component.campTimeout = component._setTimeout(() => { try { endCamp(component); } catch(e){ console.warn('endCamp timeout failed', e); } }, durationSeconds*1000 + 200);
+            component.campTimeout = component._setTimeout(() => {
+                try {
+                    console.log('[CampManager] campTimeout fired, calling endCamp. component.endCamp type:', typeof component.endCamp);
+                    // Call through the component's own endCamp wrapper (DungeonPage.endCamp)
+                    // so the extra forceUpdate calls fire after endCamp resolves.
+                    if (typeof component.endCamp === 'function') {
+                        component.endCamp();
+                    } else {
+                        endCamp(component);
+                    }
+                } catch(e){ console.warn('endCamp timeout failed', e); }
+            }, durationSeconds*1000 + 200);
         } catch(e){}
 
         // start an interval that logs camp progress every 10 seconds
@@ -84,6 +95,7 @@ export async function setUpCamp(component, maybeDuration) {
 }
 
 export async function endCamp(component) {
+    console.log('[endCamp] entered');
     try {
         try { if (component.campTimeout) { clearTimeout(component.campTimeout); component.campTimeout = null; } } catch (e) {}
         try { if (component.campInterval) { try { clearInterval(component.campInterval); } catch(e){} component.campInterval = null; } } catch(e){}
@@ -93,13 +105,19 @@ export async function endCamp(component) {
         delete m.campingEnd;
         try {
             const crew = (component.props.crewManager && component.props.crewManager.crew) || [];
-            crew.forEach(member => {
-                if (!member) return;
-                if (member.dead) { member.dead = false; member.hp = 1; }
-                else { try { member.hp = (member.stats && typeof member.stats.hp === 'number') ? member.stats.hp : member.hp || 0; } catch(e){} }
+            // Build a new array of spread objects so React sees new prop references on Tile
+            const restoredCrew = crew.map(member => {
+                if (!member) return member;
+                if (member.dead) {
+                    return { ...member, dead: false, hp: 1 };
+                } else {
+                    const maxHp = (member.stats && typeof member.stats.hp === 'number') ? member.stats.hp : member.hp || 0;
+                    console.log(`[endCamp] ${member.type || member.id}: hp ${member.hp} -> ${maxHp} (stats.hp=${member.stats && member.stats.hp})`);
+                    return { ...member, hp: maxHp };
+                }
             });
-            m.crew = crew;
-            try { if (component.props.crewManager) component.props.crewManager.crew = m.crew; } catch(e){}
+            m.crew = restoredCrew;
+            try { if (component.props.crewManager) component.props.crewManager.crew = restoredCrew; } catch(e){}
         } catch(e){}
         storeMeta(m);
         try { await updateUserRequest(getUserId(), m); } catch(e){}
@@ -107,7 +125,7 @@ export async function endCamp(component) {
             try{ component.props.boardManager.placePlayer(component.props.boardManager.playerTile.location); } catch(e){}
         }
         try {
-            // Re-read the selectedCrewMember from the freshly-mutated crew array so the
+            // Re-read the selectedCrewMember from the freshly-restored crew array so the
             // dead overlay and HP bar reflect the restored state immediately.
             const updatedSelected = (() => {
                 try {
@@ -117,8 +135,13 @@ export async function endCamp(component) {
                     return crew.find(c => c.id === prev.id) || prev;
                 } catch(e) { return component.state.selectedCrewMember; }
             })();
-            component.setState({ overlayTiles: component.props.boardManager.overlayTiles, selectedCrewMember: updatedSelected });
-        } catch(e){}
+            // crewManager.crew already holds the new spread objects; no extra spread needed.
+            const stateUpdate = { selectedCrewMember: updatedSelected };
+            try { stateUpdate.overlayTiles = component.props.boardManager.overlayTiles; } catch(e) {}
+            component.setState(stateUpdate, () => {
+                try { component.forceUpdate(); } catch(e) {}
+            });
+        } catch(e){ try { component.forceUpdate(); } catch(e2) {} }
         try { if (component.props.saveUserData) component.props.saveUserData(); } catch(e){}
         // camping ended and crew restored
         // unlock movement hotkeys

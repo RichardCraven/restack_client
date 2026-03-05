@@ -744,7 +744,7 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
     }
     this.initiateAttack = async (caller, manualAttack, combatants) => {
         if(!caller) return
-        const target = combatants ? combatants[caller.targetId] : null;
+        let target = combatants ? combatants[caller.targetId] : null;
         // Helper: check for any friendly combatant strictly between caller and target on same row
         const friendlyInLineBetween = (caller, target, combatants) => {
             if(!caller || !target || !combatants) return false;

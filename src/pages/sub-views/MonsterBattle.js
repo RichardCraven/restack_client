@@ -137,6 +137,7 @@ class MonsterBattle extends React.Component {
             ghostPortraitMatrix: [],
             showSummaryPanel: false,
             suppressSummaryPortraits: false,
+            isFinalDeath: false,
             // Inventory popup visibility
             showInventoryPopup: false,
             summaryMessage: '',
@@ -915,17 +916,19 @@ class MonsterBattle extends React.Component {
                     // Notify parent (DungeonPage) so UI elements like death-tracker can refresh
                     try { if (this.props && typeof this.props.onDeathTrackerChanged === 'function') this.props.onDeathTrackerChanged(deaths); } catch(e) {}
                 // deaths count incremented
-                if (deaths >= 300) {
-                    // Final death: clear dungeon and crew now, persist, then launch final death sequence.
+                if (deaths >= 3) {
+                    // ── FINAL DEATH ──────────────────────────────────────────────────
+                    // Show "this is the end" summary for 3 seconds, then wipe the
+                    // player's dungeon profile and launch the death sequence.
+
+                    // Wipe dungeon profile immediately so it's clean before the
+                    // narrative plays (profile reset is invisible behind the summary).
                     try {
                         if (meta.dungeonId) {
-                            // best-effort delete remote dungeon
                             try { deleteDungeonRequest(meta.dungeonId).catch(()=>{}); } catch(e) {}
                         }
                     } catch (inner) {}
-                    try {
-                        this.props.boardManager.dungeon.id = null;
-                    } catch(e) {}
+                    try { this.props.boardManager.dungeon.id = null; } catch(e) {}
                     try { this.props.inventoryManager.inventory = []; } catch(e) {}
                     meta.dungeonId = null;
                     meta.location = null;
@@ -935,10 +938,24 @@ class MonsterBattle extends React.Component {
                     try { storeMeta(meta); } catch(e) {}
                     try { updateUserRequest(getUserId(), meta).catch(()=>{}); } catch(e) {}
                     try { this.props.crewManager.initializeCrew([]); } catch(e) {}
-                    try { if (this.props.saveUserData) this.props.saveUserData(); } catch(e) {}
 
-                    // Now run the usual final death sequence which navigates to the death scene
-                    this.launchDeathSequence();
+                    // Show the final-death summary (no OK button) then auto-launch
+                    this._suppressPersistFinalHP = true;
+                    try {
+                        if (this._isMounted) this.setState({
+                            showSummaryPanel: true,
+                            suppressSummaryPortraits: true,
+                            isFinalDeath: true,
+                            summaryMessage: 'This is the end.',
+                            battleResult: 'loss',
+                        });
+                    } catch(e) {}
+
+                    this._setTimeout(() => {
+                        this._suppressPersistFinalHP = false;
+                        this.launchDeathSequence();
+                    }, 3000);
+
                 } else {
                     // We will show the battle summary (without portraits), wait 3s, then launch
                     // the death narrative and perform the respawn & restore so the narrative
@@ -1035,7 +1052,8 @@ class MonsterBattle extends React.Component {
             itemsGained,
             summaryMessage,
             battleResult,
-            suppressSummaryPortraits: !!this._suppressPersistFinalHP
+            suppressSummaryPortraits: !!this._suppressPersistFinalHP,
+            isFinalDeath: false,
         })
     }
     launchDeathSequence = () => {
@@ -1618,7 +1636,7 @@ class MonsterBattle extends React.Component {
                             )}
                         </div>
                         <div className="button-row">
-                            <div className="confirm-button" onClick={() => this.confirmClicked()}>OK</div>
+                            {!this.state.isFinalDeath && <div className="confirm-button" onClick={() => this.confirmClicked()}>OK</div>}
                         </div>
                     </div>}
 

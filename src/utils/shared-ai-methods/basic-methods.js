@@ -17,8 +17,10 @@ export const Methods = {
     },
     getDistanceToTarget: (caller, target) => {
         if(!target) return 0;
-        let d = target.depth - caller.depth
-        return d
+        // Use coordinates.x (current system); fall back to legacy .depth if coordinates not set
+        const callerX = (caller.coordinates && typeof caller.coordinates.x === 'number') ? caller.coordinates.x : (caller.depth || 0);
+        const targetX = (target.coordinates && typeof target.coordinates.x === 'number') ? target.coordinates.x : (target.depth || 0);
+        return targetX - callerX;
         // 0 = same tile
         // 1 = 1 tile in front
         // -1 = 1 tile behind

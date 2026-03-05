@@ -255,6 +255,7 @@
             }
             .camp-label {
                 display: flex;
+                position: relative;
                 line-height: 20px;
                 padding: 4px 6px;
                 height: 100%;
@@ -274,6 +275,9 @@
             }
             /* CSS animation for smooth progress fill (fallback to canvas) */
             .progress-overlay.camp-anim{
+                position: absolute;
+                top: 0;
+                left: 0;
                 background-color: rgba(249,177,21,0.45);
                 width: 0%;
                 transition: none;
@@ -281,6 +285,8 @@
                 animation-timing-function: linear;
                 animation-fill-mode: forwards;
                 height: 100%;
+                z-index: 1;
+                pointer-events: none;
             }
             /* Non-animated static class used when JS controls width. Provides background and a subtle width transition. */
             .progress-overlay.camp-static{

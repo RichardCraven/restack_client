@@ -40,13 +40,13 @@ function sanitizeMeta(metadata){
     const safe = {};
     // Copy only small, commonly useful properties. Avoid large nested objects
     // like full dungeon boards, tile arrays, or other heavy structures.
-    const whitelistedKeys = ['dungeonId','boardIndex','tileIndex','crew','inventory','preferences','lastVisited','userNotes','visitedBoards'];
+    const whitelistedKeys = ['dungeonId','boardIndex','tileIndex','crew','inventory','preferences','lastVisited','userNotes','visitedBoards','location','spawnPoint','selectedDungeon','deathTracker','respawnDate','itemRespawnDate'];
     for (const k of whitelistedKeys) {
         if (k in metadata) safe[k] = metadata[k];
     }
     // If crew is large, trim each crew member to essential fields
     if (Array.isArray(safe.crew)) {
-        safe.crew = safe.crew.map(c => ({ id: c && c.id, name: c && c.name, hp: c && c.hp, dead: c && c.dead, level: c && c.level }));
+        safe.crew = safe.crew.map(c => ({ id: c && c.id, name: c && c.name, hp: c && c.hp, dead: c && c.dead, level: c && c.level, image: c && c.image, type: c && c.type }));
     }
     // If inventory present, keep only counts/names
     if (Array.isArray(safe.inventory)) {

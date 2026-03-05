@@ -37,7 +37,9 @@ function attackFromTheBack(caller, combatants, data) {
     for (const enemy of sortedByDepth) {
         const desiredX = enemy.coordinates.x + 1;
         const desiredY = enemy.coordinates.y;
-        const isWithinBounds = desiredX < data.MAX_DEPTH;
+        // MAX_DEPTH is passed as NUM_COLUMNS (8), but the valid max index is MAX_DEPTH-1 (7).
+        // Use <= MAX_DEPTH - 1 so a monster at x=7 is not excluded.
+        const isWithinBounds = desiredX <= data.MAX_DEPTH - 1;
         // Prefer AI helper that knows about occupiedCoords / virtual occupancy
         // Prefer AI helper that knows about occupiedCoords / virtual occupancy
         const occupied = isOccupied({ x: desiredX, y: desiredY });
@@ -152,12 +154,17 @@ function attackFromTheBack(caller, combatants, data) {
             }
         }
         // If still not placed, just target the enemy closest to the back line
+        // and fall back to closing the gap directly (avoids standoff in corners)
         if (!placed) {
             const enemy = sortedByBack[0];
             if (typeof data.chooseAttackType === 'function') {
                 caller.pendingAttack = data.chooseAttackType(caller, enemy);
             }
             caller.targetId = enemy.id;
+            // Fall back to moving directly toward the target so combat doesn't stall
+            if (data.methods && typeof data.methods.closeTheGap === 'function') {
+                data.methods.closeTheGap(caller, combatants);
+            }
         }
     }
     // No return value needed

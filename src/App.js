@@ -140,8 +140,8 @@ const saveUserData = async () => {
     totems: props.inventoryManager.totems
   }
   if(props.crewManager.crew.length === 0){
-  // ...existing code...
-    debugger
+    // Crew is empty — this is expected after a final death wipe. Skip saving.
+    return
   }
   meta.crew = props.crewManager.crew;
   meta.dungeonId = props.boardManager.dungeon.id;
@@ -232,11 +232,13 @@ const toggleMenuTray = () => {
             !loggedIn ? <Redirect to="/login" /> :
             <CombatSimulator {...props} navToLanding={navToLanding} />
           )}/>
-          <Route exact path="/dungeon" render={() => (
-            !loggedIn ? <Redirect to="/login" /> :
-              <DungeonPage {...props} saveUserData={saveUserData} setNarrativeSequence={setNarrativeSequence} showCoordinates={showCoordinates} registerMessaging={(fn) => { dungeonMessagingRef.current = fn }}/>
-          )
-          }/>
+          <Route exact path="/dungeon" render={() => {
+            if (!loggedIn) return <Redirect to="/login" />;
+            const meta = getMeta();
+            const hasCrew = Array.isArray(meta && meta.crew) && meta.crew.length > 0;
+            if (!hasCrew) return <Redirect to="/crewManager" />;
+            return <DungeonPage {...props} saveUserData={saveUserData} setNarrativeSequence={setNarrativeSequence} showCoordinates={showCoordinates} registerMessaging={(fn) => { dungeonMessagingRef.current = fn }}/>;
+          }}/>
 
 
           <Route exact path="/landing" render={() => (
