@@ -22,6 +22,7 @@ import { CButton, CFormSelect, CFormInput, CModal, CModalHeader, CModalTitle, CM
 import * as images from '../utils/images'
 import '../styles/inventory-modal.scss'
 import '../styles/quests-modal.scss'
+import '../styles/camp-modal.scss'
 
 // helper: convert 3/6-digit hex to rgba string
 function hexToRgba(hex, alpha = 1){
@@ -371,6 +372,7 @@ class DungeonPage extends React.Component {
             , devConsoleInput: ''
             , devConsoleOutput: []
             , showQuestsPopup: false
+            , showCampPopup: false
             , campWarningMessage: null
         }
     // Native browser tooltip will be used for death-tracker; no custom tooltip state required.
@@ -979,17 +981,6 @@ class DungeonPage extends React.Component {
                 this.setNewItemRespawnDate();
             }
             this.setState({ itemTimeToRespawn: itemRespawnString });
-        } catch (e) {}
-        // Show quests popup on first load — only if the user hasn't seen it before
-        try {
-            // Use an in-memory/session flag so the popup will reappear on full page reload.
-            if (!this.seenQuests) {
-                // Defer slightly longer than the special-actions interval (100ms) so the
-                // showQuestsPopup guard is already true before any PrepComplete modal fires.
-                this.questsPopupTimeout = this._setTimeout(() => {
-                    try { this.setState({ showQuestsPopup: true }); } catch(e) {}
-                }, 300);
-            }
         } catch (e) {}
     }
 
@@ -1810,6 +1801,18 @@ class DungeonPage extends React.Component {
             if ((maybeKey === 'i' || maybeKey === 'I') && !this.state.inMonsterBattle) {
                 event.preventDefault();
                     this.setState((prev) => ({ showInventoryPopup: !prev.showInventoryPopup }));
+                return;
+            }
+            // 'c' — toggle Camp popup (works regardless of keysLocked; blocked during battle)
+            if ((maybeKey === 'c' || maybeKey === 'C') && !this.state.inMonsterBattle) {
+                event.preventDefault();
+                this.setState((prev) => ({ showCampPopup: !prev.showCampPopup }));
+                return;
+            }
+            // 'q' — toggle Quests popup (blocked during battle)
+            if ((maybeKey === 'q' || maybeKey === 'Q') && !this.state.inMonsterBattle) {
+                event.preventDefault();
+                this.setState((prev) => ({ showQuestsPopup: !prev.showQuestsPopup }));
                 return;
             }
         } catch (err) {
@@ -2663,12 +2666,28 @@ class DungeonPage extends React.Component {
         const monsterLabel = this.state.monster ? (this.state.monster.name || this.state.monster.type || 'unknown monster') : 'unknown monster';
         console.log('battle over result: ', result, '| monster:', monsterLabel);
         if(result === 'win'){
+            // Suppress any lingering battle callbacks from overwriting HP/dead after win
+            this._suppressFighterDeadHpUpdates = true;
             this.props.boardManager.removeDefeatedMonsterTile(this.state.monsterBattleTileId)
             this.props.crewManager.checkForLevelUp(this.props.crewManager.crew)
             let meta = getMeta()
             meta.crew = this.props.crewManager.crew;
             storeMeta(meta)
             this.props.saveUserData()
+            // Refresh selectedCrewMember from the live crew so dead/hp flags set during
+            // battle are replaced with the end-of-battle values (survivors still alive).
+            try {
+                const crew = this.props.crewManager.crew || [];
+                const prev = this.state.selectedCrewMember;
+                const updated = prev && prev.id
+                    ? crew.find(c => c && c.id === prev.id)
+                    : crew.find(c => c && !c.dead) || crew[0];
+                if (updated) {
+                    this.setState({ selectedCrewMember: { ...updated } });
+                }
+            } catch(e) {}
+            // Re-enable after a tick so any final in-flight combat callbacks have cleared
+            setTimeout(() => { this._suppressFighterDeadHpUpdates = false; }, 0);
         } else if(result === 'respawn'){
                   // Try to respawn the player at spawn point (guard against missing boardManager)
                   const meta2 = getMeta();
@@ -3084,6 +3103,18 @@ class DungeonPage extends React.Component {
         try { if (this.questsPopupTimeout) { clearTimeout(this.questsPopupTimeout); this.questsPopupTimeout = null; } } catch(e){}
         try { this.setState({ showQuestsPopup: false }, () => this._cleanupModalBodyClass()); } catch(e){}
     }
+
+    handleOpenQuestsPopup = () => {
+        try { this.setState({ showQuestsPopup: true }); } catch(e) {}
+    }
+
+    handleOpenCampPopup = () => {
+        try { this.setState({ showCampPopup: true }); } catch(e) {}
+    }
+
+    handleCloseCampPopup = () => {
+        try { this.setState({ showCampPopup: false }, () => this._cleanupModalBodyClass()); } catch(e) {}
+    }
     render(){
         return (
         <div className={`dungeon-container ${this.state.ritualWrecked ? 'wrecked' : ''}`}>
@@ -3098,8 +3129,8 @@ class DungeonPage extends React.Component {
                     setMemberRitualOptions={this.state.setMemberRitualOptions}
                 />
             </CModal>
-            {/* Quests popup: shown on initial load; takes precedence over other modals */}
-            <CModal className={'quests-modal'} alignment="center" visible={this.state.showQuestsPopup} onClose={this.handleCloseQuestsPopup} backdrop={true}>
+            {/* Quests popup */}
+            <CModal className={`quests-modal${this.state.showCampPopup ? ' quests-above-camp' : ''}`} alignment="center" visible={this.state.showQuestsPopup} onClose={this.handleCloseQuestsPopup} backdrop={true} style={this.state.showCampPopup ? {zIndex: 1100} : undefined}>
                 <CModalHeader>
                     <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%'}}>
                         <CModalTitle>Quests</CModalTitle>
@@ -3125,6 +3156,77 @@ class DungeonPage extends React.Component {
                             <div style={{fontSize: 36, textAlign: 'center', marginBottom: 8}}>🔍</div>
                             <div style={{fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: '#2ecc71', marginBottom: 6}}>Find This</div>
                             <div style={{fontSize: 12, color: '#ccc', lineHeight: 1.5}}>Locate the hidden relic on floor 3. It may be concealed behind a secret passage.</div>
+                        </div>
+                    </div>
+                </CModalBody>
+            </CModal>
+            {/* Camp popup */}
+            <CModal className={'camp-modal'} alignment="center" visible={this.state.showCampPopup} onClose={this.handleCloseCampPopup} backdrop={true}>
+                {/* Background: camp icon at cover opacity 0.3 */}
+                <div className="camp-modal-bg" style={{backgroundImage: `url(${images.camp})`}}></div>
+                <CModalHeader>
+                    <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', width:'100%', position:'relative', zIndex:2}}>
+                        <CModalTitle>Camp</CModalTitle>
+                        <button aria-label="Close camp" className="camp-close" onClick={this.handleCloseCampPopup} style={{background:'transparent', border:'none', color:'#fff', fontSize:20}}>✕</button>
+                    </div>
+                </CModalHeader>
+                <CModalBody style={{position:'relative', zIndex:2}}>
+                    {/* TOP: crew portrait row */}
+                    <div className="camp-crew-row">
+                        {(this.props.crewManager && this.props.crewManager.crew || []).map((member, i) => (
+                            <div key={i} className="camp-crew-tile">
+                                <Tile
+                                    id={i}
+                                    tileSize={54}
+                                    image={member.image || null}
+                                    imageOverride={member.portrait || null}
+                                    contains={member.type}
+                                    data={member}
+                                    color={member.color}
+                                    backgroundColor={member.color}
+                                    editMode={false}
+                                    type={'crew-tile'}
+                                    handleClick={() => {}}
+                                    handleHover={() => {}}
+                                />
+                                <div className="camp-crew-name">{member.name}</div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* MIDDLE: action buttons */}
+                    <div className="camp-actions-section">
+                        <button className="camp-action-btn" onClick={() => { this.handleCloseCampPopup(); this.setUpCamp(); }}>
+                            <span className="camp-btn-icon">🏕️</span>
+                            <span>Recuperate</span>
+                        </button>
+                        <button className="camp-action-btn" onClick={() => {}}>
+                            <span className="camp-btn-icon">⚔️</span>
+                            <span>Train</span>
+                        </button>
+                        <button className="camp-action-btn" onClick={() => {}}>
+                            <span className="camp-btn-icon">🍖</span>
+                            <span>Prepare Food</span>
+                        </button>
+                        <button className="camp-action-btn" onClick={this.handleOpenQuestsPopup}>
+                            <span className="camp-btn-icon">📜</span>
+                            <span>Quests</span>
+                        </button>
+                    </div>
+
+                    {/* BOTTOM: trophies / card deck / shards tiles */}
+                    <div className="camp-bottom-tiles">
+                        <div className="camp-bottom-tile">
+                            <div className="camp-bottom-tile-icon">🏆</div>
+                            <div className="camp-bottom-tile-label">Trophies</div>
+                        </div>
+                        <div className="camp-bottom-tile">
+                            <div className="camp-bottom-tile-icon" style={{backgroundImage:`url(${images.grimoire})`, backgroundSize:'contain', backgroundRepeat:'no-repeat', backgroundPosition:'center', width:54, height:54}}></div>
+                            <div className="camp-bottom-tile-label">Card Deck</div>
+                        </div>
+                        <div className="camp-bottom-tile">
+                            <div className="camp-bottom-tile-icon" style={{backgroundImage:`url(${images.eclipse})`, backgroundSize:'contain', backgroundRepeat:'no-repeat', backgroundPosition:'center', width:54, height:54}}></div>
+                            <div className="camp-bottom-tile-label">Shards</div>
                         </div>
                     </div>
                 </CModalBody>
@@ -3637,7 +3739,7 @@ class DungeonPage extends React.Component {
                             }
                             return (
                                 <div className="crew-action-item action-row" style={{display:'flex', flexDirection:'column', gap:6}}>
-                                    <div onClick={() => this.setUpCamp()} style={{cursor:'pointer', paddingLeft: '15px'}}>Set Up Camp</div>
+                                    <div onClick={() => this.handleOpenCampPopup()} style={{cursor:'pointer', paddingLeft: '15px'}}>Set Up Camp</div>
                                     {this.state.campWarningMessage && (
                                         <div style={{paddingLeft: 15, fontSize: 11, color: '#e74c3c', lineHeight: 1.4}}>
                                             {this.state.campWarningMessage}

@@ -210,6 +210,8 @@ import spawn_point from '../assets/icons/misc/spawn_point.png'
 import eye from '../assets/icons/misc/eye.png'
 import eye_inverted from '../assets/icons/misc/eye_inverted.png'
 import wide_skull from '../assets/icons/misc/wide_skull.png'
+import eclipse from '../assets/icons/misc/eclipse.png'
+import magic_moon_1 from '../assets/icons/misc/magic_moon_1.png'
 
 // crew
 import archer from '../assets/icons/crew_icons/archer.png'
@@ -666,6 +668,8 @@ export {
     wide_skull,
     eye,
     eye_inverted,
+    eclipse,
+    magic_moon_1,
     archer,
     barbarian,
     rogue,
