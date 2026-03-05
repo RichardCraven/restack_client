@@ -303,6 +303,9 @@ class DungeonPage extends React.Component {
         this._nextPlaceholderId = 1;
         this._lastDrawTimestamp = 0;
         this._fpsLimit = 30; // cap draw loop to 30fps
+        // Breadcrumb trail: Map keyed "boardIndex:row:col" → { boardIndex, row, col, ts, seq }
+        this._breadcrumbs = new Map();
+        this._breadcrumbSeq = 0;
         this.state = {
             tileSize: 0,
             boardSize: 0,
@@ -737,6 +740,9 @@ class DungeonPage extends React.Component {
         if (typeof this.props.registerMessaging === 'function') {
             this.props.registerMessaging(this.displayMessage);
         }
+
+        // Breadcrumb decay: prune stale trail entries every 60 seconds and re-render.
+        this._breadcrumbDecayInterval = this._setInterval(this._pruneBreadcrumbs, 60 * 1000);
     }
 
     // Compute pixel position (left, top) for a tile index within the board
@@ -760,21 +766,25 @@ class DungeonPage extends React.Component {
             if (direction === 'up' && curCoords[0] === 15) {
                 bm.moveUp();
                 this.setState({ tiles: [...bm.tiles], overlayTiles: bm.overlayTiles });
+                this.recordBreadcrumb();
                 return;
             }
             if (direction === 'down' && curCoords[0] === 29) {
                 bm.moveDown();
                 this.setState({ tiles: [...bm.tiles], overlayTiles: bm.overlayTiles });
+                this.recordBreadcrumb();
                 return;
             }
             if (direction === 'left' && curCoords[1] === 15) {
                 bm.moveLeft();
                 this.setState({ tiles: [...bm.tiles], overlayTiles: bm.overlayTiles });
+                this.recordBreadcrumb();
                 return;
             }
             if (direction === 'right' && curCoords[1] === 29) {
                 bm.moveRight();
                 this.setState({ tiles: [...bm.tiles], overlayTiles: bm.overlayTiles });
+                this.recordBreadcrumb();
                 return;
             }
 
@@ -863,6 +873,8 @@ class DungeonPage extends React.Component {
                             // refresh tiles in state to reflect boardManager changes, then re-anchor overlay
                             try {
                                 this.setState({ tiles: [...bm.tiles], overlayTiles: bm.overlayTiles }, () => {
+                                    // Record breadcrumb at new position
+                                    this.recordBreadcrumb();
                                     try {
                                         const el = this.playerFloatRef.current;
                                         // compute new board/destination absolute position after DOM update
@@ -924,6 +936,7 @@ class DungeonPage extends React.Component {
                     default: break;
                 }
                 this.setState({ tiles: [...bm.tiles], overlayTiles: bm.overlayTiles });
+                this.recordBreadcrumb();
             } catch (err) {}
         }
     }
@@ -985,8 +998,8 @@ class DungeonPage extends React.Component {
     }
 
     setNewItemRespawnDate = () => {
-        // Item respawn interval is 3x monster respawn (monster uses 1 minute by default)
-        let soon = new Date().addMinutes(3)
+        // Item respawn interval: 20 minutes
+        let soon = new Date().addMinutes(20)
         let meta = getMeta() || {};
         meta.itemRespawnDate = soon;
         try { storeMeta(meta); } catch (e) {}
@@ -1185,6 +1198,9 @@ class DungeonPage extends React.Component {
                         'fullhealth / full-health / revive',
                         'food — fill food count to 55',
                         'kill reset — reset death tracker to 0',
+                        'weapons t1 / weapons1 / weaponst1 — add 2 random tier-1 weapons',
+                        'weapons t2 / weapons2 / weaponst2 — add 2 random tier-2 weapons',
+                        'weapons t3 / weapons3 / weaponst3 — add 2 random tier-3 weapons',
                         'open board — jump to mapmaker board view for current board',
                         'list / help'
                     ];
@@ -1217,6 +1233,34 @@ class DungeonPage extends React.Component {
                         try { if (typeof this.props.saveUserData === 'function') this.props.saveUserData(); } catch(e){}
                         try { this.forceUpdate(); } catch(e){}
                         this.setState(prev => ({ devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, 'Food set to 55'], devConsoleInput: '' }));
+                    } catch (err) {
+                        this.setState(prev => ({ devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, `Error: ${err && err.message ? err.message : err}`], devConsoleInput: '' }));
+                    }
+                    try { if (this.devConsoleInputRef.current) this.devConsoleInputRef.current.focus(); } catch (err) {}
+                    e.preventDefault();
+                    return;
+                }
+                // weapons tier commands: weapons t1 / weapons1 / weaponst1 (and t2/t3)
+                const weaponTierAlias = {
+                    1: ['weapons t1', 'weapons1', 'weaponst1'],
+                    2: ['weapons t2', 'weapons2', 'weaponst2'],
+                    3: ['weapons t3', 'weapons3', 'weaponst3'],
+                };
+                const weaponTier = [1, 2, 3].find(t => weaponTierAlias[t].includes(cmd));
+                if (weaponTier !== undefined) {
+                    try {
+                        const im = this.props.inventoryManager;
+                        const allKeys = (im && Array.isArray(im.weapons_names)) ? im.weapons_names : [];
+                        const tierKeys = allKeys.filter(k => im.allItems && im.allItems[k] && im.allItems[k].tier === weaponTier);
+                        if (tierKeys.length === 0) {
+                            this.setState(prev => ({ devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, `No tier-${weaponTier} weapons found`], devConsoleInput: '' }));
+                        } else {
+                            // shuffle and take 2
+                            const shuffled = tierKeys.slice().sort(() => Math.random() - 0.5).slice(0, 2);
+                            im.addItemsByName(shuffled);
+                            const names = shuffled.map(k => (im.allItems[k] && im.allItems[k].name) ? im.allItems[k].name : k);
+                            this.setState(prev => ({ devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, `Added ${names.length} tier-${weaponTier} weapon(s): ${names.join(', ')}`], devConsoleInput: '' }));
+                        }
                     } catch (err) {
                         this.setState(prev => ({ devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, `Error: ${err && err.message ? err.message : err}`], devConsoleInput: '' }));
                     }
@@ -1412,7 +1456,7 @@ class DungeonPage extends React.Component {
         const meta = getMeta();
     }
     setNewRespawnDate = () => {
-        let soon = new Date().addMinutes(1)
+        let soon = new Date().addMinutes(3)
         let meta = getMeta();
         meta.respawnDate = soon;
         storeMeta(meta)
@@ -2846,6 +2890,53 @@ class DungeonPage extends React.Component {
             top: `${(coords[0]-15) / 14 * 100}%`
         }
     }
+
+    // ── Breadcrumb trail ────────────────────────────────────────────
+    // Record the player's current position onto the breadcrumb map.
+    // Each unique (levelId, orientation, boardIndex, row, col) cell gets one entry;
+    // revisiting a cell just refreshes its timestamp (keeping the most-recent visit).
+    recordBreadcrumb = () => {
+        try {
+            const bm = this.props.boardManager;
+            if (!bm || !bm.playerTile) return;
+            const [row, col] = bm.playerTile.location;
+            const boardIndex = this.state.minimap.findIndex(e => e.active);
+            if (boardIndex < 0) return;
+            const levelId = (this.state.levelTracker.find(e => e.active) || {}).id;
+            const orientation = bm.currentOrientation || 'A';
+            const key = `${levelId}:${orientation}:${boardIndex}:${row}:${col}`;
+            const existing = this._breadcrumbs.get(key);
+            this._breadcrumbs.set(key, {
+                levelId,
+                orientation,
+                boardIndex,
+                row,
+                col,
+                ts: Date.now(),
+                // preserve original seq so the path stays in order; only update ts
+                seq: existing ? existing.seq : ++this._breadcrumbSeq,
+            });
+        } catch (e) {}
+    }
+
+    // Evict breadcrumbs older than 30 minutes, then trigger a re-render so the
+    // trail visually fades and disappears.
+    _pruneBreadcrumbs = () => {
+        try {
+            const EXPIRE_MS = 30 * 60 * 1000;
+            const now = Date.now();
+            let pruned = false;
+            this._breadcrumbs.forEach((val, key) => {
+                if (now - val.ts > EXPIRE_MS) {
+                    this._breadcrumbs.delete(key);
+                    pruned = true;
+                }
+            });
+            if (pruned) {
+                try { this.forceUpdate(); } catch (e) {}
+            }
+        } catch (e) {}
+    }
     clearAllMarkers = () => {
         let meta = getMeta();
         meta.minimapIndicators = []
@@ -3177,7 +3268,7 @@ class DungeonPage extends React.Component {
                             <div key={i} className="camp-crew-tile">
                                 <Tile
                                     id={i}
-                                    tileSize={54}
+                                    tileSize={108}
                                     image={member.image || null}
                                     imageOverride={member.portrait || null}
                                     contains={member.type}
@@ -3211,6 +3302,10 @@ class DungeonPage extends React.Component {
                         <button className="camp-action-btn" onClick={this.handleOpenQuestsPopup}>
                             <span className="camp-btn-icon">📜</span>
                             <span>Quests</span>
+                        </button>
+                        <button className="camp-action-btn" onClick={() => {}}>
+                            <span className="camp-btn-icon">🗺️</span>
+                            <span>Map</span>
                         </button>
                     </div>
 
@@ -3514,6 +3609,43 @@ class DungeonPage extends React.Component {
                             })}
                         </div>
                         {this.state.minimap.map((e,i)=>{
+                            // Build breadcrumb SVG trail for this board tile
+                            const bcTrail = (() => {
+                                try {
+                                    const now = Date.now();
+                                    const DIM_MS  = 20 * 60 * 1000; // 20 min → dim
+                                    const TILE_PX = 50; // matches .minimap-tile height/width
+                                    // Current plane — must match what recordBreadcrumb stored
+                                    const currentLevelId = (this.state.levelTracker.find(e => e.active) || {}).id;
+                                    const currentOrientation = (this.props.boardManager && this.props.boardManager.currentOrientation) || 'A';
+                                    // Gather all crumbs for this board on this plane, sorted by visit order
+                                    const crumbs = [];
+                                    this._breadcrumbs.forEach(val => {
+                                        if (
+                                            val.boardIndex === i &&
+                                            val.levelId === currentLevelId &&
+                                            val.orientation === currentOrientation
+                                        ) crumbs.push(val);
+                                    });
+                                    if (crumbs.length === 0) return null;
+                                    crumbs.sort((a, b) => a.seq - b.seq);
+                                    // Convert row/col (15–29) to SVG pixel coords within 50px tile
+                                    const toXY = c => ({
+                                        x: ((c.col - 15) / 14) * TILE_PX,
+                                        y: ((c.row - 15) / 14) * TILE_PX,
+                                    });
+                                    // Split into consecutive fresh / dim segments for two-colour rendering.
+                                    const freshPts = [];
+                                    const dimPts   = [];
+                                    crumbs.forEach(c => {
+                                        const age = now - c.ts;
+                                        const {x, y} = toXY(c);
+                                        if (age <= DIM_MS) freshPts.push(`${x.toFixed(1)},${y.toFixed(1)}`);
+                                        else               dimPts.push(`${x.toFixed(1)},${y.toFixed(1)}`);
+                                    });
+                                    return { freshPts, dimPts };
+                                } catch(e) { return null; }
+                            })();
                             return <div className={`minimap-tile 
                             ${this.state.minimap[i].active ? 'active' : ''}
                             ${this.props.boardManager && this.props.boardManager.currentOrientation === 'B' && this.state.minimap[i].active ? 'backside' : ''}
@@ -3527,7 +3659,25 @@ class DungeonPage extends React.Component {
                             ${this.state.minimapZoomedTile === i && i === 7 ? 'botMid' : ''}
                             ${this.state.minimapZoomedTile === i && i === 8 ? 'botRight' : ''}
                             `} key={i} onClick={() => this.minimapTileClicked(i)}>
-                                
+
+                                {/* Breadcrumb trail SVG — rendered below the player dot */}
+                                {bcTrail && (bcTrail.freshPts.length > 1 || bcTrail.dimPts.length > 1) && (
+                                    <svg className="breadcrumb-trail-svg" viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg">
+                                        {bcTrail.dimPts.length > 1 && (
+                                            <polyline
+                                                points={bcTrail.dimPts.join(' ')}
+                                                className="bc-dim"
+                                            />
+                                        )}
+                                        {bcTrail.freshPts.length > 1 && (
+                                            <polyline
+                                                points={bcTrail.freshPts.join(' ')}
+                                                className="bc-fresh"
+                                            />
+                                        )}
+                                    </svg>
+                                )}
+
                                 {/* // player // */}
                                 {this.state.minimap[i].active && <div className="player-position-indicator"
                                 style={{
