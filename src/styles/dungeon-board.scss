@@ -252,6 +252,7 @@
                 gap: 8px;
                 height: 100%;
                 width: 100%;
+                justify-content: center;
             }
             .camp-label {
                 display: flex;
@@ -846,20 +847,22 @@
                 min-height: 0px;
                 position: relative;
                 &.expanded{
-                    // height: auto;
+                    height: auto;
                     min-height: 50px;
-                    // min-height: 80px;
-                    // height: auto;
+                    overflow: visible;
                 }
                 &.double-expanded{
+                    height: auto;
                     min-height: 150px;
+                    overflow: visible;
                 }
                 .actions-container{
-                    height: 100%;
+                    height: auto;
                     display: flex;
                     flex-direction: column;
                     align-items: flex-start;
                     justify-content: center;
+                    padding-bottom: 8px;
                     .action-wrapper{
                         position: relative;
                         width: 100%;
@@ -879,7 +882,7 @@
                             }
                         }
                         .action-hover-wrapper{
-                            width: calc(100% - 40px);
+                            // width: calc(100% - 40px);
                             display: flex;
                             flex-direction: row;
                             justify-content: center;
@@ -912,6 +915,10 @@
                                 margin-right: 10px;
                             }
                         }
+                        /* Ritual action icon is dark by default — invert so it shows on a dark bg */
+                        &.action-wrapper--ritual .action-hover-wrapper .action-icon{
+                            filter: invert(1);
+                        }
                         .action-sub-menu{
                             height: 0px;
                             min-height: 0px;
@@ -928,8 +935,9 @@
                                 color: rgb(97, 57, 57);
                             }
                             &.expanded{
-                                // min-height: 80px;
-                                min-height: 100px;
+                                height: auto;
+                                min-height: 60px;
+                                overflow: visible;
                             }
                             .action-subtype{
                                 cursor: pointer;
@@ -1242,4 +1250,188 @@
     position: absolute;
     color: white;
     top: 15px;
+}
+
+/* ─── Ritual Encounter Modal ──────────────────────────────────────── */
+.ritual-encounter-modal .modal-content {
+    background: #0e1520;
+    border: 2px solid #7b4fcf;
+    box-shadow: 0 0 24px rgba(123, 79, 207, 0.5);
+    max-width: 680px;
+    width: 96vw;
+}
+.ritual-encounter-zone {
+    color: #e8deff;
+    padding: 4px 2px;
+}
+.ritual-encounter-header {
+    text-align: center;
+    margin-bottom: 16px;
+}
+.ritual-encounter-title {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: #c8a8ff;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+}
+.ritual-encounter-subtitle {
+    font-size: 12px;
+    color: #9980cc;
+    line-height: 1.5;
+    max-width: 480px;
+    margin: 0 auto;
+}
+.ritual-magic-users {
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+    justify-content: center;
+    margin-bottom: 14px;
+}
+.ritual-magic-user-tile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    border: 2px solid transparent;
+    transition: border-color 0.2s;
+    &.selected {
+        border-color: #7b4fcf;
+        background: rgba(123, 79, 207, 0.12);
+    }
+}
+.ritual-magic-user-name {
+    font-size: 10px;
+    color: #b8a0e8;
+    margin-top: 4px;
+    text-align: center;
+}
+.ritual-cards {
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+.ritual-card {
+    background: #131c2e;
+    border: 1px solid #3d2e60;
+    border-radius: 6px;
+    padding: 12px 10px;
+    width: 175px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    &.known {
+        border-color: #7b4fcf;
+        box-shadow: 0 0 8px rgba(123, 79, 207, 0.35);
+    }
+    &.unknown {
+        opacity: 0.55;
+    }
+}
+.ritual-card-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.ritual-card-icon {
+    width: 28px;
+    height: 28px;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    flex-shrink: 0;
+}
+.ritual-card-name {
+    font-size: 12px;
+    font-weight: 700;
+    color: #d4b8ff;
+    line-height: 1.3;
+}
+.ritual-card-flavor {
+    font-size: 10px;
+    font-style: italic;
+    color: #8870aa;
+    line-height: 1.4;
+}
+.ritual-card-description {
+    font-size: 10px;
+    color: #b0a0cc;
+    line-height: 1.45;
+    flex: 1;
+}
+.ritual-card-footer {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-top: 4px;
+}
+.ritual-card-prep-time {
+    font-size: 10px;
+    color: #7b6fa0;
+}
+.ritual-card-btn {
+    font-size: 11px;
+    text-align: center;
+    padding: 5px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 600;
+    &.learn-btn {
+        background: #7b4fcf;
+        color: #fff;
+        &:hover { background: #9b6fef; }
+    }
+    &.known-badge {
+        background: #1e3a1e;
+        color: #6fcf97;
+        cursor: default;
+    }
+    &.preparing {
+        background: #2a2040;
+        color: #9980cc;
+        cursor: default;
+        font-style: italic;
+    }
+}
+
+/* ─── Ritual Complete Modal ───────────────────────────────────────── */
+.ritual-complete-modal .modal-content {
+    border: 2px solid #c8a8ff;
+    box-shadow: 0 0 18px rgba(200, 168, 255, 0.5);
+    background: #0e1520;
+}
+.ritual-complete-zone {
+    text-align: center;
+    padding: 8px 4px;
+    color: #e8deff;
+}
+.ritual-complete-icon {
+    font-size: 36px;
+    margin-bottom: 8px;
+}
+.ritual-complete-title {
+    font-size: 17px;
+    font-weight: 700;
+    color: #c8a8ff;
+    letter-spacing: 1px;
+    margin: 0 0 10px;
+}
+.ritual-complete-text {
+    font-size: 13px;
+    color: #b0a0cc;
+    margin-bottom: 6px;
+    line-height: 1.5;
+}
+.ritual-complete-note {
+    font-size: 11px;
+    color: #6a5a8a;
+    font-style: italic;
+    margin-top: 8px;
 }

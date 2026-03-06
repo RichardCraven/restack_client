@@ -239,6 +239,7 @@ const goTowards = (caller, combatants, targetTile) => {
         if(targetIsInCoords(E) && !isTargetTileOccupied){
             newCoords = E;
         } else if(targetIsInCoords(E)){
+            // Target is directly East and occupied — already adjacent, don't move
         } else if(someoneIsInCoords(E, combatants)){
             //go NE or SE
             if(isAvailableToMoveInto(NE, combatants)){
@@ -256,7 +257,7 @@ const goTowards = (caller, combatants, targetTile) => {
         if(targetIsInCoords(W) && !isTargetTileOccupied){
             newCoords = W;
         } else if(targetIsInCoords(W)){
-            // do nothing (original code is empty here)
+            // Target is directly West and occupied — already adjacent, don't move
         } else if(someoneIsInCoords(W, combatants)){
             //go NW or SW
             if(isAvailableToMoveInto(NW, combatants)){
@@ -436,6 +437,10 @@ export const MovementMethods = {
             const coords = caller.coordinates;
             let targetTile = {x: enemyTarget.coordinates.x, y: enemyTarget.coordinates.y}
             let newCoords = JSON.parse(JSON.stringify(coords))
+            // If already orthogonally adjacent to the target, don't move — let the attack system handle it
+            const dx = Math.abs(targetTile.x - coords.x);
+            const dy = Math.abs(targetTile.y - coords.y);
+            if ((dx === 1 && dy === 0) || (dx === 0 && dy === 1)) return;
             goTowards(caller, combatants, targetTile);
         } else {
             

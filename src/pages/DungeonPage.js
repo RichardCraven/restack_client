@@ -20,6 +20,7 @@ import  CIcon  from '@coreui/icons-react';
 
 import { CButton, CFormSelect, CFormInput, CModal, CModalHeader, CModalTitle, CModalBody, CTabPane, CTabContent} from '@coreui/react';
 import * as images from '../utils/images'
+import { RITUALS } from '../utils/spells-table'
 import '../styles/inventory-modal.scss'
 import '../styles/quests-modal.scss'
 import '../styles/camp-modal.scss'
@@ -38,7 +39,16 @@ function hexToRgba(hex, alpha = 1){
 }
 
 // Small subcomponent to render modal header + body based on modalType
-const ModalInner = ({ modalType, updates, crew, tileSize, handleMemberClickRitual, handleCrewTileHover, setMemberRitualOptions }) => {
+const ModalInner = ({ modalType, updates, crew, tileSize, handleMemberClickRitual, handleCrewTileHover, setMemberRitualOptions, onLearnRitual }) => {
+
+    // Helper: format ms as "1 hour", "3 hours", "6 hours" etc.
+    const formatPrepTime = (ms) => {
+        const hours = ms / (1000 * 60 * 60);
+        if (hours >= 1) return hours === 1 ? '1 hour' : `${hours} hours`;
+        const mins = ms / (1000 * 60);
+        return mins === 1 ? '1 minute' : `${Math.round(mins)} minutes`;
+    };
+
     return (
         <CModalBody>
             {modalType === 'Updates' && (
@@ -58,15 +68,35 @@ const ModalInner = ({ modalType, updates, crew, tileSize, handleMemberClickRitua
                 </div>
             )}
 
+            {modalType === 'RitualComplete' && (
+                <div className="ritual-complete-zone">
+                    <div className="ritual-complete-icon">✨</div>
+                    <h3 className="ritual-complete-title">Ritual Complete</h3>
+                    {(updates || []).map((update, i) => (
+                        <div key={i} className="ritual-complete-text">{update.text}</div>
+                    ))}
+                    <p className="ritual-complete-note">The ritual is now ready to use in combat.</p>
+                </div>
+            )}
+
             {modalType === 'Magic' && (
-                <div>
-                    <p>
-                        If you have a magic user in your crew you may begin a known ritual with 3x effect or learn a new one.
-                    </p>
-                    <div className="modal-zone">
-                        {crew.filter(e=> e.type === 'wizard' || e.type === 'sage').map((magicUser, i)=>{
-                            return <div className="options-row" key={i}>
-                                <Tile 
+                <div className="ritual-encounter-zone">
+                    <div className="ritual-encounter-header">
+                        <div className="ritual-encounter-title">✦ A Nexus of Power ✦</div>
+                        <div className="ritual-encounter-subtitle">
+                            The air crackles with latent magic. Your wizard may study the flows of power and learn a ritual.
+                        </div>
+                    </div>
+
+                    {/* Magic user selector */}
+                    <div className="ritual-magic-users">
+                        {crew.filter(e => e.type === 'wizard' || e.type === 'sage').map((magicUser, i) => (
+                            <div
+                                key={i}
+                                className={`ritual-magic-user-tile ${setMemberRitualOptions && setMemberRitualOptions.id === magicUser.id ? 'selected' : ''}`}
+                                onClick={() => handleMemberClickRitual({ data: magicUser })}
+                            >
+                                <Tile
                                     id={i}
                                     tileSize={tileSize}
                                     image={magicUser.image ? magicUser.image : null}
@@ -78,14 +108,60 @@ const ModalInner = ({ modalType, updates, crew, tileSize, handleMemberClickRitua
                                     type={'crew-tile'}
                                     handleClick={handleMemberClickRitual}
                                     handleHover={handleCrewTileHover}
-                                    className={`crew-tile `}> </Tile>
-                                {setMemberRitualOptions === magicUser && <div className="options-zone">
-                                    <div className="option" onClick={()=> {/* learn */}}>Learn</div>
-                                    <div className={`option ${magicUser.specialActions.filter(e=>e.type === 'ritual').length === 0 ? 'disabled' : ''}`}>Perform ritual 3x</div>
-                                </div>}
+                                    className="crew-tile"
+                                />
+                                <div className="ritual-magic-user-name">{magicUser.name}</div>
                             </div>
-                        })}
+                        ))}
                     </div>
+
+                    {/* Ritual cards — always show all 3; grey out unknown */}
+                    {(() => {
+                        const activeMagicUser = setMemberRitualOptions
+                            || (crew.find(e => e.type === 'wizard' || e.type === 'sage'));
+                        if (!activeMagicUser) return null;
+                        const knownRituals = activeMagicUser.knownRituals || [];
+                        const inProgressKeys = (activeMagicUser.specialActions || [])
+                            .filter(a => a && a.type === 'ritual' && !a.available)
+                            .map(a => a.ritualKey || a.subtype);
+
+                        return (
+                            <div className="ritual-cards">
+                                {Object.values(RITUALS).map((ritual, i) => {
+                                    const isKnown = knownRituals.includes(ritual.key);
+                                    const isInProgress = inProgressKeys.includes(ritual.key);
+                                    return (
+                                        <div key={i} className={`ritual-card ${isKnown ? 'known' : 'unknown'}`}>
+                                            <div className="ritual-card-header">
+                                                <div
+                                                    className="ritual-card-icon"
+                                                    style={{ backgroundImage: `url(${images[ritual.icon] || ''})` }}
+                                                />
+                                                <div className="ritual-card-name">{ritual.name}</div>
+                                            </div>
+                                            <div className="ritual-card-flavor">{ritual.flavorText}</div>
+                                            <div className="ritual-card-description">{ritual.description}</div>
+                                            <div className="ritual-card-footer">
+                                                <div className="ritual-card-prep-time">⏱ {formatPrepTime(ritual.prepareTime)}</div>
+                                                {isInProgress ? (
+                                                    <div className="ritual-card-btn preparing">Preparing…</div>
+                                                ) : isKnown ? (
+                                                    <div className="ritual-card-btn known-badge">Known ✓</div>
+                                                ) : (
+                                                    <div
+                                                        className="ritual-card-btn learn-btn"
+                                                        onClick={() => onLearnRitual && onLearnRitual(activeMagicUser, ritual)}
+                                                    >
+                                                        Learn
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        );
+                    })()}
                 </div>
             )}
         </CModalBody>
@@ -165,6 +241,26 @@ class DungeonPage extends React.Component {
                     }
                 ]
             });
+
+            // Prepare Ritual action — always shown for wizards; each subtype reflects a ritual
+            // known/unknown is indicated by subtype.available (greyed out if unknown)
+            const knownRituals = character.knownRituals || [];
+            const ritualSubTypes = Object.values(RITUALS).map(r => {
+                const isAvailable = knownRituals.includes(r.key);
+                return {
+                    type: r.name,
+                    ritualKey: r.key,
+                    iconUrl: images[r.icon] || '',
+                    available: isAvailable,
+                    count: 0
+                };
+            });
+            actions.push({
+                type: 'ritual',
+                name: 'Prepare Ritual',
+                iconUrl: images['magic_moon_1'] || '',
+                subTypes: ritualSubTypes
+            });
         }
         // Add other class logic here as needed
         let count = 0;
@@ -176,16 +272,18 @@ class DungeonPage extends React.Component {
         let maximumReached = count >= 3;
         return <div className='actions-container'>
             {actions.map((action, i) => {
-                // find any active special action for this character (used by canvas overlay)
+                // find the active special action that matches THIS action's type
+                // (e.g. 'glyph'/'spell' row shows spell progress; 'ritual' row shows ritual progress)
                 const activeAction = (character.specialActions || []).find(a => {
                     if (!a || !a.startDate || !a.endDate) return false;
+                    if (a.type !== action.type && !(action.type === 'glyph' && a.type === 'spell')) return false;
                     const start = new Date(a.startDate);
                     const end = new Date(a.endDate);
                     const now = new Date();
                     return now >= start && now < end;
                 });
                 return (
-                <div className="action-wrapper" key={i}>
+                <div className={`action-wrapper action-wrapper--${action.type}`} key={i}>
                     <div className='action-hover-wrapper' onClick={() => this.handleActionClick(action)} style={{
                         border: `${this.getActionCooldownPercentage() && (character.specialActions || []).find(e=>e.type === action.type) ? '1px solid #635b4a' : ''}`
                     }}>
@@ -211,7 +309,7 @@ class DungeonPage extends React.Component {
                         <div className='action-icon' style={{backgroundImage: `url(${action.iconUrl})`}}></div>
                         <div className="action-text">{action.name}</div>
                     </div>
-                    <div className="info-icon" style={{backgroundImage: `url(${images['info']})`}}></div>
+                    {/* <div className="info-icon" style={{backgroundImage: `url(${images['info']})`}}></div> */}
                     <div className={`action-sub-menu ${this.state.actionMenuTypeExpanded === action.type ? 'expanded' : ''}`}>
                         {maximumReached && <div className='max-reached'>maximum reached</div>}
                         {action.subTypes && action.subTypes.map((subType, j) => (
@@ -234,6 +332,7 @@ class DungeonPage extends React.Component {
         let updates = [];
         let modified = false;
         let numeralUpdate = false;
+        let hasRitualUpdate = false;
 
         meta.crew.forEach(member => {
             (member.specialActions || []).forEach(a => {
@@ -248,20 +347,32 @@ class DungeonPage extends React.Component {
                     }
                     if (markNotified) {
                         if (!a.notified) {
+                            const isRitual = a.type === 'ritual';
+                            if (isRitual) hasRitualUpdate = true;
+                            const updateText = isRitual
+                                ? `${member.name}'s ritual "${a.name}" is complete and ready to use`
+                                : `${member.name} has finished ${a.name}`;
                             updates.push({
-                                text: `${member.name} has finished ${a.name}`,
+                                text: updateText,
                                 owner: `${member.name}`,
-                                actionType: a.type
+                                actionType: a.type,
+                                ritualKey: a.ritualKey || null
                             });
                             a.notified = true;
                             modified = true;
                         }
                     } else {
                         if (!a.notified) {
+                            const isRitual = a.type === 'ritual';
+                            if (isRitual) hasRitualUpdate = true;
+                            const updateText = isRitual
+                                ? `${member.name}'s ritual "${a.name}" is complete and ready to use`
+                                : `${member.name} has finished ${a.name}`;
                             updates.push({
-                                text: `${member.name} has finished ${a.name}`,
+                                text: updateText,
                                 owner: `${member.name}`,
-                                actionType: a.type
+                                actionType: a.type,
+                                ritualKey: a.ritualKey || null
                             });
                         }
                     }
@@ -276,7 +387,7 @@ class DungeonPage extends React.Component {
             this.props.saveUserData();
         }
 
-        return { updates, modified, numeralUpdate };
+        return { updates, modified, numeralUpdate, hasRitualUpdate };
     }
     getRotateDegreesLeft = (percentage) => {
         let deg = Math.floor(percentage / 100 * 360);
@@ -349,6 +460,7 @@ class DungeonPage extends React.Component {
             markerName: '',
             markerType: '',
             descriptionText: '',
+            hoveredInventoryItem: null,
             actionsTrayExpanded: false,
             actionMenuExpanded: '',
             modalType: '',
@@ -553,7 +665,7 @@ class DungeonPage extends React.Component {
         // additional modals so they don't stack (two CModal backdrops trap all clicks).
         try { if (this.state.showQuestsPopup || this.state.showModal) return; } catch(e) {}
             // Use centralized helper to find finished actions and optionally mark them notified
-            const { updates, modified, numeralUpdate } = this.checkAndCollectFinishedSpecialActions({ markNotified: true });
+            const { updates, modified, numeralUpdate, hasRitualUpdate } = this.checkAndCollectFinishedSpecialActions({ markNotified: true });
 
             const meta = getMeta();
 
@@ -564,21 +676,22 @@ class DungeonPage extends React.Component {
                     const updated = meta.crew.find(c => c.id === selectedCrewMember.id);
                     if (updated) selectedCrewMember = { ...updated };
                 }
+                // Use RitualComplete modal if the finished action was a ritual; otherwise PrepComplete
+                const completionModalType = hasRitualUpdate ? 'RitualComplete' : 'PrepComplete';
                     this.setState({
                         updates,
-                        // Use a distinct modal for in-session preparation completions
-                        modalType: 'PrepComplete',
+                        modalType: completionModalType,
                         showModal: true,
                         selectedCrewMember,
                         numeralUpdate: (this.state.numeralUpdate || false) ? false : true // toggle dummy state
                     }, () => {
                         this.forceUpdate();
-                        // auto-dismiss PrepComplete modal after a short delay
+                        // auto-dismiss completion modal after a short delay
                         try {
                             if (this.prepCompleteTimeout) clearTimeout(this.prepCompleteTimeout);
                         } catch (e) {}
                         this.prepCompleteTimeout = this._setTimeout(() => {
-                            if (this.state.modalType === 'PrepComplete' && this.state.showModal) {
+                            if ((this.state.modalType === 'PrepComplete' || this.state.modalType === 'RitualComplete') && this.state.showModal) {
                                 this.onUpdateModalClosed();
                             }
                         }, 3500);
@@ -609,9 +722,9 @@ class DungeonPage extends React.Component {
                     })
                 );
                 if (anyActive) {
-                    // update a tiny state field so React re-renders and progress UI updates
-                    this.setState({ _cooldownTick: Date.now() });
-                    // ensure canvas draw loop is running
+                    // ensure canvas draw loop is running — no setState needed, the rAF
+                    // loop draws independently of React renders so triggering a re-render
+                    // here only caused the placeholder refs to unmount/remount and flicker.
                         try {
                             if (!this.cooldownAnimationFrame) {
                                 this.cooldownAnimationFrame = requestAnimationFrame(this.drawCooldowns);
@@ -1360,8 +1473,28 @@ class DungeonPage extends React.Component {
                     const y = r.top;
                     const w = r.width;
                     const h = r.height;
+                    // Skip if the element itself has zero size
+                    if (w <= 0 || h <= 0) continue;
+                    // Skip if any ancestor clips this element to zero height
+                    // (e.g. the actions-tray collapses to height:0 with overflow:hidden —
+                    // getBoundingClientRect on the child still reports its own full size,
+                    // so we must check the ancestor chain ourselves)
+                    let hidden = false;
+                    try {
+                        let ancestor = el.parentElement;
+                        while (ancestor && ancestor !== document.body) {
+                            const cs = window.getComputedStyle(ancestor);
+                            if (cs.overflow === 'hidden' || cs.overflowY === 'hidden') {
+                                const ar = ancestor.getBoundingClientRect();
+                                if (ar.height <= 0 || ar.width <= 0) { hidden = true; break; }
+                                // also skip if the element's top edge is below the ancestor's bottom
+                                if (r.top >= ar.bottom || r.bottom <= ar.top) { hidden = true; break; }
+                            }
+                            ancestor = ancestor.parentElement;
+                        }
+                    } catch(e) {}
+                    if (hidden) continue;
                     // draw a semi-opaque overlay matching the original style
-                    // Updated to use the requested color #f9b11554 (approx rgba(249,177,21,0.329))
                     ctx.fillStyle = 'rgba(249,177,21,0.6)';
                     ctx.fillRect(x, y, w * pct, h);
                     // debug: draw logging disabled to avoid frequent console output
@@ -2070,7 +2203,8 @@ class DungeonPage extends React.Component {
 
         this.setState({
             inventoryHoverMatrix: inv,
-            descriptionText
+            descriptionText,
+            hoveredInventoryItem: tileProps ? (tileProps.data || null) : null,
         })
     }
     
@@ -2146,6 +2280,39 @@ class DungeonPage extends React.Component {
         this._setTimeout(()=>{
             this.setState({ritualWrecked: false}) 
         }, 1500)
+    }
+
+    handleLearnRitual = (magicUser, ritual) => {
+        try {
+            // Update meta (persisted)
+            const meta = getMeta() || {};
+            const metaMember = (meta.crew || []).find(c => c.id === magicUser.id);
+            if (metaMember) {
+                if (!Array.isArray(metaMember.knownRituals)) metaMember.knownRituals = [];
+                if (!metaMember.knownRituals.includes(ritual.key)) metaMember.knownRituals.push(ritual.key);
+            }
+            // Update live crewManager copy
+            const liveMember = (this.props.crewManager.crew || []).find(c => c.id === magicUser.id);
+            if (liveMember) {
+                if (!Array.isArray(liveMember.knownRituals)) liveMember.knownRituals = [];
+                if (!liveMember.knownRituals.includes(ritual.key)) liveMember.knownRituals.push(ritual.key);
+            }
+            try { storeMeta(meta); } catch(e) {}
+            try { updateUserRequest(getUserId(), meta).catch(()=>{}); } catch(e) {}
+            try { if (typeof this.props.saveUserData === 'function') this.props.saveUserData(); } catch(e) {}
+            // Refresh selectedCrewMember so the actions tray reflects the new ritual immediately
+            if (this.state.selectedCrewMember && this.state.selectedCrewMember.id === magicUser.id) {
+                const updatedKnown = liveMember ? liveMember.knownRituals : [ritual.key];
+                this.setState(prev => ({
+                    selectedCrewMember: { ...prev.selectedCrewMember, knownRituals: updatedKnown }
+                }));
+            }
+        } catch(e) {
+            console.warn('handleLearnRitual failed', e);
+        }
+        // Close the modal and unlock keys
+        this.setState({ showModal: false, keysLocked: false, setMemberRitualOptions: null },
+            () => this._cleanupModalBodyClass());
     }
     handleMemberClick = (member) => {
         let meta = getMeta(), val;
@@ -3153,6 +3320,14 @@ class DungeonPage extends React.Component {
                 }
                 this.setState({ showModal: false }, () => this._cleanupModalBodyClass());
             break;
+            case 'RitualComplete':
+                // Ritual completion modal — same dismiss logic as PrepComplete
+                if (this.prepCompleteTimeout) {
+                    clearTimeout(this.prepCompleteTimeout);
+                    this.prepCompleteTimeout = null;
+                }
+                this.setState({ showModal: false }, () => this._cleanupModalBodyClass());
+            break;
             case 'Magic':
                 this.setState({keysLocked: false}, () => this._cleanupModalBodyClass())
             break;
@@ -3209,7 +3384,7 @@ class DungeonPage extends React.Component {
     render(){
         return (
         <div className={`dungeon-container ${this.state.ritualWrecked ? 'wrecked' : ''}`}>
-            <CModal className={this.state.modalType === 'PrepComplete' ? 'prep-complete-modal' : ''} alignment="center" visible={this.state.showModal} onClose={() => this.onUpdateModalClosed()}>
+            <CModal className={this.state.modalType === 'PrepComplete' ? 'prep-complete-modal' : this.state.modalType === 'RitualComplete' ? 'ritual-complete-modal' : this.state.modalType === 'Magic' ? 'ritual-encounter-modal' : ''} alignment="center" visible={this.state.showModal} onClose={() => this.onUpdateModalClosed()}>
                 <ModalInner
                     modalType={this.state.modalType}
                     updates={this.state.updates}
@@ -3218,6 +3393,7 @@ class DungeonPage extends React.Component {
                     handleMemberClickRitual={this.handleMemberClickRitual}
                     handleCrewTileHover={this.handleCrewTileHover}
                     setMemberRitualOptions={this.state.setMemberRitualOptions}
+                    onLearnRitual={this.handleLearnRitual}
                 />
             </CModal>
             {/* Quests popup */}
@@ -3446,7 +3622,8 @@ class DungeonPage extends React.Component {
                         </div>
                         <div className="equipment-panel">
                             {/* Replaced with a direct copy of the `.crew-body` from the inventory popup */}
-                            <div className='crew-body' style={{backgroundImage: `url(${images.body_male})`, filter: 'invert(1)', backgroundSize: '130%', marginTop: '-16px'}}>
+                            <div className='crew-body' style={{filter: 'invert(1)', marginTop: '-16px'}}>
+                                <div className='crew-body-image' style={{backgroundImage: `url(${images.body_male})`}} />
                                 {/* equip slots: chest, right-hand, left-hand, head, ancillary-left, ancillary-right */}
                                 {(() => {
                                     const selected = this.state.selectedCrewMember || {};
@@ -4068,13 +4245,11 @@ class DungeonPage extends React.Component {
                                         }}
                                     ></div>
                                     <div className='crew-body' style={{
-                                        backgroundImage: `url(${images.body_male})`,
                                         filter: 'invert(1)',
-                                        backgroundSize: '130%',
-                                        opacity: isSelected ? 1 : 0.5,
                                         pointerEvents: isSelected ? 'auto' : 'none',
                                         marginTop: '-16px'
                                     }}>
+                                        <div className='crew-body-image' style={{backgroundImage: `url(${images.body_male})`}} />
                                         {/* equip slots: chest, right-hand, left-hand, head, and ancillary */}
                                         {(() => {
                                             const findEquipped = (m, slot) => {
@@ -4090,7 +4265,7 @@ class DungeonPage extends React.Component {
                                             const ancillaryRight = findEquipped(member, 'ancillary-right');
                                             return (
                                                 <>
-                                                    <div className='equip-slot slot-chest' style={{border: isSelected && chest ? '2px solid #782d7b' : undefined}}>{chest && (
+                                                    <div className='equip-slot slot-chest' style={{outline: isSelected && chest ? '2px solid #782d7b' : undefined}}>{chest && (
                                                         <Tile
                                                             id={chest.id}
                                                             data={chest}
@@ -4104,7 +4279,7 @@ class DungeonPage extends React.Component {
                                                             handleHover={this.handleInventoryTileHover}
                                                         />
                                                     )}</div>
-                                                    <div className='equip-slot slot-right' style={{border: isSelected && right ? '2px solid #782d7b' : undefined}}>{right && (
+                                                    <div className='equip-slot slot-right' style={{outline: isSelected && right ? '2px solid #782d7b' : undefined}}>{right && (
                                                         <Tile
                                                             id={right.id}
                                                             data={right}
@@ -4118,7 +4293,7 @@ class DungeonPage extends React.Component {
                                                             handleHover={this.handleInventoryTileHover}
                                                         />
                                                     )}</div>
-                                                    <div className='equip-slot slot-left' style={{border: isSelected && left ? '2px solid #782d7b' : undefined}}>{left && (
+                                                    <div className='equip-slot slot-left' style={{outline: isSelected && left ? '2px solid #782d7b' : undefined}}>{left && (
                                                         <Tile
                                                             id={left.id}
                                                             data={left}
@@ -4132,7 +4307,7 @@ class DungeonPage extends React.Component {
                                                             handleHover={this.handleInventoryTileHover}
                                                         />
                                                     )}</div>
-                                                    <div className='equip-slot slot-head' style={{border: isSelected && head ? '2px solid #782d7b' : undefined}}>{head && (
+                                                    <div className='equip-slot slot-head' style={{outline: isSelected && head ? '2px solid #782d7b' : undefined}}>{head && (
                                                         <Tile
                                                             id={head.id}
                                                             data={head}
@@ -4146,7 +4321,7 @@ class DungeonPage extends React.Component {
                                                             handleHover={this.handleInventoryTileHover}
                                                         />
                                                     )}</div>
-                                                    <div className='equip-slot slot-ancillary-left' style={{border: isSelected && ancillaryLeft ? '2px solid #782d7b' : undefined}}>{ancillaryLeft && (
+                                                    <div className='equip-slot slot-ancillary-left' style={{outline: isSelected && ancillaryLeft ? '2px solid #782d7b' : undefined}}>{ancillaryLeft && (
                                                         <Tile
                                                             id={ancillaryLeft.id}
                                                             data={ancillaryLeft}
@@ -4160,7 +4335,7 @@ class DungeonPage extends React.Component {
                                                             handleHover={this.handleInventoryTileHover}
                                                         />
                                                     )}</div>
-                                                    <div className='equip-slot slot-ancillary-right' style={{border: isSelected && ancillaryRight ? '2px solid #782d7b' : undefined}}>{ancillaryRight && (
+                                                    <div className='equip-slot slot-ancillary-right' style={{outline: isSelected && ancillaryRight ? '2px solid #782d7b' : undefined}}>{ancillaryRight && (
                                                         <Tile
                                                             id={ancillaryRight.id}
                                                             data={ancillaryRight}
@@ -4174,7 +4349,7 @@ class DungeonPage extends React.Component {
                                                             handleHover={this.handleInventoryTileHover}
                                                         />
                                                     )}</div>
-                                    <div className='equip-slot slot-pet' style={{border: isSelected && bottomLeft ? '2px solid #782d7b' : undefined}}>{bottomLeft && (
+                                    <div className='equip-slot slot-pet' style={{outline: isSelected && bottomLeft ? '2px solid #782d7b' : undefined}}>{bottomLeft && (
                                                         <>
                                                         <Tile
                                                             id={bottomLeft.id}
@@ -4281,7 +4456,28 @@ class DungeonPage extends React.Component {
                         })}
                     </div>
                     <div className="inventory-descriptor-panel">
-                        TESTING 123
+                        {(() => {
+                            const item = this.state.hoveredInventoryItem;
+                            if (!item) return <span className="idp-placeholder">Hover over an item to see details</span>;
+                            const iconImg = item.icon ? images[item.icon] : null;
+                            return (
+                                <div className="idp-content">
+                                    {iconImg && (
+                                        <div className="idp-icon">
+                                            <img src={iconImg} alt={item.name || ''} />
+                                        </div>
+                                    )}
+                                    <div className="idp-details">
+                                        <div className="idp-name">{item.name || '—'}</div>
+                                        <div className="idp-meta">
+                                            {item.subtype && <span className="idp-tag idp-subtype">{item.subtype}</span>}
+                                            {item.range && <span className="idp-tag idp-range">{item.range}</span>}
+                                        </div>
+                                        {item.description && <div className="idp-description">{item.description}</div>}
+                                    </div>
+                                </div>
+                            );
+                        })()}
                     </div>
                     <div className='inventory-strip'>
                         {(() => {

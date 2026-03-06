@@ -269,8 +269,6 @@ export function InventoryManager(){
     longsword_sword: { damage: 45, icon: 'longsword', type: 'weapon', subtype: 'cutting', tier: 1, name: 'longsword', range: 'close', equippedBy: null, animation: null, description: 'The longsword does 45 (percent points)' },
     broadsword_sword: { damage: 50, icon: 'broadsword', type: 'weapon', subtype: 'cutting', tier: 1, name: 'broadsword', range: 'close', equippedBy: null, animation: null, description: 'The broadsword does 50 (percent points)' },
     golden_gladius_sword: { damage: 55, icon: 'gladius', type: 'weapon', subtype: 'cutting', tier: 1, name: 'gladius', range: 'close', equippedBy: null, animation: null, description: 'The gladius does 40 (percent points)' },
-    
-    
     wyrmsbane_sword: { damage: 52, icon: 'wyrmsbane', type: 'weapon', subtype: 'cutting', tier: 1, name: 'wyrmsbane', range: 'close', equippedBy: null, animation: null, description: 'The wyrmsbane does 52 (percent points)' },
     katana_sword: { damage: 55, icon: 'katana', type: 'weapon', subtype: 'cutting', tier: 1, name: 'katana', range: 'close', equippedBy: null, animation: null, description: 'The katana does 55 (percent points)' },
     claymore_sword: { damage: 60, icon: 'claymore', type: 'weapon', subtype: 'cutting', tier: 1, name: 'claymore', range: 'close', equippedBy: null, animation: null, description: 'The claymore does 60 (percent points)' },

@@ -1,6 +1,6 @@
 
 import * as images from '../utils/images'
-import { SPELLS } from './spells-table'
+import { SPELLS, RITUALS } from './spells-table'
 
 Date.prototype.addHours= function(h){
     this.setHours(this.getHours()+h);
@@ -354,6 +354,23 @@ export function CrewManager(){
                     default:
                         break;
                 }
+            break;
+            case 'ritual': {
+                const ritualDef = RITUALS[actionSubtype.ritualKey];
+                const prepareTime = ritualDef ? ritualDef.prepareTime : 60 * 60 * 1000;
+                endDate = new Date(Date.now() + prepareTime);
+                member.specialActions.push({
+                    type: 'ritual',
+                    name: ritualDef ? ritualDef.name : (actionSubtype.type || 'Ritual'),
+                    ritualKey: actionSubtype.ritualKey,
+                    iconUrl: actionSubtype.iconUrl || '',
+                    available: false,
+                    subtype: actionSubtype.ritualKey,
+                    startDate,
+                    endDate,
+                    notified: false
+                });
+            }
             break;
             default:
                 break;

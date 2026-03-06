@@ -6,7 +6,34 @@ export const SPELLS = {
     name: 'Magic Missile',
     prepareTime: 10000, // milliseconds (10 seconds)
     description: 'A basic arcane projectile that never misses.',
-    // Add more properties as needed (damage, icon, etc)
   },
-  // Add more spells here
+};
+
+// Ritual definitions — each has a stable key, display name, description, and prep time.
+// Shortest ritual is 1 hour (3 600 000 ms); others are 3h and 6h.
+export const RITUALS = {
+  veilOfShadows: {
+    key: 'veilOfShadows',
+    name: 'Veil of Shadows',
+    icon: 'eclipse',
+    prepareTime: 60 * 60 * 1000,           // 1 hour
+    description: 'Weaves a cloak of living shadow around the party. Enemies have a 20% chance to miss all attacks for the next combat encounter.',
+    flavorText: '"The darkness is not empty — it breathes."',
+  },
+  wardingCircle: {
+    key: 'wardingCircle',
+    name: 'Warding Circle',
+    icon: 'magic_moon_1',
+    prepareTime: 3 * 60 * 60 * 1000,        // 3 hours
+    description: 'Inscribes a protective sigil on every party member. Reduces incoming damage by 15% and grants immunity to fear for two combat encounters.',
+    flavorText: '"Draw the line. Nothing crosses it."',
+  },
+  riftBinding: {
+    key: 'riftBinding',
+    name: 'Rift Binding',
+    icon: 'glyph_inverted',
+    prepareTime: 6 * 60 * 60 * 1000,        // 6 hours
+    description: 'Opens a momentary tear between planes and anchors it to the caster\'s will. On use, teleports the entire party past the next locked gate or sealed passage.',
+    flavorText: '"Space is merely a suggestion to those who know how to argue."',
+  },
 };
