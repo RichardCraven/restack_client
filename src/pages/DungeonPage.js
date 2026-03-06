@@ -5,7 +5,7 @@ import '../styles/dungeon-board.scss'
 import Tile from '../components/tile'
 import MonsterBattle from './sub-views/MonsterBattle';
 import CardDuel from './sub-views/CardDuel';
-import ExpositionPane from './sub-views/ExpositionPane';
+// import ExpositionPane from './sub-views/ExpositionPane';
 import {
     loadAllDungeonsRequest,
     loadDungeonRequest,
@@ -18,7 +18,7 @@ import * as CampManager from '../utils/camp-manager';
 import { cilCaretRight, cilCaretLeft, cilMenu} from '@coreui/icons';
 import  CIcon  from '@coreui/icons-react';
 
-import { CButton, CFormSelect, CFormInput, CModal, CModalHeader, CModalTitle, CModalBody, CTabPane, CTabContent} from '@coreui/react';
+import { CButton, CFormSelect, CFormInput, CModal, CModalHeader, CModalTitle, CModalBody} from '@coreui/react';
 import * as images from '../utils/images'
 import { RITUALS } from '../utils/spells-table'
 import { RECIPES } from '../utils/spells-table'
@@ -71,7 +71,7 @@ const ModalInner = ({ modalType, updates, crew, tileSize, handleMemberClickRitua
 
             {modalType === 'RitualComplete' && (
                 <div className="ritual-complete-zone">
-                    <div className="ritual-complete-icon">✨</div>
+                    <div className="ritual-complete-icon"><span role="img" aria-label="sparkles">✨</span></div>
                     <h3 className="ritual-complete-title">Ritual Complete</h3>
                     {(updates || []).map((update, i) => (
                         <div key={i} className="ritual-complete-text">{update.text}</div>
@@ -82,7 +82,7 @@ const ModalInner = ({ modalType, updates, crew, tileSize, handleMemberClickRitua
 
             {modalType === 'FoodComplete' && (
                 <div className="food-complete-zone">
-                    <div className="food-complete-icon">🍖</div>
+                    <div className="food-complete-icon"><span role="img" aria-label="meat">🍖</span></div>
                     <h3 className="food-complete-title">Food Ready!</h3>
                     {(updates || []).map((u, i) => <div key={i} className="food-complete-text">{u.text}</div>)}
                     <p className="food-complete-note">Food has been added to your supplies.</p>
@@ -181,18 +181,22 @@ const ModalInner = ({ modalType, updates, crew, tileSize, handleMemberClickRitua
     )
 }
 
+// eslint-disable-next-line no-extend-native
 Date.prototype.addHours= function(h){
     this.setHours(this.getHours()+h);
     return this;
 }
+// eslint-disable-next-line no-extend-native
 Date.prototype.addMinutes= function(minutes){
     this.setMinutes(this.getMinutes()+minutes);
     return this;
 }
+// eslint-disable-next-line no-extend-native
 Date.prototype.addSeconds= function(s){
     this.setSeconds(this.getSeconds()+s);
     return this;
 }
+// eslint-disable-next-line no-extend-native
 Date.prototype.addMinutes= function(minutes){
     this.setMinutes(this.getMinutes()+minutes);
     return this;
@@ -415,7 +419,7 @@ class DungeonPage extends React.Component {
         });
 
         if (modified) {
-            meta.crew = meta.crew;
+            meta.crew = meta.crew; // eslint-disable-line no-self-assign
             storeMeta(meta);
             this.props.crewManager.crew = meta.crew;
             this.props.saveUserData();
@@ -587,7 +591,7 @@ class DungeonPage extends React.Component {
         }
         
         // Consolidated check: mark finished special actions available and collect updates
-        const { updates, modified } = this.checkAndCollectFinishedSpecialActions({ markNotified: false });
+        const { updates, modified } = this.checkAndCollectFinishedSpecialActions({ markNotified: false }); // eslint-disable-line no-unused-vars
         this.setState((state, props) => {
             return {
                 tileSize,
@@ -1475,7 +1479,7 @@ class DungeonPage extends React.Component {
                 if (cmd === 'remove rituals' || cmd === 'removerituals' || cmd === 'clear rituals' || cmd === 'clearrituals') {
                     try {
                         const cm = this.props.crewManager;
-                        const ritualTypes = ['wizard', 'sage'];
+                        const ritualTypes = ['wizard', 'sage']; // eslint-disable-line no-unused-vars
                         const affectedNames = [];
                         if (cm && Array.isArray(cm.crew)) {
                             cm.crew.forEach(member => {
@@ -1638,7 +1642,7 @@ class DungeonPage extends React.Component {
     hasActiveCooldowns = () => {
         try {
             const now = new Date();
-            for (const [id, entry] of this._placeholderRegistry) {
+            for (const [, entry] of this._placeholderRegistry) {
                 const { start, end } = entry;
                 if (!start || !end) continue;
                 if (now >= start && now < end) return true;
@@ -1721,7 +1725,7 @@ class DungeonPage extends React.Component {
         } catch(e) {}
     }
     logMeta = () => {
-        const meta = getMeta();
+        const meta = getMeta(); // eslint-disable-line no-unused-vars
     }
     setNewRespawnDate = () => {
         let soon = new Date().addMinutes(3)
@@ -2161,7 +2165,7 @@ class DungeonPage extends React.Component {
 
         if(this.state.keysLocked) return
         let key = event.key, code = event.code
-        let newTiles = [], overlayTiles = [];
+        let newTiles = [], overlayTiles = []; // eslint-disable-line no-unused-vars
         // if(code === 'Space'){
         //     let paused = !this.state.paused;
         //     this.props.combatManager.pauseCombat(paused)
@@ -2656,7 +2660,7 @@ class DungeonPage extends React.Component {
         const allDungeons = await loadAllDungeonsRequest();
         
         let dungeons = [],
-            spawnList = [],
+            spawnList = [], // eslint-disable-line no-unused-vars
             selectedDungeon,
             spawnPoint;
             
@@ -3052,8 +3056,8 @@ class DungeonPage extends React.Component {
                             const level = selectedDungeon.levels.find(e=>e.id === levelId)
                             const miniboardIndex = spawnPoint.miniboardIndex
                             const orientation = sp[4];
-                            const spawnTileIndex = spawnPoint.id;
-                            const board = orientation === 'F' ? level.front.miniboards[miniboardIndex] : (orientation === 'B' ? level.back.miniboards[miniboardIndex] : null)
+                            const spawnTileIndex = spawnPoint.id; // eslint-disable-line no-unused-vars
+                            const board = orientation === 'F' ? level.front.miniboards[miniboardIndex] : (orientation === 'B' ? level.back.miniboards[miniboardIndex] : null) // eslint-disable-line no-unused-vars
 
                             meta2.location = {
                                 boardIndex: spawnPoint.miniboardIndex,
@@ -3475,6 +3479,7 @@ class DungeonPage extends React.Component {
             case 'Magic':
                 this.setState({keysLocked: false}, () => this._cleanupModalBodyClass())
             break;
+            default: break;
         }
     }
 
@@ -3584,19 +3589,18 @@ class DungeonPage extends React.Component {
                     <div className="quests-grid" style={{display:'flex', flexDirection:'row', flexWrap:'nowrap', gap: 16, justifyContent: 'center'}}>
                         {/* Go Here quest */}
                         <div className="quest-panel" style={{width: 220, padding: 14, background: '#1a2535', color: '#fff', borderRadius: 6, boxShadow: '0 2px 8px rgba(0,0,0,0.7)', borderTop: '3px solid #4a90d9'}}>
-                            <div style={{fontSize: 36, textAlign: 'center', marginBottom: 8}}>🗺️</div>
-                            <div style={{fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: '#4a90d9', marginBottom: 6}}>Go Here</div>
+                            <div style={{fontSize: 36, textAlign: 'center', marginBottom: 8}}><span role="img" aria-label="map">🗺️</span></div>
                             <div style={{fontSize: 12, color: '#ccc', lineHeight: 1.5}}>Travel to the deepest floor of the dungeon. Explore every corner before returning.</div>
                         </div>
                         {/* Kill Them quest */}
                         <div className="quest-panel" style={{width: 220, padding: 14, background: '#2a1515', color: '#fff', borderRadius: 6, boxShadow: '0 2px 8px rgba(0,0,0,0.7)', borderTop: '3px solid #c0392b'}}>
-                            <div style={{fontSize: 36, textAlign: 'center', marginBottom: 8}}>⚔️</div>
+                            <div style={{fontSize: 36, textAlign: 'center', marginBottom: 8}}><span role="img" aria-label="swords">⚔️</span></div>
                             <div style={{fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: '#e74c3c', marginBottom: 6}}>Kill Them</div>
                             <div style={{fontSize: 12, color: '#ccc', lineHeight: 1.5}}>Defeat 5 monsters before the next dawn. Leave none standing in your path.</div>
                         </div>
                         {/* Find This quest */}
                         <div className="quest-panel" style={{width: 220, padding: 14, background: '#162216', color: '#fff', borderRadius: 6, boxShadow: '0 2px 8px rgba(0,0,0,0.7)', borderTop: '3px solid #27ae60'}}>
-                            <div style={{fontSize: 36, textAlign: 'center', marginBottom: 8}}>🔍</div>
+                            <div style={{fontSize: 36, textAlign: 'center', marginBottom: 8}}><span role="img" aria-label="magnifying glass">🔍</span></div>
                             <div style={{fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: '#2ecc71', marginBottom: 6}}>Find This</div>
                             <div style={{fontSize: 12, color: '#ccc', lineHeight: 1.5}}>Locate the hidden relic on floor 3. It may be concealed behind a secret passage.</div>
                         </div>
@@ -3616,7 +3620,7 @@ class DungeonPage extends React.Component {
                 <CModalBody style={{position:'relative', zIndex:2}}>
                     {/* TOP: crew portrait row */}
                     <div className="camp-crew-row">
-                        {(this.props.crewManager && this.props.crewManager.crew || []).map((member, i) => (
+                        {((this.props.crewManager && this.props.crewManager.crew) || []).map((member, i) => (
                             <div key={i} className="camp-crew-tile">
                                 <Tile
                                     id={i}
@@ -3639,23 +3643,23 @@ class DungeonPage extends React.Component {
                     {/* MIDDLE: action buttons */}
                     <div className="camp-actions-section">
                         <button className="camp-action-btn" onClick={() => { this.handleCloseCampPopup(); this.setUpCamp(); }}>
-                            <span className="camp-btn-icon">🏕️</span>
+                            <span className="camp-btn-icon"><span role="img" aria-label="campsite">🏕️</span></span>
                             <span>Recuperate</span>
                         </button>
                         <button className="camp-action-btn" onClick={() => {}}>
-                            <span className="camp-btn-icon">⚔️</span>
+                            <span className="camp-btn-icon"><span role="img" aria-label="crossed swords">⚔️</span></span>
                             <span>Train</span>
                         </button>
                         <button className="camp-action-btn" onClick={this.handleOpenFoodPrep}>
-                            <span className="camp-btn-icon">🍖</span>
+                            <span className="camp-btn-icon"><span role="img" aria-label="meat">🍖</span></span>
                             <span>Prepare Food</span>
                         </button>
                         <button className="camp-action-btn" onClick={this.handleOpenQuestsPopup}>
-                            <span className="camp-btn-icon">📜</span>
+                            <span className="camp-btn-icon"><span role="img" aria-label="scroll">📜</span></span>
                             <span>Quests</span>
                         </button>
                         <button className="camp-action-btn" onClick={() => {}}>
-                            <span className="camp-btn-icon">🗺️</span>
+                            <span className="camp-btn-icon"><span role="img" aria-label="map">🗺️</span></span>
                             <span>Map</span>
                         </button>
                     </div>
@@ -3663,7 +3667,7 @@ class DungeonPage extends React.Component {
                     {/* BOTTOM: trophies / card deck / shards tiles */}
                     <div className="camp-bottom-tiles">
                         <div className="camp-bottom-tile">
-                            <div className="camp-bottom-tile-icon">🏆</div>
+                            <div className="camp-bottom-tile-icon"><span role="img" aria-label="trophy">🏆</span></div>
                             <div className="camp-bottom-tile-label">Trophies</div>
                         </div>
                         <div className="camp-bottom-tile">
@@ -3686,8 +3690,8 @@ class DungeonPage extends React.Component {
                         <div className="food-prep-overlay">
                             <div className="food-prep-header">
                                 <button className="food-prep-back" onClick={this.handleFoodPrepBack}>← Back</button>
-                                <div className="food-prep-title">🍖 Prepare Food</div>
-                                <div className="food-prep-supply">Supply: {currentFood} 🍖</div>
+                                <div className="food-prep-title"><span role="img" aria-label="meat">🍖</span> Prepare Food</div>
+                                <div className="food-prep-supply">Supply: {currentFood} <span role="img" aria-label="meat">🍖</span></div>
                             </div>
                             <div className="recipe-cards">
                                 {Object.values(RECIPES).map((recipe, i) => {
@@ -3702,11 +3706,11 @@ class DungeonPage extends React.Component {
                                             <div className="recipe-card-name">{recipe.name}</div>
                                             <div className="recipe-card-description">{recipe.description}</div>
                                             <div className="recipe-card-meta">
-                                                <span className="recipe-cost">🍖 -{recipe.foodCost}</span>
+                                                <span className="recipe-cost"><span role="img" aria-label="meat">🍖</span> -{recipe.foodCost}</span>
                                                 <span className="recipe-arrow">→</span>
                                                 <span className="recipe-yield">+{recipe.foodYield}</span>
                                             </div>
-                                            <div className="recipe-card-duration">⏱ {cookTimeLabel}</div>
+                                            <div className="recipe-card-duration"><span role="img" aria-label="timer">⏱</span> {cookTimeLabel}</div>
                                             {isCookingThis ? (
                                                 <div className="recipe-card-btn cooking-badge">Cooking…</div>
                                             ) : (
@@ -4146,10 +4150,10 @@ class DungeonPage extends React.Component {
                         const resolve = typeof meta.resolve === 'number' ? meta.resolve : 100;
                         return (
                             <div className="quicklook-panel">
-                                <div className="ql-row"><span className="ql-label">⚔ Attack</span><span className="ql-value">{totalAtk}</span></div>
-                                <div className="ql-row"><span className="ql-label">🛡 Defense</span><span className="ql-value">{totalDef}</span></div>
-                                <div className="ql-row"><span className="ql-label">🍖 Food</span><span className="ql-value">{food}</span></div>
-                                <div className="ql-row"><span className="ql-label">✊ Resolve</span><span className="ql-value">{resolve}</span></div>
+                                <div className="ql-row"><span className="ql-label"><span role="img" aria-label="crossed swords">⚔</span> Attack</span><span className="ql-value">{totalAtk}</span></div>
+                                <div className="ql-row"><span className="ql-label"><span role="img" aria-label="shield">🛡</span> Defense</span><span className="ql-value">{totalDef}</span></div>
+                                <div className="ql-row"><span className="ql-label"><span role="img" aria-label="meat">🍖</span> Food</span><span className="ql-value">{food}</span></div>
+                                <div className="ql-row"><span className="ql-label"><span role="img" aria-label="fist">✊</span> Resolve</span><span className="ql-value">{resolve}</span></div>
                             </div>
                         );
                     })()}
@@ -4385,7 +4389,7 @@ class DungeonPage extends React.Component {
                         )}
                     </div>
                     <div className='crew-panels'>
-                        {(this.props.crewManager && this.props.crewManager.crew || []).map((member, idx) => {
+                        {((this.props.crewManager && this.props.crewManager.crew) || []).map((member, idx) => {
                             const portraitUrl = (images && images[member.portrait]) || member.portrait;
                             const isSelected = this.state.selectedCrewMember && this.state.selectedCrewMember.id === member.id;
                             return (

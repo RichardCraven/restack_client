@@ -5,7 +5,7 @@ function copy(item){
     if (item === undefined || item === null) return null;
     return JSON.parse(JSON.stringify(item));
 }
-const swords = [
+const swords = [ // eslint-disable-line no-unused-vars
     'longsword_sword',
     'broadsword_sword',
     'golden_gladius_sword',
@@ -153,7 +153,7 @@ export function InventoryManager(){
         'grand_health_potion',
     ]
 
-    const GATES = [
+    const GATES = [ // eslint-disable-line no-unused-vars
         {
             key: 'archway',
             requires: ''

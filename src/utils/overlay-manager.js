@@ -5,7 +5,7 @@ const clone = (val) => {
 }
 
 export function OverlayManager(){
-    const animationTypes = {
+    const animationTypes = { // eslint-disable-line no-unused-vars
         targetted: {
             duration: 2
         },

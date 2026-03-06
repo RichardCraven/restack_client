@@ -69,7 +69,7 @@ class CrewManagerPage extends React.Component{
   }
 
   getDungeonDetails = async () => {
-    const user = getMeta();
+    // const user = getMeta();
     // user.name = 'Henry'
     // ...existing code...
     

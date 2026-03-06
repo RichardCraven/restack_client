@@ -70,7 +70,7 @@ class CrewManagerPage extends React.Component{
     this.tempCrewManager = new CrewManager();
     // initialize with a deep-cloned options array to avoid sharing references
     this.tempCrewManager.initializeCrew(clone(options));
-    let wizard = this.tempCrewManager.crew.find(e=>e.type==='wizard')
+    // let wizard = this.tempCrewManager.crew.find(e=>e.type==='wizard')
     // let wizclone = clone(wizard);
 
     // Example for new structure:

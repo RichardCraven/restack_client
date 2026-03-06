@@ -82,7 +82,7 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
             return closestEnemy
         }
         const closestEnemy = getClosestEnemy();
-        const sorted = liveEnemies.sort((a,b)=>b.depth - a.depth);
+        const sorted = liveEnemies.sort((a,b)=>b.depth - a.depth); // eslint-disable-line no-unused-vars
         let target = closestEnemy.enemy;
         if(!target) return;
         const attack = this.chooseAttackType(caller, target);
@@ -296,12 +296,10 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                 });
                 const target = Object.values(combatants).find(e=>e.id === caller.targetId),
                 targetHasMoreThanHalfHp = target && target.hp > (target.starting_hp / 2),
-                spells = caller.specialActions && caller.specialActions.filter(action => action.type === 'spell'),
-                spellAvailable = caller.specialActions && caller.specialActions.find(action => action.type === 'spell' && action.available);
-                // debugger
-                
+                spells = caller.specialActions && caller.specialActions.filter(action => action.type === 'spell'), // eslint-disable-line no-unused-vars
+                spellAvailable = caller.specialActions && caller.specialActions.find(action => action.type === 'spell' && action.available); // eslint-disable-line no-unused-vars
 
-                const magicMissile = caller.specialActions && caller.specialActions.find(
+                const magicMissile = caller.specialActions && caller.specialActions.find( // eslint-disable-line no-unused-vars
                     a => a.type === 'spell' && a.subtype === 'magic missile'
                 );
 
@@ -413,31 +411,24 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                     break;
                 }
             break;
+            default:
+            break;
         }
 
         return
-        let originalCoords = JSON.parse(JSON.stringify(caller.coordinates));
-        const enemyTarget = Object.values(combatants).find(e=>e.id === caller.targetId)
-        const distanceToTarget = data.methods.getDistanceToTarget(caller, enemyTarget),
-        laneDiff = data.methods.getLaneDifferenceToTarget(caller, enemyTarget)
-        if(!caller.pendingAttack){
-            return
-        }
-        if(caller.pendingAttack.name === 'meditate'){
-            data.methods.moveTowardsCloseFriendlyTarget(caller, combatants)
-        } else if(caller.pendingAttack.name === 'cane_strike'){
-            
-        }
-
-        // data.methods.moveTowardsCloseEnemyTarget(caller, combatants)
-        data.methods.stayOnBackRow(caller,combatants)
-
-        caller.coordinates.y = caller.position
-        caller.coordinates.x = caller.depth
-        let moved = JSON.stringify(originalCoords) !== JSON.stringify(caller.coordinates);
-        if(moved){
-            caller.movesLeft--
-        }
+        // let originalCoords = JSON.parse(JSON.stringify(caller.coordinates));
+        // const enemyTarget = Object.values(combatants).find(e=>e.id === caller.targetId)
+        // const distanceToTarget = data.methods.getDistanceToTarget(caller, enemyTarget),
+        // laneDiff = data.methods.getLaneDifferenceToTarget(caller, enemyTarget)
+        // if(!caller.pendingAttack){ return }
+        // if(caller.pendingAttack.name === 'meditate'){
+        //     data.methods.moveTowardsCloseFriendlyTarget(caller, combatants)
+        // } else if(caller.pendingAttack.name === 'cane_strike'){ }
+        // data.methods.stayOnBackRow(caller,combatants)
+        // caller.coordinates.y = caller.position
+        // caller.coordinates.x = caller.depth
+        // let moved = JSON.stringify(originalCoords) !== JSON.stringify(caller.coordinates);
+        // if(moved){ caller.movesLeft-- }
     }
     this.triggerMagicMissile = (caller, target, travelTime) => {
         console.log('triggering***');
@@ -547,9 +538,9 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
         })
     }
     this.triggerIceBlast = (caller, target) => {
-        const callerCoords = caller.coordinates, targetCoords = target.coordinates;
+        const callerCoords = caller.coordinates, targetCoords = target.coordinates; // eslint-disable-line no-unused-vars
         // Defensive resolution for ice blast (same rationale as fireBlast)
-        const resolveLocalSpecial = (caller, specialKey) => {
+        const resolveLocalSpecial = (caller, specialKey) => { // eslint-disable-line no-unused-vars
             const key = (specialKey || '').toString();
             const normalized = key.replace(/\s+/g, '_').toLowerCase();
             if (!Array.isArray(caller.specials)) return null;
@@ -655,7 +646,7 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
 
     }
     this.triggerFireBlast = (caller, target) => {
-        const callerCoords = caller.coordinates, targetCoords = target.coordinates;
+        const callerCoords = caller.coordinates, targetCoords = target.coordinates; // eslint-disable-line no-unused-vars
         // Prefer the centralized resolver when available.
         let fireBlast = null;
         if (data && data.methods && typeof data.methods.resolveSpecial === 'function') {
@@ -862,7 +853,7 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                 this.kickoffAttackCooldown(caller)
             }
         } else {
-            const distanceToTarget = data.methods.getDistanceToTarget(caller, target),
+        const distanceToTarget = data.methods.getDistanceToTarget(caller, target), // eslint-disable-line no-unused-vars
             laneDiff = data.methods.getLaneDifferenceToTarget(caller, target);
             switch(caller.pendingAttack.name){
                 case 'energy blast':
@@ -917,7 +908,7 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                 //         this.missesTarget(caller);
                 //     }
     
-                break;
+                // break;
                 case 'lightning':
                     debugger
                     if(laneDiff === 0){

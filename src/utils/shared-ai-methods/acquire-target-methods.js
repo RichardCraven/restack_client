@@ -3,10 +3,10 @@
 
 import { Methods } from './basic-methods';
 
-const MAX_DEPTH = 7;
-const MAX_LANES = 5;
+const MAX_DEPTH = 7; // eslint-disable-line no-unused-vars
+const MAX_LANES = 5; // eslint-disable-line no-unused-vars
 
-const getSurroundings = (coords) => {
+const getSurroundings = (coords) => { // eslint-disable-line no-unused-vars
     const N = { x: coords.x, y: coords.y - 1 },
         S = { x: coords.x, y: coords.y + 1 },
         W = { x: coords.x - 1, y: coords.y },
@@ -18,7 +18,7 @@ const getSurroundings = (coords) => {
     return { N, S, E, W, NW, NE, SW, SE };
 };
 
-const someoneIsInCoords = function(coords) {
+const someoneIsInCoords = function(coords) { // eslint-disable-line no-unused-vars
     return Object.values(this.combatants).some(e => {
         try {
             if (!e) return false;
@@ -29,7 +29,7 @@ const someoneIsInCoords = function(coords) {
     });
 };
 
-const someoneElseIsInCoords = function(caller, coords) {
+const someoneElseIsInCoords = function(caller, coords) { // eslint-disable-line no-unused-vars
     return Object.values(this.combatants).filter(c => c.id !== caller.id).some(e => {
         try {
             if (!e) return false;

@@ -716,7 +716,7 @@ export function AnimationManager(){
         }
         let destinationTileId = this.getTileIdByCoords(newCoords)
         let destinationTile = this.tiles[destinationTileId]
-        let isOnSamePlane = sourceTile.y === destinationTile.y;
+        let isOnSamePlane = sourceTile.y === destinationTile.y; // eslint-disable-line no-unused-vars
         return new Promise(() => {
                 let distanceAway = Math.abs(sourceTile.x - destinationTile.x)
                 if(sourceTile.x > destinationTile.x && direction === 'right-to-left'){
@@ -849,7 +849,7 @@ export function AnimationManager(){
             (sourceTile.y > destinationTile.y ? 'up' : 'down')
         )
         return new Promise((resolve, reject) => {
-                let distanceAway = Math.abs(sourceTile.x - destinationTile.x)
+                let distanceAway = Math.abs(sourceTile.x - destinationTile.x) // eslint-disable-line no-unused-vars
                 let id = this.getTileIdByCoords({x: destinationTile.x, y: destinationTile.y})
                     const data = {
                         sourceTileId: sourceTile.id,

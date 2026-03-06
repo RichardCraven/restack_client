@@ -80,8 +80,8 @@ export function Rogue(data, animationManager){
             throw new Error('moveCooldown must be defined for all units');
         }
         const enemyTarget = Object.values(combatants).find(e=>e.id === caller.targetId)
-        const distanceToTarget = data.methods.getDistanceToTarget(caller, enemyTarget),
-        laneDiff = data.methods.getLaneDifferenceToTarget(caller, enemyTarget)
+        const distanceToTarget = data.methods.getDistanceToTarget(caller, enemyTarget), // eslint-disable-line no-unused-vars
+        laneDiff = data.methods.getLaneDifferenceToTarget(caller, enemyTarget) // eslint-disable-line no-unused-vars
 
         // console.log('Rogue process move, pending attack: ', caller.pendingAttack);
         if(!caller.pendingAttack){
@@ -120,7 +120,7 @@ export function Rogue(data, animationManager){
             const target = combatants[caller.targetId];
         if(!target) return
             console.log('rogue initiating attack', caller.pendingAttack.name);
-            const distanceToTarget = data.methods.getDistanceToTarget(caller, target),
+            const distanceToTarget = data.methods.getDistanceToTarget(caller, target), // eslint-disable-line no-unused-vars
             laneDiff = data.methods.getLaneDifferenceToTarget(caller, target);
 
             switch(caller.pendingAttack.name){
