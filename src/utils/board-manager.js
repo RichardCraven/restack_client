@@ -850,6 +850,7 @@ export function BoardManager(){
                 this.removeTileFromBoard(destinationTile)
                 return 'item';
             case 'spell':
+                this.removeTileFromBoard(destinationTile)
                 this.triggerRitualEncounter();
             break;
             case 'gold':

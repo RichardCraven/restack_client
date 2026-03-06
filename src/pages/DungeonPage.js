@@ -21,6 +21,7 @@ import  CIcon  from '@coreui/icons-react';
 import { CButton, CFormSelect, CFormInput, CModal, CModalHeader, CModalTitle, CModalBody, CTabPane, CTabContent} from '@coreui/react';
 import * as images from '../utils/images'
 import { RITUALS } from '../utils/spells-table'
+import { RECIPES } from '../utils/spells-table'
 import '../styles/inventory-modal.scss'
 import '../styles/quests-modal.scss'
 import '../styles/camp-modal.scss'
@@ -79,12 +80,21 @@ const ModalInner = ({ modalType, updates, crew, tileSize, handleMemberClickRitua
                 </div>
             )}
 
+            {modalType === 'FoodComplete' && (
+                <div className="food-complete-zone">
+                    <div className="food-complete-icon">🍖</div>
+                    <h3 className="food-complete-title">Food Ready!</h3>
+                    {(updates || []).map((u, i) => <div key={i} className="food-complete-text">{u.text}</div>)}
+                    <p className="food-complete-note">Food has been added to your supplies.</p>
+                </div>
+            )}
+
             {modalType === 'Magic' && (
                 <div className="ritual-encounter-zone">
                     <div className="ritual-encounter-header">
                         <div className="ritual-encounter-title">✦ A Nexus of Power ✦</div>
                         <div className="ritual-encounter-subtitle">
-                            The air crackles with latent magic. Your wizard may study the flows of power and learn a ritual.
+                            The air crackles with latent magic. Your wizard or sage may study the flows of power and learn a ritual.
                         </div>
                     </div>
 
@@ -135,7 +145,10 @@ const ModalInner = ({ modalType, updates, crew, tileSize, handleMemberClickRitua
                                             <div className="ritual-card-header">
                                                 <div
                                                     className="ritual-card-icon"
-                                                    style={{ backgroundImage: `url(${images[ritual.icon] || ''})` }}
+                                                    style={{
+                                                        backgroundImage: `url(${images[ritual.icon] || ''})`,
+                                                        ...(ritual.key === 'wardingCircle' ? { filter: 'invert(1)' } : {}),
+                                                    }}
                                                 />
                                                 <div className="ritual-card-name">{ritual.name}</div>
                                             </div>
@@ -262,16 +275,37 @@ class DungeonPage extends React.Component {
                 subTypes: ritualSubTypes
             });
         }
-        // Add other class logic here as needed
-        let count = 0;
-        actions.forEach(a => {
-            (a.subTypes || []).forEach(s => {
-                count += s.count;
+        // Sage also gets the Prepare Ritual action (same ritual pool as wizard)
+        if (character.type === 'sage') {
+            const knownRituals = character.knownRituals || [];
+            const ritualSubTypes = Object.values(RITUALS).map(r => {
+                const isAvailable = knownRituals.includes(r.key);
+                return {
+                    type: r.name,
+                    ritualKey: r.key,
+                    iconUrl: images[r.icon] || '',
+                    available: isAvailable,
+                    count: 0
+                };
             });
-        });
-        let maximumReached = count >= 3;
+            actions.push({
+                type: 'ritual',
+                name: 'Prepare Ritual',
+                iconUrl: images['magic_moon_1'] || '',
+                subTypes: ritualSubTypes
+            });
+        }
+        // Add other class logic here as needed
+        // Compute per-action maximum: only count subtypes belonging to that action type.
+        // A shared global count caused the ritual sub-menu to show "maximum reached" when
+        // the wizard had 3+ etched glyphs — rituals have no count so they should never cap.
+        const getMaxReachedForAction = (action) => {
+            const actionCount = (action.subTypes || []).reduce((sum, s) => sum + (s.count || 0), 0);
+            return actionCount >= 3;
+        };
         return <div className='actions-container'>
             {actions.map((action, i) => {
+                const maximumReached = getMaxReachedForAction(action);
                 // find the active special action that matches THIS action's type
                 // (e.g. 'glyph'/'spell' row shows spell progress; 'ritual' row shows ritual progress)
                 const activeAction = (character.specialActions || []).find(a => {
@@ -310,7 +344,7 @@ class DungeonPage extends React.Component {
                         <div className="action-text">{action.name}</div>
                     </div>
                     {/* <div className="info-icon" style={{backgroundImage: `url(${images['info']})`}}></div> */}
-                    <div className={`action-sub-menu ${this.state.actionMenuTypeExpanded === action.type ? 'expanded' : ''}`}>
+                    <div className={`action-sub-menu ${(Array.isArray(this.state.actionMenuTypeExpanded) ? this.state.actionMenuTypeExpanded : []).includes(action.type) ? 'expanded' : ''}`}>
                         {maximumReached && <div className='max-reached'>maximum reached</div>}
                         {action.subTypes && action.subTypes.map((subType, j) => (
                             <div key={j} onClick={() => this.handleActionSubtypeClick(action, subType)}
@@ -489,6 +523,7 @@ class DungeonPage extends React.Component {
             , showQuestsPopup: false
             , showCampPopup: false
             , campWarningMessage: null
+            , showFoodPrepOverlay: false
         }
     // Native browser tooltip will be used for death-tracker; no custom tooltip state required.
         // Track timers/intervals created by this component so we can clear on unmount
@@ -566,7 +601,7 @@ class DungeonPage extends React.Component {
                 updates,
                 selectedCrewMember: initialSelectedCrewMember,
                 actionsTrayExpanded: initialSelectedCrewMember ? initialSelectedCrewMember.actionsTrayExpanded : false,
-                actionMenuTypeExpanded: initialSelectedCrewMember ? initialSelectedCrewMember.actionMenuTypeExpanded : false,
+                actionMenuTypeExpanded: initialSelectedCrewMember ? (Array.isArray(initialSelectedCrewMember.actionMenuTypeExpanded) ? initialSelectedCrewMember.actionMenuTypeExpanded : (initialSelectedCrewMember.actionMenuTypeExpanded ? [initialSelectedCrewMember.actionMenuTypeExpanded] : [])) : [],
                 // Do NOT open the modal at mount time — the CModal 'modal-open' body class
                 // from an immediately-visible modal can persist and trap all clicks if a
                 // second modal (quests popup) opens before CoreUI finishes the close animation.
@@ -744,6 +779,36 @@ class DungeonPage extends React.Component {
                     } catch (e) {}
                 }
             }
+
+            // Check meta.campCooking for completion
+            try {
+                const cookMeta = getMeta() || {};
+                if (cookMeta.campCooking && !cookMeta.campCooking.notified) {
+                    const cookEnd = new Date(cookMeta.campCooking.endDate);
+                    if (new Date() >= cookEnd) {
+                        const { recipeName, foodYield } = cookMeta.campCooking;
+                        cookMeta.food = (typeof cookMeta.food === 'number' ? cookMeta.food : 0) + foodYield;
+                        cookMeta.campCooking.notified = true;
+                        try { storeMeta(cookMeta); } catch(e) {}
+                        try { updateUserRequest(getUserId(), cookMeta).catch(() => {}); } catch(e) {}
+                        try { if (this.props.saveUserData) this.props.saveUserData(); } catch(e) {}
+                        if (!this.state.showModal && !this.state.showQuestsPopup) {
+                            this.setState({
+                                updates: [{ text: `${recipeName} is ready! +${foodYield} food` }],
+                                modalType: 'FoodComplete',
+                                showModal: true,
+                            }, () => {
+                                if (this.prepCompleteTimeout) clearTimeout(this.prepCompleteTimeout);
+                                this.prepCompleteTimeout = this._setTimeout(() => {
+                                    if (this.state.modalType === 'FoodComplete' && this.state.showModal) {
+                                        this.onUpdateModalClosed();
+                                    }
+                                }, 3500);
+                            });
+                        }
+                    }
+                }
+            } catch(e) {}
     }, 100);
         // Create a full-page canvas used to draw cooldown overlays at high frequency
         try {
@@ -1311,6 +1376,7 @@ class DungeonPage extends React.Component {
                         'fullhealth / full-health / revive',
                         'food — fill food count to 55',
                         'kill reset — reset death tracker to 0',
+                        'remove rituals — clear all learned rituals from every crew member',
                         'weapons t1 / weapons1 / weaponst1 — add 2 random tier-1 weapons',
                         'weapons t2 / weapons2 / weaponst2 — add 2 random tier-2 weapons',
                         'weapons t3 / weapons3 / weaponst3 — add 2 random tier-3 weapons',
@@ -1398,6 +1464,53 @@ class DungeonPage extends React.Component {
                             // Short delay so the output is visible before navigating
                             setTimeout(() => { window.location.href = '/mapmaker'; }, 400);
                         }
+                    } catch (err) {
+                        this.setState(prev => ({ devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, `Error: ${err && err.message ? err.message : err}`], devConsoleInput: '' }));
+                    }
+                    try { if (this.devConsoleInputRef.current) this.devConsoleInputRef.current.focus(); } catch (err) {}
+                    e.preventDefault();
+                    return;
+                }
+                // remove rituals — clear all learned rituals and in-progress ritual actions from every crew member
+                if (cmd === 'remove rituals' || cmd === 'removerituals' || cmd === 'clear rituals' || cmd === 'clearrituals') {
+                    try {
+                        const cm = this.props.crewManager;
+                        const ritualTypes = ['wizard', 'sage'];
+                        const affectedNames = [];
+                        if (cm && Array.isArray(cm.crew)) {
+                            cm.crew.forEach(member => {
+                                if (!member) return;
+                                let changed = false;
+                                if (Array.isArray(member.knownRituals) && member.knownRituals.length > 0) {
+                                    member.knownRituals = [];
+                                    changed = true;
+                                }
+                                // Also clear any in-progress ritual special actions
+                                if (Array.isArray(member.specialActions)) {
+                                    const before = member.specialActions.length;
+                                    member.specialActions = member.specialActions.filter(a => a && a.type !== 'ritual');
+                                    if (member.specialActions.length !== before) changed = true;
+                                }
+                                if (changed) affectedNames.push(member.name || member.type || member.id);
+                            });
+                        }
+                        const meta = getMeta() || {};
+                        meta.crew = cm.crew;
+                        try { storeMeta(meta); } catch(e){}
+                        try { updateUserRequest(getUserId(), meta).catch(()=>{}); } catch(e){}
+                        try { if (typeof this.props.saveUserData === 'function') this.props.saveUserData(); } catch(e){}
+                        // Refresh selectedCrewMember if affected
+                        try {
+                            if (this.state.selectedCrewMember && this.state.selectedCrewMember.id) {
+                                const updated = cm.crew.find(c => c && c.id === this.state.selectedCrewMember.id);
+                                if (updated) this.setState({ selectedCrewMember: { ...updated } });
+                            }
+                            this.forceUpdate();
+                        } catch(e){}
+                        const msg = affectedNames.length > 0
+                            ? `Rituals cleared for: ${affectedNames.join(', ')}`
+                            : 'No rituals found to clear';
+                        this.setState(prev => ({ devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, msg], devConsoleInput: '' }));
                     } catch (err) {
                         this.setState(prev => ({ devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, `Error: ${err && err.message ? err.message : err}`], devConsoleInput: '' }));
                     }
@@ -2363,7 +2476,7 @@ class DungeonPage extends React.Component {
         this.setState({
             selectedCrewMember: val,
             actionsTrayExpanded: foundMember ? foundMember.actionsTrayExpanded : false,
-            actionMenuTypeExpanded: foundMember ? foundMember.actionMenuTypeExpanded : false
+            actionMenuTypeExpanded: foundMember ? (Array.isArray(foundMember.actionMenuTypeExpanded) ? foundMember.actionMenuTypeExpanded : (foundMember.actionMenuTypeExpanded ? [foundMember.actionMenuTypeExpanded] : [])) : []
         })
     }
 
@@ -2409,7 +2522,7 @@ class DungeonPage extends React.Component {
         this.setState({
             selectedCrewMember: foundMember,
             actionsTrayExpanded: foundMember.actionsTrayExpanded,
-            actionMenuTypeExpanded: foundMember.actionMenuTypeExpanded
+            actionMenuTypeExpanded: Array.isArray(foundMember.actionMenuTypeExpanded) ? foundMember.actionMenuTypeExpanded : (foundMember.actionMenuTypeExpanded ? [foundMember.actionMenuTypeExpanded] : [])
         })
     }
     handleEquipmentItemClick = (item) => {
@@ -2827,7 +2940,7 @@ class DungeonPage extends React.Component {
                 levelTracker: levels,
                 selectedCrewMember,
                 actionsTrayExpanded: selectedCrewMember ? selectedCrewMember.actionsTrayExpanded : false,
-                actionMenuTypeExpanded: selectedCrewMember ? selectedCrewMember.actionMenuTypeExpanded: false
+                actionMenuTypeExpanded: selectedCrewMember ? (Array.isArray(selectedCrewMember.actionMenuTypeExpanded) ? selectedCrewMember.actionMenuTypeExpanded : (selectedCrewMember.actionMenuTypeExpanded ? [selectedCrewMember.actionMenuTypeExpanded] : [])) : []
             }
         })
     }
@@ -3198,7 +3311,9 @@ class DungeonPage extends React.Component {
         })
     }
     handleActionClick = (action) => {
-        let val = this.state.actionMenuTypeExpanded === action.type ? '' : action.type
+        const current = Array.isArray(this.state.actionMenuTypeExpanded) ? this.state.actionMenuTypeExpanded : [];
+        const isOpen = current.includes(action.type);
+        const val = isOpen ? current.filter(t => t !== action.type) : [...current, action.type];
 
         let foundMember = this.props.crewManager.crew.find(c=>c.selected);
         if(foundMember.actionMenuExpanded){
@@ -3350,6 +3465,13 @@ class DungeonPage extends React.Component {
                 }
                 this.setState({ showModal: false }, () => this._cleanupModalBodyClass());
             break;
+            case 'FoodComplete':
+                if (this.prepCompleteTimeout) {
+                    clearTimeout(this.prepCompleteTimeout);
+                    this.prepCompleteTimeout = null;
+                }
+                this.setState({ showModal: false }, () => this._cleanupModalBodyClass());
+            break;
             case 'Magic':
                 this.setState({keysLocked: false}, () => this._cleanupModalBodyClass())
             break;
@@ -3403,10 +3525,42 @@ class DungeonPage extends React.Component {
     handleCloseCampPopup = () => {
         try { this.setState({ showCampPopup: false }, () => this._cleanupModalBodyClass()); } catch(e) {}
     }
+
+    handleOpenFoodPrep = () => {
+        this.setState({ showFoodPrepOverlay: true });
+    }
+
+    handleFoodPrepBack = () => {
+        this.setState({ showFoodPrepOverlay: false });
+    }
+
+    handleStartRecipe = (recipe) => {
+        try {
+            const meta = getMeta() || {};
+            const currentFood = typeof meta.food === 'number' ? meta.food : 0;
+            if (currentFood < recipe.foodCost) return;
+            if (meta.campCooking && !meta.campCooking.notified) return; // already cooking
+            meta.food = currentFood - recipe.foodCost;
+            const startDate = new Date();
+            const endDate = new Date(Date.now() + recipe.cookTime);
+            meta.campCooking = {
+                recipeKey: recipe.key,
+                recipeName: recipe.name,
+                foodYield: recipe.foodYield,
+                startDate,
+                endDate,
+                notified: false,
+            };
+            try { storeMeta(meta); } catch(e) {}
+            try { updateUserRequest(getUserId(), meta).catch(() => {}); } catch(e) {}
+            try { if (typeof this.props.saveUserData === 'function') this.props.saveUserData(); } catch(e) {}
+        } catch(e) { console.warn('handleStartRecipe failed', e); }
+        this.setState({ showFoodPrepOverlay: false, showCampPopup: false }, () => this._cleanupModalBodyClass());
+    }
     render(){
         return (
         <div className={`dungeon-container ${this.state.ritualWrecked ? 'wrecked' : ''}`}>
-            <CModal className={this.state.modalType === 'PrepComplete' ? 'prep-complete-modal' : this.state.modalType === 'RitualComplete' ? 'ritual-complete-modal' : this.state.modalType === 'Magic' ? 'ritual-encounter-modal' : ''} alignment="center" visible={this.state.showModal} onClose={() => this.onUpdateModalClosed()}>
+            <CModal className={this.state.modalType === 'PrepComplete' ? 'prep-complete-modal' : this.state.modalType === 'RitualComplete' ? 'ritual-complete-modal' : this.state.modalType === 'Magic' ? 'ritual-encounter-modal' : this.state.modalType === 'FoodComplete' ? 'food-complete-modal' : ''} alignment="center" visible={this.state.showModal} onClose={() => this.onUpdateModalClosed()}>
                 <ModalInner
                     modalType={this.state.modalType}
                     updates={this.state.updates}
@@ -3492,7 +3646,7 @@ class DungeonPage extends React.Component {
                             <span className="camp-btn-icon">⚔️</span>
                             <span>Train</span>
                         </button>
-                        <button className="camp-action-btn" onClick={() => {}}>
+                        <button className="camp-action-btn" onClick={this.handleOpenFoodPrep}>
                             <span className="camp-btn-icon">🍖</span>
                             <span>Prepare Food</span>
                         </button>
@@ -3522,6 +3676,54 @@ class DungeonPage extends React.Component {
                         </div>
                     </div>
                 </CModalBody>
+
+                {/* Food prep overlay — slides over the modal body */}
+                {this.state.showFoodPrepOverlay && (() => {
+                    const meta = getMeta() || {};
+                    const currentFood = typeof meta.food === 'number' ? meta.food : 0;
+                    const isCookingAnything = meta.campCooking && !meta.campCooking.notified;
+                    return (
+                        <div className="food-prep-overlay">
+                            <div className="food-prep-header">
+                                <button className="food-prep-back" onClick={this.handleFoodPrepBack}>← Back</button>
+                                <div className="food-prep-title">🍖 Prepare Food</div>
+                                <div className="food-prep-supply">Supply: {currentFood} 🍖</div>
+                            </div>
+                            <div className="recipe-cards">
+                                {Object.values(RECIPES).map((recipe, i) => {
+                                    const canAfford = currentFood >= recipe.foodCost;
+                                    const isCookingThis = isCookingAnything && meta.campCooking.recipeKey === recipe.key;
+                                    const cookTimeLabel = recipe.cookTime >= 3600000
+                                        ? `${recipe.cookTime / 3600000}h`
+                                        : `${recipe.cookTime / 60000}m`;
+                                    return (
+                                        <div key={i} className={`recipe-card${!canAfford ? ' unaffordable' : ''}${isCookingThis ? ' cooking' : ''}`}>
+                                            <div className="recipe-card-icon">{recipe.icon}</div>
+                                            <div className="recipe-card-name">{recipe.name}</div>
+                                            <div className="recipe-card-description">{recipe.description}</div>
+                                            <div className="recipe-card-meta">
+                                                <span className="recipe-cost">🍖 -{recipe.foodCost}</span>
+                                                <span className="recipe-arrow">→</span>
+                                                <span className="recipe-yield">+{recipe.foodYield}</span>
+                                            </div>
+                                            <div className="recipe-card-duration">⏱ {cookTimeLabel}</div>
+                                            {isCookingThis ? (
+                                                <div className="recipe-card-btn cooking-badge">Cooking…</div>
+                                            ) : (
+                                                <div
+                                                    className={`recipe-card-btn${canAfford && !isCookingAnything ? ' start-btn' : ' disabled'}`}
+                                                    onClick={() => canAfford && !isCookingAnything && this.handleStartRecipe(recipe)}
+                                                >
+                                                    {isCookingAnything ? 'Busy' : canAfford ? 'Cook' : 'Not enough food'}
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    );
+                })()}
             </CModal>
             {/* <ExpositionPane></ExpositionPane> */}
             {this.props.boardManager.currentOrientation === 'B' && <div className="dark-mask"></div>}
@@ -3637,7 +3839,7 @@ class DungeonPage extends React.Component {
                             <CIcon icon={cilMenu} className={`menu-icon ${this.state.leftPanelExpanded ? 'expanded' : ''}`} size="sm"/>
                             Actions
                         </div>
-                        <div className={`actions-tray ${this.state.actionsTrayExpanded && this.state.actionMenuTypeExpanded ? 'double-expanded' : 
+                        <div className={`actions-tray ${this.state.actionsTrayExpanded && (Array.isArray(this.state.actionMenuTypeExpanded) ? this.state.actionMenuTypeExpanded.length > 0 : !!this.state.actionMenuTypeExpanded) ? 'double-expanded' : 
                         (this.state.actionsTrayExpanded ? 'expanded' : '')}`}>
                             {this.getCharacterActions(this.state.selectedCrewMember)}
                         </div>
@@ -3659,106 +3861,37 @@ class DungeonPage extends React.Component {
                                     const bottomLeft = findEquipped('pet');
                                     const ancillaryLeft = findEquipped('ancillary-left');
                                     const ancillaryRight = findEquipped('ancillary-right');
+                                    // Read-only slot — no click, just a name tooltip on hover
+                                    const ReadOnlySlot = ({ item, slotClass }) => (
+                                        <div className={`equip-slot ${slotClass} ep-slot-wrapper`}>
+                                            {item && (
+                                                <>
+                                                    <Tile
+                                                        id={item.id}
+                                                        data={item}
+                                                        tileSize={this.state.tileSize}
+                                                        image={item.icon}
+                                                        contains={item.name ? item.name.replace(' ', '_') : null}
+                                                        color={item.color}
+                                                        editMode={false}
+                                                        type={'inventory-tile'}
+                                                        handleClick={() => {}}
+                                                        handleHover={() => {}}
+                                                    />
+                                                    <div className="ep-slot-name">{item.name}</div>
+                                                </>
+                                            )}
+                                        </div>
+                                    );
                                     return (
                                         <>
-                                            <div className='equip-slot slot-chest'>{chest && (
-                                                <Tile
-                                                    id={chest.id}
-                                                    data={chest}
-                                                    tileSize={this.state.tileSize}
-                                                    image={chest.icon}
-                                                    contains={chest.name ? chest.name.replace(' ', '_') : null}
-                                                    color={chest.color}
-                                                    editMode={false}
-                                                    type={'inventory-tile'}
-                                                    handleClick={() => this.handleEquipmentItemClick(chest)}
-                                                    handleHover={this.handleInventoryTileHover}
-                                                />
-                                            )}</div>
-                                            <div className='equip-slot slot-right'>{right && (
-                                                <Tile
-                                                    id={right.id}
-                                                    data={right}
-                                                    tileSize={this.state.tileSize}
-                                                    image={right.icon}
-                                                    contains={right.name ? right.name.replace(' ', '_') : null}
-                                                    color={right.color}
-                                                    editMode={false}
-                                                    type={'inventory-tile'}
-                                                    handleClick={() => this.handleEquipmentItemClick(right)}
-                                                    handleHover={this.handleInventoryTileHover}
-                                                />
-                                            )}</div>
-                                            <div className='equip-slot slot-left'>{left && (
-                                                <Tile
-                                                    id={left.id}
-                                                    data={left}
-                                                    tileSize={this.state.tileSize}
-                                                    image={left.icon}
-                                                    contains={left.name ? left.name.replace(' ', '_') : null}
-                                                    color={left.color}
-                                                    editMode={false}
-                                                    type={'inventory-tile'}
-                                                    handleClick={() => this.handleEquipmentItemClick(left)}
-                                                    handleHover={this.handleInventoryTileHover}
-                                                />
-                                            )}</div>
-                                            <div className='equip-slot slot-head'>{head && (
-                                                <Tile
-                                                    id={head.id}
-                                                    data={head}
-                                                    tileSize={this.state.tileSize}
-                                                    image={head.icon}
-                                                    contains={head.name ? head.name.replace(' ', '_') : null}
-                                                    color={head.color}
-                                                    editMode={false}
-                                                    type={'inventory-tile'}
-                                                    handleClick={() => this.handleEquipmentItemClick(head)}
-                                                    handleHover={this.handleInventoryTileHover}
-                                                />
-                                            )}</div>
-                                            <div className='equip-slot slot-ancillary-left'>{ancillaryLeft && (
-                                                <Tile
-                                                    id={ancillaryLeft.id}
-                                                    data={ancillaryLeft}
-                                                    tileSize={this.state.tileSize}
-                                                    image={ancillaryLeft.icon}
-                                                    contains={ancillaryLeft.name ? ancillaryLeft.name.replace(' ', '_') : null}
-                                                    color={ancillaryLeft.color}
-                                                    editMode={false}
-                                                    type={'inventory-tile'}
-                                                    handleClick={() => this.handleEquipmentItemClick(ancillaryLeft)}
-                                                    handleHover={this.handleInventoryTileHover}
-                                                />
-                                            )}</div>
-                                            <div className='equip-slot slot-ancillary-right'>{ancillaryRight && (
-                                                <Tile
-                                                    id={ancillaryRight.id}
-                                                    data={ancillaryRight}
-                                                    tileSize={this.state.tileSize}
-                                                    image={ancillaryRight.icon}
-                                                    contains={ancillaryRight.name ? ancillaryRight.name.replace(' ', '_') : null}
-                                                    color={ancillaryRight.color}
-                                                    editMode={false}
-                                                    type={'inventory-tile'}
-                                                    handleClick={() => this.handleEquipmentItemClick(ancillaryRight)}
-                                                    handleHover={this.handleInventoryTileHover}
-                                                />
-                                            )}</div>
-                                            <div className='equip-slot slot-pet'>{bottomLeft && (
-                                                <Tile
-                                                    id={bottomLeft.id}
-                                                    data={bottomLeft}
-                                                    tileSize={this.state.tileSize}
-                                                    image={bottomLeft.icon}
-                                                    contains={bottomLeft.name ? bottomLeft.name.replace(' ', '_') : null}
-                                                    color={bottomLeft.color}
-                                                    editMode={false}
-                                                    type={'inventory-tile'}
-                                                    handleClick={() => this.handleEquipmentItemClick(bottomLeft)}
-                                                    handleHover={this.handleInventoryTileHover}
-                                                />
-                                            )}</div>
+                                            <ReadOnlySlot item={chest}        slotClass="slot-chest" />
+                                            <ReadOnlySlot item={right}        slotClass="slot-right" />
+                                            <ReadOnlySlot item={left}         slotClass="slot-left" />
+                                            <ReadOnlySlot item={head}         slotClass="slot-head" />
+                                            <ReadOnlySlot item={ancillaryLeft}  slotClass="slot-ancillary-left" />
+                                            <ReadOnlySlot item={ancillaryRight} slotClass="slot-ancillary-right" />
+                                            <ReadOnlySlot item={bottomLeft}   slotClass="slot-pet" />
                                         </>
                                     )
                                 })()}
@@ -4087,7 +4220,7 @@ class DungeonPage extends React.Component {
                             }
                             return (
                                 <div className="crew-action-item action-row" style={{display:'flex', flexDirection:'column', gap:6}}>
-                                    <div onClick={() => this.handleOpenCampPopup()} style={{cursor:'pointer', paddingLeft: '15px'}}>Set Up Camp</div>
+                                    <div onClick={() => this.handleOpenCampPopup()} style={{cursor:'pointer', paddingLeft: '15px'}}>Go to camp</div>
                                     {this.state.campWarningMessage && (
                                         <div style={{paddingLeft: 15, fontSize: 11, color: '#e74c3c', lineHeight: 1.4}}>
                                             {this.state.campWarningMessage}

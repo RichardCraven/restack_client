@@ -620,7 +620,8 @@
     }
     .left-side-panel{
         height: 100%;
-        overflow: hidden;
+        overflow-y: auto;
+        overflow-x: hidden;
         border-right: 1px solid lightgrey;
         z-index: 3;
         width: 200px;
@@ -631,7 +632,6 @@
         &.expanded{
             left: 0;
             border-right: 1px solid lightgrey;
-            // min-width: 200px;
         }
         
         .crew-container{
@@ -853,7 +853,7 @@
                 }
                 &.double-expanded{
                     height: auto;
-                    min-height: 150px;
+                    min-height: 50px;
                     overflow: visible;
                 }
                 .actions-container{
@@ -882,10 +882,9 @@
                             }
                         }
                         .action-hover-wrapper{
-                            // width: calc(100% - 40px);
                             display: flex;
                             flex-direction: row;
-                            justify-content: center;
+                            justify-content: flex-start;
                             cursor: pointer;
                             padding: 5px 10px;
                             position: relative;
@@ -1000,6 +999,47 @@
                     flex: 0 0 auto;
                     position: relative;
                     margin-top: -16px;
+                }
+                /* body silhouette image — mirrors inventory-modal behaviour */
+                .crew-body .crew-body-image {
+                    position: absolute;
+                    inset: 0;
+                    background-size: 130%;
+                    background-repeat: no-repeat;
+                    background-position: center;
+                    opacity: 0.5;
+                    z-index: 0;
+                    pointer-events: none;
+                }
+                .crew-body .equip-slot {
+                    z-index: 1;
+                }
+                /* read-only slot wrapper — blocks clicks, shows name on hover */
+                .crew-body .ep-slot-wrapper {
+                    pointer-events: auto;
+                    cursor: default;
+                    * {
+                        pointer-events: none;
+                    }
+                    &:hover .ep-slot-name {
+                        opacity: 1;
+                    }
+                }
+                .crew-body .ep-slot-name {
+                    position: absolute;
+                    bottom: calc(100% + 4px);
+                    left: 50%;
+                    transform: translateX(-50%);
+                    background: rgba(0, 0, 0, 0.82);
+                    color: #e8e8e8;
+                    font-size: 10px;
+                    white-space: nowrap;
+                    padding: 2px 6px;
+                    border-radius: 3px;
+                    pointer-events: none;
+                    opacity: 0;
+                    transition: opacity 0.15s ease;
+                    z-index: 10;
                 }
                 /* replicate equip-slot styling from inventory-modal so slots show in left panel */
                 .equip-slot{

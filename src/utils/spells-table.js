@@ -37,3 +37,35 @@ export const RITUALS = {
     flavorText: '"Space is merely a suggestion to those who know how to argue."',
   },
 };
+
+// Camp cooking recipes — each has a stable key, display name, description, cooking time,
+// food cost (deducted immediately on start) and food yield (added on completion).
+export const RECIPES = {
+  fieldBroth: {
+    key: 'fieldBroth',
+    name: 'Field Broth',
+    icon: '🍲',
+    cookTime: 30 * 60 * 1000,        // 30 minutes
+    foodCost: 20,
+    foodYield: 50,
+    description: 'A quick, nourishing broth made from camp rations. Simple but effective.',
+  },
+  heartySoup: {
+    key: 'heartySoup',
+    name: 'Hearty Soup',
+    icon: '🥘',
+    cookTime: 2 * 60 * 60 * 1000,    // 2 hours
+    foodCost: 50,
+    foodYield: 120,
+    description: 'A thick, slow-cooked stew that fortifies the crew for hard days ahead.',
+  },
+  ironFeast: {
+    key: 'ironFeast',
+    name: 'Iron Feast',
+    icon: '🍖',
+    cookTime: 6 * 60 * 60 * 1000,    // 6 hours
+    foodCost: 100,
+    foodYield: 250,
+    description: 'A legendary camp meal. Takes all day, feeds the crew like kings.',
+  },
+};
