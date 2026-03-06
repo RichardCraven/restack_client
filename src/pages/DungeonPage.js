@@ -1558,7 +1558,6 @@ class DungeonPage extends React.Component {
                         el._campAnimApplied = true;
                     }
                 } catch (e) {}
-                // try { console.log(`placeholderRef: registered ${id} start=${s} end=${e}`); } catch(e){}
                 // ensure the draw loop is running when a new active placeholder is registered
                 try {
                     if (!this.cooldownAnimationFrame && (this.hasActiveCooldowns() || this._forcedDraw)) {
@@ -1566,11 +1565,36 @@ class DungeonPage extends React.Component {
                     }
                 } catch (e) {}
             } else {
-                // element unmounted, remove from registry
-                this._placeholderRegistry.delete(id);
-                // try { console.log(`placeholderRef: unregistered ${id}`); } catch(e){}
-                // if no active placeholders, stop the draw loop and clear canvas
+                // React fires ref=null just before firing ref=el on the same element during
+                // re-renders (e.g. the respawn interval setState fires every second and causes
+                // the whole component to re-render). Deleting the registry entry here and
+                // re-adding it a frame later creates a gap that the canvas draws a blank frame
+                // into, causing visible flicker.
+                // Instead: just null out the el reference so the draw loop skips this entry,
+                // but keep the entry itself so the start/end times survive the re-render.
+                // The next ref=el call will restore the live element.
+                const existing = this._placeholderRegistry.get(id);
+                if (existing) {
+                    existing.el = null;
+                }
+                // Only fully remove the entry (and possibly stop the loop) if this id was
+                // never re-registered within the same microtask — schedule cleanup deferred.
+                this._schedulePlaceholderCleanup(id);
+            }
+        } catch (e) {
+            // ignore
+        }
+    }
+
+    // Deferred cleanup: if a placeholder id has el===null after a short delay it has
+    // truly unmounted (component removed), so stop the loop if no more active entries.
+    _schedulePlaceholderCleanup = (id) => {
+        try {
+            setTimeout(() => {
                 try {
+                    const entry = this._placeholderRegistry.get(id);
+                    if (!entry || entry.el !== null) return; // re-mounted, skip
+                    this._placeholderRegistry.delete(id);
                     if (!this.hasActiveCooldowns() && !this._forcedDraw && this.cooldownAnimationFrame) {
                         cancelAnimationFrame(this.cooldownAnimationFrame);
                         this.cooldownAnimationFrame = null;
@@ -1579,11 +1603,9 @@ class DungeonPage extends React.Component {
                             if (ctx) ctx.clearRect(0, 0, this.cooldownCanvas.width, this.cooldownCanvas.height);
                         }
                     }
-                } catch (e) {}
-            }
-        } catch (e) {
-            // ignore
-        }
+                } catch(e) {}
+            }, 100);
+        } catch(e) {}
     }
     logMeta = () => {
         const meta = getMeta();
@@ -3450,7 +3472,6 @@ class DungeonPage extends React.Component {
                                     contains={member.type}
                                     data={member}
                                     color={member.color}
-                                    backgroundColor={member.color}
                                     editMode={false}
                                     type={'crew-tile'}
                                     handleClick={() => {}}

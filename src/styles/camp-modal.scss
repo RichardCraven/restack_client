@@ -90,6 +90,10 @@
     flex-direction: column;
     align-items: center;
     gap: 4px;
+    /* Override tile background to match right-panel crew tiles */
+    .tile.crew-tile {
+      background-color: lightgrey !important;
+    }
   }
 
   .camp-crew-name {
