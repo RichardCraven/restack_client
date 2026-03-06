@@ -30,14 +30,16 @@ const MonstersCombatGrid = ({
     const [showMonsterHitFlash, setShowMonsterHitFlash] = React.useState(false);
     const prevMonsterWounded = React.useRef(false);
     const monsterFlashTimeout = React.useRef();
-    const monsterFlashHasOccurred = React.useRef(false); // tracker for first hit-flash only
-    const monsterDiagInterval = React.useRef();
+    const monsterFlashHasOccurred = React.useRef(false); // eslint-disable-line no-unused-vars
+    const monsterDiagInterval = React.useRef(); // eslint-disable-line no-unused-vars
     const [minionHitFlash, setMinionHitFlash] = React.useState({});
     const prevMinionWounded = React.useRef({});
 
     // Effect for main monster hit flash (trigger on every wound event)
+    const monsterId = monster?.id;
+    const monsterWounded = battleData[monsterId]?.wounded;
     React.useEffect(() => {
-        const wounded = !!battleData[monster?.id]?.wounded;
+        const wounded = !!battleData[monsterId]?.wounded;
         if (wounded && !prevMonsterWounded.current) {
             setShowMonsterHitFlash(true);
             setMonsterHitFlashKey(k => k + 1);
@@ -66,7 +68,7 @@ const MonstersCombatGrid = ({
                 monsterFlashTimeout.current = null;
             }
         };
-    }, [battleData[monster?.id]?.wounded, monster?.id]);
+    }, [battleData, monster, monsterWounded, monsterId]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Effect for minion hit flash (only on new wound event, and clean up removed minions)
     React.useEffect(() => {

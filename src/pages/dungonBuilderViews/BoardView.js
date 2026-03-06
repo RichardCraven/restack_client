@@ -3,12 +3,12 @@ import '@coreui/coreui/dist/css/coreui.min.css'
 import '../../styles/dungeon-board.scss'
 import '../../styles/map-maker.scss'
 import Tile from '../../components/tile'
-import { CDropdown, CDropdownToggle, CDropdownMenu, CDropdownItem, CCollapse} from '@coreui/react';
-import  CIcon  from '@coreui/icons-react'
-import { cilCaretRight } from '@coreui/icons';
+// import { CDropdown, CDropdownToggle, CDropdownMenu, CDropdownItem, CCollapse} from '@coreui/react';
+// import  CIcon  from '@coreui/icons-react'
+// import { cilCaretRight } from '@coreui/icons';
 import '../../styles/dungeon-board.scss'
 import '../../styles/map-maker.scss'
-import * as images from '../../utils/images'
+// import * as images from '../../utils/images'
 
 
 class BoardView extends React.Component {

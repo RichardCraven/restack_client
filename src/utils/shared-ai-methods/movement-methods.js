@@ -32,9 +32,7 @@ const teleportToBackLine = (caller, combatants, onTeleport) => {
         }
     }
 }
-const clone = (val) => {
-    return JSON.parse(JSON.stringify(val))
-}
+// const clone = (val) => { return JSON.parse(JSON.stringify(val)) }
 const MAX_DEPTH = 7
 // ^ index 7, actual col count is 8
 const MAX_LANES = 5
@@ -69,8 +67,8 @@ const isOutOfBounds = (coords) => {
 const isAvailableToMoveInto = (coords, combatants) => {
     return !isOutOfBounds(coords) && !someoneIsInCoords(coords, combatants)
 }
-const someoneElseIsInCoords = (caller, coords)=>{
-    return Object.values(this.combatants).filter(c=>c.id!==caller.id).some(e=>JSON.stringify(e.coordinates) == JSON.stringify(coords))
+const someoneElseIsInCoords = (caller, coords)=>{ // eslint-disable-line no-unused-vars
+    return Object.values(this.combatants).filter(c=>c.id!==caller.id).some(e=>JSON.stringify(e.coordinates) === JSON.stringify(coords))
 }
 
 const goTowards = (caller, combatants, targetTile) => {
@@ -86,7 +84,7 @@ const goTowards = (caller, combatants, targetTile) => {
     //     return Object.values(combatants).filter(c=>c.id!==caller.id).some(e=>JSON.stringify(e.coordinates) == JSON.stringify(coords))
     // }
     const targetIsInCoords = (coords)=>{
-        return JSON.stringify(targetTile) == JSON.stringify(coords);
+        return JSON.stringify(targetTile) === JSON.stringify(coords);
     }
 
     const targetIsNorthWest = targetTile.y < caller.coordinates.y && targetTile.x < caller.coordinates.x,
@@ -282,7 +280,7 @@ const goTowards = (caller, combatants, targetTile) => {
 export const MovementMethods = {
     teleportToBackLine,
     goUp: (caller, combatants) => {
-        const enemyTarget = Object.values(combatants).find(e=>e.id === caller.targetId);
+        // const enemyTarget = Object.values(combatants).find(e=>e.id === caller.targetId);
         let coords = caller.coordinates;
         let newCoords = JSON.parse(JSON.stringify(coords))
         let amount = window.pickRandom([1,2])
@@ -295,7 +293,7 @@ export const MovementMethods = {
         caller.coordinates = newCoords;
     },
     goDown: (caller, combatants) => {
-        const enemyTarget = Object.values(combatants).find(e=>e.id === caller.targetId);
+        // const enemyTarget = Object.values(combatants).find(e=>e.id === caller.targetId);
         let coords = caller.coordinates;
         let newCoords = JSON.parse(JSON.stringify(coords))
         let amount = window.pickRandom([1,2])
@@ -309,7 +307,7 @@ export const MovementMethods = {
     },
     centerBack: (caller, combatants) => {
         const enemyTarget = Object.values(combatants).find(e=>e.id === caller.targetId);
-        const {N,E,S,W,NW,SW,NE,SE} = getSurroundings(caller.coordinates)
+        // const {N,E,S,W,NW,SW,NE,SE} = getSurroundings(caller.coordinates)
 
     let centerTile;
     if(PC_TYPES.includes(caller.type)){
@@ -346,16 +344,16 @@ export const MovementMethods = {
         let newCoords = JSON.parse(JSON.stringify(caller.coordinates))
         const enemyTarget = Object.values(combatants).find(e=>e.id === caller.targetId)
         let targetTile = {x: enemyTarget.coordinates.x, y: enemyTarget.coordinates.y}
-        const {N,E,S,W,NW,SW,NE,SE} = getSurroundings(caller.coordinates)
+        const {N,E,S,W,NW,SW,NE,SE} = getSurroundings(caller.coordinates) // eslint-disable-line no-unused-vars
 
-        const targetIsNorthWest = targetTile.y < caller.coordinates.y && targetTile.x < caller.coordinates.x,
+        const targetIsNorthWest = targetTile.y < caller.coordinates.y && targetTile.x < caller.coordinates.x, // eslint-disable-line no-unused-vars
         targetIsNorth = targetTile.y < caller.coordinates.y && targetTile.x === caller.coordinates.x,
-        targetIsNorthEast = targetTile.y < caller.coordinates.y && targetTile.x > caller.coordinates.x,
+        targetIsNorthEast = targetTile.y < caller.coordinates.y && targetTile.x > caller.coordinates.x, // eslint-disable-line no-unused-vars
         targetIsWest = targetTile.y === caller.coordinates.y && targetTile.x < caller.coordinates.x,
-        targetIsEast = targetTile.y === caller.coordinates.y && targetTile.x > caller.coordinates.x,
-        targetIsSouthWest = targetTile.y > caller.coordinates.y && targetTile.x < caller.coordinates.x,
+        targetIsEast = targetTile.y === caller.coordinates.y && targetTile.x > caller.coordinates.x, // eslint-disable-line no-unused-vars
+        targetIsSouthWest = targetTile.y > caller.coordinates.y && targetTile.x < caller.coordinates.x, // eslint-disable-line no-unused-vars
         targetIsSouth = targetTile.y > caller.coordinates.y && targetTile.x === caller.coordinates.x,
-        targetIsSouthEast = targetTile.y > caller.coordinates.y && targetTile.x > caller.coordinates.x;
+        targetIsSouthEast = targetTile.y > caller.coordinates.y && targetTile.x > caller.coordinates.x; // eslint-disable-line no-unused-vars
 
 
         if(targetIsNorth){
@@ -425,18 +423,17 @@ export const MovementMethods = {
     },
     closeTheGap: (caller, combatants) => {
         const enemyTarget = Object.values(combatants).find(e=>e.id === caller.targetId)
-        const isDirectlyAboveCaller = (caller, combatant) => {
-            const combatantIsDirectlyAbove = (combatant.coordinates.y === caller.coordinates.y-1 && combatant.coordinates.x === caller.coordinates.x)
-            return combatantIsDirectlyAbove;
-        }
-        const isDirectlyBelowCaller = (caller, combatant) => {
-            const combatantIsDirectlyBelow = (combatant.coordinates.y === caller.coordinates.y+1 && combatant.coordinates.x === caller.coordinates.x)
-            return combatantIsDirectlyBelow;
-        }
+        // const isDirectlyAboveCaller = (caller, combatant) => {
+        //     const combatantIsDirectlyAbove = (combatant.coordinates.y === caller.coordinates.y-1 && combatant.coordinates.x === caller.coordinates.x)
+        //     return combatantIsDirectlyAbove;
+        // }
+        // const isDirectlyBelowCaller = (caller, combatant) => {
+        //     const combatantIsDirectlyBelow = (combatant.coordinates.y === caller.coordinates.y+1 && combatant.coordinates.x === caller.coordinates.x)
+        //     return combatantIsDirectlyBelow;
+        // }
         if(enemyTarget){
             const coords = caller.coordinates;
             let targetTile = {x: enemyTarget.coordinates.x, y: enemyTarget.coordinates.y}
-            let newCoords = JSON.parse(JSON.stringify(coords))
             // If already orthogonally adjacent to the target, don't move — let the attack system handle it
             const dx = Math.abs(targetTile.x - coords.x);
             const dy = Math.abs(targetTile.y - coords.y);
@@ -492,7 +489,7 @@ export const MovementMethods = {
     },
     stayOnBackRow: (caller, combatants) => {
         const enemyTarget = Object.values(combatants).find(e=>e.id === caller.targetId)
-        const distanceToTarget = Methods.getDistanceToTarget(caller, enemyTarget),
+        const distanceToTarget = Methods.getDistanceToTarget(caller, enemyTarget), // eslint-disable-line no-unused-vars
         laneDiff = Methods.getLaneDifferenceToTarget(caller, enemyTarget)
 
         if(enemyTarget){

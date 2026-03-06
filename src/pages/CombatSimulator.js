@@ -1,8 +1,8 @@
 import React from 'react'
 import { INTERVALS, INTERVAL_DISPLAY_NAMES } from '../utils/shared-constants';
-import {storeMeta, getMeta, getUserId} from '../utils/session-handler';
+import {storeMeta, getMeta} from '../utils/session-handler';
 import { CrewManager } from '../utils/crew-manager'
-import { Route, Switch, Redirect} from "react-router-dom";
+import { Redirect} from "react-router-dom";
 import MonsterBattle from './sub-views/MonsterBattle';
 
 
@@ -71,7 +71,7 @@ class CrewManagerPage extends React.Component{
     // initialize with a deep-cloned options array to avoid sharing references
     this.tempCrewManager.initializeCrew(clone(options));
     let wizard = this.tempCrewManager.crew.find(e=>e.type==='wizard')
-    let wizclone = clone(wizard);
+    // let wizclone = clone(wizard);
 
     // Example for new structure:
     // let action = {
@@ -156,7 +156,7 @@ class CrewManagerPage extends React.Component{
     window.removeEventListener('beforeunload', this.componentCleanup); 
   }
   getDungeonDetails = async () => {
-    const user = getMeta();
+    // const user = getMeta();
   }
   singleClick = (crewMember) => {
     this.setState({
@@ -336,7 +336,7 @@ combatKeyDownHandler = (event) => {
     }
 }
 combatKeyUpListener = (event) => {
-    let key = event.key, code = event.code;
+    let key = event.key;
     switch(key){
         case 'Shift':
             this.setState({
@@ -356,6 +356,8 @@ combatKeyUpListener = (event) => {
             this.setState({
                 specialDown: false
             })
+        break;
+        default:
         break;
     }
 }

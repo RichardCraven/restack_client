@@ -535,7 +535,7 @@ class DungeonPage extends React.Component {
 
     // Reverted to native browser tooltip; no custom tooltip lifecycle is necessary.
     
-    componentWillMount(){
+    UNSAFE_componentWillMount(){
         let tileSize = this.getTileSize(),
             boardSize = tileSize*15;
         this.initializeListeners();

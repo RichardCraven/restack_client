@@ -2,14 +2,14 @@ import React from 'react';
 import * as images from '../../utils/images';
 import Overlay from '../Overlay'
 
-const MAX_DEPTH = 7;
-const NUM_COLUMNS = 8;
+const MAX_DEPTH = 7; // eslint-disable-line no-unused-vars
+const NUM_COLUMNS = 8; // eslint-disable-line no-unused-vars
 // ^ means 8 squares, account for depth of 0 is far left
-const MAX_ROWS = 5;
+const MAX_ROWS = 5; // eslint-disable-line no-unused-vars
 const TILE_SIZE = 100;
 const SHOW_TILE_BORDERS = false;
-const SHOW_COMBAT_BORDER_COLORS = true;
-const SHOW_INTERACTION_PANE=true
+const SHOW_COMBAT_BORDER_COLORS = true; // eslint-disable-line no-unused-vars
+const SHOW_INTERACTION_PANE=true // eslint-disable-line no-unused-vars
 
 
 export default function FightersCombatGrid(props) {
@@ -82,7 +82,7 @@ export default function FightersCombatGrid(props) {
         setWeaponPositions(newWeaponPos);
         setActionBarPositions(newActionBarPos);
         // Recompute when battle data changes, overlays change, or crew list changes
-    }, [props.crew, props.battleData, props.animationOverlays, props.selectedFighter]);
+    }, [props.crew, props.battleData, props.animationOverlays, props.selectedFighter]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Track when an attack animation should play visually (decoupled from the
     // battle state). We set a transient flag when the fighter begins attacking

@@ -1,6 +1,4 @@
-const clone = (val) => {
-    return JSON.parse(JSON.stringify(val))
-    }
+// const clone = (val) => { return JSON.parse(JSON.stringify(val)) }
 export function Soldier(data, utilMethods, animationManager, overlayManager){
     this.MAX_DEPTH = data.MAX_DEPTH;
     this.MAX_LANES = data.MAX_LANES;
@@ -377,6 +375,8 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
                     break;
                 }
             break;
+            default:
+            break;
         }
     }
     this.initiateAttack = async (caller, manualAttack, combatants) => {
@@ -403,7 +403,7 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
             }
             return val;
         };
-        const facingRight = caller.facing === 'right';
+        const facingRight = caller.facing === 'right'; // eslint-disable-line no-unused-vars
         const target = combatants[caller.targetId];
         // Prefer a facing derived from the current target position when a target exists
         // so vertical (up/down) attacks are used when appropriate.
@@ -431,8 +431,8 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
             }
         } else {
             await (async () => {
-                const distanceToTarget = data.methods.getDistanceToTarget(caller, target),
-                laneDiff = data.methods.getLaneDifferenceToTarget(caller, target);
+                const distanceToTarget = data.methods.getDistanceToTarget(caller, target), // eslint-disable-line no-unused-vars
+                laneDiff = data.methods.getLaneDifferenceToTarget(caller, target); // eslint-disable-line no-unused-vars
                 // debugger
                 switch(caller.pendingAttack.name){
                     case 'sword swing': {
@@ -465,7 +465,6 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
         const sourceTileId = this.animationManager.getTileIdByCoords(callerCoords);
         let targetTileId;
         if(facing){
-            let id;
             switch(facing){
                 case 'right':
                     if(callerCoords.x === this.MAX_DEPTH){
@@ -498,6 +497,8 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
                         let coordsToCheck = {x: callerCoords.x, y: callerCoords.y+1}
                         targetTileId = this.animationManager.getTileIdByCoords(coordsToCheck);
                     }
+                break;
+                default:
                 break;
             }
         }

@@ -42,14 +42,14 @@ export default function AnimationTile(props) {
         } else {
             setChargingUp(false);
         }
-    }, [props.animationType, props.animationData?.chargingUpKey]);
+    }, [props.animationType, props.animationData?.chargingUpKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Always use coordinate lookups for tile id
     // If AnimationManager is available via props, use getTileIdByCoords
-    let tileIdFromCoords = null;
-    if (props.animationManager && typeof props.animationManager.getTileIdByCoords === 'function' && props.x !== undefined && props.y !== undefined) {
-        tileIdFromCoords = props.animationManager.getTileIdByCoords({ x: props.x, y: props.y });
-    }
+    // let tileIdFromCoords = null;
+    // if (props.animationManager && typeof props.animationManager.getTileIdByCoords === 'function' && props.x !== undefined && props.y !== undefined) {
+    //     tileIdFromCoords = props.animationManager.getTileIdByCoords({ x: props.x, y: props.y });
+    // }
 
     switch(props.animationType){
         case 'punch':
@@ -101,10 +101,9 @@ export default function AnimationTile(props) {
                 // ...existing code...
                 // debugger
                 if(!swordX || !swordY){
-                    let a = centerX
-                    let b = radius * Math.cos(angle)
-                    let c = tileSize * 0.3
-                    // ...existing code...
+                    // let a = centerX
+                    // let b = radius * Math.cos(angle)
+                    // let c = tileSize * 0.3
                     debugger
                 }
                 // // image = images['sword_white'];

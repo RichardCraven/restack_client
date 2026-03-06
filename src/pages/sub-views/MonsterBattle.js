@@ -7,20 +7,20 @@ import AnimationGrid from '../../components/animation-grid';
 import { CModal } from '@coreui/react';
 import '../../styles/inventory-modal.scss';
 import { Redirect } from "react-router-dom";
-import {storeMeta, getMeta, getUserId, getUserName} from '../../utils/session-handler';
+import {storeMeta, getMeta, getUserId} from '../../utils/session-handler';
 import {
         updateUserRequest,
         deleteDungeonRequest
     } from '../../utils/api-handler';
 import Canvas from '../../components/Canvas/canvas'
-import Overlay from '../../components/Overlay'
-import CanvasMagicMissile from '../../components/Canvas/canvas_magic_missile'
+// import Overlay from '../../components/Overlay'
+// import CanvasMagicMissile from '../../components/Canvas/canvas_magic_missile'
 import FightersCombatGrid from '../../components/combat-panes/fighters'
 import MonstersCombatGrid from '../../components/combat-panes/monsters'
 
 import { INTERVALS, INTERVAL_DISPLAY_NAMES } from '../../utils/shared-constants';
 
-const MAX_DEPTH = 7;
+// const MAX_DEPTH = 7;
 const NUM_COLUMNS = 8;
 // ^ means 8 squares, account for depth of 0 is far left
 
@@ -32,11 +32,11 @@ const SHOW_INTERACTION_PANE = true;
 const SHOW_MONSTER_IDS = false;
 const SHOW_COORDINATES = false;
 
-const RANGES = {
-    close: 1,
-    medium: 3,
-    far: 5
-}
+// const RANGES = {
+//     close: 1,
+//     medium: 3,
+//     far: 5
+// }
 
 // Duration (ms) must match the CSS death animation/transition duration
 const DEATH_ANIMATION_DURATION = 2200;
@@ -516,7 +516,6 @@ class MonsterBattle extends React.Component {
     }
     fighterPortraitClicked = (id) => {
     const selectedFighter = this.state.battleData[id];
-    let val = (this.getFighterDetails(selectedFighter)?.coordinates.x * 100) + (selectedFighter?.facing === 'right' ? 0 : (100 - (this.props.combatManager.getRangeWidthVal(selectedFighter) * 100) ))
     selectedFighter.portrait = this.props.crew.find(e=>e.id === id).portrait
         if(this.state.showCrosshair){
             this.props.combatManager.queueAction(this.state.selectedFighter.id, id, this.state.selectedAttack)
@@ -735,7 +734,7 @@ class MonsterBattle extends React.Component {
                     // created specialAction objects.
                     try {
                         const cm = this.props && this.props.combatManager;
-                        const def = cm && (cm.specialsMatrix && cm.specialsMatrix['magic_missile'] || cm.attacksMatrix && cm.attacksMatrix['magic_missile']);
+                        const def = cm && ((cm.specialsMatrix && cm.specialsMatrix['magic_missile']) || (cm.attacksMatrix && cm.attacksMatrix['magic_missile']));
                         if (def) {
                             ['energy_cost', 'cooldown', 'damage', 'effect', 'level', 'icon'].forEach(k => {
                                 if (typeof def[k] !== 'undefined' && typeof newSpell[k] === 'undefined') {
@@ -1039,8 +1038,8 @@ class MonsterBattle extends React.Component {
             // debug: _suppressPersistFinalHP state
             // Print brief portrait info from battleData for inspection
             try {
-                const portraits = Object.values(this.state.battleData || {}).map(b => ({ id: b && b.id, portrait: b && b.portrait }));
                 // portrait snapshot suppressed
+                void Object.values(this.state.battleData || {}).map(b => ({ id: b && b.id, portrait: b && b.portrait }));
             } catch (inner) { console.warn('gameOver: failed to snapshot battleData portraits', inner); }
         } catch (e) {}
 
@@ -1206,7 +1205,6 @@ class MonsterBattle extends React.Component {
     }
     specialTileClicked = (val) => {
     // special tile clicked
-        let finalVal;
         if(val !== null && typeof val === 'string'){
             val = val.replaceAll('_', ' ')
         }
@@ -1223,7 +1221,6 @@ class MonsterBattle extends React.Component {
     manualFire = () => {
         if(!this.state.selectedFighter) return
     // manual fire invoked
-        let consumableSpecialSelected;
 
         let selectedFighter = this.state.selectedFighter;
         let specials = selectedFighter?.specials,
@@ -1280,7 +1277,6 @@ class MonsterBattle extends React.Component {
         if(!this.state.selectedFighter) return
     // firing special
         // debugger
-        let consumableSpecialSelected;
 
         let selectedFighter = this.state.selectedFighter;
         let specials = selectedFighter?.specials,
@@ -1366,7 +1362,6 @@ class MonsterBattle extends React.Component {
     // Minimal handler for spell hover to avoid missing-method runtime errors.
     // Logs a small message and updates hoveredSpellTile for the tooltip.
     spellTileHovered = (val) => {
-        const label = val ? (val.subtype || val.name || 'unknown') : 'none';
     // spell hovered
         this.setState({ hoveredSpellTile: val ? (val.subtype || val.name) : null });
     }

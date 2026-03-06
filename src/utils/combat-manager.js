@@ -2,9 +2,9 @@ import * as images from '../utils/images'
 
 import { FighterAI } from './fighter-ai/fighter-ai'
 import { MonsterAI } from './monster-ai/monster-ai'
-import {createFighter, test} from './factories'
+import {createFighter} from './factories'
 import specialsMatrix from './specials-matrix'
-import { cilLifeRing } from '@coreui/icons'
+// import { cilLifeRing } from '@coreui/icons'
 import { INTERVALS, ROCK_DURATION, CRIT_THRESHOLD_DEFAULT, CRIT_THRESHOLD_INCREASED, CRITICAL_DAMAGE_MULTIPLIER } from './shared-constants';
 // import test from './factories'
 // import {MovementMethods} from './methods/movement-methods';
@@ -560,7 +560,7 @@ export function CombatManager(){
         }
         this.data = data;
         this.combatants = {};
-        const colors_withColorSquare = [' #b710d5',' #6495ed',' #73b746',' #f4d013']
+        // const colors_withColorSquare = [' #b710d5',' #6495ed',' #73b746',' #f4d013']
         const colors = ['#b710d5', '#6495ed', '#73b746', '#f4d013']
 
         this.data.crew.forEach((e, index) => {
@@ -658,7 +658,7 @@ export function CombatManager(){
     this.targetInRange = (caller) => {
         const target = this.combatants[caller.targetId];
         if(!caller.pendingAttack) return false;
-        let attackRange = RANGES[caller.pendingAttack.range]
+        let attackRange = RANGES[caller.pendingAttack.range]; // eslint-disable-line no-unused-vars
         if(!caller.pendingAttack || this.combatOver) return false
         if(!target){
             return
@@ -731,6 +731,8 @@ export function CombatManager(){
                     case 'ice blast':
                         this.fighterAI.roster['wizard'].triggerIceBlast(this.selectedFighter, target)
                     break;
+                    default:
+                    break;
                 }
             break;
             default:
@@ -751,7 +753,7 @@ export function CombatManager(){
                 a.cooldown_position = 100
             })
         })
-        let c = 0;
+        let c = 0; // eslint-disable-line no-unused-vars
         const int = setInterval(()=>{
             c++
             let combatant = arr.pop()
@@ -872,11 +874,11 @@ export function CombatManager(){
                 return attack;
             }
             if(available.filter(e=>(e.range === 'far' || e.range === 'medium') && e.cooldown_position > 25).length > 0){
-                let percentCooledDown = 0, distanceAttackRelevance = -100, mostRelevantAttack;
+                let percentCooledDown = 0, distanceAttackRelevance = -100, mostRelevantAttack; // eslint-disable-line no-unused-vars
                 available.filter(e=>(e.range === 'far' || e.range === 'medium') && e.cooldown_position > 25).forEach((e)=>{
                     const distance = RANGES[e.range], range = RANGES[e.range];
-                    const distanceGreaterThanAtkRange = distance > range
-                    const distanceLessThanAtkRange = distance < range
+                    const distanceGreaterThanAtkRange = distance > range; // eslint-disable-line no-unused-vars
+                    const distanceLessThanAtkRange = distance < range; // eslint-disable-line no-unused-vars
 
                     let a = RANGES[e.range] - Math.abs(distanceToTarget)
                     // get relevance score, if distance is 8 and range is 5 that equals -3, which is preferrable
@@ -1090,9 +1092,9 @@ export function CombatManager(){
         }
     }
     this.initiateAttack = (caller, manualAttack = false) => {
-       let manualTarget = false;
-        const targetInRange = (caller, target) => {
-            const pendingAttack = caller.pendingAttack;
+       // let manualTarget = false;
+        const targetInRange = (caller, target) => { // eslint-disable-line no-unused-vars
+            const pendingAttack = caller.pendingAttack; // eslint-disable-line no-unused-vars
             // Use only x-differential for range, as facing is now left/right only
             const rangeDiff = Math.abs(caller.coordinates.x - target.coordinates.x);
             if(manualAttack){
@@ -1124,89 +1126,50 @@ export function CombatManager(){
 
     // this should only happern for minions with no ai
 
-    return
+    // return (dead code below kept for reference)
 
-
-
-        let target = this.combatants[caller.targetId];
-        if(!target || !targetInRange(caller, target)){
-            if(!manualAttack){
-                console.log('somehow this fighter initiated an attack without a target/range and NOT manually! investigate');
-                debugger
-            }
-            const attack = caller.pendingAttack,
-            range = RANGES[attack.range]
-            if(range === 1){
-                // will need to handle facing up/down
-                let coordinatesAttacked = {x: this.fighterFacingRight(caller) ? caller.coordinates.x+1 : caller.coordinates.x-1, y: caller.coordinates.y};
-                let occupier = this.coordinatesOccupied(coordinatesAttacked);
-                if(occupier && (occupier.isMinion || occupier.isMonster)){
-                    target = occupier;
-                    manualTarget = true;
-                } else {
-                    caller.active = true;
-                    caller.attacking = true;
-                    this.broadcastDataUpdate();
-                    caller.readout.action = ` attacks with ${caller.pendingAttack.name}`
-                    this.kickoffAttackCooldown(caller)
-                    return
-                }
-            }
-        }
-    // Use speed (derived substat) for defensive agility. Fall back to dex if present for crew.
-    const targetSpeed = (target.stats && (typeof target.stats.speed === 'number')) ? target.stats.speed : (target.stats && target.stats.dex) || 1;
-    // Previous quadratic scaling (speed ** 2) made high-speed combatants nearly invincible
-    // because defense grew quickly. Use a gentler linear scaling so attacks have a
-    // reasonable chance to connect: defense = speed * 4 + flat_def.
-    let defenseFactor = (targetSpeed * 4) + (target.stats.def || 0);
-    if (defenseFactor > 99) defenseFactor = 90;
-        let attackFactor = Math.floor(Math.sqrt(caller.atk));
-
-        const results = [], diceRoll = function(){
-            return Math.random() * 100
-        };
-        
-        for(let i = 0; i < attackFactor; i++){
-            results.push(diceRoll())
-        }
-        const connects = results.some(e=>e>defenseFactor);
-        // Helpful debug: print attack resolution details for skeletons/monks to diagnose
-        // stalemate cases. Kept narrowly targeted to avoid spam in other combat.
-        if (caller && (caller.type === 'skeleton' || caller.type === 'monk')) {
-            console.debug('attack resolution', { attacker: caller.name || caller.type, atk: caller.atk, attackFactor, connects, target: target && (target.name || target.type), defenseFactor, rolls: results.slice(0,5) });
-        }
-        if(!caller.pendingAttack){
-            console.log('WHOOA there. someone is trying to attack with nothing');
-            return
-        }
-        caller.active = true;
-        caller.attacking = true;
-        if(caller.type === 'monk'){
-            console.log('***monk attacking: ', caller);
-        }
-        this.broadcastDataUpdate();
-        caller.readout.action = ` attacks with ${caller.pendingAttack.name}`
-        this.kickoffAttackCooldown(caller)
-        if(connects){
-            if(manualAttack){
-                if(caller.type === 'monk'){
-                    console.log('monk hits target [manually]');
-                }
-                this.hitsTarget(caller, target)
-            } else {
-                if(caller.type === 'monk'){
-                    console.log('monk hits target');
-                }
-                this.hitsTarget(caller)
-            }
-        } else {
-            if(manualAttack){
-                this.missesTarget(caller, target)
-            } else {
-                this.missesTarget(caller)
-            }
-            
-        }
+        // let target = this.combatants[caller.targetId];
+        // if(!target || !targetInRange(caller, target)){
+        //     if(!manualAttack){
+        //         console.log('somehow this fighter initiated an attack without a target/range and NOT manually! investigate');
+        //         debugger
+        //     }
+        //     const attack = caller.pendingAttack,
+        //     range = RANGES[attack.range]
+        //     if(range === 1){
+        //         let coordinatesAttacked = {x: this.fighterFacingRight(caller) ? caller.coordinates.x+1 : caller.coordinates.x-1, y: caller.coordinates.y};
+        //         let occupier = this.coordinatesOccupied(coordinatesAttacked);
+        //         if(occupier && (occupier.isMinion || occupier.isMonster)){
+        //             target = occupier;
+        //             // manualTarget = true;
+        //         } else {
+        //             caller.active = true;
+        //             caller.attacking = true;
+        //             this.broadcastDataUpdate();
+        //             caller.readout.action = ` attacks with ${caller.pendingAttack.name}`
+        //             this.kickoffAttackCooldown(caller)
+        //             return
+        //         }
+        //     }
+        // }
+    // const targetSpeed = (target.stats && (typeof target.stats.speed === 'number')) ? target.stats.speed : (target.stats && target.stats.dex) || 1;
+    // let defenseFactor = (targetSpeed * 4) + (target.stats.def || 0);
+    // if (defenseFactor > 99) defenseFactor = 90;
+    //     let attackFactor = Math.floor(Math.sqrt(caller.atk));
+    //     const results = [], diceRoll = function(){ return Math.random() * 100 };
+    //     for(let i = 0; i < attackFactor; i++){ results.push(diceRoll()) }
+    //     const connects = results.some(e=>e>defenseFactor);
+    //     if(!caller.pendingAttack){ return }
+    //     caller.active = true;
+    //     caller.attacking = true;
+    //     this.broadcastDataUpdate();
+    //     caller.readout.action = ` attacks with ${caller.pendingAttack.name}`
+    //     this.kickoffAttackCooldown(caller)
+    //     if(connects){
+    //         if(manualAttack){ this.hitsTarget(caller, target) } else { this.hitsTarget(caller) }
+    //     } else {
+    //         if(manualAttack){ this.missesTarget(caller, target) } else { this.missesTarget(caller) }
+    //     }
     }
     this.kickoffAttackCooldown = (caller) => {
         const atk = caller.pendingAttack;
@@ -1218,7 +1181,7 @@ export function CombatManager(){
         let totalTime = atk.cooldown * 1000;
         let scopeVar = 0, that = this;
         caller.onGeneralAttackCooldown = true;
-        const generalAttackCooldown = setTimeout(()=>{
+        const generalAttackCooldown = setTimeout(()=>{ // eslint-disable-line no-unused-vars
             caller.onGeneralAttackCooldown = false;
         }, generalCooldown)
         const intervalRef = setInterval(()=>{
@@ -1759,7 +1722,7 @@ export function CombatManager(){
     }
     this.someoneElseIsInCoords = (caller, coords)=>{
         // console.log('In someoneelse... Object.values(this.combatants).filter(c=>c.id!==caller.id)', Object.values(this.combatants).filter(c=>c.id!==caller.id), 'JSON.stringify(coords)', JSON.stringify(coords));
-        return Object.values(this.combatants).filter(c=>c.id!==caller.id).some(e=>JSON.stringify(e.coordinates) == JSON.stringify(coords))
+        return Object.values(this.combatants).filter(c=>c.id!==caller.id).some(e=>JSON.stringify(e.coordinates) === JSON.stringify(coords))
     }
     this.hitsCombatant = (caller, combatantHit, supplementalData = null, options = {}) => {
         if(caller.type === 'wizard'){
@@ -1932,7 +1895,7 @@ export function CombatManager(){
             return;
         }
         // Otherwise, fallback to the original logic (for non-monster/minion targets)
-        let r = Math.random();
+        // let r = Math.random();
         let criticalHit = false;
         // For non-monster/non-minion targets, compute base using equipped
         // weapon percentage (if any) so fighters without weapons still use atk.
@@ -2028,7 +1991,7 @@ export function CombatManager(){
     }
     this.hasOnlyOneValidTarget = (caller) => {
         if(!caller.isMonster && !caller.isMinion && Object.values(this.combatants).filter(e=>e.isMonster || e.isMinion).length === 1) return true;
-        if(caller.isMonster || caller.isMinion && Object.values(this.combatants).filter(e=>!e.isMonster && !e.isMinion).length === 1) return true;
+        if((caller.isMonster || caller.isMinion) && Object.values(this.combatants).filter(e=>!e.isMonster && !e.isMinion).length === 1) return true;
         return false;
     }
     this.missesTarget = (caller, tempTarget = null) => {

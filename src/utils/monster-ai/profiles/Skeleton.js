@@ -96,6 +96,8 @@ export function Skeleton(data, utilMethods, animationManager, overlayManager){
                     break;
                 }
             break;
+            default:
+            break;
         }
         // After moving, update facing to face target if one exists
         if (caller.targetId && combatants[caller.targetId]) {

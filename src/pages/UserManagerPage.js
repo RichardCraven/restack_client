@@ -27,7 +27,7 @@ class UserManagerPage extends React.Component {
   // ...existing code...
     const c = window.confirm("Are you sure you want to delete this user?")
     if(c){
-      const response  = await deleteUserRequest(user.id)
+      await deleteUserRequest(user.id)
   // ...existing code...
       const final  = await loadAllUsersRequest()
       this.setState((state, props) => {

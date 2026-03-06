@@ -403,7 +403,7 @@ export function BoardManager(){
         // Make sure templateBoard is normalized for legacy templates
         try { this.normalizeBoardTiles(templateBoard); } catch (e) {}
         try {
-            const tplChanged = this.cleanupMalformedMonsterTiles(templateBoard);
+            this.cleanupMalformedMonsterTiles(templateBoard);
         } catch (e) {}
     
         if (!templateBoard) {
@@ -521,7 +521,7 @@ export function BoardManager(){
         let templateBoard = foundTemplatePlane && foundTemplatePlane.miniboards && foundTemplatePlane.miniboards[this.playerTile.boardIndex]
         // Normalize the templateBoard for legacy shapes
         try { this.normalizeBoardTiles(templateBoard); } catch (e) {}
-        try { const tplChanged = this.cleanupMalformedMonsterTiles(templateBoard); } catch (e) {}
+        try { this.cleanupMalformedMonsterTiles(templateBoard); } catch (e) {}
 
         if (!templateBoard) {
             try { console.warn('respawnItems: no templateBoard found for current boardIndex', this.playerTile && this.playerTile.boardIndex); } catch (e) {}

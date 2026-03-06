@@ -12,10 +12,10 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
         formatAttacks,
         formatSpecials,
         initiateAttack,
-    checkOverlap: _checkOverlap,
+    checkOverlap: _checkOverlap, // eslint-disable-line no-unused-vars
         handleOverlap,
         // goToDestination,
-    processActionQueue: _processActionQueue,
+    processActionQueue: _processActionQueue, // eslint-disable-line no-unused-vars
         processMove,
         targetInRange,
         getSelectedFighter

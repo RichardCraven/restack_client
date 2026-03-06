@@ -113,8 +113,10 @@ export function Monk(data, utilMethods, animationManager, overlayManager){
                     case 0:
                     case 1:
                         this.tryUseConsumableForHeal(caller);
+                        break;
                     case 2:
                         this.tryUseConsumableForHeal(caller);
+                        break;
                     case 3:
                         // era group: try consumable if low on hp
                         this.tryUseConsumableForHeal(caller);
@@ -237,7 +239,7 @@ export function Monk(data, utilMethods, animationManager, overlayManager){
             return val;
         }
 
-    const facingRight = caller.facing === 'right';
+    const facingRight = caller.facing === 'right'; // eslint-disable-line no-unused-vars
         const target = combatants[caller.targetId];
         const facing = caller.facing ? caller.facing : callerFacing(caller,target);
         caller.attacking = true; 
@@ -273,8 +275,8 @@ export function Monk(data, utilMethods, animationManager, overlayManager){
                 }
             }
         } else {
-            const distanceToTarget = data.methods.getDistanceToTarget(caller, target),
-            laneDiff = data.methods.getLaneDifferenceToTarget(caller, target);
+            const distanceToTarget = data.methods.getDistanceToTarget(caller, target), // eslint-disable-line no-unused-vars
+            laneDiff = data.methods.getLaneDifferenceToTarget(caller, target); // eslint-disable-line no-unused-vars
             switch(caller.pendingAttack.name){
                 case 'dragon punch':
                     const combatantHit = await this.triggerDragonPunch(caller.coordinates, facing)

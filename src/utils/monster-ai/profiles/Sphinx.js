@@ -131,6 +131,8 @@ export function Sphinx(data, utilMethods, animationManager, overlayManager){
                         break;
                     }
                 break;
+            default:
+            break;
             }
 
 
@@ -203,7 +205,7 @@ export function Sphinx(data, utilMethods, animationManager, overlayManager){
     this.initiateAttack = async (caller, combatants) => {
         // caller.attacking = true;
         const target = combatants[caller.targetId];
-        const distanceToTarget = data.methods.getDistanceToTarget(caller, target),
+        const distanceToTarget = data.methods.getDistanceToTarget(caller, target), // eslint-disable-line no-unused-vars
         laneDiff = data.methods.getLaneDifferenceToTarget(caller, target);
 
 

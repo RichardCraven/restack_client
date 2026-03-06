@@ -18,7 +18,7 @@ import arrowUpInvalid from '../assets/graphics/arrow_up_invalid.png'
 import spawnPoint from '../assets/graphics/location.png'
 import door from '../assets/icons//portals/closed_door_browner.png'
 
-import { CDropdown, CDropdownToggle, CDropdownMenu, CDropdownItem, CCollapse} from '@coreui/react';
+import { CDropdown, CDropdownToggle, CDropdownMenu, CDropdownItem} from '@coreui/react';
 
 // import  CIcon  from '@coreui/icons-react'
 // import { cilList, cilCaretRight, cilCaretBottom, cilGlobeAlt } from '@coreui/icons';
@@ -69,13 +69,13 @@ const clone = (thing) => {
   return JSON.parse(JSON.stringify(thing))
 }
 
-const delay = (numSeconds) => {
-  return new Promise((resolve) => {
-      setTimeout(()=>{
-          resolve(numSeconds, ' complete')
-      }, numSeconds * 1000)
-  })
-}
+// const delay = (numSeconds) => {
+//   return new Promise((resolve) => {
+//       setTimeout(()=>{
+//           resolve(numSeconds, ' complete')
+//       }, numSeconds * 1000)
+//   })
+// }
 
 class MapMakerPage extends React.Component {
   constructor(props){
@@ -225,7 +225,7 @@ class MapMakerPage extends React.Component {
     this.loadAllBoards();
     this.loadAllPlanes();
     this.loadAllDungeons();
-    const meta = getMeta()
+    // const meta = getMeta()
     // console.log('meta:', meta);  
     
     this.setState((state, props) => {
@@ -623,6 +623,8 @@ class MapMakerPage extends React.Component {
       case 'dungeon':
         if(this.state.loadedDungeon) title = `Dungeon: ${this.state.loadedDungeon.name}`
       break;
+      default:
+      break;
     }
     this.setState({
       selectedView: state,
@@ -658,7 +660,7 @@ class MapMakerPage extends React.Component {
   writeBoard = async () => {
     console.log('write board');
     // let planesToUpdate = [];
-    let miniboards;
+    // let miniboards;
 
     const config = this.props.mapMaker.getMapConfiguration(this.state.tiles)    
     // state.loadBoard is currently set to the new incoming board
@@ -1363,8 +1365,8 @@ class MapMakerPage extends React.Component {
         let plane = planesToUpdate[0],
         index = plane.miniboards.findIndex(b => {
           return b.id === boardId
-        }),
-        planeId = plane.id;
+        });
+        // planeId = plane.id;
         console.log('index to update', index);
         console.log('plane to update: ', plane);
         let newPlane = clone(plane)
@@ -1711,14 +1713,14 @@ class MapMakerPage extends React.Component {
   }
   deletePlane = async () => {
     if(this.state.loadedPlane){
-      const cachedPlane = clone(this.state.loadedPlane)
+      // const cachedPlane = clone(this.state.loadedPlane)
       await deletePlaneRequest(this.state.loadedPlane.id);
       this.clearLoadedPlane();
       await this.loadAllPlanes(); 
       this.toast('Plane Deleted')
       console.log('NEED TO HANDLE DUNGEONS WITH THIS PLANE!!!!!!!');
 
-      let dungeonsToUpdate = this.dungeonsContainingPlane(cachedPlane)
+      // let dungeonsToUpdate = this.dungeonsContainingPlane(cachedPlane)
       debugger
     }
   }

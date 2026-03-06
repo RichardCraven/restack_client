@@ -2,6 +2,7 @@
 import * as images from '../utils/images'
 import { SPELLS, RITUALS } from './spells-table'
 
+// eslint-disable-next-line no-extend-native
 Date.prototype.addHours= function(h){
     this.setHours(this.getHours()+h);
     return this;
@@ -187,7 +188,7 @@ export function CrewManager(){
 
     this.addExperience = (memberArray, experienceValue) => {
         memberArray.forEach(m=>{
-            let nextLevelExp = EXP_TABLE[m.level]
+            // const nextLevelExp = EXP_TABLE[m.level]
             let member = this.crew.find(c=>c.type === m.type)
             member.stats.experience += experienceValue
         })
