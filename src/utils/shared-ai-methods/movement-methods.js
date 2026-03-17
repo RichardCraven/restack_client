@@ -14,10 +14,10 @@ const teleportToBackLine = (caller, combatants, onTeleport) => {
             // Try up and down from startLane
             const up = startLane - offset;
             const down = startLane + offset;
-            if (up >= 0 && up < MAX_LANES && isAvailableToMoveInto({x: col, y: up}, combatants)) {
+            if (up >= 0 && up < MAX_LANES && isAvailableToMoveInto({x: col, y: up}, combatants, null, caller)) {
                 return {x: col, y: up};
             }
-            if (offset !== 0 && down >= 0 && down < MAX_LANES && isAvailableToMoveInto({x: col, y: down}, combatants)) {
+            if (offset !== 0 && down >= 0 && down < MAX_LANES && isAvailableToMoveInto({x: col, y: down}, combatants, null, caller)) {
                 return {x: col, y: down};
             }
         }
@@ -64,20 +64,90 @@ const someoneIsInCoords = (coords, combatants)=>{
 const isOutOfBounds = (coords) => {
     return coords.x >= MAX_DEPTH || coords.y > MAX_LANES || coords.x < 0 || coords.y < 0
 }
-const isAvailableToMoveInto = (coords, combatants) => {
-    return !isOutOfBounds(coords) && !someoneIsInCoords(coords, combatants)
+
+// ─── Shield Wall registry ─────────────────────────────────────────────────────
+// Soldiers write their active wall here; movement methods read it.
+// Structure: array of { x, lanesAffected, isFacingRight }
+export const activeShieldWalls = [];
+
+/**
+ * Returns true if moving from `fromCoords` to `toCoords` would cross an
+ * active shield wall line.
+ */
+const crossesShieldWall = (fromCoords, toCoords) => {
+    if (!activeShieldWalls.length) return false;
+    for (const wall of activeShieldWalls) {
+        const { x: wallX, lanesAffected, isFacingRight } = wall;
+        // Only matters if the destination lane is covered by the wall
+        if (!lanesAffected.includes(toCoords.y)) continue;
+        // A crossing happens when the move goes from one side to the other
+        if (isFacingRight) {
+            // Wall is a right-facing barrier: blocks movement from left→right across wallX
+            // and from right→left across wallX (it's solid in both directions)
+            const fromSide = fromCoords.x < wallX ? 'left' : 'right';
+            const toSide   = toCoords.x   < wallX ? 'left' : 'right';
+            if (fromSide !== toSide) return true;
+        } else {
+            const boundaryX = wallX + 1;
+            const fromSide = fromCoords.x < boundaryX ? 'left' : 'right';
+            const toSide   = toCoords.x   < boundaryX ? 'left' : 'right';
+            if (fromSide !== toSide) return true;
+        }
+    }
+    return false;
+}
+
+const LARGE_MOVER_TYPES = ['dragon','beholder','ogre','sphinx','manticore','wyvern','wyvern_alt'];
+
+/**
+ * Returns true if `caller` is a large (2-tile-tall) combatant that needs
+ * both `coords` AND the tile directly above it to be free before moving in.
+ */
+const isLargeMover = (caller) => {
+    if (!caller) return false;
+    if (typeof caller.large === 'boolean' && caller.large) return true;
+    if (caller.type && LARGE_MOVER_TYPES.includes(caller.type)) return true;
+    if (typeof caller.size === 'number' && caller.size >= 2) return true;
+    if (typeof caller.scale === 'number' && caller.scale >= 2) return true;
+    // Main battle monster (not a minion) always uses 2x portrait
+    if (caller.isMonster === true && caller.isMinion !== true) return true;
+    return false;
+};
+
+const isAvailableToMoveInto = (coords, combatants, fromCoords = null, caller = null) => {
+    if (isOutOfBounds(coords)) return false;
+    if (someoneIsInCoords(coords, combatants)) return false;
+    if (fromCoords && crossesShieldWall(fromCoords, coords)) return false;
+    // Large movers occupy coords + tile above: both must be free
+    if (caller && isLargeMover(caller)) {
+        const above = { x: coords.x, y: coords.y - 1 };
+        // If above tile is out of bounds we can't fit — block the move
+        if (above.y < 0) return false;
+        // Check if anyone else (excluding caller) is in the above tile
+        if (Object.values(combatants).some(e => {
+            if (!e || e.id === caller.id) return false;
+            if (e.coordinates && e.coordinates.x === above.x && e.coordinates.y === above.y) return true;
+            if (Array.isArray(e.occupiedCoords)) return e.occupiedCoords.some(c => c.x === above.x && c.y === above.y);
+            return false;
+        })) return false;
+    }
+    return true;
 }
 const someoneElseIsInCoords = (caller, coords)=>{ // eslint-disable-line no-unused-vars
     return Object.values(this.combatants).filter(c=>c.id!==caller.id).some(e=>JSON.stringify(e.coordinates) === JSON.stringify(coords))
 }
 
-const goTowards = (caller, combatants, targetTile) => {
+const goTowards = (caller, combatants, targetTile, forwardFirst = false) => {
     if (!targetTile || typeof targetTile.x !== 'number' || typeof targetTile.y !== 'number') {
         // Prevent TypeError if targetTile is invalid
         return JSON.parse(JSON.stringify(caller.coordinates));
     }
+    const fromCoords = caller.coordinates;
     const isTargetTileOccupied = someoneIsInCoords(targetTile, combatants);
     const {N,E,S,W,NW,SW,NE,SE} = getSurroundings(caller.coordinates)
+
+    // Wall-aware availability check: passes fromCoords and caller so large-mover two-tile check is evaluated
+    const canMoveTo = (coords) => isAvailableToMoveInto(coords, combatants, fromCoords, caller);
 
     // overwriting
     // let someoneIsInCoords = (coords)=>{
@@ -102,17 +172,17 @@ const goTowards = (caller, combatants, targetTile) => {
         if(targetIsInCoords(NW) && !isTargetTileOccupied){
             newCoords = NW;
         } else if(targetIsInCoords(NW)){
-            if(isAvailableToMoveInto(W, combatants)){
+            if(canMoveTo(W)){
                 newCoords = W;
-            } else if(isAvailableToMoveInto(N, combatants)){
+            } else if(canMoveTo(N)){
                 newCoords = N;
             } else {
             }
         } else if(someoneIsInCoords(NW, combatants)){
             //go up or left
-            if(isAvailableToMoveInto(N, combatants)){
+            if(canMoveTo(N)){
                 newCoords = N
-            } else if(isAvailableToMoveInto(W, combatants)){
+            } else if(canMoveTo(W)){
                 newCoords = W
             } else {
                 return
@@ -125,18 +195,20 @@ const goTowards = (caller, combatants, targetTile) => {
         if(targetIsInCoords(NE) && !isTargetTileOccupied){
             newCoords = NE;
         } else if(targetIsInCoords(NE)){
-            if(isAvailableToMoveInto(E, combatants)){
+            if(canMoveTo(E)){
                 newCoords = E;
-            } else if(isAvailableToMoveInto(N, combatants)){
+            } else if(canMoveTo(N)){
                 newCoords = N;
             } else {
             }
         } else if(someoneIsInCoords(NE, combatants)){
-            //go up or right
-            if(isAvailableToMoveInto(N, combatants)){
-                newCoords = N
-            } else if(isAvailableToMoveInto(E, combatants)){
-                newCoords = E
+            //go up or right — when forwardFirst, prefer E (forward) over N (lane adjust)
+            const first  = forwardFirst ? (canMoveTo(E) ? E : null) : (canMoveTo(N) ? N : null);
+            const second = forwardFirst ? (canMoveTo(N) ? N : null) : (canMoveTo(E) ? E : null);
+            if(first){
+                newCoords = first
+            } else if(second){
+                newCoords = second
             } else {
                 return
             }
@@ -148,17 +220,17 @@ const goTowards = (caller, combatants, targetTile) => {
         if(targetIsInCoords(SW) && !isTargetTileOccupied){
             newCoords = SW;
         } else if(targetIsInCoords(SW)){
-            if(isAvailableToMoveInto(W, combatants)){
+            if(canMoveTo(W)){
                 newCoords = W;
-            } else if(isAvailableToMoveInto(S, combatants)){
+            } else if(canMoveTo(S)){
                 newCoords = S;
             } else {
             }
         } else if(someoneIsInCoords(SW, combatants)){
             //go down or left
-            if(isAvailableToMoveInto(S, combatants)){
+            if(canMoveTo(S)){
                 newCoords = S
-            } else if(isAvailableToMoveInto(W, combatants)){
+            } else if(canMoveTo(W)){
                 newCoords = W
             } else {
                 return
@@ -171,11 +243,13 @@ const goTowards = (caller, combatants, targetTile) => {
         if(targetIsInCoords(SE) && !isTargetTileOccupied){
             newCoords = SE;
         } else if(someoneIsInCoords(SE, combatants)){
-            //go down or right
-            if(isAvailableToMoveInto(S, combatants)){
-                newCoords = S
-            } else if(isAvailableToMoveInto(E, combatants)){
-                newCoords = E
+            //go down or right — when forwardFirst, prefer E (forward) over S (lane adjust)
+            const first  = forwardFirst ? (canMoveTo(E) ? E : null) : (canMoveTo(S) ? S : null);
+            const second = forwardFirst ? (canMoveTo(S) ? S : null) : (canMoveTo(E) ? E : null);
+            if(first){
+                newCoords = first
+            } else if(second){
+                newCoords = second
             } else {
                 return
             }
@@ -190,15 +264,15 @@ const goTowards = (caller, combatants, targetTile) => {
             // do nothing (original code is empty here)
         } else if(someoneIsInCoords(N, combatants)){
             //go NW or NE
-            if(isAvailableToMoveInto(NW, combatants)){
+            if(canMoveTo(NW)){
                 newCoords = NW
-            } else if(isAvailableToMoveInto(NE, combatants)){
+            } else if(canMoveTo(NE)){
                 newCoords = NE
             } else {
                 // fallback: vertical blocked and side-steps blocked — try moving horizontally toward target
                 const horizDir = targetTile.x > caller.coordinates.x ? 1 : -1;
                 const horiz = { x: caller.coordinates.x + horizDir, y: caller.coordinates.y };
-                if (isAvailableToMoveInto(horiz, combatants)) {
+                if (canMoveTo(horiz)) {
                     newCoords = horiz;
                 } else {
                     return
@@ -215,15 +289,15 @@ const goTowards = (caller, combatants, targetTile) => {
             // do nothing (original code is empty here)
         } else if(someoneIsInCoords(S, combatants)){
             //go SW or SE
-            if(isAvailableToMoveInto(SW, combatants)){
+            if(canMoveTo(SW)){
                 newCoords = SW
-            } else if(isAvailableToMoveInto(SE, combatants)){
+            } else if(canMoveTo(SE)){
                 newCoords = SE
             } else {
                 // fallback: vertical blocked and side-steps blocked — try moving horizontally toward target
                 const horizDir = targetTile.x > caller.coordinates.x ? 1 : -1;
                 const horiz = { x: caller.coordinates.x + horizDir, y: caller.coordinates.y };
-                if (isAvailableToMoveInto(horiz, combatants)) {
+                if (canMoveTo(horiz)) {
                     newCoords = horiz;
                 } else {
                     return
@@ -240,9 +314,9 @@ const goTowards = (caller, combatants, targetTile) => {
             // Target is directly East and occupied — already adjacent, don't move
         } else if(someoneIsInCoords(E, combatants)){
             //go NE or SE
-            if(isAvailableToMoveInto(NE, combatants)){
+            if(canMoveTo(NE)){
                 newCoords = NE
-            } else if(isAvailableToMoveInto(SE, combatants)){
+            } else if(canMoveTo(SE)){
                 newCoords = SE
             } else {
                 return
@@ -258,9 +332,9 @@ const goTowards = (caller, combatants, targetTile) => {
             // Target is directly West and occupied — already adjacent, don't move
         } else if(someoneIsInCoords(W, combatants)){
             //go NW or SW
-            if(isAvailableToMoveInto(NW, combatants)){
+            if(canMoveTo(NW)){
                 newCoords = NW
-            } else if(isAvailableToMoveInto(SW, combatants)){
+            } else if(canMoveTo(SW)){
                 newCoords = SW
             } else {
                 return
@@ -274,7 +348,15 @@ const goTowards = (caller, combatants, targetTile) => {
     if(newCoords.x < 0) newCoords.x = 0
     if(newCoords.y > MAX_LANES-1) newCoords.y = MAX_LANES -1;
     if(newCoords.y < 0) newCoords.y = 0;
-    caller.coordinates = newCoords;
+    // Final large-mover guard: after all clamping, validate the chosen tile with the
+    // full isAvailableToMoveInto check (which includes the "above tile must be free"
+    // rule for 2× monsters). This catches cases where the "space available" fast-paths
+    // above bypass canMoveTo and assign a diagonal directly (e.g. newCoords = SW).
+    if (isLargeMover(caller) && !isAvailableToMoveInto(newCoords, combatants, fromCoords, caller)) return;
+    // Final shield-wall guard: even after clamping, block the move if it crosses a wall
+    if (!crossesShieldWall(fromCoords, newCoords)) {
+        caller.coordinates = newCoords;
+    }
 }
 
 export const MovementMethods = {
@@ -400,12 +482,12 @@ export const MovementMethods = {
             // Move toward back
             if (isMonsterOrMinion) {
                 const nextCoords = { x: caller.coordinates.x + 1, y: caller.coordinates.y };
-                if (isAvailableToMoveInto(nextCoords, combatants)) {
+                if (isAvailableToMoveInto(nextCoords, combatants, null, caller)) {
                     newCoords = nextCoords;
                 }
             } else {
                 const nextCoords = { x: caller.coordinates.x - 1, y: caller.coordinates.y };
-                if (isAvailableToMoveInto(nextCoords, combatants)) {
+                if (isAvailableToMoveInto(nextCoords, combatants, null, caller)) {
                     newCoords = nextCoords;
                 }
             }
@@ -413,9 +495,9 @@ export const MovementMethods = {
             // At back and enemy in front: try to move up or down
             const up = { x: caller.coordinates.x, y: caller.coordinates.y - 1 };
             const down = { x: caller.coordinates.x, y: caller.coordinates.y + 1 };
-            if (isAvailableToMoveInto(up, combatants)) {
+            if (isAvailableToMoveInto(up, combatants, null, caller)) {
                 newCoords = up;
-            } else if (isAvailableToMoveInto(down, combatants)) {
+            } else if (isAvailableToMoveInto(down, combatants, null, caller)) {
                 newCoords = down;
             }
         }
@@ -423,24 +505,44 @@ export const MovementMethods = {
     },
     closeTheGap: (caller, combatants) => {
         const enemyTarget = Object.values(combatants).find(e=>e.id === caller.targetId)
-        // const isDirectlyAboveCaller = (caller, combatant) => {
-        //     const combatantIsDirectlyAbove = (combatant.coordinates.y === caller.coordinates.y-1 && combatant.coordinates.x === caller.coordinates.x)
-        //     return combatantIsDirectlyAbove;
-        // }
-        // const isDirectlyBelowCaller = (caller, combatant) => {
-        //     const combatantIsDirectlyBelow = (combatant.coordinates.y === caller.coordinates.y+1 && combatant.coordinates.x === caller.coordinates.x)
-        //     return combatantIsDirectlyBelow;
-        // }
         if(enemyTarget){
             const coords = caller.coordinates;
             let targetTile = {x: enemyTarget.coordinates.x, y: enemyTarget.coordinates.y}
-            // If already orthogonally adjacent to the target, don't move — let the attack system handle it
-            const dx = Math.abs(targetTile.x - coords.x);
-            const dy = Math.abs(targetTile.y - coords.y);
-            if ((dx === 1 && dy === 0) || (dx === 0 && dy === 1)) return;
+            // For large (multi-tile) targets, stop if the caller is orthogonally
+            // adjacent to ANY tile the target occupies, not just its base coord.
+            const allTargetTiles = (Array.isArray(enemyTarget.occupiedCoords) && enemyTarget.occupiedCoords.length > 0)
+                ? enemyTarget.occupiedCoords
+                : [targetTile];
+            const alreadyAdjacent = allTargetTiles.some(t => {
+                const dx = Math.abs(t.x - coords.x);
+                const dy = Math.abs(t.y - coords.y);
+                return (dx === 1 && dy === 0) || (dx === 0 && dy === 1);
+            });
+            if (alreadyAdjacent) return;
             goTowards(caller, combatants, targetTile);
         } else {
             
+        }
+    },
+    // Like closeTheGap but always prioritises advancing forward (E) over
+    // adjusting lane (N/S) when the target is diagonally ahead.
+    closeTheGapForwardFirst: (caller, combatants) => {
+        const enemyTarget = Object.values(combatants).find(e=>e.id === caller.targetId)
+        if(enemyTarget){
+            const coords = caller.coordinates;
+            let targetTile = {x: enemyTarget.coordinates.x, y: enemyTarget.coordinates.y}
+            // For large (multi-tile) targets, stop if the caller is orthogonally
+            // adjacent to ANY tile the target occupies, not just its base coord.
+            const allTargetTiles = (Array.isArray(enemyTarget.occupiedCoords) && enemyTarget.occupiedCoords.length > 0)
+                ? enemyTarget.occupiedCoords
+                : [targetTile];
+            const alreadyAdjacent = allTargetTiles.some(t => {
+                const dx = Math.abs(t.x - coords.x);
+                const dy = Math.abs(t.y - coords.y);
+                return (dx === 1 && dy === 0) || (dx === 0 && dy === 1);
+            });
+            if (alreadyAdjacent) return;
+            goTowards(caller, combatants, targetTile, true);
         }
     },
     moveTowardsCloseEnemyTarget: (caller, combatants) => {

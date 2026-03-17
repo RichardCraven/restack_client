@@ -29,7 +29,10 @@ export default function LoginPage(props) {
     const handleKey = (e) => {
       if(e.key && e.key.toLowerCase() === 'enter'){
           if(loginName.length > 0 && loginPass.length > 0){
-              props.login({username: loginName, password:loginPass})
+              const success = props.login({username: loginName, password:loginPass})
+              if (!success) {
+                setInvalid(true);
+              }
         }
       }
     }
@@ -45,6 +48,10 @@ export default function LoginPage(props) {
 
 
   const handleChange = (e, type) => {
+    // Clear error when user starts typing
+    if (invalidCredentials) {
+      setInvalid(false);
+    }
     switch(type){
       case 'register-name':
        setRegName(e.target.value)
@@ -84,7 +91,10 @@ export default function LoginPage(props) {
           }, 90)
           setPane('login')
         } else if(loginName.length > 0 && loginPass.length > 0){
-              props.login({username: loginName, password:loginPass})
+              const success = props.login({username: loginName, password:loginPass})
+              if (!success) {
+                setInvalid(true);
+              }
         }
       break;
       case 'register':

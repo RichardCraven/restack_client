@@ -63,9 +63,17 @@ export default function AnimationTile(props) {
             keyframe = `ClawAnimation_${facing}`
         break;
         case 'sword_swing':
+                // Diagnostic log: capture when sword_swing animation is triggered
+                console.log('[AnimationTile] sword_swing animation triggered', {
+                    animationType: props.animationType,
+                    animationData: props.animationData,
+                    fighterType: props.fighterType,
+                    attackType: props.attackType,
+                    tileProps: props
+                });
             image = images['sword_white']
             facing = props.animationData?.facing
-            keyframe = `ArcAnimation_${facing}`
+            keyframe = null  // animation is driven on the <img> directly, not the tile div
         break;
         case 'spin_attack':
             image = images['sword_white']
@@ -74,6 +82,11 @@ export default function AnimationTile(props) {
         case 'dragon_punch':
             image = images['hand_7']
             keyframe = 'dragon-punch'
+        break;
+        case 'windmill':
+            // The windmill animation renders 4 fist icons directly in JSX below;
+            // no CSS keyframe is driven by `keyframe` here.
+            keyframe = null;
         break;
         case 'spin_attack_arc':
             if (
@@ -165,6 +178,36 @@ export default function AnimationTile(props) {
                                 }}
                             />
                         )}
+                        {props.animationType === 'sword_swing' && (() => {
+                            let dx = 0, dy = 0;
+                            const offset = 40;
+                            switch (facing) {
+                                case 'up':    dx = 0;       dy = -offset; break;
+                                case 'down':  dx = 0;       dy =  offset; break;
+                                case 'left':  dx = -offset; dy = 0;       break;
+                                case 'right': dx =  offset; dy = 0;       break;
+                                default:      dx =  offset; dy = 0;       break;
+                            }
+                            const flip = facing === 'left';
+                            return (
+                                <img
+                                    src={image}
+                                    alt="axe swing"
+                                    className="sword-swing-icon"
+                                    style={{
+                                        position: 'absolute',
+                                        top: `calc(50% - 30% + ${dy}px)`,
+                                        left: `calc(50% - 30% + ${dx}px)`,
+                                        width: '60%',
+                                        height: '60%',
+                                        pointerEvents: 'none',
+                                        zIndex: 5000,
+                                        transform: flip ? 'scaleX(-1)' : undefined,
+                                        animation: `ArcAnimation_${facing} ${duration / 1000}s linear forwards`,
+                                    }}
+                                />
+                            );
+                        })()}
                         {props.animationType === 'dragon_punch' && (() => {
                             // Offset 50px from center in the direction of the target (facing)
                             // Facing can be 'up', 'down', 'left', 'right', or angles
@@ -314,6 +357,20 @@ export default function AnimationTile(props) {
                 targetDistance={this.state.magicMissile_targetDistance}
                 targetLaneDiff={this.state.magicMissile_targetLaneDiff}
             /> */}
+            {/* ── Windmill: burst + 4 fists fly out N/S/E/W ── */}
+            {props.animationType === 'windmill' && (
+                <>
+                    <div className="windmill-burst" />
+                    {['N', 'S', 'E', 'W'].map(dir => (
+                        <img
+                            key={dir}
+                            src={images['fist_punch']}
+                            alt={`windmill-${dir}`}
+                            className={`windmill-fist fist-${dir}`}
+                        />
+                    ))}
+                </>
+            )}
         </div>
     )
 }

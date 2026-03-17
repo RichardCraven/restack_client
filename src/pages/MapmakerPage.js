@@ -81,9 +81,13 @@ class MapMakerPage extends React.Component {
   constructor(props){
     super(props)
     let viewStateFromPrefs,
+    dungeonOverlayOnFromPrefs,
     meta = getMeta();
     if(meta?.preferences?.editor?.selectedView){
       viewStateFromPrefs = meta.preferences.editor.selectedView
+    }
+    if(meta?.preferences?.editor?.dungeonOverlayOn !== undefined){
+      dungeonOverlayOnFromPrefs = meta.preferences.editor.dungeonOverlayOn
     }
 
     this.state = {
@@ -143,7 +147,7 @@ class MapMakerPage extends React.Component {
       boardsFoldersExpanded : {},
       visible: false,
       activeDungeonLevel: 0,
-      dungeonOverlayOn: false,
+      dungeonOverlayOn: dungeonOverlayOnFromPrefs ?? false,
       overlayData: null,
       loadingData: true,
       imagesMatrix: {},
@@ -1665,9 +1669,18 @@ class MapMakerPage extends React.Component {
     })
     if(meta?.preferences?.editor?.loadedDungeon){
       let dungeon = meta.preferences.editor.loadedDungeon;
+      const loadedDungeon = dungeons.find(d=>d.id === dungeon.id);
       this.setLoadedDungeonDropdownValue(dungeon.name)
+      
+      // If overlay was previously on, compute overlayData for the loaded dungeon
+      let overlayData = null;
+      if(this.state.dungeonOverlayOn && loadedDungeon){
+        overlayData = this.props.mapMaker.markPassages(loadedDungeon);
+      }
+      
       this.setState({
-        loadedDungeon: dungeons.find(d=>d.id === dungeon.id)
+        loadedDungeon: loadedDungeon,
+        overlayData
       })
     }
   }
@@ -2085,10 +2098,25 @@ class MapMakerPage extends React.Component {
     if(!e === true){
       overlayData= this.props.mapMaker.markPassages(this.state.loadedDungeon);
     }
+    const newOverlayState = !e;
     this.setState({
-      dungeonOverlayOn: !e,
+      dungeonOverlayOn: newOverlayState,
       overlayData
     })
+    
+    // Persist overlay preference
+    const meta = JSON.parse(sessionStorage.getItem('metadata'));
+    const userId = sessionStorage.getItem('userId');
+    if(meta.preferences && meta.preferences.editor){
+      meta.preferences.editor['dungeonOverlayOn'] = newOverlayState;
+    } else {
+      meta.preferences = {
+        ...meta.preferences,
+        editor: { dungeonOverlayOn: newOverlayState }
+      };
+    }
+    updateUserRequest(userId, meta);
+    storeMeta(meta);
   }
   clearFrontPlanePreview = (levelIndex) => {
     let dungeon = this.state.loadedDungeon;

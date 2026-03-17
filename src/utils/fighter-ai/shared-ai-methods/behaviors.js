@@ -14,10 +14,28 @@ function attackFromTheBack(caller, combatants, data) {
     // Acquire all live enemies
     const liveEnemies = Object.values(combatants).filter(e => !e.dead && (e.isMonster || e.isMinion));
     if (liveEnemies.length === 0) return;
-    // Try to find a target where caller can get to their back (right side)
-    let foundBackTarget = false;
-    // Sort enemies by depth (closest to front)
-    const sortedByDepth = [...liveEnemies].sort((a, b) => a.depth - b.depth);
+
+    // If already orthogonally adjacent to an enemy and a close-range attack is
+    // available (or pending), there is nothing to be gained by repositioning —
+    // skip the entire movement block so the Monk attacks in place rather than
+    // shuffling away and back each tick.
+    const alreadyAdjacentEnemy = liveEnemies.find(e => {
+        const dx = Math.abs(e.coordinates.x - caller.coordinates.x);
+        const dy = Math.abs(e.coordinates.y - caller.coordinates.y);
+        return (dx === 1 && dy === 0) || (dx === 0 && dy === 1);
+    });
+    if (alreadyAdjacentEnemy) {
+        const pendingRange = caller.pendingAttack && caller.pendingAttack.range;
+        if (pendingRange === 'close' || !pendingRange) {
+            // Lock onto this enemy and stop — no movement needed
+            caller.targetId = alreadyAdjacentEnemy.id;
+            if (typeof data.chooseAttackType === 'function') {
+                caller.pendingAttack = data.chooseAttackType(caller, alreadyAdjacentEnemy);
+            }
+            return;
+        }
+    }
+
     const isOccupied = (coords) => {
         // Prefer combat-manager-provided helper when available
         if (data && data.methods && typeof data.methods.someoneIsInCoords === 'function') {
@@ -33,6 +51,37 @@ function attackFromTheBack(caller, combatants, data) {
             } catch (err) { return false; }
         });
     }
+
+    // If the Monk is already to the right of (or at the same column as) all
+    // enemies, it's in the backline. Just close the gap toward the nearest enemy
+    // rather than trying to get further right — desiredX would be out of bounds.
+    const maxEnemyX = Math.max(...liveEnemies.map(e => e.coordinates.x));
+    if (caller.coordinates.x >= maxEnemyX) {
+        // Already behind the pack — close the gap and face left to attack
+        if (data.methods && typeof data.methods.closeTheGap === 'function') {
+            data.methods.closeTheGap(caller, combatants);
+        }
+        caller.facing = 'left';
+        // Try to acquire a target that is now adjacent
+        const sortedByProximity = [...liveEnemies].sort((a, b) => {
+            const da = Math.abs(a.coordinates.x - caller.coordinates.x) + Math.abs(a.coordinates.y - caller.coordinates.y);
+            const db = Math.abs(b.coordinates.x - caller.coordinates.x) + Math.abs(b.coordinates.y - caller.coordinates.y);
+            return da - db;
+        });
+        const nearest = sortedByProximity[0];
+        if (nearest) {
+            caller.targetId = nearest.id;
+            if (typeof data.chooseAttackType === 'function') {
+                caller.pendingAttack = data.chooseAttackType(caller, nearest);
+            }
+        }
+        return;
+    }
+
+    // Try to find a target where caller can get to their back (right side)
+    let foundBackTarget = false;
+    // Sort enemies by depth (closest to front)
+    const sortedByDepth = [...liveEnemies].sort((a, b) => a.depth - b.depth);
 
     for (const enemy of sortedByDepth) {
         const desiredX = enemy.coordinates.x + 1;
@@ -153,16 +202,25 @@ function attackFromTheBack(caller, combatants, data) {
                 break;
             }
         }
-        // If still not placed, just target the enemy closest to the back line
-        // and fall back to closing the gap directly (avoids standoff in corners)
+        // If still not placed, check if the Monk is already adjacent to any enemy
+        // (i.e. surrounded). If so, target that enemy and attack in place rather
+        // than trying to reposition — this prevents the Monk from freezing when
+        // every surrounding tile is occupied.
         if (!placed) {
-            const enemy = sortedByBack[0];
+            const adjacentEnemy = liveEnemies.find(e => {
+                const dx = Math.abs(e.coordinates.x - caller.coordinates.x);
+                const dy = Math.abs(e.coordinates.y - caller.coordinates.y);
+                return (dx === 1 && dy === 0) || (dx === 0 && dy === 1);
+            });
+            const enemy = adjacentEnemy || sortedByBack[0];
             if (typeof data.chooseAttackType === 'function') {
                 caller.pendingAttack = data.chooseAttackType(caller, enemy);
             }
             caller.targetId = enemy.id;
-            // Fall back to moving directly toward the target so combat doesn't stall
-            if (data.methods && typeof data.methods.closeTheGap === 'function') {
+            // Only attempt to reposition if we are NOT already adjacent —
+            // if surrounded, closeTheGap will also fail (all tiles blocked) and
+            // the call is wasteful; just stand and fight.
+            if (!adjacentEnemy && data.methods && typeof data.methods.closeTheGap === 'function') {
                 data.methods.closeTheGap(caller, combatants);
             }
         }

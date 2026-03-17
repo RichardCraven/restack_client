@@ -4,6 +4,7 @@ import { FighterAI } from './fighter-ai/fighter-ai'
 import { MonsterAI } from './monster-ai/monster-ai'
 import {createFighter} from './factories'
 import specialsMatrix from './specials-matrix'
+import { activeShieldWalls } from './shared-ai-methods/movement-methods'
 // import { cilLifeRing } from '@coreui/icons'
 import { INTERVALS, ROCK_DURATION, CRIT_THRESHOLD_DEFAULT, CRIT_THRESHOLD_INCREASED, CRITICAL_DAMAGE_MULTIPLIER } from './shared-constants';
 // import test from './factories'
@@ -16,6 +17,11 @@ const MAX_LANES = 5
 // const this.FIGHT_INTERVAL = 8;
 // const intervals = [5, 10, 40, 90]
 const FIGHT_INTERVAL = INTERVALS[1]; // 'Slow' (40)
+// Number of FIGHT_INTERVAL ticks in one era, based on a reference speed-10 combatant
+// (increment = 1/(1/10*25) = 0.4 → 100/0.4 = 250 ticks to complete a full turn cycle).
+// Used by kickoffSpecialCooldown so special cooldowns are expressed in eras and
+// automatically stretch/compress when game speed changes.
+const TICKS_PER_ERA = 250;
 const DEBUG_STEPS = false;
 const RANGES = {
     close: 1,
@@ -37,6 +43,10 @@ export function CombatManager(){
                 c.setFightInterval(newInterval);
             }
         });
+        // Notify AI modules so their internal data.INTERVAL_TIME stays in sync
+        if (this._intervalTimeListeners) {
+            this._intervalTimeListeners.forEach(cb => { try { cb(newInterval); } catch (e) {} });
+        }
     }
     // Assign this.FIGHT_INTERVAL to the instance for external access
     this.FIGHT_INTERVAL = FIGHT_INTERVAL;
@@ -86,7 +96,6 @@ export function CombatManager(){
             range: 'close',
             icon: images['claws'],
             cooldown: 3,
-            damage: 2
         },
         bite: {
             name: 'bite',
@@ -94,7 +103,6 @@ export function CombatManager(){
             icon: images['bite'],
             range: 'close',
             cooldown: 3,
-            damage: 2
         },
         crush: {
             name: 'crush',
@@ -102,44 +110,39 @@ export function CombatManager(){
             icon: images['crushing'],
             range: 'close',
             cooldown: 5,
-            damage: 3
         },
         tackle: {
             name: 'tackle',
             type: 'crushing',
             range: 'close',
-            cooldown: 5,
-            damage: 2
+            cooldown: 2,
         },
         grasp: {
             name: 'grasp',
             type: 'crushing',
             range: 'close',
-            cooldown: 6,
-            damage: 2
+            cooldown: 3,
+            effect: { type: 'stun', chance: 20, duration: 2 },
         },
         energy_drain: {
             name: 'energy drain',
             type: 'curse',
             range: 'medium',
-            cooldown: 6,
-            damage: 2
+            cooldown: 3,
         },
         fire_breath: {
             name: 'fire breath',
             type: 'fire',
             icon: images['fire_breath'],
             range: 'medium',
-            cooldown: 6,
-            damage: 4
+            cooldown: 3,
         },
         void_lance: {
             name: 'void lance',
             icon: images['void_lance'],
             type: 'psionic',
             range: 'medium',
-            cooldown: 6,
-            damage: 6
+            cooldown: 3,
         },
         energy_blast: {
             name: 'energy blast',
@@ -147,87 +150,83 @@ export function CombatManager(){
             range: 'far',
             icon: images['void_lance'],
             cooldown: 3,
-            damage: 3
         },
-        magic_missile: {
-            name: 'magic missile',
+        major_magic_missile: {
+            name: 'major magic missile',
             type: 'arcane',
             range: 'far',
             icon: images['magic_missile'],
             cooldown: 5,
-            damage: 3
+        },
+        minor_magic_missile: {
+            name: 'minor magic missile',
+            type: 'arcane',
+            range: 'far',
+            icon: images['magic_missile'],
+            cooldown: 7,
         },
         induce_madness: {
             name: 'induce madness',
             type: 'psionic',
             icon: images['lundi_mask'],
             range: 'far',
-            cooldown: 5,
-            damage: 3
+            cooldown: 2.5,
         },
         lightning: {
             name: 'lightning',
             type: 'electricity',
             icon: images['lightning'],
             range: 'far',
-            cooldown: 6,
-            damage: 5
+            cooldown: 3,
         },
         sword_swing: {
             name: 'sword swing',
             type: 'cutting',
             range: 'close',
             icon: images['sword'],
-            cooldown: 5,
-            damage: 3
+            cooldown: 2.5,
         },
         sword_thrust: {
             name: 'sword thrust',
             type: 'cutting',
             range: 'close',
             icon: images['sword'],
-            cooldown: 4.5,
-            damage: 2
+            cooldown: 2,
         },
         dragon_punch: {
             name: 'dragon punch',
             type: 'crushing',
             range: 'close',
-            icon: images['scepter'],
-            cooldown: 5,
-            damage: 3
+            icon: images['hand_7'],
+            cooldown: 3,
         },
         meditate: {
             name: 'meditate',
             type: 'buff',
             range: 'self',
             icon: images['basic_shield'],
-            cooldown: 5.5,
-            damage: 0
+            cooldown: 3,
         },
         heal: {
             name: 'heal',
             type: 'buff',
             range: 'close',
             icon: images['basic_shield'],
-            cooldown: 5.5,
-            damage: 0
+            cooldown: 3,
         },
         fire_arrow: {
             name: 'fire arrow',
             type: 'fire',
             range: 'far',
             icon: images['bow_and_arrow'],
-            cooldown: 5,
-            damage: 3
+            cooldown: 2,
         },
         axe_throw: {
             name: 'axe throw',
             type: 'cutting',
             range: 'medium',
             icon: images['axe'],
-            cooldown: 5,
-            damage: 2
+            cooldown: 2.5,
         },
         axe_swing: {
             name: 'axe swing',
@@ -235,7 +234,6 @@ export function CombatManager(){
             range: 'close',
             icon: images['axe'],
             cooldown: 3.5,
-            damage: 3
         },
         spear_throw: {
             name: 'spear throw',
@@ -243,7 +241,6 @@ export function CombatManager(){
             range: 'far',
             icon: images['spear'],
             cooldown: 3.2,
-            damage: 4
         },
         flying_lotus: {
             name: 'flying lotus',
@@ -251,7 +248,6 @@ export function CombatManager(){
             range: 'medium',
             icon: images['scepter'],
             cooldown: 4.5,
-            damage: 4
         },
         shield_bash: {
             name: 'shield bash',
@@ -259,7 +255,6 @@ export function CombatManager(){
             range: 'close',
             icon: images['basic_shield'],
             cooldown: 4.5,
-            damage: 2
         },
         cane_strike: {
             name: 'cane strike',
@@ -267,7 +262,6 @@ export function CombatManager(){
             range: 'far',
             icon: images['scepter'],
             cooldown: 3,
-            damage: 2
         },
         dagger_stab: {
             name: 'dagger_stab',
@@ -275,7 +269,6 @@ export function CombatManager(){
             range: 'close',
             icon: images['sword'],
             cooldown: 2,
-            damage: 2
         },
         snake_strike: {
             name: 'snake_strike',
@@ -283,7 +276,6 @@ export function CombatManager(){
             range: 'medium',
             icon: images['sword'],
             cooldown: 2,
-            damage: 5
         }
     }
 
@@ -297,10 +289,29 @@ export function CombatManager(){
         try {
             Object.values(this.combatants).forEach(combatant => {
                 if (!combatant) return;
-                // Normalize `specials` (learned/innate specials)
+                // Normalize `specials` (learned/innate specials) — re-merge from the
+                // canonical matrix but preserve any in-progress cooldown_position so
+                // a running kickoffSpecialCooldown interval is not orphaned.
                 if (Array.isArray(combatant.specials)) {
                     try {
-                        combatant.specials = this.formatSpecials(combatant.specials);
+                        combatant.specials = combatant.specials.map(s => {
+                            if (!s) return s;
+                            // If it's still a raw string key, expand it fully
+                            if (typeof s === 'string') {
+                                return this.formatSpecials([s])[0] || s;
+                            }
+                            // Already an object — re-merge from canonical but keep cooldown_position
+                            const lookupKey = s.name
+                                ? s.name.replace(/\s+/g, '_').toLowerCase()
+                                : null;
+                            const canonical = lookupKey ? this.formatSpecials([lookupKey])[0] : null;
+                            if (canonical) {
+                                const instanceProps = {};
+                                if (s.cooldown_position !== undefined) instanceProps.cooldown_position = s.cooldown_position;
+                                return Object.assign({}, canonical, instanceProps);
+                            }
+                            return s;
+                        });
                     } catch (err) {
                         console.warn('syncSpecials: failed to format specials for', combatant.id, err);
                     }
@@ -344,6 +355,9 @@ export function CombatManager(){
         this.data = null;
         this.intervalReference = null;
         this.combatOver = false;
+        // Clear the module-level shield wall registry so walls from a previous
+        // combat don't persist into the next one.
+        activeShieldWalls.splice(0, activeShieldWalls.length);
     }
 
     // Helper: set occupiedCoords for a combatant, honoring large monsters that
@@ -378,6 +392,52 @@ export function CombatManager(){
         } catch (e) {
             // best-effort
         }
+    }
+
+    // Returns true if combatant is a large (2-tile-tall) creature.
+    this._isLargeCombatant = (combatant) => {
+        if (!combatant) return false;
+        const LARGE_KEYS = ['dragon','beholder','ogre','sphinx','manticore','wyvern','wyvern_alt'];
+        return (
+            (typeof combatant.large === 'boolean' && combatant.large === true)
+            || (combatant.type && LARGE_KEYS.includes(combatant.type))
+            || (typeof combatant.size === 'number' && combatant.size >= 2)
+            || (typeof combatant.scale === 'number' && combatant.scale >= 2)
+            || (combatant.isMonster === true && combatant.isMinion !== true)
+        );
+    }
+
+    /**
+     * Checks whether `caller` can legally move to `coords`.
+     * - The tile must be in-bounds and unoccupied (checking occupiedCoords too).
+     * - If `caller` is a large combatant, the tile directly above `coords`
+     *   must also be in-bounds and unoccupied (no one else occupies it).
+     */
+    this._canMoveToCoords = (caller, coords) => {
+        if (!coords || typeof coords.x !== 'number' || typeof coords.y !== 'number') return false;
+        const MAX_D = 7, MAX_L = 5;
+        if (coords.x < 0 || coords.x > MAX_D || coords.y < 0 || coords.y > MAX_L) return false;
+        // Check destination tile itself
+        const destOccupied = Object.values(this.combatants).some(e => {
+            if (!e || e.id === caller.id) return false;
+            if (e.coordinates && e.coordinates.x === coords.x && e.coordinates.y === coords.y) return true;
+            if (Array.isArray(e.occupiedCoords)) return e.occupiedCoords.some(c => c.x === coords.x && c.y === coords.y);
+            return false;
+        });
+        if (destOccupied) return false;
+        // For large combatants, also check the tile above the destination
+        if (this._isLargeCombatant(caller)) {
+            const above = { x: coords.x, y: coords.y - 1 };
+            if (above.y < 0) return false; // can't fit — top of board
+            const aboveOccupied = Object.values(this.combatants).some(e => {
+                if (!e || e.id === caller.id) return false;
+                if (e.coordinates && e.coordinates.x === above.x && e.coordinates.y === above.y) return true;
+                if (Array.isArray(e.occupiedCoords)) return e.occupiedCoords.some(c => c.x === above.x && c.y === above.y);
+                return false;
+            });
+            if (aboveOccupied) return false;
+        }
+        return true;
     }
 
     this.combatants = {};
@@ -434,6 +494,9 @@ export function CombatManager(){
     }
     this.establishUpdateDataCallback = (cb) => {
         this.updateData = cb
+    }
+    this.establishBoardEventCallback = (cb) => {
+        this.triggerBoardEvent = cb;
     }
     this.establishGameOverCallback = (cb) => {
         this.gameOver = cb
@@ -558,6 +621,9 @@ export function CombatManager(){
             getSelectedFighter: this.getSelectedFighter
             // combatPaused: this.combatPaused
         }
+        // Store on `this` so runtime methods like spawnMinion (defined outside
+        // initializeCombat's scope) can pass the same callbacks to createFighter.
+        this._callbacks = callbacks;
         this.data = data;
         this.combatants = {};
         // const colors_withColorSquare = [' #b710d5',' #6495ed',' #73b746',' #f4d013']
@@ -601,14 +667,25 @@ export function CombatManager(){
     try { this._setCombatantOccupiedCoords(this.combatants[monster.id]); } catch (err) {}
 
         if(this.data.minions){
-            let position = MAX_LANES-1;
-            this.data.minions.forEach(e=>{
+            const monsterLane = this.data.monster.coordinates.y; // e.g. 2
+            // The main monster is always 2x scale — it virtually occupies the tile
+            // directly above it (monsterLane - 1) as well. Exclude both tiles so
+            // no minion is placed inside the monster's virtual space.
+            const monsterVirtualLane = monsterLane - 1; // tile above (may be -1 if monster is at row 0, handled below)
+            // All valid lanes 0..MAX_LANES-1, excluding the main monster's lane and its virtual tile above
+            const availableLanes = [];
+            for (let i = MAX_LANES - 1; i >= 0; i--) {
+                if (i !== monsterLane && i !== monsterVirtualLane) availableLanes.push(i);
+            }
+            // availableLanes has MAX_LANES-1 slots. If there are more minions than that,
+            // overflow minions are placed one column behind (MAX_DEPTH-1) to avoid overlap.
+            this.data.minions.forEach((e, i)=>{
                 e.isMinion = true;
                 e.coordinates = {x:0,y:0}
-                e.coordinates.y = position;
-                position--
-                e.coordinates.x = MAX_DEPTH;
-                // e.coordinates = {x:MAX_DEPTH+1, y:position}
+                const laneIndex = i % availableLanes.length;
+                const columnOffset = Math.floor(i / availableLanes.length); // 0 for first batch, 1 for overflow
+                e.coordinates.y = availableLanes[laneIndex];
+                e.coordinates.x = MAX_DEPTH - columnOffset;
                 let m = createFighter(e, callbacks, this.FIGHT_INTERVAL)
                 m.isMinion = true;
                 this.combatants[m.id] = m;
@@ -621,14 +698,18 @@ export function CombatManager(){
         // using stale values persisted from earlier runs.
         try { this.syncSpecials(); } catch (e) { console.warn('syncSpecials error', e); }
 
+        // Initialize specials to fully ready (cooldown_position = 100) so they
+        // are available at the start of combat. The recharge interval is only
+        // started AFTER a special is triggered — NOT here. (Previously this loop
+        // called kickoffSpecialCooldown which immediately set cooldown_position = 0
+        // and ticked up over 20s, making auto-trigger specials like berserker
+        // unreachable on the very first processMove tick.)
         Object.values(this.combatants).forEach(combatant => {
             if (combatant.specials && Array.isArray(combatant.specials)) {
                 combatant.specials.forEach(action => {
-                    try {
-                        this.kickoffSpecialCooldown(action);
-                    } catch (err) {
-                        // non-fatal: log and continue
-                        console.warn('kickoffSpecialCooldown error for', combatant.id, err);
+                    if (action && typeof action === 'object') {
+                        action.cooldown_position = 100;
+                        console.log(`[initializeCombat] ${combatant.type} special "${action.name}" → cooldown_position set to 100 (ready)`);
                     }
                 });
             }
@@ -663,40 +744,42 @@ export function CombatManager(){
         if(!target){
             return
         }
-    // Compute x and y differences explicitly so we can correctly check orthogonal adjacency
-    const dx = Math.abs(caller.coordinates.x - target.coordinates.x);
-    const dy = Math.abs(caller.coordinates.y - target.coordinates.y);
 
-    // 1 in either axis indicates adjacent in that axis
-    let res;
-    res = dx <= 3;
+        // For large targets (2-tile monsters), check range against every occupied tile —
+        // not just target.coordinates. This lets fighters adjacent to the virtual top tile
+        // also trigger attacks and have them register as hits.
+        const targetTiles = (Array.isArray(target.occupiedCoords) && target.occupiedCoords.length > 0)
+            ? target.occupiedCoords
+            : [target.coordinates];
 
-    switch(caller.pendingAttack.range){
-            case 'self':
-                res = true;
-            break;
-            case 'close':
-                // Close means orthogonally adjacent (left/right OR up/down), not diagonal.
-                // dx === 1 && dy === 0 -> horizontal neighbor
-                // dx === 0 && dy === 1 -> vertical neighbor
-                res = (dx === 1 && dy === 0) || (dx === 0 && dy === 1);
-            break;
-            case 'medium':
-                        // Medium range: primarily based on horizontal (x) distance from caller
-                        // Use the x-axis differential (dx) to decide if the target is within
-                        // medium reach (greater than close but within medium range).
-                        res = dx > 1 && dx <= 3;
-            break;
-            case 'far':
-                // if(caller.type === 'sphinx'){
-                //     console.log('sphinx differential', differential);
-                // }
-                res = caller.coordinates.y === target.coordinates.y;
-            break;
-            default:
-                console.log('somehow attack had no range');
-            break;
-        }
+        // For large callers (e.g. the Mummy attacking a fighter standing on its virtual
+        // top tile), also check range from every tile the caller occupies — not just its
+        // foot tile. This is the symmetric fix to the target-side occupiedCoords check.
+        const callerTiles = (Array.isArray(caller.occupiedCoords) && caller.occupiedCoords.length > 0)
+            ? caller.occupiedCoords
+            : [caller.coordinates];
+
+        // Helper: test one caller tile vs one target tile for the pending attack range
+        const tileInRange = (cc, tc) => {
+            const dx = Math.abs(cc.x - tc.x);
+            const dy = Math.abs(cc.y - tc.y);
+            switch(caller.pendingAttack.range){
+                case 'self':
+                    return true;
+                case 'close':
+                    // Orthogonally adjacent (left/right OR up/down)
+                    return (dx === 1 && dy === 0) || (dx === 0 && dy === 1);
+                case 'medium':
+                    return dx > 1 && dx <= 3;
+                case 'far':
+                    // Far range: must share the same lane (y row)
+                    return cc.y === tc.y;
+                default:
+                    return false;
+            }
+        };
+
+        const res = callerTiles.some(cc => targetTiles.some(tc => tileInRange(cc, tc)));
         return !!res;
     }
     this.getLiveFighters = () => {
@@ -726,6 +809,27 @@ export function CombatManager(){
         if(!this.selectedFighter) return 
         const target = this.combatants[this.selectedFighter.targetId];
         switch(this.selectedFighter.type){
+            case 'soldier':
+                switch(special.name){
+                    case 'shield wall': {
+                        const soldierAI = this.fighterAI && this.fighterAI.roster && this.fighterAI.roster['soldier'];
+                        if (soldierAI) {
+                            const fighter = this.selectedFighter;
+                            const sw = fighter.specials && fighter.specials.find(s => s && s.name === 'shield wall');
+                            const ready = sw && sw.cooldown_position === 100;
+                            if (ready && !fighter.shieldWallActive) {
+                                soldierAI.triggerShieldWall(fighter, this.combatants);
+                            }
+                        }
+                        break;
+                    }
+                    case 'force back':
+                        // stub — not yet implemented
+                    break;
+                    default:
+                    break;
+                }
+            break;
             case 'wizard':
                 switch(special.name){
                     case 'ice blast':
@@ -735,6 +839,41 @@ export function CombatManager(){
                     break;
                 }
             break;
+            case 'monk': {
+                const monkAI = this.fighterAI && this.fighterAI.roster && this.fighterAI.roster['monk'];
+                if (monkAI) {
+                    switch (special.name) {
+                        case 'windmill': {
+                            const fighter = this.combatants[this.selectedFighter.id];
+                            const ws = fighter.specials && fighter.specials.find(s => s && s.name === 'windmill');
+                            if (ws && ws.cooldown_position === 100 && !fighter.windmillActive) {
+                                monkAI.triggerWindmill(fighter, this.combatants);
+                            }
+                            break;
+                        }
+                        default:
+                            break;
+                    }
+                }
+                break;
+            }
+            case 'barbarian': {
+                const barbarianAI = this.fighterAI?.roster?.['barbarian'];
+                if (barbarianAI && special) {
+                    switch (special.name) {
+                        case 'berserker': {
+                            const fighter = this.combatants[this.selectedFighter?.id];
+                            if (fighter && barbarianAI.shouldUseBerserker(fighter, this.combatants)) {
+                                barbarianAI.triggerBerserker(fighter, this.combatants);
+                            }
+                            break;
+                        }
+                        default:
+                            break;
+                    }
+                }
+                break;
+            }
             default:
                 break;
         }
@@ -831,17 +970,7 @@ export function CombatManager(){
         }
         this.updateData(clone(this.combatants))
     }
-    this.chooseAttackType = (caller, target) => {
-        if(this.fighterAI.roster[caller.type]){
-            caller.pendingAttack = this.fighterAI.roster[caller.type].chooseAttackType(caller, target);
-            return
-        }
-
-        if(this.monsterAI.roster[caller.type]){
-            caller.pendingAttack = this.monsterAI.roster[caller.type].chooseAttackType(caller, target);
-            return
-        }
-
+    this.genericChooseAttackType = (caller, target) => {
         let attack, available = caller.attacks.filter(e=>e.cooldown_position === 100);
         const distanceToTarget = this.getDistanceToTarget(caller, target);
         let percentCooledDown = 0,
@@ -912,6 +1041,17 @@ export function CombatManager(){
             console.log('hmmm, wasnt able to find an appropriate attack');
         }
         return attack
+    }
+    this.chooseAttackType = (caller, target) => {
+        if(this.fighterAI.roster[caller.type]){
+            caller.pendingAttack = this.fighterAI.roster[caller.type].chooseAttackType(caller, target);
+            return
+        }
+        if(this.monsterAI.roster[caller.type]){
+            caller.pendingAttack = this.monsterAI.roster[caller.type].chooseAttackType(caller, target);
+            return
+        }
+        caller.pendingAttack = this.genericChooseAttackType(caller, target);
     }
     this.isSpecialAttack = (attackType) => {
         const specials = ['meditate']
@@ -1176,7 +1316,9 @@ export function CombatManager(){
         if(!atk) return
     // Use speed for cooldown calculations (monsters use speed, fighters may have dex-derived speed)
     const callerSpeed = (caller.stats && (typeof caller.stats.speed === 'number') && caller.stats.speed > 0) ? caller.stats.speed : ((caller.stats && (typeof caller.stats.dex === 'number') && caller.stats.dex > 0) ? caller.stats.dex : 1);
-    const generalCooldown = (10 / callerSpeed) * 1000
+    // attackSpeedMult allows per-fighter attack frequency tuning without touching dex/movement
+    const attackSpeedMult = (typeof caller.stats.attackSpeedMult === 'number' && caller.stats.attackSpeedMult > 0) ? caller.stats.attackSpeedMult : 1;
+    const generalCooldown = (10 / callerSpeed) * 1000 / attackSpeedMult;
         atk['cooldown_position'] = 0;
         let totalTime = atk.cooldown * 1000;
         let scopeVar = 0, that = this;
@@ -1202,25 +1344,23 @@ export function CombatManager(){
         if(!specialAction) return
 
         specialAction['cooldown_position'] = 0;
-        let totalTime = specialAction.cooldown * 1000;
-        let scopeVar = 0, that = this;
-        // caller.onGeneralAttackCooldown = true;
-        // const generalAttackCooldown = setTimeout(()=>{
-        //     caller.onGeneralAttackCooldown = false;
-        // }, generalCooldown)
+        // cooldown is expressed in eras. One era = TICKS_PER_ERA ticks of FIGHT_INTERVAL ms each.
+        // Reading this.FIGHT_INTERVAL live inside the interval means the cooldown rate
+        // automatically adjusts when the player changes game speed mid-combat.
+        const totalTicks = specialAction.cooldown * TICKS_PER_ERA;
+        let ticksElapsed = 0, that = this;
         const intervalRef = setInterval(()=>{
             let ratio = 0;
             if(!that.combatPaused){
-                scopeVar += 100;
-                ratio = Math.ceil((scopeVar / totalTime) * 100);
+                ticksElapsed++;
+                ratio = Math.ceil((ticksElapsed / totalTicks) * 100);
                 specialAction['cooldown_position'] = ratio;
             }
             if(ratio >= 100){
-                scopeVar = 0;
-                // console.log(caller.type, 'done with cooldown for ', atk);
+                ticksElapsed = 0;
                 clearInterval(intervalRef)
             }
-        },100)
+        }, this.FIGHT_INTERVAL)
     }
     this.getLaneDifferenceToTarget = (caller, target) => {
         if(!target) return 0;
@@ -1307,7 +1447,9 @@ export function CombatManager(){
                         color: caller.color
                     }
                 }
-                this.overlayManager.addAnimation(animation)
+                if (this.overlayManager && this.overlayManager.overlays && this.overlayManager.overlays[caller.targetId]) {
+                    this.overlayManager.addAnimation(animation)
+                }
             }
             // If no new target, do not change facing (persist last direction)
             return
@@ -1329,7 +1471,9 @@ export function CombatManager(){
                         color: caller.isMonster ? 'red' : 'lightred'
                     }
                 }
-                this.overlayManager.addAnimation(animation)
+                if (this.overlayManager && this.overlayManager.overlays && this.overlayManager.overlays[caller.targetId]) {
+                    this.overlayManager.addAnimation(animation)
+                }
             }
             // If no new target, do not change facing (persist last direction)
             return
@@ -1404,6 +1548,7 @@ export function CombatManager(){
     }
     this.processMove = (caller) => {
         if(caller.dead) return;
+        if(caller.stunned) return; // stunned: skip all movement and AI logic this tick
     // Recompute facing before attempting movement so facing isn't stale as units shift around
     try { this.recalculateFacing(caller); } catch (e) {}
         if(this.fighterAI.roster[caller.type]){
@@ -1423,6 +1568,17 @@ export function CombatManager(){
         const distanceToTarget = this.getDistanceToTarget(caller, target),
         laneDiff = this.getLaneDifferenceToTarget(caller, target)
 
+        // If this is a monster/minion already adjacent to its target with a close-range
+        // attack selected, skip repositioning entirely — no dancing in place.
+        if((caller.isMonster || caller.isMinion) && target && caller.pendingAttack){
+            const pendingRange = caller.pendingAttack.range;
+            if(pendingRange === 'close' || !pendingRange){
+                const dx = Math.abs(caller.coordinates.x - target.coordinates.x);
+                const dy = Math.abs(caller.coordinates.y - target.coordinates.y);
+                if((dx === 1 && dy === 0) || (dx === 0 && dy === 1)) return;
+            }
+        }
+
         
         
         let newPosition, newDepth;
@@ -1438,7 +1594,11 @@ export function CombatManager(){
             newDepth = caller.coordinates.x
         }
         const coordinatesOccupiedBy = (coordinates) => {
-            return Object.values(this.combatants).find(e=>e.coordinates.x === coordinates.x && e.coordinates.y === coordinates.y)
+            return Object.values(this.combatants).find(e => {
+                if (e.coordinates.x === coordinates.x && e.coordinates.y === coordinates.y) return true;
+                if (Array.isArray(e.occupiedCoords) && e.occupiedCoords.some(c => c.x === coordinates.x && c.y === coordinates.y)) return true;
+                return false;
+            });
         }
 
         // RE-POSITION
@@ -1525,6 +1685,16 @@ export function CombatManager(){
         if(newPosition > MAX_LANES) newPosition = MAX_LANES;
         if(newDepth < 0) newDepth = 0
         if(newDepth > MAX_DEPTH) newDepth = MAX_DEPTH;
+
+        // For large combatants (main monster, 2-tile-tall creatures), make sure
+        // the tile above the destination is also free before committing the move.
+        if (this._isLargeCombatant && this._isLargeCombatant(caller)) {
+            const destAbove = { x: newDepth, y: newPosition - 1 };
+            if (destAbove.y < 0 || coordinatesOccupiedBy(destAbove)) {
+                // Can't fit — abort this tick's movement
+                return;
+            }
+        }
 
         //set new values
         if(newDepth !== undefined) caller.coordinates.x = newDepth;
@@ -1725,12 +1895,16 @@ export function CombatManager(){
         return Object.values(this.combatants).filter(c=>c.id!==caller.id).some(e=>JSON.stringify(e.coordinates) === JSON.stringify(coords))
     }
     this.hitsCombatant = (caller, combatantHit, supplementalData = null, options = {}) => {
-        if(caller.type === 'wizard'){
-            console.log('WIZARD HITS');
-        }
-        if(supplementalData){
-            console.log('supplementalData: ', supplementalData);
-        }
+        // Guard: never apply damage to an already-dead combatant (race condition safety)
+        if (!combatantHit || combatantHit.dead) return;
+        // if(caller.type === 'wizard'){
+        //     console.log('WIZARD HITS');
+        // }
+        // if(supplementalData){
+        //     console.log('supplementalData: ', supplementalData);
+        // }
+
+
         // Unified damage application used by many attack paths.
         // options.forceCritical: boolean to force a critical hit
         // supplementalData.increasedCritChance: legacy flag that increases crit chance
@@ -1766,6 +1940,9 @@ export function CombatManager(){
         }
 
         let damage = criticalHit ? baseDamage * CRITICAL_DAMAGE_MULTIPLIER : baseDamage;
+        // Safety net: if damage is NaN (e.g. caller.atk is undefined), default to 1
+        // so the hit still registers and the hp <= 0 death check can fire correctly.
+        if (!Number.isFinite(damage) || damage < 0) damage = 1;
 
         // Determine attack type for weakness checks: prefer pendingAttack.type, but
         // if this is a special use supplementalData.type when available.
@@ -1874,8 +2051,26 @@ export function CombatManager(){
             }
         }, ROCK_DURATION);
         // (Critical movement handled above; duplicated block removed)
-        
-        
+
+        // ── Attack effect: stun ──────────────────────────────────────────
+        // If the attack that just landed has an effect of type 'stun', roll
+        // the chance and apply the stun flag for the specified era duration.
+        // Duration is stored as an era counter (stunned_eras) and decremented
+        // in restartTurnCycle — so it tracks correctly regardless of game speed.
+        const attackEffect = caller.pendingAttack && caller.pendingAttack.effect;
+        if (attackEffect && attackEffect.type === 'stun' && combatantHit.hp > 0) {
+            // Only attempt to stun if the target is not already stunned —
+            // prevents repeated hits from indefinitely refreshing the timer.
+            if (!combatantHit.stunned) {
+                const roll = Math.random() * 100;
+                if (roll < attackEffect.chance) {
+                    combatantHit.stunned = true;
+                    combatantHit.stunned_eras = (attackEffect.duration || 1);
+                    if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+                }
+            }
+        }
+
         if(combatantHit.hp <= 0){
             combatantHit.hp = 0;
             if(caller.targetId === combatantHit.id) caller.targetId = null;
@@ -1957,6 +2152,10 @@ export function CombatManager(){
             // HANDLE PUSHBACK OF TARGET
         }
         setTimeout(()=>{
+            caller.active = caller.aiming = false;
+            caller.attacking = caller.attackingReverse = false;
+            caller.missed = false;
+            
             if(!this.isMonster && !this.isMinion){
                 const hasValidTargets = Object.values(this.combatants).filter(e=>e.isMonster || e.isMinion).length >= 1;
                 if(hasValidTargets){
@@ -1977,13 +2176,13 @@ export function CombatManager(){
                     caller.targetId = null;
                 }
             }
-            caller.active = caller.aiming = false;
-        }, this.FIGHT_INTERVAL * 100);
-        setTimeout(()=>{
-            caller.attacking = caller.attackingReverse = false;
-            // Clear the unified wounded state after the hit-flash window
-            target.wounded = false;
-        }, this.FIGHT_INTERVAL * 30)
+            
+            // setTimeout(()=>{
+            //     caller.restartTurnCycle();
+            // }, 250)
+
+        }, this.FIGHT_INTERVAL * 50)
+
         setTimeout(()=>{
             caller.readout.action = ''
             caller.readout.result = ''
@@ -2038,6 +2237,11 @@ export function CombatManager(){
     }
 
     this.targetKilled = (combatant) => {
+    // If combat is already over, ignore in-flight death calls to prevent
+    // duplicate gameOver triggers and stale combatant state mutations.
+    if (this.combatOver) return;
+    // Guard against double-death (e.g. two fighters attack simultaneously)
+    if (combatant.dead) return;
     // Ensure the combatant stops all activity immediately.
     combatant.aiming = false;
     combatant.active = false;
@@ -2166,8 +2370,88 @@ export function CombatManager(){
         missesTarget: this.missesTarget,
         hitsTarget: this.hitsTarget,
         hitsCombatant: this.hitsCombatant,
-        targetKilled: this.targetKilled
+        targetKilled: this.targetKilled,
+        kickoffSpecialCooldown: this.kickoffSpecialCooldown,
+        chooseAttackType: this.genericChooseAttackType,
+        getCombatants: () => this.combatants,
+        triggerBoardEvent: (eventType, data) => { if (typeof this.triggerBoardEvent === 'function') this.triggerBoardEvent(eventType, data); },
+        // Returns the current live fight interval so AI profiles always use the
+        // correct value even after updateAllFightIntervals changes the speed.
+        getFightInterval: () => this.FIGHT_INTERVAL,
+        // Lets fighter-ai.js register a callback to sync its internal data.INTERVAL_TIME
+        // whenever the combat speed changes.
+        updateIntervalTime: (cb) => { this._intervalTimeListeners = this._intervalTimeListeners || []; this._intervalTimeListeners.push(cb); }
     }
+    // Allow monster AI to spawn a new minion at runtime (used by duplicate / bifurcate).
+    // `template` is a plain data object shaped like a monster-manager entry.
+    // `overrides` is merged on top before createFighter so the caller can set
+    // coordinates, hp, specials, etc. without mutating the original template.
+    utilMethods.spawnMinion = (template, overrides = {}) => {
+        try {
+            // Build the raw data object that createFighter expects
+            const rawId = (template.id || template.type || 'minion') + '_clone_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
+            const rawMinion = Object.assign({}, template, overrides, { id: rawId });
+
+            // Ensure coordinates exist
+            if (!rawMinion.coordinates) rawMinion.coordinates = { x: MAX_DEPTH - 1, y: 0 };
+
+            // Ensure stats object exists (createFighter reads from stats.*)
+            if (!rawMinion.stats) {
+                rawMinion.stats = {
+                    hp: rawMinion.hp || 10,
+                    atk: rawMinion.atk || 1,
+                    def: rawMinion.def || 0,
+                    speed: rawMinion.speed || 5,
+                    willpower: 0
+                };
+            }
+
+            rawMinion.isMinion = true;
+
+            const newCombatant = createFighter(rawMinion, this._callbacks, this.FIGHT_INTERVAL);
+            newCombatant.isMinion = true;
+
+            this.combatants[newCombatant.id] = newCombatant;
+            try { this._setCombatantOccupiedCoords(this.combatants[newCombatant.id]); } catch (err) {}
+
+            // Register with overlay manager so targeting animations don't crash
+            try {
+                if (this.overlayManager && typeof this.overlayManager.addCombatant === 'function') {
+                    this.overlayManager.addCombatant(newCombatant);
+                }
+            } catch (err) { console.warn('[spawnMinion] overlayManager.addCombatant failed', err); }
+
+            // Set specials to fully ready
+            if (Array.isArray(newCombatant.specials)) {
+                newCombatant.specials.forEach(s => { if (s && typeof s === 'object') s.cooldown_position = 100; });
+            }
+
+            console.log(`[spawnMinion] spawned ${newCombatant.type} id=${newCombatant.id} at (${newCombatant.coordinates.x},${newCombatant.coordinates.y})`);
+
+            // Initialize AI behavior for the new minion
+            const ai = this.monsterAI && this.monsterAI.roster && this.monsterAI.roster[newCombatant.type];
+            if (ai && typeof ai.initialize === 'function') {
+                try { ai.initialize(newCombatant); } catch (e) { console.warn('[spawnMinion] ai.initialize failed', e); }
+            }
+
+            // Set all attacks to ready so the minion can act immediately
+            if (Array.isArray(newCombatant.attacks)) {
+                newCombatant.attacks.forEach(a => { if (a && typeof a === 'object') a.cooldown_position = 100; });
+            }
+
+            // Push to UI immediately
+            if (typeof this.broadcastDataUpdate === 'function') this.broadcastDataUpdate();
+
+            // Kick off the turn cycle so the new minion starts acting
+            try { newCombatant.turnCycle(); } catch (e) { console.warn('[spawnMinion] turnCycle failed', e); }
+
+            return newCombatant;
+        } catch (err) {
+            console.error('[spawnMinion] error:', err);
+            return null;
+        }
+    };
+
     // Allow AI to consume consumables and notify UI (DungeonPage) to remove one item
     utilMethods.useConsumable = (item, user) => {
         try {

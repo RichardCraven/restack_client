@@ -60,7 +60,21 @@ export default function FightersCombatGrid(props) {
                 // more robust against page scroll and transforms than client bounding rect diffs.
                 const portraitOffsetLeft = (typeof portraitEl.offsetLeft === 'number') ? portraitEl.offsetLeft : Math.round(pRect.left - parentRect.left);
                 const portraitOffsetTop = (typeof portraitEl.offsetTop === 'number') ? portraitEl.offsetTop : Math.round(pRect.top - parentRect.top);
-                const left = portraitOffsetLeft + (pRect.width / 2) - (weaponW / 2);
+                // Place the icon at the leading edge of the portrait (the divide between
+                // the fighter and their target) rather than centered on the portrait.
+                // Use TILE_SIZE (100) rather than pRect.width — portrait-wrapper has no
+                // explicit width so getBoundingClientRect can return unreliable values.
+                let left;
+                if (details.facing === 'right') {
+                    // Center the icon on the right edge of the portrait tile, nudged
+                    // slightly inward so it visually straddles the divide.
+                    left = portraitOffsetLeft + TILE_SIZE - weaponW;
+                } else if (details.facing === 'left') {
+                    left = portraitOffsetLeft;
+                } else {
+                    // up/down: centre horizontally
+                    left = portraitOffsetLeft + (TILE_SIZE / 2) - (weaponW / 2);
+                }
                 let top;
                 if (details.facing === 'up') {
                     top = portraitOffsetTop - (weaponH / 2);
@@ -101,6 +115,11 @@ export default function FightersCombatGrid(props) {
             if (!prev && now) {
                 // attacking went from false -> true: start visual animation
                 setAnimatingHits(prevState => ({ ...prevState, [fighter.id]: true }));
+                // Clear the hit class after 1s since the CSS animation was removed
+                // (the onAnimationEnd handler is no longer reliable for this class).
+                setTimeout(() => {
+                    setAnimatingHits(prevState => ({ ...prevState, [fighter.id]: false }));
+                }, 1000);
             }
             // update prev ref for next tick
             prevAttackingRef.current[fighter.id] = now;
@@ -162,6 +181,10 @@ export default function FightersCombatGrid(props) {
                                                 verticalFacingClass,
                                                 details?.locked ? 'locked' : '',
                                                 details?.chargingUpActive ? 'charging-up' : '',
+                                                details?.berserkerActive ? 'berserk-active' : '',
+                                                details?.stunned ? 'stunned' : '',
+                                                details?.drained ? 'drained' : '',
+                                                details?.feared  ? 'feared'  : '',
                                             ].filter(Boolean).join(' ')
                                         }
                                         style={{
@@ -201,7 +224,8 @@ export default function FightersCombatGrid(props) {
                                         <div className={`portrait-overlay`} >
                                             <div className="damage-indicator-container">
                                                 {props.getFighterDetails(fighter)?.damageIndicators.map((e,i)=>{
-                                                    return <div key={i} className="damage-indicator">
+                                                    const isStatDebuff = typeof e === 'string';
+                                                    return <div key={i} className={`damage-indicator${isStatDebuff ? ' stat-debuff' : ''}`}>
                                                         {e}
                                                     </div>
                                                 })}
@@ -235,7 +259,7 @@ export default function FightersCombatGrid(props) {
 
                                         </div>
                                     </div>
-                                    { props.getFighterDetails(fighter) && props.getFighterDetails(fighter).pendingAttack && !props.getFighterDetails(fighter).dead && (() => {
+                                    { props.getFighterDetails(fighter) && props.getFighterDetails(fighter).pendingAttack && props.getFighterDetails(fighter).attacking && !props.getFighterDetails(fighter).dead && (() => {
                                         const details = props.getFighterDetails(fighter);
                                         const isMonk = fighter.type === 'monk';
                                         const isBasicPunch = isMonk && details.pendingAttack.range === 'close' && details.pendingAttack.name !== 'dragon punch';
@@ -243,17 +267,22 @@ export default function FightersCombatGrid(props) {
 
                                         // position weapon using measured portrait positions when available
                                         const measured = weaponPositions[fighter.id];
-                                        const weaponStyle = measured ? { ...measured, backgroundImage: `url(${icon})` } : (() => {
+                                        const weaponStyle = measured ? { ...measured, backgroundImage: `url(${icon})`, opacity: 1 } : (() => {
                                             // fallback to original coordinate math if measurement not ready
-                                            if (details?.facing === 'right') return { left: `${details?.coordinates.x * 100 + 45 + (details?.coordinates.x * 2)}px`, backgroundImage: `url(${icon})` };
-                                            if (details?.facing === 'left') return { left: `${details?.coordinates.x * 100 - 65 + (details?.coordinates.x * 2)}px`, backgroundImage: `url(${icon})` };
-                                            const left = `${details?.coordinates.x * 100 + 45 + (details?.coordinates.x * 2)}px`;
-                                            const top = details?.facing === 'up' ? `-40px` : `110px`;
-                                            return { left, top, backgroundImage: `url(${icon})` };
+                                            const tileW = 100;
+                                            const weaponW = 90;
+                                            if (details?.facing === 'right') return { left: `${details?.coordinates.x * tileW + tileW - weaponW}px`, opacity: 1, backgroundImage: `url(${icon})` };
+                                            if (details?.facing === 'left') return { left: `${details?.coordinates.x * tileW}px`, opacity: 1, backgroundImage: `url(${icon})` };
+                                            if (details?.facing === 'up') return { left: `${details?.coordinates.x * tileW + (tileW / 2) - (weaponW / 2)}px`, top: `-40px`, opacity: 1, backgroundImage: `url(${icon})`, transform: 'rotate(-90deg)' };
+                                            if (details?.facing === 'down') return { left: `${details?.coordinates.x * tileW + (tileW / 2) - (weaponW / 2)}px`, top: `110px`, opacity: 1, backgroundImage: `url(${icon})`, transform: 'rotate(90deg)' };
+                                            // Default: center
+                                            const left = `${details?.coordinates.x * tileW + (tileW / 2) - (weaponW / 2)}px`;
+                                            const top = `50px`;
+                                            return { left, top, opacity: 1, backgroundImage: `url(${icon})` };
                                         })();
 
                                         return (
-                                            <div className={`weapon-wrapper ${details?.facing === 'left' ? 'reversed' : ''} ${verticalFacingClass} ${details?.aiming ? 'aiming' : ''} ${(details?.attacking && details?.pendingAttack.range === 'close') ? (details?.facing === 'right' ? 'swinging-right' : 'swinging-left') : (details?.attacking && details?.pendingAttack.range === 'far' ? 'shooting' : '')} medium`} style={weaponStyle}>
+                                            <div className={`weapon-wrapper ${details?.facing === 'left' ? 'reversed' : ''} ${verticalFacingClass} ${details?.aiming ? 'aiming' : ''} medium`} style={weaponStyle}>
                                             </div>
                                         );
                                     })()}
@@ -272,10 +301,10 @@ export default function FightersCombatGrid(props) {
                                         ${(props.getFighterDetails(fighter)?.healing) ? 'fighterHealsAnimation' : ''}
                                         `}
                                         onAnimationEnd={e => {
-                                            // When the visual hit animation completes, clear our
-                                            // transient flag so the class is removed and the
-                                            // background/gradient won't linger.
-                                            if (e && e.animationName && (e.animationName.includes('FighterHits') || e.animationName.includes('FighterHitsRtoL') || e.animationName.includes('MonsterHits'))) {
+                                            // Clear heals animation flag when the FighterHits keyframe completes.
+                                            // (Hit animation classes no longer have CSS animations so they are
+                                            //  cleared via the setTimeout in the useEffect below instead.)
+                                            if (e && e.animationName && e.animationName.includes('FighterHits')) {
                                                 setAnimatingHits(prev => ({ ...prev, [fighter.id]: false }));
                                             }
                                         }}></div>

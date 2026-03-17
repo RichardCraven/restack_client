@@ -1,4 +1,6 @@
 import * as images from '../utils/images'
+import React from 'react';
+import CanvasAxeThrow from '../components/Canvas/canvas_axe_throw';
 export function AnimationManager(){
     // Animation durations (ms)
     this.animationsMatrix = {
@@ -8,6 +10,7 @@ export function AnimationManager(){
         dragon_punch: { duration: 700 },
         punch: { duration: 600 },
         spin_attack_arc: { duration: 800 },
+        windmill: { duration: 750 }
     };
 
     // Generic attack animation trigger for AI modules (e.g., Monk)
@@ -236,12 +239,90 @@ export function AnimationManager(){
     //         this.update();
     //     }, duration);
     // }
-    this.magicMissile = (sourceCoords, targetCoords) => {
+
+    /**
+     * Windmill — 4-direction simultaneous strike.
+     *
+     * Sets animationType='windmill' on the source tile (triggers the CSS burst +
+     * 4 fist keyframes), then after a short delay hits every enemy that is
+     * orthogonally adjacent (N / S / E / W) and triggers a hit-flash on those tiles.
+     *
+     * @param {object}   caller      - The Monk combatant object
+     * @param {object}   combatants  - All combatants map
+     * @param {function} hitCallback - Called with each enemy hit (e.g. hitsCombatant)
+     * @param {number}   duration    - Total animation duration in ms (default 750)
+     * @returns {Promise<object[]>}  - Resolves with array of combatants hit
+     */
+    this.triggerWindmill = (caller, combatants, hitCallback, duration = 750) => {
+        const sourceTileId = this.getTileIdByCoords(caller.coordinates);
+        const animationTile = sourceTileId !== null ? this.tiles.find(e => e.id === sourceTileId) : null;
+
+        // Kick off the CSS animation on the source tile
+        if (animationTile) {
+            animationTile.animationType = 'windmill';
+            animationTile.transitionType = null;
+            animationTile.animationData = { duration };
+            this.update();
+        }
+
+        return new Promise((resolve) => {
+            // Hit window: halfway through the animation (fists reach full extension)
+            const hitDelayMs = Math.round(duration * 0.6);
+            setTimeout(() => {
+                const { x, y } = caller.coordinates;
+                const cardinals = [
+                    { x, y: y - 1 }, // N
+                    { x, y: y + 1 }, // S
+                    { x: x + 1, y }, // E
+                    { x: x - 1, y }, // W
+                ];
+
+                const hit = [];
+                cardinals.forEach(tileCoords => {
+                    // Hit-flash the tile
+                    const tile = this.tiles.find(t => t.x === tileCoords.x && t.y === tileCoords.y);
+                    if (tile) {
+                        tile.animationType = 'hit-flash';
+                        this.update();
+                        setTimeout(() => {
+                            if (tile.animationType === 'hit-flash') {
+                                tile.animationType = null;
+                                this.update();
+                            }
+                        }, 500);
+                    }
+                    // Damage every living enemy on this tile
+                    Object.values(combatants).forEach(e => {
+                        if (!e.dead && (e.isMonster || e.isMinion) &&
+                            e.coordinates.x === tileCoords.x && e.coordinates.y === tileCoords.y) {
+                            hit.push(e);
+                            if (typeof hitCallback === 'function') hitCallback(e);
+                        }
+                    });
+                });
+
+                resolve(hit);
+            }, hitDelayMs);
+
+            // Clear the source tile animation after the full duration
+            setTimeout(() => {
+                if (animationTile) {
+                    animationTile.animationType = null;
+                    animationTile.transitionType = null;
+                    animationTile.animationData = {};
+                    this.update();
+                }
+            }, duration);
+        });
+    };
+
+    this.magicMissile = (sourceCoords, targetCoords, variant = 'major') => {
         const ref = {
             origin: sourceCoords,
             distanceToTarget: this.getDistanceToTarget(sourceCoords, targetCoords), 
             verticalDistanceToTarget: this.getVerticalDistanceToTarget(sourceCoords, targetCoords),
-            connectParticles: false
+            connectParticles: false,
+            variant, // 'major' (purple) or 'minor' (green, fewer particles)
         };
         this.canvasAnimations.push(ref)
         this.update();
@@ -252,6 +333,10 @@ export function AnimationManager(){
             this.update();
         }, 2500)
         // ^ travel time + 1 second of damage animation
+    }
+
+    this.minorMagicMissile = (sourceCoords, targetCoords) => {
+        this.magicMissile(sourceCoords, targetCoords, 'minor');
     }
     // Magic Circle Animation: static circle of particles at midpoint between source and target
     this.magicCircle = (sourceCoords, targetCoords, options = {}) => {
@@ -432,6 +517,10 @@ export function AnimationManager(){
 
     this.initialize = (MAX_DEPTH, MAX_ROWS) => {
         this.MAX_DEPTH = MAX_DEPTH;
+        // Flush any canvas animations left over from a previous session so they
+        // don't bleed into the new one (e.g. a magic missile still in-flight when
+        // the last combat ended).
+        this.canvasAnimations = [];
         let arr = [];
         // Use row-major order: id = y * MAX_DEPTH + x
         for (let y = 0; y < MAX_ROWS; y++) {
@@ -454,6 +543,20 @@ export function AnimationManager(){
     }
     this.update = () => {
         this.updateAnimationData({tiles: this.tiles, canvasAnimations: this.canvasAnimations})
+    }
+    // Hard-reset all animation state — call this when a combat session ends so
+    // stale canvas animations (missiles, fireballs, etc.) can't bleed into the
+    // next session via in-flight setTimeout cleanup callbacks.
+    this.reset = () => {
+        this.canvasAnimations = [];
+        // Clear all tile animation state too so tile-based effects don't linger
+        this.tiles.forEach(t => {
+            t.animationOn = false;
+            t.animationType = '';
+            t.animationData = {};
+            t.transitionType = '';
+        });
+        this.update();
     }
     this.handleTileClick = (tileId) => {
         let colors = ['purple', 'red', 'green', 'white'],
@@ -529,6 +632,33 @@ export function AnimationManager(){
             return;
         }
         switch(type){
+            case 'axe_throw':
+                    // Diagnostic log: capture when axe_throw animation is triggered in tile animation
+                    console.log('[AnimationManager] triggerTileAnimationComplex axe_throw', {
+                        tile: animationTile,
+                        data,
+                        actor: this.currentActor,
+                        tileId: sourceTileId,
+                        targetTileId,
+                        facing
+                    });
+                    // Calculate origin and target tile coordinates
+                    const originCoords = this.getTileCoordsById(sourceTileId);
+                    const targetCoords = this.getTileCoordsById(targetTileId);
+                    // Add a canvas animation for the flying axe
+                    this.canvasAnimations.push({
+                        type: 'axe_throw',
+                        origin: originCoords,
+                        target: targetCoords
+                    });
+                    this.update();
+                    // Remove the animation after it completes
+                    setTimeout(() => {
+                        this.canvasAnimations = this.canvasAnimations.filter(anim => anim.type !== 'axe_throw');
+                        this.update();
+                    }, this.animationsMatrix['sword_swing'].duration);
+                    return;
+                break;
             case 'claw':
                 animationTile.animationType = `claw`;
                 animationTile.transitionType = 'fade';
@@ -542,16 +672,30 @@ export function AnimationManager(){
                 },this.animationsMatrix[type].duration)
             break;
             case 'sword_swing':
+                // Diagnostic log: capture when sword_swing animation is triggered in tile animation
+                console.log('[AnimationManager] triggerTileAnimationComplex sword_swing', {
+                    tile: animationTile,
+                    data,
+                    actor: this.currentActor,
+                    tileId: sourceTileId,
+                    targetTileId,
+                    facing
+                });
                 animationTile.animationType = 'sword_swing';
                 animationTile.transitionType = 'fade';
-                animationTile.animationData = {facing, duration: this.animationsMatrix[type].duration};
+                animationTile.animationData = {
+                    facing,
+                    duration: this.animationsMatrix[type].duration,
+                    fighterType: data.fighterType,
+                    attackType: data.attackType
+                };
                 this.update();
-                setTimeout(()=>{
+                setTimeout(() => {
                     animationTile.animationType = null;
                     animationTile.transitionType = null;
                     animationTile.animationData = {};
                     this.update();
-                },this.animationsMatrix[type].duration)
+                }, this.animationsMatrix[type].duration);
             break;
             case 'spin_attack':
                 animationTile.animationType = 'spin_attack';
@@ -572,7 +716,7 @@ export function AnimationManager(){
                 animationTile.animationType = 'dragon_punch';
                 animationTile.transitionType = 'fade';
                 animationTile.animationData = {
-                    icon: data.icon || images['scepter_white'],
+                    icon: data.icon || images['hand_7'],
                     duration: this.animationsMatrix[type].duration,
                     facing
                 };
@@ -656,6 +800,25 @@ export function AnimationManager(){
         setTimeout(()=>{
             animate();
         },100)
+    }
+    this.axeThrow = async (targetTileId, sourceTileId, facing, resolve, fighterType, attackType) => {
+        const sourceTile = this.tiles.find(e => e.id === sourceTileId);
+        if (!sourceTile) {
+            console.log('missing source');
+            debugger;
+        }
+        const data = {
+            targetTileId,
+            type: 'axe_throw',
+            facing,
+            sourceTileId: sourceTile.id,
+            fighterType,
+            attackType
+        };
+        this.triggerTileAnimationComplex(data);
+        let tileCoords = targetTileId ? this.getTileCoordsById(targetTileId) : null;
+        let collision = tileCoords ? this.checkForCollision(tileCoords) : false;
+        resolve(collision);
     }
     this.straightBeamTo = (targetTileId, sourceTileId, color = null) => {
         const sourceTile = this.tiles.find(e=>e.id === sourceTileId)
@@ -1045,10 +1208,83 @@ export function AnimationManager(){
         resolve();
     }
 
+    /**
+     * Void Lance: a dark-purple beam that travels tile-by-tile from source to
+     * target, then bursts with a ripple at the impact point.
+     *
+     * Returns a Promise that resolves once the beam reaches the target tile.
+     * The caller is responsible for applying damage after the travel time.
+     *
+     * @param {object} sourceCoords  { x, y }
+     * @param {object} targetCoords  { x, y }
+     * @returns {Promise<number>}  resolves with the travel time in ms
+     */
+    this.voidLance = (sourceCoords, targetCoords) => {
+        return new Promise((resolve) => {
+            const sourceTileId  = this.getTileIdByCoords(sourceCoords);
+            const targetTileId  = this.getTileIdByCoords(targetCoords);
+
+            if (sourceTileId === null || targetTileId === null) {
+                resolve(0);
+                return;
+            }
+
+            const sourceTile      = this.tiles.find(e => e.id === sourceTileId);
+            const destinationTile = this.tiles.find(e => e.id === targetTileId);
+
+            if (!sourceTile || !destinationTile) {
+                resolve(0);
+                return;
+            }
+
+            const sameRow     = sourceTile.y === destinationTile.y;
+            const dx          = destinationTile.x - sourceTile.x;
+            const dy          = destinationTile.y - sourceTile.y;
+            const horizontal  = Math.abs(dx);
+            const vertical    = Math.abs(dy);
+            const steps       = Math.max(horizontal, vertical);
+
+            // Build an ordered list of intermediate tile ids between source and target
+            const idArray = [];
+            for (let i = 1; i <= steps; i++) {
+                const fx = sourceTile.x + Math.round((dx / steps) * i);
+                const fy = sourceTile.y + Math.round((dy / steps) * i);
+                const id = this.getTileIdByCoords({ x: fx, y: fy });
+                if (id !== null) idArray.push(id);
+            }
+
+            // For a short same-lane shot (1 tile gap) there are no intermediate tiles;
+            // flash the target directly after a short delay so something always plays.
+            if (idArray.length === 0) idArray.push(targetTileId);
+
+            // Speed: ~80 ms per tile feels like a fast lance
+            const msPerStep = sameRow ? 80 : 100;
+            let stepIndex   = 0;
+
+            const beamInterval = setInterval(() => {
+                if (stepIndex >= idArray.length) {
+                    clearInterval(beamInterval);
+                    // Impact burst at the target
+                    this.rippleAnimation(targetTileId, 'purple');
+                    resolve(steps * msPerStep);
+                    return;
+                }
+                this.triggerTileAnimation(idArray[stepIndex], 'purple');
+                stepIndex++;
+            }, msPerStep);
+        });
+    };
+
 
     // UTILS
     this.pickRandom = (array) => {
         let index = Math.floor(Math.random() * array.length)
         return array[index]
+    }
+    // Render a flying axe animation using a moving canvas
+    this.renderAxeThrowCanvas = (origin, target) => {
+        // This method should be called from a React component context
+        // Example usage: ReactDOM.render(this.renderAxeThrowCanvas(origin, target), container)
+        return <CanvasAxeThrow origin={origin} target={target} />;
     }
 }

@@ -89,7 +89,7 @@ export function MonsterManager(){
         },
         // ── Level 4 (minion) ─────────────────────────────────────────────
         kabuki_demon_minion: {
-            type: 'demon',
+            type: 'kabuki_demon_minion',
             key: 'kabuki_demon_minion',
             image_names: ['kabuki_demon_minion'],
             monster_names: ['Ikiro', 'Jimbu'],
@@ -105,7 +105,7 @@ export function MonsterManager(){
             greetings: ['Assaaa'],
             deathCries: ['No! Impossible!'],
             specials: ['obliterate', 'flying', 'invisibility'],
-            attacks: ['void_lance', 'magic_missile'],
+            attacks: ['void_lance', 'major_magic_missile'],
             weaknesses: ['arcane', 'holy-aura'],
             drops: [
                 {item: TIER1_POTION, percentChance: 35},
@@ -127,10 +127,11 @@ export function MonsterManager(){
             },
             level: 5,
             portrait: images['beholder_minion_portrait'],
+            portraitFilter: 'sepia(0.4) hue-rotate(320deg)',
             greetings: ['Vukdaj kolo gurdu'],
             deathCries: ['Urdu meklak milnaurku...'],
-            specials: ['obliterate', 'flying', 'invisibility'],
-            attacks: ['void_lance', 'magic_missile'],
+            specials: ['bifurcate', 'flying', 'minor_magic_missile'],
+            attacks: ['void_lance','claws'],
             weaknesses: ['arcane', 'holy-aura'],
             drops: [
                 {item: TIER1_POTION, percentChance: 35},
@@ -144,7 +145,7 @@ export function MonsterManager(){
             image_names: ['troll'],
             monster_names: ['Mundzungu', 'Wugum'],
             stats: {
-                hp: 78,
+                hp: 178,
                 atk: 10,
                 def: 13,
                 speed: 10,
@@ -168,7 +169,7 @@ export function MonsterManager(){
             image_names: ['mummy'],
             monster_names: ['Kufu', 'Razeset'],
             stats: {
-                hp: 80,
+                hp: 250,
                 atk: 10,
                 def: 13,
                 speed: 10,
@@ -179,7 +180,7 @@ export function MonsterManager(){
             greetings: ['time is unravelling'],
             deathCries: ['at last'],
             specials: ['induce_fear'],
-            attacks: ['grasp', 'energy_drain'],
+            attacks: ['grasp', 'energy_drain', 'claws'],
             weaknesses: ['arcane', 'fire', 'electricity'],
             minions: ['skeleton', 'skeleton'],
             drops: [
@@ -194,7 +195,7 @@ export function MonsterManager(){
             image_names: ['wraith'],
             monster_names: ['Sicirath', 'Olnuk', 'Ygra'],
             stats: {
-                hp: 82,
+                hp: 282,
                 atk: 9,
                 def: 8,
                 speed: 10,
@@ -243,7 +244,7 @@ export function MonsterManager(){
             image_names: ['gorgon'],
             monster_names: ['Lithios', 'Merkaba', 'Axolus'],
             stats: {
-                hp: 62,
+                hp: 162,
                 atk: 8,
                 def: 9,
                 speed: 10,
@@ -268,7 +269,7 @@ export function MonsterManager(){
             image_names: ['black_vampire'],
             monster_names: ['Vukodlak', 'Morias', 'Roterach'],
             stats: {
-                hp: 84,
+                hp: 184,
                 atk: 9,
                 def: 12,
                 speed: 10,
@@ -288,7 +289,7 @@ export function MonsterManager(){
         },
         // ── Level 11 ─────────────────────────────────────────────────────
         goat_demon: {
-            type: 'demon',
+            type: 'goat_demon',
             key: 'goat_demon',
             image_names: ['goat_demon'],
             monster_names: ['ur-Xulu', 'ur-Baba', 'ur-Zuzu'],
@@ -330,7 +331,7 @@ export function MonsterManager(){
             greetings: ['Thy blood is quickening'],
             deathCries: ['Mercy'],
             specials: ['obliterate', 'flying', 'invisibility'],
-            attacks: ['void_lance', 'magic_missile'],
+            attacks: ['void_lance', 'major_magic_missile'],
             weaknesses: ['arcane', 'holy-aura'],
             drops: [
                 {item: TIER2_POTION, percentChance: 35},
@@ -355,8 +356,8 @@ export function MonsterManager(){
             greetings: ['Vukudaj kolo gurdu'],
             deathCries: ['Urdu meklak milnaurku...'],
             specials: ['obliterate', 'flying', 'invisibility'],
-            attacks: ['void_lance', 'magic_missile'],
-            // attacks: ['magic_missile'],
+            attacks: ['void_lance', 'major_magic_missile'],
+            // attacks: ['major_magic_missile'],
             weaknesses: ['arcane', 'holy-aura'],
             minions: ['beholder_minion', 'beholder_minion'],
             drops: [
@@ -366,7 +367,7 @@ export function MonsterManager(){
         },
         // ── Level 15 ─────────────────────────────────────────────────────
         kabuki_demon: {
-            type: 'demon',
+            type: 'kabuki_demon',
             key: 'kabuki_demon',
             image_names: ['kabuki_demon_portrait'],
             monster_names: ['Ikiro', 'Jimbu'],
@@ -382,7 +383,7 @@ export function MonsterManager(){
             greetings: ['Assaaa'],
             deathCries: ['No! Impossible!'],
             specials: ['obliterate', 'flying', 'invisibility'],
-            attacks: ['void_lance', 'magic_missile'],
+            attacks: ['void_lance', 'major_magic_missile'],
             weaknesses: ['arcane', 'holy-aura'],
             minions: ['kabuki_demon_minion', 'kabuki_demon_minion'],
             drops: [
@@ -407,7 +408,7 @@ export function MonsterManager(){
             portrait: images['djinn_portrait'],
             greetings: ['your fate leads you here, now it will all end'],
             deathCries: ['it seems your fate has other plans'],
-            specials: ['duplicate', 'meditate', 'tesseract'],
+            specials: ['duplicate', 'meditate'],
             attacks: ['claws', 'void_lance', 'fire_breath'],
             weaknesses: ['arcane'],
             drops: [

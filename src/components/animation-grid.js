@@ -5,6 +5,7 @@ import CanvasMagicMissile from '../components/Canvas/canvas_magic_missile'
 import CanvasMagicCircle from '../components/Canvas/canvas_magic_circle'
 import CanvasMagicTriangle from '../components/Canvas/canvas_magic_triangle'
 import CanvasFireball from '../components/Canvas/canvas_fireball'
+import CanvasAxeThrow from '../components/Canvas/canvas_axe_throw'
 
 // class AnimationGrid extends React.Component {
     // constructor(props){
@@ -34,19 +35,26 @@ const AnimationGrid = ({
     return (
         <div className="animation-grid" style={{width: gridWidth + 'px'}}>
             {animationData.tiles.map((t,i)=>{
-                return <AnimationTile
-                    key={i}
-                    id={i}
-                    x={t.x}
-                    y={t.y}
-                    animationOn = {t.animationOn}
-                    animationType = {t.animationType}
-                    animationData = {t.animationData}
-                    transitionType = {t.transitionType}
-                    handleClick={handleClickWrapper}
-                    tileSize={tileProps.TILE_SIZE}
-
-                >  </AnimationTile>
+                    if (t.animationType === 'sword_swing') {
+                        console.log('[AnimationGrid] AnimationTile sword_swing props', {
+                            tileIndex: i,
+                            tileObj: t,
+                            tileProps,
+                            animationData: t.animationData
+                        });
+                    }
+                    return <AnimationTile
+                        key={i}
+                        id={i}
+                        x={t.x}
+                        y={t.y}
+                        animationOn = {t.animationOn}
+                        animationType = {t.animationType}
+                        animationData = {t.animationData}
+                        transitionType = {t.transitionType}
+                        handleClick={handleClickWrapper}
+                        tileSize={tileProps.TILE_SIZE}
+                    />
             })}
             <div className="canvas-grid-container">
                 <div className="canvas-grid">
@@ -98,6 +106,14 @@ const AnimationGrid = ({
                                 targetLaneDiff={anim.targetLaneDiff}
                                 duration={anim.duration}
                             />
+                        } else if (anim.type === 'axe_throw') {
+                            return <CanvasAxeThrow
+                                key={idx}
+                                origin={anim.origin}
+                                target={anim.target}
+                                width={TILE_SIZE}
+                                height={TILE_SIZE}
+                            />
                         } else {
                             return <CanvasMagicMissile
                                 key={idx}
@@ -107,6 +123,7 @@ const AnimationGrid = ({
                                 connectParticlesActive={true}
                                 targetDistance={anim.distanceToTarget}
                                 targetLaneDiff={anim.verticalDistanceToTarget}
+                                variant={anim.variant || 'major'}
                             />
                         }
                     })}

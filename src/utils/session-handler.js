@@ -8,7 +8,17 @@ function storeSessionData(id, token, isAdmin, username, metadata){
 
 function storeMeta(metadata){
     try {
-        const serialized = JSON.stringify(metadata);
+        // If metadata is already a string, parse it first to avoid double-stringification
+        let metaObject = metadata;
+        if (typeof metadata === 'string') {
+            try {
+                metaObject = JSON.parse(metadata);
+            } catch (e) {
+                // If it fails to parse, treat it as invalid and use empty object
+                metaObject = {};
+            }
+        }
+        const serialized = JSON.stringify(metaObject);
         sessionStorage.setItem('metadata', serialized);
         return;
     } catch (err) {
@@ -40,7 +50,7 @@ function sanitizeMeta(metadata){
     const safe = {};
     // Copy only small, commonly useful properties. Avoid large nested objects
     // like full dungeon boards, tile arrays, or other heavy structures.
-    const whitelistedKeys = ['dungeonId','boardIndex','tileIndex','crew','inventory','preferences','lastVisited','userNotes','visitedBoards','location','spawnPoint','selectedDungeon','deathTracker','respawnDate','itemRespawnDate'];
+    const whitelistedKeys = ['dungeonId','boardIndex','tileIndex','crew','inventory','preferences','lastVisited','userNotes','visitedBoards','location','spawnPoint','selectedDungeon','deathTracker','respawnDate','itemRespawnDate','simulatorDefaults'];
     for (const k of whitelistedKeys) {
         if (k in metadata) safe[k] = metadata[k];
     }
@@ -66,7 +76,12 @@ function getMeta(){
     const raw = sessionStorage.getItem('metadata');
     if (raw) {
         try {
-            return JSON.parse(raw);
+            let parsed = JSON.parse(raw);
+            // Handle double-stringified case (if metadata was stored as a string)
+            if (typeof parsed === 'string') {
+                parsed = JSON.parse(parsed);
+            }
+            return parsed;
         } catch (e) {
             console.warn('getMeta: failed to parse metadata from sessionStorage, returning minimal meta', e && e.message ? e.message : e);
             return { dungeonId: null, boardIndex: null, tileIndex: null, crew: null, inventory: null };
@@ -88,5 +103,9 @@ function setEditorPreference(key, val){
     storeMeta(meta)
 }
 
+function setUserName(username){
+    sessionStorage.setItem('userName', username)
+}
 
-export {storeSessionData, storeMeta, getMeta, getUserId, setEditorPreference, getUserName};
+
+export {storeSessionData, storeMeta, getMeta, getUserId, setEditorPreference, getUserName, setUserName};

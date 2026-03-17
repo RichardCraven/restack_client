@@ -276,6 +276,7 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
         }
     };
     this.processMove = (caller, combatants) => {
+        if (caller.stunned) return; // stunned: skip all movement this tick
         if (typeof caller.moveCooldown === 'undefined') {
             throw new Error('moveCooldown must be defined for all units');
         }

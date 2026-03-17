@@ -373,6 +373,41 @@ import terrain_14 from '../assets/icons/terrain/stone-14.png'
 import terrain_15 from '../assets/icons/terrain/stone-15.png'
 import terrain_16 from '../assets/icons/terrain/stone-16.png'
 
+import terrain_1_dark from '../assets/icons/terrain/dark-stone-1.png'
+import terrain_2_dark from '../assets/icons/terrain/dark-stone-2.png'
+import terrain_3_dark from '../assets/icons/terrain/dark-stone-3.png'
+import terrain_4_dark from '../assets/icons/terrain/dark-stone-4.png'
+import terrain_5_dark from '../assets/icons/terrain/dark-stone-5.png'
+import terrain_6_dark from '../assets/icons/terrain/dark-stone-6.png'
+import terrain_7_dark from '../assets/icons/terrain/dark-stone-7.png'
+import terrain_8_dark from '../assets/icons/terrain/dark-stone-8.png'
+import terrain_9_dark from '../assets/icons/terrain/dark-stone-9.png'
+import terrain_10_dark from '../assets/icons/terrain/dark-stone-10.png'
+import terrain_11_dark from '../assets/icons/terrain/dark-stone-11.png'
+import terrain_12_dark from '../assets/icons/terrain/dark-stone-12.png'
+import terrain_13_dark from '../assets/icons/terrain/dark-stone-13.png'
+import terrain_14_dark from '../assets/icons/terrain/dark-stone-14.png'
+import terrain_15_dark from '../assets/icons/terrain/dark-stone-15.png'
+import terrain_16_dark from '../assets/icons/terrain/dark-stone-16.png'
+
+import terrain_1_light from '../assets/icons/terrain/light-stone-1.png'
+import terrain_2_light from '../assets/icons/terrain/light-stone-2.png'
+import terrain_3_light from '../assets/icons/terrain/light-stone-3.png'
+import terrain_4_light from '../assets/icons/terrain/light-stone-4.png'
+import terrain_5_light from '../assets/icons/terrain/light-stone-5.png'
+import terrain_6_light from '../assets/icons/terrain/light-stone-6.png'
+import terrain_7_light from '../assets/icons/terrain/light-stone-7.png'
+import terrain_8_light from '../assets/icons/terrain/light-stone-8.png'
+import terrain_9_light from '../assets/icons/terrain/light-stone-9.png'
+import terrain_10_light from '../assets/icons/terrain/light-stone-10.png'
+import terrain_11_light from '../assets/icons/terrain/light-stone-11.png'
+import terrain_12_light from '../assets/icons/terrain/light-stone-12.png'
+import terrain_13_light from '../assets/icons/terrain/light-stone-13.png'
+import terrain_14_light from '../assets/icons/terrain/light-stone-14.png'
+import terrain_15_light from '../assets/icons/terrain/light-stone-15.png'
+import terrain_16_light from '../assets/icons/terrain/light-stone-16.png'
+
+
 import axe_1 from '../assets/icons/items/weapons/axes/Axe_01.png';
 import axe_2 from '../assets/icons/items/weapons/axes/Axe_02.png';
 import axe_3 from '../assets/icons/items/weapons/axes/Axe_03.png';
@@ -426,6 +461,22 @@ import axe_50 from '../assets/icons/items/weapons/axes/Axe_50.png';
 import axe_51 from '../assets/icons/items/weapons/axes/Axe_51.png';
 import axe_52 from '../assets/icons/items/weapons/axes/Axe_52.png';
 import axe_53 from '../assets/icons/items/weapons/axes/Axe_53.png';
+
+const _terrainBase  = [terrain_1,terrain_2,terrain_3,terrain_4,terrain_5,terrain_6,terrain_7,terrain_8,terrain_9,terrain_10,terrain_11,terrain_12,terrain_13,terrain_14,terrain_15,terrain_16];
+const _terrainLight = [terrain_1_light,terrain_2_light,terrain_3_light,terrain_4_light,terrain_5_light,terrain_6_light,terrain_7_light,terrain_8_light,terrain_9_light,terrain_10_light,terrain_11_light,terrain_12_light,terrain_13_light,terrain_14_light,terrain_15_light,terrain_16_light];
+const _terrainDark  = [terrain_1_dark,terrain_2_dark,terrain_3_dark,terrain_4_dark,terrain_5_dark,terrain_6_dark,terrain_7_dark,terrain_8_dark,terrain_9_dark,terrain_10_dark,terrain_11_dark,terrain_12_dark,terrain_13_dark,terrain_14_dark,terrain_15_dark,terrain_16_dark];
+
+/**
+ * Returns the array of 16 terrain tile images appropriate for a given dungeon level.
+ * Level  0        → stone (base)
+ * Level  1 or  2  → light-stone
+ * Level -1 or -2  → dark-stone
+ */
+const getTerrainSetForLevel = (level) => {
+    if (level >= 1)  return _terrainLight;
+    if (level <= -1) return _terrainDark;
+    return _terrainBase;
+};
 
 export {
     hand_1,
@@ -792,6 +843,42 @@ export {
     terrain_14,
     terrain_15,
     terrain_16,
+
+    terrain_1_dark,
+    terrain_2_dark,
+    terrain_3_dark,
+    terrain_4_dark,
+    terrain_5_dark,
+    terrain_6_dark,
+    terrain_7_dark,
+    terrain_8_dark,
+    terrain_9_dark,
+    terrain_10_dark,
+    terrain_11_dark,
+    terrain_12_dark,
+    terrain_13_dark,
+    terrain_14_dark,
+    terrain_15_dark,
+    terrain_16_dark,
+
+    terrain_1_light,
+    terrain_2_light,
+    terrain_3_light,
+    terrain_4_light,
+    terrain_5_light,
+    terrain_6_light,
+    terrain_7_light,
+    terrain_8_light,
+    terrain_9_light,
+    terrain_10_light,
+    terrain_11_light,
+    terrain_12_light,
+    terrain_13_light,
+    terrain_14_light,
+    terrain_15_light,
+    terrain_16_light,
+
+    getTerrainSetForLevel,
 
     camp,
     vampire,

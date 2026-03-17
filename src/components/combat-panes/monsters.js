@@ -24,7 +24,8 @@ const MonstersCombatGrid = ({
     // monsterFacingDown,
     greetingInProcess,
     SHOW_MONSTER_IDS = false,
-    teleportingFighterId
+    teleportingFighterId,
+    fearCastingActive,
 }) => {
     const [monsterHitFlashKey, setMonsterHitFlashKey] = React.useState(0);
     const [showMonsterHitFlash, setShowMonsterHitFlash] = React.useState(false);
@@ -115,6 +116,17 @@ const MonstersCombatGrid = ({
         if (monster && battleData[monster.id]) {
             if (battleData[monster.id].dead && !showDeathAnimation[monster.id] && !fullyDead[monster.id]) {
                 setShowDeathAnimation(prev => ({ ...prev, [monster.id]: true }));
+                // Fallback: if onAnimationEnd never fires (e.g. animation conflict),
+                // force fullyDead after the death animation duration + buffer.
+                const id = monster.id;
+                const t = setTimeout(() => {
+                    setFullyDead(prev => {
+                        if (!prev[id]) return { ...prev, [id]: true };
+                        return prev;
+                    });
+                    setShowDeathAnimation(prev => ({ ...prev, [id]: false }));
+                }, 2400); // meltDownDeath is 2000ms + 400ms buffer
+                return () => clearTimeout(t);
             } else if (!battleData[monster.id].dead && (showDeathAnimation[monster.id] || fullyDead[monster.id])) {
                 setShowDeathAnimation(prev => ({ ...prev, [monster.id]: false }));
                 setFullyDead(prev => ({ ...prev, [monster.id]: false }));
@@ -123,7 +135,8 @@ const MonstersCombatGrid = ({
         // Minions
         Object.values(battleData).forEach(minion => {
             if (minion.isMinion) {
-                if (minion.dead && !showDeathAnimation[minion.id] && !fullyDead[minion.id]) {
+                // Don't trigger the death animation for bifurcating minions — they use their own shrink animation
+                if (minion.dead && !minion.bifurcating && !showDeathAnimation[minion.id] && !fullyDead[minion.id]) {
                     setShowDeathAnimation(prev => ({ ...prev, [minion.id]: true }));
                 } else if (!minion.dead && (showDeathAnimation[minion.id] || fullyDead[minion.id])) {
                     setShowDeathAnimation(prev => ({ ...prev, [minion.id]: false }));
@@ -133,6 +146,26 @@ const MonstersCombatGrid = ({
         });
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [battleData, monster]);
+
+    // Fallback: ensure minion fullyDead is set after death animation even if onAnimationEnd is missed
+    React.useEffect(() => {
+        const timers = [];
+        Object.values(battleData).forEach(minion => {
+            if (minion.isMinion && minion.dead && showDeathAnimation[minion.id] && !fullyDead[minion.id]) {
+                const id = minion.id;
+                const t = setTimeout(() => {
+                    setFullyDead(prev => {
+                        if (!prev[id]) return { ...prev, [id]: true };
+                        return prev;
+                    });
+                    setShowDeathAnimation(prev => ({ ...prev, [id]: false }));
+                }, 2400);
+                timers.push(t);
+            }
+        });
+        return () => timers.forEach(t => clearTimeout(t));
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [showDeathAnimation]);
 
     // Determine if monster or minion is teleporting (by id)
     const isTeleporting = (id) => {
@@ -150,7 +183,10 @@ const MonstersCombatGrid = ({
     // Set to 0.5 to pick a halfway intensity as requested.
     const MINION_DEBUG_FACTOR = 0.3;
     const computeHitVars = (combatant) => {
-        if (!combatant || !combatant.wounded) return {};
+        // Always expose --portrait-base-scale so meltDownDeath uses the right start scale.
+        const baseScale = (combatant && combatant.isMinion) ? '1' : '2';
+        const flip = (combatant && combatant.facing === 'right') ? '-1' : '1';
+        if (!combatant || !combatant.wounded) return { '--portrait-base-scale': baseScale, '--portrait-flip': flip };
         const hc = getHitAnimation(combatant) || '';
         let severity = 'minor';
         if (hc.indexOf('severe') !== -1) severity = 'severe';
@@ -265,6 +301,9 @@ const MonstersCombatGrid = ({
             '--portrait-transform-origin': transformOrigin,
             // Preserve the base scale for main monsters so animations don't reset scale(2)
             '--portrait-base-scale': combatant.isMinion ? '1' : '2',
+            // Preserve facing direction so the hit animation never un-flips the portrait.
+            // facing === 'right' means the portrait is mirrored (reversed class = scaleX(-1)).
+            '--portrait-flip': combatant.facing === 'right' ? '-1' : '1',
             // Per-element animation tuning: make minions a touch slower/smoother
             '--portrait-animation-duration': combatant.isMinion ? '520ms' : '420ms',
             '--portrait-animation-timing': combatant.isMinion ? 'cubic-bezier(.18,.9,.22,1)' : 'cubic-bezier(.2,.8,.2,1)'
@@ -283,7 +322,7 @@ const MonstersCombatGrid = ({
                     }}
                 >
                     <div
-                        className={`monster-wrapper ${battleData[monster.id]?.rocked ? 'rocked' : ''} ${battleData[monster.id]?.wounded ? 'hit' : ''} ${battleData[monster.id]?.wounded ? getHitAnimation(battleData[monster.id]) : ''} ${battleData[monster.id]?.wounded ? 'hit-flash' : ''} ${battleData[monster.id]?.facing === 'right' ? 'reversed' : ''}`}
+                        className={`monster-wrapper ${battleData[monster.id]?.rocked ? 'rocked' : ''} ${battleData[monster.id]?.wounded ? 'hit' : ''} ${battleData[monster.id]?.wounded ? getHitAnimation(battleData[monster.id]) : ''} ${battleData[monster.id]?.wounded ? 'hit-flash' : ''} ${battleData[monster.id]?.facing === 'right' ? 'reversed' : ''} ${battleData[monster.id]?.stunned ? 'stunned' : ''}`}
                         style={computeHitVars(battleData[monster.id])}
                     >
                         <div
@@ -334,6 +373,8 @@ const MonstersCombatGrid = ({
                                         ${selectedMonster?.id === monster.id ? 'selected' : ''}
                                         ${selectedFighter?.targetId === monster.id ? 'targetted' : ''}
                                         ${battleData[monster.id]?.facing === 'right' ? 'reversed' : ''}
+                                        ${battleData[monster.id]?.facing === 'up' ? 'facing-up' : ''}
+                                        ${battleData[monster.id]?.facing === 'down' ? 'facing-down' : ''}
                                         ${battleData[monster.id]?.chargingUpActive ? 'charging-up' : ''}`}
                                     ref={el => {
                                         if (battleData[monster.id]?.wounded) {
@@ -347,10 +388,10 @@ const MonstersCombatGrid = ({
                                         backgroundImage: monster.portrait ? `url(${monster.portrait})` : 'none',
                                         filter: `saturate(${((battleData[monster.id]?.hp / monster.stats.hp) * 100) / 2}) sepia(${portraitHoveredId === monster.id ? '2' : '0'})`,
                                         zIndex: 1,
-                                        position: 'relative'
-                                        ,
-                                        animation: battleData[monster.id]?.wounded ? 'BulgePortrait var(--portrait-animation-duration, 420ms) var(--portrait-animation-timing, cubic-bezier(.2,.8,.2,1))' : undefined,
-                                        animationFillMode: battleData[monster.id]?.wounded ? 'forwards' : undefined
+                                        position: 'relative',
+                                        // Never apply BulgePortrait when dead — it competes with meltDownDeath
+                                        animation: (battleData[monster.id]?.wounded && !battleData[monster.id]?.dead) ? 'BulgePortrait var(--portrait-animation-duration, 420ms) var(--portrait-animation-timing, cubic-bezier(.2,.8,.2,1))' : undefined,
+                                        animationFillMode: (battleData[monster.id]?.wounded && !battleData[monster.id]?.dead) ? 'forwards' : undefined
                                     }}
                                     onAnimationEnd={e => {
                                         if (
@@ -381,6 +422,10 @@ const MonstersCombatGrid = ({
                                         <div className="hit-flash-overlay" key={monsterHitFlashKey} />
                                     )}
                                 </div>
+                                {/* Fear-cast glow — behind the portrait via z-index, after in DOM */}
+                                {fearCastingActive && !monster.isMinion && (
+                                    <div className="fear-cast-glow" />
+                                )}
                                 {/* Overlay and indicators above portrait */}
                                 <div className={`portrait-overlay ${battleData[monster.id]?.frozen ? 'frozen' : ''}`} style={{zIndex: 2, position: 'absolute', top: 0, left: 0, width: '100%', height: '100%'}}>
                                     <div className="damage-indicator-container">
@@ -402,6 +447,19 @@ const MonstersCombatGrid = ({
                                     ))}
                                   </div>
                                 )} */}
+                                {/* Target indicator: tiny portrait of whoever this monster is targeting */}
+                                {(() => {
+                                    const targetId = battleData[monster.id]?.targetId;
+                                    const target = targetId ? combatManager.getCombatant(targetId) : null;
+                                    return target?.portrait && !battleData[monster.id]?.dead ? (
+                                        <div className="monster-target-indicator" style={{ zIndex: 10 }}>
+                                            <div
+                                                className="monster-target-portrait"
+                                                style={{ backgroundImage: `url(${target.portrait})` }}
+                                            />
+                                        </div>
+                                    ) : null;
+                                })()}
                             </div>
                             {battleData[monster.id] && !battleData[monster.id]?.dead && animationOverlays[monster.id] && getAllOverlaysById(monster.id).map((overlay, i) => {
                                 // Ensure overlay.data contains up-to-date 'dead' property
@@ -433,7 +491,7 @@ const MonstersCombatGrid = ({
                 </div>
             )}
                 {/* Minions: render only those present in battleData and flagged as isMinion */}
-                                {Object.values(battleData).filter(m => m.isMinion && (!m.dead || (showDeathAnimation[m.id] && !fullyDead[m.id]))).map((minion) => (
+                {Object.values(battleData).filter(m => m.isMinion && (!m.dead || m.bifurcating || (showDeathAnimation[m.id] && !fullyDead[m.id]))).map((minion) => (
                     <div
                         key={minion.id}
                         className="lane-wrapper"
@@ -444,7 +502,7 @@ const MonstersCombatGrid = ({
                         }}
                     >
                         <div
-                            className={`monster-wrapper ${minion.rocked ? 'rocked' : ''} ${minion.wounded ? 'hit' : ''} ${minion.wounded ? getHitAnimation(minion) : ''} ${minion.wounded ? 'hit-flash' : ''} ${minion.facing === 'right' ? 'reversed' : ''}`}
+                            className={`monster-wrapper ${minion.rocked ? 'rocked' : ''} ${minion.wounded ? 'hit' : ''} ${minion.wounded ? getHitAnimation(minion) : ''} ${minion.wounded ? 'hit-flash' : ''} ${minion.facing === 'right' ? 'reversed' : ''} ${minion.stunned ? 'stunned' : ''}`}
                             style={computeHitVars(minion)}
                         >
                             <div
@@ -481,19 +539,23 @@ const MonstersCombatGrid = ({
                                 <div
                                     className={`portrait minion-portrait
                                             ${minion.active ? 'active' : ''}
-                                            ${minion.dead ? 'dead monsterDeadAnimation' : ''}
+                                            ${minion.bifurcating ? 'bifurcatingAnimation' : (minion.dead ? 'dead monsterDeadAnimation' : '')}
+                                            ${minion.isBifurcateSmall ? 'bifurcate-copy' : ''}
+                                            ${minion.isBifurcateCopy ? 'bifurcate-copy-spawning' : ''}
                                             ${minion.missed ? (minion.facing === 'right' ? 'missed-reversed' : 'missed') : ''}
                                             ${selectedMonster?.id === minion.id ? 'selected' : ''}
                                             ${selectedFighter?.targetId === minion.id ? 'targetted' : ''}
-                                            ${minion.facing === 'right' ? 'reversed' : ''}`
+                                            ${minion.facing === 'right' ? 'reversed' : ''}
+                                            ${minion.facing === 'up' ? 'facing-up' : ''}
+                                            ${minion.facing === 'down' ? 'facing-down' : ''}`
                                         }
                                     style={{
                                         backgroundImage: `url(${minion.portrait})`,
-                                        filter: `saturate(${((minion.hp / minion.stats.hp) * 100) / 2}) sepia(${portraitHoveredId === minion.id ? '2' : '0'})`,
-                                        zIndex: 2 // Always below fighter portraits
-                                        ,
-                                        animation: minion.wounded ? 'BulgePortrait var(--portrait-animation-duration, 420ms) var(--portrait-animation-timing, cubic-bezier(.2,.8,.2,1))' : undefined,
-                                        animationFillMode: minion.wounded ? 'forwards' : undefined
+                                        filter: `saturate(${((minion.hp / minion.stats.hp) * 100) / 2}) ${minion.portraitFilter || ''} sepia(${portraitHoveredId === minion.id ? '2' : '0'})`,
+                                        zIndex: 2, // Always below fighter portraits
+                                        // Never apply BulgePortrait when dead — it competes with meltDownDeath
+                                        animation: (minion.wounded && !minion.dead) ? 'BulgePortrait var(--portrait-animation-duration, 420ms) var(--portrait-animation-timing, cubic-bezier(.2,.8,.2,1))' : undefined,
+                                        animationFillMode: (minion.wounded && !minion.dead) ? 'forwards' : undefined
                                     }}
                                     onClick={() => monsterCombatPortraitClicked(minion.id)}
                                     ref={el => {
@@ -510,6 +572,13 @@ const MonstersCombatGrid = ({
                                         ) {
                                             setFullyDead(prev => ({ ...prev, [minion.id]: true }));
                                             setShowDeathAnimation(prev => ({ ...prev, [minion.id]: false }));
+                                        }
+                                        // Bifurcate shrink: remove from the board once the animation finishes
+                                        if (
+                                            e.animationName &&
+                                            e.animationName.includes('bifurcateShrink')
+                                        ) {
+                                            setFullyDead(prev => ({ ...prev, [minion.id]: true }));
                                         }
                                     }}
                                         onAnimationStart={e => {
@@ -552,6 +621,18 @@ const MonstersCombatGrid = ({
                                             ></div>
                                         ))}
                                     </div>
+                                    {/* Target indicator: tiny portrait of whoever this minion is targeting */}
+                                    {(() => {
+                                        const target = minion.targetId ? combatManager.getCombatant(minion.targetId) : null;
+                                        return target?.portrait && !minion.dead ? (
+                                            <div className="monster-target-indicator" style={{ zIndex: 10 }}>
+                                                <div
+                                                    className="monster-target-portrait"
+                                                    style={{ backgroundImage: `url(${target.portrait})` }}
+                                                />
+                                            </div>
+                                        ) : null;
+                                    })()}
                                 </div>
                                 <div className={`portrait-overlay ${minion.frozen ? 'frozen' : ''}`}> 
                                     <div className="damage-indicator-container">

@@ -232,7 +232,7 @@ export function MapMaker(props){
         // console.log('input: ', input)
     }
     this.getMapConfiguration = (tiles) => {
-            let topRow = function(){
+            let topRow = () => {
                 let openings = []
                 for(let p = 0; p<15; p++){
                     if(this.getContainsType(tiles[p].contains) !== 'void'){
@@ -241,7 +241,7 @@ export function MapMaker(props){
                 }
                 return openings
             }
-            let leftCol = function(){
+            let leftCol = () => {
                 let openings = []
                 for(let p = 0; p<15; p++){
                     let index = p*15
@@ -251,7 +251,7 @@ export function MapMaker(props){
                 }
                 return openings
             }
-            let rightCol = function(){
+            let rightCol = () => {
                 let openings = []
                 for(let p = 0; p<15; p++){
                     let index = p*15+14
@@ -261,7 +261,7 @@ export function MapMaker(props){
                 }
                 return openings
             }
-            let botRow = function(){
+            let botRow = () => {
                 let openings = []
                 for(let p = 210; p<225; p++){
                     if(this.getContainsType(tiles[p].contains) !== 'void'){

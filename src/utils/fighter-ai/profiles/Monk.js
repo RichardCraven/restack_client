@@ -17,6 +17,7 @@ export function Monk(data, utilMethods, animationManager, overlayManager){
     // this.fighterFacingRight = utilMethods.fighterFacingRight;
     this.broadcastDataUpdate = utilMethods.broadcastDataUpdate;
     this.kickoffAttackCooldown = utilMethods.kickoffAttackCooldown;
+    this.kickoffSpecialCooldown = utilMethods.kickoffSpecialCooldown;
     this.missesTarget = utilMethods.missesTarget;
     this.hitsTarget = utilMethods.hitsTarget;
     this.hitsCombatant = utilMethods.hitsCombatant;
@@ -38,6 +39,15 @@ export function Monk(data, utilMethods, animationManager, overlayManager){
 
     this.enemies = (combatants) => {
         return Object.values(combatants).filter(e=>this.isEnemy(e));
+    }
+
+    // Returns true if at least one living enemy does NOT use the closeTheGap
+    // movement behavior (i.e. its behaviorSequence is NOT 'brawler').
+    // Those enemies sit in the backline and are worth teleporting behind.
+    this.hasBacklineEnemy = (combatants) => {
+        return Object.values(combatants).some(
+            e => !e.dead && (e.isMonster || e.isMinion) && e.behaviorSequence !== 'brawler'
+        );
     }
     this.initialize = (caller) => {
         // Default facing right
@@ -96,6 +106,11 @@ export function Monk(data, utilMethods, animationManager, overlayManager){
                     case 2:
                         // If low HP, attempt to consume a health consumable before acting
                         this.tryUseConsumableForHeal(caller);
+                        // If windmill is ready and multiple enemies are adjacent, use it
+                        if (this.shouldUseWindmill(caller, combatants)) {
+                            this.triggerWindmill(caller, combatants);
+                            break;
+                        }
                         data.methods.closeTheGap(caller, combatants)
                     break;
                     case 3:
@@ -109,30 +124,32 @@ export function Monk(data, utilMethods, animationManager, overlayManager){
                 }
             break;
             case 'teleport-attacker':
+                this.tryUseConsumableForHeal(caller);
+                // Check immediately (every era) whether a backline enemy exists.
+                // If not, abandon the teleport sequence and close the gap like a brawler.
+                if (!this.hasBacklineEnemy(combatants)) {
+                    data.methods.closeTheGap(caller, combatants);
+                    // Once we've closed the gap, switch to attackFromTheBack so the
+                    // Monk attacks normally from the front.
+                    if (caller.eraIndex >= 4) caller.behaviorSequence = 'attackFromTheBack';
+                    break;
+                }
+                // There IS a backline enemy — run the charge-up / teleport sequence.
                 switch (caller.eraIndex) {
                     case 0:
                     case 1:
-                        this.tryUseConsumableForHeal(caller);
-                        break;
                     case 2:
-                        this.tryUseConsumableForHeal(caller);
+                        // Begin charging up as early as era 0 so there's no idle time.
+                        this.triggerChargingUp(caller);
                         break;
                     case 3:
-                        // era group: try consumable if low on hp
-                        this.tryUseConsumableForHeal(caller);
                         this.triggerChargingUp(caller);
                         break;
                     case 4:
                         if (caller.chargingUpActive) caller.chargingUpActive = false;
-                        if (data.methods.teleportToBackLine) {
-                            // Pass a callback to notify the UI when teleport occurs
-                            caller.energy = 0;
-                            data.methods.teleportToBackLine(caller, combatants, this.onTeleport);
-                            caller.behaviorSequence = 'attackFromTheBack';
-                        } else {
-                            data.methods.closeTheGap(caller, combatants);
-                            caller.behaviorSequence = 'attackFromTheBack';
-                        }
+                        caller.energy = 0;
+                        data.methods.teleportToBackLine(caller, combatants, this.onTeleport);
+                        caller.behaviorSequence = 'attackFromTheBack';
                         break;
                     default:
                         if (caller.chargingUpActive) caller.chargingUpActive = false;
@@ -141,6 +158,12 @@ export function Monk(data, utilMethods, animationManager, overlayManager){
                 break;
             case 'attackFromTheBack': {
                 this.tryUseConsumableForHeal(caller);
+                // If multiple enemies are adjacent and Windmill is ready, use it now
+                // instead of trying to reposition — hits everything around the Monk.
+                if (this.shouldUseWindmill(caller, combatants)) {
+                    this.triggerWindmill(caller, combatants);
+                    break;
+                }
                 // For all eraIndex cases, call the shared behavior
                 attackFromTheBack(caller, combatants, {
                     MAX_DEPTH: this.MAX_DEPTH,
@@ -211,8 +234,72 @@ export function Monk(data, utilMethods, animationManager, overlayManager){
             animationType: 'dragon_punch',
         });
         }
+    // ─────────────────────────────────────────────────────────────────────────
+    // WINDMILL — strike all 4 orthogonal neighbours simultaneously
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Returns true when Windmill should fire automatically:
+     *  - special is cooled down (cooldown_position === 100)
+     *  - at least 2 enemies are orthogonally adjacent
+     */
+    this.shouldUseWindmill = (caller, combatants) => {
+        const windmill = caller.specials && caller.specials.find(s => s && s.name === 'windmill');
+        if (!windmill || windmill.cooldown_position !== 100) return false;
+        const { x, y } = caller.coordinates;
+        const cardinals = [
+            { x, y: y - 1 },
+            { x, y: y + 1 },
+            { x: x + 1, y },
+            { x: x - 1, y },
+        ];
+        const adjacentEnemies = Object.values(combatants).filter(e =>
+            !e.dead && (e.isMonster || e.isMinion) &&
+            cardinals.some(c => c.x === e.coordinates.x && c.y === e.coordinates.y)
+        );
+        return adjacentEnemies.length >= 2;
+    }
+
+    /**
+     * Fire the Windmill special.
+     * Delegates the animation + hit logic to animationManager, then starts
+     * the special cooldown.
+     */
+    this.triggerWindmill = async (caller, combatants) => {
+        const windmill = caller.specials && caller.specials.find(s => s && s.name === 'windmill');
+        if (!windmill) return;
+
+        // Mark cooldown immediately so it cannot double-fire
+        windmill.cooldown_position = 0;
+        caller.windmillActive = true;
+
+        // Pass windmill special data as supplementalData so hitsCombatant uses
+        // the correct damage value (windmill.damage) rather than caller.atk,
+        // which may be undefined for the Monk (stats has no atk property).
+        const supplementalData = {
+            damage: windmill.damage,
+            type: 'physical',
+            effect: windmill.effect || ['damage_multi_target', 'special'],
+        };
+
+        await this.animationManager.triggerWindmill(
+            caller,
+            combatants,
+            (enemy) => this.hitsCombatant(caller, enemy, supplementalData)
+        );
+
+        caller.windmillActive = false;
+
+        // Start the recharge cooldown
+        if (typeof this.kickoffSpecialCooldown === 'function') {
+            this.kickoffSpecialCooldown(windmill);
+        }
+        if (typeof this.broadcastDataUpdate === 'function') {
+            try { this.broadcastDataUpdate(caller); } catch (e) {}
+        }
+    }
+
     this.triggerChargingUp = (caller) => {
-    // Called when Monk teleports; can be set by UI to trigger teleport effect
     
         if (!caller.chargingUpActive) {
             caller.chargingUpActive = true;
@@ -278,6 +365,10 @@ export function Monk(data, utilMethods, animationManager, overlayManager){
             const distanceToTarget = data.methods.getDistanceToTarget(caller, target), // eslint-disable-line no-unused-vars
             laneDiff = data.methods.getLaneDifferenceToTarget(caller, target); // eslint-disable-line no-unused-vars
             switch(caller.pendingAttack.name){
+                case 'windmill':
+                    await this.triggerWindmill(caller, combatants);
+                    this.kickoffAttackCooldown(caller);
+                    break;
                 case 'dragon punch':
                     const combatantHit = await this.triggerDragonPunch(caller.coordinates, facing)
                     if(combatantHit){

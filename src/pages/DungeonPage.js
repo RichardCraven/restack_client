@@ -28,6 +28,7 @@ import '../styles/camp-modal.scss'
 
 // helper: convert 3/6-digit hex to rgba string
 function hexToRgba(hex, alpha = 1){
+    if (!hex) return `rgba(128, 128, 128, ${alpha})`; // default gray if no color
     let h = hex.replace('#','').trim();
     if(h.length === 3){
         h = h.split('').map(c=>c+c).join('');
@@ -982,10 +983,22 @@ class DungeonPage extends React.Component {
 
             const originIndex = bm.getIndexFromCoordinates(curCoords);
             const destIndex = bm.getIndexFromCoordinates(destCoords);
-            // Defensive: if destination is invalid (e.g. void) do not begin transition
+            // Check if movement is blocked (void, locked gate, large monster, etc.)
+            // If blocked, do NOT start the animation - just call the move method which
+            // will handle messaging and return early
             try {
-                const destTile = bm.tiles[destIndex];
-                if (!destTile || bm.getContainsType(destTile.contains) === 'void') return;
+                if (bm.isMovementBlocked(destCoords)) {
+                    // Call move() to trigger the gate message, but don't animate
+                    switch (direction) {
+                        case 'up': bm.moveUp(); break;
+                        case 'down': bm.moveDown(); break;
+                        case 'left': bm.moveLeft(); break;
+                        case 'right': bm.moveRight(); break;
+                        default: break;
+                    }
+                    this.setState({ tiles: [...bm.tiles], overlayTiles: bm.overlayTiles });
+                    return;
+                }
             } catch (e) {}
             const originPixel = this.getPixelForIndex(originIndex);
             const destPixel = this.getPixelForIndex(destIndex);
@@ -1811,24 +1824,28 @@ class DungeonPage extends React.Component {
     setPending = (pendingState) => {
         this.setState({pending: pendingState})
     }
-    refreshTiles = () => {
+    refreshTiles = (levelIdOverride) => {
         let newTiles = this.props.boardManager.tiles,
             newOverlayTiles = this.props.boardManager.overlayTiles
 
         // Ensure each visible (non-void) tile has a randomly chosen terrain background
         try {
             if (Array.isArray(newTiles) && this.props.boardManager && typeof this.props.boardManager.getContainsType === 'function') {
+                const meta = getMeta() || {};
+                const activeLevel = this.state.levelTracker ? this.state.levelTracker.find(e => e.active) : null;
+                const currentLevelId = levelIdOverride !== undefined ? Number(levelIdOverride) : (activeLevel !== null && activeLevel !== undefined ? Number(activeLevel.id) : Number(meta.location?.levelId ?? 0));
+                const terrainSet = images.getTerrainSetForLevel(currentLevelId);
                 for (let i = 0; i < newTiles.length; i++) {
                     const t = newTiles[i];
                     if (!t) continue;
                     const containsType = this.props.boardManager.getContainsType(t.contains);
                     // skip void tiles or currently hidden (black) tiles — fog-of-war will mark hidden tiles as black
                     if (containsType === 'void' || t.color === 'black') continue;
-                    // do not override an existing terrain assignment so reloads keep the same visuals
-                    if (!t.terrain) {
-                        const n = Math.floor(Math.random() * 16) + 1;
-                        t.terrain = `terrain_${n}`;
-                    }
+                    // Always re-derive the terrain from the current level's set so that
+                    // switching levels updates tile visuals. Use tile id as a stable seed
+                    // so each tile always picks the same variant number across refreshes.
+                    const variantIndex = Math.abs(t.id * 2654435761 >>> 0) % 16;
+                    t.terrain = terrainSet[variantIndex];
                 }
             }
         } catch (e) {
@@ -1948,12 +1965,18 @@ class DungeonPage extends React.Component {
             meta.minimapIndicators.push(indicatorsGroup)
             storeMeta(meta)
         }
+        // Keep meta.location.levelId in sync so other code reading meta gets the right level
+        if (meta.location) {
+            meta.location.levelId = newLevelId;
+            storeMeta(meta);
+        }
         this.setState({
             levelTracker,
             minimapZoomedTile: null,
             minimapIndicators: indicatorsGroup.indicators
         })
-
+        // Re-assign terrain now that the level is confirmed, bypassing the stale meta.
+        this.refreshTiles(newLevelId);
     }
     boardTransition = (direction) => {
         const minimap = this.state.minimap;

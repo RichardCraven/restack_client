@@ -2,6 +2,11 @@ import * as images from './images'
 
 // Centralized canonical specials matrix. Exporting as default so other
 // modules (CombatManager, UIs, AI) import the authoritative data.
+//
+// COOLDOWN UNITS: All `cooldown` values are in ERAS (one full turn cycle).
+// kickoffSpecialCooldown converts eras → ticks using TICKS_PER_ERA (250)
+// multiplied by the live FIGHT_INTERVAL, so cooldowns automatically
+// stretch/compress when game speed changes.
 const specialsMatrix = {
     deadeye_shot: {
         name: 'deadeye shot',
@@ -69,13 +74,43 @@ const specialsMatrix = {
         special_instructions: 'target has 50% chance to be stunned for 1 sec * $str',
         level: 1
     },
+    windmill: {
+        name: 'windmill',
+        type: 'special',
+        icon: images['fist_punch'],
+        cooldown: 14,
+        damage: 8,
+        effect: ['damage_multi_target', 'special'],
+        special_instructions: 'Strike all four adjacent tiles simultaneously, dealing damage to every enemy in range.',
+        level: 1
+    },
     shield_wall: {
         name: 'shield wall',
         type: 'special',
-        icon: images['beetle_charm'],
-        cooldown: 11,
+        icon: images['seeing_shield'],
+        cooldown: 8,    // 8 eras — fires once per battle, recharges for a second use in longer fights
+        duration: 40,   // lasts 2 eras (~20s at default interval)
         effect: ['special'],
-        special_instructions: 'shield all members for three hits',
+        special_instructions: 'Erect a 5-tile vertical barrier at the Soldier\'s front edge. Blocks all unit movement across the line for 2 eras. Soldier cannot move or attack while active.',
+        level: 1
+    },
+    berserker: {
+        name: 'berserker',
+        type: 'special',
+        icon: images['demonskull_charm'],
+        cooldown: 20,   // 20-era recharge after expiry
+        effect: ['buff_self'],
+        special_instructions: 'If 3+ enemies are present at the start of combat, enter a berserk state. Costs 60% energy. Doubles movement speed and attack speed for one full turn cycle.',
+        level: 1
+    },
+    force_back: {
+        name: 'force back',
+        type: 'special',
+        icon: images['basic_shield'],
+        cooldown: 30,
+        damage: 4,
+        effect: ['special'],
+        special_instructions: 'Push all enemies in the forward arc one tile back.',
         level: 1
     },
     ice_blast: {
@@ -98,6 +133,191 @@ const specialsMatrix = {
         damage: 7,
         effect: ['damage_multi_target', 'special'],
         special_instructions: 'each enemy has a 40% chance to be lit aflame',
+        level: 1
+    },
+    induce_fear: {
+        name: 'induce fear',
+        type: 'special',
+        icon: images['wide_skull'],
+        cooldown: 15,
+        energy_cost: 90,
+        duration: 5,
+        effect: ['nerf_all_enemies'],
+        nerf: {
+            decrease_stats: {
+                stats: [
+                    { stat: 'atk', amount: 50, isPercent: true },
+                    { stat: 'def', amount: 50, isPercent: true }
+                ]
+            }
+        },
+        special_instructions: 'Costs 90 energy. Paralyzes all enemy fighters with dread — halves their ATK and DEF for 5 eras. A shroud of darkness blankets the entire battlefield.',
+        level: 1
+    },
+    zealotry: {
+        name: 'zealotry',
+        type: 'special',
+        icon: images['demonskull_charm'],
+        cooldown: 20,
+        effect: ['buff_self'],
+        buff: {
+            increase_stats: {
+                stats: [
+                    { stat: 'atk', amount: 6 },
+                    { stat: 'str', amount: 4 }
+                ]
+            }
+        },
+        special_instructions: 'Enters a fanatical rage, increasing attack and strength for 2 eras.',
+        level: 1
+    },
+
+    // ── Monster specials ──────────────────────────────────────────────────────
+
+    major_magic_missile: {
+        name: 'major magic missile',
+        type: 'special',
+        icon: images['magic_missile'],
+        cooldown: 5,
+        damage: 12,
+        energy_cost: 30,
+        effect: ['damage_single_target'],
+        special_instructions: 'Launches a powerful barrage of arcane bolts at a single target.',
+        level: 1
+    },
+    minor_magic_missile: {
+        name: 'minor magic missile',
+        type: 'special',
+        icon: images['magic_missile'],
+        cooldown: 7,
+        damage: 6,
+        energy_cost: 30,
+        effect: ['damage_single_target'],
+        special_instructions: 'Launches a small burst of arcane bolts at a single target.',
+        level: 1
+    },
+    obliterate: {
+        name: 'obliterate',
+        type: 'special',
+        icon: images['void_lance'],
+        cooldown: 'TBD',
+        damage: 'TBD',
+        energy_cost: 'TBD',
+        effect: ['TBD'],
+        special_instructions: 'TBD',
+        level: 1
+    },
+    flying: {
+        name: 'flying',
+        type: 'passive',
+        icon: images['basic_shield'],
+        cooldown: null,
+        effect: ['movement_modifier'],
+        special_instructions: 'TBD',
+        level: 1
+    },
+    invisibility: {
+        name: 'invisibility',
+        type: 'special',
+        icon: images['nukta_charm'],
+        cooldown: 'TBD',
+        duration: 'TBD',
+        energy_cost: 'TBD',
+        effect: ['TBD'],
+        special_instructions: 'TBD',
+        level: 1
+    },
+    regenerate: {
+        name: 'regenerate',
+        type: 'passive',
+        icon: images['lundi_charm'],
+        cooldown: null,
+        effect: ['heal_self_over_time'],
+        special_instructions: 'TBD',
+        level: 1
+    },
+    banshee_wail: {
+        name: 'banshee wail',
+        type: 'special',
+        icon: images['wide_skull'],
+        cooldown: 'TBD',
+        energy_cost: 'TBD',
+        effect: ['TBD'],
+        special_instructions: 'TBD',
+        level: 1
+    },
+    berserk: {
+        name: 'berserk',
+        type: 'special',
+        icon: images['demonskull_charm'],
+        cooldown: 'TBD',
+        duration: 'TBD',
+        energy_cost: 'TBD',
+        effect: ['buff_self'],
+        special_instructions: 'TBD',
+        level: 1
+    },
+    petrify: {
+        name: 'petrify',
+        type: 'special',
+        icon: images['hamsa_charm'],
+        cooldown: 'TBD',
+        duration: 'TBD',
+        energy_cost: 'TBD',
+        effect: ['TBD'],
+        special_instructions: 'TBD',
+        level: 1
+    },
+    duplicate: {
+        name: 'duplicate',
+        type: 'special',
+        icon: images['evilai_charm'],
+        cooldown: 30,
+        energy_cost: 100,   // depletes the original's entire energy pool
+        effect: ['special'],
+        special_instructions: 'Costs ALL energy. Spawns an exact copy of this monster (same current stats, same attacks) at an adjacent tile. The copy does NOT inherit the duplicate ability.',
+        level: 1
+    },
+    bifurcate: {
+        name: 'bifurcate',
+        type: 'special',
+        icon: images['evilai_charm'],
+        cooldown: 30,
+        energy_cost: 100,   // fires when energy pool is full — original is destroyed
+        effect: ['special'],
+        special_instructions: 'Triggers when energy reaches 100. The original is destroyed and splits into TWO copies, each with 50% of the original\'s current HP. Neither copy inherits the bifurcate ability.',
+        level: 1
+    },
+    possess: {
+        name: 'possess',
+        type: 'special',
+        icon: images['lundi_mask'],
+        cooldown: 'TBD',
+        duration: 'TBD',
+        energy_cost: 'TBD',
+        effect: ['TBD'],
+        special_instructions: 'TBD',
+        level: 1
+    },
+    tesseract: {
+        name: 'tesseract',
+        type: 'special',
+        icon: images['evilai_charm'],
+        cooldown: 'TBD',
+        energy_cost: 'TBD',
+        effect: ['TBD'],
+        special_instructions: 'TBD',
+        level: 1
+    },
+    firestorm: {
+        name: 'firestorm',
+        type: 'special',
+        icon: images['fire_blast'],
+        cooldown: 'TBD',
+        damage: 'TBD',
+        energy_cost: 'TBD',
+        effect: ['damage_multi_target'],
+        special_instructions: 'TBD',
         level: 1
     },
 }

@@ -94,8 +94,20 @@ class MonsterBattle extends React.Component {
             });
         }
     }
+    // ── Shield Wall registration / expiry ─────────────────────────────────────
+    registerShieldWall = (wallData, fighter) => { // eslint-disable-line no-unused-vars
+        this.setState(prev => ({
+            activeWalls: [...prev.activeWalls, { ...wallData, id: `wall_${Date.now()}` }]
+        }));
+    }
+    expireShieldWall = (wallData, fighter) => { // eslint-disable-line no-unused-vars
+        if (!wallData) return;
+        this.setState(prev => ({
+            activeWalls: prev.activeWalls.filter(w => w.callerId !== wallData.callerId)
+        }));
+    }
+    // ─────────────────────────────────────────────────────────────────────────
     removeDeadCombatantAfterDelay = (id) => {
-            // Only remove from combatManager (the source of truth)
             if (this.props.combatManager && typeof this.props.combatManager.removeCombatant === 'function') {
                 this.props.combatManager.removeCombatant(id);
             }
@@ -155,7 +167,13 @@ class MonsterBattle extends React.Component {
             magicMissile_connectParticles: true,
             magicMissile_targetDistance: 0,
                magicMissile_targetLaneDiff: 0,
-            teleportingFighterId: null
+            teleportingFighterId: null,
+            // Active shield walls: array of wallData objects
+            activeWalls: [],
+            // Board-wide fear overlay
+            boardFearActive: false,
+            // Transient glow on the casting monster portrait when induce_fear fires
+            fearCastingActive: false,
         }
         // Internal flags for special group-death flow
         this._suppressPersistFinalHP = false;
@@ -178,6 +196,8 @@ class MonsterBattle extends React.Component {
     this._suppressPersistFinalHP = false;
     this._gameOverHandled = false;
     this._goldAwarded = false;
+    // Reset UI state that persists across remounts (shield walls, fear, etc.)
+    this.setState({ activeWalls: [], boardFearActive: false, fearCastingActive: false });
         this.props.combatManager.initialize();
         this.props.combatManager.connectOverlayManager(this.props.overlayManager)
         this.props.combatManager.connectAnimationManager(this.props.animationManager);
@@ -269,6 +289,21 @@ class MonsterBattle extends React.Component {
         this.establishUpdateAnimationDataCallback();
         // this.establishAnimationCallback();
 
+        // Wire board-wide event callback (e.g. induce_fear overlay)
+        this.props.combatManager.establishBoardEventCallback((eventType, data) => {
+            if (eventType === 'induce_fear') {
+                this.setState({ boardFearActive: true, fearCastingActive: true });
+                const duration = (data && data.duration) ? data.duration : 20000;
+                this._setTimeout(() => {
+                    this.setState({ boardFearActive: false });
+                }, duration);
+                // Glow persists only for the cast moment, not the full fear duration
+                this._setTimeout(() => {
+                    this.setState({ fearCastingActive: false });
+                }, 1800);
+            }
+        });
+
         this.props.combatManager.initializeCombat({
             crew: this.props.crew,
             leader: this.getCrewLeader(),
@@ -311,6 +346,13 @@ class MonsterBattle extends React.Component {
             }
         } catch (err) {
             console.warn('failed to wire monsterBattleRef to wizard AI', err);
+        }
+        try {
+            if (this.props.combatManager && this.props.combatManager.fighterAI && this.props.combatManager.fighterAI.roster && this.props.combatManager.fighterAI.roster.soldier) {
+                this.props.combatManager.fighterAI.roster.soldier.monsterBattleRef = this;
+            }
+        } catch (err) {
+            console.warn('failed to wire monsterBattleRef to soldier AI', err);
         }
 
         let arrowUp = new Image()
@@ -358,6 +400,9 @@ class MonsterBattle extends React.Component {
         // Best-effort: disconnect combat manager callbacks so no further calls come in
         try { if (this.props && this.props.combatManager && typeof this.props.combatManager.shutdown === 'function') this.props.combatManager.shutdown(); } catch(e){}
         try { if (this.props && this.props.combatManager && typeof this.props.combatManager.disconnectOverlayManager === 'function') this.props.combatManager.disconnectOverlayManager(); } catch(e){}
+        // Flush all canvas and tile animations immediately so in-flight missiles,
+        // fireballs etc. can't appear at the start of the next combat session.
+        try { if (this.props && this.props.animationManager && typeof this.props.animationManager.reset === 'function') this.props.animationManager.reset(); } catch(e){}
         // Clear any timers/intervals this component created
         try { if (Array.isArray(this._timers)) { this._timers.forEach(t => clearTimeout(t)); this._timers = []; } } catch(e){}
         try { if (Array.isArray(this._intervals)) { this._intervals.forEach(i => clearInterval(i)); this._intervals = []; } } catch(e){}
@@ -708,15 +753,6 @@ class MonsterBattle extends React.Component {
                 if (!combatant) return;
                 if (combatant.type !== 'wizard') return;
                 if (!combatant.specialActions) combatant.specialActions = [];
-                // Diagnostic: log if any incoming specialActions already have cooldown_position === 3
-                try {
-                    if (combatant.specialActions.some(sa => sa && sa.cooldown_position === 3)) {
-                        console.warn('ensureWizardSpells: combatant with specialActions containing cooldown_position===3', combatant.id || combatant.name, combatant.specialActions.filter(sa => sa && sa.cooldown_position === 3));
-                        console.trace();
-                    }
-                } catch (err) {
-                    console.debug('ensureWizardSpells diagnostic error', err);
-                }
                 const existing = combatant.specialActions.filter(sa => sa && sa.type === 'spell' && (sa.subtype === 'magic missile' || (sa.name && sa.name.toLowerCase().includes('magic missile'))));
                 const needed = Math.max(0, 3 - existing.length);
                 for (let i = 0; i < needed; i++) {
@@ -734,7 +770,10 @@ class MonsterBattle extends React.Component {
                     // created specialAction objects.
                     try {
                         const cm = this.props && this.props.combatManager;
-                        const def = cm && ((cm.specialsMatrix && cm.specialsMatrix['magic_missile']) || (cm.attacksMatrix && cm.attacksMatrix['magic_missile']));
+                        const def = cm && (
+                            (cm.specialsMatrix && (cm.specialsMatrix['magic_missile'] || cm.specialsMatrix['major_magic_missile'])) ||
+                            (cm.attacksMatrix  && (cm.attacksMatrix['magic_missile']  || cm.attacksMatrix['major_magic_missile']))
+                        );
                         if (def) {
                             ['energy_cost', 'cooldown', 'damage', 'effect', 'level', 'icon'].forEach(k => {
                                 if (typeof def[k] !== 'undefined' && typeof newSpell[k] === 'undefined') {
@@ -744,14 +783,6 @@ class MonsterBattle extends React.Component {
                         }
                     } catch (err) {
                         console.debug('ensureWizardSpells merge diagnostic error', err);
-                    }
-                    // Diagnostic: log inserted spells so we can trace creation time
-                    try {
-                        console.info('ensureWizardSpells: inserting magic-missile specialAction for', combatant.id || combatant.name, newSpell);
-                        // lightweight stack trace to find caller path
-                        console.trace();
-                    } catch (err) {
-                        console.debug('ensureWizardSpells insert diagnostic error', err);
                     }
                     combatant.specialActions.push(newSpell);
                 }
@@ -799,6 +830,12 @@ class MonsterBattle extends React.Component {
         }
         this._gameOverHandled = true;
 
+        // Snapshot battle data BEFORE reset() wipes combatManager.combatants.
+        // Attempt to use the freshest battleData available. Prefer component state
+        // (updated via updateBattleData). If that's empty (race), fall back to the
+        // authoritative combatManager.combatants snapshot.
+        let latestBattleData = (this.state.battleData && Object.keys(this.state.battleData).length) ? this.state.battleData : (this.props.combatManager && this.props.combatManager.combatants ? JSON.parse(JSON.stringify(this.props.combatManager.combatants)) : {});
+
         this.props.overlayManager.reset();
         this.props.combatManager.reset();
 
@@ -807,11 +844,6 @@ class MonsterBattle extends React.Component {
             this.props.exitSimulator();
             return
         }
-
-        // Attempt to use the freshest battleData available. Prefer component state
-        // (updated via updateBattleData). If that's empty (race), fall back to the
-        // authoritative combatManager.combatants snapshot.
-        let latestBattleData = (this.state.battleData && Object.keys(this.state.battleData).length) ? this.state.battleData : (this.props.combatManager && this.props.combatManager.combatants ? JSON.parse(JSON.stringify(this.props.combatManager.combatants)) : {});
 
         let experienceGained,
             goldGained,
@@ -1694,6 +1726,42 @@ class MonsterBattle extends React.Component {
                             </div>
                         })}
                     </div>
+                    {/* /// SHIELD WALL OVERLAYS */}
+                    {this.state.activeWalls.map((wall) => {
+                        // Each wall occupies lanesAffected.length tiles vertically.
+                        // Position: the wall is a thin vertical line sitting between
+                        // column (wall.x - 1) and column (wall.x).
+                        // left = wall.x * TILE_SIZE  (right edge of the tile at wall.x-1)
+                        // top  = min(lanesAffected) * TILE_SIZE
+                        // height = lanesAffected.length * TILE_SIZE
+                        if (!wall.lanesAffected || !wall.lanesAffected.length) return null;
+                        const minLane = Math.min(...wall.lanesAffected);
+                        const topPx = minLane * TILE_SIZE;
+                        const heightPx = wall.lanesAffected.length * TILE_SIZE;
+                        // The wall line sits at the leading edge of wall.x column
+                        const leftPx = wall.isFacingRight
+                            ? wall.x * TILE_SIZE - 3
+                            : (wall.x + 1) * TILE_SIZE - 3;
+                        return (
+                            <div
+                                key={wall.id}
+                                className="shield-wall-overlay"
+                                style={{
+                                    position: 'absolute',
+                                    left: leftPx + 'px',
+                                    top: topPx + 'px',
+                                    width: '6px',
+                                    height: heightPx + 'px',
+                                    zIndex: 20,
+                                    pointerEvents: 'none'
+                                }}
+                            />
+                        );
+                    })}
+                    {/* /// FEAR OVERLAY — board-wide shroud when induce_fear is active */}
+                    {this.state.boardFearActive && (
+                        <div className="fear-overlay" />
+                    )}
                     {/* /// FIGHTERS */}
                     <FightersCombatGrid 
                         crew={this.props.crew}
@@ -1738,6 +1806,7 @@ class MonsterBattle extends React.Component {
                         TILE_SIZE={TILE_SIZE}
                         SHOW_TILE_BORDERS={SHOW_TILE_BORDERS}
                         SHOW_MONSTER_IDS={SHOW_MONSTER_IDS}
+                        fearCastingActive={this.state.fearCastingActive}
                     />
                 </div>
 

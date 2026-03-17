@@ -44,12 +44,16 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
         combatStyle: fighter.combatStyle,
         id: fighter.id,
         portrait: fighter.portrait,
+        portraitFilter: fighter.portraitFilter || null,
         level: fighter.level,
     // Use incoming current hp if provided (persisted from DungeonPage), otherwise default to stats.hp
     hp: (typeof fighter.hp === 'number') ? fighter.hp : fighter.stats.hp,
     // starting_hp represents the max HP for the fighter (may be provided or fall back to stats.hp)
     starting_hp: (typeof fighter.starting_hp === 'number') ? fighter.starting_hp : fighter.stats.hp,
-        energy: 100,
+        // Minions start with 0 energy so they must earn a full pool before their
+        // special abilities (e.g. bifurcate) can fire. Monsters and fighters start
+        // with a full pool so their openers are immediately available.
+        energy: fighter.isMinion ? 0 : 100,
         tempo: 1,
         atk: fighter.stats.atk,
         stats: {
@@ -141,10 +145,10 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
         facing: initialFacing, // persistent facing property
         attack: function(){
             const target = getCombatant(this.targetId);
-            if(!target) return
+            if(!target) return;
             if(!target){
                 this.skip();
-                return
+                return;
             }
             // Ensure AI attack consumes move points similarly to manual attack
             try {
@@ -154,6 +158,15 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
                 if (typeof broadcastDataUpdate === 'function') broadcastDataUpdate(this);
             } catch (err) {
                 // non-fatal
+            }
+            // Log attack details for debugging
+            if (this.type === 'barbarian') {
+                const atk = this.pendingAttack;
+                console.log('[Barbarian Attack]', {
+                    attackType: atk ? atk.name : 'none',
+                    icon: atk ? atk.icon : 'none',
+                    attackObj: atk
+                });
             }
             initiateAttack(this);
         },
@@ -215,7 +228,7 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
             this.movesLeft = this.movesPerTurnCycle;
             
             this.interval = setInterval(()=>{
-                if(this.combatPaused || this.dead || this.locked) return
+                if(this.combatPaused || this.dead || this.locked || isCombatOver()) return
                 if(this.isOnManualMoveCooldown){
                     if(this.tempo > 100) this.tempo = 100;
                     broadcastDataUpdate(this)
@@ -260,6 +273,25 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
                 this.tempo = Math.floor((count/100)*100);
                 if(this.tempo < 1) return;
 
+                // ── Passive energy regen ───────────────────────────────────
+                // Ticks every FIGHT_INTERVAL ms. Regen rate is derived from
+                // stats.speed so faster combatants fill their bar quicker.
+                // A combatant with speed=10 at the default 40ms interval will
+                // reach 100 energy in roughly 20 seconds (matching ~one full
+                // turn-cycle duration). Minions start at 0 so this is their
+                // only path to triggering energy-gated abilities.
+                if (!this.dead && !this.combatPaused) {
+                    const speed = (this.stats && typeof this.stats.speed === 'number' && this.stats.speed > 0)
+                        ? this.stats.speed
+                        : 1;
+                    // regenPerTick = speed * 0.02  →  speed-10 unit at 40ms ticks ≈ 20s to fill
+                    // beholder_minion gets 3x regen for testing so they can reach 100 energy to bifurcate
+                    const regenMult = (this.type === 'beholder_minion') ? 3 : 1;
+                    const regenPerTick = speed * 0.02 * regenMult;
+                    this.energy = Math.min(100, (this.energy || 0) + regenPerTick);
+                }
+                // ─────────────────────────────────────────────────────────
+
                 if(isCombatOver() || this.dead){
                     clearInterval(this.interval)
                     return
@@ -302,6 +334,7 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
                 this.eraIndex = eraIndex;
 
                 const eraMove = () => {
+                    if(this.stunned) return; // stunned: cannot move
                     if(this.movesLeft && !era.moved && !this.onMoveCooldown){
                         // Diagnostic log to help trace when AI attempts to move
                         // (will show in browser console)
@@ -311,6 +344,7 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
                     }
                 }
                 const eraAttack = () => {
+                    if(this.stunned) return; // stunned: cannot attack
                     if(!this.targetId) acquireTarget(this);
                     target = getCombatant(this.targetId)
                     if(!this.pendingAttack) chooseAttackType(this, target)
@@ -333,7 +367,8 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
                                     // invoked without storing its result, which left
                                     // pendingAttack null and prevented generic monsters
                                     // from ever attacking.
-                                    if(!this.pendingAttack) this.pendingAttack = chooseAttackType(this, target);
+                                    target = getCombatant(this.targetId);
+                                    if(!this.pendingAttack && target) this.pendingAttack = chooseAttackType(this, target);
                                     eraAttack();
                                 }
                     break;
@@ -372,6 +407,43 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
             this.movesLeft = this.movesPerTurnCycle;
             this.eras.forEach(e=>e.moved = e.attacked = false)
             this.pendingAttack = null;
+
+            // ── Tick down era-based effect counters ───────────────────────
+            // Stun
+            if (this.stunned && this.stunned_eras > 0) {
+                this.stunned_eras--;
+                if (this.stunned_eras <= 0) {
+                    this.stunned = false;
+                    this.stunned_eras = 0;
+                    // Push immediately so the UI drops the 'stunned' CSS class right away
+                    if (typeof broadcastDataUpdate === 'function' && !isCombatOver()) broadcastDataUpdate(this);
+                }
+            }
+            // Fear (halved ATK/DEF applied by induce_fear)
+            if (this.feared && this.feared_eras > 0) {
+                this.feared_eras--;
+                if (this.feared_eras <= 0) {
+                    if (this._fearOriginalAtk != null) { this.atk = this._fearOriginalAtk; delete this._fearOriginalAtk; }
+                    if (this._fearOriginalDef != null) { this.def = this._fearOriginalDef; delete this._fearOriginalDef; }
+                    this.feared = false;
+                    this.feared_eras = 0;
+                    // Reacquire target after fear ends
+                    if (!this.targetId) acquireTarget(this);
+                    // Push immediately so the UI drops the 'feared' CSS class right away
+                    if (typeof broadcastDataUpdate === 'function' && !isCombatOver()) broadcastDataUpdate(this);
+                }
+            }
+            // Drained (energy drain visual flag)
+            if (this.drained && this.drained_eras > 0) {
+                this.drained_eras--;
+                if (this.drained_eras <= 0) {
+                    this.drained = false;
+                    this.drained_eras = 0;
+                    if (typeof broadcastDataUpdate === 'function' && !isCombatOver()) broadcastDataUpdate(this);
+                }
+            }
+            // ─────────────────────────────────────────────────────────────
+
             this.turnCycle();
         },
         waitForAttack: function(){

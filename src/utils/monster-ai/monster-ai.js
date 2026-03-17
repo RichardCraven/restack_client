@@ -2,6 +2,8 @@ import { Djinn } from './profiles/Djinn'
 import { Sphinx } from './profiles/Sphinx'
 import { Skeleton } from './profiles/Skeleton'
 import { Goblin } from './profiles/Goblin'
+import { Mummy } from './profiles/Mummy'
+import { BeholderMinion } from './profiles/BeholderMinion'
 import {Methods, getSurroundings} from '../shared-ai-methods/basic-methods';
 import {MovementMethods} from '../shared-ai-methods/movement-methods';
 
@@ -21,26 +23,17 @@ export function MonsterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
         INTERVAL_TIME: this.INTERVAL_TIME
     }
     this.connectUtilMethods = (utilMethods) => {
-        // this.monsterFacingUp = utilMethods.monsterFacingUp;
-        // this.monsterFacingDown = utilMethods.monsterFacingDown;
-        // this.monsterFacingRight = utilMethods.monsterFacingRight;
+        // Store the full utilMethods object so all profile methods are available.
+        // Individual convenience references kept for MonsterAI-level use.
         this.broadcastDataUpdate = utilMethods.broadcastDataUpdate;
         this.kickoffAttackCooldown = utilMethods.kickoffAttackCooldown;
         this.missesTarget = utilMethods.missesTarget;
         this.hitsTarget = utilMethods.hitsTarget;
         this.hitsCombatant = utilMethods.hitsCombatant;
 
-        this.utilMethods = {
-            // monsterFacingDown:this.monsterFacingDown,
-            // monsterFacingUp: this.monsterFacingUp,
-            // monsterFacingRight: this.monsterFacingRight,
-            broadcastDataUpdate: this.broadcastDataUpdate,
-            kickoffAttackCooldown: this.kickoffAttackCooldown,
-            missesTarget: this.missesTarget,
-            hitsTarget: this.hitsTarget,
-            hitsCombatant: this.hitsCombatant,
-            chooseAttackType: this.chooseAttackType
-        }
+        // Pass the full utilMethods through to all profiles so any method added
+        // to combat-manager's utilMethods object is automatically available.
+        this.utilMethods = utilMethods;
     }
 
     this.connectOverlayManager = (instance) => {
@@ -55,7 +48,9 @@ export function MonsterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
             djinn: new Djinn(data, this.utilMethods, this.animationManager, this.overlayManager),
             sphinx: new Sphinx(data, this.utilMethods, this.animationManager, this.overlayManager),
             skeleton: new Skeleton(data, this.utilMethods, this.animationManager, this.overlayManager),
-            goblin: new Goblin(data, this.utilMethods, this.animationManager, this.overlayManager)
+            goblin: new Goblin(data, this.utilMethods, this.animationManager, this.overlayManager),
+            mummy: new Mummy(data, this.utilMethods, this.animationManager, this.overlayManager),
+            beholder_minion: new BeholderMinion(data, this.utilMethods, this.animationManager, this.overlayManager),
         }
     }
 
@@ -175,6 +170,27 @@ export function MonsterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
 
     this.moveTowardsCloseEnemyTarget = (caller, combatants) => {
         const enemyTarget = Object.values(combatants).find(e=>e.id === caller.targetId)
+        if(!enemyTarget) return;
+
+        // If already adjacent and using a close attack, don't reposition.
+        const pendingRange = caller.pendingAttack && caller.pendingAttack.range;
+        if(pendingRange === 'close' || !pendingRange){
+            const callerTiles = (Array.isArray(caller.occupiedCoords) && caller.occupiedCoords.length > 0)
+                ? caller.occupiedCoords
+                : [caller.coordinates];
+            const targetTiles = (Array.isArray(enemyTarget.occupiedCoords) && enemyTarget.occupiedCoords.length > 0)
+                ? enemyTarget.occupiedCoords
+                : [enemyTarget.coordinates];
+            const alreadyAdjacent = callerTiles.some(cc =>
+                targetTiles.some(tc => {
+                    const dx = Math.abs(cc.x - tc.x);
+                    const dy = Math.abs(cc.y - tc.y);
+                    return (dx === 1 && dy === 0) || (dx === 0 && dy === 1);
+                })
+            );
+            if(alreadyAdjacent) return;
+        }
+
         const distanceToTarget = this.methods.getDistanceToTarget(caller, enemyTarget),
         laneDiff = this.methods.getLaneDifferenceToTarget(caller, enemyTarget)
 
@@ -208,6 +224,30 @@ export function MonsterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
             if(caller.depth > 1) caller.depth -= 2
         } else if(distanceToTarget > 1){
             caller.depth++
+        }
+
+        // Large monsters occupy 2 vertical tiles. If the tile above the proposed
+        // destination is occupied (or off the top of the board), abort the move.
+        const callerIsLargeMAI = (caller.isMonster === true && caller.isMinion !== true)
+            || caller.large === true;
+        if (callerIsLargeMAI) {
+            const aboveY = caller.position - 1;
+            const aboveOccupiedMAI = aboveY < 0 || Object.values(combatants).filter(c => c.id !== caller.id).some(e => {
+                try {
+                    if (!e) return false;
+                    if (e.coordinates && e.coordinates.x === caller.depth && e.coordinates.y === aboveY) return true;
+                    if (Array.isArray(e.occupiedCoords)) return e.occupiedCoords.some(c => c.x === caller.depth && c.y === aboveY);
+                    return false;
+                } catch (err) { return false; }
+            });
+            if (aboveOccupiedMAI) {
+                // Can't fit — revert to original coordinates
+                if (typeof caller.coordinates === 'object') {
+                    caller.depth = caller.coordinates.x;
+                    caller.position = caller.coordinates.y;
+                }
+                return;
+            }
         }
     }
 

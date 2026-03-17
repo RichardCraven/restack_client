@@ -13,7 +13,9 @@ import * as images from '../../utils/images'
 class BoardsPalette extends React.Component {
     constructor(props){
         super(props)
-        this.state = {}
+        this.state = {
+            hoveredSubItem: null  // { type: 'monster'|'gate', id: i }
+        }
     }
 
     render (){
@@ -79,9 +81,13 @@ class BoardsPalette extends React.Component {
                         </div>
                         {tile.optionType === 'monster' && <div className={`palette-option-expandable-container ${this.props.optionClickedIdx === i ? 'expanded' : ''}`}>
                             {Object.values(this.props.monsterManager.monsters).map((monster,i)=>{
+                                const isHovered = this.state.hoveredSubItem?.type === 'monster' && this.state.hoveredSubItem?.id === i;
+                                const isSelected = this.props.pinnedOption?.type === 'monster-tile' && this.props.pinnedOption?.id === i;
                                 return <div 
                                 key={i} 
-                                className={`palette-option-subcontainer`}
+                                className={`palette-option-subcontainer${isHovered ? ' sub-hovered' : ''}${isSelected ? ' sub-selected' : ''}`}
+                                onMouseEnter={() => this.setState({ hoveredSubItem: { type: 'monster', id: i } })}
+                                onMouseLeave={() => this.setState({ hoveredSubItem: null })}
                                 onClick={() => {
                                     this.props.handleClick({
                                     type: 'monster-tile',
@@ -117,9 +123,13 @@ class BoardsPalette extends React.Component {
                         </div>}
                         {tile.optionType === 'gate' && <div className={`palette-option-expandable-container ${this.props.optionClickedIdx === i ? 'expanded' : ''}`}>
                             {this.props.gates.map((gate,i)=>{
+                                const isHovered = this.state.hoveredSubItem?.type === 'gate' && this.state.hoveredSubItem?.id === i;
+                                const isSelected = this.props.pinnedOption?.type === 'gate-tile' && this.props.pinnedOption?.id === i;
                                 return <div 
                                 key={i} 
-                                className={`palette-option-subcontainer`}
+                                className={`palette-option-subcontainer${isHovered ? ' sub-hovered' : ''}${isSelected ? ' sub-selected' : ''}`}
+                                onMouseEnter={() => this.setState({ hoveredSubItem: { type: 'gate', id: i } })}
+                                onMouseLeave={() => this.setState({ hoveredSubItem: null })}
                                 onClick={() => {
                                     this.props.handleClick({
                                     type: 'gate-tile',
