@@ -262,7 +262,8 @@ export default function FightersCombatGrid(props) {
                                     { props.getFighterDetails(fighter) && props.getFighterDetails(fighter).pendingAttack && props.getFighterDetails(fighter).attacking && !props.getFighterDetails(fighter).dead && (() => {
                                         const details = props.getFighterDetails(fighter);
                                         const isMonk = fighter.type === 'monk';
-                                        const isBasicPunch = isMonk && details.pendingAttack.range === 'close' && details.pendingAttack.name !== 'dragon punch';
+                                        if (!isMonk) return null;
+                                        const isBasicPunch = details.pendingAttack.range === 'close' && details.pendingAttack.name !== 'dragon punch';
                                         const icon = isBasicPunch ? images.fist_punch : props.battleData[fighter.id].pendingAttack.icon;
 
                                         // position weapon using measured portrait positions when available

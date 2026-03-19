@@ -188,6 +188,9 @@
     animation: hit-flash-fade 0.4s linear;
     z-index: 10;
 }
+.axe-throw-hit-flash .hit-flash-overlay {
+    background: rgba(255, 80, 80, 0.35) !important; /* Light red for axe throw hit */
+}
 
 .monster-portrait.hit-flash,
 .minion-portrait.hit-flash {

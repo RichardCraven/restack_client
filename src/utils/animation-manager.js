@@ -661,10 +661,31 @@ export function AnimationManager(){
                         origin: originCoords,
                         target: targetCoords,
                         onComplete: () => {
+                            // Remove the canvas animation
                             const idx = this.canvasAnimations.findIndex(anim => anim.id === axeAnimId);
                             if (idx !== -1) {
                                 this.canvasAnimations.splice(idx, 1);
                                 this.update();
+                            }
+                            // Trigger a hit-flash effect on the target tile
+                            const targetTileId = this.getTileIdByCoords(targetCoords);
+                            if (targetTileId !== null && targetTileId !== undefined) {
+                                const animationTile = this.tiles.find(e => e.id === targetTileId);
+                                if (animationTile) {
+                                    animationTile.animationType = 'hit-flash';
+                                    animationTile.transitionType = 'fade';
+                                    animationTile.animationData = {
+                                        axeThrowHit: true,
+                                        duration: 500
+                                    };
+                                    this.update();
+                                    setTimeout(() => {
+                                        animationTile.animationType = null;
+                                        animationTile.transitionType = null;
+                                        animationTile.animationData = {};
+                                        this.update();
+                                    }, 500);
+                                }
                             }
                         }
                     };

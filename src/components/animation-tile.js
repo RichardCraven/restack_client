@@ -137,7 +137,6 @@ export default function AnimationTile(props) {
                 cursor: 'pointer',
                 height: props.tileSize + 'px',
                 width: props.tileSize + 'px',
-                // backgroundImage: image && props.animationType !== 'spin_attack_arc' && props.animationType !== 'spin_attack' ? "url(" + image + ")" : '',
                 animation: keyframe && props.animationType !== 'spin_attack' ? `${keyframe} ${duration / 1000}s linear 0s ${infiniteLoop ? 'infinite' : ''} forwards` : '',
                 WebkitAnimation: keyframe && props.animationType !== 'spin_attack' ? `${keyframe} ${duration / 1000}s linear 0s ${infiniteLoop ? 'infinite' : ''} forwards` : '',
                 backgroundSize: '100% 100%',
@@ -158,8 +157,13 @@ export default function AnimationTile(props) {
                 ${hitFlashing ? 'hit-flashing' : ''}
                 ${chargingUp ? 'charging-up' : ''}
                 ${isTeleporting ? 'instant-teleport' : ''}
+                ${props.animationData?.axeThrowHit ? 'axe-throw-hit-flash' : ''}
             `}
         >
+            {/* Render hit-flash overlay for both blue and red cases */}
+            {(props.animationType === 'hit-flash' && hitFlashing) && (
+                <div className="hit-flash-overlay" />
+            )}
             {/* <div className="animation-tile-id">{tileIdFromCoords !== null ? tileIdFromCoords : props.id}</div> */}
                         {props.animationType === 'spin_attack' && (
                             <img

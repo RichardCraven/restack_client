@@ -68,7 +68,7 @@ export function MonsterManager(){
             image_names: ['skeleton'],
             monster_names: ['bones'],
             stats: {
-                hp: 935,
+                hp: 35,
                 atk: 5,
                 def: 7,
                 speed: 10,
