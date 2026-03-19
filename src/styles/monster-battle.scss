@@ -202,27 +202,29 @@
     60% { opacity: 0.7; }
     100% { opacity: 0; }
 }
-@keyframes Rocked { 
-    0%{transform: matrix3d(1, 0.3, 2, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);}
-    20%{ transform: matrix3d(1, -0.3, -1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);}
-    40%{transform: matrix3d(1, 0.2, 2, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);}
-    60%{transform: matrix3d(1, -0.2, -2, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);}
-    80%{transform: matrix3d(1, 0.3, 2, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);}
-    100%{transform: matrix3d(1, -0.3, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);}
+@keyframes Rocked {
+    0% { transform: translateX(0) scale(1); }
+    20% { transform: translateX(-2px) scale(1.02); }
+    40% { transform: translateX(2px) scale(0.98); }
+    60% { transform: translateX(-1px) scale(1.01); }
+    80% { transform: translateX(1px) scale(0.99); }
+    100% { transform: translateX(0) scale(1); }
 }
 @-webkit-keyframes Rocked {
-    0%{transform: matrix3d(1, 0, 2, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);}
-    25%{ transform: matrix3d(1, 0, -2, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);}
-    50%{transform: matrix3d(1, 0, 2, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);}
-    75%{transform: matrix3d(1, 0, -5, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);}
-    100%{transform: matrix3d(1, -1, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);}
+    0% { transform: translateX(0) scale(1); }
+    20% { transform: translateX(-2px) scale(1.02); }
+    40% { transform: translateX(2px) scale(0.98); }
+    60% { transform: translateX(-1px) scale(1.01); }
+    80% { transform: translateX(1px) scale(0.99); }
+    100% { transform: translateX(0) scale(1); }
 }
 @-moz-keyframes Rocked {
-    0%{transform: matrix3d(1, 0, 2, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);}
-    25%{ transform: matrix3d(1, 0, -2, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);}
-    50%{transform: matrix3d(1, 0, 2, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);}
-    75%{transform: matrix3d(1, 0, -5, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);}
-    100%{transform: matrix3d(1, -1, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1);}
+    0% { transform: translateX(0) scale(1); }
+    20% { transform: translateX(-2px) scale(1.02); }
+    40% { transform: translateX(2px) scale(0.98); }
+    60% { transform: translateX(-1px) scale(1.01); }
+    80% { transform: translateX(1px) scale(0.99); }
+    100% { transform: translateX(0) scale(1); }
 }
 
 /* Pulse animation used when a target is selected to draw attention */

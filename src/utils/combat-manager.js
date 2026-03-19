@@ -1437,7 +1437,8 @@ export function CombatManager(){
             if(caller.targetId && caller.targetId !== prevTargetId){
                 // Set facing based on target position ONLY if targetId changed
                 const target = this.combatants[caller.targetId];
-                if (target) {
+                if (target && !caller.facingLocked) {
+                    // If not locked, update facing as usual
                     caller.facing = (caller.coordinates.x <= target.coordinates.x) ? 'right' : 'left';
                 }
                 const animation = {
@@ -1461,7 +1462,8 @@ export function CombatManager(){
             if(caller.targetId && caller.targetId !== prevTargetId){
                 // Set facing based on target position ONLY if targetId changed
                 const target = this.combatants[caller.targetId];
-                if (target) {
+                if (target && !caller.facingLocked) {
+                    // If not locked, update facing as usual
                     caller.facing = (caller.coordinates.x <= target.coordinates.x) ? 'right' : 'left';
                 }
                 const animation = {

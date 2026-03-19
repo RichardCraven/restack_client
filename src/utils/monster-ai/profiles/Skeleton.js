@@ -100,18 +100,53 @@ export function Skeleton(data, utilMethods, animationManager, overlayManager){
             break;
         }
         // After moving, update facing to face target if one exists
-        if (caller.targetId && combatants[caller.targetId]) {
+        if (caller.targetId && combatants[caller.targetId] && !caller.facingLocked) {
             const target = combatants[caller.targetId];
-            caller.facing = (caller.coordinates.x <= target.coordinates.x) ? 'right' : 'left';
+            // Only update facing if not currently facing up/down, or if target is not above/below
+            if (caller.facing === 'up' || caller.facing === 'down') {
+                // If still targeting up/down, keep facing
+                if (caller.coordinates.x === target.coordinates.x) {
+                    caller.facing = (caller.coordinates.y > target.coordinates.y) ? 'up' : 'down';
+                } else {
+                    caller.facing = (caller.coordinates.x <= target.coordinates.x) ? 'right' : 'left';
+                }
+            } else {
+                // If targeting up/down, set facing up/down
+                if (caller.coordinates.x === target.coordinates.x) {
+                    caller.facing = (caller.coordinates.y > target.coordinates.y) ? 'up' : 'down';
+                } else {
+                    caller.facing = (caller.coordinates.x <= target.coordinates.x) ? 'right' : 'left';
+                }
+            }
         }
     }
 
     this.triggerClawAttack = (callerCoords, targetCoords, id = null) => {
         const targetTileId = this.animationManager.getTileIdByCoords(targetCoords)
         const sourceTileId = this.animationManager.getTileIdByCoords(callerCoords);
+        // Lock facing for the duration of the animation
+        const monster = id ? (typeof id === 'string' ? id : null) : null;
+        let originalFacing = null;
+        if (monster) {
+            // If we have a monster id, try to lock its facing
+            const combatant = typeof monster === 'string' && window?.combatManager?.combatants?.[monster];
+            if (combatant) {
+                originalFacing = combatant.facing;
+            }
+        }
         return new Promise((resolve) => {
             if(sourceTileId !== null){
-                this.animationManager.clawToTarget(targetTileId, sourceTileId, resolve)
+                // Prevent facing changes for the duration of the animation
+                if (monster && window?.combatManager?.combatants?.[monster]) {
+                    window.combatManager.combatants[monster].facingLocked = true;
+                }
+                this.animationManager.clawToTarget(targetTileId, sourceTileId, (result) => {
+                    // Unlock facing after animation
+                    if (monster && window?.combatManager?.combatants?.[monster]) {
+                        window.combatManager.combatants[monster].facingLocked = false;
+                    }
+                    resolve(result);
+                });
             }
         })
     }
