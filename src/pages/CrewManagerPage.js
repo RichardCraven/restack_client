@@ -37,6 +37,7 @@ class CrewManagerPage extends React.Component{
     // }
 
   componentDidMount(){
+    console.log('MOUNTED');
     // ...existing code...
     // const userData = getMeta();
     
@@ -95,6 +96,7 @@ class CrewManagerPage extends React.Component{
     })
   }
   selectCrewMember = (event, crewMember) => {
+    console.log('SELECT');
     clearTimeout(this.timer);
     if (event.detail === 1) {
         this.timer = setTimeout(this.singleClick(crewMember), 200)
@@ -110,6 +112,9 @@ class CrewManagerPage extends React.Component{
     this.setState({
         selectedCrewMember: crewMember
     })
+    setTimeout(() => {
+        console.log('this.state.selectedCrewMember.name', this.state.selectedCrewMember.name);
+    }, 1000);
 
   }
   addMember = (index) => {
@@ -172,11 +177,26 @@ goBack = () => {
                     )}
                 </div>
                 <div className="member-panel">
-                    {this.state.selectedCrewMember && <div className='giant-portrait' 
-                    style={{backgroundImage: "url(" + this.state.selectedCrewMember.portrait + ")"}}>
-                        {/* <div className="add-button" onClick={()=>this.addMember()}>+</div> */}
-                        <div className="name">{this.state.selectedCrewMember.name}</div>
-                    </div>}
+                                        {this.state.selectedCrewMember &&
+                                            <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center', marginRight: 15}}>
+                                                <div className="giant-portrait-name">{this.state.selectedCrewMember.name}</div>
+                                                <div
+                                                    className="giant-portrait"
+                                                    style={{
+                                                        backgroundImage: "url(" + this.state.selectedCrewMember.portrait + ")",
+                                                        ...(this.state.selectedCrewMember.name === 'Sardonis' ? {
+                                                            backgroundSize: '90% 90%',
+                                                            backgroundPosition: 'center'
+                                                        } : {
+                                                            backgroundSize: '100% 100%',
+                                                            backgroundPosition: 'inherit'
+                                                        })
+                                                    }}
+                                                >
+                                                        {/* <div className="add-button" onClick={()=>this.addMember()}>+</div> */}
+                                                </div>
+                                            </div>
+                                        }
                     {this.state.selectedCrewMember && <div className="details-pane">
                         <div className="description">
                             {this.state.selectedCrewMember.description}

@@ -1,3 +1,8 @@
+          .soldier-giant-portrait {
+            /* Only for Soldier: override portrait size and position */
+            background-size: 90% 90% !important;
+            background-position: center !important;
+          }
 @import './styles/charging-up.css';
 // Debug animation for tile: black to light grey
 .debug-animation {
@@ -756,39 +761,23 @@ button{
         color: white;
         justify-content: flex-start;
         
-        .giant-portrait{
-          height: 200px;
-          width: 200px;
-          min-width: 200px;
-          background-size: 100% 100%;
-          margin-right: 15px;
-          position: relative;
-          .name{
-            position: absolute;
-            bottom: -32px;
-            left: 0;
-            font-size: 20px;
-            width: 100%;
+          .giant-portrait{
+            height: 200px;
+            width: 200px;
+            min-width: 200px;
+            background-size: 100% 100%;
+            position: relative;
           }
-          .add-button{
-            position: absolute;
-            bottom: 0;
-            left: 100px;
-            border-radius: 40px;
-
-            position: absolute;
-            bottom: -20px;
-            left: 85px;
-            height: 40px;
-            width: 40px;
-            background-color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 28px;
-            cursor: pointer;
+          .giant-portrait-name {
+            color: #fff;
+            font-size: 2.1em;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 0.3em;
+            text-shadow: 0 2px 8px #000, 0 0px 2px #000;
+            letter-spacing: 0.04em;
+            line-height: 1.1;
           }
-        }
         .details-pane{
           text-align: left;
           margin-right: 15px;

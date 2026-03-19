@@ -63,17 +63,22 @@ export default function AnimationTile(props) {
             keyframe = `ClawAnimation_${facing}`
         break;
         case 'sword_swing':
-                // Diagnostic log: capture when sword_swing animation is triggered
-                console.log('[AnimationTile] sword_swing animation triggered', {
-                    animationType: props.animationType,
-                    animationData: props.animationData,
-                    fighterType: props.fighterType,
-                    attackType: props.attackType,
-                    tileProps: props
-                });
-            image = images['sword_white']
-            facing = props.animationData?.facing
-            keyframe = null  // animation is driven on the <img> directly, not the tile div
+            // Diagnostic log: capture when sword_swing animation is triggered
+            console.log('[AnimationTile] sword_swing animation triggered', {
+                animationType: props.animationType,
+                animationData: props.animationData,
+                fighterType: props.fighterType,
+                attackType: props.attackType,
+                tileProps: props
+            });
+            // If Barbarian, use axe icon (white variant)
+            if (props.fighterType === 'barbarian') {
+                image = images['axe_white'];
+            } else {
+                image = images['sword_white'];
+            }
+            facing = props.animationData?.facing;
+            keyframe = null; // animation is driven on the <img> directly, not the tile div
         break;
         case 'spin_attack':
             image = images['sword_white']
@@ -184,7 +189,8 @@ export default function AnimationTile(props) {
                         )}
                         {props.animationType === 'sword_swing' && (() => {
                             let dx = 0, dy = 0;
-                            const offset = 40;
+                            // For Barbarian, render axe icon closer to the border between tiles
+                            const offset = props.fighterType === 'barbarian' ? 20 : 40;
                             switch (facing) {
                                 case 'up':    dx = 0;       dy = -offset; break;
                                 case 'down':  dx = 0;       dy =  offset; break;
@@ -196,7 +202,7 @@ export default function AnimationTile(props) {
                             return (
                                 <img
                                     src={image}
-                                    alt="axe swing"
+                                    alt={props.fighterType === 'barbarian' ? 'axe swing' : 'sword swing'}
                                     className="sword-swing-icon"
                                     style={{
                                         position: 'absolute',
