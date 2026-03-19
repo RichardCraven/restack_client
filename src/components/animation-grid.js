@@ -21,9 +21,19 @@ const AnimationGrid = ({
     animationData,
     tileProps
 }) => {
+    // Warn if canvasAnimations array identity changes (for debugging unnecessary remounts)
+    const lastCanvasAnimationsRef = React.useRef();
     useEffect(() => {
-        // console.log('animation data: ', animationData);
-    }, [animationData])
+        if (lastCanvasAnimationsRef.current && lastCanvasAnimationsRef.current !== animationData.canvasAnimations) {
+            console.warn('[AnimationGrid] canvasAnimations array identity changed! This may cause remounts.', {
+                prev: lastCanvasAnimationsRef.current,
+                next: animationData.canvasAnimations
+            });
+        }
+        lastCanvasAnimationsRef.current = animationData.canvasAnimations;
+    }, [animationData.canvasAnimations]);
+    // Log canvasAnimations reference and contents on every render
+    console.log('[AnimationGrid] canvasAnimations ref:', animationData.canvasAnimations, 'contents:', JSON.stringify(animationData.canvasAnimations));
 
     const handleClickWrapper = (tile) => {
         animationManager.handleTileClick(tile.id)
@@ -59,6 +69,17 @@ const AnimationGrid = ({
             <div className="canvas-grid-container">
                 <div className="canvas-grid">
                     {animationData.canvasAnimations?.map((anim, idx) => {
+                        // Use a stable key: prefer anim.id, else fallback to a composite key
+                        let animKey = anim.id;
+                        if (!animKey) {
+                            // Compose a key from type, origin, target, and a timestamp if available
+                            const originStr = anim.origin ? `${anim.origin.x},${anim.origin.y}` : 'no-origin';
+                            const targetStr = anim.target ? `${anim.target.x},${anim.target.y}` : 'no-target';
+                            animKey = `${anim.type}-${originStr}-${targetStr}-${anim.timestamp || idx}`;
+                        }
+                        if (anim.type === 'axe_throw') {
+                            console.log('[AnimationGrid] CanvasAxeThrow key:', animKey, 'anim:', anim);
+                        }
                         const TILE_SIZE = typeof tileProps.TILE_SIZE === 'number' && !isNaN(tileProps.TILE_SIZE) ? tileProps.TILE_SIZE : 100;
                         const MAX_DEPTH = typeof tileProps.MAX_DEPTH === 'number' && !isNaN(tileProps.MAX_DEPTH) ? tileProps.MAX_DEPTH : 5;
                         const MAX_ROWS = typeof tileProps.MAX_ROWS === 'number' && !isNaN(tileProps.MAX_ROWS) ? tileProps.MAX_ROWS : 5;
@@ -66,7 +87,7 @@ const AnimationGrid = ({
                         const height = TILE_SIZE * MAX_ROWS;
                         if (anim.type === 'magicCircle') {
                             return <CanvasMagicCircle
-                                key={idx}
+                                key={animKey}
                                 center={anim.center}
                                 radius={anim.radius}
                                 numParticles={anim.numParticles}
@@ -80,7 +101,7 @@ const AnimationGrid = ({
                             />
                         } else if (anim.type === 'magicTriangle') {
                             return <CanvasMagicTriangle
-                                key={idx}
+                                key={animKey}
                                 center={anim.center}
                                 radius={anim.radius}
                                 numParticles={anim.numParticles}
@@ -94,7 +115,7 @@ const AnimationGrid = ({
                             />
                         } else if (anim.type === 'fireball') {
                             return <CanvasFireball
-                                key={idx}
+                                key={animKey}
                                 center={anim.center}
                                 radius={anim.radius}
                                 numParticles={anim.numParticles}
@@ -107,16 +128,28 @@ const AnimationGrid = ({
                                 duration={anim.duration}
                             />
                         } else if (anim.type === 'axe_throw') {
+                            console.log('[AnimationGrid] Rendering CanvasAxeThrow', {
+                                idx,
+                                origin: anim.origin,
+                                target: anim.target,
+                                width: TILE_SIZE,
+                                height: TILE_SIZE
+                            });
+                            if (!anim.origin || !anim.target) {
+                                console.warn('[AnimationGrid] CanvasAxeThrow missing origin or target', anim);
+                                return null;
+                            }
                             return <CanvasAxeThrow
-                                key={idx}
+                                key={animKey}
                                 origin={anim.origin}
                                 target={anim.target}
                                 width={TILE_SIZE}
                                 height={TILE_SIZE}
+                                onComplete={anim.onComplete}
                             />
                         } else {
                             return <CanvasMagicMissile
-                                key={idx}
+                                key={animKey}
                                 origin={anim.origin}
                                 width={100}
                                 height={100}

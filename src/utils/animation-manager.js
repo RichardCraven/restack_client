@@ -3,14 +3,18 @@ import React from 'react';
 import CanvasAxeThrow from '../components/Canvas/canvas_axe_throw';
 export function AnimationManager(){
     // Animation durations (ms)
+    // Animation type separation:
+    // - tile: tile-based animation (fixed duration, affects board tiles)
+    // - canvas: canvas-based animation (dynamic duration, rendered in overlay/canvas)
     this.animationsMatrix = {
-        claw: { duration: 600 },
-        sword_swing: { duration: 600 },
-        spin_attack: { duration: 900 },
-        dragon_punch: { duration: 700 },
-        punch: { duration: 600 },
-        spin_attack_arc: { duration: 800 },
-        windmill: { duration: 750 }
+        claw: { duration: 600, animationType: 'tile' },
+        sword_swing: { duration: 600, animationType: 'tile' },
+        spin_attack: { duration: 900, animationType: 'tile' },
+        dragon_punch: { duration: 700, animationType: 'tile' },
+        punch: { duration: 600, animationType: 'tile' },
+        spin_attack_arc: { duration: 800, animationType: 'tile' },
+        windmill: { duration: 750, animationType: 'tile' },
+        axe_throw: { duration: 1200, animationType: 'canvas' } // Default/fallback for axe_throw, but actual duration is calculated dynamically
     };
 
     // Generic attack animation trigger for AI modules (e.g., Monk)
@@ -516,11 +520,10 @@ export function AnimationManager(){
 
 
     this.initialize = (MAX_DEPTH, MAX_ROWS) => {
+            console.log('[AnimationManager] initialize called:', { MAX_DEPTH, MAX_ROWS, canvasAnimations: this.canvasAnimations });
         this.MAX_DEPTH = MAX_DEPTH;
-        // Flush any canvas animations left over from a previous session so they
-        // don't bleed into the new one (e.g. a magic missile still in-flight when
-        // the last combat ended).
-        this.canvasAnimations = [];
+        // Only clear canvasAnimations if a full session reset is intended.
+        // this.canvasAnimations = [];
         let arr = [];
         // Use row-major order: id = y * MAX_DEPTH + x
         for (let y = 0; y < MAX_ROWS; y++) {
@@ -548,6 +551,8 @@ export function AnimationManager(){
     // stale canvas animations (missiles, fireballs, etc.) can't bleed into the
     // next session via in-flight setTimeout cleanup callbacks.
     this.reset = () => {
+            console.log('[AnimationManager] reset called, clearing canvasAnimations:', { canvasAnimations: this.canvasAnimations });
+        // Full session reset: clear all canvas animations
         this.canvasAnimations = [];
         // Clear all tile animation state too so tile-based effects don't linger
         this.tiles.forEach(t => {
@@ -645,18 +650,26 @@ export function AnimationManager(){
                     // Calculate origin and target tile coordinates
                     const originCoords = this.getTileCoordsById(sourceTileId);
                     const targetCoords = this.getTileCoordsById(targetTileId);
-                    // Add a canvas animation for the flying axe
-                    this.canvasAnimations.push({
+                    // Add a canvas animation for the flying axe with a unique id
+                    const axeAnimId = `axe_throw_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+                    // Calculate duration based on origin/target distance and speed (match CanvasAxeThrow logic)
+                    const TILE_SIZE = this.TILE_SIZE || 100;
+                    const axeAnim = {
+                        id: axeAnimId,
                         type: 'axe_throw',
+                        animationType: 'canvas',
                         origin: originCoords,
-                        target: targetCoords
-                    });
+                        target: targetCoords,
+                        onComplete: () => {
+                            const idx = this.canvasAnimations.findIndex(anim => anim.id === axeAnimId);
+                            if (idx !== -1) {
+                                this.canvasAnimations.splice(idx, 1);
+                                this.update();
+                            }
+                        }
+                    };
+                    this.canvasAnimations.push(axeAnim);
                     this.update();
-                    // Remove the animation after it completes
-                    setTimeout(() => {
-                        this.canvasAnimations = this.canvasAnimations.filter(anim => anim.type !== 'axe_throw');
-                        this.update();
-                    }, this.animationsMatrix['sword_swing'].duration);
                     return;
                 break;
             case 'claw':

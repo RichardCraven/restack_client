@@ -541,9 +541,9 @@ export function Barbarian(data, utilMethods, animationManager) {
                         break;
                     }
                     case 'axe throw':
-                        console.log(`[Barbarian] ⚔️ AI attack — "axe throw", facing=${facing}, coords=(${caller.coordinates.x},${caller.coordinates.y})`);
+                        console.log(`[Barbarian] ⚔️ AI attack — "axe throw", coords=(${caller.coordinates.x},${caller.coordinates.y}), target=(${target?.coordinates?.x},${target?.coordinates?.y})`);
                         await new Promise((resolve) => {
-                            this.triggerAxeThrow(caller.coordinates, facing, resolve, caller.fighterType, caller.pendingAttack?.name);
+                            this.triggerAxeThrow(caller.coordinates, target?.coordinates, resolve, caller.fighterType, caller.pendingAttack?.name);
                         });
                         if (target) this.hitsCombatant(caller, target);
                         break;
@@ -608,37 +608,12 @@ export function Barbarian(data, utilMethods, animationManager) {
     }
 
     // Triggers the axe_throw animation
-    this.triggerAxeThrow = (callerCoords, facing, resolve, fighterType, attackType) => {
+    // Accepts actual target coordinates for ranged throws
+    this.triggerAxeThrow = (callerCoords, targetCoords, resolve, fighterType, attackType) => {
         const sourceTileId = this.animationManager.getTileIdByCoords(callerCoords);
-        let targetTileId;
-        if (facing) {
-            switch (facing) {
-                case 'right':
-                    if (callerCoords.x < this.MAX_DEPTH) {
-                        targetTileId = this.animationManager.getTileIdByCoords({ x: callerCoords.x + 1, y: callerCoords.y });
-                    }
-                    break;
-                case 'left':
-                    if (callerCoords.x > 0) {
-                        targetTileId = this.animationManager.getTileIdByCoords({ x: callerCoords.x - 1, y: callerCoords.y });
-                    }
-                    break;
-                case 'up':
-                    if (callerCoords.y > 0) {
-                        targetTileId = this.animationManager.getTileIdByCoords({ x: callerCoords.x, y: callerCoords.y - 1 });
-                    }
-                    break;
-                case 'down':
-                    if (callerCoords.y < this.MAX_LANES - 1) {
-                        targetTileId = this.animationManager.getTileIdByCoords({ x: callerCoords.x, y: callerCoords.y + 1 });
-                    }
-                    break;
-                default:
-                    break;
-            }
-        }
+        const targetTileId = this.animationManager.getTileIdByCoords(targetCoords);
         if (sourceTileId !== null && targetTileId !== null) {
-            this.animationManager.axeThrow(targetTileId, sourceTileId, facing, resolve || (()=>{}), fighterType, attackType);
+            this.animationManager.axeThrow(targetTileId, sourceTileId, null, resolve || (()=>{}), fighterType, attackType);
         } else if (resolve) {
             resolve();
         }
