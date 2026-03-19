@@ -32,9 +32,6 @@ const AnimationGrid = ({
         }
         lastCanvasAnimationsRef.current = animationData.canvasAnimations;
     }, [animationData.canvasAnimations]);
-    // Log canvasAnimations reference and contents on every render
-    console.log('[AnimationGrid] canvasAnimations ref:', animationData.canvasAnimations, 'contents:', JSON.stringify(animationData.canvasAnimations));
-
     const handleClickWrapper = (tile) => {
         animationManager.handleTileClick(tile.id)
     }
@@ -146,6 +143,11 @@ const AnimationGrid = ({
                                 width={TILE_SIZE}
                                 height={TILE_SIZE}
                                 onComplete={anim.onComplete}
+                                style={{
+                                    position: 'absolute',
+                                    pointerEvents: 'none',
+                                    zIndex: 20
+                                }}
                             />
                         } else {
                             return <CanvasMagicMissile
