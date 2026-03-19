@@ -514,6 +514,17 @@ export function Barbarian(data, utilMethods, animationManager) {
 
         caller.attacking = true;
 
+        // Debug log: attack name and icon
+        if (caller.pendingAttack) {
+            console.log('[Barbarian DEBUG]', {
+                attackName: caller.pendingAttack.name,
+                attackIcon: caller.pendingAttack.icon,
+                attackObj: caller.pendingAttack
+            });
+        } else {
+            console.log('[Barbarian DEBUG] No pendingAttack');
+        }
+
         if (manualAttack) {
             if (caller.pendingAttack && caller.pendingAttack.cooldown_position < 99) return;
             if (caller.pendingAttack && caller.pendingAttack.cooldown_position === 100) {
@@ -600,7 +611,7 @@ export function Barbarian(data, utilMethods, animationManager) {
         }
         return new Promise((resolve) => {
             if (sourceTileId !== null) {
-                this.animationManager.swordSwing(targetTileId, sourceTileId, facing, resolve);
+                this.animationManager.axeSwing(targetTileId, sourceTileId, facing, resolve);
             } else {
                 resolve(null);
             }

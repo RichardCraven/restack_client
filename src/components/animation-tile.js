@@ -7,6 +7,7 @@ export default function AnimationTile(props) {
     const tileRef = useRef();
 
     useEffect(() => {
+        console.log('ANIMATION TYPE: ', props.animationType);
         // Only for punch animation: get grid container rect
         if (props.animationType === 'punch' && tileRef.current) {
             let grid = tileRef.current.closest('.animation-grid');
@@ -52,6 +53,20 @@ export default function AnimationTile(props) {
     // }
 
     switch(props.animationType){
+        case 'axe_swing':
+            // Use icon from animationData if present, fallback to images['axe_white']
+            image = props.animationData?.icon || images['axe_white'];
+            facing = props.animationData?.facing;
+            keyframe = null;
+            // Diagnostic log: confirm axe_swing icon rendering
+            console.log('[AnimationTile] axe_swing render', {
+                animationType: props.animationType,
+                animationData: props.animationData,
+                image,
+                facing,
+                tileProps: props
+            });
+        break;
         case 'punch':
             image = images['fist_punch'];
             // For punch, we want to animate from source to target and fade out
@@ -63,6 +78,7 @@ export default function AnimationTile(props) {
             keyframe = `ClawAnimation_${facing}`
         break;
         case 'sword_swing':
+            debugger
             // Diagnostic log: capture when sword_swing animation is triggered
             console.log('[AnimationTile] sword_swing animation triggered', {
                 animationType: props.animationType,
@@ -169,8 +185,27 @@ export default function AnimationTile(props) {
             {(props.animationType === 'hit-flash' && hitFlashing) && (
                 <div className="hit-flash-overlay" />
             )}
+            {/* Diagnostic render for axe_swing animation */}
+            {props.animationType === 'axe_swing' && image && (
+                <img
+                    src={image}
+                    alt="axe swing"
+                    className="axe-swing-icon"
+                    style={{
+                        position: 'absolute',
+                        top: '20%',
+                        left: '20%',
+                        width: '60%',
+                        height: '60%',
+                        pointerEvents: 'none',
+                        zIndex: 5000,
+                        // Add transform for facing if needed
+                        transform: facing === 'left' ? 'scaleX(-1)' : undefined
+                    }}
+                />
+            )}
             {/* <div className="animation-tile-id">{tileIdFromCoords !== null ? tileIdFromCoords : props.id}</div> */}
-                        {props.animationType === 'spin_attack' && (
+            {props.animationType === 'spin_attack' && (
                             <img
                                 src={images['spear_white']}
                                 alt="spin"

@@ -483,7 +483,7 @@ export function CrewManager(){
             portrait: images['barbarian_portrait'],
             inventory: [],
             specials: ['berserker'],
-            attacks: ['axe_throw', 'axe_swing'],
+                attacks: ['axe_throw', 'axe_swing'],
             passives: ['fury'],
             weaknesses: ['ice', 'curse', 'psionic'],
             description: "Ulaf is the son of the chieftan of the Rootsnarl Clan. He is on a journey to prove his mettle and one day take his father's place",

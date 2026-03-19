@@ -2,6 +2,36 @@ import * as images from '../utils/images'
 import React from 'react';
 import CanvasAxeThrow from '../components/Canvas/canvas_axe_throw';
 export function AnimationManager(){
+    this.axeSwing = (targetTileId, sourceTileId, facing, resolve) => {
+        const animationTile = this.tiles.find(e => e.id === sourceTileId);
+        if (!animationTile) return;
+        // Diagnostic log: trace axeSwing animation trigger
+        console.log('[AnimationManager] axeSwing animation triggered', {
+            tile: animationTile,
+            targetTileId,
+            sourceTileId,
+            facing
+        });
+        animationTile.animationType = 'axe_swing';
+        animationTile.transitionType = 'swing';
+        animationTile.animationData = {
+            icon: images['axe_white'],
+            facing,
+            duration: 600
+        };
+        this.update();
+        // Pause combat after rendering (debugger removed)
+        if (typeof this.pauseCombat === 'function') {
+            this.pauseCombat();
+        }
+        setTimeout(() => {
+            animationTile.animationType = null;
+            animationTile.transitionType = null;
+            animationTile.animationData = {};
+            this.update();
+            if (resolve) resolve();
+        }, 600);
+    }
     // Animation durations (ms)
     // Animation type separation:
     // - tile: tile-based animation (fixed duration, affects board tiles)

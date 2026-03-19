@@ -131,6 +131,18 @@ const isAvailableToMoveInto = (coords, combatants, fromCoords = null, caller = n
             return false;
         })) return false;
     }
+    // Patch: Prevent movement into spaces virtually occupied by large monsters (2x mummy)
+    // Check if any other combatant (not self) has occupiedCoords that includes the destination
+    if (combatants) {
+        const blocked = Object.values(combatants).some(e => {
+            if (!caller || e.id === caller.id) return false;
+            if (Array.isArray(e.occupiedCoords)) {
+                return e.occupiedCoords.some(c => c.x === coords.x && c.y === coords.y);
+            }
+            return false;
+        });
+        if (blocked) return false;
+    }
     return true;
 }
 const someoneElseIsInCoords = (caller, coords)=>{ // eslint-disable-line no-unused-vars
