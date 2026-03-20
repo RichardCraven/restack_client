@@ -74,8 +74,16 @@ export default function AnimationTile(props) {
             keyframe = null;
         break;
         case 'claw':
-            image = images['claws']
-            keyframe = `ClawAnimation_${facing}`
+            image = images['claws'];
+            keyframe = `ClawAnimation_${facing}`;
+        break;
+        case 'grasp':
+            image = images['grasp'];
+            keyframe = `GraspAnimation_${facing}`;
+        break;
+        case 'energy_drain':
+            image = images['energy_drain'];
+            keyframe = `EnergyDrainAnimation_${facing}`;
         break;
         case 'sword_swing':
             debugger
@@ -128,11 +136,9 @@ export default function AnimationTile(props) {
                 // Center of the source tile
                 const centerX = tileSize / 2;
                 const centerY = tileSize / 2;
-                // ...existing code...
                 // Sword position relative to the source tile
                 swordX = centerX + radius * Math.cos(angle) - tileSize * 0.3; // adjust offset for icon size
                 swordY = centerY + radius * Math.sin(angle) - tileSize * 0.3;
-                // ...existing code...
                 // debugger
                 if(!swordX || !swordY){
                     // let a = centerX
@@ -185,25 +191,99 @@ export default function AnimationTile(props) {
             {(props.animationType === 'hit-flash' && hitFlashing) && (
                 <div className="hit-flash-overlay" />
             )}
-            {/* Diagnostic render for axe_swing animation */}
-            {props.animationType === 'axe_swing' && image && (
-                <img
-                    src={image}
-                    alt="axe swing"
-                    className="axe-swing-icon"
-                    style={{
-                        position: 'absolute',
-                        top: '20%',
-                        left: '20%',
-                        width: '60%',
-                        height: '60%',
-                        pointerEvents: 'none',
-                        zIndex: 5000,
-                        // Add transform for facing if needed
-                        transform: facing === 'left' ? 'scaleX(-1)' : undefined
-                    }}
-                />
-            )}
+            {/* Animated axe_swing render (same logic as sword_swing) */}
+            {props.animationType === 'axe_swing' && image && (() => {
+                let dx = 0, dy = 0;
+                const offset = props.fighterType === 'barbarian' ? 20 : 40;
+                switch (facing) {
+                    case 'up':    dx = 0;       dy = -offset; break;
+                    case 'down':  dx = 0;       dy =  offset; break;
+                    case 'left':  dx = -offset; dy = 0;       break;
+                    case 'right': dx =  offset; dy = 0;       break;
+                    default:      dx =  offset; dy = 0;       break;
+                }
+                const flip = facing === 'left';
+                return (
+                    <img
+                        src={image}
+                        alt="axe swing"
+                        className="axe-swing-icon"
+                        style={{
+                            position: 'absolute',
+                            top: `calc(50% - 30% + ${dy}px)`,
+                            left: `calc(50% - 30% + ${dx}px)`,
+                            width: '60%',
+                            height: '60%',
+                            pointerEvents: 'none',
+                            zIndex: 5000,
+                            transform: flip ? 'scaleX(-1)' : undefined,
+                            animation: `ArcAnimation_${facing} ${duration / 1000}s linear forwards`,
+                        }}
+                    />
+                );
+            })()}
+            {/* Animated grasp render (same logic as claw) */}
+            {props.animationType === 'grasp' && image && (() => {
+                let dx = 0, dy = 0;
+                const offset = 40;
+                switch (facing) {
+                    case 'up':    dx = 0;       dy = -offset; break;
+                    case 'down':  dx = 0;       dy = props.tileSize / 2; break;
+                    case 'left':  dx = -offset; dy = 0;       break;
+                    case 'right': dx =  offset; dy = 0;       break;
+                    default:      dx =  offset; dy = 0;       break;
+                }
+                const flip = facing === 'left';
+                return (
+                    <img
+                        src={image}
+                        alt="grasp"
+                        className="grasp-icon"
+                        style={{
+                            position: 'absolute',
+                            top: facing === 'down' ? `calc(100% - 60%)` : `calc(50% - 30% + ${dy}px)`,
+                            left: `calc(50% - 30% + ${dx}px)`,
+                            width: '60%',
+                            height: '60%',
+                            pointerEvents: 'none',
+                            zIndex: 5000,
+                            transform: flip ? 'scaleX(-1)' : undefined,
+                            animation: `GraspAnimation_${facing} ${duration / 1000}s linear forwards`,
+                        }}
+                    />
+                );
+            })()}
+            {/* Animated energy_drain render */}
+            {props.animationType === 'energy_drain' && image && (() => {
+                let dx = 0, dy = 0;
+                const offset = 40;
+                switch (facing) {
+                    case 'up':    dx = 0;       dy = -offset; break;
+                    case 'down':  dx = 0;       dy = props.tileSize / 2; break;
+                    case 'left':  dx = -offset; dy = 0;       break;
+                    case 'right': dx =  offset; dy = 0;       break;
+                    default:      dx =  offset; dy = 0;       break;
+                }
+                const flip = facing === 'left';
+                return (
+                    <img
+                        src={image}
+                        alt="energy drain"
+                        className="energy-drain-icon"
+                        style={{
+                            position: 'absolute',
+                            top: facing === 'down' ? `calc(100% - 60%)` : `calc(50% - 30% + ${dy}px)`,
+                            left: `calc(50% - 30% + ${dx}px)`,
+                            width: '60%',
+                            height: '60%',
+                            pointerEvents: 'none',
+                            zIndex: 5000,
+                            transform: flip ? 'scaleX(-1)' : undefined,
+                            animation: `EnergyDrainAnimation_${facing} ${duration / 1000}s linear forwards`,
+                        }}
+                    />
+                );
+            })()}
             {/* <div className="animation-tile-id">{tileIdFromCoords !== null ? tileIdFromCoords : props.id}</div> */}
             {props.animationType === 'spin_attack' && (
                             <img

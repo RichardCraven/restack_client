@@ -190,14 +190,20 @@ class MonsterBattle extends React.Component {
 
         // mark mounted so async callbacks can safely call setState
         this._isMounted = true;
-    // Reset any previous group-death suppression flag and one-time guards
-    // when mounting a new battle. This prevents prior battle state from
-    // affecting subsequent battles if the component instance is reused.
-    this._suppressPersistFinalHP = false;
-    this._gameOverHandled = false;
-    this._goldAwarded = false;
-    // Reset UI state that persists across remounts (shield walls, fear, etc.)
-    this.setState({ activeWalls: [], boardFearActive: false, fearCastingActive: false });
+        // Reset any previous group-death suppression flag and one-time guards
+        // when mounting a new battle. This prevents prior battle state from
+        // affecting subsequent battles if the component instance is reused.
+        this._suppressPersistFinalHP = false;
+        this._gameOverHandled = false;
+        this._goldAwarded = false;
+        // Reset UI state that persists across remounts (shield walls, fear, etc.)
+        this.setState({ activeWalls: [], boardFearActive: false, fearCastingActive: false });
+
+        // --- FIX: Ensure combatManager resets combatants and removes all active enemies ---
+        if (this.props.combatManager && typeof this.props.combatManager.reset === 'function') {
+            this.props.combatManager.reset();
+        }
+
         this.props.combatManager.initialize();
         this.props.combatManager.connectOverlayManager(this.props.overlayManager)
         this.props.combatManager.connectAnimationManager(this.props.animationManager);
