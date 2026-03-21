@@ -233,7 +233,7 @@ export function CombatManager(){
             type: 'cutting',
             range: 'close',
             icon: images['axe'],
-            cooldown: 3.5,
+            cooldown: 2,
         },
         spear_throw: {
             name: 'spear throw',

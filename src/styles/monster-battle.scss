@@ -50,10 +50,29 @@
 
 // ── Berserker: red pulse on barbarian portrait while berserk is active ────────
 .fighter-portrait.berserk-active {
-    animation: berserkerBorderPulse 1s ease-in-out infinite;
+}
+
+// Combined berserk + feared state: trembling + subtle red ripple
+.fighter-portrait.berserk-feared {
+    animation: fearedTremble 0.5s ease-in-out infinite;
+    position: relative;
+    /* filter moved to React inline style for correct stacking */
+}
+.fighter-portrait.berserk-feared::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    /* Use a much brighter, more opaque red overlay */
+    background: rgba(255, 0, 0, 0.7);
+    mix-blend-mode: screen;
+    pointer-events: none;
+    z-index: 2;
+    animation: berserkerTintPulseDim 1.2s ease-in-out infinite;
+}
 
     // Red tint overlay on the portrait image itself
-    &::before {
+    .fighter-portrait.berserk-active::before {
         content: '';
         position: absolute;
         inset: 0;
@@ -64,9 +83,21 @@
         z-index: 2;
         animation: berserkerTintPulse 1s ease-in-out infinite;
     }
-}
+// Remove .berserk-active.feared rules; use only .berserk-feared for combined state
+// removed extra closing brace here
 
 // Use outline instead of box-shadow — outline renders outside the element boundary
+@keyframes berserkerBorderPulseDim {
+    0%   { outline: 3px solid rgba(40, 0, 0, 0); outline-offset: 0px; }
+    50%  { outline: 3px solid rgba(40, 0, 0, 0.7); outline-offset: 4px; }
+    100% { outline: 3px solid rgba(40, 0, 0, 0); outline-offset: 0px; }
+}
+@keyframes berserkerTintPulseDim {
+    0%   { background: rgba(255, 0, 0, 0.0); }
+    40%  { background: rgba(255, 0, 0, 0.85); }
+    60%  { background: rgba(255, 0, 0, 0.85); }
+    100% { background: rgba(255, 0, 0, 0.0); }
+}
 // and does not composite with child elements, so it stays pure red not magenta.
 @keyframes berserkerBorderPulse {
     0%   {

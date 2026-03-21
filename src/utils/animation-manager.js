@@ -17,7 +17,7 @@ export function AnimationManager(){
         animationTile.animationData = {
             icon: images['axe_white'],
             facing,
-            duration: 600
+            duration: 1200 // doubled duration for half speed, twice as long
         };
         this.update();
         // Pause combat after rendering (debugger removed)

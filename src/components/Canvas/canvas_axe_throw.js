@@ -24,7 +24,6 @@ const CanvasAxeThrow = ({ origin, target, height = 100, width = 100, targetDista
     const [canvasPos, setCanvasPos] = React.useState({ x: origin.x * width, y: origin.y * height });
 
     useEffect(() => {
-        console.log('[CanvasAxeThrow] component mount', { origin, target, height, width, targetDistance });
         const canvas = canvasRef.current;
         const context = canvas.getContext('2d');
         let animationFrameId;

@@ -137,21 +137,7 @@ export function Mummy(data, utilMethods, animationManager, overlayManager) {
             this.triggerBoardEvent('induce_fear', { duration: eraDuration });
         }
 
-        // Safety-net: forcibly clear the 'feared' visual flag on all affected fighters
-        // after eraDuration ms, in case the era-tick path in restartTurnCycle misses it
-        // (e.g. a fighter dies and restartTurnCycle never runs again, or timing drift).
-        setTimeout(() => {
-            console.log('*********INDUCED FEAR FINISHED********');
-            enemies.forEach(enemy => {
-                if (!enemy.feared) return; // already cleared by era ticks — nothing to do
-                enemy.feared = false;
-                enemy.feared_eras = 0;
-                if (enemy._fearOriginalAtk != null) { enemy.atk = enemy._fearOriginalAtk; delete enemy._fearOriginalAtk; }
-                if (enemy._fearOriginalDef != null) { enemy.def = enemy._fearOriginalDef; delete enemy._fearOriginalDef; }
-                console.log(`[Mummy] safety-net cleared FEAR on ${enemy.name || enemy.type}`);
-            });
-            if (typeof this.broadcastDataUpdate === 'function') this.broadcastDataUpdate();
-        }, eraDuration);
+        // Safety-net removed: fear is now only cleared by tick-based logic in restartTurnCycle.
 
         // Lock movement for the duration of the cast glow animation (matches fearCastingActive in UI)
         caller.castingLock = true;

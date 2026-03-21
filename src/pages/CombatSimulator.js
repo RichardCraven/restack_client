@@ -743,9 +743,9 @@ combatKeyUpListener = (event) => {
                 inventoryManager={this.props.inventoryManager}
                 animationManager={this.props.animationManager}
                 crewManager={this.tempCrewManager || this.props.crewManager || null}
-                crew={this.state.selectedCrew|| null}
-                monster={this.state.monster || null}
-                minions={this.state.minions || null}
+                crew={JSON.parse(JSON.stringify(this.state.selectedCrew)) || null}
+                monster={this.state.monster ? JSON.parse(JSON.stringify(this.state.monster)) : null}
+                minions={this.state.minions ? JSON.parse(JSON.stringify(this.state.minions)) : null}
                 battleOver={this.battleOver || null}
                 paused={this.state.paused || null}
                 setNarrativeSequence={this.props.setNarrativeSequence || null}

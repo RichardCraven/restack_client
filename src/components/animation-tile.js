@@ -7,7 +7,6 @@ export default function AnimationTile(props) {
     const tileRef = useRef();
 
     useEffect(() => {
-        console.log('ANIMATION TYPE: ', props.animationType);
         // Only for punch animation: get grid container rect
         if (props.animationType === 'punch' && tileRef.current) {
             let grid = tileRef.current.closest('.animation-grid');

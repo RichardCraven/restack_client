@@ -74,9 +74,6 @@ const AnimationGrid = ({
                             const targetStr = anim.target ? `${anim.target.x},${anim.target.y}` : 'no-target';
                             animKey = `${anim.type}-${originStr}-${targetStr}-${anim.timestamp || idx}`;
                         }
-                        if (anim.type === 'axe_throw') {
-                            console.log('[AnimationGrid] CanvasAxeThrow key:', animKey, 'anim:', anim);
-                        }
                         const TILE_SIZE = typeof tileProps.TILE_SIZE === 'number' && !isNaN(tileProps.TILE_SIZE) ? tileProps.TILE_SIZE : 100;
                         const MAX_DEPTH = typeof tileProps.MAX_DEPTH === 'number' && !isNaN(tileProps.MAX_DEPTH) ? tileProps.MAX_DEPTH : 5;
                         const MAX_ROWS = typeof tileProps.MAX_ROWS === 'number' && !isNaN(tileProps.MAX_ROWS) ? tileProps.MAX_ROWS : 5;
@@ -125,13 +122,6 @@ const AnimationGrid = ({
                                 duration={anim.duration}
                             />
                         } else if (anim.type === 'axe_throw') {
-                            console.log('[AnimationGrid] Rendering CanvasAxeThrow', {
-                                idx,
-                                origin: anim.origin,
-                                target: anim.target,
-                                width: TILE_SIZE,
-                                height: TILE_SIZE
-                            });
                             if (!anim.origin || !anim.target) {
                                 console.warn('[AnimationGrid] CanvasAxeThrow missing origin or target', anim);
                                 return null;

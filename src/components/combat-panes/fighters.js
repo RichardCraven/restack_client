@@ -166,13 +166,10 @@ export default function FightersCombatGrid(props) {
                                                 'fighter-portrait',
                                                 isTeleporting ? 'teleporting' : '',
                                                 props.selectedFighter?.id === fighter.id && !fighter.dead ? 'selected' : '',
-                                                // wound classes: use unified wounded object with severity ('minor'|'severe'|'lethal')
                                                 (details?.wounded && details?.wounded.severity === 'minor') ? (details?.facing === 'right' ? 'hit-from-right-minor' : 'hit-from-left-minor') : '',
                                                 (details?.wounded && details?.wounded.severity === 'severe') ? (details?.facing === 'right' ? 'hit-from-right-severe' : 'hit-from-left-severe') : '',
                                                 (details?.wounded && details?.wounded.severity === 'lethal') ? (details?.facing === 'right' ? 'hit-from-right-lethal' : 'hit-from-left-lethal') : '',
                                                 details?.rocked ? 'rocked' : '',
-                                                // up/down facing classes removed; add if you have a new property for this
-                                                // details?.missed ? (details?.facing === 'right' ? 'missed' : 'missed-reversed') : '',
                                                 fighter.isLeader ? 'leader-portrait' : '',
                                                 details?.dead ? 'dead fighterDeadAnimation' : '',
                                                 (props.selectedFighter?.targetId === fighter.id || props.selectedMonster?.targetId === fighter.id) && !details?.dead ? 'targetted' : '',
@@ -181,17 +178,20 @@ export default function FightersCombatGrid(props) {
                                                 verticalFacingClass,
                                                 details?.locked ? 'locked' : '',
                                                 details?.chargingUpActive ? 'charging-up' : '',
-                                                details?.berserkerActive ? 'berserk-active' : '',
+                                                details?.berserkerActive && details?.feared ? 'berserk-feared' : '',
+                                                details?.berserkerActive && !details?.feared ? 'berserk-active' : '',
+                                                !details?.berserkerActive && details?.feared ? 'feared' : '',
                                                 details?.stunned ? 'stunned' : '',
                                                 details?.drained ? 'drained' : '',
-                                                details?.feared  ? 'feared'  : '',
                                             ].filter(Boolean).join(' ')
                                         }
                                         style={{
-                                            backgroundImage: "url(" + fighter.portrait + ")",
+                                            backgroundImage: `url(${fighter.portrait})`,
+                                            backgroundSize: (details?.berserkerActive && details?.feared) ? '100% 100%' : undefined,
                                             filter: [
                                                 details?.chargingUpActive ? "url('#ripple-effect')" : null,
-                                                `saturate(${((details?.hp / fighter.stats.hp) * 100) / 2}) sepia(${props.portraitHoveredId === fighter.id ? '2' : '0'})`
+                                                `saturate(${((details?.hp / fighter.stats.hp) * 100) / 2}) sepia(${props.portraitHoveredId === fighter.id ? '2' : '0'})`,
+                                                (details?.berserkerActive && details?.feared) ? 'brightness(1.18)' : ''
                                             ].filter(Boolean).join(' '),
                                             zIndex: 300 // Always above monsters/minions
                                             }} 
