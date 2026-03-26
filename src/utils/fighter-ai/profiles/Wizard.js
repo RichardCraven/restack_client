@@ -452,7 +452,10 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                     let r = Math.random();
                     let criticalHit = r * 100 > 80;
                     let damage = criticalHit ? caller.atk * 3 : caller.atk;
-                    target.damageIndicators.push(damage);
+                    const indicatorId = Date.now() + Math.random();
+                    const indicatorObj = { id: indicatorId, value: damage, source: caller?.name || 'Wizard' };
+                    target.damageIndicators.push(indicatorObj);
+                    console.log('[DIAG][Wizard] Pushed to target.damageIndicators:', indicatorObj, 'Current:', target.damageIndicators);
                     target.hp -= damage;
                     if (target.hp <= 0) {
                         target.hp = 0;
@@ -629,7 +632,9 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                     const critical = r * 100 > 80;
                     const damage = Math.round((critical ? baseDamage * multiplier * 3 : baseDamage * multiplier));
                     if (!Array.isArray(target.damageIndicators)) target.damageIndicators = [];
-                    target.damageIndicators.push(damage);
+                    const indicatorId = Date.now() + Math.random();
+                    const indicatorObj = { id: indicatorId, value: damage, source: caller?.name || 'Wizard' };
+                    target.damageIndicators.push(indicatorObj);
                     target.hp -= damage;
                     if (target.hp <= 0) {
                         target.hp = 0;
@@ -719,7 +724,9 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                     const critical = r * 100 > 80;
                     const damage = Math.round((critical ? baseDamage * multiplier * 3 : baseDamage * multiplier));
                     if (!Array.isArray(target.damageIndicators)) target.damageIndicators = [];
-                    target.damageIndicators.push(damage);
+                    const indicatorId = Date.now() + Math.random();
+                    const indicatorObj = { id: indicatorId, value: damage, source: caller?.name || 'Wizard' };
+                    target.damageIndicators.push(indicatorObj);
                     target.hp -= damage;
                     if (target.hp <= 0) {
                         target.hp = 0;

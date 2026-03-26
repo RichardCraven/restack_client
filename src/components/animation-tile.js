@@ -52,19 +52,48 @@ export default function AnimationTile(props) {
     // }
 
     switch(props.animationType){
-        case 'axe_swing':
+        case 'axe_swing': {
             // Use icon from animationData if present, fallback to images['axe_white']
             image = props.animationData?.icon || images['axe_white'];
             facing = props.animationData?.facing;
             keyframe = null;
-            // Diagnostic log: confirm axe_swing icon rendering
-            console.log('[AnimationTile] axe_swing render', {
-                animationType: props.animationType,
-                animationData: props.animationData,
-                image,
-                facing,
-                tileProps: props
-            });
+            // Position axe closer to attacker (source tile)
+            // If animationData has from/to, offset toward 'from' (attacker)
+            if (props.animationData?.from && props.animationData?.to) {
+                // Calculate offset: move icon 30% toward the attacker from the center of the target tile
+                const from = props.animationData.from;
+                const to = props.animationData.to;
+                // These should be pixel coordinates or tile grid positions
+                // If grid, multiply by tileSize
+                const tileSize = props.tileSize || 64;
+                let fromX = from.x, fromY = from.y, toX = to.x, toY = to.y;
+                if (fromX < 20 && toX < 20) { // likely grid, not px
+                    fromX = fromX * tileSize + tileSize/2;
+                    fromY = fromY * tileSize + tileSize/2;
+                    toX = toX * tileSize + tileSize/2;
+                    toY = toY * tileSize + tileSize/2;
+                }
+                // Vector from target to attacker
+                const dx = fromX - toX;
+                const dy = fromY - toY;
+                // Move 30% toward attacker
+                const offsetX = toX + dx * 0.3;
+                const offsetY = toY + dy * 0.3;
+                // Store for use in render
+                props.animationData._iconX = offsetX;
+                props.animationData._iconY = offsetY;
+            }
+            // Diagnostic log: confirm axe_swing icon rendering and offset
+            // console.log('[AnimationTile] axe_swing icon', {
+            //     animationType: props.animationType,
+            //     animationData: props.animationData,
+            //     icon: image,
+            //     offset: {
+            //         x: props.animationData?._iconX,
+            //         y: props.animationData?._iconY
+            //     }
+            // });
+        }
         break;
         case 'punch':
             image = images['fist_punch'];
@@ -85,15 +114,6 @@ export default function AnimationTile(props) {
             keyframe = `EnergyDrainAnimation_${facing}`;
         break;
         case 'sword_swing':
-            debugger
-            // Diagnostic log: capture when sword_swing animation is triggered
-            console.log('[AnimationTile] sword_swing animation triggered', {
-                animationType: props.animationType,
-                animationData: props.animationData,
-                fighterType: props.fighterType,
-                attackType: props.attackType,
-                tileProps: props
-            });
             // If Barbarian, use axe icon (white variant)
             if (props.fighterType === 'barbarian') {
                 image = images['axe_white'];
@@ -192,16 +212,22 @@ export default function AnimationTile(props) {
             )}
             {/* Animated axe_swing render (same logic as sword_swing) */}
             {props.animationType === 'axe_swing' && image && (() => {
-                let dx = 0, dy = 0;
-                const offset = props.fighterType === 'barbarian' ? 20 : 40;
-                switch (facing) {
-                    case 'up':    dx = 0;       dy = -offset; break;
-                    case 'down':  dx = 0;       dy =  offset; break;
-                    case 'left':  dx = -offset; dy = 0;       break;
-                    case 'right': dx =  offset; dy = 0;       break;
-                    default:      dx =  offset; dy = 0;       break;
+                // Use calculated offset if available, else fallback to old logic
+                let top = 'calc(50% - 30%)', left = 'calc(50% - 30%)';
+                if (props.animationData?._iconX !== undefined && props.animationData?._iconY !== undefined) {
+                    // _iconX/_iconY are absolute pixel positions relative to the board, so convert to relative for this tile
+                    // If this tile is at (tileX, tileY), and tileSize is known, offset within tile:
+                    const tileSize = props.tileSize || 64;
+                    const tileX = props.tileX || 0;
+                    const tileY = props.tileY || 0;
+                    const relX = props.animationData._iconX - (tileX * tileSize);
+                    const relY = props.animationData._iconY - (tileY * tileSize);
+                    left = relX - tileSize * 0.3;
+                    top = relY - tileSize * 0.3;
                 }
+                // Flip axe horizontally if attacking left
                 const flip = facing === 'left';
+                const baseTransform = flip ? 'scaleX(-1)' : 'none';
                 return (
                     <img
                         src={image}
@@ -209,13 +235,13 @@ export default function AnimationTile(props) {
                         className="axe-swing-icon"
                         style={{
                             position: 'absolute',
-                            top: `calc(50% - 30% + ${dy}px)`,
-                            left: `calc(50% - 30% + ${dx}px)`,
+                            top: typeof top === 'number' ? `${top}px` : top,
+                            left: typeof left === 'number' ? `${left}px` : left,
                             width: '60%',
                             height: '60%',
                             pointerEvents: 'none',
                             zIndex: 5000,
-                            transform: flip ? 'scaleX(-1)' : undefined,
+                            transform: baseTransform,
                             animation: `ArcAnimation_${facing} ${duration / 1000}s linear forwards`,
                         }}
                     />

@@ -110,9 +110,12 @@ export function Mummy(data, utilMethods, animationManager, overlayManager) {
         // Push floating stat-debuff indicators above each affected fighter
         enemies.forEach(enemy => {
             if (!Array.isArray(enemy.damageIndicators)) enemy.damageIndicators = [];
-            enemy.damageIndicators.push('ATK ↓');
+            const atkId = Date.now() + Math.random();
+            const atkObj = { id: atkId, value: 'ATK ↓', source: 'Mummy' };
+            enemy.damageIndicators.push(atkObj);
+            console.log('[DIAG][Mummy] Pushed to enemy.damageIndicators:', atkObj, 'Current:', enemy.damageIndicators);
             setTimeout(() => {
-                const idx = enemy.damageIndicators.indexOf('ATK ↓');
+                const idx = enemy.damageIndicators.findIndex(e => e && e.id === atkId);
                 if (idx !== -1) enemy.damageIndicators.splice(idx, 1);
                 if (typeof this.broadcastDataUpdate === 'function') this.broadcastDataUpdate();
             }, 1800);
@@ -122,9 +125,12 @@ export function Mummy(data, utilMethods, animationManager, overlayManager) {
             enemies.forEach(enemy => {
                 if (enemy.dead) return;
                 if (!Array.isArray(enemy.damageIndicators)) enemy.damageIndicators = [];
-                enemy.damageIndicators.push('DEF ↓');
+                const defId = Date.now() + Math.random();
+                const defObj = { id: defId, value: 'DEF ↓', source: 'Mummy' };
+                enemy.damageIndicators.push(defObj);
+                console.log('[DIAG][Mummy] Pushed to enemy.damageIndicators:', defObj, 'Current:', enemy.damageIndicators);
                 setTimeout(() => {
-                    const idx = enemy.damageIndicators.indexOf('DEF ↓');
+                    const idx = enemy.damageIndicators.findIndex(e => e && e.id === defId);
                     if (idx !== -1) enemy.damageIndicators.splice(idx, 1);
                     if (typeof this.broadcastDataUpdate === 'function') this.broadcastDataUpdate();
                 }, 1800);
@@ -157,7 +163,16 @@ export function Mummy(data, utilMethods, animationManager, overlayManager) {
         // Retarget every turn to always track the closest enemy
         this.acquireTarget(caller, combatants);
 
-        console.log(`[Mummy] processMove — eraIndex=${caller.eraIndex}, targetId=${caller.targetId}, pendingAttack=${caller.pendingAttack?.name}, energy=${Math.floor(caller.energy || 0)}`);
+        console.log(`[Mummy] processMove — eraIndex=${caller.eraIndex}, targetId=${caller.targetId}, pendingAttack=${caller.pendingAttack?.name}, attacking=${caller.attacking}, moveCooldown=${caller.moveCooldown}, energy=${Math.floor(caller.energy || 0)}`);
+        console.log('[Mummy][DEBUG] State at processMove:', {
+            pendingAttack: caller.pendingAttack,
+            attacking: caller.attacking,
+            moveCooldown: caller.moveCooldown,
+            onMoveCooldown: caller.onMoveCooldown,
+            targetId: caller.targetId,
+            hp: caller.hp,
+            energy: caller.energy
+        });
 
         // Check if induce_fear should fire (energy ≥ 90 and special ready)
         const fearSpecial = Array.isArray(caller.specials)
@@ -186,6 +201,15 @@ export function Mummy(data, utilMethods, animationManager, overlayManager) {
 
     this.initiateAttack = async (caller, combatants) => {
         const target = combatants[caller.targetId];
+        console.log('[Mummy][DEBUG] initiateAttack called', {
+            pendingAttack: caller.pendingAttack,
+            attacking: caller.attacking,
+            moveCooldown: caller.moveCooldown,
+            onMoveCooldown: caller.onMoveCooldown,
+            targetId: caller.targetId,
+            hp: caller.hp,
+            energy: caller.energy
+        });
         caller.attacking = true;
         if (!target) {
             console.log('[Mummy] initiateAttack — NO TARGET!');
@@ -195,6 +219,17 @@ export function Mummy(data, utilMethods, animationManager, overlayManager) {
         const attackName = caller.pendingAttack?.name;
         console.log(`[Mummy] initiateAttack — attack=${attackName}, target=${target.name || target.type || target.id}`);
 
+        // Log before executing the attack
+        console.log('[Mummy][DEBUG] About to execute attack', {
+            attackName,
+            pendingAttack: caller.pendingAttack,
+            attacking: caller.attacking,
+            moveCooldown: caller.moveCooldown,
+            onMoveCooldown: caller.onMoveCooldown,
+            targetId: caller.targetId,
+            hp: caller.hp,
+            energy: caller.energy
+        });
         switch (attackName) {
             case 'grasp': {
                 const attackEffect = caller.pendingAttack.effect;
@@ -239,5 +274,15 @@ export function Mummy(data, utilMethods, animationManager, overlayManager) {
 
         this.kickoffAttackCooldown(caller);
         caller.pendingAttack = null;
+        caller.attacking = false;
+        console.log('[Mummy][DEBUG] Attack complete. State after attack:', {
+            pendingAttack: caller.pendingAttack,
+            attacking: caller.attacking,
+            moveCooldown: caller.moveCooldown,
+            onMoveCooldown: caller.onMoveCooldown,
+            targetId: caller.targetId,
+            hp: caller.hp,
+            energy: caller.energy
+        });
     }
 }

@@ -224,9 +224,9 @@ export default function FightersCombatGrid(props) {
                                         <div className={`portrait-overlay`} >
                                             <div className="damage-indicator-container">
                                                 {props.getFighterDetails(fighter)?.damageIndicators.map((e,i)=>{
-                                                    const isStatDebuff = typeof e === 'string';
-                                                    return <div key={i} className={`damage-indicator${isStatDebuff ? ' stat-debuff' : ''}`}>
-                                                        {e}
+                                                    const isStatDebuff = typeof e.value === 'string';
+                                                    return <div key={e.id || i} className={`damage-indicator${isStatDebuff ? ' stat-debuff' : ''}`}>
+                                                        {e.value}
                                                     </div>
                                                 })}
                                             </div>

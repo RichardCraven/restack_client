@@ -83,7 +83,20 @@ export function CombatManager(){
     }
     this.reset = () => {
         this.combatPaused = false;
+        if (this.combatants && typeof this.combatants === 'object') {
+            Object.keys(this.combatants).forEach(id => {
+                if (this.combatants[id]) {
+                    // Defensive: mark as dead and locked
+                    this.combatants[id].dead = true;
+                    this.combatants[id].locked = true;
+                }
+            });
+            console.log('[CombatManager.reset] Combatants before reset:', JSON.parse(JSON.stringify(this.combatants)));
+        }
         this.combatants = {};
+        if (this._intervalTimeListeners) this._intervalTimeListeners = [];
+        if (typeof this.updateData === 'function') this.updateData({});
+        console.log('[CombatManager.reset] All combatants cleared, listeners reset.');
     }
     // this.combatStyles = {
     //     prioritizeClosestEnemy,
@@ -233,7 +246,7 @@ export function CombatManager(){
             type: 'cutting',
             range: 'close',
             icon: images['axe'],
-            cooldown: 2,
+            cooldown: 1,
         },
         spear_throw: {
             name: 'spear throw',
@@ -366,31 +379,24 @@ export function CombatManager(){
         if(!combatant) return;
         try {
             combatant.occupiedCoords = [];
-            if (combatant.coordinates) combatant.occupiedCoords.push(combatant.coordinates);
-            // Lightweight large-monster detection: allow combatant.large flag or known subtype keys
+            if (combatant.coordinates) combatant.occupiedCoords.push({ x: combatant.coordinates.x, y: combatant.coordinates.y });
             const LARGE_COMBAT_KEYS = ['dragon','beholder','ogre','sphinx','manticore','wyvern','wyvern_alt'];
-            // Treat as large if explicitly marked, if type is known-large, or if
-            // the combatant has a size/scale >= 2 (common sprite/scaling markers).
             const isLarge = (
-                // explicit flag
                 (typeof combatant.large === 'boolean' && combatant.large === true)
-                // fallback for historically-known large types
                 || (combatant.type && LARGE_COMBAT_KEYS.includes(combatant.type))
-                // scaled or sized sprites
                 || (typeof combatant.size === 'number' && combatant.size >= 2)
                 || (typeof combatant.scale === 'number' && combatant.scale >= 2)
-                // treat the main monster (the battle's primary monster) as "large" so
-                // it virtually occupies the tile above it. Minions (isMinion===true)
-                // will not be treated as large.
                 || (combatant.isMonster === true && combatant.isMinion !== true)
             );
-            if (isLarge) {
+            if (isLarge && combatant.coordinates) {
                 const above = { x: combatant.coordinates.x, y: combatant.coordinates.y - 1 };
-                if (above.y >= 0) combatant.occupiedCoords.push(above);
+                if (above.y >= 0 && !combatant.occupiedCoords.some(c => c.x === above.x && c.y === above.y)) {
+                    combatant.occupiedCoords.push(above);
+                }
+                console.log(`[CombatManager._setCombatantOccupiedCoords] Large combatant ${combatant.name || combatant.type} occupies:`, combatant.occupiedCoords);
             }
-            // debug logs removed
         } catch (e) {
-            // best-effort
+            console.warn('[CombatManager._setCombatantOccupiedCoords] Error:', e);
         }
     }
 
@@ -424,18 +430,27 @@ export function CombatManager(){
             if (Array.isArray(e.occupiedCoords)) return e.occupiedCoords.some(c => c.x === coords.x && c.y === coords.y);
             return false;
         });
-        if (destOccupied) return false;
+        if (destOccupied) {
+            console.log(`[CombatManager._canMoveToCoords] Move blocked: destination (${coords.x},${coords.y}) occupied (including virtual tiles).`);
+            return false;
+        }
         // For large combatants, also check the tile above the destination
         if (this._isLargeCombatant(caller)) {
             const above = { x: coords.x, y: coords.y - 1 };
-            if (above.y < 0) return false; // can't fit — top of board
+            if (above.y < 0) {
+                console.log(`[CombatManager._canMoveToCoords] Move blocked: large combatant can't fit above top of board.`);
+                return false; // can't fit — top of board
+            }
             const aboveOccupied = Object.values(this.combatants).some(e => {
                 if (!e || e.id === caller.id) return false;
                 if (e.coordinates && e.coordinates.x === above.x && e.coordinates.y === above.y) return true;
                 if (Array.isArray(e.occupiedCoords)) return e.occupiedCoords.some(c => c.x === above.x && c.y === above.y);
                 return false;
             });
-            if (aboveOccupied) return false;
+            if (aboveOccupied) {
+                console.log(`[CombatManager._canMoveToCoords] Move blocked: large combatant's virtual tile (${above.x},${above.y}) occupied.`);
+                return false;
+            }
         }
         return true;
     }
@@ -930,10 +945,16 @@ export function CombatManager(){
             console.warn('goToDestination aborted for dead or missing caller:', caller && caller.id);
             return;
         }
-    caller.coordinates.x = caller.destinationCoordinates.x;
-    caller.coordinates.y = caller.destinationCoordinates.y;
-    caller.coordinates = {x: caller.destinationCoordinates.x, y: caller.destinationCoordinates.y}
-    try { this._setCombatantOccupiedCoords(caller); } catch (e) {}
+        // Defensive: check if move is legal before moving
+        if (!this._canMoveToCoords(caller, caller.destinationCoordinates)) {
+            console.log(`[CombatManager.goToDestination] Move blocked for ${caller.name || caller.type} (${caller.id}) to (${caller.destinationCoordinates.x},${caller.destinationCoordinates.y}) — occupied or illegal.`);
+            return;
+        }
+        caller.coordinates.x = caller.destinationCoordinates.x;
+        caller.coordinates.y = caller.destinationCoordinates.y;
+        caller.coordinates = {x: caller.destinationCoordinates.x, y: caller.destinationCoordinates.y}
+        console.log(`[DIAG] goToDestination: ${caller.name || caller.type} (${caller.id}) moved to (${caller.coordinates.x},${caller.coordinates.y})`);
+        try { this._setCombatantOccupiedCoords(caller); } catch (e) {}
         this.fighterMovedToDestination(caller.destinationCoordinates);
         caller.destinationCoordinates = null;
         caller.attacking = caller.attackingReverse = false;
@@ -1062,9 +1083,7 @@ export function CombatManager(){
         // switch(caller.pendingAttack)
     }
     this.moveFighterOneSpace = (direction) => {
-        let pendingCoordinates, spaceOccupier;
-
-        // debug logs removed
+        let pendingCoordinates;
 
         if(!this.selectedFighter) {
             try { console.warn('moveFighterOneSpace: no selectedFighter'); } catch(e){}
@@ -1090,7 +1109,7 @@ export function CombatManager(){
             return
         }
 
-        // compute pending coordinates, occupancy, and decision for each direction
+        // compute pending coordinates for each direction
         switch(direction){
             case 'up':
                 if(fighter.coordinates.y === 0) {
@@ -1098,66 +1117,47 @@ export function CombatManager(){
                     break;
                 }
                 pendingCoordinates = {x: fighter.coordinates.x , y: fighter.coordinates.y-1}
-                try { spaceOccupier = this.coordinatesOccupied(pendingCoordinates) } catch(e){ spaceOccupier = null; console.warn('coordinatesOccupied threw', e) }
-                if(spaceOccupier && !spaceOccupier.dead) {
-                    console.warn('move blocked: space occupied by', spaceOccupier);
-                    break;
-                }
-                fighter.coordinates.y--
-                fighter.manualMovesCurrent--
-                try { fighter.manualMoveCooldown && fighter.manualMoveCooldown(); } catch(e){}
-                try { fighter.restartTurnCycle && fighter.restartTurnCycle(); } catch(e){}
-            break;
+                break;
             case 'down':
                 if(fighter.coordinates.y >= MAX_LANES - 1) {
                     console.warn('moveFighterOneSpace: already at bottom row (y >= MAX_LANES-1)');
                     break;
                 }
                 pendingCoordinates = {x: fighter.coordinates.x , y: fighter.coordinates.y+1}
-                try { spaceOccupier = this.coordinatesOccupied(pendingCoordinates) } catch(e){ spaceOccupier = null; console.warn('coordinatesOccupied threw', e) }
-                if(spaceOccupier && !spaceOccupier.dead) {
-                    console.warn('move blocked: space occupied by', spaceOccupier);
-                    break;
-                }
-                fighter.coordinates.y++
-                fighter.manualMovesCurrent--
-                try { fighter.manualMoveCooldown && fighter.manualMoveCooldown(); } catch(e){}
-                try { fighter.restartTurnCycle && fighter.restartTurnCycle(); } catch(e){}
-            break;
+                break;
             case 'right':
                 if(fighter.coordinates.x === MAX_DEPTH) {
                     console.warn('moveFighterOneSpace: already at max depth (x == MAX_DEPTH)');
                     break;
                 }
                 pendingCoordinates = {x: fighter.coordinates.x+1 , y: fighter.coordinates.y}
-                try { spaceOccupier = this.coordinatesOccupied(pendingCoordinates) } catch(e){ spaceOccupier = null; console.warn('coordinatesOccupied threw', e) }
-                if(spaceOccupier && !spaceOccupier.dead) {
-                    console.warn('move blocked: space occupied by', spaceOccupier);
-                    break;
-                }
-                fighter.coordinates.x++
-                fighter.manualMovesCurrent--
-                try { fighter.manualMoveCooldown && fighter.manualMoveCooldown(); } catch(e){}
-                try { fighter.restartTurnCycle && fighter.restartTurnCycle(); } catch(e){}
-            break;
+                break;
             case 'left':
                 if(fighter.coordinates.x === 0) {
                     console.warn('moveFighterOneSpace: already at leftmost (x == 0)');
                     break;
                 }
                 pendingCoordinates = {x: fighter.coordinates.x-1 , y: fighter.coordinates.y}
-                try { spaceOccupier = this.coordinatesOccupied(pendingCoordinates) } catch(e){ spaceOccupier = null; console.warn('coordinatesOccupied threw', e) }
-                if(spaceOccupier && !spaceOccupier.dead) {
-                    console.warn('move blocked: space occupied by', spaceOccupier);
-                    break;
-                }
-                fighter.coordinates.x--
-                fighter.manualMovesCurrent--
-                try { fighter.manualMoveCooldown && fighter.manualMoveCooldown(); } catch(e){}
-            break;
+                break;
             default:
                 console.warn('moveFighterOneSpace: unknown direction', direction);
-            break;
+                return;
+        }
+
+        // Use _canMoveToCoords for robust occupancy check (including virtual tiles)
+        if (pendingCoordinates && !this._canMoveToCoords(fighter, pendingCoordinates)) {
+            console.log(`[CombatManager.moveFighterOneSpace] Move blocked for ${fighter.name || fighter.type} (${fighter.id}) to (${pendingCoordinates.x},${pendingCoordinates.y}) — occupied or illegal.`);
+            return;
+        }
+
+        // Move is legal, update coordinates
+        if (pendingCoordinates) {
+            fighter.coordinates = { ...pendingCoordinates };
+            console.log(`[DIAG] moveFighterOneSpace: ${fighter.name || fighter.type} (${fighter.id}) moved to (${fighter.coordinates.x},${fighter.coordinates.y})`);
+            fighter.manualMovesCurrent--;
+            try { fighter.manualMoveCooldown && fighter.manualMoveCooldown(); } catch(e){}
+            try { fighter.restartTurnCycle && fighter.restartTurnCycle(); } catch(e){}
+            try { this._setCombatantOccupiedCoords(fighter); } catch(e){}
         }
 
         try { this.broadcastDataUpdate && this.broadcastDataUpdate(); } catch(e){}
@@ -1427,6 +1427,7 @@ export function CombatManager(){
     }
     this.updateCoordinates = (caller) => {
         caller.coordinates = {x: caller.coordinates.x, y: caller.coordinates.y}
+        console.log(`[DIAG] updateCoordinates: ${caller.name || caller.type} (${caller.id}) set to (${caller.coordinates.x},${caller.coordinates.y})`);
         try { this._setCombatantOccupiedCoords(caller); } catch (e) {}
     }
     this.acquireTarget = (caller, targetToAvoid = null) => {
@@ -1703,6 +1704,7 @@ export function CombatManager(){
         if(newPosition !== undefined) caller.coordinates.y = newPosition;
 
         caller.coordinates = {x: newDepth, y: newPosition}
+        console.log(`[DIAG] direct assign: ${caller.name || caller.type} (${caller.id}) set to (${caller.coordinates.x},${caller.coordinates.y}) [newDepth=${newDepth}, newPosition=${newPosition}]`);
 
         if(caller.coordinates.y === undefined){
             console.log('position undefined');
@@ -1897,8 +1899,15 @@ export function CombatManager(){
         return Object.values(this.combatants).filter(c=>c.id!==caller.id).some(e=>JSON.stringify(e.coordinates) === JSON.stringify(coords))
     }
     this.hitsCombatant = (caller, combatantHit, supplementalData = null, options = {}) => {
-        // Guard: never apply damage to an already-dead combatant (race condition safety)
-        if (!combatantHit || combatantHit.dead) return;
+        // Defensive: never apply damage to an already-dead or missing combatant
+        if (!combatantHit || combatantHit.dead || !this.combatants[combatantHit.id]) {
+            console.warn('[CombatManager.hitsCombatant] Attempted to hit missing/dead combatant:', combatantHit && combatantHit.id, combatantHit);
+            return;
+        }
+        if (!caller || !this.combatants[caller.id] || caller.dead) {
+            console.warn('[CombatManager.hitsCombatant] Invalid or dead caller:', caller && caller.id, caller);
+            return;
+        }
         // if(caller.type === 'wizard'){
         //     console.log('WIZARD HITS');
         // }
@@ -1972,7 +1981,11 @@ export function CombatManager(){
         // Save readout and apply damage
         caller.readout.result = `${caller.name} hits ${combatantHit.name} for ${damage} damage`;
         combatantHit.hp -= damage;
-        combatantHit.damageIndicators.push(damage);
+        // Generate unique id for this indicator
+        const indicatorId = Date.now() + Math.random();
+        const indicatorObj = { id: indicatorId, value: damage, source: caller?.name || 'unknown' };
+        combatantHit.damageIndicators.push(indicatorObj);
+        console.log('[DIAG][combat-manager] Pushed to combatantHit.damageIndicators:', indicatorObj, 'Current:', combatantHit.damageIndicators);
         caller.energy += caller.stats.fort * 1 + (1 / 2 * caller.level);
         if (caller.energy > 100) caller.energy = 100;
 
@@ -2085,7 +2098,14 @@ export function CombatManager(){
     }
     this.hitsTarget = (caller, tempTarget = null) => {
         let target = tempTarget ? tempTarget : this.getCombatant(caller.targetId);
-        if (!target) return;
+        if (!target || target.dead || !this.combatants[target.id]) {
+            console.warn('[CombatManager.hitsTarget] Attempted to hit missing/dead target:', target && target.id, target);
+            return;
+        }
+        if (!caller || !this.combatants[caller.id] || caller.dead) {
+            console.warn('[CombatManager.hitsTarget] Invalid or dead caller:', caller && caller.id, caller);
+            return;
+        }
         // If the target is a monster or minion, use hitsCombatant to ensure .wounded is set and hit-flash is triggered
         if (target.isMonster || target.isMinion) {
             this.hitsCombatant(caller, target);
@@ -2139,7 +2159,11 @@ export function CombatManager(){
 
         caller.readout.result = `${caller.name} hits ${target.name} for ${damage} damage`;
         target.hp -= damage;
-        target.damageIndicators.push(damage);
+        // Generate unique id for this indicator
+        const indicatorId2 = Date.now() + Math.random();
+        const indicatorObj2 = { id: indicatorId2, value: damage, source: caller?.name || 'unknown' };
+        target.damageIndicators.push(indicatorObj2);
+        console.log('[DIAG][combat-manager] Pushed to target.damageIndicators:', indicatorObj2, 'Current:', target.damageIndicators);
         if (typeof this.updateData === 'function') {
             this.updateData(clone(this.combatants));
         }
@@ -2199,7 +2223,12 @@ export function CombatManager(){
         caller.missed = true;
         caller.readout.result = `misses`
         let target = tempTarget ? tempTarget : this.getCombatant(caller.targetId);
-        if(target) target.damageIndicators.push('miss');
+        if(target) {
+            const missId = Date.now() + Math.random();
+            const missObj = { id: missId, value: 'miss', source: caller?.name || 'unknown' };
+            target.damageIndicators.push(missObj);
+            console.log('[DIAG][combat-manager] Pushed to target.damageIndicators:', missObj, 'Current:', target.damageIndicators);
+        }
         setTimeout(()=>{
             caller.active = caller.aiming = false;
             caller.attacking = caller.attackingReverse = false;
@@ -2241,9 +2270,15 @@ export function CombatManager(){
     this.targetKilled = (combatant) => {
     // If combat is already over, ignore in-flight death calls to prevent
     // duplicate gameOver triggers and stale combatant state mutations.
-    if (this.combatOver) return;
+    if (this.combatOver) {
+        console.log('[CombatManager.targetKilled] Combat already over, ignoring death for', combatant && combatant.id);
+        return;
+    }
     // Guard against double-death (e.g. two fighters attack simultaneously)
-    if (combatant.dead) return;
+    if (!combatant || combatant.dead || !this.combatants[combatant.id]) {
+        console.warn('[CombatManager.targetKilled] Attempted to kill missing/dead combatant:', combatant && combatant.id, combatant);
+        return;
+    }
     // Ensure the combatant stops all activity immediately.
     combatant.aiming = false;
     combatant.active = false;
@@ -2271,7 +2306,11 @@ export function CombatManager(){
         this.clearTargetListById(combatant.id)
         const allMonstersDead = Object.values(this.combatants).filter(e=> (e.isMonster || e.isMinion) && !e.dead).length === 0;
         const allCrewDead = Object.values(this.combatants).filter(e=>!e.isMonster && !e.isMinion).every(e=>e.dead)
-        this.onFighterDeath(combatant.id);
+        if (typeof this.onFighterDeath === 'function') {
+            this.onFighterDeath(combatant.id);
+        } else {
+            console.warn('[CombatManager.targetKilled] onFighterDeath callback missing');
+        }
 
         if(allMonstersDead || allCrewDead){
             let outcome = allMonstersDead ? 'crewWins' : 'monstersWin';
@@ -2289,7 +2328,11 @@ export function CombatManager(){
 
             setTimeout(()=>{
                 try { console.log('combat-manager: invoking gameOver callback with outcome=', outcome); } catch(e){}
-                this.gameOver(outcome)
+                if (typeof this.gameOver === 'function') {
+                    this.gameOver(outcome)
+                } else {
+                    console.warn('[CombatManager.targetKilled] gameOver callback missing');
+                }
             }, 2000)
         }
     }
@@ -2396,6 +2439,7 @@ export function CombatManager(){
 
             // Ensure coordinates exist
             if (!rawMinion.coordinates) rawMinion.coordinates = { x: MAX_DEPTH - 1, y: 0 };
+            console.log(`[DIAG] INIT: rawMinion (${rawMinion.id || rawMinion.type}) at (${rawMinion.coordinates.x},${rawMinion.coordinates.y})`);
 
             // Ensure stats object exists (createFighter reads from stats.*)
             if (!rawMinion.stats) {

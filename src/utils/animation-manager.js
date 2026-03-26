@@ -1295,7 +1295,6 @@ export function AnimationManager(){
 
             const sourceTile      = this.tiles.find(e => e.id === sourceTileId);
             const destinationTile = this.tiles.find(e => e.id === targetTileId);
-
             if (!sourceTile || !destinationTile) {
                 resolve(0);
                 return;

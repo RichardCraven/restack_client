@@ -64,20 +64,23 @@ class CrewManagerPage extends React.Component{
 
   componentDidMount(){
 
-    console.log('meta: ', getMeta());
+    console.log('[CombatSimulator] componentDidMount: Initializing new session');
+    console.log('[CombatSimulator] meta:', getMeta());
     const meta = getMeta();
-    console.log('meta.crew before pops: ', meta.crew);
+    console.log('[CombatSimulator] meta.crew before pops:', meta.crew);
     // meta.crew[0].specialActions.pop();
     // meta.crew[0].specialActions.pop();
     // meta.crew[0].specialActions.pop();
     storeMeta(meta);
 
+    console.log('[CombatSimulator] Initializing inventory items');
     this.props.inventoryManager.initializeItems()
     let options = this.props.crewManager.adventurers;
     // Create a temporary CrewManager instance for the simulator so we don't mutate the global crew state
     this.tempCrewManager = new CrewManager();
     // initialize with a deep-cloned options array to avoid sharing references
     this.tempCrewManager.initializeCrew(clone(options));
+    console.log('[CombatSimulator] tempCrewManager initialized:', this.tempCrewManager.crew);
     // let wizard = this.tempCrewManager.crew.find(e=>e.type==='wizard')
     // let wizclone = clone(wizard);
 
@@ -97,6 +100,7 @@ class CrewManagerPage extends React.Component{
     // Ref wiring will be done after MonsterBattle is mounted in componentDidUpdate
     // After MonsterBattle is mounted, wire up the ref to Wizard AI synchronously
     this.wireMonsterBattleRefToWizardAI();
+    console.log('[CombatSimulator] MonsterBattle ref wired to Wizard AI');
     // this.props.crewManager.beginSpecialAction(wizard, action)
     // wizard.specialActions.push(action)
 
@@ -118,6 +122,7 @@ class CrewManagerPage extends React.Component{
     // potatoe('test')
 
     this.initializeListeners();
+    console.log('[CombatSimulator] Listeners initialized');
 
     // Restore default enemy selection from meta if saved
     const savedDefaults = getMeta()?.simulatorDefaults;
@@ -175,10 +180,37 @@ class CrewManagerPage extends React.Component{
     window.addEventListener('beforeunload', this.componentCleanup);
   }
   componentCleanup = () => {
-    // ...existing code...
-    window.removeEventListener('keydown', this.combatKeyDownHandler)
-    window.removeEventListener('keyup', this.combatKeyUpListener)
-    window.removeEventListener('beforeunload', this.componentCleanup); 
+        console.log('[CombatSimulator] componentCleanup: Tearing down session');
+        // Add logs for crew, monsters, and listeners
+        if (this.tempCrewManager && this.tempCrewManager.crew) {
+            console.log('[CombatSimulator] Cleaning up tempCrewManager:', this.tempCrewManager.crew);
+        }
+        if (this.state.monster) {
+            console.log('[CombatSimulator] Cleaning up monster:', this.state.monster);
+        }
+        if (this.state.minions) {
+            console.log('[CombatSimulator] Cleaning up minions:', this.state.minions);
+        }
+        // Clear any timers/intervals on this instance
+        if (this.timer) {
+            clearTimeout(this.timer);
+            this.timer = null;
+            console.log('[CombatSimulator] Cleared this.timer');
+        }
+        if (this._intervals && Array.isArray(this._intervals)) {
+            this._intervals.forEach(i => { try { clearInterval(i); } catch(e){} });
+            this._intervals = [];
+            console.log('[CombatSimulator] Cleared this._intervals');
+        }
+        if (this._timers && Array.isArray(this._timers)) {
+            this._timers.forEach(t => { try { clearTimeout(t); } catch(e){} });
+            this._timers = [];
+            console.log('[CombatSimulator] Cleared this._timers');
+        }
+        window.removeEventListener('keydown', this.combatKeyDownHandler)
+        window.removeEventListener('keyup', this.combatKeyUpListener)
+        window.removeEventListener('beforeunload', this.componentCleanup); 
+        console.log('[CombatSimulator] Listeners removed');
   }
   getDungeonDetails = async () => {
     // const user = getMeta();
@@ -189,7 +221,7 @@ class CrewManagerPage extends React.Component{
     })
   }
   exitSimulator = () => {
-    // ...existing code...
+    console.log('[CombatSimulator] exitSimulator: Exiting simulator and cleaning up');
     this.componentCleanup();
     this.props.navToLanding();
     // const history = useHistory();

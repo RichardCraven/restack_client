@@ -100,7 +100,7 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
         isOnManualMoveCooldown: false,
         manualCount: 0,
         timeAhead: null,
-        damageIndicators: [],
+        damageIndicators: [], // Will store objects: { id, value, source }
     manualMovesTotal: fighter.manualMovesTotal,
     manualMovesCurrent: fighter.manualMovesCurrent,
     // New alias fields for broader use: movement points apply to both manual and AI

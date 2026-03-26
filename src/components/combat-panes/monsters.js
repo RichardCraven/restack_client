@@ -36,76 +36,86 @@ const MonstersCombatGrid = ({
     const [minionHitFlash, setMinionHitFlash] = React.useState({});
     const prevMinionWounded = React.useRef({});
 
-    // Effect for main monster hit flash (trigger on every wound event)
-    const monsterId = monster?.id;
-    const monsterWounded = battleData[monsterId]?.wounded;
+
+    // --- Damage Indicator Queuing System ---
+    // --- Simultaneous Damage Indicator System ---
+    // --- Queued Damage Indicator System ---
+    // --- Stacked Simultaneous Damage Indicator System ---
+    // --- Time-staggered Damage Indicator System ---
+    // For each monster/minion, queue indicators and instantiate each with a delay if triggered close together
+    // Each indicator: { id, value, source, timestamp }
+    const [visibleDamageIndicators, setVisibleDamageIndicators] = React.useState({}); // { [id]: [indicatorObjects] }
+    const [indicatorQueues, setIndicatorQueues] = React.useState({}); // { [id]: [indicatorObjects] }
+    const indicatorTimeouts = React.useRef({});
+    const STAGGER_DELAY = 150; // ms between instantiations
+
+    // Add new indicators to the queue
     React.useEffect(() => {
-        const wounded = !!battleData[monsterId]?.wounded;
-        if (wounded && !prevMonsterWounded.current) {
-            setShowMonsterHitFlash(true);
-            setMonsterHitFlashKey(k => k + 1);
-            if (monsterFlashTimeout.current) {
-                clearTimeout(monsterFlashTimeout.current);
-            }
-            const timeout = setTimeout(() => {
-                setShowMonsterHitFlash(false);
-                monsterFlashTimeout.current = null;
-            }, ROCK_DURATION);
-            monsterFlashTimeout.current = timeout;
-            prevMonsterWounded.current = true;
-        } else if (!wounded && prevMonsterWounded.current) {
-            setShowMonsterHitFlash(false);
-            prevMonsterWounded.current = false;
-            if (monsterFlashTimeout.current) {
-                clearTimeout(monsterFlashTimeout.current);
-                monsterFlashTimeout.current = null;
-            }
-        }
+        Object.values(battleData).forEach(entity => {
+            if (!entity || !Array.isArray(entity.damageIndicators)) return;
+            const id = entity.id;
+            setIndicatorQueues(prev => {
+                const prevQueue = prev[id] || [];
+                const visibleIds = (visibleDamageIndicators[id] || []).map(e => e.id);
+                const queueIds = prevQueue.map(e => e.id);
+                const newIndicators = entity.damageIndicators
+                    .filter(e => e && !visibleIds.includes(e.id) && !queueIds.includes(e.id))
+                    .map(e => e.timestamp ? e : { ...e, timestamp: Date.now() });
+                if (newIndicators.length === 0) return prev;
+                return { ...prev, [id]: [...prevQueue, ...newIndicators] };
+            });
+        });
+        // Clean up queues for entities no longer present
+        setIndicatorQueues(prev => {
+            const validIds = Object.values(battleData).map(e => e.id);
+            const cleaned = {};
+            validIds.forEach(id => { if (prev[id]) cleaned[id] = prev[id]; });
+            return cleaned;
+        });
+        setVisibleDamageIndicators(prev => {
+            const validIds = Object.values(battleData).map(e => e.id);
+            const cleaned = {};
+            validIds.forEach(id => { if (prev[id]) cleaned[id] = prev[id]; });
+            return cleaned;
+        });
         // Cleanup on unmount
         return () => {
-            if (monsterFlashTimeout.current) {
-                clearTimeout(monsterFlashTimeout.current);
-                setShowMonsterHitFlash(false);
-                monsterFlashTimeout.current = null;
-            }
+            Object.values(indicatorTimeouts.current).forEach(clearTimeout);
         };
-    }, [battleData, monster, monsterWounded, monsterId]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [battleData]);
 
-    // Effect for minion hit flash (only on new wound event, and clean up removed minions)
+    // Staggered instantiation: show next indicator from queue after delay
     React.useEffect(() => {
-        const newFlashes = {};
-        const newPrev = {};
-        // Only keep minions currently in battleData
-        const minionIds = Object.values(battleData).filter(m => m.isMinion).map(m => m.id);
-        Object.values(battleData).forEach(minion => {
-            if (minion.isMinion) {
-                const wounded = !!minion.wounded;
-                if (wounded && !prevMinionWounded.current[minion.id]) {
-                    // console.log('[MINION FLASH TRIGGER]', minion.id, 'wounded:', minion.wounded, 'prev:', prevMinionWounded.current[minion.id]);
-                    newFlashes[minion.id] = true;
-                    setTimeout(() => {
-                        setMinionHitFlash(prev => ({ ...prev, [minion.id]: false }));
-                    }, ROCK_DURATION);
-                    newPrev[minion.id] = true;
-                } else if (!wounded) {
-                    newFlashes[minion.id] = false;
-                    newPrev[minion.id] = false;
-                } else if (prevMinionWounded.current[minion.id]) {
-                    // Maintain previous state if still wounded
-                    newPrev[minion.id] = true;
+        Object.keys(indicatorQueues).forEach(id => {
+            if (!indicatorQueues[id] || indicatorQueues[id].length === 0) return;
+            // If none currently being instantiated (i.e., last in visible is older than STAGGER_DELAY)
+            const visibleArr = visibleDamageIndicators[id] || [];
+            const lastTimestamp = visibleArr.length > 0 ? Math.max(...visibleArr.map(e => e.timestamp)) : 0;
+            const now = Date.now();
+            if (visibleArr.length === 0 || (now - lastTimestamp >= STAGGER_DELAY)) {
+                // Show next in queue
+                const [next, ...rest] = indicatorQueues[id];
+                setVisibleDamageIndicators(prev => ({ ...prev, [id]: [...(prev[id] || []), next] }));
+                setIndicatorQueues(prev => ({ ...prev, [id]: rest }));
+                // Set timer to remove after ROCK_DURATION
+                if (!indicatorTimeouts.current[next.id]) {
+                    indicatorTimeouts.current[next.id] = setTimeout(() => {
+                        setVisibleDamageIndicators(current => {
+                            const arr = (current[id] || []).filter(e => e.id !== next.id);
+                            return { ...current, [id]: arr };
+                        });
+                        // Remove from battleData as well
+                        const entityRef = battleData[id];
+                        if (entityRef && Array.isArray(entityRef.damageIndicators)) {
+                            entityRef.damageIndicators = entityRef.damageIndicators.filter(e => e && e.id !== next.id);
+                            battleData[id].damageIndicators = entityRef.damageIndicators;
+                        }
+                        delete indicatorTimeouts.current[next.id];
+                    }, ROCK_DURATION || 1800);
                 }
             }
         });
-        // Remove state for minions that no longer exist
-        setMinionHitFlash(prev => {
-            const cleaned = {};
-            minionIds.forEach(id => {
-                cleaned[id] = (id in newFlashes) ? newFlashes[id] : prev[id];
-            });
-            return cleaned;
-        });
-        prevMinionWounded.current = newPrev;
-    }, [battleData]);
+    }, [indicatorQueues, visibleDamageIndicators, battleData]);
 
     // Delay removal of monster/minion portrait after death for death animation
     const [showDeathAnimation, setShowDeathAnimation] = React.useState({});
@@ -429,9 +439,22 @@ const MonstersCombatGrid = ({
                                 {/* Overlay and indicators above portrait */}
                                 <div className={`portrait-overlay ${battleData[monster.id]?.frozen ? 'frozen' : ''}`} style={{zIndex: 2, position: 'absolute', top: 0, left: 0, width: '100%', height: '100%'}}>
                                     <div className="damage-indicator-container">
-                                        {battleData[monster.id]?.damageIndicators.map((e, i) => (
-                                            <div key={i} className="damage-indicator">
-                                                {e}
+                                        {(visibleDamageIndicators[monster.id] || []).map((indicator, idx, arr) => (
+                                            <div
+                                                className="damage-indicator"
+                                                key={indicator.id}
+                                                style={{
+                                                    // Offset each indicator by its index so they don't overlap
+                                                    transform: `translateY(-${idx * 28}px)`,
+                                                    zIndex: 10 + (arr.length - idx),
+                                                    position: 'absolute',
+                                                    left: 0,
+                                                    right: 0,
+                                                    margin: '0 auto',
+                                                    pointerEvents: 'none',
+                                                }}
+                                            >
+                                                {indicator.value}
                                             </div>
                                         ))}
                                     </div>
@@ -636,9 +659,12 @@ const MonstersCombatGrid = ({
                                 </div>
                                 <div className={`portrait-overlay ${minion.frozen ? 'frozen' : ''}`}> 
                                     <div className="damage-indicator-container">
-                                        {minion.damageIndicators && minion.damageIndicators.map((e, i) => (
-                                            <div key={i} className="damage-indicator">
-                                                {e}
+                                        {(visibleDamageIndicators[minion.id] || []).map(indicator => (
+                                            <div
+                                                className="damage-indicator"
+                                                key={indicator.id}
+                                            >
+                                                {indicator.value}
                                             </div>
                                         ))}
                                     </div>

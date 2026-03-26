@@ -410,8 +410,14 @@ class MonsterBattle extends React.Component {
         // fireballs etc. can't appear at the start of the next combat session.
         try { if (this.props && this.props.animationManager && typeof this.props.animationManager.reset === 'function') this.props.animationManager.reset(); } catch(e){}
         // Clear any timers/intervals this component created
-        try { if (Array.isArray(this._timers)) { this._timers.forEach(t => clearTimeout(t)); this._timers = []; } } catch(e){}
-        try { if (Array.isArray(this._intervals)) { this._intervals.forEach(i => clearInterval(i)); this._intervals = []; } } catch(e){}
+        try { if (Array.isArray(this._timers)) { this._timers.forEach(t => clearTimeout(t)); this._timers = []; console.log('[MonsterBattle] Cleared this._timers'); } } catch(e){}
+        try { if (Array.isArray(this._intervals)) { this._intervals.forEach(i => clearInterval(i)); this._intervals = []; console.log('[MonsterBattle] Cleared this._intervals'); } } catch(e){}
+        // Deep diagnostic: log state of combatManager and timers at unmount
+        try {
+            if (this.props && this.props.combatManager) {
+                console.log('[MonsterBattle] componentWillUnmount: combatManager state:', JSON.parse(JSON.stringify(this.props.combatManager.combatants)));
+            }
+        } catch (e) { console.warn('[MonsterBattle] componentWillUnmount: failed to log combatManager state', e); }
     }
     monster = () => {
         // console.log('monster: ', this.state.battleData[this.props.monster.id]);
@@ -664,6 +670,7 @@ class MonsterBattle extends React.Component {
                     entry.portrait = images['avatar'];
                 }
                 if (!Array.isArray(entry.damageIndicators)) entry.damageIndicators = [];
+                            if (!Array.isArray(entry.damageIndicators)) console.log('[DIAG][MonsterBattle] Initialized entry.damageIndicators as empty array for', entry);
             });
         } catch (err) {
             console.warn('updateBattleData: normalization failed', err);
