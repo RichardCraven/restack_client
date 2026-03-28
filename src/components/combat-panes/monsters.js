@@ -320,7 +320,7 @@ const MonstersCombatGrid = ({
         };
     };
     return (
-        <div className="mb-col monster-pane">
+        <div className="mb-col monster-pane" style={{ overflow: 'visible' }}>
             {/* Main Monster: only render if not dead, or if dead but still animating */}
             {monster && battleData[monster.id] && (!battleData[monster.id].dead || (showDeathAnimation[monster.id] && !fullyDead[monster.id])) && (
                 <div
@@ -328,6 +328,7 @@ const MonstersCombatGrid = ({
                     style={{
                         top: `${battleData[monster.id]?.coordinates.y * TILE_SIZE + (SHOW_TILE_BORDERS ? battleData[monster.id]?.coordinates.y * 2 : 0)}px`,
                         height: `${TILE_SIZE}px`,
+                        overflow: 'visible',
                         ...transitionStyle(monster.id)
                     }}
                 >
@@ -344,25 +345,36 @@ const MonstersCombatGrid = ({
                         >
                             <div className={`action-bar ${battleData[monster.id]?.attacking ? (battleData[monster.id]?.facing === 'right' ? 'monsterHitsAnimation_LtoR' : 'monsterHitsAnimation') : ''}`}></div>
                         </div>
-                        {battleData[monster.id] && battleData[monster.id].pendingAttack && (
-                            <div
-                                className={`weapon-wrapper
-                                    ${getMonsterWeaponAnimation(battleData[monster.id])}
-                                    ${battleData[monster.id]?.aiming ? 'aiming' : ''}
-                                    small`}
-                                style={{
-                                    left: battleData[monster.id]?.facing === 'right'
-                                        ? `${battleData[monster.id]?.coordinates.x * 100 + 65 + (battleData[monster.id]?.coordinates.x * 2)}px`
-                                        : `${battleData[monster.id]?.coordinates.x * 100 - 45 + (battleData[monster.id]?.coordinates.x * 2)}px`,
-                                    backgroundImage: `url(${battleData[monster.id].pendingAttack.icon})`
-                                }}
-                            ></div>
-                        )}
+                        {(() => {
+                            let weaponWrapper = null;
+                            if (battleData[monster.id] && battleData[monster.id].pendingAttack) {
+                                const pendingAttack = battleData[monster.id].pendingAttack;
+                                if (pendingAttack && pendingAttack.type === 'grasp') {
+                                    debugger;
+                                }
+                                weaponWrapper = (
+                                    <div
+                                        className={`weapon-wrapper
+                                            ${getMonsterWeaponAnimation(battleData[monster.id])}
+                                            ${battleData[monster.id]?.aiming ? 'aiming' : ''}
+                                            small`}
+                                        style={{
+                                            left: battleData[monster.id]?.facing === 'right'
+                                                ? `${battleData[monster.id]?.coordinates.x * 100 + 65 + (battleData[monster.id]?.coordinates.x * 2)}px`
+                                                : `${battleData[monster.id]?.coordinates.x * 100 - 45 + (battleData[monster.id]?.coordinates.x * 2)}px`,
+                                            backgroundImage: `url(${battleData[monster.id].pendingAttack.icon})`
+                                        }}
+                                    ></div>
+                                );
+                            }
+                            return weaponWrapper;
+                        })()}
                         <div
                             className="portrait-wrapper monster-portrait-wrapper"
                             style={{
                                 left: `${battleData[monster.id]?.coordinates.x * 100 + (SHOW_TILE_BORDERS ? battleData[monster.id]?.coordinates.x * 2 : 0)}px`,
                                 zIndex: `${battleData[monster.id]?.dead ? '0' : '200'}`,
+                                overflow: 'visible',
                                 ...transitionStyle(monster.id)
                             }}
                         >
@@ -436,27 +448,43 @@ const MonstersCombatGrid = ({
                                 {fearCastingActive && !monster.isMinion && (
                                     <div className="fear-cast-glow" />
                                 )}
-                                {/* Overlay and indicators above portrait */}
-                                <div className={`portrait-overlay ${battleData[monster.id]?.frozen ? 'frozen' : ''}`} style={{zIndex: 2, position: 'absolute', top: 0, left: 0, width: '100%', height: '100%'}}>
-                                    <div className="damage-indicator-container">
-                                        {(visibleDamageIndicators[monster.id] || []).map((indicator, idx, arr) => (
-                                            <div
-                                                className="damage-indicator"
-                                                key={indicator.id}
-                                                style={{
-                                                    // Offset each indicator by its index so they don't overlap
-                                                    transform: `translateY(-${idx * 28}px)`,
-                                                    zIndex: 10 + (arr.length - idx),
-                                                    position: 'absolute',
-                                                    left: 0,
-                                                    right: 0,
-                                                    margin: '0 auto',
-                                                    pointerEvents: 'none',
-                                                }}
-                                            >
-                                                {indicator.value}
-                                            </div>
-                                        ))}
+                                {/* Overlay and indicators above portrait */
+}                                <div className={`portrait-overlay ${battleData[monster.id]?.frozen ? 'frozen' : ''}`} style={{zIndex: 2, position: 'absolute', top: 0, left: 0, width: '100%', height: '100%'}}>
+                                    <div className="damage-indicator-container" style={{ overflow: 'visible' }}>
+                                        {(visibleDamageIndicators[monster.id] || []).map((indicator, idx, arr) => {
+                                            // If this is a main-monster (2x scale), render indicators at the top tile (virtually occupied)
+                                            const isMainMonster = !monster.isMinion && (monster.scale === 2 || monster['main-monster'] || monster.isMainMonster);
+                                            // Increase offset for 2x monsters to make indicator much higher
+                                            const yOffset = isMainMonster ? TILE_SIZE * 5 + idx * 36 : idx * 28;
+                                            // if (isMainMonster) {
+                                            //     console.log('[MainMonsterIndicator] DEBUG TILE_SIZE:', TILE_SIZE, 'yOffset:', yOffset, 'idx:', idx, 'indicator:', indicator);
+                                            // }
+                                            // Stat debuff (Induce Fear) is string, all others (damage) are numbers
+                                            const isStatDebuff = typeof indicator.value === 'string';
+                                            return (
+                                                <div
+                                                    className={`damage-indicator${isStatDebuff ? ' stat-debuff' : ''}`}
+                                                    key={indicator.id}
+                                                    style={{
+                                                        transform: `translateY(-${yOffset}px)`,
+                                                        top: isMainMonster ? `-${yOffset}px` : undefined,
+                                                        zIndex: 10 + (arr.length - idx),
+                                                        position: 'absolute',
+                                                        left: 0,
+                                                        right: 0,
+                                                        margin: '0 auto',
+                                                        pointerEvents: 'none',
+                                                        background: isMainMonster ? 'rgba(255,0,0,0.3)' : undefined,
+                                                        border: isMainMonster ? '2px solid red' : undefined,
+                                                        fontSize: isMainMonster ? '2.2em' : undefined,
+                                                        fontWeight: isMainMonster ? '900' : undefined,
+                                                        color: !isStatDebuff ? 'red' : undefined,
+                                                    }}
+                                                >
+                                                    {indicator.value}
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                 </div>
                                 {/* { !battleData[monster.id]?.dead && (
@@ -505,7 +533,7 @@ const MonstersCombatGrid = ({
                                 </div>
                                 <div className="tempo-bar">
                                     {!battleData[monster.id]?.dead && (
-                                        <div className="tempo-indicator" style={{ right: `calc(${battleData[monster.id]?.tempo}% - 4px)` }}></div>
+                                        <div className="tempo-indicator" style={{ left: `calc(${battleData[monster.id]?.tempo}% - 4px)` }}></div>
                                     )}
                                 </div>
                             </div>
@@ -659,14 +687,29 @@ const MonstersCombatGrid = ({
                                 </div>
                                 <div className={`portrait-overlay ${minion.frozen ? 'frozen' : ''}`}> 
                                     <div className="damage-indicator-container">
-                                        {(visibleDamageIndicators[minion.id] || []).map(indicator => (
-                                            <div
-                                                className="damage-indicator"
-                                                key={indicator.id}
-                                            >
-                                                {indicator.value}
-                                            </div>
-                                        ))}
+                                        {(visibleDamageIndicators[minion.id] || []).map((indicator, idx, arr) => {
+                                            // For minions, always use the default offset.
+                                            const yOffset = idx * 28;
+                                            // For debugging, log minion type and id
+                                            // console.log('MINION', minion.type, minion.id, 'yOffset:', yOffset, 'idx:', idx, 'indicator:', indicator);
+                                            return (
+                                                <div
+                                                    className="damage-indicator"
+                                                    key={indicator.id}
+                                                    style={{
+                                                        transform: `translateY(-${yOffset}px)`,
+                                                        zIndex: 10 + (arr.length - idx),
+                                                        position: 'absolute',
+                                                        left: 0,
+                                                        right: 0,
+                                                        margin: '0 auto',
+                                                        pointerEvents: 'none',
+                                                    }}
+                                                >
+                                                    {indicator.value}
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                 </div>
                                 <div className="indicators-wrapper">
@@ -682,7 +725,7 @@ const MonstersCombatGrid = ({
                                     </div>
                                     <div className="tempo-bar">
                                         {!minion.dead && (
-                                            <div className="tempo-indicator" style={{ right: `calc(${minion.tempo}% - 4px)` }}></div>
+                                            <div className="tempo-indicator" style={{ left: `calc(${minion.tempo}% - 4px)` }}></div>
                                         )}
                                     </div>
                                 </div>

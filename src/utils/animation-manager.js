@@ -12,12 +12,13 @@ export function AnimationManager(){
             sourceTileId,
             facing
         });
+        const duration = 1200; // ms, matches animationData.duration
         animationTile.animationType = 'axe_swing';
         animationTile.transitionType = 'swing';
         animationTile.animationData = {
             icon: images['axe_white'],
             facing,
-            duration: 1200 // doubled duration for half speed, twice as long
+            duration
         };
         this.update();
         // Pause combat after rendering (debugger removed)
@@ -30,7 +31,7 @@ export function AnimationManager(){
             animationTile.animationData = {};
             this.update();
             if (resolve) resolve();
-        }, 600);
+        }, duration);
     }
     // Animation durations (ms)
     // Animation type separation:
@@ -44,7 +45,8 @@ export function AnimationManager(){
         punch: { duration: 600, animationType: 'tile' },
         spin_attack_arc: { duration: 800, animationType: 'tile' },
         windmill: { duration: 750, animationType: 'tile' },
-        axe_throw: { duration: 1200, animationType: 'canvas' } // Default/fallback for axe_throw, but actual duration is calculated dynamically
+        axe_throw: { duration: 1200, animationType: 'canvas' }, // Default/fallback for axe_throw, but actual duration is calculated dynamically
+        grasp: { duration: 900, animationType: 'tile' } // Grasp attack animation config
     };
 
     // Generic attack animation trigger for AI modules (e.g., Monk)
@@ -734,6 +736,27 @@ export function AnimationManager(){
                     animationTile.animationData = {};
                     this.update();
                 },this.animationsMatrix[type].duration)
+            break;
+            case 'grasp':
+                // Diagnostic log: capture when grasp animation is triggered in tile animation
+                console.log('[AnimationManager] triggerTileAnimationComplex grasp', {
+                    tile: animationTile,
+                    data,
+                    actor: this.currentActor,
+                    tileId: sourceTileId,
+                    targetTileId,
+                    facing
+                });
+                animationTile.animationType = 'grasp';
+                animationTile.transitionType = 'fade';
+                animationTile.animationData = {facing, duration: this.animationsMatrix[type]?.duration || 900};
+                this.update();
+                setTimeout(()=>{
+                    animationTile.animationType = null;
+                    animationTile.transitionType = null;
+                    animationTile.animationData = {};
+                    this.update();
+                }, this.animationsMatrix[type]?.duration || 900);
             break;
             case 'sword_swing':
                 // Diagnostic log: capture when sword_swing animation is triggered in tile animation

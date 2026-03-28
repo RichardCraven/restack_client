@@ -42,14 +42,14 @@ const AnimationGrid = ({
     return (
         <div className="animation-grid" style={{width: gridWidth + 'px'}}>
             {animationData.tiles.map((t,i)=>{
-                    if (t.animationType === 'sword_swing') {
-                        console.log('[AnimationGrid] AnimationTile sword_swing props', {
-                            tileIndex: i,
-                            tileObj: t,
-                            tileProps,
-                            animationData: t.animationData
-                        });
-                    }
+                    // if (t.animationType === 'sword_swing') {
+                    //     console.log('[AnimationGrid] AnimationTile sword_swing props', {
+                    //         tileIndex: i,
+                    //         tileObj: t,
+                    //         tileProps,
+                    //         animationData: t.animationData
+                    //     });
+                    // }
                     return <AnimationTile
                         key={i}
                         id={i}

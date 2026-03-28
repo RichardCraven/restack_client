@@ -133,6 +133,7 @@ export function CombatManager(){
         grasp: {
             name: 'grasp',
             type: 'crushing',
+            icon: images['grasp'],
             range: 'close',
             cooldown: 3,
             effect: { type: 'stun', chance: 20, duration: 2 },
@@ -140,6 +141,7 @@ export function CombatManager(){
         energy_drain: {
             name: 'energy drain',
             type: 'curse',
+            icon: images['energy_drain'],
             range: 'medium',
             cooldown: 3,
         },
@@ -393,7 +395,6 @@ export function CombatManager(){
                 if (above.y >= 0 && !combatant.occupiedCoords.some(c => c.x === above.x && c.y === above.y)) {
                     combatant.occupiedCoords.push(above);
                 }
-                console.log(`[CombatManager._setCombatantOccupiedCoords] Large combatant ${combatant.name || combatant.type} occupies:`, combatant.occupiedCoords);
             }
         } catch (e) {
             console.warn('[CombatManager._setCombatantOccupiedCoords] Error:', e);
@@ -1427,7 +1428,6 @@ export function CombatManager(){
     }
     this.updateCoordinates = (caller) => {
         caller.coordinates = {x: caller.coordinates.x, y: caller.coordinates.y}
-        console.log(`[DIAG] updateCoordinates: ${caller.name || caller.type} (${caller.id}) set to (${caller.coordinates.x},${caller.coordinates.y})`);
         try { this._setCombatantOccupiedCoords(caller); } catch (e) {}
     }
     this.acquireTarget = (caller, targetToAvoid = null) => {
@@ -1983,9 +1983,10 @@ export function CombatManager(){
         combatantHit.hp -= damage;
         // Generate unique id for this indicator
         const indicatorId = Date.now() + Math.random();
+        // Always use a number for value, even for critical hits
         const indicatorObj = { id: indicatorId, value: damage, source: caller?.name || 'unknown' };
         combatantHit.damageIndicators.push(indicatorObj);
-        console.log('[DIAG][combat-manager] Pushed to combatantHit.damageIndicators:', indicatorObj, 'Current:', combatantHit.damageIndicators);
+        //console.log('[DIAG][combat-manager] Pushed to combatantHit.damageIndicators:', indicatorObj, 'Current:', combatantHit.damageIndicators);
         caller.energy += caller.stats.fort * 1 + (1 / 2 * caller.level);
         if (caller.energy > 100) caller.energy = 100;
 
@@ -2015,46 +2016,37 @@ export function CombatManager(){
 
         // NEED TO HANDLE CRIT FROM TOP AND BOTTOM
 
-        if(caller.coordinates.x < combatantHit.coordinates.x){
-            combatantHit.wounded.sourceDirection = 'left';
-            if(criticalHit){
-                const {E} = this.getSurroundings(combatantHit.coordinates),
-                someoneElseIsInCoords = this.someoneElseIsInCoords(combatantHit.coordinates, E);
-                if(!someoneElseIsInCoords && combatantHit.coordinates.x !== MAX_DEPTH){
-                    combatantHit.coordinates.x++
-                    this.checkOverlap(combatantHit)
-                }
+        if (criticalHit) {
+            // Compute intended pushback destination
+            let pushDest = null;
+            if (caller.coordinates.x < combatantHit.coordinates.x) {
+                combatantHit.wounded.sourceDirection = 'left';
+                pushDest = { x: combatantHit.coordinates.x + 1, y: combatantHit.coordinates.y };
+            } else if ((caller.coordinates.x === combatantHit.coordinates.x) && caller.coordinates.y > combatantHit.coordinates.y) {
+                combatantHit.wounded.sourceDirection = 'bottom';
+                pushDest = { x: combatantHit.coordinates.x, y: combatantHit.coordinates.y - 1 };
+            } else if ((caller.coordinates.x === combatantHit.coordinates.x) && caller.coordinates.y < combatantHit.coordinates.y) {
+                combatantHit.wounded.sourceDirection = 'top';
+                pushDest = { x: combatantHit.coordinates.x, y: combatantHit.coordinates.y + 1 };
+            } else if (caller.coordinates.x > combatantHit.coordinates.x) {
+                combatantHit.wounded.sourceDirection = 'right';
+                pushDest = { x: combatantHit.coordinates.x - 1, y: combatantHit.coordinates.y };
             }
-        } else if((caller.coordinates.x === combatantHit.coordinates.x) && caller.coordinates.y > combatantHit.coordinates.y){
-            combatantHit.wounded.sourceDirection = 'bottom';
-            if(criticalHit){
-                const {S} = this.getSurroundings(combatantHit.coordinates),
-                someoneElseIsInCoords = this.someoneElseIsInCoords(combatantHit, S);
-                if(!someoneElseIsInCoords && combatantHit.coordinates.y !== 0){
-                    combatantHit.coordinates.y--
-                    this.checkOverlap(combatantHit)
-                }
+            // Only push if destination is legal (not into virtually occupied space)
+            if (pushDest && this._canMoveToCoords(combatantHit, pushDest)) {
+                combatantHit.coordinates = pushDest;
+                this.checkOverlap(combatantHit);
             }
-        } else if((caller.coordinates.x === combatantHit.coordinates.x) && caller.coordinates.y < combatantHit.coordinates.y){
-            combatantHit.wounded.sourceDirection = 'top';
-            if(criticalHit){
-                const {S} = this.getSurroundings(combatantHit.coordinates),
-                someoneElseIsInCoords = this.someoneElseIsInCoords(combatantHit, S);
-                if(!someoneElseIsInCoords && combatantHit.coordinates.y !== MAX_LANES-1){
-                    combatantHit.coordinates.y++
-                    this.checkOverlap(combatantHit)
-                }
-            }
-        } else if(caller.coordinates.x > combatantHit.coordinates.x){
-            combatantHit.wounded.sourceDirection = 'right';
-            if(criticalHit){
-                const {W} = this.getSurroundings(combatantHit.coordinates),
-                someoneElseIsInCoords = this.someoneElseIsInCoords(combatantHit, W);
-                console.log(caller.name, '>', combatantHit.name,'crit from right, someoneElseIsInCoords', someoneElseIsInCoords);
-                if(!someoneElseIsInCoords && combatantHit.coordinates.x !== 0){
-                    combatantHit.coordinates.x--
-                    this.checkOverlap(combatantHit)
-                }
+        } else {
+            // Set sourceDirection for non-crits
+            if (caller.coordinates.x < combatantHit.coordinates.x) {
+                combatantHit.wounded.sourceDirection = 'left';
+            } else if ((caller.coordinates.x === combatantHit.coordinates.x) && caller.coordinates.y > combatantHit.coordinates.y) {
+                combatantHit.wounded.sourceDirection = 'bottom';
+            } else if ((caller.coordinates.x === combatantHit.coordinates.x) && caller.coordinates.y < combatantHit.coordinates.y) {
+                combatantHit.wounded.sourceDirection = 'top';
+            } else if (caller.coordinates.x > combatantHit.coordinates.x) {
+                combatantHit.wounded.sourceDirection = 'right';
             }
         }
 
@@ -2163,7 +2155,7 @@ export function CombatManager(){
         const indicatorId2 = Date.now() + Math.random();
         const indicatorObj2 = { id: indicatorId2, value: damage, source: caller?.name || 'unknown' };
         target.damageIndicators.push(indicatorObj2);
-        console.log('[DIAG][combat-manager] Pushed to target.damageIndicators:', indicatorObj2, 'Current:', target.damageIndicators);
+        //console.log('[DIAG][combat-manager] Pushed to target.damageIndicators:', indicatorObj2, 'Current:', target.damageIndicators);
         if (typeof this.updateData === 'function') {
             this.updateData(clone(this.combatants));
         }
@@ -2227,7 +2219,7 @@ export function CombatManager(){
             const missId = Date.now() + Math.random();
             const missObj = { id: missId, value: 'miss', source: caller?.name || 'unknown' };
             target.damageIndicators.push(missObj);
-            console.log('[DIAG][combat-manager] Pushed to target.damageIndicators:', missObj, 'Current:', target.damageIndicators);
+            //console.log('[DIAG][combat-manager] Pushed to target.damageIndicators:', missObj, 'Current:', target.damageIndicators);
         }
         setTimeout(()=>{
             caller.active = caller.aiming = false;

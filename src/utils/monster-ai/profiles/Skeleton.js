@@ -121,54 +121,37 @@ export function Skeleton(data, utilMethods, animationManager, overlayManager){
         }
     }
 
-    this.triggerClawAttack = (callerCoords, targetCoords, id = null) => {
-        const targetTileId = this.animationManager.getTileIdByCoords(targetCoords)
-        const sourceTileId = this.animationManager.getTileIdByCoords(callerCoords);
-        // Lock facing for the duration of the animation
-        const monster = id ? (typeof id === 'string' ? id : null) : null;
-        let originalFacing = null;
-        if (monster) {
-            // If we have a monster id, try to lock its facing
-            const combatant = typeof monster === 'string' && window?.combatManager?.combatants?.[monster];
-            if (combatant) {
-                originalFacing = combatant.facing;
-            }
+    this.triggerClawAttack = async (caller, target) => {
+        // Use the animation manager's generic triggerAttackAnimation
+        if (this.animationManager && typeof this.animationManager.triggerAttackAnimation === 'function') {
+            await this.animationManager.triggerAttackAnimation({
+                coordinates: caller.coordinates,
+                facing: caller.facing,
+                icon: caller.pendingAttack?.icon,
+                type: 'claw',
+                animationType: 'claw'
+            });
         }
-        return new Promise((resolve) => {
-            if(sourceTileId !== null){
-                // Prevent facing changes for the duration of the animation
-                if (monster && window?.combatManager?.combatants?.[monster]) {
-                    window.combatManager.combatants[monster].facingLocked = true;
-                }
-                this.animationManager.clawToTarget(targetTileId, sourceTileId, (result) => {
-                    // Unlock facing after animation
-                    if (monster && window?.combatManager?.combatants?.[monster]) {
-                        window.combatManager.combatants[monster].facingLocked = false;
-                    }
-                    resolve(result);
-                });
-            }
-        })
+        return target;
     }
     this.initiateAttack = async (caller, combatants) => {
         const target = combatants[caller.targetId];
-        caller.attacking = true
-        if(!target){
+        caller.attacking = true;
+        if (!target) {
             console.log('NO TARGET!');
             return;
         }
         let combatantHit;
-        switch(caller.pendingAttack.name){
+        switch (caller.pendingAttack.name) {
             case 'claws':
-                combatantHit = await this.triggerClawAttack(caller.coordinates, target.coordinates, caller.id)
-                if(combatantHit){
-                    const supplementalData = {increasedCritChance: false}
+                combatantHit = await this.triggerClawAttack(caller, target);
+                if (combatantHit) {
+                    const supplementalData = { increasedCritChance: false };
                     this.hitsCombatant(caller, combatantHit, supplementalData);
                 } else {
                     this.missesTarget(caller);
                 }
-
-            break;
+                break;
             default:
                 // Fallback: for attacks not explicitly animated here (eg. void_lance,
                 // magic_missile when using the skeleton AI as a fallback), apply
@@ -181,9 +164,9 @@ export function Skeleton(data, utilMethods, animationManager, overlayManager){
                 } catch (e) {
                     console.warn('Fallback attack failed in Skeleton.initiateAttack', e);
                 }
-            break;
+                break;
         }
-        this.kickoffAttackCooldown(caller)
+        this.kickoffAttackCooldown(caller);
         caller.pendingAttack = null;
     }
 }

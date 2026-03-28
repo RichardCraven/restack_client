@@ -105,7 +105,7 @@ export function BoardManager(){
     this.availableItems = [];
     // List of monster subtypes that should occupy two vertical tiles (boss portraits)
     this.largeMonsterKeys = [
-        'dragon', 'beholder', 'ogre', 'sphinx', 'manticore', 'wyvern', 'wyvern_alt'
+        'dragon', 'beholder', 'ogre', 'sphinx', 'manticore', 'wyvern', 'wyvern_alt', 'mummy'
     ];
     // Known monster keys from the comprehensive MonsterManager. Use this
     // in cleanup to detect monster keys that may not be present in the

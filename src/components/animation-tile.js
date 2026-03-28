@@ -105,6 +105,42 @@ export default function AnimationTile(props) {
             image = images['claws'];
             keyframe = `ClawAnimation_${facing}`;
         break;
+        case 'claw':
+            image = images['claws'];
+            keyframe = `ClawAnimation_${facing}`;
+        break;
+                    {/* Animated claw render (same logic as sword_swing) */}
+                    {props.animationType === 'claw' && image && (() => {
+                        let dx = 0, dy = 0;
+                        const offset = 40;
+                        switch (facing) {
+                            case 'up':    dx = 0;       dy = -offset; break;
+                            case 'down':  dx = 0;       dy = offset; break;
+                            case 'left':  dx = -offset; dy = 0;       break;
+                            case 'right': dx =  offset; dy = 0;       break;
+                            default:      dx =  offset; dy = 0;       break;
+                        }
+                        const flip = facing === 'left';
+                        return (
+                            <img
+                                src={image}
+                                alt="claw"
+                                className="claw-icon"
+                                style={{
+                                    position: 'absolute',
+                                    top: `calc(50% - 30% + ${dy}px)`,
+                                    left: `calc(50% - 30% + ${dx}px)`,
+                                    width: '60%',
+                                    height: '60%',
+                                    pointerEvents: 'none',
+                                    zIndex: 5000,
+                                    transform: flip ? 'scaleX(-1)' : undefined,
+                                    animation: `ClawAnimation_${facing} ${duration / 1000}s linear forwards`,
+                                }}
+                            />
+                        );
+                    })()}
+        break;
         case 'grasp':
             image = images['grasp'];
             keyframe = `GraspAnimation_${facing}`;
@@ -259,6 +295,20 @@ export default function AnimationTile(props) {
                     default:      dx =  offset; dy = 0;       break;
                 }
                 const flip = facing === 'left';
+                const top = facing === 'down' ? `calc(100% - 60%)` : `calc(50% - 30% + ${dy}px)`;
+                const left = `calc(50% - 30% + ${dx}px)`;
+                // Diagnostic log for grasp animation position
+                console.log('[AnimationTile][grasp] Render grasp', {
+                    facing,
+                    dx,
+                    dy,
+                    top,
+                    left,
+                    tileSize: props.tileSize,
+                    x: props.x,
+                    y: props.y,
+                    image,
+                });
                 return (
                     <img
                         src={image}
@@ -266,8 +316,8 @@ export default function AnimationTile(props) {
                         className="grasp-icon"
                         style={{
                             position: 'absolute',
-                            top: facing === 'down' ? `calc(100% - 60%)` : `calc(50% - 30% + ${dy}px)`,
-                            left: `calc(50% - 30% + ${dx}px)`,
+                            top,
+                            left,
                             width: '60%',
                             height: '60%',
                             pointerEvents: 'none',

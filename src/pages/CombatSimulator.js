@@ -64,23 +64,30 @@ class CrewManagerPage extends React.Component{
 
   componentDidMount(){
 
-    console.log('[CombatSimulator] componentDidMount: Initializing new session');
-    console.log('[CombatSimulator] meta:', getMeta());
-    const meta = getMeta();
-    console.log('[CombatSimulator] meta.crew before pops:', meta.crew);
-    // meta.crew[0].specialActions.pop();
-    // meta.crew[0].specialActions.pop();
-    // meta.crew[0].specialActions.pop();
-    storeMeta(meta);
+        console.log('[CombatSimulator] componentDidMount: Initializing new session');
+        console.log('[CombatSimulator] meta:', getMeta());
+        const meta = getMeta();
+        console.log('[CombatSimulator] meta.crew before pops:', meta.crew);
+        // meta.crew[0].specialActions.pop();
+        // meta.crew[0].specialActions.pop();
+        // meta.crew[0].specialActions.pop();
+        storeMeta(meta);
 
-    console.log('[CombatSimulator] Initializing inventory items');
-    this.props.inventoryManager.initializeItems()
-    let options = this.props.crewManager.adventurers;
-    // Create a temporary CrewManager instance for the simulator so we don't mutate the global crew state
-    this.tempCrewManager = new CrewManager();
-    // initialize with a deep-cloned options array to avoid sharing references
-    this.tempCrewManager.initializeCrew(clone(options));
-    console.log('[CombatSimulator] tempCrewManager initialized:', this.tempCrewManager.crew);
+        // Restore combat speed from meta if present
+        if (meta && meta.combatSpeed && this.props.combatManager) {
+            this.props.combatManager.FIGHT_INTERVAL = meta.combatSpeed;
+            // Optionally force update if UI needs to reflect this
+            this.forceUpdate();
+        }
+
+        console.log('[CombatSimulator] Initializing inventory items');
+        this.props.inventoryManager.initializeItems()
+        let options = this.props.crewManager.adventurers;
+        // Create a temporary CrewManager instance for the simulator so we don't mutate the global crew state
+        this.tempCrewManager = new CrewManager();
+        // initialize with a deep-cloned options array to avoid sharing references
+        this.tempCrewManager.initializeCrew(clone(options));
+        console.log('[CombatSimulator] tempCrewManager initialized:', this.tempCrewManager.crew);
     // let wizard = this.tempCrewManager.crew.find(e=>e.type==='wizard')
     // let wizclone = clone(wizard);
 

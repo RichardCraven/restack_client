@@ -396,12 +396,14 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
                             break;
                 }
                 if(this.tempo >= 100){
+                    console.log(`[MONSTER TURN CYCLE] tempo >= 100 for ${this.name || this.type || this.id}, calling restartTurnCycle. tempo:`, this.tempo, 'eraIndex:', this.eraIndex, 'movesLeft:', this.movesLeft, 'pendingAttack:', this.pendingAttack);
                     this.restartTurnCycle();
                 }
                 broadcastDataUpdate(this)
             }, this.FIGHT_INTERVAL)
         },
         restartTurnCycle: function(){
+            console.log(`[MONSTER TURN CYCLE] restartTurnCycle called for ${this.name || this.type || this.id}. tempo:`, this.tempo, 'eraIndex:', this.eraIndex, 'movesLeft:', this.movesLeft, 'pendingAttack:', this.pendingAttack, 'stack:', new Error().stack);
             clearInterval(this.interval)
             this.tempo = 0;
             this.movesLeft = this.movesPerTurnCycle;

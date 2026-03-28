@@ -20,19 +20,36 @@ export function Mummy(data, utilMethods, animationManager, overlayManager) {
     // Prefer energy_drain when the target is at medium range.
     // Falls back to whatever is off cooldown (most recovered first).
     this.chooseAttackType = (caller, target) => {
+
         if (!target || !target.coordinates || !caller.coordinates) {
             // No valid target yet — fall back to most-recovered attack
             return caller.attacks.reduce((best, a) => (a.cooldown_position > best.cooldown_position ? a : best), caller.attacks[0]);
         }
-        const dx = target.coordinates.x - caller.coordinates.x;
-        const absDistance = Math.abs(dx);
+
+        // --- BEGIN 2x ADJACENCY LOGIC ---
+        // For 2x monsters, check adjacency to all occupied tiles
+        // Assume scale=2 means 2x2, anchor at (x, y)
+        const occupiedTiles = [];
+        const scale = caller.scale || caller["main-monster"] || caller.isMainMonster ? 2 : 1;
+        const baseX = caller.coordinates.x;
+        const baseY = caller.coordinates.y;
+        for (let dx = 0; dx < scale; dx++) {
+            for (let dy = 0; dy < scale; dy++) {
+                occupiedTiles.push({ x: baseX + dx, y: baseY + dy });
+            }
+        }
+
+        // Check if target is adjacent to any occupied tile
+        const isAdjacent = occupiedTiles.some(tile => {
+            const dx = Math.abs(target.coordinates.x - tile.x);
+            const dy = Math.abs(target.coordinates.y - tile.y);
+            return (dx + dy === 1); // 4-way adjacency
+        });
 
         const available = caller.attacks.filter(e => e.cooldown_position === 100);
-
-        // Helper: pick the attack with the highest cooldown_position among a list
         const mostRecovered = (list) => list.reduce((best, a) => (a.cooldown_position > best.cooldown_position ? a : best), list[0]);
 
-        if (absDistance <= 1) {
+        if (isAdjacent) {
             // Adjacent — always try grasp first
             const grasp = available.find(a => a.name === 'grasp');
             if (grasp) return grasp;
@@ -59,14 +76,114 @@ export function Mummy(data, utilMethods, animationManager, overlayManager) {
 
     this.acquireTarget = (caller, combatants) => {
         const { AcquireTargetMethods } = require('../../shared-ai-methods/acquire-target-methods');
-        const target = AcquireTargetMethods.acquireClosestSoftTarget(caller, combatants);
+        // Find all valid enemies
+        const isMonsterOrMinion = caller.isMonster || caller.isMinion;
+        const enemies = Object.values(combatants).filter(e => {
+            if (isMonsterOrMinion) {
+                return !e.dead && e.id !== caller.id && !e.isMonster && !e.isMinion;
+            } else {
+                return !e.dead && e.id !== caller.id && (e.isMonster || e.isMinion);
+            }
+        });
+        // Use virtually occupied tiles for adjacency checks (for 2x2 monsters)
+        let occupiedTiles = Array.isArray(caller.occupiedTiles) && caller.occupiedTiles.length > 0
+            ? caller.occupiedTiles
+            : (() => {
+                const scale = caller.scale || caller["main-monster"] || caller.isMainMonster ? 2 : 1;
+                const baseX = caller.coordinates.x;
+                const baseY = caller.coordinates.y;
+                const tiles = [];
+                for (let dx = 0; dx < scale; dx++) {
+                    for (let dy = 0; dy < scale; dy++) {
+                        tiles.push({ x: baseX + dx, y: baseY + dy });
+                    }
+                }
+                return tiles;
+            })();
+        // Always retarget to any enemy adjacent to any occupied tile
+        let target = null;
+        let foundAdjacent = false;
+        for (const enemy of enemies) {
+            for (const tile of occupiedTiles) {
+                const dx = Math.abs(enemy.coordinates.x - tile.x);
+                const dy = Math.abs(enemy.coordinates.y - tile.y);
+                if (dx + dy === 1) {
+                    target = enemy;
+                    foundAdjacent = true;
+                    break;
+                }
+            }
+            if (foundAdjacent) break;
+        }
+        if (!foundAdjacent) {
+            // No adjacent enemy, use closest soft target
+            target = AcquireTargetMethods.acquireClosestSoftTarget(caller, combatants);
+        }
+            // --- Enhanced movement logic: try to move around blockers if path is blocked ---
+            // This should be called in processMove or closeTheGap logic
+            this.tryMoveAroundBlocker = (caller, combatants) => {
+                // Only try if we have a target
+                if (!caller.targetId || !combatants[caller.targetId]) return;
+                const target = combatants[caller.targetId];
+                // Get all possible orthogonal moves (N/S/E/W)
+                const possibleMoves = [
+                    { x: caller.coordinates.x + 1, y: caller.coordinates.y },
+                    { x: caller.coordinates.x - 1, y: caller.coordinates.y },
+                    { x: caller.coordinates.x, y: caller.coordinates.y + 1 },
+                    { x: caller.coordinates.x, y: caller.coordinates.y - 1 }
+                ];
+                // For large monsters, check all virtually occupied tiles for overlap
+                const isBlocked = (coords) => {
+                    const scale = caller.scale || caller["main-monster"] || caller.isMainMonster ? 2 : 1;
+                    for (let dx = 0; dx < scale; dx++) {
+                        for (let dy = 0; dy < scale; dy++) {
+                            const tileX = coords.x + dx;
+                            const tileY = coords.y + dy;
+                            // Check if any other unit occupies this tile
+                            const overlap = Object.values(combatants).some(e => {
+                                if (e.dead || e.id === caller.id) return false;
+                                if (e.coordinates.x === tileX && e.coordinates.y === tileY) return true;
+                                if (Array.isArray(e.occupiedTiles)) {
+                                    return e.occupiedTiles.some(t => t.x === tileX && t.y === tileY);
+                                }
+                                return false;
+                            });
+                            if (overlap) return true;
+                        }
+                    }
+                    return false;
+                };
+                const inBounds = (coords) => coords.x >= 0 && coords.x < this.MAX_DEPTH && coords.y >= 0 && coords.y < this.MAX_LANES;
+                // Prefer moves that get closer to the target, but if all are blocked, try any unblocked orthogonal move
+                possibleMoves.sort((a, b) => {
+                    const da = Math.abs(a.x - target.coordinates.x) + Math.abs(a.y - target.coordinates.y);
+                    const db = Math.abs(b.x - target.coordinates.x) + Math.abs(b.y - target.coordinates.y);
+                    return da - db;
+                });
+                for (const move of possibleMoves) {
+                    if (inBounds(move) && !isBlocked(move)) {
+                        caller.coordinates.x = move.x;
+                        caller.coordinates.y = move.y;
+                        return true;
+                    }
+                }
+                // If all preferred moves are blocked, try any unblocked orthogonal move
+                for (const move of possibleMoves) {
+                    if (inBounds(move) && !isBlocked(move)) {
+                        caller.coordinates.x = move.x;
+                        caller.coordinates.y = move.y;
+                        return true;
+                    }
+                }
+                return false;
+            };
         if (!target) {
-            console.log(`[Mummy] acquireTarget — no soft target found`);
+            //console.log(`[Mummy] acquireTarget — no target found`);
             return;
         }
         caller.pendingAttack = this.chooseAttackType(caller, target);
         caller.targetId = target.id;
-        console.log(`[Mummy] acquireTarget → target=${target.name || target.type || target.id}, pendingAttack=${caller.pendingAttack?.name}`);
+        //console.log(`[Mummy] acquireTarget → target=${target.name || target.type || target.id}, pendingAttack=${caller.pendingAttack?.name}`);
     }
 
     this.handleOverlap = (caller, combatants) => {
@@ -128,7 +245,6 @@ export function Mummy(data, utilMethods, animationManager, overlayManager) {
                 const defId = Date.now() + Math.random();
                 const defObj = { id: defId, value: 'DEF ↓', source: 'Mummy' };
                 enemy.damageIndicators.push(defObj);
-                console.log('[DIAG][Mummy] Pushed to enemy.damageIndicators:', defObj, 'Current:', enemy.damageIndicators);
                 setTimeout(() => {
                     const idx = enemy.damageIndicators.findIndex(e => e && e.id === defId);
                     if (idx !== -1) enemy.damageIndicators.splice(idx, 1);
@@ -163,16 +279,16 @@ export function Mummy(data, utilMethods, animationManager, overlayManager) {
         // Retarget every turn to always track the closest enemy
         this.acquireTarget(caller, combatants);
 
-        console.log(`[Mummy] processMove — eraIndex=${caller.eraIndex}, targetId=${caller.targetId}, pendingAttack=${caller.pendingAttack?.name}, attacking=${caller.attacking}, moveCooldown=${caller.moveCooldown}, energy=${Math.floor(caller.energy || 0)}`);
-        console.log('[Mummy][DEBUG] State at processMove:', {
-            pendingAttack: caller.pendingAttack,
-            attacking: caller.attacking,
-            moveCooldown: caller.moveCooldown,
-            onMoveCooldown: caller.onMoveCooldown,
-            targetId: caller.targetId,
-            hp: caller.hp,
-            energy: caller.energy
-        });
+        //console.log(`[Mummy] processMove — eraIndex=${caller.eraIndex}, targetId=${caller.targetId}, pendingAttack=${caller.pendingAttack?.name}, attacking=${caller.attacking}, moveCooldown=${caller.moveCooldown}, energy=${Math.floor(caller.energy || 0)}`);
+        //console.log('[Mummy][DEBUG] State at processMove:', {
+        //    pendingAttack: caller.pendingAttack,
+        //    attacking: caller.attacking,
+        //    moveCooldown: caller.moveCooldown,
+        //    onMoveCooldown: caller.onMoveCooldown,
+        //    targetId: caller.targetId,
+        //    hp: caller.hp,
+        //    energy: caller.energy
+        //});
 
         // Check if induce_fear should fire (energy ≥ 90 and special ready)
         const fearSpecial = Array.isArray(caller.specials)
@@ -187,29 +303,185 @@ export function Mummy(data, utilMethods, animationManager, overlayManager) {
             caller.onMoveCooldown = false;
         }, caller.moveCooldown);
 
-        // Always close the gap regardless of eraIndex — unless casting lock is active
+        // Prevent movement if already adjacent to any enemy (stand and fight)
         if (!caller.castingLock) {
-            data.methods.closeTheGap(caller, combatants);
+            // Use virtually occupied tiles for adjacency checks
+            let occupiedTiles = Array.isArray(caller.occupiedTiles) && caller.occupiedTiles.length > 0
+                ? caller.occupiedTiles
+                : (() => {
+                    const scale = caller.scale || caller["main-monster"] || caller.isMainMonster ? 2 : 1;
+                    const baseX = caller.coordinates.x;
+                    const baseY = caller.coordinates.y;
+                    const tiles = [];
+                    for (let dx = 0; dx < scale; dx++) {
+                        for (let dy = 0; dy < scale; dy++) {
+                            tiles.push({ x: baseX + dx, y: baseY + dy });
+                        }
+                    }
+                    return tiles;
+                })();
+            // Only check adjacency to the current target
+            let target = caller.targetId && combatants[caller.targetId] ? combatants[caller.targetId] : null;
+            let isAdjacentToTarget = false;
+            if (target) {
+                isAdjacentToTarget = occupiedTiles.some(tile => {
+                    const dx = Math.abs(target.coordinates.x - tile.x);
+                    const dy = Math.abs(target.coordinates.y - tile.y);
+                    return (dx + dy === 1);
+                });
+            }
+            if (!isAdjacentToTarget) {
+                // Try to move toward the target; if blocked, try to move around blocker
+                const prevX = caller.coordinates.x;
+                const prevY = caller.coordinates.y;
+                // --- Enhanced: Prevent overlap for large monsters ---
+                const tryMove = (moveFn) => {
+                    // Simulate move
+                    const origX = caller.coordinates.x;
+                    const origY = caller.coordinates.y;
+                    moveFn();
+                    // Calculate new virtually occupied tiles
+                    const scale = caller.scale || caller["main-monster"] || caller.isMainMonster ? 2 : 1;
+                    const newTiles = [];
+                    for (let dx = 0; dx < scale; dx++) {
+                        for (let dy = 0; dy < scale; dy++) {
+                            newTiles.push({ x: caller.coordinates.x + dx, y: caller.coordinates.y + dy });
+                        }
+                    }
+                    // Check for overlap with any other unit
+                    let overlap = false;
+                    Object.values(combatants).forEach(e => {
+                        if (e.dead || e.id === caller.id) return;
+                        // Check anchor
+                        if (newTiles.some(t => t.x === e.coordinates.x && t.y === e.coordinates.y)) overlap = true;
+                        // Check virtually occupied tiles if present
+                        if (Array.isArray(e.occupiedTiles)) {
+                            if (newTiles.some(t => e.occupiedTiles.some(et => et.x === t.x && et.y === t.y))) overlap = true;
+                        }
+                    });
+                    // Undo move if overlap
+                    if (overlap) {
+                        caller.coordinates.x = origX;
+                        caller.coordinates.y = origY;
+                        return false;
+                    }
+                    return true;
+                };
+                // Try closeTheGap
+                const moved = tryMove(() => data.methods.closeTheGap(caller, combatants));
+                if (!moved) {
+                    // Movement was blocked or would overlap, try to move around blocker
+                    tryMove(() => this.tryMoveAroundBlocker(caller, combatants));
+                }
+            }
         }
 
         // Keep facing toward target
         if (caller.targetId && combatants[caller.targetId]) {
             const target = combatants[caller.targetId];
-            caller.facing = (caller.coordinates.x <= target.coordinates.x) ? 'right' : 'left';
+            // --- Improved: For 2x monsters, if target is in any column of the Mummy and directly above or below, do not update facing ---
+            const scale = caller.scale || caller["main-monster"] || caller.isMainMonster ? 2 : 1;
+            const is2x = scale === 2;
+            let skipFacing = false;
+            if (is2x) {
+                const x0 = caller.coordinates.x;
+                const x1 = x0 + 1;
+                const y0 = caller.coordinates.y;
+                const y1 = y0 + 1;
+                const inMummyColumn = (target.coordinates.x === x0 || target.coordinates.x === x1);
+                const directlyAbove = target.coordinates.y === y0 - 1;
+                const directlyBelow = target.coordinates.y === y1 + 1;
+                if (inMummyColumn && (directlyAbove || directlyBelow)) {
+                    skipFacing = true;
+                }
+            }
+            if (!skipFacing) {
+                caller.facing = (caller.coordinates.x <= target.coordinates.x) ? 'right' : 'left';
+            }
+            // --- Robust attack trigger: allow attack if target is adjacent to any occupied tile ---
+            const occupiedTiles = Array.isArray(caller.occupiedTiles) && caller.occupiedTiles.length > 0
+                ? caller.occupiedTiles
+                : (() => {
+                    const scale = caller.scale || caller["main-monster"] || caller.isMainMonster ? 2 : 1;
+                    const baseX = caller.coordinates.x;
+                    const baseY = caller.coordinates.y;
+                    const tiles = [];
+                    for (let dx = 0; dx < scale; dx++) {
+                        for (let dy = 0; dy < scale; dy++) {
+                            tiles.push({ x: baseX + dx, y: baseY + dy });
+                        }
+                    }
+                    return tiles;
+                })();
+            let isAdjacentToTarget = false;
+            if (target) {
+                isAdjacentToTarget = occupiedTiles.some(tile => {
+                    const dx = Math.abs(target.coordinates.x - tile.x);
+                    const dy = Math.abs(target.coordinates.y - tile.y);
+                    return (dx + dy === 1);
+                });
+            }
+            if (
+                caller.pendingAttack &&
+                !caller.attacking &&
+                (!caller.castingLock) &&
+                caller.pendingAttack.cooldown_position === 100 &&
+                isAdjacentToTarget
+            ) {
+                this.initiateAttack(caller, combatants);
+            }
+            // (skip the old attack trigger logic)
+            // --- Attack trigger logic ---
+            // If we have a pendingAttack and are not already attacking, check if we can attack now
+            if (
+                caller.pendingAttack &&
+                !caller.attacking &&
+                (!caller.castingLock) &&
+                caller.pendingAttack.cooldown_position === 100 // attack is ready
+            ) {
+                // Check if target is in range for the pending attack
+                const attackRange = caller.pendingAttack.range;
+                // For 2x monsters, check adjacency to all occupied tiles
+                const occupiedTiles = (caller.scale === 2 && Array.isArray(caller.occupiedTiles))
+                    ? caller.occupiedTiles
+                    : [caller.coordinates];
+                let inRange = false;
+                if (attackRange === 'close') {
+                    // Adjacent to any occupied tile
+                    inRange = occupiedTiles.some(tile => {
+                        const dx = Math.abs(tile.x - target.coordinates.x);
+                        const dy = Math.abs(tile.y - target.coordinates.y);
+                        return (dx + dy === 1); // 4-way adjacency
+                    });
+                } else if (attackRange === 'medium' || attackRange === 'far') {
+                    // Use Manhattan distance for range
+                    const minDist = Math.min(...occupiedTiles.map(tile => {
+                        const dx = Math.abs(tile.x - target.coordinates.x);
+                        const dy = Math.abs(tile.y - target.coordinates.y);
+                        return dx + dy;
+                    }));
+                    if (attackRange === 'medium') inRange = minDist <= 3;
+                    if (attackRange === 'far') inRange = minDist <= 6;
+                }
+                if (inRange) {
+                    // Fire the attack!
+                    this.initiateAttack(caller, combatants);
+                }
+            }
         }
     }
 
     this.initiateAttack = async (caller, combatants) => {
         const target = combatants[caller.targetId];
-        console.log('[Mummy][DEBUG] initiateAttack called', {
-            pendingAttack: caller.pendingAttack,
-            attacking: caller.attacking,
-            moveCooldown: caller.moveCooldown,
-            onMoveCooldown: caller.onMoveCooldown,
-            targetId: caller.targetId,
-            hp: caller.hp,
-            energy: caller.energy
-        });
+        //console.log('[Mummy][DEBUG] initiateAttack called', {
+        //    pendingAttack: caller.pendingAttack,
+        //    attacking: caller.attacking,
+        //    moveCooldown: caller.moveCooldown,
+        //    onMoveCooldown: caller.onMoveCooldown,
+        //    targetId: caller.targetId,
+        //    hp: caller.hp,
+        //    energy: caller.energy
+        //});
         caller.attacking = true;
         if (!target) {
             console.log('[Mummy] initiateAttack — NO TARGET!');
@@ -217,24 +489,41 @@ export function Mummy(data, utilMethods, animationManager, overlayManager) {
         }
 
         const attackName = caller.pendingAttack?.name;
-        console.log(`[Mummy] initiateAttack — attack=${attackName}, target=${target.name || target.type || target.id}`);
+        //console.log(`[Mummy] initiateAttack — attack=${attackName}, target=${target.name || target.type || target.id}`);
 
         // Log before executing the attack
-        console.log('[Mummy][DEBUG] About to execute attack', {
-            attackName,
-            pendingAttack: caller.pendingAttack,
-            attacking: caller.attacking,
-            moveCooldown: caller.moveCooldown,
-            onMoveCooldown: caller.onMoveCooldown,
-            targetId: caller.targetId,
-            hp: caller.hp,
-            energy: caller.energy
-        });
+        //console.log('[Mummy][DEBUG] About to execute attack', {
+        //    attackName,
+        //    pendingAttack: caller.pendingAttack,
+        //    attacking: caller.attacking,
+        //    moveCooldown: caller.moveCooldown,
+        //    onMoveCooldown: caller.onMoveCooldown,
+        //    targetId: caller.targetId,
+        //    hp: caller.hp,
+        //    energy: caller.energy
+        //});
         switch (attackName) {
             case 'grasp': {
                 const attackEffect = caller.pendingAttack.effect;
-                if (attackEffect && attackEffect.type === 'stun') {
-                    console.log(`*** MUMMY GRASP (STUN attempt, 50%) → ${target.name || target.type || target.id} ***`);
+                // Find which occupied tile is adjacent to the target
+                let graspTile = caller.coordinates;
+                if (Array.isArray(caller.occupiedTiles) && caller.occupiedTiles.length > 1) {
+                    const adjTile = caller.occupiedTiles.find(tile => {
+                        const dx = Math.abs(tile.x - target.coordinates.x);
+                        const dy = Math.abs(tile.y - target.coordinates.y);
+                        return (dx + dy === 1);
+                    });
+                    if (adjTile) graspTile = adjTile;
+                }
+                // Trigger grasp animation using animationManager at the correct tile
+                if (this.animationManager && typeof this.animationManager.triggerAttackAnimation === 'function') {
+                    await this.animationManager.triggerAttackAnimation({
+                        coordinates: graspTile,
+                        facing: caller.facing,
+                        icon: caller.pendingAttack.icon,
+                        type: 'grasp',
+                        animationType: 'grasp'
+                    });
                 }
                 this.hitsCombatant(caller, target);
                 break;
@@ -255,7 +544,7 @@ export function Mummy(data, utilMethods, animationManager, overlayManager) {
                     // Boost mummy energy by 40 (capped at 100)
                     caller.energy = Math.min(100, (caller.energy || 0) + 40);
 
-                    console.log(`[Mummy] Energy Drain: drained ${drainedAmount} energy from ${target.name || target.type}, mummy energy now ${caller.energy}`);
+                    //console.log(`[Mummy] Energy Drain: drained ${drainedAmount} energy from ${target.name || target.type}, mummy energy now ${caller.energy}`);
 
                     if (typeof this.broadcastDataUpdate === 'function') this.broadcastDataUpdate();
                 }
@@ -275,14 +564,14 @@ export function Mummy(data, utilMethods, animationManager, overlayManager) {
         this.kickoffAttackCooldown(caller);
         caller.pendingAttack = null;
         caller.attacking = false;
-        console.log('[Mummy][DEBUG] Attack complete. State after attack:', {
-            pendingAttack: caller.pendingAttack,
-            attacking: caller.attacking,
-            moveCooldown: caller.moveCooldown,
-            onMoveCooldown: caller.onMoveCooldown,
-            targetId: caller.targetId,
-            hp: caller.hp,
-            energy: caller.energy
-        });
+        //console.log('[Mummy][DEBUG] Attack complete. State after attack:', {
+        //    pendingAttack: caller.pendingAttack,
+        //    attacking: caller.attacking,
+        //    moveCooldown: caller.moveCooldown,
+        //    onMoveCooldown: caller.onMoveCooldown,
+        //    targetId: caller.targetId,
+        //    hp: caller.hp,
+        //    energy: caller.energy
+        //});
     }
 }

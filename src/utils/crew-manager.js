@@ -405,7 +405,7 @@ export function CrewManager(){
             name: 'Sardonis',
             id: 123,
             level: 1,
-            stats: { str: 8, int: 5, dex: 6, fort: 7, baseHp: 1110, experience: 0, attackSpeedMult: 2 },
+            stats: { str: 8, int: 5, dex: 6, fort: 7, baseHp: 110, experience: 0, attackSpeedMult: 2 },
             portrait: images['soldier_portrait'],
             inventory: [],
             passives: ['inspiring_force'],

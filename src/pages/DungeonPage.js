@@ -2270,7 +2270,12 @@ class DungeonPage extends React.Component {
                     const current = this.props.combatManager?.FIGHT_INTERVAL;
                     const idx = INTERVALS.indexOf(current);
                     if (idx < INTERVALS.length - 1) {
-                        this.props.combatManager.updateAllFightIntervals(INTERVALS[idx + 1]);
+                        const newInterval = INTERVALS[idx + 1];
+                        this.props.combatManager.updateAllFightIntervals(newInterval);
+                        // Persist to meta
+                        const meta = getMeta();
+                        meta.combatSpeed = newInterval;
+                        storeMeta(meta);
                         this.forceUpdate();
                     }
                     break;
@@ -2280,7 +2285,12 @@ class DungeonPage extends React.Component {
                     const current = this.props.combatManager?.FIGHT_INTERVAL;
                     const idx = INTERVALS.indexOf(current);
                     if (idx > 0) {
-                        this.props.combatManager.updateAllFightIntervals(INTERVALS[idx - 1]);
+                        const newInterval = INTERVALS[idx - 1];
+                        this.props.combatManager.updateAllFightIntervals(newInterval);
+                        // Persist to meta
+                        const meta = getMeta();
+                        meta.combatSpeed = newInterval;
+                        storeMeta(meta);
                         this.forceUpdate();
                     }
                     break;

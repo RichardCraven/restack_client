@@ -47,6 +47,17 @@ class MonsterBattle extends React.Component {
     getGameSpeed = () => {
         return this.props.combatManager?.FIGHT_INTERVAL;
     }
+
+    setGameSpeed = (newInterval) => {
+        if (this.props.combatManager) {
+            this.props.combatManager.updateAllFightIntervals(newInterval);
+            // Persist to meta
+            const meta = getMeta();
+            meta.combatSpeed = newInterval;
+            storeMeta(meta);
+            if (typeof this.forceUpdate === 'function') this.forceUpdate();
+        }
+    }
     // lifecycle methods implemented further below
 
     // All keydown logic removed; now handled in CombatSimulator
