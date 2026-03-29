@@ -1499,6 +1499,20 @@
         animation: drainedPulse 0.5s ease-in-out 3;
         position: relative;
         &::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 4px solid #7c3aed;
+            background: transparent;
+            box-sizing: border-box;
+            pointer-events: none;
+            z-index: 998;
+        }
+        &::after {
             content: '⚡ ⚡ ⚡';
             position: absolute;
             top: -18px;
@@ -1893,6 +1907,9 @@
     }
     .portrait-wrapper{
         z-index: 1;
+        width: 100px;
+        height: 100px;
+        aspect-ratio: 1/1;
     }
     .action-bar-wrapper{
         z-index: 0;
@@ -1994,8 +2011,9 @@
                         // transition: 1s;
                         top: 0;
                         .fighter-portrait{
-                            height: 100px;
                             width: 100px;
+                            height: 100px;
+                            aspect-ratio: 1/1;
                             border-radius: 100px;
                             position: relative;
                             cursor: pointer;

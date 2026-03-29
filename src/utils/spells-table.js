@@ -4,8 +4,9 @@
 export const SPELLS = {
   magicMissile: {
     name: 'Magic Missile',
-    prepareTime: 10000, // milliseconds (10 seconds)
+    prepareTime: 300000, // milliseconds (300 seconds)
     description: 'A basic arcane projectile that never misses.',
+    energyCost: 30, // Default energy cost for magic missile
   },
 };
 

@@ -254,8 +254,40 @@ export function Mummy(data, utilMethods, animationManager, overlayManager) {
             throw new Error('moveCooldown must be defined for all units');
         }
 
+        // --- DIAGNOSTIC: Log before acquireTarget ---
+        if (typeof console !== 'undefined') {
+            const t = caller.targetId && combatants[caller.targetId] ? combatants[caller.targetId] : null;
+            console.log('[Mummy][DIAG] BEFORE acquireTarget:', {
+                targetId: caller.targetId,
+                targetIsVCT: t ? !!t.isVCT : null,
+                target: t
+            });
+        }
+
         // Retarget every turn to always track the closest enemy
         this.acquireTarget(caller, combatants);
+
+        // --- DIAGNOSTIC: Log after acquireTarget ---
+        if (typeof console !== 'undefined') {
+            const t = caller.targetId && combatants[caller.targetId] ? combatants[caller.targetId] : null;
+            console.log('[Mummy][DIAG] AFTER acquireTarget:', {
+                targetId: caller.targetId,
+                targetIsVCT: t ? !!t.isVCT : null,
+                target: t
+            });
+        }
+
+        // --- FINAL UNCONDITIONAL VCT GUARD ---
+        if (caller.targetId && combatants[caller.targetId] && combatants[caller.targetId].isVCT) {
+            if (typeof console !== 'undefined') {
+                console.warn('[Mummy][VCT-GUARD] TargetId was set to a VCT after acquireTarget! Forcing to null.', {
+                    targetId: caller.targetId,
+                    target: combatants[caller.targetId]
+                });
+            }
+            caller.targetId = null;
+            caller.pendingAttack = null;
+        }
 
         //console.log(`[Mummy] processMove — eraIndex=${caller.eraIndex}, targetId=${caller.targetId}, pendingAttack=${caller.pendingAttack?.name}, attacking=${caller.attacking}, moveCooldown=${caller.moveCooldown}, energy=${Math.floor(caller.energy || 0)}`);
         //console.log('[Mummy][DEBUG] State at processMove:', {
@@ -514,17 +546,10 @@ export function Mummy(data, utilMethods, animationManager, overlayManager) {
 
                 // Only drain energy if the target survived
                 if (target && !target.dead && target.hp > 0) {
-                    const drainedAmount = target.energy || 0;
-                    target.energy = 0;
-                    target.drained = true;
-                    target.drained_eras = 1; // cleared in restartTurnCycle — speed-agnostic
-
+                    const { applyDrainedEffect } = require('../../combat-effects');
+                    applyDrainedEffect(target, this.broadcastDataUpdate);
                     // Boost mummy energy by 40 (capped at 100)
                     caller.energy = Math.min(100, (caller.energy || 0) + 40);
-
-                    //console.log(`[Mummy] Energy Drain: drained ${drainedAmount} energy from ${target.name || target.type}, mummy energy now ${caller.energy}`);
-
-                    if (typeof this.broadcastDataUpdate === 'function') this.broadcastDataUpdate();
                 }
                 break;
             }

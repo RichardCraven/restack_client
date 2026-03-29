@@ -130,44 +130,40 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
         }
     return attack;
     }
+    // Import SPELLS table for spell metadata
+    const { SPELLS } = require('../../spells-table');
     this.useSpell = (caller, combatants) => {
-        // const getGlyph = () => {
-
-        // }
-        // console.log('caller.specialActions: ', caller.specialActions);
-        // debugger
-
-        // Find a spell of subtype 'magic missile'
+        // Diagnostic: log spell state and decision
         const magicMissile = caller.specialActions && caller.specialActions.find(
             a => a.type === 'spell' && a.subtype === 'magic missile'
         );
-        // Ensure defaults: energy_cost and movement_point_cost
         if (magicMissile) {
-            if (typeof magicMissile.energy_cost === 'undefined') magicMissile.energy_cost = 30;
-            // movement point cost is 1/4 of the fighter's movementPointsMax (or manualMovesTotal fallback)
+            // Use energyCost from spells-table if defined, else fallback
+            if (typeof magicMissile.energy_cost === 'undefined') {
+                magicMissile.energy_cost = (SPELLS.magicMissile && SPELLS.magicMissile.energyCost) || 30;
+            }
             const maxPts = (typeof caller.movementPointsMax === 'number') ? caller.movementPointsMax : (caller.manualMovesTotal || 1);
             if (typeof magicMissile.movement_point_cost === 'undefined') magicMissile.movement_point_cost = Math.ceil(maxPts * 0.25);
         }
-        
-        // Three conditions to cast: cooldown_position===100, enough energy, and enough movement points
         const magicMissileAvailable = magicMissile && (magicMissile.cooldown_position === 100) && (typeof magicMissile.energy_cost === 'number' ? caller.energy >= magicMissile.energy_cost : true) && (typeof magicMissile.movement_point_cost === 'number' ? ((typeof caller.movementPointsCurrent === 'number' ? caller.movementPointsCurrent : caller.manualMovesCurrent || 0) >= magicMissile.movement_point_cost) : true);
+        if (typeof console !== 'undefined') {
+            console.log('[Wizard AI][useSpell] magicMissile:', magicMissile, 'available:', magicMissileAvailable, 'energy:', caller.energy, 'movePts:', caller.movementPointsCurrent, 'manualMoves:', caller.manualMovesCurrent);
+        }
         if (magicMissileAvailable) {
-            // Acquire a target (closest enemy)
             const liveEnemies = Object.values(combatants).filter(e => !e.dead && (e.isMonster || e.isMinion));
             if (liveEnemies.length > 0) {
-                // Sort by distance
                 const getDist = (a, b) => Math.sqrt(Math.pow(a.coordinates.x - b.coordinates.x, 2) + Math.pow(a.coordinates.y - b.coordinates.y, 2));
                 const target = liveEnemies.sort((a, b) => getDist(a, caller) - getDist(b, caller))[0];
-                // Use MonsterBattle's fireSpecialForAI if available
+                if (typeof console !== 'undefined') {
+                    console.log('[Wizard AI][useSpell] Firing magic missile at', target?.id, target);
+                }
                 if (this.monsterBattleRef && typeof this.monsterBattleRef.fireSpecialForAI === 'function') {
                     caller.targetId = target.id;
                     this.monsterBattleRef.fireSpecialForAI(caller, magicMissile);
                 } else if (this.useSpellMagicMissile) {
                     this.useSpellMagicMissile(caller, target, magicMissile);
                 } else {
-                    
                     caller.specialActions = caller.specialActions.filter(a => a !== magicMissile)
-                    // notify host/owner that caller data changed so UI can re-render
                     if (typeof this.broadcastDataUpdate === 'function') {
                         try {
                             this.broadcastDataUpdate(caller);
@@ -175,9 +171,6 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                             try { this.broadcastDataUpdate(); } catch (e2) { /* ignore */ }
                         }
                     }
-                    // Additionally, if a MonsterBattle ref is wired in, call its
-                    // update hook so the component can reconcile the change and
-                    // refresh the interaction pane count directly.
                     if (this.monsterBattleRef && typeof this.monsterBattleRef.applyFighterUpdate === 'function') {
                         try {
                             this.monsterBattleRef.applyFighterUpdate(caller);
@@ -185,9 +178,7 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                             console.warn('monsterBattleRef.applyFighterUpdate failed', err);
                         }
                     }
-                    // Deduct energy as defined by the special
                     caller.energy -= (magicMissile.energy_cost || 50);
-                    // Reduce move points by the special's movement_point_cost so UI updates
                     try {
                         const reduce = magicMissile.movement_point_cost || Math.ceil(((typeof caller.movementPointsMax === 'number' ? caller.movementPointsMax : (caller.manualMovesTotal || 1)) * 0.25));
                         caller.manualMovesCurrent = Math.max(0, (caller.manualMovesCurrent || 0) - reduce);
@@ -198,11 +189,17 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                         }
                     } catch (err) { /* non-fatal */ }
                     this.triggerMagicMissile(caller, target, 1500);
-                    
                 }
-                // magicMissile.cooldown_position = magicMissile.cooldown || 3;
-                // console.log('spell available');
                 return true;
+            }
+        } else {
+            if (typeof console !== 'undefined') {
+                console.log('[Wizard AI][useSpell] Magic missile NOT available. Reason:', {
+                    hasMagicMissile: !!magicMissile,
+                    cooldown: magicMissile?.cooldown_position,
+                    enoughEnergy: magicMissile ? caller.energy >= magicMissile.energy_cost : false,
+                    enoughMove: magicMissile ? ((typeof caller.movementPointsCurrent === 'number' ? caller.movementPointsCurrent : caller.manualMovesCurrent || 0) >= magicMissile.movement_point_cost) : false
+                });
             }
         }
         if(caller.energy > 50){
@@ -276,6 +273,9 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
         }
     };
     this.processMove = (caller, combatants) => {
+        if (typeof console !== 'undefined') {
+            console.log('[Wizard AI][processMove] called for', caller?.id, 'eraIndex:', caller?.eraIndex, 'energy:', caller?.energy, 'moveCooldown:', caller?.moveCooldown, 'specialActions:', caller?.specialActions);
+        }
         if (caller.stunned) return; // stunned: skip all movement this tick
         if (typeof caller.moveCooldown === 'undefined') {
             throw new Error('moveCooldown must be defined for all units');
@@ -284,7 +284,6 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
         setTimeout(() => {
             caller.onMoveCooldown = false;
         }, caller.moveCooldown);
-
 
         switch(caller.behaviorSequence){
             case 'center-spellcaster': {

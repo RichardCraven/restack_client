@@ -1964,7 +1964,7 @@ class MonsterBattle extends React.Component {
                             <div className="interaction-header">Attacks</div>
                             <div className="interaction-tooltip">{this.state.hoveredAttackTile}</div>
                             <div className="interaction-tile-container">
-                                    {this.state.selectedFighter?.attacks.map((a, i)=>{
+                                    {(this.state.selectedFighter?.attacks || []).map((a, i)=>{
                                         return <div key={i}  className='interaction-tile-wrapper'>
                                                     <div 
                                                     className={`interaction-tile ${a.cooldown_position === 100 ? 'available' : ''}`} 
@@ -2014,7 +2014,7 @@ class MonsterBattle extends React.Component {
                         <div className="queue-col">
                             <div className="interaction-header">Queue</div>
                             <div className="queue-tile-container">
-                                {this.state.selectedFighter?.action_queue.map((action, i)=>{
+                                {(this.state.selectedFighter?.action_queue || []).map((action, i)=>{
                                     return <div 
                                     key={i} 
                                     style={{backgroundImage: "url(" + images[action.icon] + ")", cursor: 'pointer'}} 

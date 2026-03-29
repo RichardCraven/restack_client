@@ -1032,7 +1032,11 @@ export function CombatManager(){
         caller.turnCycle();
     }
     this.getCombatant = (id) => {
-        return Object.values(this.combatants).find(e=> e.id === id)
+        const combatant = Object.values(this.combatants).find(e=> e.id === id);
+        if (combatant && !Array.isArray(combatant.attacks)) {
+            combatant.attacks = [];
+        }
+        return combatant;
     }
     this.queueAction = (callerId, targetId, selectedAction) => {
         const caller = this.getCombatant(callerId);
@@ -1055,14 +1059,7 @@ export function CombatManager(){
     }
     this.setTargetFromClick = (callerId, targetId) => {
         const caller = this.getCombatant(callerId)
-        const target = this.getCombatant(targetId);
-        // Prevent monsters/minions from ever setting a VCT as their target
-        if (caller && (caller.isMonster || caller.isMinion) && target && target.isVCT) {
-            console.warn('[CombatManager] Prevented monster/minion from setting VCT as target. Caller:', caller.id, 'Target VCT:', target.id);
-            caller.targetId = null;
-        } else {
-            caller.targetId = targetId;
-        }
+        this.setTargetId(caller, targetId, 'setTargetFromClick');
     }
     this.broadcastDataUpdate = (caller = null) => {
         if(caller){
@@ -1170,7 +1167,7 @@ export function CombatManager(){
             const adj = this.findAdjacentEnemyForLargeMonster(caller);
             if (adj && adj.enemy) {
                 // Retarget to adjacent enemy and set attack origin
-                caller.targetId = adj.enemy.id;
+                this.setTargetId(caller, adj.enemy.id, 'chooseAttackType-adjacent');
                 caller.attackOrigin = adj.originTile; // Used for animation/effects if needed
                 // Always pick a close-range attack if available
                 const available = caller.attacks.filter(e=>e.cooldown_position === 100 && e.range === 'close');
@@ -1197,8 +1194,7 @@ export function CombatManager(){
         // Final guard: never allow a monster to target a VCT
         const t = this.combatants[caller.targetId];
         if ((caller.isMonster || caller.isMinion) && t && t.isVCT) {
-            console.warn('[chooseAttackType] Monster attempted to target a VCT. Forcing targetId to null.', caller.id, t.id);
-            caller.targetId = null;
+            this.setTargetId(caller, null, 'chooseAttackType-finalGuard');
             debugger;
         }
     }
@@ -1469,8 +1465,7 @@ export function CombatManager(){
         },100)
     }
     this.kickoffSpecialCooldown = (specialAction) => {
-        if(!specialAction) return
-
+        if(!specialAction) return;
         specialAction['cooldown_position'] = 0;
         // cooldown is expressed in eras. One era = TICKS_PER_ERA ticks of FIGHT_INTERVAL ms each.
         // Reading this.FIGHT_INTERVAL live inside the interval means the cooldown rate
@@ -1574,17 +1569,13 @@ export function CombatManager(){
         if(this.combatPaused || caller.dead) return;
         // Defensive: never acquire a VCT as a target
         if (caller && caller.targetId) {
-            let t = this.combatants[caller.targetId];
-            if (t && t.isVCT && t.parentMonsterId && this.combatants[t.parentMonsterId]) {
-                caller.targetId = t.parentMonsterId;
-            } else if (t && t.isVCT) {
-                caller.targetId = null;
-            }
+            this.setTargetId(caller, caller.targetId, 'acquireTarget-preAI');
         }
         if(this.fighterAI.roster[caller.type]){
             const prevTargetId = caller.targetId;
             this.fighterAI.roster[caller.type].acquireTarget(caller, this.combatants, targetToAvoid)
             if(caller.targetId && caller.targetId !== prevTargetId){
+                this.setTargetId(caller, caller.targetId, 'acquireTarget-fighterAI');
                 // Set facing based on target position ONLY if targetId changed
                 const target = this.combatants[caller.targetId];
                 if (target && !caller.facingLocked) {
@@ -1602,7 +1593,6 @@ export function CombatManager(){
                     this.overlayManager.addAnimation(animation)
                 }
             }
-            // If no new target, do not change facing (persist last direction)
             return
         }
         
@@ -1610,6 +1600,7 @@ export function CombatManager(){
             const prevTargetId = caller.targetId;
             this.monsterAI.roster[caller.type].acquireTarget(caller, this.combatants);
             if(caller.targetId && caller.targetId !== prevTargetId){
+                this.setTargetId(caller, caller.targetId, 'acquireTarget-monsterAI');
                 // Set facing based on target position ONLY if targetId changed
                 const target = this.combatants[caller.targetId];
                 if (target && !caller.facingLocked) {
@@ -1627,7 +1618,6 @@ export function CombatManager(){
                     this.overlayManager.addAnimation(animation)
                 }
             }
-            // If no new target, do not change facing (persist last direction)
             return
         }
         const liveMonsters = Object.values(this.combatants).filter(e=> ((e.isMonster || e.isMinion )  && !e.dead)),
@@ -1652,8 +1642,8 @@ export function CombatManager(){
         this.clearTargetListById(caller.id)
         target.targettedBy.push(caller.id)
         const attack = this.chooseAttackType(caller, target);
-        caller.targetId = target.id
-            if(!attack){
+        this.setTargetId(caller, target.id, 'acquireTarget-default');
+        if(!attack){
             console.log('whoa! about to assign an undefined attackj to pending');
             console.log('details: ', 'caller:',caller,'target', target);
         }
@@ -1683,11 +1673,11 @@ export function CombatManager(){
         const targetsSortedVertically = liveEnemies.sort((a,b)=>a.coordinates.y - b.coordinates.y);
         let currentTargetIndex = targetsSortedVertically.indexOf(currentTarget)
         if(targetsSortedVertically[currentTargetIndex+1]){
-            caller.targetId = targetsSortedVertically[currentTargetIndex+1].id;
+            this.setTargetId(caller, targetsSortedVertically[currentTargetIndex+1].id, 'acquireTargetManually-next');
         } else if(targetsSortedVertically.length > 0) {
-            caller.targetId = targetsSortedVertically[0].id
+            this.setTargetId(caller, targetsSortedVertically[0].id, 'acquireTargetManually-first');
         } else {
-            caller.targetId = null;
+            this.setTargetId(caller, null, 'acquireTargetManually-none');
         }
         if(caller.targetId){
             // Set facing based on target position
@@ -1836,10 +1826,11 @@ export function CombatManager(){
         if(liveCombatants.some(e=>e.coordinates.y === newPosition && e.coordinates.x === newDepth)){
             let targetPosition = {x: newDepth, y: newPosition};
             let downspace = targetPosition.y + 1;
-            let upspace = targetPosition.y - 1
-            let upSpaceOccupied = liveCombatants.some(e=>e.coordinates.x === targetPosition.x && e.coordinates.y === targetPosition.y - 1);
-            let downSpaceOccupied = liveCombatants.some(e=>e.coordinates.x === targetPosition.x && e.coordinates.y === targetPosition.y + 1);
-            let upPref = this.pickRandom([false, true])
+            let upspace = targetPosition.y - 1;
+            // Define upSpaceOccupied and downSpaceOccupied before use
+            const upSpaceOccupied = liveCombatants.some(e=>e.coordinates.y === upspace && e.coordinates.x === newDepth);
+            const downSpaceOccupied = liveCombatants.some(e=>e.coordinates.y === downspace && e.coordinates.x === newDepth);
+            let upPref = this.pickRandom([false, true]);
             if(upPref){
                 if(!upSpaceOccupied && upspace >= 0){
                     newPosition = targetPosition.y-1;
@@ -1908,6 +1899,14 @@ export function CombatManager(){
             if(combatant.coordinates.x < 0)combatant.coordinates.x = 0;
         // },800)
         if (combatant.dead) {
+            // Remove VCT if this is a monster and has a VCT
+            if (combatant.isMonster && this.vctByMonster && this.vctByMonster[combatant.id]) {
+                const vctId = `${combatant.id}_VCT`;
+                if (this.combatants[vctId]) {
+                    delete this.combatants[vctId];
+                }
+                delete this.vctByMonster[combatant.id];
+            }
             // Defensive: checkOverlap should never be invoked for dead combatants.
             // Instead of breaking in the debugger, clear overlap and return.
             console.warn('checkOverlap called for dead combatant:', combatant && combatant.id);
@@ -1961,7 +1960,7 @@ export function CombatManager(){
                             if(liveCombatants.some(e=>e.coordinates.x === combatant.coordinates.x && e.coordinates.y === combatant.coordinates.y + 1)){
                                 depthAvailable = true;
                             } else {
-                                combatant.coordinates.y = combatant.coordinates.y + 1
+                                combatant.coordinates.x = combatant.coordinates.x + 1
                                 combatant.coordinates.y++
                             }
                         } else {
@@ -2294,10 +2293,47 @@ export function CombatManager(){
             if(caller.targetId === combatantHit.id) caller.targetId = null;
             combatantHit.wounded.severity = 'lethal';
             this.targetKilled(combatantHit);
+        } else if(criticalHit) {
+            // HANDLE PUSHBACK OF TARGET
         }
         setTimeout(()=>{
-            // combatantHit.wounded = false;
-        }, this.FIGHT_INTERVAL * 30)
+            caller.active = caller.aiming = false;
+            caller.attacking = caller.attackingReverse = false;
+            caller.missed = false;
+            
+            if(!this.isMonster && !this.isMinion){
+                const hasValidTargets = Object.values(this.combatants).filter(e=>e.isMonster || e.isMinion).length >= 1;
+                if(hasValidTargets){
+                    const target = this.combatants[caller.targetId];
+                    const attack = this.chooseAttackType(caller, target);
+                    caller.pendingAttack = attack;
+                } else {
+                    this.clearTargetListById(caller.id);
+                    caller.targetId = null;
+                }
+            } else {
+                //is monster or minion
+                const hasValidTargets = Object.values(this.combatants).filter(e=>!e.isMonster && !e.isMinion).length >= 1;
+                if(hasValidTargets){
+                    const target = this.combatants[caller.targetId];
+                    const attack = this.chooseAttackType(caller, target);
+                    caller.pendingAttack = attack;
+                } else {
+                    this.clearTargetListById(caller.id);
+                    caller.targetId = null;
+                }
+            }
+            
+            // setTimeout(()=>{
+            //     caller.restartTurnCycle();
+            // }, 250)
+
+        }, this.FIGHT_INTERVAL * 50)
+
+        setTimeout(()=>{
+            caller.readout.action = ''
+            caller.readout.result = ''
+        }, 1500)
     }
     this.hitsTarget = (caller, tempTarget = null) => {
         // Prevent monsters from attacking their own VCT
@@ -2395,23 +2431,23 @@ export function CombatManager(){
             caller.missed = false;
             
             if(!this.isMonster && !this.isMinion){
-                const hasValidTargets = Object.values(this.combatants).filter(e=>e.isMonster || e.isMinion).length >= 1;
+                const hasValidTargets = Object.values(this.combatants).filter(e=>e.isMonster || e.isMinion).length >= 1
                 if(hasValidTargets){
                     const attack = this.chooseAttackType(caller, target);
                     caller.pendingAttack = attack;
                 } else {
-                    this.clearTargetListById(caller.id);
-                    caller.targetId = null;
+                    this.clearTargetListById(caller.id)
+                    caller.targetId = null
                 }
             } else {
                 //is monster or minion
-                const hasValidTargets = Object.values(this.combatants).filter(e=>!e.isMonster && !e.isMinion).length >= 1;
+                const hasValidTargets = Object.values(this.combatants).filter(e=>!e.isMonster && !e.isMinion).length >= 1
                 if(hasValidTargets){
                     const attack = this.chooseAttackType(caller, target);
                     caller.pendingAttack = attack;
                 } else {
-                    this.clearTargetListById(caller.id);
-                    caller.targetId = null;
+                    this.clearTargetListById(caller.id)
+                    caller.targetId = null
                 }
             }
             
@@ -2739,3 +2775,47 @@ export function CombatManager(){
         this.getCurrentInventoryCallback = cb;
     }
 }
+
+// Centralized setter for targetId with VCT guard and diagnostics
+CombatManager.prototype.setTargetId = function(caller, targetId, context = '') {
+        const prevTargetId = caller.targetId;
+        const target = this.combatants[targetId];
+        // Monsters/minions: never allow targeting a VCT
+        if ((caller.isMonster || caller.isMinion) && target && target.isVCT) {
+            if (typeof console !== 'undefined') {
+                console.warn('[CombatManager][setTargetId][VCT-GUARD] Monster/minion attempted to set VCT as target. Nulling targetId.', {
+                    callerId: caller.id,
+                    vctId: target.id,
+                    parentMonsterId: target.parentMonsterId,
+                    context,
+                    prevTargetId
+                });
+            }
+            caller.targetId = null;
+            return;
+        }
+        // Fighters: allow targeting VCT, but redirect to parent monster if present
+        if (!(caller.isMonster || caller.isMinion) && target && target.isVCT && target.parentMonsterId && this.combatants[target.parentMonsterId]) {
+            if (typeof console !== 'undefined') {
+                console.warn('[CombatManager][setTargetId][VCT-REDIRECT] Fighter targeting VCT, redirecting to parent monster.', {
+                    callerId: caller.id,
+                    vctId: target.id,
+                    parentMonsterId: target.parentMonsterId,
+                    context,
+                    prevTargetId
+                });
+            }
+            caller.targetId = target.parentMonsterId;
+            return;
+        }
+        // Default: assign as requested
+        caller.targetId = targetId;
+        if (typeof console !== 'undefined') {
+            console.log('[CombatManager][setTargetId] targetId set', {
+                callerId: caller.id,
+                newTargetId: targetId,
+                context,
+                prevTargetId
+            });
+        }
+    };
