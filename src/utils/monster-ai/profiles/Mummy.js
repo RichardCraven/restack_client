@@ -76,13 +76,13 @@ export function Mummy(data, utilMethods, animationManager, overlayManager) {
 
     this.acquireTarget = (caller, combatants) => {
         const { AcquireTargetMethods } = require('../../shared-ai-methods/acquire-target-methods');
-        // Find all valid enemies
+        // Find all valid enemies (guaranteed VCT exclusion)
         const isMonsterOrMinion = caller.isMonster || caller.isMinion;
         const enemies = Object.values(combatants).filter(e => {
             if (isMonsterOrMinion) {
-                return !e.dead && e.id !== caller.id && !e.isMonster && !e.isMinion;
+                return !e.dead && e.id !== caller.id && !e.isMonster && !e.isMinion && !e.isVCT;
             } else {
-                return !e.dead && e.id !== caller.id && (e.isMonster || e.isMinion);
+                return !e.dead && e.id !== caller.id && (e.isMonster || e.isMinion) && !e.isVCT;
             }
         });
         // Use virtually occupied tiles for adjacency checks (for 2x2 monsters)
@@ -100,90 +100,68 @@ export function Mummy(data, utilMethods, animationManager, overlayManager) {
                 }
                 return tiles;
             })();
-        // Always retarget to any enemy adjacent to any occupied tile
-        let target = null;
-        let foundAdjacent = false;
+
+        // Scan all enemies for best possible target/attack pair
+        let best = null;
         for (const enemy of enemies) {
-            for (const tile of occupiedTiles) {
-                const dx = Math.abs(enemy.coordinates.x - tile.x);
-                const dy = Math.abs(enemy.coordinates.y - tile.y);
-                if (dx + dy === 1) {
-                    target = enemy;
-                    foundAdjacent = true;
-                    break;
+            if (enemy.isVCT) continue; // Extra guard
+            // For each attack, check if enemy is in range and attack is ready
+            for (const attack of caller.attacks) {
+                if (attack.cooldown_position < 100) continue;
+                let inRange = false;
+                if (attack.range === 'close') {
+                    inRange = occupiedTiles.some(tile => {
+                        const dx = Math.abs(enemy.coordinates.x - tile.x);
+                        const dy = Math.abs(enemy.coordinates.y - tile.y);
+                        return (dx + dy === 1);
+                    });
+                } else if (attack.range === 'medium') {
+                    const minDist = Math.min(...occupiedTiles.map(tile => {
+                        const dx = Math.abs(enemy.coordinates.x - tile.x);
+                        const dy = Math.abs(enemy.coordinates.y - tile.y);
+                        return dx + dy;
+                    }));
+                    inRange = minDist <= 3;
+                } else if (attack.range === 'far') {
+                    const minDist = Math.min(...occupiedTiles.map(tile => {
+                        const dx = Math.abs(enemy.coordinates.x - tile.x);
+                        const dy = Math.abs(enemy.coordinates.y - tile.y);
+                        return dx + dy;
+                    }));
+                    inRange = minDist <= 6;
+                }
+                if (inRange) {
+                    // Prefer adjacent/close, then medium, then far, then most recovered
+                    if (!best || (attack.range === 'close' && best.attack.range !== 'close') ||
+                        (attack.range === 'medium' && best.attack.range === 'far') ||
+                        (attack.cooldown_position > best.attack.cooldown_position)) {
+                        best = { enemy, attack };
+                    }
                 }
             }
-            if (foundAdjacent) break;
         }
-        if (!foundAdjacent) {
-            // No adjacent enemy, use closest soft target
-            target = AcquireTargetMethods.acquireClosestSoftTarget(caller, combatants);
-        }
-            // --- Enhanced movement logic: try to move around blockers if path is blocked ---
-            // This should be called in processMove or closeTheGap logic
-            this.tryMoveAroundBlocker = (caller, combatants) => {
-                // Only try if we have a target
-                if (!caller.targetId || !combatants[caller.targetId]) return;
-                const target = combatants[caller.targetId];
-                // Get all possible orthogonal moves (N/S/E/W)
-                const possibleMoves = [
-                    { x: caller.coordinates.x + 1, y: caller.coordinates.y },
-                    { x: caller.coordinates.x - 1, y: caller.coordinates.y },
-                    { x: caller.coordinates.x, y: caller.coordinates.y + 1 },
-                    { x: caller.coordinates.x, y: caller.coordinates.y - 1 }
-                ];
-                // For large monsters, check all virtually occupied tiles for overlap
-                const isBlocked = (coords) => {
-                    const scale = caller.scale || caller["main-monster"] || caller.isMainMonster ? 2 : 1;
-                    for (let dx = 0; dx < scale; dx++) {
-                        for (let dy = 0; dy < scale; dy++) {
-                            const tileX = coords.x + dx;
-                            const tileY = coords.y + dy;
-                            // Check if any other unit occupies this tile
-                            const overlap = Object.values(combatants).some(e => {
-                                if (e.dead || e.id === caller.id) return false;
-                                if (e.coordinates.x === tileX && e.coordinates.y === tileY) return true;
-                                if (Array.isArray(e.occupiedTiles)) {
-                                    return e.occupiedTiles.some(t => t.x === tileX && t.y === tileY);
-                                }
-                                return false;
-                            });
-                            if (overlap) return true;
-                        }
-                    }
-                    return false;
-                };
-                const inBounds = (coords) => coords.x >= 0 && coords.x < this.MAX_DEPTH && coords.y >= 0 && coords.y < this.MAX_LANES;
-                // Prefer moves that get closer to the target, but if all are blocked, try any unblocked orthogonal move
-                possibleMoves.sort((a, b) => {
-                    const da = Math.abs(a.x - target.coordinates.x) + Math.abs(a.y - target.coordinates.y);
-                    const db = Math.abs(b.x - target.coordinates.x) + Math.abs(b.y - target.coordinates.y);
-                    return da - db;
-                });
-                for (const move of possibleMoves) {
-                    if (inBounds(move) && !isBlocked(move)) {
-                        caller.coordinates.x = move.x;
-                        caller.coordinates.y = move.y;
-                        return true;
-                    }
-                }
-                // If all preferred moves are blocked, try any unblocked orthogonal move
-                for (const move of possibleMoves) {
-                    if (inBounds(move) && !isBlocked(move)) {
-                        caller.coordinates.x = move.x;
-                        caller.coordinates.y = move.y;
-                        return true;
-                    }
-                }
-                return false;
-            };
-        if (!target) {
-            //console.log(`[Mummy] acquireTarget — no target found`);
+        if (best && !best.enemy.isVCT) {
+            caller.targetId = best.enemy.id;
+            caller.pendingAttack = best.attack;
             return;
         }
-        caller.pendingAttack = this.chooseAttackType(caller, target);
-        caller.targetId = target.id;
-        //console.log(`[Mummy] acquireTarget → target=${target.name || target.type || target.id}, pendingAttack=${caller.pendingAttack?.name}`);
+        // Fallback: no one in range, use closest soft target (guaranteed VCT exclusion)
+        let fallbackTarget = AcquireTargetMethods.acquireClosestSoftTarget(caller, combatants);
+        if (fallbackTarget) {
+            if (fallbackTarget.isVCT) {
+                if (typeof console !== 'undefined') {
+                    console.warn('[Mummy AI] Fallback target is a VCT! Excluding. id:', fallbackTarget.id, fallbackTarget);
+                }
+                fallbackTarget = null;
+            }
+        }
+        if (fallbackTarget) {
+            caller.targetId = fallbackTarget.id;
+            caller.pendingAttack = this.chooseAttackType(caller, fallbackTarget);
+        } else {
+            caller.targetId = null;
+            caller.pendingAttack = null;
+        }
     }
 
     this.handleOverlap = (caller, combatants) => {
@@ -206,8 +184,8 @@ export function Mummy(data, utilMethods, animationManager, overlayManager) {
         // Spend energy
         caller.energy = (caller.energy || 0) - 90;
 
-        // Apply 50% ATK and DEF reduction to all non-monster, non-minion combatants
-        const enemies = Object.values(combatants).filter(c => !c.dead && !c.isMonster && !c.isMinion);
+        // Apply 50% ATK and DEF reduction to all non-monster, non-minion combatants, excluding VCTs
+        const enemies = Object.values(combatants).filter(c => !c.dead && !c.isMonster && !c.isMinion && !c.isVCT);
         enemies.forEach(enemy => {
             // Store originals before first application (guard against double-stack)
             if (!enemy._fearOriginalAtk) enemy._fearOriginalAtk = enemy.atk;

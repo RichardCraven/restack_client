@@ -37,6 +37,13 @@ function Tile(props) {
         maxHpVal = hpVal;
     }
 
+    // VCT border logic: if combatManager and isVCT, add a 2px solid white border
+    let vctBorder = undefined;
+    if (props.combatManager && props.coordinates && typeof props.combatManager.isVCT === 'function') {
+        if (props.combatManager.isVCT(props.coordinates.x, props.coordinates.y)) {
+            vctBorder = '2px solid white';
+        }
+    }
     return (
         <div style={{
             pointerEvents: props.passThrough ? 'none' : 'inherit',
@@ -45,8 +52,6 @@ function Tile(props) {
             cursor: props.cursor ? props.cursor : 'pointer',
             height: props.tileSize+'px',
             width: props.tileSize+'px',
-            // keep a base background color (type color) — the portrait is rendered in a child so
-            // we can show an HP-fill that uses the same color as a vertical meter
             backgroundColor: 
                 props.backgroundColor ? props.backgroundColor :
                 (props.hovered && props.type === 'board-tile') ? 
@@ -54,15 +59,15 @@ function Tile(props) {
                 ( props.type === 'overlay-tile' ? 
                     'transparent': 
                     (props.isActiveInventory && props.type === 'inventory-tile' ? 'lightgreen' : props.color)),
-            // portrait and overlays are handled by child elements so we can layer an HP meter behind
             fontSize: '0.7em',
             position: 'relative',
             overflow: 'hidden',
-            borderLeft: (props.type === 'palette-tile' && !props.hovered) ? '2px solid transparent' : 
-            (props.type === 'palette-tile' && props.hovered ? '2px solid red' : ((props.borders && props.borders.left) ? props.borders.left : '1px solid transparent')),
-            borderRight: (props.borders && props.borders.right) ? props.borders.right : '1px solid transparent',
-            borderTop: (props.borders && props.borders.top) ? props.borders.top : '1px solid transparent',
-            borderBottom: (props.borders && props.borders.bottom) ? props.borders.bottom : '1px solid transparent'
+            border: vctBorder,
+            borderLeft: vctBorder ? undefined : ((props.type === 'palette-tile' && !props.hovered) ? '2px solid transparent' : 
+                (props.type === 'palette-tile' && props.hovered ? '2px solid red' : ((props.borders && props.borders.left) ? props.borders.left : '1px solid transparent'))),
+            borderRight: vctBorder ? undefined : ((props.borders && props.borders.right) ? props.borders.right : '1px solid transparent'),
+            borderTop: vctBorder ? undefined : ((props.borders && props.borders.top) ? props.borders.top : '1px solid transparent'),
+            borderBottom: vctBorder ? undefined : ((props.borders && props.borders.bottom) ? props.borders.bottom : '1px solid transparent')
             }}
             onMouseEnter={() => {
                 if(props.type === 'crew-tile'){

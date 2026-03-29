@@ -319,8 +319,74 @@ const MonstersCombatGrid = ({
             '--portrait-animation-timing': combatant.isMinion ? 'cubic-bezier(.18,.9,.22,1)' : 'cubic-bezier(.2,.8,.2,1)'
         };
     };
+    // Find VCT for this monster (if present)
+    let vct = null;
+    if (monster && battleData[`${monster.id}_VCT`]) {
+        vct = battleData[`${monster.id}_VCT`];
+    }
     return (
         <div className="mb-col monster-pane" style={{ overflow: 'visible' }}>
+            {/* VCT: render above the monster if present */}
+            {vct && (
+                <div
+                    className="lane-wrapper vct-wrapper"
+                    style={{
+                        top: `${vct.coordinates.y * TILE_SIZE + (SHOW_TILE_BORDERS ? vct.coordinates.y * 2 : 0)}px`,
+                        height: `${TILE_SIZE}px`,
+                        overflow: 'visible',
+                        zIndex: 300
+                    }}
+                >
+                    <div
+                        className="vct-portrait-wrapper"
+                        style={{
+                            left: `${vct.coordinates.x * 100 + (SHOW_TILE_BORDERS ? vct.coordinates.x * 2 : 0)}px`,
+                            zIndex: 300,
+                            border: '2px solid white',
+                            width: `${TILE_SIZE}px`,
+                            height: `${TILE_SIZE}px`,
+                            background: 'rgba(255,255,255,0.08)',
+                            position: 'absolute',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            pointerEvents: 'none',
+                        }}
+                    >
+                        {/* Optionally show VCT label for debugging */}
+                        <span style={{ color: 'white', fontSize: '0.8em', opacity: 0.7 }}>VCT</span>
+                    </div>
+                    {/* Damage indicators for VCT */}
+                    <div className="portrait-overlay" style={{zIndex: 301, position: 'absolute', top: 0, left: 0, width: '100%', height: '100%'}}>
+                        <div className="damage-indicator-container" style={{ overflow: 'visible' }}>
+                            {(visibleDamageIndicators[vct.id] || []).map((indicator, idx, arr) => {
+                                const yOffset = idx * 28;
+                                return (
+                                    <div
+                                        className="damage-indicator"
+                                        key={indicator.id}
+                                        style={{
+                                            transform: `translateY(-${yOffset}px)`,
+                                            zIndex: 10 + (arr.length - idx),
+                                            position: 'absolute',
+                                            left: 0,
+                                            right: 0,
+                                            margin: '0 auto',
+                                            pointerEvents: 'none',
+                                            color: 'white',
+                                            fontWeight: 700,
+                                            fontSize: '1.2em',
+                                            textShadow: '0 0 4px #000',
+                                        }}
+                                    >
+                                        {indicator.value}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </div>
+            )}
             {/* Main Monster: only render if not dead, or if dead but still animating */}
             {monster && battleData[monster.id] && (!battleData[monster.id].dead || (showDeathAnimation[monster.id] && !fullyDead[monster.id])) && (
                 <div
@@ -375,7 +441,8 @@ const MonstersCombatGrid = ({
                                 left: `${battleData[monster.id]?.coordinates.x * 100 + (SHOW_TILE_BORDERS ? battleData[monster.id]?.coordinates.x * 2 : 0)}px`,
                                 zIndex: `${battleData[monster.id]?.dead ? '0' : '200'}`,
                                 overflow: 'visible',
-                                ...transitionStyle(monster.id)
+                                ...transitionStyle(monster.id),
+                                border: (combatManager && combatManager.isVCT && battleData[monster.id]?.coordinates && combatManager.isVCT(battleData[monster.id].coordinates.x, battleData[monster.id].coordinates.y)) ? '2px solid white' : undefined
                             }}
                         >
                             <div

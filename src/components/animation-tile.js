@@ -297,18 +297,6 @@ export default function AnimationTile(props) {
                 const flip = facing === 'left';
                 const top = facing === 'down' ? `calc(100% - 60%)` : `calc(50% - 30% + ${dy}px)`;
                 const left = `calc(50% - 30% + ${dx}px)`;
-                // Diagnostic log for grasp animation position
-                console.log('[AnimationTile][grasp] Render grasp', {
-                    facing,
-                    dx,
-                    dy,
-                    top,
-                    left,
-                    tileSize: props.tileSize,
-                    x: props.x,
-                    y: props.y,
-                    image,
-                });
                 return (
                     <img
                         src={image}

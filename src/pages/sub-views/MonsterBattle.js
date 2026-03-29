@@ -1,3 +1,4 @@
+// Force sync battleData from combatManager (including VCT positions)
 import React from 'react'
 // Show/hide tile coordinates overlay
 import '../../styles/monster-battle.scss'
@@ -196,6 +197,19 @@ class MonsterBattle extends React.Component {
         this._setTimeout = (fn, t) => { const id = setTimeout(fn, t); try { this._timers.push(id); } catch(e){}; return id };
         this._setInterval = (fn, t) => { const id = setInterval(fn, t); try { this._intervals.push(id); } catch(e){}; return id };
     }
+
+    // Public method to force sync battleData from combatManager (including VCT positions)
+    forceSyncBattleData = () => {
+        if (this.props.combatManager && this.props.combatManager.combatants) {
+            // Deep clone to ensure React state update
+            const clonedBattleData = JSON.parse(JSON.stringify(this.props.combatManager.combatants));
+            this.updateBattleData(clonedBattleData);
+            console.log('[DIAG][MonsterBattle] forceSyncBattleData called.');
+        } else {
+            console.warn('[MonsterBattle] forceSyncBattleData: combatManager or combatants missing');
+        }
+    }
+
     componentDidMount(){
         console.log('MonsterBattle mounted with props: ', this.props);
 
@@ -583,8 +597,11 @@ class MonsterBattle extends React.Component {
     return baseX + offset;
     }
     fighterPortraitClicked = (id) => {
-    const selectedFighter = this.state.battleData[id];
-    selectedFighter.portrait = this.props.crew.find(e=>e.id === id).portrait
+        const selectedFighter = this.state.battleData[id];
+        const crewMember = this.props.crew.find(e => e.id === id);
+        if (crewMember && crewMember.portrait) {
+            selectedFighter.portrait = crewMember.portrait;
+        }
         if(this.state.showCrosshair){
             this.props.combatManager.queueAction(this.state.selectedFighter.id, id, this.state.selectedAttack)
             this.setState({
@@ -1843,7 +1860,7 @@ class MonsterBattle extends React.Component {
                                 {this.state.selectedFighter?.name}
                             </div>
                             <div className="readout">
-                                {this.state.selectedFighter?.readout.action} {this.state.selectedFighter?.readout.result}
+                                {(this.state.selectedFighter?.readout?.action || '')} {(this.state.selectedFighter?.readout?.result || '')}
                             </div>
                             {this.props.paused && <span className="paused-marker">PAUSED</span>}
                         </div>
