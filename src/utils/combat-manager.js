@@ -152,6 +152,7 @@ export function CombatManager(){
             name: 'grasp',
             type: 'crushing',
             icon: images['grasp'],
+                isGif: true,
             range: 'close',
             cooldown: 3,
             effect: { type: 'stun', chance: 20, duration: 2 },

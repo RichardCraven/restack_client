@@ -1266,9 +1266,10 @@ export function BoardManager(){
     }
     this.move = (destinationCoords, direction) => {
         const tile = this.tiles[this.getIndexFromCoordinates(this.playerTile.location)];
-        const destinationIndex = this.getIndexFromCoordinates(destinationCoords),
-        destinationTile = this.tiles[destinationIndex];
-                if(this.getContainsType(destinationTile.contains) === 'void') return
+        const destinationIndex = this.getIndexFromCoordinates(destinationCoords);
+        const destinationTile = this.tiles[destinationIndex];
+        if (!destinationTile || typeof destinationTile.contains === 'undefined') return;
+        if (this.getContainsType(destinationTile.contains) === 'void') return;
                 // Prevent movement into tiles that are logically occupied by a large monster
                 try {
                     if (destinationTile && destinationTile.blockedByLargeMonster) {

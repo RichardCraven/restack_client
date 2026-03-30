@@ -294,7 +294,7 @@ import beholder_minion from '../assets/portraits/monsters/beholder_minion.png'
 
 //combat images
 import bow_and_arrow from '../assets/icons/items/combat-icons/bow_arrow.png'
-import claws from '../assets/icons/combat-icons/monster-attacks/claws.png'
+import claws from '../assets/icons/combat-icons/monster-attacks/claws.gif'
 import bite from '../assets/icons/combat-icons/monster-attacks/bite.png'
 import crushing from '../assets/icons/combat-icons/monster-attacks/crushing.png'
 import tackle from '../assets/icons/combat-icons/monster-attacks/tackle.png'

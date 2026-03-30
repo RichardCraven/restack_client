@@ -24,10 +24,27 @@ export default function AnimationTile(props) {
         }
     }, [props.animationType, props.animationData]);
 
+
     let image, facing, keyframe, duration;
     facing = props.animationData?.facing;
     duration = props.animationData?.duration;
     let swordX, swordY;
+
+    // Cache buster state for GIFs
+    const [gifCacheBuster, setGifCacheBuster] = useState(Date.now());
+    useEffect(() => {
+        // Update cache buster whenever animationType or animationData changes
+        if (
+            props.animationType === 'grasp' &&
+            (props.animationData?.isGif || (props.animationData && props.animationData.icon && props.animationData.icon.endsWith('.gif')))
+        ) {
+            const newBuster = Date.now();
+            console.log('[AnimationTile] Setting new GIF cache buster:', newBuster, 'for animationType:', props.animationType, 'isGif:', props.animationData?.isGif, 'icon:', props.animationData?.icon);
+            setGifCacheBuster(newBuster);
+        } else {
+            console.log('[AnimationTile] Not updating cache buster. animationType:', props.animationType, 'isGif:', props.animationData?.isGif, 'icon:', props.animationData?.icon);
+        }
+    }, [props.animationType, props.animationData]);
 
     // Charging up animation state
     const [chargingUp, setChargingUp] = useState(false);
@@ -141,9 +158,19 @@ export default function AnimationTile(props) {
                         );
                     })()}
         break;
-        case 'grasp':
-            image = images['grasp'];
+        case 'grasp': {
+            // Use icon from animationData if present, fallback to images['grasp']
+            let graspIcon = props.animationData?.icon || images['grasp'];
+            // If isGif is set, append cache buster from state
+            if (props.animationData?.isGif || (props.animationData && props.animationData.icon && props.animationData.icon.endsWith('.gif'))) {
+                graspIcon = `${graspIcon}?cb=${gifCacheBuster}`;
+                console.log('[AnimationTile] Grasp GIF with cache buster:', graspIcon, 'gifCacheBuster:', gifCacheBuster);
+            } else {
+                console.log('[AnimationTile] Grasp icon (no cache buster):', graspIcon);
+            }
+            image = graspIcon;
             keyframe = `GraspAnimation_${facing}`;
+        }
         break;
         case 'energy_drain':
             image = images['energy_drain'];

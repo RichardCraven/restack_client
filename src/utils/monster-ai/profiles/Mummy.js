@@ -527,12 +527,14 @@ export function Mummy(data, utilMethods, animationManager, overlayManager) {
                 }
                 // Trigger grasp animation using animationManager at the correct tile
                 if (this.animationManager && typeof this.animationManager.triggerAttackAnimation === 'function') {
+                    console.log('[Mummy][DIAG] pendingAttack before animation:', caller.pendingAttack);
                     await this.animationManager.triggerAttackAnimation({
                         coordinates: graspTile,
                         facing: caller.facing,
                         icon: caller.pendingAttack.icon,
                         type: 'grasp',
-                        animationType: 'grasp'
+                        animationType: 'grasp',
+                        selectedAction: caller.pendingAttack // Pass the full attack object (has isGif, icon)
                     });
                 }
                 this.hitsCombatant(caller, target);

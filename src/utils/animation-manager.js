@@ -50,18 +50,18 @@ export function AnimationManager(){
     };
 
     // Generic attack animation trigger for AI modules (e.g., Monk)
-    this.triggerAttackAnimation = async ({ coordinates, facing, icon, type, animationType }) => {
+    this.triggerAttackAnimation = async (data) => {
         // Default to using 'type' as animationType if not provided
-        const animType = animationType || type;
-        const sourceTileId = this.getTileIdByCoords(coordinates);
+        const animType = data.animationType || data.type;
+        const sourceTileId = this.getTileIdByCoords(data.coordinates);
         if (sourceTileId === null || sourceTileId === undefined) {
-            console.warn('triggerAttackAnimation: Invalid coordinates for tile:', coordinates);
+            console.warn('triggerAttackAnimation: Invalid coordinates for tile:', data.coordinates);
             return null;
         }
         // Set icon based on type if not provided
-        let resolvedIcon = icon;
+        let resolvedIcon = data.icon;
         if (!resolvedIcon) {
-            switch (type) {
+            switch (data.type) {
                 case 'dragon_punch':
                     resolvedIcon = images['scepter_white'];
                     break;
@@ -77,8 +77,8 @@ export function AnimationManager(){
             }
         }
         // Determine the target tile based on facing
-        let targetCoords = { ...coordinates };
-        switch (facing) {
+        let targetCoords = { ...data.coordinates };
+        switch (data.facing) {
             case 'right':
                 targetCoords.x += 1;
                 break;
@@ -96,14 +96,15 @@ export function AnimationManager(){
         }
         const targetTileId = this.getTileIdByCoords(targetCoords);
         return new Promise((resolve) => {
-            const data = {
+            const animData = {
                 sourceTileId,
                 targetTileId,
                 type: animType || 'dragon_punch',
                 icon: resolvedIcon,
-                facing
+                facing: data.facing,
+                selectedAction: data.selectedAction // Forward full attack object for grasp
             };
-            this.triggerTileAnimationComplex(data);
+            this.triggerTileAnimationComplex(animData);
             // After the animation, check for a combatant at the target tile
             setTimeout(() => {
                 let combatantHit = null;
@@ -726,9 +727,16 @@ export function AnimationManager(){
                     return;
                 break;
             case 'claw':
+                // Forward isGif and icon for claw
+                let isGif = false;
+                let icon = undefined;
+                if (data && data.selectedAction) {
+                    isGif = !!data.selectedAction.isGif;
+                    icon = data.selectedAction.icon;
+                }
                 animationTile.animationType = `claw`;
                 animationTile.transitionType = 'fade';
-                animationTile.animationData = {facing, duration: this.animationsMatrix[type].duration};
+                animationTile.animationData = {facing, duration: this.animationsMatrix[type].duration, isGif, icon};
                 this.update();
                 setTimeout(()=>{
                     animationTile.animationType = null;
@@ -737,19 +745,34 @@ export function AnimationManager(){
                     this.update();
                 },this.animationsMatrix[type].duration)
             break;
-            case 'grasp':
+            case 'grasp': {
                 // Diagnostic log: capture when grasp animation is triggered in tile animation
+                // Pass isGif and icon from the attack definition if available
+                let isGif = false;
+                let icon = undefined;
+                if (data && data.selectedAction) {
+                    isGif = !!data.selectedAction.isGif;
+                    icon = data.selectedAction.icon;
+                }
                 console.log('[AnimationManager] triggerTileAnimationComplex grasp', {
                     tile: animationTile,
                     data,
                     actor: this.currentActor,
                     tileId: sourceTileId,
                     targetTileId,
-                    facing
+                    facing,
+                    isGif,
+                    icon
                 });
                 animationTile.animationType = 'grasp';
                 animationTile.transitionType = 'fade';
-                animationTile.animationData = {facing, duration: this.animationsMatrix[type]?.duration || 900};
+                animationTile.animationData = {
+                    facing,
+                    duration: this.animationsMatrix[type]?.duration || 900,
+                    isGif,
+                    icon
+                };
+                console.log('[AnimationManager][SET] animationTile.animationData for grasp:', animationTile.animationData);
                 this.update();
                 setTimeout(()=>{
                     animationTile.animationType = null;
@@ -757,6 +780,7 @@ export function AnimationManager(){
                     animationTile.animationData = {};
                     this.update();
                 }, this.animationsMatrix[type]?.duration || 900);
+            }
             break;
             case 'sword_swing':
                 // Diagnostic log: capture when sword_swing animation is triggered in tile animation
@@ -902,7 +926,10 @@ export function AnimationManager(){
             fighterType,
             attackType
         };
-        this.triggerTileAnimationComplex(data);
+        this.triggerTileAnimationComplex({
+            ...data,
+            selectedAction: data.selectedAction // Forward selectedAction for grasp
+        });
         let tileCoords = targetTileId ? this.getTileCoordsById(targetTileId) : null;
         let collision = tileCoords ? this.checkForCollision(tileCoords) : false;
         resolve(collision);
@@ -1262,7 +1289,7 @@ export function AnimationManager(){
             console.log('missing source');
             debugger
         }
-        return new Promise(() => {
+        return new Promise((resolve) => {
             const data = {
                 targetTileId,
                 type: 'sword_swing',
@@ -1275,8 +1302,9 @@ export function AnimationManager(){
             let tileCoords = targetTileId ? this.getTileCoordsById(targetTileId) : null;
             let collision = tileCoords ? this.checkForCollision(tileCoords) : false;
             resolve(collision);
-        })
+        });
     }
+
     this.zapBurstAnimation = async (targetTileId, sourceTileId, color = null, resolve) => {
         await this.straightLineTo(targetTileId, sourceTileId, color)
         resolve()

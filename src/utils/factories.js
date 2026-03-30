@@ -84,7 +84,8 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
         attackingReverse: false,
         healing: false,
         missed: false,
-    attacks: formatAttacks(fighter.attacks),
+    // Ensure attacks are always full objects, not just strings
+    attacks: (typeof callbacks.formatAttacks === 'function') ? callbacks.formatAttacks(fighter.attacks || []) : (fighter.attacks || []),
     specials: (typeof formatSpecials === 'function') ? formatSpecials(fighter.specials || []) : (fighter.specials || []),
         specialActions: fighter.specialActions, // Now uses flat structure: type, name, iconUrl, subtype, etc.
         targettedBy: [],
