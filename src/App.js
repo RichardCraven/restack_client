@@ -194,21 +194,22 @@ const toggleMenuTray = () => {
         {loggedIn === true && showToolbar === true && <div className="nav-buttons-container">
           <div className="hamburger-button" style={{backgroundImage: `url(${images['hamburger']})`}} onClick={() => toggleMenuTray()}></div>
           <div className={`menu-tray${menuTrayExpanded ? ' open' : ''}`} style={{
-            height: menuTrayExpanded ? '126px' : '0px',
             border: menuTrayExpanded ? '1px solid lightgrey' : '1px solid #d3d3d300'
           }}>
-            {<button className="menu-buttons logout-button" onClick={logout}>
-              Logout
-            </button>}
-            {<button className="menu-buttons save-button" onClick={saveUserData}>
-              Save
-            </button>}
-            {<button className="menu-buttons go-home-button" onClick={goHome}>
-              Home
-            </button>}    
-            {isAdmin && <button className="menu-buttons show-coordinates-button" onClick={toggleShowCoordinates}>
-              Show Coordinates
-            </button>}
+            <div className="menu-tray-content">
+              <button className="menu-buttons logout-button" onClick={logout}>
+                Logout
+              </button>
+              <button className="menu-buttons save-button" onClick={saveUserData}>
+                Save
+              </button>
+              <button className="menu-buttons go-home-button" onClick={goHome}>
+                Home
+              </button>
+              {isAdmin && <button className="menu-buttons show-coordinates-button" onClick={toggleShowCoordinates}>
+                Show Coordinates
+              </button>}
+            </div>
           </div>
         </div> }
         <Switch>

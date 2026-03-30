@@ -447,6 +447,7 @@ class DungeonPage extends React.Component {
         super(props)
         this.monsterBattleComponentRef = React.createRef()
         this.devConsoleInputRef = React.createRef()
+        this.devConsoleOutputRef = React.createRef()
         this.playerFloatRef = React.createRef()
         // internal registry of active placeholders (id -> { el, start:Date, end:Date })
         this._placeholderRegistry = new Map();
@@ -535,11 +536,44 @@ class DungeonPage extends React.Component {
         this._timers = [];
         this._intervals = [];
         this._setTimeout = (fn, t) => { const id = setTimeout(fn, t); try { this._timers.push(id); } catch(e){}; return id };
+        
         this._setInterval = (fn, t) => { const id = setInterval(fn, t); try { this._intervals.push(id); } catch(e){}; return id };
     }
 
     // Reverted to native browser tooltip; no custom tooltip lifecycle is necessary.
     
+        componentDidUpdate(prevProps, prevState) {
+            // Auto-scroll dev console output to bottom when new output is added
+            if (
+                this.state.devConsoleOpen &&
+                this.devConsoleOutputRef &&
+                this.devConsoleOutputRef.current &&
+                prevState.devConsoleOutput !== this.state.devConsoleOutput
+            ) {
+                // Defer scroll to ensure DOM is updated with new output
+                setTimeout(() => {
+                    const outputDiv = this.devConsoleOutputRef.current;
+                    if (outputDiv) {
+                        console.log('OUTPUT DIV: ', outputDiv);
+                        outputDiv.scrollTop = outputDiv.scrollHeight;
+                    }
+                    if (
+                        this.state.devConsoleOpen &&
+                        this.devConsoleOutputRef &&
+                        this.devConsoleOutputRef.current &&
+                        prevState.devConsoleOutput !== this.state.devConsoleOutput
+                    ) {
+                        // Defer scroll to ensure DOM is updated with new output
+                        setTimeout(() => {
+                            const outputDiv = this.devConsoleOutputRef.current;
+                            if (outputDiv && outputDiv.lastElementChild) {
+                                outputDiv.lastElementChild.scrollIntoView({ behavior: 'auto' });
+                            }
+                        }, 0);
+                    }
+                }, 0);
+            }
+    }
     UNSAFE_componentWillMount(){
         let tileSize = this.getTileSize(),
             boardSize = tileSize*15;
@@ -3959,7 +3993,7 @@ class DungeonPage extends React.Component {
                         </div>
                         <div className="dev-console-divider" />
                         <div className="dev-console-right">
-                            <div className="dev-console-output">
+                            <div className="dev-console-output" ref={this.devConsoleOutputRef}>
                                 {this.state.devConsoleOutput.map((line, idx) => (
                                     <div key={idx} className="dev-console-line">{line}</div>
                                 ))}

@@ -78,6 +78,18 @@ const clone = (thing) => {
 // }
 
 class MapMakerPage extends React.Component {
+    componentDidUpdate(prevProps, prevState) {
+      // Auto-scroll dev console output to bottom when new output is added
+      if (
+        this.state.devConsoleOpen &&
+        this.devConsoleOutputRef &&
+        this.devConsoleOutputRef.current &&
+        prevState.devConsoleOutput !== this.state.devConsoleOutput
+      ) {
+        const outputDiv = this.devConsoleOutputRef.current;
+        outputDiv.scrollTop = outputDiv.scrollHeight;
+      }
+    }
   constructor(props){
     super(props)
     let viewStateFromPrefs,
@@ -159,6 +171,7 @@ class MapMakerPage extends React.Component {
       devConsoleOutput: []
     };
     this.devConsoleInputRef = React.createRef();
+    this.devConsoleOutputRef = React.createRef();
   }
   
 
@@ -285,7 +298,7 @@ class MapMakerPage extends React.Component {
         this.setState(prev => ({
           devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, 'Returning to dungeon...'],
           devConsoleInput: ''
-        }));
+        }), this.scrollDevConsoleToBottom);
         setTimeout(() => { window.location.href = '/dungeon'; }, 400);
         e.preventDefault();
         return;
@@ -299,7 +312,7 @@ class MapMakerPage extends React.Component {
         this.setState(prev => ({
           devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, ...commands],
           devConsoleInput: ''
-        }));
+        }), this.scrollDevConsoleToBottom);
         try { if (this.devConsoleInputRef.current) this.devConsoleInputRef.current.focus(); } catch(_) {}
         e.preventDefault();
         return;
@@ -308,7 +321,7 @@ class MapMakerPage extends React.Component {
       this.setState(prev => ({
         devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, `Unknown command: ${raw}`],
         devConsoleInput: ''
-      }));
+      }), this.scrollDevConsoleToBottom);
       try { if (this.devConsoleInputRef.current) this.devConsoleInputRef.current.focus(); } catch(_) {}
       e.preventDefault();
 
@@ -1390,17 +1403,13 @@ class MapMakerPage extends React.Component {
   planesContainingBoard = (board) => {
     let planesToUpdate = [];
     if(!board.id) return planesToUpdate;
-    console.log('board: ', board, 'boardId = ', board.id);
     if(this.state.planes.length > 0){
-      console.log('planes: ', this.state.planes);
       this.state.planes.forEach((plane) => {
         let planeHasMatchingBoard = false;
-        console.log('plane: ', plane);
         plane.miniboards.forEach((b, index) => {
           
           if(b.id === board.id){
             planeHasMatchingBoard = true;
-            console.log('found a plane with matching board: ', plane);
             // miniboards = d.miniboards;
             // miniboards[index] = board;
             // miniboards[index].name = board.name;
@@ -1469,7 +1478,6 @@ class MapMakerPage extends React.Component {
   writePlane = async () => {
     if(this.state.selectedView !== 'plane') return
     if(this.state.loadedPlane && this.state.loadedPlane.id){
-      console.log('miniboards: ', this.state.loadedPlane.miniboards);
       let obj = {
         name: this.state.loadedPlane.name,
         miniboards: this.state.loadedPlane.miniboards,
@@ -1480,14 +1488,12 @@ class MapMakerPage extends React.Component {
       this.loadAllPlanes(); 
       this.toast('Plane Saved')
     } else {
-      console.log('brand new plane!')
       let newPlanePayload = {
         name: this.state.loadedPlane.name,
         miniboards: this.state.loadedPlane.miniboards,
         spawnPoints: this.state.loadedPlane.spawnPoints,
         valid: false
       }
-      console.log('adding new plane with payload:', newPlanePayload)
       const newPlaneRes = await addPlaneRequest(newPlanePayload);
       let lp = this.state.loadedPlane
       lp.id = newPlaneRes.data._id;
@@ -2681,7 +2687,7 @@ class MapMakerPage extends React.Component {
             </div>
             <div className="dev-console-divider" />
             <div className="dev-console-right">
-              <div className="dev-console-output">
+              <div className="dev-console-output" ref={this.devConsoleOutputRef}>
                 {this.state.devConsoleOutput.map((line, idx) => (
                   <div key={idx} className="dev-console-line">{line}</div>
                 ))}

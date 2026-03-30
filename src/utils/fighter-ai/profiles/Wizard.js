@@ -4,6 +4,15 @@ const pickRandom = (array) => {
 }
 
 export function Wizard(data, utilMethods, animationManager, overlayManager){
+        // Diagnostic: log all decrements to movement points
+        const logMPDecrement = (caller, amount, reason) => {
+            if (!caller) return;
+            const mp = caller.movementPointsCurrent ?? caller.manualMovesCurrent;
+            const mpMax = caller.movementPointsMax ?? caller.manualMovesTotal;
+            // Print a call stack for tracing
+            console.log(`[MP DECR][Wizard] ${caller.name || caller.type} (${caller.id}) MP: ${mp} / ${mpMax} | -${amount} | Reason: ${reason}`);
+            if (console.trace) console.trace();
+        };
     // Reference to MonsterBattle component for AI-triggered glyph casting
     this.monsterBattleRef = null;
     this.MAX_DEPTH = data.MAX_DEPTH;
@@ -160,35 +169,48 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                 if (this.monsterBattleRef && typeof this.monsterBattleRef.fireSpecialForAI === 'function') {
                     caller.targetId = target.id;
                     this.monsterBattleRef.fireSpecialForAI(caller, magicMissile);
+                    // Diagnostic: log MP decrement for magic missile
+                    if (magicMissile && magicMissile.movement_point_cost) {
+                        logMPDecrement(caller, magicMissile.movement_point_cost, 'magic missile cast (AI)');
+                    }
+                    //////////// ^ this is the ai path ////////////
                 } else if (this.useSpellMagicMissile) {
                     this.useSpellMagicMissile(caller, target, magicMissile);
+                    // Diagnostic: log MP decrement for magic missile
+                    if (magicMissile && magicMissile.movement_point_cost) {
+                        logMPDecrement(caller, magicMissile.movement_point_cost, 'magic missile cast (manual)');
+                    }
                 } else {
-                    caller.specialActions = caller.specialActions.filter(a => a !== magicMissile)
-                    if (typeof this.broadcastDataUpdate === 'function') {
-                        try {
-                            this.broadcastDataUpdate(caller);
-                        } catch (e) {
-                            try { this.broadcastDataUpdate(); } catch (e2) { /* ignore */ }
-                        }
-                    }
-                    if (this.monsterBattleRef && typeof this.monsterBattleRef.applyFighterUpdate === 'function') {
-                        try {
-                            this.monsterBattleRef.applyFighterUpdate(caller);
-                        } catch (err) {
-                            console.warn('monsterBattleRef.applyFighterUpdate failed', err);
-                        }
-                    }
-                    caller.energy -= (magicMissile.energy_cost || 50);
-                    try {
-                        const reduce = magicMissile.movement_point_cost || Math.ceil(((typeof caller.movementPointsMax === 'number' ? caller.movementPointsMax : (caller.manualMovesTotal || 1)) * 0.25));
-                        caller.manualMovesCurrent = Math.max(0, (caller.manualMovesCurrent || 0) - reduce);
-                        caller.movementPointsCurrent = Math.max(0, (caller.movementPointsCurrent || 0) - reduce);
-                        if (typeof this.broadcastDataUpdate === 'function') this.broadcastDataUpdate(caller);
-                        if (this.monsterBattleRef && typeof this.monsterBattleRef.applyFighterUpdate === 'function') {
-                            try { this.monsterBattleRef.applyFighterUpdate(caller); } catch (err) { /* ignore */ }
-                        }
-                    } catch (err) { /* non-fatal */ }
-                    this.triggerMagicMissile(caller, target, 1500);
+                    console.log('IN HERE');
+
+                    debugger
+                    // caller.specialActions = caller.specialActions.filter(a => a !== magicMissile)
+                    // if (typeof this.broadcastDataUpdate === 'function') {
+                    //     try {
+                    //         this.broadcastDataUpdate(caller);
+                    //     } catch (e) {
+                    //         try { this.broadcastDataUpdate(); } catch (e2) { /* ignore */ }
+                    //     }
+                    // }
+                    // if (this.monsterBattleRef && typeof this.monsterBattleRef.applyFighterUpdate === 'function') {
+                    //     try {
+                    //         this.monsterBattleRef.applyFighterUpdate(caller);
+                    //     } catch (err) {
+                    //         console.warn('monsterBattleRef.applyFighterUpdate failed', err);
+                    //     }
+                    // }
+                    // caller.energy -= (magicMissile.energy_cost || 50);
+                    // try {
+                    //     debugger
+                    //     const reduce = magicMissile.movement_point_cost || Math.ceil(((typeof caller.movementPointsMax === 'number' ? caller.movementPointsMax : (caller.manualMovesTotal || 1)) * 0.25));
+                    //     caller.manualMovesCurrent = Math.max(0, (caller.manualMovesCurrent || 0) - reduce);
+                    //     caller.movementPointsCurrent = Math.max(0, (caller.movementPointsCurrent || 0) - reduce);
+                    //     if (typeof this.broadcastDataUpdate === 'function') this.broadcastDataUpdate(caller);
+                    //     if (this.monsterBattleRef && typeof this.monsterBattleRef.applyFighterUpdate === 'function') {
+                    //         try { this.monsterBattleRef.applyFighterUpdate(caller); } catch (err) { /* ignore */ }
+                    //     }
+                    // } catch (err) { /* non-fatal */ }
+                    // this.triggerMagicMissile(caller, target, 1500);
                 }
                 return true;
             }
@@ -223,6 +245,8 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                         const reduce = special.movement_point_cost || Math.ceil(maxPts * 0.25);
                         caller.manualMovesCurrent = Math.max(0, (caller.manualMovesCurrent || 0) - reduce);
                         caller.movementPointsCurrent = Math.max(0, (caller.movementPointsCurrent || 0) - reduce);
+                        // Diagnostic: log MP decrement for special
+                        logMPDecrement(caller, reduce, `special cast: ${special.name}`);
                         if (typeof this.broadcastDataUpdate === 'function') this.broadcastDataUpdate(caller);
                         if (this.monsterBattleRef && typeof this.monsterBattleRef.applyFighterUpdate === 'function') {
                             try { this.monsterBattleRef.applyFighterUpdate(caller); } catch (err) { /* ignore */ }

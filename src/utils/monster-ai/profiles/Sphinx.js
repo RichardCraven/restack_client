@@ -27,10 +27,16 @@ export function Sphinx(data, utilMethods, animationManager, overlayManager){
         //     caller.pendingAttack = this.chooseAttackType(caller, target);
         //     return
         // }
-        const liveEnemies = Object.values(combatants).filter(e=>!e.dead && (!e.isMonster && !e.isMinion));
+        const liveEnemies = Object.values(combatants).filter(e=>!e.dead && (!e.isMonster && !e.isMinion) && !e.isVCT);
         const sorted = liveEnemies.sort((a,b)=>a.depth - b.depth);
         const target = sorted[0];
-        if(!target) return
+        if(!target) return;
+        // Final guard: never allow targeting a VCT
+        if (target.isVCT) {
+            caller.targetId = null;
+            caller.pendingAttack = null;
+            return;
+        }
         caller.pendingAttack = this.chooseAttackType(caller, target);
         caller.targetId = target.id;
     }
@@ -205,21 +211,19 @@ export function Sphinx(data, utilMethods, animationManager, overlayManager){
     this.initiateAttack = async (caller, combatants) => {
         // caller.attacking = true;
         const target = combatants[caller.targetId];
+        if (!target || target.dead || target.isVCT) return;
         const distanceToTarget = data.methods.getDistanceToTarget(caller, target), // eslint-disable-line no-unused-vars
         laneDiff = data.methods.getLaneDifferenceToTarget(caller, target);
-
 
         const animation = {
             type: 'glowing-eyes',
             id: caller.id,
             data:{
-                // color: caller.isMonster ? 'red' : 'lightred'
                 color: 'white'
             }
         }
         this.overlayManager.addAnimation(animation)
 
-        // console.log('sphinx initiate', caller.pendingAttack.name, 'TARGET: ', target)
         let combatantHit;
         switch(caller.pendingAttack.name){
             case 'induce madness':
@@ -227,7 +231,6 @@ export function Sphinx(data, utilMethods, animationManager, overlayManager){
                     await this.triggerInduceMadness(caller.coordinates, target.coordinates)
                     console.log('induce madness hits');
                     this.hitsTarget(caller)
-                    // this.hitsCombatant(caller, combatantHit)
                 } else {
                     this.missesTarget(caller);
                 }
@@ -240,12 +243,10 @@ export function Sphinx(data, utilMethods, animationManager, overlayManager){
                 } else {
                     this.missesTarget(caller);
                 }
-
             break;
             case 'lightning':
                 combatantHit = await this.triggerLightningAttack(caller.coordinates, target.coordinates)
                 if(combatantHit){
-                    // this.hitsTarget(caller)
                     this.hitsCombatant(caller, combatantHit);
                 } else {
                     this.missesTarget(caller);

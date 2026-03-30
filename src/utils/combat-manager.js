@@ -66,6 +66,24 @@ export function CombatManager(){
                     e.targetId = null;
                 }
             });
+            // --- VCT CLEANUP LOGIC ---
+            // If this combatant is a monster with a VCT, remove its VCT and VCT combatant
+            if (this.vctByMonster && this.vctByMonster[id]) {
+                const vctId = `${id}_VCT`;
+                // Remove VCT combatant from combatants list
+                if (this.combatants[vctId]) {
+                    delete this.combatants[vctId];
+                }
+                // Remove VCT object from vctByMonster
+                delete this.vctByMonster[id];
+            }
+            // Defensive: if this is a VCT combatant, also remove from vctByMonster
+            if (id.endsWith && id.endsWith('_VCT')) {
+                const parentId = id.replace(/_VCT$/, '');
+                if (this.vctByMonster && this.vctByMonster[parentId]) {
+                    delete this.vctByMonster[parentId];
+                }
+            }
             delete this.combatants[id];
             // Broadcast update to ensure UI sync
             if (typeof this.updateData === 'function') {
@@ -440,10 +458,13 @@ export function CombatManager(){
                 const vctId = `${combatant.id}_VCT`;
                 if (this.combatants[vctId]) {
                     this.combatants[vctId].coordinates = { ...vct.coordinates };
-                    console.log(`[DIAG] syncVCTs: VCT for ${combatant.name || combatant.type} (${combatant.id}) set to (${vct.coordinates.x},${vct.coordinates.y}) | Monster coords: (${combatant.coordinates.x},${combatant.coordinates.y})`);
+                    // console.log(`[DIAG] syncVCTs: VCT for ${combatant.name || combatant.type} (${combatant.id}) set to (${vct.coordinates.x},${vct.coordinates.y}) | Monster coords: (${combatant.coordinates.x},${combatant.coordinates.y})`);
                 }
             }
         });
+        // DIAGNOSTIC: Log all combatants and their targetIds after VCT sync
+        const combatantTargets = Object.values(this.combatants).map(c => ({id: c.id, isVCT: !!c.isVCT, targetId: c.targetId, type: c.type, isMonster: c.isMonster, isMinion: c.isMinion}));
+        // console.log('[DIAG][syncVCTs][POST] Combatant target states:', JSON.stringify(combatantTargets, null, 2));
         // Force UI update if updateData is available
         if (typeof this.updateData === 'function') {
             this.updateData(clone(this.combatants));
@@ -1146,8 +1167,8 @@ export function CombatManager(){
         const occupiedTiles = Array.isArray(monster.occupiedCoords) && monster.occupiedCoords.length > 0
             ? monster.occupiedCoords
             : [monster.coordinates];
-        // Only consider live enemy fighters
-        const enemies = Object.values(this.combatants).filter(e => !e.dead && !e.isMonster && !e.isMinion);
+        // Only consider live enemy fighters, EXCLUDING VCTs
+        const enemies = Object.values(this.combatants).filter(e => !e.dead && !e.isMonster && !e.isMinion && !e.isVCT);
         for (const tile of occupiedTiles) {
             for (const enemy of enemies) {
                 // Check if enemy is adjacent (orthogonally) to this tile
@@ -1553,19 +1574,26 @@ export function CombatManager(){
         try { this._setCombatantOccupiedCoords(caller); } catch (e) {}
     }
     this.acquireTarget = (caller, targetToAvoid = null) => {
-                // Prevent monsters from ever targeting their own VCT
-                if (caller && caller.isMonster && caller.targetId) {
-                    const t = this.combatants[caller.targetId];
-                    if (t && t.isVCT && t.parentMonsterId === caller.id) {
-                        // Try to find a valid non-VCT target, otherwise clear targetId
-                        const validTargets = Object.values(this.combatants).filter(e => !e.dead && !e.isVCT && e.id !== caller.id && (e.isMonster || e.isMinion));
-                        if (validTargets.length > 0) {
-                            caller.targetId = validTargets[0].id;
-                        } else {
-                            caller.targetId = null;
-                        }
-                    }
+        // Prevent monsters from ever targeting their own VCT
+        if (caller && caller.isMonster && caller.targetId) {
+            const t = this.combatants[caller.targetId];
+            if (t && t.isVCT && t.parentMonsterId === caller.id) {
+                // Try to find a valid non-VCT target, otherwise clear targetId
+                const validTargets = Object.values(this.combatants).filter(e => !e.dead && !e.isVCT && e.id !== caller.id && (e.isMonster || e.isMinion));
+                if (validTargets.length > 0) {
+                    caller.targetId = validTargets[0].id;
+                } else {
+                    caller.targetId = null;
                 }
+            }
+        }
+        // Proactively clear targetId if it is a VCT before calling setTargetId
+        if (caller && caller.targetId) {
+            const t = this.combatants[caller.targetId];
+            if (t && t.isVCT) {
+                caller.targetId = null;
+            }
+        }
         if(this.combatPaused || caller.dead) return;
         // Defensive: never acquire a VCT as a target
         if (caller && caller.targetId) {
@@ -2783,29 +2811,35 @@ CombatManager.prototype.setTargetId = function(caller, targetId, context = '') {
         // Monsters/minions: never allow targeting a VCT
         if ((caller.isMonster || caller.isMinion) && target && target.isVCT) {
             if (typeof console !== 'undefined') {
-                console.warn('[CombatManager][setTargetId][VCT-GUARD] Monster/minion attempted to set VCT as target. Nulling targetId.', {
-                    callerId: caller.id,
-                    vctId: target.id,
-                    parentMonsterId: target.parentMonsterId,
-                    context,
-                    prevTargetId
-                });
+                // console.warn('[CombatManager][setTargetId][VCT-GUARD] Monster/minion attempted to set VCT as target. Nulling targetId.', {
+                //     callerId: caller.id,
+                //     vctId: target.id,
+                //     parentMonsterId: target.parentMonsterId,
+                //     context,
+                //     prevTargetId
+                // });
             }
             caller.targetId = null;
+            // DIAGNOSTIC: Log all combatants and their targetIds after VCT guard triggers
+            const combatantTargets = Object.values(this.combatants).map(c => ({id: c.id, isVCT: !!c.isVCT, targetId: c.targetId, type: c.type, isMonster: c.isMonster, isMinion: c.isMinion}));
+            // console.log('[DIAG][setTargetId][VCT-GUARD][POST] Combatant target states:', JSON.stringify(combatantTargets, null, 2));
             return;
         }
         // Fighters: allow targeting VCT, but redirect to parent monster if present
         if (!(caller.isMonster || caller.isMinion) && target && target.isVCT && target.parentMonsterId && this.combatants[target.parentMonsterId]) {
             if (typeof console !== 'undefined') {
-                console.warn('[CombatManager][setTargetId][VCT-REDIRECT] Fighter targeting VCT, redirecting to parent monster.', {
-                    callerId: caller.id,
-                    vctId: target.id,
-                    parentMonsterId: target.parentMonsterId,
-                    context,
-                    prevTargetId
-                });
+                // console.warn('[CombatManager][setTargetId][VCT-REDIRECT] Fighter targeting VCT, redirecting to parent monster.', {
+                //     callerId: caller.id,
+                //     vctId: target.id,
+                //     parentMonsterId: target.parentMonsterId,
+                //     context,
+                //     prevTargetId
+                // });
             }
             caller.targetId = target.parentMonsterId;
+            // DIAGNOSTIC: Log all combatants and their targetIds after VCT redirect
+            const combatantTargets = Object.values(this.combatants).map(c => ({id: c.id, isVCT: !!c.isVCT, targetId: c.targetId, type: c.type, isMonster: c.isMonster, isMinion: c.isMinion}));
+            // console.log('[DIAG][setTargetId][VCT-REDIRECT][POST] Combatant target states:', JSON.stringify(combatantTargets, null, 2));
             return;
         }
         // Default: assign as requested
@@ -2817,5 +2851,8 @@ CombatManager.prototype.setTargetId = function(caller, targetId, context = '') {
                 context,
                 prevTargetId
             });
+            // DIAGNOSTIC: Log all combatants and their targetIds after normal set
+            const combatantTargets = Object.values(this.combatants).map(c => ({id: c.id, isVCT: !!c.isVCT, targetId: c.targetId, type: c.type, isMonster: c.isMonster, isMinion: c.isMinion}));
+            // console.log('[DIAG][setTargetId][POST] Combatant target states:', JSON.stringify(combatantTargets, null, 2));
         }
     };

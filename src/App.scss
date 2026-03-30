@@ -74,23 +74,31 @@ button{
       cursor: pointer;
     }
     .menu-tray{
-      height: 200px;
+      max-height: 0;
+      min-height: 0;
+      box-sizing: border-box;
       width: 189px;
-      flex-direction: column;
-      justify-content: space-around;
-      display: flex;
+      display: block;
       overflow: hidden;
-      transition: all 0.4s ease-in-out;
-      align-items: flex-start;
+      // transition: max-height 3s ease-in-out, visibility 3s, pointer-events 0.4s;
+      transition: all 5s;
       padding-left: 10px;
       background-color: black;
-      border: 1px solid #d3d3d300;
-      // When collapsed (height 0) hide completely and don't intercept pointer events
+      // border: 1px solid #d3d3d300;
+      border: 5px solid red;
       pointer-events: none;
-      visibility: hidden;
+      // visibility: hidden;
       &.open{
+        max-height: 1000px;
         pointer-events: auto;
-        visibility: visible;
+        // visibility: visible;
+      }
+      .menu-tray-content {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-around;
+        align-items: flex-start;
+        // height: 150px; /* TEMP: fixed height for transition test */
       }
     }
   }
@@ -100,6 +108,7 @@ button{
     color: white;
     box-shadow: none;
     border: none;
+    margin: 0;
     &:hover{
       color: rgb(79, 206, 245);
     }

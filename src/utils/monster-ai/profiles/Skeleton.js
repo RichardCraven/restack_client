@@ -137,8 +137,12 @@ export function Skeleton(data, utilMethods, animationManager, overlayManager){
     this.initiateAttack = async (caller, combatants) => {
         const target = combatants[caller.targetId];
         caller.attacking = true;
-        if (!target) {
-            console.log('NO TARGET!');
+        if (!target || target.dead || target.isVCT) {
+            if (!target) {
+                console.log('NO TARGET!');
+            } else if (target.isVCT) {
+                console.warn('Skeleton.initiateAttack — target is VCT, skipping attack');
+            }
             return;
         }
         let combatantHit;

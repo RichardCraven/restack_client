@@ -339,8 +339,12 @@ export function BeholderMinion(data, utilMethods, animationManager, overlayManag
     this.initiateAttack = async (caller, combatants) => {
         const target = combatants[caller.targetId];
         caller.attacking = true;
-        if (!target) {
-            console.log('[BeholderMinion] initiateAttack — no target');
+        if (!target || target.dead || target.isVCT) {
+            if (!target) {
+                console.log('[BeholderMinion] initiateAttack — no target');
+            } else if (target.isVCT) {
+                console.warn('[BeholderMinion] initiateAttack — target is VCT, skipping attack');
+            }
             this.kickoffAttackCooldown(caller);
             caller.pendingAttack = null;
             return;
@@ -383,6 +387,12 @@ export function BeholderMinion(data, utilMethods, animationManager, overlayManag
         const { AcquireTargetMethods } = require('../../shared-ai-methods/acquire-target-methods');
         const target = AcquireTargetMethods.acquireClosestSoftTarget(caller, combatants);
         if (!target) return;
+        // Final guard: never allow targeting a VCT
+        if (target.isVCT) {
+            caller.targetId = null;
+            caller.pendingAttack = null;
+            return;
+        }
         caller.targetId = target.id;
         caller.pendingAttack = this.chooseAttackType(caller, target);
     };

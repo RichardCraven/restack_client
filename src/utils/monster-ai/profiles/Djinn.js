@@ -15,19 +15,26 @@ export function Djinn(data, utilMethods, animationManager, overlayManager){
  
     this.acquireTarget = (caller, combatants) => {
         if(caller.targetId){
-
-            const target = combatants[caller.targetId]
+            const target = combatants[caller.targetId];
+            if (target && target.isVCT) {
+                caller.targetId = null;
+                caller.pendingAttack = null;
+                return;
+            }
             console.log('already has target, just choose new attack');
             caller.pendingAttack = this.chooseAttackType(caller, target);
-            return
+            return;
         }
-        const liveEnemies = Object.values(combatants).filter(e=>!e.dead && (!e.isMonster && !e.isMinion));
+        const liveEnemies = Object.values(combatants).filter(e=>!e.dead && (!e.isMonster && !e.isMinion) && !e.isVCT);
         const sorted = liveEnemies.sort((a,b)=>b.depth - a.depth);
-        // console.log('djinn sorted targets: ', sorted);
         let target = sorted.length ? sorted[0] : null;
-        if(!target) return
+        if(!target) return;
+        if (target.isVCT) {
+            caller.targetId = null;
+            caller.pendingAttack = null;
+            return;
+        }
         if(Object.values(combatants).filter(e=>e.isMonster||e.isMinion).some(e=>e.targetId === target.targetId) && sorted.length > 1){
-            // console.log('SAME target! find new target');
             target = sorted[1]
         }
         caller.pendingAttack = this.chooseAttackType(caller, target);
@@ -75,13 +82,13 @@ export function Djinn(data, utilMethods, animationManager, overlayManager){
     this.initiateAttack = (caller, combatants) => {
         caller.attacking = true;
         const target = combatants[caller.targetId];
+        if (!target || target.dead || target.isVCT) return;
         const distanceToTarget = data.methods.getDistanceToTarget(caller, target),
         laneDiff = data.methods.getLaneDifferenceToTarget(caller, target);
         if(caller.energy > 50){
             caller.energy -= 80;
             this.triggerVoidLance(target.coordinates);
             this.hitsTarget(caller)
-            
         } else if(distanceToTarget > 0){
             this.goBehindAndAttack(caller, target)
         } else if(distanceToTarget === 1 && laneDiff === 0){

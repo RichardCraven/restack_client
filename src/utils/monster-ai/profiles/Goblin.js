@@ -22,6 +22,12 @@ export function Goblin(data, utilMethods, animationManager, overlayManager){
     this.acquireTarget = (caller, combatants) => {
         const target = AcquireTargetMethods.acquireClosestSoftTarget(caller, combatants);
         if (!target) return;
+        // Final guard: never allow targeting a VCT
+        if (target.isVCT) {
+            caller.targetId = null;
+            caller.pendingAttack = null;
+            return;
+        }
         caller.pendingAttack = this.chooseAttackType(caller, target);
         caller.targetId = target.id;
     }
@@ -29,7 +35,7 @@ export function Goblin(data, utilMethods, animationManager, overlayManager){
     // Returns true when the goblin is orthogonally adjacent (close range) to its target.
     this._isAdjacentToTarget = (caller, combatants) => {
         const target = Object.values(combatants).find(e => e.id === caller.targetId);
-        if (!target) return false;
+        if (!target || target.isVCT) return false;
         const dx = Math.abs(caller.coordinates.x - target.coordinates.x);
         const dy = Math.abs(caller.coordinates.y - target.coordinates.y);
         // Orthogonally adjacent = exactly 1 step in one axis, same position in the other.
@@ -64,7 +70,7 @@ export function Goblin(data, utilMethods, animationManager, overlayManager){
 
     this.initiateAttack = (caller, combatants) => {
         const target = Object.values(combatants).find(e => e.id === caller.targetId);
-        if (!target || target.dead) return;
+        if (!target || target.dead || target.isVCT) return;
         if (!caller.pendingAttack) {
             caller.pendingAttack = this.chooseAttackType(caller, target);
         }

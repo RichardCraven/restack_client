@@ -299,7 +299,7 @@ import bite from '../assets/icons/combat-icons/monster-attacks/bite.png'
 import crushing from '../assets/icons/combat-icons/monster-attacks/crushing.png'
 import tackle from '../assets/icons/combat-icons/monster-attacks/tackle.png'
 // Placeholder icons for grasp and energy_drain
-import grasp from '../assets/icons/combat-icons/monster-attacks/tackle.png';
+import grasp from '../assets/icons/combat-icons/monster-attacks/grasp.gif';
 import energy_drain from '../assets/icons/combat-icons/monster-attacks/lightning.png'
 import void_lance from '../assets/icons/combat-icons/monster-attacks/void_lance.png'
 import fire_breath from '../assets/icons/combat-icons/monster-attacks/fire_breath.png'

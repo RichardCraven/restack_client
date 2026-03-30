@@ -45,7 +45,9 @@ export const AcquireTargetMethods = {
     acquireClosestEnemy: (caller, combatants) => {
         // For monsters/minions: enemies are not monsters/minions. For fighters: enemies are monsters/minions.
         const isMonsterOrMinion = caller.isMonster || caller.isMinion;
+        // Exclude VCTs from possible targets
         const enemies = Object.values(combatants).filter(e => {
+            if (e.isVCT) return false;
             if (isMonsterOrMinion) {
                 return !e.dead && e.id !== caller.id && !e.isMonster && !e.isMinion;
             } else {
@@ -71,7 +73,9 @@ export const AcquireTargetMethods = {
     acquireClosestSoftTarget: (caller, combatants) => {
         const SOFT_CLASSES = ['wizard', 'sage', 'rogue'];
         const isMonsterOrMinion = caller.isMonster || caller.isMinion;
+        // Exclude VCTs from possible targets
         const enemies = Object.values(combatants).filter(e => {
+            if (e.isVCT) return false;
             if (isMonsterOrMinion) {
                 return !e.dead && e.id !== caller.id && !e.isMonster && !e.isMinion;
             } else {
@@ -91,5 +95,5 @@ export const AcquireTargetMethods = {
                 (Math.abs(b.coordinates.x - caller.coordinates.x) + Math.abs(b.coordinates.y - caller.coordinates.y));
         });
         return sorted[0];
-    }
+    },
 };
