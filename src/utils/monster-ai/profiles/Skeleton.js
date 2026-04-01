@@ -122,14 +122,12 @@ export function Skeleton(data, utilMethods, animationManager, overlayManager){
     }
 
     this.triggerClawAttack = async (caller, target) => {
-        // Use the animation manager's generic triggerAttackAnimation
-        if (this.animationManager && typeof this.animationManager.triggerAttackAnimation === 'function') {
-            await this.animationManager.triggerAttackAnimation({
-                coordinates: caller.coordinates,
-                facing: caller.facing,
-                icon: caller.pendingAttack?.icon,
-                type: 'claw',
-                animationType: 'claw'
+        // Use the animation manager's canvas-based clawSwipe
+        if (this.animationManager && typeof this.animationManager.clawSwipe === 'function') {
+            const sourceTileId = this.animationManager.getTileIdByCoords(caller.coordinates);
+            const targetTileId = this.animationManager.getTileIdByCoords(target.coordinates);
+            await new Promise(resolve => {
+                this.animationManager.clawSwipe(targetTileId, sourceTileId, caller.facing, resolve);
             });
         }
         return target;

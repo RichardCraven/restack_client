@@ -1,7 +1,72 @@
-import * as images from '../utils/images'
+import * as images from '../utils/images';
 import React from 'react';
 import CanvasAxeThrow from '../components/Canvas/canvas_axe_throw';
+
 export function AnimationManager(){
+    // ...existing code...
+
+    // Canvas-based claw swipe animation (for Skeleton)
+    this.clawSwipe = async (targetTileId, sourceTileId, facing, resolve) => {
+        const sourceTile = this.tiles.find(e => e.id === sourceTileId);
+        if (!sourceTile) {
+            if (resolve) resolve();
+            return;
+        }
+        const targetTile = this.tiles.find(e => e.id === targetTileId);
+        if (!targetTile) {
+            if (resolve) resolve();
+            return;
+        }
+        // Calculate origin and target tile coordinates
+        const originCoords = this.getTileCoordsById(sourceTileId);
+        const targetCoords = this.getTileCoordsById(targetTileId);
+        const clawAnimId = `claw_swipe_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+        const TILE_SIZE = this.TILE_SIZE || 100;
+        const duration = 400; // ms, matches CanvasClawSwipe default
+        const clawAnim = {
+            id: clawAnimId,
+            type: 'claw_swipe',
+            animationType: 'canvas',
+            origin: originCoords,
+            target: targetCoords,
+            duration,
+            onComplete: () => {
+                // Remove the canvas animation
+                const idx = this.canvasAnimations.findIndex(anim => anim.id === clawAnimId);
+                if (idx !== -1) {
+                    this.canvasAnimations.splice(idx, 1);
+                    this.update();
+                }
+                // Trigger a hit-flash effect on the target tile
+                if (targetTileId !== null && targetTileId !== undefined) {
+                    const animationTile = this.tiles.find(e => e.id === targetTileId);
+                    if (animationTile) {
+                        animationTile.animationType = 'hit-flash';
+                        animationTile.transitionType = 'fade';
+                        animationTile.animationData = {
+                            clawSwipeHit: true,
+                            duration: 500
+                        };
+                        this.update();
+                        setTimeout(() => {
+                            animationTile.animationType = null;
+                            animationTile.transitionType = null;
+                            animationTile.animationData = {};
+                            this.update();
+                        }, 500);
+                    }
+                }
+                if (resolve) resolve();
+            }
+        };
+        this.canvasAnimations.push(clawAnim);
+        this.update();
+        // Fallback: auto-complete after duration if onComplete is not called by the canvas
+        setTimeout(() => {
+            if (clawAnim.onComplete) clawAnim.onComplete();
+        }, duration);
+    }
+    // ...existing code...
     this.axeSwing = (targetTileId, sourceTileId, facing, resolve) => {
         const animationTile = this.tiles.find(e => e.id === sourceTileId);
         if (!animationTile) return;
@@ -746,24 +811,12 @@ export function AnimationManager(){
                 },this.animationsMatrix[type].duration)
             break;
             case 'grasp': {
-                // Diagnostic log: capture when grasp animation is triggered in tile animation
-                // Pass isGif and icon from the attack definition if available
                 let isGif = false;
                 let icon = undefined;
                 if (data && data.selectedAction) {
                     isGif = !!data.selectedAction.isGif;
                     icon = data.selectedAction.icon;
                 }
-                console.log('[AnimationManager] triggerTileAnimationComplex grasp', {
-                    tile: animationTile,
-                    data,
-                    actor: this.currentActor,
-                    tileId: sourceTileId,
-                    targetTileId,
-                    facing,
-                    isGif,
-                    icon
-                });
                 animationTile.animationType = 'grasp';
                 animationTile.transitionType = 'fade';
                 animationTile.animationData = {
@@ -772,7 +825,6 @@ export function AnimationManager(){
                     isGif,
                     icon
                 };
-                console.log('[AnimationManager][SET] animationTile.animationData for grasp:', animationTile.animationData);
                 this.update();
                 setTimeout(()=>{
                     animationTile.animationType = null;

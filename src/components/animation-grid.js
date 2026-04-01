@@ -6,6 +6,7 @@ import CanvasMagicCircle from '../components/Canvas/canvas_magic_circle'
 import CanvasMagicTriangle from '../components/Canvas/canvas_magic_triangle'
 import CanvasFireball from '../components/Canvas/canvas_fireball'
 import CanvasAxeThrow from '../components/Canvas/canvas_axe_throw'
+import CanvasClawSwipe from '../components/Canvas/canvas_claw_swipe'
 
 // class AnimationGrid extends React.Component {
     // constructor(props){
@@ -139,7 +140,23 @@ const AnimationGrid = ({
                                     zIndex: 20
                                 }}
                             />
-                        } else {
+                        } 
+                        else if (anim.type === 'claw_swipe') {
+                            if (!anim.origin || !anim.target) {
+                                console.warn('[AnimationGrid] CanvasClawSwipe missing origin or target', anim);
+                                return null;
+                            }
+                            return <CanvasClawSwipe
+                                key={animKey}
+                                origin={anim.origin}
+                                target={anim.target}
+                                width={TILE_SIZE}
+                                height={TILE_SIZE}
+                                duration={anim.duration || 400}
+                                onComplete={anim.onComplete}
+                            />
+                        } 
+                        else {
                             return <CanvasMagicMissile
                                 key={animKey}
                                 origin={anim.origin}

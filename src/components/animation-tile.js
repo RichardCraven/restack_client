@@ -38,11 +38,7 @@ export default function AnimationTile(props) {
             props.animationType === 'grasp' &&
             (props.animationData?.isGif || (props.animationData && props.animationData.icon && props.animationData.icon.endsWith('.gif')))
         ) {
-            const newBuster = Date.now();
-            console.log('[AnimationTile] Setting new GIF cache buster:', newBuster, 'for animationType:', props.animationType, 'isGif:', props.animationData?.isGif, 'icon:', props.animationData?.icon);
-            setGifCacheBuster(newBuster);
-        } else {
-            console.log('[AnimationTile] Not updating cache buster. animationType:', props.animationType, 'isGif:', props.animationData?.isGif, 'icon:', props.animationData?.icon);
+            setGifCacheBuster(Date.now());
         }
     }, [props.animationType, props.animationData]);
 
@@ -164,9 +160,6 @@ export default function AnimationTile(props) {
             // If isGif is set, append cache buster from state
             if (props.animationData?.isGif || (props.animationData && props.animationData.icon && props.animationData.icon.endsWith('.gif'))) {
                 graspIcon = `${graspIcon}?cb=${gifCacheBuster}`;
-                console.log('[AnimationTile] Grasp GIF with cache buster:', graspIcon, 'gifCacheBuster:', gifCacheBuster);
-            } else {
-                console.log('[AnimationTile] Grasp icon (no cache buster):', graspIcon);
             }
             image = graspIcon;
             keyframe = `GraspAnimation_${facing}`;
