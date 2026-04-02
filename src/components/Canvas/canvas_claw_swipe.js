@@ -7,7 +7,7 @@ export default function CanvasClawSwipe({
   target, // {x, y} tile coordinates of the target
   width = 100,
   height = 100,
-  duration = 400,
+  duration = 10000, // TEST: very large duration to check persistence
   onComplete = () => {}
 }) {
   const imgRef = useRef();
@@ -23,9 +23,10 @@ export default function CanvasClawSwipe({
   const startY = (origin.y - minY) * height + height / 2;
   const endX = (target.x - minX) * width + width / 2;
   const endY = (target.y - minY) * height + height / 2;
-  const dx = endX - startX;
-  const dy = endY - startY;
-  const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+  const halfX = startX + (endX - startX) * 0.5;
+  const halfY = startY + (endY - startY) * 0.5;
+  const dx = halfX - startX;
+  const dy = halfY - startY;
 
   useEffect(() => {
     let running = true;
@@ -33,22 +34,29 @@ export default function CanvasClawSwipe({
     function animate(ts) {
       if (!startTime) startTime = ts;
       const elapsed = ts - startTime;
+      // Always interpolate from 0 to halfway over the full duration
       const progress = Math.min(elapsed / duration, 1);
       if (imgRef.current) {
         imgRef.current.style.transform =
-          `translate(${dx * progress}px, ${dy * progress}px) rotate(${angle}deg)`;
+          `translate(${dx * progress}px, ${dy * progress}px)`;
         imgRef.current.style.opacity = 1 - 0.2 * progress;
       }
       if (progress < 1 && running) {
         requestAnimationFrame(animate);
-      } else {
-        if (onComplete) onComplete();
       }
     }
     requestAnimationFrame(animate);
-    return () => { running = false; };
+    // Only call onComplete after the full duration, not when the image reaches its destination
+    const timeout = setTimeout(() => {
+      if (imgRef.current) {
+        imgRef.current.style.transform = `translate(${dx}px, ${dy}px)`;
+        imgRef.current.style.opacity = 0.8;
+      }
+      if (onComplete) onComplete();
+    }, duration);
+    return () => { running = false; clearTimeout(timeout); };
     // eslint-disable-next-line
-  }, [origin, target, width, height]);
+  }, [origin, target, width, height, duration]);
 
   // Position the container absolutely at the bounding box
   const left = minX * width;
