@@ -22,7 +22,7 @@ export function AnimationManager(){
         const targetCoords = this.getTileCoordsById(targetTileId);
         const clawAnimId = `claw_swipe_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
         const TILE_SIZE = this.TILE_SIZE || 100;
-        const duration = 400; // ms, matches CanvasClawSwipe default
+        const duration = 10000; // ms, doubled for longer GIF playback
         const clawAnim = {
             id: clawAnimId,
             type: 'claw_swipe',
@@ -30,39 +30,45 @@ export function AnimationManager(){
             origin: originCoords,
             target: targetCoords,
             duration,
-            onComplete: () => {
-                // Remove the canvas animation
-                const idx = this.canvasAnimations.findIndex(anim => anim.id === clawAnimId);
-                if (idx !== -1) {
-                    this.canvasAnimations.splice(idx, 1);
-                    this.update();
-                }
-                // Trigger a hit-flash effect on the target tile
-                if (targetTileId !== null && targetTileId !== undefined) {
-                    const animationTile = this.tiles.find(e => e.id === targetTileId);
-                    if (animationTile) {
-                        animationTile.animationType = 'hit-flash';
-                        animationTile.transitionType = 'fade';
-                        animationTile.animationData = {
-                            clawSwipeHit: true,
-                            duration: 500
-                        };
-                        this.update();
-                        setTimeout(() => {
-                            animationTile.animationType = null;
-                            animationTile.transitionType = null;
-                            animationTile.animationData = {};
-                            this.update();
-                        }, 500);
-                    }
-                }
-                if (resolve) resolve();
-            }
+            // onComplete will be set below
         };
         this.canvasAnimations.push(clawAnim);
         this.update();
-        // Fallback: auto-complete after duration if onComplete is not called by the canvas
+        // Normal removal: remove only in setTimeout/onComplete
+        clawAnim.onComplete = () => {
+            console.log('[clawSwipe] onComplete called for', clawAnimId, 'at', Date.now());
+            // Remove the canvas animation after the duration
+            const idx = this.canvasAnimations.findIndex(anim => anim.id === clawAnimId);
+            if (idx !== -1) {
+                console.log('[clawSwipe] Removing animation from canvasAnimations at idx', idx, 'id', clawAnimId);
+                this.canvasAnimations.splice(idx, 1);
+                this.update();
+            } else {
+                console.warn('[clawSwipe] Tried to remove animation but not found in canvasAnimations', clawAnimId);
+            }
+            // Trigger hit-flash effect on the target tile
+            if (targetTileId !== null && targetTileId !== undefined) {
+                const animationTile = this.tiles.find(e => e.id === targetTileId);
+                if (animationTile) {
+                    animationTile.animationType = 'hit-flash';
+                    animationTile.transitionType = 'fade';
+                    animationTile.animationData = {
+                        clawSwipeHit: true,
+                        duration: 500
+                    };
+                    this.update();
+                    setTimeout(() => {
+                        animationTile.animationType = null;
+                        animationTile.transitionType = null;
+                        animationTile.animationData = {};
+                        this.update();
+                    }, 500);
+                }
+            }
+            if (resolve) resolve();
+        };
         setTimeout(() => {
+            console.log('[clawSwipe] setTimeout firing onComplete for', clawAnimId, 'at', Date.now());
             if (clawAnim.onComplete) clawAnim.onComplete();
         }, duration);
     }

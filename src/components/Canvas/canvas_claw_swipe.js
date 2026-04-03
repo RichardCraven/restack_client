@@ -7,7 +7,7 @@ export default function CanvasClawSwipe({
   target, // {x, y} tile coordinates of the target
   width = 100,
   height = 100,
-  duration = 10000, // TEST: very large duration to check persistence
+  duration = 50000, // Doubled duration for longer GIF playback
   onComplete = () => {}
 }) {
   const imgRef = useRef();
@@ -35,13 +35,21 @@ export default function CanvasClawSwipe({
       if (!startTime) startTime = ts;
       const elapsed = ts - startTime;
       // Always interpolate from 0 to halfway over the full duration
-      const progress = Math.min(elapsed / duration, 1);
+      let progress = Math.min(elapsed / duration, 1);
+      // After progress reaches 1, keep drawing at final position until timeout
       if (imgRef.current) {
-        imgRef.current.style.transform =
-          `translate(${dx * progress}px, ${dy * progress}px)`;
-        imgRef.current.style.opacity = 1 - 0.2 * progress;
+        if (progress < 1) {
+          imgRef.current.style.transform =
+            `translate(${dx * progress}px, ${dy * progress}px)`;
+          imgRef.current.style.opacity = 1 - 0.2 * progress;
+        } else {
+          // Keep drawing at final position until timeout
+          imgRef.current.style.transform = `translate(${dx}px, ${dy}px)`;
+          imgRef.current.style.opacity = 0.8;
+        }
       }
-      if (progress < 1 && running) {
+      // Always keep the animation frame loop running until the timeout fires (running=false)
+      if (running) {
         requestAnimationFrame(animate);
       }
     }
@@ -52,6 +60,7 @@ export default function CanvasClawSwipe({
         imgRef.current.style.transform = `translate(${dx}px, ${dy}px)`;
         imgRef.current.style.opacity = 0.8;
       }
+      console.log('[CanvasClawSwipe] setTimeout firing onComplete at', Date.now());
       if (onComplete) onComplete();
     }, duration);
     return () => { running = false; clearTimeout(timeout); };
