@@ -8,7 +8,8 @@ export default function CanvasClawSwipe({
   width = 100,
   height = 100,
   duration = 50000, // Doubled duration for longer GIF playback
-  onComplete = () => {}
+  onComplete = () => {},
+  tracer = true // If true, do NOT clear canvas (tracer effect ON)
 }) {
   const imgRef = useRef();
   // Compute bounding box covering both tiles
@@ -31,41 +32,48 @@ export default function CanvasClawSwipe({
   useEffect(() => {
     let running = true;
     let startTime = null;
+
     function animate(ts) {
       if (!startTime) startTime = ts;
       const elapsed = ts - startTime;
-      // Always interpolate from 0 to halfway over the full duration
       let progress = Math.min(elapsed / duration, 1);
-      // After progress reaches 1, keep drawing at final position until timeout
       if (imgRef.current) {
         if (progress < 1) {
           imgRef.current.style.transform =
             `translate(${dx * progress}px, ${dy * progress}px)`;
           imgRef.current.style.opacity = 1 - 0.2 * progress;
+          imgRef.current.style.visibility = 'visible';
         } else {
-          // Keep drawing at final position until timeout
           imgRef.current.style.transform = `translate(${dx}px, ${dy}px)`;
           imgRef.current.style.opacity = 0.8;
+          // If tracer is false, hide the image after the animation completes
+          if (!tracer) {
+            imgRef.current.style.visibility = 'hidden';
+          } else {
+            imgRef.current.style.visibility = 'visible';
+          }
         }
       }
-      // Always keep the animation frame loop running until the timeout fires (running=false)
       if (running) {
         requestAnimationFrame(animate);
       }
     }
     requestAnimationFrame(animate);
-    // Only call onComplete after the full duration, not when the image reaches its destination
     const timeout = setTimeout(() => {
       if (imgRef.current) {
         imgRef.current.style.transform = `translate(${dx}px, ${dy}px)`;
         imgRef.current.style.opacity = 0.8;
+        if (!tracer) {
+          imgRef.current.style.visibility = 'hidden';
+        } else {
+          imgRef.current.style.visibility = 'visible';
+        }
       }
-      console.log('[CanvasClawSwipe] setTimeout firing onComplete at', Date.now());
       if (onComplete) onComplete();
     }, duration);
     return () => { running = false; clearTimeout(timeout); };
     // eslint-disable-next-line
-  }, [origin, target, width, height, duration]);
+  }, [origin, target, width, height, duration, tracer]);
 
   // Position the container absolutely at the bounding box
   const left = minX * width;

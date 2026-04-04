@@ -1,3 +1,5 @@
+# Error Resolution Rule
+- When the user asks to resolve an error, the agent must immediately analyze the issue, output the diagnosis, and proceed to resolve it without asking for permission. Do not prompt the user for confirmation before fixing errors—take direct action as soon as the request is made.
 # Rule: When adding new methods to any file, do NOT place them at the top of the file. Always insert new methods in an appropriate position farther down, following the file’s structure and conventions, to avoid compilation errors and maintain code organization.
 # Agent Coding Rules and Context
 

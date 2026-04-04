@@ -140,8 +140,7 @@ const AnimationGrid = ({
                                     zIndex: 20
                                 }}
                             />
-                        } 
-                        else if (anim.type === 'claw_swipe') {
+                        } else if (anim.type === 'claw_swipe') {
                             if (!anim.origin || !anim.target) {
                                 console.warn('[AnimationGrid] CanvasClawSwipe missing origin or target', anim);
                                 return null;
@@ -154,6 +153,7 @@ const AnimationGrid = ({
                                 height={TILE_SIZE}
                                 duration={anim.duration || 400}
                                 onComplete={anim.onComplete}
+                                tracer={typeof anim.tracer === 'boolean' ? anim.tracer : true}
                             />
                         } 
                         else {

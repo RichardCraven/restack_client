@@ -113,11 +113,7 @@ button{
       color: rgb(79, 206, 245);
     }
   }
-  .logout-button{
-    &:hovered{
-      
-    }
-  }
+  // Removed empty .logout-button ruleset
   .save-button{
     cursor: pointer;
   }
@@ -859,9 +855,7 @@ button{
         .selected-crew-portrait-wrapper{
           height: 100px;
           width: 100px;
-          &.empty{
-
-          }
+          // Removed empty &.empty ruleset
           &.locked{
             
             background-color: rgba(211, 211, 211, 0.605);

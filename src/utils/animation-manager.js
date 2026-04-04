@@ -1,3 +1,4 @@
+
 import * as images from '../utils/images';
 import React from 'react';
 import CanvasAxeThrow from '../components/Canvas/canvas_axe_throw';
@@ -22,7 +23,12 @@ export function AnimationManager(){
         const targetCoords = this.getTileCoordsById(targetTileId);
         const clawAnimId = `claw_swipe_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
         const TILE_SIZE = this.TILE_SIZE || 100;
-        const duration = 10000; // ms, doubled for longer GIF playback
+        let duration = 1000; // ms, doubled for longer GIF playback
+        let tracer = false; // Toggle this to true to enable tracer effect
+        // 10000ms = tracer, 1000ms is not
+        if (tracer) {
+            duration = 10000;
+        }
         const clawAnim = {
             id: clawAnimId,
             type: 'claw_swipe',
@@ -30,49 +36,49 @@ export function AnimationManager(){
             origin: originCoords,
             target: targetCoords,
             duration,
-            // onComplete will be set below
+            tracer,
+            onComplete: () => {
+                console.log('[clawSwipe] onComplete called for', clawAnimId, 'at', Date.now());
+                // Remove the canvas animation after the duration
+                const idx = this.canvasAnimations.findIndex(anim => anim.id === clawAnimId);
+                if (idx !== -1) {
+                    console.log('[clawSwipe] Removing animation from canvasAnimations at idx', idx, 'id', clawAnimId);
+                    this.canvasAnimations.splice(idx, 1);
+                    this.update();
+                } else {
+                    console.warn('[clawSwipe] Tried to remove animation but not found in canvasAnimations', clawAnimId);
+                }
+                // Trigger hit-flash effect on the target tile
+                if (targetTileId !== null && targetTileId !== undefined) {
+                    const animationTile = this.tiles.find(e => e.id === targetTileId);
+                    if (animationTile) {
+                        animationTile.animationType = 'hit-flash';
+                        animationTile.transitionType = 'fade';
+                        animationTile.animationData = {
+                            clawSwipeHit: true,
+                            duration: 500
+                        };
+                        this.update();
+                        setTimeout(() => {
+                            animationTile.animationType = null;
+                            animationTile.transitionType = null;
+                            animationTile.animationData = {};
+                            this.update();
+                        }, 500);
+                    }
+                }
+                if (resolve) resolve();
+            }
         };
         this.canvasAnimations.push(clawAnim);
         this.update();
-        // Normal removal: remove only in setTimeout/onComplete
-        clawAnim.onComplete = () => {
-            console.log('[clawSwipe] onComplete called for', clawAnimId, 'at', Date.now());
-            // Remove the canvas animation after the duration
-            const idx = this.canvasAnimations.findIndex(anim => anim.id === clawAnimId);
-            if (idx !== -1) {
-                console.log('[clawSwipe] Removing animation from canvasAnimations at idx', idx, 'id', clawAnimId);
-                this.canvasAnimations.splice(idx, 1);
-                this.update();
-            } else {
-                console.warn('[clawSwipe] Tried to remove animation but not found in canvasAnimations', clawAnimId);
-            }
-            // Trigger hit-flash effect on the target tile
-            if (targetTileId !== null && targetTileId !== undefined) {
-                const animationTile = this.tiles.find(e => e.id === targetTileId);
-                if (animationTile) {
-                    animationTile.animationType = 'hit-flash';
-                    animationTile.transitionType = 'fade';
-                    animationTile.animationData = {
-                        clawSwipeHit: true,
-                        duration: 500
-                    };
-                    this.update();
-                    setTimeout(() => {
-                        animationTile.animationType = null;
-                        animationTile.transitionType = null;
-                        animationTile.animationData = {};
-                        this.update();
-                    }, 500);
-                }
-            }
-            if (resolve) resolve();
-        };
+        // Fallback: auto-complete after duration if onComplete is not called by the canvas
         setTimeout(() => {
             console.log('[clawSwipe] setTimeout firing onComplete for', clawAnimId, 'at', Date.now());
             if (clawAnim.onComplete) clawAnim.onComplete();
         }, duration);
     }
-    // ...existing code...
+
     this.axeSwing = (targetTileId, sourceTileId, facing, resolve) => {
         const animationTile = this.tiles.find(e => e.id === sourceTileId);
         if (!animationTile) return;
@@ -1453,10 +1459,5 @@ export function AnimationManager(){
         let index = Math.floor(Math.random() * array.length)
         return array[index]
     }
-    // Render a flying axe animation using a moving canvas
-    this.renderAxeThrowCanvas = (origin, target) => {
-        // This method should be called from a React component context
-        // Example usage: ReactDOM.render(this.renderAxeThrowCanvas(origin, target), container)
-        return <CanvasAxeThrow origin={origin} target={target} />;
-    }
+// End of AnimationManager function
 }
