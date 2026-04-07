@@ -641,11 +641,18 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
                 }
             }
         } else {
+            // Snapshot pendingAttack before the async IIFE. restartTurnCycle can fire
+            // during the animation await and clear caller.pendingAttack. Without a
+            // snapshot the switch would throw (null.name) and hit() would log
+            // "HOW CAN YOU HIT WITH NO PENDING ATTACK" because it reads
+            // caller.pendingAttack after the await resumes.
+            const capturedPendingAttack = caller.pendingAttack;
+            if (!capturedPendingAttack) return;
             await (async () => {
                 const distanceToTarget = data.methods.getDistanceToTarget(caller, target), // eslint-disable-line no-unused-vars
                 laneDiff = data.methods.getLaneDifferenceToTarget(caller, target); // eslint-disable-line no-unused-vars
                 // debugger
-                switch(caller.pendingAttack.name){
+                switch(capturedPendingAttack.name){
                     case 'sword swing': {
                         // console.log('SWING ', facing);
                         // if (facing === 'up'){
@@ -654,6 +661,9 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
                         // }
                         const combatantHit = await this.triggerSwordSwing(caller.coordinates, facing);
                         if(combatantHit){
+                            // Restore pendingAttack if restartTurnCycle cleared it while the
+                            // animation was in flight, so hit() has valid type/weakness data.
+                            if (!caller.pendingAttack) caller.pendingAttack = capturedPendingAttack;
                             this.hitsCombatant(caller, combatantHit);
                         } else {
                             this.missesTarget(caller);

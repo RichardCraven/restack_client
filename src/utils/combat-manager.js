@@ -796,7 +796,6 @@ export function CombatManager(){
                 combatant.specials.forEach(action => {
                     if (action && typeof action === 'object') {
                         action.cooldown_position = 100;
-                        console.log(`[initializeCombat] ${combatant.type} special "${action.name}" → cooldown_position set to 100 (ready)`);
                     }
                 });
             }
@@ -978,9 +977,9 @@ export function CombatManager(){
     }
     this.kickOffTurnCycles = () => {
         let arr = Object.values(this.combatants)
-            Object.values(this.combatants).forEach((combatant) => {
-                // Skip virtual combatants (VCTs) and any without attacks
-                if (combatant.isVCT || !Array.isArray(combatant.attacks)) return;
+        Object.values(this.combatants).forEach((combatant) => {
+            // Skip virtual combatants (VCTs) and any without attacks
+            if (combatant.isVCT || !Array.isArray(combatant.attacks)) return;
             combatant.attacks.forEach((a)=>{
                 a.cooldown_position = 100
             })
@@ -998,6 +997,21 @@ export function CombatManager(){
             ) {
                 combatant.turnCycle();
             }
+            // --- FEAR CLEANUP PATCH ---
+            // Defensive: forcibly clean up expired feared states for all fighters.
+            // NOTE: This patch only runs during the kickOffTurnCycles init interval (one tick
+            // per combatant). Once arr is empty, clearInterval fires and this check STOPS.
+            // It is NOT a persistent recurring monitor. Do not rely on it for ongoing cleanup.
+            Object.values(this.combatants).forEach(f => {
+                if (f.feared && (typeof f.feared_eras === 'number') && f.feared_eras <= 0) {
+                    debugger; // Induce fear effect expired and is being cleaned up
+                    if (f._fearOriginalAtk != null) { f.atk = f._fearOriginalAtk; delete f._fearOriginalAtk; }
+                    if (f._fearOriginalDef != null) { f.def = f._fearOriginalDef; delete f._fearOriginalDef; }
+                    f.feared = false;
+                    f.feared_eras = 0;
+                    if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+                }
+            });
             if(!arr.length) clearInterval(int)
         },100)
         // while (arr.length){
@@ -1036,7 +1050,6 @@ export function CombatManager(){
         caller.coordinates.x = caller.destinationCoordinates.x;
         caller.coordinates.y = caller.destinationCoordinates.y;
         caller.coordinates = {x: caller.destinationCoordinates.x, y: caller.destinationCoordinates.y}
-        console.log(`[DIAG] goToDestination: ${caller.name || caller.type} (${caller.id}) moved to (${caller.coordinates.x},${caller.coordinates.y})`);
         try { this._setCombatantOccupiedCoords(caller); } catch (e) {}
         this.syncVCTs();
             // For debugging: render a 2px white border on VCT tiles (to be used in the board rendering logic)
@@ -1299,7 +1312,6 @@ export function CombatManager(){
         // Move is legal, update coordinates
         if (pendingCoordinates) {
             fighter.coordinates = { ...pendingCoordinates };
-            console.log(`[DIAG] moveFighterOneSpace: ${fighter.name || fighter.type} (${fighter.id}) moved to (${fighter.coordinates.x},${fighter.coordinates.y})`);
             fighter.manualMovesCurrent--;
             try { fighter.manualMoveCooldown && fighter.manualMoveCooldown(); } catch(e){}
             try { fighter.restartTurnCycle && fighter.restartTurnCycle(); } catch(e){}
@@ -1734,12 +1746,6 @@ export function CombatManager(){
             this.fighterAI.roster[caller.type].processMove(caller, this.combatants, this.hitsTarget, this.missesTarget);
             try { this._setCombatantOccupiedCoords(caller); } catch (e) {}
             if (caller.isMonster) {
-                const type = (caller.type || '').toLowerCase();
-                if (type === 'mummy') {
-                    console.log(`[DIAG] Mummy processMove: coords now (${caller.coordinates.x},${caller.coordinates.y})`);
-                } else {
-                    console.log(`[DIAG] Monster processMove: ${caller.type} (${caller.id}) coords now (${caller.coordinates.x},${caller.coordinates.y})`);
-                }
                 // Defensive: always sync VCTs and update UI after monster move
                 if (typeof this.syncVCTs === 'function') this.syncVCTs();
             }
@@ -1749,12 +1755,6 @@ export function CombatManager(){
             this.monsterAI.roster[caller.type].processMove(caller, this.combatants, this.hitsTarget, this.missesTarget);
             try { this._setCombatantOccupiedCoords(caller); } catch (e) {}
             if (caller.isMonster) {
-                const type = (caller.type || '').toLowerCase();
-                if (type === 'mummy') {
-                    console.log(`[DIAG] Mummy processMove: coords now (${caller.coordinates.x},${caller.coordinates.y})`);
-                } else {
-                    console.log(`[DIAG] Monster processMove: ${caller.type} (${caller.id}) coords now (${caller.coordinates.x},${caller.coordinates.y})`);
-                }
                 // Defensive: always sync VCTs and update UI after monster move
                 if (typeof this.syncVCTs === 'function') this.syncVCTs();
             }
@@ -2269,10 +2269,7 @@ export function CombatManager(){
             if (pushDest && this._canMoveToCoords(combatantHit, pushDest)) {
                 combatantHit.coordinates = pushDest;
                 this.checkOverlap(combatantHit);
-                // Log and sync VCTs after pushback
-                console.log(`[DIAG] pushback: ${combatantHit.name || combatantHit.type} (${combatantHit.id}) pushed to (${combatantHit.coordinates.x},${combatantHit.coordinates.y})`);
                 if (combatantHit.isMonster && typeof this.syncVCTs === 'function') {
-                    console.log('[DIAG] syncVCTs called after pushback');
                     this.syncVCTs();
                 }
             }

@@ -179,8 +179,6 @@ export function Mummy(data, utilMethods, animationManager, overlayManager) {
         const FIGHT_INTERVAL = utilMethods.getFightInterval ? utilMethods.getFightInterval() : 40;
         const eraDuration = 5 * 100 * FIGHT_INTERVAL;
 
-        console.log(`[Mummy] *** INDUCE FEAR activated! energy=${caller.energy} ***`);
-
         // Spend energy
         caller.energy = (caller.energy || 0) - 90;
 
@@ -194,7 +192,20 @@ export function Mummy(data, utilMethods, animationManager, overlayManager) {
             enemy.atk = Math.max(1, Math.floor(enemy._fearOriginalAtk * 0.5));
             enemy.def = Math.max(0, Math.floor(enemy._fearOriginalDef * 0.5));
             enemy.feared = true;
-            enemy.feared_eras = 5; // decremented in restartTurnCycle — speed-agnostic
+            // Only set feared_eras on first application. If already counting down,
+            // do NOT reset to 5 — that would allow a second Mummy firing mid-countdown
+            // to permanently extend fear and prevent it from ever expiring.
+            if (!enemy.feared_eras || enemy.feared_eras <= 0) {
+                // Use duration from the specials matrix (fearSpecial.duration) rather than
+                // a hardcoded value.  specials-matrix.induce_fear.duration = 2.  The old
+                // hardcoded 5 meant fear lasted ~83 s for a dex-6 fighter, which typically
+                // exceeded the fight length and made fear appear to never end.
+                const erasToApply = (fearSpecial && typeof fearSpecial.duration === 'number' && fearSpecial.duration > 0)
+                    ? fearSpecial.duration
+                    : 2; // fallback matches matrix default
+                enemy.feared_eras = erasToApply;
+            } else {
+            }
 
             console.log(`[Mummy] FEAR applied to ${enemy.name || enemy.type}: atk ${enemy._fearOriginalAtk}→${enemy.atk}, def ${enemy._fearOriginalDef}→${enemy.def}`);
         });
@@ -208,7 +219,6 @@ export function Mummy(data, utilMethods, animationManager, overlayManager) {
             const atkId = Date.now() + Math.random();
             const atkObj = { id: atkId, value: 'ATK ↓', source: 'Mummy' };
             enemy.damageIndicators.push(atkObj);
-            console.log('[DIAG][Mummy] Pushed to enemy.damageIndicators:', atkObj, 'Current:', enemy.damageIndicators);
             setTimeout(() => {
                 const idx = enemy.damageIndicators.findIndex(e => e && e.id === atkId);
                 if (idx !== -1) enemy.damageIndicators.splice(idx, 1);
@@ -254,28 +264,8 @@ export function Mummy(data, utilMethods, animationManager, overlayManager) {
             throw new Error('moveCooldown must be defined for all units');
         }
 
-        // --- DIAGNOSTIC: Log before acquireTarget ---
-        if (typeof console !== 'undefined') {
-            const t = caller.targetId && combatants[caller.targetId] ? combatants[caller.targetId] : null;
-            console.log('[Mummy][DIAG] BEFORE acquireTarget:', {
-                targetId: caller.targetId,
-                targetIsVCT: t ? !!t.isVCT : null,
-                target: t
-            });
-        }
-
         // Retarget every turn to always track the closest enemy
         this.acquireTarget(caller, combatants);
-
-        // --- DIAGNOSTIC: Log after acquireTarget ---
-        if (typeof console !== 'undefined') {
-            const t = caller.targetId && combatants[caller.targetId] ? combatants[caller.targetId] : null;
-            console.log('[Mummy][DIAG] AFTER acquireTarget:', {
-                targetId: caller.targetId,
-                targetIsVCT: t ? !!t.isVCT : null,
-                target: t
-            });
-        }
 
         // --- FINAL UNCONDITIONAL VCT GUARD ---
         if (caller.targetId && combatants[caller.targetId] && combatants[caller.targetId].isVCT) {
@@ -527,7 +517,6 @@ export function Mummy(data, utilMethods, animationManager, overlayManager) {
                 }
                 // Trigger grasp animation using animationManager at the correct tile
                 if (this.animationManager && typeof this.animationManager.triggerAttackAnimation === 'function') {
-                    console.log('[Mummy][DIAG] pendingAttack before animation:', caller.pendingAttack);
                     await this.animationManager.triggerAttackAnimation({
                         coordinates: graspTile,
                         facing: caller.facing,

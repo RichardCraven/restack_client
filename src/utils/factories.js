@@ -26,18 +26,7 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
         // console.log('*****fighter: ', fighter);
         initialFacing = 'left';
     }
-    // Diagnostic instrumentation: if any incoming specialActions carry an unexpected
-    // cooldown_position === 3, log them with a stack trace so we can find the creation site.
-    try {
-        if (fighter.specialActions && fighter.specialActions.some(s => s && s.cooldown_position === 3)) {
-            console.warn('createFighter: incoming specialActions with cooldown_position===3 for fighter:', fighter.id || fighter.name, fighter.specialActions.filter(s => s && s.cooldown_position === 3));
-            // Print stack to help locate who created/modified these objects at runtime
-            console.trace();
-        }
-    } catch (err) {
-        // Non-fatal diagnostic — don't break the game if console access fails
-        // console.debug('createFighter diagnostic error', err);
-    }
+
     return {
         name: fighter.name,
         type: fighter.type,
@@ -159,15 +148,6 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
                 if (typeof broadcastDataUpdate === 'function') broadcastDataUpdate(this);
             } catch (err) {
                 // non-fatal
-            }
-            // Log attack details for debugging
-            if (this.type === 'barbarian') {
-                const atk = this.pendingAttack;
-                console.log('[Barbarian Attack]', {
-                    attackType: atk ? atk.name : 'none',
-                    icon: atk ? atk.icon : 'none',
-                    attackObj: atk
-                });
             }
             initiateAttack(this);
         },
@@ -334,6 +314,23 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
                 const era = this.eras[eraIndex]
                 this.eraIndex = eraIndex;
 
+                // Era-transition: fires once per era (5 times per turn cycle).
+                // Fear duration is counted in eras, not full cycles.
+                if (eraIndex !== this._lastEraIndex) {
+                    this._lastEraIndex = eraIndex;
+                    if (this.feared && this.feared_eras > 0) {
+                        this.feared_eras--;
+                        if (this.feared_eras <= 0) {
+                            if (this._fearOriginalAtk != null) { this.atk = this._fearOriginalAtk; delete this._fearOriginalAtk; }
+                            if (this._fearOriginalDef != null) { this.def = this._fearOriginalDef; delete this._fearOriginalDef; }
+                            this.feared = false;
+                            this.feared_eras = 0;
+                            if (!this.targetId) acquireTarget(this);
+                            if (typeof broadcastDataUpdate === 'function' && !isCombatOver()) broadcastDataUpdate(this);
+                        }
+                    }
+                }
+
                 const eraMove = () => {
                     if(this.stunned) return; // stunned: cannot move
                     if(this.movesLeft && !era.moved && !this.onMoveCooldown){
@@ -397,18 +394,18 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
                             break;
                 }
                 if(this.tempo >= 100){
-                    console.log(`[MONSTER TURN CYCLE] tempo >= 100 for ${this.name || this.type || this.id}, calling restartTurnCycle. tempo:`, this.tempo, 'eraIndex:', this.eraIndex, 'movesLeft:', this.movesLeft, 'pendingAttack:', this.pendingAttack);
                     this.restartTurnCycle();
                 }
                 broadcastDataUpdate(this)
             }, this.FIGHT_INTERVAL)
         },
         restartTurnCycle: function(){
-            console.log(`[MONSTER TURN CYCLE] restartTurnCycle called for ${this.name || this.type || this.id}. tempo:`, this.tempo, 'eraIndex:', this.eraIndex, 'movesLeft:', this.movesLeft, 'pendingAttack:', this.pendingAttack, 'stack:', new Error().stack);
+            this._inRestartTurnCycle = true;
             clearInterval(this.interval)
             this.tempo = 0;
             this.movesLeft = this.movesPerTurnCycle;
             this.eras.forEach(e=>e.moved = e.attacked = false)
+            this._lastEraIndex = -1;
             this.pendingAttack = null;
 
             // ── Tick down era-based effect counters ───────────────────────
@@ -422,20 +419,8 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
                     if (typeof broadcastDataUpdate === 'function' && !isCombatOver()) broadcastDataUpdate(this);
                 }
             }
-            // Fear (halved ATK/DEF applied by induce_fear)
-            if (this.feared && this.feared_eras > 0) {
-                this.feared_eras--;
-                if (this.feared_eras <= 0) {
-                    if (this._fearOriginalAtk != null) { this.atk = this._fearOriginalAtk; delete this._fearOriginalAtk; }
-                    if (this._fearOriginalDef != null) { this.def = this._fearOriginalDef; delete this._fearOriginalDef; }
-                    this.feared = false;
-                    this.feared_eras = 0;
-                    // Reacquire target after fear ends
-                    if (!this.targetId) acquireTarget(this);
-                    // Push immediately so the UI drops the 'feared' CSS class right away
-                    if (typeof broadcastDataUpdate === 'function' && !isCombatOver()) broadcastDataUpdate(this);
-                }
-            }
+            // Fear duration is now counted in eras (via _lastEraIndex transition in the
+            // interval tick above), not in full turn cycles. No decrement here.
             // Drained (energy drain visual flag)
             if (this.drained && this.drained_eras > 0) {
                 this.drained_eras--;
@@ -447,6 +432,7 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
             }
             // ─────────────────────────────────────────────────────────────
 
+            this._inRestartTurnCycle = false;
             this.turnCycle();
         },
         waitForAttack: function(){
@@ -480,10 +466,22 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
         // Allow updating the fighter's interval dynamically
         setFightInterval: function(newInterval) {
             this.FIGHT_INTERVAL = newInterval;
-            // If a turn cycle is running, restart it with the new interval
+            // If a turn cycle is running, restart it with the new interval.
+            // Guard against reentrance: if we are already inside restartTurnCycle
+            // (e.g. _expireBerserker calling setFightInterval from within the
+            // patched restartTurnCycle), only clear the stale interval and let the
+            // outer restartTurnCycle finish normally. Without this guard, original()
+            // (which contains side-effects like feared_eras decrement) would run
+            // twice — once from the inner restartTurnCycle and once from the outer.
             if (this.interval) {
                 clearInterval(this.interval);
-                this.restartTurnCycle();
+                this.interval = null;
+                if (!this._inRestartTurnCycle) {
+                    this.restartTurnCycle();
+                }
+                // else: the outer restartTurnCycle already called clearInterval above,
+                // so the old interval is gone. It will call turnCycle() at the end of
+                // its own execution with the updated FIGHT_INTERVAL already in place.
             }
         }
     };

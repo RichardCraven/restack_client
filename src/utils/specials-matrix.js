@@ -141,7 +141,7 @@ const specialsMatrix = {
         icon: images['wide_skull'],
         cooldown: 15,
         energy_cost: 90,
-        duration: 5,
+        duration: 2,
         effect: ['nerf_all_enemies'],
         nerf: {
             decrease_stats: {
