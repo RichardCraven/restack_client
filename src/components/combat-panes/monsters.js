@@ -27,14 +27,14 @@ const MonstersCombatGrid = ({
     teleportingFighterId,
     fearCastingActive,
 }) => {
-    const [monsterHitFlashKey, setMonsterHitFlashKey] = React.useState(0);
-    const [showMonsterHitFlash, setShowMonsterHitFlash] = React.useState(false);
-    const prevMonsterWounded = React.useRef(false);
-    const monsterFlashTimeout = React.useRef();
+    const [monsterHitFlashKey, setMonsterHitFlashKey] = React.useState(0); // eslint-disable-line no-unused-vars
+    const [showMonsterHitFlash, setShowMonsterHitFlash] = React.useState(false); // eslint-disable-line no-unused-vars
+    const prevMonsterWounded = React.useRef(false); // eslint-disable-line no-unused-vars
+    const monsterFlashTimeout = React.useRef(); // eslint-disable-line no-unused-vars
     const monsterFlashHasOccurred = React.useRef(false); // eslint-disable-line no-unused-vars
     const monsterDiagInterval = React.useRef(); // eslint-disable-line no-unused-vars
-    const [minionHitFlash, setMinionHitFlash] = React.useState({});
-    const prevMinionWounded = React.useRef({});
+    const [minionHitFlash, setMinionHitFlash] = React.useState({}); // eslint-disable-line no-unused-vars
+    const prevMinionWounded = React.useRef({}); // eslint-disable-line no-unused-vars
 
 
     // --- Damage Indicator Queuing System ---
@@ -78,10 +78,14 @@ const MonstersCombatGrid = ({
             validIds.forEach(id => { if (prev[id]) cleaned[id] = prev[id]; });
             return cleaned;
         });
+        // Capture ref at effect-run time, not cleanup time (satisfies react-hooks/exhaustive-deps)
+        const timeoutsToClean = indicatorTimeouts.current;
         // Cleanup on unmount
         return () => {
-            Object.values(indicatorTimeouts.current).forEach(clearTimeout);
+            Object.values(timeoutsToClean).forEach(clearTimeout);
         };
+    // visibleDamageIndicators omitted: including it causes infinite re-renders since this effect calls setVisibleDamageIndicators
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [battleData]);
 
     // Staggered instantiation: show next indicator from queue after delay
@@ -342,47 +346,39 @@ const MonstersCombatGrid = ({
                         style={{
                             left: `${vct.coordinates.x * 100 + (SHOW_TILE_BORDERS ? vct.coordinates.x * 2 : 0)}px`,
                             zIndex: 300,
-                            border: '2px solid white',
                             width: `${TILE_SIZE}px`,
                             height: `${TILE_SIZE}px`,
-                            background: 'rgba(255,255,255,0.08)',
                             position: 'absolute',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
                             pointerEvents: 'none',
+                            overflow: 'visible',
                         }}
                     >
-                        {/* Optionally show VCT label for debugging */}
-                        <span style={{ color: 'white', fontSize: '0.8em', opacity: 0.7 }}>VCT</span>
-                    </div>
-                    {/* Damage indicators for VCT */}
-                    <div className="portrait-overlay" style={{zIndex: 301, position: 'absolute', top: 0, left: 0, width: '100%', height: '100%'}}>
-                        <div className="damage-indicator-container" style={{ overflow: 'visible' }}>
-                            {(visibleDamageIndicators[vct.id] || []).map((indicator, idx, arr) => {
-                                const yOffset = idx * 28;
-                                return (
-                                    <div
-                                        className="damage-indicator"
-                                        key={indicator.id}
-                                        style={{
-                                            transform: `translateY(-${yOffset}px)`,
-                                            zIndex: 10 + (arr.length - idx),
-                                            position: 'absolute',
-                                            left: 0,
-                                            right: 0,
-                                            margin: '0 auto',
-                                            pointerEvents: 'none',
-                                            color: 'white',
-                                            fontWeight: 700,
-                                            fontSize: '1.2em',
-                                            textShadow: '0 0 4px #000',
-                                        }}
-                                    >
-                                        {indicator.value}
-                                    </div>
-                                );
-                            })}
+                        {/* Damage indicators — inside vct-portrait-wrapper so they're centered over the tile */}
+                        <div className="portrait-overlay" style={{ zIndex: 301, position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', overflow: 'visible' }}>
+                            <div className="damage-indicator-container" style={{ overflow: 'visible' }}>
+                                {(visibleDamageIndicators[vct.id] || []).map((indicator, idx, arr) => {
+                                    const isStatDebuff = !indicator.isCrit && typeof indicator.value === 'string';
+                                    const yOffset = idx * 28;
+                                    return (
+                                        <div
+                                            className={`damage-indicator${isStatDebuff ? ' stat-debuff' : ''}${indicator.isCrit ? ' crit' : ''}`}
+                                            key={indicator.id}
+                                            style={{
+                                                transform: `translateY(-${yOffset}px)`,
+                                                zIndex: 10 + (arr.length - idx),
+                                                position: 'absolute',
+                                                left: 0,
+                                                right: 0,
+                                                margin: '0 auto',
+                                                pointerEvents: 'none',
+                                                color: !isStatDebuff ? 'red' : undefined,
+                                            }}
+                                        >
+                                            {indicator.value}
+                                        </div>
+                                    );
+                                })}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -411,7 +407,7 @@ const MonstersCombatGrid = ({
                         >
                             <div className={`action-bar ${battleData[monster.id]?.attacking ? (battleData[monster.id]?.facing === 'right' ? 'monsterHitsAnimation_LtoR' : 'monsterHitsAnimation') : ''}`}></div>
                         </div>
-                        {(() => {
+                        {/* {(() => {
                             let weaponWrapper = null;
                             if (battleData[monster.id] && battleData[monster.id].pendingAttack) {
                                 const pendingAttack = battleData[monster.id].pendingAttack;
@@ -434,7 +430,7 @@ const MonstersCombatGrid = ({
                                 );
                             }
                             return weaponWrapper;
-                        })()}
+                        })()} */}
                         <div
                             className="portrait-wrapper monster-portrait-wrapper"
                             style={{
@@ -442,7 +438,7 @@ const MonstersCombatGrid = ({
                                 zIndex: `${battleData[monster.id]?.dead ? '0' : '200'}`,
                                 overflow: 'visible',
                                 ...transitionStyle(monster.id),
-                                border: (combatManager && combatManager.isVCT && battleData[monster.id]?.coordinates && combatManager.isVCT(battleData[monster.id].coordinates.x, battleData[monster.id].coordinates.y)) ? '2px solid white' : undefined
+                                border: undefined
                             }}
                         >
                             <div
@@ -519,32 +515,20 @@ const MonstersCombatGrid = ({
 }                                <div className={`portrait-overlay ${battleData[monster.id]?.frozen ? 'frozen' : ''}`} style={{zIndex: 2, position: 'absolute', top: 0, left: 0, width: '100%', height: '100%'}}>
                                     <div className="damage-indicator-container" style={{ overflow: 'visible' }}>
                                         {(visibleDamageIndicators[monster.id] || []).map((indicator, idx, arr) => {
-                                            // If this is a main-monster (2x scale), render indicators at the top tile (virtually occupied)
-                                            const isMainMonster = !monster.isMinion && (monster.scale === 2 || monster['main-monster'] || monster.isMainMonster);
-                                            // Increase offset for 2x monsters to make indicator much higher
-                                            const yOffset = isMainMonster ? TILE_SIZE * 5 + idx * 36 : idx * 28;
-                                            // if (isMainMonster) {
-                                            //     console.log('[MainMonsterIndicator] DEBUG TILE_SIZE:', TILE_SIZE, 'yOffset:', yOffset, 'idx:', idx, 'indicator:', indicator);
-                                            // }
-                                            // Stat debuff (Induce Fear) is string, all others (damage) are numbers
-                                            const isStatDebuff = typeof indicator.value === 'string';
+                                            const yOffset = idx * 28;
+                                            const isStatDebuff = !indicator.isCrit && typeof indicator.value === 'string';
                                             return (
                                                 <div
-                                                    className={`damage-indicator${isStatDebuff ? ' stat-debuff' : ''}`}
+                                                    className={`damage-indicator${isStatDebuff ? ' stat-debuff' : ''}${indicator.isCrit ? ' crit' : ''}`}
                                                     key={indicator.id}
                                                     style={{
                                                         transform: `translateY(-${yOffset}px)`,
-                                                        top: isMainMonster ? `-${yOffset}px` : undefined,
                                                         zIndex: 10 + (arr.length - idx),
                                                         position: 'absolute',
                                                         left: 0,
                                                         right: 0,
                                                         margin: '0 auto',
                                                         pointerEvents: 'none',
-                                                        background: isMainMonster ? 'rgba(255,0,0,0.3)' : undefined,
-                                                        border: isMainMonster ? '2px solid red' : undefined,
-                                                        fontSize: isMainMonster ? '2.2em' : undefined,
-                                                        fontWeight: isMainMonster ? '900' : undefined,
                                                         color: !isStatDebuff ? 'red' : undefined,
                                                     }}
                                                 >
@@ -632,7 +616,7 @@ const MonstersCombatGrid = ({
                             >
                                 <div className={`action-bar ${minion.attacking ? (minion.facing === 'right' ? 'monsterHitsAnimation_LtoR' : 'monsterHitsAnimation') : ''}`}></div>
                             </div>
-                            {minion.pendingAttack && (
+                            {/* {minion.pendingAttack && (
                                 <div
                                     className={`weapon-wrapper
                                         ${getMonsterWeaponAnimation(minion)}
@@ -645,7 +629,7 @@ const MonstersCombatGrid = ({
                                         backgroundImage: `url(${minion.pendingAttack.icon})`
                                     }}
                                 ></div>
-                            )}
+                            )} */}
                             <div
                                 className="portrait-wrapper"
                                 style={{
@@ -757,11 +741,10 @@ const MonstersCombatGrid = ({
                                         {(visibleDamageIndicators[minion.id] || []).map((indicator, idx, arr) => {
                                             // For minions, always use the default offset.
                                             const yOffset = idx * 28;
-                                            // For debugging, log minion type and id
-                                            // console.log('MINION', minion.type, minion.id, 'yOffset:', yOffset, 'idx:', idx, 'indicator:', indicator);
+                                            const isStatDebuff = !indicator.isCrit && typeof indicator.value === 'string';
                                             return (
                                                 <div
-                                                    className="damage-indicator"
+                                                    className={`damage-indicator${isStatDebuff ? ' stat-debuff' : ''}${indicator.isCrit ? ' crit' : ''}`}
                                                     key={indicator.id}
                                                     style={{
                                                         transform: `translateY(-${yOffset}px)`,

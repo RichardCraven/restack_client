@@ -48,6 +48,15 @@
     }
 }
 
+// ── Shield Wall: white pulse glow on Soldier portrait while active ─────────────
+.fighter-portrait.shield-wall-active {
+    box-shadow:
+        0 0 8px 4px rgba(180, 210, 255, 0.9),
+        0 0 20px 8px rgba(100, 180, 255, 0.5),
+        0 0 40px 16px rgba(60, 130, 255, 0.25);
+    animation: shieldWallPulse 1.2s ease-in-out infinite alternate;
+}
+
 // ── Berserker: red pulse on barbarian portrait while berserk is active ────────
 .fighter-portrait.berserk-active {
 }
@@ -234,28 +243,28 @@
     100% { opacity: 0; }
 }
 @keyframes Rocked {
-    0% { transform: translateX(0) scale(1); }
-    20% { transform: translateX(-2px) scale(1.02); }
-    40% { transform: translateX(2px) scale(0.98); }
-    60% { transform: translateX(-1px) scale(1.01); }
-    80% { transform: translateX(1px) scale(0.99); }
-    100% { transform: translateX(0) scale(1); }
+    0%   { transform: var(--portrait-base-transform, none) translateX(0)    scale(1); }
+    20%  { transform: var(--portrait-base-transform, none) translateX(-2px)  scale(1.02); }
+    40%  { transform: var(--portrait-base-transform, none) translateX(2px)   scale(0.98); }
+    60%  { transform: var(--portrait-base-transform, none) translateX(-1px)  scale(1.01); }
+    80%  { transform: var(--portrait-base-transform, none) translateX(1px)   scale(0.99); }
+    100% { transform: var(--portrait-base-transform, none) translateX(0)    scale(1); }
 }
 @-webkit-keyframes Rocked {
-    0% { transform: translateX(0) scale(1); }
-    20% { transform: translateX(-2px) scale(1.02); }
-    40% { transform: translateX(2px) scale(0.98); }
-    60% { transform: translateX(-1px) scale(1.01); }
-    80% { transform: translateX(1px) scale(0.99); }
-    100% { transform: translateX(0) scale(1); }
+    0%   { transform: var(--portrait-base-transform, none) translateX(0)    scale(1); }
+    20%  { transform: var(--portrait-base-transform, none) translateX(-2px)  scale(1.02); }
+    40%  { transform: var(--portrait-base-transform, none) translateX(2px)   scale(0.98); }
+    60%  { transform: var(--portrait-base-transform, none) translateX(-1px)  scale(1.01); }
+    80%  { transform: var(--portrait-base-transform, none) translateX(1px)   scale(0.99); }
+    100% { transform: var(--portrait-base-transform, none) translateX(0)    scale(1); }
 }
 @-moz-keyframes Rocked {
-    0% { transform: translateX(0) scale(1); }
-    20% { transform: translateX(-2px) scale(1.02); }
-    40% { transform: translateX(2px) scale(0.98); }
-    60% { transform: translateX(-1px) scale(1.01); }
-    80% { transform: translateX(1px) scale(0.99); }
-    100% { transform: translateX(0) scale(1); }
+    0%   { transform: var(--portrait-base-transform, none) translateX(0)    scale(1); }
+    20%  { transform: var(--portrait-base-transform, none) translateX(-2px)  scale(1.02); }
+    40%  { transform: var(--portrait-base-transform, none) translateX(2px)   scale(0.98); }
+    60%  { transform: var(--portrait-base-transform, none) translateX(-1px)  scale(1.01); }
+    80%  { transform: var(--portrait-base-transform, none) translateX(1px)   scale(0.99); }
+    100% { transform: var(--portrait-base-transform, none) translateX(0)    scale(1); }
 }
 
 /* Pulse animation used when a target is selected to draw attention */
@@ -736,10 +745,7 @@
             .animation-tile-id{
                 color: cyan;
             }
-            &.claw-fade{
-                // background-image: url;
-                border: 1px solid red;
-            }
+
 
             /// experimental 
             .spin-attack-icon {
@@ -1147,6 +1153,56 @@
                     opacity: 0;
                 }
             }
+            // GRASP animations — pure translate, no rotation (GIF image)
+            @keyframes GraspAnimation_left {
+                0%   { transform: translate(0px, 0px);   opacity: 0.3; }
+                40%  { transform: translate(-25px, 0px); opacity: 1; }
+                80%  { transform: translate(-45px, 0px); opacity: 1; }
+                100% { transform: translate(-55px, 0px); opacity: 0; }
+            }
+            @keyframes GraspAnimation_right {
+                0%   { transform: translate(0px, 0px);  opacity: 0.3; }
+                40%  { transform: translate(25px, 0px); opacity: 1; }
+                80%  { transform: translate(45px, 0px); opacity: 1; }
+                100% { transform: translate(55px, 0px); opacity: 0; }
+            }
+            @keyframes GraspAnimation_down {
+                0%   { transform: translate(0px, 0px);  opacity: 0.3; }
+                40%  { transform: translate(0px, 20px); opacity: 1; }
+                80%  { transform: translate(0px, 40px); opacity: 1; }
+                100% { transform: translate(0px, 50px); opacity: 0; }
+            }
+            @keyframes GraspAnimation_up {
+                0%   { transform: translate(0px, 0px);   opacity: 0.3; }
+                40%  { transform: translate(0px, -20px); opacity: 1; }
+                80%  { transform: translate(0px, -40px); opacity: 1; }
+                100% { transform: translate(0px, -50px); opacity: 0; }
+            }
+            // ENERGY DRAIN animations — travels ~2 tiles toward target
+            @keyframes EnergyDrainAnimation_left {
+                0%   { transform: translate(0px, 0px);    opacity: 0.2; }
+                30%  { transform: translate(-80px, 0px);  opacity: 1; }
+                70%  { transform: translate(-160px, 0px); opacity: 1; }
+                100% { transform: translate(-210px, 0px); opacity: 0; }
+            }
+            @keyframes EnergyDrainAnimation_right {
+                0%   { transform: translate(0px, 0px);   opacity: 0.2; }
+                30%  { transform: translate(80px, 0px);  opacity: 1; }
+                70%  { transform: translate(160px, 0px); opacity: 1; }
+                100% { transform: translate(210px, 0px); opacity: 0; }
+            }
+            @keyframes EnergyDrainAnimation_down {
+                0%   { transform: translate(0px, 0px);   opacity: 0.2; }
+                30%  { transform: translate(0px, 80px);  opacity: 1; }
+                70%  { transform: translate(0px, 160px); opacity: 1; }
+                100% { transform: translate(0px, 210px); opacity: 0; }
+            }
+            @keyframes EnergyDrainAnimation_up {
+                0%   { transform: translate(0px, 0px);    opacity: 0.2; }
+                30%  { transform: translate(0px, -80px);  opacity: 1; }
+                70%  { transform: translate(0px, -160px); opacity: 1; }
+                100% { transform: translate(0px, -210px); opacity: 0; }
+            }
             &.line-white-fade{
                 @-webkit-keyframes TileAnimationLineWhiteFade {
                     0%{background: linear-gradient(180deg,transparent 28%, white 48%, transparent 51%)}
@@ -1497,11 +1553,21 @@
     .portrait.drained,
     .fighter-portrait.drained {
         animation: drainedPulse 0.5s ease-in-out 3;
-        position: relative;
+    }
+
+    // Ring and lightning on the untransformed overlay so Rocked/facing
+    // transforms on fighter-portrait never displace them
+    @keyframes drainedRingPulse {
+        0%   { transform: scale(1.00); opacity: 1.0; box-shadow: 0 0 6px 2px #7c3aed; }
+        30%  { transform: scale(1.08); opacity: 0.7; box-shadow: 0 0 18px 6px #7c3aed, 0 0 8px 3px #38bdf8; }
+        60%  { transform: scale(0.96); opacity: 0.9; box-shadow: 0 0 10px 4px #5b21b6; }
+        100% { transform: scale(1.00); opacity: 1.0; box-shadow: 0 0 6px 2px #7c3aed; }
+    }
+    .portrait-overlay.drained {
         &::before {
             content: '';
             position: absolute;
-            top: 0 !important;
+            top: 0;
             left: 0;
             width: 100%;
             height: 100%;
@@ -1511,7 +1577,7 @@
             box-sizing: border-box;
             pointer-events: none;
             z-index: 998;
-            animation: none !important;
+            animation: drainedRingPulse 1.4s ease-in-out infinite;
         }
         &::after {
             content: '⚡ ⚡ ⚡';
@@ -1857,9 +1923,19 @@
         border-radius: 100px;
         position: absolute;
         top: 0;
+        left: 0;
         // border: 2px solid greenyellow;
         border: 1px solid transparent;
-        z-index: 0;
+        pointer-events: none;
+        .color-glow{
+            position: absolute;
+            top: 0; left: 0;
+            height: 100%;
+            width: 100%;
+            border-radius: 100%;
+            box-shadow: 0px 0px 30px;
+            pointer-events: none;
+        }
         
 
         // opacity: 0;
@@ -1978,6 +2054,21 @@
                 text-shadow: 0 0 6px #7700cc;
                 letter-spacing: 0.04em;
             }
+            @keyframes CritFloatUp {
+                0%   { transform: translateY(0px) scale(1);   opacity: 1; }
+                20%  { transform: translateY(-8px) scale(1.3); opacity: 1; }
+                60%  { transform: translateY(-22px) scale(1.1); opacity: 0.85; }
+                100% { transform: translateY(-40px) scale(0.9); opacity: 0; }
+            }
+            &.crit {
+                color: #ffd700;
+                font-size: 20px;
+                font-weight: 900;
+                letter-spacing: 0.06em;
+                text-shadow: 0 0 8px #ff8800, 0 0 16px #ff4400, 0 2px 2px rgba(0,0,0,0.7);
+                animation: CritFloatUp 1.8s cubic-bezier(.2,.8,.2,1);
+                opacity: 0;
+            }
         }
     }
 
@@ -2003,14 +2094,32 @@
                     height: 100%;
                     display: flex;
                     position: relative;
-                    transition: 1s;
                     &.leader-wrapper{
                         // height: 160px;
                     }
                     .portrait-wrapper{
                         position: absolute;
-                        // transition: 1s;
                         top: 0;
+                        left: 0;
+                        width: 100px;
+                        height: 100px;
+                        border-radius: 50%;
+                        will-change: transform;
+                        .monster-target-indicator {
+                            position: absolute;
+                            bottom: 2px;
+                            right: 2px;
+                            pointer-events: none;
+                        }
+                        .monster-target-portrait {
+                            width: 28px;
+                            height: 28px;
+                            border-radius: 50%;
+                            background-size: 100% 100%;
+                            border: 2px solid rgba(255, 220, 80, 0.85);
+                            box-shadow: 0 0 5px 1px rgba(255, 180, 0, 0.55), inset 0 0 3px rgba(0,0,0,0.4);
+                            background-color: rgba(0, 0, 0, 0.35);
+                        }
                         .fighter-portrait{
                             width: 100px;
                             height: 100px;
@@ -2018,15 +2127,8 @@
                             border-radius: 100px;
                             position: relative;
                             cursor: pointer;
-                            transition: all 1s;
+                            transition: filter 1s, box-shadow 1s;
                             z-index: 1;
-                            .color-glow{
-                                height: 100%;
-                                width: 100%;
-                                border-radius: 100%;
-                                box-shadow: 0px 0px 30px;
-                                // color: #b710d5;
-                            }
                             &.locked{
                                 filter: invert(1) !important;
                             }
@@ -2059,10 +2161,16 @@
                                 box-shadow: 0px 0px 40px #951515;
                             }
                             &.rocked{
-                                -webkit-animation: Rocked 1s linear;
-                                -moz-animation: Rocked 1s linear;
-                                animation: Rocked 1s linear;
+                                -webkit-animation: Rocked 0.75s linear;
+                                -moz-animation: Rocked 0.75s linear;
+                                animation: Rocked 0.75s linear;
                             }
+                            // Per-orientation: preserve facing transform inside Rocked animation
+                            &.rocked.reversed               { --portrait-base-transform: scaleX(-1); }
+                            &.rocked.facing-up              { --portrait-base-transform: rotate(-45deg); }
+                            &.rocked.facing-up.reversed     { --portrait-base-transform: scaleX(-1) rotate(45deg); }
+                            &.rocked.facing-down            { --portrait-base-transform: rotate(45deg); }
+                            &.rocked.facing-down.reversed   { --portrait-base-transform: scaleX(-1) rotate(-45deg); }
                             /* Legacy portrait-level matrix3d hit transforms removed so the portrait's
                                composed transform (from --portrait-*) and the new bulge animation
                                can run without being overwritten. */
@@ -2152,12 +2260,21 @@
                 .portrait-wrapper{
                     position: absolute;
                     width: 100px;
+                    height: 100px;
                     transition: 1s;
                     top: 0;
                     z-index: 100;
                     // &.monster-portrait-wrapper{
                     //     transform: scale(2);
                     // }
+                    .portrait-overlay {
+                        position: absolute;
+                        top: 0;
+                        left: 0;
+                        width: 100%;
+                        height: 100%;
+                        pointer-events: none;
+                    }
                 }
                 .weapon-wrapper{
                     position: absolute;

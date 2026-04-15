@@ -75,9 +75,9 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
 
     this.acquireTarget = (caller, combatants, targetToAvoid = null) => {
         const liveEnemies = Object.values(combatants).filter(e=>!e.dead && (e.isMonster || e.isMinion));
-        // c2 = a2 + b2
-        // c (hypotenuse) = square root of a squared plus b squared
-        // Math.sqrt(Math.pow(a, 2) + Math.pow(b, 2))
+        // Sticky target guard — prevent per-tick target thrashing which resets facing debounce
+        const currentTarget = caller.targetId ? liveEnemies.find(e => e.id === caller.targetId) : null;
+        if (currentTarget && (!targetToAvoid || currentTarget.id !== targetToAvoid.id)) return;
 
         const getClosestEnemy = () => {
             let closestEnemy = {enemy: null, distance: Infinity}
@@ -477,8 +477,8 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                     let damage = criticalHit ? caller.atk * 3 : caller.atk;
                     const indicatorId = Date.now() + Math.random();
                     const indicatorObj = { id: indicatorId, value: damage, source: caller?.name || 'Wizard' };
-                    target.damageIndicators.push(indicatorObj);
-                    console.log('[DIAG][Wizard] Pushed to target.damageIndicators:', indicatorObj, 'Current:', target.damageIndicators);
+                    const indicatorTarget0 = (this.vctByMonster && this.vctByMonster[target.id] && this.combatants[`${target.id}_VCT`]) ? this.combatants[`${target.id}_VCT`] : target;
+                    indicatorTarget0.damageIndicators.push(indicatorObj);
                     target.hp -= damage;
                     if (target.hp <= 0) {
                         target.hp = 0;
@@ -657,7 +657,8 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                     if (!Array.isArray(target.damageIndicators)) target.damageIndicators = [];
                     const indicatorId = Date.now() + Math.random();
                     const indicatorObj = { id: indicatorId, value: damage, source: caller?.name || 'Wizard' };
-                    target.damageIndicators.push(indicatorObj);
+                    const indicatorTarget1 = (this.vctByMonster && this.vctByMonster[target.id] && this.combatants[`${target.id}_VCT`]) ? this.combatants[`${target.id}_VCT`] : target;
+                    indicatorTarget1.damageIndicators.push(indicatorObj);
                     target.hp -= damage;
                     if (target.hp <= 0) {
                         target.hp = 0;
@@ -749,7 +750,8 @@ export function Wizard(data, utilMethods, animationManager, overlayManager){
                     if (!Array.isArray(target.damageIndicators)) target.damageIndicators = [];
                     const indicatorId = Date.now() + Math.random();
                     const indicatorObj = { id: indicatorId, value: damage, source: caller?.name || 'Wizard' };
-                    target.damageIndicators.push(indicatorObj);
+                    const indicatorTarget2 = (this.vctByMonster && this.vctByMonster[target.id] && this.combatants[`${target.id}_VCT`]) ? this.combatants[`${target.id}_VCT`] : target;
+                    indicatorTarget2.damageIndicators.push(indicatorObj);
                     target.hp -= damage;
                     if (target.hp <= 0) {
                         target.hp = 0;

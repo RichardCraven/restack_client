@@ -65,7 +65,7 @@ export default function AnimationTile(props) {
     // }
 
     switch(props.animationType){
-        case 'axe_swing': {
+        case 'axe_swing':
             // Use icon from animationData if present, fallback to images['axe_white']
             image = props.animationData?.icon || images['axe_white'];
             facing = props.animationData?.facing;
@@ -106,53 +106,13 @@ export default function AnimationTile(props) {
             //         y: props.animationData?._iconY
             //     }
             // });
-        }
+
         break;
         case 'punch':
             image = images['fist_punch'];
             // For punch, we want to animate from source to target and fade out
             // We'll use animationData: { from: {x, y}, to: {x, y}, duration }
             keyframe = null;
-        break;
-        case 'claw':
-            image = images['claws'];
-            keyframe = `ClawAnimation_${facing}`;
-        break;
-        case 'claw':
-            image = images['claws'];
-            keyframe = `ClawAnimation_${facing}`;
-        break;
-                    {/* Animated claw render (same logic as sword_swing) */}
-                    {props.animationType === 'claw' && image && (() => {
-                        let dx = 0, dy = 0;
-                        const offset = 40;
-                        switch (facing) {
-                            case 'up':    dx = 0;       dy = -offset; break;
-                            case 'down':  dx = 0;       dy = offset; break;
-                            case 'left':  dx = -offset; dy = 0;       break;
-                            case 'right': dx =  offset; dy = 0;       break;
-                            default:      dx =  offset; dy = 0;       break;
-                        }
-                        const flip = facing === 'left';
-                        return (
-                            <img
-                                src={image}
-                                alt="claw"
-                                className="claw-icon"
-                                style={{
-                                    position: 'absolute',
-                                    top: `calc(50% - 30% + ${dy}px)`,
-                                    left: `calc(50% - 30% + ${dx}px)`,
-                                    width: '60%',
-                                    height: '60%',
-                                    pointerEvents: 'none',
-                                    zIndex: 5000,
-                                    transform: flip ? 'scaleX(-1)' : undefined,
-                                    animation: `ClawAnimation_${facing} ${duration / 1000}s linear forwards`,
-                                }}
-                            />
-                        );
-                    })()}
         break;
         case 'grasp': {
             // Use icon from animationData if present, fallback to images['grasp']
@@ -169,16 +129,7 @@ export default function AnimationTile(props) {
             image = images['energy_drain'];
             keyframe = `EnergyDrainAnimation_${facing}`;
         break;
-        case 'sword_swing':
-            // If Barbarian, use axe icon (white variant)
-            if (props.fighterType === 'barbarian') {
-                image = images['axe_white'];
-            } else {
-                image = images['sword_white'];
-            }
-            facing = props.animationData?.facing;
-            keyframe = null; // animation is driven on the <img> directly, not the tile div
-        break;
+
         case 'spin_attack':
             image = images['sword_white']
             keyframe = 'spin-attack'
@@ -286,6 +237,7 @@ export default function AnimationTile(props) {
                 const baseTransform = flip ? 'scaleX(-1)' : 'none';
                 return (
                     <img
+                        key={props.animationData?.startTime || 'axe-swing'}
                         src={image}
                         alt="axe swing"
                         className="axe-swing-icon"
@@ -305,29 +257,20 @@ export default function AnimationTile(props) {
             })()}
             {/* Animated grasp render (same logic as claw) */}
             {props.animationType === 'grasp' && image && (() => {
-                let dx = 0, dy = 0;
-                const offset = 40;
-                switch (facing) {
-                    case 'up':    dx = 0;       dy = -offset; break;
-                    case 'down':  dx = 0;       dy = props.tileSize / 2; break;
-                    case 'left':  dx = -offset; dy = 0;       break;
-                    case 'right': dx =  offset; dy = 0;       break;
-                    default:      dx =  offset; dy = 0;       break;
-                }
-                const flip = facing === 'left';
-                const top = facing === 'down' ? `calc(100% - 60%)` : `calc(50% - 30% + ${dy}px)`;
-                const left = `calc(50% - 30% + ${dx}px)`;
+                const flip = facing === 'right';
+                const graspKey = props.animationData?.startTime || 'grasp';
                 return (
                     <img
+                        key={graspKey}
                         src={image}
                         alt="grasp"
                         className="grasp-icon"
                         style={{
                             position: 'absolute',
-                            top,
-                            left,
-                            width: '60%',
-                            height: '60%',
+                            top: 'calc(50% - 60%)',
+                            left: 'calc(50% - 60%)',
+                            width: '120%',
+                            height: '120%',
                             pointerEvents: 'none',
                             zIndex: 5000,
                             transform: flip ? 'scaleX(-1)' : undefined,
@@ -338,30 +281,24 @@ export default function AnimationTile(props) {
             })()}
             {/* Animated energy_drain render */}
             {props.animationType === 'energy_drain' && image && (() => {
-                let dx = 0, dy = 0;
-                const offset = 40;
-                switch (facing) {
-                    case 'up':    dx = 0;       dy = -offset; break;
-                    case 'down':  dx = 0;       dy = props.tileSize / 2; break;
-                    case 'left':  dx = -offset; dy = 0;       break;
-                    case 'right': dx =  offset; dy = 0;       break;
-                    default:      dx =  offset; dy = 0;       break;
-                }
                 const flip = facing === 'left';
+                const drainKey = props.animationData?.startTime || 'energy-drain';
                 return (
                     <img
+                        key={drainKey}
                         src={image}
                         alt="energy drain"
                         className="energy-drain-icon"
                         style={{
                             position: 'absolute',
-                            top: facing === 'down' ? `calc(100% - 60%)` : `calc(50% - 30% + ${dy}px)`,
-                            left: `calc(50% - 30% + ${dx}px)`,
-                            width: '60%',
-                            height: '60%',
+                            top: `calc(50% - 40%)`,
+                            left: `calc(50% - 40%)`,
+                            width: '80%',
+                            height: '80%',
                             pointerEvents: 'none',
                             zIndex: 5000,
                             transform: flip ? 'scaleX(-1)' : undefined,
+                            filter: 'drop-shadow(0 0 6px rgba(255,0,0,0.95)) drop-shadow(0 0 14px rgba(220,30,0,0.7))',
                             animation: `EnergyDrainAnimation_${facing} ${duration / 1000}s linear forwards`,
                         }}
                     />
@@ -385,35 +322,37 @@ export default function AnimationTile(props) {
                                 }}
                             />
                         )}
-                        {props.animationType === 'sword_swing' && (() => {
-                            let dx = 0, dy = 0;
-                            // For Barbarian, render axe icon closer to the border between tiles
-                            const offset = props.fighterType === 'barbarian' ? 20 : 40;
-                            switch (facing) {
-                                case 'up':    dx = 0;       dy = -offset; break;
-                                case 'down':  dx = 0;       dy =  offset; break;
-                                case 'left':  dx = -offset; dy = 0;       break;
-                                case 'right': dx =  offset; dy = 0;       break;
-                                default:      dx =  offset; dy = 0;       break;
-                            }
-                            const flip = facing === 'left';
+                        {props.overlayAnimationType === 'sword_swing' && (() => {
+                            const overFacing = props.overlayAnimationData?.facing;
+                            const overDuration = props.overlayAnimationData?.duration;
+                            const overImage = props.fighterType === 'barbarian' ? images['axe_white'] : images['sword_white'];
+                            const mirror = overFacing === 'left' || overFacing === 'up';
+                            const swingKey = props.overlayAnimationData?.startTime || 'sword-swing-overlay';
                             return (
-                                <img
-                                    src={image}
-                                    alt={props.fighterType === 'barbarian' ? 'axe swing' : 'sword swing'}
+                                <div
                                     className="sword-swing-icon"
                                     style={{
                                         position: 'absolute',
-                                        top: `calc(50% - 30% + ${dy}px)`,
-                                        left: `calc(50% - 30% + ${dx}px)`,
+                                        top: 'calc(50% - 30%)',
+                                        left: 'calc(50% - 30%)',
                                         width: '60%',
                                         height: '60%',
                                         pointerEvents: 'none',
                                         zIndex: 5000,
-                                        transform: flip ? 'scaleX(-1)' : undefined,
-                                        animation: `ArcAnimation_${facing} ${duration / 1000}s linear forwards`,
+                                        transform: mirror ? 'scaleX(-1)' : 'none',
                                     }}
-                                />
+                                >
+                                    <img
+                                        key={swingKey}
+                                        src={overImage}
+                                        alt={props.fighterType === 'barbarian' ? 'axe swing' : 'sword swing'}
+                                        style={{
+                                            width: '100%',
+                                            height: '100%',
+                                            animation: `ArcAnimation_right ${overDuration / 1000}s linear forwards`,
+                                        }}
+                                    />
+                                </div>
                             );
                         })()}
                         {props.animationType === 'dragon_punch' && (() => {

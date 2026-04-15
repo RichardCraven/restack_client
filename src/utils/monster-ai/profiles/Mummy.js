@@ -13,6 +13,7 @@ export function Mummy(data, utilMethods, animationManager, overlayManager) {
     this.hitsTarget = utilMethods.hitsTarget;
     this.hitsCombatant = utilMethods.hitsCombatant;
     this.getCombatants = utilMethods.getCombatants;
+    this.getVct = utilMethods.getVct;
     this.triggerBoardEvent = utilMethods.triggerBoardEvent;
 
     // ── Custom attack selection ──────────────────────────────────────────────
@@ -332,8 +333,6 @@ export function Mummy(data, utilMethods, animationManager, overlayManager) {
             }
             if (!isAdjacentToTarget) {
                 // Try to move toward the target; if blocked, try to move around blocker
-                const prevX = caller.coordinates.x;
-                const prevY = caller.coordinates.y;
                 // --- Enhanced: Prevent overlap for large monsters ---
                 const tryMove = (moveFn) => {
                     // Simulate move
@@ -376,27 +375,16 @@ export function Mummy(data, utilMethods, animationManager, overlayManager) {
             }
         }
 
-        // Keep facing toward target
+        // Keep facing toward target — full 4-directional so downward attacks
+        // use 'down' instead of incorrectly snapping to 'right'.
         if (caller.targetId && combatants[caller.targetId]) {
             const target = combatants[caller.targetId];
-            // --- Improved: For 2x monsters, if target is in any column of the Mummy and directly above or below, do not update facing ---
-            const scale = caller.scale || caller["main-monster"] || caller.isMainMonster ? 2 : 1;
-            const is2x = scale === 2;
-            let skipFacing = false;
-            if (is2x) {
-                const x0 = caller.coordinates.x;
-                const x1 = x0 + 1;
-                const y0 = caller.coordinates.y;
-                const y1 = y0 + 1;
-                const inMummyColumn = (target.coordinates.x === x0 || target.coordinates.x === x1);
-                const directlyAbove = target.coordinates.y === y0 - 1;
-                const directlyBelow = target.coordinates.y === y1 + 1;
-                if (inMummyColumn && (directlyAbove || directlyBelow)) {
-                    skipFacing = true;
-                }
-            }
-            if (!skipFacing) {
-                caller.facing = (caller.coordinates.x <= target.coordinates.x) ? 'right' : 'left';
+            const _dx = target.coordinates.x - caller.coordinates.x;
+            const _dy = target.coordinates.y - caller.coordinates.y;
+            if (_dx === 0) {
+                caller.facing = _dy > 0 ? 'down' : 'up';
+            } else {
+                caller.facing = _dx > 0 ? 'right' : 'left';
             }
             // --- Robust attack trigger: allow attack if target is adjacent to any occupied tile ---
             const occupiedTiles = Array.isArray(caller.occupiedTiles) && caller.occupiedTiles.length > 0
@@ -421,18 +409,10 @@ export function Mummy(data, utilMethods, animationManager, overlayManager) {
                     return (dx + dy === 1);
                 });
             }
-            if (
-                caller.pendingAttack &&
-                !caller.attacking &&
-                (!caller.castingLock) &&
-                caller.pendingAttack.cooldown_position === 100 &&
-                isAdjacentToTarget
-            ) {
-                this.initiateAttack(caller, combatants);
-            }
-            // (skip the old attack trigger logic)
             // --- Attack trigger logic ---
-            // If we have a pendingAttack and are not already attacking, check if we can attack now
+            // Single unified path: check pendingAttack ready, then check range.
+            // The old duplicate adjacency-only check has been removed — the range
+            // check below already covers close (adjacent) attacks.
             if (
                 caller.pendingAttack &&
                 !caller.attacking &&
@@ -504,7 +484,6 @@ export function Mummy(data, utilMethods, animationManager, overlayManager) {
         //});
         switch (attackName) {
             case 'grasp': {
-                const attackEffect = caller.pendingAttack.effect;
                 // Find which occupied tile is adjacent to the target
                 let graspTile = caller.coordinates;
                 if (Array.isArray(caller.occupiedTiles) && caller.occupiedTiles.length > 1) {
@@ -532,6 +511,31 @@ export function Mummy(data, utilMethods, animationManager, overlayManager) {
 
             case 'energy drain':
             case 'energy_drain': {
+                console.log('****************** ENERGY DRAIN **********');
+                // Pick the source tile (main or VCT) that is most aligned with the target
+                const vct = this.getVct && this.getVct(caller.id);
+                let drainSourceCoords = caller.coordinates;
+                if (vct) {
+                    const mainDx = Math.abs(caller.coordinates.x - target.coordinates.x);
+                    const mainDy = Math.abs(caller.coordinates.y - target.coordinates.y);
+                    const vctDx  = Math.abs(vct.coordinates.x  - target.coordinates.x);
+                    const vctDy  = Math.abs(vct.coordinates.y  - target.coordinates.y);
+                    // Use whichever tile is closer (Manhattan distance) to the target
+                    const mainDist = mainDx + mainDy;
+                    const vctDist  = vctDx  + vctDy;
+                    drainSourceCoords = vctDist <= mainDist ? vct.coordinates : caller.coordinates;
+                }
+                // Trigger tile animation before hit
+                if (this.animationManager && typeof this.animationManager.triggerAttackAnimation === 'function') {
+                    await this.animationManager.triggerAttackAnimation({
+                        coordinates: drainSourceCoords,
+                        facing: caller.facing,
+                        icon: caller.pendingAttack?.icon,
+                        type: 'energy_drain',
+                        animationType: 'energy_drain',
+                        selectedAction: caller.pendingAttack
+                    });
+                }
                 // Apply hit damage first
                 this.hitsCombatant(caller, target);
 

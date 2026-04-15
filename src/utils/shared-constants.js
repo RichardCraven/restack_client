@@ -4,6 +4,8 @@ export const INTERVALS = [90, 40, 10, 5];
 export const INTERVAL_DISPLAY_NAMES = ['Very Slow', 'Slow', 'Fast', 'Very Fast'];
 // Duration (ms) for the 'rocked' / hit-flash animation
 export const ROCK_DURATION = 750;
+// Duration (ms) for fighter tile-position move transitions (left/right and up/down)
+export const FIGHTER_MOVE_TRANSITION_MS = 500;
 // Critical hit configuration
 export const CRIT_THRESHOLD_DEFAULT = 80; // percent (r*100 > threshold means crit)
 export const CRIT_THRESHOLD_INCREASED = 50; // used when increasedCritChance is present

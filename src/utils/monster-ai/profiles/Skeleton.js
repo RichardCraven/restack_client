@@ -99,26 +99,7 @@ export function Skeleton(data, utilMethods, animationManager, overlayManager){
             default:
             break;
         }
-        // After moving, update facing to face target if one exists
-        if (caller.targetId && combatants[caller.targetId] && !caller.facingLocked) {
-            const target = combatants[caller.targetId];
-            // Only update facing if not currently facing up/down, or if target is not above/below
-            if (caller.facing === 'up' || caller.facing === 'down') {
-                // If still targeting up/down, keep facing
-                if (caller.coordinates.x === target.coordinates.x) {
-                    caller.facing = (caller.coordinates.y > target.coordinates.y) ? 'up' : 'down';
-                } else {
-                    caller.facing = (caller.coordinates.x <= target.coordinates.x) ? 'right' : 'left';
-                }
-            } else {
-                // If targeting up/down, set facing up/down
-                if (caller.coordinates.x === target.coordinates.x) {
-                    caller.facing = (caller.coordinates.y > target.coordinates.y) ? 'up' : 'down';
-                } else {
-                    caller.facing = (caller.coordinates.x <= target.coordinates.x) ? 'right' : 'left';
-                }
-            }
-        }
+        // facing is handled by recalculateFacing in combat-manager.processMove
     }
 
     this.triggerClawAttack = async (caller, target) => {
@@ -126,6 +107,7 @@ export function Skeleton(data, utilMethods, animationManager, overlayManager){
         if (this.animationManager && typeof this.animationManager.clawSwipe === 'function') {
             const sourceTileId = this.animationManager.getTileIdByCoords(caller.coordinates);
             const targetTileId = this.animationManager.getTileIdByCoords(target.coordinates);
+            if (sourceTileId == null || targetTileId == null) return target;
             await new Promise(resolve => {
                 this.animationManager.clawSwipe(targetTileId, sourceTileId, caller.facing, resolve);
             });
@@ -170,5 +152,6 @@ export function Skeleton(data, utilMethods, animationManager, overlayManager){
         }
         this.kickoffAttackCooldown(caller);
         caller.pendingAttack = null;
+        caller.attacking = false;
     }
 }

@@ -9,7 +9,8 @@ export default function CanvasClawSwipe({
   height = 100,
   duration = 50000, // Doubled duration for longer GIF playback
   onComplete = () => {},
-  tracer = true // If true, do NOT clear canvas (tracer effect ON)
+  tracer = true, // If true, do NOT clear canvas (tracer effect ON)
+  facing = 'left'
 }) {
   const imgRef = useRef();
   // Compute bounding box covering both tiles
@@ -29,6 +30,11 @@ export default function CanvasClawSwipe({
   const dx = halfX - startX;
   const dy = halfY - startY;
 
+  // When scaleX(-1) is applied, the X axis is inverted — translate(+dx) moves left.
+  // Negate dx in the transform so the image still travels toward the target.
+  const flipScale = facing === 'right' ? 'scaleX(-1) ' : '';
+  const tdx = facing === 'right' ? -dx : dx;
+
   useEffect(() => {
     let running = true;
     let startTime = null;
@@ -40,11 +46,11 @@ export default function CanvasClawSwipe({
       if (imgRef.current) {
         if (progress < 1) {
           imgRef.current.style.transform =
-            `translate(${dx * progress}px, ${dy * progress}px)`;
+            `${flipScale}translate(${tdx * progress}px, ${dy * progress}px)`;
           imgRef.current.style.opacity = 1 - 0.2 * progress;
           imgRef.current.style.visibility = 'visible';
         } else {
-          imgRef.current.style.transform = `translate(${dx}px, ${dy}px)`;
+          imgRef.current.style.transform = `${flipScale}translate(${tdx}px, ${dy}px)`;
           imgRef.current.style.opacity = 0.8;
           // If tracer is false, hide the image after the animation completes
           if (!tracer) {
@@ -61,7 +67,7 @@ export default function CanvasClawSwipe({
     requestAnimationFrame(animate);
     const timeout = setTimeout(() => {
       if (imgRef.current) {
-        imgRef.current.style.transform = `translate(${dx}px, ${dy}px)`;
+        imgRef.current.style.transform = `${flipScale}translate(${tdx}px, ${dy}px)`;
         imgRef.current.style.opacity = 0.8;
         if (!tracer) {
           imgRef.current.style.visibility = 'hidden';
@@ -73,7 +79,7 @@ export default function CanvasClawSwipe({
     }, duration);
     return () => { running = false; clearTimeout(timeout); };
     // eslint-disable-next-line
-  }, [origin, target, width, height, duration, tracer]);
+  }, [origin, target, width, height, duration, tracer, flipScale]);
 
   // Position the container absolutely at the bounding box
   const left = minX * width;
@@ -107,6 +113,7 @@ export default function CanvasClawSwipe({
           pointerEvents: 'none',
           opacity: 1,
           filter: 'drop-shadow(0 2px 6px #000)',
+          transform: 'none', // animation loop applies flip via flipScale
           transition: 'none',
         }}
         draggable={false}

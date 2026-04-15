@@ -9,7 +9,6 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
         isCombatOver, 
         getCombatant,
         // combatPaused,
-        formatAttacks,
         formatSpecials,
         initiateAttack,
     checkOverlap: _checkOverlap, // eslint-disable-line no-unused-vars
@@ -343,13 +342,15 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
                 }
                 const eraAttack = () => {
                     if(this.stunned) return; // stunned: cannot attack
+                    if(this.attacking) return; // async attack already in flight — wait for it to resolve
                     if(!this.targetId) acquireTarget(this);
                     target = getCombatant(this.targetId)
+                    if(!target) return; // no live target — nothing to attack
                     if(!this.pendingAttack) chooseAttackType(this, target)
+                    if(!this.pendingAttack) return; // chooseAttackType failed to assign — skip
                     inRange = targetInRange(this);
-                    if(inRange && this.movesLeft && !era.attacked && !this.onGeneralAttackCooldown && !this.onMoveCooldown){
+                    if(inRange && !era.attacked && !this.onGeneralAttackCooldown && !this.onMoveCooldown){
                         era.attacked = true;
-                        this.movesLeft--
                         this.attack(target);
                     }
                 }

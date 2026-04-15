@@ -45,7 +45,6 @@ const CanvasAxeThrow = ({ origin, target, height = 100, width = 100, targetDista
                 dy = endY - startY;
                 distance = Math.sqrt(dx * dx + dy * dy);
             }
-            const speed = distance / duration;
 
         const img = new window.Image();
         img.src = axeImg;
@@ -87,10 +86,8 @@ const CanvasAxeThrow = ({ origin, target, height = 100, width = 100, targetDista
 
         function animate(now) {
             // Target tile bounds (declare before first use)
-            const targetLeft = target.x * width;
-            const targetTop = target.y * height;
-            const targetRight = targetLeft + width;
-            const targetBottom = targetTop + height;
+            const targetLeft = target.x * width; // eslint-disable-line no-unused-vars
+            const targetTop = target.y * height; // eslint-disable-line no-unused-vars
             // Use precomputed endX, endY, dx, dy, distance from useEffect scope
             const elapsed = now - startTime;
             const t = Math.min(elapsed / duration, 1);
@@ -129,6 +126,8 @@ const CanvasAxeThrow = ({ origin, target, height = 100, width = 100, targetDista
         return () => {
             window.cancelAnimationFrame(animationFrameId);
         };
+    // onComplete omitted: stable callback, including it restarts animation on every render
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [origin, target, height, width, targetDistance]);
 
     return (

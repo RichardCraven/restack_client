@@ -59,6 +59,8 @@ const AnimationGrid = ({
                         animationOn = {t.animationOn}
                         animationType = {t.animationType}
                         animationData = {t.animationData}
+                        overlayAnimationType = {t.overlayAnimationType}
+                        overlayAnimationData = {t.overlayAnimationData}
                         transitionType = {t.transitionType}
                         handleClick={handleClickWrapper}
                         tileSize={tileProps.TILE_SIZE}
@@ -154,6 +156,7 @@ const AnimationGrid = ({
                                 duration={anim.duration || 400}
                                 onComplete={anim.onComplete}
                                 tracer={typeof anim.tracer === 'boolean' ? anim.tracer : true}
+                                facing={anim.facing}
                             />
                         } 
                         else {

@@ -8,7 +8,7 @@ import { activeShieldWalls } from '../../shared-ai-methods/movement-methods';
 // lasts 20 × FIGHT_INTERVAL ms.  We store an absolute expiry timestamp on
 // the caller and clear it when it expires.
 // ─────────────────────────────────────────────────────────────────────────────
-const SHIELD_WALL_ERAS = 10;
+// Shield wall duration/cooldown are now read from specials-matrix via caller.specials
 
 export function Soldier(data, utilMethods, animationManager, overlayManager){
     this.MAX_DEPTH = data.MAX_DEPTH;
@@ -53,6 +53,11 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
 
     this.acquireTarget = (caller, combatants, targetToAvoid = null) => {
         const liveEnemies = Object.values(combatants).filter(e=>!e.dead && (e.isMonster || e.isMinion));
+        if (!liveEnemies.length) return;
+        // Stick with current target if it is still alive — prevents rapid switching
+        // when surrounded by multiple enemies at the same depth.
+        const currentTarget = caller.targetId ? liveEnemies.find(e => e.id === caller.targetId) : null;
+        if (currentTarget && (!targetToAvoid || currentTarget.id !== targetToAvoid.id)) return;
         const sorted = liveEnemies.sort((a,b)=>b.depth - a.depth);
         let target = sorted.length ? sorted[0] : null;
         if(!target) return;
@@ -277,6 +282,9 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
         if (!shieldWall || shieldWall.cooldown_position !== 100) return false;
         // Must not already be in a wall
         if (caller.shieldWallActive) return false;
+        // Must have enough energy
+        const energy = typeof caller.energy === 'number' ? caller.energy : 100;
+        if (shieldWall.energy_cost != null && energy < shieldWall.energy_cost) return false;
 
         // ── Guard: don't wall if there's nobody left to protect ────────────
         const SOFT_CLASSES = ['wizard', 'sage', 'rogue'];
@@ -370,7 +378,7 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
         const liveInterval = (typeof data.methods.getFightInterval === 'function')
             ? data.methods.getFightInterval()
             : (data.INTERVAL_TIME || 500);
-        const eraDurationMs = SHIELD_WALL_ERAS * 20 * liveInterval;
+        const eraDurationMs = shieldWall.duration * 20 * liveInterval;
         const wallData = {
             x: wallX,                         // column boundary (between x-1 and x)
             lanesAffected,
@@ -681,6 +689,7 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
                 }
             })();
         }
+        caller.attacking = false;
     }
     this.triggerSwordSwing = (callerCoords, facing) => {
         const sourceTileId = this.animationManager.getTileIdByCoords(callerCoords);
@@ -729,6 +738,8 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
             if(sourceTileId !== null){
                 // console.log('sourceTileId: ', sourceTileId);
                 this.animationManager.swordSwing(targetTileId, sourceTileId, facing, resolve)
+            } else {
+                resolve(null);
             }
         })
     }   

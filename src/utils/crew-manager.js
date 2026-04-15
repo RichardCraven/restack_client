@@ -41,21 +41,11 @@ export function CrewManager(){
     this.initializeCrew = (crew) => {
         //called everytime game loads, not just first time
         this.crew = [];
-        console.log('initializing crew: ', crew, 'this is where specialActions are checked and marked available if their endDate has passed');
         const colors = ['#b710d5', '#6495ed', '#73b746', '#f4d013'];
         crew.forEach((member, index)=> { 
             // Ensure specialActions exists; some persisted meta may omit this field.
             // Default to an empty array so initialization doesn't skip the member.
             member.specialActions = member.specialActions || [];
-            // Diagnostic: detect any specialActions that already have cooldown_position === 3
-            try {
-                if (member.specialActions.some(a => a && a.cooldown_position === 3)) {
-                    console.warn('initializeCrew: member has specialActions with cooldown_position===3', member.id || member.name, member.specialActions.filter(a => a && a.cooldown_position === 3));
-                    console.trace();
-                }
-            } catch (err) {
-                console.debug('initializeCrew diagnostic error', err);
-            }
             member.specialActions.forEach(a=>{
                 let end = new Date(a.endDate),
                 now = new Date();
@@ -376,7 +366,6 @@ export function CrewManager(){
             default:
                 break;
         }
-        console.log('member.specialActions', member.specialActions);
     }
 
     this.adventurers = [
@@ -405,7 +394,7 @@ export function CrewManager(){
             name: 'Sardonis',
             id: 123,
             level: 1,
-            stats: { str: 8, int: 5, dex: 6, fort: 7, baseHp: 110, experience: 0, attackSpeedMult: 2 },
+            stats: { str: 8, int: 5, dex: 6, fort: 7, baseHp: 1100, experience: 0, attackSpeedMult: 2 },
             portrait: images['soldier_portrait'],
             inventory: [],
             passives: ['inspiring_force'],

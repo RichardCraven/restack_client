@@ -200,13 +200,16 @@ export function Sphinx(data, utilMethods, animationManager, overlayManager){
         })
     }
     this.triggerClawAttack = (callerCoords, targetCoords) => {
-        const targetTileId = this.animationManager.getTileIdByCoords(targetCoords)
+        const targetTileId = this.animationManager.getTileIdByCoords(targetCoords);
         const sourceTileId = this.animationManager.getTileIdByCoords(callerCoords);
+        const facing = callerCoords.x < targetCoords.x ? 'right' :
+                       callerCoords.x > targetCoords.x ? 'left' :
+                       callerCoords.y < targetCoords.y ? 'down' : 'up';
         return new Promise((resolve) => {
-            if(sourceTileId !== null){
-                this.animationManager.clawToTarget(targetTileId, sourceTileId, resolve)
+            if (sourceTileId !== null) {
+                this.animationManager.clawSwipe(targetTileId, sourceTileId, facing, resolve);
             }
-        })
+        });
     }
     this.initiateAttack = async (caller, combatants) => {
         // caller.attacking = true;

@@ -61,7 +61,6 @@ function attackFromTheBack(caller, combatants, data) {
         if (data.methods && typeof data.methods.closeTheGap === 'function') {
             data.methods.closeTheGap(caller, combatants);
         }
-        caller.facing = 'left';
         // Try to acquire a target that is now adjacent
         const sortedByProximity = [...liveEnemies].sort((a, b) => {
             const da = Math.abs(a.coordinates.x - caller.coordinates.x) + Math.abs(a.coordinates.y - caller.coordinates.y);
@@ -113,7 +112,6 @@ function attackFromTheBack(caller, combatants, data) {
             } else {
                 // next tile is occupied (including virtual occupancy) - skip move
             }
-            caller.facing = 'left';
             // Only set a pending attack if the caller is now adjacent to the enemy
             const adjX = Math.abs(caller.coordinates.x - enemy.coordinates.x);
             const adjY = Math.abs(caller.coordinates.y - enemy.coordinates.y);
@@ -157,7 +155,6 @@ function attackFromTheBack(caller, combatants, data) {
                 } else {
                     // desired above position occupied
                 }
-                caller.facing = 'left';
                 // Only set pending attack if in adjacency after placement
                 if (Math.abs(caller.coordinates.x - enemy.coordinates.x) <= 1 && Math.abs(caller.coordinates.y - enemy.coordinates.y) === 0) {
                     if (typeof data.chooseAttackType === 'function') {
@@ -188,7 +185,6 @@ function attackFromTheBack(caller, combatants, data) {
                 } else {
                     // desired below position occupied
                 }
-                caller.facing = 'left';
                 if (Math.abs(caller.coordinates.x - enemy.coordinates.x) <= 1 && Math.abs(caller.coordinates.y - enemy.coordinates.y) === 0) {
                     if (typeof data.chooseAttackType === 'function') {
                         caller.pendingAttack = data.chooseAttackType(caller, enemy);

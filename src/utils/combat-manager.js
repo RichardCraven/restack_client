@@ -463,9 +463,6 @@ export function CombatManager(){
                 }
             }
         });
-        // DIAGNOSTIC: Log all combatants and their targetIds after VCT sync
-        const combatantTargets = Object.values(this.combatants).map(c => ({id: c.id, isVCT: !!c.isVCT, targetId: c.targetId, type: c.type, isMonster: c.isMonster, isMinion: c.isMinion}));
-        // console.log('[DIAG][syncVCTs][POST] Combatant target states:', JSON.stringify(combatantTargets, null, 2));
         // Force UI update if updateData is available
         if (typeof this.updateData === 'function') {
             this.updateData(clone(this.combatants));
@@ -1378,15 +1375,34 @@ export function CombatManager(){
         const target = caller && caller.targetId ? this.combatants[caller.targetId] : null;
         if(!target) return;
         try {
+            let newFacing;
             if (target.coordinates.x === caller.coordinates.x) {
-                // Same column -> vertical facing
-                caller.facing = target.coordinates.y > caller.coordinates.y ? 'down' : 'up';
+                newFacing = target.coordinates.y > caller.coordinates.y ? 'down' : 'up';
             } else {
-                caller.facing = target.coordinates.x > caller.coordinates.x ? 'right' : 'left';
+                newFacing = target.coordinates.x > caller.coordinates.x ? 'right' : 'left';
+            }
+            if (newFacing === caller.facing) {
+                // Already correct — clear any pending flip
+                caller._pendingFacing = null;
+                caller._pendingFacingCount = 0;
+            } else {
+                // Debounce: require the same new direction on 2 consecutive calls
+                // before committing. This prevents tick-rate oscillation when a
+                // target passes through the caller's column or bounces ±1 tile.
+                if (caller._pendingFacing === newFacing) {
+                    caller._pendingFacingCount = (caller._pendingFacingCount || 0) + 1;
+                    if (caller._pendingFacingCount >= 3) {
+                        caller.facing = newFacing;
+                        caller._pendingFacing = null;
+                        caller._pendingFacingCount = 0;
+                    }
+                } else {
+                    caller._pendingFacing = newFacing;
+                    caller._pendingFacingCount = 1;
+                }
             }
         } catch (e) {
             // be defensive
-            // console.warn('recalculateFacing error', e);
         }
     }
     this.initiateAttack = (caller, manualAttack = false) => {
@@ -1617,11 +1633,19 @@ export function CombatManager(){
             this.fighterAI.roster[caller.type].acquireTarget(caller, this.combatants, targetToAvoid)
             if(caller.targetId && caller.targetId !== prevTargetId){
                 this.setTargetId(caller, caller.targetId, 'acquireTarget-fighterAI');
-                // Set facing based on target position ONLY if targetId changed
-                const target = this.combatants[caller.targetId];
-                if (target && !caller.facingLocked) {
-                    // If not locked, update facing as usual
-                    caller.facing = (caller.coordinates.x <= target.coordinates.x) ? 'right' : 'left';
+                // Immediately commit facing toward the new target — avoids the
+                // null-facing debounce window that caused left/right flicker.
+                if (!caller.facingLocked) {
+                    const _newT = this.combatants[caller.targetId];
+                    if (_newT) {
+                        if (_newT.coordinates.x === caller.coordinates.x) {
+                            caller.facing = _newT.coordinates.y > caller.coordinates.y ? 'down' : 'up';
+                        } else {
+                            caller.facing = _newT.coordinates.x > caller.coordinates.x ? 'right' : 'left';
+                        }
+                    }
+                    caller._pendingFacing = null;
+                    caller._pendingFacingCount = 0;
                 }
                 const animation = {
                     type: 'targetted',
@@ -1642,11 +1666,19 @@ export function CombatManager(){
             this.monsterAI.roster[caller.type].acquireTarget(caller, this.combatants);
             if(caller.targetId && caller.targetId !== prevTargetId){
                 this.setTargetId(caller, caller.targetId, 'acquireTarget-monsterAI');
-                // Set facing based on target position ONLY if targetId changed
-                const target = this.combatants[caller.targetId];
-                if (target && !caller.facingLocked) {
-                    // If not locked, update facing as usual
-                    caller.facing = (caller.coordinates.x <= target.coordinates.x) ? 'right' : 'left';
+                // Immediately commit facing toward the new target — avoids the
+                // null-facing debounce window that caused left/right flicker.
+                if (!caller.facingLocked) {
+                    const _newT = this.combatants[caller.targetId];
+                    if (_newT) {
+                        if (_newT.coordinates.x === caller.coordinates.x) {
+                            caller.facing = _newT.coordinates.y > caller.coordinates.y ? 'down' : 'up';
+                        } else {
+                            caller.facing = _newT.coordinates.x > caller.coordinates.x ? 'right' : 'left';
+                        }
+                    }
+                    caller._pendingFacing = null;
+                    caller._pendingFacingCount = 0;
                 }
                 const animation = {
                     type: 'targetted',
@@ -2215,10 +2247,14 @@ export function CombatManager(){
         const indicatorObj = { id: indicatorId, value: damage, source: caller?.name || 'unknown' };
         if (vctId && this.combatants[vctId]) {
             this.combatants[vctId].damageIndicators.push(indicatorObj);
-            //console.log('[DIAG][combat-manager] Pushed to VCT.damageIndicators:', indicatorObj, 'Current:', this.combatants[vctId].damageIndicators);
+            if (criticalHit) {
+                this.combatants[vctId].damageIndicators.push({ id: Date.now() + Math.random(), value: 'CRIT!', isCrit: true, source: caller?.name || 'unknown' });
+            }
         } else {
             combatantHit.damageIndicators.push(indicatorObj);
-            //console.log('[DIAG][combat-manager] Pushed to combatantHit.damageIndicators:', indicatorObj, 'Current:', combatantHit.damageIndicators);
+            if (criticalHit) {
+                combatantHit.damageIndicators.push({ id: Date.now() + Math.random(), value: 'CRIT!', isCrit: true, source: caller?.name || 'unknown' });
+            }
         }
         caller.energy += caller.stats.fort * 1 + (1 / 2 * caller.level);
         if (caller.energy > 100) caller.energy = 100;
@@ -2498,10 +2534,10 @@ export function CombatManager(){
         caller.readout.result = `misses`
         let target = tempTarget ? tempTarget : this.getCombatant(caller.targetId);
         if(target) {
+            const indicatorTarget = (this.vctByMonster && this.vctByMonster[target.id] && this.combatants[`${target.id}_VCT`]) ? this.combatants[`${target.id}_VCT`] : target;
             const missId = Date.now() + Math.random();
             const missObj = { id: missId, value: 'miss', source: caller?.name || 'unknown' };
-            target.damageIndicators.push(missObj);
-            //console.log('[DIAG][combat-manager] Pushed to target.damageIndicators:', missObj, 'Current:', target.damageIndicators);
+            indicatorTarget.damageIndicators.push(missObj);
         }
         setTimeout(()=>{
             caller.active = caller.aiming = false;
@@ -2579,7 +2615,7 @@ export function CombatManager(){
         },1000)
         this.clearTargetListById(combatant.id)
         const allMonstersDead = Object.values(this.combatants).filter(e=> (e.isMonster || e.isMinion) && !e.dead).length === 0;
-        const allCrewDead = Object.values(this.combatants).filter(e=>!e.isMonster && !e.isMinion).every(e=>e.dead)
+        const allCrewDead = Object.values(this.combatants).filter(e=>!e.isMonster && !e.isMinion && !e.isVCT).every(e=>e.dead)
         if (typeof this.onFighterDeath === 'function') {
             this.onFighterDeath(combatant.id);
         } else {
@@ -2693,6 +2729,7 @@ export function CombatManager(){
         kickoffSpecialCooldown: this.kickoffSpecialCooldown,
         chooseAttackType: this.genericChooseAttackType,
         getCombatants: () => this.combatants,
+        getVct: (id) => this.vctByMonster && this.vctByMonster[id],
         triggerBoardEvent: (eventType, data) => { if (typeof this.triggerBoardEvent === 'function') this.triggerBoardEvent(eventType, data); },
         // Returns the current live fight interval so AI profiles always use the
         // correct value even after updateAllFightIntervals changes the speed.
@@ -2804,7 +2841,6 @@ export function CombatManager(){
 
 // Centralized setter for targetId with VCT guard and diagnostics
 CombatManager.prototype.setTargetId = function(caller, targetId, context = '') {
-        const prevTargetId = caller.targetId;
         const target = this.combatants[targetId];
         // Monsters/minions: never allow targeting a VCT
         if ((caller.isMonster || caller.isMinion) && target && target.isVCT) {
@@ -2818,9 +2854,6 @@ CombatManager.prototype.setTargetId = function(caller, targetId, context = '') {
                 // });
             }
             caller.targetId = null;
-            // DIAGNOSTIC: Log all combatants and their targetIds after VCT guard triggers
-            const combatantTargets = Object.values(this.combatants).map(c => ({id: c.id, isVCT: !!c.isVCT, targetId: c.targetId, type: c.type, isMonster: c.isMonster, isMinion: c.isMinion}));
-            // console.log('[DIAG][setTargetId][VCT-GUARD][POST] Combatant target states:', JSON.stringify(combatantTargets, null, 2));
             return;
         }
         // Fighters: allow targeting VCT, but redirect to parent monster if present
@@ -2835,22 +2868,8 @@ CombatManager.prototype.setTargetId = function(caller, targetId, context = '') {
                 // });
             }
             caller.targetId = target.parentMonsterId;
-            // DIAGNOSTIC: Log all combatants and their targetIds after VCT redirect
-            const combatantTargets = Object.values(this.combatants).map(c => ({id: c.id, isVCT: !!c.isVCT, targetId: c.targetId, type: c.type, isMonster: c.isMonster, isMinion: c.isMinion}));
-            // console.log('[DIAG][setTargetId][VCT-REDIRECT][POST] Combatant target states:', JSON.stringify(combatantTargets, null, 2));
             return;
         }
         // Default: assign as requested
         caller.targetId = targetId;
-        if (typeof console !== 'undefined') {
-            console.log('[CombatManager][setTargetId] targetId set', {
-                callerId: caller.id,
-                newTargetId: targetId,
-                context,
-                prevTargetId
-            });
-            // DIAGNOSTIC: Log all combatants and their targetIds after normal set
-            const combatantTargets = Object.values(this.combatants).map(c => ({id: c.id, isVCT: !!c.isVCT, targetId: c.targetId, type: c.type, isMonster: c.isMonster, isMinion: c.isMinion}));
-            // console.log('[DIAG][setTargetId][POST] Combatant target states:', JSON.stringify(combatantTargets, null, 2));
-        }
     };

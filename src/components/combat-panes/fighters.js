@@ -1,6 +1,7 @@
 import React from 'react';
 import * as images from '../../utils/images';
 import Overlay from '../Overlay'
+import { FIGHTER_MOVE_TRANSITION_MS } from '../../utils/shared-constants'
 
 const MAX_DEPTH = 7; // eslint-disable-line no-unused-vars
 const NUM_COLUMNS = 8; // eslint-disable-line no-unused-vars
@@ -135,17 +136,16 @@ export default function FightersCombatGrid(props) {
             <div className="fighter-content">
                 {activeCrew.map((fighter) => {
                     const isTeleporting = props.teleportingFighterId === fighter.id;
-                    const transitionStyle = { transition: isTeleporting ? 'none' : '1s' };
                     // Always use the facing at the moment of death for the death animation
                     const details = props.getFighterDetails(fighter);
                     // only mark reversed when explicitly facing left; support up/down classes separately
                     const facingClass = details?.facing === 'left' ? 'reversed' : '';
                     const verticalFacingClass = details?.facing === 'up' ? 'facing-up' : (details?.facing === 'down' ? 'facing-down' : '');
+                    const xPos = props.battleData[fighter.id]?.coordinates.x * 100 + (SHOW_TILE_BORDERS ? props.battleData[fighter.id]?.coordinates.x * 2 : 0);
+                    const yPos = props.battleData[fighter.id]?.coordinates.y * TILE_SIZE + (SHOW_TILE_BORDERS ? props.battleData[fighter.id]?.coordinates.y * 2 : 0);
                     return  <div key={fighter.id}  className={`lane-wrapper ${isTeleporting ? ' teleporting' : ''}`}
                                 style={{ 
-                                    top: `${props.battleData[fighter.id]?.coordinates.y * TILE_SIZE + (SHOW_TILE_BORDERS ? props.battleData[fighter.id]?.coordinates.y * 2 : 0)}px`,
                                     height: `${TILE_SIZE}px`,
-                                    ...transitionStyle
                                 }}>
                                 <div 
                                 ref={el => { fighterWrapperRefs.current[fighter.id] = el }}
@@ -153,9 +153,9 @@ export default function FightersCombatGrid(props) {
                                 >
                                     <div className={`portrait-wrapper${isTeleporting ? ' teleporting' : ''}`}
                                     style={{
-                                        left: `${props.battleData[fighter.id]?.coordinates.x * 100 + (SHOW_TILE_BORDERS ? props.battleData[fighter.id]?.coordinates.x * 2 : 0)}px`,
-                                        zIndex: 300, // Always above monsters/minions
-                                        ...transitionStyle
+                                        transform: `translate(${xPos}px, ${yPos}px)`,
+                                        transition: isTeleporting ? 'none' : `transform ${FIGHTER_MOVE_TRANSITION_MS}ms`,
+                                        zIndex: 300,
                                     }}
                                     ref={el => { portraitWrapperRefs.current[fighter.id] = el }}
                                     >
@@ -181,6 +181,7 @@ export default function FightersCombatGrid(props) {
                                                 details?.berserkerActive && details?.feared ? 'berserk-feared' : '',
                                                 details?.berserkerActive && !details?.feared ? 'berserk-active' : '',
                                                 !details?.berserkerActive && details?.feared ? 'feared' : '',
+                                                props.combatManager.getCombatant(fighter.id)?.shieldWallActive ? 'shield-wall-active' : '',
                                                 details?.stunned ? 'stunned' : '',
                                                 details?.drained ? 'drained' : '',
                                             ].filter(Boolean).join(' ')
@@ -193,7 +194,7 @@ export default function FightersCombatGrid(props) {
                                                 `saturate(${((details?.hp / fighter.stats.hp) * 100) / 2}) sepia(${props.portraitHoveredId === fighter.id ? '2' : '0'})`,
                                                 (details?.berserkerActive && details?.feared) ? 'brightness(1.18)' : ''
                                             ].filter(Boolean).join(' '),
-                                            zIndex: 300 // Always above monsters/minions
+                                            zIndex: 300,
                                             }} 
                                         onClick={() => props.fighterPortraitClicked(fighter.id)}
                                         onMouseEnter={() => props.portraitHovered(fighter.id)} 
@@ -212,7 +213,6 @@ export default function FightersCombatGrid(props) {
                                             }
                                         }}
                                         >
-                                            <div className="color-glow" style={{color: props.getFighterDetails(fighter)?.color}}></div>
                                         </div>
                                         {props.animationOverlays[fighter.id] && props.getAllOverlaysById(fighter.id).map((overlay, i) => {
                                             const overlayData = {
@@ -221,11 +221,11 @@ export default function FightersCombatGrid(props) {
                                             };
                                             return <Overlay key={i} animationType={overlay.type} data={overlayData} />;
                                         })}
-                                        <div className={`portrait-overlay`} >
+                                        <div className={`portrait-overlay${details?.drained ? ' drained' : ''}`} >
                                             <div className="damage-indicator-container">
                                                 {props.getFighterDetails(fighter)?.damageIndicators.map((e,i)=>{
-                                                    const isStatDebuff = typeof e.value === 'string';
-                                                    return <div key={e.id || i} className={`damage-indicator${isStatDebuff ? ' stat-debuff' : ''}`}>
+                                                    const isStatDebuff = !e.isCrit && typeof e.value === 'string';
+                                                    return <div key={e.id || i} className={`damage-indicator${isStatDebuff ? ' stat-debuff' : ''}${e.isCrit ? ' crit' : ''}`}>
                                                         {e.value}
                                                     </div>
                                                 })}
@@ -257,8 +257,21 @@ export default function FightersCombatGrid(props) {
                                         <div className="tempo-bar">
                                             {!props.getFighterDetails(fighter)?.dead &&  <div className="tempo-indicator" style={{left: `calc(${props.getFighterDetails(fighter)?.tempo}% - 4px)`}}></div>}
 
+                                        {/* Target indicator: tiny portrait of whoever this fighter is targeting */}
+                                        {(() => {
+                                            const liveFighter = props.combatManager.getCombatant(fighter.id);
+                                            const targetId = liveFighter?.targetId;
+                                            const target = targetId ? props.combatManager.getCombatant(targetId) : null;
+                                            return target?.portrait && !details?.dead ? (
+                                                <div className="monster-target-indicator" style={{ zIndex: 310, position: 'absolute' }}>
+                                                    <div
+                                                        className="monster-target-portrait"
+                                                        style={{ backgroundImage: `url(${target.portrait})` }}
+                                                    />
+                                                </div>
+                                            ) : null;
+                                        })()}
                                         </div>
-                                    </div>
                                     { props.getFighterDetails(fighter) && props.getFighterDetails(fighter).pendingAttack && props.getFighterDetails(fighter).attacking && !props.getFighterDetails(fighter).dead && (() => {
                                         const details = props.getFighterDetails(fighter);
                                         const isMonk = fighter.type === 'monk';
@@ -311,8 +324,9 @@ export default function FightersCombatGrid(props) {
                                         }}></div>
                                     </div>
                                 </div>
-                            </div>    
-                        })}
+                            </div>
+                        </div>
+                    })}
             </div>
         </div>
     )

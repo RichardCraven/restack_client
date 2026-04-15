@@ -88,17 +88,19 @@ const specialsMatrix = {
         name: 'shield wall',
         type: 'special',
         icon: images['seeing_shield'],
-        cooldown: 8,    // 8 eras — fires once per battle, recharges for a second use in longer fights
-        duration: 40,   // lasts 2 eras (~20s at default interval)
+        cooldown: 15,       // 15-era recharge after expiry
+        duration: 4,        // wall lasts 4 eras
+        energy_cost: 30,    // costs 30% energy to erect
         effect: ['special'],
-        special_instructions: 'Erect a 5-tile vertical barrier at the Soldier\'s front edge. Blocks all unit movement across the line for 2 eras. Soldier cannot move or attack while active.',
+        special_instructions: 'Erect a 5-tile vertical barrier at the Soldier\'s front edge. Blocks all unit movement across the line for 4 eras. Soldier cannot move or attack while active.',
         level: 1
     },
     berserker: {
         name: 'berserker',
         type: 'special',
         icon: images['demonskull_charm'],
-        cooldown: 20,   // 20-era recharge after expiry
+        cooldown: 20,       // 20-era recharge after expiry
+        energy_cost: 60,    // costs 60% energy to activate
         effect: ['buff_self'],
         special_instructions: 'If 3+ enemies are present at the start of combat, enter a berserk state. Costs 60% energy. Doubles movement speed and attack speed for one full turn cycle.',
         level: 1
@@ -107,8 +109,8 @@ const specialsMatrix = {
         name: 'force back',
         type: 'special',
         icon: images['basic_shield'],
-        cooldown: 30,
-        damage: 4,
+        cooldown: 10,
+        damage: 5,
         effect: ['special'],
         special_instructions: 'Push all enemies in the forward arc one tile back.',
         level: 1

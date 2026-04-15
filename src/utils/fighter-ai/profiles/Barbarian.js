@@ -257,7 +257,7 @@ export function Barbarian(data, utilMethods, animationManager) {
             return false;
         }
         const energy = typeof caller.energy === 'number' ? caller.energy : 100;
-        if (energy < 60) {
+        if (energy < (spec.energy_cost ?? 60)) {
             console.log(`[Barbarian] shouldUseBerserker: not enough energy — energy=${energy}`);
             return false;
         }
@@ -306,7 +306,7 @@ export function Barbarian(data, utilMethods, animationManager) {
         caller.berserkerChecked = true;
 
         // Energy cost
-        caller.energy = Math.max(0, (typeof caller.energy === 'number' ? caller.energy : 100) - 60);
+        caller.energy = Math.max(0, (typeof caller.energy === 'number' ? caller.energy : 100) - (spec.energy_cost ?? 60));
 
         // Store base values for restoration on expiry
         caller._berserkerBaseMoveCooldown      = caller.moveCooldown;
@@ -476,11 +476,17 @@ export function Barbarian(data, utilMethods, animationManager) {
                 break;
         }
 
-        // Keep caller.facing pointing toward the target after every move tick
-        // so that initiateAttack always gets an up-to-date horizontal direction.
+        // Keep caller.facing pointing toward the target after every move tick.
+        // Use 4-directional logic to correctly handle targets above/below.
         if (caller.targetId && combatants[caller.targetId]) {
             const t = combatants[caller.targetId];
-            caller.facing = t.coordinates.x >= caller.coordinates.x ? 'right' : 'left';
+            const _dx = t.coordinates.x - caller.coordinates.x;
+            const _dy = t.coordinates.y - caller.coordinates.y;
+            if (_dx === 0) {
+                caller.facing = _dy > 0 ? 'down' : 'up';
+            } else {
+                caller.facing = _dx > 0 ? 'right' : 'left';
+            }
         }
     }
 
@@ -551,18 +557,28 @@ export function Barbarian(data, utilMethods, animationManager) {
                         }
                         break;
                     }
-                    case 'axe throw':
+                    case 'axe throw': {
                         console.log(`[Barbarian] ⚔️ AI attack — "axe throw", coords=(${caller.coordinates.x},${caller.coordinates.y}), target=(${target?.coordinates?.x},${target?.coordinates?.y})`);
-                        await new Promise((resolve) => {
+                        const axeThrowHit = await new Promise((resolve) => {
                             this.triggerAxeThrow(caller.coordinates, target?.coordinates, resolve, caller.fighterType, caller.pendingAttack?.name);
                         });
-                        if (target) this.hitsCombatant(caller, target);
+                        if (axeThrowHit) {
+                            this.hitsCombatant(caller, axeThrowHit);
+                        } else {
+                            this.missesTarget(caller);
+                        }
                         break;
-                    case 'spear throw':
+                    }
+                    case 'spear throw': {
                         console.log(`[Barbarian] ⚔️ AI attack — "spear throw", facing=${facing}, coords=(${caller.coordinates.x},${caller.coordinates.y})`);
-                        await this.triggerAxeSwing(caller.coordinates, facing);
-                        if (target) this.hitsCombatant(caller, target);
+                        const spearThrowHit = await this.triggerAxeSwing(caller.coordinates, facing);
+                        if (spearThrowHit) {
+                            this.hitsCombatant(caller, spearThrowHit);
+                        } else {
+                            this.missesTarget(caller);
+                        }
                         break;
+                    }
                     default:
                         console.warn(`[Barbarian] ⚔️ AI attack — unhandled attack name: "${caller.pendingAttack.name}"`);
                         break;
@@ -572,6 +588,7 @@ export function Barbarian(data, utilMethods, animationManager) {
             // pendingAttack recharges and the barbarian can attack again.
             this.kickoffAttackCooldown(caller);
         }
+        caller.attacking = false;
     }
 
     // ─── Animation trigger ───────────────────────────────────────────────────
