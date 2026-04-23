@@ -96,24 +96,8 @@ export function Barbarian(data, utilMethods, animationManager) {
         let attack, chosenAttack;
 
         if (available.length === 0) {
-            // Nothing ready — return the most-cooled-down non-close attack
-            let best = 0;
-            caller.attacks.filter(e => e.range !== 'close').forEach(e => {
-                if (e.cooldown_position > best) {
-                    best = e.cooldown_position;
-                    chosenAttack = e;
-                }
-            });
-            // Fall back to any attack if still nothing
-            if (!chosenAttack) {
-                caller.attacks.forEach(e => {
-                    if (e.cooldown_position > best) {
-                        best = e.cooldown_position;
-                        chosenAttack = e;
-                    }
-                });
-            }
-            return chosenAttack || null;
+            // Nothing ready — return null to defer attack until cooldown reaches 100%
+            return null;
         }
 
         if (isCloseRange) {

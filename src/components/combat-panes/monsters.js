@@ -361,7 +361,7 @@ const MonstersCombatGrid = ({
                                     const yOffset = idx * 28;
                                     return (
                                         <div
-                                            className={`damage-indicator${isStatDebuff ? ' stat-debuff' : ''}${indicator.isCrit ? ' crit' : ''}`}
+                                            className={`damage-indicator${isStatDebuff ? ' stat-debuff' : ''}${indicator.isCrit ? ' crit' : ''}${indicator.type === 'heal' ? ' heal' : ''}`}
                                             key={indicator.id}
                                             style={{
                                                 transform: `translateY(-${yOffset}px)`,
@@ -371,7 +371,6 @@ const MonstersCombatGrid = ({
                                                 right: 0,
                                                 margin: '0 auto',
                                                 pointerEvents: 'none',
-                                                color: !isStatDebuff ? 'red' : undefined,
                                             }}
                                         >
                                             {indicator.value}
@@ -460,7 +459,9 @@ const MonstersCombatGrid = ({
                                         ${battleData[monster.id]?.facing === 'right' ? 'reversed' : ''}
                                         ${battleData[monster.id]?.facing === 'up' ? 'facing-up' : ''}
                                         ${battleData[monster.id]?.facing === 'down' ? 'facing-down' : ''}
-                                        ${battleData[monster.id]?.chargingUpActive ? 'charging-up' : ''}`}
+                                        ${battleData[monster.id]?.chargingUpActive ? 'charging-up' : ''}
+                                        ${battleData[monster.id]?.regenerating ? 'regenerating' : ''}
+                                        ${battleData[monster.id]?.bleed ? 'bleeding' : ''}`}
                                     ref={el => {
                                         if (battleData[monster.id]?.wounded) {
                                             // console.log('MONSTER WOUNDED:', battleData[monster.id]?.wounded, 'classes:',
@@ -519,7 +520,7 @@ const MonstersCombatGrid = ({
                                             const isStatDebuff = !indicator.isCrit && typeof indicator.value === 'string';
                                             return (
                                                 <div
-                                                    className={`damage-indicator${isStatDebuff ? ' stat-debuff' : ''}${indicator.isCrit ? ' crit' : ''}`}
+                                                    className={`damage-indicator${isStatDebuff ? ' stat-debuff' : ''}${indicator.isCrit ? ' crit' : ''}${indicator.type === 'heal' ? ' heal' : ''}`}
                                                     key={indicator.id}
                                                     style={{
                                                         transform: `translateY(-${yOffset}px)`,
@@ -529,7 +530,6 @@ const MonstersCombatGrid = ({
                                                         right: 0,
                                                         margin: '0 auto',
                                                         pointerEvents: 'none',
-                                                        color: !isStatDebuff ? 'red' : undefined,
                                                     }}
                                                 >
                                                     {indicator.value}
@@ -649,7 +649,9 @@ const MonstersCombatGrid = ({
                                             ${selectedFighter?.targetId === minion.id ? 'targetted' : ''}
                                             ${minion.facing === 'right' ? 'reversed' : ''}
                                             ${minion.facing === 'up' ? 'facing-up' : ''}
-                                            ${minion.facing === 'down' ? 'facing-down' : ''}`
+                                            ${minion.facing === 'down' ? 'facing-down' : ''}
+                                            ${minion.regenerating ? 'regenerating' : ''}
+                                            ${minion.bleed ? 'bleeding' : ''}`
                                         }
                                     style={{
                                         backgroundImage: `url(${minion.portrait})`,
@@ -744,7 +746,7 @@ const MonstersCombatGrid = ({
                                             const isStatDebuff = !indicator.isCrit && typeof indicator.value === 'string';
                                             return (
                                                 <div
-                                                    className={`damage-indicator${isStatDebuff ? ' stat-debuff' : ''}${indicator.isCrit ? ' crit' : ''}`}
+                                                    className={`damage-indicator${isStatDebuff ? ' stat-debuff' : ''}${indicator.isCrit ? ' crit' : ''}${indicator.type === 'heal' ? ' heal' : ''}`}
                                                     key={indicator.id}
                                                     style={{
                                                         transform: `translateY(-${yOffset}px)`,

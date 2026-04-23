@@ -4,6 +4,7 @@ import { Skeleton } from './profiles/Skeleton'
 import { Goblin } from './profiles/Goblin'
 import { Mummy } from './profiles/Mummy'
 import { BeholderMinion } from './profiles/BeholderMinion'
+import { Troll } from './profiles/Troll'
 import {Methods, getSurroundings} from '../shared-ai-methods/basic-methods';
 import {MovementMethods} from '../shared-ai-methods/movement-methods';
 
@@ -51,6 +52,7 @@ export function MonsterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
             goblin: new Goblin(data, this.utilMethods, this.animationManager, this.overlayManager),
             mummy: new Mummy(data, this.utilMethods, this.animationManager, this.overlayManager),
             beholder_minion: new BeholderMinion(data, this.utilMethods, this.animationManager, this.overlayManager),
+            troll: new Troll(data, this.utilMethods, this.animationManager, this.overlayManager),
         }
     }
 
@@ -91,13 +93,7 @@ export function MonsterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
             return attack;
         }
         if(available.length === 0){
-            caller.attacks.forEach(e=>{
-                if(e.cooldown_position > percentCooledDown){
-                    percentCooledDown = e.cooldown_position;
-                    chosenAttack = e;
-                }
-            })
-            attack = chosenAttack;
+            return null;
         } else {
             if(available.filter(e=>(e.range === 'far' || e.range === 'medium') && e.cooldown_position > 25).length > 0){
                 let attacks = available.filter(e=>(e.range === 'far' || e.range === 'medium') && e.cooldown_position > 25);

@@ -122,7 +122,7 @@ export function AnimationManager(){
         windmill: { duration: 750, animationType: 'tile' },
         axe_swing: { duration: 600, animationType: 'tile' },
         axe_throw: { duration: 1200, animationType: 'canvas' },
-        grasp: { duration: 900, animationType: 'tile' },
+        grasp: { duration: 600, animationType: 'canvas' },
         energy_drain: { duration: 1400, animationType: 'tile' },
         bite: { duration: 600, animationType: 'canvas' },
         tackle: { duration: 600, animationType: 'canvas' },
@@ -940,6 +940,7 @@ export function AnimationManager(){
             case 'bite':
             case 'tackle':
             case 'crush':
+            case 'grasp':
                 animationTile.animationType = type;
                 animationTile.transitionType = 'fade';
                 animationTile.animationData = {

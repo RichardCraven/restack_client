@@ -1388,6 +1388,8 @@ class DungeonPage extends React.Component {
                                     m.dead = false;
                                 } catch (inner) {}
                             });
+                            // Spread members into new objects so React.memo on Tile detects the change
+                            cm.crew = cm.crew.map(m => ({ ...m }));
                         }
                         const meta = getMeta() || {};
                         if (Array.isArray(meta.crew) && this.props.crewManager && Array.isArray(this.props.crewManager.crew)) {

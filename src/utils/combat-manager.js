@@ -4,6 +4,7 @@ import { FighterAI } from './fighter-ai/fighter-ai'
 import { MonsterAI } from './monster-ai/monster-ai'
 import { createFighter } from './factories'
 import specialsMatrix from './specials-matrix'
+import { applyAttackEffect } from './combat-effects'
 import { activeShieldWalls } from './shared-ai-methods/movement-methods'
 // import { cilLifeRing } from '@coreui/icons'
 import { INTERVALS, ROCK_DURATION, CRIT_THRESHOLD_DEFAULT, CRIT_THRESHOLD_INCREASED, CRITICAL_DAMAGE_MULTIPLIER } from './shared-constants';
@@ -188,7 +189,7 @@ export function CombatManager() {
             type: 'arcane',
             range: 'far',
             icon: images['void_lance'],
-            cooldown: 3,
+            cooldown: 6,
         },
         lightning: {
             name: 'lightning',
@@ -665,6 +666,16 @@ export function CombatManager() {
     this.getSelectedFighter = () => {
         return this.selectedFighter
     }
+
+    this.onEraTransition = (caller) => {
+        if (!caller) return;
+        if (this.fighterAI && this.fighterAI.roster[caller.type] && typeof this.fighterAI.roster[caller.type].onEraTransition === 'function') {
+            this.fighterAI.roster[caller.type].onEraTransition(caller, this.combatants);
+        } else if (this.monsterAI && this.monsterAI.roster[caller.type] && typeof this.monsterAI.roster[caller.type].onEraTransition === 'function') {
+            this.monsterAI.roster[caller.type].onEraTransition(caller, this.combatants);
+        }
+    }
+
     this.initializeCombat = (data) => {
         const callbacks = {
             broadcastDataUpdate: this.broadcastDataUpdate,
@@ -686,7 +697,8 @@ export function CombatManager() {
             processActionQueue: this.processActionQueue,
             processMove: this.processMove,
             targetInRange: this.targetInRange,
-            getSelectedFighter: this.getSelectedFighter
+            getSelectedFighter: this.getSelectedFighter,
+            onEraTransition: this.onEraTransition
             // combatPaused: this.combatPaused
         }
         // Store on `this` so runtime methods like spawnMinion (defined outside
@@ -1094,23 +1106,7 @@ export function CombatManager() {
         if (caller.combatStyle) {
         }
         if (available.length === 0) {
-            if (caller.combatStyle === 'prioritizeClosestEnemy') {
-                caller.attacks.filter(e => e.range === 'close').forEach(e => {
-                    if (e.cooldown_position > percentCooledDown) {
-                        percentCooledDown = e.cooldown_position;
-                        chosenAttack = e;
-                    }
-                })
-            } else {
-                caller.attacks.filter(e => e.range === 'medium' || e.range === 'far').forEach(e => {
-                    if (e.cooldown_position > percentCooledDown) {
-                        percentCooledDown = e.cooldown_position;
-                        chosenAttack = e;
-                    }
-                })
-                if (!chosenAttack) chosenAttack = caller.attacks[0]
-            }
-            attack = chosenAttack;
+            return null;
         } else {
             if ((distanceToTarget === 1 || distanceToTarget === -1) && available.find(e => e.range === 'close')) {
                 attack = available.find(e => e.range === 'close');
@@ -2313,23 +2309,10 @@ export function CombatManager() {
         }, ROCK_DURATION);
         // (Critical movement handled above; duplicated block removed)
 
-        // ── Attack effect: stun ──────────────────────────────────────────
-        // If the attack that just landed has an effect of type 'stun', roll
-        // the chance and apply the stun flag for the specified era duration.
-        // Duration is stored as an era counter (stunned_eras) and decremented
-        // in restartTurnCycle — so it tracks correctly regardless of game speed.
-        const attackEffect = caller.pendingAttack && caller.pendingAttack.effect;
-        if (attackEffect && attackEffect.type === 'stun' && combatantHit.hp > 0) {
-            // Only attempt to stun if the target is not already stunned —
-            // prevents repeated hits from indefinitely refreshing the timer.
-            if (!combatantHit.stunned) {
-                const roll = Math.random() * 100;
-                if (roll < attackEffect.chance) {
-                    combatantHit.stunned = true;
-                    combatantHit.stunned_eras = (attackEffect.duration || 1);
-                    if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
-                }
-            }
+        // ── Attack effect application ──────────────────────────────────────────
+        // Apply any status effects defined on the attack (stun, bleed, energy drain, etc.)
+        if (caller.pendingAttack && caller.pendingAttack.effect && combatantHit.hp > 0) {
+            applyAttackEffect(combatantHit, caller.pendingAttack.effect, this.broadcastDataUpdate, criticalHit);
         }
 
         if (combatantHit.hp <= 0) {
@@ -2459,6 +2442,13 @@ export function CombatManager() {
         if (typeof this.updateData === 'function') {
             this.updateData(clone(this.combatants));
         }
+
+        // ── Attack effect application ──────────────────────────────────────────
+        // Apply any status effects defined on the attack (stun, bleed, energy drain, etc.)
+        if (caller.pendingAttack && caller.pendingAttack.effect && target.hp > 0) {
+            applyAttackEffect(target, caller.pendingAttack.effect, this.broadcastDataUpdate, criticalHit);
+        }
+
         caller.energy += caller.stats.fort * 1 + (1 / 2 * caller.level);
         if (caller.energy > 100) caller.energy = 100;
         if (target.hp <= 0) {

@@ -113,14 +113,9 @@ export function Wizard(data, utilMethods, animationManager, overlayManager) {
         }
 
         if (available.length === 0) {
-            // choose the attack that is closest to 100 percent
-            caller.attacks.filter(e => e.range === 'medium' || e.range === 'far').forEach(e => {
-                if (e.cooldown_position > percentCooledDown) {
-                    percentCooledDown = e.cooldown_position;
-                    chosenAttack = e;
-                }
-            })
-            attack = chosenAttack;
+            // No attacks are at 100% cooldown. 
+            // Return null so the AI defers attacking and waits for the cooldown to finish.
+            return null;
         } else {
             let nearestRangeAttacks = available.filter(e => (e.range === 'far' || e.range === 'medium') && e.cooldown_position > 25)
             if (nearestRangeAttacks.length > 0) {

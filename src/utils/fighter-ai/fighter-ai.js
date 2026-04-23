@@ -98,13 +98,7 @@ export function FighterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
         }
 
         if(available.length === 0){
-            caller.attacks.filter(e=>e.range === 'medium' || e.range === 'far').forEach(e=>{
-                if(e.cooldown_position > percentCooledDown){
-                    percentCooledDown = e.cooldown_position;
-                    chosenAttack = e;
-                }
-            })
-            attack = chosenAttack;
+            return null;
         } else {
             if(available.filter(e=>(e.range === 'far' || e.range === 'medium') && e.cooldown_position > 25).length > 0){
                 let percentCooledDown = 0;

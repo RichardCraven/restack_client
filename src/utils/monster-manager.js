@@ -145,7 +145,7 @@ export function MonsterManager() {
             image_names: ['troll'],
             monster_names: ['Mundzungu', 'Wugum'],
             stats: {
-                hp: 138,
+                hp: 178,
                 atk: 10,
                 def: 13,
                 speed: 10,
@@ -269,7 +269,7 @@ export function MonsterManager() {
             image_names: ['black_vampire'],
             monster_names: ['Vukodlak', 'Morias', 'Roterach'],
             stats: {
-                hp: 184,
+                hp: 194,
                 atk: 9,
                 def: 12,
                 speed: 10,
@@ -282,6 +282,7 @@ export function MonsterManager() {
             specials: ['obliterate', 'flying', 'invisibility'],
             attacks: ['claws', 'bite'],
             weaknesses: ['arcane', 'holy-aura'],
+            minions: ['goblin', 'goblin'],
             drops: [
                 { item: TIER2_POTION, percentChance: 35 },
                 { item: this.pickRandom(TIER2_WEAPONS), percentChance: 35 },

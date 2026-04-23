@@ -14,10 +14,10 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
     checkOverlap: _checkOverlap, // eslint-disable-line no-unused-vars
         handleOverlap,
         // goToDestination,
-    processActionQueue: _processActionQueue, // eslint-disable-line no-unused-vars
         processMove,
         targetInRange,
-        getSelectedFighter
+        getSelectedFighter,
+        onEraTransition
     } = callbacks;
     // Determine initial facing: right for fighters, left for monsters/minions
     let initialFacing = 'right';
@@ -72,6 +72,13 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
         attackingReverse: false,
         healing: false,
         missed: false,
+        drained: false,
+        drained_eras: 0,
+
+        // -- New Regeneration Properties --
+        regenerating: false,
+        regenerating_eras: 0,
+        regeneration_percent: 0,
     // Ensure attacks are always full objects, not just strings
     attacks: (typeof callbacks.formatAttacks === 'function') ? callbacks.formatAttacks(fighter.attacks || []) : (fighter.attacks || []),
     specials: (typeof formatSpecials === 'function') ? formatSpecials(fighter.specials || []) : (fighter.specials || []),
@@ -317,6 +324,11 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
                 // Fear duration is counted in eras, not full cycles.
                 if (eraIndex !== this._lastEraIndex) {
                     this._lastEraIndex = eraIndex;
+
+                    if (typeof onEraTransition === 'function') {
+                        onEraTransition(this);
+                    }
+
                     if (this.feared && this.feared_eras > 0) {
                         this.feared_eras--;
                         if (this.feared_eras <= 0) {
@@ -348,6 +360,31 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
                         if (this.bleed_eras <= 0) {
                             this.bleed = false;
                             this.bleed_eras = 0;
+                        }
+                        if (typeof broadcastDataUpdate === 'function' && !isCombatOver()) broadcastDataUpdate(this);
+                    }
+
+                    // -- Regeneration effect: heal per era --
+                    if (this.regenerating && this.regenerating_eras > 0 && !this.dead) {
+                        const healPercent = this.regeneration_percent || 0;
+                        const healAmount = Math.floor(this.starting_hp * (healPercent / 100));
+                        if (healAmount > 0) {
+                            this.hp = Math.min(this.starting_hp, this.hp + healAmount);
+                            // Add damage indicator (as healing)
+                            const indicatorId = Date.now() + Math.random();
+                            this.damageIndicators.push({ 
+                                id: indicatorId, 
+                                value: `+${healAmount}`, 
+                                source: 'Regen', 
+                                type: 'heal',
+                                timestamp: Date.now()
+                            });
+                        }
+                        
+                        this.regenerating_eras--;
+                        if (this.regenerating_eras <= 0) {
+                            this.regenerating = false;
+                            this.regenerating_eras = 0;
                         }
                         if (typeof broadcastDataUpdate === 'function' && !isCombatOver()) broadcastDataUpdate(this);
                     }

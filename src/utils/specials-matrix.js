@@ -27,16 +27,16 @@ const specialsMatrix = {
         buff: {
             increase_stats: {
                 stats: [
-                    {stat: 'str', amount: 5},
-                    {stat:'dex',amount:3},
-                    {stat: 'atk', amount: 7}
+                    { stat: 'str', amount: 5 },
+                    { stat: 'dex', amount: 3 },
+                    { stat: 'atk', amount: 7 }
                 ]
             }
         },
         nerf: {
-            decrease_stats:{
+            decrease_stats: {
                 stats: [
-                    {stat: 'int', amount: 3}
+                    { stat: 'int', amount: 3 }
                 ]
             }
         },
@@ -49,7 +49,7 @@ const specialsMatrix = {
         effect: ['buff_all_friendly'],
         buff: {
             heal: {
-                amount: 12 
+                amount: 12
             }
         },
         cooldown: 12,
@@ -244,8 +244,8 @@ const specialsMatrix = {
         type: 'special',
         icon: images['lundi_charm'],
         cooldown: 15,
-        energy_cost: 80,
-        duration: 6,
+        energy_cost: 20,
+        duration: 10,
         effect: ['heal_self_over_time'],
         regeneration_percent: 3,
         special_instructions: 'Regenerate 3% of max HP every era for 6 eras. Costs 80 energy, 15 era cooldown.',
@@ -256,8 +256,8 @@ const specialsMatrix = {
         type: 'special',
         icon: images['lundi_charm'],
         cooldown: 20,
-        energy_cost: 90,
-        duration: 9,
+        energy_cost: 40,
+        duration: 15,
         effect: ['heal_self_over_time'],
         regeneration_percent: 5,
         special_instructions: 'Regenerate 5% of max HP every era for 9 eras. Costs 90 energy, 20 era cooldown.',

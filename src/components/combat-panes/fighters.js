@@ -184,6 +184,8 @@ export default function FightersCombatGrid(props) {
                                                 props.combatManager.getCombatant(fighter.id)?.shieldWallActive ? 'shield-wall-active' : '',
                                                 details?.stunned ? 'stunned' : '',
                                                 details?.drained ? 'drained' : '',
+                                                details?.regenerating ? 'regenerating' : '',
+                                                details?.bleed ? 'bleeding' : '',
                                             ].filter(Boolean).join(' ')
                                         }
                                         style={{

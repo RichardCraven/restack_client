@@ -91,19 +91,46 @@ export function clearStunEffect(target) {
 }
 
 /**
+ * Applies the "regeneration" effect to a combatant.
+ * - Sets regenerating=true, regenerating_eras=duration, regeneration_percent=percent
+ * @param {object} target - The combatant object
+ * @param {number} duration - Duration in eras
+ * @param {number} percent - Percentage of max HP to heal per era
+ * @param {function} [broadcastDataUpdate] - Optional callback
+ */
+export function applyRegenerationEffect(target, duration, percent, broadcastDataUpdate) {
+    if (!target) return;
+    target.regenerating = true;
+    target.regenerating_eras = duration || 1;
+    target.regeneration_percent = percent || 0;
+    if (typeof broadcastDataUpdate === 'function') broadcastDataUpdate();
+}
+
+/**
  * Centralized dispatcher for applying combat effects from attacks.
  * Handles the chance roll and routes to the specific effect helper.
  * @param {object} target - The combatant being hit
  * @param {object} effect - The effect definition { type, chance, duration }
  * @param {function} [broadcastDataUpdate] - Optional callback for UI updates
  */
-export function applyAttackEffect(target, effect, broadcastDataUpdate) {
-    if (!target || !effect || !effect.type || target.hp <= 0) return;
+export function applyAttackEffect(target, effect, broadcastDataUpdate, isCrit) {
+    if (!target || !effect || target.hp <= 0) return;
+    
+    // Resolve effect type: prefer effect.type, but if it's 'special', use effect.name.
+    // This allows the dispatcher to handle both standard attacks and special abilities.
+    let type = (effect.type || '');
+    if (type === 'special' && effect.name) {
+        type = effect.name;
+    }
+    if (!type) return;
 
+    const baseChance = effect.chance || 100;
+    // Critical hits double the chance of bleed effects (capped at 100%)
+    const effectiveChance = (isCrit && type.toLowerCase() === 'bleed') ? Math.min(baseChance * 2, 100) : baseChance;
     const roll = Math.random() * 100;
-    if (roll >= (effect.chance || 100)) return;
+    if (roll >= effectiveChance) return;
 
-    switch (effect.type.toLowerCase()) {
+    switch (type.toLowerCase()) {
         case 'stun':
             applyStunEffect(target, effect.duration, broadcastDataUpdate);
             break;
@@ -114,8 +141,13 @@ export function applyAttackEffect(target, effect, broadcastDataUpdate) {
         case 'energy_drain':
             applyEnergyDrainEffect(target, effect.duration, broadcastDataUpdate);
             break;
+        case 'regeneration':
+        case 'greater regeneration':
+        case 'greater_regeneration':
+            applyRegenerationEffect(target, effect.duration, effect.regeneration_percent, broadcastDataUpdate);
+            break;
         default:
-            console.warn(`Unknown effect type: ${effect.type}`);
+            console.warn(`Unknown effect type: ${type}`);
             break;
     }
 }

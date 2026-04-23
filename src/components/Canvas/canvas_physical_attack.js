@@ -32,11 +32,13 @@ export default function CanvasPhysicalAttack({
   const endX = (target.x - minX) * width + width / 2;
   const endY = (target.y - minY) * height + height / 2;
 
-  // Midpoint or slightly offset point for the "lunge"
   const dx = endX - startX;
   const dy = endY - startY;
 
+  // When scaleX(-1) is applied, the X axis is inverted — translate(+dx) moves left.
+  // Negate dx in the transform so the image still travels toward the target.
   const flipScale = facing === 'right' ? 'scaleX(-1) ' : '';
+  const tdx = facing === 'right' ? -dx : dx;
 
   useEffect(() => {
     let running = true;
@@ -52,7 +54,7 @@ export default function CanvasPhysicalAttack({
           // Lunge effect: move quickly toward target and scale slightly
           const scale = 1 + Math.sin(progress * Math.PI) * 0.2;
           imgRef.current.style.transform = 
-            `${flipScale}translate(${dx * progress}px, ${dy * progress}px) scale(${scale})`;
+            `${flipScale}translate(${tdx * progress}px, ${dy * progress}px) scale(${scale})`;
           imgRef.current.style.opacity = 1 - 0.5 * progress;
           imgRef.current.style.visibility = 'visible';
         } else {
@@ -72,7 +74,7 @@ export default function CanvasPhysicalAttack({
     }, duration);
 
     return () => { running = false; clearTimeout(timeout); };
-  }, [origin, target, width, height, duration, flipScale, dx, dy, onComplete]);
+  }, [origin, target, width, height, duration, flipScale, tdx, dy, onComplete]);
 
   const left = minX * width;
   const top = minY * height;

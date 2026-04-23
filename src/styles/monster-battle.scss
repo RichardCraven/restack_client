@@ -283,6 +283,41 @@
     }
 }
 
+@keyframes regenerationPulse {
+    0% {
+        outline: 3px solid rgba(0, 255, 0, 0);
+        outline-offset: 0px;
+    }
+    50% {
+        outline: 3px solid rgba(0, 255, 0, 0.85);
+        outline-offset: 4px;
+    }
+    100% {
+        outline: 3px solid rgba(0, 255, 0, 0);
+        outline-offset: 0px;
+    }
+}
+
+.regenerating {
+    animation: regenerationPulse 1.5s ease-in-out infinite !important;
+}
+
+@keyframes bleedingPulse {
+    0% {
+        filter: drop-shadow(0 0 0px rgba(255, 0, 0, 0));
+    }
+    50% {
+        filter: drop-shadow(0 0 8px rgba(255, 0, 0, 0.8)) sepia(0.8) hue-rotate(-50deg) saturate(3) brightness(0.8);
+    }
+    100% {
+        filter: drop-shadow(0 0 0px rgba(255, 0, 0, 0));
+    }
+}
+
+.bleeding {
+    animation: bleedingPulse 1.2s ease-in-out infinite !important;
+}
+
 /* Stacked count badge used for consumables & spells */
 .stack-badge{
     position: absolute;
@@ -2068,6 +2103,10 @@
                 text-shadow: 0 0 8px #ff8800, 0 0 16px #ff4400, 0 2px 2px rgba(0,0,0,0.7);
                 animation: CritFloatUp 1.8s cubic-bezier(.2,.8,.2,1);
                 opacity: 0;
+            }
+            &.heal {
+                color: #00ff00;
+                text-shadow: 0 0 8px rgba(0, 255, 0, 0.4);
             }
         }
     }
