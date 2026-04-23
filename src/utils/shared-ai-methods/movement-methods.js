@@ -145,6 +145,57 @@ const isAvailableToMoveInto = (coords, combatants, fromCoords = null, caller = n
     }
     return true;
 }
+
+/**
+ * Returns true if there is at least one healthy friendly combatant 
+ * strictly between fromCoords and toCoords on the same horizontal lane.
+ */
+const isPathBlockedByFriendly = (fromCoords, toCoords, combatants) => {
+    if (!fromCoords || !toCoords || !combatants) return false;
+    if (fromCoords.y !== toCoords.y) return false;
+    const y = fromCoords.y;
+    const startX = Math.min(fromCoords.x, toCoords.x) + 1;
+    const endX = Math.max(fromCoords.x, toCoords.x) - 1;
+    if (startX > endX) return false;
+    
+    return Object.values(combatants).some(e => {
+        if (!e || e.dead || e.isMonster || e.isMinion || e.isVCT) return false;
+        return e.coordinates && e.coordinates.y === y && e.coordinates.x >= startX && e.coordinates.x <= endX;
+    });
+};
+
+/**
+ * Given a target entity (which might be large), this finds the nearest 
+ * available lane (y) that has a clear horizontal LOS to ANY tile occupied 
+ * by that target.
+ */
+const findLaneWithClearLOS = (caller, target, combatants) => {
+    if (!caller || !target || !combatants) return null;
+    
+    const allTargetTiles = (Array.isArray(target.occupiedCoords) && target.occupiedCoords.length > 0)
+        ? target.occupiedCoords
+        : [target.coordinates];
+        
+    const callerX = caller.coordinates.x;
+    const possibleLanes = [0, 1, 2, 3, 4, 5]; // MAX_LANES is 5 (index 0-5)
+    
+    // Sort lanes by vertical distance to caller
+    possibleLanes.sort((a, b) => Math.abs(a - caller.coordinates.y) - Math.abs(b - caller.coordinates.y));
+    
+    for (const y of possibleLanes) {
+        // For each lane, check if any of the target's occupied tiles are in this lane
+        // AND have a clear path from (callerX, y)
+        const clearTileInLane = allTargetTiles.find(t => {
+            if (t.y !== y) return false;
+            return !isPathBlockedByFriendly({x: callerX, y: y}, t, combatants);
+        });
+        
+        if (clearTileInLane) return y;
+    }
+    
+    return null;
+};
+
 const someoneElseIsInCoords = (caller, coords)=>{ // eslint-disable-line no-unused-vars
     return Object.values(this.combatants).filter(c=>c.id!==caller.id).some(e=>JSON.stringify(e.coordinates) === JSON.stringify(coords))
 }
@@ -372,6 +423,10 @@ const goTowards = (caller, combatants, targetTile, forwardFirst = false) => {
 }
 
 export const MovementMethods = {
+    isAvailableToMoveInto,
+    isPathBlockedByFriendly,
+    findLaneWithClearLOS,
+    goTowards,
     teleportToBackLine,
     goUp: (caller, combatants) => {
         // const enemyTarget = Object.values(combatants).find(e=>e.id === caller.targetId);

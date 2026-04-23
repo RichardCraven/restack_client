@@ -29,7 +29,7 @@ const TIER2_POTION = 'major_health_potion';
 const TIER3_POTION = 'grand_health_potion';
 const TIER4_POTION = 'grand_health_potion';
 
-export function MonsterManager(){
+export function MonsterManager() {
     this.pickRandom = (array) => {
         let index = Math.floor(Math.random() * array.length)
         return array[index]
@@ -57,8 +57,8 @@ export function MonsterManager(){
             attacks: ['claws', 'bite'],
             weaknesses: ['crushing', 'cutting', 'fire', 'electricity'],
             drops: [
-                {item: TIER1_POTION, percentChance: 35},
-                {item: this.pickRandom(TIER1_WEAPONS), percentChance: 35},
+                { item: TIER1_POTION, percentChance: 35 },
+                { item: this.pickRandom(TIER1_WEAPONS), percentChance: 35 },
             ]
         },
         // ── Level 3 ──────────────────────────────────────────────────────
@@ -78,13 +78,13 @@ export function MonsterManager(){
             portrait: images['skeleton_portrait'],
             greetings: ['*screech*'],
             deathCries: ['*screech*'],
-            specials: ['induce_fear'],
+            specials: [],
             attacks: ['claws', 'claws', 'claws'],
             minions: ['skeleton', 'skeleton'],
             weaknesses: ['fire'],
             drops: [
-                {item: TIER1_POTION, percentChance: 35},
-                {item: this.pickRandom(TIER1_WEAPONS), percentChance: 35},
+                { item: TIER1_POTION, percentChance: 35 },
+                { item: this.pickRandom(TIER1_WEAPONS), percentChance: 35 },
             ]
         },
         // ── Level 4 (minion) ─────────────────────────────────────────────
@@ -108,8 +108,8 @@ export function MonsterManager(){
             attacks: ['void_lance', 'major_magic_missile'],
             weaknesses: ['arcane', 'holy-aura'],
             drops: [
-                {item: TIER1_POTION, percentChance: 35},
-                {item: this.pickRandom(TIER1_WEAPONS), percentChance: 35},
+                { item: TIER1_POTION, percentChance: 35 },
+                { item: this.pickRandom(TIER1_WEAPONS), percentChance: 35 },
             ]
         },
         // ── Level 5 (minion) ─────────────────────────────────────────────
@@ -131,11 +131,11 @@ export function MonsterManager(){
             greetings: ['Vukdaj kolo gurdu'],
             deathCries: ['Urdu meklak milnaurku...'],
             specials: ['bifurcate', 'flying', 'minor_magic_missile'],
-            attacks: ['void_lance','claws'],
+            attacks: ['void_lance', 'claws'],
             weaknesses: ['arcane', 'holy-aura'],
             drops: [
-                {item: TIER1_POTION, percentChance: 35},
-                {item: this.pickRandom(TIER1_WEAPONS), percentChance: 35},
+                { item: TIER1_POTION, percentChance: 35 },
+                { item: this.pickRandom(TIER1_WEAPONS), percentChance: 35 },
             ]
         },
         // ── Level 6 ──────────────────────────────────────────────────────
@@ -145,7 +145,7 @@ export function MonsterManager(){
             image_names: ['troll'],
             monster_names: ['Mundzungu', 'Wugum'],
             stats: {
-                hp: 178,
+                hp: 138,
                 atk: 10,
                 def: 13,
                 speed: 10,
@@ -155,12 +155,12 @@ export function MonsterManager(){
             portrait: images['troll_portrait'],
             greetings: ['you stink of fresh meat'],
             deathCries: ['*gurgle*'],
-            specials: ['regenerate'],
-            attacks: ['crush', 'bite', 'tackle'],
+            specials: ['regeneration'],
+            attacks: ['crush', 'tackle', 'bite'],
             weaknesses: ['fire'],
             drops: [
-                {item: TIER1_POTION, percentChance: 35},
-                {item: this.pickRandom(TIER1_WEAPONS), percentChance: 35},
+                { item: TIER1_POTION, percentChance: 35 },
+                { item: this.pickRandom(TIER1_WEAPONS), percentChance: 35 },
             ]
         },
         mummy: {
@@ -184,8 +184,8 @@ export function MonsterManager(){
             weaknesses: ['arcane', 'fire', 'electricity'],
             minions: ['skeleton', 'skeleton'],
             drops: [
-                {item: TIER1_POTION, percentChance: 35},
-                {item: this.pickRandom(TIER1_WEAPONS), percentChance: 35},
+                { item: TIER1_POTION, percentChance: 35 },
+                { item: this.pickRandom(TIER1_WEAPONS), percentChance: 35 },
             ]
         },
         // ── Level 8 ──────────────────────────────────────────────────────
@@ -209,8 +209,8 @@ export function MonsterManager(){
             attacks: ['grasp', 'energy_drain'],
             weaknesses: ['holy', 'psionic'],
             drops: [
-                {item: TIER1_POTION, percentChance: 35},
-                {item: this.pickRandom(TIER1_WEAPONS), percentChance: 35},
+                { item: TIER1_POTION, percentChance: 35 },
+                { item: this.pickRandom(TIER1_WEAPONS), percentChance: 35 },
             ]
         },
         ogre: {
@@ -233,8 +233,8 @@ export function MonsterManager(){
             attacks: ['crush', 'bite', 'tackle'],
             weaknesses: ['fire', 'psionic'],
             drops: [
-                {item: TIER1_POTION, percentChance: 35},
-                {item: this.pickRandom(TIER1_WEAPONS), percentChance: 35},
+                { item: TIER1_POTION, percentChance: 35 },
+                { item: this.pickRandom(TIER1_WEAPONS), percentChance: 35 },
             ]
         },
         // ── Level 9 ──────────────────────────────────────────────────────
@@ -258,8 +258,8 @@ export function MonsterManager(){
             attacks: ['snake_strike', 'bite'],
             weaknesses: ['ice', 'psionic'],
             drops: [
-                {item: TIER1_POTION, percentChance: 35},
-                {item: this.pickRandom(TIER1_WEAPONS), percentChance: 35},
+                { item: TIER1_POTION, percentChance: 35 },
+                { item: this.pickRandom(TIER1_WEAPONS), percentChance: 35 },
             ]
         },
         // ── Level 10 ─────────────────────────────────────────────────────
@@ -283,8 +283,8 @@ export function MonsterManager(){
             attacks: ['claws', 'bite'],
             weaknesses: ['arcane', 'holy-aura'],
             drops: [
-                {item: TIER2_POTION, percentChance: 35},
-                {item: this.pickRandom(TIER2_WEAPONS), percentChance: 35},
+                { item: TIER2_POTION, percentChance: 35 },
+                { item: this.pickRandom(TIER2_WEAPONS), percentChance: 35 },
             ]
         },
         // ── Level 11 ─────────────────────────────────────────────────────
@@ -309,8 +309,8 @@ export function MonsterManager(){
             weaknesses: ['ice', 'psionic'],
             minions: ['goblin', 'goblin'],
             drops: [
-                {item: TIER2_POTION, percentChance: 35},
-                {item: this.pickRandom(TIER2_WEAPONS), percentChance: 35},
+                { item: TIER2_POTION, percentChance: 35 },
+                { item: this.pickRandom(TIER2_WEAPONS), percentChance: 35 },
             ]
         },
         // ── Level 12 ─────────────────────────────────────────────────────
@@ -334,10 +334,34 @@ export function MonsterManager(){
             attacks: ['void_lance', 'major_magic_missile'],
             weaknesses: ['arcane', 'holy-aura'],
             drops: [
-                {item: TIER2_POTION, percentChance: 35},
-                {item: this.pickRandom(TIER2_WEAPONS), percentChance: 35},
+                { item: TIER2_POTION, percentChance: 35 },
+                { item: this.pickRandom(TIER2_WEAPONS), percentChance: 35 },
             ]
         },
+        // mirror: {
+        //     type: 'mirror',
+        //     key: 'mirror',
+        //     image_names: ['mirror'],
+        //     monster_names: ['the mirror'],
+        //     stats: {
+        //         hp: 100,
+        //         atk: 10,
+        //         def: 8,
+        //         speed: 14,
+        //         willpower: 20
+        //     },
+        //     level: 12,
+        //     portrait: images['mirror'],
+        //     greetings: ['reflect on this'],
+        //     deathCries: ['ahhh'],
+        //     specials: ['obliterate', 'flying', 'invisibility'],
+        //     attacks: ['major_magic_missile'],
+        //     weaknesses: ['arcane', 'holy-aura'],
+        //     drops: [
+        //         { item: TIER2_POTION, percentChance: 35 },
+        //         { item: this.pickRandom(TIER2_WEAPONS), percentChance: 35 },
+        //     ]
+        // },
         // ── Level 14 ─────────────────────────────────────────────────────
         beholder: {
             type: 'beholder',
@@ -361,10 +385,36 @@ export function MonsterManager(){
             weaknesses: ['arcane', 'holy-aura'],
             minions: ['beholder_minion', 'beholder_minion'],
             drops: [
-                {item: TIER2_POTION, percentChance: 35},
-                {item: this.pickRandom(TIER2_WEAPONS), percentChance: 35},
+                { item: TIER2_POTION, percentChance: 35 },
+                { item: this.pickRandom(TIER2_WEAPONS), percentChance: 35 },
             ]
         },
+        // precipice_guardian: {
+        //     type: 'precipice_guardian',
+        //     key: 'precipice_guardian',
+        //     image_names: ['precipice_guardian'],
+        //     monster_names: ['Samra', 'Julu'],
+        //     stats: {
+        //         hp: 190,
+        //         atk: 12,
+        //         def: 15,
+        //         speed: 9,
+        //         willpower: 0
+        //     },
+        //     level: 14,
+        //     portrait: images['beholder_portrait'],
+        //     greetings: ['Vukudaj kolo gurdu'],
+        //     deathCries: ['Urdu meklak milnaurku...'],
+        //     specials: ['obliterate', 'flying', 'invisibility'],
+        //     attacks: ['void_lance', 'major_magic_missile'],
+        //     // attacks: ['major_magic_missile'],
+        //     weaknesses: ['arcane', 'holy-aura'],
+        //     minions: ['golem'],
+        //     drops: [
+        //         { item: TIER2_POTION, percentChance: 35 },
+        //         { item: this.pickRandom(TIER2_WEAPONS), percentChance: 35 },
+        //     ]
+        // },
         // ── Level 15 ─────────────────────────────────────────────────────
         kabuki_demon: {
             type: 'kabuki_demon',
@@ -387,8 +437,8 @@ export function MonsterManager(){
             weaknesses: ['arcane', 'holy-aura'],
             minions: ['kabuki_demon_minion', 'kabuki_demon_minion'],
             drops: [
-                {item: TIER2_POTION, percentChance: 35},
-                {item: this.pickRandom(TIER2_WEAPONS), percentChance: 35},
+                { item: TIER2_POTION, percentChance: 35 },
+                { item: this.pickRandom(TIER2_WEAPONS), percentChance: 35 },
             ]
         },
         // ── Level 19 ─────────────────────────────────────────────────────
@@ -412,8 +462,8 @@ export function MonsterManager(){
             attacks: ['claws', 'void_lance', 'fire_breath'],
             weaknesses: ['arcane'],
             drops: [
-                {item: TIER2_POTION, percentChance: 35},
-                {item: this.pickRandom(TIER2_WEAPONS), percentChance: 35},
+                { item: TIER2_POTION, percentChance: 35 },
+                { item: this.pickRandom(TIER2_WEAPONS), percentChance: 35 },
             ]
         },
         // ── Level 29 ─────────────────────────────────────────────────────
@@ -441,8 +491,8 @@ export function MonsterManager(){
             weaknesses: ['arcane'],
             minions: ['djinn'],
             drops: [
-                {item: TIER3_POTION, percentChance: 35},
-                {item: this.pickRandom(TIER3_WEAPONS), percentChance: 35},
+                { item: TIER3_POTION, percentChance: 35 },
+                { item: this.pickRandom(TIER3_WEAPONS), percentChance: 35 },
             ]
         },
         // ── Level 30 ─────────────────────────────────────────────────────
@@ -466,13 +516,13 @@ export function MonsterManager(){
             attacks: ['claws', 'bite', 'fire_breath'],
             weaknesses: ['psionic'],
             drops: [
-                {item: TIER4_POTION, percentChance: 35},
-                {item: this.pickRandom(TIER4_WEAPONS), percentChance: 35},
+                { item: TIER4_POTION, percentChance: 35 },
+                { item: this.pickRandom(TIER4_WEAPONS), percentChance: 35 },
             ]
         },
     }
     let count = 100;
-    for(let key in this.monsters){
+    for (let key in this.monsters) {
         let m = this.monsters[key]
         m.id = count;
         count++
@@ -489,9 +539,9 @@ export function MonsterManager(){
         // return this.monsters['sphinx']
         return this.pickRandom(Object.values(this.monsters))
     }
-    
 
-    
+
+
     // this.initializeCrew = (crew) => {
     //     crew.forEach(member=> { 
     //         if(this.memberTypes.includes(member.image)){

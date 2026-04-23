@@ -229,6 +229,40 @@ const specialsMatrix = {
         special_instructions: 'TBD',
         level: 1
     },
+    induce_madness: {
+        name: 'induce madness',
+        type: 'special',
+        icon: images['lundi_mask'],
+        cooldown: 8,
+        energy_cost: 60,
+        effect: ['special'],
+        special_instructions: 'Inflicts psychological trauma on a target, causing them to hallucinate and skip actions.',
+        level: 1
+    },
+    regeneration: {
+        name: 'regeneration',
+        type: 'special',
+        icon: images['lundi_charm'],
+        cooldown: 15,
+        energy_cost: 80,
+        duration: 6,
+        effect: ['heal_self_over_time'],
+        regeneration_percent: 3,
+        special_instructions: 'Regenerate 3% of max HP every era for 6 eras. Costs 80 energy, 15 era cooldown.',
+        level: 1
+    },
+    greater_regeneration: {
+        name: 'greater regeneration',
+        type: 'special',
+        icon: images['lundi_charm'],
+        cooldown: 20,
+        energy_cost: 90,
+        duration: 9,
+        effect: ['heal_self_over_time'],
+        regeneration_percent: 5,
+        special_instructions: 'Regenerate 5% of max HP every era for 9 eras. Costs 90 energy, 20 era cooldown.',
+        level: 1
+    },
     regenerate: {
         name: 'regenerate',
         type: 'passive',

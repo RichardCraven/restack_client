@@ -34,7 +34,7 @@ export function Monk(data, utilMethods, animationManager, overlayManager){
     }
 
     this.isEnemy = (e) => {
-        return e.isMonster|| e.isMinion;
+        return (e.isMonster || e.isMinion);
     }
 
     this.enemies = (combatants) => {
@@ -179,7 +179,7 @@ export function Monk(data, utilMethods, animationManager, overlayManager){
         }
     }
     this.acquireTarget = (caller, combatants, targetToAvoid = null) => {
-        const liveEnemies = Object.values(combatants).filter(e=>!e.dead && (e.isMonster || e.isMinion));
+        const liveEnemies = Object.values(combatants).filter(e => !e.dead && (e.isMonster || e.isMinion) && !e.isVCT);
         const sorted = (targetToAvoid && liveEnemies.length > 1) ?  liveEnemies.filter(e => e.id !== targetToAvoid.id).sort((a,b)=>a.depth - b.depth) : liveEnemies.sort((a,b)=>a.depth - b.depth);
         const target = sorted[0];
 

@@ -117,12 +117,8 @@ export function Skeleton(data, utilMethods, animationManager, overlayManager){
     this.initiateAttack = async (caller, combatants) => {
         const target = combatants[caller.targetId];
         caller.attacking = true;
-        if (!target || target.dead || target.isVCT) {
-            if (!target) {
-                console.log('NO TARGET!');
-            } else if (target.isVCT) {
-                console.warn('Skeleton.initiateAttack — target is VCT, skipping attack');
-            }
+        if (!target || target.dead) {
+            caller.attacking = false;
             return;
         }
         let combatantHit;
@@ -137,11 +133,37 @@ export function Skeleton(data, utilMethods, animationManager, overlayManager){
                 }
                 break;
             default:
-                // Fallback: for attacks not explicitly animated here (eg. void_lance,
-                // magic_missile when using the skeleton AI as a fallback), apply
-                // damage directly so monsters still hurt players.
+                // Fallback: for attacks not explicitly animated here (eg. bite, crush, tackle),
+                // trigger a generic attack animation so humans can see the icon and timing.
                 try {
                     if (target) {
+                        // Determine the best source tile for the animation (for large monsters)
+                        const allSourceCoords = (Array.isArray(caller.occupiedCoords) && caller.occupiedCoords.length > 0)
+                            ? caller.occupiedCoords
+                            : [caller.coordinates];
+
+                        // Pick the tile closest to the target
+                        let bestSource = caller.coordinates;
+                        let minDist = Infinity;
+                        allSourceCoords.forEach(c => {
+                            const d = Math.abs(c.x - target.coordinates.x) + Math.abs(c.y - target.coordinates.y);
+                            if (d < minDist) {
+                                minDist = d;
+                                bestSource = c;
+                            }
+                        });
+
+                        // Trigger the visual icon flash/animation
+                        if (this.animationManager && typeof this.animationManager.triggerAttackAnimation === 'function') {
+                            await this.animationManager.triggerAttackAnimation({
+                                coordinates: bestSource,
+                                facing: caller.facing,
+                                icon: caller.pendingAttack?.icon,
+                                type: caller.pendingAttack?.name || 'grasp', // fallback animation type
+                                selectedAction: caller.pendingAttack
+                            });
+                        }
+
                         // Use hitsCombatant to ensure wounded/damageIndicators are set
                         this.hitsCombatant(caller, target);
                     }

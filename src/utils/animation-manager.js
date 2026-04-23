@@ -121,9 +121,12 @@ export function AnimationManager(){
         spin_attack_arc: { duration: 800, animationType: 'tile' },
         windmill: { duration: 750, animationType: 'tile' },
         axe_swing: { duration: 600, animationType: 'tile' },
-        axe_throw: { duration: 1200, animationType: 'canvas' }, // Default/fallback for axe_throw, but actual duration is calculated dynamically
+        axe_throw: { duration: 1200, animationType: 'canvas' },
         grasp: { duration: 900, animationType: 'tile' },
-        energy_drain: { duration: 1400, animationType: 'tile' }
+        energy_drain: { duration: 1400, animationType: 'tile' },
+        bite: { duration: 600, animationType: 'canvas' },
+        tackle: { duration: 600, animationType: 'canvas' },
+        crush: { duration: 600, animationType: 'canvas' }
     };
 
     // Generic attack animation trigger for AI modules (e.g., Monk)
@@ -172,16 +175,40 @@ export function AnimationManager(){
                 break;
         }
         const targetTileId = this.getTileIdByCoords(targetCoords);
+
         return new Promise((resolve) => {
-            const animData = {
-                sourceTileId,
-                targetTileId,
-                type: animType || 'dragon_punch',
-                icon: resolvedIcon,
-                facing: data.facing,
-                selectedAction: data.selectedAction // Forward full attack object for grasp
-            };
-            this.triggerTileAnimationComplex(animData);
+            const matrixEntry = this.animationsMatrix[animType] || { duration: 700, animationType: 'tile' };
+            const duration = matrixEntry.duration || 700;
+
+            if (matrixEntry.animationType === 'canvas') {
+                const animId = `canvas_anim_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+                const canvasAnim = {
+                    id: animId,
+                    type: 'physical_attack', // Generic canvas type we just added to AnimationGrid
+                    origin: data.coordinates,
+                    target: targetCoords,
+                    icon: resolvedIcon || images[animType],
+                    duration,
+                    facing: data.facing,
+                    onComplete: () => {
+                        this.canvasAnimations = this.canvasAnimations.filter(a => a.id !== animId);
+                        this.update();
+                    }
+                };
+                this.canvasAnimations.push(canvasAnim);
+                this.update();
+            } else {
+                const animData = {
+                    sourceTileId,
+                    targetTileId,
+                    type: animType || 'dragon_punch',
+                    icon: resolvedIcon,
+                    facing: data.facing,
+                    selectedAction: data.selectedAction
+                };
+                this.triggerTileAnimationComplex(animData);
+            }
+
             // After the animation, check for a combatant at the target tile
             setTimeout(() => {
                 let combatantHit = null;
@@ -190,7 +217,7 @@ export function AnimationManager(){
                     combatantHit = this.checkForCollision(tileCoords);
                 }
                 resolve(combatantHit);
-            }, this.animationsMatrix[animType]?.duration || 700);
+            }, duration);
         });
     }
     this.tiles = [];
@@ -201,17 +228,17 @@ export function AnimationManager(){
     this.connectCombatMethods = (callback) => {
         this.checkForCollision = callback;
     }
-    this.animationsMatrix = {
-        sword_swing: {
-            duration: 500
-        },
-        spin_attack: {
-            duration: 800
-        },
-        dragon_punch: {
-            duration: 700
-        }
-    }
+    // this.animationsMatrix = {
+    //     sword_swing: {
+    //         duration: 500
+    //     },
+    //     spin_attack: {
+    //         duration: 800
+    //     },
+    //     dragon_punch: {
+    //         duration: 700
+    //     }
+    // }
     this.spinAttack = (sourceTileId, resolve) => {
         const animationTile = this.tiles.find(e=>e.id === sourceTileId);
         if (!animationTile) return;
@@ -910,8 +937,26 @@ export function AnimationManager(){
                     this.update();
                 }, animationTile.animationData.duration);
             break;
+            case 'bite':
+            case 'tackle':
+            case 'crush':
+                animationTile.animationType = type;
+                animationTile.transitionType = 'fade';
+                animationTile.animationData = {
+                    icon: data.icon || images[type],
+                    duration: this.animationsMatrix[type].duration,
+                    facing
+                };
+                this.update();
+                setTimeout(() => {
+                    animationTile.animationType = null;
+                    animationTile.transitionType = null;
+                    animationTile.animationData = {};
+                    this.update();
+                }, this.animationsMatrix[type].duration);
+                break;
             default:
-                console.log('animation not properly specified... INVESTIGATE');
+                console.log('animation not properly specified... INVESTIGATE', type);
                 break;
 
         }

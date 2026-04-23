@@ -328,6 +328,29 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
                             if (typeof broadcastDataUpdate === 'function' && !isCombatOver()) broadcastDataUpdate(this);
                         }
                     }
+                    // -- Bleed effect: damage per era --
+                    if (this.bleed && this.bleed_eras > 0 && !this.dead) {
+                        const bleedDamage = Math.floor(Math.random() * 6) + 3; // 3-8 damage
+                        this.hp -= bleedDamage;
+                        if (this.hp < 0) this.hp = 0;
+                        
+                        // Add damage indicator for bleed
+                        const indicatorId = Date.now() + Math.random();
+                        this.damageIndicators.push({ id: indicatorId, value: bleedDamage, source: 'Bleed' });
+                        
+                        this.bleed_eras--;
+                        if (this.hp <= 0) {
+                            // Death logic is usually handled in combat-manager, 
+                            // but we must at least stop the tick here if lethal.
+                            this.dead = true;
+                            // The actual cleanup (targetKilled) happens in combat-manager.
+                        }
+                        if (this.bleed_eras <= 0) {
+                            this.bleed = false;
+                            this.bleed_eras = 0;
+                        }
+                        if (typeof broadcastDataUpdate === 'function' && !isCombatOver()) broadcastDataUpdate(this);
+                    }
                 }
 
                 const eraMove = () => {

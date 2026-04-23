@@ -40,7 +40,7 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
         return Object.values(combatants).filter(e=>this.isFriendly(e));
     }
     this.isEnemy = (e) => {
-        return e.isMonster|| e.isMinion;
+        return (e.isMonster || e.isMinion);
     }
 
     this.enemies = (combatants) => {
@@ -52,7 +52,7 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
     }
 
     this.acquireTarget = (caller, combatants, targetToAvoid = null) => {
-        const liveEnemies = Object.values(combatants).filter(e=>!e.dead && (e.isMonster || e.isMinion));
+        const liveEnemies = this.enemies(combatants).filter(e => !e.dead);
         if (!liveEnemies.length) return;
         // Stick with current target if it is still alive — prevents rapid switching
         // when surrounded by multiple enemies at the same depth.
@@ -66,6 +66,7 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
         }
         caller.pendingAttack = this.chooseAttackType(caller, target);
         caller.targetId = target.id;
+        if(!Array.isArray(target.targettedBy)) target.targettedBy = [];
         target.targettedBy.push(caller.id)
     }
     this.chooseAttackType = (caller, target) => {

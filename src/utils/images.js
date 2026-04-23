@@ -78,6 +78,13 @@ import kabuki_demon_minion from '../assets/portraits/monsters/variations/kabuki_
 
 import arrowUp from '../assets/graphics/arrow_up.png'
 import arrowDown from '../assets/graphics/arrow_down.png'
+import reaper_card_back from '../assets/graphics/card_duel/reaper_card_back.png'
+import card_game_background from '../assets/graphics/card_duel/card_game_background.png'
+import construct_icon from '../assets/graphics/card_duel/construct_icon.png'
+import sigil_icon from '../assets/graphics/card_duel/sigil_icon.png'
+import element_fire from '../assets/graphics/card_duel/element_fire.png'
+import element_water from '../assets/graphics/card_duel/element_water.png'
+import element_earth from '../assets/graphics/card_duel/element_earth.png'
 
 // ------------------------------------------------------------------------------------------------
 
@@ -227,7 +234,7 @@ import viking1 from '../assets/icons/crew_icons/viking1.png'
 import viking2 from '../assets/icons/crew_icons/viking2.png'
 import viking3 from '../assets/icons/crew_icons/viking3.png'
 
-import monk_portrait from '../assets/portraits/crew/monk/monk_compressed.png' 
+import monk_portrait from '../assets/portraits/crew/monk/monk_compressed.png'
 import sage_portrait from '../assets/portraits/crew/sage/sage_compressed.png'
 import wizard_portrait from '../assets/portraits/crew/wizard/wizard_compressed.png'
 import soldier_portrait from '../assets/portraits/crew/soldier/soldier_compressed.png'
@@ -465,9 +472,9 @@ import axe_51 from '../assets/icons/items/weapons/axes/Axe_51.png';
 import axe_52 from '../assets/icons/items/weapons/axes/Axe_52.png';
 import axe_53 from '../assets/icons/items/weapons/axes/Axe_53.png';
 
-const _terrainBase  = [terrain_1,terrain_2,terrain_3,terrain_4,terrain_5,terrain_6,terrain_7,terrain_8,terrain_9,terrain_10,terrain_11,terrain_12,terrain_13,terrain_14,terrain_15,terrain_16];
-const _terrainLight = [terrain_1_light,terrain_2_light,terrain_3_light,terrain_4_light,terrain_5_light,terrain_6_light,terrain_7_light,terrain_8_light,terrain_9_light,terrain_10_light,terrain_11_light,terrain_12_light,terrain_13_light,terrain_14_light,terrain_15_light,terrain_16_light];
-const _terrainDark  = [terrain_1_dark,terrain_2_dark,terrain_3_dark,terrain_4_dark,terrain_5_dark,terrain_6_dark,terrain_7_dark,terrain_8_dark,terrain_9_dark,terrain_10_dark,terrain_11_dark,terrain_12_dark,terrain_13_dark,terrain_14_dark,terrain_15_dark,terrain_16_dark];
+const _terrainBase = [terrain_1, terrain_2, terrain_3, terrain_4, terrain_5, terrain_6, terrain_7, terrain_8, terrain_9, terrain_10, terrain_11, terrain_12, terrain_13, terrain_14, terrain_15, terrain_16];
+const _terrainLight = [terrain_1_light, terrain_2_light, terrain_3_light, terrain_4_light, terrain_5_light, terrain_6_light, terrain_7_light, terrain_8_light, terrain_9_light, terrain_10_light, terrain_11_light, terrain_12_light, terrain_13_light, terrain_14_light, terrain_15_light, terrain_16_light];
+const _terrainDark = [terrain_1_dark, terrain_2_dark, terrain_3_dark, terrain_4_dark, terrain_5_dark, terrain_6_dark, terrain_7_dark, terrain_8_dark, terrain_9_dark, terrain_10_dark, terrain_11_dark, terrain_12_dark, terrain_13_dark, terrain_14_dark, terrain_15_dark, terrain_16_dark];
 
 /**
  * Returns the array of 16 terrain tile images appropriate for a given dungeon level.
@@ -476,7 +483,7 @@ const _terrainDark  = [terrain_1_dark,terrain_2_dark,terrain_3_dark,terrain_4_da
  * Level -1 or -2  → dark-stone
  */
 const getTerrainSetForLevel = (level) => {
-    if (level >= 1)  return _terrainLight;
+    if (level >= 1) return _terrainLight;
     if (level <= -1) return _terrainDark;
     return _terrainBase;
 };
@@ -755,7 +762,7 @@ export {
     vampire_portrait,
     troll_portrait,
     wraith_portrait,
-    skeleton_portrait, 
+    skeleton_portrait,
 
 
     goat_demon,
@@ -799,6 +806,14 @@ export {
     dungeon_door,
     dungeon_door_opened,
 
+    reaper_card_back,
+    card_game_background,
+    construct_icon,
+    sigil_icon,
+    element_fire,
+    element_water,
+    element_earth,
+
     glyph,
     glyph_inverted,
     info,
@@ -830,7 +845,7 @@ export {
     fire_blast,
 
     body_male,
-    body_female, 
+    body_female,
 
     terrain_1,
     terrain_2,

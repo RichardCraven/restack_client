@@ -1432,6 +1432,7 @@ class DungeonPage extends React.Component {
                         'weapons t2 / weapons2 / weaponst2 — add 2 random tier-2 weapons',
                         'weapons t3 / weapons3 / weaponst3 — add 2 random tier-3 weapons',
                         'open board — jump to mapmaker board view for current board',
+                        'launch cardgame — start a card duel battle',
                         'list / help'
                     ];
                     this.setState(prev => ({ devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, ...commands], devConsoleInput: '' }));
@@ -1494,6 +1495,18 @@ class DungeonPage extends React.Component {
                     } catch (err) {
                         this.setState(prev => ({ devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, `Error: ${err && err.message ? err.message : err}`], devConsoleInput: '' }));
                     }
+                    try { if (this.devConsoleInputRef.current) this.devConsoleInputRef.current.focus(); } catch (err) {}
+                    e.preventDefault();
+                    return;
+                }
+                // launch cardgame — instantiate a card duel for testing
+                if (cmd === 'launch cardgame' || cmd === 'launchcardgame' || cmd === 'card game') {
+                    this.setState(prev => ({ 
+                        showCardDuelModal: true, 
+                        devConsoleInput: '',
+                        devConsoleOpen: false,
+                        devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, 'Launching Card Duel...'] 
+                    }));
                     try { if (this.devConsoleInputRef.current) this.devConsoleInputRef.current.focus(); } catch (err) {}
                     e.preventDefault();
                     return;
@@ -4197,16 +4210,6 @@ class DungeonPage extends React.Component {
                         } catch (e) { return null; }
                     })()}
                     {this.state.toastMessage && <div className="dungeon-toast" style={{marginTop:8, padding:8, background:'#2b1b1b', color:'#f0d', borderRadius:4}}>{this.state.toastMessage}</div>}
-
-                    {/* Card duel modal (opens when clicking a death skull) */}
-                    <CModal visible={this.state.showCardDuelModal} onClose={this.closeCardDuel} backdrop={true} size="lg">
-                        <CModalHeader>
-                            <CModalTitle>Fire of Circulation — Duel</CModalTitle>
-                        </CModalHeader>
-                        <CModalBody>
-                            <CardDuel onFinish={this.handleCardDuelFinish} saveUserData={this.props.saveUserData} />
-                        </CModalBody>
-                    </CModal>
                     {/* Quicklook Panel: crew-wide stats summary */}
                     {(() => {
                         const meta = getMeta() || {};
@@ -4753,6 +4756,25 @@ class DungeonPage extends React.Component {
                     </div>
                 </div>
             </CModal>
+
+            {/* Card duel fullscreen overlay - Rendered at root for clean stacking context */}
+            {this.state.showCardDuelModal && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0, left: 0, right: 0, bottom: 0,
+                    zIndex: 1000000,
+                    background: '#000',
+                    overflow: 'hidden',
+                    pointerEvents: 'auto'
+                }}>
+                    <CardDuel 
+                        onFinish={this.handleCardDuelFinish} 
+                        onClose={() => this.setState({ showCardDuelModal: false })}
+                        saveUserData={this.props.saveUserData} 
+                        inventoryManager={this.props.inventoryManager} 
+                    />
+                </div>
+            )}
         </div>
         )
     }

@@ -7,6 +7,7 @@ import CanvasMagicTriangle from '../components/Canvas/canvas_magic_triangle'
 import CanvasFireball from '../components/Canvas/canvas_fireball'
 import CanvasAxeThrow from '../components/Canvas/canvas_axe_throw'
 import CanvasClawSwipe from '../components/Canvas/canvas_claw_swipe'
+import CanvasPhysicalAttack from '../components/Canvas/canvas_physical_attack'
 
 // class AnimationGrid extends React.Component {
     // constructor(props){
@@ -141,6 +142,22 @@ const AnimationGrid = ({
                                     pointerEvents: 'none',
                                     zIndex: 20
                                 }}
+                            />
+                        } else if (anim.type === 'physical_attack') {
+                            if (!anim.origin || !anim.target) {
+                                console.warn('[AnimationGrid] CanvasPhysicalAttack missing origin or target', anim);
+                                return null;
+                            }
+                            return <CanvasPhysicalAttack
+                                key={animKey}
+                                origin={anim.origin}
+                                target={anim.target}
+                                icon={anim.icon}
+                                width={TILE_SIZE}
+                                height={TILE_SIZE}
+                                duration={anim.duration || 600}
+                                onComplete={anim.onComplete}
+                                facing={anim.facing}
                             />
                         } else if (anim.type === 'claw_swipe') {
                             if (!anim.origin || !anim.target) {

@@ -47,7 +47,6 @@ export const AcquireTargetMethods = {
         const isMonsterOrMinion = caller.isMonster || caller.isMinion;
         // Exclude VCTs from possible targets
         const enemies = Object.values(combatants).filter(e => {
-            if (e.isVCT) return false;
             if (isMonsterOrMinion) {
                 return !e.dead && e.id !== caller.id && !e.isMonster && !e.isMinion;
             } else {
@@ -75,7 +74,6 @@ export const AcquireTargetMethods = {
         const isMonsterOrMinion = caller.isMonster || caller.isMinion;
         // Exclude VCTs from possible targets
         const enemies = Object.values(combatants).filter(e => {
-            if (e.isVCT) return false;
             if (isMonsterOrMinion) {
                 return !e.dead && e.id !== caller.id && !e.isMonster && !e.isMinion;
             } else {

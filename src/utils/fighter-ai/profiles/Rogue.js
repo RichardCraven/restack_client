@@ -14,14 +14,14 @@ export function Rogue(data, animationManager){
     }
 
     this.isEnemy = (e) => {
-        return e.isMonster|| e.isMinion;
+        return (e.isMonster || e.isMinion);
     }
 
     this.enemies = (combatants) => {
         return Object.values(combatants).filter(e=>this.isEnemy(e));
     }
     this.acquireTarget = (caller, combatants) => {
-        const liveEnemies = Object.values(combatants).filter(e=>!e.dead && (e.isMonster || e.isMinion));
+        const liveEnemies = Object.values(combatants).filter(e => !e.dead && (e.isMonster || e.isMinion) && !e.isVCT);
         const sorted = liveEnemies.sort((a,b)=>b.depth - a.depth);
         let target = sorted.length ? sorted[0] : null;
         if(!target) return

@@ -26,8 +26,13 @@ export function Barbarian(data, utilMethods, animationManager) {
 
     this.isFriendly = (e) => !e.isMonster && !e.isMinion;
     this.friendlies = (combatants) => Object.values(combatants).filter(e => this.isFriendly(e));
-    this.isEnemy    = (e) => e.isMonster || e.isMinion;
-    this.enemies    = (combatants) => Object.values(combatants).filter(e => this.isEnemy(e));
+    this.isEnemy = (e) => {
+        return (e.isMonster || e.isMinion);
+    }
+
+    this.enemies = (combatants) => {
+        return Object.values(combatants).filter(e=>this.isEnemy(e));
+    }
 
     // ─── Lifecycle ───────────────────────────────────────────────────────────
 
@@ -44,7 +49,7 @@ export function Barbarian(data, utilMethods, animationManager) {
     // ─── Target acquisition ──────────────────────────────────────────────────
 
     this.acquireTarget = (caller, combatants, targetToAvoid = null) => {
-        const liveEnemies = Object.values(combatants).filter(e => !e.dead && (e.isMonster || e.isMinion));
+        const liveEnemies = this.enemies(combatants).filter(e => !e.dead);
         if (!liveEnemies.length) return;
 
         // Chebyshev distance — max of x and y deltas — so diagonal adjacency
@@ -147,7 +152,7 @@ export function Barbarian(data, utilMethods, animationManager) {
         let adjacentEnemies = 0;
         surroundings.forEach(tile => {
             const enemy = Object.values(combatants).find(e =>
-                this.isEnemy(e) && !e.dead &&
+                this.isEnemy(e) && !e.dead && !e.isVCT &&
                 e.coordinates.x === tile.x && e.coordinates.y === tile.y
             );
             if (enemy) adjacentEnemies++;

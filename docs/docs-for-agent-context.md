@@ -1,5 +1,9 @@
 # Error Resolution Rule
 - When the user asks to resolve an error, the agent must immediately analyze the issue, output the diagnosis, and proceed to resolve it without asking for permission. Do not prompt the user for confirmation before fixing errors—take direct action as soon as the request is made.
+- **CRITICAL**: Always check for compile errors after making a change, and fix any syntax errors before finishing the process. Never leave a file in a broken state.
+# Browser Testing & Debugging
+- **Credentials**: To access the dungeon from the browser, use username `b` and password `b`.
+- **Trigger Card Game**: Inside the dungeon, press `Shift + Space` to open the hidden console, type `card game`, and press Enter.
 # Rule: When adding new methods to any file, do NOT place them at the top of the file. Always insert new methods in an appropriate position farther down, following the file’s structure and conventions, to avoid compilation errors and maintain code organization.
 # Agent Coding Rules and Context
 
@@ -50,7 +54,7 @@ The map creation layer provides tools for designing, editing, and managing dunge
 5. **Persistence**: All changes are persisted via `session-handler` and/or backend API as needed.
 
 ### Key Concepts
-- **Board/Plane/Dungeon Structure**: Maps are organized hierarchically: tiles → boards → planes → dungeons. Each level can be created, edited, and saved.
+- **Board/Plane/Dungeon Structure**: Maps are organized in a 4-dimensional hierarchy. Tiles form 15x15 `miniboards`. A grid of these miniboards constructs a `plane` (representing either 'front' or 'back' depth). A `level` binds a `front` and `back` plane together. Finally, stacking multiple levels up/down creates the full `dungeon`.
 - **Overlays**: Visual effects and highlights for editing are managed by `overlayManager` and rendered on top of the map grid.
 - **Drag-and-Drop**: Tiles and features can be dragged and dropped for editing, with state updates and overlays reflecting changes.
 - **CRUD Operations**: Full create, read, update, delete support for boards, planes, and dungeons, with UI and state sync.
@@ -107,24 +111,15 @@ The dungeon explorer layer manages the player's navigation, interaction, and pro
 5. **Combat/Narrative Triggers**: When combat or narrative events are triggered (e.g., entering a monster tile), `DungeonPage` launches the appropriate modal/component (e.g., `MonsterBattle`, narrative sequence).
 
 ### Key Concepts
+- **4-Dimensional Navigation**: The game world is structured in 4 interconnected dimensions:
+	1. **X** and **Y** (2D Planes): The player navigates a 15x15 tile grid (`miniboard`). Moving off the edge (`moveBoardLeft`, etc.) loads the adjacent miniboard in the current plane.
+	2. **Z / Levels** (Up/Down): Accessible via `way_up` and `way_down` tiles. This increments or decrements `currentLevel.id` to load a new floor.
+	3. **Depth / Planes** (Front/Back): Each level is composed of a `front` and `back` plane of miniboards. Interacting with a `door` tile toggles the `currentOrientation` between `'F'` (Front) and `'B'` (Back), swapping between parallel planes while maintaining the X/Y position.
 - **Board State**: The dungeon board is a 2D grid of tiles, each with type, state, and overlays. Managed by `boardManager` and synced to UI.
 - **Crew State**: Crew members are managed by `crewManager`, with state synced to UI for health, specials, and inventory.
 - **Overlays**: Visual effects and highlights are managed by `overlayManager` and rendered on top of the board.
 - **Minimap**: A minimap is rendered based on the current board state and player position.
 - **Modal Flow**: All major events (combat, inventory, narrative) are handled via modal dialogs/components, with state managed in `DungeonPage`.
-
-### Component/Manager Relationships
-- `DungeonPage` (UI, state, event wiring)
-	- Receives: `boardManager`, `crewManager`, `overlayManager`, `inventoryManager`, etc. as props or constructs them
-	- Registers: Callbacks for all board/crew/overlay events
-	- Delegates: Board rendering, minimap, overlays, and modals
-- `boardManager` (logic, state)
-	- Maintains: Authoritative board state, tile logic, fog-of-war
-	- Handles: Movement, tile effects, triggers
-- `crewManager` (logic, state)
-	- Maintains: Crew state, stats, specials, deaths, respawn
-- `overlayManager` (logic, state)
-	- Maintains: Overlays for effects, highlights, and events
 
 ### Data/State Example
 ```js
@@ -139,12 +134,34 @@ The dungeon explorer layer manages the player's navigation, interaction, and pro
 }
 ```
 
+### Key Concepts
+- **4-Dimensional Navigation**: The game world is structured in 4 interconnected dimensions:
+	1. **X** and **Y** (2D Planes): The player navigates a 15x15 tile grid (`miniboard`). Moving off the edge (`moveBoardLeft`, etc.) loads the adjacent miniboard in the current plane.
+	2. **Z / Levels** (Up/Down): Accessible via `way_up` and `way_down` tiles. This increments or decrements `currentLevel.id` to load a new floor.
+	3. **Depth / Planes** (Front/Back): Each level is composed of a `front` and `back` plane of miniboards. Interacting with a `door` tile toggles the `currentOrientation` between `'F'` (Front) and `'B'` (Back), swapping between parallel planes while maintaining the X/Y position.
+- **Board State**: The dungeon board is a 2D grid of tiles, each with type, state, and overlays. Managed by `boardManager`.
+- **Crew & Experience**:
+	- **EXP Table**: `EXP_TABLE` defines thresholds (0, 120, 300, 700, 1500, 3200, 7000, 15000, 31000, 60000, 120000, 250000, 500000, 1000000).
+	- **Derived Stats**: Stats like `atk`, `def`, `hp`, `energy`, `willpower`, and `speed` are derived from base `str`, `int`, `dex`, and `fort` using class-specific constituents (e.g., Monk uses `dex`+`str` for `atk`, Wizard uses `int` for `atk`).
+	- **Level Up**: Increases primary stats and adds +5 to `baseHp`.
+- **Real-Time Preparation (Special Actions)**:
+	- Wizards can "Etch Glyphs" and "Prepare Rituals"; Sages can prepare rituals.
+	- Triggered via `beginSpecialAction` with real-world preparation time (hours/minutes).
+	- `DungeonPage` runs a `realTimeSpecialActionCheckInterval` to monitor completion and update the `available` flag.
+- **Inventory & Currencies**:
+	- **Currencies**: `gold`, `shimmering_dust`, and `totems`.
+	- **Item Categories**: `weapon`, `armor` (helm/shield), `magical` (wand/charm/amulet), `ancillary` (mask), `consumable` (potion), `key`.
+	- Persistence: Managed by `inventory-manager.js` and stored in `meta`.
+- **Special Encounters**:
+	- **Reaper Card Duel**: A high-stakes mini-game modal; losing can lead to a gold tax.
+	- **Magic Nexus**: Tiles that trigger specialized modals for learning rituals.
+
 ### Dungeon Flow (Simplified)
 1. `DungeonPage` mounts → loads dungeon, initializes managers and state
 2. Player moves/interacts → calls manager methods, updates state
 3. Board/crew/overlay events trigger callbacks → update UI
 4. Combat/narrative triggers launch modals/components
-5. State is persisted via `session-handler` as needed
+5. State is persisted via `session-handler` and `updateUserRequest`.
 
 ---
 
@@ -171,9 +188,11 @@ The combat layer is responsible for all turn-based battles between the player's 
 6. **End of Combat**: On win/loss, `MonsterBattle` handles reward/penalty logic, updates meta/profile state, and triggers respawn or death flows as needed.
 
 ### Key Concepts
-- **Virtually-Occupied Combat Tiles (VCTs)**: Special tiles that are never targetable or attackable. All targeting, fallback, and UI logic must robustly exclude VCTs. State is synced between `combatManager` and UI.
+- **Virtually-Occupied Combat Tiles (VCTs)**: Special tiles that are never targetable or attackable. All targeting, fallback, and UI logic must robustly exclude VCTs. VCTs occupy the tile above a large monster. The `CombatManager` handles `syncVCTs` to keep virtual tiles aligned with monster movement.
 - **State Normalization**: All combatant objects are normalized to ensure required fields (e.g., `portrait`, `damageIndicators`) are always present for UI safety.
 - **Callbacks & Wiring**: All major combat events (actor update, data update, animation, game over, etc.) are wired via explicit callback registration between `MonsterBattle` and `combatManager`.
+- **Facing Logic**: `recalculateFacing` dynamically updates a combatant's orientation (up/down/left/right) based on their target. Includes a debounce/count mechanism to prevent rapid oscillation when targets move across columns/rows.
+- **Large Monsters & Occupancy**: `_canMoveToCoords` and `_setCombatantOccupiedCoords` handle multi-tile occupancy rules, preventing units from moving into a monster's primary or virtual tile.
 - **Summary Panel**: At combat end, a summary panel displays rewards, level-ups, and crew status, with logic for group death and respawn.
 
 ### Component/Manager Relationships
