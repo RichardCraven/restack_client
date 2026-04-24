@@ -65,6 +65,20 @@ const GATES = [
   }
 ]
 
+const KEYS = [
+  { key: 'minor_key',          name: 'minor key' },
+  { key: 'major_key',          name: 'major key' },
+  { key: 'treasury_key',       name: 'treasury key' },
+  { key: 'lockbox_key',        name: 'lockbox key' },
+  { key: 'necrotic_key',       name: 'necrotic key' },
+  { key: 'necrotic_master_key',name: 'necrotic master key' },
+  { key: 'violet_key',         name: 'violet key' },
+  { key: 'rubicund_key',       name: 'rubicund key' },
+  { key: 'cyan_key',           name: 'cyan key' },
+  { key: 'imperial_key',       name: 'imperial key' },
+  { key: 'dimensional_key',    name: 'dimensional key' },
+]
+
 const clone = (thing) => {
   return JSON.parse(JSON.stringify(thing))
 }
@@ -510,8 +524,8 @@ class MapMakerPage extends React.Component {
         })
       }
       
-    } else if(tile.type === 'monster-tile' || tile.type === 'gate-tile'){
-      console.log('MONSTER/GATE TILE');
+    } else if(tile.type === 'monster-tile' || tile.type === 'gate-tile' || tile.type === 'key-tile'){
+      console.log('MONSTER/GATE/KEY TILE');
       this.setState({
         pinnedOption: tile
       })
@@ -519,13 +533,16 @@ class MapMakerPage extends React.Component {
         console.log('pinnedoption: ', this.state.pinnedOption);
       },500)
     } else if(tile.type === 'board-tile'){
-      let pinned = null, monster, gate;
+      let pinned = null, monster, gate, key;
       if(this.state.pinnedOption && this.state.pinnedOption.type === 'monster-tile'){
         monster = Object.values(this.props.monsterManager.monsters)[this.state.pinnedOption.id];
       };
       if(this.state.pinnedOption && this.state.pinnedOption.type === 'gate-tile'){
         console.log('id: ', this.state.pinnedOption.id);
         gate = GATES[this.state.pinnedOption.id];
+      };
+      if(this.state.pinnedOption && this.state.pinnedOption.type === 'key-tile'){
+        key = KEYS[this.state.pinnedOption.id];
       };
       if(monster){
         console.log('monster get here, monster: ', monster);
@@ -546,6 +563,15 @@ class MapMakerPage extends React.Component {
         arr[tile.id].image = images[gate.key]
         console.log('arr[tile.id]:', arr[tile.id]);
         console.log('tiles now ', arr);
+        this.setState({
+          tiles: arr,
+          hoveredTileIdx: null
+        })
+        return
+      } else if(key){
+        let arr = [...this.state.tiles];
+        arr[tile.id].contains = { type: 'item', subtype: key.key }
+        arr[tile.id].image = images[key.key]
         this.setState({
           tiles: arr,
           hoveredTileIdx: null
@@ -2384,6 +2410,7 @@ class MapMakerPage extends React.Component {
               loadBoard={this.loadBoard}
               monsterManager={this.props.monsterManager}
               gates={GATES}
+              keys={KEYS}
               onDragStart={this.onDragStart}
             >
             </BoardsPanel>
@@ -2424,6 +2451,7 @@ class MapMakerPage extends React.Component {
               loadBoard={this.loadBoard}
               monsterManager={this.props.monsterManager}
               gates={GATES}
+              keys={KEYS}
             ></BoardView>}
 
             {this.state.selectedView === 'board' && <BoardsPalette
@@ -2462,6 +2490,7 @@ class MapMakerPage extends React.Component {
               loadBoard={this.loadBoard}
               monsterManager={this.props.monsterManager}
               gates={GATES}
+              keys={KEYS}
             >
             </BoardsPalette>}
 

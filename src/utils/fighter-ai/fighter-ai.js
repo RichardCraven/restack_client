@@ -71,6 +71,12 @@ export function FighterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
         if (typeof utilMethods.getCurrentInventory === 'function') {
             this.utilMethods.getCurrentInventory = utilMethods.getCurrentInventory;
         }
+        if (typeof utilMethods.hitCheck === 'function') {
+            this.utilMethods.hitCheck = utilMethods.hitCheck;
+        }
+        if (typeof utilMethods.damageCheck === 'function') {
+            this.utilMethods.damageCheck = utilMethods.damageCheck;
+        }
     }
     this.initializeRoster = (animationManager) => {
         this.roster = {

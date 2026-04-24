@@ -16,9 +16,7 @@ export function MapMaker(props){
         'monster',
         'item',
         'magic',
-        'minor key',
-        'major key',
-        'master key',
+        'key',
         
         'gate',
         'treasure',
@@ -519,18 +517,14 @@ export function MapMaker(props){
                 return 'lantern'
             case 'magic':
                 return 'spell'
+            case 'key':
+                return 'key'
             case 'stairs':
                 return 'stairs_down'
             case 'door':
                 return 'door'
             case 'dream den':
                 return 'moon_castle'
-            case 'major key':
-                return 'major_key'  
-            case 'minor key':
-                return 'minor_key'  
-            case 'master key':
-                return 'ornate_key'  
             case 'devil':
                 return 'mordu_devil'
             case 'spawn':

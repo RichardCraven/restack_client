@@ -675,6 +675,18 @@
             align-items: center;
             justify-content: center;
         }
+        .experience-container{
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            .summary-icon{
+                width: 28px;
+                height: 28px;
+                object-fit: contain;
+                margin-right: 10px;
+                flex-shrink: 0;
+            }
+        }
     }
     .combat-grid, .animation-grid{
         display: flex;

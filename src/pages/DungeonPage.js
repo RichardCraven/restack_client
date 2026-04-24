@@ -14,6 +14,7 @@ import {
     addDungeonRequest
   } from '../utils/api-handler';
 import {storeMeta, getMeta, getUserId, getUserName} from '../utils/session-handler';
+import { keyCleanup } from '../utils/cache-cleanup';
 import * as CampManager from '../utils/camp-manager';
 import { cilCaretRight, cilCaretLeft, cilMenu} from '@coreui/icons';
 import  CIcon  from '@coreui/icons-react';
@@ -606,6 +607,9 @@ class DungeonPage extends React.Component {
         if(!meta || !meta.dungeonId){
             console.log('DungeonPage.componentWillMount: no dungeonId, calling initializeCrew with meta.crew=', meta && meta.crew);
             this.props.crewManager.initializeCrew(meta.crew);
+            if (this.props.inventoryManager && typeof this.props.inventoryManager.refreshWeaponStats === 'function') {
+                this.props.crewManager.crew.forEach(m => { if (m && Array.isArray(m.inventory)) m.inventory = this.props.inventoryManager.refreshWeaponStats(m.inventory); });
+            }
             this.loadNewDungeon();
         } else {
             this.props.inventoryManager.initializeItems(meta.inventory);
@@ -614,6 +618,9 @@ class DungeonPage extends React.Component {
 
             console.log('DungeonPage.componentWillMount: dungeonId=', meta.dungeonId, 'calling initializeCrew with meta.crew=', meta.crew);
             this.props.crewManager.initializeCrew(meta.crew);
+            if (this.props.inventoryManager && typeof this.props.inventoryManager.refreshWeaponStats === 'function') {
+                this.props.crewManager.crew.forEach(m => { if (m && Array.isArray(m.inventory)) m.inventory = this.props.inventoryManager.refreshWeaponStats(m.inventory); });
+            }
             this.loadExistingDungeon(meta.dungeonId)
         }
         // Set selectedCrewMember synchronously here (crew was just initialized above).
@@ -2876,6 +2883,7 @@ class DungeonPage extends React.Component {
         }
         const dungeon = JSON.parse(res.data[0].content)
         dungeon.id = res.data[0]._id;
+        keyCleanup(dungeon);
         const cleanupSummary = this.props.boardManager.setDungeon(dungeon)
         console.log('DungeonPage.loadExistingDungeon: called boardManager.setDungeon; cleanupSummary:', cleanupSummary);
         try {
@@ -3156,6 +3164,11 @@ class DungeonPage extends React.Component {
                         meta2.deathTracker = freshMeta.deathTracker;
                         try { storeMeta(meta2); } catch(e) {}
                         try { this.props.crewManager.initializeCrew(meta2.crew); } catch(e) {}
+                        try {
+                            if (this.props.inventoryManager && typeof this.props.inventoryManager.refreshWeaponStats === 'function') {
+                                this.props.crewManager.crew.forEach(m => { if (m && Array.isArray(m.inventory)) m.inventory = this.props.inventoryManager.refreshWeaponStats(m.inventory); });
+                            }
+                        } catch(e) {}
                         // Explicitly clear dead/hp on crewManager.crew as a second pass — initializeCrew
                         // rebuilds from meta2.crew (hp=1/dead=false) but any in-flight callbacks from
                         // combat may have mutated the objects. Force-clear here so the Tile dead-overlay
@@ -4688,22 +4701,26 @@ class DungeonPage extends React.Component {
                     <div className="inventory-descriptor-panel">
                         {(() => {
                             const item = this.state.hoveredInventoryItem;
-                            if (!item) return <span className="idp-placeholder">Hover over an item to see details</span>;
-                            const iconImg = item.icon ? images[item.icon] : null;
+                            const iconImg = item && item.icon ? images[item.icon] : null;
                             return (
                                 <div className="idp-content">
-                                    {iconImg && (
+                                    {item && (
                                         <div className="idp-icon">
-                                            <img src={iconImg} alt={item.name || ''} />
+                                            {iconImg && <img src={iconImg} alt={item.name || ''} />}
                                         </div>
                                     )}
                                     <div className="idp-details">
-                                        <div className="idp-name">{item.name || '—'}</div>
-                                        <div className="idp-meta">
-                                            {item.subtype && <span className="idp-tag idp-subtype">{item.subtype}</span>}
-                                            {item.range && <span className="idp-tag idp-range">{item.range}</span>}
-                                        </div>
-                                        {item.description && <div className="idp-description">{item.description}</div>}
+                                        {!item
+                                            ? <span className="idp-placeholder">Hover over an item to see details</span>
+                                            : <>
+                                                <div className="idp-name">{item.name || '—'}</div>
+                                                <div className="idp-meta">
+                                                    {item.subtype && <span className="idp-tag idp-subtype">{item.subtype}</span>}
+                                                    {item.range && <span className="idp-tag idp-range">{item.range}</span>}
+                                                </div>
+                                                {item.description && <div className="idp-description">{item.description}</div>}
+                                            </>
+                                        }
                                     </div>
                                 </div>
                             );
@@ -4726,11 +4743,9 @@ class DungeonPage extends React.Component {
                                 const firstIndex = group.firstIndex;
                                 return (
                                     <div className={`strip-item sub-container ${item.animation === 'consumed' ? 'consumed' : ''}`} key={gIdx} style={{position: 'relative'}}>
-                                        { this.state.inventoryHoverMatrix[firstIndex] && 
-                                            <div className="hover-message-container">
-                                                <div className="hover-message">{this.state.inventoryHoverMatrix[firstIndex].replaceAll('_', ' ')}</div>
-                                            </div>
-                                        }
+                                        <div className="hover-message-container">
+                                            <div className="hover-message">{this.state.inventoryHoverMatrix[firstIndex] ? this.state.inventoryHoverMatrix[firstIndex].replaceAll('_', ' ') : '\u00A0'}</div>
+                                        </div>
                                         <Tile
                                             key={gIdx}
                                             id={firstIndex}

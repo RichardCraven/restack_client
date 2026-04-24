@@ -46,7 +46,7 @@ export function MonsterManager() {
                 hp: 38,
                 atk: 3,
                 def: 5,
-                speed: 10,
+                speed: 11, // nimble, hard to pin down
                 willpower: 0
             },
             level: 2,
@@ -58,7 +58,7 @@ export function MonsterManager() {
             weaknesses: ['crushing', 'cutting', 'fire', 'electricity'],
             drops: [
                 { item: TIER1_POTION, percentChance: 35 },
-                { item: this.pickRandom(TIER1_WEAPONS), percentChance: 35 },
+                { itemPool: TIER1_WEAPONS, percentChance: 35 },
             ]
         },
         // ── Level 3 ──────────────────────────────────────────────────────
@@ -71,7 +71,7 @@ export function MonsterManager() {
                 hp: 35,
                 atk: 5,
                 def: 7,
-                speed: 10,
+                speed: 7, // shambling undead
                 willpower: 0
             },
             level: 3,
@@ -84,7 +84,7 @@ export function MonsterManager() {
             weaknesses: ['fire'],
             drops: [
                 { item: TIER1_POTION, percentChance: 35 },
-                { item: this.pickRandom(TIER1_WEAPONS), percentChance: 35 },
+                { itemPool: TIER1_WEAPONS, percentChance: 35 },
             ]
         },
         // ── Level 4 (minion) ─────────────────────────────────────────────
@@ -97,7 +97,7 @@ export function MonsterManager() {
                 hp: 50,
                 atk: 5,
                 def: 3,
-                speed: 10,
+                speed: 10, // agile demon
                 willpower: 0
             },
             level: 4,
@@ -109,7 +109,7 @@ export function MonsterManager() {
             weaknesses: ['arcane', 'holy-aura'],
             drops: [
                 { item: TIER1_POTION, percentChance: 35 },
-                { item: this.pickRandom(TIER1_WEAPONS), percentChance: 35 },
+                { itemPool: TIER1_WEAPONS, percentChance: 35 },
             ]
         },
         // ── Level 5 (minion) ─────────────────────────────────────────────
@@ -122,7 +122,7 @@ export function MonsterManager() {
                 hp: 60,
                 atk: 7,
                 def: 2,
-                speed: 10,
+                speed: 8, // floating eyeball
                 willpower: 0
             },
             level: 5,
@@ -135,7 +135,7 @@ export function MonsterManager() {
             weaknesses: ['arcane', 'holy-aura'],
             drops: [
                 { item: TIER1_POTION, percentChance: 35 },
-                { item: this.pickRandom(TIER1_WEAPONS), percentChance: 35 },
+                { itemPool: TIER1_WEAPONS, percentChance: 35 },
             ]
         },
         // ── Level 6 ──────────────────────────────────────────────────────
@@ -148,7 +148,7 @@ export function MonsterManager() {
                 hp: 178,
                 atk: 10,
                 def: 13,
-                speed: 10,
+                speed: 5, // big lumbering brute
                 willpower: 0
             },
             level: 6,
@@ -160,7 +160,7 @@ export function MonsterManager() {
             weaknesses: ['fire'],
             drops: [
                 { item: TIER1_POTION, percentChance: 35 },
-                { item: this.pickRandom(TIER1_WEAPONS), percentChance: 35 },
+                { itemPool: TIER1_WEAPONS, percentChance: 35 },
             ]
         },
         mummy: {
@@ -172,7 +172,7 @@ export function MonsterManager() {
                 hp: 250,
                 atk: 10,
                 def: 13,
-                speed: 10,
+                speed: 4, // slow ancient undead — easy to hit but very tanky
                 willpower: 0
             },
             level: 6,
@@ -185,7 +185,7 @@ export function MonsterManager() {
             minions: ['skeleton', 'skeleton'],
             drops: [
                 { item: TIER1_POTION, percentChance: 35 },
-                { item: this.pickRandom(TIER1_WEAPONS), percentChance: 35 },
+                { itemPool: TIER1_WEAPONS, percentChance: 35 },
             ]
         },
         // ── Level 8 ──────────────────────────────────────────────────────
@@ -198,7 +198,7 @@ export function MonsterManager() {
                 hp: 282,
                 atk: 9,
                 def: 8,
-                speed: 10,
+                speed: 12, // ghostly, nearly untouchable
                 willpower: 0
             },
             level: 8,
@@ -210,7 +210,7 @@ export function MonsterManager() {
             weaknesses: ['holy', 'psionic'],
             drops: [
                 { item: TIER1_POTION, percentChance: 35 },
-                { item: this.pickRandom(TIER1_WEAPONS), percentChance: 35 },
+                { itemPool: TIER1_WEAPONS, percentChance: 35 },
             ]
         },
         ogre: {
@@ -222,7 +222,7 @@ export function MonsterManager() {
                 hp: 172,
                 atk: 9,
                 def: 11,
-                speed: 10,
+                speed: 5, // massive but slow
                 willpower: 0
             },
             level: 8,
@@ -234,7 +234,7 @@ export function MonsterManager() {
             weaknesses: ['fire', 'psionic'],
             drops: [
                 { item: TIER1_POTION, percentChance: 35 },
-                { item: this.pickRandom(TIER1_WEAPONS), percentChance: 35 },
+                { itemPool: TIER1_WEAPONS, percentChance: 35 },
             ]
         },
         // ── Level 9 ──────────────────────────────────────────────────────
@@ -247,7 +247,7 @@ export function MonsterManager() {
                 hp: 162,
                 atk: 8,
                 def: 9,
-                speed: 10,
+                speed: 8, // serpentine, medium agility
                 willpower: 0
             },
             level: 9,
@@ -259,7 +259,7 @@ export function MonsterManager() {
             weaknesses: ['ice', 'psionic'],
             drops: [
                 { item: TIER1_POTION, percentChance: 35 },
-                { item: this.pickRandom(TIER1_WEAPONS), percentChance: 35 },
+                { itemPool: TIER1_WEAPONS, percentChance: 35 },
             ]
         },
         // ── Level 10 ─────────────────────────────────────────────────────
@@ -272,7 +272,7 @@ export function MonsterManager() {
                 hp: 194,
                 atk: 9,
                 def: 12,
-                speed: 10,
+                speed: 13, // supernaturally fast
                 willpower: 0
             },
             level: 10,
@@ -285,7 +285,7 @@ export function MonsterManager() {
             minions: ['goblin', 'goblin'],
             drops: [
                 { item: TIER2_POTION, percentChance: 35 },
-                { item: this.pickRandom(TIER2_WEAPONS), percentChance: 35 },
+                { itemPool: TIER2_WEAPONS, percentChance: 35 },
             ]
         },
         // ── Level 11 ─────────────────────────────────────────────────────
@@ -298,7 +298,7 @@ export function MonsterManager() {
                 hp: 92,
                 atk: 11,
                 def: 11,
-                speed: 10,
+                speed: 10, // demonic quickness
                 willpower: 0
             },
             level: 11,
@@ -311,7 +311,7 @@ export function MonsterManager() {
             minions: ['goblin', 'goblin'],
             drops: [
                 { item: TIER2_POTION, percentChance: 35 },
-                { item: this.pickRandom(TIER2_WEAPONS), percentChance: 35 },
+                { itemPool: TIER2_WEAPONS, percentChance: 35 },
             ]
         },
         // ── Level 12 ─────────────────────────────────────────────────────
@@ -324,7 +324,7 @@ export function MonsterManager() {
                 hp: 160,
                 atk: 13,
                 def: 8,
-                speed: 10,
+                speed: 9, // elusive spell-caster
                 willpower: 0
             },
             level: 12,
@@ -336,7 +336,7 @@ export function MonsterManager() {
             weaknesses: ['arcane', 'holy-aura'],
             drops: [
                 { item: TIER2_POTION, percentChance: 35 },
-                { item: this.pickRandom(TIER2_WEAPONS), percentChance: 35 },
+                { itemPool: TIER2_WEAPONS, percentChance: 35 },
             ]
         },
         // mirror: {
@@ -360,7 +360,7 @@ export function MonsterManager() {
         //     weaknesses: ['arcane', 'holy-aura'],
         //     drops: [
         //         { item: TIER2_POTION, percentChance: 35 },
-        //         { item: this.pickRandom(TIER2_WEAPONS), percentChance: 35 },
+        //         { itemPool: TIER2_WEAPONS, percentChance: 35 },
         //     ]
         // },
         // ── Level 14 ─────────────────────────────────────────────────────
@@ -373,7 +373,7 @@ export function MonsterManager() {
                 hp: 110,
                 atk: 15,
                 def: 5,
-                speed: 10,
+                speed: 9, // drifts and repositions
                 willpower: 0
             },
             level: 14,
@@ -387,7 +387,7 @@ export function MonsterManager() {
             minions: ['beholder_minion', 'beholder_minion'],
             drops: [
                 { item: TIER2_POTION, percentChance: 35 },
-                { item: this.pickRandom(TIER2_WEAPONS), percentChance: 35 },
+                { itemPool: TIER2_WEAPONS, percentChance: 35 },
             ]
         },
         // precipice_guardian: {
@@ -413,7 +413,7 @@ export function MonsterManager() {
         //     minions: ['golem'],
         //     drops: [
         //         { item: TIER2_POTION, percentChance: 35 },
-        //         { item: this.pickRandom(TIER2_WEAPONS), percentChance: 35 },
+        //         { itemPool: TIER2_WEAPONS, percentChance: 35 },
         //     ]
         // },
         // ── Level 15 ─────────────────────────────────────────────────────
@@ -426,7 +426,7 @@ export function MonsterManager() {
                 hp: 140,
                 atk: 13,
                 def: 3,
-                speed: 10,
+                speed: 11, // swift leader demon
                 willpower: 0
             },
             level: 15,
@@ -439,7 +439,7 @@ export function MonsterManager() {
             minions: ['kabuki_demon_minion', 'kabuki_demon_minion'],
             drops: [
                 { item: TIER2_POTION, percentChance: 35 },
-                { item: this.pickRandom(TIER2_WEAPONS), percentChance: 35 },
+                { itemPool: TIER2_WEAPONS, percentChance: 35 },
             ]
         },
         // ── Level 19 ─────────────────────────────────────────────────────
@@ -452,7 +452,7 @@ export function MonsterManager() {
                 hp: 175,
                 atk: 10,
                 def: 11,
-                speed: 10,
+                speed: 10, // elemental mastery enhances evasion
                 willpower: 0
             },
             level: 19,
@@ -464,7 +464,7 @@ export function MonsterManager() {
             weaknesses: ['arcane'],
             drops: [
                 { item: TIER2_POTION, percentChance: 35 },
-                { item: this.pickRandom(TIER2_WEAPONS), percentChance: 35 },
+                { itemPool: TIER2_WEAPONS, percentChance: 35 },
             ]
         },
         // ── Level 29 ─────────────────────────────────────────────────────
@@ -478,7 +478,7 @@ export function MonsterManager() {
                 atk: 13,
                 // atk: 2,
                 def: 13,
-                speed: 10,
+                speed: 7, // large creature, deliberate movements
                 willpower: 0
             },
             level: 29,
@@ -493,7 +493,7 @@ export function MonsterManager() {
             minions: ['djinn'],
             drops: [
                 { item: TIER3_POTION, percentChance: 35 },
-                { item: this.pickRandom(TIER3_WEAPONS), percentChance: 35 },
+                { itemPool: TIER3_WEAPONS, percentChance: 35 },
             ]
         },
         // ── Level 30 ─────────────────────────────────────────────────────
@@ -506,7 +506,7 @@ export function MonsterManager() {
                 hp: 325,
                 atk: 20,
                 def: 17,
-                speed: 10,
+                speed: 6, // immense, slow but near-immune to damage
                 willpower: 0
             },
             level: 30,
@@ -518,7 +518,7 @@ export function MonsterManager() {
             weaknesses: ['psionic'],
             drops: [
                 { item: TIER4_POTION, percentChance: 35 },
-                { item: this.pickRandom(TIER4_WEAPONS), percentChance: 35 },
+                { itemPool: TIER4_WEAPONS, percentChance: 35 },
             ]
         },
     }

@@ -109,6 +109,15 @@ import lantern from '../assets/icons/items/lantern.png'
 
 import seeing_shield from '../assets/icons/items/shields/seeing_shield.png'
 import basic_shield from '../assets/icons/items/shields/basic_shield.png'
+import buckler from '../assets/icons/items/shields/buckler.png'
+import infantry_shield from '../assets/icons/items/shields/infantry shield.png'
+import cold_steel_shield from '../assets/icons/items/shields/cold steel shield.png'
+import banded_steel_shield from '../assets/icons/items/shields/banded steel shield.png'
+import crusaders_shield from "../assets/icons/items/shields/crusader's shield.png"
+import dawnguard from '../assets/icons/items/shields/dawnguard.png'
+import twilight_screen from '../assets/icons/items/shields/twilight screen.png'
+import revenants_shield from "../assets/icons/items/shields/revenant's shield.png"
+import aegis_bulwark from '../assets/icons/items/shields/aegis bulwark.png'
 
 import bundu_mask from '../assets/icons/items/headgear/bundu_mask.png';
 import court_mask from '../assets/icons/items/headgear/court_mask.png';
@@ -126,6 +135,20 @@ import cretan_helm from '../assets/icons/items/headgear/cretan_helm.png';
 import glindas_wand from '../assets/icons/items/wands/glindas_wand.png';
 import maerlyns_rod from '../assets/icons/items/wands/maerlyns_rod.png';
 import volkas_wand from '../assets/icons/items/wands/volkas_wand.png';
+import cloudfire_wand from '../assets/icons/items/wands/cloudfire wand.png';
+import animus_wand from '../assets/icons/items/wands/animus wand.png';
+import glyndas_wand from "../assets/icons/items/wands/glynda's wand.png";
+import justicator_wand from '../assets/icons/items/wands/justicator wand.png';
+import willowcaster from '../assets/icons/items/wands/willowcaster.png';
+
+// staves
+import archmages_staff from "../assets/icons/items/staves/archmage's staff.png";
+import enchanters_staff from "../assets/icons/items/staves/enchanter's staff.png";
+import imperial_mage_staff from '../assets/icons/items/staves/imperial mage staff.png';
+import staff_of_espilon from '../assets/icons/items/staves/staff of Espilon.png';
+import staff_of_marduk from '../assets/icons/items/staves/staff of Marduk.png';
+import staff_of_omicron from '../assets/icons/items/staves/staff of Omicron.png';
+import staff_of_tomorrow from '../assets/icons/items/staves/staff of tomorrow.png';
 
 // weapons
 import axe_upright_white from '../assets/icons/items/weapons/axe_upright_white.png'
@@ -194,6 +217,7 @@ import black_magic from '../assets/icons/magic/black_magic.png';
 import fireball from '../assets/icons/magic/fireball.png';
 import grimoire from '../assets/icons/magic/grimoire.png';
 import necromancy from '../assets/icons/magic/necromancy.png';
+import exp from '../assets/icons/misc/exp related/exp.png';
 import spell from '../assets/icons/magic/spell.png';
 import white_magic from '../assets/icons/magic/white_magic.png';
 
@@ -204,8 +228,17 @@ import minor_gate_open from '../assets/icons/staples/gate_open.png'
 import gate from '../assets/icons/staples/gate.png'
 import gold from '../assets/icons/staples/gold.png'
 import ornate_key from '../assets/icons/staples/key.png'
-import minor_key from '../assets/icons/items/minor_key.png'
-import major_key from '../assets/icons/items/major_key.png'
+import minor_key from '../assets/icons/misc/keys/minor key.png'
+import major_key from '../assets/icons/misc/keys/major key.png'
+import treasury_key from '../assets/icons/misc/keys/treasury key.png'
+import lockbox_key from '../assets/icons/misc/keys/lockbox key.png'
+import necrotic_key from '../assets/icons/misc/keys/necrotic key.png'
+import necrotic_master_key from '../assets/icons/misc/keys/necrotic  master key.png'
+import violet_key from '../assets/icons/misc/keys/violet key.png'
+import rubicund_key from '../assets/icons/misc/keys/rubicund key.png'
+import cyan_key from '../assets/icons/misc/keys/cyan key.png'
+import imperial_key from '../assets/icons/misc/keys/imperial key.png'
+import dimensional_key from '../assets/icons/misc/keys/dimensional key.png'
 import moon_castle from '../assets/icons/staples/moon_castle.png'
 import oracle from '../assets/icons/staples/oracle.png'
 import ornate_potion from '../assets/icons/staples/potion.png'
@@ -471,6 +504,27 @@ import axe_50 from '../assets/icons/items/weapons/axes/Axe_50.png';
 import axe_51 from '../assets/icons/items/weapons/axes/Axe_51.png';
 import axe_52 from '../assets/icons/items/weapons/axes/Axe_52.png';
 import axe_53 from '../assets/icons/items/weapons/axes/Axe_53.png';
+// books (spellbooks)
+import oily_manual from '../assets/icons/items/weapons/books/Oily manual.png';
+import bound_tome from '../assets/icons/items/weapons/books/Bound tome.png';
+import glowing_tome from '../assets/icons/items/weapons/books/Glowing tome.png';
+import kelrigans_manual from "../assets/icons/items/weapons/books/Kelrigan's manual.png";
+import the_watchful_eye from '../assets/icons/items/weapons/books/The watchful eye.png';
+import moonbird_folio from '../assets/icons/items/weapons/books/Moonbird folio.png';
+import icewing_folio from '../assets/icons/items/weapons/books/Icewing folio.png';
+import emerald_tablet from '../assets/icons/items/weapons/books/Emerald tablet.png';
+import ruby_tablet from '../assets/icons/items/weapons/books/Ruby tablet.png';
+import feldons_manual from "../assets/icons/items/weapons/books/Feldon's manual.png";
+import the_beast_book from '../assets/icons/items/weapons/books/The beast book.png';
+import book_of_jade from '../assets/icons/items/weapons/books/Book of jade.png';
+import igors_grimoire from '../assets/icons/items/weapons/books/Igors grimoire.png';
+import forbidden_grimoire from '../assets/icons/items/weapons/books/Forbidden grimoire.png';
+import monadic_engine from '../assets/icons/items/weapons/books/Monadic engine.png';
+import crimson_engine from '../assets/icons/items/weapons/books/Crimson engine.png';
+import verdant_engine from '../assets/icons/items/weapons/books/Verdant engine.png';
+import folio_of_coincidence from '../assets/icons/items/weapons/books/Folio of coincidence.png';
+import folio_of_paradox from '../assets/icons/items/weapons/books/Folio of paradox.png';
+import septemons_grimoire from '../assets/icons/items/weapons/books/Septemons grimoire.png';
 
 const _terrainBase = [terrain_1, terrain_2, terrain_3, terrain_4, terrain_5, terrain_6, terrain_7, terrain_8, terrain_9, terrain_10, terrain_11, terrain_12, terrain_13, terrain_14, terrain_15, terrain_16];
 const _terrainLight = [terrain_1_light, terrain_2_light, terrain_3_light, terrain_4_light, terrain_5_light, terrain_6_light, terrain_7_light, terrain_8_light, terrain_9_light, terrain_10_light, terrain_11_light, terrain_12_light, terrain_13_light, terrain_14_light, terrain_15_light, terrain_16_light];
@@ -577,6 +631,15 @@ export {
 
     seeing_shield,
     basic_shield,
+    buckler,
+    infantry_shield,
+    cold_steel_shield,
+    banded_steel_shield,
+    crusaders_shield,
+    dawnguard,
+    twilight_screen,
+    revenants_shield,
+    aegis_bulwark,
 
     bundu_mask,
     lundi_mask,
@@ -593,6 +656,19 @@ export {
     glindas_wand,
     maerlyns_rod,
     volkas_wand,
+    cloudfire_wand,
+    animus_wand,
+    glyndas_wand,
+    justicator_wand,
+    willowcaster,
+
+    archmages_staff,
+    enchanters_staff,
+    imperial_mage_staff,
+    staff_of_espilon,
+    staff_of_marduk,
+    staff_of_omicron,
+    staff_of_tomorrow,
 
     axe,
     axe_upright,
@@ -671,6 +747,27 @@ export {
     axe_52,
     axe_53,
 
+    oily_manual,
+    bound_tome,
+    glowing_tome,
+    kelrigans_manual,
+    the_watchful_eye,
+    moonbird_folio,
+    icewing_folio,
+    emerald_tablet,
+    ruby_tablet,
+    feldons_manual,
+    the_beast_book,
+    book_of_jade,
+    igors_grimoire,
+    forbidden_grimoire,
+    monadic_engine,
+    crimson_engine,
+    verdant_engine,
+    folio_of_coincidence,
+    folio_of_paradox,
+    septemons_grimoire,
+
     longsword,
     broadsword,
     claymore,
@@ -709,12 +806,22 @@ export {
     fireball,
     grimoire,
     necromancy,
+    exp,
     spell,
     white_magic,
 
     minor_key,
     major_key,
     ornate_key,
+    treasury_key,
+    lockbox_key,
+    necrotic_key,
+    necrotic_master_key,
+    violet_key,
+    rubicund_key,
+    cyan_key,
+    imperial_key,
+    dimensional_key,
     ornate_potion,
     gate,
     minor_gate,

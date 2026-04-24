@@ -335,6 +335,16 @@ class MonsterBattle extends React.Component {
             }
         });
 
+        // Ensure every crew member's equipped weapons reflect the current
+        // damage/stat values from inventory-manager before combat begins.
+        if (this.props.inventoryManager && typeof this.props.inventoryManager.refreshWeaponStats === 'function') {
+            (this.props.crew || []).forEach(member => {
+                if (member && Array.isArray(member.inventory)) {
+                    member.inventory = this.props.inventoryManager.refreshWeaponStats(member.inventory);
+                }
+            });
+        }
+
         this.props.combatManager.initializeCombat({
             crew: this.props.crew,
             leader: this.getCrewLeader(),
@@ -902,7 +912,15 @@ class MonsterBattle extends React.Component {
                 itemsGained = [];
                 this.props.monster.drops.forEach(e=>{
                     let d = Math.random();
-                    if(d < e.percentChance*.01) itemsGained.push(e.item)
+                    if(d < e.percentChance*.01){
+                        if(e.itemPool && Array.isArray(e.itemPool) && e.itemPool.length > 0){
+                            // Pick a fresh random weapon from the pool each encounter
+                            const idx = Math.floor(Math.random() * e.itemPool.length);
+                            itemsGained.push(e.itemPool[idx]);
+                        } else if(e.item){
+                            itemsGained.push(e.item);
+                        }
+                    }
                 })
                 this.props.inventoryManager.addItemsByName(itemsGained)
             }
@@ -1623,21 +1641,33 @@ class MonsterBattle extends React.Component {
                                 {this.state.summaryMessage}
                             </div>
                             {this.state.itemsGained && this.state.itemsGained.length > 0 &&
-                            <div className="experience-container">
-                                You found a {this.state.itemsGained.map(e=> e.replaceAll('_',' ')).join(', ')}
-                            </div>} 
+                                this.state.itemsGained.map((itemKey, idx) => {
+                                    const itemDef = this.props.inventoryManager.allItems[itemKey];
+                                    const iconSrc = itemDef?.icon ? images[itemDef.icon] : null;
+                                    const displayName = itemDef?.name || itemKey.replaceAll('_', ' ');
+                                    return (
+                                        <div key={idx} className="experience-container">
+                                            {iconSrc && <img className="summary-icon" src={iconSrc} alt="" />}
+                                            You found a {displayName}
+                                        </div>
+                                    );
+                                })
+                            }
                             {this.state.goldGained > 0 && 
                             <div className="experience-container">
+                                <img className="summary-icon" src={images.gold} alt="" />
                                 You found {this.state.goldGained} gold
                             </div>
                             }
                             {this.state.foodGained > 0 &&
                             <div className="experience-container">
+                                <img className="summary-icon" src={images.ornate_potion} alt="" />
                                 Your crew foraged {this.state.foodGained} food
                             </div>
                             }
                             {this.state.experienceGained > 0 && 
                             <div className="experience-container">
+                                <img className="summary-icon" src={images.exp} alt="" />
                                 Each crew member has earned {this.state.experienceGained} experience
                             </div>} 
                             { !this.state.suppressSummaryPortraits && (

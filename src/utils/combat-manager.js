@@ -684,6 +684,8 @@ export function CombatManager() {
             hitsTarget: this.hitsTarget,
             pickRandom: this.pickRandom,
             missesTarget: this.missesTarget,
+            hitCheck: this.hitCheck,
+            damageCheck: this.damageCheck,
             // combatOver: this.combatOver
             isCombatOver: this.combatOverCheck,
             getCombatant: this.getCombatant,
@@ -2121,6 +2123,59 @@ export function CombatManager() {
         // console.log('In someoneelse... Object.values(this.combatants).filter(c=>c.id!==caller.id)', Object.values(this.combatants).filter(c=>c.id!==caller.id), 'JSON.stringify(coords)', JSON.stringify(coords));
         return Object.values(this.combatants).filter(c => c.id !== caller.id).some(e => JSON.stringify(e.coordinates) === JSON.stringify(coords))
     }
+
+    /**
+     * hitCheck(caller, target) — Determines whether an attack connects.
+     * Miss chance scales with target speed (dex for fighters) and is capped at
+     * MAX_MISS_CHANCE so a hit is always possible regardless of target speed.
+     * Returns true = attack hits, false = attack misses.
+     */
+    this.hitCheck = (caller, target) => {
+        if (!target || !caller) return true;
+        const targetSpeed = (target.stats && typeof target.stats.speed === 'number' && target.stats.speed > 0)
+            ? target.stats.speed
+            : ((target.stats && typeof target.stats.dex === 'number' && target.stats.dex > 0)
+                ? target.stats.dex : 1);
+        const MAX_MISS_CHANCE = 35; // never fully un-hittable
+        const missChance = Math.min(targetSpeed * 2.5, MAX_MISS_CHANCE);
+        return (Math.random() * 100) >= missChance;
+    };
+
+    /**
+     * damageCheck(caller, target, rawDamage) — Applies armor-based damage reduction.
+     * Combines the target's equipped armor (inventory items of type 'armor') with
+     * natural armor derived from the target's def stat (monsters use this).
+     * Base cap: 75% reduction. Large level differentials allow higher caps (up to 95%)
+     * so a very tough high-level target can effectively shrug off a weak attacker.
+     * Returns the final damage value (>= 0).
+     */
+    this.damageCheck = (caller, target, rawDamage) => {
+        if (!target || typeof rawDamage !== 'number' || rawDamage <= 0) return rawDamage || 0;
+        // Sum equipped armor from inventory items
+        let equippedArmor = 0;
+        try {
+            const inv = target.inventory || [];
+            equippedArmor = inv
+                .filter(i => i && i.type === 'armor' && (i.equippedSlot || i.equippedBy === target.id))
+                .reduce((acc, a) => acc + (typeof a.armor === 'number' ? a.armor : 0), 0);
+        } catch (e) { equippedArmor = 0; }
+        // Natural armor from def stat (monsters have def; fighters do not, so this is 0 for them)
+        const naturalArmor = (target.stats && typeof target.stats.def === 'number' && target.stats.def > 0)
+            ? target.stats.def * 4 : 0;
+        const totalArmor = Math.min(equippedArmor + naturalArmor, 200); // hard cap on armor stacking
+        if (totalArmor <= 0) return rawDamage;
+        // Determine max reduction allowed based on level differential
+        const callerLevel = typeof caller.level === 'number' ? caller.level : 1;
+        const targetLevel = typeof target.level === 'number' ? target.level : 1;
+        const levelDiff = targetLevel - callerLevel; // positive = target outlevels caller
+        let maxReduction = 75;
+        if (levelDiff >= 10) maxReduction = 95;
+        else if (levelDiff >= 5) maxReduction = 85;
+        const reductionPct = Math.min(totalArmor * 0.7, maxReduction);
+        const reduction = Math.floor(rawDamage * reductionPct / 100);
+        return Math.max(0, rawDamage - reduction);
+    };
+
     this.hitsCombatant = (caller, combatantHit, supplementalData = null, options = {}) => {
         // Defensive: never apply damage to an already-dead, missing, or VCT combatant
         // If the target is the Mummy, redirect damage indicators to its VCT
@@ -2144,6 +2199,11 @@ export function CombatManager() {
         }
         if (!caller || !this.combatants[caller.id] || caller.dead) {
             console.warn('[CombatManager.hitsCombatant] Invalid or dead caller:', caller && caller.id, caller);
+            return;
+        }
+        // Run hit-check (speed-based miss chance) unless the caller forces a hit via options
+        if (!options.forceHit && !this.hitCheck(caller, combatantHit)) {
+            this.missesTarget(caller);
             return;
         }
         // if(caller.type === 'wizard'){
@@ -2204,17 +2264,8 @@ export function CombatManager() {
                 damage += Math.floor(damage / 2);
             }
         }
-        // Apply equipped armor percent reduction (if any) to the damage
-        let armorPercentTarget = 0;
-        try {
-            const inv = combatantHit.inventory || [];
-            armorPercentTarget = inv.filter(i => i && i.type === 'armor' && (i.equippedSlot || i.equippedBy === combatantHit.id)).reduce((acc, a) => acc + (typeof a.armor === 'number' ? a.armor : 0), 0);
-        } catch (e) { armorPercentTarget = 0 }
-        if (armorPercentTarget > 0) {
-            const reduction = Math.floor(damage * (armorPercentTarget / 100));
-            damage = Math.max(0, damage - reduction);
-            console.log('armor reduction applied, ', armorPercentTarget, '% reduced damage by', reduction, 'to', damage);
-        }
+        // Apply armor-based damage reduction via damageCheck
+        damage = this.damageCheck(caller, combatantHit, damage);
 
         // Save readout and apply damage
         caller.readout.result = `${caller.name} hits ${combatantHit.name} for ${damage} damage`;
@@ -2386,7 +2437,12 @@ export function CombatManager() {
             this.hitsCombatant(caller, target);
             return;
         }
-        // Otherwise, fallback to the original logic (for non-monster/minion targets)
+        // Run hit-check for non-monster targets (fighters being hit by monsters)
+        if (!this.hitCheck(caller, target)) {
+            this.missesTarget(caller, target);
+            return;
+        }
+        // Otherwise, fallback to the original logic (for non-monster/non-minion targets)
         // let r = Math.random();
         let criticalHit = false;
         // For non-monster/non-minion targets, compute base using equipped
@@ -2421,16 +2477,8 @@ export function CombatManager() {
                 damage += Math.floor(damage / 2);
             }
         }
-        // Apply equipped armor percent reduction (if any) to the damage for non-monster targets
-        let armorPercentTarget = 0;
-        try {
-            const inv = target.inventory || [];
-            armorPercentTarget = inv.filter(i => i && i.type === 'armor' && (i.equippedSlot || i.equippedBy === target.id)).reduce((acc, a) => acc + (typeof a.armor === 'number' ? a.armor : 0), 0);
-        } catch (e) { armorPercentTarget = 0 }
-        if (armorPercentTarget > 0) {
-            const reduction = Math.floor(damage * (armorPercentTarget / 100));
-            damage = Math.max(0, damage - reduction);
-        }
+        // Apply armor-based damage reduction via damageCheck
+        damage = this.damageCheck(caller, target, damage);
 
         caller.readout.result = `${caller.name} hits ${target.name} for ${damage} damage`;
         target.hp -= damage;
@@ -2697,6 +2745,8 @@ export function CombatManager() {
         missesTarget: this.missesTarget,
         hitsTarget: this.hitsTarget,
         hitsCombatant: this.hitsCombatant,
+        hitCheck: this.hitCheck,
+        damageCheck: this.damageCheck,
         targetKilled: this.targetKilled,
         kickoffSpecialCooldown: this.kickoffSpecialCooldown,
         chooseAttackType: this.genericChooseAttackType,
