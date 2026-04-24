@@ -1410,53 +1410,6 @@ export function CombatManager() {
             this.monsterAI.roster['skeleton'].initiateAttack(caller, this.combatants);
             return
         }
-
-        // this should only happern for minions with no ai
-
-        // return (dead code below kept for reference)
-
-        // let target = this.combatants[caller.targetId];
-        // if(!target || !targetInRange(caller, target)){
-        //     if(!manualAttack){
-        //         console.log('somehow this fighter initiated an attack without a target/range and NOT manually! investigate');
-        //         debugger
-        //     }
-        //     const attack = caller.pendingAttack,
-        //     range = RANGES[attack.range]
-        //     if(range === 1){
-        //         let coordinatesAttacked = {x: this.fighterFacingRight(caller) ? caller.coordinates.x+1 : caller.coordinates.x-1, y: caller.coordinates.y};
-        //         let occupier = this.coordinatesOccupied(coordinatesAttacked);
-        //         if(occupier && (occupier.isMinion || occupier.isMonster)){
-        //             target = occupier;
-        //             // manualTarget = true;
-        //         } else {
-        //             caller.active = true;
-        //             caller.attacking = true;
-        //             this.broadcastDataUpdate();
-        //             caller.readout.action = ` attacks with ${caller.pendingAttack.name}`
-        //             this.kickoffAttackCooldown(caller)
-        //             return
-        //         }
-        //     }
-        // }
-        // const targetSpeed = (target.stats && (typeof target.stats.speed === 'number')) ? target.stats.speed : (target.stats && target.stats.dex) || 1;
-        // let defenseFactor = (targetSpeed * 4) + (target.stats.def || 0);
-        // if (defenseFactor > 99) defenseFactor = 90;
-        //     let attackFactor = Math.floor(Math.sqrt(caller.atk));
-        //     const results = [], diceRoll = function(){ return Math.random() * 100 };
-        //     for(let i = 0; i < attackFactor; i++){ results.push(diceRoll()) }
-        //     const connects = results.some(e=>e>defenseFactor);
-        //     if(!caller.pendingAttack){ return }
-        //     caller.active = true;
-        //     caller.attacking = true;
-        //     this.broadcastDataUpdate();
-        //     caller.readout.action = ` attacks with ${caller.pendingAttack.name}`
-        //     this.kickoffAttackCooldown(caller)
-        //     if(connects){
-        //         if(manualAttack){ this.hitsTarget(caller, target) } else { this.hitsTarget(caller) }
-        //     } else {
-        //         if(manualAttack){ this.missesTarget(caller, target) } else { this.missesTarget(caller) }
-        //     }
     }
     this.kickoffAttackCooldown = (caller) => {
         const atk = caller.pendingAttack;
