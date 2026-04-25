@@ -82,10 +82,7 @@ export function InventoryManager(){
         'nukta_charm',
         'scarab_charm'
     ]
-    this.shields_names = [
-        'seeing_shield',
-        'basic_shield'
-    ]
+    this.shields_names = []
     this.masks_names = [
         'bundu_mask',
         'court_mask',
@@ -496,26 +493,6 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             animation: null,
             subtype: 'helm',
             description: `Legendary Spartan crest. Defense: 85 (~59% damage reduction)`
-        },
-        basic_shield: {
-            armor: 30,
-            type: 'armor',
-            subtype: 'shield',
-            icon: 'basic_shield',
-            name: 'basic shield',
-            equippedBy: null,
-            animation: null,
-            description: `Wooden buckler. Defense: 30 (~21% damage reduction)`
-        },
-        seeing_shield: {
-            armor: 45,
-            type: 'armor',
-            subtype: 'shield',
-            icon: 'seeing_shield',
-            name: 'seeing shield',
-            equippedBy: null,
-            animation: null,
-            description: `Enchanted shield with a crystal eye. Defense: 45 (~31% damage reduction). Increases sight radius by 1.`
         },
         buckler: {
             armor: 20,
@@ -1367,6 +1344,17 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
     }
     this.removeItemByIndex = (index) => {
         this.inventory.splice(index, 1)
+    }
+    // Remove the first occurrence of an item with the given key that is not equipped.
+    this.removeItemByKey = (key) => {
+        const idx = this.inventory.findIndex(item =>
+            item &&
+            item.equippedBy == null &&
+            (item._im_key === key ||
+             (item.name || '').replaceAll(' ', '_') === key ||
+             item.name === key)
+        );
+        if (idx !== -1) this.inventory.splice(idx, 1);
     }
     this.addCurrency = (data) => {
         switch(data.type){

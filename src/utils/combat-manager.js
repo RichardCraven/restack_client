@@ -223,14 +223,14 @@ export function CombatManager() {
             name: 'meditate',
             type: 'buff',
             range: 'self',
-            icon: images['basic_shield'],
+            icon: images['buckler'],
             cooldown: 3,
         },
         heal: {
             name: 'heal',
             type: 'buff',
             range: 'close',
-            icon: images['basic_shield'],
+            icon: images['buckler'],
             cooldown: 3,
         },
         fire_arrow: {
@@ -272,7 +272,7 @@ export function CombatManager() {
             name: 'shield bash',
             type: 'crushing',
             range: 'close',
-            icon: images['basic_shield'],
+            icon: images['buckler'],
             cooldown: 4.5,
         },
         cane_strike: {
@@ -1019,7 +1019,7 @@ export function CombatManager() {
         fighter.targetId = null;
         const action = {
             name: 'Move to',
-            icon: 'basic_shield',
+            icon: 'buckler',
             instruction: {
                 type: 'move',
                 destinationCoordinates: coordinates
@@ -2711,7 +2711,32 @@ export function CombatManager() {
         getFightInterval: () => this.FIGHT_INTERVAL,
         // Lets fighter-ai.js register a callback to sync its internal data.INTERVAL_TIME
         // whenever the combat speed changes.
-        updateIntervalTime: (cb) => { this._intervalTimeListeners = this._intervalTimeListeners || []; this._intervalTimeListeners.push(cb); }
+        updateIntervalTime: (cb) => { this._intervalTimeListeners = this._intervalTimeListeners || []; this._intervalTimeListeners.push(cb); },
+        // Steal an item from the communal inventory and notify MonsterBattle.
+        stealItem: (itemKey, itemName) => {
+            try { if (typeof this.stolenItemCallback === 'function') this.stolenItemCallback(itemKey, itemName); } catch (e) { console.warn('[stealItem] callback failed', e); }
+        },
+        // Remove a monster from combat without killing it (escape/flee).
+        // Triggers allMonstersDead check so battle can still end.
+        escapeFromCombat: (callerId) => {
+            try {
+                const escapee = this.combatants[callerId];
+                if (!escapee || escapee.dead) return;
+                escapee.dead = true;
+                escapee.escaped = true;
+                try { this.clearTargetListById(escapee.id); } catch (e) {}
+                this.updateData(clone(this.combatants));
+                const allMonstersDead = Object.values(this.combatants).filter(e => (e.isMonster || e.isMinion) && !e.dead && !e.isVCT).length === 0;
+                const allCrewDead = Object.values(this.combatants).filter(e => !e.isMonster && !e.isMinion && !e.isVCT).every(e => e.dead);
+                if (allMonstersDead || allCrewDead) {
+                    const outcome = allMonstersDead ? 'crewWins' : 'monstersWin';
+                    this.combatOver = true;
+                    setTimeout(() => {
+                        if (typeof this.gameOver === 'function') this.gameOver(outcome);
+                    }, 2000);
+                }
+            } catch (e) { console.warn('[escapeFromCombat] failed', e); }
+        }
     }
     // Allow monster AI to spawn a new minion at runtime (used by duplicate / bifurcate).
     // `template` is a plain data object shaped like a monster-manager entry.
@@ -2811,6 +2836,9 @@ export function CombatManager() {
     }
     this.establishGetCurrentInventoryCallback = (cb) => {
         this.getCurrentInventoryCallback = cb;
+    }
+    this.establishStolenItemCallback = (cb) => {
+        this.stolenItemCallback = cb;
     }
 }
 

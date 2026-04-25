@@ -194,7 +194,7 @@ const toggleMenuTray = () => {
         {loggedIn === true && showToolbar === true && <div className="nav-buttons-container">
           <div className="hamburger-button" style={{backgroundImage: `url(${images['hamburger']})`}} onClick={() => toggleMenuTray()}></div>
           <div className={`menu-tray${menuTrayExpanded ? ' open' : ''}`} style={{
-            border: menuTrayExpanded ? '1px solid lightgrey' : '1px solid #d3d3d300'
+            border: menuTrayExpanded ? '1px solid lightgrey' : 'none'
           }}>
             <div className="menu-tray-content">
               <button className="menu-buttons logout-button" onClick={logout}>

@@ -944,7 +944,7 @@ export function BoardManager(){
                         })
                     break;
                     case 1:
-                        treasureItems = ['seeing_shield', 'court_mask', 'mardi_mask', 'basic_helm', 'axe', 'minor_health_potion']
+                        treasureItems = ['infantry_shield', 'court_mask', 'mardi_mask', 'basic_helm', 'axe', 'minor_health_potion']
                         this.addTreasureToInventory({
                             item: this.pickRandom(treasureItems),
                             currency: {

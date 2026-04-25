@@ -53,7 +53,7 @@ export function MonsterManager() {
             portrait: images['goblin_portrait'],
             greetings: ['bones for my master!'],
             deathCries: ['nooooooo'],
-            specials: ['zealotry'],
+            specials: ['sticky_fingers'],
             attacks: ['claws', 'bite'],
             weaknesses: ['crushing', 'cutting', 'fire', 'electricity'],
             drops: [

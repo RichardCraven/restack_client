@@ -17,6 +17,7 @@ export function MapMaker(props){
         'item',
         'magic',
         'key',
+        'tier',
         
         'gate',
         'treasure',
@@ -26,6 +27,18 @@ export function MapMaker(props){
 
         'devil'
     ]
+
+    this.tierOptions = [
+        { key: 'tier_1_weapon',  name: 'Tier 1 Weapon',  image: 'tier_1_weapon' },
+        { key: 'tier_2_weapon',  name: 'Tier 2 Weapon',  image: 'tier_2_weapon' },
+        { key: 'tier_3_weapon',  name: 'Tier 3 Weapon',  image: 'tier_3_weapon' },
+        { key: 'tier_1_magical', name: 'Tier 1 Magical', image: 'tier_1_magical' },
+        { key: 'tier_2_magical', name: 'Tier 2 Magical', image: 'tier_2_magical' },
+        { key: 'tier_3_magical', name: 'Tier 3 Magical', image: 'tier_3_magical' },
+        { key: 'tier_1_armor',   name: 'Tier 1 Armor',   image: 'tier_1_armor' },
+        { key: 'tier_2_armor',   name: 'Tier 2 Armor',   image: 'tier_2_armor' },
+        { key: 'tier_3_armor',   name: 'Tier 3 Armor',   image: 'tier_3_armor' },
+    ];
 
     this.paletteTiles = [];
     this.getIndexFromCoordinates = (coordinates) =>{
@@ -518,7 +531,9 @@ export function MapMaker(props){
             case 'magic':
                 return 'spell'
             case 'key':
-                return 'key'
+                return 'treasury_key'
+            case 'tier':
+                return 'tier_1_weapon'
             case 'stairs':
                 return 'stairs_down'
             case 'door':

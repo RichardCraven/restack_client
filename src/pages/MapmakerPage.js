@@ -524,8 +524,8 @@ class MapMakerPage extends React.Component {
         })
       }
       
-    } else if(tile.type === 'monster-tile' || tile.type === 'gate-tile' || tile.type === 'key-tile'){
-      console.log('MONSTER/GATE/KEY TILE');
+    } else if(tile.type === 'monster-tile' || tile.type === 'gate-tile' || tile.type === 'key-tile' || tile.type === 'tier-tile'){
+      console.log('MONSTER/GATE/KEY/TIER TILE');
       this.setState({
         pinnedOption: tile
       })
@@ -533,7 +533,7 @@ class MapMakerPage extends React.Component {
         console.log('pinnedoption: ', this.state.pinnedOption);
       },500)
     } else if(tile.type === 'board-tile'){
-      let pinned = null, monster, gate, key;
+      let pinned = null, monster, gate, key, tierOption;
       if(this.state.pinnedOption && this.state.pinnedOption.type === 'monster-tile'){
         monster = Object.values(this.props.monsterManager.monsters)[this.state.pinnedOption.id];
       };
@@ -543,6 +543,9 @@ class MapMakerPage extends React.Component {
       };
       if(this.state.pinnedOption && this.state.pinnedOption.type === 'key-tile'){
         key = KEYS[this.state.pinnedOption.id];
+      };
+      if(this.state.pinnedOption && this.state.pinnedOption.type === 'tier-tile'){
+        tierOption = this.props.mapMaker.tierOptions[this.state.pinnedOption.id];
       };
       if(monster){
         console.log('monster get here, monster: ', monster);
@@ -572,6 +575,15 @@ class MapMakerPage extends React.Component {
         let arr = [...this.state.tiles];
         arr[tile.id].contains = { type: 'item', subtype: key.key }
         arr[tile.id].image = images[key.key]
+        this.setState({
+          tiles: arr,
+          hoveredTileIdx: null
+        })
+        return
+      } else if(tierOption){
+        let arr = [...this.state.tiles];
+        arr[tile.id].contains = { type: tierOption.key, subtype: null }
+        arr[tile.id].image = images[tierOption.image]
         this.setState({
           tiles: arr,
           hoveredTileIdx: null

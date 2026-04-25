@@ -14,7 +14,7 @@ import {
     addDungeonRequest
   } from '../utils/api-handler';
 import {storeMeta, getMeta, getUserId, getUserName} from '../utils/session-handler';
-import { keyCleanup } from '../utils/cache-cleanup';
+import { keyCleanup, itemCleanup, resolveItemPools } from '../utils/cache-cleanup';
 import * as CampManager from '../utils/camp-manager';
 import { cilCaretRight, cilCaretLeft, cilMenu} from '@coreui/icons';
 import  CIcon  from '@coreui/icons-react';
@@ -607,6 +607,7 @@ class DungeonPage extends React.Component {
         if(!meta || !meta.dungeonId){
             console.log('DungeonPage.componentWillMount: no dungeonId, calling initializeCrew with meta.crew=', meta && meta.crew);
             this.props.crewManager.initializeCrew(meta.crew);
+            itemCleanup(null, meta.crew);
             if (this.props.inventoryManager && typeof this.props.inventoryManager.refreshWeaponStats === 'function') {
                 this.props.crewManager.crew.forEach(m => { if (m && Array.isArray(m.inventory)) m.inventory = this.props.inventoryManager.refreshWeaponStats(m.inventory); });
             }
@@ -2884,6 +2885,8 @@ class DungeonPage extends React.Component {
         const dungeon = JSON.parse(res.data[0].content)
         dungeon.id = res.data[0]._id;
         keyCleanup(dungeon);
+        itemCleanup(dungeon, meta.crew);
+        resolveItemPools(dungeon, this.props.inventoryManager.allItems);
         const cleanupSummary = this.props.boardManager.setDungeon(dungeon)
         console.log('DungeonPage.loadExistingDungeon: called boardManager.setDungeon; cleanupSummary:', cleanupSummary);
         try {
@@ -3024,6 +3027,10 @@ class DungeonPage extends React.Component {
             storeMeta(meta)
         }
     let selectedCrewMember = this.props.crewManager.crew.find(c=>c.selected) || {};
+        // Generate a fresh quest set for this dungeon run
+        if (this.props.questManager) {
+            this.props.questManager.generateQuestSet(dungeon, this.props.monsterManager, this.props.inventoryManager);
+        }
         this.setState(()=>{
             return {
                 spawn: meta.location.tileIndex,
@@ -3681,25 +3688,41 @@ class DungeonPage extends React.Component {
                     </div>
                 </CModalHeader>
                 <CModalBody>
-                    <div className="quests-grid" style={{display:'flex', flexDirection:'row', flexWrap:'nowrap', gap: 16, justifyContent: 'center'}}>
-                        {/* Go Here quest */}
-                        <div className="quest-panel" style={{width: 220, padding: 14, background: '#1a2535', color: '#fff', borderRadius: 6, boxShadow: '0 2px 8px rgba(0,0,0,0.7)', borderTop: '3px solid #4a90d9'}}>
-                            <div style={{fontSize: 36, textAlign: 'center', marginBottom: 8}}><span role="img" aria-label="map">🗺️</span></div>
-                            <div style={{fontSize: 12, color: '#ccc', lineHeight: 1.5}}>Travel to the deepest floor of the dungeon. Explore every corner before returning.</div>
-                        </div>
-                        {/* Kill Them quest */}
-                        <div className="quest-panel" style={{width: 220, padding: 14, background: '#2a1515', color: '#fff', borderRadius: 6, boxShadow: '0 2px 8px rgba(0,0,0,0.7)', borderTop: '3px solid #c0392b'}}>
-                            <div style={{fontSize: 36, textAlign: 'center', marginBottom: 8}}><span role="img" aria-label="swords">⚔️</span></div>
-                            <div style={{fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: '#e74c3c', marginBottom: 6}}>Kill Them</div>
-                            <div style={{fontSize: 12, color: '#ccc', lineHeight: 1.5}}>Defeat 5 monsters before the next dawn. Leave none standing in your path.</div>
-                        </div>
-                        {/* Find This quest */}
-                        <div className="quest-panel" style={{width: 220, padding: 14, background: '#162216', color: '#fff', borderRadius: 6, boxShadow: '0 2px 8px rgba(0,0,0,0.7)', borderTop: '3px solid #27ae60'}}>
-                            <div style={{fontSize: 36, textAlign: 'center', marginBottom: 8}}><span role="img" aria-label="magnifying glass">🔍</span></div>
-                            <div style={{fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: '#2ecc71', marginBottom: 6}}>Find This</div>
-                            <div style={{fontSize: 12, color: '#ccc', lineHeight: 1.5}}>Locate the hidden relic on floor 3. It may be concealed behind a secret passage.</div>
-                        </div>
-                    </div>
+                    {(() => {
+                        const QUEST_STYLES = {
+                            travel:         { bg: '#1a2535', border: '#4a90d9', titleColor: '#7eb8f7', emoji: '🗺️' },
+                            bounty:         { bg: '#2a1515', border: '#c0392b', titleColor: '#e74c3c', emoji: '⚔️' },
+                            item_retrieval: { bg: '#162216', border: '#27ae60', titleColor: '#2ecc71', emoji: '🔍' },
+                        };
+                        const quests = (this.props.questManager && this.props.questManager.activeQuests) || [];
+                        if (!quests.length) {
+                            return <div style={{color: '#aaa', textAlign: 'center', padding: '32px 0'}}>No active quests. Explore a dungeon to receive missions.</div>;
+                        }
+                        return (
+                            <div className="quests-grid" style={{display:'flex', flexDirection:'row', flexWrap:'wrap', gap: 16, justifyContent: 'center'}}>
+                                {quests.map(quest => {
+                                    const s = QUEST_STYLES[quest.type] || QUEST_STYLES.travel;
+                                    const showProgress = quest.progressTarget > 1;
+                                    return (
+                                        <div key={quest.id} className="quest-panel" style={{width: 200, padding: 14, background: s.bg, color: '#fff', borderRadius: 6, boxShadow: '0 2px 8px rgba(0,0,0,0.7)', borderTop: `3px solid ${s.border}`, opacity: quest.completed ? 0.5 : 1}}>
+                                            <div style={{fontSize: 32, textAlign: 'center', marginBottom: 6}}>{s.emoji}</div>
+                                            <div style={{fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: s.titleColor, marginBottom: 6}}>{quest.title}</div>
+                                            <div style={{fontSize: 12, color: '#ccc', lineHeight: 1.5}}>{quest.description}</div>
+                                            {showProgress && (
+                                                <div style={{marginTop: 10}}>
+                                                    <div style={{fontSize: 11, color: '#aaa', marginBottom: 3}}>{quest.progress} / {quest.progressTarget}</div>
+                                                    <div style={{height: 4, background: '#333', borderRadius: 2}}>
+                                                        <div style={{height: '100%', width: `${Math.round((quest.progress / quest.progressTarget) * 100)}%`, background: s.border, borderRadius: 2, transition: 'width 0.3s'}} />
+                                                    </div>
+                                                </div>
+                                            )}
+                                            {quest.completed && <div style={{marginTop: 8, fontSize: 11, color: '#8bc34a', fontWeight: 700}}>✓ COMPLETE</div>}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        );
+                    })()}
                 </CModalBody>
             </CModal>
             {/* Camp popup */}

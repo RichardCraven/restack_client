@@ -168,6 +168,7 @@ class MonsterBattle extends React.Component {
             experienceGained: null,
             goldGained: null,
             foodGained: 0,
+            stolenItems: [],
             levelTransitions: {},
             battleResult: null,
             monsterPortrait: '',
@@ -308,6 +309,16 @@ class MonsterBattle extends React.Component {
             if (this.props.combatManager && typeof this.props.combatManager.establishUseConsumableCallback === 'function') {
                 this.props.combatManager.establishUseConsumableCallback((item) => {
                     try { if (this.props.useConsumableFromInventory) this.props.useConsumableFromInventory(item); } catch (e) { console.warn('useConsumableCallback failed', e); }
+                });
+            }
+        } catch (e) {}
+        try {
+            if (this.props.combatManager && typeof this.props.combatManager.establishStolenItemCallback === 'function') {
+                this._stolenItems = [];
+                this.props.combatManager.establishStolenItemCallback((itemKey, itemName) => {
+                    try { if (this.props.inventoryManager) this.props.inventoryManager.removeItemByKey(itemKey); } catch (e) {}
+                    this._stolenItems = this._stolenItems || [];
+                    this._stolenItems.push(itemName);
                 });
             }
         } catch (e) {}
@@ -1140,6 +1151,7 @@ class MonsterBattle extends React.Component {
             foodGained,
             experienceGained,
             itemsGained,
+            stolenItems: this._stolenItems && this._stolenItems.length ? [...this._stolenItems] : [],
             summaryMessage,
             battleResult,
             suppressSummaryPortraits: !!this._suppressPersistFinalHP,
@@ -1658,6 +1670,13 @@ class MonsterBattle extends React.Component {
                                 <img className="summary-icon" src={images.gold} alt="" />
                                 You found {this.state.goldGained} gold
                             </div>
+                            }
+                            {this.state.stolenItems && this.state.stolenItems.length > 0 &&
+                                this.state.stolenItems.map((itemName, idx) => (
+                                    <div key={`stolen-${idx}`} className="experience-container stolen-item">
+                                        {itemName} was stolen by a goblin!
+                                    </div>
+                                ))
                             }
                             {this.state.foodGained > 0 &&
                             <div className="experience-container">

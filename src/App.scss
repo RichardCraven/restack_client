@@ -67,11 +67,13 @@ button{
     left: 0;
     z-index: 9999;
     display: flex;
+    pointer-events: none;
     .hamburger-button{
       background-size: 100% 100%;
       width: 50px;
       height: 50px;
       cursor: pointer;
+      pointer-events: auto;
     }
     .menu-tray{
       max-height: 0;
@@ -80,18 +82,16 @@ button{
       width: 189px;
       display: block;
       overflow: hidden;
-      // transition: max-height 3s ease-in-out, visibility 3s, pointer-events 0.4s;
-      transition: all 5s;
+      transition: max-height 0.3s ease-in-out, visibility 0s linear 0.3s;
       padding-left: 10px;
       background-color: black;
-      // border: 1px solid #d3d3d300;
-      border: 5px solid red;
       pointer-events: none;
-      // visibility: hidden;
+      visibility: hidden;
       &.open{
         max-height: 1000px;
         pointer-events: auto;
-        // visibility: visible;
+        visibility: visible;
+        transition: max-height 0.3s ease-in-out, visibility 0s linear 0s;
       }
       .menu-tray-content {
         display: flex;

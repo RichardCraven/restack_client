@@ -87,7 +87,7 @@ const specialsMatrix = {
     shield_wall: {
         name: 'shield wall',
         type: 'special',
-        icon: images['seeing_shield'],
+        icon: images['infantry_shield'],
         cooldown: 15,       // 15-era recharge after expiry
         duration: 4,        // wall lasts 4 eras
         energy_cost: 30,    // costs 30% energy to erect
@@ -108,7 +108,7 @@ const specialsMatrix = {
     force_back: {
         name: 'force back',
         type: 'special',
-        icon: images['basic_shield'],
+        icon: images['buckler'],
         cooldown: 10,
         damage: 5,
         effect: ['special'],
@@ -154,6 +154,16 @@ const specialsMatrix = {
             }
         },
         special_instructions: 'Costs 90 energy. Paralyzes all enemy fighters with dread — halves their ATK and DEF for 5 eras. A shroud of darkness blankets the entire battlefield.',
+        level: 1
+    },
+    sticky_fingers: {
+        name: 'sticky fingers',
+        type: 'special',
+        icon: images['hand_1'],
+        energy_cost: 100,
+        cooldown: 0,
+        effect: ['special'],
+        special_instructions: 'Costs 100 energy. Steals a random non-equipped item from the crew\'s inventory, then flees to the backline. If the goblin escapes, the item is lost permanently.',
         level: 1
     },
     zealotry: {
@@ -212,7 +222,7 @@ const specialsMatrix = {
     flying: {
         name: 'flying',
         type: 'passive',
-        icon: images['basic_shield'],
+        icon: images['buckler'],
         cooldown: null,
         effect: ['movement_modifier'],
         special_instructions: 'TBD',

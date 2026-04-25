@@ -107,8 +107,16 @@ import key from '../assets/icons/items/key.png'
 import potion from '../assets/icons/items/potion.png'
 import lantern from '../assets/icons/items/lantern.png'
 
-import seeing_shield from '../assets/icons/items/shields/seeing_shield.png'
-import basic_shield from '../assets/icons/items/shields/basic_shield.png'
+import tier_1_armor from '../assets/icons/items/tier 1 .png'
+import tier_1_magical from '../assets/icons/items/tier 1 magical.png'
+import tier_1_weapon from '../assets/icons/items/tier 1 weapon.png'
+import tier_2_armor from '../assets/icons/items/tier 2 armor.png'
+import tier_2_magical from '../assets/icons/items/tier 2 magical.png'
+import tier_2_weapon from '../assets/icons/items/tier 2 weapon.png'
+import tier_3_armor from '../assets/icons/items/tier 3 armor.png'
+import tier_3_magical from '../assets/icons/items/tier 3 magical.png'
+import tier_3_weapon from '../assets/icons/items/tier 3 weapon.png'
+
 import buckler from '../assets/icons/items/shields/buckler.png'
 import infantry_shield from '../assets/icons/items/shields/infantry shield.png'
 import cold_steel_shield from '../assets/icons/items/shields/cold steel shield.png'
@@ -629,8 +637,6 @@ export {
     potion,
     lantern,
 
-    seeing_shield,
-    basic_shield,
     buckler,
     infantry_shield,
     cold_steel_shield,
@@ -815,6 +821,16 @@ export {
     ornate_key,
     treasury_key,
     lockbox_key,
+
+    tier_1_armor,
+    tier_1_magical,
+    tier_1_weapon,
+    tier_2_armor,
+    tier_2_magical,
+    tier_2_weapon,
+    tier_3_armor,
+    tier_3_magical,
+    tier_3_weapon,
     necrotic_key,
     necrotic_master_key,
     violet_key,
