@@ -47,12 +47,6 @@ export function Goblin(data, utilMethods, animationManager, overlayManager){
     // Steal a random non-equipped item from the communal inventory.
     // Returns true if a theft occurred.
     this.triggerStickyFingers = (caller, target, stickySpecial) => {
-        // Deduct energy cost and start cooldown
-        if (stickySpecial) {
-            caller.energy = Math.max(0, (caller.energy || 0) - (stickySpecial.energy_cost || 100));
-            this.kickoffSpecialCooldown(stickySpecial);
-        }
-
         let inventory = [];
         try { inventory = this.getCurrentInventory() || []; } catch (e) { console.warn('[Goblin] getCurrentInventory threw:', e); }
 
@@ -62,7 +56,14 @@ export function Goblin(data, utilMethods, animationManager, overlayManager){
             item.equippedSlot == null &&
             item.equippedBy == null
         );
+        // Nothing to steal — abort without consuming energy or cooldown
         if (stealable.length === 0) return false;
+
+        // Only deduct energy and start cooldown when a steal is actually possible
+        if (stickySpecial) {
+            caller.energy = Math.max(0, (caller.energy || 0) - (stickySpecial.energy_cost || 100));
+            this.kickoffSpecialCooldown(stickySpecial);
+        }
 
         const stolen = stealable[Math.floor(Math.random() * stealable.length)];
         const itemKey = stolen._im_key || stolen.name || 'item';
@@ -131,6 +132,12 @@ export function Goblin(data, utilMethods, animationManager, overlayManager){
                 {
                     const era = caller.eras ? caller.eras[caller.eraIndex] : null;
                     const attackTarget = Object.values(combatants).find(e => e.id === caller.targetId);
+                    // restartTurnCycle clears pendingAttack at the start of every turn cycle.
+                    // acquireTarget is only called in era 0 when targetId is null, so pendingAttack
+                    // would stay null forever after the first cycle. Repopulate it here.
+                    if (!caller.pendingAttack && attackTarget && !attackTarget.dead && !attackTarget.isVCT) {
+                        caller.pendingAttack = this.chooseAttackType(caller, attackTarget);
+                    }
                     if (era && !era.attacked && !caller.onGeneralAttackCooldown && !caller.attacking &&
                             caller.pendingAttack && attackTarget && !attackTarget.dead && !attackTarget.isVCT) {
                         const dx = Math.abs(caller.coordinates.x - attackTarget.coordinates.x);
@@ -147,19 +154,37 @@ export function Goblin(data, utilMethods, animationManager, overlayManager){
                 break;
             }
             case 'flee': {
-                const backlineX = this.MAX_DEPTH - 1;
-                if (caller.coordinates.x >= backlineX) {
-                    // Reached edge — escape from combat
-                    try { this.escapeFromCombat(caller.id); } catch (e) {}
-                } else {
-                    // Use proper pathfinding toward the backline; forwardFirst=true
-                    // biases movement toward East when navigating around obstacles.
-                    const backlineTile = { x: backlineX, y: caller.coordinates.y };
-                    data.methods.goTowards(caller, combatants, backlineTile, true);
-                    if (typeof this.broadcastDataUpdate === 'function') this.broadcastDataUpdate();
-                    // Escape immediately if the move brought us to the backline
-                    if (caller.coordinates.x >= backlineX) {
+                // movement-methods.js caps movement at MAX_DEPTH-2 (its hardcoded MAX_DEPTH=7
+                // marks column MAX_DEPTH-1 as out-of-bounds, so last reachable col = MAX_DEPTH-2).
+                // data.MAX_DEPTH (from combat-manager) is 8, so escapeX = 6.
+                const escapeX = this.MAX_DEPTH - 2;
+                if (caller.coordinates.x >= escapeX) {
+                    // Goblin is at the last visible column — render portrait here for one tick,
+                    // then escape on the next processMove call.
+                    if (caller._escapePending) {
                         try { this.escapeFromCombat(caller.id); } catch (e) {}
+                    } else {
+                        caller._escapePending = true;
+                        if (typeof this.broadcastDataUpdate === 'function') this.broadcastDataUpdate();
+                    }
+                } else {
+                    const prevX = caller.coordinates.x;
+                    // Aim well past the edge so goTowards never stalls on the "target is
+                    // directly east and occupied" branch in the final approach.
+                    const fleeTarget = { x: escapeX + 3, y: caller.coordinates.y };
+                    data.methods.goTowards(caller, combatants, fleeTarget, true);
+                    if (typeof this.broadcastDataUpdate === 'function') this.broadcastDataUpdate();
+                    if (caller.coordinates.x >= escapeX) {
+                        // Just arrived at escape column — stay for one tick so portrait is visible.
+                        caller._escapePending = true;
+                    } else if (caller.coordinates.x === prevX && caller.coordinates.x >= escapeX - 1) {
+                        // Stuck at escapeX-1 (another goblin is blocking escapeX).
+                        // Give one tick reprieve, then escape from here to unblock the lane.
+                        if (caller._escapePending) {
+                            try { this.escapeFromCombat(caller.id); } catch (e) {}
+                        } else {
+                            caller._escapePending = true;
+                        }
                     }
                 }
                 break;
@@ -169,7 +194,19 @@ export function Goblin(data, utilMethods, animationManager, overlayManager){
         }
     }
 
-    this.initiateAttack = (caller, combatants) => {
+    this.triggerClawAttack = async (caller, target) => {
+        if (this.animationManager && typeof this.animationManager.clawSwipe === 'function') {
+            const sourceTileId = this.animationManager.getTileIdByCoords(caller.coordinates);
+            const targetTileId = this.animationManager.getTileIdByCoords(target.coordinates);
+            if (sourceTileId == null || targetTileId == null) return target;
+            await new Promise(resolve => {
+                this.animationManager.clawSwipe(targetTileId, sourceTileId, caller.facing, resolve);
+            });
+        }
+        return target;
+    }
+
+    this.initiateAttack = async (caller, combatants) => {
         if (caller.behaviorSequence === 'flee') return;
 
         const target = Object.values(combatants).find(e => e.id === caller.targetId);
@@ -185,17 +222,60 @@ export function Goblin(data, utilMethods, animationManager, overlayManager){
         const inRange = (dx === 1 && dy === 0) || (dx === 0 && dy === 1);
         if (!inRange) return;
 
-        const hitRoll = Math.random();
-        if (hitRoll > 0.25) {
-            this.hitsTarget(caller, target, caller.pendingAttack);
-        } else {
-            this.missesTarget(caller, target, caller.pendingAttack);
+        caller.attacking = true;
+
+        try {
+            switch (caller.pendingAttack.name) {
+                case 'claws': {
+                    const combatantHit = await this.triggerClawAttack(caller, target);
+                    if (combatantHit) {
+                        this.hitsCombatant(caller, combatantHit, { increasedCritChance: false });
+                    } else {
+                        this.missesTarget(caller, target, caller.pendingAttack);
+                    }
+                    break;
+                }
+                default: {
+                    // Fallback animation for bite and any other attacks
+                    try {
+                        if (this.animationManager && typeof this.animationManager.triggerAttackAnimation === 'function') {
+                            await this.animationManager.triggerAttackAnimation({
+                                coordinates: caller.coordinates,
+                                facing: caller.facing,
+                                icon: caller.pendingAttack?.icon,
+                                type: caller.pendingAttack?.name || 'bite',
+                                selectedAction: caller.pendingAttack
+                            });
+                        }
+                        this.hitsCombatant(caller, target);
+                    } catch (e) {
+                        console.warn('[Goblin] Fallback attack animation failed:', e);
+                        this.hitsCombatant(caller, target);
+                    }
+                    break;
+                }
+            }
+            this.kickoffAttackCooldown(caller, caller.pendingAttack);
+            caller.pendingAttack = null;
+        } finally {
+            // Always clear the attacking flag so future attacks aren't blocked
+            caller.attacking = false;
         }
-        this.kickoffAttackCooldown(caller, caller.pendingAttack);
     }
 
     this.handleOverlap = (caller, combatants) => {
-        if (caller.isFleeing) return;
+        if (caller.isFleeing) {
+            // Fleeing goblins that overlap each other should shift lanes so one
+            // can continue east rather than both hanging at the same tile forever.
+            const N = { x: caller.coordinates.x, y: caller.coordinates.y - 1 };
+            const S = { x: caller.coordinates.x, y: caller.coordinates.y + 1 };
+            if (data.methods.isAvailableToMoveInto(N, combatants, caller.coordinates, caller)) {
+                caller.coordinates = N;
+            } else if (data.methods.isAvailableToMoveInto(S, combatants, caller.coordinates, caller)) {
+                caller.coordinates = S;
+            }
+            return;
+        }
         data.methods.closeTheGap(caller, combatants);
     }
 }
