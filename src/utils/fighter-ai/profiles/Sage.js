@@ -1,7 +1,12 @@
-export function Sage(data){
+export function Sage(data, utilMethods, animationManager, overlayManager){ // eslint-disable-line no-unused-vars
     this.MAX_DEPTH = data.MAX_DEPTH;
     this.MAX_LANES = data.MAX_LANES;
     this.INTERVAL_TIME = data.INTERVAL_TIME
+
+    this.hitsTarget = (utilMethods && typeof utilMethods.hitsTarget === 'function') ? utilMethods.hitsTarget : null;
+    this.missesTarget = (utilMethods && typeof utilMethods.missesTarget === 'function') ? utilMethods.missesTarget : null;
+    this.hitsCombatant = (utilMethods && typeof utilMethods.hitsCombatant === 'function') ? utilMethods.hitsCombatant : null;
+    this.kickoffAttackCooldown = (utilMethods && typeof utilMethods.kickoffAttackCooldown === 'function') ? utilMethods.kickoffAttackCooldown : null;
     
     this.acquireTarget = (caller, combatants, targetToAvoid = null) => {
             if(data.methods.isAnEnemyDirectlyInFrontOfMe(caller, combatants)){
@@ -31,31 +36,28 @@ export function Sage(data){
             debugger
         }
         }
-    this.initiateAttack = (caller, combatants, hitsTarget, missesTarget) => {
+    this.initiateAttack = (caller, manualAttack, combatants) => { // eslint-disable-line no-unused-vars
             const target = combatants[caller.targetId];
             if(!target){
                 console.log('no target!!!');
-                // debugger
                 return
             }
             const distanceToTarget = data.methods.getDistanceToTarget(caller, target),
             laneDiff = data.methods.getLaneDifferenceToTarget(caller, target);
             if(target.isMonster || target.isMinion){
-                hitsTarget(caller);
+                if (typeof this.hitsCombatant === 'function') this.hitsCombatant(caller, target);
+                else if (typeof this.hitsTarget === 'function') this.hitsTarget(caller);
             } else {
                 if(distanceToTarget === 1 && laneDiff === 0){ 
                     caller.healing = true
                     target.hp += 10;
                     if(target.hp > target.starting_hp) target.hp = target.starting_hp;
                     setTimeout(()=>{
-                        // console.log('why no healing animation');
-                        // debugger
                         caller.healing = false
                         caller.active = false;
                         caller.tempo = 1;
                         caller.turnCycle();
                     }, this.INTERVAL_TIME * 50)
-                    // debugger
                 } else if(distanceToTarget === 0 && (laneDiff === 1 || laneDiff === -1)){
                     console.log('LORYASTES: adjacent heal');
                     caller.position = target.position;
@@ -72,14 +74,9 @@ export function Sage(data){
                         caller.turnCycle();
                     }, this.INTERVAL_TIME * 50)
                 } else if(distanceToTarget === 1 && (laneDiff === 1 || laneDiff === -1)){
-                    missesTarget(caller)
-                    // caller.position = (laneDiff === 1) ? caller.position -1 : caller.position + 1;
-                    // setTimeout(()=>{
-                    //     caller.tempo = 1;
-                    //     caller.turnCycle();
-                    // }, 500)
+                    if (typeof this.missesTarget === 'function') this.missesTarget(caller);
                 } else {
-                    missesTarget(caller)
+                    if (typeof this.missesTarget === 'function') this.missesTarget(caller);
                 }
             }
     }

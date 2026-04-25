@@ -89,7 +89,7 @@ const specialsMatrix = {
         type: 'special',
         icon: images['infantry_shield'],
         cooldown: 15,       // 15-era recharge after expiry
-        duration: 4,        // wall lasts 4 eras
+        duration: 12,        // wall lasts 4 eras
         energy_cost: 30,    // costs 30% energy to erect
         effect: ['special'],
         special_instructions: 'Erect a 5-tile vertical barrier at the Soldier\'s front edge. Blocks all unit movement across the line for 4 eras. Soldier cannot move or attack while active.',
@@ -143,7 +143,7 @@ const specialsMatrix = {
         icon: images['wide_skull'],
         cooldown: 15,
         energy_cost: 90,
-        duration: 2,
+        duration: 10,
         effect: ['nerf_all_enemies'],
         nerf: {
             decrease_stats: {
@@ -164,6 +164,38 @@ const specialsMatrix = {
         cooldown: 0,
         effect: ['special'],
         special_instructions: 'Costs 100 energy. Steals a random non-equipped item from the crew\'s inventory, then flees to the backline. If the goblin escapes, the item is lost permanently.',
+        level: 1
+    },
+    petrify: {
+        name: 'petrify',
+        type: 'special',
+        icon: images['hand_1'],
+        energy_cost: 80,
+        duration: 10,
+        cooldown: 15,
+        effect: ['special'],
+        special_instructions: 'Target is turned to stone, becoming immobile and invulnerable but also unable to act',
+        level: 1
+    },
+    energy_burn: {
+        name: 'energy burn',
+        type: 'special',
+        icon: images['hand_1'],
+        energy_cost: 60,
+        cooldown: 12,
+        effect: ['special'],
+        special_instructions: 'Reduces targets energy by 50% (rounded down), dealing damage to them. Damage is equal to energy lost - targets fortitude value. ',
+        level: 1
+    },
+    invisibility: {
+        name: 'invisibility',
+        type: 'special',
+        icon: images['nukta_charm'],
+        cooldown: 20,
+        duration: 12,
+        energy_cost: 80,
+        effect: ['special'],
+        special_instructions: 'Costs 80 energy. The fighter becomes invisible for 4 eras, gaining evasion but unable to attack. While invisible, the fighter cannot be targeted by enemy attacks or specials, but also cannot use their own attacks or specials.',
         level: 1
     },
     zealotry: {

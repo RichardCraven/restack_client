@@ -1,9 +1,17 @@
-export function Rogue(data, animationManager){
+export function Rogue(data, utilMethods, animationManager){
     this.MAX_DEPTH = data.MAX_DEPTH;
     this.MAX_LANES = data.MAX_LANES;
     this.INTERVAL_TIME = data.INTERVAL_TIME
-    
+
     this.animationManager = animationManager;
+    this.hitsTarget = (utilMethods && typeof utilMethods.hitsTarget === 'function') ? utilMethods.hitsTarget : null;
+    this.missesTarget = (utilMethods && typeof utilMethods.missesTarget === 'function') ? utilMethods.missesTarget : null;
+    this.hitsCombatant = (utilMethods && typeof utilMethods.hitsCombatant === 'function') ? utilMethods.hitsCombatant : null;
+    this.kickoffAttackCooldown = (utilMethods && typeof utilMethods.kickoffAttackCooldown === 'function') ? utilMethods.kickoffAttackCooldown : null;
+
+    this.initialize = (caller) => {
+        caller.behaviorSequence = 'brawler';
+    };
 
     this.isFriendly = (e) => {
         return !e.isMonster && !e.isMinion;
@@ -97,6 +105,25 @@ export function Rogue(data, animationManager){
 
         caller.coordinates.y = caller.position
         caller.coordinates.x = caller.depth
+
+        // Attack trigger
+        {
+            const era = caller.eras ? caller.eras[caller.eraIndex] : null;
+            if (era && !era.attacked && !caller.onGeneralAttackCooldown && !caller.attacking && caller.pendingAttack) {
+                const atkTarget = combatants[caller.targetId];
+                if (atkTarget && !atkTarget.dead && !atkTarget.isVCT) {
+                    const dx = Math.abs(caller.coordinates.x - atkTarget.coordinates.x);
+                    const dy = Math.abs(caller.coordinates.y - atkTarget.coordinates.y);
+                    const dist = dx + dy;
+                    const atkRange = caller.pendingAttack.range || 'far';
+                    const inRange = atkRange === 'close' ? dist === 1 : atkRange === 'medium' ? dist <= 3 : dist <= 6;
+                    if (inRange) {
+                        era.attacked = true;
+                        caller.attack();
+                    }
+                }
+            }
+        }
     }
     this.triggerNarrowBeamAttack = (callerCoords, targetCoords) => {
         const targetTileId = this.animationManager.getTileIdByCoords(targetCoords)
@@ -107,29 +134,29 @@ export function Rogue(data, animationManager){
             }
         })
     }
-    this.initiateAttack = async (caller, combatants, hitsTarget, missesTarget) => {
-        console.log('rogue initiate attack');
-        if(!caller) return
-            const target = combatants[caller.targetId];
-        if(!target) return
-            console.log('rogue initiating attack', caller.pendingAttack.name);
-            const distanceToTarget = data.methods.getDistanceToTarget(caller, target), // eslint-disable-line no-unused-vars
-            laneDiff = data.methods.getLaneDifferenceToTarget(caller, target);
+    this.initiateAttack = async (caller, manualAttack, combatants) => { // eslint-disable-line no-unused-vars
+        if (!caller) return;
+        caller.attacking = true;
+        const target = combatants[caller.targetId];
+        if (!target) { caller.attacking = false; return; }
+        if (!caller.pendingAttack) { caller.attacking = false; return; }
+        const laneDiff = data.methods.getLaneDifferenceToTarget(caller, target);
 
-            switch(caller.pendingAttack.name){
-                case 'fire arrow':
-                    if(laneDiff === 0){
-                        await this.triggerNarrowBeamAttack(caller.coordinates, target.coordinates)
-                        hitsTarget(caller)
-                    } else {
-                        missesTarget(caller);
-                    }
+        switch (caller.pendingAttack.name) {
+            case 'fire arrow':
+                if (laneDiff === 0) {
+                    await this.triggerNarrowBeamAttack(caller.coordinates, target.coordinates);
+                    if (typeof this.hitsCombatant === 'function') this.hitsCombatant(caller, target);
+                } else {
+                    if (typeof this.missesTarget === 'function') this.missesTarget(caller);
+                }
                 break;
-                default:
-                    console.log('NO ATTACK!!!!');
-                    debugger
-                    hitsTarget(caller);
-                    break;
-            }
+            default:
+                if (typeof this.hitsCombatant === 'function') this.hitsCombatant(caller, target);
+                else if (typeof this.hitsTarget === 'function') this.hitsTarget(caller);
+                break;
+        }
+        if (typeof this.kickoffAttackCooldown === 'function') this.kickoffAttackCooldown(caller);
+        caller.attacking = false;
     }
 }

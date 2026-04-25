@@ -1726,6 +1726,9 @@ export function CombatManager() {
             return
         }
 
+        // Fallback: no specific AI profile — ensure behavior is initialized
+        if (!caller.behaviorSequence) caller.behaviorSequence = 'brawler';
+
         const liveCombatants = Object.values(this.combatants).filter(e => (!e.dead && e.id !== caller.id));
 
         const target = this.combatants[caller.targetId]
@@ -1884,6 +1887,25 @@ export function CombatManager() {
                 this.handleOverlap(e)
             }
         })
+
+        // Attack trigger for fallback monsters (no specific AI profile)
+        {
+            const _era = caller.eras ? caller.eras[caller.eraIndex] : null;
+            if (_era && !_era.attacked && !caller.onGeneralAttackCooldown && !caller.attacking && caller.pendingAttack) {
+                const _target = this.combatants[caller.targetId];
+                if (_target && !_target.dead && !_target.isVCT) {
+                    const _dx = Math.abs(caller.coordinates.x - _target.coordinates.x);
+                    const _dy = Math.abs(caller.coordinates.y - _target.coordinates.y);
+                    const _dist = _dx + _dy;
+                    const _atkRange = caller.pendingAttack.range || 'close';
+                    const _inRange = _atkRange === 'close' ? _dist === 1 : _atkRange === 'medium' ? _dist <= 3 : _dist <= 6;
+                    if (_inRange) {
+                        _era.attacked = true;
+                        this.initiateAttack(caller);
+                    }
+                }
+            }
+        }
     }
     this.checkOverlap = (combatant) => {
         let overlapper;
@@ -2048,6 +2070,7 @@ export function CombatManager() {
             }
             if (e.targetId === targetId) {
                 e.targetId = null;
+                e.pendingAttack = null;
             }
         })
     }
@@ -2722,9 +2745,17 @@ export function CombatManager() {
             try {
                 const escapee = this.combatants[callerId];
                 if (!escapee || escapee.dead) return;
+                // Mark dead so the factory interval exits on next tick
                 escapee.dead = true;
                 escapee.escaped = true;
+                // Clear all targetId references to this unit before removing
                 try { this.clearTargetListById(escapee.id); } catch (e) {}
+                // Remove immediately from the combatants map — no death animation
+                delete this.combatants[callerId];
+                // VCT cleanup
+                const vctId = `${callerId}_VCT`;
+                if (this.combatants[vctId]) delete this.combatants[vctId];
+                if (this.vctByMonster && this.vctByMonster[callerId]) delete this.vctByMonster[callerId];
                 this.updateData(clone(this.combatants));
                 const allMonstersDead = Object.values(this.combatants).filter(e => (e.isMonster || e.isMinion) && !e.dead && !e.isVCT).length === 0;
                 const allCrewDead = Object.values(this.combatants).filter(e => !e.isMonster && !e.isMinion && !e.isVCT).every(e => e.dead);

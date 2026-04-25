@@ -265,6 +265,8 @@ export function Mummy(data, utilMethods, animationManager, overlayManager) {
             throw new Error('moveCooldown must be defined for all units');
         }
 
+        switch (caller.behaviorSequence) {
+            case 'brawler': {
         // Retarget every turn to always track the closest enemy
         this.acquireTarget(caller, combatants);
 
@@ -449,6 +451,11 @@ export function Mummy(data, utilMethods, animationManager, overlayManager) {
                 }
             }
         }
+            break; // end case 'brawler'
+            }
+            default:
+                break;
+        } // end switch(behaviorSequence)
     }
 
     this.initiateAttack = async (caller, combatants) => {

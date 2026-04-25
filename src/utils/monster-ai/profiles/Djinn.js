@@ -13,6 +13,10 @@ export function Djinn(data, utilMethods, animationManager, overlayManager){
     this.missesTarget = utilMethods.missesTarget;
     this.hitsTarget = utilMethods.hitsTarget;
  
+    this.initialize = (caller) => {
+        caller.behaviorSequence = 'brawler';
+    }
+
     this.acquireTarget = (caller, combatants) => {
         if(caller.targetId){
             const target = combatants[caller.targetId];
@@ -45,16 +49,32 @@ export function Djinn(data, utilMethods, animationManager, overlayManager){
             debugger;
             throw new Error('moveCooldown must be defined for all units');
         }
-        if(!caller.pendingAttack){
-            return
-        }
-        // console.log('Djinn energy');
-        caller.energy+=5
-        data.methods.moveTowardsCloseEnemyTarget(caller, combatants)
-        // After moving, update facing to face target if one exists
-        if (caller.targetId && combatants[caller.targetId]) {
-            const target = combatants[caller.targetId];
-            caller.facing = (caller.coordinates.x <= target.coordinates.x) ? 'right' : 'left';
+
+        switch (caller.behaviorSequence) {
+            case 'brawler': {
+                if(!caller.pendingAttack) break;
+                // console.log('Djinn energy');
+                caller.energy += 5;
+                data.methods.moveTowardsCloseEnemyTarget(caller, combatants);
+                // After moving, update facing to face target if one exists
+                if (caller.targetId && combatants[caller.targetId]) {
+                    const t = combatants[caller.targetId];
+                    caller.facing = (caller.coordinates.x <= t.coordinates.x) ? 'right' : 'left';
+                }
+
+                // Attack trigger
+                const era = caller.eras ? caller.eras[caller.eraIndex] : null;
+                if (era && !era.attacked && !caller.onGeneralAttackCooldown && !caller.attacking) {
+                    const target = combatants[caller.targetId];
+                    if (target && !target.dead && !target.isVCT) {
+                        era.attacked = true;
+                        this.initiateAttack(caller, combatants);
+                    }
+                }
+                break;
+            }
+            default:
+                break;
         }
     }
     this.triggerVoidLance = (coords) => {

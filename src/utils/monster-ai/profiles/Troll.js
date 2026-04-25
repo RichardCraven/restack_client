@@ -76,8 +76,32 @@ export function Troll(data, utilMethods, animationManager, overlayManager){
             caller.onMoveCooldown = false;
         }, caller.moveCooldown);
 
-        // Standard brawler movement: close the gap
-        data.methods.closeTheGap(caller, combatants);
+        switch (caller.behaviorSequence) {
+            case 'brawler': {
+                // Standard brawler movement: close the gap
+                data.methods.closeTheGap(caller, combatants);
+
+                // Attack trigger
+                const era = caller.eras ? caller.eras[caller.eraIndex] : null;
+                if (era && !era.attacked && !caller.onGeneralAttackCooldown && !caller.attacking && caller.pendingAttack) {
+                    const target = combatants[caller.targetId];
+                    if (target && !target.dead && !target.isVCT) {
+                        const dx = Math.abs(caller.coordinates.x - target.coordinates.x);
+                        const dy = Math.abs(caller.coordinates.y - target.coordinates.y);
+                        const dist = dx + dy;
+                        const atkRange = caller.pendingAttack.range || 'close';
+                        const inRange = atkRange === 'close' ? dist === 1 : atkRange === 'medium' ? dist <= 3 : dist <= 6;
+                        if (inRange) {
+                            era.attacked = true;
+                            this.initiateAttack(caller, combatants);
+                        }
+                    }
+                }
+                break;
+            }
+            default:
+                break;
+        }
     }
 
     this.initiateAttack = async (caller, combatants) => {

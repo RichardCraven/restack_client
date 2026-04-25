@@ -54,10 +54,38 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
     this.acquireTarget = (caller, combatants, targetToAvoid = null) => {
         const liveEnemies = this.enemies(combatants).filter(e => !e.dead);
         if (!liveEnemies.length) return;
+
+        // If an enemy is directly adjacent (dist=1), prefer attacking it immediately
+        // rather than chasing a distant target that may be blocked by other units.
+        const adjacentEnemy = liveEnemies.find(e => {
+            const dx = Math.abs(caller.coordinates.x - e.coordinates.x);
+            const dy = Math.abs(caller.coordinates.y - e.coordinates.y);
+            return dx + dy === 1;
+        });
+
         // Stick with current target if it is still alive — prevents rapid switching
         // when surrounded by multiple enemies at the same depth.
         const currentTarget = caller.targetId ? liveEnemies.find(e => e.id === caller.targetId) : null;
-        if (currentTarget && (!targetToAvoid || currentTarget.id !== targetToAvoid.id)) return;
+
+        // If an adjacent enemy exists but the current target is not adjacent, switch
+        // (so the Soldier attacks whoever is right next to it instead of walking past them)
+        if (adjacentEnemy && currentTarget && adjacentEnemy.id !== currentTarget.id) {
+            const ctDx = Math.abs(caller.coordinates.x - currentTarget.coordinates.x);
+            const ctDy = Math.abs(caller.coordinates.y - currentTarget.coordinates.y);
+            if (ctDx + ctDy > 1) {
+                caller.pendingAttack = this.chooseAttackType(caller, adjacentEnemy);
+                caller.targetId = adjacentEnemy.id;
+                if (!Array.isArray(adjacentEnemy.targettedBy)) adjacentEnemy.targettedBy = [];
+                adjacentEnemy.targettedBy.push(caller.id);
+                return;
+            }
+        }
+
+        if (currentTarget && (!targetToAvoid || currentTarget.id !== targetToAvoid.id)) {
+            // Ensure pendingAttack is always populated even in the sticky-target early exit
+            if (!caller.pendingAttack) caller.pendingAttack = this.chooseAttackType(caller, currentTarget);
+            return;
+        }
         const sorted = liveEnemies.sort((a,b)=>b.depth - a.depth);
         let target = sorted.length ? sorted[0] : null;
         if(!target) return;
@@ -452,8 +480,13 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
         // transition-duration is now set via CSS variable --move-duration, which should match moveCooldown
 
         switch(caller.behaviorSequence){
-            case 'brawler':
-                
+            case 'brawler': {
+                // Always refresh target + pendingAttack at the start of each move tick.
+                // This ensures pendingAttack is never null (even after restartTurnCycle
+                // clears it) and gives the Soldier a chance to re-acquire an adjacent
+                // enemy instead of chasing a blocked distant one.
+                this.acquireTarget(caller, combatants);
+
                 // ── Shield Wall check ───────────────────────────────────────
                 if (this.shouldUseShieldWall(caller, combatants)) {
                     this.triggerShieldWall(caller, combatants);
@@ -461,130 +494,42 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
                 }
                 // ────────────────────────────────────────────────────────────
 
-                switch(caller.eraIndex){
-                    case 0:
-                        if(this.isSurrounded(caller, combatants)){
-                            
-                            this.triggerSpinAttack(caller, combatants).then((combatantHit)=>{
-                                // if(combatantHit){
-                                //     this.hitsCombatant(caller, combatantHit);
-                                // } else {
-                                //     console.log('spin move missed');
-                                // }
-                            });
-                            break;
-                        }
-                        data.methods.closeTheGapForwardFirst(caller, combatants)
-                    break;
-                    case 1:
-                        if(this.isSurrounded(caller, combatants)){
-                            
-                            this.triggerSpinAttack(caller, combatants).then((combatantHit)=>{
-                                // if(combatantHit){
-                                //     this.hitsCombatant(caller, combatantHit);
-                                // } else {
-                                //     console.log('spin move missed');
-                                // }
-                            });
-                            break;
-                        }
-                        this.tryUseConsumableForHeal(caller);
-                        data.methods.closeTheGapForwardFirst(caller, combatants)
-                    break;
-                    case 2:
-                        
-                        if(this.isSurrounded(caller, combatants)){
-                            
-                            this.triggerSpinAttack(caller, combatants).then((combatantHit)=>{
-                                // if(combatantHit){
-                                //     this.hitsCombatant(caller, combatantHit);
-                                // } else {
-                                //     console.log('spin move missed');
-                                // }
-                            });
-                            break;
-                        }
-                        
-                        // Era 2: attempt to drink a health potion if low (50% threshold)
-                        this.tryUseConsumableForHeal(caller);
-                        data.methods.closeTheGapForwardFirst(caller, combatants)
-                    break;
-                    case 3:
-                        if(this.isSurrounded(caller, combatants)){
-                            
-                            this.triggerSpinAttack(caller, combatants).then((combatantHit)=>{
-                                // if(combatantHit){
-                                //     this.hitsCombatant(caller, combatantHit);
-                                // } else {
-                                //     console.log('spin move missed');
-                                // }
-                            });
-                            break;
-                        }
-                        this.tryUseConsumableForHeal(caller);
-                        data.methods.closeTheGapForwardFirst(caller, combatants)
-                    break;
-                    case 4:
-                        if(this.isSurrounded(caller, combatants)){
-                            
-                            this.triggerSpinAttack(caller, combatants).then((combatantHit)=>{
-                                // if(combatantHit){
-                                //     this.hitsCombatant(caller, combatantHit);
-                                // } else {
-                                //     console.log('spin move missed');
-                                // }
-                            });
-                            break;
-                        }
-                        this.tryUseConsumableForHeal(caller);
-                        data.methods.closeTheGapForwardFirst(caller, combatants)
-                    break;
-                    default: 
+                // Spin attack if surrounded (any era)
+                if(this.isSurrounded(caller, combatants)){
+                    this.triggerSpinAttack(caller, combatants).then(() => {});
                     break;
                 }
-            break;
+
+                // Heal check: eras 1, 2, 3 only
+                if (caller.eraIndex >= 1 && caller.eraIndex <= 3) {
+                    this.tryUseConsumableForHeal(caller);
+                }
+
+                // Movement
+                data.methods.closeTheGapForwardFirst(caller, combatants);
+
+                // Attack trigger
+                {
+                    const era = caller.eras ? caller.eras[caller.eraIndex] : null;
+                    if (era && !era.attacked && !caller.onGeneralAttackCooldown && !caller.attacking && caller.pendingAttack) {
+                        const target = combatants[caller.targetId];
+                        if (target && !target.dead && !target.isVCT) {
+                            const dx = Math.abs(caller.coordinates.x - target.coordinates.x);
+                            const dy = Math.abs(caller.coordinates.y - target.coordinates.y);
+                            const dist = dx + dy;
+                            const atkRange = caller.pendingAttack.range || 'close';
+                            const inRange = atkRange === 'close' ? dist === 1 : atkRange === 'medium' ? dist <= 3 : dist <= 6;
+                            if (inRange) {
+                                era.attacked = true;
+                                caller.attack();
+                            }
+                        }
+                    }
+                }
+                break;
+            }
             case 'panicked':
-                switch(caller.eraIndex){
-                    case 0:
-
-                    break;
-                    case 1:
-
-                    break;
-                    case 2:
-
-                    break;
-                    case 3:
-
-                    break;
-                    case 4:
-
-                    break;
-                    default: 
-                    break;
-                }
-            break;
             case 'melee':
-                switch(caller.eraIndex){
-                    case 0:
-
-                    break;
-                    case 1:
-
-                    break;
-                    case 2:
-
-                    break;
-                    case 3:
-
-                    break;
-                    case 4:
-
-                    break;
-                    default: 
-                    break;
-                }
-            break;
             default:
             break;
         }

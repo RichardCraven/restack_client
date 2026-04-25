@@ -1,6 +1,7 @@
 import React from 'react';
 import Overlay from '../Overlay';
 import { ROCK_DURATION } from '../../utils/shared-constants';
+import * as images from '../../utils/images';
 
 const MonstersCombatGrid = ({
     monster,
@@ -357,11 +358,11 @@ const MonstersCombatGrid = ({
                         <div className="portrait-overlay" style={{ zIndex: 301, position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', overflow: 'visible' }}>
                             <div className="damage-indicator-container" style={{ overflow: 'visible' }}>
                                 {(visibleDamageIndicators[vct.id] || []).map((indicator, idx, arr) => {
-                                    const isStatDebuff = !indicator.isCrit && typeof indicator.value === 'string';
+                                    const isStatDebuff = !indicator.isCrit && typeof indicator.value === 'string' && indicator.type !== 'robbed';
                                     const yOffset = idx * 28;
                                     return (
                                         <div
-                                            className={`damage-indicator${isStatDebuff ? ' stat-debuff' : ''}${indicator.isCrit ? ' crit' : ''}${indicator.type === 'heal' ? ' heal' : ''}`}
+                                            className={`damage-indicator${isStatDebuff ? ' stat-debuff' : ''}${indicator.isCrit ? ' crit' : ''}${indicator.type === 'heal' ? ' heal' : ''}${indicator.type === 'robbed' ? ' robbed' : ''}`}
                                             key={indicator.id}
                                             style={{
                                                 transform: `translateY(-${yOffset}px)`,
@@ -517,10 +518,10 @@ const MonstersCombatGrid = ({
                                     <div className="damage-indicator-container" style={{ overflow: 'visible' }}>
                                         {(visibleDamageIndicators[monster.id] || []).map((indicator, idx, arr) => {
                                             const yOffset = idx * 28;
-                                            const isStatDebuff = !indicator.isCrit && typeof indicator.value === 'string';
+                                            const isStatDebuff = !indicator.isCrit && typeof indicator.value === 'string' && indicator.type !== 'robbed';
                                             return (
                                                 <div
-                                                    className={`damage-indicator${isStatDebuff ? ' stat-debuff' : ''}${indicator.isCrit ? ' crit' : ''}${indicator.type === 'heal' ? ' heal' : ''}`}
+                                                    className={`damage-indicator${isStatDebuff ? ' stat-debuff' : ''}${indicator.isCrit ? ' crit' : ''}${indicator.type === 'heal' ? ' heal' : ''}${indicator.type === 'robbed' ? ' robbed' : ''}`}
                                                     key={indicator.id}
                                                     style={{
                                                         transform: `translateY(-${yOffset}px)`,
@@ -558,6 +559,19 @@ const MonstersCombatGrid = ({
                                             <div
                                                 className="monster-target-portrait"
                                                 style={{ backgroundImage: `url(${target.portrait})` }}
+                                            />
+                                        </div>
+                                    ) : null;
+                                })()}
+                                {/* Stolen item indicator: icon in upper-left when goblin has stolen something */}
+                                {(() => {
+                                    const stolenIconKey = battleData[monster.id]?.stolenItemIcon;
+                                    const stolenImg = stolenIconKey ? images[stolenIconKey] : null;
+                                    return stolenImg && !battleData[monster.id]?.dead ? (
+                                        <div className="monster-stolen-item-indicator" style={{ zIndex: 10 }}>
+                                            <div
+                                                className="monster-stolen-item-portrait"
+                                                style={{ backgroundImage: `url(${stolenImg})` }}
                                             />
                                         </div>
                                     ) : null;
@@ -737,16 +751,29 @@ const MonstersCombatGrid = ({
                                             </div>
                                         ) : null;
                                     })()}
+                                    {/* Stolen item indicator: icon in upper-left when minion has stolen something */}
+                                    {(() => {
+                                        const stolenIconKey = minion.stolenItemIcon;
+                                        const stolenImg = stolenIconKey ? images[stolenIconKey] : null;
+                                        return stolenImg && !minion.dead ? (
+                                            <div className="monster-stolen-item-indicator" style={{ zIndex: 10 }}>
+                                                <div
+                                                    className="monster-stolen-item-portrait"
+                                                    style={{ backgroundImage: `url(${stolenImg})` }}
+                                                />
+                                            </div>
+                                        ) : null;
+                                    })()}
                                 </div>
                                 <div className={`portrait-overlay ${minion.frozen ? 'frozen' : ''}`}> 
                                     <div className="damage-indicator-container">
                                         {(visibleDamageIndicators[minion.id] || []).map((indicator, idx, arr) => {
                                             // For minions, always use the default offset.
                                             const yOffset = idx * 28;
-                                            const isStatDebuff = !indicator.isCrit && typeof indicator.value === 'string';
+                                            const isStatDebuff = !indicator.isCrit && typeof indicator.value === 'string' && indicator.type !== 'robbed';
                                             return (
                                                 <div
-                                                    className={`damage-indicator${isStatDebuff ? ' stat-debuff' : ''}${indicator.isCrit ? ' crit' : ''}${indicator.type === 'heal' ? ' heal' : ''}`}
+                                                    className={`damage-indicator${isStatDebuff ? ' stat-debuff' : ''}${indicator.isCrit ? ' crit' : ''}${indicator.type === 'heal' ? ' heal' : ''}${indicator.type === 'robbed' ? ' robbed' : ''}`}
                                                     key={indicator.id}
                                                     style={{
                                                         transform: `translateY(-${yOffset}px)`,

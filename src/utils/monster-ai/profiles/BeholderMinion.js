@@ -412,6 +412,9 @@ export function BeholderMinion(data, utilMethods, animationManager, overlayManag
         caller.onMoveCooldown = true;
         setTimeout(() => { caller.onMoveCooldown = false; }, caller.moveCooldown);
 
+        switch (caller.behaviorSequence) {
+          case 'skirmisher':
+          default: {
         this.acquireTarget(caller, combatants);
 
         // ── check for cloning specials ──────────────────────────────────────
@@ -531,5 +534,26 @@ export function BeholderMinion(data, utilMethods, animationManager, overlayManag
             const postMoveTarget = combatants[caller.targetId];
             caller.pendingAttack = this.chooseAttackType(caller, postMoveTarget);
         }
+
+        // Attack trigger
+        {
+            const era = caller.eras ? caller.eras[caller.eraIndex] : null;
+            if (era && !era.attacked && !caller.onGeneralAttackCooldown && !caller.attacking && caller.pendingAttack) {
+                const attackTarget = combatants[caller.targetId];
+                if (attackTarget && !attackTarget.dead && !attackTarget.isVCT) {
+                    const dx = Math.abs(caller.coordinates.x - attackTarget.coordinates.x);
+                    const dy = Math.abs(caller.coordinates.y - attackTarget.coordinates.y);
+                    const dist = dx + dy;
+                    const atkRange = caller.pendingAttack.range || 'close';
+                    const inRange = atkRange === 'close' ? dist === 1 : atkRange === 'medium' ? dist <= 3 : dist <= 6;
+                    if (inRange) {
+                        era.attacked = true;
+                        this.initiateAttack(caller, combatants);
+                    }
+                }
+            }
+        }
+          } // end default/skirmisher case
+        } // end switch
     };
 }

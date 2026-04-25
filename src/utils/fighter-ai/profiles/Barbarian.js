@@ -416,48 +416,38 @@ export function Barbarian(data, utilMethods, animationManager) {
                     // interval picks up immediately without running a stale move tick.
                     return;
                 }
-                switch (caller.eraIndex) {
-                    case 0:
-                        if (this.isSurrounded(caller, combatants)) {
-                            this.triggerSpinAttack(caller, combatants);
-                            break;
+
+                // Spin attack if surrounded (any era)
+                if (this.isSurrounded(caller, combatants)) {
+                    this.triggerSpinAttack(caller, combatants);
+                    break;
+                }
+
+                // Heal check: eras 1, 2, 3 only
+                if (caller.eraIndex >= 1 && caller.eraIndex <= 3) {
+                    this.tryUseConsumableForHeal(caller);
+                }
+
+                // Movement
+                data.methods.closeTheGapForwardFirst(caller, combatants);
+
+                // Attack trigger
+                {
+                    const era = caller.eras ? caller.eras[caller.eraIndex] : null;
+                    if (era && !era.attacked && !caller.onGeneralAttackCooldown && !caller.attacking && caller.pendingAttack) {
+                        const target = combatants[caller.targetId];
+                        if (target && !target.dead && !target.isVCT) {
+                            const dx = Math.abs(caller.coordinates.x - target.coordinates.x);
+                            const dy = Math.abs(caller.coordinates.y - target.coordinates.y);
+                            const dist = dx + dy;
+                            const atkRange = caller.pendingAttack.range || 'close';
+                            const inRange = atkRange === 'close' ? dist === 1 : atkRange === 'medium' ? dist <= 3 : dist <= 6;
+                            if (inRange) {
+                                era.attacked = true;
+                                caller.attack();
+                            }
                         }
-                        data.methods.closeTheGapForwardFirst(caller, combatants);
-                        break;
-                    case 1:
-                        if (this.isSurrounded(caller, combatants)) {
-                            this.triggerSpinAttack(caller, combatants);
-                            break;
-                        }
-                        this.tryUseConsumableForHeal(caller);
-                        data.methods.closeTheGapForwardFirst(caller, combatants);
-                        break;
-                    case 2:
-                        if (this.isSurrounded(caller, combatants)) {
-                            this.triggerSpinAttack(caller, combatants);
-                            break;
-                        }
-                        this.tryUseConsumableForHeal(caller);
-                        data.methods.closeTheGapForwardFirst(caller, combatants);
-                        break;
-                    case 3:
-                        if (this.isSurrounded(caller, combatants)) {
-                            this.triggerSpinAttack(caller, combatants);
-                            break;
-                        }
-                        this.tryUseConsumableForHeal(caller);
-                        data.methods.closeTheGapForwardFirst(caller, combatants);
-                        break;
-                    case 4:
-                        if (this.isSurrounded(caller, combatants)) {
-                            this.triggerSpinAttack(caller, combatants);
-                            break;
-                        }
-                        this.tryUseConsumableForHeal(caller);
-                        data.methods.closeTheGapForwardFirst(caller, combatants);
-                        break;
-                    default:
-                        break;
+                    }
                 }
                 break;
             }

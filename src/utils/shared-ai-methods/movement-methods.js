@@ -376,11 +376,15 @@ const goTowards = (caller, combatants, targetTile, forwardFirst = false) => {
         } else if(targetIsInCoords(E)){
             // Target is directly East and occupied — already adjacent, don't move
         } else if(someoneIsInCoords(E, combatants)){
-            //go NE or SE
+            //go NE or SE; for large movers fall back to pure N/S lane shift
             if(canMoveTo(NE)){
                 newCoords = NE
             } else if(canMoveTo(SE)){
                 newCoords = SE
+            } else if(canMoveTo(N)){
+                newCoords = N
+            } else if(canMoveTo(S)){
+                newCoords = S
             } else {
                 return
             }
@@ -394,11 +398,15 @@ const goTowards = (caller, combatants, targetTile, forwardFirst = false) => {
         } else if(targetIsInCoords(W)){
             // Target is directly West and occupied — already adjacent, don't move
         } else if(someoneIsInCoords(W, combatants)){
-            //go NW or SW
+            //go NW or SW; for large movers fall back to pure N/S lane shift
             if(canMoveTo(NW)){
                 newCoords = NW
             } else if(canMoveTo(SW)){
                 newCoords = SW
+            } else if(canMoveTo(N)){
+                newCoords = N
+            } else if(canMoveTo(S)){
+                newCoords = S
             } else {
                 return
             }

@@ -122,6 +122,24 @@ export function Monk(data, utilMethods, animationManager, overlayManager){
                     default: 
                     break;
                 }
+                // Attack trigger
+                {
+                    const era = caller.eras ? caller.eras[caller.eraIndex] : null;
+                    if (era && !era.attacked && !caller.onGeneralAttackCooldown && !caller.attacking && caller.pendingAttack) {
+                        const atkTarget = combatants[caller.targetId];
+                        if (atkTarget && !atkTarget.dead && !atkTarget.isVCT) {
+                            const dx = Math.abs(caller.coordinates.x - atkTarget.coordinates.x);
+                            const dy = Math.abs(caller.coordinates.y - atkTarget.coordinates.y);
+                            const dist = dx + dy;
+                            const atkRange = caller.pendingAttack.range || 'close';
+                            const inRange = atkRange === 'close' ? dist === 1 : atkRange === 'medium' ? dist <= 3 : dist <= 6;
+                            if (inRange) {
+                                era.attacked = true;
+                                caller.attack();
+                            }
+                        }
+                    }
+                }
             break;
             case 'teleport-attacker':
                 this.tryUseConsumableForHeal(caller);
@@ -172,6 +190,24 @@ export function Monk(data, utilMethods, animationManager, overlayManager){
                     // Pass shared AI helper methods (includes someoneIsInCoords/isAvailableToMoveInto)
                     methods: data.methods
                 });
+                // Attack trigger
+                {
+                    const era = caller.eras ? caller.eras[caller.eraIndex] : null;
+                    if (era && !era.attacked && !caller.onGeneralAttackCooldown && !caller.attacking && caller.pendingAttack) {
+                        const atkTarget = combatants[caller.targetId];
+                        if (atkTarget && !atkTarget.dead && !atkTarget.isVCT) {
+                            const dx = Math.abs(caller.coordinates.x - atkTarget.coordinates.x);
+                            const dy = Math.abs(caller.coordinates.y - atkTarget.coordinates.y);
+                            const dist = dx + dy;
+                            const atkRange = caller.pendingAttack.range || 'close';
+                            const inRange = atkRange === 'close' ? dist === 1 : atkRange === 'medium' ? dist <= 3 : dist <= 6;
+                            if (inRange) {
+                                era.attacked = true;
+                                caller.attack();
+                            }
+                        }
+                    }
+                }
                 break;
             }
             default:

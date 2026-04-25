@@ -55,6 +55,7 @@ export function Wizard(data, utilMethods, animationManager, overlayManager) {
     }
 
     this.friendlies = (combatants) => {
+        if (!combatants) return [];
         return Object.values(combatants).filter(e => this.isFriendly(e));
     }
 
@@ -63,6 +64,7 @@ export function Wizard(data, utilMethods, animationManager, overlayManager) {
     }
 
     this.enemies = (combatants) => {
+        if (!combatants) return [];
         return Object.values(combatants).filter(e => this.isEnemy(e));
     }
 
@@ -435,6 +437,24 @@ export function Wizard(data, utilMethods, animationManager, overlayManager) {
                         break;
                 }
             }
+                // Attack trigger — fires if no spell was used this era and Wizard is in range
+                {
+                    const era = caller.eras ? caller.eras[caller.eraIndex] : null;
+                    if (era && !era.attacked && !caller.onGeneralAttackCooldown && !caller.attacking && caller.pendingAttack) {
+                        const atkTarget = combatants[caller.targetId];
+                        if (atkTarget && !atkTarget.dead && !atkTarget.isVCT) {
+                            const dx = Math.abs(caller.coordinates.x - atkTarget.coordinates.x);
+                            const dy = Math.abs(caller.coordinates.y - atkTarget.coordinates.y);
+                            const dist = dx + dy;
+                            const atkRange = caller.pendingAttack.range || 'far';
+                            const inRange = atkRange === 'close' ? dist === 1 : atkRange === 'medium' ? dist <= 3 : dist <= 6;
+                            if (inRange) {
+                                era.attacked = true;
+                                caller.attack();
+                            }
+                        }
+                    }
+                }
                 break;
             case 'panicked':
                 switch (caller.eraIndex) {

@@ -346,6 +346,13 @@ class MonsterBattle extends React.Component {
             }
         });
 
+        // For simulation battles: seed a tier-1 weapon into the group inventory so
+        // goblin sticky-fingers has a valid item to steal during testing.
+        if (this.props.isSimulation && this.props.inventoryManager &&
+                typeof this.props.inventoryManager.addItemsByName === 'function') {
+            this.props.inventoryManager.addItemsByName(['shortsword_sword']);
+        }
+
         // Ensure every crew member's equipped weapons reflect the current
         // damage/stat values from inventory-manager before combat begins.
         if (this.props.inventoryManager && typeof this.props.inventoryManager.refreshWeaponStats === 'function') {

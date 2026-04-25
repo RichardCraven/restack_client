@@ -311,7 +311,6 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
                 // era 3 = 41-60
                 // era 4 = 61-80
                 // era 5 = 81-100
-                let target, inRange;
                 const eraIndex = this.tempo < 21 ? 0 :
                 (this.tempo < 41 ? 1 :
                 (this.tempo < 61 ? 2 :
@@ -391,65 +390,30 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
                 }
 
                 const eraMove = () => {
-                    if(this.stunned) return; // stunned: cannot move
-                    if(this.movesLeft && !era.moved && !this.onMoveCooldown){
-                        // Diagnostic log to help trace when AI attempts to move
-                        // (will show in browser console)
+                    if(this.stunned) return; // stunned: cannot move or attack
+                    if(!era.moved && !this.onMoveCooldown){
                         era.moved = true;
-                        this.movesLeft--
-                        this.move()
+                        if(this.movesLeft > 0) this.movesLeft--;
+                        this.move(); // processMove handles movement and attack
                     }
                 }
-                const eraAttack = () => {
-                    if(this.stunned) return; // stunned: cannot attack
-                    if(this.attacking) return; // async attack already in flight — wait for it to resolve
-                    if(!this.targetId) acquireTarget(this);
-                    target = getCombatant(this.targetId)
-                    if(!target) return; // no live target — nothing to attack
-                    if(!this.pendingAttack) chooseAttackType(this, target)
-                    if(!this.pendingAttack) return; // chooseAttackType failed to assign — skip
-                    inRange = targetInRange(this);
-                    if(inRange && !era.attacked && !this.onGeneralAttackCooldown && !this.onMoveCooldown){
-                        era.attacked = true;
-                        this.attack(target);
-                    }
-                }
-                // let target;
+                // eraAttack removed — attack logic is now embedded in each AI's processMove
                 switch(eraIndex){
                     case 0: 
                         if(!this.targetId) acquireTarget(this);
-                            eraMove();
-                            if(this.tempo > 10){
-                                    // Ensure the chosen attack is assigned to pendingAttack so
-                                    // subsequent range checks and initiateAttack have the
-                                    // correct context. Previously chooseAttackType was being
-                                    // invoked without storing its result, which left
-                                    // pendingAttack null and prevented generic monsters
-                                    // from ever attacking.
-                                    target = getCombatant(this.targetId);
-                                    if(!this.pendingAttack && target) this.pendingAttack = chooseAttackType(this, target);
-                                    eraAttack();
-                                }
+                        eraMove();
                     break;
                     case 1: 
                         eraMove();
-                        
-                        eraAttack();
                     break;
                     case 2: 
                         eraMove();
-                        
-                        eraAttack();
                     break;
                     case 3: 
                         eraMove();
-                        
-                        eraAttack();
                     break;
                     case 4: 
                         eraMove();
-                        
-                        eraAttack();
                     break;
                         default:
                             break;

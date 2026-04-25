@@ -43,61 +43,32 @@ export function Skeleton(data, utilMethods, animationManager, overlayManager){
             caller.onMoveCooldown = false;
         }, caller.moveCooldown);
         switch(caller.behaviorSequence){
-            case 'brawler':
-                switch(caller.eraIndex){
-                    case 0:
-                        data.methods.closeTheGap(caller, combatants)
-                    break;
-                    case 1:
-                        data.methods.closeTheGap(caller, combatants)
-                    break;
-                    case 2:
-                        data.methods.closeTheGap(caller, combatants)
-                    break;
-                    case 3:
-                        data.methods.closeTheGap(caller, combatants)
-                    break;
-                    case 4:
-                        data.methods.closeTheGap(caller, combatants)
-                    break;
-                    default: 
-                    break;
+            case 'brawler': {
+                // Close in on target every era
+                data.methods.closeTheGap(caller, combatants);
+
+                // Attack trigger
+                const era = caller.eras ? caller.eras[caller.eraIndex] : null;
+                if (era && !era.attacked && !caller.onGeneralAttackCooldown && !caller.attacking && caller.pendingAttack) {
+                    const target = combatants[caller.targetId];
+                    if (target && !target.dead && !target.isVCT) {
+                        const dx = Math.abs(caller.coordinates.x - target.coordinates.x);
+                        const dy = Math.abs(caller.coordinates.y - target.coordinates.y);
+                        const dist = dx + dy;
+                        const atkRange = caller.pendingAttack.range || 'close';
+                        const inRange = atkRange === 'close' ? dist === 1 : atkRange === 'medium' ? dist <= 3 : dist <= 6;
+                        if (inRange) {
+                            era.attacked = true;
+                            this.initiateAttack(caller, combatants);
+                        }
+                    }
                 }
-            break;
+                break;
+            }
             case 'panicked':
-                switch(caller.eraIndex){
-                    case 0:
-                    break;
-                    case 1:
-                    break;
-                    case 2:
-                    break;
-                    case 3:
-                    break;
-                    case 4:
-                    break;
-                    default: 
-                    break;
-                }
-            break;
             case 'melee':
-                switch(caller.eraIndex){
-                    case 0:
-                    break;
-                    case 1:
-                    break;
-                    case 2:
-                    break;
-                    case 3:
-                    break;
-                    case 4:
-                    break;
-                    default: 
-                    break;
-                }
-            break;
             default:
-            break;
+                break;
         }
         // facing is handled by recalculateFacing in combat-manager.processMove
     }

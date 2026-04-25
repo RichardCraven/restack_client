@@ -380,9 +380,8 @@ export function MonsterManager() {
             portrait: images['beholder_portrait'],
             greetings: ['Vukudaj kolo gurdu'],
             deathCries: ['Urdu meklak milnaurku...'],
-            specials: ['obliterate', 'flying', 'invisibility'],
-            attacks: ['void_lance', 'major_magic_missile'],
-            // attacks: ['major_magic_missile'],
+            specials: ['obliterate', 'energy_burn', 'petrify', 'invisibility', 'major_magic_missile'],
+            attacks: ['void_lance'],
             weaknesses: ['arcane', 'holy-aura'],
             minions: ['beholder_minion', 'beholder_minion'],
             drops: [
@@ -408,7 +407,6 @@ export function MonsterManager() {
         //     deathCries: ['Urdu meklak milnaurku...'],
         //     specials: ['obliterate', 'flying', 'invisibility'],
         //     attacks: ['void_lance', 'major_magic_missile'],
-        //     // attacks: ['major_magic_missile'],
         //     weaknesses: ['arcane', 'holy-aura'],
         //     minions: ['golem'],
         //     drops: [
@@ -433,8 +431,8 @@ export function MonsterManager() {
             portrait: images['kabuki_demon_portrait'],
             greetings: ['Assaaa'],
             deathCries: ['No! Impossible!'],
-            specials: ['obliterate', 'flying', 'invisibility'],
-            attacks: ['void_lance', 'major_magic_missile'],
+            specials: ['obliterate', 'flying', 'invisibility', 'major_magic_missile'],
+            attacks: ['void_lance'],
             weaknesses: ['arcane', 'holy-aura'],
             minions: ['kabuki_demon_minion', 'kabuki_demon_minion'],
             drops: [
