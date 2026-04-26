@@ -33,7 +33,10 @@ export default function FightersCombatGrid(props) {
 
     // Only render fighters still present in battleData (i.e., not removed from combat),
     // and if dead, only if showDeathAnimation is true and not fullyDead
-    const activeCrew = props.crew.filter(f => props.battleData[f.id] && (!props.getFighterDetails(f)?.dead || (showDeathAnimation[f.id] && !fullyDead[f.id])));
+    const activeCrew = props.crew.filter(f => {
+        const details = props.getFighterDetails(f);
+        return props.battleData[f.id] && !details?.invisible && (!details?.dead || (showDeathAnimation[f.id] && !fullyDead[f.id]));
+    });
     // Refs to portrait wrappers and fighter containers so we can measure DOM for precise weapon placement
     const portraitWrapperRefs = React.useRef({});
     const fighterWrapperRefs = React.useRef({});
@@ -226,8 +229,8 @@ export default function FightersCombatGrid(props) {
                                         <div className={`portrait-overlay${details?.drained ? ' drained' : ''}`} >
                                             <div className="damage-indicator-container">
                                                 {props.getFighterDetails(fighter)?.damageIndicators.map((e,i)=>{
-                                                    const isStatDebuff = !e.isCrit && typeof e.value === 'string';
-                                                    return <div key={e.id || i} className={`damage-indicator${isStatDebuff ? ' stat-debuff' : ''}${e.isCrit ? ' crit' : ''}`}>
+                                                    const isStatDebuff = !e.isCrit && !e.isMiss && typeof e.value === 'string';
+                                                    return <div key={e.id || i} className={`damage-indicator${isStatDebuff ? ' stat-debuff' : ''}${e.isCrit ? ' crit' : ''}${e.isMiss ? ' miss' : ''}`}>
                                                         {e.value}
                                                     </div>
                                                 })}
@@ -264,7 +267,7 @@ export default function FightersCombatGrid(props) {
                                             const liveFighter = props.combatManager.getCombatant(fighter.id);
                                             const targetId = liveFighter?.targetId;
                                             const target = targetId ? props.combatManager.getCombatant(targetId) : null;
-                                            return target?.portrait && !details?.dead ? (
+                                            return target?.portrait && !target?.invisible && !details?.dead ? (
                                                 <div className="monster-target-indicator" style={{ zIndex: 310, position: 'absolute' }}>
                                                     <div
                                                         className="monster-target-portrait"

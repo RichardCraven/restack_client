@@ -358,11 +358,11 @@ const MonstersCombatGrid = ({
                         <div className="portrait-overlay" style={{ zIndex: 301, position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', overflow: 'visible' }}>
                             <div className="damage-indicator-container" style={{ overflow: 'visible' }}>
                                 {(visibleDamageIndicators[vct.id] || []).map((indicator, idx, arr) => {
-                                    const isStatDebuff = !indicator.isCrit && typeof indicator.value === 'string' && indicator.type !== 'robbed';
+                                    const isStatDebuff = !indicator.isCrit && !indicator.isMiss && typeof indicator.value === 'string' && indicator.type !== 'robbed';
                                     const yOffset = idx * 28;
                                     return (
                                         <div
-                                            className={`damage-indicator${isStatDebuff ? ' stat-debuff' : ''}${indicator.isCrit ? ' crit' : ''}${indicator.type === 'heal' ? ' heal' : ''}${indicator.type === 'robbed' ? ' robbed' : ''}`}
+                                            className={`damage-indicator${isStatDebuff ? ' stat-debuff' : ''}${indicator.isCrit ? ' crit' : ''}${indicator.type === 'heal' ? ' heal' : ''}${indicator.type === 'robbed' ? ' robbed' : ''}${indicator.isMiss ? ' miss' : ''}`}
                                             key={indicator.id}
                                             style={{
                                                 transform: `translateY(-${yOffset}px)`,
@@ -384,7 +384,7 @@ const MonstersCombatGrid = ({
                 </div>
             )}
             {/* Main Monster: only render if not dead, or if dead but still animating */}
-            {monster && battleData[monster.id] && (!battleData[monster.id].dead || (showDeathAnimation[monster.id] && !fullyDead[monster.id])) && (
+            {monster && battleData[monster.id] && !battleData[monster.id]?.invisible && (!battleData[monster.id].dead || (showDeathAnimation[monster.id] && !fullyDead[monster.id])) && (
                 <div
                     className="lane-wrapper"
                     style={{
@@ -554,7 +554,7 @@ const MonstersCombatGrid = ({
                                 {(() => {
                                     const targetId = battleData[monster.id]?.targetId;
                                     const target = targetId ? combatManager.getCombatant(targetId) : null;
-                                    return target?.portrait && !battleData[monster.id]?.dead ? (
+                                    return target?.portrait && !target?.invisible && !battleData[monster.id]?.dead ? (
                                         <div className="monster-target-indicator" style={{ zIndex: 10 }}>
                                             <div
                                                 className="monster-target-portrait"
@@ -609,7 +609,7 @@ const MonstersCombatGrid = ({
                 </div>
             )}
                 {/* Minions: render only those present in battleData and flagged as isMinion */}
-                {Object.values(battleData).filter(m => m.isMinion && (!m.dead || m.bifurcating || (showDeathAnimation[m.id] && !fullyDead[m.id]))).map((minion) => (
+                {Object.values(battleData).filter(m => m.isMinion && !m.invisible && (!m.dead || m.bifurcating || (showDeathAnimation[m.id] && !fullyDead[m.id]))).map((minion) => (
                     <div
                         key={minion.id}
                         className="lane-wrapper"

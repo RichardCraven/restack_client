@@ -18,8 +18,34 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
         targetInRange,
         getSelectedFighter,
         onEraTransition,
-        targetKilled
+        targetKilled,
+        setTargetId,
+        getAllCombatants
     } = callbacks;
+
+    const getOccupiedCoords = (combatant) => {
+        if (!combatant) return [];
+        if (Array.isArray(combatant.occupiedCoords) && combatant.occupiedCoords.length > 0) {
+            return combatant.occupiedCoords;
+        }
+        if (combatant.coordinates) return [combatant.coordinates];
+        return [];
+    };
+
+    const getShortestTileDistance = (a, b) => {
+        const aCoords = getOccupiedCoords(a);
+        const bCoords = getOccupiedCoords(b);
+        if (aCoords.length === 0 || bCoords.length === 0) return Number.POSITIVE_INFINITY;
+
+        let minDistance = Number.POSITIVE_INFINITY;
+        aCoords.forEach((ac) => {
+            bCoords.forEach((bc) => {
+                const distance = Math.abs(ac.x - bc.x) + Math.abs(ac.y - bc.y);
+                if (distance < minDistance) minDistance = distance;
+            });
+        });
+        return minDistance;
+    };
     // Determine initial facing: right for fighters, left for monsters/minions
     let initialFacing = 'right';
     if (fighter.isMonster || fighter.isMinion) {
@@ -35,6 +61,7 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
         portrait: fighter.portrait,
         portraitFilter: fighter.portraitFilter || null,
         level: fighter.level,
+        FIGHT_INTERVAL: FIGHT_INTERVAL,
     // Use incoming current hp if provided (persisted from DungeonPage), otherwise default to stats.hp
     hp: (typeof fighter.hp === 'number') ? fighter.hp : fighter.stats.hp,
     // starting_hp represents the max HP for the fighter (may be provided or fall back to stats.hp)
@@ -44,6 +71,8 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
         // with a full pool so their openers are immediately available.
         energy: fighter.isMinion ? 0 : 100,
         tempo: 1,
+        turnCycleCount: 0,
+        turnCycleStarted: false,
         atk: fighter.stats.atk,
         stats: {
             str: fighter.stats.str,
@@ -75,6 +104,10 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
         missed: false,
         drained: false,
         drained_eras: 0,
+        invisible: false,
+        invisible_eras: 0,
+        petrified: false,
+        petrified_eras: 0,
 
         // -- New Regeneration Properties --
         regenerating: false,
@@ -141,6 +174,7 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
         color: fighter.color,
         facing: initialFacing, // persistent facing property
         attack: function(){
+            if (this.invisible || this.petrified) return;
             const target = getCombatant(this.targetId);
             if(!target) return;
             if(!target){
@@ -159,6 +193,7 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
             initiateAttack(this);
         },
         manualAttack: function(){
+            if (this.invisible || this.petrified) return;
             this.manualMovesCurrent-= 2
             initiateAttack(this, true);
         },
@@ -199,15 +234,66 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
             } catch (err) {}
             processMove(this);
         },
+        retargetToCloserEnemyIfNeeded: function(){
+            if (!(this.isMonster || this.isMinion) || this.behaviorSequence !== 'brawler') return;
+            if (typeof getAllCombatants !== 'function') return;
+
+            const combatants = getAllCombatants();
+            if (!combatants) return;
+
+            const currentTarget = this.targetId ? combatants[this.targetId] : null;
+            if (!currentTarget || currentTarget.dead || currentTarget.isVCT || currentTarget.invisible) {
+                acquireTarget(this);
+                return;
+            }
+
+            const enemies = Object.values(combatants).filter(e =>
+                e &&
+                e.id !== this.id &&
+                !e.dead &&
+                !e.invisible &&
+                !e.isVCT &&
+                !e.isMonster &&
+                !e.isMinion
+            );
+            if (enemies.length === 0) return;
+
+            const currentDistance = getShortestTileDistance(this, currentTarget);
+            let closerEnemy = null;
+            let closerDistance = currentDistance;
+
+            enemies.forEach((enemy) => {
+                if (enemy.id === currentTarget.id) return;
+                const enemyDistance = getShortestTileDistance(this, enemy);
+                if (enemyDistance < closerDistance) {
+                    closerDistance = enemyDistance;
+                    closerEnemy = enemy;
+                }
+            });
+
+            if (!closerEnemy) return;
+
+            if (typeof setTargetId === 'function') {
+                setTargetId(this, closerEnemy.id, 'brawler-retarget-closer-enemy');
+            } else {
+                this.targetId = closerEnemy.id;
+            }
+            this.pendingAttack = chooseAttackType(this, closerEnemy);
+        },
         setToFrozen: function(val){
             this.frozen = true;
             this.wounded = false;
             this.frozenPoints += val
         },
-        turnCycle: function(){
-            let count = 0;
+        turnCycle: function(startCount = null){
+            this.turnCycleStarted = true;
+            // Resume from the exact internal tick position when restarting mid-cycle
+            // (for example after a speed change). Using tempo here causes visible
+            // jitter because tempo is only the rounded display value.
+            let count = typeof startCount === 'number'
+                ? startCount
+                : (!this._inRestartTurnCycle && typeof this.turnCycleCount === 'number' ? this.turnCycleCount : 0);
             // Use dex when present (crew), otherwise fall back to speed (monsters). Default to 1.
-            // Prefer a positive dex value; fall back to a positive speed value; otherwise default to 1
             const effectiveStat = (this.stats && (typeof this.stats.dex === 'number') && this.stats.dex > 0) ? this.stats.dex : ((this.stats && (typeof this.stats.speed === 'number') && this.stats.speed > 0) ? this.stats.speed : 1);
             let factor = (1 / effectiveStat * 25)
             let increment = (1 / factor)
@@ -241,6 +327,7 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
                     return
                 }
                 count += increment;
+                this.turnCycleCount = count;
                 if(this.frozen){
                     debugger
                     this.tempo = Math.floor((count/100)*100);
@@ -340,6 +427,24 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
                             if (typeof broadcastDataUpdate === 'function' && !isCombatOver()) broadcastDataUpdate(this);
                         }
                     }
+
+                    if (this.invisible && this.invisible_eras > 0) {
+                        this.invisible_eras--;
+                        if (this.invisible_eras <= 0) {
+                            this.invisible = false;
+                            this.invisible_eras = 0;
+                            if (typeof broadcastDataUpdate === 'function' && !isCombatOver()) broadcastDataUpdate(this);
+                        }
+                    }
+
+                    if (this.petrified && this.petrified_eras > 0) {
+                        this.petrified_eras--;
+                        if (this.petrified_eras <= 0) {
+                            this.petrified = false;
+                            this.petrified_eras = 0;
+                            if (typeof broadcastDataUpdate === 'function' && !isCombatOver()) broadcastDataUpdate(this);
+                        }
+                    }
                     // -- Bleed effect: damage per era --
                     if (this.bleed && this.bleed_eras > 0 && !this.dead) {
                         const bleedDamage = Math.floor(Math.random() * 6) + 3; // 3-8 damage
@@ -396,8 +501,9 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
                 }
 
                 const eraMove = () => {
-                    if(this.stunned) return; // stunned: cannot move or attack
+                    if(this.stunned || this.petrified) return; // petrified/stunned cannot move or attack
                     if(!era.moved && !this.onMoveCooldown){
+                        this.retargetToCloserEnemyIfNeeded();
                         era.moved = true;
                         if(this.movesLeft > 0) this.movesLeft--;
                         this.move(); // processMove handles movement and attack
@@ -434,6 +540,7 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
             this._inRestartTurnCycle = true;
             clearInterval(this.interval)
             this.tempo = 0;
+            this.turnCycleCount = 0;
             this.movesLeft = this.movesPerTurnCycle;
             this.eras.forEach(e=>e.moved = e.attacked = false)
             this._lastEraIndex = -1;
@@ -494,26 +601,17 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
         unlock: function(){
             this.locked = false;
         },
-        // Allow updating the fighter's interval dynamically
+        // Allow updating the fighter's interval dynamically without resetting tempo.
         setFightInterval: function(newInterval) {
             this.FIGHT_INTERVAL = newInterval;
-            // If a turn cycle is running, restart it with the new interval.
-            // Guard against reentrance: if we are already inside restartTurnCycle
-            // (e.g. _expireBerserker calling setFightInterval from within the
-            // patched restartTurnCycle), only clear the stale interval and let the
-            // outer restartTurnCycle finish normally. Without this guard, original()
-            // (which contains side-effects like feared_eras decrement) would run
-            // twice — once from the inner restartTurnCycle and once from the outer.
-            if (this.interval) {
-                clearInterval(this.interval);
-                this.interval = null;
-                if (!this._inRestartTurnCycle) {
-                    this.restartTurnCycle();
-                }
-                // else: the outer restartTurnCycle already called clearInterval above,
-                // so the old interval is gone. It will call turnCycle() at the end of
-                // its own execution with the updated FIGHT_INTERVAL already in place.
+            if (!this.turnCycleStarted || !this.interval) {
+                return;
             }
+            const currentCount = typeof this.turnCycleCount === 'number' ? this.turnCycleCount : 0;
+            // setInterval cannot adopt a new delay in place, so restart it at the
+            // same exact turn-cycle count to avoid snapping the tempo bar.
+            clearInterval(this.interval);
+            this.turnCycle(currentCount);
         }
     };
 }

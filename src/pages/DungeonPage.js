@@ -531,6 +531,7 @@ class DungeonPage extends React.Component {
             , showCampPopup: false
             , campWarningMessage: null
             , showFoodPrepOverlay: false
+            , showSpellsOverlay: false
         }
     // Native browser tooltip will be used for death-tracker; no custom tooltip state required.
         // Track timers/intervals created by this component so we can clear on unmount
@@ -3630,7 +3631,7 @@ class DungeonPage extends React.Component {
     }
 
     handleCloseCampPopup = () => {
-        try { this.setState({ showCampPopup: false }, () => this._cleanupModalBodyClass()); } catch(e) {}
+        try { this.setState({ showCampPopup: false, showFoodPrepOverlay: false, showSpellsOverlay: false }, () => this._cleanupModalBodyClass()); } catch(e) {}
     }
 
     handleOpenFoodPrep = () => {
@@ -3639,6 +3640,14 @@ class DungeonPage extends React.Component {
 
     handleFoodPrepBack = () => {
         this.setState({ showFoodPrepOverlay: false });
+    }
+
+    handleOpenSpells = () => {
+        this.setState({ showSpellsOverlay: true });
+    }
+
+    handleSpellsBack = () => {
+        this.setState({ showSpellsOverlay: false });
     }
 
     handleStartRecipe = (recipe) => {
@@ -3665,6 +3674,11 @@ class DungeonPage extends React.Component {
         this.setState({ showFoodPrepOverlay: false, showCampPopup: false }, () => this._cleanupModalBodyClass());
     }
     render(){
+        const crew = ((this.props.crewManager && this.props.crewManager.crew) || []);
+        const hasMeleeTrainerCandidate = crew.some(member => ['soldier', 'monk', 'barbarian'].includes((member.type || '').toLowerCase()));
+        const hasMagicUser = crew.some(member => ['wizard', 'sage'].includes((member.type || '').toLowerCase()));
+        const magicUsers = crew.filter(member => ['wizard', 'sage'].includes((member.type || '').toLowerCase()));
+
         return (
         <div className={`dungeon-container ${this.state.ritualWrecked ? 'wrecked' : ''}`}>
             <CModal className={this.state.modalType === 'PrepComplete' ? 'prep-complete-modal' : this.state.modalType === 'RitualComplete' ? 'ritual-complete-modal' : this.state.modalType === 'Magic' ? 'ritual-encounter-modal' : this.state.modalType === 'FoodComplete' ? 'food-complete-modal' : ''} alignment="center" visible={this.state.showModal} onClose={() => this.onUpdateModalClosed()}>
@@ -3738,7 +3752,7 @@ class DungeonPage extends React.Component {
                 <CModalBody style={{position:'relative', zIndex:2}}>
                     {/* TOP: crew portrait row */}
                     <div className="camp-crew-row">
-                        {((this.props.crewManager && this.props.crewManager.crew) || []).map((member, i) => (
+                        {crew.map((member, i) => (
                             <div key={i} className="camp-crew-tile">
                                 <Tile
                                     id={i}
@@ -3764,22 +3778,30 @@ class DungeonPage extends React.Component {
                             <span className="camp-btn-icon"><span role="img" aria-label="campsite">🏕️</span></span>
                             <span>Recuperate</span>
                         </button>
-                        <button className="camp-action-btn" onClick={() => {}}>
-                            <span className="camp-btn-icon"><span role="img" aria-label="crossed swords">⚔️</span></span>
-                            <span>Train</span>
+                        <button className="camp-action-btn" onClick={this.handleOpenQuestsPopup}>
+                            <span className="camp-btn-icon"><span role="img" aria-label="scroll">📜</span></span>
+                            <span>Quests</span>
                         </button>
                         <button className="camp-action-btn" onClick={this.handleOpenFoodPrep}>
                             <span className="camp-btn-icon"><span role="img" aria-label="meat">🍖</span></span>
                             <span>Prepare Food</span>
                         </button>
-                        <button className="camp-action-btn" onClick={this.handleOpenQuestsPopup}>
-                            <span className="camp-btn-icon"><span role="img" aria-label="scroll">📜</span></span>
-                            <span>Quests</span>
-                        </button>
                         <button className="camp-action-btn" onClick={() => {}}>
                             <span className="camp-btn-icon"><span role="img" aria-label="map">🗺️</span></span>
                             <span>Map</span>
                         </button>
+                        {hasMeleeTrainerCandidate && (
+                            <button className="camp-action-btn" onClick={() => {}}>
+                                <span className="camp-btn-icon"><span role="img" aria-label="crossed swords">⚔️</span></span>
+                                <span>Train</span>
+                            </button>
+                        )}
+                        {hasMagicUser && (
+                            <button className="camp-action-btn" onClick={this.handleOpenSpells}>
+                                <span className="camp-btn-icon"><span role="img" aria-label="sparkles">✨</span></span>
+                                <span>Spells</span>
+                            </button>
+                        )}
                     </div>
 
                     {/* BOTTOM: trophies / card deck / shards tiles */}
@@ -3839,6 +3861,87 @@ class DungeonPage extends React.Component {
                                                     {isCookingAnything ? 'Busy' : canAfford ? 'Cook' : 'Not enough food'}
                                                 </div>
                                             )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    );
+                })()}
+
+                {this.state.showSpellsOverlay && (() => {
+                    const normalizeImgUrl = (value) => {
+                        if (!value) return '';
+                        const resolved = typeof value === 'string' ? value : (value.default || '');
+                        if (!resolved) return '';
+                        return `url(\"${encodeURI(resolved)}\")`;
+                    };
+
+                    return (
+                        <div className="spells-overlay">
+                            <div className="spells-overlay-header">
+                                <button className="spells-overlay-back" onClick={this.handleSpellsBack}>← Back</button>
+                                <div className="spells-overlay-title"><span role="img" aria-label="sparkles">✨</span> Dungeon Spells</div>
+                                <div className="spells-overlay-subtitle">Combat spells are excluded here. Rituals and prep magic only.</div>
+                            </div>
+
+                            <div className="spells-user-list">
+                                {magicUsers.map((member) => {
+                                    const knownRitualKeys = member.knownRituals || [];
+                                    const preparedRituals = (member.specialActions || [])
+                                        .filter(action => action && action.type === 'ritual' && action.available)
+                                        .map(action => action.ritualKey || action.subtype);
+                                    const inProgressRituals = (member.specialActions || [])
+                                        .filter(action => action && action.type === 'ritual' && !action.available)
+                                        .map(action => action.ritualKey || action.subtype);
+
+                                    return (
+                                        <div key={member.id || member.name} className="spells-user-block">
+                                            <div className="spells-user-portrait-wrap">
+                                                <Tile
+                                                    id={member.id || member.name}
+                                                    tileSize={108}
+                                                    image={member.image || null}
+                                                    imageOverride={member.portrait || null}
+                                                    contains={member.type}
+                                                    data={member}
+                                                    color={member.color}
+                                                    editMode={false}
+                                                    type={'crew-tile'}
+                                                    handleClick={() => {}}
+                                                    handleHover={() => {}}
+                                                />
+                                                <div className="spells-user-name">{member.name}</div>
+                                                <div className="spells-user-class">{member.type}</div>
+                                            </div>
+
+                                            <div className="spells-tiles-grid">
+                                                {knownRitualKeys.length === 0 && (
+                                                    <div className="spells-empty">No dungeon spells learned yet.</div>
+                                                )}
+
+                                                {Object.values(RITUALS)
+                                                    .filter(ritual => knownRitualKeys.includes(ritual.key))
+                                                    .map((ritual) => {
+                                                        const isReady = preparedRituals.includes(ritual.key);
+                                                        const isPreparing = inProgressRituals.includes(ritual.key);
+                                                        const iconUrl = images[ritual.icon];
+
+                                                        return (
+                                                            <div key={`${member.id || member.name}-${ritual.key}`} className={`spell-tile ${isReady ? 'ready' : ''} ${isPreparing ? 'preparing' : ''}`}>
+                                                                <div
+                                                                    className="spell-tile-icon"
+                                                                    style={{ backgroundImage: normalizeImgUrl(iconUrl) }}
+                                                                ></div>
+                                                                <div className="spell-tile-name">{ritual.name}</div>
+                                                                <div className="spell-tile-description">{ritual.description}</div>
+                                                                <div className="spell-tile-status">
+                                                                    {isReady ? 'Ready' : isPreparing ? 'Preparing' : 'Known'}
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                            </div>
                                         </div>
                                     );
                                 })}

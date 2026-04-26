@@ -438,7 +438,8 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
      * Expire an active shield wall: un-freeze the Soldier, clear the wall data,
      * and notify MonsterBattle to remove the visual overlay.
      */
-    this._expireShieldWall = (caller, combatants) => { // eslint-disable-line no-unused-vars
+    this._expireShieldWall = (caller, combatants, options = {}) => { // eslint-disable-line no-unused-vars
+        const { startCooldown = true } = options;
         caller.shieldWallActive = false;
         if (caller._shieldWallExpiryTimer) {
             clearTimeout(caller._shieldWallExpiryTimer);
@@ -456,13 +457,19 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
         }
         // Restart the cooldown interval so the special can be used again
         const shieldWall = caller.specials && caller.specials.find(s => s && s.name === 'shield wall');
-        if (shieldWall && typeof this.kickoffSpecialCooldown === 'function') {
+        if (startCooldown && shieldWall && typeof this.kickoffSpecialCooldown === 'function') {
             this.kickoffSpecialCooldown(shieldWall);
         }
         // Broadcast so the UI refreshes the cooldown bar
         if (typeof this.broadcastDataUpdate === 'function') {
             try { this.broadcastDataUpdate(caller); } catch (e) { /* non-fatal */ }
         }
+    }
+
+    // Used by CombatManager death handling so an active wall is removed
+    // immediately when the Soldier dies.
+    this.destroyShieldWallOnDeath = (caller, combatants) => {
+        this._expireShieldWall(caller, combatants, { startCooldown: false });
     }
 
     this.processMove = (caller, combatants) => {

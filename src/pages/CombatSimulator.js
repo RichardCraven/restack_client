@@ -71,8 +71,11 @@ class CrewManagerPage extends React.Component{
 
         // Restore combat speed from meta if present
         if (meta && meta.combatSpeed && this.props.combatManager) {
-            this.props.combatManager.FIGHT_INTERVAL = meta.combatSpeed;
-            // Optionally force update if UI needs to reflect this
+            if (typeof this.props.combatManager.updateAllFightIntervals === 'function') {
+                this.props.combatManager.updateAllFightIntervals(meta.combatSpeed);
+            } else {
+                this.props.combatManager.FIGHT_INTERVAL = meta.combatSpeed;
+            }
             this.forceUpdate();
         }
 
@@ -259,7 +262,11 @@ class CrewManagerPage extends React.Component{
 
   updateCombatSpeed = (newInterval) => {
     if (this.props.combatManager) {
-        this.props.combatManager.FIGHT_INTERVAL = newInterval;
+        if (typeof this.props.combatManager.updateAllFightIntervals === 'function') {
+            this.props.combatManager.updateAllFightIntervals(newInterval);
+        } else {
+            this.props.combatManager.FIGHT_INTERVAL = newInterval;
+        }
         // Persist to meta
         const meta = getMeta();
         meta.combatSpeed = newInterval;

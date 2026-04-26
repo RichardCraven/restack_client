@@ -399,7 +399,7 @@ export function CrewManager(){
             inventory: [],
             passives: ['inspiring_force'],
             specials: ['shield_wall', 'force_back'],
-            attacks: ['sword_swing', 'sword_swing', 'sword_swing'],
+            attacks: ['sword_swing'],
             weaknesses: ['ice', 'electricity', 'blood_magic'],
             description: "Once the captain of the royal army's legendary vangard battalion, Sardonis has a reputation for fair leadership and honor.",
             specialActions: [],

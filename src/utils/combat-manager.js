@@ -32,6 +32,14 @@ const clone = (val) => {
     return JSON.parse(JSON.stringify(val));
 }
 
+const formatCombatText = (value) => String(value || '')
+    .replaceAll('_', ' ')
+    .trim()
+    .split(' ')
+    .filter(Boolean)
+    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+
 export function CombatManager() {
     // Update all combatants' intervals and restart their turn cycles
     this.updateAllFightIntervals = (newInterval) => {
@@ -92,6 +100,43 @@ export function CombatManager() {
     this.monsterAI = new MonsterAI(NUM_COLUMNS, MAX_LANES, this.FIGHT_INTERVAL);
     this.overlayManager = null;
     this.selectedFighter = null;
+    this.combatLog = [];
+    this.combatLogSequence = 0;
+    this.getCombatLog = () => this.combatLog.slice();
+    this.getCombatantLogName = (combatant) => {
+        if (!combatant) return 'Unknown';
+        if (combatant.isMinion) return formatCombatText(combatant.type || combatant.name || 'minion');
+        return combatant.name || formatCombatText(combatant.type || 'unknown');
+    };
+    this.getCombatActionName = (action) => {
+        if (!action) return 'Attack';
+        return formatCombatText(action.name || action.subtype || action.type || 'attack');
+    };
+    this.appendCombatLog = (message) => {
+        if (!message) return;
+        this.combatLogSequence += 1;
+        this.combatLog.push({
+            id: `combat_log_${this.combatLogSequence}`,
+            message
+        });
+        if (this.combatLog.length > 200) {
+            this.combatLog.splice(0, this.combatLog.length - 200);
+        }
+    };
+    this.buildCombatLogMessage = ({ caller, target, attackName, result, damage = null, effectText = null, criticalHit = false }) => {
+        const attackerName = this.getCombatantLogName(caller);
+        const targetName = this.getCombatantLogName(target);
+        const resolvedAttackName = this.getCombatActionName(attackName);
+
+        if (result === 'miss') {
+            return `${attackerName} attacks ${targetName} with ${resolvedAttackName}, misses`;
+        }
+
+        let message = `${attackerName} attacks ${targetName} with ${resolvedAttackName}, hits for ${damage} damage`;
+        if (criticalHit) message += ' critically';
+        if (effectText) message += ` and ${effectText}`;
+        return message;
+    };
     this.combatPaused = false;
     this.pauseCombat = (val) => {
         this.combatPaused = val
@@ -99,6 +144,8 @@ export function CombatManager() {
     }
     this.reset = () => {
         this.combatPaused = false;
+        this.combatLog = [];
+        this.combatLogSequence = 0;
         if (this.combatants && typeof this.combatants === 'object') {
             Object.keys(this.combatants).forEach(id => {
                 if (this.combatants[id]) {
@@ -698,7 +745,9 @@ export function CombatManager() {
             targetInRange: this.targetInRange,
             getSelectedFighter: this.getSelectedFighter,
             onEraTransition: this.onEraTransition,
-            targetKilled: this.targetKilled
+            targetKilled: this.targetKilled,
+            setTargetId: this.setTargetId.bind(this),
+            getAllCombatants: () => this.combatants
             // combatPaused: this.combatPaused
         }
         // Store on `this` so runtime methods like spawnMinion (defined outside
@@ -866,7 +915,7 @@ export function CombatManager() {
         return !!res;
     }
     this.getLiveFighters = () => {
-        return Object.values(this.combatants).filter(e => !e.isMonster && !e.isMinion && !e.dead)
+        return Object.values(this.combatants).filter(e => !e.isMonster && !e.isMinion && !e.dead && !e.invisible)
     }
     this.itemUsed = (item, userInput) => {
         console.log('item used, ', item);
@@ -890,6 +939,7 @@ export function CombatManager() {
     }
     this.fighterSpecialAttack = (special) => {
         if (!this.selectedFighter) return
+        if (this.selectedFighter.invisible || this.selectedFighter.petrified) return
         const target = this.combatants[this.selectedFighter.targetId];
         switch (this.selectedFighter.type) {
             case 'soldier':
@@ -1075,6 +1125,7 @@ export function CombatManager() {
         const targetIsInvalid =
             !currentTarget ||
             currentTarget.dead ||
+            currentTarget.invisible ||
             (callerIsMonster && (currentTarget.isMonster || currentTarget.isMinion || currentTarget.isVCT)) ||
             (!callerIsMonster && (!currentTarget.isMonster && !currentTarget.isMinion));
 
@@ -1117,6 +1168,18 @@ export function CombatManager() {
             if (!caller.dead) this.checkOverlap(caller)
             this.updateCoordinates(caller)
         }
+
+        // Invisibility invalidates targeting immediately.
+        Object.values(this.combatants).forEach((combatant) => {
+            if (!combatant || combatant.dead || !combatant.targetId) return;
+            const target = this.combatants[combatant.targetId];
+            if (target && target.invisible) {
+                this.clearTargetListById(combatant.id);
+                this.setTargetId(combatant, null, 'broadcastDataUpdate-target-became-invisible');
+                combatant.pendingAttack = null;
+            }
+        });
+
         this.updateData(clone(this.combatants))
     }
     this.genericChooseAttackType = (caller, target) => {
@@ -1398,6 +1461,13 @@ export function CombatManager() {
         }
     }
     this.initiateAttack = (caller, manualAttack = false) => {
+        if (!caller || caller.dead || caller.invisible || caller.petrified) {
+            if (caller) {
+                caller.active = false;
+                caller.aiming = false;
+            }
+            return;
+        }
         // let manualTarget = false;
         const targetInRange = (caller, target) => { // eslint-disable-line no-unused-vars
             const pendingAttack = caller.pendingAttack; // eslint-disable-line no-unused-vars
@@ -1640,8 +1710,8 @@ export function CombatManager() {
             }
             return
         }
-        const liveMonsters = Object.values(this.combatants).filter(e => e && !e.dead && (e.isMonster || e.isMinion)),
-            liveFighters = Object.values(this.combatants).filter(e => e && !e.dead && !e.isMonster && !e.isMinion);
+        const liveMonsters = Object.values(this.combatants).filter(e => e && !e.dead && !e.invisible && (e.isMonster || e.isMinion)),
+            liveFighters = Object.values(this.combatants).filter(e => e && !e.dead && !e.invisible && !e.isMonster && !e.isMinion);
         let target;
         // Sticky target guard for generic fallback: if caller already has a valid target
         // from the filtered lists, do not re-acquire.
@@ -1698,10 +1768,10 @@ export function CombatManager() {
         // Exclude VCTs from monster/minion targeting, but allow for fighters
         let liveEnemies;
         if (caller && caller.isMonster) {
-            liveEnemies = Object.values(this.combatants).filter(e => !e.dead && (e.isMonster || e.isMinion) && !e.isVCT);
+            liveEnemies = Object.values(this.combatants).filter(e => !e.dead && !e.invisible && (e.isMonster || e.isMinion) && !e.isVCT);
         } else {
             // Fighters can target VCTs (as extension of mummy)
-            liveEnemies = Object.values(this.combatants).filter(e => !e.dead && (e.isMonster || e.isMinion));
+            liveEnemies = Object.values(this.combatants).filter(e => !e.dead && !e.invisible && (e.isMonster || e.isMinion));
         }
         const targetsSortedVertically = liveEnemies.sort((a, b) => a.coordinates.y - b.coordinates.y);
         let currentTargetIndex = targetsSortedVertically.indexOf(currentTarget)
@@ -1731,7 +1801,7 @@ export function CombatManager() {
     }
     this.processMove = (caller) => {
         if (caller.dead) return;
-        if (caller.stunned) return; // stunned: skip all movement and AI logic this tick
+        if (caller.stunned || caller.petrified) return; // stunned/petrified: skip all movement and AI logic this tick
         if (!this.ensureValidTarget(caller, 'processMove')) return;
         // Recompute facing before attempting movement so facing isn't stale as units shift around
         try { this.recalculateFacing(caller); } catch (e) { }
@@ -2181,6 +2251,12 @@ export function CombatManager() {
     };
 
     this.hitsCombatant = (caller, combatantHit, supplementalData = null, options = {}) => {
+        if (caller && (caller.invisible || caller.petrified)) {
+            return;
+        }
+        if (combatantHit && (combatantHit.invisible || combatantHit.petrified)) {
+            return;
+        }
         // Defensive: never apply damage to an already-dead, missing, or VCT combatant
         // If the target is the Mummy, redirect damage indicators to its VCT
         let vctId = null;
@@ -2207,7 +2283,7 @@ export function CombatManager() {
         }
         // Run hit-check (speed-based miss chance) unless the caller forces a hit via options
         if (!options.forceHit && !this.hitCheck(caller, combatantHit)) {
-            this.missesTarget(caller);
+            this.missesTarget(caller, combatantHit);
             return;
         }
         // if(caller.type === 'wizard'){
@@ -2365,9 +2441,27 @@ export function CombatManager() {
 
         // ── Attack effect application ──────────────────────────────────────────
         // Apply any status effects defined on the attack (stun, bleed, energy drain, etc.)
+        let appliedEffectText = null;
         if (caller.pendingAttack && caller.pendingAttack.effect && combatantHit.hp > 0) {
-            applyAttackEffect(combatantHit, caller.pendingAttack.effect, this.broadcastDataUpdate, criticalHit);
+            const pendingEffect = caller.pendingAttack.effect;
+            const resolvedEffectType = (pendingEffect.type === 'special' && pendingEffect.name)
+                ? pendingEffect.name
+                : pendingEffect.type;
+            const effectRecipient = (String(resolvedEffectType || '').toLowerCase() === 'invisibility')
+                ? caller
+                : combatantHit;
+            appliedEffectText = applyAttackEffect(effectRecipient, pendingEffect, this.broadcastDataUpdate, criticalHit);
         }
+
+        this.appendCombatLog(this.buildCombatLogMessage({
+            caller,
+            target: combatantHit,
+            attackName: isSpecial ? supplementalData : caller.pendingAttack,
+            result: 'hit',
+            damage,
+            effectText: appliedEffectText,
+            criticalHit
+        }));
 
         if (combatantHit.hp <= 0) {
             combatantHit.hp = 0;
@@ -2383,7 +2477,7 @@ export function CombatManager() {
             caller.missed = false;
 
             if (!this.isMonster && !this.isMinion) {
-                const hasValidTargets = Object.values(this.combatants).filter(e => e.isMonster || e.isMinion).length >= 1;
+                const hasValidTargets = Object.values(this.combatants).filter(e => (e.isMonster || e.isMinion) && !e.dead && !e.invisible).length >= 1;
                 if (hasValidTargets) {
                     const target = this.combatants[caller.targetId];
                     const attack = this.chooseAttackType(caller, target);
@@ -2394,7 +2488,7 @@ export function CombatManager() {
                 }
             } else {
                 //is monster or minion
-                const hasValidTargets = Object.values(this.combatants).filter(e => !e.isMonster && !e.isMinion).length >= 1;
+                const hasValidTargets = Object.values(this.combatants).filter(e => !e.isMonster && !e.isMinion && !e.dead && !e.invisible).length >= 1;
                 if (hasValidTargets) {
                     const target = this.combatants[caller.targetId];
                     const attack = this.chooseAttackType(caller, target);
@@ -2417,8 +2511,14 @@ export function CombatManager() {
         }, 1500)
     }
     this.hitsTarget = (caller, tempTarget = null) => {
+        if (caller && (caller.invisible || caller.petrified)) {
+            return;
+        }
         // Prevent monsters from attacking their own VCT
         let target = tempTarget ? tempTarget : this.getCombatant(caller.targetId);
+        if (target && (target.invisible || target.petrified)) {
+            return;
+        }
         if (caller && caller.isMonster && target && target.isVCT && target.parentMonsterId === caller.id) {
             console.warn('[CombatManager.hitsTarget] Monster tried to attack its own VCT. Skipping.');
             return;
@@ -2427,7 +2527,7 @@ export function CombatManager() {
         if (target && target.isVCT && target.parentMonsterId && this.combatants[target.parentMonsterId]) {
             target = this.combatants[target.parentMonsterId];
         }
-        if (!target || target.dead || !this.combatants[target.id] || target.isVCT) {
+        if (!target || target.dead || target.invisible || target.petrified || !this.combatants[target.id] || target.isVCT) {
             console.warn('[CombatManager.hitsTarget] Attempted to hit missing/dead/VCT target:', target && target.id, target);
             return;
         }
@@ -2496,9 +2596,27 @@ export function CombatManager() {
 
         // ── Attack effect application ──────────────────────────────────────────
         // Apply any status effects defined on the attack (stun, bleed, energy drain, etc.)
+        let appliedEffectText = null;
         if (caller.pendingAttack && caller.pendingAttack.effect && target.hp > 0) {
-            applyAttackEffect(target, caller.pendingAttack.effect, this.broadcastDataUpdate, criticalHit);
+            const pendingEffect = caller.pendingAttack.effect;
+            const resolvedEffectType = (pendingEffect.type === 'special' && pendingEffect.name)
+                ? pendingEffect.name
+                : pendingEffect.type;
+            const effectRecipient = (String(resolvedEffectType || '').toLowerCase() === 'invisibility')
+                ? caller
+                : target;
+            appliedEffectText = applyAttackEffect(effectRecipient, pendingEffect, this.broadcastDataUpdate, criticalHit);
         }
+
+        this.appendCombatLog(this.buildCombatLogMessage({
+            caller,
+            target,
+            attackName: caller.pendingAttack,
+            result: 'hit',
+            damage,
+            effectText: appliedEffectText,
+            criticalHit
+        }));
 
         caller.energy = Math.min(100, (caller.energy || 0) + (caller.stats?.fort || 0) + (caller.level ? caller.level / 2 : 0));
         if (target.hp <= 0) {
@@ -2515,7 +2633,7 @@ export function CombatManager() {
             caller.missed = false;
 
             if (!caller.isMonster && !caller.isMinion) {
-                const hasValidTargets = Object.values(this.combatants).filter(e => (e.isMonster || e.isMinion) && !e.dead).length >= 1
+                const hasValidTargets = Object.values(this.combatants).filter(e => (e.isMonster || e.isMinion) && !e.dead && !e.invisible).length >= 1
                 if (hasValidTargets) {
                     const attack = this.chooseAttackType(caller, target);
                     caller.pendingAttack = attack;
@@ -2525,7 +2643,7 @@ export function CombatManager() {
                 }
             } else {
                 // is monster or minion
-                const hasValidTargets = Object.values(this.combatants).filter(e => !e.isMonster && !e.isMinion && !e.dead).length >= 1
+                const hasValidTargets = Object.values(this.combatants).filter(e => !e.isMonster && !e.isMinion && !e.dead && !e.invisible).length >= 1
                 if (hasValidTargets) {
                     const attack = this.chooseAttackType(caller, target);
                     caller.pendingAttack = attack;
@@ -2558,8 +2676,17 @@ export function CombatManager() {
         if (target) {
             const indicatorTarget = (this.vctByMonster && this.vctByMonster[target.id] && this.combatants[`${target.id}_VCT`]) ? this.combatants[`${target.id}_VCT`] : target;
             const missId = Date.now() + Math.random();
-            const missObj = { id: missId, value: 'miss', source: caller?.name || 'unknown' };
+            const missObj = { id: missId, value: 'miss', isMiss: true, source: caller?.name || 'unknown' };
             indicatorTarget.damageIndicators.push(missObj);
+        }
+        this.appendCombatLog(this.buildCombatLogMessage({
+            caller,
+            target,
+            attackName: caller?.pendingAttack,
+            result: 'miss'
+        }));
+        if (typeof this.broadcastDataUpdate === 'function') {
+            this.broadcastDataUpdate(caller);
         }
         setTimeout(() => {
             caller.active = caller.aiming = false;
@@ -2567,7 +2694,7 @@ export function CombatManager() {
             caller.missed = false;
 
             if (!caller.isMonster && !caller.isMinion) {
-                const hasValidTargets = Object.values(this.combatants).filter(e => (e.isMonster || e.isMinion) && !e.dead).length >= 1
+                const hasValidTargets = Object.values(this.combatants).filter(e => (e.isMonster || e.isMinion) && !e.dead && !e.invisible).length >= 1
                 if (hasValidTargets) {
                     const attack = this.chooseAttackType(caller, target);
                     caller.pendingAttack = attack;
@@ -2577,7 +2704,7 @@ export function CombatManager() {
                 }
             } else {
                 // is monster or minion
-                const hasValidTargets = Object.values(this.combatants).filter(e => !e.isMonster && !e.isMinion && !e.dead).length >= 1
+                const hasValidTargets = Object.values(this.combatants).filter(e => !e.isMonster && !e.isMinion && !e.dead && !e.invisible).length >= 1
                 if (hasValidTargets) {
                     const attack = this.chooseAttackType(caller, target);
                     caller.pendingAttack = attack;
@@ -2614,6 +2741,7 @@ export function CombatManager() {
         // Ensure the combatant stops all activity immediately.
         combatant.aiming = false;
         combatant.active = false;
+        this.appendCombatLog(`${this.getCombatantLogName(combatant)} is slain`);
         combatant.attacking = combatant.attackingReverse = false;
         combatant.pendingAttack = null;
         combatant.destinationCoordinates = null;
@@ -2631,6 +2759,32 @@ export function CombatManager() {
         if (combatant.targetId) {
             combatant.targetId = null;
         }
+
+        // If a Soldier dies while Shield Wall is active, tear the wall down
+        // immediately so movement and overlay state stay in sync.
+        if (combatant.type === 'soldier' && (combatant.shieldWallActive || combatant.shieldWallData)) {
+            const soldierAI = this.fighterAI && this.fighterAI.roster && this.fighterAI.roster['soldier'];
+            if (soldierAI && typeof soldierAI.destroyShieldWallOnDeath === 'function') {
+                soldierAI.destroyShieldWallOnDeath(combatant, this.combatants);
+            } else {
+                // Fallback cleanup if Soldier AI instance is unavailable
+                const wallData = combatant.shieldWallData;
+                combatant.shieldWallActive = false;
+                combatant.shieldWallData = null;
+                if (combatant._shieldWallExpiryTimer) {
+                    clearTimeout(combatant._shieldWallExpiryTimer);
+                    combatant._shieldWallExpiryTimer = null;
+                }
+                if (wallData) {
+                    for (let i = activeShieldWalls.length - 1; i >= 0; i--) {
+                        if (activeShieldWalls[i] && activeShieldWalls[i].callerId === combatant.id) {
+                            activeShieldWalls.splice(i, 1);
+                        }
+                    }
+                }
+            }
+        }
+
         // Immediately broadcast update so UI sees dead state instantly
         // if (typeof this.updateData === 'function') {
         this.updateData(clone(this.combatants));
@@ -2911,7 +3065,7 @@ CombatManager.prototype.setTargetId = function (caller, targetId, context = '') 
     }
     const target = this.combatants[targetId];
     // Never allow target assignment to dead/missing combatants.
-    if (!target || target.dead) {
+    if (!target || target.dead || target.invisible) {
         caller.targetId = null;
         return;
     }

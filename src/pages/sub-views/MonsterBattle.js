@@ -187,7 +187,10 @@ class MonsterBattle extends React.Component {
             boardFearActive: false,
             // Transient glow on the casting monster portrait when induce_fear fires
             fearCastingActive: false,
+            combatLog: [],
         }
+        this.combatLogContainerRef = React.createRef();
+        this.latestCombatLogEntryRef = React.createRef();
         // Internal flags for special group-death flow
         this._suppressPersistFinalHP = false;
         // Internal flag to ensure we only inject wizard spells once for simulation battles
@@ -451,6 +454,17 @@ class MonsterBattle extends React.Component {
             }
         } catch (err) {
             console.warn('componentDidUpdate: level-flag clearing failed', err);
+        }
+
+        if (prevState.combatLog.length !== this.state.combatLog.length && this.latestCombatLogEntryRef.current) {
+            try {
+                this.latestCombatLogEntryRef.current.scrollIntoView({
+                    block: 'center',
+                    behavior: 'smooth'
+                });
+            } catch (err) {
+                console.warn('componentDidUpdate: combat-log scroll failed', err);
+            }
         }
     }
     componentWillUnmount() {
@@ -732,8 +746,13 @@ class MonsterBattle extends React.Component {
             console.warn('updateBattleData: normalization failed', err);
         }
 
+        const combatLog = this.props.combatManager && typeof this.props.combatManager.getCombatLog === 'function'
+            ? this.props.combatManager.getCombatLog()
+            : [];
+
         this.setState({
-            battleData: clonedBattleData
+            battleData: clonedBattleData,
+            combatLog
         }, () => {
             // If nothing is selected yet, pick the default top-most / left-most crew member
             if (!this.state.selectedFighter) {
@@ -2100,18 +2119,19 @@ class MonsterBattle extends React.Component {
 
                         </div>
                         <div className="queue-col">
-                            <div className="interaction-header">Queue</div>
-                            <div className="queue-tile-container">
-                                {(this.state.selectedFighter?.action_queue || []).map((action, i)=>{
-                                    return <div 
-                                    key={i} 
-                                    style={{backgroundImage: "url(" + images[action.icon] + ")", cursor: 'pointer'}} 
-                                    className='interaction-tile action' 
-                                    onMouseEnter={() => this.queueTileHovered(action)} 
-                                    onMouseLeave={() => this.queueTileHovered(null)}
-                                    >
-                                        {/* {a} */}
-                                    </div>
+                            <div className="interaction-header">Event Log</div>
+                            <div className="event-log-container" ref={this.combatLogContainerRef}>
+                                {this.state.combatLog.map((entry, index) => {
+                                    const isLatest = index === this.state.combatLog.length - 1;
+                                    return (
+                                        <div
+                                            key={entry.id || index}
+                                            ref={isLatest ? this.latestCombatLogEntryRef : null}
+                                            className="event-log-entry"
+                                        >
+                                            {entry.message}
+                                        </div>
+                                    );
                                 })}
                             </div>
                         </div>
