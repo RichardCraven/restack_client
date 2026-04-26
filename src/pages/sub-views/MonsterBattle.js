@@ -1965,15 +1965,47 @@ class MonsterBattle extends React.Component {
                             <div className="interaction-tooltip">{this.state.hoveredSpecialTile}</div>
                             <div className="interaction-tile-container">
                                 {this.state.selectedFighter?.specials?.map((a, i)=>{
-                                    return a && <div key={i} className='interaction-tile-wrapper'>
+                                    const cm = this.props.combatManager;
+                                    const fallbackSpecial = (typeof a === 'string' && cm && cm.specialsMatrix)
+                                        ? cm.specialsMatrix[a]
+                                        : null;
+                                    const normalizedSpecial = (typeof a === 'string')
+                                        ? (cm?.resolveSpecial?.([a], a) || fallbackSpecial || { name: a.replaceAll('_', ' '), key: a })
+                                        : a;
+                                    const iconCandidate = normalizedSpecial?.iconUrl || normalizedSpecial?.icon;
+                                    const resolveIconSource = (candidate) => {
+                                        if (!candidate) return '';
+                                        if (typeof candidate === 'string') {
+                                            const trimmed = candidate.trim();
+                                            if (!trimmed) return '';
+                                            if (trimmed.startsWith('url(')) {
+                                                return trimmed.replace(/^url\((.*)\)$/i, '$1').replace(/^['\"]|['\"]$/g, '');
+                                            }
+                                            const mapped = images[trimmed];
+                                            if (mapped) return mapped.default || mapped;
+                                            return trimmed;
+                                        }
+                                        if (typeof candidate === 'object' && candidate.default) return candidate.default;
+                                        return '';
+                                    };
+                                    const cssUrl = (value) => {
+                                        if (!value) return '';
+                                        const normalizedValue = String(value).trim().replace(/^['\"]|['\"]$/g, '');
+                                        return `url("${encodeURI(normalizedValue)}")`;
+                                    };
+                                    const specialIcon = resolveIconSource(iconCandidate);
+                                    const specialBackgroundImage = specialIcon
+                                        ? `${cssUrl(specialIcon)}, radial-gradient(white 40%, black 80%)`
+                                        : 'radial-gradient(white 40%, black 80%)';
+                                    return normalizedSpecial && <div key={i} className='interaction-tile-wrapper'>
                                                 <div 
-                                                style={{backgroundImage: "url(" + a?.icon + "), radial-gradient(white 40%, black 80%)", cursor: 'pointer'}} 
-                                                className={`interaction-tile special ${a.selected ? 'selected' : ''}`}
-                                                onClick={() => this.specialTileClicked(a)} 
-                                                onMouseEnter={() => this.specialTileHovered(a)} 
+                                                style={{backgroundImage: specialBackgroundImage, cursor: 'pointer'}} 
+                                                className={`interaction-tile special ${normalizedSpecial.selected ? 'selected' : ''}`}
+                                                onClick={() => this.specialTileClicked(normalizedSpecial)} 
+                                                onMouseEnter={() => this.specialTileHovered(normalizedSpecial)} 
                                                 onMouseLeave={() => this.specialTileHovered(null)}>
                                                 </div>
-                                                <div className="interaction-tile-overlay" style={{width: `${a.cooldown_position}%`, transition: a.cooldown_position === 0 ? '0s' : '0.2s', backgroundColor: a.cooldown_position === 100 && this.state.selectedFighter?.energy >= 100 ? 'green' : '#c2bd0f'}}></div>
+                                                <div className="interaction-tile-overlay" style={{width: `${normalizedSpecial.cooldown_position}%`, transition: normalizedSpecial.cooldown_position === 0 ? '0s' : '0.2s', backgroundColor: normalizedSpecial.cooldown_position === 100 && this.state.selectedFighter?.energy >= 100 ? 'green' : '#c2bd0f'}}></div>
                                             </div>
                                 })}
                             </div>

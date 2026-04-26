@@ -1,14 +1,17 @@
+// ⚠️  AGENTS: Before writing any attack logic, read the "Required Patterns for All AI Profiles"
+//    section at the top of CHANGELOG.md — pendingAttack guard, attacking flag, resolve(null)
+//    fallbacks, and attack-in-processMove are all mandatory.
+
 // const clone = (val) => { return JSON.parse(JSON.stringify(val)) }
 import { activeShieldWalls } from '../../shared-ai-methods/movement-methods';
+import { TICKS_PER_ERA } from '../../shared-constants';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Shield Wall constants
-// The wall lasts for SHIELD_WALL_ERAS eras.  One era = 20 tempo ticks.
-// Each tick fires every FIGHT_INTERVAL ms (default 40 ms) so a single era
-// lasts 20 × FIGHT_INTERVAL ms.  We store an absolute expiry timestamp on
-// the caller and clear it when it expires.
+// Shield Wall duration
+// shieldWall.duration (from specials-matrix) is in "eras" where 1 era =
+// TICKS_PER_ERA interval ticks (matches kickoffSpecialCooldown in combat-manager).
+// eraDurationMs = duration * TICKS_PER_ERA * FIGHT_INTERVAL
 // ─────────────────────────────────────────────────────────────────────────────
-// Shield wall duration/cooldown are now read from specials-matrix via caller.specials
 
 export function Soldier(data, utilMethods, animationManager, overlayManager){
     this.MAX_DEPTH = data.MAX_DEPTH;
@@ -400,7 +403,7 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
         const liveInterval = (typeof data.methods.getFightInterval === 'function')
             ? data.methods.getFightInterval()
             : (data.INTERVAL_TIME || 500);
-        const eraDurationMs = shieldWall.duration * 20 * liveInterval;
+        const eraDurationMs = shieldWall.duration * TICKS_PER_ERA * liveInterval;
         const wallData = {
             x: wallX,                         // column boundary (between x-1 and x)
             lanesAffected,

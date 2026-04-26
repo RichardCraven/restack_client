@@ -17,7 +17,8 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
         processMove,
         targetInRange,
         getSelectedFighter,
-        onEraTransition
+        onEraTransition,
+        targetKilled
     } = callbacks;
     // Determine initial facing: right for fighters, left for monsters/minions
     let initialFacing = 'right';
@@ -351,10 +352,15 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
                         
                         this.bleed_eras--;
                         if (this.hp <= 0) {
-                            // Death logic is usually handled in combat-manager, 
-                            // but we must at least stop the tick here if lethal.
-                            this.dead = true;
-                            // The actual cleanup (targetKilled) happens in combat-manager.
+                            // Route lethal effect deaths through combat-manager so
+                            // target cleanup/retargeting happens immediately.
+                            this.hp = 0;
+                            if (typeof targetKilled === 'function') {
+                                targetKilled(this);
+                            } else {
+                                this.dead = true;
+                                this.locked = true;
+                            }
                         }
                         if (this.bleed_eras <= 0) {
                             this.bleed = false;

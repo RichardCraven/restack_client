@@ -1,3 +1,7 @@
+// ⚠️  AGENTS: Before writing any attack logic, read the "Required Patterns for All AI Profiles"
+//    section at the top of CHANGELOG.md — pendingAttack guard, attacking flag, resolve(null)
+//    fallbacks, and attack-in-processMove are all mandatory.
+
 import { AcquireTargetMethods } from '../../shared-ai-methods/acquire-target-methods';
 import { applyAttackEffect } from '../../combat-effects';
 
@@ -83,6 +87,13 @@ export function Troll(data, utilMethods, animationManager, overlayManager){
 
                 // Attack trigger
                 const era = caller.eras ? caller.eras[caller.eraIndex] : null;
+                // Repopulate pendingAttack if cleared by restartTurnCycle
+                if (!caller.pendingAttack) {
+                    const repopTarget = combatants[caller.targetId];
+                    if (repopTarget && !repopTarget.dead && !repopTarget.isVCT) {
+                        caller.pendingAttack = this.chooseAttackType(caller, repopTarget);
+                    }
+                }
                 if (era && !era.attacked && !caller.onGeneralAttackCooldown && !caller.attacking && caller.pendingAttack) {
                     const target = combatants[caller.targetId];
                     if (target && !target.dead && !target.isVCT) {

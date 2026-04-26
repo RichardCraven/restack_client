@@ -1,3 +1,7 @@
+// ⚠️  AGENTS: Before writing any attack logic, read the "Required Patterns for All AI Profiles"
+//    section at the top of CHANGELOG.md — pendingAttack guard, attacking flag, resolve(null)
+//    fallbacks, and attack-in-processMove are all mandatory.
+
 export function Sage(data, utilMethods, animationManager, overlayManager){ // eslint-disable-line no-unused-vars
     this.MAX_DEPTH = data.MAX_DEPTH;
     this.MAX_LANES = data.MAX_LANES;

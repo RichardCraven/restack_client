@@ -1,3 +1,7 @@
+// ⚠️  AGENTS: Before writing any attack logic, read the "Required Patterns for All AI Profiles"
+//    section at the top of CHANGELOG.md — pendingAttack guard, attacking flag, resolve(null)
+//    fallbacks, and attack-in-processMove are all mandatory.
+
 // Barbarian AI profile
 // Nearly identical to Soldier but has no Shield Wall ability.
 // Uses axe_swing (close) and axe_throw (medium) attacks.

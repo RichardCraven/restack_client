@@ -1,3 +1,7 @@
+// ⚠️  AGENTS: Before writing any attack logic, read the "Required Patterns for All AI Profiles"
+//    section at the top of CHANGELOG.md — pendingAttack guard, attacking flag, resolve(null)
+//    fallbacks, and attack-in-processMove are all mandatory.
+
 import { AcquireTargetMethods } from '../../shared-ai-methods/acquire-target-methods';
 
 export function Goblin(data, utilMethods, animationManager, overlayManager){
@@ -67,6 +71,9 @@ export function Goblin(data, utilMethods, animationManager, overlayManager){
 
         const stolen = stealable[Math.floor(Math.random() * stealable.length)];
         const itemKey = stolen._im_key || stolen.name || 'item';
+        const itemIconKey = (typeof stolen.icon === 'string' && stolen.icon)
+            ? stolen.icon
+            : ((typeof stolen._im_key === 'string' && stolen._im_key) ? stolen._im_key : null);
         const displayName = stolen.name || itemKey.replaceAll('_', ' ');
         // Push "Robbed!" floating indicator on the victim
         if (target) {
@@ -86,7 +93,9 @@ export function Goblin(data, utilMethods, animationManager, overlayManager){
 
         // Record stolen item on the goblin and switch to flee behavior
         caller.stolenItem = displayName;
-        caller.stolenItemIcon = stolen._im_key || stolen.icon || null;
+        // `_im_key` is a stable inventory identifier, but UI icon resolution
+        // uses `images[iconKey]`, so prefer the item's icon key for rendering.
+        caller.stolenItemIcon = itemIconKey;
         caller.isFleeing = true;
         caller.behaviorSequence = 'flee';
         caller.targetId = null;

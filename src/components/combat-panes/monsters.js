@@ -566,7 +566,9 @@ const MonstersCombatGrid = ({
                                 {/* Stolen item indicator: icon in upper-left when goblin has stolen something */}
                                 {(() => {
                                     const stolenIconKey = battleData[monster.id]?.stolenItemIcon;
-                                    const stolenImg = stolenIconKey ? images[stolenIconKey] : null;
+                                    const stolenImg = stolenIconKey
+                                        ? (images[stolenIconKey] || stolenIconKey)
+                                        : null;
                                     return stolenImg && !battleData[monster.id]?.dead ? (
                                         <div className="monster-stolen-item-indicator" style={{ zIndex: 10 }}>
                                             <div
@@ -754,7 +756,9 @@ const MonstersCombatGrid = ({
                                     {/* Stolen item indicator: icon in upper-left when minion has stolen something */}
                                     {(() => {
                                         const stolenIconKey = minion.stolenItemIcon;
-                                        const stolenImg = stolenIconKey ? images[stolenIconKey] : null;
+                                        const stolenImg = stolenIconKey
+                                            ? (images[stolenIconKey] || stolenIconKey)
+                                            : null;
                                         return stolenImg && !minion.dead ? (
                                             <div className="monster-stolen-item-indicator" style={{ zIndex: 10 }}>
                                                 <div

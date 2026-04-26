@@ -7,7 +7,7 @@ import specialsMatrix from './specials-matrix'
 import { applyAttackEffect } from './combat-effects'
 import { activeShieldWalls } from './shared-ai-methods/movement-methods'
 // import { cilLifeRing } from '@coreui/icons'
-import { INTERVALS, ROCK_DURATION, CRIT_THRESHOLD_DEFAULT, CRIT_THRESHOLD_INCREASED, CRITICAL_DAMAGE_MULTIPLIER } from './shared-constants';
+import { INTERVALS, ROCK_DURATION, CRIT_THRESHOLD_DEFAULT, CRIT_THRESHOLD_INCREASED, CRITICAL_DAMAGE_MULTIPLIER, TICKS_PER_ERA } from './shared-constants';
 // import test from './factories'
 // import {MovementMethods} from './methods/movement-methods';
 
@@ -18,11 +18,8 @@ const MAX_LANES = 5
 // const this.FIGHT_INTERVAL = 8;
 // const intervals = [5, 10, 40, 90]
 const FIGHT_INTERVAL = INTERVALS[1]; // 'Slow' (40)
-// Number of FIGHT_INTERVAL ticks in one era, based on a reference speed-10 combatant
-// (increment = 1/(1/10*25) = 0.4 → 100/0.4 = 250 ticks to complete a full turn cycle).
-// Used by kickoffSpecialCooldown so special cooldowns are expressed in eras and
-// automatically stretch/compress when game speed changes.
-const TICKS_PER_ERA = 250;
+// Number of FIGHT_INTERVAL ticks in one full turn cycle at reference speed-10.
+// Imported from shared-constants (TICKS_PER_ERA = 250). Used by kickoffSpecialCooldown.
 const DEBUG_STEPS = false;
 const RANGES = {
     close: 1,
@@ -700,7 +697,8 @@ export function CombatManager() {
             processMove: this.processMove,
             targetInRange: this.targetInRange,
             getSelectedFighter: this.getSelectedFighter,
-            onEraTransition: this.onEraTransition
+            onEraTransition: this.onEraTransition,
+            targetKilled: this.targetKilled
             // combatPaused: this.combatPaused
         }
         // Store on `this` so runtime methods like spawnMinion (defined outside
@@ -1068,6 +1066,29 @@ export function CombatManager() {
         }
         return combatant;
     }
+    // Ensure caller's current target is still valid; if not, clear and reacquire.
+    this.ensureValidTarget = (caller, context = '') => {
+        if (!caller || caller.dead) return false;
+
+        const currentTarget = caller.targetId ? this.combatants[caller.targetId] : null;
+        const callerIsMonster = !!(caller.isMonster || caller.isMinion);
+        const targetIsInvalid =
+            !currentTarget ||
+            currentTarget.dead ||
+            (callerIsMonster && (currentTarget.isMonster || currentTarget.isMinion || currentTarget.isVCT)) ||
+            (!callerIsMonster && (!currentTarget.isMonster && !currentTarget.isMinion));
+
+        if (!targetIsInvalid) return true;
+
+        // Remove stale reticles/associations from the previous target and clear combat intent.
+        this.clearTargetListById(caller.id);
+        this.setTargetId(caller, null, `ensureValidTarget-${context}`);
+        caller.pendingAttack = null;
+
+        this.acquireTarget(caller);
+        const reacquired = caller.targetId ? this.combatants[caller.targetId] : null;
+        return !!(reacquired && !reacquired.dead);
+    }
     this.queueAction = (callerId, targetId, selectedAction) => {
         const caller = this.getCombatant(callerId);
         const target = this.getCombatant(targetId);
@@ -1093,7 +1114,7 @@ export function CombatManager() {
     }
     this.broadcastDataUpdate = (caller = null) => {
         if (caller) {
-            this.checkOverlap(caller)
+            if (!caller.dead) this.checkOverlap(caller)
             this.updateCoordinates(caller)
         }
         this.updateData(clone(this.combatants))
@@ -1391,6 +1412,12 @@ export function CombatManager() {
                 // console.groupEnd()
             }
             return rangeDiff <= RANGES[caller.pendingAttack.range]
+        }
+
+        if (!this.ensureValidTarget(caller, 'initiateAttack')) {
+            caller.active = false;
+            caller.aiming = false;
+            return;
         }
 
         // Always recompute facing from target immediately before initiating an attack
@@ -1705,6 +1732,7 @@ export function CombatManager() {
     this.processMove = (caller) => {
         if (caller.dead) return;
         if (caller.stunned) return; // stunned: skip all movement and AI logic this tick
+        if (!this.ensureValidTarget(caller, 'processMove')) return;
         // Recompute facing before attempting movement so facing isn't stale as units shift around
         try { this.recalculateFacing(caller); } catch (e) { }
         if (this.fighterAI.roster[caller.type]) {
@@ -2261,8 +2289,7 @@ export function CombatManager() {
                 combatantHit.damageIndicators.push({ id: Date.now() + Math.random(), value: 'CRIT!', isCrit: true, source: caller?.name || 'unknown' });
             }
         }
-        caller.energy += caller.stats.fort * 1 + (1 / 2 * caller.level);
-        if (caller.energy > 100) caller.energy = 100;
+        caller.energy = Math.min(100, (caller.energy || 0) + (caller.stats?.fort || 0) + (caller.level ? caller.level / 2 : 0));
 
         // compute sourceDirection for animation purposes
         const sourceDirection = caller.coordinates.x < combatantHit.coordinates.x ? 'left' : (caller.coordinates.x > combatantHit.coordinates.x ? 'right' : (caller.coordinates.y > combatantHit.coordinates.y ? 'bottom' : 'top'));
@@ -2473,8 +2500,7 @@ export function CombatManager() {
             applyAttackEffect(target, caller.pendingAttack.effect, this.broadcastDataUpdate, criticalHit);
         }
 
-        caller.energy += caller.stats.fort * 1 + (1 / 2 * caller.level);
-        if (caller.energy > 100) caller.energy = 100;
+        caller.energy = Math.min(100, (caller.energy || 0) + (caller.stats?.fort || 0) + (caller.level ? caller.level / 2 : 0));
         if (target.hp <= 0) {
             target.hp = 0;
             caller.targetId = null;
@@ -2601,6 +2627,9 @@ export function CombatManager() {
         // Immediately clear targettedBy so reticle is removed
         if (Array.isArray(combatant.targettedBy)) {
             combatant.targettedBy = [];
+        }
+        if (combatant.targetId) {
+            combatant.targetId = null;
         }
         // Immediately broadcast update so UI sees dead state instantly
         // if (typeof this.updateData === 'function') {
@@ -2875,7 +2904,17 @@ export function CombatManager() {
 
 // Centralized setter for targetId with VCT guard and diagnostics
 CombatManager.prototype.setTargetId = function (caller, targetId, context = '') {
+    if (!caller) return;
+    if (!targetId) {
+        caller.targetId = null;
+        return;
+    }
     const target = this.combatants[targetId];
+    // Never allow target assignment to dead/missing combatants.
+    if (!target || target.dead) {
+        caller.targetId = null;
+        return;
+    }
     // Monsters/minions: never allow targeting a VCT
     if ((caller.isMonster || caller.isMinion) && target && target.isVCT) {
         // Monsters/minions: redirect VCT to parent if possible, else allow (redundant with redirect below but safe)

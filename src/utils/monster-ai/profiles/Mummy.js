@@ -1,3 +1,7 @@
+// ⚠️  AGENTS: Before writing any attack logic, read the "Required Patterns for All AI Profiles"
+//    section at the top of CHANGELOG.md — pendingAttack guard, attacking flag, resolve(null)
+//    fallbacks, and attack-in-processMove are all mandatory.
+
 export function Mummy(data, utilMethods, animationManager, overlayManager) {
     this.MAX_DEPTH = data.MAX_DEPTH;
     this.MAX_LANES = data.MAX_LANES;
@@ -415,6 +419,10 @@ export function Mummy(data, utilMethods, animationManager, overlayManager) {
             // Single unified path: check pendingAttack ready, then check range.
             // The old duplicate adjacency-only check has been removed — the range
             // check below already covers close (adjacent) attacks.
+            // Repopulate pendingAttack if cleared by restartTurnCycle
+            if (!caller.pendingAttack && target && !target.dead && !target.isVCT) {
+                caller.pendingAttack = this.chooseAttackType(caller, target);
+            }
             if (
                 caller.pendingAttack &&
                 !caller.attacking &&
