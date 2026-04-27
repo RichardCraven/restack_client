@@ -86,6 +86,56 @@ export function BeholderMinion(data, utilMethods, animationManager, overlayManag
         });
     };
 
+    this._hasPassive = (caller, passiveKey) => {
+        if (!caller || !Array.isArray(caller.passives) || !passiveKey) return false;
+        const normalizedTarget = String(passiveKey).replace(/\s+/g, '_').toLowerCase();
+        return caller.passives.some((passive) => {
+            const name = typeof passive === 'string' ? passive : (passive && (passive.name || passive.key)) || '';
+            const normalizedName = String(name).replace(/\s+/g, '_').toLowerCase();
+            return normalizedName === normalizedTarget;
+        });
+    };
+
+    this._isOccupied = (coords, combatants, caller) => {
+        return Object.values(combatants).some(c => {
+            if (!c || c.dead || c.id === caller.id) return false;
+            if (c.coordinates && c.coordinates.x === coords.x && c.coordinates.y === coords.y) return true;
+            if (Array.isArray(c.occupiedCoords)) return c.occupiedCoords.some(oc => oc.x === coords.x && oc.y === coords.y);
+            return false;
+        });
+    };
+
+    // Flying movement can hop over blockers, but may not end on occupied tiles.
+    this._flyTowardTarget = (caller, combatants, target) => {
+        if (!caller || !caller.coordinates || !target || !target.coordinates) return false;
+
+        const dx = target.coordinates.x - caller.coordinates.x;
+        const dy = target.coordinates.y - caller.coordinates.y;
+        const stepX = dx === 0 ? 0 : (dx > 0 ? 1 : -1);
+        const stepY = dy === 0 ? 0 : (dy > 0 ? 1 : -1);
+
+        const candidates = [
+            { x: caller.coordinates.x + (stepX * 2), y: caller.coordinates.y },
+            { x: caller.coordinates.x + stepX, y: caller.coordinates.y + stepY },
+            { x: caller.coordinates.x + (stepX * 2), y: caller.coordinates.y + stepY },
+            { x: caller.coordinates.x + stepX, y: caller.coordinates.y + (stepY * 2) },
+            { x: caller.coordinates.x, y: caller.coordinates.y + (stepY * 2) },
+            { x: caller.coordinates.x + stepX, y: caller.coordinates.y },
+            { x: caller.coordinates.x, y: caller.coordinates.y + stepY }
+        ].filter((coords) => (
+            coords.x >= 0 && coords.x <= this.MAX_DEPTH && coords.y >= 0 && coords.y < this.MAX_LANES
+        ));
+
+        for (const next of candidates) {
+            if (!this._isOccupied(next, combatants, caller)) {
+                caller.coordinates = next;
+                return true;
+            }
+        }
+
+        return false;
+    };
+
     // ── duplicate ────────────────────────────────────────────────────────────
     this.triggerDuplicate = (caller, combatants, dupSpecial) => {
         if (!dupSpecial || dupSpecial.cooldown_position < 100) return;
@@ -293,10 +343,17 @@ export function BeholderMinion(data, utilMethods, animationManager, overlayManag
         console.log(`[BeholderMinion] triggerMagicMissile — src=(${caller.coordinates.x},${caller.coordinates.y}) tgt=(${target.coordinates.x},${target.coordinates.y}) animMgr=${!!this.animationManager}`);
         if (this.animationManager && caller && target) {
             // Use minorMagicMissile if available (green, fewer particles), fall back to major
-            const fireFn = typeof this.animationManager.minorMagicMissile === 'function'
-                ? this.animationManager.minorMagicMissile
-                : this.animationManager.magicMissile;
-            fireFn.call(this.animationManager, caller.coordinates, target.coordinates);
+            const missileOptions = {
+                getCurrentTargetCoords: () => {
+                    if (!target || target.dead || !target.coordinates) return null;
+                    return target.coordinates;
+                }
+            };
+            if (typeof this.animationManager.minorMagicMissile === 'function') {
+                this.animationManager.minorMagicMissile(caller.coordinates, target.coordinates, missileOptions);
+            } else {
+                this.animationManager.magicMissile(caller.coordinates, target.coordinates, 'major', missileOptions);
+            }
         }
         const applyHit = () => {
             if (!caller || !target || target.dead) return;
@@ -469,13 +526,10 @@ export function BeholderMinion(data, utilMethods, animationManager, overlayManag
             const isMedium   = dx >= 2 && dx <= 3;
 
             const someoneIsAt = (coords) => {
-                return Object.values(combatants).some(c => {
-                    if (c.id === caller.id || c.dead) return false;
-                    if (c.coordinates && c.coordinates.x === coords.x && c.coordinates.y === coords.y) return true;
-                    if (Array.isArray(c.occupiedCoords)) return c.occupiedCoords.some(oc => oc.x === coords.x && oc.y === coords.y);
-                    return false;
-                });
+                return this._isOccupied(coords, combatants, caller);
             };
+
+            const hasFlying = this._hasPassive(caller, 'flying');
 
             if (isAdjacent && hasMediumAttack) {
                 // Has void lance — 60% chance to back off to mid-range, 40% stay and use claws
@@ -517,12 +571,16 @@ export function BeholderMinion(data, utilMethods, animationManager, overlayManag
                 }
                 // else: hold position — already optimal for void lance
             } else {
-                // Out of range — close the gap
-                data.methods.closeTheGap(caller, combatants);
+                // Out of range — flyers can hop over blockers/walls.
+                if (!(hasFlying && this._flyTowardTarget(caller, combatants, moveTarget))) {
+                    data.methods.closeTheGap(caller, combatants);
+                }
             }
         } else {
             // No target — standard movement
-            data.methods.closeTheGap(caller, combatants);
+            if (!(this._hasPassive(caller, 'flying') && caller.targetId && this._flyTowardTarget(caller, combatants, combatants[caller.targetId]))) {
+                data.methods.closeTheGap(caller, combatants);
+            }
         }
 
         // Keep facing toward target

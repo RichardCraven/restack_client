@@ -46,6 +46,15 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
         });
         return minDistance;
     };
+
+    const getIndicatorRecipient = (combatant) => {
+        if (!combatant) return null;
+        const allCombatants = typeof getAllCombatants === 'function' ? getAllCombatants() : null;
+        if (!allCombatants) return combatant;
+        if (combatant.isVCT && allCombatants[combatant.id]) return allCombatants[combatant.id];
+        const vctId = `${combatant.id}_VCT`;
+        return allCombatants[vctId] || combatant;
+    };
     // Determine initial facing: right for fighters, left for monsters/minions
     let initialFacing = 'right';
     if (fighter.isMonster || fighter.isMinion) {
@@ -118,6 +127,9 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
     specials: (typeof formatSpecials === 'function') ? formatSpecials(fighter.specials || []) : (fighter.specials || []),
         specialActions: fighter.specialActions, // Now uses flat structure: type, name, iconUrl, subtype, etc.
         targettedBy: [],
+        passives: Array.isArray(fighter.passives) ? [...fighter.passives] : [],
+        reassembleUsed: !!fighter.reassembleUsed,
+        hasReassembled: !!fighter.hasReassembled,
         combatPaused: false,
         readout: {action:'', result: ''},
         // readout: '',
@@ -453,7 +465,8 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
                         
                         // Add damage indicator for bleed
                         const indicatorId = Date.now() + Math.random();
-                        this.damageIndicators.push({ id: indicatorId, value: bleedDamage, source: 'Bleed' });
+                        const indicatorRecipient = getIndicatorRecipient(this);
+                        indicatorRecipient.damageIndicators.push({ id: indicatorId, value: bleedDamage, source: 'Bleed' });
                         
                         this.bleed_eras--;
                         if (this.hp <= 0) {
@@ -482,7 +495,8 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
                             this.hp = Math.min(this.starting_hp, this.hp + healAmount);
                             // Add damage indicator (as healing)
                             const indicatorId = Date.now() + Math.random();
-                            this.damageIndicators.push({ 
+                            const indicatorRecipient = getIndicatorRecipient(this);
+                            indicatorRecipient.damageIndicators.push({ 
                                 id: indicatorId, 
                                 value: `+${healAmount}`, 
                                 source: 'Regen', 

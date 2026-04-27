@@ -261,11 +261,18 @@
 /* New bottom-left equip slot: positioned near the lower-left torso */
 .inventory-popup .crew-body .slot-pet,
 .inventory-modal .crew-body .slot-pet{
-    left: 12%;
+    left: 5%;
     bottom: 8%;
     transform: translate(0, 0);
     width: 55px;
     height: 55px;
+}
+
+.inventory-popup .crew-body .slot-boots,
+.inventory-modal .crew-body .slot-boots{
+    left: 50%;
+    top: 82%;
+    transform: translate(-50%, -50%);
 }
 
 /* small circular pet/paw overlay shown on pet slots */

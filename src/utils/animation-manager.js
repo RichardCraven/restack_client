@@ -454,13 +454,15 @@ export function AnimationManager(){
         });
     };
 
-    this.magicMissile = (sourceCoords, targetCoords, variant = 'major') => {
+    this.magicMissile = (sourceCoords, targetCoords, variant = 'major', options = {}) => {
         const ref = {
             origin: sourceCoords,
             distanceToTarget: this.getDistanceToTarget(sourceCoords, targetCoords), 
             verticalDistanceToTarget: this.getVerticalDistanceToTarget(sourceCoords, targetCoords),
             connectParticles: false,
             variant, // 'major' (purple) or 'minor' (green, fewer particles)
+            target: targetCoords ? { x: targetCoords.x, y: targetCoords.y } : null,
+            getCurrentTargetCoords: typeof options.getCurrentTargetCoords === 'function' ? options.getCurrentTargetCoords : null,
         };
         this.canvasAnimations.push(ref)
         this.update();
@@ -473,8 +475,8 @@ export function AnimationManager(){
         // ^ travel time + 1 second of damage animation
     }
 
-    this.minorMagicMissile = (sourceCoords, targetCoords) => {
-        this.magicMissile(sourceCoords, targetCoords, 'minor');
+    this.minorMagicMissile = (sourceCoords, targetCoords, options = {}) => {
+        this.magicMissile(sourceCoords, targetCoords, 'minor', options);
     }
     // Magic Circle Animation: static circle of particles at midpoint between source and target
     this.magicCircle = (sourceCoords, targetCoords, options = {}) => {

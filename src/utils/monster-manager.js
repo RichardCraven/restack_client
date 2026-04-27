@@ -24,6 +24,46 @@ const TIER3_WEAPONS = [
 // No tier-4 weapons exist yet — use tier 3 pool
 const TIER4_WEAPONS = TIER3_WEAPONS;
 
+// ── Tier magical pools (items with explicit tier only) ─────────────────────
+const TIER1_MAGICAL = [
+    'cloudfire_wand', 'animus_wand', 'glyndas_wand',
+    'archmages_staff', 'enchanters_staff', 'imperial_mage_staff',
+    'oily_manual', 'bound_tome', 'glowing_tome', 'kelrigans_manual',
+];
+const TIER2_MAGICAL = [
+    'justicator_wand', 'volkas_wand', 'willowcaster',
+    'staff_of_espilon', 'staff_of_marduk', 'staff_of_omicron',
+    'the_watchful_eye', 'moonbird_folio', 'icewing_folio',
+    'emerald_tablet', 'ruby_tablet',
+];
+const TIER3_MAGICAL = [
+    'maerlyns_rod', 'staff_of_tomorrow',
+    'feldons_manual', 'the_beast_book', 'book_of_jade',
+    'igors_grimoire', 'forbidden_grimoire',
+];
+const TIER4_MAGICAL = [
+    'monadic_engine', 'verdant_engine', 'crimson_engine',
+    'folio_of_coincidence', 'folio_of_paradox', 'septemons_grimoire',
+];
+
+// ── Tier armor pools (items with explicit tier only) ───────────────────────
+const TIER1_ARMOR = [
+    'buckler', 'infantry_shield', 'cold_steel_shield',
+];
+const TIER2_ARMOR = [
+    'crusaders_shield', 'dawnguard', 'twilight_screen',
+];
+const TIER3_ARMOR = [
+    'revenants_shield', 'aegis_bulwark',
+];
+const TIER4_ARMOR = [];
+
+// Mixed item pools (weapons, armor, magical) per tier
+const TIER1_ITEM = [TIER1_WEAPONS, TIER1_ARMOR, TIER1_MAGICAL];
+const TIER2_ITEM = [TIER2_WEAPONS, TIER2_ARMOR, TIER2_MAGICAL];
+const TIER3_ITEM = [TIER3_WEAPONS, TIER3_ARMOR, TIER3_MAGICAL];
+const TIER4_ITEM = [TIER4_WEAPONS, TIER4_ARMOR, TIER4_MAGICAL];
+
 const TIER1_POTION = 'minor_health_potion';
 const TIER2_POTION = 'major_health_potion';
 const TIER3_POTION = 'grand_health_potion';
@@ -39,6 +79,7 @@ export function MonsterManager() {
         // ── Level 2 ──────────────────────────────────────────────────────
         goblin: {
             type: 'goblin',
+            subtype: 'brutekin',
             key: 'goblin',
             image_names: ['goblin'],
             monster_names: ['Wiggit', 'Miggi', "Gurnak"],
@@ -55,7 +96,7 @@ export function MonsterManager() {
             deathCries: ['nooooooo'],
             specials: ['sticky_fingers'],
             attacks: ['claws', 'bite'],
-            weaknesses: ['crushing', 'cutting', 'fire', 'electricity'],
+            weaknesses: ['crushing', 'cutting', 'electricity'],
             drops: [
                 { item: TIER1_POTION, percentChance: 35 },
                 { itemPool: TIER1_WEAPONS, percentChance: 35 },
@@ -64,6 +105,7 @@ export function MonsterManager() {
         // ── Level 3 ──────────────────────────────────────────────────────
         skeleton: {
             type: 'skeleton',
+            subtype: 'undead',
             key: 'skeleton',
             image_names: ['skeleton'],
             monster_names: ['bones'],
@@ -79,6 +121,7 @@ export function MonsterManager() {
             greetings: ['*screech*'],
             deathCries: ['*screech*'],
             specials: [],
+            passives: ['reassemble'],
             attacks: ['claws', 'claws', 'claws'],
             minions: ['skeleton', 'skeleton'],
             weaknesses: ['fire'],
@@ -90,6 +133,7 @@ export function MonsterManager() {
         // ── Level 4 (minion) ─────────────────────────────────────────────
         kabuki_demon_minion: {
             type: 'kabuki_demon_minion',
+            subtype: 'demon',
             key: 'kabuki_demon_minion',
             image_names: ['kabuki_demon_minion'],
             monster_names: ['Ikiro', 'Jimbu'],
@@ -104,7 +148,8 @@ export function MonsterManager() {
             portrait: images['kabuki_demon_minion_portrait'],
             greetings: ['Assaaa'],
             deathCries: ['No! Impossible!'],
-            specials: ['obliterate', 'flying', 'invisibility'],
+            specials: ['obliterate', 'invisibility'],
+            passives: ['flying'],
             attacks: ['void_lance', 'major_magic_missile'],
             weaknesses: ['arcane', 'holy-aura'],
             drops: [
@@ -115,6 +160,7 @@ export function MonsterManager() {
         // ── Level 5 (minion) ─────────────────────────────────────────────
         beholder_minion: {
             type: 'beholder_minion',
+            subtype: 'eldritch',
             key: 'beholder_minion',
             image_names: ['beholder_minion'],
             monster_names: ['Nirnuceks', 'Adalak', 'Vemrindon'],
@@ -130,8 +176,9 @@ export function MonsterManager() {
             portraitFilter: 'sepia(0.4) hue-rotate(320deg)',
             greetings: ['Vukdaj kolo gurdu'],
             deathCries: ['Urdu meklak milnaurku...'],
-            specials: ['bifurcate', 'flying', 'minor_magic_missile'],
-            attacks: ['void_lance', 'claws'],
+            specials: ['bifurcate', 'minor_magic_missile'],
+            passives: ['flying'],
+            attacks: ['claws'],
             weaknesses: ['arcane', 'holy-aura'],
             drops: [
                 { item: TIER1_POTION, percentChance: 35 },
@@ -141,6 +188,7 @@ export function MonsterManager() {
         // ── Level 6 ──────────────────────────────────────────────────────
         troll: {
             type: 'troll',
+            subtype: 'brutekin',
             key: 'troll',
             image_names: ['troll'],
             monster_names: ['Mundzungu', 'Wugum'],
@@ -165,6 +213,7 @@ export function MonsterManager() {
         },
         mummy: {
             type: 'mummy',
+            subtype: 'undead',
             key: 'mummy',
             image_names: ['mummy'],
             monster_names: ['Kufu', 'Razeset'],
@@ -191,6 +240,7 @@ export function MonsterManager() {
         // ── Level 8 ──────────────────────────────────────────────────────
         wraith: {
             type: 'wraith',
+            subtype: 'undead',
             key: 'wraith',
             image_names: ['wraith'],
             monster_names: ['Sicirath', 'Olnuk', 'Ygra'],
@@ -215,6 +265,7 @@ export function MonsterManager() {
         },
         ogre: {
             type: 'ogre',
+            subtype: 'brutekin',
             key: 'ogre',
             image_names: ['ogre'],
             monster_names: ['Uggo', 'Tubodu', 'Gumluk'],
@@ -240,6 +291,7 @@ export function MonsterManager() {
         // ── Level 9 ──────────────────────────────────────────────────────
         gorgon: {
             type: 'gorgon',
+            subtype: 'serpentine',
             key: 'gorgon',
             image_names: ['gorgon'],
             monster_names: ['Lithios', 'Merkaba', 'Axolus'],
@@ -265,6 +317,7 @@ export function MonsterManager() {
         // ── Level 10 ─────────────────────────────────────────────────────
         vampire: {
             type: 'vampire',
+            subtype: 'undead',
             key: 'vampire',
             image_names: ['black_vampire'],
             monster_names: ['Vukodlak', 'Morias', 'Roterach'],
@@ -279,7 +332,8 @@ export function MonsterManager() {
             portrait: images['vampire_portrait'],
             greetings: ['My hunger sees you'],
             deathCries: ['Peace at last...'],
-            specials: ['obliterate', 'flying', 'invisibility'],
+            specials: ['obliterate', 'invisibility'],
+            passives: ['flying'],
             attacks: ['claws', 'bite'],
             weaknesses: ['arcane', 'holy-aura'],
             minions: ['goblin', 'goblin'],
@@ -291,6 +345,7 @@ export function MonsterManager() {
         // ── Level 11 ─────────────────────────────────────────────────────
         goat_demon: {
             type: 'goat_demon',
+            subtype: 'demon',
             key: 'goat_demon',
             image_names: ['goat_demon'],
             monster_names: ['ur-Xulu', 'ur-Baba', 'ur-Zuzu'],
@@ -317,6 +372,7 @@ export function MonsterManager() {
         // ── Level 12 ─────────────────────────────────────────────────────
         witch: {
             type: 'witch',
+            subtype: 'eldritch',
             key: 'witch',
             image_names: ['witch_p1_1'],
             monster_names: ['Rhea', 'BabaYaga'],
@@ -331,7 +387,7 @@ export function MonsterManager() {
             portrait: images['witch_p1_1'],
             greetings: ['Thy blood is quickening'],
             deathCries: ['Mercy'],
-            specials: ['obliterate', 'flying', 'invisibility'],
+            specials: ['obliterate', 'invisibility'],
             attacks: ['void_lance', 'major_magic_missile'],
             weaknesses: ['arcane', 'holy-aura'],
             drops: [
@@ -366,6 +422,7 @@ export function MonsterManager() {
         // ── Level 14 ─────────────────────────────────────────────────────
         beholder: {
             type: 'beholder',
+            subtype: 'eldritch',
             key: 'beholder',
             image_names: ['beholder'],
             monster_names: ['Nirnuceks', 'Adalak', 'Vemrindon', 'Sardaresh'],
@@ -386,6 +443,7 @@ export function MonsterManager() {
             minions: ['beholder_minion', 'beholder_minion'],
             drops: [
                 { item: TIER2_POTION, percentChance: 35 },
+                { itemPool: TIER2_MAGICAL, percentChance: 35 },
                 { itemPool: TIER2_WEAPONS, percentChance: 35 },
             ]
         },
@@ -417,6 +475,7 @@ export function MonsterManager() {
         // ── Level 15 ─────────────────────────────────────────────────────
         kabuki_demon: {
             type: 'kabuki_demon',
+            subtype: 'demon',
             key: 'kabuki_demon',
             image_names: ['kabuki_demon_portrait'],
             monster_names: ['Ikiro', 'Jimbu'],
@@ -431,7 +490,8 @@ export function MonsterManager() {
             portrait: images['kabuki_demon_portrait'],
             greetings: ['Assaaa'],
             deathCries: ['No! Impossible!'],
-            specials: ['obliterate', 'flying', 'invisibility', 'major_magic_missile'],
+            specials: ['obliterate', 'invisibility', 'major_magic_missile'],
+            passives: ['flying'],
             attacks: ['void_lance'],
             weaknesses: ['arcane', 'holy-aura'],
             minions: ['kabuki_demon_minion', 'kabuki_demon_minion'],
@@ -443,6 +503,7 @@ export function MonsterManager() {
         // ── Level 19 ─────────────────────────────────────────────────────
         djinn: {
             type: 'djinn',
+            subtype: 'eldritch',
             key: 'djinn',
             image_names: ['djinn'],
             monster_names: ['Murmeros', 'Ixcalot', 'il Hagan'],
@@ -468,6 +529,7 @@ export function MonsterManager() {
         // ── Level 29 ─────────────────────────────────────────────────────
         sphinx: {
             type: 'sphinx',
+            subtype: 'eldritch',
             key: 'sphinx',
             image_names: ['sphinx'],
             monster_names: ['Nunufet', 'Ipalot', 'Vizieros'],
@@ -497,6 +559,7 @@ export function MonsterManager() {
         // ── Level 30 ─────────────────────────────────────────────────────
         dragon: {
             type: 'dragon',
+            subtype: 'serpentine',
             key: 'dragon',
             image_names: ['dragon'],
             monster_names: ['Theraxes', 'Daedron', 'Kykerod'],

@@ -951,9 +951,15 @@ class MonsterBattle extends React.Component {
                     let d = Math.random();
                     if(d < e.percentChance*.01){
                         if(e.itemPool && Array.isArray(e.itemPool) && e.itemPool.length > 0){
-                            // Pick a fresh random weapon from the pool each encounter
-                            const idx = Math.floor(Math.random() * e.itemPool.length);
-                            itemsGained.push(e.itemPool[idx]);
+                            // Supports both flat pools and nested pools like [WEAPONS, ARMOR, MAGICAL]
+                            const pickFromPool = (pool) => {
+                                if(!Array.isArray(pool) || pool.length === 0) return null;
+                                const idx = Math.floor(Math.random() * pool.length);
+                                const picked = pool[idx];
+                                return Array.isArray(picked) ? pickFromPool(picked) : picked;
+                            };
+                            const itemFromPool = pickFromPool(e.itemPool);
+                            if(itemFromPool) itemsGained.push(itemFromPool);
                         } else if(e.item){
                             itemsGained.push(e.item);
                         }
@@ -1337,6 +1343,11 @@ class MonsterBattle extends React.Component {
         if(val !== null && typeof val === 'string'){
             val = val.replaceAll('_', ' ')
         }
+        try {
+            if (this.state.selectedFighter && this.props.combatManager && typeof this.props.combatManager.setSelectedFighter === 'function') {
+                this.props.combatManager.setSelectedFighter(this.state.selectedFighter);
+            }
+        } catch (err) {}
     // special tile value
         this.fireSpecial(val)
 
@@ -1408,10 +1419,28 @@ class MonsterBattle extends React.Component {
         // debugger
 
         let selectedFighter = this.state.selectedFighter;
-        let specials = selectedFighter?.specials,
-        consumableSpecials = selectedFighter?.specialActions,
+        const cmFighter = this.props.combatManager && typeof this.props.combatManager.getCombatant === 'function'
+            ? this.props.combatManager.getCombatant(selectedFighter.id)
+            : null;
+        const fighterRef = cmFighter || selectedFighter;
+        let specials = fighterRef?.specials || [],
+        consumableSpecials = fighterRef?.specialActions || [],
         selectedSpecial = specials.find(a=> a.selected),
         selectedConsumableSpecial = consumableSpecials.find(a=> a.selected);
+
+        if (special) {
+            const specialName = (typeof special === 'string' ? special : special?.name || '')
+                .replaceAll('_', ' ')
+                .toLowerCase();
+            const clickedSpecial = specials.find(a => a && a.name && a.name.toLowerCase() === specialName) || special;
+            if (!clickedSpecial || !clickedSpecial.name) return;
+            if (clickedSpecial.cooldown_position !== 100) return;
+            if ((fighterRef.energy || 0) < 100) return;
+            this.props.combatManager.fighterSpecialAttack(clickedSpecial)
+            specials.forEach(e=>e.selected=false)
+            consumableSpecials.forEach(a=>a.selected=false)
+            return;
+        }
 
         if(selectedSpecial){
             this.props.combatManager.fighterSpecialAttack(selectedSpecial)

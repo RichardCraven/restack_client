@@ -1071,6 +1071,11 @@
                     top: 16%;
                     transform: translate(-50%, -50%);
                 }
+                .crew-body .slot-boots{
+                    left: 50%;
+                    top: 82%;
+                    transform: translate(-50%, -50%);
+                }
                 .crew-body .slot-ancillary-left{
                     left: 8%;
                     top: 24%;
@@ -1083,7 +1088,7 @@
                 }
                 /* bottom-left slot mirrored from inventory modal */
                     .crew-body .slot-pet{
-                        left: 8%;
+                        left: 2%;
                         bottom: 8%;
                         transform: translate(0, 0);
                     }

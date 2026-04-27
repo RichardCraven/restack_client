@@ -133,6 +133,10 @@ import lundi_mask from '../assets/icons/items/headgear/bundu_mask.png';
 import mardi_mask from '../assets/icons/items/headgear/mardi_mask.png';
 import solomon_mask from '../assets/icons/items/headgear/solomon_mask.png';
 import zul_mask from '../assets/icons/items/headgear/zul_mask.png';
+import crimson_mask from '../assets/icons/items/helms/masks/crimson mask.png';
+import seraphic_mask from '../assets/icons/items/helms/masks/seraphic mask.png';
+import shadow_mask from '../assets/icons/items/helms/masks/shadow mask.png';
+import twilight_mask from '../assets/icons/items/helms/masks/twilight mask.png';
 
 import basic_helm from '../assets/icons/items/headgear/basic_helm.png';
 import knight_helm from '../assets/icons/items/headgear/knight_helm.png';
@@ -653,6 +657,10 @@ export {
     mardi_mask,
     solomon_mask,
     zul_mask,
+    crimson_mask,
+    seraphic_mask,
+    shadow_mask,
+    twilight_mask,
     basic_helm,
     knight_helm,
     spartan_helm,

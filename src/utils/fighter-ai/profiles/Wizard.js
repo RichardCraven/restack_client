@@ -525,7 +525,12 @@ export function Wizard(data, utilMethods, animationManager, overlayManager) {
         // console.log('triggering***');
         // Trigger the animation when the spell is cast
         if (this.animationManager && caller && target) {
-            this.animationManager.magicMissile(caller.coordinates, target.coordinates);
+            this.animationManager.magicMissile(caller.coordinates, target.coordinates, 'major', {
+                getCurrentTargetCoords: () => {
+                    if (!target || target.dead || !target.coordinates) return null;
+                    return target.coordinates;
+                }
+            });
         }
 
         // caller.lock();

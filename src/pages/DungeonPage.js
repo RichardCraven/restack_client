@@ -4083,6 +4083,7 @@ class DungeonPage extends React.Component {
                                     const right = findEquipped('right');
                                     const left = findEquipped('left');
                                     const head = findEquipped('head');
+                                    const boots = findEquipped('boots');
                                     const bottomLeft = findEquipped('pet');
                                     const ancillaryLeft = findEquipped('ancillary-left');
                                     const ancillaryRight = findEquipped('ancillary-right');
@@ -4114,6 +4115,7 @@ class DungeonPage extends React.Component {
                                             <ReadOnlySlot item={right}        slotClass="slot-right" />
                                             <ReadOnlySlot item={left}         slotClass="slot-left" />
                                             <ReadOnlySlot item={head}         slotClass="slot-head" />
+                                            <ReadOnlySlot item={boots}        slotClass="slot-boots" />
                                             <ReadOnlySlot item={ancillaryLeft}  slotClass="slot-ancillary-left" />
                                             <ReadOnlySlot item={ancillaryRight} slotClass="slot-ancillary-right" />
                                             <ReadOnlySlot item={bottomLeft}   slotClass="slot-pet" />
@@ -4629,6 +4631,7 @@ class DungeonPage extends React.Component {
                                             const right = findEquipped(member, 'right');
                                             const left = findEquipped(member, 'left');
                                             const head = findEquipped(member, 'head');
+                                            const boots = findEquipped(member, 'boots');
                                             const bottomLeft = findEquipped(member, 'pet');
                                             const ancillaryLeft = findEquipped(member, 'ancillary-left');
                                             const ancillaryRight = findEquipped(member, 'ancillary-right');
@@ -4687,6 +4690,20 @@ class DungeonPage extends React.Component {
                                                             editMode={false}
                                                             type={'inventory-tile'}
                                                             handleClick={() => isSelected ? this.handleEquipmentItemClick(head) : null}
+                                                            handleHover={this.handleInventoryTileHover}
+                                                        />
+                                                    )}</div>
+                                                    <div className='equip-slot slot-boots' style={{outline: isSelected && boots ? '2px solid #782d7b' : undefined}}>{boots && (
+                                                        <Tile
+                                                            id={boots.id}
+                                                            data={boots}
+                                                            tileSize={this.state.tileSize}
+                                                            image={boots.icon}
+                                                            contains={boots.name ? boots.name.replace(' ', '_') : null}
+                                                            color={boots.color}
+                                                            editMode={false}
+                                                            type={'inventory-tile'}
+                                                            handleClick={() => isSelected ? this.handleEquipmentItemClick(boots) : null}
                                                             handleHover={this.handleInventoryTileHover}
                                                         />
                                                     )}</div>

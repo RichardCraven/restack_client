@@ -7,6 +7,9 @@ import * as images from './images'
 // kickoffSpecialCooldown converts eras → ticks using TICKS_PER_ERA (250)
 // multiplied by the live FIGHT_INTERVAL, so cooldowns automatically
 // stretch/compress when game speed changes.
+
+// this documents Specials as well as Passives
+
 const specialsMatrix = {
     deadeye_shot: {
         name: 'deadeye shot',
@@ -224,7 +227,7 @@ const specialsMatrix = {
         icon: images['magic_missile'],
         cooldown: 5,
         damage: 12,
-        energy_cost: 30,
+        energy_cost: 40,
         effect: ['damage_single_target'],
         special_instructions: 'Launches a powerful barrage of arcane bolts at a single target.',
         level: 1
@@ -248,15 +251,6 @@ const specialsMatrix = {
         damage: 'TBD',
         energy_cost: 'TBD',
         effect: ['TBD'],
-        special_instructions: 'TBD',
-        level: 1
-    },
-    flying: {
-        name: 'flying',
-        type: 'passive',
-        icon: images['buckler'],
-        cooldown: null,
-        effect: ['movement_modifier'],
         special_instructions: 'TBD',
         level: 1
     },
@@ -398,6 +392,27 @@ const specialsMatrix = {
         special_instructions: 'TBD',
         level: 1
     },
+}
+
+const passivesMatrix = {
+    flying: {
+        name: 'flying',
+        type: 'passive',
+        icon: images['buckler'],
+        // need to update icon for this
+        effect: ['movement_modifier, can move two spaces at a time, can pass over barriers like shield wall, and other units (but cannot end a movement on top of another unit)'],
+        special_instructions: 'TBD',
+        level: 1
+    },
+    reassemble: {
+        name: 'reassemble',
+        type: 'passive',
+        icon: images['buckler'],
+        // need to update icon for this
+        effect: ['on death, has a 40% chance to reassemble with 30% HP, and if it does, it loses all specials and passives and gains the "berserk" special which doubles its attack and movement speed but prevents it from using any other specials. Can only trigger once per combat.'],
+        special_instructions: 'TBD',
+        level: 1
+    }
 }
 
 export default specialsMatrix;

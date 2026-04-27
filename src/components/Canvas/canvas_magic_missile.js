@@ -9,10 +9,22 @@ import React, { useRef, useEffect } from 'react'
  *   connectParticlesActive – whether to draw lines between particles
  *   targetDistance      – signed tile distance on the x axis (negative = firing leftward)
  *   targetLaneDiff      – signed tile distance on the y axis
+ *   target              – optional fallback target tile coords {x, y}
+ *   getCurrentTargetCoords – optional function returning live target coords
  *   variant             – 'major' (default, purple/magenta, 5 particles)
  *                         'minor'           (green, 3 particles)
  */
-const CanvasMagicMissile = ({origin, height, width, connectParticlesActive, targetDistance, targetLaneDiff, variant = 'major'}) => {
+const CanvasMagicMissile = ({
+  origin,
+  height,
+  width,
+  connectParticlesActive,
+  targetDistance,
+  targetLaneDiff,
+  target,
+  getCurrentTargetCoords,
+  variant = 'major'
+}) => {
 
     const canvasRef = useRef(null)
 
@@ -20,6 +32,7 @@ const CanvasMagicMissile = ({origin, height, width, connectParticlesActive, targ
 
     useEffect(() => {
         const canvas = canvasRef.current
+      if (!canvas || !origin) return;
         const context = canvas.getContext('2d')
 
         // ── Particle color palette ──────────────────────────────────────────
@@ -114,12 +127,75 @@ const CanvasMagicMissile = ({origin, height, width, connectParticlesActive, targ
         const LINES_CUTOFF_FRACTION = 0.72;
 
         const startTime = performance.now();
+        const TILE_SIZE = 100;
+
+        const resolveTargetCoords = () => {
+          if (typeof getCurrentTargetCoords === 'function') {
+            const liveCoords = getCurrentTargetCoords();
+            if (liveCoords && typeof liveCoords.x === 'number' && typeof liveCoords.y === 'number') {
+              return liveCoords;
+            }
+          }
+          if (target && typeof target.x === 'number' && typeof target.y === 'number') {
+            return target;
+          }
+          return {
+            x: origin.x + (typeof targetDistance === 'number' ? targetDistance : 0),
+            y: origin.y + (typeof targetLaneDiff === 'number' ? targetLaneDiff : 0),
+          };
+        };
+
+        const lerp = (a, b, t) => a + (b - a) * t;
+        const applyTravelTransform = (elapsed) => {
+          const progress = Math.max(0, Math.min(1, elapsed / MISSILE_DURATION_MS));
+          const liveTarget = resolveTargetCoords();
+          const liveTargetDistance = liveTarget.x - origin.x;
+          const liveTargetLaneDiff = liveTarget.y - origin.y;
+          const dirSign = liveTargetDistance >= 0 ? 1 : -1;
+          const nudgeX = dirSign * 50;
+          const nudgeY = liveTargetLaneDiff !== 0
+            ? Math.sign(liveTargetLaneDiff) * Math.min(Math.abs(liveTargetLaneDiff) * 10, 30)
+            : 0;
+
+          const startX = origin.x * TILE_SIZE;
+          const startY = origin.y * TILE_SIZE;
+          const mid1X = startX + nudgeX;
+          const mid1Y = startY + nudgeY;
+          const mid2X = startX + nudgeX * 2;
+          const mid2Y = startY + nudgeY * 2;
+          const finalX = liveTarget.x * TILE_SIZE;
+          const finalY = liveTarget.y * TILE_SIZE;
+
+          let x;
+          let y;
+          let scale;
+          if (progress <= 0.25) {
+            const p = progress / 0.25;
+            x = lerp(startX, mid1X, p);
+            y = lerp(startY, mid1Y, p);
+            scale = lerp(0.1, 1, p);
+          } else if (progress <= 0.5) {
+            const p = (progress - 0.25) / 0.25;
+            x = lerp(mid1X, mid2X, p);
+            y = lerp(mid1Y, mid2Y, p);
+            scale = lerp(1, 2.75, p);
+          } else {
+            const p = (progress - 0.5) / 0.5;
+            x = lerp(mid2X, finalX, p);
+            y = lerp(mid2Y, finalY, p);
+            scale = lerp(2.75, 1.5, p);
+          }
+
+          canvas.style.transform = `translateX(${x}px) translateY(${y}px) scale(${scale})`;
+          canvas.style.animation = 'none';
+        };
 
         let animationFrameId;
         function animate(now) {
           const elapsed = now - startTime;
           // Draw connecting lines only while the missile is still in flight (before cutoff).
           const shouldConnect = connectParticlesActive && (elapsed < MISSILE_DURATION_MS * LINES_CUTOFF_FRACTION);
+          applyTravelTransform(elapsed);
           context.clearRect(0, 0, canvas.width, canvas.height);
           effect.handleParticles(context, shouldConnect);
           animationFrameId = window.requestAnimationFrame(animate);
@@ -129,45 +205,25 @@ const CanvasMagicMissile = ({origin, height, width, connectParticlesActive, targ
         return () => {
           window.cancelAnimationFrame(animationFrameId)
         }
-    }, [connectParticlesActive, origin, height, width, targetDistance, targetLaneDiff, isMinor])
-
-    // ── Direction-aware initial nudge ───────────────────────────────────────
-    // The missile spawns at the caster's tile and does a short "warm-up" drift
-    // in the direction of the target before the main flight arc kicks in.
-    // targetDistance is signed: positive = target is to the right, negative = left.
-    // We nudge 50px in the direction of travel so the initial motion always
-    // points toward the enemy regardless of which side the caster is on.
-    const dirSign = targetDistance >= 0 ? 1 : -1;
-    const nudgeX = dirSign * 50;   // px — same magnitude as before, now directional
-    // Small vertical nudge proportional to the lane difference (capped at ±30px)
-    const nudgeY = targetLaneDiff !== 0
-        ? Math.sign(targetLaneDiff) * Math.min(Math.abs(targetLaneDiff) * 10, 30)
-        : 0;
-
-    const startX  = origin.x * 100;
-    const startY  = origin.y * 100;
-    const mid1X   = startX + nudgeX;
-    const mid1Y   = startY + nudgeY;
-    const mid2X   = startX + nudgeX * 2;
-    const mid2Y   = startY + nudgeY * 2;
-    const finalX  = (origin.x + targetDistance) * 100;
-    const finalY  = (origin.y + targetLaneDiff) * 100;
+      }, [
+        connectParticlesActive,
+        origin,
+        height,
+        width,
+        targetDistance,
+        targetLaneDiff,
+        target,
+        getCurrentTargetCoords,
+        isMinor
+      ])
 
     return <canvas
-        style={{ animation: 'missileTravel 1.5s linear forwards' }}
+        style={{ transform: `translateX(${origin.x * 100}px) translateY(${origin.y * 100}px) scale(0.1)` }}
         className='spell-animation'
         height={height}
         width={width}
-        ref={canvasRef}>
-        <style>{`
-            @keyframes missileTravel {
-              0%   { transform: translateX(${startX}px) translateY(${startY}px) scale(0.1) }
-              25%  { transform: translateX(${mid1X}px)  translateY(${mid1Y}px)  scale(1)   }
-              50%  { transform: translateX(${mid2X}px)  translateY(${mid2Y}px)  scale(2.75)}
-              100% { transform: translateX(${finalX}px) translateY(${finalY}px) scale(1.5) }
-            }
-        `}</style>
-    </canvas>
+        ref={canvasRef}
+      />
 }
 
 export default CanvasMagicMissile

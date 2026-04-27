@@ -85,10 +85,14 @@ export function InventoryManager(){
     this.shields_names = []
     this.masks_names = [
         'bundu_mask',
+        'crimson_mask',
         'court_mask',
         'lundi_mask',
         'mardi_mask',
+        'seraphic_mask',
+        'shadow_mask',
         'solomon_mask',
+        'twilight_mask',
         'zul_mask'
     ]
     this.helms_names = [
@@ -444,57 +448,8 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
     }
     
     this.armor= {
-        basic_helm: {
-            armor: 30,
-            type: 'armor',
-            icon: 'basic_helm',
-            name: 'basic helm',
-            equippedBy: null,
-            subtype: 'helm',
-            animation: null,
-            description: 'A simple iron helm. Defense: 30 (~21% damage reduction)'
-        },
-        cretan_helm: {
-            armor: 40,
-            type: 'armor',
-            icon: 'cretan_helm',
-            name: 'cretan helm',
-            equippedBy: null,
-            subtype: 'helm',
-            animation: null,
-            description: 'Cretan-style bronze helm. Defense: 40 (~28% damage reduction)'
-        },
-        knight_helm: {
-            armor: 55,
-            type: 'armor',
-            icon: 'knight_helm',
-            name: 'knight helm',
-            equippedBy: null,
-            subtype: 'helm',
-            animation: null,
-            description: `Full knight's visor helm. Defense: 55 (~38% damage reduction)`
-        },
-        legionaire_helm: {
-            armor: 70,
-            type: 'armor',
-            icon: 'legionaire_helm',
-            name: 'legionaire helm',
-            equippedBy: null,
-            subtype: 'helm',
-            animation: null,
-            description: `Legion-forged crest helm. Defense: 70 (~49% damage reduction)`
-        },
-        spartan_helm: {
-            armor: 85,
-            type: 'armor',
-            icon: 'spartan_helm',
-            name: 'spartan helm',
-            equippedBy: null,
-            animation: null,
-            subtype: 'helm',
-            description: `Legendary Spartan crest. Defense: 85 (~59% damage reduction)`
-        },
         buckler: {
+            tier: 1,
             armor: 20,
             type: 'armor',
             subtype: 'shield',
@@ -505,6 +460,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             description: 'Small parrying buckler. Defense: 20 (~14% damage reduction)'
         },
         infantry_shield: {
+            tier: 1,
             armor: 35,
             type: 'armor',
             subtype: 'shield',
@@ -515,6 +471,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             description: 'Standard-issue infantry kite shield. Defense: 35 (~24% damage reduction)'
         },
         cold_steel_shield: {
+            tier: 1,
             armor: 50,
             type: 'armor',
             subtype: 'shield',
@@ -535,6 +492,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             description: 'Reinforced banded-steel kite. Defense: 65 (~45% damage reduction)'
         },
         crusaders_shield: {
+            tier: 2,
             armor: 80,
             type: 'armor',
             subtype: 'shield',
@@ -545,6 +503,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             description: "Blessed crusader tower shield. Defense: 80 (~56% damage reduction)"
         },
         dawnguard: {
+            tier: 2,
             armor: 95,
             type: 'armor',
             subtype: 'shield',
@@ -555,6 +514,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             description: 'Elite sentinel shield of the Dawnguard order. Defense: 95 (~66% damage reduction)'
         },
         twilight_screen: {
+            tier: 2,
             armor: 107,
             type: 'armor',
             subtype: 'shield',
@@ -565,6 +525,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             description: 'Twilight-forged aegis of living shadow. Defense: 107 (~75% damage reduction, max)'
         },
         revenants_shield: {
+            tier: 3,
             armor: 107,
             type: 'armor',
             subtype: 'shield',
@@ -575,6 +536,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             description: "Undying revenant ward. Defense: 107 (~75% damage reduction, max)"
         },
         aegis_bulwark: {
+            tier: 3,
             armor: 107,
             type: 'armor',
             subtype: 'shield',
@@ -619,6 +581,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
         // },
         // wands
         cloudfire_wand: {
+            tier: 1,
             type: 'magical',
             icon: 'cloudfire_wand',
             name: 'Cloudfire Wand',
@@ -629,6 +592,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             description: ''
         },
         animus_wand: {
+            tier: 1,
             type: 'magical',
             icon: 'animus_wand',
             name: 'Animus Wand',
@@ -639,6 +603,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             description: ''
         },
         glyndas_wand: {
+            tier: 1,
             type: 'magical',
             icon: 'glyndas_wand',
             name: "Glynda's Wand",
@@ -649,6 +614,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             description: ''
         },
         justicator_wand: {
+            tier: 2,
             type: 'magical',
             icon: 'justicator_wand',
             name: 'Justicator Wand',
@@ -659,6 +625,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             description: ''
         },
         volkas_wand: {
+            tier: 2,            
             type: 'magical',
             icon: 'volkas_wand',
             name: "Volka's Wand",
@@ -669,6 +636,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             description: ''
         },
         willowcaster: {
+            tier: 2,
             type: 'magical',
             icon: 'willowcaster',
             name: 'Willowcaster',
@@ -679,6 +647,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             description: ''
         },
         maerlyns_rod: {
+            tier: 3,
             type: 'magical',
             icon: 'maerlyns_rod',
             name: "Maerlyn's Rod",
@@ -690,6 +659,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
         },
         // staves
         archmages_staff: {
+            tier: 1,
             type: 'magical',
             icon: 'archmages_staff',
             name: "Archmage's Staff",
@@ -699,7 +669,8 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             animation: null,
             description: ''
         },
-        enchanters_staff: {
+        enchanters_staff: {            
+            tier: 1,
             type: 'magical',
             icon: 'enchanters_staff',
             name: "Enchanter's Staff",
@@ -710,6 +681,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             description: ''
         },
         imperial_mage_staff: {
+            tier: 1,
             type: 'magical',
             icon: 'imperial_mage_staff',
             name: 'Imperial Mage Staff',
@@ -720,6 +692,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             description: ''
         },
         staff_of_espilon: {
+            tier: 2,
             type: 'magical',
             icon: 'staff_of_espilon',
             name: 'Staff of Espilon',
@@ -730,6 +703,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             description: ''
         },
         staff_of_marduk: {
+            tier: 2,
             type: 'magical',
             icon: 'staff_of_marduk',
             name: 'Staff of Marduk',
@@ -740,6 +714,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             description: ''
         },
         staff_of_omicron: {
+            tier: 2,
             type: 'magical',
             icon: 'staff_of_omicron',
             name: 'Staff of Omicron',
@@ -750,6 +725,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             description: ''
         },
         staff_of_tomorrow: {
+            tier: 3,
             type: 'magical',
             icon: 'staff_of_tomorrow',
             name: 'Staff of Tomorrow',
@@ -873,6 +849,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
         },
         //spellbooks
         oily_manual: {
+            tier: 1,
             type: 'magical',
             icon: 'oily_manual',
             name: 'Oily Manual',
@@ -883,6 +860,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             description: `A battered manual smeared with oils and arcane ink`
         },
         bound_tome: {
+            tier: 1,
             type: 'magical',
             icon: 'bound_tome',
             name: 'Bound Tome',
@@ -893,6 +871,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             description: `A tome bound tightly with worn leather straps`
         },
         glowing_tome: {
+            tier: 1,
             type: 'magical',
             icon: 'glowing_tome',
             name: 'Glowing Tome',
@@ -903,6 +882,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             description: `A tome that pulses faintly with stored magical energy`
         },
         kelrigans_manual: {
+            tier: 1,
             type: 'magical',
             icon: 'kelrigans_manual',
             name: "Kelrigan's Manual",
@@ -913,6 +893,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             description: `A well-worn manual penned by the scholar Kelrigan`
         },
         the_watchful_eye: {
+            tier: 2,
             type: 'magical',
             icon: 'the_watchful_eye',
             name: 'The Watchful Eye',
@@ -923,6 +904,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             description: `An arcane folio said to observe its reader in return`
         },
         moonbird_folio: {
+            tier: 2,
             type: 'magical',
             icon: 'moonbird_folio',
             name: 'Moonbird Folio',
@@ -933,6 +915,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             description: `A folio covered in moonbird sigils and lunar charts`
         },
         icewing_folio: {
+            tier: 2,
             type: 'magical',
             icon: 'icewing_folio',
             name: 'Icewing Folio',
@@ -943,6 +926,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             description: `A folio inscribed with frost-laced incantations`
         },
         emerald_tablet: {
+            tier: 2,
             type: 'magical',
             icon: 'emerald_tablet',
             name: 'Emerald Tablet',
@@ -953,6 +937,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             description: `A green-jeweled tome housing ancient transmutation lore`
         },
         ruby_tablet: {
+            tier: 2,
             type: 'magical',
             icon: 'ruby_tablet',
             name: 'Ruby Tablet',
@@ -963,6 +948,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             description: `A red-gemmed tome crackling with volatile fire magic`
         },
         feldons_manual: {
+            tier: 3,
             type: 'magical',
             icon: 'feldons_manual',
             name: "Feldon's Manual",
@@ -973,6 +959,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             description: `Feldon's comprehensive manual of intermediate sorcery`
         },
         the_beast_book: {
+            tier: 3,
             type: 'magical',
             icon: 'the_beast_book',
             name: 'The Beast Book',
@@ -983,6 +970,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             description: `A tome bound in hide, filled with beast-summoning rites`
         },
         book_of_jade: {
+            tier: 3,
             type: 'magical',
             icon: 'book_of_jade',
             name: 'Book of Jade',
@@ -993,6 +981,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             description: `A jade-covered codex of eastern elemental magic`
         },
         igors_grimoire: {
+            tier: 3,
             type: 'magical',
             icon: 'igors_grimoire',
             name: "Igor's Grimoire",
@@ -1003,6 +992,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             description: `Igor's personal grimoire, dense with dark experiments`
         },
         forbidden_grimoire: {
+            tier: 3,
             type: 'magical',
             icon: 'forbidden_grimoire',
             name: 'Forbidden Grimoire',
@@ -1013,6 +1003,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             description: `A chained grimoire whose contents are proscribed by most mage councils`
         },
         monadic_engine: {
+            tier: 4,
             type: 'magical',
             icon: 'monadic_engine',
             name: 'Monadic Engine',
@@ -1023,6 +1014,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             description: `A mechanical folio that computes and channels arcane formulae`
         },
         verdant_engine: {
+            tier: 4,
             type: 'magical',
             icon: 'verdant_engine',
             name: 'Verdant Engine',
@@ -1033,6 +1025,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             description: `A living folio woven from enchanted vines and growth magic`
         },
         crimson_engine: {
+            tier: 4,
             type: 'magical',
             icon: 'crimson_engine',
             name: 'Crimson Engine',
@@ -1043,6 +1036,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             description: `A blood-red engine-tome that amplifies destructive spells`
         },
         folio_of_coincidence: {
+            tier: 4,
             type: 'magical',
             icon: 'folio_of_coincidence',
             name: 'Folio of Coincidence',
@@ -1053,6 +1047,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             description: `A folio that bends probability, making the unlikely inevitable`
         },
         folio_of_paradox: {
+            tier: 4,
             type: 'magical',
             icon: 'folio_of_paradox',
             name: 'Folio of Paradox',
@@ -1063,6 +1058,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             description: `A folio containing contradictory truths that somehow all hold`
         },
         septemons_grimoire: {
+            tier: 4,
             type: 'magical',
             icon: 'septemons_grimoire',
             name: "Septemon's Grimoire",
@@ -1136,6 +1132,46 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             equippedBy: null,
             animation: null,
             description: `Solomon masks have a power of 5 and a give +10 magic resistance to the wearer. <br /> Passive: 1/2 cooldown time for all of wearer's skills, 2x gold drop.`
+        },
+        crimson_mask: {
+            tier: 3,
+            type: 'magical',
+            icon: 'crimson_mask',
+            name: 'crimson mask',
+            subtype: 'mask',
+            equippedBy: null,
+            animation: null,
+            description: '50% damage reduction from demons and fire magic'
+        },
+        seraphic_mask: {
+            tier: 3,
+            type: 'magical',
+            icon: 'seraphic_mask',
+            name: 'seraphic mask',
+            subtype: 'mask',
+            equippedBy: null,
+            animation: null,
+            description: '50% damage reduction from undead and dark magic'
+        },
+        shadow_mask: {
+            tier: 3,
+            type: 'magical',
+            icon: 'shadow_mask',
+            name: 'shadow mask',
+            subtype: 'mask',
+            equippedBy: null,
+            animation: null,
+            description: '50% damage reduction from eldritch and dark magic'
+        },
+        twilight_mask: {
+            tier: 3,
+            type: 'magical',
+            icon: 'twilight_mask',
+            name: 'twilight mask',
+            subtype: 'mask',
+            equippedBy: null,
+            animation: null,
+            description: '50% damage reduction from all magic types'
         }
     });
     this.misc = {
@@ -1376,6 +1412,22 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
     }
     this.getStarterPack = () => {
         return [
+            {
+                effect: 'health gain',
+                amount: 55,
+                icon: 'potion',
+                type: 'consumable',
+                name: 'minor health potion',
+                equippedBy: null
+            }, 
+            {
+                effect: 'health gain',
+                amount: 55,
+                icon: 'potion',
+                type: 'consumable',
+                name: 'minor health potion',
+                equippedBy: null
+            },
             {
                 effect: 'health gain',
                 amount: 55,

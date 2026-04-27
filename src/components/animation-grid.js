@@ -185,6 +185,8 @@ const AnimationGrid = ({
                                 connectParticlesActive={true}
                                 targetDistance={anim.distanceToTarget}
                                 targetLaneDiff={anim.verticalDistanceToTarget}
+                                target={anim.target}
+                                getCurrentTargetCoords={anim.getCurrentTargetCoords}
                                 variant={anim.variant || 'major'}
                             />
                         }

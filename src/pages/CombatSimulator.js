@@ -122,7 +122,6 @@ class CrewManagerPage extends React.Component{
 
     // useScriptCustom('../assets/particles/particles.js')
 
-    // potatoe('test')
 
     this.initializeListeners();
 

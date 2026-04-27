@@ -1,8 +1,7 @@
-import * as images from '../utils/images'
-
 import { FighterAI } from './fighter-ai/fighter-ai'
 import { MonsterAI } from './monster-ai/monster-ai'
 import { createFighter } from './factories'
+import attacksMatrix from './attacks-matrix'
 import specialsMatrix from './specials-matrix'
 import { applyAttackEffect } from './combat-effects'
 import { activeShieldWalls } from './shared-ai-methods/movement-methods'
@@ -112,6 +111,75 @@ export function CombatManager() {
         if (!action) return 'Attack';
         return formatCombatText(action.name || action.subtype || action.type || 'attack');
     };
+    this.hasPassive = (combatant, passiveKey) => {
+        if (!combatant || !Array.isArray(combatant.passives) || !passiveKey) return false;
+        const normalizedTarget = String(passiveKey).replace(/\s+/g, '_').toLowerCase();
+        return combatant.passives.some((passive) => {
+            const name = typeof passive === 'string'
+                ? passive
+                : (passive && (passive.name || passive.key)) || '';
+            const normalizedName = String(name).replace(/\s+/g, '_').toLowerCase();
+            return normalizedName === normalizedTarget;
+        });
+    };
+    this.tryTriggerReassemble = (combatant) => {
+        if (!combatant || combatant.dead) return false;
+        if ((combatant.type || '').toLowerCase() !== 'skeleton') return false;
+        if (!this.hasPassive(combatant, 'reassemble')) return false;
+        if (combatant.reassembleUsed || combatant.hasReassembled) return false;
+
+        combatant.reassembleUsed = true;
+        if (Math.random() > 0.40) {
+            return false;
+        }
+
+        const reviveHp = Math.max(1, Math.floor((combatant.starting_hp || combatant.stats?.hp || 1) * 0.30));
+        combatant.hp = reviveHp;
+        combatant.hasReassembled = true;
+        combatant.dead = false;
+        combatant.locked = false;
+        combatant.aiming = false;
+        combatant.active = false;
+        combatant.attacking = false;
+        combatant.attackingReverse = false;
+        combatant.pendingAttack = null;
+        combatant.targetId = null;
+        combatant.targettedBy = [];
+        combatant.wounded = false;
+        combatant.frozen = false;
+        combatant.frozenPoints = 0;
+        combatant.invisible = false;
+        combatant.invisible_eras = 0;
+        combatant.petrified = false;
+        combatant.petrified_eras = 0;
+
+        // Reassemble strips existing abilities and grants berserk-only behavior.
+        combatant.passives = [];
+        combatant.specials = this.formatSpecials(['berserk']).filter(Boolean);
+
+        const currentAtk = typeof combatant.atk === 'number'
+            ? combatant.atk
+            : (typeof combatant.stats?.atk === 'number' ? combatant.stats.atk : 1);
+        const currentSpeed = (typeof combatant.stats?.speed === 'number' && combatant.stats.speed > 0)
+            ? combatant.stats.speed
+            : 1;
+
+        combatant.atk = Math.max(1, Math.round(currentAtk * 2));
+        if (combatant.stats) {
+            combatant.stats.atk = combatant.atk;
+            combatant.stats.speed = Math.max(1, Math.round(currentSpeed * 2));
+        }
+
+        const effectiveSpeed = (combatant.stats && typeof combatant.stats.speed === 'number' && combatant.stats.speed > 0)
+            ? combatant.stats.speed
+            : 1;
+        combatant.movesPerTurnCycle = effectiveSpeed * 2;
+        combatant.moveCooldown = (1 / effectiveSpeed) * 5000;
+
+        this.appendCombatLog(`${this.getCombatantLogName(combatant)} reassembles with berserk fury`);
+        this.updateData(clone(this.combatants));
+        return true;
+    };
     this.appendCombatLog = (message) => {
         if (!message) return;
         this.combatLogSequence += 1;
@@ -165,182 +233,7 @@ export function CombatManager() {
     //     prioritizeClosestEnemy,
     //     default
     // }
-    this.attacksMatrix = {
-        claws: {
-            name: 'claws',
-            type: 'cutting',
-            range: 'close',
-            icon: images['claws'],
-            cooldown: 3,
-        },
-        bite: {
-            name: 'bite',
-            type: 'cutting',
-            icon: images['bite'],
-            range: 'close',
-            cooldown: 3,
-            effect: { type: 'bleed', chance: 40, duration: 5 }
-        },
-        crush: {
-            name: 'crush',
-            type: 'crushing',
-            icon: images['crushing'],
-            range: 'close',
-            cooldown: 5,
-            effect: { type: 'stun', chance: 40, duration: 5 }
-        },
-        tackle: {
-            name: 'tackle',
-            type: 'crushing',
-            icon: images['tackle'],
-            range: 'close',
-            cooldown: 4,
-            effect: { type: 'stun', chance: 30, duration: 3 }
-        },
-        grasp: {
-            name: 'grasp',
-            type: 'crushing',
-            icon: images['grasp'],
-            isGif: true,
-            range: 'close',
-            cooldown: 3,
-            effect: { type: 'stun', chance: 20, duration: 2 },
-        },
-        energy_drain: {
-            name: 'energy drain',
-            type: 'curse',
-            icon: images['energy_drain'],
-            range: 'medium',
-            cooldown: 3,
-            effect: { type: 'energy drain', chance: 100, duration: 4 },
-        },
-        fire_breath: {
-            name: 'fire breath',
-            type: 'fire',
-            icon: images['fire_breath'],
-            range: 'medium',
-            cooldown: 3,
-        },
-        void_lance: {
-            name: 'void lance',
-            icon: images['void_lance'],
-            type: 'psionic',
-            range: 'medium',
-            cooldown: 3,
-        },
-        energy_blast: {
-            name: 'energy blast',
-            type: 'arcane',
-            range: 'far',
-            icon: images['void_lance'],
-            cooldown: 6,
-        },
-        lightning: {
-            name: 'lightning',
-            type: 'electricity',
-            icon: images['lightning'],
-            range: 'far',
-            cooldown: 3,
-        },
-        sword_swing: {
-            name: 'sword swing',
-            type: 'cutting',
-            range: 'close',
-            icon: images['sword'],
-            cooldown: 2.5,
-        },
-        sword_thrust: {
-            name: 'sword thrust',
-            type: 'cutting',
-            range: 'close',
-            icon: images['sword'],
-            cooldown: 2,
-        },
-        dragon_punch: {
-            name: 'dragon punch',
-            type: 'crushing',
-            range: 'close',
-            icon: images['hand_7'],
-            cooldown: 3,
-        },
-        meditate: {
-            name: 'meditate',
-            type: 'buff',
-            range: 'self',
-            icon: images['buckler'],
-            cooldown: 3,
-        },
-        heal: {
-            name: 'heal',
-            type: 'buff',
-            range: 'close',
-            icon: images['buckler'],
-            cooldown: 3,
-        },
-        fire_arrow: {
-            name: 'fire arrow',
-            type: 'fire',
-            range: 'far',
-            icon: images['bow_and_arrow'],
-            cooldown: 2,
-        },
-        axe_throw: {
-            name: 'axe throw',
-            type: 'cutting',
-            range: 'medium',
-            icon: images['axe'],
-            cooldown: 2.5,
-        },
-        axe_swing: {
-            name: 'axe swing',
-            type: 'cutting',
-            range: 'close',
-            icon: images['axe'],
-            cooldown: 1,
-        },
-        spear_throw: {
-            name: 'spear throw',
-            type: 'cutting',
-            range: 'far',
-            icon: images['spear'],
-            cooldown: 3.2,
-        },
-        flying_lotus: {
-            name: 'flying lotus',
-            type: 'crushing',
-            range: 'medium',
-            icon: images['scepter'],
-            cooldown: 4.5,
-        },
-        shield_bash: {
-            name: 'shield bash',
-            type: 'crushing',
-            range: 'close',
-            icon: images['buckler'],
-            cooldown: 4.5,
-        },
-        cane_strike: {
-            name: 'cane strike',
-            type: 'crushing',
-            range: 'far',
-            icon: images['scepter'],
-            cooldown: 3,
-        },
-        dagger_stab: {
-            name: 'dagger_stab',
-            type: 'cutting',
-            range: 'close',
-            icon: images['sword'],
-            cooldown: 2,
-        },
-        snake_strike: {
-            name: 'snake_strike',
-            type: 'cutting',
-            range: 'medium',
-            icon: images['sword'],
-            cooldown: 2,
-        }
-    }
+    this.attacksMatrix = attacksMatrix
 
     // Use the centralized canonical specials matrix so other modules import
     // the same authoritative data. Keep on the instance for compatibility.
@@ -939,15 +832,27 @@ export function CombatManager() {
     }
     this.fighterSpecialAttack = (special) => {
         if (!this.selectedFighter) return
-        if (this.selectedFighter.invisible || this.selectedFighter.petrified) return
-        const target = this.combatants[this.selectedFighter.targetId];
-        switch (this.selectedFighter.type) {
+
+        const fighter = this.combatants[this.selectedFighter.id];
+        if (!fighter || fighter.dead || fighter.invisible || fighter.petrified) return
+
+        const incomingName = typeof special === 'string'
+            ? special
+            : (special && special.name) || '';
+        const normalizedIncoming = String(incomingName).replaceAll('_', ' ').toLowerCase();
+        const resolvedSpecial = Array.isArray(fighter.specials)
+            ? (fighter.specials.find(s => s && String(s.name || '').toLowerCase() === normalizedIncoming) || special)
+            : special;
+
+        if (!resolvedSpecial || !resolvedSpecial.name) return;
+
+        const target = fighter.targetId ? this.combatants[fighter.targetId] : null;
+        switch (fighter.type) {
             case 'soldier':
-                switch (special.name) {
+                switch (resolvedSpecial.name) {
                     case 'shield wall': {
                         const soldierAI = this.fighterAI && this.fighterAI.roster && this.fighterAI.roster['soldier'];
                         if (soldierAI) {
-                            const fighter = this.selectedFighter;
                             const sw = fighter.specials && fighter.specials.find(s => s && s.name === 'shield wall');
                             const ready = sw && sw.cooldown_position === 100;
                             if (ready && !fighter.shieldWallActive) {
@@ -964,9 +869,9 @@ export function CombatManager() {
                 }
                 break;
             case 'wizard':
-                switch (special.name) {
+                switch (resolvedSpecial.name) {
                     case 'ice blast':
-                        this.fighterAI.roster['wizard'].triggerIceBlast(this.selectedFighter, target)
+                        this.fighterAI.roster['wizard'].triggerIceBlast(fighter, target)
                         break;
                     default:
                         break;
@@ -975,9 +880,8 @@ export function CombatManager() {
             case 'monk': {
                 const monkAI = this.fighterAI && this.fighterAI.roster && this.fighterAI.roster['monk'];
                 if (monkAI) {
-                    switch (special.name) {
+                    switch (resolvedSpecial.name) {
                         case 'windmill': {
-                            const fighter = this.combatants[this.selectedFighter.id];
                             const ws = fighter.specials && fighter.specials.find(s => s && s.name === 'windmill');
                             if (ws && ws.cooldown_position === 100 && !fighter.windmillActive) {
                                 monkAI.triggerWindmill(fighter, this.combatants);
@@ -992,10 +896,9 @@ export function CombatManager() {
             }
             case 'barbarian': {
                 const barbarianAI = this.fighterAI?.roster?.['barbarian'];
-                if (barbarianAI && special) {
-                    switch (special.name) {
+                if (barbarianAI && resolvedSpecial) {
+                    switch (resolvedSpecial.name) {
                         case 'berserker': {
-                            const fighter = this.combatants[this.selectedFighter?.id];
                             if (fighter && barbarianAI.shouldUseBerserker(fighter, this.combatants)) {
                                 barbarianAI.triggerBerserker(fighter, this.combatants);
                             }
@@ -2250,6 +2153,18 @@ export function CombatManager() {
         return Math.max(0, rawDamage - reduction);
     };
 
+    this.getIndicatorAnchor = (combatant) => {
+        if (!combatant) return null;
+        if (combatant.isVCT) {
+            return this.combatants[combatant.id] || combatant;
+        }
+        const vctId = `${combatant.id}_VCT`;
+        if (this.combatants[vctId]) {
+            return this.combatants[vctId];
+        }
+        return combatant;
+    };
+
     this.hitsCombatant = (caller, combatantHit, supplementalData = null, options = {}) => {
         if (caller && (caller.invisible || caller.petrified)) {
             return;
@@ -2258,8 +2173,7 @@ export function CombatManager() {
             return;
         }
         // Defensive: never apply damage to an already-dead, missing, or VCT combatant
-        // If the target is the Mummy, redirect damage indicators to its VCT
-        let vctId = null;
+        let indicatorAnchor = null;
         // If the target is a VCT and has a parentMonsterId, redirect to parent monster for logic
         if (combatantHit && combatantHit.isVCT && combatantHit.parentMonsterId && this.combatants[combatantHit.parentMonsterId]) {
             // If the caller is a monster, log and skip the attack
@@ -2267,12 +2181,11 @@ export function CombatManager() {
                 console.warn('[CombatManager] Monster attempted to attack a VCT. Skipping. Caller:', caller.id, 'Target VCT:', combatantHit.id);
                 return;
             }
-            // If the caller is a fighter, treat the VCT as an extension of the mummy
-            vctId = combatantHit.id;
+            // If the caller is a fighter, treat the VCT as an extension of the parent monster
+            indicatorAnchor = this.getIndicatorAnchor(combatantHit);
             combatantHit = this.combatants[combatantHit.parentMonsterId];
-        } else if (combatantHit && combatantHit.type === 'mummy' && this.vctByMonster && this.vctByMonster[combatantHit.id]) {
-            vctId = `${combatantHit.id}_VCT`;
         }
+        indicatorAnchor = indicatorAnchor || this.getIndicatorAnchor(combatantHit);
         if (!combatantHit || combatantHit.dead || !this.combatants[combatantHit.id] || (combatantHit.isVCT && (!combatantHit.parentMonsterId || !this.combatants[combatantHit.parentMonsterId]))) {
             console.warn('[CombatManager.hitsCombatant] Attempted to hit missing/dead/VCT combatant:', combatantHit && combatantHit.id, combatantHit);
             return;
@@ -2354,10 +2267,10 @@ export function CombatManager() {
         const indicatorId = Date.now() + Math.random();
         // Always use a number for value, even for critical hits
         const indicatorObj = { id: indicatorId, value: damage, source: caller?.name || 'unknown' };
-        if (vctId && this.combatants[vctId]) {
-            this.combatants[vctId].damageIndicators.push(indicatorObj);
+        if (indicatorAnchor) {
+            indicatorAnchor.damageIndicators.push(indicatorObj);
             if (criticalHit) {
-                this.combatants[vctId].damageIndicators.push({ id: Date.now() + Math.random(), value: 'CRIT!', isCrit: true, source: caller?.name || 'unknown' });
+                indicatorAnchor.damageIndicators.push({ id: Date.now() + Math.random(), value: 'CRIT!', isCrit: true, source: caller?.name || 'unknown' });
             }
         } else {
             combatantHit.damageIndicators.push(indicatorObj);
@@ -2588,7 +2501,8 @@ export function CombatManager() {
         // Generate unique id for this indicator
         const indicatorId2 = Date.now() + Math.random();
         const indicatorObj2 = { id: indicatorId2, value: damage, source: caller?.name || 'unknown' };
-        target.damageIndicators.push(indicatorObj2);
+        const indicatorTarget = this.getIndicatorAnchor(target) || target;
+        indicatorTarget.damageIndicators.push(indicatorObj2);
         //console.log('[DIAG][combat-manager] Pushed to target.damageIndicators:', indicatorObj2, 'Current:', target.damageIndicators);
         if (typeof this.updateData === 'function') {
             this.updateData(clone(this.combatants));
@@ -2674,7 +2588,7 @@ export function CombatManager() {
         caller.readout.result = `misses`
         let target = tempTarget ? tempTarget : this.getCombatant(caller.targetId);
         if (target) {
-            const indicatorTarget = (this.vctByMonster && this.vctByMonster[target.id] && this.combatants[`${target.id}_VCT`]) ? this.combatants[`${target.id}_VCT`] : target;
+            const indicatorTarget = this.getIndicatorAnchor(target) || target;
             const missId = Date.now() + Math.random();
             const missObj = { id: missId, value: 'miss', isMiss: true, source: caller?.name || 'unknown' };
             indicatorTarget.damageIndicators.push(missObj);
@@ -2736,6 +2650,9 @@ export function CombatManager() {
         // Guard against double-death (e.g. two fighters attack simultaneously)
         if (!combatant || combatant.dead || !this.combatants[combatant.id]) {
             console.warn('[CombatManager.targetKilled] Attempted to kill missing/dead combatant:', combatant && combatant.id, combatant);
+            return;
+        }
+        if (this.tryTriggerReassemble(combatant)) {
             return;
         }
         // Ensure the combatant stops all activity immediately.

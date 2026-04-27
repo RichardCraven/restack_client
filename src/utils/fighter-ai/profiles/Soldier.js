@@ -625,6 +625,8 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
                         } else {
                             this.missesTarget(caller);
                         }
+                        // AI path must also respect attack cooldowns.
+                        this.kickoffAttackCooldown(caller);
                         break;
                     }
                     case 'sword thrust':
