@@ -62,6 +62,18 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
         initialFacing = 'left';
     }
 
+    const rawAttacks = Array.isArray(fighter.attacks) ? fighter.attacks : [];
+    let formattedAttacks = (typeof callbacks.formatAttacks === 'function')
+        ? callbacks.formatAttacks(rawAttacks)
+        : rawAttacks;
+
+    // Persisted Soldier records may contain duplicate sword swings from older data.
+    // Normalize to a single base attack so the UI and cooldown behavior remain correct.
+    if ((fighter.type === 'soldier' || fighter.image === 'soldier') && Array.isArray(formattedAttacks) && formattedAttacks.length > 0) {
+        const swordSwing = formattedAttacks.find((a) => (a?.name || '').toLowerCase() === 'sword swing');
+        formattedAttacks = [swordSwing || formattedAttacks[0]];
+    }
+
     return {
         name: fighter.name,
         type: fighter.type,
@@ -122,8 +134,8 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
         regenerating: false,
         regenerating_eras: 0,
         regeneration_percent: 0,
-    // Ensure attacks are always full objects, not just strings
-    attacks: (typeof callbacks.formatAttacks === 'function') ? callbacks.formatAttacks(fighter.attacks || []) : (fighter.attacks || []),
+    // Ensure attacks are always full objects, not just strings.
+    attacks: formattedAttacks,
     specials: (typeof formatSpecials === 'function') ? formatSpecials(fighter.specials || []) : (fighter.specials || []),
         specialActions: fighter.specialActions, // Now uses flat structure: type, name, iconUrl, subtype, etc.
         targettedBy: [],

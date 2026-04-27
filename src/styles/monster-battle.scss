@@ -3087,6 +3087,20 @@
                             opacity: 0.3;
                             pointer-events: none;
                             // border-right: 1px solid black;
+
+                            &.radial{
+                                left: 0;
+                                top: 0;
+                                width: 100%;
+                                height: 100%;
+                                border-radius: 50%;
+                                opacity: 1;
+                                background: conic-gradient(
+                                    rgba(0, 0, 0, 0.62) var(--cooldown-remaining, 100%),
+                                    rgba(0, 0, 0, 0) 0
+                                );
+                                transition: background 0.1s linear;
+                            }
                         }
                         .interaction-tile{
                             // height: 40px;

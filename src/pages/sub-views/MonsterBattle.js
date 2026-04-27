@@ -2100,19 +2100,45 @@ class MonsterBattle extends React.Component {
                             <div className="interaction-header">Attacks</div>
                             <div className="interaction-tooltip">{this.state.hoveredAttackTile}</div>
                             <div className="interaction-tile-container">
-                                    {(this.state.selectedFighter?.attacks || []).map((a, i)=>{
-                                        return <div key={i}  className='interaction-tile-wrapper'>
+                                {(() => {
+                                    const grouped = {};
+                                    (this.state.selectedFighter?.attacks || []).forEach((attack) => {
+                                        if (!attack) return;
+                                        const key = `${attack.name || attack.key || 'attack'}__${attack.icon || ''}__${attack.range || ''}`;
+                                        if (!grouped[key]) grouped[key] = [];
+                                        grouped[key].push(attack);
+                                    });
+
+                                    return Object.keys(grouped).map((groupKey) => {
+                                        const group = grouped[groupKey];
+                                        if (!group || group.length === 0) return null;
+                                        const displayAttack = group.find((unit) => unit && unit.cooldown_position === 100) || group[0];
+                                        if (!displayAttack) return null;
+
+                                        const cooldownPosition = typeof displayAttack.cooldown_position === 'number'
+                                            ? displayAttack.cooldown_position
+                                            : 100;
+                                        const cooldownRemaining = Math.max(0, Math.min(100, 100 - cooldownPosition));
+
+                                        return <div key={groupKey} className='interaction-tile-wrapper'>
                                                     <div 
-                                                    className={`interaction-tile ${a.cooldown_position === 100 ? 'available' : ''}`} 
-                                                    style={{backgroundImage: "url(" + a.icon + ")", cursor: this.state.showCrosshair ? 'crosshair' : (a.cooldown_position === 100 ? 'pointer' : '')}} 
-                                                    onClick={() => this.attackTileClicked(a)} 
-                                                    onMouseEnter={() => this.attackTileHovered(a.name)} 
+                                                    className={`interaction-tile ${cooldownPosition === 100 ? 'available' : ''}`} 
+                                                    style={{backgroundImage: "url(" + displayAttack.icon + ")", cursor: this.state.showCrosshair ? 'crosshair' : (cooldownPosition === 100 ? 'pointer' : '')}} 
+                                                    onClick={() => this.attackTileClicked(displayAttack)} 
+                                                    onMouseEnter={() => this.attackTileHovered(displayAttack.name)} 
                                                     onMouseLeave={() => this.attackTileHovered(null)}
                                                     >
                                                     </div>
-                                                    <div className="interaction-tile-overlay" style={{width: `${a.cooldown_position}%`, transition: a.cooldown_position === 0 ? '0s' : '0.2s'}}></div>
+                                                    {cooldownRemaining > 0 && (
+                                                        <div
+                                                            className="interaction-tile-overlay radial"
+                                                            style={{ '--cooldown-remaining': `${cooldownRemaining}%` }}
+                                                        ></div>
+                                                    )}
+                                                    {group.length > 1 && <div className="stack-badge">{this.romanNumeral(group.length)}</div>}
                                                 </div>
-                                    })}
+                                    });
+                                })()}
                             </div>
                         </div>
                         <div className="target-col">

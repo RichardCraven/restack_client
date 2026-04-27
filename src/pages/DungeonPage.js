@@ -494,7 +494,7 @@ class DungeonPage extends React.Component {
             levelTracker: [
                 {id: 2, active: false},
                 {id: 1, active: false},
-                {id: 0, active: false},
+                {id: 0, active: true},
                 {id: -1, active: false},
                 {id: -2, active: false},
             ],
@@ -532,6 +532,7 @@ class DungeonPage extends React.Component {
             , campWarningMessage: null
             , showFoodPrepOverlay: false
             , showSpellsOverlay: false
+            , showMapOverlay: false
         }
     // Native browser tooltip will be used for death-tracker; no custom tooltip state required.
         // Track timers/intervals created by this component so we can clear on unmount
@@ -2892,13 +2893,15 @@ class DungeonPage extends React.Component {
         if (!meta.location || meta.location.levelId == null) {
             console.warn('DungeonPage.loadExistingDungeon: meta.location missing — deriving defaults from dungeon data', meta);
             const firstLevel = dungeon.levels && dungeon.levels[0];
+            const levelZero = dungeon.levels && dungeon.levels.find(level => Number(level.id) === 0);
+            const defaultLevel = levelZero || firstLevel;
             // Try to use the dungeon's stored spawn point for a sensible starting tile
             const spawnFallback = dungeon.spawn_points && dungeon.spawn_points[0];
             const fallbackTileIndex = spawnFallback ? spawnFallback.id : 112; // 112 = center of 15x15 board
             const fallbackBoardIndex = spawnFallback ? (spawnFallback.miniboardIndex || 0) : 0;
             const fallbackOrientation = spawnFallback ? (spawnFallback.locationCode && spawnFallback.locationCode.split('_')[4]) || 'F' : 'F';
             meta.location = {
-                levelId: firstLevel ? firstLevel.id : null,
+                levelId: defaultLevel ? defaultLevel.id : null,
                 orientation: fallbackOrientation,
                 boardIndex: fallbackBoardIndex,
                 tileIndex: fallbackTileIndex
@@ -3624,7 +3627,7 @@ class DungeonPage extends React.Component {
     }
 
     handleCloseCampPopup = () => {
-        try { this.setState({ showCampPopup: false, showFoodPrepOverlay: false, showSpellsOverlay: false }, () => this._cleanupModalBodyClass()); } catch(e) {}
+        try { this.setState({ showCampPopup: false, showFoodPrepOverlay: false, showSpellsOverlay: false, showMapOverlay: false }, () => this._cleanupModalBodyClass()); } catch(e) {}
     }
 
     handleOpenFoodPrep = () => {
@@ -3641,6 +3644,20 @@ class DungeonPage extends React.Component {
 
     handleSpellsBack = () => {
         this.setState({ showSpellsOverlay: false });
+    }
+
+    handleOpenMapOverlay = () => {
+        this.setState({ showMapOverlay: true });
+    }
+
+    handleMapOverlayBack = () => {
+        this.setState({ showMapOverlay: false });
+    }
+
+    handleMapLevelSelect = (levelId) => {
+        const nextLevel = Number(levelId);
+        if (Number.isNaN(nextLevel)) return;
+        this.handleLevelChange(nextLevel);
     }
 
     handleStartRecipe = (recipe) => {
@@ -3779,7 +3796,7 @@ class DungeonPage extends React.Component {
                             <span className="camp-btn-icon"><span role="img" aria-label="meat">🍖</span></span>
                             <span>Prepare Food</span>
                         </button>
-                        <button className="camp-action-btn" onClick={() => {}}>
+                        <button className="camp-action-btn" onClick={this.handleOpenMapOverlay}>
                             <span className="camp-btn-icon"><span role="img" aria-label="map">🗺️</span></span>
                             <span>Map</span>
                         </button>
@@ -3938,6 +3955,58 @@ class DungeonPage extends React.Component {
                                         </div>
                                     );
                                 })}
+                            </div>
+                        </div>
+                    );
+                })()}
+
+                {this.state.showMapOverlay && (() => {
+                    const tracker = this.state.levelTracker || [];
+                    const trackerIds = tracker.map((entry) => Number(entry.id)).filter((id) => !Number.isNaN(id));
+                    const dungeonIds = ((this.props.boardManager && this.props.boardManager.dungeon && this.props.boardManager.dungeon.levels) || [])
+                        .map((level) => Number(level.id))
+                        .filter((id) => !Number.isNaN(id));
+                    const sourceLevelIds = trackerIds.length ? trackerIds : dungeonIds;
+                    const levelIds = Array.from(new Set(sourceLevelIds)).sort((a, b) => b - a);
+                    const activeLevel = tracker.find((entry) => entry && entry.active);
+                    const activeLevelId = activeLevel ? Number(activeLevel.id) : Number((getMeta() || {}).location?.levelId || 0);
+
+                    return (
+                        <div className="camp-map-overlay">
+                            <div className="camp-map-header">
+                                <button className="camp-map-back" onClick={this.handleMapOverlayBack}>Back</button>
+                                <div className="camp-map-title">Dungeon Tower</div>
+                                <div className="camp-map-subtitle">Stacked floors from an isometric view</div>
+                            </div>
+
+                            <div className="camp-map-scene-wrap">
+                                <div className="camp-map-scene" role="list" aria-label="Dungeon tower floors">
+                                    {levelIds.map((levelId, index) => {
+                                        const isActive = levelId === activeLevelId;
+                                        const depthOffset = index * 52;
+                                        return (
+                                            <button
+                                                key={levelId}
+                                                role="listitem"
+                                                className={`tower-floor-slab ${isActive ? 'active' : ''}`}
+                                                style={{
+                                                    '--tower-offset': `${depthOffset}px`,
+                                                    animationDelay: `${index * 70}ms`,
+                                                    zIndex: levelIds.length - index
+                                                }}
+                                                onClick={() => this.handleMapLevelSelect(levelId)}
+                                                title={`Go to level ${levelId}`}
+                                            >
+                                                <span className="slab-shadow"></span>
+                                                <span className="slab-face slab-top"></span>
+                                                <span className="slab-face slab-left"></span>
+                                                <span className="slab-face slab-right"></span>
+                                                <span className="slab-label">L{levelId}</span>
+                                                {isActive && <span className="slab-active-badge">Current</span>}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
                             </div>
                         </div>
                     );

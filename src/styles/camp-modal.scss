@@ -224,6 +224,286 @@
   border-radius: 8px;
 }
 
+.camp-map-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  background: radial-gradient(circle at 16% 12%, rgba(34, 56, 80, 0.92), rgba(8, 12, 20, 0.98));
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  overflow: hidden;
+  border-radius: 8px;
+}
+
+.camp-map-header {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas:
+    'back title'
+    'back subtitle';
+  align-items: center;
+  gap: 2px 14px;
+  margin-bottom: 14px;
+}
+
+.camp-map-back {
+  grid-area: back;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #d6dee9;
+  border-radius: 6px;
+  padding: 4px 12px;
+  cursor: pointer;
+  font-size: 13px;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+  }
+}
+
+.camp-map-title {
+  grid-area: title;
+  font-size: 17px;
+  font-weight: 700;
+  color: #9bc7ff;
+  letter-spacing: 0.5px;
+}
+
+.camp-map-subtitle {
+  grid-area: subtitle;
+  font-size: 12px;
+  color: #9fb0c6;
+}
+
+.camp-map-scene-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 300px;
+  border-radius: 10px;
+  border: 1px solid rgba(190, 220, 255, 0.18);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0)),
+    repeating-linear-gradient(
+      -30deg,
+      rgba(130, 168, 214, 0.05) 0,
+      rgba(130, 168, 214, 0.05) 2px,
+      transparent 2px,
+      transparent 10px
+    );
+  overflow: hidden;
+}
+
+.camp-map-scene {
+  position: absolute;
+  inset: 0;
+  perspective: 1000px;
+  perspective-origin: 50% 32%;
+  transform-style: preserve-3d;
+  animation: towerSceneFloat 6.5s ease-in-out infinite;
+}
+
+.tower-floor-slab {
+  --slab-w: 208px;
+  --slab-top-h: 94px;
+  --slab-thickness: 18px;
+
+  position: absolute;
+  left: 50%;
+  top: 30px;
+  margin-left: calc(var(--slab-w) * -0.5);
+  width: var(--slab-w);
+  height: calc(var(--slab-top-h) + var(--slab-thickness) + 16px);
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  transform-style: preserve-3d;
+  transition: transform 0.2s ease, filter 0.2s ease;
+  padding: 0;
+  opacity: 0;
+  transform: translate3d(0, var(--tower-offset, 0px), 0);
+  animation: towerFloorReveal 420ms cubic-bezier(0.2, 0.9, 0.2, 1) forwards;
+
+  &:hover {
+    filter: brightness(1.08);
+    transform: translate3d(0, calc(var(--tower-offset, 0px) - 8px), 0) scale(1.02);
+
+    .slab-shadow {
+      opacity: 0.9;
+      filter: blur(12px);
+    }
+  }
+
+  &:focus-visible {
+    outline: 2px solid #7fc4ff;
+    outline-offset: 2px;
+  }
+
+  &.active {
+    filter: drop-shadow(0 0 12px rgba(126, 210, 255, 0.45));
+  }
+}
+
+.slab-face {
+  position: absolute;
+  display: block;
+  pointer-events: none;
+}
+
+.slab-shadow {
+  position: absolute;
+  left: 50%;
+  top: calc(var(--slab-top-h) + 10px);
+  width: calc(var(--slab-w) * 0.72);
+  height: 22px;
+  transform: translateX(-50%) skewX(-44deg);
+  transform-origin: center;
+  background: linear-gradient(180deg, rgba(6, 10, 18, 0.28), rgba(6, 10, 18, 0.02));
+  filter: blur(10px);
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.slab-top {
+  width: 100%;
+  height: var(--slab-top-h);
+  top: 0;
+  left: 0;
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+  background: linear-gradient(145deg, #cfd9e6, #8fa1b9);
+  border: 1px solid rgba(40, 55, 74, 0.45);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14), 0 8px 16px rgba(12, 20, 34, 0.14);
+}
+
+.slab-left {
+  width: 50%;
+  height: calc((var(--slab-top-h) * 0.5) + var(--slab-thickness));
+  left: 0;
+  top: calc(var(--slab-top-h) * 0.5);
+  /* Keep the top and bottom edges parallel for a true cuboid side face. */
+  clip-path: polygon(0 0, 100% 72%, 100% 100%, 0 28%);
+  background: linear-gradient(180deg, #627892, #3d4f67);
+  border-left: 1px solid rgba(20, 30, 42, 0.45);
+}
+
+.slab-right {
+  width: 50%;
+  height: calc((var(--slab-top-h) * 0.5) + var(--slab-thickness));
+  right: 0;
+  top: calc(var(--slab-top-h) * 0.5);
+  /* Mirror of slab-left with the same vertical offset to keep symmetry. */
+  clip-path: polygon(0 72%, 100% 0, 100% 28%, 0 100%);
+  background: linear-gradient(180deg, #4f647f, #324359);
+  border-right: 1px solid rgba(16, 22, 32, 0.52);
+}
+
+.tower-floor-slab.active .slab-top {
+  background: linear-gradient(145deg, #fff6c4, #d8b86a);
+  animation: towerFloorGlow 2.8s ease-in-out infinite;
+}
+
+.tower-floor-slab.active .slab-left {
+  background: linear-gradient(180deg, #8f6d2f, #654b1e);
+}
+
+.tower-floor-slab.active .slab-right {
+  background: linear-gradient(180deg, #7d5e28, #5a431b);
+}
+
+.tower-floor-slab.active .slab-shadow {
+  background: linear-gradient(180deg, rgba(44, 28, 4, 0.26), rgba(44, 28, 4, 0.03));
+}
+
+.slab-label {
+  position: absolute;
+  top: 44px;
+  left: -44px;
+  transform: none;
+  font-size: 12px;
+  font-weight: 700;
+  color: #132238;
+  background: rgba(255, 255, 255, 0.75);
+  border-radius: 999px;
+  padding: 2px 8px;
+  letter-spacing: 0.35px;
+  pointer-events: none;
+}
+
+.slab-active-badge {
+  position: absolute;
+  top: 42px;
+  right: -72px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: #ffe7a6;
+  background: rgba(20, 16, 6, 0.75);
+  border: 1px solid rgba(255, 214, 124, 0.55);
+  border-radius: 999px;
+  padding: 2px 6px;
+  pointer-events: none;
+  z-index: 3;
+}
+
+@media (max-width: 640px) {
+  .slab-shadow {
+    top: calc(var(--slab-top-h) + 8px);
+    height: 18px;
+  }
+
+  .tower-floor-slab {
+    --slab-w: 176px;
+    --slab-top-h: 82px;
+    --slab-thickness: 14px;
+  }
+}
+
+@keyframes towerFloorReveal {
+  0% {
+    opacity: 0;
+    transform: translate3d(24px, calc(var(--tower-offset, 0px) + 26px), 0) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, var(--tower-offset, 0px), 0) scale(1);
+  }
+}
+
+@keyframes towerFloorGlow {
+  0%,
+  100% {
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2), 0 0 0 rgba(255, 214, 124, 0);
+  }
+  50% {
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28), 0 0 18px rgba(255, 214, 124, 0.18);
+  }
+}
+
+@keyframes towerSceneFloat {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+@media (max-width: 640px) {
+  .tower-floor-slab {
+    --slab-w: 150px;
+    --slab-h: 68px;
+    --slab-depth: 18px;
+    top: 42px;
+  }
+
+  .slab-label {
+    font-size: 11px;
+  }
+}
+
 .spells-overlay-header {
   display: grid;
   grid-template-columns: auto 1fr;
