@@ -89,10 +89,6 @@ import element_earth from '../assets/graphics/card_duel/element_earth.png'
 // ------------------------------------------------------------------------------------------------
 
 // items
-import evilai_amulet from '../assets/icons/items/amulets/evilai_amulet.png'
-import lundi_amulet from '../assets/icons/items/amulets/lundi_amulet.png'
-import nukta_amulet from '../assets/icons/items/amulets/nukta_amulet.png'
-import sayan_amulet from '../assets/icons/items/amulets/sayan_amulet.png'
 
 import beetle_charm from '../assets/icons/items/charms/beetle_charm.png'
 import demonskull_charm from '../assets/icons/items/charms/demonskull_charm.png'
@@ -101,6 +97,39 @@ import hamsa_charm from '../assets/icons/items/charms/hamsa_charm.png'
 import lundi_charm from '../assets/icons/items/charms/lundi_charm.png'
 import nukta_charm from '../assets/icons/items/charms/nukta_charm.png'
 import scarab_charm from '../assets/icons/items/charms/scarab_charm.png'
+
+// amulets
+import elasi_amulet from '../assets/icons/items/amulets/tier 1/Elasi amulet.png'
+import darkarrow_amulet from '../assets/icons/items/amulets/tier 1/Darkarrow amulet.png'
+import elemental_amulet from '../assets/icons/items/amulets/tier 1/Elemental amulet.png'
+import silver_amulet from '../assets/icons/items/amulets/tier 1/Silver amulet.png'
+import ruby_amulet from '../assets/icons/items/amulets/tier 1/Ruby amulet.png'
+import acorn_amulet from '../assets/icons/items/amulets/tier 1/Acorn amulet.png'
+import voodoo_amulet from '../assets/icons/items/amulets/tier 1/Voodoo amulet.png'
+import yaga_amulet from '../assets/icons/items/amulets/tier 1/Yaga amulet.png'
+import temprance_amulet from '../assets/icons/items/amulets/tier 1/Temprance amulet.png'
+import emerald_amulet from '../assets/icons/items/amulets/tier 1/Emerald amulet.png'
+import maconic_amulet from '../assets/icons/items/amulets/tier 1/Maconic amulet.png'
+
+// tier 2 amulets
+import warding_amulet from '../assets/icons/items/amulets/tier 2/Warding amulet.png'
+import bloodvial_amulet from '../assets/icons/items/amulets/tier 2/Bloodvial amulet.png'
+import enchantress_amulet from '../assets/icons/items/amulets/tier 2/Enchantress amulet.png'
+import goldclaw_amulet from '../assets/icons/items/amulets/tier 2/Goldclaw amulet.png'
+import clerics_amulet from '../assets/icons/items/amulets/tier 2/Cleric\'s amulet.png'
+import queens_amulet from '../assets/icons/items/amulets/tier 2/Queens amulet.png'
+
+// tier 3 amulets
+import ice_amulet from '../assets/icons/items/amulets/tier 3/Ice amulet.png'
+import hypnosis_amulet from '../assets/icons/items/amulets/tier 3/Hypnosis amulet.png'
+import vampiric_amulet from '../assets/icons/items/amulets/tier 3/Vampiric amulet.png'
+import platinum_amulet from '../assets/icons/items/amulets/tier 3/Platinum amulet.png'
+import necrotic_amulet from '../assets/icons/items/amulets/tier 3/Necrotic amulet.png'
+
+// tier 4 amulets
+import voidward_amulet from '../assets/icons/items/amulets/tier 4/Voidward amulet.png'
+import celestial_amulet from '../assets/icons/items/amulets/tier 4/Celestial amulet.png'
+import dimensional_amulet from '../assets/icons/items/amulets/tier 4/Dimensional amulet.png'
 
 import crown from '../assets/icons/items/crown.png'
 import key from '../assets/icons/items/key.png'
@@ -127,13 +156,35 @@ import twilight_screen from '../assets/icons/items/shields/twilight screen.png'
 import revenants_shield from "../assets/icons/items/shields/revenant's shield.png"
 import aegis_bulwark from '../assets/icons/items/shields/aegis bulwark.png'
 
-import bundu_mask from '../assets/icons/items/headgear/bundu_mask.png';
-import court_mask from '../assets/icons/items/headgear/court_mask.png';
-import lundi_mask from '../assets/icons/items/headgear/bundu_mask.png';
-import mardi_mask from '../assets/icons/items/headgear/mardi_mask.png';
-import solomon_mask from '../assets/icons/items/headgear/solomon_mask.png';
-import zul_mask from '../assets/icons/items/headgear/zul_mask.png';
+import travelers_boots from "../assets/icons/items/boots/traveler's boots.png"
+import wayfinders_boots from "../assets/icons/items/boots/wayfinder's boots.png"
+import oily_boots from '../assets/icons/items/boots/oily boots.png'
+import highwaymans_boots from "../assets/icons/items/boots/highwayman's boots.png"
+import voyagers_boots from "../assets/icons/items/boots/voyager's boots.png"
+import northerners_boots from "../assets/icons/items/boots/northerner's boots.png"
+import midas_boots from '../assets/icons/items/boots/Midas boots.png'
+import sentinels_boots from "../assets/icons/items/boots/sentinel's boots.png"
+import imperial_boots from '../assets/icons/items/boots/imperial boots.png'
+import mariners_boots from "../assets/icons/items/boots/mariner's boots.png"
+import magicians_boots from "../assets/icons/items/boots/magician's boots.png"
+import sorcerers_boots from "../assets/icons/items/boots/sorcerer's boots.png"
+import shadow_boots from '../assets/icons/items/boots/shadow boots.png'
+import twilight_boots from '../assets/icons/items/boots/twilight boots.png'
+import moonstone_boots from '../assets/icons/items/boots/moonstone boots.png'
+import eldritch_boots from '../assets/icons/items/boots/eldritch boots.png'
+import glimmering_boots from '../assets/icons/items/boots/glimmering boots.png'
+import princes_boots from "../assets/icons/items/boots/prince's boots.png"
+import lords_boots from "../assets/icons/items/boots/lord's boots.png"
+import golems_boots from "../assets/icons/items/boots/golem's boots.png"
+import darklings_boots from "../assets/icons/items/boots/darkling's boots.png"
+import ornate_boots from '../assets/icons/items/boots/ornate boots.png'
+import rainmans_boots from "../assets/icons/items/boots/rainman's boots.png"
+
 import crimson_mask from '../assets/icons/items/helms/masks/crimson mask.png';
+import eldritch_mask from '../assets/icons/items/helms/masks/eldritch mask.png';
+import entropic_mask from '../assets/icons/items/helms/masks/entropic mask.png';
+import necrotic_mask from '../assets/icons/items/helms/masks/necrotic mask.png';
+import paradox_mask from '../assets/icons/items/helms/masks/paradox mask.png';
 import seraphic_mask from '../assets/icons/items/helms/masks/seraphic mask.png';
 import shadow_mask from '../assets/icons/items/helms/masks/shadow mask.png';
 import twilight_mask from '../assets/icons/items/helms/masks/twilight mask.png';
@@ -143,6 +194,44 @@ import knight_helm from '../assets/icons/items/headgear/knight_helm.png';
 import spartan_helm from '../assets/icons/items/headgear/spartan_helm.png';
 import legionaire_helm from '../assets/icons/items/headgear/legionaire_helm.png';
 import cretan_helm from '../assets/icons/items/headgear/cretan_helm.png';
+import archer_helm from '../assets/icons/items/helms/archer helm.png';
+import kettle_hat from '../assets/icons/items/helms/kettle hat.png';
+import hounskull from '../assets/icons/items/helms/hounskull.png';
+import plague_helm from '../assets/icons/items/helms/plague helm.png';
+import warlord_helm from '../assets/icons/items/helms/warlord helm.png';
+import juggernaut_helm from '../assets/icons/items/helms/juggernaut helm.png';
+import moonlord_helm from '../assets/icons/items/helms/moonlord helm.png';
+import witch_knight_helm from '../assets/icons/items/helms/witch knight helm.png';
+import collosus_helm from '../assets/icons/items/helms/collosus helm.png';
+import omega_helm from '../assets/icons/items/helms/omega helm.png';
+import immortal_helm from '../assets/icons/items/helms/immortal helm.png';
+
+import nasal_helm_upgradeable from '../assets/icons/items/helms/upgradeable/nasal helm.png';
+import nasal_helm_upgradeable_upgraded from '../assets/icons/items/helms/upgradeable/nasal helm upgraded.png';
+import soldier_helm_upgradeable from '../assets/icons/items/helms/upgradeable/soldier helm.png';
+import soldier_helm_upgradeable_upgraded from '../assets/icons/items/helms/upgradeable/soldier helm upgraded.png';
+import crusader_helm_upgradeable from '../assets/icons/items/helms/upgradeable/crusader helm.png';
+import crusader_helm_upgradeable_upgraded from '../assets/icons/items/helms/upgradeable/crusader helm upgraded.png';
+import cavalry_helm_upgradeable from '../assets/icons/items/helms/upgradeable/cavalry helm.png';
+import cavalry_helm_upgradeable_upgraded from '../assets/icons/items/helms/upgradeable/cavalry helm upgraded.png';
+import war_helm_upgradeable from '../assets/icons/items/helms/upgradeable/war helm.png';
+import war_helm_upgradeable_upgraded from '../assets/icons/items/helms/upgradeable/war helm upgraded.png';
+import coif_helm_upgradeable from '../assets/icons/items/helms/upgradeable/coif helm.png';
+import coif_helm_upgradeable_upgraded from '../assets/icons/items/helms/upgradeable/coif helm upgraded.png';
+import gladiator_helm_upgradeable from '../assets/icons/items/helms/upgradeable/gladiator helm.png';
+import gladiator_helm_upgradeable_upgraded from '../assets/icons/items/helms/upgradeable/gladiator helm upgraded.png';
+import battle_mage_helm_upgradeable from '../assets/icons/items/helms/upgradeable/battle mage helm.png';
+import battle_mage_helm_upgradeable_upgraded from '../assets/icons/items/helms/upgradeable/battle mage helm upgraded.png';
+import knight_helm_upgradeable from '../assets/icons/items/helms/upgradeable/knight helm.png';
+import knight_helm_upgradeable_upgraded from '../assets/icons/items/helms/upgradeable/knight helm upgraded.png';
+import janissary_helm_upgradeable from '../assets/icons/items/helms/upgradeable/janissary helm.png';
+import janissary_helm_upgradeable_upgraded from '../assets/icons/items/helms/upgradeable/janissary helm upgraded.png';
+import bascinet_upgradeable from '../assets/icons/items/helms/upgradeable/bascinet.png';
+import bascinet_upgradeable_upgraded from '../assets/icons/items/helms/upgradeable/bascinet upgraded.png';
+import imperial_helm_upgradeable from '../assets/icons/items/helms/upgradeable/imperial helm.png';
+import imperial_helm_upgradeable_upgraded from '../assets/icons/items/helms/upgradeable/imperial helm upgraded.png';
+import rogue_hood_upgradeable from '../assets/icons/items/helms/upgradeable/rogue hood.png';
+import rogue_hood_upgradeable_upgraded from '../assets/icons/items/helms/upgradeable/rogue hood upgraded.png';
 
 import glindas_wand from '../assets/icons/items/wands/glindas_wand.png';
 import maerlyns_rod from '../assets/icons/items/wands/maerlyns_rod.png';
@@ -623,11 +712,6 @@ export {
     golden_demon,
     kabuki_demon,
 
-    evilai_amulet,
-    lundi_amulet,
-    nukta_amulet,
-    sayan_amulet,
-
     beetle_charm,
     demonskull_charm,
     evilai_charm,
@@ -635,6 +719,35 @@ export {
     lundi_charm,
     nukta_charm,
     scarab_charm,
+
+    elasi_amulet,
+    darkarrow_amulet,
+    elemental_amulet,
+    silver_amulet,
+    ruby_amulet,
+    acorn_amulet,
+    voodoo_amulet,
+    yaga_amulet,
+    temprance_amulet,
+    emerald_amulet,
+    maconic_amulet,
+
+    warding_amulet,
+    bloodvial_amulet,
+    enchantress_amulet,
+    goldclaw_amulet,
+    clerics_amulet,
+    queens_amulet,
+
+    ice_amulet,
+    hypnosis_amulet,
+    vampiric_amulet,
+    platinum_amulet,
+    necrotic_amulet,
+
+    voidward_amulet,
+    celestial_amulet,
+    dimensional_amulet,
 
     crown,
     key,
@@ -651,13 +764,35 @@ export {
     revenants_shield,
     aegis_bulwark,
 
-    bundu_mask,
-    lundi_mask,
-    court_mask,
-    mardi_mask,
-    solomon_mask,
-    zul_mask,
+    travelers_boots,
+    wayfinders_boots,
+    oily_boots,
+    highwaymans_boots,
+    voyagers_boots,
+    northerners_boots,
+    midas_boots,
+    sentinels_boots,
+    imperial_boots,
+    mariners_boots,
+    magicians_boots,
+    sorcerers_boots,
+    shadow_boots,
+    twilight_boots,
+    moonstone_boots,
+    eldritch_boots,
+    glimmering_boots,
+    princes_boots,
+    lords_boots,
+    golems_boots,
+    darklings_boots,
+    ornate_boots,
+    rainmans_boots,
+
     crimson_mask,
+    eldritch_mask,
+    entropic_mask,
+    necrotic_mask,
+    paradox_mask,
     seraphic_mask,
     shadow_mask,
     twilight_mask,
@@ -666,6 +801,43 @@ export {
     spartan_helm,
     legionaire_helm,
     cretan_helm,
+    archer_helm,
+    kettle_hat,
+    hounskull,
+    plague_helm,
+    warlord_helm,
+    juggernaut_helm,
+    moonlord_helm,
+    witch_knight_helm,
+    collosus_helm,
+    omega_helm,
+    immortal_helm,
+    nasal_helm_upgradeable,
+    nasal_helm_upgradeable_upgraded,
+    soldier_helm_upgradeable,
+    soldier_helm_upgradeable_upgraded,
+    crusader_helm_upgradeable,
+    crusader_helm_upgradeable_upgraded,
+    cavalry_helm_upgradeable,
+    cavalry_helm_upgradeable_upgraded,
+    war_helm_upgradeable,
+    war_helm_upgradeable_upgraded,
+    coif_helm_upgradeable,
+    coif_helm_upgradeable_upgraded,
+    gladiator_helm_upgradeable,
+    gladiator_helm_upgradeable_upgraded,
+    battle_mage_helm_upgradeable,
+    battle_mage_helm_upgradeable_upgraded,
+    knight_helm_upgradeable,
+    knight_helm_upgradeable_upgraded,
+    janissary_helm_upgradeable,
+    janissary_helm_upgradeable_upgraded,
+    bascinet_upgradeable,
+    bascinet_upgradeable_upgraded,
+    imperial_helm_upgradeable,
+    imperial_helm_upgradeable_upgraded,
+    rogue_hood_upgradeable,
+    rogue_hood_upgradeable_upgraded,
 
     glindas_wand,
     maerlyns_rod,

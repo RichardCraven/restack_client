@@ -914,7 +914,7 @@ export function BoardManager(){
                 let treasureItems;
                 switch (treasureFactor){
                     case 4:
-                        treasureItems = ['sayan_amulet', 'solomon_mask', 'major_key', 'nukta_charm', 'scepter', 'grand_health_potion']
+                        treasureItems = ['sayan_amulet', 'twilight_mask', 'major_key', 'nukta_charm', 'scepter', 'grand_health_potion']
                         this.addTreasureToInventory({
                             item: this.pickRandom(treasureItems),
                             currency: {
@@ -944,7 +944,7 @@ export function BoardManager(){
                         })
                     break;
                     case 1:
-                        treasureItems = ['infantry_shield', 'court_mask', 'mardi_mask', 'basic_helm', 'axe', 'minor_health_potion']
+                        treasureItems = ['infantry_shield', 'crimson_mask', 'seraphic_mask', 'basic_helm', 'axe', 'minor_health_potion']
                         this.addTreasureToInventory({
                             item: this.pickRandom(treasureItems),
                             currency: {

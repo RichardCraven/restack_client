@@ -361,7 +361,9 @@ export function Monk(data, utilMethods, animationManager, overlayManager){
 
     const facingRight = caller.facing === 'right'; // eslint-disable-line no-unused-vars
         const target = combatants[caller.targetId];
-        const facing = caller.facing ? caller.facing : callerFacing(caller,target);
+        const computedFacing = callerFacing(caller, target);
+        const facing = target ? (computedFacing || caller.facing) : (caller.facing || computedFacing);
+        caller.facing = facing || caller.facing;
         caller.attacking = true; 
         if(manualAttack){
             if(caller.pendingAttack && caller.pendingAttack.cooldown_position < 99){

@@ -67,12 +67,6 @@ export function InventoryManager(){
     this.shimmering_dust = 0;
     this.totems = 0;
 
-    this.amulets_names = [
-        'evilai_amulet',
-        'lundi_amulet',
-        'nukta_amulet',
-        'sayan_amulet'
-    ]
     this.charms_names = [
         'beetle_charm',
         'demonskull_charm',
@@ -82,25 +76,98 @@ export function InventoryManager(){
         'nukta_charm',
         'scarab_charm'
     ]
+    this.amulets_names = [
+        'elasi_amulet',
+        'darkarrow_amulet',
+        'elemental_amulet',
+        'silver_amulet',
+        'ruby_amulet',
+        'acorn_amulet',
+        'voodoo_amulet',
+        'yaga_amulet',
+        'temprance_amulet',
+        'emerald_amulet',
+        'maconic_amulet'
+    ]
     this.shields_names = []
+    this.boots_names = [
+        'travelers_boots',
+        'wayfinders_boots',
+        'oily_boots',
+        'highwaymans_boots',
+        'voyagers_boots',
+        'northerners_boots',
+        'midas_boots',
+        'sentinels_boots',
+        'imperial_boots',
+        'mariners_boots',
+        'magicians_boots',
+        'sorcerers_boots',
+        'shadow_boots',
+        'twilight_boots',
+        'moonstone_boots',
+        'eldritch_boots',
+        'glimmering_boots',
+        'princes_boots',
+        'lords_boots',
+        'golems_boots',
+        'darklings_boots',
+        'ornate_boots',
+        'rainmans_boots'
+    ]
     this.masks_names = [
-        'bundu_mask',
         'crimson_mask',
-        'court_mask',
-        'lundi_mask',
-        'mardi_mask',
+        'eldritch_mask',
+        'entropic_mask',
+        'necrotic_mask',
+        'paradox_mask',
         'seraphic_mask',
         'shadow_mask',
-        'solomon_mask',
         'twilight_mask',
-        'zul_mask'
     ]
     this.helms_names = [
         'basic_helm',
         'knight_helm',
         'spartan_helm',
         'legionaire_helm',
-        'cretan_helm'
+        'cretan_helm',
+        'archer_helm',
+        'kettle_hat',
+        'hounskull',
+        'plague_helm',
+        'warlord_helm',
+        'juggernaut_helm',
+        'moonlord_helm',
+        'witch_knight_helm',
+        'collosus_helm',
+        'omega_helm',
+        'immortal_helm',
+        'nasal_helm_upgradeable',
+        'nasal_helm_upgradeable_upgraded',
+        'soldier_helm_upgradeable',
+        'soldier_helm_upgradeable_upgraded',
+        'crusader_helm_upgradeable',
+        'crusader_helm_upgradeable_upgraded',
+        'cavalry_helm_upgradeable',
+        'cavalry_helm_upgradeable_upgraded',
+        'war_helm_upgradeable',
+        'war_helm_upgradeable_upgraded',
+        'coif_helm_upgradeable',
+        'coif_helm_upgradeable_upgraded',
+        'gladiator_helm_upgradeable',
+        'gladiator_helm_upgradeable_upgraded',
+        'battle_mage_helm_upgradeable',
+        'battle_mage_helm_upgradeable_upgraded',
+        'knight_helm_upgradeable',
+        'knight_helm_upgradeable_upgraded',
+        'janissary_helm_upgradeable',
+        'janissary_helm_upgradeable_upgraded',
+        'bascinet_upgradeable',
+        'bascinet_upgradeable_upgraded',
+        'imperial_helm_upgradeable',
+        'imperial_helm_upgradeable_upgraded',
+        'rogue_hood_upgradeable',
+        'rogue_hood_upgradeable_upgraded'
     ]
     this.wands_names = [
         'glindas_wand',
@@ -448,6 +515,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
     }
     
     this.armor= {
+        /////////////// shields
         buckler: {
             tier: 1,
             armor: 20,
@@ -545,40 +613,687 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             equippedBy: null,
             animation: null,
             description: 'The legendary Aegis — ultimate protection. Defense: 107 (~75% damage reduction, max)'
+        },
+        //////////////// boots
+        travelers_boots: {
+            tier: 1,
+            armor: 5,
+            type: 'armor',
+            subtype: 'boots',
+            icon: 'travelers_boots',
+            name: "traveler's boots",
+            equippedBy: null,
+            animation: null,
+            description: ''
+        },
+        wayfinders_boots: {
+            tier: 1,
+            armor: 5,
+            type: 'armor',
+            subtype: 'boots',
+            icon: 'wayfinders_boots',
+            name: "wayfinder's boots",
+            equippedBy: null,
+            animation: null,
+            description: ''
+        },
+        oily_boots: {
+            tier: 1,
+            armor: 5,
+            type: 'armor',
+            subtype: 'boots',
+            icon: 'oily_boots',
+            name: 'oily boots',
+            equippedBy: null,
+            animation: null,
+            description: ''
+        },
+        highwaymans_boots: {
+            tier: 1,
+            armor: 5,
+            type: 'armor',
+            subtype: 'boots',
+            icon: 'highwaymans_boots',
+            name: "highwayman's boots",
+            equippedBy: null,
+            animation: null,
+            description: ''
+        },
+        voyagers_boots: {
+            tier: 1,
+            armor: 5,
+            type: 'armor',
+            subtype: 'boots',
+            icon: 'voyagers_boots',
+            name: "voyager's boots",
+            equippedBy: null,
+            animation: null,
+            description: ''
+        },
+        northerners_boots: {
+            tier: 1,
+            armor: 5,
+            type: 'armor',
+            subtype: 'boots',
+            icon: 'northerners_boots',
+            name: "northerner's boots",
+            equippedBy: null,
+            animation: null,
+            description: ''
+        },
+        midas_boots: {
+            tier: 1,
+            armor: 5,
+            type: 'armor',
+            subtype: 'boots',
+            icon: 'midas_boots',
+            name: 'Midas boots',
+            equippedBy: null,
+            animation: null,
+            description: ''
+        },
+        sentinels_boots: {
+            tier: 1,
+            armor: 5,
+            type: 'armor',
+            subtype: 'boots',
+            icon: 'sentinels_boots',
+            name: "sentinel's boots",
+            equippedBy: null,
+            animation: null,
+            description: ''
+        },
+        imperial_boots: {
+            tier: 1,
+            armor: 5,
+            type: 'armor',
+            subtype: 'boots',
+            icon: 'imperial_boots',
+            name: 'imperial boots',
+            equippedBy: null,
+            animation: null,
+            description: ''
+        },
+        mariners_boots: {
+            tier: 1,
+            armor: 5,
+            type: 'armor',
+            subtype: 'boots',
+            icon: 'mariners_boots',
+            name: "mariner's boots",
+            equippedBy: null,
+            animation: null,
+            description: ''
+        },
+        magicians_boots: {
+            tier: 1,
+            armor: 5,
+            type: 'armor',
+            subtype: 'boots',
+            icon: 'magicians_boots',
+            name: "magician's boots",
+            equippedBy: null,
+            animation: null,
+            description: ''
+        },
+        sorcerers_boots: {
+            tier: 1,
+            armor: 5,
+            type: 'armor',
+            subtype: 'boots',
+            icon: 'sorcerers_boots',
+            name: "sorcerer's boots",
+            equippedBy: null,
+            animation: null,
+            description: ''
+        },
+        shadow_boots: {
+            tier: 1,
+            armor: 5,
+            type: 'armor',
+            subtype: 'boots',
+            icon: 'shadow_boots',
+            name: 'shadow boots',
+            equippedBy: null,
+            animation: null,
+            description: ''
+        },
+        twilight_boots: {
+            tier: 3,
+            armor: 45,
+            type: 'armor',
+            subtype: 'boots',
+            icon: 'twilight_boots',
+            name: 'twilight boots',
+            equippedBy: null,
+            animation: null,
+            description: ''
+        },
+        moonstone_boots: {
+            tier: 3,
+            armor: 45,
+            type: 'armor',
+            subtype: 'boots',
+            icon: 'moonstone_boots',
+            name: 'moonstone boots',
+            equippedBy: null,
+            animation: null,
+            description: ''
+        },
+        eldritch_boots: {
+            tier: 3,
+            armor: 45,
+            type: 'armor',
+            subtype: 'boots',
+            icon: 'eldritch_boots',
+            name: 'eldritch boots',
+            equippedBy: null,
+            animation: null,
+            description: ''
+        },
+        glimmering_boots: {
+            tier: 3,
+            armor: 45,
+            type: 'armor',
+            subtype: 'boots',
+            icon: 'glimmering_boots',
+            name: 'glimmering boots',
+            equippedBy: null,
+            animation: null,
+            description: ''
+        },
+        princes_boots: {
+            tier: 2,
+            armor: 24,
+            type: 'armor',
+            subtype: 'boots',
+            icon: 'princes_boots',
+            name: "prince's boots",
+            equippedBy: null,
+            animation: null,
+            description: ''
+        },
+        lords_boots: {
+            tier: 2,
+            armor: 24,
+            type: 'armor',
+            subtype: 'boots',
+            icon: 'lords_boots',
+            name: "lord's boots",
+            equippedBy: null,
+            animation: null,
+            description: ''
+        },
+        golems_boots: {
+            tier: 2,
+            armor: 24,
+            type: 'armor',
+            subtype: 'boots',
+            icon: 'golems_boots',
+            name: "golem's boots",
+            equippedBy: null,
+            animation: null,
+            description: ''
+        },
+        darklings_boots: {
+            tier: 2,
+            armor: 24,
+            type: 'armor',
+            subtype: 'boots',
+            icon: 'darklings_boots',
+            name: "darkling's boots",
+            equippedBy: null,
+            animation: null,
+            description: ''
+        },
+        ornate_boots: {
+            tier: 2,
+            armor: 24,
+            type: 'armor',
+            subtype: 'boots',
+            icon: 'ornate_boots',
+            name: 'ornate boots',
+            equippedBy: null,
+            animation: null,
+            description: ''
+        },
+        rainmans_boots: {
+            tier: 2,
+            armor: 24,
+            type: 'armor',
+            subtype: 'boots',
+            icon: 'rainmans_boots',
+            name: "rainman's boots",
+            equippedBy: null,
+            animation: null,
+            description: ''
+        },
+        //////////////// standard helms
+        archer_helm: {
+            tier: 1,
+            armor: 8,
+            type: 'armor',
+            subtype: 'helm',
+            icon: 'archer_helm',
+            name: 'archer helm',
+            equippedBy: null,
+            animation: null,
+            description: ''
+        },
+        kettle_hat: {
+            tier: 1,
+            armor: 8,
+            type: 'armor',
+            subtype: 'helm',
+            icon: 'kettle_hat',
+            name: 'kettle hat',
+            equippedBy: null,
+            animation: null,
+            description: ''
+        },
+        hounskull: {
+            tier: 1,
+            armor: 8,
+            type: 'armor',
+            subtype: 'helm',
+            icon: 'hounskull',
+            name: 'hounskull',
+            equippedBy: null,
+            animation: null,
+            description: ''
+        },
+        plague_helm: {
+            tier: 1,
+            armor: 8,
+            type: 'armor',
+            subtype: 'helm',
+            icon: 'plague_helm',
+            name: 'plague helm',
+            equippedBy: null,
+            animation: null,
+            description: ''
+        },
+        warlord_helm: {
+            tier: 3,
+            armor: 18,
+            type: 'armor',
+            subtype: 'helm',
+            icon: 'warlord_helm',
+            name: 'warlord helm',
+            equippedBy: null,
+            animation: null,
+            description: ''
+        },
+        juggernaut_helm: {
+            tier: 3,
+            armor: 18,
+            type: 'armor',
+            subtype: 'helm',
+            icon: 'juggernaut_helm',
+            name: 'juggernaut helm',
+            equippedBy: null,
+            animation: null,
+            description: ''
+        },
+        moonlord_helm: {
+            tier: 3,
+            armor: 18,
+            type: 'armor',
+            subtype: 'helm',
+            icon: 'moonlord_helm',
+            name: 'moonlord helm',
+            equippedBy: null,
+            animation: null,
+            description: ''
+        },
+        witch_knight_helm: {
+            tier: 3,
+            armor: 18,
+            type: 'armor',
+            subtype: 'helm',
+            icon: 'witch_knight_helm',
+            name: 'witch knight helm',
+            equippedBy: null,
+            animation: null,
+            description: ''
+        },
+        collosus_helm: {
+            tier: 4,
+            armor: 24,
+            type: 'armor',
+            subtype: 'helm',
+            icon: 'collosus_helm',
+            name: 'collosus helm',
+            equippedBy: null,
+            animation: null,
+            description: ''
+        },
+        omega_helm: {
+            tier: 4,
+            armor: 24,
+            type: 'armor',
+            subtype: 'helm',
+            icon: 'omega_helm',
+            name: 'omega helm',
+            equippedBy: null,
+            animation: null,
+            description: ''
+        },
+        immortal_helm: {
+            tier: 4,
+            armor: 24,
+            type: 'armor',
+            subtype: 'helm',
+            icon: 'immortal_helm',
+            name: 'immortal helm',
+            equippedBy: null,
+            animation: null,
+            description: ''
+        },
+        //////////////// upgradeable helms
+        nasal_helm_upgradeable: {
+            tier: 1,
+            armor: 8,
+            type: 'armor',
+            subtype: 'helm',
+            icon: 'nasal_helm_upgradeable',
+            name: 'nasal helm',
+            upgradeable: true,
+            equippedBy: null,
+            animation: null,
+            description: ''
+        },
+        nasal_helm_upgradeable_upgraded: {
+            tier: 1,
+            armor: 12,
+            type: 'armor',
+            subtype: 'helm',
+            icon: 'nasal_helm_upgradeable_upgraded',
+            name: 'nasal helm upgraded',
+            equippedBy: null,
+            animation: null,
+            description: ''
+        },
+        soldier_helm_upgradeable: {
+            tier: 1,
+            armor: 8,
+            type: 'armor',
+            subtype: 'helm',
+            icon: 'soldier_helm_upgradeable',
+            name: 'soldier helm',
+            upgradeable: true,
+            equippedBy: null,
+            animation: null,
+            description: ''
+        },
+        soldier_helm_upgradeable_upgraded: {
+            tier: 1,
+            armor: 12,
+            type: 'armor',
+            subtype: 'helm',
+            icon: 'soldier_helm_upgradeable_upgraded',
+            name: 'soldier helm upgraded',
+            equippedBy: null,
+            animation: null,
+            description: ''
+        },
+        crusader_helm_upgradeable: {
+            tier: 1,
+            armor: 8,
+            type: 'armor',
+            subtype: 'helm',
+            icon: 'crusader_helm_upgradeable',
+            name: 'crusader helm',
+            upgradeable: true,
+            equippedBy: null,
+            animation: null,
+            description: ''
+        },
+        crusader_helm_upgradeable_upgraded: {
+            tier: 1,
+            armor: 12,
+            type: 'armor',
+            subtype: 'helm',
+            icon: 'crusader_helm_upgradeable_upgraded',
+            name: 'crusader helm upgraded',
+            equippedBy: null,
+            animation: null,
+            description: ''
+        },
+        cavalry_helm_upgradeable: {
+            tier: 1,
+            armor: 8,
+            type: 'armor',
+            subtype: 'helm',
+            icon: 'cavalry_helm_upgradeable',
+            name: 'cavalry helm',
+            upgradeable: true,
+            equippedBy: null,
+            animation: null,
+            description: ''
+        },
+        cavalry_helm_upgradeable_upgraded: {
+            tier: 1,
+            armor: 12,
+            type: 'armor',
+            subtype: 'helm',
+            icon: 'cavalry_helm_upgradeable_upgraded',
+            name: 'cavalry helm upgraded',
+            equippedBy: null,
+            animation: null,
+            description: ''
+        },
+        war_helm_upgradeable: {
+            tier: 2,
+            armor: 8,
+            type: 'armor',
+            subtype: 'helm',
+            icon: 'war_helm_upgradeable',
+            name: 'war helm',
+            upgradeable: true,
+            equippedBy: null,
+            animation: null,
+            description: ''
+        },
+        war_helm_upgradeable_upgraded: {
+            tier: 2,
+            armor: 12,
+            type: 'armor',
+            subtype: 'helm',
+            icon: 'war_helm_upgradeable_upgraded',
+            name: 'war helm upgraded',
+            equippedBy: null,
+            animation: null,
+            description: ''
+        },
+        coif_helm_upgradeable: {
+            tier: 2,
+            armor: 8,
+            type: 'armor',
+            subtype: 'helm',
+            icon: 'coif_helm_upgradeable',
+            name: 'coif helm',
+            upgradeable: true,
+            equippedBy: null,
+            animation: null,
+            description: ''
+        },
+        coif_helm_upgradeable_upgraded: {
+            tier: 2,
+            armor: 12,
+            type: 'armor',
+            subtype: 'helm',
+            icon: 'coif_helm_upgradeable_upgraded',
+            name: 'coif helm upgraded',
+            equippedBy: null,
+            animation: null,
+            description: ''
+        },
+        gladiator_helm_upgradeable: {
+            tier: 2,
+            armor: 8,
+            type: 'armor',
+            subtype: 'helm',
+            icon: 'gladiator_helm_upgradeable',
+            name: 'gladiator helm',
+            upgradeable: true,
+            equippedBy: null,
+            animation: null,
+            description: ''
+        },
+        gladiator_helm_upgradeable_upgraded: {
+            tier: 2,
+            armor: 12,
+            type: 'armor',
+            subtype: 'helm',
+            icon: 'gladiator_helm_upgradeable_upgraded',
+            name: 'gladiator helm upgraded',
+            equippedBy: null,
+            animation: null,
+            description: ''
+        },
+        battle_mage_helm_upgradeable: {
+            tier: 2,
+            armor: 8,
+            type: 'armor',
+            subtype: 'helm',
+            icon: 'battle_mage_helm_upgradeable',
+            name: 'battle mage helm',
+            upgradeable: true,
+            equippedBy: null,
+            animation: null,
+            description: ''
+        },
+        battle_mage_helm_upgradeable_upgraded: {
+            tier: 2,
+            armor: 12,
+            type: 'armor',
+            subtype: 'helm',
+            icon: 'battle_mage_helm_upgradeable_upgraded',
+            name: 'battle mage helm upgraded',
+            equippedBy: null,
+            animation: null,
+            description: ''
+        },
+        knight_helm_upgradeable: {
+            tier: 2,
+            armor: 8,
+            type: 'armor',
+            subtype: 'helm',
+            icon: 'knight_helm_upgradeable',
+            name: 'knight helm',
+            upgradeable: true,
+            equippedBy: null,
+            animation: null,
+            description: ''
+        },
+        knight_helm_upgradeable_upgraded: {
+            tier: 2,
+            armor: 12,
+            type: 'armor',
+            subtype: 'helm',
+            icon: 'knight_helm_upgradeable_upgraded',
+            name: 'knight helm upgraded',
+            equippedBy: null,
+            animation: null,
+            description: ''
+        },
+        janissary_helm_upgradeable: {
+            tier: 2,
+            armor: 8,
+            type: 'armor',
+            subtype: 'helm',
+            icon: 'janissary_helm_upgradeable',
+            name: 'janissary helm',
+            upgradeable: true,
+            equippedBy: null,
+            animation: null,
+            description: ''
+        },
+        janissary_helm_upgradeable_upgraded: {
+            tier: 2,
+            armor: 12,
+            type: 'armor',
+            subtype: 'helm',
+            icon: 'janissary_helm_upgradeable_upgraded',
+            name: 'janissary helm upgraded',
+            equippedBy: null,
+            animation: null,
+            description: ''
+        },
+        bascinet_upgradeable: {
+            tier: 2,
+            armor: 8,
+            type: 'armor',
+            subtype: 'helm',
+            icon: 'bascinet_upgradeable',
+            name: 'bascinet',
+            upgradeable: true,
+            equippedBy: null,
+            animation: null,
+            description: ''
+        },
+        bascinet_upgradeable_upgraded: {
+            tier: 2,
+            armor: 12,
+            type: 'armor',
+            subtype: 'helm',
+            icon: 'bascinet_upgradeable_upgraded',
+            name: 'bascinet upgraded',
+            equippedBy: null,
+            animation: null,
+            description: ''
+        },
+        imperial_helm_upgradeable: {
+            tier: 2,
+            armor: 8,
+            type: 'armor',
+            subtype: 'helm',
+            icon: 'imperial_helm_upgradeable',
+            name: 'imperial helm',
+            upgradeable: true,
+            equippedBy: null,
+            animation: null,
+            description: ''
+        },
+        imperial_helm_upgradeable_upgraded: {
+            tier: 2,
+            armor: 12,
+            type: 'armor',
+            subtype: 'helm',
+            icon: 'imperial_helm_upgradeable_upgraded',
+            name: 'imperial helm upgraded',
+            equippedBy: null,
+            animation: null,
+            description: ''
+        },
+        rogue_hood_upgradeable: {
+            tier: 2,
+            armor: 8,
+            type: 'armor',
+            subtype: 'helm',
+            icon: 'rogue_hood_upgradeable',
+            name: 'rogue hood',
+            upgradeable: true,
+            equippedBy: null,
+            animation: null,
+            description: ''
+        },
+        rogue_hood_upgradeable_upgraded: {
+            tier: 2,
+            armor: 12,
+            type: 'armor',
+            subtype: 'helm',
+            icon: 'rogue_hood_upgradeable_upgraded',
+            name: 'rogue hood upgraded',
+            equippedBy: null,
+            animation: null,
+            description: ''
         }
+        ///////// chest pieces
     }
     
     this.magical = {
-        // glindas_wand: {
-        //     type: 'magical',
-        //     icon: 'glindas_wand',
-        //     name: 'glindas wand',
-        //     equippedBy: null,
-        //     subtype: 'wand',
-        //     power: 4,
-        //     animation: null,
-        //     description: `Glinda's wand has a power of 4 and has a 60% chance to cast a minor spell on use`
-        // },
-        // volkas_wand: {
-        //     type: 'magical',
-        //     icon: 'volkas_wand',
-        //     name: 'volkas wand',
-        //     equippedBy: null,
-        //     subtype: 'wand',
-        //     power: 6,
-        //     animation: null,
-        //     description: `Volka's wand has a power of 6 and has a 80% chance to cast a minor spell and a 15% chance to cast a major spell on use`
-        // },
-        // maerlyns_rod: {
-        //     type: 'magical',
-        //     icon: 'maerlyns_rod',
-        //     name: 'maerlyns rod',
-        //     equippedBy: null,
-        //     subtype: 'wand',
-        //     power: 10,
-        //     animation: null,
-        //     description: `Maerlyn's rod has a power of 10 and has a 80% chance to cast 2 major spells and a 15% chance to cast an eldritch spell on use`
-        // },
         // wands
         cloudfire_wand: {
             tier: 1,
@@ -807,46 +1522,282 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             description: `Demonskull charms have a power of 12.  On Use: Cast 2 random eldritch spells Passive: Skill cooldowns are doubled, -1 to all stats for wearer.`
         },
         //amulets
-        lundi_amulet: {
+        elasi_amulet: {
+            tier: 1,
             type: 'magical',
-            icon: 'lundi_amulet',
-            name: 'lundi amulet',
+            icon: 'elasi_amulet',
+            name: 'Elasi Amulet',
             equippedBy: null,
             subtype: 'amulet',
-            power: 3,
+            power: null,
             animation: null,
-            description: `Lundi amulets have a power of 3. Reflects 20% damage back on all attacks, +1 to all stats`
+            description: ''
         },
-        sayan_amulet: {
+        darkarrow_amulet: {
+            tier: 1,
             type: 'magical',
-            icon: 'sayan_amulet',
-            name: 'sayan amulet',
+            icon: 'darkarrow_amulet',
+            name: 'Darkarrow Amulet',
             equippedBy: null,
             subtype: 'amulet',
-            power: 5,
+            power: null,
             animation: null,
-            description: `Sayan amulets have a power of 5. Doubles intelligence for entire crew`
+            description: ''
         },
-        nukta_amulet: {
+        elemental_amulet: {
+            tier: 1,
             type: 'magical',
-            icon: 'nukta_amulet',
-            name: 'nukta amulet',
+            icon: 'elemental_amulet',
+            name: 'Elemental Amulet',
             equippedBy: null,
             subtype: 'amulet',
-            power: 7,
+            power: null,
             animation: null,
-            description: `Nukta amulets have a power of 7. On combat start, 30% chance no minions spawn`
+            description: ''
         },
-        evilai_amulet: {
+        silver_amulet: {
+            tier: 1,
             type: 'magical',
-            icon: 'evilai_amulet',
-            name: 'evilai amulet',
+            icon: 'silver_amulet',
+            name: 'Silver Amulet',
             equippedBy: null,
             subtype: 'amulet',
-            power: 9,
+            power: null,
             animation: null,
-            description: `Nukta amulets have a power of 9. Doubles experience gained for wearer, -3 to all stats`
+            description: ''
         },
+        ruby_amulet: {
+            tier: 1,
+            type: 'magical',
+            icon: 'ruby_amulet',
+            name: 'Ruby Amulet',
+            equippedBy: null,
+            subtype: 'amulet',
+            power: null,
+            animation: null,
+            description: ''
+        },
+        acorn_amulet: {
+            tier: 1,
+            type: 'magical',
+            icon: 'acorn_amulet',
+            name: 'Acorn Amulet',
+            equippedBy: null,
+            subtype: 'amulet',
+            power: null,
+            animation: null,
+            description: ''
+        },
+        voodoo_amulet: {
+            tier: 1,
+            type: 'magical',
+            icon: 'voodoo_amulet',
+            name: 'Voodoo Amulet',
+            equippedBy: null,
+            subtype: 'amulet',
+            power: null,
+            animation: null,
+            description: ''
+        },
+        yaga_amulet: {
+            tier: 1,
+            type: 'magical',
+            icon: 'yaga_amulet',
+            name: 'Yaga Amulet',
+            equippedBy: null,
+            subtype: 'amulet',
+            power: null,
+            animation: null,
+            description: ''
+        },
+        temprance_amulet: {
+            tier: 1,
+            type: 'magical',
+            icon: 'temprance_amulet',
+            name: 'Temprance Amulet',
+            equippedBy: null,
+            subtype: 'amulet',
+            power: null,
+            animation: null,
+            description: ''
+        },
+        emerald_amulet: {
+            tier: 1,
+            type: 'magical',
+            icon: 'emerald_amulet',
+            name: 'Emerald Amulet',
+            equippedBy: null,
+            subtype: 'amulet',
+            power: null,
+            animation: null,
+            description: ''
+        },
+        maconic_amulet: {
+            tier: 1,
+            type: 'magical',
+            icon: 'maconic_amulet',
+            name: 'Maconic Amulet',
+            equippedBy: null,
+            subtype: 'amulet',
+            power: null,
+            animation: null,
+            description: ''
+        },
+        warding_amulet: {
+            tier: 2,
+            type: 'magical',
+            icon: 'warding_amulet',
+            name: 'Warding Amulet',
+            equippedBy: null,
+            subtype: 'amulet',
+            power: null,
+            animation: null,
+            description: ''
+        },
+        bloodvial_amulet: {
+            tier: 2,
+            type: 'magical',
+            icon: 'bloodvial_amulet',
+            name: 'Bloodvial Amulet',
+            equippedBy: null,
+            subtype: 'amulet',
+            power: null,
+            animation: null,
+            description: ''
+        },
+        enchantress_amulet: {
+            tier: 2,
+            type: 'magical',
+            icon: 'enchantress_amulet',
+            name: 'Enchantress Amulet',
+            equippedBy: null,
+            subtype: 'amulet',
+            power: null,
+            animation: null,
+            description: ''
+        },
+        goldclaw_amulet: {
+            tier: 2,
+            type: 'magical',
+            icon: 'goldclaw_amulet',
+            name: 'Goldclaw Amulet',
+            equippedBy: null,
+            subtype: 'amulet',
+            power: null,
+            animation: null,
+            description: ''
+        },
+        clerics_amulet: {
+            tier: 2,
+            type: 'magical',
+            icon: 'clerics_amulet',
+            name: "Cleric's Amulet",
+            equippedBy: null,
+            subtype: 'amulet',
+            power: null,
+            animation: null,
+            description: ''
+        },
+        queens_amulet: {
+            tier: 2,
+            type: 'magical',
+            icon: 'queens_amulet',
+            name: 'Queens Amulet',
+            equippedBy: null,
+            subtype: 'amulet',
+            power: null,
+            animation: null,
+            description: ''
+        },
+        ice_amulet: {
+            tier: 3,
+            type: 'magical',
+            icon: 'ice_amulet',
+            name: 'Ice Amulet',
+            equippedBy: null,
+            subtype: 'amulet',
+            power: null,
+            animation: null,
+            description: ''
+        },
+        hypnosis_amulet: {
+            tier: 3,
+            type: 'magical',
+            icon: 'hypnosis_amulet',
+            name: 'Hypnosis Amulet',
+            equippedBy: null,
+            subtype: 'amulet',
+            power: null,
+            animation: null,
+            description: ''
+        },
+        vampiric_amulet: {
+            tier: 3,
+            type: 'magical',
+            icon: 'vampiric_amulet',
+            name: 'Vampiric Amulet',
+            equippedBy: null,
+            subtype: 'amulet',
+            power: null,
+            animation: null,
+            description: ''
+        },
+        platinum_amulet: {
+            tier: 3,
+            type: 'magical',
+            icon: 'platinum_amulet',
+            name: 'Platinum Amulet',
+            equippedBy: null,
+            subtype: 'amulet',
+            power: null,
+            animation: null,
+            description: ''
+        },
+        necrotic_amulet: {
+            tier: 3,
+            type: 'magical',
+            icon: 'necrotic_amulet',
+            name: 'Necrotic Amulet',
+            equippedBy: null,
+            subtype: 'amulet',
+            power: null,
+            animation: null,
+            description: ''
+        },
+        voidward_amulet: {
+            tier: 4,
+            type: 'magical',
+            icon: 'voidward_amulet',
+            name: 'Voidward Amulet',
+            equippedBy: null,
+            subtype: 'amulet',
+            power: null,
+            animation: null,
+            description: ''
+        },
+        celestial_amulet: {
+            tier: 4,
+            type: 'magical',
+            icon: 'celestial_amulet',
+            name: 'Celestial Amulet',
+            equippedBy: null,
+            subtype: 'amulet',
+            power: null,
+            animation: null,
+            description: ''
+        },
+        dimensional_amulet: {
+            tier: 4,
+            type: 'magical',
+            icon: 'dimensional_amulet',
+            name: 'Dimensional Amulet',
+            equippedBy: null,
+            subtype: 'amulet',
+            power: null,
+            animation: null,
+            description: ''
+        },
+
         //spellbooks
         oily_manual: {
             tier: 1,
@@ -1073,66 +2024,6 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
     // via the same initialization loop as other magical items. This replaces
     // the previous `this.ornaments` object.
     this.magical = Object.assign({}, this.magical, {
-        mardi_mask: {
-            power: 1,
-            icon: 'mardi_mask',
-            type: 'ancillary',
-            name: 'mardi mask',
-            subtype: 'mask',
-            equippedBy: null,
-            animation: null,
-            description: `Court     masks have a power of 1 and a give +15 max hp. <br /> Passive: 10% chance of healing 15 hp on being hit.`
-        },
-        court_mask: {
-            power: 1,
-            icon: 'court_mask',
-            type: 'ancillary',
-            name: 'court mask',
-            subtype: 'mask',
-            equippedBy: null,
-            animation: null,
-            description: `Court masks have a power of 1 and a give +1 magic resistance to the wearer. <br /> Passive: 80% chance of negating an enemy hex if wearer is within 4 tiles of caster.`
-        },
-        zul_mask: {
-            power: 2,
-            icon: 'zul_mask',
-            type: 'ancillary',
-            name: 'zul mask',
-            subtype: 'mask',
-            equippedBy: null,
-            animation: null,
-            description: `Zul masks have a power of 2 and a give immunity from demobilization and mind control. <br /> Passive: 50% chance of negating a successful hit on wearer and teleporting to a random empty space`
-        },
-        bundu_mask: {
-            power: 2,
-            icon: 'bundu_mask',
-            type: 'ancillary',
-            name: 'bundu mask',
-            subtype: 'mask',
-            equippedBy: null,
-            animation: null,
-            description: `Bundu masks have a power of 2 and a give +2 magic resistance to the wearer. <br /> Passive: 80% chance of negating an enemy hex if wearer is within 3 tiles of caster.`
-        },
-        lundi_mask: {
-            power: 3,
-            icon: 'lundi_mask',
-            type: 'ancillary',
-            name: 'lundi mask',
-            subtype: 'mask',
-            equippedBy: null,
-            animation: null,
-            description: `Lundi masks have a power of 3 and a give +4 magic resistance to the wearer. <br /> Passive: If a boon is cast, 50% to recast after 5 seconds.`
-        },
-        solomon_mask: {
-            power: 5,
-            icon: 'solomon_mask',
-            type: 'ancillary',
-            name: 'solomon mask',
-            subtype: 'mask',
-            equippedBy: null,
-            animation: null,
-            description: `Solomon masks have a power of 5 and a give +10 magic resistance to the wearer. <br /> Passive: 1/2 cooldown time for all of wearer's skills, 2x gold drop.`
-        },
         crimson_mask: {
             tier: 3,
             type: 'magical',
@@ -1172,6 +2063,46 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             equippedBy: null,
             animation: null,
             description: '50% damage reduction from all magic types'
+        },
+        eldritch_mask: {
+            tier: 4,
+            type: 'magical',
+            icon: 'eldritch_mask',
+            name: 'eldritch mask',
+            subtype: 'mask',
+            equippedBy: null,
+            animation: null,
+            description: ''
+        },
+        paradox_mask: {
+            tier: 4,
+            type: 'magical',
+            icon: 'paradox_mask',
+            name: 'paradox mask',
+            subtype: 'mask',
+            equippedBy: null,
+            animation: null,
+            description: ''
+        },
+        necrotic_mask: {
+            tier: 4,
+            type: 'magical',
+            icon: 'necrotic_mask',
+            name: 'necrotic mask',
+            subtype: 'mask',
+            equippedBy: null,
+            animation: null,
+            description: ''
+        },
+        entropic_mask: {
+            tier: 4,
+            type: 'magical',
+            icon: 'entropic_mask',
+            name: 'entropic mask',
+            subtype: 'mask',
+            equippedBy: null,
+            animation: null,
+            description: ''
         }
     });
     this.misc = {
@@ -1275,7 +2206,21 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
         }
     }
     this.allItems = {};
-    this.items = this.weapons_names.concat(this.masks_names.concat(this.helms_names.concat(this.keys_names.concat(this.amulets_names.concat(this.charms_names.concat(this.wands_names.concat(this.staves_names.concat(this.misc_names.concat(this.shields_names)))))))))
+    // Build category key list defensively so a missing/undefined category array
+    // never crashes InventoryManager construction.
+    this.items = [].concat(
+        this.weapons_names || [],
+        this.masks_names || [],
+        this.helms_names || [],
+        this.keys_names || [],
+        this.amulets_names || [],
+        this.charms_names || [],
+        this.wands_names || [],
+        this.staves_names || [],
+        this.misc_names || [],
+        this.shields_names || [],
+        this.boots_names || []
+    )
     this.initializeItems = (data = null) => {
         for(let key in this.consumables){
             this.allItems[key] = this.consumables[key]
@@ -1446,4 +2391,115 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             },
         ]
     }
+
+    // ── Tier weapon pools ────────────────────────────────────────────────────────
+    this.TIER1_WEAPONS = [
+        'woodcutters_axe', 'bloodcleaver_axe', 'hillbiter_axe', 'ironcleaver_axe',
+        'rune_axe', 'timberfall_axe', 'grovehack_axe', 'stormsplitter_axe',
+        'bonecutter_axe', 'frostedge_axe', 'emberchop_axe',
+        'shortsword_sword', 'cutlass_sword', 'gladius_sword', 'falchion_sword',
+        'longsword_sword', 'broadsword_sword', 'golden_gladius_sword',
+        'wyrmsbane_sword', 'katana_sword', 'claymore_sword', 'greatsword_sword',
+    ];
+    this.TIER2_WEAPONS = [
+        'razorfang_axe', 'stonebreaker_axe', 'mossreaper_axe', 'warcleaver_axe',
+        'blackroot_axe', 'dawnsplitter_axe', 'duskbane_axe',
+        'doomreaver_sword', 'nightfall_sword', 'dreadedge_sword', 'sunsteel_sword',
+        'voidrender_sword', 'warlords_cleaver_sword', 'emberbrand_sword',
+    ];
+    this.TIER3_WEAPONS = [
+        'thunderhewer_axe', 'skullsplitter_axe', 'giantsbane_axe', 'vinecutter_axe',
+        'obsidian_axe', 'ashwood_axe', 'drakebane_axe',
+        'frostbite_sword', 'bloodsong_sword', 'shadowfang_sword', 'skymourne_sword',
+        'opalveil_sword', 'titans_claw_sword', 'entropy_sword',
+    ];
+    this.TIER4_WEAPONS = [
+        // No tier-4 weapons defined yet, use tier 3 pool
+        ...this.TIER3_WEAPONS
+    ];
+
+    // ── Tier armor pools (shields, boots, helms, masks) ─────────────────────────
+    this.TIER1_ARMOR = [
+        'buckler', 'infantry_shield', 'cold_steel_shield',
+        'travelers_boots', 'wayfinders_boots', 'oily_boots', 'highwaymans_boots',
+        'voyagers_boots', 'northerners_boots', 'midas_boots', 'sentinels_boots',
+        'imperial_boots', 'mariners_boots', 'magicians_boots', 'sorcerers_boots',
+        'shadow_boots', 'twilight_boots', 'moonstone_boots', 'eldritch_boots',
+        'glimmering_boots', 'princes_boots', 'lords_boots', 'golems_boots',
+        'darklings_boots', 'ornate_boots', 'rainmans_boots',
+        'basic_helm', 'knight_helm', 'spartan_helm', 'legionaire_helm', 'cretan_helm',
+        'archer_helm', 'kettle_hat', 'hounskull', 'plague_helm', 'warlord_helm',
+        'crimson_mask', 'eldritch_mask', 'entropic_mask', 'necrotic_mask', 'paradox_mask',
+        'seraphic_mask', 'shadow_mask', 'twilight_mask',
+    ];
+    this.TIER2_ARMOR = [
+        'crusaders_shield', 'dawnguard', 'twilight_screen',
+        'nasal_helm_upgradeable', 'soldier_helm_upgradeable', 'crusader_helm_upgradeable',
+        'cavalry_helm_upgradeable', 'war_helm_upgradeable', 'coif_helm_upgradeable',
+        'gladiator_helm_upgradeable', 'battle_mage_helm_upgradeable', 'knight_helm_upgradeable',
+        'janissary_helm_upgradeable', 'bascinet_upgradeable', 'imperial_helm_upgradeable',
+        'rogue_hood_upgradeable',
+    ];
+    this.TIER3_ARMOR = [
+        'revenants_shield', 'aegis_bulwark',
+        'juggernaut_helm', 'moonlord_helm', 'witch_knight_helm', 'collosus_helm', 'omega_helm',
+        'immortal_helm', 'nasal_helm_upgradeable_upgraded', 'soldier_helm_upgradeable_upgraded',
+        'crusader_helm_upgradeable_upgraded', 'cavalry_helm_upgradeable_upgraded',
+        'war_helm_upgradeable_upgraded', 'coif_helm_upgradeable_upgraded',
+        'gladiator_helm_upgradeable_upgraded', 'battle_mage_helm_upgradeable_upgraded',
+        'knight_helm_upgradeable_upgraded', 'janissary_helm_upgradeable_upgraded',
+        'bascinet_upgradeable_upgraded', 'imperial_helm_upgradeable_upgraded',
+        'rogue_hood_upgradeable_upgraded',
+    ];
+    this.TIER4_ARMOR = [];
+
+    // ── Tier magical pools (wands, staves, spellbooks, tablets, engines, folios, charms, amulets, manuals) ──
+    this.TIER1_MAGICAL = [
+        'cloudfire_wand', 'animus_wand', 'glyndas_wand',
+        'archmages_staff', 'enchanters_staff', 'imperial_mage_staff',
+        'oily_manual', 'bound_tome', 'glowing_tome', 'kelrigans_manual',
+        'beetle_charm', 'demonskull_charm', 'evilai_charm', 'hamsa_charm',
+        'lundi_charm', 'nukta_charm', 'scarab_charm',
+        'elasi_amulet', 'darkarrow_amulet', 'elemental_amulet', 'silver_amulet',
+        'ruby_amulet', 'acorn_amulet', 'voodoo_amulet', 'yaga_amulet',
+        'temprance_amulet', 'emerald_amulet', 'maconic_amulet',
+    ];
+    this.TIER2_MAGICAL = [
+        'justicator_wand', 'volkas_wand', 'willowcaster',
+        'staff_of_espilon', 'staff_of_marduk', 'staff_of_omicron',
+        'the_watchful_eye', 'moonbird_folio', 'icewing_folio',
+        'emerald_tablet', 'ruby_tablet',
+        'warding_amulet', 'bloodvial_amulet', 'enchantress_amulet', 'goldclaw_amulet',
+        'clerics_amulet', 'queens_amulet',
+    ];
+    this.TIER3_MAGICAL = [
+        'maerlyns_rod', 'staff_of_tomorrow',
+        'feldons_manual', 'the_beast_book', 'book_of_jade',
+        'igors_grimoire', 'forbidden_grimoire',
+        'ice_amulet', 'hypnosis_amulet', 'vampiric_amulet', 'platinum_amulet', 'necrotic_amulet',
+    ];
+    this.TIER4_MAGICAL = [
+        'monadic_engine', 'verdant_engine', 'crimson_engine',
+        'folio_of_coincidence', 'folio_of_paradox', 'septemons_grimoire',
+        'voidward_amulet', 'celestial_amulet', 'dimensional_amulet',
+    ];
+
+    // ── Mixed item pools (weapons, armor, magical) per tier ──────────────────────
+    this.TIER1_ITEM = [this.TIER1_WEAPONS, this.TIER1_ARMOR, this.TIER1_MAGICAL];
+    this.TIER2_ITEM = [this.TIER2_WEAPONS, this.TIER2_ARMOR, this.TIER2_MAGICAL];
+    this.TIER3_ITEM = [this.TIER3_WEAPONS, this.TIER3_ARMOR, this.TIER3_MAGICAL];
+    this.TIER4_ITEM = [this.TIER4_WEAPONS, this.TIER4_ARMOR, this.TIER4_MAGICAL];
+
+    this.TIER1_POTION = 'minor_health_potion';
+    this.TIER2_POTION = 'major_health_potion';
+    this.TIER3_POTION = 'grand_health_potion';
+    this.TIER4_POTION = 'grand_health_potion';
+}
+
+// Create a singleton instance to provide tier pools
+const inventoryManagerInstance = new InventoryManager();
+
+export {
+    InventoryManager,
+    inventoryManagerInstance as inventoryManager,
 }

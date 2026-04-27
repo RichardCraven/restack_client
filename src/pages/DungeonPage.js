@@ -2422,13 +2422,6 @@ class DungeonPage extends React.Component {
         if(tileProps){
             inv[tileProps.id] = tileProps.contains;
             descriptionText = tileProps.description
-            // switch(tileProps.image){
-            //     case 'bundu_mask': 
-            //         descriptionText = 'testing all bozos'
-            //     break;
-            //     default:
-            //     break;
-            // }
         }
 
         this.setState({

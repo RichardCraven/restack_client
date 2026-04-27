@@ -268,7 +268,7 @@ const specialsMatrix = {
     induce_madness: {
         name: 'induce madness',
         type: 'special',
-        icon: images['lundi_mask'],
+        icon: images['eldritch_mask'],
         cooldown: 8,
         energy_cost: 60,
         effect: ['special'],
@@ -363,7 +363,7 @@ const specialsMatrix = {
     possess: {
         name: 'possess',
         type: 'special',
-        icon: images['lundi_mask'],
+        icon: images['necrotic_mask'],
         cooldown: 'TBD',
         duration: 'TBD',
         energy_cost: 'TBD',

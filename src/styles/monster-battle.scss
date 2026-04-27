@@ -1655,33 +1655,42 @@
     // ── Feared state ─────────────────────────────────────────────────────────
     // Applied to .portrait.feared and .fighter-portrait.feared when induce_fear
     // is active — greyed-out trembling portrait to signal halved ATK/DEF.
+    // Uses --feared-base-transform so the portrait's orientation (facing-up,
+    // facing-down, reversed) is preserved inside the animation keyframes.
     @keyframes fearedTremble {
-        0%   { transform: translateX(0)    rotate(0deg);    filter: grayscale(0.7) brightness(0.7); }
-        20%  { transform: translateX(-3px) rotate(-1.5deg); filter: grayscale(0.8) brightness(0.6); }
-        40%  { transform: translateX(3px)  rotate(1.5deg);  filter: grayscale(0.9) brightness(0.55); }
-        60%  { transform: translateX(-2px) rotate(-1deg);   filter: grayscale(0.8) brightness(0.6); }
-        80%  { transform: translateX(2px)  rotate(1deg);    filter: grayscale(0.7) brightness(0.65); }
-        100% { transform: translateX(0)    rotate(0deg);    filter: grayscale(0.7) brightness(0.7); }
-    }
-    // Reversed variant — identical tremble but keeps scaleX(-1) so the portrait
-    // stays flipped toward its target while feared.
-    @keyframes fearedTrembleReversed {
-        0%   { transform: scaleX(-1) translateX(0)    rotate(0deg);    filter: grayscale(0.7) brightness(0.7); }
-        20%  { transform: scaleX(-1) translateX(-3px) rotate(-1.5deg); filter: grayscale(0.8) brightness(0.6); }
-        40%  { transform: scaleX(-1) translateX(3px)  rotate(1.5deg);  filter: grayscale(0.9) brightness(0.55); }
-        60%  { transform: scaleX(-1) translateX(-2px) rotate(-1deg);   filter: grayscale(0.8) brightness(0.6); }
-        80%  { transform: scaleX(-1) translateX(2px)  rotate(1deg);    filter: grayscale(0.7) brightness(0.65); }
-        100% { transform: scaleX(-1) translateX(0)    rotate(0deg);    filter: grayscale(0.7) brightness(0.7); }
+        0%   { transform: var(--feared-base-transform, none) translateX(0)    rotate(0deg);    filter: grayscale(0.7) brightness(0.7); }
+        20%  { transform: var(--feared-base-transform, none) translateX(-3px) rotate(-1.5deg); filter: grayscale(0.8) brightness(0.6); }
+        40%  { transform: var(--feared-base-transform, none) translateX(3px)  rotate(1.5deg);  filter: grayscale(0.9) brightness(0.55); }
+        60%  { transform: var(--feared-base-transform, none) translateX(-2px) rotate(-1deg);   filter: grayscale(0.8) brightness(0.6); }
+        80%  { transform: var(--feared-base-transform, none) translateX(2px)  rotate(1deg);    filter: grayscale(0.7) brightness(0.65); }
+        100% { transform: var(--feared-base-transform, none) translateX(0)    rotate(0deg);    filter: grayscale(0.7) brightness(0.7); }
     }
     .portrait.feared,
     .fighter-portrait.feared {
         animation: fearedTremble 0.5s ease-in-out infinite;
     }
-    // When the portrait is also reversed (facing left), use the reversed keyframes
-    // so the flip is preserved throughout the animation.
+    // Per-orientation overrides: set --feared-base-transform to match the
+    // static transform that facing classes normally apply, so the fear tremble
+    // never drops the portrait's rotation or flip.
     .portrait.feared.reversed,
     .fighter-portrait.feared.reversed {
-        animation: fearedTrembleReversed 0.5s ease-in-out infinite;
+        --feared-base-transform: scaleX(-1);
+    }
+    .portrait.feared.facing-up,
+    .fighter-portrait.feared.facing-up {
+        --feared-base-transform: rotate(-45deg);
+    }
+    .portrait.feared.facing-up.reversed,
+    .fighter-portrait.feared.facing-up.reversed {
+        --feared-base-transform: scaleX(-1) rotate(45deg);
+    }
+    .portrait.feared.facing-down,
+    .fighter-portrait.feared.facing-down {
+        --feared-base-transform: rotate(45deg);
+    }
+    .portrait.feared.facing-down.reversed,
+    .fighter-portrait.feared.facing-down.reversed {
+        --feared-base-transform: scaleX(-1) rotate(-45deg);
     }
 
     // ── Board-wide Fear Overlay ───────────────────────────────────────────────

@@ -1735,7 +1735,7 @@ class MonsterBattle extends React.Component {
                             }
                             {this.state.foodGained > 0 &&
                             <div className="experience-container">
-                                <img className="summary-icon" src={images.ornate_potion} alt="" />
+                                <span className="summary-icon" role="img" aria-label="meat">🍖</span>
                                 Your crew foraged {this.state.foodGained} food
                             </div>
                             }

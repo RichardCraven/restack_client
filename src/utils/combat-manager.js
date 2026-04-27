@@ -2329,6 +2329,13 @@ export function CombatManager() {
                 if (combatantHit.isMonster && typeof this.syncVCTs === 'function') {
                     this.syncVCTs();
                 }
+                // A pushed-back Soldier can no longer hold the wall line — expire it
+                if (combatantHit.type === 'soldier' && combatantHit.shieldWallActive) {
+                    const soldierAI = this.fighterAI && this.fighterAI.roster && this.fighterAI.roster['soldier'];
+                    if (soldierAI && typeof soldierAI._expireShieldWall === 'function') {
+                        soldierAI._expireShieldWall(combatantHit, this.combatants);
+                    }
+                }
             }
         } else {
             // Set sourceDirection for non-crits

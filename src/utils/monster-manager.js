@@ -1,73 +1,34 @@
 import * as images from '../utils/images'
+import { inventoryManager } from '../utils/inventory-manager'
 
-// ── Tier weapon pools ────────────────────────────────────────────────────────
-const TIER1_WEAPONS = [
-    'woodcutters_axe', 'bloodcleaver_axe', 'hillbiter_axe', 'ironcleaver_axe',
-    'rune_axe', 'timberfall_axe', 'grovehack_axe', 'stormsplitter_axe',
-    'bonecutter_axe', 'frostedge_axe', 'emberchop_axe',
-    'shortsword_sword', 'cutlass_sword', 'gladius_sword', 'falchion_sword',
-    'longsword_sword', 'broadsword_sword', 'golden_gladius_sword',
-    'wyrmsbane_sword', 'katana_sword', 'claymore_sword', 'greatsword_sword',
-];
-const TIER2_WEAPONS = [
-    'razorfang_axe', 'stonebreaker_axe', 'mossreaper_axe', 'warcleaver_axe',
-    'blackroot_axe', 'dawnsplitter_axe', 'duskbane_axe',
-    'doomreaver_sword', 'nightfall_sword', 'dreadedge_sword', 'sunsteel_sword',
-    'voidrender_sword', 'warlords_cleaver_sword', 'emberbrand_sword',
-];
-const TIER3_WEAPONS = [
-    'thunderhewer_axe', 'skullsplitter_axe', 'giantsbane_axe', 'vinecutter_axe',
-    'obsidian_axe', 'ashwood_axe', 'drakebane_axe',
-    'frostbite_sword', 'bloodsong_sword', 'shadowfang_sword', 'skymourne_sword',
-    'opalveil_sword', 'titans_claw_sword', 'entropy_sword',
-];
-// No tier-4 weapons exist yet — use tier 3 pool
-const TIER4_WEAPONS = TIER3_WEAPONS;
+// ── Tier weapon pools (from inventoryManager) ────────────────────────────────
+const TIER1_WEAPONS = inventoryManager.TIER1_WEAPONS;
+const TIER2_WEAPONS = inventoryManager.TIER2_WEAPONS;
+const TIER3_WEAPONS = inventoryManager.TIER3_WEAPONS;
+const TIER4_WEAPONS = inventoryManager.TIER4_WEAPONS;
 
-// ── Tier magical pools (items with explicit tier only) ─────────────────────
-const TIER1_MAGICAL = [
-    'cloudfire_wand', 'animus_wand', 'glyndas_wand',
-    'archmages_staff', 'enchanters_staff', 'imperial_mage_staff',
-    'oily_manual', 'bound_tome', 'glowing_tome', 'kelrigans_manual',
-];
-const TIER2_MAGICAL = [
-    'justicator_wand', 'volkas_wand', 'willowcaster',
-    'staff_of_espilon', 'staff_of_marduk', 'staff_of_omicron',
-    'the_watchful_eye', 'moonbird_folio', 'icewing_folio',
-    'emerald_tablet', 'ruby_tablet',
-];
-const TIER3_MAGICAL = [
-    'maerlyns_rod', 'staff_of_tomorrow',
-    'feldons_manual', 'the_beast_book', 'book_of_jade',
-    'igors_grimoire', 'forbidden_grimoire',
-];
-const TIER4_MAGICAL = [
-    'monadic_engine', 'verdant_engine', 'crimson_engine',
-    'folio_of_coincidence', 'folio_of_paradox', 'septemons_grimoire',
-];
+// ── Tier magical pools (from inventoryManager) ──────────────────────────────
+const TIER1_MAGICAL = inventoryManager.TIER1_MAGICAL;
+const TIER2_MAGICAL = inventoryManager.TIER2_MAGICAL;
+const TIER3_MAGICAL = inventoryManager.TIER3_MAGICAL;
+const TIER4_MAGICAL = inventoryManager.TIER4_MAGICAL;
 
-// ── Tier armor pools (items with explicit tier only) ───────────────────────
-const TIER1_ARMOR = [
-    'buckler', 'infantry_shield', 'cold_steel_shield',
-];
-const TIER2_ARMOR = [
-    'crusaders_shield', 'dawnguard', 'twilight_screen',
-];
-const TIER3_ARMOR = [
-    'revenants_shield', 'aegis_bulwark',
-];
-const TIER4_ARMOR = [];
+// ── Tier armor pools (from inventoryManager) ───────────────────────────────
+const TIER1_ARMOR = inventoryManager.TIER1_ARMOR;
+const TIER2_ARMOR = inventoryManager.TIER2_ARMOR;
+const TIER3_ARMOR = inventoryManager.TIER3_ARMOR;
+const TIER4_ARMOR = inventoryManager.TIER4_ARMOR;
 
 // Mixed item pools (weapons, armor, magical) per tier
-const TIER1_ITEM = [TIER1_WEAPONS, TIER1_ARMOR, TIER1_MAGICAL];
-const TIER2_ITEM = [TIER2_WEAPONS, TIER2_ARMOR, TIER2_MAGICAL];
-const TIER3_ITEM = [TIER3_WEAPONS, TIER3_ARMOR, TIER3_MAGICAL];
-const TIER4_ITEM = [TIER4_WEAPONS, TIER4_ARMOR, TIER4_MAGICAL];
+const TIER1_ITEM = inventoryManager.TIER1_ITEM;
+const TIER2_ITEM = inventoryManager.TIER2_ITEM;
+const TIER3_ITEM = inventoryManager.TIER3_ITEM;
+const TIER4_ITEM = inventoryManager.TIER4_ITEM;
 
-const TIER1_POTION = 'minor_health_potion';
-const TIER2_POTION = 'major_health_potion';
-const TIER3_POTION = 'grand_health_potion';
-const TIER4_POTION = 'grand_health_potion';
+const TIER1_POTION = inventoryManager.TIER1_POTION;
+const TIER2_POTION = inventoryManager.TIER2_POTION;
+const TIER3_POTION = inventoryManager.TIER3_POTION;
+const TIER4_POTION = inventoryManager.TIER4_POTION;
 
 export function MonsterManager() {
     this.pickRandom = (array) => {
