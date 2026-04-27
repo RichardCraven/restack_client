@@ -369,9 +369,9 @@
   height: var(--slab-top-h);
   top: 0;
   left: 0;
-  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+  clip-path: polygon(50% 0.2%, 99.6% 50%, 50% 99.8%, 0.4% 50%);
   background: linear-gradient(145deg, #cfd9e6, #8fa1b9);
-  border: 1px solid rgba(40, 55, 74, 0.45);
+  border: 0;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14), 0 8px 16px rgba(12, 20, 34, 0.14);
 }
 

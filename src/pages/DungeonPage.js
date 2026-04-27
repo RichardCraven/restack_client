@@ -522,6 +522,7 @@ class DungeonPage extends React.Component {
             , mapUnzoomingLevelId: null
             , mapRevealAfterUnzoom: false
             , mapPendingZoomLevelId: null
+            , mapSelectedLevelId: null
             // floating player animation state
             , playerFloatVisible: false
             , playerFloatStyle: { left: 0, top: 0, transform: 'translate3d(0px, 0px, 0px)' }
@@ -2220,6 +2221,9 @@ class DungeonPage extends React.Component {
             // 'm' — open Camp Map overlay directly from dungeon (blocked during battle)
             if ((maybeKey === 'm' || maybeKey === 'M') && !this.state.inMonsterBattle) {
                 event.preventDefault();
+                const tracker = this.state.levelTracker || [];
+                const activeLevel = tracker.find((entry) => entry && entry.active);
+                const currentLevelId = activeLevel ? Number(activeLevel.id) : Number((getMeta() || {}).location?.levelId || 0);
                 this.setState({
                     showCampPopup: true,
                     showMapOverlay: true,
@@ -2227,7 +2231,8 @@ class DungeonPage extends React.Component {
                     showSpellsOverlay: false,
                     mapRevealAfterUnzoom: false,
                     mapPendingZoomLevelId: null,
-                    mapUnzoomingLevelId: null
+                    mapUnzoomingLevelId: null,
+                    mapSelectedLevelId: currentLevelId
                 });
                 return;
             }
@@ -3645,7 +3650,7 @@ class DungeonPage extends React.Component {
     }
 
     handleCloseCampPopup = () => {
-        try { this.setState({ showCampPopup: false, showFoodPrepOverlay: false, showSpellsOverlay: false, showMapOverlay: false, mapZoomedLevelId: null, mapUnzoomingLevelId: null, mapRevealAfterUnzoom: false, mapPendingZoomLevelId: null }, () => this._cleanupModalBodyClass()); } catch(e) {}
+        try { this.setState({ showCampPopup: false, showFoodPrepOverlay: false, showSpellsOverlay: false, showMapOverlay: false, mapZoomedLevelId: null, mapUnzoomingLevelId: null, mapRevealAfterUnzoom: false, mapPendingZoomLevelId: null, mapSelectedLevelId: null }, () => this._cleanupModalBodyClass()); } catch(e) {}
     }
 
     handleOpenFoodPrep = () => {
@@ -3665,17 +3670,26 @@ class DungeonPage extends React.Component {
     }
 
     handleOpenMapOverlay = () => {
-        this.setState({ showMapOverlay: true });
+        const tracker = this.state.levelTracker || [];
+        const activeLevel = tracker.find((entry) => entry && entry.active);
+        const currentLevelId = activeLevel ? Number(activeLevel.id) : Number((getMeta() || {}).location?.levelId || 0);
+        this.setState({ showMapOverlay: true, mapSelectedLevelId: currentLevelId });
     }
 
     handleMapOverlayBack = () => {
-        this.setState({ showMapOverlay: false, mapZoomedLevelId: null, mapUnzoomingLevelId: null, mapRevealAfterUnzoom: false, mapPendingZoomLevelId: null });
+        this.setState({ showMapOverlay: false, mapZoomedLevelId: null, mapUnzoomingLevelId: null, mapRevealAfterUnzoom: false, mapPendingZoomLevelId: null, mapSelectedLevelId: null });
     }
 
     handleMapLevelSelect = (levelId) => {
         const nextLevel = Number(levelId);
         if (Number.isNaN(nextLevel)) return;
-        this.handleLevelChange(nextLevel);
+        this.setState({
+            mapSelectedLevelId: nextLevel,
+            mapZoomedLevelId: null,
+            mapUnzoomingLevelId: null,
+            mapRevealAfterUnzoom: false,
+            mapPendingZoomLevelId: null
+        });
     }
 
     handleMapZoomClose = () => {
@@ -3699,12 +3713,14 @@ class DungeonPage extends React.Component {
         }, 1700);
     }
 
-    handleMapZoomInStart = (levelId, levelCount) => {
+    handleMapZoomInStart = (levelId, levelCount, selectedIndex) => {
         const MAP_FADE_DURATION_MS = 1000;
         const MAP_FADE_STAGGER_MS = 90;
-        const safetyBuffer = 80;
-        const steps = Math.max((Number(levelCount) || 1) - 1, 0);
-        const zoomStartDelay = MAP_FADE_DURATION_MS + (steps * MAP_FADE_STAGGER_MS) + safetyBuffer;
+        const totalLevels = Math.max(Number(levelCount) || 1, 1);
+        const safeSelectedIndex = Number.isInteger(selectedIndex) ? selectedIndex : 0;
+        const highestIndex = totalLevels - 1;
+        const maxNonSelectedIndex = safeSelectedIndex === highestIndex ? Math.max(highestIndex - 1, 0) : highestIndex;
+        const zoomStartDelay = MAP_FADE_DURATION_MS + (maxNonSelectedIndex * MAP_FADE_STAGGER_MS);
 
         this.setState({
             mapPendingZoomLevelId: levelId,
@@ -4030,7 +4046,10 @@ class DungeonPage extends React.Component {
                     const sourceLevelIds = trackerIds.length ? trackerIds : dungeonIds;
                     const levelIds = Array.from(new Set(sourceLevelIds)).sort((a, b) => b - a);
                     const activeLevel = tracker.find((entry) => entry && entry.active);
-                    const activeLevelId = activeLevel ? Number(activeLevel.id) : Number((getMeta() || {}).location?.levelId || 0);
+                    const currentLevelId = activeLevel ? Number(activeLevel.id) : Number((getMeta() || {}).location?.levelId || 0);
+                    const selectedLevelId = this.state.mapSelectedLevelId === null || typeof this.state.mapSelectedLevelId === 'undefined'
+                        ? currentLevelId
+                        : Number(this.state.mapSelectedLevelId);
                     const zoomedLevelId = this.state.mapZoomedLevelId;
                     const unzoomingLevelId = this.state.mapUnzoomingLevelId;
                     const revealAfterUnzoom = !!this.state.mapRevealAfterUnzoom;
@@ -4051,7 +4070,8 @@ class DungeonPage extends React.Component {
                             <div className="camp-map-scene-wrap" onClick={(e) => e.stopPropagation()}>
                                 <div className={`camp-map-scene ${hasZoomedLevel ? 'zoomed' : ''} ${hasPendingZoomLevel ? 'pre-zoom' : ''} ${isPreUnzoom ? 'pre-unzoom' : ''} ${revealAfterUnzoom ? 'reveal-others' : ''}`} role="list" aria-label="Dungeon tower floors">
                                     {levelIds.map((levelId, index) => {
-                                        const isActive = levelId === activeLevelId;
+                                        const isCurrent = levelId === currentLevelId;
+                                        const isSelected = levelId === selectedLevelId;
                                         const isZoomed = zoomedLevelId === levelId;
                                         const isUnzooming = unzoomingLevelId === levelId;
                                         const isPendingZoom = pendingZoomLevelId === levelId;
@@ -4062,7 +4082,7 @@ class DungeonPage extends React.Component {
                                             <button
                                                 key={levelId}
                                                 role="listitem"
-                                                className={`tower-floor-slab ${isActive ? 'active' : ''} ${isZoomed ? 'zoomed-in' : ''} ${isUnzooming ? 'zooming-out' : ''} ${isPendingZoom ? 'pending-zoom' : ''} ${holdOthersHidden && !isZoomed && !isUnzooming && !isPendingZoom ? 'faded' : ''}`}
+                                                className={`tower-floor-slab ${isSelected ? 'active' : ''} ${isZoomed ? 'zoomed-in' : ''} ${isUnzooming ? 'zooming-out' : ''} ${isPendingZoom ? 'pending-zoom' : ''} ${holdOthersHidden && !isZoomed && !isUnzooming && !isPendingZoom ? 'faded' : ''}`}
                                                 style={{
                                                     '--tower-offset': `${depthOffset}px`,
                                                     '--tower-zoom-shift': `${124 - depthOffset}px`,
@@ -4073,17 +4093,17 @@ class DungeonPage extends React.Component {
                                                 }}
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    // If this level is already active
-                                                    if (isActive) {
+                                                    // If this level is already selected in map view
+                                                    if (isSelected) {
                                                         // If already zoomed, unzoom
                                                         if (isZoomed) {
                                                             this.handleMapZoomClose();
                                                         } else {
-                                                            // If active but not zoomed, zoom in
-                                                            this.handleMapZoomInStart(levelId, levelIds.length);
+                                                            // If selected but not zoomed, zoom in
+                                                            this.handleMapZoomInStart(levelId, levelIds.length, index);
                                                         }
                                                     } else {
-                                                        // If not active, select this level
+                                                        // If not selected, select this level in map view only
                                                         this.handleMapLevelSelect(levelId);
                                                     }
                                                 }}
@@ -4094,7 +4114,7 @@ class DungeonPage extends React.Component {
                                                 <span className="slab-face slab-left"></span>
                                                 <span className="slab-face slab-right"></span>
                                                 <span className="slab-label">L{levelId}</span>
-                                                {isActive && <span className="slab-active-badge">Current</span>}
+                                                {isCurrent && <span className="slab-active-badge">Current</span>}
                                             </button>
                                         );
                                     })}
