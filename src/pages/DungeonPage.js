@@ -518,6 +518,7 @@ class DungeonPage extends React.Component {
             , showCardDuelModal: false
             , cardDuelTileId: null
             , toastMessage: null
+            , mapZoomedLevelId: null
             // floating player animation state
             , playerFloatVisible: false
             , playerFloatStyle: { left: 0, top: 0, transform: 'translate3d(0px, 0px, 0px)' }
@@ -3660,6 +3661,10 @@ class DungeonPage extends React.Component {
         this.handleLevelChange(nextLevel);
     }
 
+    handleMapZoomClose = () => {
+        this.setState({ mapZoomedLevelId: null });
+    }
+
     handleStartRecipe = (recipe) => {
         try {
             const meta = getMeta() || {};
@@ -3970,31 +3975,49 @@ class DungeonPage extends React.Component {
                     const levelIds = Array.from(new Set(sourceLevelIds)).sort((a, b) => b - a);
                     const activeLevel = tracker.find((entry) => entry && entry.active);
                     const activeLevelId = activeLevel ? Number(activeLevel.id) : Number((getMeta() || {}).location?.levelId || 0);
+                    const zoomedLevelId = this.state.mapZoomedLevelId;
 
                     return (
-                        <div className="camp-map-overlay">
+                        <div className="camp-map-overlay" onClick={zoomedLevelId ? this.handleMapZoomClose : undefined}>
                             <div className="camp-map-header">
                                 <button className="camp-map-back" onClick={this.handleMapOverlayBack}>Back</button>
                                 <div className="camp-map-title">Dungeon Tower</div>
                                 <div className="camp-map-subtitle">Stacked floors from an isometric view</div>
                             </div>
 
-                            <div className="camp-map-scene-wrap">
-                                <div className="camp-map-scene" role="list" aria-label="Dungeon tower floors">
+                            <div className="camp-map-scene-wrap" onClick={(e) => e.stopPropagation()}>
+                                <div className={`camp-map-scene ${zoomedLevelId ? 'zoomed' : ''}`} role="list" aria-label="Dungeon tower floors">
                                     {levelIds.map((levelId, index) => {
                                         const isActive = levelId === activeLevelId;
+                                        const isZoomed = zoomedLevelId === levelId;
                                         const depthOffset = index * 52;
                                         return (
                                             <button
                                                 key={levelId}
                                                 role="listitem"
-                                                className={`tower-floor-slab ${isActive ? 'active' : ''}`}
+                                                className={`tower-floor-slab ${isActive ? 'active' : ''} ${isZoomed ? 'zoomed-in' : ''} ${zoomedLevelId && !isZoomed ? 'faded' : ''}`}
                                                 style={{
                                                     '--tower-offset': `${depthOffset}px`,
+                                                    '--tower-zoom-shift': `${124 - depthOffset}px`,
                                                     animationDelay: `${index * 70}ms`,
                                                     zIndex: levelIds.length - index
                                                 }}
-                                                onClick={() => this.handleMapLevelSelect(levelId)}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    // If this level is already active
+                                                    if (isActive) {
+                                                        // If already zoomed, unzoom
+                                                        if (isZoomed) {
+                                                            this.setState({ mapZoomedLevelId: null });
+                                                        } else {
+                                                            // If active but not zoomed, zoom in
+                                                            this.setState({ mapZoomedLevelId: levelId });
+                                                        }
+                                                    } else {
+                                                        // If not active, select this level
+                                                        this.handleMapLevelSelect(levelId);
+                                                    }
+                                                }}
                                                 title={`Go to level ${levelId}`}
                                             >
                                                 <span className="slab-shadow"></span>
