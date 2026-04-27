@@ -519,6 +519,7 @@ class DungeonPage extends React.Component {
             , cardDuelTileId: null
             , toastMessage: null
             , mapZoomedLevelId: null
+            , mapUnzoomingLevelId: null
             // floating player animation state
             , playerFloatVisible: false
             , playerFloatStyle: { left: 0, top: 0, transform: 'translate3d(0px, 0px, 0px)' }
@@ -3628,7 +3629,7 @@ class DungeonPage extends React.Component {
     }
 
     handleCloseCampPopup = () => {
-        try { this.setState({ showCampPopup: false, showFoodPrepOverlay: false, showSpellsOverlay: false, showMapOverlay: false }, () => this._cleanupModalBodyClass()); } catch(e) {}
+        try { this.setState({ showCampPopup: false, showFoodPrepOverlay: false, showSpellsOverlay: false, showMapOverlay: false, mapZoomedLevelId: null, mapUnzoomingLevelId: null }, () => this._cleanupModalBodyClass()); } catch(e) {}
     }
 
     handleOpenFoodPrep = () => {
@@ -3652,7 +3653,7 @@ class DungeonPage extends React.Component {
     }
 
     handleMapOverlayBack = () => {
-        this.setState({ showMapOverlay: false });
+        this.setState({ showMapOverlay: false, mapZoomedLevelId: null, mapUnzoomingLevelId: null });
     }
 
     handleMapLevelSelect = (levelId) => {
@@ -3662,7 +3663,16 @@ class DungeonPage extends React.Component {
     }
 
     handleMapZoomClose = () => {
-        this.setState({ mapZoomedLevelId: null });
+        const exitingLevelId = this.state.mapZoomedLevelId;
+        if (exitingLevelId === null || typeof exitingLevelId === 'undefined') return;
+
+        this.setState({ mapZoomedLevelId: null, mapUnzoomingLevelId: exitingLevelId });
+        this._setTimeout(() => {
+            this.setState((prev) => {
+                if (prev.mapUnzoomingLevelId !== exitingLevelId) return null;
+                return { mapUnzoomingLevelId: null };
+            });
+        }, 2000);
     }
 
     handleStartRecipe = (recipe) => {
@@ -3976,9 +3986,11 @@ class DungeonPage extends React.Component {
                     const activeLevel = tracker.find((entry) => entry && entry.active);
                     const activeLevelId = activeLevel ? Number(activeLevel.id) : Number((getMeta() || {}).location?.levelId || 0);
                     const zoomedLevelId = this.state.mapZoomedLevelId;
+                    const unzoomingLevelId = this.state.mapUnzoomingLevelId;
+                    const hasZoomedLevel = zoomedLevelId !== null && typeof zoomedLevelId !== 'undefined';
 
                     return (
-                        <div className="camp-map-overlay" onClick={zoomedLevelId ? this.handleMapZoomClose : undefined}>
+                        <div className="camp-map-overlay" onClick={hasZoomedLevel ? this.handleMapZoomClose : undefined}>
                             <div className="camp-map-header">
                                 <button className="camp-map-back" onClick={this.handleMapOverlayBack}>Back</button>
                                 <div className="camp-map-title">Dungeon Tower</div>
@@ -3986,16 +3998,17 @@ class DungeonPage extends React.Component {
                             </div>
 
                             <div className="camp-map-scene-wrap" onClick={(e) => e.stopPropagation()}>
-                                <div className={`camp-map-scene ${zoomedLevelId ? 'zoomed' : ''}`} role="list" aria-label="Dungeon tower floors">
+                                <div className={`camp-map-scene ${hasZoomedLevel ? 'zoomed' : ''}`} role="list" aria-label="Dungeon tower floors">
                                     {levelIds.map((levelId, index) => {
                                         const isActive = levelId === activeLevelId;
                                         const isZoomed = zoomedLevelId === levelId;
+                                        const isUnzooming = unzoomingLevelId === levelId;
                                         const depthOffset = index * 52;
                                         return (
                                             <button
                                                 key={levelId}
                                                 role="listitem"
-                                                className={`tower-floor-slab ${isActive ? 'active' : ''} ${isZoomed ? 'zoomed-in' : ''} ${zoomedLevelId && !isZoomed ? 'faded' : ''}`}
+                                                className={`tower-floor-slab ${isActive ? 'active' : ''} ${isZoomed ? 'zoomed-in' : ''} ${isUnzooming ? 'zooming-out' : ''} ${hasZoomedLevel && !isZoomed ? 'faded' : ''}`}
                                                 style={{
                                                     '--tower-offset': `${depthOffset}px`,
                                                     '--tower-zoom-shift': `${124 - depthOffset}px`,
@@ -4008,10 +4021,10 @@ class DungeonPage extends React.Component {
                                                     if (isActive) {
                                                         // If already zoomed, unzoom
                                                         if (isZoomed) {
-                                                            this.setState({ mapZoomedLevelId: null });
+                                                            this.handleMapZoomClose();
                                                         } else {
                                                             // If active but not zoomed, zoom in
-                                                            this.setState({ mapZoomedLevelId: levelId });
+                                                            this.setState({ mapZoomedLevelId: levelId, mapUnzoomingLevelId: null });
                                                         }
                                                     } else {
                                                         // If not active, select this level

@@ -319,11 +319,10 @@
   background: transparent;
   cursor: pointer;
   transform-style: preserve-3d;
-  transition: transform 380ms cubic-bezier(0.22, 0.84, 0.26, 1), opacity 2000ms cubic-bezier(0.16, 1, 0.3, 1), filter 240ms ease;
+  transition: transform 2000ms cubic-bezier(0.16, 1, 0.3, 1), opacity 2000ms cubic-bezier(0.16, 1, 0.3, 1), filter 240ms ease;
   padding: 0;
-  opacity: 0;
+  opacity: 1;
   transform: translate3d(0, var(--tower-offset, 0px), 0);
-  animation: towerFloorReveal 420ms cubic-bezier(0.2, 0.9, 0.2, 1) forwards;
 
   &:hover {
     filter: brightness(1.08);
@@ -488,9 +487,7 @@
 }
 
 .camp-map-scene.zoomed .tower-floor-slab {
-  /* Stop the reveal keyframe from pinning opacity at 1 while zoom transitions run. */
-  animation: none;
-  opacity: 1;
+  transition: transform 2000ms cubic-bezier(0.16, 1, 0.3, 1), opacity 2000ms cubic-bezier(0.16, 1, 0.3, 1), filter 240ms ease;
 }
 
 .camp-map-scene.zoomed .tower-floor-slab.faded {
@@ -501,6 +498,10 @@
 
 .tower-floor-slab.zoomed-in {
   transform: translate3d(0, calc(var(--tower-offset, 0px) + var(--tower-zoom-shift, 0px)), 0) scale(1.62) rotateX(-5deg);
+  z-index: 1000 !important;
+}
+
+.tower-floor-slab.zooming-out {
   z-index: 1000 !important;
 }
 
