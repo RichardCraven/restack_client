@@ -112,7 +112,7 @@ import emerald_amulet from '../assets/icons/items/amulets/tier 1/Emerald amulet.
 import maconic_amulet from '../assets/icons/items/amulets/tier 1/Maconic amulet.png'
 
 // tier 2 amulets
-import warding_amulet from '../assets/icons/items/amulets/tier 2/Warding amulet.png'
+import warding_amulet from '../assets/icons/items/amulets/tier 2/Warding amuleet.png'
 import bloodvial_amulet from '../assets/icons/items/amulets/tier 2/Bloodvial amulet.png'
 import enchantress_amulet from '../assets/icons/items/amulets/tier 2/Enchantress amulet.png'
 import goldclaw_amulet from '../assets/icons/items/amulets/tier 2/Goldclaw amulet.png'

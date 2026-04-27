@@ -2497,9 +2497,4 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
 }
 
 // Create a singleton instance to provide tier pools
-const inventoryManagerInstance = new InventoryManager();
-
-export {
-    InventoryManager,
-    inventoryManagerInstance as inventoryManager,
-}
+export const inventoryManager = new InventoryManager();

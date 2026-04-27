@@ -60,7 +60,7 @@ export function MonsterManager() {
             weaknesses: ['crushing', 'cutting', 'electricity'],
             drops: [
                 { item: TIER1_POTION, percentChance: 35 },
-                { itemPool: TIER1_WEAPONS, percentChance: 35 },
+                { itemPool: TIER1_WEAPONS, percentChance: 25 },
             ]
         },
         // ── Level 3 ──────────────────────────────────────────────────────
@@ -88,7 +88,7 @@ export function MonsterManager() {
             weaknesses: ['fire'],
             drops: [
                 { item: TIER1_POTION, percentChance: 35 },
-                { itemPool: TIER1_WEAPONS, percentChance: 35 },
+                { itemPool: TIER1_ITEM, percentChance: 35 },
             ]
         },
         // ── Level 4 (minion) ─────────────────────────────────────────────
@@ -169,7 +169,7 @@ export function MonsterManager() {
             weaknesses: ['fire'],
             drops: [
                 { item: TIER1_POTION, percentChance: 35 },
-                { itemPool: TIER1_WEAPONS, percentChance: 35 },
+                { itemPool: TIER1_ITEM, percentChance: 35 },
             ]
         },
         mummy: {
@@ -195,7 +195,7 @@ export function MonsterManager() {
             minions: ['skeleton', 'skeleton'],
             drops: [
                 { item: TIER1_POTION, percentChance: 35 },
-                { itemPool: TIER1_WEAPONS, percentChance: 35 },
+                { itemPool: TIER1_ITEM, percentChance: 50 },
             ]
         },
         // ── Level 8 ──────────────────────────────────────────────────────
@@ -221,7 +221,7 @@ export function MonsterManager() {
             weaknesses: ['holy', 'psionic'],
             drops: [
                 { item: TIER1_POTION, percentChance: 35 },
-                { itemPool: TIER1_WEAPONS, percentChance: 35 },
+                { itemPool: TIER1_ITEM, percentChance: 50 },
             ]
         },
         ogre: {
@@ -246,7 +246,7 @@ export function MonsterManager() {
             weaknesses: ['fire', 'psionic'],
             drops: [
                 { item: TIER1_POTION, percentChance: 35 },
-                { itemPool: TIER1_WEAPONS, percentChance: 35 },
+                { itemPool: TIER1_WEAPONS, percentChance: 45 },
             ]
         },
         // ── Level 9 ──────────────────────────────────────────────────────
@@ -272,7 +272,7 @@ export function MonsterManager() {
             weaknesses: ['ice', 'psionic'],
             drops: [
                 { item: TIER1_POTION, percentChance: 35 },
-                { itemPool: TIER1_WEAPONS, percentChance: 35 },
+                { itemPool: TIER1_WEAPONS, percentChance: 45 },
             ]
         },
         // ── Level 10 ─────────────────────────────────────────────────────
@@ -300,7 +300,7 @@ export function MonsterManager() {
             minions: ['goblin', 'goblin'],
             drops: [
                 { item: TIER2_POTION, percentChance: 35 },
-                { itemPool: TIER2_WEAPONS, percentChance: 35 },
+                { itemPool: TIER2_WEAPONS, percentChance: 45 },
             ]
         },
         // ── Level 11 ─────────────────────────────────────────────────────
@@ -328,6 +328,7 @@ export function MonsterManager() {
             drops: [
                 { item: TIER2_POTION, percentChance: 35 },
                 { itemPool: TIER2_WEAPONS, percentChance: 35 },
+                { itemPool: TIER2_WEAPONS, percentChance: 35 },
             ]
         },
         // ── Level 12 ─────────────────────────────────────────────────────
@@ -352,8 +353,8 @@ export function MonsterManager() {
             attacks: ['void_lance', 'major_magic_missile'],
             weaknesses: ['arcane', 'holy-aura'],
             drops: [
-                { item: TIER2_POTION, percentChance: 35 },
-                { itemPool: TIER2_WEAPONS, percentChance: 35 },
+                { item: TIER3_POTION, percentChance: 35 },
+                { itemPool: TIER3_ITEM, percentChance: 35 },
             ]
         },
         // mirror: {
@@ -403,8 +404,9 @@ export function MonsterManager() {
             weaknesses: ['arcane', 'holy-aura'],
             minions: ['beholder_minion', 'beholder_minion'],
             drops: [
-                { item: TIER2_POTION, percentChance: 35 },
+                { item: TIER2_POTION, percentChance: 60 },
                 { itemPool: TIER2_MAGICAL, percentChance: 35 },
+                { itemPool: TIER3_MAGICAL, percentChance: 15 },
                 { itemPool: TIER2_WEAPONS, percentChance: 35 },
             ]
         },
@@ -458,7 +460,7 @@ export function MonsterManager() {
             minions: ['kabuki_demon_minion', 'kabuki_demon_minion'],
             drops: [
                 { item: TIER2_POTION, percentChance: 35 },
-                { itemPool: TIER2_WEAPONS, percentChance: 35 },
+                { itemPool: TIER3_ITEM, percentChance: 35 },
             ]
         },
         // ── Level 19 ─────────────────────────────────────────────────────
@@ -484,7 +486,7 @@ export function MonsterManager() {
             weaknesses: ['arcane'],
             drops: [
                 { item: TIER2_POTION, percentChance: 35 },
-                { itemPool: TIER2_WEAPONS, percentChance: 35 },
+                { itemPool: TIER3_MAGICAL, percentChance: 45 },
             ]
         },
         // ── Level 29 ─────────────────────────────────────────────────────
@@ -514,7 +516,8 @@ export function MonsterManager() {
             minions: ['djinn'],
             drops: [
                 { item: TIER3_POTION, percentChance: 35 },
-                { itemPool: TIER3_WEAPONS, percentChance: 35 },
+                { itemPool: TIER3_MAGICAL, percentChance: 35 },
+                { itemPool: TIER4_ITEM, percentChance: 15 },
             ]
         },
         // ── Level 30 ─────────────────────────────────────────────────────
@@ -540,7 +543,8 @@ export function MonsterManager() {
             weaknesses: ['psionic'],
             drops: [
                 { item: TIER4_POTION, percentChance: 35 },
-                { itemPool: TIER4_WEAPONS, percentChance: 35 },
+                { itemPool: TIER4_ITEM, percentChance: 35 },
+                { itemPool: TIER4_ITEM, percentChance: 20 },
             ]
         },
     }
