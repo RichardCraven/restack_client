@@ -104,22 +104,27 @@ export function Djinn(data, utilMethods, animationManager, overlayManager){
         // // debugger
     }
     this.initiateAttack = (caller, combatants) => {
+        if (caller.attacking) return;
         caller.attacking = true;
-        const target = combatants[caller.targetId];
-        if (!target || target.dead || target.isVCT) return;
-        const distanceToTarget = data.methods.getDistanceToTarget(caller, target),
-        laneDiff = data.methods.getLaneDifferenceToTarget(caller, target);
-        if(caller.energy > 50){
-            caller.energy -= 80;
-            this.triggerVoidLance(target.coordinates);
-            this.hitsTarget(caller)
-        } else if(distanceToTarget > 0){
-            this.goBehindAndAttack(caller, target)
-        } else if(distanceToTarget === 1 && laneDiff === 0){
-            this.hitsTarget(caller)
-        } else {
-            caller.energy += 20
-            this.missesTarget(caller);
+        try {
+            const target = combatants[caller.targetId];
+            if (!target || target.dead || target.isVCT) return;
+            const distanceToTarget = data.methods.getDistanceToTarget(caller, target),
+            laneDiff = data.methods.getLaneDifferenceToTarget(caller, target);
+            if(caller.energy > 50){
+                caller.energy -= 80;
+                this.triggerVoidLance(target.coordinates);
+                this.hitsTarget(caller)
+            } else if(distanceToTarget > 0){
+                this.goBehindAndAttack(caller, target)
+            } else if(distanceToTarget === 1 && laneDiff === 0){
+                this.hitsTarget(caller)
+            } else {
+                caller.energy += 20
+                this.missesTarget(caller);
+            }
+        } finally {
+            caller.attacking = false;
         }
     }
     this.chooseAttackType = (caller, target) => {

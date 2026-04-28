@@ -1763,6 +1763,7 @@ export function CombatManager() {
         }
         const coordinatesOccupiedBy = (coordinates) => {
             return Object.values(this.combatants).find(e => {
+                if (!e || e.id === caller.id || e.dead) return false;
                 if (e.coordinates.x === coordinates.x && e.coordinates.y === coordinates.y) return true;
                 if (Array.isArray(e.occupiedCoords) && e.occupiedCoords.some(c => c.x === coordinates.x && c.y === coordinates.y)) return true;
                 return false;

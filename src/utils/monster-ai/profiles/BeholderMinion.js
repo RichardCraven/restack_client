@@ -398,50 +398,55 @@ export function BeholderMinion(data, utilMethods, animationManager, overlayManag
     };
 
     this.initiateAttack = async (caller, combatants) => {
+        if (caller.attacking) return;
         const target = combatants[caller.targetId];
         caller.attacking = true;
-        if (!target || target.dead || target.isVCT) {
-            if (!target) {
-                console.log('[BeholderMinion] initiateAttack — no target');
-            } else if (target.isVCT) {
-                console.warn('[BeholderMinion] initiateAttack — target is VCT, skipping attack');
+        try {
+            if (!target || target.dead || target.isVCT) {
+                if (!target) {
+                    console.log('[BeholderMinion] initiateAttack — no target');
+                } else if (target.isVCT) {
+                    console.warn('[BeholderMinion] initiateAttack — target is VCT, skipping attack');
+                }
+                this.kickoffAttackCooldown(caller);
+                caller.pendingAttack = null;
+                return;
             }
+
+            // If no pending attack has been chosen yet, pick one now
+            if (!caller.pendingAttack) {
+                caller.pendingAttack = this.chooseAttackType(caller, target);
+            }
+
+            const attackName = caller.pendingAttack && caller.pendingAttack.name;
+            console.log(`[BeholderMinion] initiateAttack — "${attackName}" vs ${target.name || target.type}`);
+
+            if (attackName === 'void lance') {
+                // Animated projectile — damage fires after beam arrives
+                this.triggerVoidLance(caller, target);
+            } else if (attackName === 'claws') {
+                // Melee — direct hit, icon shows via pendingAttack
+                try {
+                    this.hitsCombatant(caller, target);
+                } catch (e) {
+                    console.warn('[BeholderMinion] claws hit failed', e);
+                    try { this.missesTarget(caller); } catch (_) {}
+                }
+            } else {
+                // All other attacks — direct hit
+                try {
+                    this.hitsCombatant(caller, target);
+                } catch (e) {
+                    console.warn('[BeholderMinion] initiateAttack failed', e);
+                    try { this.missesTarget(caller); } catch (_) {}
+                }
+            }
+
             this.kickoffAttackCooldown(caller);
             caller.pendingAttack = null;
-            return;
+        } finally {
+            caller.attacking = false;
         }
-
-        // If no pending attack has been chosen yet, pick one now
-        if (!caller.pendingAttack) {
-            caller.pendingAttack = this.chooseAttackType(caller, target);
-        }
-
-        const attackName = caller.pendingAttack && caller.pendingAttack.name;
-        console.log(`[BeholderMinion] initiateAttack — "${attackName}" vs ${target.name || target.type}`);
-
-        if (attackName === 'void lance') {
-            // Animated projectile — damage fires after beam arrives
-            this.triggerVoidLance(caller, target);
-        } else if (attackName === 'claws') {
-            // Melee — direct hit, icon shows via pendingAttack
-            try {
-                this.hitsCombatant(caller, target);
-            } catch (e) {
-                console.warn('[BeholderMinion] claws hit failed', e);
-                try { this.missesTarget(caller); } catch (_) {}
-            }
-        } else {
-            // All other attacks — direct hit
-            try {
-                this.hitsCombatant(caller, target);
-            } catch (e) {
-                console.warn('[BeholderMinion] initiateAttack failed', e);
-                try { this.missesTarget(caller); } catch (_) {}
-            }
-        }
-
-        this.kickoffAttackCooldown(caller);
-        caller.pendingAttack = null;
     };
 
     this.acquireTarget = (caller, combatants) => {

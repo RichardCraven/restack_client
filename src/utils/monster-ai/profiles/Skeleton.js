@@ -97,10 +97,11 @@ export function Skeleton(data, utilMethods, animationManager, overlayManager){
         return target;
     }
     this.initiateAttack = async (caller, combatants) => {
+        if (caller.attacking) return;
         const target = combatants[caller.targetId];
         caller.attacking = true;
+        try {
         if (!target || target.dead) {
-            caller.attacking = false;
             return;
         }
         let combatantHit;
@@ -156,6 +157,8 @@ export function Skeleton(data, utilMethods, animationManager, overlayManager){
         }
         this.kickoffAttackCooldown(caller);
         caller.pendingAttack = null;
-        caller.attacking = false;
+        } finally {
+            caller.attacking = false;
+        }
     }
 }

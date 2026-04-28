@@ -467,6 +467,7 @@ export function Mummy(data, utilMethods, animationManager, overlayManager) {
     }
 
     this.initiateAttack = async (caller, combatants) => {
+        if (caller.attacking) return;
         const target = combatants[caller.targetId];
         //console.log('[Mummy][DEBUG] initiateAttack called', {
         //    pendingAttack: caller.pendingAttack,
@@ -478,6 +479,7 @@ export function Mummy(data, utilMethods, animationManager, overlayManager) {
         //    energy: caller.energy
         //});
         caller.attacking = true;
+        try {
         if (!target) {
             console.log('[Mummy] initiateAttack — NO TARGET!');
             return;
@@ -576,7 +578,9 @@ export function Mummy(data, utilMethods, animationManager, overlayManager) {
 
         this.kickoffAttackCooldown(caller);
         caller.pendingAttack = null;
-        caller.attacking = false;
+        } finally {
+            caller.attacking = false;
+        }
         //console.log('[Mummy][DEBUG] Attack complete. State after attack:', {
         //    pendingAttack: caller.pendingAttack,
         //    attacking: caller.attacking,

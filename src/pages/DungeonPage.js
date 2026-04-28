@@ -985,12 +985,10 @@ class DungeonPage extends React.Component {
         return { left: col * tileSize, top: row * tileSize };
     }
 
-    // High-level move handler that performs a two-stage animation for within-board moves.
+    // High-level move handler that performs a smooth single-stage tween for within-board moves.
     handleDirectionalMove = (direction) => {
-    // Total move duration in ms (two stages). Change this to tune speed.
-    const TOTAL_MOVE_MS = 62; // total across both stages (now ~62ms => ~31ms per half)
-    const HALF_MS = Math.round(TOTAL_MOVE_MS / 2);
-    const BUFFER_MS = 4; // small buffer for timeouts
+    const TOTAL_MOVE_MS = 120;
+    const BUFFER_MS = 12;
         try {
             const bm = this.props.boardManager;
             const curCoords = bm.playerTile.location;
@@ -1072,7 +1070,18 @@ class DungeonPage extends React.Component {
             const floatLeft = (boardRect ? boardRect.left : 0) + originPixel.left;
             const floatTop = (boardRect ? boardRect.top : 0) + originPixel.top;
 
+            // Apply logical move first, then animate overlay from old world position to new one.
+            switch (direction) {
+                case 'up': bm.moveUp(); break;
+                case 'down': bm.moveDown(); break;
+                case 'left': bm.moveLeft(); break;
+                case 'right': bm.moveRight(); break;
+                default: break;
+            }
+
             this.setState({
+                tiles: [...bm.tiles],
+                overlayTiles: bm.overlayTiles,
                 playerFloatVisible: true,
                 playerAnimating: true,
                 animOriginIndex: originIndex,
@@ -1080,90 +1089,46 @@ class DungeonPage extends React.Component {
                 playerFloatStyle: {
                     left: floatLeft,
                     top: floatTop,
-                    transform: `translate3d(0px, 0px, 0px)`,
+                    transform: 'translate3d(0px, 0px, 0px)',
                     backgroundImage: `url(${images[playerImgKey]})`
                 }
             }, () => {
-                // allow the browser to paint initial position, then animate to halfway
+                this.recordBreadcrumb();
                 requestAnimationFrame(() => {
-                        // first half: move to midpoint over HALF_MS
-                        const halfX = (deltaX / 2);
-                        const halfY = (deltaY / 2);
-                        if (this.playerFloatRef.current) {
+                    requestAnimationFrame(() => {
+                        try {
                             const el = this.playerFloatRef.current;
-                            // Use translate3d for GPU acceleration and keep sub-pixel precision
-                            el.style.willChange = 'transform';
-                            el.style.transition = `transform ${HALF_MS}ms cubic-bezier(.2,0,.1,1)`;
-                            el.style.transform = `translate3d(${halfX.toFixed(2)}px, ${halfY.toFixed(2)}px, 0px)`;
-                        }
+                            if (!el) return;
 
-                        // at halfway, update logical position (call boardManager move) and then continue animation
-                        setTimeout(() => {
-                            // current absolute position of overlay (before board changes)
-                            const halfX = (deltaX / 2);
-                            const halfY = (deltaY / 2);
-                            const currentAbsLeft = floatLeft + halfX;
-                            const currentAbsTop = floatTop + halfY;
-
-                            // perform logical move first (this may change board DOM/layout)
-                            switch (direction) {
-                                case 'up': bm.moveUp(); break;
-                                case 'down': bm.moveDown(); break;
-                                case 'left': bm.moveLeft(); break;
-                                case 'right': bm.moveRight(); break;
-                                default: break;
-                            }
-
-                            // refresh tiles in state to reflect boardManager changes, then re-anchor overlay
+                            let newBoardRect = null;
                             try {
-                                this.setState({ tiles: [...bm.tiles], overlayTiles: bm.overlayTiles }, () => {
-                                    // Record breadcrumb at new position
-                                    this.recordBreadcrumb();
-                                    try {
-                                        const el = this.playerFloatRef.current;
-                                        // compute new board/destination absolute position after DOM update
-                                        let newBoardRect = null;
-                                        try {
-                                            const boardEl = document.querySelector('.center-board-wrapper .board');
-                                            newBoardRect = boardEl ? boardEl.getBoundingClientRect() : null;
-                                        } catch (e) { newBoardRect = null }
-                                        const newDestAbsLeft = (newBoardRect ? newBoardRect.left : 0) + destPixel.left;
-                                        const newDestAbsTop = (newBoardRect ? newBoardRect.top : 0) + destPixel.top;
+                                const boardEl = document.querySelector('.center-board-wrapper .board');
+                                newBoardRect = boardEl ? boardEl.getBoundingClientRect() : null;
+                            } catch (e) { newBoardRect = null; }
 
-                                        if (el) {
-                                            // Re-anchor overlay at its current visual spot by moving left/top and clearing transform
-                                            el.style.transition = 'none';
-                                            el.style.left = `${currentAbsLeft}px`;
-                                            el.style.top = `${currentAbsTop}px`;
-                                            el.style.transform = 'translate3d(0px, 0px, 0px)';
-                                            // force reflow so subsequent transition is applied cleanly
-                                            void el.offsetHeight;
+                            const newDestAbsLeft = (newBoardRect ? newBoardRect.left : 0) + destPixel.left;
+                            const newDestAbsTop = (newBoardRect ? newBoardRect.top : 0) + destPixel.top;
+                            const fullX = newDestAbsLeft - floatLeft;
+                            const fullY = newDestAbsTop - floatTop;
 
-                                            // compute remaining delta to destination in absolute coordinates
-                                            const remainingX = newDestAbsLeft - currentAbsLeft;
-                                            const remainingY = newDestAbsTop - currentAbsTop;
+                            el.style.willChange = 'transform';
+                            el.style.transition = `transform ${TOTAL_MOVE_MS}ms cubic-bezier(0.22, 0.61, 0.36, 1)`;
+                            el.style.transform = `translate3d(${fullX.toFixed(2)}px, ${fullY.toFixed(2)}px, 0px)`;
 
-                                            // animate remaining distance
-                                            el.style.transition = `transform ${HALF_MS}ms cubic-bezier(.2,0,.1,1)`;
-                                            el.style.transform = `translate3d(${remainingX.toFixed(2)}px, ${remainingY.toFixed(2)}px, 0px)`;
-                                        }
-
-                                        // cleanup after remaining animation completes
-                                        setTimeout(() => {
-                                            this.setState({ playerFloatVisible: false, playerAnimating: false, animOriginIndex: null, animDestIndex: null });
-                                            if (this.playerFloatRef.current) {
-                                                const el2 = this.playerFloatRef.current;
-                                                el2.style.transition = '';
-                                                el2.style.transform = 'translate3d(0px, 0px, 0px)';
-                                                el2.style.willChange = 'auto';
-                                            }
-                                        }, HALF_MS + BUFFER_MS);
-                                    } catch (e) { console.warn('post-move anchoring failed', e); }
-                                });
-                            } catch (e) {
-                                console.warn('failed to setState after move', e);
-                            }
-                        }, HALF_MS + BUFFER_MS);
+                            this._setTimeout(() => {
+                                this.setState({ playerFloatVisible: false, playerAnimating: false, animOriginIndex: null, animDestIndex: null });
+                                const el2 = this.playerFloatRef.current;
+                                if (el2) {
+                                    el2.style.transition = '';
+                                    el2.style.transform = 'translate3d(0px, 0px, 0px)';
+                                    el2.style.willChange = 'auto';
+                                }
+                            }, TOTAL_MOVE_MS + BUFFER_MS);
+                        } catch (e) {
+                            console.warn('post-move tween failed', e);
+                            this.setState({ playerFloatVisible: false, playerAnimating: false, animOriginIndex: null, animDestIndex: null });
+                        }
+                    });
                 });
             });
 
@@ -3737,6 +3702,56 @@ class DungeonPage extends React.Component {
         }, zoomStartDelay);
     }
 
+    getMapBoardHighlightSvg = (boardIndex) => {
+        const idx = Number(boardIndex);
+        if (Number.isNaN(idx) || idx < 0 || idx > 8) return '';
+
+        // The tower plane is visually rotated relative to the row-major minimap grid.
+        // This remap rotates minimap indices clockwise into the projected slab cells.
+        const projectedIndexByMinimapIndex = [6, 3, 0, 7, 4, 1, 8, 5, 2];
+        const projectedIndex = projectedIndexByMinimapIndex[idx];
+        const row = Math.floor(projectedIndex / 3);
+        const col = projectedIndex % 3;
+        const a0 = col / 3;
+        const a1 = (col + 1) / 3;
+        const b0 = row / 3;
+        const b1 = (row + 1) / 3;
+
+        const point = (a, b) => {
+            const x = 50 + (50 * (a - b));
+            const y = 50 * (a + b);
+            return `${x.toFixed(3)},${y.toFixed(3)}`;
+        };
+
+        const rawPoints = [
+            point(a0, b0),
+            point(a1, b0),
+            point(a1, b1),
+            point(a0, b1)
+        ].map((pair) => {
+            const [x, y] = pair.split(',').map(Number);
+            return { x, y };
+        });
+
+        const center = rawPoints.reduce((acc, p) => ({
+            x: acc.x + p.x,
+            y: acc.y + p.y
+        }), { x: 0, y: 0 });
+        center.x /= rawPoints.length;
+        center.y /= rawPoints.length;
+
+        // Pull edges inward to create a true inner border (not overlapping grid lines).
+        const insetFactor = 0.17;
+        const insetPoints = rawPoints.map((p) => {
+            const x = p.x + ((center.x - p.x) * insetFactor);
+            const y = p.y + ((center.y - p.y) * insetFactor);
+            return `${x.toFixed(3)},${y.toFixed(3)}`;
+        }).join(' ');
+
+        const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" preserveAspectRatio="none"><polygon points="${insetPoints}" fill="none" stroke="#66c2ff" stroke-width="2.2" stroke-linejoin="round"/></svg>`;
+        return `url("data:image/svg+xml;base64,${btoa(svg)}")`;  
+    }
+
     handleStartRecipe = (recipe) => {
         try {
             const meta = getMeta() || {};
@@ -4050,6 +4065,42 @@ class DungeonPage extends React.Component {
                     const selectedLevelId = this.state.mapSelectedLevelId === null || typeof this.state.mapSelectedLevelId === 'undefined'
                         ? currentLevelId
                         : Number(this.state.mapSelectedLevelId);
+                    const activeMinimapIndex = Array.isArray(this.state.minimap) ? this.state.minimap.findIndex((entry) => entry && entry.active) : -1;
+                    const boardHighlightImage = this.getMapBoardHighlightSvg(activeMinimapIndex);
+                    const playerSlabDot = (() => {
+                        try {
+                            const bm = this.props.boardManager;
+                            if (!bm || !bm.playerTile || !bm.playerTile.location) return null;
+                            if (activeMinimapIndex < 0 || activeMinimapIndex > 8) return null;
+                            // Determine which 1/3 cell of the diamond this board occupies.
+                            const projectedIndexByMinimapIndex = [6, 3, 0, 7, 4, 1, 8, 5, 2];
+                            const projectedIndex = projectedIndexByMinimapIndex[activeMinimapIndex];
+                            const cellRow = Math.floor(projectedIndex / 3);
+                            const cellCol = projectedIndex % 3;
+                            const a0 = cellCol / 3;       // u start
+                            const a1 = (cellCol + 1) / 3; // u end
+                            const b0 = cellRow / 3;       // v start
+                            const b1 = (cellRow + 1) / 3; // v end
+                            // Match minimap convention exactly:
+                            // minimap left  = (loc[1]-15)/14  → col → this is isometric U axis
+                            // minimap top   = (loc[0]-15)/14  → row → this is isometric V axis
+                            const loc = bm.playerTile.location;
+                            const pu = (loc[1] - 15) / 14; // col normalized 0→1 (left-right across diamond)
+                            const pv = (loc[0] - 15) / 14; // row normalized 0→1 (top-bottom down diamond)
+                            // Map player position into the cell's portion of the diamond
+                            const u = a0 + pu * (a1 - a0);
+                            const v = b0 + pv * (b1 - b0);
+                            // Isometric projection: diamond viewBox 0-100 x 0-100
+                            // x increases right as col increases, left as row increases
+                            // y increases down as both col and row increase
+                            const xPct = (50 + 50 * (u - v)).toFixed(2);
+                            const yPct = (50 * (u + v)).toFixed(2);
+                            return {
+                                left: `${xPct}%`,
+                                top: `${yPct}%`
+                            };
+                        } catch (e) { return null; }
+                    })();
                     const zoomedLevelId = this.state.mapZoomedLevelId;
                     const unzoomingLevelId = this.state.mapUnzoomingLevelId;
                     const revealAfterUnzoom = !!this.state.mapRevealAfterUnzoom;
@@ -4064,7 +4115,7 @@ class DungeonPage extends React.Component {
                             <div className="camp-map-header">
                                 <button className="camp-map-back" onClick={this.handleMapOverlayBack}>Back</button>
                                 <div className="camp-map-title">Dungeon Tower</div>
-                                <div className="camp-map-subtitle">Stacked floors from an isometric view</div>
+                                {/* <div className="camp-map-subtitle">Stacked floors from an isometric view</div> */}
                             </div>
 
                             <div className="camp-map-scene-wrap" onClick={(e) => e.stopPropagation()}>
@@ -4073,6 +4124,7 @@ class DungeonPage extends React.Component {
                                         const isCurrent = levelId === currentLevelId;
                                         const isSelected = levelId === selectedLevelId;
                                         const isZoomed = zoomedLevelId === levelId;
+                                        const showBoardHighlight = isCurrent && isZoomed && !!boardHighlightImage;
                                         const isUnzooming = unzoomingLevelId === levelId;
                                         const isPendingZoom = pendingZoomLevelId === levelId;
                                         const holdOthersHidden = hasZoomedLevel || hasPendingZoomLevel || (hasUnzoomingLevel && !revealAfterUnzoom);
@@ -4082,7 +4134,7 @@ class DungeonPage extends React.Component {
                                             <button
                                                 key={levelId}
                                                 role="listitem"
-                                                className={`tower-floor-slab ${isSelected ? 'active' : ''} ${isZoomed ? 'zoomed-in' : ''} ${isUnzooming ? 'zooming-out' : ''} ${isPendingZoom ? 'pending-zoom' : ''} ${holdOthersHidden && !isZoomed && !isUnzooming && !isPendingZoom ? 'faded' : ''}`}
+                                                className={`tower-floor-slab ${isSelected ? 'active' : ''} ${isZoomed ? 'zoomed-in' : ''} ${showBoardHighlight ? 'show-board-highlight' : ''} ${isUnzooming ? 'zooming-out' : ''} ${isPendingZoom ? 'pending-zoom' : ''} ${holdOthersHidden && !isZoomed && !isUnzooming && !isPendingZoom ? 'faded' : ''}`}
                                                 style={{
                                                     '--tower-offset': `${depthOffset}px`,
                                                     '--tower-zoom-shift': `${124 - depthOffset}px`,
@@ -4111,6 +4163,12 @@ class DungeonPage extends React.Component {
                                             >
                                                 <span className="slab-shadow"></span>
                                                 <span className="slab-face slab-top"></span>
+                                                <span className="slab-face slab-grid"></span>
+                                                <span className="slab-face slab-board-highlight" style={showBoardHighlight ? { backgroundImage: boardHighlightImage } : undefined}>
+                                                    {showBoardHighlight && playerSlabDot && (
+                                                        <span className="slab-player-dot" style={playerSlabDot} />
+                                                    )}
+                                                </span>
                                                 <span className="slab-face slab-left"></span>
                                                 <span className="slab-face slab-right"></span>
                                                 <span className="slab-label">L{levelId}</span>

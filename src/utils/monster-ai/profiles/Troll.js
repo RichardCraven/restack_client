@@ -120,75 +120,77 @@ export function Troll(data, utilMethods, animationManager, overlayManager){
         const target = combatants[caller.targetId];
         caller.attacking = true;
 
-        if (caller.dead || !target || (target.dead && target.id !== caller.id)) {
-            caller.attacking = false;
-            return;
-        }
-
-        const attack = caller.pendingAttack;
-        if (!attack) {
-            caller.attacking = false;
-            return;
-        }
-
-        console.log(`[TROLL AI] initiates ${attack.name} on ${target.name || 'self'}`);
-
-        // Handle Specials (Regeneration)
-        if (attack.name.includes('regeneration')) {
-            // Visual feedback: pulsing green (handled by .regenerating class)
-            // Specials define their properties (type, duration, chance) on the main object, not within an .effect property
-            applyAttackEffect(target, attack, this.broadcastDataUpdate);
-            
-            this.kickoffSpecialCooldown(attack);
-            caller.energy -= (attack.energy_cost || 0);
-            
-            // Brief "casting" pause
-            await new Promise(resolve => setTimeout(resolve, 600));
-        } else {
-            // Standard Physical Attacks (bite, crush, tackle, etc.)
-            try {
-                // Determine the best source tile for the animation (for large monsters)
-                const allSourceCoords = (Array.isArray(caller.occupiedCoords) && caller.occupiedCoords.length > 0)
-                    ? caller.occupiedCoords
-                    : [caller.coordinates];
-
-                // Pick the tile closest to the target
-                let bestSource = caller.coordinates;
-                let minDist = Infinity;
-                allSourceCoords.forEach(c => {
-                    const d = Math.abs(c.x - target.coordinates.x) + Math.abs(c.y - target.coordinates.y);
-                    if (d < minDist) {
-                        minDist = d;
-                        bestSource = c;
-                    }
-                });
-
-                // Trigger the visual icon flash/animation
-                if (this.animationManager && typeof this.animationManager.triggerAttackAnimation === 'function') {
-                    await this.animationManager.triggerAttackAnimation({
-                        coordinates: bestSource,
-                        facing: caller.facing,
-                        icon: attack.icon,
-                        type: attack.name || 'grasp',
-                        selectedAction: attack
-                    });
-                }
-
-                // If the Troll died mid-animation wait, abort so hitsCombatant doesn't throw
-                if (caller.dead) {
-                    caller.attacking = false;
-                    return;
-                }
-
-                // Apply hits/damage
-                this.hitsCombatant(caller, target);
-            } catch (e) {
-                console.warn('[TROLL AI] Fallback attack failed', e);
+        try {
+            if (caller.dead || !target || (target.dead && target.id !== caller.id)) {
+                return;
             }
-            this.kickoffAttackCooldown(caller);
-        }
 
-        // We explicitly DO NOT clear caller.pendingAttack here.
-        // It must be preserved so hitsCombatant can identify the attack and properly queue the next one via its setTimeout.
+            const attack = caller.pendingAttack;
+            if (!attack) {
+                return;
+            }
+
+            console.log(`[TROLL AI] initiates ${attack.name} on ${target.name || 'self'}`);
+
+            // Handle Specials (Regeneration)
+            if (attack.name.includes('regeneration')) {
+                // Visual feedback: pulsing green (handled by .regenerating class)
+                // Specials define their properties (type, duration, chance) on the main object, not within an .effect property
+                applyAttackEffect(target, attack, this.broadcastDataUpdate);
+
+                this.kickoffSpecialCooldown(attack);
+                caller.energy -= (attack.energy_cost || 0);
+
+                // Brief "casting" pause
+                await new Promise(resolve => setTimeout(resolve, 600));
+            } else {
+                // Standard Physical Attacks (bite, crush, tackle, etc.)
+                try {
+                    // Determine the best source tile for the animation (for large monsters)
+                    const allSourceCoords = (Array.isArray(caller.occupiedCoords) && caller.occupiedCoords.length > 0)
+                        ? caller.occupiedCoords
+                        : [caller.coordinates];
+
+                    // Pick the tile closest to the target
+                    let bestSource = caller.coordinates;
+                    let minDist = Infinity;
+                    allSourceCoords.forEach(c => {
+                        const d = Math.abs(c.x - target.coordinates.x) + Math.abs(c.y - target.coordinates.y);
+                        if (d < minDist) {
+                            minDist = d;
+                            bestSource = c;
+                        }
+                    });
+
+                    // Trigger the visual icon flash/animation
+                    if (this.animationManager && typeof this.animationManager.triggerAttackAnimation === 'function') {
+                        await this.animationManager.triggerAttackAnimation({
+                            coordinates: bestSource,
+                            facing: caller.facing,
+                            icon: attack.icon,
+                            type: attack.name || 'grasp',
+                            selectedAction: attack
+                        });
+                    }
+
+                    // If the Troll died mid-animation wait, abort so hitsCombatant doesn't throw
+                    if (caller.dead) {
+                        return;
+                    }
+
+                    // Apply hits/damage
+                    this.hitsCombatant(caller, target);
+                } catch (e) {
+                    console.warn('[TROLL AI] Fallback attack failed', e);
+                }
+                this.kickoffAttackCooldown(caller);
+            }
+
+            // We explicitly DO NOT clear caller.pendingAttack here.
+            // It must be preserved so hitsCombatant can identify the attack and properly queue the next one via its setTimeout.
+        } finally {
+            // Always release the attack lock so the troll can attack again next era.
+            caller.attacking = false;
+        }
     }
 }
