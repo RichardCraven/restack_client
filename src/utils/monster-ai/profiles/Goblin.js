@@ -89,7 +89,7 @@ export function Goblin(data, utilMethods, animationManager, overlayManager){
         }
 
         // Remove item from inventory and report for battle summary
-        try { this.stealItem(itemKey, displayName); } catch (e) {}
+        try { this.stealItem(itemKey, displayName, itemIconKey); } catch (e) {}
 
         // Record stolen item on the goblin and switch to flee behavior
         caller.stolenItem = displayName;

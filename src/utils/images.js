@@ -134,6 +134,10 @@ import dimensional_amulet from '../assets/icons/items/amulets/tier 4/Dimensional
 import crown from '../assets/icons/items/crown.png'
 import key from '../assets/icons/items/key.png'
 import potion from '../assets/icons/items/potion.png'
+import minor_health_potion from '../assets/icons/items/potions/minor health potion.png'
+import major_health_potion from '../assets/icons/items/potions/major health potion.png'
+import grand_health_potion from '../assets/icons/items/potions/grand health potion.png'
+import supreme_health_potion from '../assets/icons/items/potions/supreme health potion.png'
 import lantern from '../assets/icons/items/lantern.png'
 
 import tier_1_armor from '../assets/icons/items/tier 1 .png'
@@ -752,6 +756,10 @@ export {
     crown,
     key,
     potion,
+    minor_health_potion,
+    major_health_potion,
+    grand_health_potion,
+    supreme_health_potion,
     lantern,
 
     buckler,

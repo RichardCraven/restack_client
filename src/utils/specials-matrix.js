@@ -92,7 +92,7 @@ const specialsMatrix = {
         type: 'special',
         icon: images['infantry_shield'],
         cooldown: 15,       // 15-era recharge after expiry
-        duration: 12,        // wall lasts 4 eras
+        duration: 6,        // wall lasts 6 eras
         energy_cost: 30,    // costs 30% energy to erect
         effect: ['special'],
         special_instructions: 'Erect a 5-tile vertical barrier at the Soldier\'s front edge. Blocks all unit movement across the line for 4 eras. Soldier cannot move or attack while active.',

@@ -326,8 +326,8 @@ export default function AnimationTile(props) {
                             const overFacing = props.overlayAnimationData?.facing;
                             const overDuration = props.overlayAnimationData?.duration;
                             const overImage = props.fighterType === 'barbarian' ? images['axe_white'] : images['sword_white'];
-                            const mirror = overFacing === 'left' || overFacing === 'up';
                             const swingKey = props.overlayAnimationData?.startTime || 'sword-swing-overlay';
+                            const swingDirection = ['left', 'up', 'down', 'right'].includes(overFacing) ? overFacing : 'right';
                             return (
                                 <div
                                     className="sword-swing-icon"
@@ -339,7 +339,6 @@ export default function AnimationTile(props) {
                                         height: '60%',
                                         pointerEvents: 'none',
                                         zIndex: 5000,
-                                        transform: mirror ? 'scaleX(-1)' : 'none',
                                     }}
                                 >
                                     <img
@@ -349,7 +348,7 @@ export default function AnimationTile(props) {
                                         style={{
                                             width: '100%',
                                             height: '100%',
-                                            animation: `ArcAnimation_right ${overDuration / 1000}s linear forwards`,
+                                            animation: `ArcAnimation_${swingDirection} ${overDuration / 1000}s linear forwards`,
                                         }}
                                     />
                                 </div>

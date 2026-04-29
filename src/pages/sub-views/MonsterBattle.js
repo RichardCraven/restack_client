@@ -318,10 +318,10 @@ class MonsterBattle extends React.Component {
         try {
             if (this.props.combatManager && typeof this.props.combatManager.establishStolenItemCallback === 'function') {
                 this._stolenItems = [];
-                this.props.combatManager.establishStolenItemCallback((itemKey, itemName) => {
+                this.props.combatManager.establishStolenItemCallback((itemKey, itemName, itemIconKey = null) => {
                     try { if (this.props.inventoryManager) this.props.inventoryManager.removeItemByKey(itemKey); } catch (e) {}
                     this._stolenItems = this._stolenItems || [];
-                    this._stolenItems.push(itemName);
+                    this._stolenItems.push({ itemName, itemIconKey });
                 });
             }
         } catch (e) {}
@@ -1727,11 +1727,17 @@ class MonsterBattle extends React.Component {
                             </div>
                             }
                             {this.state.stolenItems && this.state.stolenItems.length > 0 &&
-                                this.state.stolenItems.map((itemName, idx) => (
-                                    <div key={`stolen-${idx}`} className="experience-container stolen-item">
-                                        {itemName} was stolen by a goblin!
-                                    </div>
-                                ))
+                                this.state.stolenItems.map((entry, idx) => {
+                                    const itemName = typeof entry === 'string' ? entry : entry?.itemName;
+                                    const itemIconKey = typeof entry === 'string' ? null : entry?.itemIconKey;
+                                    const iconSrc = (itemIconKey && images[itemIconKey]) ? images[itemIconKey] : images.goblin_portrait;
+                                    return (
+                                        <div key={`stolen-${idx}`} className="experience-container stolen-item">
+                                            {iconSrc && <img className="summary-icon" src={iconSrc} alt="" />}
+                                            {itemName} was stolen by a goblin!
+                                        </div>
+                                    );
+                                })
                             }
                             {this.state.foodGained > 0 &&
                             <div className="experience-container">

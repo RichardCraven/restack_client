@@ -122,6 +122,29 @@ export function CombatManager() {
             return normalizedName === normalizedTarget;
         });
     };
+    this.getEquippedWeaponDamageBreakdown = (caller) => {
+        const breakdown = {
+            equippedCount: 0,
+            percentBonus: 0,
+            flatBonus: 0,
+            totalBonus: 0,
+        };
+        try {
+            const inv = caller?.inventory || [];
+            const equippedWeapons = inv.filter(i => i && i.type === 'weapon' && (i.equippedSlot === 'right' || i.equippedSlot === 'left' || i.equippedBy === caller.id));
+            breakdown.equippedCount = equippedWeapons.length;
+            for (let i = 0; i < equippedWeapons.length; i++) {
+                const weapon = equippedWeapons[i];
+                if (!weapon || typeof weapon.damage !== 'number') continue;
+                breakdown.percentBonus += (caller.atk * weapon.damage) / 100;
+                breakdown.flatBonus += weapon.damage * 0.1;
+            }
+            breakdown.totalBonus = breakdown.percentBonus + breakdown.flatBonus;
+        } catch (e) {
+            return breakdown;
+        }
+        return breakdown;
+    };
     this.tryTriggerReassemble = (combatant) => {
         if (!combatant || combatant.dead) return false;
         if ((combatant.type || '').toLowerCase() !== 'skeleton') return false;
@@ -1737,13 +1760,26 @@ export function CombatManager() {
             laneDiff = this.getLaneDifferenceToTarget(caller, target)
 
         // If this is a monster/minion already adjacent to its target with a close-range
-        // attack selected, skip repositioning entirely — no dancing in place.
-        if ((caller.isMonster || caller.isMinion) && target && caller.pendingAttack) {
-            const pendingRange = caller.pendingAttack.range;
-            if (pendingRange === 'close' || !pendingRange) {
-                const dx = Math.abs(caller.coordinates.x - target.coordinates.x);
-                const dy = Math.abs(caller.coordinates.y - target.coordinates.y);
-                if ((dx === 1 && dy === 0) || (dx === 0 && dy === 1)) return;
+        // attack selected, skip repositioning — but still fire the attack so the monster
+        // does not just stand there. Also repopulate pendingAttack if restartTurnCycle cleared it.
+        if ((caller.isMonster || caller.isMinion) && target && !target.dead && !target.isVCT) {
+            if (!caller.pendingAttack) {
+                caller.pendingAttack = this.chooseAttackType(caller, target);
+            }
+            if (caller.pendingAttack) {
+                const pendingRange = caller.pendingAttack.range;
+                if (pendingRange === 'close' || !pendingRange) {
+                    const dx = Math.abs(caller.coordinates.x - target.coordinates.x);
+                    const dy = Math.abs(caller.coordinates.y - target.coordinates.y);
+                    if ((dx === 1 && dy === 0) || (dx === 0 && dy === 1)) {
+                        const _eraAdj = caller.eras ? caller.eras[caller.eraIndex] : null;
+                        if (_eraAdj && !_eraAdj.attacked && !caller.onGeneralAttackCooldown && !caller.attacking) {
+                            _eraAdj.attacked = true;
+                            this.initiateAttack(caller);
+                        }
+                        return;
+                    }
+                }
             }
         }
 
@@ -1893,6 +1929,11 @@ export function CombatManager() {
         // Attack trigger for fallback monsters (no specific AI profile)
         {
             const _era = caller.eras ? caller.eras[caller.eraIndex] : null;
+            // Repopulate pendingAttack if restartTurnCycle cleared it
+            const _repopTarget = this.combatants[caller.targetId];
+            if (!caller.pendingAttack && _repopTarget && !_repopTarget.dead && !_repopTarget.isVCT) {
+                caller.pendingAttack = this.chooseAttackType(caller, _repopTarget);
+            }
             if (_era && !_era.attacked && !caller.onGeneralAttackCooldown && !caller.attacking && caller.pendingAttack) {
                 const _target = this.combatants[caller.targetId];
                 if (_target && !_target.dead && !_target.isVCT) {
@@ -2222,24 +2263,17 @@ export function CombatManager() {
 
         // Determine base damage. If supplementalData (special) provides a damage
         // field, prefer that as the baseline. Otherwise compute damage using
-        // the caller's atk and any equipped weapon percent (weapon.damage is
-        // now expressed in percentage-points, e.g. 30 === +30% of atk).
+        // the caller's atk and equipped weapon bonuses where each equipped weapon
+        // contributes: (caller.atk * weapon.damage%) + (weapon.damage * 0.1) raw.
         const isSpecial = supplementalData && typeof supplementalData === 'object' && (typeof supplementalData.damage === 'number' || typeof supplementalData.base_damage === 'number' || supplementalData.energy_cost || supplementalData.effect);
         let baseDamage;
+        let weaponBreakdown = null;
         if (isSpecial) {
             baseDamage = (typeof supplementalData.damage === 'number') ? supplementalData.damage : ((typeof supplementalData.base_damage === 'number') ? supplementalData.base_damage : caller.atk);
         } else {
-            // find equipped weapon (right/left) or by equippedBy marker
-            let weaponPercent = 0;
-            try {
-                const inv = caller.inventory || [];
-                const weapon = inv.find(i => i && i.type === 'weapon' && (i.equippedSlot === 'right' || i.equippedSlot === 'left' || i.equippedBy === caller.id));
-                if (weapon && typeof weapon.damage === 'number') weaponPercent = weapon.damage;
-            } catch (e) {
-                // defensive: ignore inventory errors and treat as no weapon
-                weaponPercent = 0;
-            }
-            baseDamage = caller.atk + Math.floor((caller.atk * (weaponPercent || 0)) / 100);
+            // Sum bonuses from all equipped weapons independently.
+            weaponBreakdown = this.getEquippedWeaponDamageBreakdown(caller);
+            baseDamage = caller.atk + weaponBreakdown.totalBonus;
         }
 
         let damage = criticalHit ? baseDamage * CRITICAL_DAMAGE_MULTIPLIER : baseDamage;
@@ -2262,7 +2296,10 @@ export function CombatManager() {
         damage = this.damageCheck(caller, combatantHit, damage);
 
         // Save readout and apply damage
-        caller.readout.result = `${caller.name} hits ${combatantHit.name} for ${damage} damage`;
+        const bonusReadout = (!isSpecial && weaponBreakdown && weaponBreakdown.equippedCount > 0)
+            ? ` (weapon bonus: +${weaponBreakdown.percentBonus.toFixed(1)} scaling, +${weaponBreakdown.flatBonus.toFixed(1)} flat)`
+            : '';
+        caller.readout.result = `${caller.name} hits ${combatantHit.name} for ${damage} damage${bonusReadout}`;
         combatantHit.hp -= damage;
         // Generate unique id for this indicator
         const indicatorId = Date.now() + Math.random();
@@ -2470,16 +2507,10 @@ export function CombatManager() {
         // let r = Math.random();
         let criticalHit = false;
         // For non-monster/non-minion targets, compute base using equipped
-        // weapon percentage (if any) so fighters without weapons still use atk.
-        let weaponPercent = 0;
-        try {
-            const inv = caller.inventory || [];
-            const weapon = inv.find(i => i && i.type === 'weapon' && (i.equippedSlot === 'right' || i.equippedSlot === 'left' || i.equippedBy === caller.id));
-            if (weapon && typeof weapon.damage === 'number') weaponPercent = weapon.damage;
-        } catch (e) {
-            weaponPercent = 0;
-        }
-        const base = caller.atk + Math.floor((caller.atk * (weaponPercent || 0)) / 100);
+        // weapon bonuses where each equipped weapon contributes:
+        // (caller.atk * weapon.damage%) + (weapon.damage * 0.1) raw.
+        const weaponBreakdown = this.getEquippedWeaponDamageBreakdown(caller);
+        const base = caller.atk + weaponBreakdown.totalBonus;
         let damage = criticalHit ? base * CRITICAL_DAMAGE_MULTIPLIER : base;
         let sourceDirection = 'left';
         if (caller.coordinates.x < target.coordinates.x) {
@@ -2504,7 +2535,10 @@ export function CombatManager() {
         // Apply armor-based damage reduction via damageCheck
         damage = this.damageCheck(caller, target, damage);
 
-        caller.readout.result = `${caller.name} hits ${target.name} for ${damage} damage`;
+        const bonusReadout = (weaponBreakdown.equippedCount > 0)
+            ? ` (weapon bonus: +${weaponBreakdown.percentBonus.toFixed(1)} scaling, +${weaponBreakdown.flatBonus.toFixed(1)} flat)`
+            : '';
+        caller.readout.result = `${caller.name} hits ${target.name} for ${damage} damage${bonusReadout}`;
         target.hp -= damage;
         // Generate unique id for this indicator
         const indicatorId2 = Date.now() + Math.random();
@@ -2844,8 +2878,8 @@ export function CombatManager() {
         // whenever the combat speed changes.
         updateIntervalTime: (cb) => { this._intervalTimeListeners = this._intervalTimeListeners || []; this._intervalTimeListeners.push(cb); },
         // Steal an item from the communal inventory and notify MonsterBattle.
-        stealItem: (itemKey, itemName) => {
-            try { if (typeof this.stolenItemCallback === 'function') this.stolenItemCallback(itemKey, itemName); } catch (e) { console.warn('[stealItem] callback failed', e); }
+        stealItem: (itemKey, itemName, itemIconKey = null) => {
+            try { if (typeof this.stolenItemCallback === 'function') this.stolenItemCallback(itemKey, itemName, itemIconKey); } catch (e) { console.warn('[stealItem] callback failed', e); }
         },
         // Remove a monster from combat without killing it (escape/flee).
         // Triggers allMonstersDead check so battle can still end.

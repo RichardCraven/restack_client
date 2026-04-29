@@ -236,6 +236,7 @@ export function InventoryManager(){
         'minor_health_potion',
         'major_health_potion',
         'grand_health_potion',
+        'supreme_health_potion',
     ]
 
     const GATES = [ // eslint-disable-line no-unused-vars
@@ -264,7 +265,7 @@ export function InventoryManager(){
         minor_health_potion: {
             effect: 'health gain',
             amount: 20,
-            icon: 'potion',
+            icon: 'minor_health_potion',
             type: 'consumable',
             name: 'minor health potion',
             equippedBy: null,
@@ -274,7 +275,7 @@ export function InventoryManager(){
         major_health_potion: {
             effect: 'health gain',
             amount: 40,
-            icon: 'potion',
+            icon: 'major_health_potion',
             type: 'consumable',
             name: 'major health potion',
             equippedBy: null,
@@ -284,12 +285,22 @@ export function InventoryManager(){
         grand_health_potion: {
             effect: 'health gain',
             amount: 100,
-            icon: 'potion',
+            icon: 'grand_health_potion',
             type: 'consumable',
             name: 'grand health potion',
             equippedBy: null,
             animation: null,
             description: 'Grand health potions replenish 70% total hp'
+        },
+        supreme_health_potion: {
+            effect: 'health gain',
+            amount: 250,
+            icon: 'supreme_health_potion',
+            type: 'consumable',
+            name: 'supreme health potion',
+            equippedBy: null,
+            animation: null,
+            description: 'Supreme health potions replenish 100% total hp'
         },
         minor_key: {
             effect: 'key',
@@ -513,6 +524,12 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
     //     description: 'The basic longbow does 30 (percent points)'
     // },
     }
+    Object.values(this.weapons).forEach((weapon) => {
+        if (!weapon || typeof weapon.damage !== 'number') return;
+        const flatBonus = (weapon.damage * 0.1).toFixed(1);
+        const tierText = weapon.tier ? ` [Tier ${weapon.tier}]` : '';
+        weapon.description = `${weapon.name} grants +${weapon.damage}% base atk and +${flatBonus} flat damage${tierText}`;
+    });
     
     this.armor= {
         /////////////// shields
@@ -2360,7 +2377,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             {
                 effect: 'health gain',
                 amount: 55,
-                icon: 'potion',
+                icon: 'minor_health_potion',
                 type: 'consumable',
                 name: 'minor health potion',
                 equippedBy: null
@@ -2368,7 +2385,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             {
                 effect: 'health gain',
                 amount: 55,
-                icon: 'potion',
+                icon: 'minor_health_potion',
                 type: 'consumable',
                 name: 'minor health potion',
                 equippedBy: null
@@ -2376,7 +2393,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             {
                 effect: 'health gain',
                 amount: 55,
-                icon: 'potion',
+                icon: 'minor_health_potion',
                 type: 'consumable',
                 name: 'minor health potion',
                 equippedBy: null
@@ -2384,7 +2401,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             {
                 effect: 'health gain',
                 amount: 55,
-                icon: 'potion',
+                icon: 'minor_health_potion',
                 type: 'consumable',
                 name: 'minor health potion',
                 equippedBy: null
@@ -2493,7 +2510,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
     this.TIER1_POTION = 'minor_health_potion';
     this.TIER2_POTION = 'major_health_potion';
     this.TIER3_POTION = 'grand_health_potion';
-    this.TIER4_POTION = 'grand_health_potion';
+    this.TIER4_POTION = 'supreme_health_potion';
 }
 
 // Create a singleton instance to provide tier pools
