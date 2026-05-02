@@ -186,8 +186,11 @@ class MapMakerPage extends React.Component {
       overlayData: null,
       loadingData: true,
       planeSyncInProgress: false,
+      dungeonHasUnsavedChanges: false,
+      planeHasUnsavedChanges: false,
       imagesMatrix: {},
       selectedThingTitle: '',
+      leftReadoutFlashMessage: null,
       showPlanesNames: false,
       showCoordinates: this.props.showCoordinates ?? false,
       // Dev console
@@ -305,6 +308,10 @@ class MapMakerPage extends React.Component {
   componentWillUnmount() {
     if (this._mapmakerKeyHandler) {
       document.removeEventListener('keydown', this._mapmakerKeyHandler);
+    }
+    if (this.leftReadoutFlashTimer) {
+      clearTimeout(this.leftReadoutFlashTimer);
+      this.leftReadoutFlashTimer = null;
     }
   }
   getTileSize(){
@@ -676,6 +683,17 @@ class MapMakerPage extends React.Component {
     }, 2000)
   }
 
+  flashLeftReadout = (msg, duration = 2000) => {
+    if (this.leftReadoutFlashTimer) {
+      clearTimeout(this.leftReadoutFlashTimer);
+    }
+    this.setState({ leftReadoutFlashMessage: msg });
+    this.leftReadoutFlashTimer = setTimeout(() => {
+      this.setState({ leftReadoutFlashMessage: null });
+      this.leftReadoutFlashTimer = null;
+    }, duration);
+  }
+
   setViewState = (state) => {
     let title = '';
     const currentOverlayOn = !!this.state.dungeonOverlayOn;
@@ -703,6 +721,10 @@ class MapMakerPage extends React.Component {
       overlayData,
       selectedThingTitle: title
     })
+
+    if(state === 'dungeon' && this.state.loadedDungeon?.name){
+      this.setLoadedDungeonDropdownValue(this.state.loadedDungeon.name);
+    }
 
     // update user
     const userId = sessionStorage.getItem('userId');
@@ -775,7 +797,7 @@ class MapMakerPage extends React.Component {
 
       
 
-      this.toast('Board Saved')
+      this.flashLeftReadout('Board Saved')
     } else {
       
       console.log('CLONE PATH, RENAME SHOULD NOT GET HERE');
@@ -795,7 +817,7 @@ class MapMakerPage extends React.Component {
 
       this.loadBoard(newBoard)
 
-      this.toast('Board Saved')
+      this.flashLeftReadout('Board Saved')
     }
     if(planesToUpdate && planesToUpdate.length > 1){
       console.log('multiple planes to update, figure this out');
@@ -1764,7 +1786,8 @@ class MapMakerPage extends React.Component {
           setEditorPreference('loadedDungeon', updatedLoadedDungeon);
         }
 
-        this.toast('Plane Saved')
+        this.flashLeftReadout('Plane Saved');
+        this.setState({ planeHasUnsavedChanges: false });
       } finally {
         this.setState({ planeSyncInProgress: false });
       }
@@ -1782,7 +1805,8 @@ class MapMakerPage extends React.Component {
         loadedPlane: lp,
         // miniboards: this.state.loadedPlane.miniboards
       })
-      this.toast('Plane Saved')
+      this.flashLeftReadout('Plane Saved');
+      this.setState({ planeHasUnsavedChanges: false });
       this.loadAllPlanes(); 
     }
   }
@@ -1793,7 +1817,7 @@ class MapMakerPage extends React.Component {
       await updateDungeonRequest(this.state.loadedDungeon.id, this.state.loadedDungeon);
       setEditorPreference('loadedDungeon', this.state.loadedDungeon)
       this.loadAllDungeons()
-      this.toast('Dungeon Saved')
+      this.flashLeftReadout('Dungeon Saved')
     } else {
       let newDungeonPayload = {
         name: this.state.loadedDungeon.name,
@@ -1810,9 +1834,10 @@ class MapMakerPage extends React.Component {
         loadedDungeon: this.props.mapMaker.formatDungeon(loadedDungeon)
         // miniboards: this.state.loadedDungeon.miniboards
       })
-      this.toast('Dungeon Saved')
+      this.flashLeftReadout('Dungeon Saved')
       this.loadAllDungeons(); 
     }
+    this.setState({ dungeonHasUnsavedChanges: false });
     // this update user block NEEDS to be abstracted. you can search 'update user' to find all instances of it
     console.warn('this update user block NEEDS to be abstracted. you can search "update user" to find all instances of it')
     console.log('HELLO??? MCFLY???????');
@@ -1884,8 +1909,9 @@ class MapMakerPage extends React.Component {
     console.log('loaded plane: ', plane);
     this.setState({
       loadedPlane: plane,
-      selectedThingTitle: `Plane: ${plane.name}`
-      // miniboards: plane.miniboards
+      selectedThingTitle: `Plane: ${plane.name}`,
+      // miniboards: plane.miniboards,
+      planeHasUnsavedChanges: false,
     })
   }
   loadDungeon = async (id) => {
@@ -1916,8 +1942,10 @@ class MapMakerPage extends React.Component {
     dungeon.valid = dungeonValid;
     console.log('about to format 3');
     this.setState({
-      loadedDungeon: this.props.mapMaker.formatDungeon(dungeon)
+      loadedDungeon: this.props.mapMaker.formatDungeon(dungeon),
+      selectedThingTitle: this.state.selectedView === 'dungeon' ? `Dungeon: ${dungeon.name}` : this.state.selectedThingTitle
     })
+    this.setLoadedDungeonDropdownValue(dungeon.name)
   }
   loadAllDungeons = async () => {
     const val = await loadAllDungeonsRequest()
@@ -1957,7 +1985,8 @@ class MapMakerPage extends React.Component {
       
       this.setState({
         loadedDungeon: loadedDungeon,
-        overlayData
+        overlayData,
+        selectedThingTitle: this.state.selectedView === 'dungeon' && loadedDungeon ? `Dungeon: ${loadedDungeon.name}` : this.state.selectedThingTitle
       })
     }
   }
@@ -1970,6 +1999,38 @@ class MapMakerPage extends React.Component {
       })
     }
   }
+
+  parsePlaneLevelLabel = (label) => {
+    const raw = `${label ?? ''}`.trim();
+    if (!/^-?\d+$/.test(raw)) return null;
+    return Number(raw);
+  }
+
+  comparePlaneFolderLabels = (a, b) => {
+    const aNum = this.parsePlaneLevelLabel(a?.title ?? a);
+    const bNum = this.parsePlaneLevelLabel(b?.title ?? b);
+
+    if (aNum !== null && bNum !== null) return bNum - aNum; // 2,1,0,-1,-2
+    if (aNum !== null) return -1; // numeric first
+    if (bNum !== null) return 1;  // text at bottom
+    return `${a?.title ?? a}`.localeCompare(`${b?.title ?? b}`, undefined, { sensitivity: 'base' });
+  }
+
+  sortPlaneFolderHierarchy = (folders) => {
+    if (!Array.isArray(folders)) return;
+    folders.sort((a, b) => this.comparePlaneFolderLabels(a, b));
+    folders.forEach((folder) => {
+      if (Array.isArray(folder.subfolders)) {
+        folder.subfolders.sort((a, b) => this.comparePlaneFolderLabels(a, b));
+        folder.subfolders.forEach((subfolder) => {
+          if (Array.isArray(subfolder.deepfolders)) {
+            subfolder.deepfolders.sort((a, b) => this.comparePlaneFolderLabels(a, b));
+          }
+        });
+      }
+    });
+  }
+
   loadAllPlanes = async () => {
     const val = await loadAllPlanesRequest()
     let planes = [];
@@ -2021,6 +2082,7 @@ class MapMakerPage extends React.Component {
         }
       }
     })
+    this.sortPlaneFolderHierarchy(planesFolders);
     planesFolders.map(f=>f.title).forEach(t=>planesFoldersExpanded[t] = false)
     planesFolders.forEach((f)=>{
       f.subfolders.forEach((s)=>{
@@ -2057,7 +2119,14 @@ class MapMakerPage extends React.Component {
   deletePlane = async () => {
     if(this.state.loadedPlane){
       const deletedPlaneId = this.state.loadedPlane.id;
-      if(!deletedPlaneId) return;
+      if(!deletedPlaneId){
+        this.setState({
+          loadedPlane: null,
+          planeHasUnsavedChanges: false
+        });
+        this.toast('Unsaved Plane Discarded');
+        return;
+      }
       await deletePlaneRequest(deletedPlaneId);
       const updatedDungeonCount = await this.removePlaneReferencesFromAllDungeons(deletedPlaneId);
       this.clearLoadedPlane();
@@ -2299,7 +2368,8 @@ class MapMakerPage extends React.Component {
       this.setState({
         draggedBoard: null,
         hoveredSection: null,
-        loadedPlane
+        loadedPlane,
+        planeHasUnsavedChanges: true,
       })
     // })
   }
@@ -2328,7 +2398,8 @@ class MapMakerPage extends React.Component {
       this.setState({
         loadedDungeon: this.props.mapMaker.formatDungeon(dungeon),
         draggedPlane: null,
-        hoveredDungeonSection: null
+        hoveredDungeonSection: null,
+        dungeonHasUnsavedChanges: true,
       })
     })
   }
@@ -2523,12 +2594,14 @@ class MapMakerPage extends React.Component {
       dungeon = this.state.dungeons.find(x=>x.name === e.target.value)
       this.setState({
         dungeonOverlayOn: false,
-        overlayData: null
+        overlayData: null,
+        dungeonHasUnsavedChanges: false,
       })
       this.loadDungeon(dungeon.id)
     } else {
       this.setState({
-        loadedDungeon: null
+        loadedDungeon: null,
+        selectedThingTitle: this.state.selectedView === 'dungeon' ? '' : this.state.selectedThingTitle
       })
     }
     
@@ -2603,7 +2676,7 @@ class MapMakerPage extends React.Component {
         <div className="column-wrapper">
           <div className="inputs-container">
             <div className="left-text-readout title">
-              {this.state.selectedThingTitle}
+              {this.state.leftReadoutFlashMessage || this.state.selectedThingTitle}
             </div>
 
             <CButtonGroup className='view-state-radio-group' role="group" aria-label="Basic checkbox toggle button group" >
@@ -2638,11 +2711,6 @@ class MapMakerPage extends React.Component {
                 onChange={this.viewSelectorChange}
               />
             </CButtonGroup>
-
-            <div className="right-text-readout title">
-              
-            </div>
-
             <div className="right-menus">
             </div>
           </div>
@@ -2774,6 +2842,7 @@ class MapMakerPage extends React.Component {
               boardSize={this.state.boardSize}
               boardsFolders={this.state.boardsFolders}
               boardsFoldersExpanded={this.state.boardsFoldersExpanded}
+              planeHasUnsavedChanges={this.state.planeHasUnsavedChanges}
               boards={this.state.boards}
               tiles={this.state.tiles}
               compatibilityMatrix={this.state.compatibilityMatrix}
@@ -2832,6 +2901,7 @@ class MapMakerPage extends React.Component {
               boardSize={this.state.boardSize}
               boardsFolders={this.state.boardsFolders}
               boardsFoldersExpanded={this.state.boardsFoldersExpanded}
+              dungeonHasUnsavedChanges={this.state.dungeonHasUnsavedChanges}
               boards={this.state.boards}
               dungeons={this.state.dungeons}
               tiles={this.state.tiles}

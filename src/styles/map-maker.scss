@@ -37,11 +37,37 @@ $bot-level-zIndex: 2; // doubletall containers
     }
     background-color: white;
 }
+.left-text-readout{
+    text-align: left;
+    width: 289px !important;
+}
+.right-menus{
+    width: 289px !important;
+}
 .board-view-container{
     height: 100%;
-    // width: 100%;
     display: flex;
-    // overflow: hidden;
+    min-height: 858px;
+.plane-action-buttons {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border-bottom: 1px solid rgba(0,0,0,0.15);
+    .icon-container {
+        color: rgba(255,255,255,0.86);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        svg {
+            color: inherit;
+        }
+        &:hover {
+            color: rgb(37, 192, 179);
+        }
+    }
+}
 }
 .left-palette.boards-palette{
     background-color: transparent;
@@ -535,15 +561,23 @@ ul.dropdown-menu.show{
     justify-content: flex-start;
     padding: 0;
     height: 40px;
+    width: 100%;
+    flex: 0 0 40px;
+    background-color: #111;
     .dungeon-name{
         position: relative;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        padding: 0 10px;
+        background-color: #111;
         .dungeon-validity-indicator{
             position: absolute;
             height: 8px;
             width: 8px;
             border-radius: 8px;
             top: calc(50% - 4px);
-            left: 8px;
+            left: 18px;
             &.valid{
                 background-color: lightgreen;
             }
@@ -559,13 +593,19 @@ ul.dropdown-menu.show{
         display: flex;
         min-width: 300px;
         justify-content: space-around;
-        margin: 0px 20px;
+        margin: 0;
+        padding: 0 12px;
+        height: 100%;
         flex-direction: row;
-        min-height: 50%;
+        min-height: 100%;
         align-items: center;
+        background-color: #111;
+        border-left: 1px solid rgba(255,255,255,0.12);
+        color: rgba(255,255,255,0.86);
         .icon-container{
             cursor: pointer;
             display: flex;
+            align-items: center;
             &:hover{
                 color: rgb(37, 192, 179);
             }
@@ -582,6 +622,13 @@ ul.dropdown-menu.show{
             display: flex;
         }
     }
+}
+
+.dungeon-map-board{
+    display: flex !important;
+    flex-direction: column !important;
+    flex-wrap: nowrap !important;
+    align-content: stretch !important;
 }
 .dungeon-planes-container{
     height: calc(100% - 40px);

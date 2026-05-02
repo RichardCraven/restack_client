@@ -34,7 +34,8 @@ class DungeonView extends React.Component {
             nextProps.planeSyncInProgress !== this.props.planeSyncInProgress ||
             nextProps.tileSize !== this.props.tileSize ||
             nextProps.boardSize !== this.props.boardSize ||
-            nextProps.imagesMatrix !== this.props.imagesMatrix
+            nextProps.imagesMatrix !== this.props.imagesMatrix ||
+            nextProps.dungeonHasUnsavedChanges !== this.props.dungeonHasUnsavedChanges
         );
     }
     onClickHandler = event => {
@@ -367,35 +368,22 @@ class DungeonView extends React.Component {
                 <div className="center-board-container">
                     <div 
                     onMouseLeave={() => {return this.props.setHover(null)}}
-                    className="board map-board" 
+                    className="board map-board dungeon-map-board" 
                     style={{
                         width: this.props.boardSize+'px', height: this.props.boardSize+ 'px',
                         backgroundColor: 'white'
                     }}
                     >
                         <div className="dungeon-info">
-                            <div className="dungeon-name">
-                                { this.props.loadedDungeon && <div className={`dungeon-validity-indicator ${this.props.loadedDungeon.valid ? 'valid' : 'invalid'}`}></div>}
-                                <CFormSelect 
-                                aria-label="Dungeon Selector"
-                                ref={this.props.dungeonSelectVal}
-                                options={
-                                    ['Dungeon Selector'].concat(this.props.dungeons.map((e, i)=>{
-                                    return { label: e.name, value: e.name}
-                                    }))
-                                }
-                                onChange={this.props.dungeonSelectOnChange}
-                                />
-                            </div>
                             { <div className="level-buttons-container">
-                                <div className="icon-container" onClick={() => this.props.addDungeonLevelUp()}>
-                                    <CIcon icon={cilLibraryAdd} size="lg"/> <CIcon className="add-level-up-icon" icon={cilLevelUp} size="lg"/>
-                                </div>
                                 <div className="icon-container" onClick={() =>  this.props.saveDungeonLevel()}>
-                                    <CIcon icon={cilSave} size="lg"/>
+                                    <CIcon icon={cilSave} size="lg" style={this.props.dungeonHasUnsavedChanges ? {color: 'gold'} : {}}/>
                                 </div>
                                 <div className="icon-container" onClick={() => this.props.toggleDungeonLevelOverlay()}>
                                     <CIcon icon={cilQrCode} size="lg"/>
+                                </div>
+                                <div className="icon-container" onClick={() => this.props.addDungeonLevelUp()}>
+                                    <CIcon icon={cilLibraryAdd} size="lg"/> <CIcon className="add-level-up-icon" icon={cilLevelUp} size="lg"/>
                                 </div>
                                 <div className="icon-container" onClick={() => this.props.addDungeonLevelDown()}>
                                     <CIcon icon={cilLibraryAdd} size="lg"/> <CIcon className="add-level-down-icon" icon={cilLevelDown} size="lg"/>
@@ -416,6 +404,19 @@ class DungeonView extends React.Component {
                                     </CDropdown>
                                 </div>
                             </div>}
+                            <div className="dungeon-name">
+                                { this.props.loadedDungeon && <div className={`dungeon-validity-indicator ${this.props.loadedDungeon.valid ? 'valid' : 'invalid'}`}></div>}
+                                <CFormSelect 
+                                aria-label="Dungeon Selector"
+                                ref={this.props.dungeonSelectVal}
+                                options={
+                                    ['Dungeon Selector'].concat(this.props.dungeons.map((e, i)=>{
+                                    return { label: e.name, value: e.name}
+                                    }))
+                                }
+                                onChange={this.props.dungeonSelectOnChange}
+                                />
+                            </div>
                         </div>
                         <div className="dungeon-planes-container">
                             {this.props.loadedDungeon && !this.props.loadingData && !this.props.planeSyncInProgress && <div className="loaded-dungeon-wrapper"

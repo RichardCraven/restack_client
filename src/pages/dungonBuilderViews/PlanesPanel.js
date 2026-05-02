@@ -126,6 +126,33 @@ class PlanesPanel extends React.Component {
         return { roots, folders };
     }
 
+    parseLevelLabel = (label) => {
+        const raw = `${label ?? ''}`.trim().replace(/\u2212/g, '-');
+        if (!/^[+-]?\d+$/.test(raw)) return null;
+        return Number(raw);
+    }
+
+    compareLevelLabels = (a, b) => {
+        const aNum = this.parseLevelLabel(a?.title ?? a);
+        const bNum = this.parseLevelLabel(b?.title ?? b);
+
+        if (aNum !== null && bNum !== null) return bNum - aNum; // 2,1,0,-1,-2
+        if (aNum !== null) return -1;
+        if (bNum !== null) return 1;
+        return `${a?.title ?? a}`.localeCompare(`${b?.title ?? b}`, undefined, { sensitivity: 'base' });
+    }
+
+    getSortedPlaneFolders = (folders) => {
+        const sorted = (folders || []).map((folder) => ({
+            ...folder,
+            subfolders: (folder.subfolders || []).map((subfolder) => ({
+                ...subfolder,
+                deepfolders: [...(subfolder.deepfolders || [])].sort((a, b) => this.compareLevelLabels(a, b))
+            })).sort((a, b) => this.compareLevelLabels(a, b))
+        }));
+        return sorted.sort((a, b) => this.compareLevelLabels(a, b));
+    }
+
     renderPlanePreview = (plane, key, colorLineStyle = null) => {
         return (
             <div className='plane-previews-container' key={key}>
@@ -194,6 +221,7 @@ class PlanesPanel extends React.Component {
         const planeFolders = (this.props.planesFolders && this.props.planesFolders.length > 0)
             ? this.props.planesFolders
             : derivedHierarchy.folders;
+        const sortedPlaneFolders = this.getSortedPlaneFolders(planeFolders);
         const rootPlanes = derivedHierarchy.roots;
         return (
             <div className="palette right-palette" 
@@ -231,7 +259,7 @@ class PlanesPanel extends React.Component {
                         height: (this.props.boardSize - 78)+ 'px'
                     }}
                 >
-                    {planeFolders && planeFolders.length > 0 && planeFolders.map((folder, idx) => {
+                    {sortedPlaneFolders && sortedPlaneFolders.length > 0 && sortedPlaneFolders.map((folder, idx) => {
                         return <div key={idx}>
                             <div className="boards-folder-headline" onClick={(e) => this.toggleFolder(e, folder.title)}>
                                 <div className="folder-color-line" style={{backgroundColor: idx % 2 ? 'magenta' : 'aqua'}}></div>

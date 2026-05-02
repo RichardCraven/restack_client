@@ -3,6 +3,8 @@ import '@coreui/coreui/dist/css/coreui.min.css'
 import '../../styles/dungeon-board.scss'
 import '../../styles/map-maker.scss'
 import Tile from '../../components/tile'
+import CIcon from '@coreui/icons-react'
+import { cilSave, cilPencil, cilTrash, cilPlus } from '@coreui/icons';
 // import { CDropdown, CDropdownToggle, CDropdownMenu, CDropdownItem, CCollapse} from '@coreui/react';
 // import  CIcon  from '@coreui/icons-react'
 // import { cilCaretRight } from '@coreui/icons';
@@ -21,7 +23,21 @@ class BoardView extends React.Component {
     render (){
         return (
             <div className="board-view-container">
-                <div className="center-board-container">
+                <div className="center-board-container" style={{flexDirection: 'column'}}>
+                    <div className="level-buttons-container plane-action-buttons">
+                        <div className="icon-container" title="Save Board" onClick={() => this.props.writeBoard && this.props.writeBoard()}>
+                            <CIcon icon={cilSave} size="lg"/>
+                        </div>
+                        <div className="icon-container" title="Rename Board" onClick={() => this.props.loadedBoard && this.props.renameBoard && this.props.renameBoard()}>
+                            <CIcon icon={cilPencil} size="lg"/>
+                        </div>
+                        <div className="icon-container" title="Delete Board" onClick={() => this.props.loadedBoard && this.props.deleteBoard && this.props.deleteBoard(this.props.loadedBoard.id)}>
+                            <CIcon icon={cilTrash} size="lg"/>
+                        </div>
+                        <div className="icon-container" title="New Board" onClick={() => this.props.addNewBoard && this.props.addNewBoard()}>
+                            <CIcon icon={cilPlus} size="lg"/>
+                        </div>
+                    </div>
                     <div className="board map-board" 
                         onMouseLeave={() => {return this.props.setHover(null)}}
                         style={{
