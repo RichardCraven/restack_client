@@ -5,7 +5,7 @@ const clone = (val) => {
 }
 
 export function OverlayManager(){
-    const animationTypes = {
+    const animationTypes = { // eslint-disable-line no-unused-vars
         targetted: {
             duration: 2
         },
@@ -35,8 +35,8 @@ export function OverlayManager(){
         }
     }
     this.addAnimation = (animation) => {
-        const duration = animationTypes[animation.type]?.duration * 1000;
-        const modifiedDuration = duration + 500;
+        // const duration = animationTypes[animation.type]?.duration * 1000;
+        // const modifiedDuration = duration + 500;
         animation.locked = true;
         animation.subjectType = this.overlays[animation.id].data.type
         

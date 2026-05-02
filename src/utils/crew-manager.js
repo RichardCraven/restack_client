@@ -1,7 +1,8 @@
 
 import * as images from '../utils/images'
-import { SPELLS } from './spells-table'
+import { SPELLS, RITUALS } from './spells-table'
 
+// eslint-disable-next-line no-extend-native
 Date.prototype.addHours= function(h){
     this.setHours(this.getHours()+h);
     return this;
@@ -40,21 +41,11 @@ export function CrewManager(){
     this.initializeCrew = (crew) => {
         //called everytime game loads, not just first time
         this.crew = [];
-        console.log('initializing crew: ', crew, 'this is where specialActions are checked and marked available if their endDate has passed');
         const colors = ['#b710d5', '#6495ed', '#73b746', '#f4d013'];
         crew.forEach((member, index)=> { 
             // Ensure specialActions exists; some persisted meta may omit this field.
             // Default to an empty array so initialization doesn't skip the member.
             member.specialActions = member.specialActions || [];
-            // Diagnostic: detect any specialActions that already have cooldown_position === 3
-            try {
-                if (member.specialActions.some(a => a && a.cooldown_position === 3)) {
-                    console.warn('initializeCrew: member has specialActions with cooldown_position===3', member.id || member.name, member.specialActions.filter(a => a && a.cooldown_position === 3));
-                    console.trace();
-                }
-            } catch (err) {
-                console.debug('initializeCrew diagnostic error', err);
-            }
             member.specialActions.forEach(a=>{
                 let end = new Date(a.endDate),
                 now = new Date();
@@ -187,7 +178,7 @@ export function CrewManager(){
 
     this.addExperience = (memberArray, experienceValue) => {
         memberArray.forEach(m=>{
-            let nextLevelExp = EXP_TABLE[m.level]
+            // const nextLevelExp = EXP_TABLE[m.level]
             let member = this.crew.find(c=>c.type === m.type)
             member.stats.experience += experienceValue
         })
@@ -355,10 +346,26 @@ export function CrewManager(){
                         break;
                 }
             break;
+            case 'ritual': {
+                const ritualDef = RITUALS[actionSubtype.ritualKey];
+                const prepareTime = ritualDef ? ritualDef.prepareTime : 60 * 60 * 1000;
+                endDate = new Date(Date.now() + prepareTime);
+                member.specialActions.push({
+                    type: 'ritual',
+                    name: ritualDef ? ritualDef.name : (actionSubtype.type || 'Ritual'),
+                    ritualKey: actionSubtype.ritualKey,
+                    iconUrl: actionSubtype.iconUrl || '',
+                    available: false,
+                    subtype: actionSubtype.ritualKey,
+                    startDate,
+                    endDate,
+                    notified: false
+                });
+            }
+            break;
             default:
                 break;
         }
-        console.log('member.specialActions', member.specialActions);
     }
 
     this.adventurers = [
@@ -387,12 +394,12 @@ export function CrewManager(){
             name: 'Sardonis',
             id: 123,
             level: 1,
-            stats: { str: 8, int: 5, dex: 6, fort: 7, baseHp: 10, experience: 0 },
+            stats: { str: 8, int: 5, dex: 6, fort: 7, baseHp: 11, experience: 0, attackSpeedMult: 2 },
             portrait: images['soldier_portrait'],
             inventory: [],
             passives: ['inspiring_force'],
-            specials: ['shield_wall'],
-            attacks: ['sword_swing', 'sword_swing', 'sword_swing'],
+            specials: ['shield_wall', 'force_back'],
+            attacks: ['sword_swing'],
             weaknesses: ['ice', 'electricity', 'blood_magic'],
             description: "Once the captain of the royal army's legendary vangard battalion, Sardonis has a reputation for fair leadership and honor.",
             specialActions: [],
@@ -407,11 +414,11 @@ export function CrewManager(){
             name: 'Yu',
             id: 8080,
             level: 1,
-            stats: { str: 5, int: 6, dex: 7, fort: 7, baseHp: 10, experience: 0 },
+            stats: { str: 5, int: 6, dex: 7, fort: 7, baseHp: 10, experience: 0, attackSpeedMult: 2 },
             portrait: images['monk_portrait'],
             inventory: [],
             passives: ['diamond_skin'],
-            specials: ['flying_lotus'],
+            specials: ['flying_lotus', 'windmill'],
             attacks: ['dragon_punch', 'dragon_punch', 'dragon_punch'],
             weaknesses: ['fire', 'electricity', 'ice', 'blood_magic', 'crushing'],
             description: "Yu was born into the dynastic order of the White Serpent, inheriting the secrets of absolute stillness and unyielding motion",
@@ -461,11 +468,11 @@ export function CrewManager(){
             name: 'Ulaf',
             id: 8822,
             level: 1,
-            stats: { str: 8, int: 3, dex: 4, fort: 6, baseHp: 12, experience: 0 },
+            stats: { str: 8, int: 3, dex: 4, fort: 6, baseHp: 52, experience: 0, attackSpeedMult: 2 },
             portrait: images['barbarian_portrait'],
             inventory: [],
-            specials: ['berserker_rage'],
-            attacks: ['axe_throw', 'axe_swing', 'spear_throw'],
+            specials: ['berserker'],
+                attacks: ['axe_throw', 'axe_swing'],
             passives: ['fury'],
             weaknesses: ['ice', 'curse', 'psionic'],
             description: "Ulaf is the son of the chieftan of the Rootsnarl Clan. He is on a journey to prove his mettle and one day take his father's place",

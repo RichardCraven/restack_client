@@ -1,9 +1,33 @@
 // This file has been removed as part of the refactoring process.
 
 import {Methods} from './basic-methods';
+import { activeShieldWalls } from '../../shared-ai-methods/movement-methods';
 
 const MAX_DEPTH = 7
 const MAX_LANES = 5
+
+/**
+ * Returns true if a move from `fromCoords` to `toCoords` would cross an
+ * active shield wall. Used to block monster movement through the wall.
+ */
+const crossesShieldWall = (fromCoords, toCoords) => {
+    if (!activeShieldWalls || !activeShieldWalls.length) return false;
+    for (const wall of activeShieldWalls) {
+        const { x: wallX, lanesAffected, isFacingRight } = wall;
+        if (!lanesAffected || !lanesAffected.includes(toCoords.y)) continue;
+        if (isFacingRight) {
+            const fromSide = fromCoords.x < wallX ? 'left' : 'right';
+            const toSide   = toCoords.x   < wallX ? 'left' : 'right';
+            if (fromSide !== toSide) return true;
+        } else {
+            const boundaryX = wallX + 1;
+            const fromSide = fromCoords.x < boundaryX ? 'left' : 'right';
+            const toSide   = toCoords.x   < boundaryX ? 'left' : 'right';
+            if (fromSide !== toSide) return true;
+        }
+    }
+    return false;
+}
 
 const getSurroundings = (coords) => {
     const N = {x: coords.x, y: coords.y-1},
@@ -108,6 +132,29 @@ export const MonsterMovementMethods = {
     },
     closeTheGap: (caller, combatants) => {
         const enemyTarget = Object.values(combatants).find(e=>e.id === caller.targetId)
+        if(enemyTarget){
+            // If the target is already adjacent and the pending attack is close range,
+            // there is no need to move — skip to avoid the "dancing" behaviour.
+            // For large callers (occupying multiple tiles) check adjacency against ALL
+            // occupied tiles so a fighter standing on the virtual top tile also counts.
+            const pendingRange = caller.pendingAttack && caller.pendingAttack.range;
+            if(pendingRange === 'close' || !pendingRange){
+                const callerTiles = (Array.isArray(caller.occupiedCoords) && caller.occupiedCoords.length > 0)
+                    ? caller.occupiedCoords
+                    : [caller.coordinates];
+                const targetTiles = (Array.isArray(enemyTarget.occupiedCoords) && enemyTarget.occupiedCoords.length > 0)
+                    ? enemyTarget.occupiedCoords
+                    : [enemyTarget.coordinates];
+                const alreadyAdjacent = callerTiles.some(cc =>
+                    targetTiles.some(tc => {
+                        const dx = Math.abs(cc.x - tc.x);
+                        const dy = Math.abs(cc.y - tc.y);
+                        return (dx === 1 && dy === 0) || (dx === 0 && dy === 1);
+                    })
+                );
+                if(alreadyAdjacent) return;
+            }
+        }
         const isDirectlyAboveCaller = (caller, combatant) => {
             const combatantIsDirectlyAbove = (combatant.coordinates.y === caller.coordinates.y-1 && combatant.coordinates.x === caller.coordinates.x)
             return combatantIsDirectlyAbove;
@@ -319,7 +366,20 @@ export const MonsterMovementMethods = {
                     newCoords = W;
                 }
             }
-            caller.coordinates = newCoords;
+            // Block the move if it would cross an active shield wall
+            if (!crossesShieldWall(coords, newCoords)) {
+                // Large monsters (main non-minion monsters) occupy 2 tiles vertically.
+                // Make sure the tile above the destination is also free before committing.
+                const callerIsLarge = (caller.isMonster === true && caller.isMinion !== true)
+                    || caller.large === true;
+                if (callerIsLarge) {
+                    const above = { x: newCoords.x, y: newCoords.y - 1 };
+                    if (above.y < 0 || someoneIsInCoords(above)) {
+                        return; // can't fit — abort move
+                    }
+                }
+                caller.coordinates = newCoords;
+            }
         } else {
             console.log('no enbemey target!!!, caller ', caller);
         }
@@ -328,6 +388,7 @@ export const MonsterMovementMethods = {
         const enemyTarget = Object.values(combatants).find(e=>e.id === caller.targetId)
         const distanceToTarget = Methods.getDistanceToTarget(caller, enemyTarget),
         laneDiff = Methods.getLaneDifferenceToTarget(caller, enemyTarget)
+        const originalCoords = { x: caller.depth, y: caller.position };
 
         // handle position
 
@@ -364,7 +425,33 @@ export const MonsterMovementMethods = {
             caller.depth += 2
         }
 
-        caller.coordinates = {x: caller.depth, y: caller.position}
+        const newCoordsMTCET = {x: caller.depth, y: caller.position};
+        if (!crossesShieldWall(originalCoords, newCoordsMTCET)) {
+            // Large monsters occupy 2 tiles — also check the tile above the destination.
+            const callerIsLargeMTCET = (caller.isMonster === true && caller.isMinion !== true)
+                || caller.large === true;
+            if (callerIsLargeMTCET) {
+                const aboveMTCET = { x: newCoordsMTCET.x, y: newCoordsMTCET.y - 1 };
+                const aboveOccupied = aboveMTCET.y < 0 || Object.values(combatants).filter(c => c.id !== caller.id).some(e => {
+                    try {
+                        if (!e) return false;
+                        if (e.coordinates && e.coordinates.x === aboveMTCET.x && e.coordinates.y === aboveMTCET.y) return true;
+                        if (Array.isArray(e.occupiedCoords)) return e.occupiedCoords.some(c => c.x === aboveMTCET.x && c.y === aboveMTCET.y);
+                        return false;
+                    } catch (err) { return false; }
+                });
+                if (aboveOccupied) {
+                    caller.depth = originalCoords.x;
+                    caller.position = originalCoords.y;
+                    return;
+                }
+            }
+            caller.coordinates = newCoordsMTCET;
+        } else {
+            // Wall blocked the move — restore original position
+            caller.depth = originalCoords.x;
+            caller.position = originalCoords.y;
+        }
     },
     moveTowardsCloseFriendlyTarget: (caller, combatants) => {
         let newPosition, newDepth;

@@ -1,28 +1,147 @@
-import * as images from '../utils/images'
+
+import * as images from '../utils/images';
+
 export function AnimationManager(){
+    // ...existing code...
+
+    // Canvas-based claw swipe animation (for Skeleton)
+    this.clawSwipe = async (targetTileId, sourceTileId, facing, resolve) => {
+        const sourceTile = this.tiles.find(e => e.id === sourceTileId);
+        if (!sourceTile) {
+            if (resolve) resolve();
+            return;
+        }
+        const targetTile = this.tiles.find(e => e.id === targetTileId);
+        if (!targetTile) {
+            if (resolve) resolve();
+            return;
+        }
+        // Calculate origin and target tile coordinates
+        const originCoords = this.getTileCoordsById(sourceTileId);
+        const targetCoords = this.getTileCoordsById(targetTileId);
+        const clawAnimId = `claw_swipe_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+        let duration = 1000; // ms, doubled for longer GIF playback
+        let tracer = false; // Toggle this to true to enable tracer effect
+        // 10000ms = tracer, 1000ms is not
+        if (tracer) {
+            duration = 10000;
+        }
+        const clawAnim = {
+            id: clawAnimId,
+            type: 'claw_swipe',
+            animationType: 'canvas',
+            origin: originCoords,
+            target: targetCoords,
+            duration,
+            tracer,
+            facing,
+            onComplete: () => {
+                // Guard against double-fire: both the component's setTimeout and the
+                // manager's fallback setTimeout fire at the same duration. Null out
+                // onComplete after first call so it only runs once.
+                if (!clawAnim.onComplete) return;
+                clawAnim.onComplete = null;
+                // Remove the canvas animation
+                const idx = this.canvasAnimations.findIndex(anim => anim.id === clawAnimId);
+                if (idx !== -1) {
+                    this.canvasAnimations.splice(idx, 1);
+                    this.update();
+                }
+                // Trigger hit-flash effect on the target tile
+                if (targetTileId !== null && targetTileId !== undefined) {
+                    const animationTile = this.tiles.find(e => e.id === targetTileId);
+                    if (animationTile) {
+                        animationTile.animationType = 'hit-flash';
+                        animationTile.transitionType = 'fade';
+                        animationTile.animationData = {
+                            clawSwipeHit: true,
+                            duration: 500
+                        };
+                        this.update();
+                        setTimeout(() => {
+                            animationTile.animationType = null;
+                            animationTile.transitionType = null;
+                            animationTile.animationData = {};
+                            this.update();
+                        }, 500);
+                    }
+                }
+                if (resolve) resolve();
+            }
+        };
+        this.canvasAnimations.push(clawAnim);
+        this.update();
+        // Fallback: auto-complete after duration if onComplete was not called by the canvas component
+        setTimeout(() => {
+            if (clawAnim.onComplete) clawAnim.onComplete();
+        }, duration);
+    }
+
+    this.axeSwing = (targetTileId, sourceTileId, facing, resolve) => {
+        const animationTile = this.tiles.find(e => e.id === sourceTileId);
+        if (!animationTile) return;
+        // Diagnostic log: trace axeSwing animation trigger
+        console.log('[AnimationManager] axeSwing animation triggered', {
+            tile: animationTile,
+            targetTileId,
+            sourceTileId,
+            facing
+        });
+        const duration = 600; // ms — matches sword_swing for consistent feel
+        animationTile.animationType = 'axe_swing';
+        animationTile.transitionType = 'swing';
+        animationTile.animationData = {
+            icon: images['axe_white'],
+            facing,
+            duration,
+            startTime: Date.now()
+        };
+        this.update();
+        setTimeout(() => {
+            animationTile.animationType = null;
+            animationTile.transitionType = null;
+            animationTile.animationData = {};
+            this.update();
+            if (resolve) {
+                const tileCoords = targetTileId ? this.getTileCoordsById(targetTileId) : null;
+                const collision = tileCoords ? this.checkForCollision(tileCoords) : null;
+                resolve(collision);
+            }
+        }, duration);
+    }
     // Animation durations (ms)
+    // Animation type separation:
+    // - tile: tile-based animation (fixed duration, affects board tiles)
+    // - canvas: canvas-based animation (dynamic duration, rendered in overlay/canvas)
     this.animationsMatrix = {
-        claw: { duration: 600 },
-        sword_swing: { duration: 600 },
-        spin_attack: { duration: 900 },
-        dragon_punch: { duration: 700 },
-        punch: { duration: 600 },
-        spin_attack_arc: { duration: 800 },
+        sword_swing: { duration: 600, animationType: 'tile' },
+        spin_attack: { duration: 900, animationType: 'tile' },
+        dragon_punch: { duration: 700, animationType: 'tile' },
+        punch: { duration: 600, animationType: 'tile' },
+        spin_attack_arc: { duration: 800, animationType: 'tile' },
+        windmill: { duration: 750, animationType: 'tile' },
+        axe_swing: { duration: 600, animationType: 'tile' },
+        axe_throw: { duration: 1200, animationType: 'canvas' },
+        grasp: { duration: 600, animationType: 'canvas' },
+        energy_drain: { duration: 1400, animationType: 'tile' },
+        bite: { duration: 600, animationType: 'canvas' },
+        tackle: { duration: 600, animationType: 'canvas' },
+        crush: { duration: 600, animationType: 'canvas' }
     };
 
     // Generic attack animation trigger for AI modules (e.g., Monk)
-    this.triggerAttackAnimation = async ({ coordinates, facing, icon, type, animationType }) => {
+    this.triggerAttackAnimation = async (data) => {
         // Default to using 'type' as animationType if not provided
-        const animType = animationType || type;
-        const sourceTileId = this.getTileIdByCoords(coordinates);
+        const animType = data.animationType || data.type;
+        const sourceTileId = this.getTileIdByCoords(data.coordinates);
         if (sourceTileId === null || sourceTileId === undefined) {
-            console.warn('triggerAttackAnimation: Invalid coordinates for tile:', coordinates);
+            console.warn('triggerAttackAnimation: Invalid coordinates for tile:', data.coordinates);
             return null;
         }
         // Set icon based on type if not provided
-        let resolvedIcon = icon;
+        let resolvedIcon = data.icon;
         if (!resolvedIcon) {
-            switch (type) {
+            switch (data.type) {
                 case 'dragon_punch':
                     resolvedIcon = images['scepter_white'];
                     break;
@@ -38,8 +157,8 @@ export function AnimationManager(){
             }
         }
         // Determine the target tile based on facing
-        let targetCoords = { ...coordinates };
-        switch (facing) {
+        let targetCoords = { ...data.coordinates };
+        switch (data.facing) {
             case 'right':
                 targetCoords.x += 1;
                 break;
@@ -56,15 +175,40 @@ export function AnimationManager(){
                 break;
         }
         const targetTileId = this.getTileIdByCoords(targetCoords);
+
         return new Promise((resolve) => {
-            const data = {
-                sourceTileId,
-                targetTileId,
-                type: animType || 'dragon_punch',
-                icon: resolvedIcon,
-                facing
-            };
-            this.triggerTileAnimationComplex(data);
+            const matrixEntry = this.animationsMatrix[animType] || { duration: 700, animationType: 'tile' };
+            const duration = matrixEntry.duration || 700;
+
+            if (matrixEntry.animationType === 'canvas') {
+                const animId = `canvas_anim_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+                const canvasAnim = {
+                    id: animId,
+                    type: 'physical_attack', // Generic canvas type we just added to AnimationGrid
+                    origin: data.coordinates,
+                    target: targetCoords,
+                    icon: resolvedIcon || images[animType],
+                    duration,
+                    facing: data.facing,
+                    onComplete: () => {
+                        this.canvasAnimations = this.canvasAnimations.filter(a => a.id !== animId);
+                        this.update();
+                    }
+                };
+                this.canvasAnimations.push(canvasAnim);
+                this.update();
+            } else {
+                const animData = {
+                    sourceTileId,
+                    targetTileId,
+                    type: animType || 'dragon_punch',
+                    icon: resolvedIcon,
+                    facing: data.facing,
+                    selectedAction: data.selectedAction
+                };
+                this.triggerTileAnimationComplex(animData);
+            }
+
             // After the animation, check for a combatant at the target tile
             setTimeout(() => {
                 let combatantHit = null;
@@ -73,7 +217,7 @@ export function AnimationManager(){
                     combatantHit = this.checkForCollision(tileCoords);
                 }
                 resolve(combatantHit);
-            }, this.animationsMatrix[animType]?.duration || 700);
+            }, duration);
         });
     }
     this.tiles = [];
@@ -84,20 +228,17 @@ export function AnimationManager(){
     this.connectCombatMethods = (callback) => {
         this.checkForCollision = callback;
     }
-    this.animationsMatrix = {
-        sword_swing: {
-            duration: 500
-        },
-        claw: {
-            duration: 500
-        },
-        spin_attack: {
-            duration: 800
-        },
-        dragon_punch: {
-            duration: 700
-        }
-    }
+    // this.animationsMatrix = {
+    //     sword_swing: {
+    //         duration: 500
+    //     },
+    //     spin_attack: {
+    //         duration: 800
+    //     },
+    //     dragon_punch: {
+    //         duration: 700
+    //     }
+    // }
     this.spinAttack = (sourceTileId, resolve) => {
         const animationTile = this.tiles.find(e=>e.id === sourceTileId);
         if (!animationTile) return;
@@ -236,12 +377,92 @@ export function AnimationManager(){
     //         this.update();
     //     }, duration);
     // }
-    this.magicMissile = (sourceCoords, targetCoords) => {
+
+    /**
+     * Windmill — 4-direction simultaneous strike.
+     *
+     * Sets animationType='windmill' on the source tile (triggers the CSS burst +
+     * 4 fist keyframes), then after a short delay hits every enemy that is
+     * orthogonally adjacent (N / S / E / W) and triggers a hit-flash on those tiles.
+     *
+     * @param {object}   caller      - The Monk combatant object
+     * @param {object}   combatants  - All combatants map
+     * @param {function} hitCallback - Called with each enemy hit (e.g. hitsCombatant)
+     * @param {number}   duration    - Total animation duration in ms (default 750)
+     * @returns {Promise<object[]>}  - Resolves with array of combatants hit
+     */
+    this.triggerWindmill = (caller, combatants, hitCallback, duration = 750) => {
+        const sourceTileId = this.getTileIdByCoords(caller.coordinates);
+        const animationTile = sourceTileId !== null ? this.tiles.find(e => e.id === sourceTileId) : null;
+
+        // Kick off the CSS animation on the source tile
+        if (animationTile) {
+            animationTile.animationType = 'windmill';
+            animationTile.transitionType = null;
+            animationTile.animationData = { duration };
+            this.update();
+        }
+
+        return new Promise((resolve) => {
+            // Hit window: halfway through the animation (fists reach full extension)
+            const hitDelayMs = Math.round(duration * 0.6);
+            setTimeout(() => {
+                const { x, y } = caller.coordinates;
+                const cardinals = [
+                    { x, y: y - 1 }, // N
+                    { x, y: y + 1 }, // S
+                    { x: x + 1, y }, // E
+                    { x: x - 1, y }, // W
+                ];
+
+                const hit = [];
+                cardinals.forEach(tileCoords => {
+                    // Hit-flash the tile
+                    const tile = this.tiles.find(t => t.x === tileCoords.x && t.y === tileCoords.y);
+                    if (tile) {
+                        tile.animationType = 'hit-flash';
+                        this.update();
+                        setTimeout(() => {
+                            if (tile.animationType === 'hit-flash') {
+                                tile.animationType = null;
+                                this.update();
+                            }
+                        }, 500);
+                    }
+                    // Damage every living enemy on this tile
+                    Object.values(combatants).forEach(e => {
+                        if (!e.dead && (e.isMonster || e.isMinion) &&
+                            e.coordinates.x === tileCoords.x && e.coordinates.y === tileCoords.y) {
+                            hit.push(e);
+                            if (typeof hitCallback === 'function') hitCallback(e);
+                        }
+                    });
+                });
+
+                resolve(hit);
+            }, hitDelayMs);
+
+            // Clear the source tile animation after the full duration
+            setTimeout(() => {
+                if (animationTile) {
+                    animationTile.animationType = null;
+                    animationTile.transitionType = null;
+                    animationTile.animationData = {};
+                    this.update();
+                }
+            }, duration);
+        });
+    };
+
+    this.magicMissile = (sourceCoords, targetCoords, variant = 'major', options = {}) => {
         const ref = {
             origin: sourceCoords,
             distanceToTarget: this.getDistanceToTarget(sourceCoords, targetCoords), 
             verticalDistanceToTarget: this.getVerticalDistanceToTarget(sourceCoords, targetCoords),
-            connectParticles: false
+            connectParticles: false,
+            variant, // 'major' (purple) or 'minor' (green, fewer particles)
+            target: targetCoords ? { x: targetCoords.x, y: targetCoords.y } : null,
+            getCurrentTargetCoords: typeof options.getCurrentTargetCoords === 'function' ? options.getCurrentTargetCoords : null,
         };
         this.canvasAnimations.push(ref)
         this.update();
@@ -252,6 +473,10 @@ export function AnimationManager(){
             this.update();
         }, 2500)
         // ^ travel time + 1 second of damage animation
+    }
+
+    this.minorMagicMissile = (sourceCoords, targetCoords, options = {}) => {
+        this.magicMissile(sourceCoords, targetCoords, 'minor', options);
     }
     // Magic Circle Animation: static circle of particles at midpoint between source and target
     this.magicCircle = (sourceCoords, targetCoords, options = {}) => {
@@ -431,7 +656,10 @@ export function AnimationManager(){
 
 
     this.initialize = (MAX_DEPTH, MAX_ROWS) => {
+            console.log('[AnimationManager] initialize called:', { MAX_DEPTH, MAX_ROWS, canvasAnimations: this.canvasAnimations });
         this.MAX_DEPTH = MAX_DEPTH;
+        // Only clear canvasAnimations if a full session reset is intended.
+        // this.canvasAnimations = [];
         let arr = [];
         // Use row-major order: id = y * MAX_DEPTH + x
         for (let y = 0; y < MAX_ROWS; y++) {
@@ -454,6 +682,22 @@ export function AnimationManager(){
     }
     this.update = () => {
         this.updateAnimationData({tiles: this.tiles, canvasAnimations: this.canvasAnimations})
+    }
+    // Hard-reset all animation state — call this when a combat session ends so
+    // stale canvas animations (missiles, fireballs, etc.) can't bleed into the
+    // next session via in-flight setTimeout cleanup callbacks.
+    this.reset = () => {
+            console.log('[AnimationManager] reset called, clearing canvasAnimations:', { canvasAnimations: this.canvasAnimations });
+        // Full session reset: clear all canvas animations
+        this.canvasAnimations = [];
+        // Clear all tile animation state too so tile-based effects don't linger
+        this.tiles.forEach(t => {
+            t.animationOn = false;
+            t.animationType = '';
+            t.animationData = {};
+            t.transitionType = '';
+        });
+        this.update();
     }
     this.handleTileClick = (tileId) => {
         let colors = ['purple', 'red', 'green', 'white'],
@@ -529,29 +773,125 @@ export function AnimationManager(){
             return;
         }
         switch(type){
-            case 'claw':
-                animationTile.animationType = `claw`;
+            case 'axe_throw':
+                    // Calculate origin and target tile coordinates
+                    const originCoords = this.getTileCoordsById(sourceTileId);
+                    const targetCoords = this.getTileCoordsById(targetTileId);
+                    // Add a canvas animation for the flying axe with a unique id
+                    const axeAnimId = `axe_throw_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+                    // Calculate duration based on origin/target distance and speed (match CanvasAxeThrow logic)
+                    const axeAnim = {
+                        id: axeAnimId,
+                        type: 'axe_throw',
+                        animationType: 'canvas',
+                        origin: originCoords,
+                        target: targetCoords,
+                        onComplete: null  // set below so the closure captures axeAnim
+                    };
+                    axeAnim.onComplete = () => {
+                        // Guard against double-fire (same pattern as clawSwipe)
+                        if (!axeAnim.onComplete) return;
+                        axeAnim.onComplete = null;
+                        // Remove the canvas animation
+                        const idx = this.canvasAnimations.findIndex(anim => anim.id === axeAnimId);
+                        if (idx !== -1) {
+                            this.canvasAnimations.splice(idx, 1);
+                            this.update();
+                        }
+                        // Trigger a hit-flash effect on the target tile
+                        const hitTileId = this.getTileIdByCoords(targetCoords);
+                        if (hitTileId !== null && hitTileId !== undefined) {
+                            const hitTile = this.tiles.find(e => e.id === hitTileId);
+                            if (hitTile) {
+                                hitTile.animationType = 'hit-flash';
+                                hitTile.transitionType = 'fade';
+                                hitTile.animationData = { axeThrowHit: true, duration: 500 };
+                                this.update();
+                                setTimeout(() => {
+                                    hitTile.animationType = null;
+                                    hitTile.transitionType = null;
+                                    hitTile.animationData = {};
+                                    this.update();
+                                }, 500);
+                            }
+                        }
+                        // Resolve hit/miss — check who is standing on the target tile NOW
+                        // (after the axe has visually arrived, matching clawSwipe architecture)
+                        if (axeAnim._resolve) {
+                            const tileCoords = this.getTileCoordsById(hitTileId);
+                            const collision = tileCoords ? this.checkForCollision(tileCoords) : null;
+                            axeAnim._resolve(collision);
+                            axeAnim._resolve = null;
+                        }
+                    };
+                    this.canvasAnimations.push(axeAnim);
+                    this.update();
+                    return;
+            case 'grasp': {
+                let isGif = false;
+                let icon = undefined;
+                if (data && data.selectedAction) {
+                    isGif = !!data.selectedAction.isGif;
+                    icon = data.selectedAction.icon;
+                }
+                animationTile.animationType = 'grasp';
                 animationTile.transitionType = 'fade';
-                animationTile.animationData = {facing, duration: this.animationsMatrix[type].duration};
+                animationTile.animationData = {
+                    facing,
+                    startTime: Date.now(),
+                    duration: this.animationsMatrix[type]?.duration || 900,
+                    isGif,
+                    icon
+                };
                 this.update();
                 setTimeout(()=>{
                     animationTile.animationType = null;
                     animationTile.transitionType = null;
                     animationTile.animationData = {};
                     this.update();
-                },this.animationsMatrix[type].duration)
+                }, this.animationsMatrix[type]?.duration || 900);
+            }
             break;
-            case 'sword_swing':
-                animationTile.animationType = 'sword_swing';
+            case 'energy_drain': {
+                const drainDuration = this.animationsMatrix['energy_drain']?.duration || 900;
+                animationTile.animationType = 'energy_drain';
                 animationTile.transitionType = 'fade';
-                animationTile.animationData = {facing, duration: this.animationsMatrix[type].duration};
+                animationTile.animationData = {
+                    facing,
+                    duration: drainDuration,
+                    icon: data.icon || images['energy_drain'],
+                };
                 this.update();
-                setTimeout(()=>{
+                setTimeout(() => {
                     animationTile.animationType = null;
                     animationTile.transitionType = null;
                     animationTile.animationData = {};
                     this.update();
-                },this.animationsMatrix[type].duration)
+                }, drainDuration);
+            }
+            break;
+            case 'sword_swing': {
+                // Use TARGET tile — so hits on the source tile (Soldier getting hit) can't
+                // interrupt the swing animation mid-frame.
+                const swingTile = this.tiles.find(e => e.id === targetTileId) || animationTile;
+                const swingDuration = this.animationsMatrix[type].duration;
+                swingTile.animationType = 'sword_swing';
+                swingTile.transitionType = 'fade';
+                swingTile.animationData = {
+                    facing,
+                    duration: swingDuration,
+                    fighterType: data.fighterType,
+                    attackType: data.attackType,
+                    startTime: Date.now()
+                };
+                this.update();
+                setTimeout(() => {
+                    swingTile.animationType = null;
+                    swingTile.transitionType = null;
+                    swingTile.animationData = {};
+                    this.update();
+                }, swingDuration);
+            }
             break;
             case 'spin_attack':
                 animationTile.animationType = 'spin_attack';
@@ -572,7 +912,7 @@ export function AnimationManager(){
                 animationTile.animationType = 'dragon_punch';
                 animationTile.transitionType = 'fade';
                 animationTile.animationData = {
-                    icon: data.icon || images['scepter_white'],
+                    icon: data.icon || images['hand_7'],
                     duration: this.animationsMatrix[type].duration,
                     facing
                 };
@@ -599,8 +939,27 @@ export function AnimationManager(){
                     this.update();
                 }, animationTile.animationData.duration);
             break;
+            case 'bite':
+            case 'tackle':
+            case 'crush':
+            case 'grasp':
+                animationTile.animationType = type;
+                animationTile.transitionType = 'fade';
+                animationTile.animationData = {
+                    icon: data.icon || images[type],
+                    duration: this.animationsMatrix[type].duration,
+                    facing
+                };
+                this.update();
+                setTimeout(() => {
+                    animationTile.animationType = null;
+                    animationTile.transitionType = null;
+                    animationTile.animationData = {};
+                    this.update();
+                }, this.animationsMatrix[type].duration);
+                break;
             default:
-                console.log('animation not properly specified... INVESTIGATE');
+                console.log('animation not properly specified... INVESTIGATE', type);
                 break;
 
         }
@@ -656,6 +1015,32 @@ export function AnimationManager(){
         setTimeout(()=>{
             animate();
         },100)
+    }
+    this.axeThrow = (targetTileId, sourceTileId, facing, resolve, fighterType, attackType) => {
+        const sourceTile = this.tiles.find(e => e.id === sourceTileId);
+        if (!sourceTile) {
+            if (resolve) resolve(null);
+            return;
+        }
+        const data = {
+            targetTileId,
+            type: 'axe_throw',
+            facing,
+            sourceTileId: sourceTile.id,
+            fighterType,
+            attackType
+        };
+        this.triggerTileAnimationComplex({ ...data });
+        // Store resolve on the canvas animation so onComplete can call it after
+        // the axe visually reaches the target (matches clawSwipe architecture).
+        // triggerTileAnimationComplex pushes the axeAnim as the last canvas animation.
+        const axeAnim = this.canvasAnimations[this.canvasAnimations.length - 1];
+        if (axeAnim && axeAnim.type === 'axe_throw') {
+            axeAnim._resolve = resolve;
+        } else {
+            // Fallback: canvas animation wasn't created (e.g. invalid tile), miss immediately
+            if (resolve) resolve(null);
+        }
     }
     this.straightBeamTo = (targetTileId, sourceTileId, color = null) => {
         const sourceTile = this.tiles.find(e=>e.id === sourceTileId)
@@ -716,7 +1101,7 @@ export function AnimationManager(){
         }
         let destinationTileId = this.getTileIdByCoords(newCoords)
         let destinationTile = this.tiles[destinationTileId]
-        let isOnSamePlane = sourceTile.y === destinationTile.y;
+        let isOnSamePlane = sourceTile.y === destinationTile.y; // eslint-disable-line no-unused-vars
         return new Promise(() => {
                 let distanceAway = Math.abs(sourceTile.x - destinationTile.x)
                 if(sourceTile.x > destinationTile.x && direction === 'right-to-left'){
@@ -818,57 +1203,6 @@ export function AnimationManager(){
                     }, 10 + (distanceAway * 10))
                 }
             }
-        })
-    }
-    this.clawTo = (targetTileId, sourceTileId) => {
-        const sourceTile = this.tiles.find(e=>e.id === sourceTileId)
-        const destinationTile = this.tiles.find(e=>e.id === targetTileId)
-        // Defensive: ensure source tile exists
-        if (!sourceTile) {
-            console.warn('clawTo: missing sourceTile for sourceTileId', sourceTileId);
-            return Promise.resolve(null);
-        }
-
-        // If destination tile is missing (target may have died or be off-map),
-        // still play a local 'claw' animation on the source tile and bail gracefully.
-        if (!destinationTile) {
-            console.warn('clawTo: destinationTile missing for targetTileId', targetTileId, ' — animating source only');
-            const facing = 'right'; // default facing when target coords are unknown
-            const data = {
-                sourceTileId: sourceTile.id,
-                targetTileId: null,
-                type: 'claw',
-                facing
-            };
-            this.triggerTileAnimationComplex(data);
-            return Promise.resolve(null);
-        }
-
-        const facing = sourceTile.x > destinationTile.x ? 'left' : (
-            sourceTile.x < destinationTile.x ? 'right' :
-            (sourceTile.y > destinationTile.y ? 'up' : 'down')
-        )
-        return new Promise((resolve, reject) => {
-                let distanceAway = Math.abs(sourceTile.x - destinationTile.x)
-                let id = this.getTileIdByCoords({x: destinationTile.x, y: destinationTile.y})
-                    const data = {
-                        sourceTileId: sourceTile.id,
-                        targetTileId: id,
-                        type: 'claw',
-                        facing
-                    }
-                    // need to handle attacks from above or below
-                    this.triggerTileAnimationComplex(data);
-                    let tileCoords = id != null ? this.getTileCoordsById(id) : null
-                    let collision = null
-                    try {
-                        collision = (typeof this.checkForCollision === 'function' && tileCoords) ? this.checkForCollision(tileCoords) : null
-                    } catch (err) {
-                        console.warn('clawTo: checkForCollision threw', err)
-                        collision = null
-                    }
-                    resolve(collision);
-            // }
         })
     }
     this.straightLineTo = (targetTileId, sourceTileId, color = null) => {
@@ -1001,32 +1335,30 @@ export function AnimationManager(){
         this.triggerTileAnimation(tileId, color)
         this.cross(tileId, color)
     }
-    this.clawToTarget = async (targetTileId, sourceTileId, resolve) => {
-        let hit = await this.clawTo(targetTileId, sourceTileId)
-        resolve(hit)
-    }
-    this.swordSwing = async (targetTileId, sourceTileId, facing, resolve) => {
-        const sourceTile = this.tiles.find(e=>e.id === sourceTileId)
-        // const destinationTile = this.tiles.find(e=>e.id === targetTileId)
-        if(!sourceTile){
-            console.log('missing source');
-            debugger
-        }
-        return new Promise(() => {
-            const data = {
-                targetTileId,
-                type: 'sword_swing',
-                facing,
-                sourceTileId: sourceTile.id
+    this.swordSwing = (targetTileId, sourceTileId, facing, resolve) => {
+        const animationTile = this.tiles.find(e => e.id === sourceTileId);
+        if (!animationTile) return;
+        const duration = 600;
+        const startTime = Date.now();
+        animationTile.overlayAnimationType = 'sword_swing';
+        animationTile.overlayAnimationData = {
+            facing,
+            duration,
+            startTime
+        };
+        this.update();
+        setTimeout(() => {
+            animationTile.overlayAnimationType = null;
+            animationTile.overlayAnimationData = null;
+            this.update();
+            if (resolve) {
+                const tileCoords = targetTileId ? this.getTileCoordsById(targetTileId) : null;
+                const collision = tileCoords ? this.checkForCollision(tileCoords) : null;
+                resolve(collision);
             }
-            this.triggerTileAnimationComplex(data)
-            //target tile ID can be null if they are facing left at the left edge
-            // ...not entirely sure when this would happen
-            let tileCoords = targetTileId ? this.getTileCoordsById(targetTileId) : null;
-            let collision = tileCoords ? this.checkForCollision(tileCoords) : false;
-            resolve(collision);
-        })
+        }, duration);
     }
+
     this.zapBurstAnimation = async (targetTileId, sourceTileId, color = null, resolve) => {
         await this.straightLineTo(targetTileId, sourceTileId, color)
         resolve()
@@ -1045,10 +1377,77 @@ export function AnimationManager(){
         resolve();
     }
 
+    /**
+     * Void Lance: a dark-purple beam that travels tile-by-tile from source to
+     * target, then bursts with a ripple at the impact point.
+     *
+     * Returns a Promise that resolves once the beam reaches the target tile.
+     * The caller is responsible for applying damage after the travel time.
+     *
+     * @param {object} sourceCoords  { x, y }
+     * @param {object} targetCoords  { x, y }
+     * @returns {Promise<number>}  resolves with the travel time in ms
+     */
+    this.voidLance = (sourceCoords, targetCoords) => {
+        return new Promise((resolve) => {
+            const sourceTileId  = this.getTileIdByCoords(sourceCoords);
+            const targetTileId  = this.getTileIdByCoords(targetCoords);
+
+            if (sourceTileId === null || targetTileId === null) {
+                resolve(0);
+                return;
+            }
+
+            const sourceTile      = this.tiles.find(e => e.id === sourceTileId);
+            const destinationTile = this.tiles.find(e => e.id === targetTileId);
+            if (!sourceTile || !destinationTile) {
+                resolve(0);
+                return;
+            }
+
+            const sameRow     = sourceTile.y === destinationTile.y;
+            const dx          = destinationTile.x - sourceTile.x;
+            const dy          = destinationTile.y - sourceTile.y;
+            const horizontal  = Math.abs(dx);
+            const vertical    = Math.abs(dy);
+            const steps       = Math.max(horizontal, vertical);
+
+            // Build an ordered list of intermediate tile ids between source and target
+            const idArray = [];
+            for (let i = 1; i <= steps; i++) {
+                const fx = sourceTile.x + Math.round((dx / steps) * i);
+                const fy = sourceTile.y + Math.round((dy / steps) * i);
+                const id = this.getTileIdByCoords({ x: fx, y: fy });
+                if (id !== null) idArray.push(id);
+            }
+
+            // For a short same-lane shot (1 tile gap) there are no intermediate tiles;
+            // flash the target directly after a short delay so something always plays.
+            if (idArray.length === 0) idArray.push(targetTileId);
+
+            // Speed: ~80 ms per tile feels like a fast lance
+            const msPerStep = sameRow ? 80 : 100;
+            let stepIndex   = 0;
+
+            const beamInterval = setInterval(() => {
+                if (stepIndex >= idArray.length) {
+                    clearInterval(beamInterval);
+                    // Impact burst at the target
+                    this.rippleAnimation(targetTileId, 'purple');
+                    resolve(steps * msPerStep);
+                    return;
+                }
+                this.triggerTileAnimation(idArray[stepIndex], 'purple');
+                stepIndex++;
+            }, msPerStep);
+        });
+    };
+
 
     // UTILS
     this.pickRandom = (array) => {
         let index = Math.floor(Math.random() * array.length)
         return array[index]
     }
+// End of AnimationManager function
 }

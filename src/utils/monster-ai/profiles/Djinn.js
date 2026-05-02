@@ -1,3 +1,7 @@
+// ⚠️  AGENTS: Before writing any attack logic, read the "Required Patterns for All AI Profiles"
+//    section at the top of CHANGELOG.md — pendingAttack guard, attacking flag, resolve(null)
+//    fallbacks, and attack-in-processMove are all mandatory.
+
 export function Djinn(data, utilMethods, animationManager, overlayManager){
     this.MAX_DEPTH = data.MAX_DEPTH;
     this.MAX_LANES = data.MAX_LANES;
@@ -13,21 +17,32 @@ export function Djinn(data, utilMethods, animationManager, overlayManager){
     this.missesTarget = utilMethods.missesTarget;
     this.hitsTarget = utilMethods.hitsTarget;
  
+    this.initialize = (caller) => {
+        caller.behaviorSequence = 'brawler';
+    }
+
     this.acquireTarget = (caller, combatants) => {
         if(caller.targetId){
-
-            const target = combatants[caller.targetId]
+            const target = combatants[caller.targetId];
+            if (target && target.isVCT) {
+                caller.targetId = null;
+                caller.pendingAttack = null;
+                return;
+            }
             console.log('already has target, just choose new attack');
             caller.pendingAttack = this.chooseAttackType(caller, target);
-            return
+            return;
         }
-        const liveEnemies = Object.values(combatants).filter(e=>!e.dead && (!e.isMonster && !e.isMinion));
+        const liveEnemies = Object.values(combatants).filter(e=>!e.dead && (!e.isMonster && !e.isMinion) && !e.isVCT);
         const sorted = liveEnemies.sort((a,b)=>b.depth - a.depth);
-        // console.log('djinn sorted targets: ', sorted);
         let target = sorted.length ? sorted[0] : null;
-        if(!target) return
+        if(!target) return;
+        if (target.isVCT) {
+            caller.targetId = null;
+            caller.pendingAttack = null;
+            return;
+        }
         if(Object.values(combatants).filter(e=>e.isMonster||e.isMinion).some(e=>e.targetId === target.targetId) && sorted.length > 1){
-            // console.log('SAME target! find new target');
             target = sorted[1]
         }
         caller.pendingAttack = this.chooseAttackType(caller, target);
@@ -38,16 +53,32 @@ export function Djinn(data, utilMethods, animationManager, overlayManager){
             debugger;
             throw new Error('moveCooldown must be defined for all units');
         }
-        if(!caller.pendingAttack){
-            return
-        }
-        // console.log('Djinn energy');
-        caller.energy+=5
-        data.methods.moveTowardsCloseEnemyTarget(caller, combatants)
-        // After moving, update facing to face target if one exists
-        if (caller.targetId && combatants[caller.targetId]) {
-            const target = combatants[caller.targetId];
-            caller.facing = (caller.coordinates.x <= target.coordinates.x) ? 'right' : 'left';
+
+        switch (caller.behaviorSequence) {
+            case 'brawler': {
+                if(!caller.pendingAttack) break;
+                // console.log('Djinn energy');
+                caller.energy += 5;
+                data.methods.moveTowardsCloseEnemyTarget(caller, combatants);
+                // After moving, update facing to face target if one exists
+                if (caller.targetId && combatants[caller.targetId]) {
+                    const t = combatants[caller.targetId];
+                    caller.facing = (caller.coordinates.x <= t.coordinates.x) ? 'right' : 'left';
+                }
+
+                // Attack trigger
+                const era = caller.eras ? caller.eras[caller.eraIndex] : null;
+                if (era && !era.attacked && !caller.onGeneralAttackCooldown && !caller.attacking) {
+                    const target = combatants[caller.targetId];
+                    if (target && !target.dead && !target.isVCT) {
+                        era.attacked = true;
+                        this.initiateAttack(caller, combatants);
+                    }
+                }
+                break;
+            }
+            default:
+                break;
         }
     }
     this.triggerVoidLance = (coords) => {
@@ -73,22 +104,27 @@ export function Djinn(data, utilMethods, animationManager, overlayManager){
         // // debugger
     }
     this.initiateAttack = (caller, combatants) => {
+        if (caller.attacking) return;
         caller.attacking = true;
-        const target = combatants[caller.targetId];
-        const distanceToTarget = data.methods.getDistanceToTarget(caller, target),
-        laneDiff = data.methods.getLaneDifferenceToTarget(caller, target);
-        if(caller.energy > 50){
-            caller.energy -= 80;
-            this.triggerVoidLance(target.coordinates);
-            this.hitsTarget(caller)
-            
-        } else if(distanceToTarget > 0){
-            this.goBehindAndAttack(caller, target)
-        } else if(distanceToTarget === 1 && laneDiff === 0){
-            this.hitsTarget(caller)
-        } else {
-            caller.energy += 20
-            this.missesTarget(caller);
+        try {
+            const target = combatants[caller.targetId];
+            if (!target || target.dead || target.isVCT) return;
+            const distanceToTarget = data.methods.getDistanceToTarget(caller, target),
+            laneDiff = data.methods.getLaneDifferenceToTarget(caller, target);
+            if(caller.energy > 50){
+                caller.energy -= 80;
+                this.triggerVoidLance(target.coordinates);
+                this.hitsTarget(caller)
+            } else if(distanceToTarget > 0){
+                this.goBehindAndAttack(caller, target)
+            } else if(distanceToTarget === 1 && laneDiff === 0){
+                this.hitsTarget(caller)
+            } else {
+                caller.energy += 20
+                this.missesTarget(caller);
+            }
+        } finally {
+            caller.attacking = false;
         }
     }
     this.chooseAttackType = (caller, target) => {
@@ -104,14 +140,7 @@ export function Djinn(data, utilMethods, animationManager, overlayManager){
         }
 
         if(available.length === 0){
-            // choose the attack that is closest to 100 percent
-            caller.attacks.filter(e=>e.range === 'medium' || e.range === 'far').forEach(e=>{
-                if(e.cooldown_position > percentCooledDown){
-                    percentCooledDown = e.cooldown_position;
-                    chosenAttack = e;
-                }
-            })
-            attack = chosenAttack;
+            return null;
         } else {
             let nearestRangeAttacks = available.filter(e=>(e.range === 'far' || e.range === 'medium') && e.cooldown_position > 25)
             if(nearestRangeAttacks.length > 0){

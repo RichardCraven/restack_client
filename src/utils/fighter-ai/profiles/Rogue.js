@@ -1,9 +1,21 @@
-export function Rogue(data, animationManager){
+// ⚠️  AGENTS: Before writing any attack logic, read the "Required Patterns for All AI Profiles"
+//    section at the top of CHANGELOG.md — pendingAttack guard, attacking flag, resolve(null)
+//    fallbacks, and attack-in-processMove are all mandatory.
+
+export function Rogue(data, utilMethods, animationManager){
     this.MAX_DEPTH = data.MAX_DEPTH;
     this.MAX_LANES = data.MAX_LANES;
     this.INTERVAL_TIME = data.INTERVAL_TIME
-    
+
     this.animationManager = animationManager;
+    this.hitsTarget = (utilMethods && typeof utilMethods.hitsTarget === 'function') ? utilMethods.hitsTarget : null;
+    this.missesTarget = (utilMethods && typeof utilMethods.missesTarget === 'function') ? utilMethods.missesTarget : null;
+    this.hitsCombatant = (utilMethods && typeof utilMethods.hitsCombatant === 'function') ? utilMethods.hitsCombatant : null;
+    this.kickoffAttackCooldown = (utilMethods && typeof utilMethods.kickoffAttackCooldown === 'function') ? utilMethods.kickoffAttackCooldown : null;
+
+    this.initialize = (caller) => {
+        caller.behaviorSequence = 'brawler';
+    };
 
     this.isFriendly = (e) => {
         return !e.isMonster && !e.isMinion;
@@ -14,14 +26,14 @@ export function Rogue(data, animationManager){
     }
 
     this.isEnemy = (e) => {
-        return e.isMonster|| e.isMinion;
+        return (e.isMonster || e.isMinion);
     }
 
     this.enemies = (combatants) => {
         return Object.values(combatants).filter(e=>this.isEnemy(e));
     }
     this.acquireTarget = (caller, combatants) => {
-        const liveEnemies = Object.values(combatants).filter(e=>!e.dead && (e.isMonster || e.isMinion));
+        const liveEnemies = Object.values(combatants).filter(e => !e.dead && (e.isMonster || e.isMinion) && !e.isVCT);
         const sorted = liveEnemies.sort((a,b)=>b.depth - a.depth);
         let target = sorted.length ? sorted[0] : null;
         if(!target) return
@@ -47,14 +59,7 @@ export function Rogue(data, animationManager){
         }
 
         if(available.length === 0){
-            // choose the attack that is closest to 100 percent
-            caller.attacks.filter(e=>e.range === 'medium' || e.range === 'far').forEach(e=>{
-                if(e.cooldown_position > percentCooledDown){
-                    percentCooledDown = e.cooldown_position;
-                    chosenAttack = e;
-                }
-            })
-            attack = chosenAttack;
+            return null;
         } else {
             let nearestRangeAttacks = available.filter(e=>(e.range === 'far' || e.range === 'medium') && e.cooldown_position > 25)
             if(nearestRangeAttacks.length > 0){
@@ -80,8 +85,8 @@ export function Rogue(data, animationManager){
             throw new Error('moveCooldown must be defined for all units');
         }
         const enemyTarget = Object.values(combatants).find(e=>e.id === caller.targetId)
-        const distanceToTarget = data.methods.getDistanceToTarget(caller, enemyTarget),
-        laneDiff = data.methods.getLaneDifferenceToTarget(caller, enemyTarget)
+        const distanceToTarget = data.methods.getDistanceToTarget(caller, enemyTarget), // eslint-disable-line no-unused-vars
+        laneDiff = data.methods.getLaneDifferenceToTarget(caller, enemyTarget) // eslint-disable-line no-unused-vars
 
         // console.log('Rogue process move, pending attack: ', caller.pendingAttack);
         if(!caller.pendingAttack){
@@ -104,6 +109,25 @@ export function Rogue(data, animationManager){
 
         caller.coordinates.y = caller.position
         caller.coordinates.x = caller.depth
+
+        // Attack trigger
+        {
+            const era = caller.eras ? caller.eras[caller.eraIndex] : null;
+            if (era && !era.attacked && !caller.onGeneralAttackCooldown && !caller.attacking && caller.pendingAttack) {
+                const atkTarget = combatants[caller.targetId];
+                if (atkTarget && !atkTarget.dead && !atkTarget.isVCT) {
+                    const dx = Math.abs(caller.coordinates.x - atkTarget.coordinates.x);
+                    const dy = Math.abs(caller.coordinates.y - atkTarget.coordinates.y);
+                    const dist = dx + dy;
+                    const atkRange = caller.pendingAttack.range || 'far';
+                    const inRange = atkRange === 'close' ? dist === 1 : atkRange === 'medium' ? dist <= 3 : dist <= 6;
+                    if (inRange) {
+                        era.attacked = true;
+                        caller.attack();
+                    }
+                }
+            }
+        }
     }
     this.triggerNarrowBeamAttack = (callerCoords, targetCoords) => {
         const targetTileId = this.animationManager.getTileIdByCoords(targetCoords)
@@ -114,29 +138,29 @@ export function Rogue(data, animationManager){
             }
         })
     }
-    this.initiateAttack = async (caller, combatants, hitsTarget, missesTarget) => {
-        console.log('rogue initiate attack');
-        if(!caller) return
-            const target = combatants[caller.targetId];
-        if(!target) return
-            console.log('rogue initiating attack', caller.pendingAttack.name);
-            const distanceToTarget = data.methods.getDistanceToTarget(caller, target),
-            laneDiff = data.methods.getLaneDifferenceToTarget(caller, target);
+    this.initiateAttack = async (caller, manualAttack, combatants) => { // eslint-disable-line no-unused-vars
+        if (!caller) return;
+        caller.attacking = true;
+        const target = combatants[caller.targetId];
+        if (!target) { caller.attacking = false; return; }
+        if (!caller.pendingAttack) { caller.attacking = false; return; }
+        const laneDiff = data.methods.getLaneDifferenceToTarget(caller, target);
 
-            switch(caller.pendingAttack.name){
-                case 'fire arrow':
-                    if(laneDiff === 0){
-                        await this.triggerNarrowBeamAttack(caller.coordinates, target.coordinates)
-                        hitsTarget(caller)
-                    } else {
-                        missesTarget(caller);
-                    }
+        switch (caller.pendingAttack.name) {
+            case 'fire arrow':
+                if (laneDiff === 0) {
+                    await this.triggerNarrowBeamAttack(caller.coordinates, target.coordinates);
+                    if (typeof this.hitsCombatant === 'function') this.hitsCombatant(caller, target);
+                } else {
+                    if (typeof this.missesTarget === 'function') this.missesTarget(caller);
+                }
                 break;
-                default:
-                    console.log('NO ATTACK!!!!');
-                    debugger
-                    hitsTarget(caller);
-                    break;
-            }
+            default:
+                if (typeof this.hitsCombatant === 'function') this.hitsCombatant(caller, target);
+                else if (typeof this.hitsTarget === 'function') this.hitsTarget(caller);
+                break;
+        }
+        if (typeof this.kickoffAttackCooldown === 'function') this.kickoffAttackCooldown(caller);
+        caller.attacking = false;
     }
 }

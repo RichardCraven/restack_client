@@ -3,9 +3,9 @@ import '@coreui/coreui/dist/css/coreui.min.css'
 import '../../styles/dungeon-board.scss'
 import '../../styles/map-maker.scss'
 import Tile from '../../components/tile'
-import { CDropdown, CDropdownToggle, CDropdownMenu, CDropdownItem, CCollapse} from '@coreui/react';
-import  CIcon  from '@coreui/icons-react'
-import { cilCaretRight } from '@coreui/icons';
+// import { CDropdown, CDropdownToggle, CDropdownMenu, CDropdownItem, CCollapse} from '@coreui/react';
+// import  CIcon  from '@coreui/icons-react'
+// import { cilCaretRight } from '@coreui/icons';
 import '../../styles/dungeon-board.scss'
 import '../../styles/map-maker.scss'
 
@@ -30,11 +30,18 @@ class PlaneView extends React.Component {
     // }
     miniboardClicked(event, board, boardIndex){
         console.log('miniboard clicked', event.detail);
+        if(!board || !board.id){
+            if(this.props.selectedView !== 'board'){
+                this.props.setViewState('board');
+            }
+            this.props.clearLoadedBoard();
+            return;
+        }
         if(this.props.adjacencyHoverIdx === boardIndex && board.tiles){
             this.props.adjacencyFilter(board, boardIndex)
         }
         if (event.detail === 2) {
-            if(board.tiles){
+            if(board.id && board.tiles){
                 this.props.loadBoard(board)
             }
         }

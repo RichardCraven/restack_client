@@ -72,3 +72,8 @@
     .modal-content { width: 100%; }
   }
 }
+
+/* When quests is opened on top of the camp popup, raise it above camp's backdrop */
+.quests-above-camp {
+  z-index: 1100 !important;
+}

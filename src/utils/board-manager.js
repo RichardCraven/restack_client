@@ -1,6 +1,38 @@
 import { getMeta, storeMeta } from './session-handler';
 import { MonsterManager } from './monster-manager';
 
+// Gate configuration: maps closed gate types to their requirements and opened versions
+const GATE_CONFIG = {
+    // new keyed gates (opened → archway)
+    'minor_gate':           { requires: 'minor_key',           opened: 'archway', keyName: 'minor key' },
+    'major_gate':           { requires: 'major_key',           opened: 'archway', keyName: 'major key' },
+    'treasury_gate':        { requires: 'treasury_key',        opened: 'archway', keyName: 'treasury key' },
+    'imperial_gate':        { requires: 'imperial_key',        opened: 'archway', keyName: 'imperial key' },
+    'necrotic_gate':        { requires: 'necrotic_key',        opened: 'archway', keyName: 'necrotic key' },
+    'master_necrotic_gate': { requires: 'necrotic_master_key', opened: 'archway', keyName: 'necrotic master key' },
+    'dimensional_gate':     { requires: 'dimensional_key',     opened: 'archway', keyName: 'dimensional key' },
+    'cyan_gate':            { requires: 'cyan_key',            opened: 'archway', keyName: 'cyan key' },
+    'violet_gate':          { requires: 'violet_key',          opened: 'archway', keyName: 'violet key' },
+    'rubicund_gate':        { requires: 'rubicund_key',        opened: 'archway', keyName: 'rubicund key' },
+    // legacy gates (kept for backward compatibility with existing boards)
+    'dungeon_door': { requires: 'minor_key', opened: 'archway', keyName: 'minor key' },
+    'gryphon_gate': { requires: 'major_key', opened: 'gryphon_gate_opened', keyName: 'major key' },
+    'bat_gate':     { requires: 'major_key', opened: 'bat_gate_opened', keyName: 'major key' },
+    'evil_gate':    { requires: 'ornate_key', opened: 'evil_gate_opened', keyName: 'ornate key' },
+    'archway': { requires: null, opened: null, keyName: null } // already open, passable
+};
+
+// List of all closed gate types that block movement
+const CLOSED_GATE_TYPES = [
+    'minor_gate', 'major_gate', 'treasury_gate', 'imperial_gate',
+    'necrotic_gate', 'master_necrotic_gate', 'dimensional_gate',
+    'cyan_gate', 'violet_gate', 'rubicund_gate',
+    'dungeon_door', 'gryphon_gate', 'bat_gate', 'evil_gate'
+];
+
+// List of all opened gate types and archway that are passable
+const OPEN_GATE_TYPES = ['archway', 'gryphon_gate_opened', 'bat_gate_opened', 'evil_gate_opened', 'dungeon_door_opened'];
+
 export function BoardManager(){
     // By default, large-monster blocking (marking the tile above a large monster
     // as impassable) is disabled for the dungeon board. It was intended for
@@ -89,7 +121,7 @@ export function BoardManager(){
     this.availableItems = [];
     // List of monster subtypes that should occupy two vertical tiles (boss portraits)
     this.largeMonsterKeys = [
-        'dragon', 'beholder', 'ogre', 'sphinx', 'manticore', 'wyvern', 'wyvern_alt'
+        'dragon', 'beholder', 'ogre', 'sphinx', 'manticore', 'wyvern', 'wyvern_alt', 'mummy'
     ];
     // Known monster keys from the comprehensive MonsterManager. Use this
     // in cleanup to detect monster keys that may not be present in the
@@ -115,6 +147,9 @@ export function BoardManager(){
     this.establishAddCurrencyToInventoryCallback = (callback) => {
         this.addCurrencyToInventory = callback
     }
+    this.establishAddFoodToSuppliesCallback = (callback) => {
+        this.addFoodToSupplies = callback
+    }
     this.establishUpdateDungeonCallback = (callback) => {
         this.updateDungeon = callback;
     }
@@ -138,6 +173,9 @@ export function BoardManager(){
     }
     this.establishRitualEncounterCallback = (callback) => {
         this.triggerRitualEncounter = callback
+    }
+    this.establishNarrativeEncounterCallback = (callback) => {
+        this.triggerNarrativeEncounter = callback
     }
     this.establishSetMonsterCallback = (callback) => {
         this.setMonster = callback;
@@ -184,8 +222,11 @@ export function BoardManager(){
     this.getContainsType = (contains) => {
         if (!contains && contains !== null) return null;
         if (typeof contains === 'object' && contains !== null) {
-            // special-case older 'gate' -> 'minor_gate' naming used elsewhere
-            if (contains.type === 'gate' && contains.subtype === 'minor') return 'minor_gate';
+            // For gates, return the subtype (dungeon_door, gryphon_gate, etc.) as the type
+            // This allows gate-specific handling in getInteraction
+            if (contains.type === 'gate' && contains.subtype) {
+                return contains.subtype;
+            }
             return contains.type;
         }
         // string legacy format
@@ -403,7 +444,7 @@ export function BoardManager(){
         // Make sure templateBoard is normalized for legacy templates
         try { this.normalizeBoardTiles(templateBoard); } catch (e) {}
         try {
-            const tplChanged = this.cleanupMalformedMonsterTiles(templateBoard);
+            this.cleanupMalformedMonsterTiles(templateBoard);
         } catch (e) {}
     
         if (!templateBoard) {
@@ -521,7 +562,7 @@ export function BoardManager(){
         let templateBoard = foundTemplatePlane && foundTemplatePlane.miniboards && foundTemplatePlane.miniboards[this.playerTile.boardIndex]
         // Normalize the templateBoard for legacy shapes
         try { this.normalizeBoardTiles(templateBoard); } catch (e) {}
-        try { const tplChanged = this.cleanupMalformedMonsterTiles(templateBoard); } catch (e) {}
+        try { this.cleanupMalformedMonsterTiles(templateBoard); } catch (e) {}
 
         if (!templateBoard) {
             try { console.warn('respawnItems: no templateBoard found for current boardIndex', this.playerTile && this.playerTile.boardIndex); } catch (e) {}
@@ -821,6 +862,18 @@ export function BoardManager(){
 
         const type = this.getContainsType(destinationTile.contains);
         const subtype = this.getContainsSubtype(destinationTile.contains);
+        
+        // Check if this is a closed gate that requires a key
+        if (CLOSED_GATE_TYPES.includes(type)) {
+            this.handleGate(destinationTile, type);
+            return 'impassable';
+        }
+        
+        // Open gates and archways are passable
+        if (OPEN_GATE_TYPES.includes(type)) {
+            return null; // passable
+        }
+        
         switch(type){
             case 'door':
                 return 'door';
@@ -835,9 +888,6 @@ export function BoardManager(){
                 // initiate the encounter. That ordering ensures the player
                 // visibly occupies the tile before the battle UI appears.
                 return 'monster';
-            case 'minor_gate':
-                this.handleGate(destinationTile);
-                return 'impassable';
             case 'item':
                 console.log('picked up item');
                 // destinationTile.contains may be object; callers expect string contains
@@ -850,8 +900,11 @@ export function BoardManager(){
                 this.removeTileFromBoard(destinationTile)
                 return 'item';
             case 'spell':
+                this.removeTileFromBoard(destinationTile)
                 this.triggerRitualEncounter();
             break;
+            case 'narrative':
+                return 'narrative';
             case 'gold':
                 let factor, num = Math.random();
                 if(num > .85){
@@ -870,6 +923,12 @@ export function BoardManager(){
                 })
                 this.removeTileFromBoard(destinationTile)
             break;
+            case 'food':
+                if (this.addFoodToSupplies) {
+                    this.addFoodToSupplies();
+                }
+                this.removeTileFromBoard(destinationTile)
+            break;
             case 'treasure':
                 console.log('picked up treasure');
                 let treasureFactor, treasureNum = Math.random();
@@ -885,7 +944,7 @@ export function BoardManager(){
                 let treasureItems;
                 switch (treasureFactor){
                     case 4:
-                        treasureItems = ['sayan_amulet', 'solomon_mask', 'major_key', 'nukta_charm', 'scepter', 'grand_health_potion']
+                        treasureItems = ['sayan_amulet', 'twilight_mask', 'major_key', 'nukta_charm', 'scepter', 'grand_health_potion']
                         this.addTreasureToInventory({
                             item: this.pickRandom(treasureItems),
                             currency: {
@@ -915,7 +974,7 @@ export function BoardManager(){
                         })
                     break;
                     case 1:
-                        treasureItems = ['seeing_shield', 'court_mask', 'mardi_mask', 'basic_helm', 'axe', 'minor_health_potion']
+                        treasureItems = ['infantry_shield', 'crimson_mask', 'seraphic_mask', 'basic_helm', 'axe', 'minor_health_potion']
                         this.addTreasureToInventory({
                             item: this.pickRandom(treasureItems),
                             currency: {
@@ -1000,42 +1059,76 @@ export function BoardManager(){
         // Ensure UI refresh in case handleFogOfWar did not run for any reason
         try { if (this.refreshTiles) this.refreshTiles(); } catch (e) {}
     }
-    this.handleGate = (tile) => {
+    this.handleGate = (tile, gateType) => {
         if(!this.activeInteractionTile) this.activeInteractionTile = tile;
-        if(this.pending && this.pending.type === 'minor_gate'){
-            this.messaging('This gate requires a minor key');
+        
+        // Get gate configuration
+        const config = GATE_CONFIG[gateType];
+        if (!config) {
+            console.warn('Unknown gate type:', gateType);
+            return;
+        }
+        
+        // If gate doesn't require a key (archway), it's already passable
+        if (!config.requires) {
+            return;
+        }
+        
+        const keyName = config.keyName;
+        const requiredKeySubtype = config.requires;
+        const openedVersion = config.opened;
+        
+        if(this.pending && this.pending.type === gateType){
+            this.messaging(`This gate requires a ${keyName}`);
             let hasKey = false, key;
-            if(this.getCurrentInventory().find(e=>e.name==='minor key')){
+            
+            // Check for key by name or subtype
+            const inventory = this.getCurrentInventory();
+            key = inventory.find(e => 
+                e.name === keyName || 
+                e.subtype === requiredKeySubtype || 
+                e.name === requiredKeySubtype ||
+                (e.name && e.name.replace(/_/g, ' ') === keyName)
+            );
+            
+            if(key){
                 hasKey = true;
-                key = this.getCurrentInventory().find(e=>e.name==='minor key');
             }
+            
             if(hasKey){
-                this.messaging('Minor gate rattles open')
-                tile.contains = 'minor_gate_open'
-                tile.image = 'minor_gate_open'
+                this.messaging('The gate rattles open')
+                tile.contains = openedVersion;
+                tile.image = openedVersion;
                 this.activeInteractionTile = tile;
-                this.broadcastUseConsumableFromInventory(key)
+                this.broadcastUseConsumableFromInventory(key);
                 this.refreshTiles();
                 this.tiles[tile.id] = tile;
+                
+                // Persist the opened gate to dungeon structure
                 if(this.currentOrientation === 'F'){
                     this.dungeon.levels.find(e=>e.id === this.currentLevel.id).front.miniboards.find(b=>b.id === this.currentBoard.id).tiles[tile.id].contains = tile.contains;
+                    this.dungeon.levels.find(e=>e.id === this.currentLevel.id).front.miniboards.find(b=>b.id === this.currentBoard.id).tiles[tile.id].image = tile.image;
                 } else {
                     this.dungeon.levels.find(e=>e.id === this.currentLevel.id).back.miniboards.find(b=>b.id === this.currentBoard.id).tiles[tile.id].contains = tile.contains;
+                    this.dungeon.levels.find(e=>e.id === this.currentLevel.id).back.miniboards.find(b=>b.id === this.currentBoard.id).tiles[tile.id].image = tile.image;
                 }
                 this.updateDungeon(this.dungeon);
+                
+                // Clear pending state
+                this.pending = null;
+                if (this.setPending) this.setPending(null);
             } else {
                 tile.color = 'lightyellow';
             }
         } else if(this.pending === null){
             tile.color = 'lightyellow'
-            this.messaging('This gate requires a minor key')
+            this.messaging(`This gate requires a ${keyName}`)
             let p = {
-                type: 'minor_gate'
+                type: gateType
             }
             this.pending = p;
             this.setPending(p)
         }
-
     }
     this.handlePassingThroughDoor = () => {
         if(this.currentOrientation === 'F'){
@@ -1164,11 +1257,49 @@ export function BoardManager(){
 
 
     }
+    // Check if movement to destination coordinates would be blocked
+    // Returns true if blocked, false if movement is allowed
+    this.isMovementBlocked = (destinationCoords) => {
+        try {
+            const destIndex = this.getIndexFromCoordinates(destinationCoords);
+            const destTile = this.tiles[destIndex];
+            if (!destTile) return true;
+            
+            const type = this.getContainsType(destTile.contains);
+            
+            // Check for void
+            if (type === 'void') return true;
+            
+            // Check for large monster blocking
+            if (destTile.blockedByLargeMonster) return true;
+            
+            // Check for closed gates that require keys
+            if (CLOSED_GATE_TYPES.includes(type)) {
+                const config = GATE_CONFIG[type];
+                if (config && config.requires) {
+                    // Check if player has the required key
+                    const inventory = this.getCurrentInventory();
+                    const hasKey = inventory.some(e => 
+                        e.name === config.keyName || 
+                        e.subtype === config.requires || 
+                        e.name === config.requires ||
+                        (e.name && e.name.replace(/_/g, ' ') === config.keyName)
+                    );
+                    if (!hasKey) return true; // Blocked - no key
+                }
+            }
+            
+            return false; // Movement allowed
+        } catch (e) {
+            return false; // On error, allow movement (let move() handle it)
+        }
+    }
     this.move = (destinationCoords, direction) => {
         const tile = this.tiles[this.getIndexFromCoordinates(this.playerTile.location)];
-        const destinationIndex = this.getIndexFromCoordinates(destinationCoords),
-        destinationTile = this.tiles[destinationIndex];
-                if(this.getContainsType(destinationTile.contains) === 'void') return
+        const destinationIndex = this.getIndexFromCoordinates(destinationCoords);
+        const destinationTile = this.tiles[destinationIndex];
+        if (!destinationTile || typeof destinationTile.contains === 'undefined') return;
+        if (this.getContainsType(destinationTile.contains) === 'void') return;
                 // Prevent movement into tiles that are logically occupied by a large monster
                 try {
                     if (destinationTile && destinationTile.blockedByLargeMonster) {
@@ -1218,9 +1349,11 @@ export function BoardManager(){
         }
         if(interaction === 'way_up'){
             this.handlePassingThroughWayUp();
+            return; // level change rebuilds tiles/terrain; skip the rest of move()
         }
         if(interaction === 'way_down'){
             this.handlePassingThroughWayDown();
+            return; // level change rebuilds tiles/terrain; skip the rest of move()
         }
         // If the destination contained a monster, initiate the encounter AFTER
         // the player has been moved onto the tile so the UI/game state shows
@@ -1232,12 +1365,20 @@ export function BoardManager(){
             } catch (e) { /* best-effort */ }
             try { this.triggerMonsterBattle(true, destinationTile.id); } catch (e) { /* best-effort */ }
         }
-    this.overlayTiles.forEach(t=>t.image = null)
-    let meta = {};
-    try { meta = getMeta() || {}; } catch (e) { meta = {}; }
-    const playerImage = (meta && meta.camping) ? 'camp' : 'avatar';
-    this.overlayTiles[this.getIndexFromCoordinates(this.playerTile.location)].image = playerImage
+        this.overlayTiles.forEach(t=>t.image = null)
+        let meta = {};
+        try { meta = getMeta() || {}; } catch (e) { meta = {}; }
+        const playerImage = (meta && meta.camping) ? 'camp' : 'avatar';
+        this.overlayTiles[this.getIndexFromCoordinates(this.playerTile.location)].image = playerImage
         this.checkAdjacency();
+
+        if (interaction === 'narrative') {
+            try {
+                if (this.triggerNarrativeEncounter) {
+                    this.triggerNarrativeEncounter(destinationTile);
+                }
+            } catch (e) {}
+        }
     }
     this.moveUp = () => {
         if(this.playerTile.location[0] === 15){
@@ -1301,6 +1442,8 @@ export function BoardManager(){
                 return 'lantern'
             case 'magic':
                 return 'spell'
+            case 'narrative':
+                return 'narrative'
             case 'stairs':
                 return 'stairs_down'
             case 'door':

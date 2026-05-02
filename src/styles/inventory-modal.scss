@@ -116,8 +116,97 @@
 }
 .inventory-descriptor-panel{
     width: 100%;
-    height: 50px;
-    border: 1px solid lightgrey;
+    height: 90px;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 6px;
+    background: rgba(0,0,0,0.25);
+    box-sizing: border-box;
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+
+    .idp-placeholder {
+        color: rgba(255,255,255,0.3);
+        font-size: 0.8em;
+        font-style: italic;
+    }
+
+    .idp-content {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        width: 100%;
+    }
+
+    .idp-icon {
+        flex: 0 0 48px;
+        width: 48px;
+        height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0,0,0,0.3);
+        border-radius: 4px;
+        border: 1px solid rgba(255,255,255,0.1);
+        img {
+            width: 36px;
+            height: 36px;
+            object-fit: contain;
+            image-rendering: pixelated;
+        }
+    }
+
+    .idp-details {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        min-width: 0;
+        min-height: 56px;
+    }
+
+    .idp-name {
+        font-size: 0.95em;
+        font-weight: 600;
+        color: rgba(255,255,255,0.9);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .idp-meta {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+    }
+
+    .idp-tag {
+        font-size: 0.7em;
+        padding: 1px 6px;
+        border-radius: 3px;
+        text-transform: capitalize;
+        font-weight: 500;
+    }
+
+    .idp-subtype {
+        background: rgba(100,140,255,0.25);
+        color: rgba(160,190,255,0.9);
+        border: 1px solid rgba(100,140,255,0.3);
+    }
+
+    .idp-range {
+        background: rgba(255,180,80,0.2);
+        color: rgba(255,200,120,0.9);
+        border: 1px solid rgba(255,180,80,0.25);
+    }
+
+    .idp-description {
+        font-size: 0.75em;
+        color: rgba(255,255,255,0.55);
+        line-height: 1.4;
+        margin-top: 2px;
+    }
 }
 .inventory-popup .inventory-strip .strip-item,
 .inventory-modal .inventory-strip .strip-item{
@@ -172,11 +261,18 @@
 /* New bottom-left equip slot: positioned near the lower-left torso */
 .inventory-popup .crew-body .slot-pet,
 .inventory-modal .crew-body .slot-pet{
-    left: 12%;
+    left: 5%;
     bottom: 8%;
     transform: translate(0, 0);
     width: 55px;
     height: 55px;
+}
+
+.inventory-popup .crew-body .slot-boots,
+.inventory-modal .crew-body .slot-boots{
+    left: 50%;
+    top: 82%;
+    transform: translate(-50%, -50%);
 }
 
 /* small circular pet/paw overlay shown on pet slots */
@@ -279,11 +375,24 @@
 .inventory-modal .crew-body{
     width: 210px;
     height: 350px;
-    background-size: contain;
-    background-repeat: no-repeat;
-    background-position: center;
     margin-top: 8px;
     flex: 0 0 auto;
+    position: relative;
+}
+.inventory-popup .crew-body .crew-body-image,
+.inventory-modal .crew-body .crew-body-image{
+    position: absolute;
+    inset: 0;
+    background-size: 130%;
+    background-repeat: no-repeat;
+    background-position: center;
+    opacity: 0.5;
+    z-index: 0;
+    pointer-events: none;
+}
+.inventory-popup .crew-body .equip-slot,
+.inventory-modal .crew-body .equip-slot{
+    z-index: 1;
 }
 
 /* Hover message positioning for strip items (match right-panel behavior) */

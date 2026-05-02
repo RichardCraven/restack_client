@@ -26,6 +26,7 @@ import fist_punch from '../assets/icons/combat-icons/__fist-punch.png';
 import monster from '../assets/icons/monster.png'
 import avatar from '../assets/icons/avatar.png'
 import avatar_white from '../assets/icons/avatar_white.png'
+import narrative from '../assets/icons/narrative.png'
 import beholder from '../assets/portraits/monsters/beholder.png'
 import black_banshee from '../assets/icons/monsters/black_banshee.png'
 import black_djinn from '../assets/icons/monsters/black_djinn.png'
@@ -78,14 +79,17 @@ import kabuki_demon_minion from '../assets/portraits/monsters/variations/kabuki_
 
 import arrowUp from '../assets/graphics/arrow_up.png'
 import arrowDown from '../assets/graphics/arrow_down.png'
+import reaper_card_back from '../assets/graphics/card_duel/reaper_card_back.png'
+import card_game_background from '../assets/graphics/card_duel/card_game_background.png'
+import construct_icon from '../assets/graphics/card_duel/construct_icon.png'
+import sigil_icon from '../assets/graphics/card_duel/sigil_icon.png'
+import element_fire from '../assets/graphics/card_duel/element_fire.png'
+import element_water from '../assets/graphics/card_duel/element_water.png'
+import element_earth from '../assets/graphics/card_duel/element_earth.png'
 
 // ------------------------------------------------------------------------------------------------
 
 // items
-import evilai_amulet from '../assets/icons/items/amulets/evilai_amulet.png'
-import lundi_amulet from '../assets/icons/items/amulets/lundi_amulet.png'
-import nukta_amulet from '../assets/icons/items/amulets/nukta_amulet.png'
-import sayan_amulet from '../assets/icons/items/amulets/sayan_amulet.png'
 
 import beetle_charm from '../assets/icons/items/charms/beetle_charm.png'
 import demonskull_charm from '../assets/icons/items/charms/demonskull_charm.png'
@@ -95,30 +99,162 @@ import lundi_charm from '../assets/icons/items/charms/lundi_charm.png'
 import nukta_charm from '../assets/icons/items/charms/nukta_charm.png'
 import scarab_charm from '../assets/icons/items/charms/scarab_charm.png'
 
+// amulets
+import elasi_amulet from '../assets/icons/items/amulets/tier 1/Elasi amulet.png'
+import darkarrow_amulet from '../assets/icons/items/amulets/tier 1/Darkarrow amulet.png'
+import elemental_amulet from '../assets/icons/items/amulets/tier 1/Elemental amulet.png'
+import silver_amulet from '../assets/icons/items/amulets/tier 1/Silver amulet.png'
+import ruby_amulet from '../assets/icons/items/amulets/tier 1/Ruby amulet.png'
+import acorn_amulet from '../assets/icons/items/amulets/tier 1/Acorn amulet.png'
+import voodoo_amulet from '../assets/icons/items/amulets/tier 1/Voodoo amulet.png'
+import yaga_amulet from '../assets/icons/items/amulets/tier 1/Yaga amulet.png'
+import temprance_amulet from '../assets/icons/items/amulets/tier 1/Temprance amulet.png'
+import emerald_amulet from '../assets/icons/items/amulets/tier 1/Emerald amulet.png'
+import maconic_amulet from '../assets/icons/items/amulets/tier 1/Maconic amulet.png'
+
+// tier 2 amulets
+import warding_amulet from '../assets/icons/items/amulets/tier 2/Warding amuleet.png'
+import bloodvial_amulet from '../assets/icons/items/amulets/tier 2/Bloodvial amulet.png'
+import enchantress_amulet from '../assets/icons/items/amulets/tier 2/Enchantress amulet.png'
+import goldclaw_amulet from '../assets/icons/items/amulets/tier 2/Goldclaw amulet.png'
+import clerics_amulet from '../assets/icons/items/amulets/tier 2/Cleric\'s amulet.png'
+import queens_amulet from '../assets/icons/items/amulets/tier 2/Queens amulet.png'
+
+// tier 3 amulets
+import ice_amulet from '../assets/icons/items/amulets/tier 3/Ice amulet.png'
+import hypnosis_amulet from '../assets/icons/items/amulets/tier 3/Hypnosis amulet.png'
+import vampiric_amulet from '../assets/icons/items/amulets/tier 3/Vampiric amulet.png'
+import platinum_amulet from '../assets/icons/items/amulets/tier 3/Platinum amulet.png'
+import necrotic_amulet from '../assets/icons/items/amulets/tier 3/Necrotic amulet.png'
+
+// tier 4 amulets
+import voidward_amulet from '../assets/icons/items/amulets/tier 4/Voidward amulet.png'
+import celestial_amulet from '../assets/icons/items/amulets/tier 4/Celestial amulet.png'
+import dimensional_amulet from '../assets/icons/items/amulets/tier 4/Dimensional amulet.png'
+
 import crown from '../assets/icons/items/crown.png'
 import key from '../assets/icons/items/key.png'
 import potion from '../assets/icons/items/potion.png'
+import minor_health_potion from '../assets/icons/items/potions/minor health potion.png'
+import major_health_potion from '../assets/icons/items/potions/major health potion.png'
+import grand_health_potion from '../assets/icons/items/potions/grand health potion.png'
+import supreme_health_potion from '../assets/icons/items/potions/supreme health potion.png'
 import lantern from '../assets/icons/items/lantern.png'
 
-import seeing_shield from '../assets/icons/items/shields/seeing_shield.png'
-import basic_shield from '../assets/icons/items/shields/basic_shield.png'
+import tier_1_armor from '../assets/icons/items/tier 1 .png'
+import tier_1_magical from '../assets/icons/items/tier 1 magical.png'
+import tier_1_weapon from '../assets/icons/items/tier 1 weapon.png'
+import tier_2_armor from '../assets/icons/items/tier 2 armor.png'
+import tier_2_magical from '../assets/icons/items/tier 2 magical.png'
+import tier_2_weapon from '../assets/icons/items/tier 2 weapon.png'
+import tier_3_armor from '../assets/icons/items/tier 3 armor.png'
+import tier_3_magical from '../assets/icons/items/tier 3 magical.png'
+import tier_3_weapon from '../assets/icons/items/tier 3 weapon.png'
 
-import bundu_mask from '../assets/icons/items/headgear/bundu_mask.png';
-import court_mask from '../assets/icons/items/headgear/court_mask.png';
-import lundi_mask from '../assets/icons/items/headgear/bundu_mask.png';
-import mardi_mask from '../assets/icons/items/headgear/mardi_mask.png';
-import solomon_mask from '../assets/icons/items/headgear/solomon_mask.png';
-import zul_mask from '../assets/icons/items/headgear/zul_mask.png';
+import buckler from '../assets/icons/items/shields/buckler.png'
+import infantry_shield from '../assets/icons/items/shields/infantry shield.png'
+import cold_steel_shield from '../assets/icons/items/shields/cold steel shield.png'
+import banded_steel_shield from '../assets/icons/items/shields/banded steel shield.png'
+import crusaders_shield from "../assets/icons/items/shields/crusader's shield.png"
+import dawnguard from '../assets/icons/items/shields/dawnguard.png'
+import twilight_screen from '../assets/icons/items/shields/twilight screen.png'
+import revenants_shield from "../assets/icons/items/shields/revenant's shield.png"
+import aegis_bulwark from '../assets/icons/items/shields/aegis bulwark.png'
+
+import travelers_boots from "../assets/icons/items/boots/traveler's boots.png"
+import wayfinders_boots from "../assets/icons/items/boots/wayfinder's boots.png"
+import oily_boots from '../assets/icons/items/boots/oily boots.png'
+import highwaymans_boots from "../assets/icons/items/boots/highwayman's boots.png"
+import voyagers_boots from "../assets/icons/items/boots/voyager's boots.png"
+import northerners_boots from "../assets/icons/items/boots/northerner's boots.png"
+import midas_boots from '../assets/icons/items/boots/Midas boots.png'
+import sentinels_boots from "../assets/icons/items/boots/sentinel's boots.png"
+import imperial_boots from '../assets/icons/items/boots/imperial boots.png'
+import mariners_boots from "../assets/icons/items/boots/mariner's boots.png"
+import magicians_boots from "../assets/icons/items/boots/magician's boots.png"
+import sorcerers_boots from "../assets/icons/items/boots/sorcerer's boots.png"
+import shadow_boots from '../assets/icons/items/boots/shadow boots.png'
+import twilight_boots from '../assets/icons/items/boots/twilight boots.png'
+import moonstone_boots from '../assets/icons/items/boots/moonstone boots.png'
+import eldritch_boots from '../assets/icons/items/boots/eldritch boots.png'
+import glimmering_boots from '../assets/icons/items/boots/glimmering boots.png'
+import princes_boots from "../assets/icons/items/boots/prince's boots.png"
+import lords_boots from "../assets/icons/items/boots/lord's boots.png"
+import golems_boots from "../assets/icons/items/boots/golem's boots.png"
+import darklings_boots from "../assets/icons/items/boots/darkling's boots.png"
+import ornate_boots from '../assets/icons/items/boots/ornate boots.png'
+import rainmans_boots from "../assets/icons/items/boots/rainman's boots.png"
+
+import crimson_mask from '../assets/icons/items/helms/masks/crimson mask.png';
+import eldritch_mask from '../assets/icons/items/helms/masks/eldritch mask.png';
+import entropic_mask from '../assets/icons/items/helms/masks/entropic mask.png';
+import necrotic_mask from '../assets/icons/items/helms/masks/necrotic mask.png';
+import paradox_mask from '../assets/icons/items/helms/masks/paradox mask.png';
+import seraphic_mask from '../assets/icons/items/helms/masks/seraphic mask.png';
+import shadow_mask from '../assets/icons/items/helms/masks/shadow mask.png';
+import twilight_mask from '../assets/icons/items/helms/masks/twilight mask.png';
 
 import basic_helm from '../assets/icons/items/headgear/basic_helm.png';
 import knight_helm from '../assets/icons/items/headgear/knight_helm.png';
 import spartan_helm from '../assets/icons/items/headgear/spartan_helm.png';
 import legionaire_helm from '../assets/icons/items/headgear/legionaire_helm.png';
 import cretan_helm from '../assets/icons/items/headgear/cretan_helm.png';
+import archer_helm from '../assets/icons/items/helms/archer helm.png';
+import kettle_hat from '../assets/icons/items/helms/kettle hat.png';
+import hounskull from '../assets/icons/items/helms/hounskull.png';
+import plague_helm from '../assets/icons/items/helms/plague helm.png';
+import warlord_helm from '../assets/icons/items/helms/warlord helm.png';
+import juggernaut_helm from '../assets/icons/items/helms/juggernaut helm.png';
+import moonlord_helm from '../assets/icons/items/helms/moonlord helm.png';
+import witch_knight_helm from '../assets/icons/items/helms/witch knight helm.png';
+import collosus_helm from '../assets/icons/items/helms/collosus helm.png';
+import omega_helm from '../assets/icons/items/helms/omega helm.png';
+import immortal_helm from '../assets/icons/items/helms/immortal helm.png';
+
+import nasal_helm_upgradeable from '../assets/icons/items/helms/upgradeable/nasal helm.png';
+import nasal_helm_upgradeable_upgraded from '../assets/icons/items/helms/upgradeable/nasal helm upgraded.png';
+import soldier_helm_upgradeable from '../assets/icons/items/helms/upgradeable/soldier helm.png';
+import soldier_helm_upgradeable_upgraded from '../assets/icons/items/helms/upgradeable/soldier helm upgraded.png';
+import crusader_helm_upgradeable from '../assets/icons/items/helms/upgradeable/crusader helm.png';
+import crusader_helm_upgradeable_upgraded from '../assets/icons/items/helms/upgradeable/crusader helm upgraded.png';
+import cavalry_helm_upgradeable from '../assets/icons/items/helms/upgradeable/cavalry helm.png';
+import cavalry_helm_upgradeable_upgraded from '../assets/icons/items/helms/upgradeable/cavalry helm upgraded.png';
+import war_helm_upgradeable from '../assets/icons/items/helms/upgradeable/war helm.png';
+import war_helm_upgradeable_upgraded from '../assets/icons/items/helms/upgradeable/war helm upgraded.png';
+import coif_helm_upgradeable from '../assets/icons/items/helms/upgradeable/coif helm.png';
+import coif_helm_upgradeable_upgraded from '../assets/icons/items/helms/upgradeable/coif helm upgraded.png';
+import gladiator_helm_upgradeable from '../assets/icons/items/helms/upgradeable/gladiator helm.png';
+import gladiator_helm_upgradeable_upgraded from '../assets/icons/items/helms/upgradeable/gladiator helm upgraded.png';
+import battle_mage_helm_upgradeable from '../assets/icons/items/helms/upgradeable/battle mage helm.png';
+import battle_mage_helm_upgradeable_upgraded from '../assets/icons/items/helms/upgradeable/battle mage helm upgraded.png';
+import knight_helm_upgradeable from '../assets/icons/items/helms/upgradeable/knight helm.png';
+import knight_helm_upgradeable_upgraded from '../assets/icons/items/helms/upgradeable/knight helm upgraded.png';
+import janissary_helm_upgradeable from '../assets/icons/items/helms/upgradeable/janissary helm.png';
+import janissary_helm_upgradeable_upgraded from '../assets/icons/items/helms/upgradeable/janissary helm upgraded.png';
+import bascinet_upgradeable from '../assets/icons/items/helms/upgradeable/bascinet.png';
+import bascinet_upgradeable_upgraded from '../assets/icons/items/helms/upgradeable/bascinet upgraded.png';
+import imperial_helm_upgradeable from '../assets/icons/items/helms/upgradeable/imperial helm.png';
+import imperial_helm_upgradeable_upgraded from '../assets/icons/items/helms/upgradeable/imperial helm upgraded.png';
+import rogue_hood_upgradeable from '../assets/icons/items/helms/upgradeable/rogue hood.png';
+import rogue_hood_upgradeable_upgraded from '../assets/icons/items/helms/upgradeable/rogue hood upgraded.png';
 
 import glindas_wand from '../assets/icons/items/wands/glindas_wand.png';
 import maerlyns_rod from '../assets/icons/items/wands/maerlyns_rod.png';
 import volkas_wand from '../assets/icons/items/wands/volkas_wand.png';
+import cloudfire_wand from '../assets/icons/items/wands/cloudfire wand.png';
+import animus_wand from '../assets/icons/items/wands/animus wand.png';
+import glyndas_wand from "../assets/icons/items/wands/glynda's wand.png";
+import justicator_wand from '../assets/icons/items/wands/justicator wand.png';
+import willowcaster from '../assets/icons/items/wands/willowcaster.png';
+
+// staves
+import archmages_staff from "../assets/icons/items/staves/archmage's staff.png";
+import enchanters_staff from "../assets/icons/items/staves/enchanter's staff.png";
+import imperial_mage_staff from '../assets/icons/items/staves/imperial mage staff.png';
+import staff_of_espilon from '../assets/icons/items/staves/staff of Espilon.png';
+import staff_of_marduk from '../assets/icons/items/staves/staff of Marduk.png';
+import staff_of_omicron from '../assets/icons/items/staves/staff of Omicron.png';
+import staff_of_tomorrow from '../assets/icons/items/staves/staff of tomorrow.png';
 
 // weapons
 import axe_upright_white from '../assets/icons/items/weapons/axe_upright_white.png'
@@ -187,18 +323,38 @@ import black_magic from '../assets/icons/magic/black_magic.png';
 import fireball from '../assets/icons/magic/fireball.png';
 import grimoire from '../assets/icons/magic/grimoire.png';
 import necromancy from '../assets/icons/magic/necromancy.png';
+import exp from '../assets/icons/misc/exp related/exp.png';
 import spell from '../assets/icons/magic/spell.png';
 import white_magic from '../assets/icons/magic/white_magic.png';
 
 // staples
-import minor_gate from '../assets/icons/staples/gate.png'
-import minor_gate_open from '../assets/icons/staples/gate_open.png'
-
 import gate from '../assets/icons/staples/gate.png'
+
+// gates
+import minor_gate from '../assets/gates/minor.png'
+import major_gate from '../assets/gates/major.png'
+import treasury_gate from '../assets/gates/treasury.png'
+import imperial_gate from '../assets/gates/imperial.png'
+import necrotic_gate from '../assets/gates/necrotic.png'
+import master_necrotic_gate from '../assets/gates/master necrotic.png'
+import dimensional_gate from '../assets/gates/dimensional.png'
+import cyan_gate from '../assets/gates/cyan.png'
+import violet_gate from '../assets/gates/violet.png'
+import rubicund_gate from '../assets/gates/rubicund.png'
+
 import gold from '../assets/icons/staples/gold.png'
 import ornate_key from '../assets/icons/staples/key.png'
-import minor_key from '../assets/icons/items/minor_key.png'
-import major_key from '../assets/icons/items/major_key.png'
+import minor_key from '../assets/icons/misc/keys/minor key.png'
+import major_key from '../assets/icons/misc/keys/major key.png'
+import treasury_key from '../assets/icons/misc/keys/treasury key.png'
+import lockbox_key from '../assets/icons/misc/keys/lockbox key.png'
+import necrotic_key from '../assets/icons/misc/keys/necrotic key.png'
+import necrotic_master_key from '../assets/icons/misc/keys/necrotic  master key.png'
+import violet_key from '../assets/icons/misc/keys/violet key.png'
+import rubicund_key from '../assets/icons/misc/keys/rubicund key.png'
+import cyan_key from '../assets/icons/misc/keys/cyan key.png'
+import imperial_key from '../assets/icons/misc/keys/imperial key.png'
+import dimensional_key from '../assets/icons/misc/keys/dimensional key.png'
 import moon_castle from '../assets/icons/staples/moon_castle.png'
 import oracle from '../assets/icons/staples/oracle.png'
 import ornate_potion from '../assets/icons/staples/potion.png'
@@ -210,6 +366,44 @@ import spawn_point from '../assets/icons/misc/spawn_point.png'
 import eye from '../assets/icons/misc/eye.png'
 import eye_inverted from '../assets/icons/misc/eye_inverted.png'
 import wide_skull from '../assets/icons/misc/wide_skull.png'
+import eclipse from '../assets/icons/misc/eclipse.png'
+import magic_moon_1 from '../assets/icons/misc/magic_moon_1.png'
+import food from '../assets/icons/misc/food.png'
+
+// loot
+import green_opal from '../assets/icons/misc/loot/green opal.png'
+import blue_opal from '../assets/icons/misc/loot/blue opal.png'
+import red_opal from '../assets/icons/misc/loot/red opal.png'
+import amber_opal from '../assets/icons/misc/loot/amber opal.png'
+import rune from '../assets/icons/misc/loot/rune.png'
+import quest_crown from '../assets/icons/misc/loot/quest crown.png'
+import banner from '../assets/icons/misc/loot/banner.png'
+import quest_57_ore from '../assets/icons/misc/loot/Quest_57_ore.png'
+import quest_58_ore from '../assets/icons/misc/loot/Quest_58_ore.png'
+import res_76_crystal_red from '../assets/icons/misc/loot/Res_76_crystalRed.png'
+import res_77 from '../assets/icons/misc/loot/Res_77.png'
+import res_78 from '../assets/icons/misc/loot/Res_78.png'
+import amber from '../assets/icons/misc/loot/amber.png'
+import sapphire from '../assets/icons/misc/loot/sapphire.png'
+import ruby from '../assets/icons/misc/loot/ruby.png'
+import amber_shards from '../assets/icons/misc/loot/amber shards.png'
+import sapphire_shards from '../assets/icons/misc/loot/sapphire shards.png'
+import ruby_shards from '../assets/icons/misc/loot/ruby shards.png'
+import blue_crystal from '../assets/icons/misc/loot/blue crystal.png'
+import purple_crystal from '../assets/icons/misc/loot/purple crystal.png'
+import pink_crystal from '../assets/icons/misc/loot/pink crystal.png'
+import green_crystal from '../assets/icons/misc/loot/green crystal.png'
+import ruddy_crystal from '../assets/icons/misc/loot/ruddy crystal.png'
+import pyrite from '../assets/icons/misc/loot/pyrite.png'
+import benthite from '../assets/icons/misc/loot/benthite.png'
+import labradite from '../assets/icons/misc/loot/labradite.png'
+import memnite from '../assets/icons/misc/loot/memnite.png'
+import malachite from '../assets/icons/misc/loot/malachite.png'
+import onyx from '../assets/icons/misc/loot/onyx.png'
+import quest_09_goldbar from '../assets/icons/misc/loot/gold/Quest_09_goldbar.png'
+import quest_10_treasure from '../assets/icons/misc/loot/gold/Quest_10_treasure.png'
+import quest_128_dragontreasure from '../assets/icons/misc/loot/gold/Quest_128_dragontreasure.png'
+import quest_48_pirate from '../assets/icons/misc/loot/gold/Quest_48_pirate.png'
 
 // crew
 import archer from '../assets/icons/crew_icons/archer.png'
@@ -225,7 +419,7 @@ import viking1 from '../assets/icons/crew_icons/viking1.png'
 import viking2 from '../assets/icons/crew_icons/viking2.png'
 import viking3 from '../assets/icons/crew_icons/viking3.png'
 
-import monk_portrait from '../assets/portraits/crew/monk/monk_compressed.png' 
+import monk_portrait from '../assets/portraits/crew/monk/monk_compressed.png'
 import sage_portrait from '../assets/portraits/crew/sage/sage_compressed.png'
 import wizard_portrait from '../assets/portraits/crew/wizard/wizard_compressed.png'
 import soldier_portrait from '../assets/portraits/crew/soldier/soldier_compressed.png'
@@ -292,10 +486,13 @@ import beholder_minion from '../assets/portraits/monsters/beholder_minion.png'
 
 //combat images
 import bow_and_arrow from '../assets/icons/items/combat-icons/bow_arrow.png'
-import claws from '../assets/icons/combat-icons/monster-attacks/claws.png'
+import claws from '../assets/icons/combat-icons/monster-attacks/claws.gif'
 import bite from '../assets/icons/combat-icons/monster-attacks/bite.png'
 import crushing from '../assets/icons/combat-icons/monster-attacks/crushing.png'
 import tackle from '../assets/icons/combat-icons/monster-attacks/tackle.png'
+// Placeholder icons for grasp and energy_drain
+import grasp from '../assets/icons/combat-icons/monster-attacks/grasp.gif';
+import energy_drain from '../assets/icons/combat-icons/monster-attacks/lightning.png'
 import void_lance from '../assets/icons/combat-icons/monster-attacks/void_lance.png'
 import fire_breath from '../assets/icons/combat-icons/monster-attacks/fire_breath.png'
 import lightning from '../assets/icons/combat-icons/monster-attacks/lightning.png'
@@ -371,6 +568,41 @@ import terrain_14 from '../assets/icons/terrain/stone-14.png'
 import terrain_15 from '../assets/icons/terrain/stone-15.png'
 import terrain_16 from '../assets/icons/terrain/stone-16.png'
 
+import terrain_1_dark from '../assets/icons/terrain/dark-stone-1.png'
+import terrain_2_dark from '../assets/icons/terrain/dark-stone-2.png'
+import terrain_3_dark from '../assets/icons/terrain/dark-stone-3.png'
+import terrain_4_dark from '../assets/icons/terrain/dark-stone-4.png'
+import terrain_5_dark from '../assets/icons/terrain/dark-stone-5.png'
+import terrain_6_dark from '../assets/icons/terrain/dark-stone-6.png'
+import terrain_7_dark from '../assets/icons/terrain/dark-stone-7.png'
+import terrain_8_dark from '../assets/icons/terrain/dark-stone-8.png'
+import terrain_9_dark from '../assets/icons/terrain/dark-stone-9.png'
+import terrain_10_dark from '../assets/icons/terrain/dark-stone-10.png'
+import terrain_11_dark from '../assets/icons/terrain/dark-stone-11.png'
+import terrain_12_dark from '../assets/icons/terrain/dark-stone-12.png'
+import terrain_13_dark from '../assets/icons/terrain/dark-stone-13.png'
+import terrain_14_dark from '../assets/icons/terrain/dark-stone-14.png'
+import terrain_15_dark from '../assets/icons/terrain/dark-stone-15.png'
+import terrain_16_dark from '../assets/icons/terrain/dark-stone-16.png'
+
+import terrain_1_light from '../assets/icons/terrain/light-stone-1.png'
+import terrain_2_light from '../assets/icons/terrain/light-stone-2.png'
+import terrain_3_light from '../assets/icons/terrain/light-stone-3.png'
+import terrain_4_light from '../assets/icons/terrain/light-stone-4.png'
+import terrain_5_light from '../assets/icons/terrain/light-stone-5.png'
+import terrain_6_light from '../assets/icons/terrain/light-stone-6.png'
+import terrain_7_light from '../assets/icons/terrain/light-stone-7.png'
+import terrain_8_light from '../assets/icons/terrain/light-stone-8.png'
+import terrain_9_light from '../assets/icons/terrain/light-stone-9.png'
+import terrain_10_light from '../assets/icons/terrain/light-stone-10.png'
+import terrain_11_light from '../assets/icons/terrain/light-stone-11.png'
+import terrain_12_light from '../assets/icons/terrain/light-stone-12.png'
+import terrain_13_light from '../assets/icons/terrain/light-stone-13.png'
+import terrain_14_light from '../assets/icons/terrain/light-stone-14.png'
+import terrain_15_light from '../assets/icons/terrain/light-stone-15.png'
+import terrain_16_light from '../assets/icons/terrain/light-stone-16.png'
+
+
 import axe_1 from '../assets/icons/items/weapons/axes/Axe_01.png';
 import axe_2 from '../assets/icons/items/weapons/axes/Axe_02.png';
 import axe_3 from '../assets/icons/items/weapons/axes/Axe_03.png';
@@ -424,6 +656,43 @@ import axe_50 from '../assets/icons/items/weapons/axes/Axe_50.png';
 import axe_51 from '../assets/icons/items/weapons/axes/Axe_51.png';
 import axe_52 from '../assets/icons/items/weapons/axes/Axe_52.png';
 import axe_53 from '../assets/icons/items/weapons/axes/Axe_53.png';
+// books (spellbooks)
+import oily_manual from '../assets/icons/items/weapons/books/Oily manual.png';
+import bound_tome from '../assets/icons/items/weapons/books/Bound tome.png';
+import glowing_tome from '../assets/icons/items/weapons/books/Glowing tome.png';
+import kelrigans_manual from "../assets/icons/items/weapons/books/Kelrigan's manual.png";
+import the_watchful_eye from '../assets/icons/items/weapons/books/The watchful eye.png';
+import moonbird_folio from '../assets/icons/items/weapons/books/Moonbird folio.png';
+import icewing_folio from '../assets/icons/items/weapons/books/Icewing folio.png';
+import emerald_tablet from '../assets/icons/items/weapons/books/Emerald tablet.png';
+import ruby_tablet from '../assets/icons/items/weapons/books/Ruby tablet.png';
+import feldons_manual from "../assets/icons/items/weapons/books/Feldon's manual.png";
+import the_beast_book from '../assets/icons/items/weapons/books/The beast book.png';
+import book_of_jade from '../assets/icons/items/weapons/books/Book of jade.png';
+import igors_grimoire from '../assets/icons/items/weapons/books/Igors grimoire.png';
+import forbidden_grimoire from '../assets/icons/items/weapons/books/Forbidden grimoire.png';
+import monadic_engine from '../assets/icons/items/weapons/books/Monadic engine.png';
+import crimson_engine from '../assets/icons/items/weapons/books/Crimson engine.png';
+import verdant_engine from '../assets/icons/items/weapons/books/Verdant engine.png';
+import folio_of_coincidence from '../assets/icons/items/weapons/books/Folio of coincidence.png';
+import folio_of_paradox from '../assets/icons/items/weapons/books/Folio of paradox.png';
+import septemons_grimoire from '../assets/icons/items/weapons/books/Septemons grimoire.png';
+
+const _terrainBase = [terrain_1, terrain_2, terrain_3, terrain_4, terrain_5, terrain_6, terrain_7, terrain_8, terrain_9, terrain_10, terrain_11, terrain_12, terrain_13, terrain_14, terrain_15, terrain_16];
+const _terrainLight = [terrain_1_light, terrain_2_light, terrain_3_light, terrain_4_light, terrain_5_light, terrain_6_light, terrain_7_light, terrain_8_light, terrain_9_light, terrain_10_light, terrain_11_light, terrain_12_light, terrain_13_light, terrain_14_light, terrain_15_light, terrain_16_light];
+const _terrainDark = [terrain_1_dark, terrain_2_dark, terrain_3_dark, terrain_4_dark, terrain_5_dark, terrain_6_dark, terrain_7_dark, terrain_8_dark, terrain_9_dark, terrain_10_dark, terrain_11_dark, terrain_12_dark, terrain_13_dark, terrain_14_dark, terrain_15_dark, terrain_16_dark];
+
+/**
+ * Returns the array of 16 terrain tile images appropriate for a given dungeon level.
+ * Level  0        → stone (base)
+ * Level  1 or  2  → light-stone
+ * Level -1 or -2  → dark-stone
+ */
+const getTerrainSetForLevel = (level) => {
+    if (level >= 1) return _terrainLight;
+    if (level <= -1) return _terrainDark;
+    return _terrainBase;
+};
 
 export {
     hand_1,
@@ -451,6 +720,7 @@ export {
     monster,
     avatar,
     avatar_white,
+    narrative,
     beholder,
     beholder_portrait,
     beholder_minion,
@@ -494,11 +764,6 @@ export {
     golden_demon,
     kabuki_demon,
 
-    evilai_amulet,
-    lundi_amulet,
-    nukta_amulet,
-    sayan_amulet,
-
     beetle_charm,
     demonskull_charm,
     evilai_charm,
@@ -507,29 +772,145 @@ export {
     nukta_charm,
     scarab_charm,
 
+    elasi_amulet,
+    darkarrow_amulet,
+    elemental_amulet,
+    silver_amulet,
+    ruby_amulet,
+    acorn_amulet,
+    voodoo_amulet,
+    yaga_amulet,
+    temprance_amulet,
+    emerald_amulet,
+    maconic_amulet,
+
+    warding_amulet,
+    bloodvial_amulet,
+    enchantress_amulet,
+    goldclaw_amulet,
+    clerics_amulet,
+    queens_amulet,
+
+    ice_amulet,
+    hypnosis_amulet,
+    vampiric_amulet,
+    platinum_amulet,
+    necrotic_amulet,
+
+    voidward_amulet,
+    celestial_amulet,
+    dimensional_amulet,
+
     crown,
     key,
     potion,
+    minor_health_potion,
+    major_health_potion,
+    grand_health_potion,
+    supreme_health_potion,
     lantern,
 
-    seeing_shield,
-    basic_shield,
+    buckler,
+    infantry_shield,
+    cold_steel_shield,
+    banded_steel_shield,
+    crusaders_shield,
+    dawnguard,
+    twilight_screen,
+    revenants_shield,
+    aegis_bulwark,
 
-    bundu_mask,
-    lundi_mask,
-    court_mask,
-    mardi_mask,
-    solomon_mask,
-    zul_mask,
+    travelers_boots,
+    wayfinders_boots,
+    oily_boots,
+    highwaymans_boots,
+    voyagers_boots,
+    northerners_boots,
+    midas_boots,
+    sentinels_boots,
+    imperial_boots,
+    mariners_boots,
+    magicians_boots,
+    sorcerers_boots,
+    shadow_boots,
+    twilight_boots,
+    moonstone_boots,
+    eldritch_boots,
+    glimmering_boots,
+    princes_boots,
+    lords_boots,
+    golems_boots,
+    darklings_boots,
+    ornate_boots,
+    rainmans_boots,
+
+    crimson_mask,
+    eldritch_mask,
+    entropic_mask,
+    necrotic_mask,
+    paradox_mask,
+    seraphic_mask,
+    shadow_mask,
+    twilight_mask,
     basic_helm,
     knight_helm,
     spartan_helm,
     legionaire_helm,
     cretan_helm,
+    archer_helm,
+    kettle_hat,
+    hounskull,
+    plague_helm,
+    warlord_helm,
+    juggernaut_helm,
+    moonlord_helm,
+    witch_knight_helm,
+    collosus_helm,
+    omega_helm,
+    immortal_helm,
+    nasal_helm_upgradeable,
+    nasal_helm_upgradeable_upgraded,
+    soldier_helm_upgradeable,
+    soldier_helm_upgradeable_upgraded,
+    crusader_helm_upgradeable,
+    crusader_helm_upgradeable_upgraded,
+    cavalry_helm_upgradeable,
+    cavalry_helm_upgradeable_upgraded,
+    war_helm_upgradeable,
+    war_helm_upgradeable_upgraded,
+    coif_helm_upgradeable,
+    coif_helm_upgradeable_upgraded,
+    gladiator_helm_upgradeable,
+    gladiator_helm_upgradeable_upgraded,
+    battle_mage_helm_upgradeable,
+    battle_mage_helm_upgradeable_upgraded,
+    knight_helm_upgradeable,
+    knight_helm_upgradeable_upgraded,
+    janissary_helm_upgradeable,
+    janissary_helm_upgradeable_upgraded,
+    bascinet_upgradeable,
+    bascinet_upgradeable_upgraded,
+    imperial_helm_upgradeable,
+    imperial_helm_upgradeable_upgraded,
+    rogue_hood_upgradeable,
+    rogue_hood_upgradeable_upgraded,
 
     glindas_wand,
     maerlyns_rod,
     volkas_wand,
+    cloudfire_wand,
+    animus_wand,
+    glyndas_wand,
+    justicator_wand,
+    willowcaster,
+
+    archmages_staff,
+    enchanters_staff,
+    imperial_mage_staff,
+    staff_of_espilon,
+    staff_of_marduk,
+    staff_of_omicron,
+    staff_of_tomorrow,
 
     axe,
     axe_upright,
@@ -608,6 +989,27 @@ export {
     axe_52,
     axe_53,
 
+    oily_manual,
+    bound_tome,
+    glowing_tome,
+    kelrigans_manual,
+    the_watchful_eye,
+    moonbird_folio,
+    icewing_folio,
+    emerald_tablet,
+    ruby_tablet,
+    feldons_manual,
+    the_beast_book,
+    book_of_jade,
+    igors_grimoire,
+    forbidden_grimoire,
+    monadic_engine,
+    crimson_engine,
+    verdant_engine,
+    folio_of_coincidence,
+    folio_of_paradox,
+    septemons_grimoire,
+
     longsword,
     broadsword,
     claymore,
@@ -646,16 +1048,44 @@ export {
     fireball,
     grimoire,
     necromancy,
+    exp,
     spell,
     white_magic,
 
     minor_key,
     major_key,
     ornate_key,
+    treasury_key,
+    lockbox_key,
+
+    tier_1_armor,
+    tier_1_magical,
+    tier_1_weapon,
+    tier_2_armor,
+    tier_2_magical,
+    tier_2_weapon,
+    tier_3_armor,
+    tier_3_magical,
+    tier_3_weapon,
+    necrotic_key,
+    necrotic_master_key,
+    violet_key,
+    rubicund_key,
+    cyan_key,
+    imperial_key,
+    dimensional_key,
     ornate_potion,
     gate,
     minor_gate,
-    minor_gate_open,
+    major_gate,
+    treasury_gate,
+    imperial_gate,
+    necrotic_gate,
+    master_necrotic_gate,
+    dimensional_gate,
+    cyan_gate,
+    violet_gate,
+    rubicund_gate,
     moon_castle,
     gold,
     treasure,
@@ -666,6 +1096,44 @@ export {
     wide_skull,
     eye,
     eye_inverted,
+    eclipse,
+    magic_moon_1,
+    food,
+
+    green_opal,
+    blue_opal,
+    red_opal,
+    amber_opal,
+    rune,
+    quest_crown,
+    banner,
+    quest_57_ore,
+    quest_58_ore,
+    res_76_crystal_red,
+    res_77,
+    res_78,
+    amber,
+    sapphire,
+    ruby,
+    amber_shards,
+    sapphire_shards,
+    ruby_shards,
+    blue_crystal,
+    purple_crystal,
+    pink_crystal,
+    green_crystal,
+    ruddy_crystal,
+    pyrite,
+    benthite,
+    labradite,
+    memnite,
+    malachite,
+    onyx,
+    quest_09_goldbar,
+    quest_10_treasure,
+    quest_128_dragontreasure,
+    quest_48_pirate,
+
     archer,
     barbarian,
     rogue,
@@ -697,7 +1165,7 @@ export {
     vampire_portrait,
     troll_portrait,
     wraith_portrait,
-    skeleton_portrait, 
+    skeleton_portrait,
 
 
     goat_demon,
@@ -728,6 +1196,8 @@ export {
     void_lance,
     lightning,
     tackle,
+    grasp,
+    energy_drain,
 
     archway,
     bat_gate,
@@ -738,6 +1208,14 @@ export {
     evil_gate_opened,
     dungeon_door,
     dungeon_door_opened,
+
+    reaper_card_back,
+    card_game_background,
+    construct_icon,
+    sigil_icon,
+    element_fire,
+    element_water,
+    element_earth,
 
     glyph,
     glyph_inverted,
@@ -770,7 +1248,7 @@ export {
     fire_blast,
 
     body_male,
-    body_female, 
+    body_female,
 
     terrain_1,
     terrain_2,
@@ -788,6 +1266,42 @@ export {
     terrain_14,
     terrain_15,
     terrain_16,
+
+    terrain_1_dark,
+    terrain_2_dark,
+    terrain_3_dark,
+    terrain_4_dark,
+    terrain_5_dark,
+    terrain_6_dark,
+    terrain_7_dark,
+    terrain_8_dark,
+    terrain_9_dark,
+    terrain_10_dark,
+    terrain_11_dark,
+    terrain_12_dark,
+    terrain_13_dark,
+    terrain_14_dark,
+    terrain_15_dark,
+    terrain_16_dark,
+
+    terrain_1_light,
+    terrain_2_light,
+    terrain_3_light,
+    terrain_4_light,
+    terrain_5_light,
+    terrain_6_light,
+    terrain_7_light,
+    terrain_8_light,
+    terrain_9_light,
+    terrain_10_light,
+    terrain_11_light,
+    terrain_12_light,
+    terrain_13_light,
+    terrain_14_light,
+    terrain_15_light,
+    terrain_16_light,
+
+    getTerrainSetForLevel,
 
     camp,
     vampire,

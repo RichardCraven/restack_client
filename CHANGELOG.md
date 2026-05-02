@@ -1,3 +1,87 @@
+# Change Summary - April 25, 2026
+
+## Required Patterns for All AI Profiles
+> **Important:** Every monster and fighter AI profile MUST implement all of the following patterns. When creating a new AI profile, review this section before writing any attack logic.
+
+### 1. `pendingAttack` Repopulation Guard
+`restartTurnCycle` in `factories.js` clears `caller.pendingAttack` to `null` at the start of every new turn cycle. An AI profile's `processMove` may fire before `pendingAttack` is repopulated by `chooseAttackType`. Always check and repopulate immediately before triggering an attack:
+```js
+if (!caller.pendingAttack) caller.pendingAttack = chooseAttackType(caller, target);
+if (caller.pendingAttack === 'attack_name') { ... }
+```
+
+### 2. Attack Guard (`caller.attacking`)
+At the top of any attack trigger, return early if already attacking to prevent double-firing:
+```js
+if (this.attacking) return;
+this.attacking = true;
+```
+After the attack resolves, always clear the flag — use a `finally` block so it clears even on error:
+```js
+try {
+    // ... attack logic ...
+} finally {
+    caller.attacking = false;
+}
+```
+
+### 3. `resolve(null)` Fallbacks in Attack Promises
+Every Promise inside an attack sequence must have a `resolve(null)` path to prevent hung Promises that stall the turn cycle. Never leave a `resolve` call only inside a conditional branch without a guaranteed fallback.
+
+### 4. Attack Embedded in `processMove` (not `eraAttack`)
+`eraAttack` has been removed from `factories.js`. All attacks must be triggered from within the AI profile's own `processMove` method, inside the appropriate `behaviorSequence` case (e.g., `'brawler'`). Do not rely on the turn cycle to call an external attack dispatcher.
+
+### 5. `chooseAttackType` must be defined
+Every AI profile that attacks must implement or import a `chooseAttackType(caller, target)` function that returns a string attack name based on caller/target state. This is the authoritative source for `pendingAttack`.
+
+---
+
+## Combat System Changes (April 2026)
+
+### New: `hitCheck` and `damageCheck` Methods (combat-manager.js)
+- `hitCheck(caller, target)` — Miss chance = `min(speed × 2.5, 35%)`. Returns `true` if hit lands.
+- `damageCheck(caller, target, rawDamage)` — Armor-based reduction. Level-diff caps applied (75% / 85% / 95%).
+
+### New: Goblin AI (`monster-ai/profiles/Goblin.js`)
+- Full AI profile with `brawler` and `flee` behavior sequences.
+- **Sticky Fingers** ability: 15% chance per turn when `energy >= cost` and `cooldown_position >= 100`. Finds an unequipped item in the target fighter's inventory and steals it. Sets `caller.stolenItemIcon` for display in the battle UI.
+- After a successful steal, switches `behaviorSequence` to `'flee'` and attempts to exit the board.
+- Flee pathfinding uses `goTowards({ x: backlineX + 2 })` to move off-board; `_escapePending` flag gates a two-tick delay before the escape is finalized.
+- All attack triggers include the `pendingAttack` repopulation guard and `finally` block cleanup.
+
+### Fix: Global `pendingAttack` Repopulation (all monster AI profiles)
+All monster AI profiles (Skeleton, Troll, Mummy, BeholderMinion, Goblin) now include the repopulation guard before attack trigger. This prevents stalemates when `restartTurnCycle` clears `pendingAttack` between eras.
+
+### Fix: Combat Stalemate Prevention
+- `eraAttack` removed from `factories.js` turn cycle. Attacks are now embedded in each AI profile's `processMove`.
+- `movesLeft` no longer gates attacks — attackers fire regardless of move budget.
+- `if (this.attacking) return` guard prevents double-firing in all profiles.
+- All attack Promises have `resolve(null)` fallbacks.
+
+### Fix: Portrait Ring Displacement
+- `drained` class moved to `.portrait-overlay` (which never receives transform animations), not `.fighter-portrait`.
+- The `::before` ring glow is now defined under `.portrait-overlay.drained::before` so Rocked/transform animations on the portrait image do not displace it.
+- Fighter glow effect moved from a separate `.color-glow` div to `boxShadow` on `.portrait-wrapper`.
+
+### New: Sword Swing Overlay System (`animation-manager.js`, `animation-tile.js`)
+- Sword swing animations are rendered via `overlayAnimationType` / `overlayAnimationData` props to prevent `hit-flash` from overwriting the animation mid-swing.
+- `startTime: Date.now()` added to all animation data objects as a React key to force re-mount on each new animation.
+
+### New: Grasp and Energy Drain Animations
+- `GraspAnimation_*` and `EnergyDrainAnimation_*` keyframes added to `monster-battle.scss`.
+- Energy drain animation: lightning icon with red drop-shadow filter, 1400ms. Origin uses closer of main tile vs VCT position.
+
+### New: Item System
+- `inventory-manager.js`: `_im_key` stamped on all items at init; `refreshWeaponStats(inventory)` corrects malformed `+N% atk` descriptions; `removeItemByKey(key)` for targeted item removal.
+- New items added: shields (9), staves (7), wands (7), spellbooks (20), keys (11) with tier system.
+- `images.js`: All new item icons imported.
+- `cache-cleanup.js` (new): `keyCleanup` and `itemCleanup` for migrating stale cached dungeon data.
+
+### New: Quest Manager (`utils/quest-manager.js`)
+- New file. `generateQuestSet(dungeon)` creates travel, bounty, and item_retrieval quest types.
+
+---
+
 # Change Summary - December 5, 2025
 
 ## UI and Animation

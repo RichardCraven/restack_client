@@ -1,3 +1,4 @@
+// Force sync battleData from combatManager (including VCT positions)
 import React from 'react'
 // Show/hide tile coordinates overlay
 import '../../styles/monster-battle.scss'
@@ -7,20 +8,20 @@ import AnimationGrid from '../../components/animation-grid';
 import { CModal } from '@coreui/react';
 import '../../styles/inventory-modal.scss';
 import { Redirect } from "react-router-dom";
-import {storeMeta, getMeta, getUserId, getUserName} from '../../utils/session-handler';
+import {storeMeta, getMeta, getUserId} from '../../utils/session-handler';
 import {
         updateUserRequest,
         deleteDungeonRequest
     } from '../../utils/api-handler';
 import Canvas from '../../components/Canvas/canvas'
-import Overlay from '../../components/Overlay'
-import CanvasMagicMissile from '../../components/Canvas/canvas_magic_missile'
+// import Overlay from '../../components/Overlay'
+// import CanvasMagicMissile from '../../components/Canvas/canvas_magic_missile'
 import FightersCombatGrid from '../../components/combat-panes/fighters'
 import MonstersCombatGrid from '../../components/combat-panes/monsters'
 
 import { INTERVALS, INTERVAL_DISPLAY_NAMES } from '../../utils/shared-constants';
 
-const MAX_DEPTH = 7;
+// const MAX_DEPTH = 7;
 const NUM_COLUMNS = 8;
 // ^ means 8 squares, account for depth of 0 is far left
 
@@ -32,11 +33,11 @@ const SHOW_INTERACTION_PANE = true;
 const SHOW_MONSTER_IDS = false;
 const SHOW_COORDINATES = false;
 
-const RANGES = {
-    close: 1,
-    medium: 3,
-    far: 5
-}
+// const RANGES = {
+//     close: 1,
+//     medium: 3,
+//     far: 5
+// }
 
 // Duration (ms) must match the CSS death animation/transition duration
 const DEATH_ANIMATION_DURATION = 2200;
@@ -46,6 +47,17 @@ const DEATH_ANIMATION_DURATION = 2200;
 class MonsterBattle extends React.Component {
     getGameSpeed = () => {
         return this.props.combatManager?.FIGHT_INTERVAL;
+    }
+
+    setGameSpeed = (newInterval) => {
+        if (this.props.combatManager) {
+            this.props.combatManager.updateAllFightIntervals(newInterval);
+            // Persist to meta
+            const meta = getMeta();
+            meta.combatSpeed = newInterval;
+            storeMeta(meta);
+            if (typeof this.forceUpdate === 'function') this.forceUpdate();
+        }
     }
     // lifecycle methods implemented further below
 
@@ -94,8 +106,20 @@ class MonsterBattle extends React.Component {
             });
         }
     }
+    // ── Shield Wall registration / expiry ─────────────────────────────────────
+    registerShieldWall = (wallData, fighter) => { // eslint-disable-line no-unused-vars
+        this.setState(prev => ({
+            activeWalls: [...prev.activeWalls, { ...wallData, id: `wall_${Date.now()}` }]
+        }));
+    }
+    expireShieldWall = (wallData, fighter) => { // eslint-disable-line no-unused-vars
+        if (!wallData) return;
+        this.setState(prev => ({
+            activeWalls: prev.activeWalls.filter(w => w.callerId !== wallData.callerId)
+        }));
+    }
+    // ─────────────────────────────────────────────────────────────────────────
     removeDeadCombatantAfterDelay = (id) => {
-            // Only remove from combatManager (the source of truth)
             if (this.props.combatManager && typeof this.props.combatManager.removeCombatant === 'function') {
                 this.props.combatManager.removeCombatant(id);
             }
@@ -144,6 +168,7 @@ class MonsterBattle extends React.Component {
             experienceGained: null,
             goldGained: null,
             foodGained: 0,
+            stolenItems: [],
             levelTransitions: {},
             battleResult: null,
             monsterPortrait: '',
@@ -155,8 +180,17 @@ class MonsterBattle extends React.Component {
             magicMissile_connectParticles: true,
             magicMissile_targetDistance: 0,
                magicMissile_targetLaneDiff: 0,
-            teleportingFighterId: null
+            teleportingFighterId: null,
+            // Active shield walls: array of wallData objects
+            activeWalls: [],
+            // Board-wide fear overlay
+            boardFearActive: false,
+            // Transient glow on the casting monster portrait when induce_fear fires
+            fearCastingActive: false,
+            combatLog: [],
         }
+        this.combatLogContainerRef = React.createRef();
+        this.latestCombatLogEntryRef = React.createRef();
         // Internal flags for special group-death flow
         this._suppressPersistFinalHP = false;
         // Internal flag to ensure we only inject wizard spells once for simulation battles
@@ -167,17 +201,38 @@ class MonsterBattle extends React.Component {
         this._setTimeout = (fn, t) => { const id = setTimeout(fn, t); try { this._timers.push(id); } catch(e){}; return id };
         this._setInterval = (fn, t) => { const id = setInterval(fn, t); try { this._intervals.push(id); } catch(e){}; return id };
     }
+
+    // Public method to force sync battleData from combatManager (including VCT positions)
+    forceSyncBattleData = () => {
+        if (this.props.combatManager && this.props.combatManager.combatants) {
+            // Deep clone to ensure React state update
+            const clonedBattleData = JSON.parse(JSON.stringify(this.props.combatManager.combatants));
+            this.updateBattleData(clonedBattleData);
+            console.log('[DIAG][MonsterBattle] forceSyncBattleData called.');
+        } else {
+            console.warn('[MonsterBattle] forceSyncBattleData: combatManager or combatants missing');
+        }
+    }
+
     componentDidMount(){
         console.log('MonsterBattle mounted with props: ', this.props);
 
         // mark mounted so async callbacks can safely call setState
         this._isMounted = true;
-    // Reset any previous group-death suppression flag and one-time guards
-    // when mounting a new battle. This prevents prior battle state from
-    // affecting subsequent battles if the component instance is reused.
-    this._suppressPersistFinalHP = false;
-    this._gameOverHandled = false;
-    this._goldAwarded = false;
+        // Reset any previous group-death suppression flag and one-time guards
+        // when mounting a new battle. This prevents prior battle state from
+        // affecting subsequent battles if the component instance is reused.
+        this._suppressPersistFinalHP = false;
+        this._gameOverHandled = false;
+        this._goldAwarded = false;
+        // Reset UI state that persists across remounts (shield walls, fear, etc.)
+        this.setState({ activeWalls: [], boardFearActive: false, fearCastingActive: false });
+
+        // --- FIX: Ensure combatManager resets combatants and removes all active enemies ---
+        if (this.props.combatManager && typeof this.props.combatManager.reset === 'function') {
+            this.props.combatManager.reset();
+        }
+
         this.props.combatManager.initialize();
         this.props.combatManager.connectOverlayManager(this.props.overlayManager)
         this.props.combatManager.connectAnimationManager(this.props.animationManager);
@@ -260,6 +315,16 @@ class MonsterBattle extends React.Component {
                 });
             }
         } catch (e) {}
+        try {
+            if (this.props.combatManager && typeof this.props.combatManager.establishStolenItemCallback === 'function') {
+                this._stolenItems = [];
+                this.props.combatManager.establishStolenItemCallback((itemKey, itemName, itemIconKey = null) => {
+                    try { if (this.props.inventoryManager) this.props.inventoryManager.removeItemByKey(itemKey); } catch (e) {}
+                    this._stolenItems = this._stolenItems || [];
+                    this._stolenItems.push({ itemName, itemIconKey });
+                });
+            }
+        } catch (e) {}
         
         //overlay manager callbacks
         // this.establishInitializeOverlayManagerCallback();
@@ -268,6 +333,38 @@ class MonsterBattle extends React.Component {
         // /animation CB
         this.establishUpdateAnimationDataCallback();
         // this.establishAnimationCallback();
+
+        // Wire board-wide event callback (e.g. induce_fear overlay)
+        this.props.combatManager.establishBoardEventCallback((eventType, data) => {
+            if (eventType === 'induce_fear') {
+                this.setState({ boardFearActive: true, fearCastingActive: true });
+                const duration = (data && data.duration) ? data.duration : 20000;
+                this._setTimeout(() => {
+                    this.setState({ boardFearActive: false });
+                }, duration);
+                // Glow persists only for the cast moment, not the full fear duration
+                this._setTimeout(() => {
+                    this.setState({ fearCastingActive: false });
+                }, 1800);
+            }
+        });
+
+        // For simulation battles: seed a tier-1 weapon into the group inventory so
+        // goblin sticky-fingers has a valid item to steal during testing.
+        if (this.props.isSimulation && this.props.inventoryManager &&
+                typeof this.props.inventoryManager.addItemsByName === 'function') {
+            this.props.inventoryManager.addItemsByName(['shortsword_sword']);
+        }
+
+        // Ensure every crew member's equipped weapons reflect the current
+        // damage/stat values from inventory-manager before combat begins.
+        if (this.props.inventoryManager && typeof this.props.inventoryManager.refreshWeaponStats === 'function') {
+            (this.props.crew || []).forEach(member => {
+                if (member && Array.isArray(member.inventory)) {
+                    member.inventory = this.props.inventoryManager.refreshWeaponStats(member.inventory);
+                }
+            });
+        }
 
         this.props.combatManager.initializeCombat({
             crew: this.props.crew,
@@ -312,6 +409,13 @@ class MonsterBattle extends React.Component {
         } catch (err) {
             console.warn('failed to wire monsterBattleRef to wizard AI', err);
         }
+        try {
+            if (this.props.combatManager && this.props.combatManager.fighterAI && this.props.combatManager.fighterAI.roster && this.props.combatManager.fighterAI.roster.soldier) {
+                this.props.combatManager.fighterAI.roster.soldier.monsterBattleRef = this;
+            }
+        } catch (err) {
+            console.warn('failed to wire monsterBattleRef to soldier AI', err);
+        }
 
         let arrowUp = new Image()
         arrowUp.src = images['arrowUp']
@@ -351,6 +455,17 @@ class MonsterBattle extends React.Component {
         } catch (err) {
             console.warn('componentDidUpdate: level-flag clearing failed', err);
         }
+
+        if (prevState.combatLog.length !== this.state.combatLog.length && this.latestCombatLogEntryRef.current) {
+            try {
+                this.latestCombatLogEntryRef.current.scrollIntoView({
+                    block: 'center',
+                    behavior: 'smooth'
+                });
+            } catch (err) {
+                console.warn('componentDidUpdate: combat-log scroll failed', err);
+            }
+        }
     }
     componentWillUnmount() {
         // mark unmounted to prevent async callbacks attempting setState
@@ -358,9 +473,18 @@ class MonsterBattle extends React.Component {
         // Best-effort: disconnect combat manager callbacks so no further calls come in
         try { if (this.props && this.props.combatManager && typeof this.props.combatManager.shutdown === 'function') this.props.combatManager.shutdown(); } catch(e){}
         try { if (this.props && this.props.combatManager && typeof this.props.combatManager.disconnectOverlayManager === 'function') this.props.combatManager.disconnectOverlayManager(); } catch(e){}
+        // Flush all canvas and tile animations immediately so in-flight missiles,
+        // fireballs etc. can't appear at the start of the next combat session.
+        try { if (this.props && this.props.animationManager && typeof this.props.animationManager.reset === 'function') this.props.animationManager.reset(); } catch(e){}
         // Clear any timers/intervals this component created
-        try { if (Array.isArray(this._timers)) { this._timers.forEach(t => clearTimeout(t)); this._timers = []; } } catch(e){}
-        try { if (Array.isArray(this._intervals)) { this._intervals.forEach(i => clearInterval(i)); this._intervals = []; } } catch(e){}
+        try { if (Array.isArray(this._timers)) { this._timers.forEach(t => clearTimeout(t)); this._timers = []; console.log('[MonsterBattle] Cleared this._timers'); } } catch(e){}
+        try { if (Array.isArray(this._intervals)) { this._intervals.forEach(i => clearInterval(i)); this._intervals = []; console.log('[MonsterBattle] Cleared this._intervals'); } } catch(e){}
+        // Deep diagnostic: log state of combatManager and timers at unmount
+        try {
+            if (this.props && this.props.combatManager) {
+                console.log('[MonsterBattle] componentWillUnmount: combatManager state:', JSON.parse(JSON.stringify(this.props.combatManager.combatants)));
+            }
+        } catch (e) { console.warn('[MonsterBattle] componentWillUnmount: failed to log combatManager state', e); }
     }
     monster = () => {
         // console.log('monster: ', this.state.battleData[this.props.monster.id]);
@@ -515,9 +639,11 @@ class MonsterBattle extends React.Component {
     return baseX + offset;
     }
     fighterPortraitClicked = (id) => {
-    const selectedFighter = this.state.battleData[id];
-    let val = (this.getFighterDetails(selectedFighter)?.coordinates.x * 100) + (selectedFighter?.facing === 'right' ? 0 : (100 - (this.props.combatManager.getRangeWidthVal(selectedFighter) * 100) ))
-    selectedFighter.portrait = this.props.crew.find(e=>e.id === id).portrait
+        const selectedFighter = this.state.battleData[id];
+        const crewMember = this.props.crew.find(e => e.id === id);
+        if (crewMember && crewMember.portrait) {
+            selectedFighter.portrait = crewMember.portrait;
+        }
         if(this.state.showCrosshair){
             this.props.combatManager.queueAction(this.state.selectedFighter.id, id, this.state.selectedAttack)
             this.setState({
@@ -614,13 +740,19 @@ class MonsterBattle extends React.Component {
                     entry.portrait = images['avatar'];
                 }
                 if (!Array.isArray(entry.damageIndicators)) entry.damageIndicators = [];
+                            if (!Array.isArray(entry.damageIndicators)) console.log('[DIAG][MonsterBattle] Initialized entry.damageIndicators as empty array for', entry);
             });
         } catch (err) {
             console.warn('updateBattleData: normalization failed', err);
         }
 
+        const combatLog = this.props.combatManager && typeof this.props.combatManager.getCombatLog === 'function'
+            ? this.props.combatManager.getCombatLog()
+            : [];
+
         this.setState({
-            battleData: clonedBattleData
+            battleData: clonedBattleData,
+            combatLog
         }, () => {
             // If nothing is selected yet, pick the default top-most / left-most crew member
             if (!this.state.selectedFighter) {
@@ -709,15 +841,6 @@ class MonsterBattle extends React.Component {
                 if (!combatant) return;
                 if (combatant.type !== 'wizard') return;
                 if (!combatant.specialActions) combatant.specialActions = [];
-                // Diagnostic: log if any incoming specialActions already have cooldown_position === 3
-                try {
-                    if (combatant.specialActions.some(sa => sa && sa.cooldown_position === 3)) {
-                        console.warn('ensureWizardSpells: combatant with specialActions containing cooldown_position===3', combatant.id || combatant.name, combatant.specialActions.filter(sa => sa && sa.cooldown_position === 3));
-                        console.trace();
-                    }
-                } catch (err) {
-                    console.debug('ensureWizardSpells diagnostic error', err);
-                }
                 const existing = combatant.specialActions.filter(sa => sa && sa.type === 'spell' && (sa.subtype === 'magic missile' || (sa.name && sa.name.toLowerCase().includes('magic missile'))));
                 const needed = Math.max(0, 3 - existing.length);
                 for (let i = 0; i < needed; i++) {
@@ -735,7 +858,10 @@ class MonsterBattle extends React.Component {
                     // created specialAction objects.
                     try {
                         const cm = this.props && this.props.combatManager;
-                        const def = cm && (cm.specialsMatrix && cm.specialsMatrix['magic_missile'] || cm.attacksMatrix && cm.attacksMatrix['magic_missile']);
+                        const def = cm && (
+                            (cm.specialsMatrix && (cm.specialsMatrix['magic_missile'] || cm.specialsMatrix['major_magic_missile'])) ||
+                            (cm.attacksMatrix  && (cm.attacksMatrix['magic_missile']  || cm.attacksMatrix['major_magic_missile']))
+                        );
                         if (def) {
                             ['energy_cost', 'cooldown', 'damage', 'effect', 'level', 'icon'].forEach(k => {
                                 if (typeof def[k] !== 'undefined' && typeof newSpell[k] === 'undefined') {
@@ -745,14 +871,6 @@ class MonsterBattle extends React.Component {
                         }
                     } catch (err) {
                         console.debug('ensureWizardSpells merge diagnostic error', err);
-                    }
-                    // Diagnostic: log inserted spells so we can trace creation time
-                    try {
-                        console.info('ensureWizardSpells: inserting magic-missile specialAction for', combatant.id || combatant.name, newSpell);
-                        // lightweight stack trace to find caller path
-                        console.trace();
-                    } catch (err) {
-                        console.debug('ensureWizardSpells insert diagnostic error', err);
                     }
                     combatant.specialActions.push(newSpell);
                 }
@@ -800,6 +918,12 @@ class MonsterBattle extends React.Component {
         }
         this._gameOverHandled = true;
 
+        // Snapshot battle data BEFORE reset() wipes combatManager.combatants.
+        // Attempt to use the freshest battleData available. Prefer component state
+        // (updated via updateBattleData). If that's empty (race), fall back to the
+        // authoritative combatManager.combatants snapshot.
+        let latestBattleData = (this.state.battleData && Object.keys(this.state.battleData).length) ? this.state.battleData : (this.props.combatManager && this.props.combatManager.combatants ? JSON.parse(JSON.stringify(this.props.combatManager.combatants)) : {});
+
         this.props.overlayManager.reset();
         this.props.combatManager.reset();
 
@@ -808,11 +932,6 @@ class MonsterBattle extends React.Component {
             this.props.exitSimulator();
             return
         }
-
-        // Attempt to use the freshest battleData available. Prefer component state
-        // (updated via updateBattleData). If that's empty (race), fall back to the
-        // authoritative combatManager.combatants snapshot.
-        let latestBattleData = (this.state.battleData && Object.keys(this.state.battleData).length) ? this.state.battleData : (this.props.combatManager && this.props.combatManager.combatants ? JSON.parse(JSON.stringify(this.props.combatManager.combatants)) : {});
 
         let experienceGained,
             goldGained,
@@ -830,7 +949,21 @@ class MonsterBattle extends React.Component {
                 itemsGained = [];
                 this.props.monster.drops.forEach(e=>{
                     let d = Math.random();
-                    if(d < e.percentChance*.01) itemsGained.push(e.item)
+                    if(d < e.percentChance*.01){
+                        if(e.itemPool && Array.isArray(e.itemPool) && e.itemPool.length > 0){
+                            // Supports both flat pools and nested pools like [WEAPONS, ARMOR, MAGICAL]
+                            const pickFromPool = (pool) => {
+                                if(!Array.isArray(pool) || pool.length === 0) return null;
+                                const idx = Math.floor(Math.random() * pool.length);
+                                const picked = pool[idx];
+                                return Array.isArray(picked) ? pickFromPool(picked) : picked;
+                            };
+                            const itemFromPool = pickFromPool(e.itemPool);
+                            if(itemFromPool) itemsGained.push(itemFromPool);
+                        } else if(e.item){
+                            itemsGained.push(e.item);
+                        }
+                    }
                 })
                 this.props.inventoryManager.addItemsByName(itemsGained)
             }
@@ -1039,8 +1172,8 @@ class MonsterBattle extends React.Component {
             // debug: _suppressPersistFinalHP state
             // Print brief portrait info from battleData for inspection
             try {
-                const portraits = Object.values(this.state.battleData || {}).map(b => ({ id: b && b.id, portrait: b && b.portrait }));
                 // portrait snapshot suppressed
+                void Object.values(this.state.battleData || {}).map(b => ({ id: b && b.id, portrait: b && b.portrait }));
             } catch (inner) { console.warn('gameOver: failed to snapshot battleData portraits', inner); }
         } catch (e) {}
 
@@ -1050,6 +1183,7 @@ class MonsterBattle extends React.Component {
             foodGained,
             experienceGained,
             itemsGained,
+            stolenItems: this._stolenItems && this._stolenItems.length ? [...this._stolenItems] : [],
             summaryMessage,
             battleResult,
             suppressSummaryPortraits: !!this._suppressPersistFinalHP,
@@ -1206,10 +1340,14 @@ class MonsterBattle extends React.Component {
     }
     specialTileClicked = (val) => {
     // special tile clicked
-        let finalVal;
         if(val !== null && typeof val === 'string'){
             val = val.replaceAll('_', ' ')
         }
+        try {
+            if (this.state.selectedFighter && this.props.combatManager && typeof this.props.combatManager.setSelectedFighter === 'function') {
+                this.props.combatManager.setSelectedFighter(this.state.selectedFighter);
+            }
+        } catch (err) {}
     // special tile value
         this.fireSpecial(val)
 
@@ -1223,7 +1361,6 @@ class MonsterBattle extends React.Component {
     manualFire = () => {
         if(!this.state.selectedFighter) return
     // manual fire invoked
-        let consumableSpecialSelected;
 
         let selectedFighter = this.state.selectedFighter;
         let specials = selectedFighter?.specials,
@@ -1280,13 +1417,30 @@ class MonsterBattle extends React.Component {
         if(!this.state.selectedFighter) return
     // firing special
         // debugger
-        let consumableSpecialSelected;
 
         let selectedFighter = this.state.selectedFighter;
-        let specials = selectedFighter?.specials,
-        consumableSpecials = selectedFighter?.specialActions,
+        const cmFighter = this.props.combatManager && typeof this.props.combatManager.getCombatant === 'function'
+            ? this.props.combatManager.getCombatant(selectedFighter.id)
+            : null;
+        const fighterRef = cmFighter || selectedFighter;
+        let specials = fighterRef?.specials || [],
+        consumableSpecials = fighterRef?.specialActions || [],
         selectedSpecial = specials.find(a=> a.selected),
         selectedConsumableSpecial = consumableSpecials.find(a=> a.selected);
+
+        if (special) {
+            const specialName = (typeof special === 'string' ? special : special?.name || '')
+                .replaceAll('_', ' ')
+                .toLowerCase();
+            const clickedSpecial = specials.find(a => a && a.name && a.name.toLowerCase() === specialName) || special;
+            if (!clickedSpecial || !clickedSpecial.name) return;
+            if (clickedSpecial.cooldown_position !== 100) return;
+            if ((fighterRef.energy || 0) < 100) return;
+            this.props.combatManager.fighterSpecialAttack(clickedSpecial)
+            specials.forEach(e=>e.selected=false)
+            consumableSpecials.forEach(a=>a.selected=false)
+            return;
+        }
 
         if(selectedSpecial){
             this.props.combatManager.fighterSpecialAttack(selectedSpecial)
@@ -1366,7 +1520,6 @@ class MonsterBattle extends React.Component {
     // Minimal handler for spell hover to avoid missing-method runtime errors.
     // Logs a small message and updates hoveredSpellTile for the tooltip.
     spellTileHovered = (val) => {
-        const label = val ? (val.subtype || val.name || 'unknown') : 'none';
     // spell hovered
         this.setState({ hoveredSpellTile: val ? (val.subtype || val.name) : null });
     }
@@ -1555,21 +1708,46 @@ class MonsterBattle extends React.Component {
                                 {this.state.summaryMessage}
                             </div>
                             {this.state.itemsGained && this.state.itemsGained.length > 0 &&
-                            <div className="experience-container">
-                                You found a {this.state.itemsGained.map(e=> e.replaceAll('_',' ')).join(', ')}
-                            </div>} 
+                                this.state.itemsGained.map((itemKey, idx) => {
+                                    const itemDef = this.props.inventoryManager.allItems[itemKey];
+                                    const iconSrc = itemDef?.icon ? images[itemDef.icon] : null;
+                                    const displayName = itemDef?.name || itemKey.replaceAll('_', ' ');
+                                    return (
+                                        <div key={idx} className="experience-container">
+                                            {iconSrc && <img className="summary-icon" src={iconSrc} alt="" />}
+                                            You found a {displayName}
+                                        </div>
+                                    );
+                                })
+                            }
                             {this.state.goldGained > 0 && 
                             <div className="experience-container">
+                                <img className="summary-icon" src={images.gold} alt="" />
                                 You found {this.state.goldGained} gold
                             </div>
                             }
+                            {this.state.stolenItems && this.state.stolenItems.length > 0 &&
+                                this.state.stolenItems.map((entry, idx) => {
+                                    const itemName = typeof entry === 'string' ? entry : entry?.itemName;
+                                    const itemIconKey = typeof entry === 'string' ? null : entry?.itemIconKey;
+                                    const iconSrc = (itemIconKey && images[itemIconKey]) ? images[itemIconKey] : images.goblin_portrait;
+                                    return (
+                                        <div key={`stolen-${idx}`} className="experience-container stolen-item">
+                                            {iconSrc && <img className="summary-icon" src={iconSrc} alt="" />}
+                                            {itemName} was stolen by a goblin!
+                                        </div>
+                                    );
+                                })
+                            }
                             {this.state.foodGained > 0 &&
                             <div className="experience-container">
+                                <span className="summary-icon" role="img" aria-label="meat">🍖</span>
                                 Your crew foraged {this.state.foodGained} food
                             </div>
                             }
                             {this.state.experienceGained > 0 && 
                             <div className="experience-container">
+                                <img className="summary-icon" src={images.exp} alt="" />
                                 Each crew member has earned {this.state.experienceGained} experience
                             </div>} 
                             { !this.state.suppressSummaryPortraits && (
@@ -1699,6 +1877,42 @@ class MonsterBattle extends React.Component {
                             </div>
                         })}
                     </div>
+                    {/* /// SHIELD WALL OVERLAYS */}
+                    {this.state.activeWalls.map((wall) => {
+                        // Each wall occupies lanesAffected.length tiles vertically.
+                        // Position: the wall is a thin vertical line sitting between
+                        // column (wall.x - 1) and column (wall.x).
+                        // left = wall.x * TILE_SIZE  (right edge of the tile at wall.x-1)
+                        // top  = min(lanesAffected) * TILE_SIZE
+                        // height = lanesAffected.length * TILE_SIZE
+                        if (!wall.lanesAffected || !wall.lanesAffected.length) return null;
+                        const minLane = Math.min(...wall.lanesAffected);
+                        const topPx = minLane * TILE_SIZE;
+                        const heightPx = wall.lanesAffected.length * TILE_SIZE;
+                        // The wall line sits at the leading edge of wall.x column
+                        const leftPx = wall.isFacingRight
+                            ? wall.x * TILE_SIZE - 3
+                            : (wall.x + 1) * TILE_SIZE - 3;
+                        return (
+                            <div
+                                key={wall.id}
+                                className="shield-wall-overlay"
+                                style={{
+                                    position: 'absolute',
+                                    left: leftPx + 'px',
+                                    top: topPx + 'px',
+                                    width: '6px',
+                                    height: heightPx + 'px',
+                                    zIndex: 20,
+                                    pointerEvents: 'none'
+                                }}
+                            />
+                        );
+                    })}
+                    {/* /// FEAR OVERLAY — board-wide shroud when induce_fear is active */}
+                    {this.state.boardFearActive && (
+                        <div className="fear-overlay" />
+                    )}
                     {/* /// FIGHTERS */}
                     <FightersCombatGrid 
                         crew={this.props.crew}
@@ -1743,6 +1957,7 @@ class MonsterBattle extends React.Component {
                         TILE_SIZE={TILE_SIZE}
                         SHOW_TILE_BORDERS={SHOW_TILE_BORDERS}
                         SHOW_MONSTER_IDS={SHOW_MONSTER_IDS}
+                        fearCastingActive={this.state.fearCastingActive}
                     />
                 </div>
 
@@ -1755,7 +1970,7 @@ class MonsterBattle extends React.Component {
                                 {this.state.selectedFighter?.name}
                             </div>
                             <div className="readout">
-                                {this.state.selectedFighter?.readout.action} {this.state.selectedFighter?.readout.result}
+                                {(this.state.selectedFighter?.readout?.action || '')} {(this.state.selectedFighter?.readout?.result || '')}
                             </div>
                             {this.props.paused && <span className="paused-marker">PAUSED</span>}
                         </div>
@@ -1804,15 +2019,47 @@ class MonsterBattle extends React.Component {
                             <div className="interaction-tooltip">{this.state.hoveredSpecialTile}</div>
                             <div className="interaction-tile-container">
                                 {this.state.selectedFighter?.specials?.map((a, i)=>{
-                                    return a && <div key={i} className='interaction-tile-wrapper'>
+                                    const cm = this.props.combatManager;
+                                    const fallbackSpecial = (typeof a === 'string' && cm && cm.specialsMatrix)
+                                        ? cm.specialsMatrix[a]
+                                        : null;
+                                    const normalizedSpecial = (typeof a === 'string')
+                                        ? (cm?.resolveSpecial?.([a], a) || fallbackSpecial || { name: a.replaceAll('_', ' '), key: a })
+                                        : a;
+                                    const iconCandidate = normalizedSpecial?.iconUrl || normalizedSpecial?.icon;
+                                    const resolveIconSource = (candidate) => {
+                                        if (!candidate) return '';
+                                        if (typeof candidate === 'string') {
+                                            const trimmed = candidate.trim();
+                                            if (!trimmed) return '';
+                                            if (trimmed.startsWith('url(')) {
+                                                return trimmed.replace(/^url\((.*)\)$/i, '$1').replace(/^['\"]|['\"]$/g, '');
+                                            }
+                                            const mapped = images[trimmed];
+                                            if (mapped) return mapped.default || mapped;
+                                            return trimmed;
+                                        }
+                                        if (typeof candidate === 'object' && candidate.default) return candidate.default;
+                                        return '';
+                                    };
+                                    const cssUrl = (value) => {
+                                        if (!value) return '';
+                                        const normalizedValue = String(value).trim().replace(/^['\"]|['\"]$/g, '');
+                                        return `url("${encodeURI(normalizedValue)}")`;
+                                    };
+                                    const specialIcon = resolveIconSource(iconCandidate);
+                                    const specialBackgroundImage = specialIcon
+                                        ? `${cssUrl(specialIcon)}, radial-gradient(white 40%, black 80%)`
+                                        : 'radial-gradient(white 40%, black 80%)';
+                                    return normalizedSpecial && <div key={i} className='interaction-tile-wrapper'>
                                                 <div 
-                                                style={{backgroundImage: "url(" + a?.icon + "), radial-gradient(white 40%, black 80%)", cursor: 'pointer'}} 
-                                                className={`interaction-tile special ${a.selected ? 'selected' : ''}`}
-                                                onClick={() => this.specialTileClicked(a)} 
-                                                onMouseEnter={() => this.specialTileHovered(a)} 
+                                                style={{backgroundImage: specialBackgroundImage, cursor: 'pointer'}} 
+                                                className={`interaction-tile special ${normalizedSpecial.selected ? 'selected' : ''}`}
+                                                onClick={() => this.specialTileClicked(normalizedSpecial)} 
+                                                onMouseEnter={() => this.specialTileHovered(normalizedSpecial)} 
                                                 onMouseLeave={() => this.specialTileHovered(null)}>
                                                 </div>
-                                                <div className="interaction-tile-overlay" style={{width: `${a.cooldown_position}%`, transition: a.cooldown_position === 0 ? '0s' : '0.2s', backgroundColor: a.cooldown_position === 100 && this.state.selectedFighter?.energy >= 100 ? 'green' : '#c2bd0f'}}></div>
+                                                <div className="interaction-tile-overlay" style={{width: `${normalizedSpecial.cooldown_position}%`, transition: normalizedSpecial.cooldown_position === 0 ? '0s' : '0.2s', backgroundColor: normalizedSpecial.cooldown_position === 100 && this.state.selectedFighter?.energy >= 100 ? 'green' : '#c2bd0f'}}></div>
                                             </div>
                                 })}
                             </div>
@@ -1859,26 +2106,52 @@ class MonsterBattle extends React.Component {
                             <div className="interaction-header">Attacks</div>
                             <div className="interaction-tooltip">{this.state.hoveredAttackTile}</div>
                             <div className="interaction-tile-container">
-                                    {this.state.selectedFighter?.attacks.map((a, i)=>{
-                                        return <div key={i}  className='interaction-tile-wrapper'>
+                                {(() => {
+                                    const grouped = {};
+                                    (this.state.selectedFighter?.attacks || []).forEach((attack) => {
+                                        if (!attack) return;
+                                        const key = `${attack.name || attack.key || 'attack'}__${attack.icon || ''}__${attack.range || ''}`;
+                                        if (!grouped[key]) grouped[key] = [];
+                                        grouped[key].push(attack);
+                                    });
+
+                                    return Object.keys(grouped).map((groupKey) => {
+                                        const group = grouped[groupKey];
+                                        if (!group || group.length === 0) return null;
+                                        const displayAttack = group.find((unit) => unit && unit.cooldown_position === 100) || group[0];
+                                        if (!displayAttack) return null;
+
+                                        const cooldownPosition = typeof displayAttack.cooldown_position === 'number'
+                                            ? displayAttack.cooldown_position
+                                            : 100;
+                                        const cooldownRemaining = Math.max(0, Math.min(100, 100 - cooldownPosition));
+
+                                        return <div key={groupKey} className='interaction-tile-wrapper'>
                                                     <div 
-                                                    className={`interaction-tile ${a.cooldown_position === 100 ? 'available' : ''}`} 
-                                                    style={{backgroundImage: "url(" + a.icon + ")", cursor: this.state.showCrosshair ? 'crosshair' : (a.cooldown_position === 100 ? 'pointer' : '')}} 
-                                                    onClick={() => this.attackTileClicked(a)} 
-                                                    onMouseEnter={() => this.attackTileHovered(a.name)} 
+                                                    className={`interaction-tile ${cooldownPosition === 100 ? 'available' : ''}`} 
+                                                    style={{backgroundImage: "url(" + displayAttack.icon + ")", cursor: this.state.showCrosshair ? 'crosshair' : (cooldownPosition === 100 ? 'pointer' : '')}} 
+                                                    onClick={() => this.attackTileClicked(displayAttack)} 
+                                                    onMouseEnter={() => this.attackTileHovered(displayAttack.name)} 
                                                     onMouseLeave={() => this.attackTileHovered(null)}
                                                     >
                                                     </div>
-                                                    <div className="interaction-tile-overlay" style={{width: `${a.cooldown_position}%`, transition: a.cooldown_position === 0 ? '0s' : '0.2s'}}></div>
+                                                    {cooldownRemaining > 0 && (
+                                                        <div
+                                                            className="interaction-tile-overlay radial"
+                                                            style={{ '--cooldown-remaining': `${cooldownRemaining}%` }}
+                                                        ></div>
+                                                    )}
+                                                    {group.length > 1 && <div className="stack-badge">{this.romanNumeral(group.length)}</div>}
                                                 </div>
-                                    })}
+                                    });
+                                })()}
                             </div>
                         </div>
                         <div className="target-col">
                             <div className="interaction-header">Target</div>
                             <div className="interaction-tooltip"> </div>
                             <div className="interaction-tile-container">
-                                {this.state.selectedFighter && this.state.selectedFighter.name !== 'Loryastes' && Object.values(this.state.battleData).filter(e => (e.isMonster || e.isMinion) && !e.dead && !e.invisible).map((a)=>{
+                                {this.state.selectedFighter && this.state.selectedFighter.name !== 'Loryastes' && Object.values(this.state.battleData).filter(e => (e.isMonster || e.isMinion) && !e.dead && !e.invisible && !e.isVCT).map((a)=>{
                                     return <div key={a.id} className='interaction-tile-wrapper'>
                                                 <div 
                                                     style={{backgroundImage: "url(" + a.portrait + ")", cursor: this.state.showCrosshair ? 'crosshair' : ''}} 
@@ -1907,18 +2180,19 @@ class MonsterBattle extends React.Component {
 
                         </div>
                         <div className="queue-col">
-                            <div className="interaction-header">Queue</div>
-                            <div className="queue-tile-container">
-                                {this.state.selectedFighter?.action_queue.map((action, i)=>{
-                                    return <div 
-                                    key={i} 
-                                    style={{backgroundImage: "url(" + images[action.icon] + ")", cursor: 'pointer'}} 
-                                    className='interaction-tile action' 
-                                    onMouseEnter={() => this.queueTileHovered(action)} 
-                                    onMouseLeave={() => this.queueTileHovered(null)}
-                                    >
-                                        {/* {a} */}
-                                    </div>
+                            <div className="interaction-header">Event Log</div>
+                            <div className="event-log-container" ref={this.combatLogContainerRef}>
+                                {this.state.combatLog.map((entry, index) => {
+                                    const isLatest = index === this.state.combatLog.length - 1;
+                                    return (
+                                        <div
+                                            key={entry.id || index}
+                                            ref={isLatest ? this.latestCombatLogEntryRef : null}
+                                            className="event-log-entry"
+                                        >
+                                            {entry.message}
+                                        </div>
+                                    );
                                 })}
                             </div>
                         </div>

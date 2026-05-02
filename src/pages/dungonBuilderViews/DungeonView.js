@@ -3,9 +3,9 @@ import '@coreui/coreui/dist/css/coreui.min.css'
 import '../../styles/dungeon-board.scss'
 import '../../styles/map-maker.scss'
 import Tile from '../../components/tile'
-import { CDropdown, CDropdownToggle, CDropdownMenu, CDropdownItem, CCollapse, CSpinner, CFormSelect} from '@coreui/react';
+import { CDropdown, CDropdownToggle, CDropdownMenu, CDropdownItem, CSpinner, CFormSelect} from '@coreui/react';
 import  CIcon  from '@coreui/icons-react'
-import { cilCaretRight, cilSave, cilQrCode, cilLevelDown, cilLevelUp, cilLibraryAdd, cilTrash, cilOptions, cilPlus } from '@coreui/icons';
+import { cilSave, cilQrCode, cilLevelDown, cilLevelUp, cilLibraryAdd, cilTrash, cilOptions, cilPlus } from '@coreui/icons';
 import '../../styles/dungeon-board.scss'
 import '../../styles/map-maker.scss'
 import Canvas from '../../components/Canvas/canvas'
@@ -31,6 +31,7 @@ class DungeonView extends React.Component {
             nextProps.hoveredDungeonSection !== this.props.hoveredDungeonSection ||
             nextProps.dungeons !== this.props.dungeons ||
             nextProps.loadingData !== this.props.loadingData ||
+            nextProps.planeSyncInProgress !== this.props.planeSyncInProgress ||
             nextProps.tileSize !== this.props.tileSize ||
             nextProps.boardSize !== this.props.boardSize ||
             nextProps.imagesMatrix !== this.props.imagesMatrix
@@ -417,7 +418,7 @@ class DungeonView extends React.Component {
                             </div>}
                         </div>
                         <div className="dungeon-planes-container">
-                            {this.props.loadedDungeon && !this.props.loadingData && <div className="loaded-dungeon-wrapper"
+                            {this.props.loadedDungeon && !this.props.loadingData && !this.props.planeSyncInProgress && <div className="loaded-dungeon-wrapper"
                             style={{
                                 justifyContent: this.props.loadedDungeon.levels.length > 2 ? 'flex-start' : 'center'
                             }}
@@ -637,8 +638,9 @@ class DungeonView extends React.Component {
                                 Select a dungeon, or create a new one
                             </div>}
 
-                            {this.props.loadingData && <div className="empty-dungeons-container">
+                            {(this.props.loadingData || this.props.planeSyncInProgress) && <div className="empty-dungeons-container">
                                 <CSpinner/>
+                                {this.props.planeSyncInProgress && <div style={{ marginTop: '8px' }}>Updating dungeon planes...</div>}
                             </div>}
                         </div>
                     </div>

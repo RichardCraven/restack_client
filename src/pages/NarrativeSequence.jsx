@@ -439,7 +439,7 @@ export default function NarrativeSequence(props) {
         break;
     }
     // [deathSequence, introSequence, props]
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
     // cleanup timers on unmount
     useEffect(() => {
@@ -452,6 +452,7 @@ export default function NarrativeSequence(props) {
   return (
     <div className="intro-pane pane">
         {currentOddSequence && <img 
+         alt=""
          className={`intro-image ${wreckImage ? 'wrecked' : ''} ${moreWrecked ? 'more-wrecked' : ''}`}
          src={currentOddSequence.image}
          style={{opacity: moreWrecked ? 0 : 
@@ -459,6 +460,7 @@ export default function NarrativeSequence(props) {
          />}
 
          {currentEvenSequence && <img 
+         alt=""
          className={`intro-image ${wreckImage ? 'wrecked' : ''} ${moreWrecked ? 'more-wrecked' : ''}`}
          src={currentEvenSequence.image}
          style={{opacity: 

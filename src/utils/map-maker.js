@@ -13,21 +13,38 @@ export function MapMaker(props){
         'cloud',
         'spawn',
         
-        'monster',
+        'monsters',
         'item',
         'magic',
-        'minor key',
-        'major key',
-        'master key',
+        'narrative',
+        'key',
+        'items',
         
         'gate',
         'treasure',
         'gold',
+        'food',
         'oracle',
         'dream den',
 
         'devil'
     ]
+
+    this.tierOptions = [
+        { key: 'tier_1_monster', name: 'Tier 1', image: 'beholder_minion' },
+        { key: 'tier_2_monster', name: 'Tier 2', image: 'ogre' },
+        { key: 'tier_3_monster', name: 'Tier 3', image: 'witch' },
+        { key: 'tier_4_monster', name: 'Tier 4', image: 'sphinx' },
+        { key: 'tier_1_weapon',  name: 'Tier 1 Weapon',  image: 'tier_1_weapon' },
+        { key: 'tier_2_weapon',  name: 'Tier 2 Weapon',  image: 'tier_2_weapon' },
+        { key: 'tier_3_weapon',  name: 'Tier 3 Weapon',  image: 'tier_3_weapon' },
+        { key: 'tier_1_magical', name: 'Tier 1 Magical', image: 'tier_1_magical' },
+        { key: 'tier_2_magical', name: 'Tier 2 Magical', image: 'tier_2_magical' },
+        { key: 'tier_3_magical', name: 'Tier 3 Magical', image: 'tier_3_magical' },
+        { key: 'tier_1_armor',   name: 'Tier 1 Armor',   image: 'tier_1_armor' },
+        { key: 'tier_2_armor',   name: 'Tier 2 Armor',   image: 'tier_2_armor' },
+        { key: 'tier_3_armor',   name: 'Tier 3 Armor',   image: 'tier_3_armor' },
+    ];
 
     this.paletteTiles = [];
     this.getIndexFromCoordinates = (coordinates) =>{
@@ -53,6 +70,19 @@ export function MapMaker(props){
         return tiles
     }
     this.markPassages = (dungeon) => {
+        const collectPassagesByMiniboard = (plane, includeSpawnPoint = true) => {
+            if (!plane || !Array.isArray(plane.miniboards)) return [];
+            return plane.miniboards.map((board) => {
+                if (!board || !board.tiles) return [];
+                return board.tiles.filter((tile) => {
+                    const type = this.getContainsType(tile.contains);
+                    return includeSpawnPoint
+                        ? (type === 'way_up' || type === 'way_down' || type === 'door' || type === 'spawn_point')
+                        : (type === 'way_up' || type === 'way_down' || type === 'door');
+                });
+            });
+        };
+
         dungeon.levels.forEach(lvl => {
             if(lvl.front) lvl.front.miniboards.forEach((mb, i) => {
                 if(!mb|| !mb.tiles) return
@@ -73,54 +103,44 @@ export function MapMaker(props){
         })
         let val = [];
         dungeon.levels.forEach((l) => {
-            let frontFilteredMiniboards = (!!l.front && l.front.miniboards && l.front.miniboards.filter(e=>e.id).length === 9) ? l.front.miniboards.map(b=> b.tiles.filter(t=>{
-                const type = this.getContainsType(t.contains); return (type === 'way_up' || type === 'way_down' || type === 'door' || type === 'spawn_point')
-            })) : [];
-            let backFilteredMiniboards = (!!l.back && l.back.miniboards && l.back.miniboards.filter(e=>e.id).length === 9) ? l.back.miniboards.map(b=>b.tiles.filter(t=>{
-                const type = this.getContainsType(t.contains); return (type === 'way_up' || type === 'way_down' || type === 'door' || type === 'spawn_point')
-            })) : [];
+            let frontFilteredMiniboards = collectPassagesByMiniboard(l.front, true);
+            let backFilteredMiniboards = collectPassagesByMiniboard(l.back, true);
 
             let aboveLevel = dungeon.levels.find(lev => lev.id === l.id+1)
             let belowLevel = dungeon.levels.find(lev => lev.id === l.id-1)
             let connected = [];
 
+            const aboveFrontMiniboards = collectPassagesByMiniboard(aboveLevel && aboveLevel.front, false);
+            const aboveBackMiniboards = collectPassagesByMiniboard(aboveLevel && aboveLevel.back, false);
+            const belowFront = collectPassagesByMiniboard(belowLevel && belowLevel.front, false);
+            const belowBack = collectPassagesByMiniboard(belowLevel && belowLevel.back, false);
+
             for(let i =0; i < 9; i++){
                 const frontBoardPassages = frontFilteredMiniboards[i];
                 const backBoardPassages = backFilteredMiniboards[i];
-                const aboveFrontMiniboards = (aboveLevel && aboveLevel.front && aboveLevel.front.miniboards.filter(e=>e.id).length === 9) ? aboveLevel.front.miniboards.map(b=>b.tiles.filter(t=>{
-                    const type = this.getContainsType(t.contains); return (type === 'way_up' || type === 'way_down' || type === 'door')
-                })) : null;
-                const aboveBackMiniboards = (aboveLevel && aboveLevel.back && aboveLevel.back && aboveLevel.back.miniboards.filter(e=>e.id).length === 9) ? aboveLevel.back.miniboards.map(b=>b.tiles.filter(t=>{
-                    const type = this.getContainsType(t.contains); return (type === 'way_up' || type === 'way_down' || type === 'door')
-                })) : null;
-                const belowFront = (belowLevel && belowLevel.front && belowLevel.front && belowLevel.front.miniboards.filter(e=>e.id).length === 9) ? belowLevel.front.miniboards.map(b=>b.tiles.filter(t=>{
-                    const type = this.getContainsType(t.contains); return (type === 'way_up' || type === 'way_down' || type === 'door')
-                })) : null,
-                belowBack = (belowLevel && belowLevel.back && belowLevel.back && belowLevel.back.miniboards.filter(e=>e.id).length === 9) ? belowLevel.back.miniboards.map(b=>b.tiles.filter(t=>{
-                    const type = this.getContainsType(t.contains); return (type === 'way_up' || type === 'way_down' || type === 'door')
-                })) : null;
                 if(frontBoardPassages && frontBoardPassages.length > 0){
                     frontBoardPassages.forEach((f)=>{
                         let backMatch = backBoardPassages ? backBoardPassages.find(b=>b.id === f.id) : null,
-                        aboveMatch = aboveFrontMiniboards ? aboveFrontMiniboards[i].find(aboveTile=>aboveTile.id === f.id) : null,
-                        belowMatch = belowFront ? belowFront[i].find(belowTile=>belowTile.id === f.id) : null;
-                        switch(f.contains){
+                        aboveMatch = aboveFrontMiniboards[i] ? aboveFrontMiniboards[i].find(aboveTile=>aboveTile.id === f.id) : null,
+                        belowMatch = belowFront[i] ? belowFront[i].find(belowTile=>belowTile.id === f.id) : null;
+                        const frontType = this.getContainsType(f.contains);
+                        switch(frontType){
                             case 'way_up': 
                                 if(aboveMatch){
                                     aboveMatch.miniboardIndex = i;
-                                    connected.push({locationCode: f.locationCode, miniboardIndex: i, type: f.contains, coordinates: f.coordinates, orientation: 'front', connectedTo: aboveMatch, level: f.level})
+                                    connected.push({locationCode: f.locationCode, miniboardIndex: i, type: frontType, coordinates: f.coordinates, orientation: 'front', connectedTo: aboveMatch, level: f.level})
                                 }
                             break;
                             case 'way_down': 
                             if(belowMatch){
                                     belowMatch.miniboardIndex = i;
-                                    connected.push({locationCode: f.locationCode, miniboardIndex: i, type: f.contains, coordinates: f.coordinates, orientation: 'front', connectedTo: belowMatch, level: f.level})
+                                    connected.push({locationCode: f.locationCode, miniboardIndex: i, type: frontType, coordinates: f.coordinates, orientation: 'front', connectedTo: belowMatch, level: f.level})
                                 }
                             break;
                             case 'door': 
                                 if(backMatch){
                                     backMatch.miniboardIndex = i;
-                                    connected.push({locationCode: f.locationCode, miniboardIndex: i, type: f.contains, coordinates: f.coordinates, orientation: 'front', connectedTo: backMatch, level: f.level})
+                                    connected.push({locationCode: f.locationCode, miniboardIndex: i, type: frontType, coordinates: f.coordinates, orientation: 'front', connectedTo: backMatch, level: f.level})
                                 }
                             break;
                             default:
@@ -131,25 +151,26 @@ export function MapMaker(props){
                 if(backBoardPassages && backBoardPassages.length > 0){
                     backBoardPassages.forEach((b)=>{
                         let frontMatch = frontBoardPassages ? frontBoardPassages.find(f=>f.id === b.id): null,
-                        aboveMatch = aboveBackMiniboards ? aboveBackMiniboards[i].find(above=>above.id === b.id) : null,
-                        belowMatch = belowBack ? belowBack[i].find(below=>below.id === b.id) : null
-                        switch(b.contains){
+                        aboveMatch = aboveBackMiniboards[i] ? aboveBackMiniboards[i].find(above=>above.id === b.id) : null,
+                        belowMatch = belowBack[i] ? belowBack[i].find(below=>below.id === b.id) : null
+                        const backType = this.getContainsType(b.contains);
+                        switch(backType){
                             case 'way_up': 
                                 if(aboveMatch){
                                     aboveMatch.miniboardIndex = i;
-                                    connected.push({locationCode: b.locationCode, miniboardIndex: i, type: b.contains, coordinates: b.coordinates, orientation: 'back', connectedTo: aboveMatch, level: b.level})
+                                    connected.push({locationCode: b.locationCode, miniboardIndex: i, type: backType, coordinates: b.coordinates, orientation: 'back', connectedTo: aboveMatch, level: b.level})
                                 }
                             break;
                             case 'way_down': 
                                 if(belowMatch){
                                     belowMatch.miniboardIndex = i;
-                                    connected.push({locationCode: b.locationCode, miniboardIndex: i, type: b.contains, coordinates: b.coordinates, orientation: 'back', connectedTo: belowMatch, level: b.level})
+                                    connected.push({locationCode: b.locationCode, miniboardIndex: i, type: backType, coordinates: b.coordinates, orientation: 'back', connectedTo: belowMatch, level: b.level})
                                 }
                             break;
                             case 'door': 
                                 if(frontMatch){
                                     frontMatch.miniboardIndex = i;
-                                    connected.push({locationCode: b.locationCode, miniboardIndex: i, type: b.contains, coordinates: b.coordinates, orientation: 'back', connectedTo: frontMatch, level: b.level})
+                                    connected.push({locationCode: b.locationCode, miniboardIndex: i, type: backType, coordinates: b.coordinates, orientation: 'back', connectedTo: frontMatch, level: b.level})
                                 }
                             break;
                             default:
@@ -174,10 +195,9 @@ export function MapMaker(props){
                 }
             })
 
-            // let newBBmb = backFilteredMiniboards.filter(f=>f.length > 0)
-            if(frontFilteredMiniboards || backFilteredMiniboards){
-                val.push({id: l.id, frontPassages: newFFmb, backPassages: newBBmb, connected})
-            }
+            // Always include a per-level passages record, even for completely empty levels.
+            // This prevents formatDungeon from crashing when a new level has front/back = null.
+            val.push({id: l.id, frontPassages: newFFmb, backPassages: newBBmb, connected})
         })
         return val
     }
@@ -232,7 +252,7 @@ export function MapMaker(props){
         // console.log('input: ', input)
     }
     this.getMapConfiguration = (tiles) => {
-            let topRow = function(){
+            let topRow = () => {
                 let openings = []
                 for(let p = 0; p<15; p++){
                     if(this.getContainsType(tiles[p].contains) !== 'void'){
@@ -241,7 +261,7 @@ export function MapMaker(props){
                 }
                 return openings
             }
-            let leftCol = function(){
+            let leftCol = () => {
                 let openings = []
                 for(let p = 0; p<15; p++){
                     let index = p*15
@@ -251,7 +271,7 @@ export function MapMaker(props){
                 }
                 return openings
             }
-            let rightCol = function(){
+            let rightCol = () => {
                 let openings = []
                 for(let p = 0; p<15; p++){
                     let index = p*15+14
@@ -261,7 +281,7 @@ export function MapMaker(props){
                 }
                 return openings
             }
-            let botRow = function(){
+            let botRow = () => {
                 let openings = []
                 for(let p = 210; p<225; p++){
                     if(this.getContainsType(tiles[p].contains) !== 'void'){
@@ -389,7 +409,12 @@ export function MapMaker(props){
             l.valid = true;
             if(l.front) l.front.valid = true;
             if(l.back) l.back.valid = true;
-            let passages = markedPassages.find(p=>p.id === l.id)
+            let passages = markedPassages.find(p=>p.id === l.id) || {
+                id: l.id,
+                frontPassages: [],
+                backPassages: [],
+                connected: []
+            }
             let spawns = []
             passages.frontPassages.forEach(passage=>{
                 if(this.getContainsType(passage.contains) === 'spawn_point'){
@@ -398,7 +423,7 @@ export function MapMaker(props){
                 } else {
                     let connectedMatch = passages.connected.find(e=>e.locationCode === passage.locationCode)
                     if(!connectedMatch){
-                        l.front.valid = false;
+                        if(l.front) l.front.valid = false;
                     }
                 }
             })
@@ -415,7 +440,7 @@ export function MapMaker(props){
                         // console.log('setting level valid to false in back');
                         // debugger
                         // l.valid = false;
-                        l.back.valid = false;
+                        if(l.back) l.back.valid = false;
                     }
                 }
                 // })
@@ -513,26 +538,28 @@ export function MapMaker(props){
                 return 'way_down'
             case 'delete':
                 return 'trash'
-            case 'monster':
-                return 'monster'
+            case 'monsters':
+                return 'wyvern'
             case 'item':
                 return 'lantern'
             case 'magic':
                 return 'spell'
+            case 'narrative':
+                return 'narrative'
+            case 'key':
+                return 'treasury_key'
+            case 'items':
+                return 'tier_1_weapon'
             case 'stairs':
                 return 'stairs_down'
             case 'door':
                 return 'door'
             case 'dream den':
                 return 'moon_castle'
-            case 'major key':
-                return 'major_key'  
-            case 'minor key':
-                return 'minor_key'  
-            case 'master key':
-                return 'ornate_key'  
             case 'devil':
                 return 'mordu_devil'
+            case 'food':
+                return 'food'
             case 'spawn':
                 return 'spawn_point'    
             default:

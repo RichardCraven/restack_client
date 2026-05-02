@@ -24,10 +24,23 @@ export default function AnimationTile(props) {
         }
     }, [props.animationType, props.animationData]);
 
+
     let image, facing, keyframe, duration;
     facing = props.animationData?.facing;
     duration = props.animationData?.duration;
     let swordX, swordY;
+
+    // Cache buster state for GIFs
+    const [gifCacheBuster, setGifCacheBuster] = useState(Date.now());
+    useEffect(() => {
+        // Update cache buster whenever animationType or animationData changes
+        if (
+            props.animationType === 'grasp' &&
+            (props.animationData?.isGif || (props.animationData && props.animationData.icon && props.animationData.icon.endsWith('.gif')))
+        ) {
+            setGifCacheBuster(Date.now());
+        }
+    }, [props.animationType, props.animationData]);
 
     // Charging up animation state
     const [chargingUp, setChargingUp] = useState(false);
@@ -42,31 +55,81 @@ export default function AnimationTile(props) {
         } else {
             setChargingUp(false);
         }
-    }, [props.animationType, props.animationData?.chargingUpKey]);
+    }, [props.animationType, props.animationData?.chargingUpKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Always use coordinate lookups for tile id
     // If AnimationManager is available via props, use getTileIdByCoords
-    let tileIdFromCoords = null;
-    if (props.animationManager && typeof props.animationManager.getTileIdByCoords === 'function' && props.x !== undefined && props.y !== undefined) {
-        tileIdFromCoords = props.animationManager.getTileIdByCoords({ x: props.x, y: props.y });
-    }
+    // let tileIdFromCoords = null;
+    // if (props.animationManager && typeof props.animationManager.getTileIdByCoords === 'function' && props.x !== undefined && props.y !== undefined) {
+    //     tileIdFromCoords = props.animationManager.getTileIdByCoords({ x: props.x, y: props.y });
+    // }
 
     switch(props.animationType){
+        case 'axe_swing':
+            // Use icon from animationData if present, fallback to images['axe_white']
+            image = props.animationData?.icon || images['axe_white'];
+            facing = props.animationData?.facing;
+            keyframe = null;
+            // Position axe closer to attacker (source tile)
+            // If animationData has from/to, offset toward 'from' (attacker)
+            if (props.animationData?.from && props.animationData?.to) {
+                // Calculate offset: move icon 30% toward the attacker from the center of the target tile
+                const from = props.animationData.from;
+                const to = props.animationData.to;
+                // These should be pixel coordinates or tile grid positions
+                // If grid, multiply by tileSize
+                const tileSize = props.tileSize || 64;
+                let fromX = from.x, fromY = from.y, toX = to.x, toY = to.y;
+                if (fromX < 20 && toX < 20) { // likely grid, not px
+                    fromX = fromX * tileSize + tileSize/2;
+                    fromY = fromY * tileSize + tileSize/2;
+                    toX = toX * tileSize + tileSize/2;
+                    toY = toY * tileSize + tileSize/2;
+                }
+                // Vector from target to attacker
+                const dx = fromX - toX;
+                const dy = fromY - toY;
+                // Move 30% toward attacker
+                const offsetX = toX + dx * 0.3;
+                const offsetY = toY + dy * 0.3;
+                // Store for use in render
+                props.animationData._iconX = offsetX;
+                props.animationData._iconY = offsetY;
+            }
+            // Diagnostic log: confirm axe_swing icon rendering and offset
+            // console.log('[AnimationTile] axe_swing icon', {
+            //     animationType: props.animationType,
+            //     animationData: props.animationData,
+            //     icon: image,
+            //     offset: {
+            //         x: props.animationData?._iconX,
+            //         y: props.animationData?._iconY
+            //     }
+            // });
+
+        break;
         case 'punch':
             image = images['fist_punch'];
             // For punch, we want to animate from source to target and fade out
             // We'll use animationData: { from: {x, y}, to: {x, y}, duration }
             keyframe = null;
         break;
-        case 'claw':
-            image = images['claws']
-            keyframe = `ClawAnimation_${facing}`
+        case 'grasp': {
+            // Use icon from animationData if present, fallback to images['grasp']
+            let graspIcon = props.animationData?.icon || images['grasp'];
+            // If isGif is set, append cache buster from state
+            if (props.animationData?.isGif || (props.animationData && props.animationData.icon && props.animationData.icon.endsWith('.gif'))) {
+                graspIcon = `${graspIcon}?cb=${gifCacheBuster}`;
+            }
+            image = graspIcon;
+            keyframe = `GraspAnimation_${facing}`;
+        }
         break;
-        case 'sword_swing':
-            image = images['sword_white']
-            facing = props.animationData?.facing
-            keyframe = `ArcAnimation_${facing}`
+        case 'energy_drain':
+            image = images['energy_drain'];
+            keyframe = `EnergyDrainAnimation_${facing}`;
         break;
+
         case 'spin_attack':
             image = images['sword_white']
             keyframe = 'spin-attack'
@@ -74,6 +137,11 @@ export default function AnimationTile(props) {
         case 'dragon_punch':
             image = images['hand_7']
             keyframe = 'dragon-punch'
+        break;
+        case 'windmill':
+            // The windmill animation renders 4 fist icons directly in JSX below;
+            // no CSS keyframe is driven by `keyframe` here.
+            keyframe = null;
         break;
         case 'spin_attack_arc':
             if (
@@ -94,17 +162,14 @@ export default function AnimationTile(props) {
                 // Center of the source tile
                 const centerX = tileSize / 2;
                 const centerY = tileSize / 2;
-                // ...existing code...
                 // Sword position relative to the source tile
                 swordX = centerX + radius * Math.cos(angle) - tileSize * 0.3; // adjust offset for icon size
                 swordY = centerY + radius * Math.sin(angle) - tileSize * 0.3;
-                // ...existing code...
                 // debugger
                 if(!swordX || !swordY){
-                    let a = centerX
-                    let b = radius * Math.cos(angle)
-                    let c = tileSize * 0.3
-                    // ...existing code...
+                    // let a = centerX
+                    // let b = radius * Math.cos(angle)
+                    // let c = tileSize * 0.3
                     debugger
                 }
                 // // image = images['sword_white'];
@@ -125,7 +190,6 @@ export default function AnimationTile(props) {
                 cursor: 'pointer',
                 height: props.tileSize + 'px',
                 width: props.tileSize + 'px',
-                // backgroundImage: image && props.animationType !== 'spin_attack_arc' && props.animationType !== 'spin_attack' ? "url(" + image + ")" : '',
                 animation: keyframe && props.animationType !== 'spin_attack' ? `${keyframe} ${duration / 1000}s linear 0s ${infiniteLoop ? 'infinite' : ''} forwards` : '',
                 WebkitAnimation: keyframe && props.animationType !== 'spin_attack' ? `${keyframe} ${duration / 1000}s linear 0s ${infiniteLoop ? 'infinite' : ''} forwards` : '',
                 backgroundSize: '100% 100%',
@@ -146,10 +210,102 @@ export default function AnimationTile(props) {
                 ${hitFlashing ? 'hit-flashing' : ''}
                 ${chargingUp ? 'charging-up' : ''}
                 ${isTeleporting ? 'instant-teleport' : ''}
+                ${props.animationData?.axeThrowHit ? 'axe-throw-hit-flash' : ''}
             `}
         >
+            {/* Render hit-flash overlay for both blue and red cases */}
+            {(props.animationType === 'hit-flash' && hitFlashing) && (
+                <div className="hit-flash-overlay" />
+            )}
+            {/* Animated axe_swing render (same logic as sword_swing) */}
+            {props.animationType === 'axe_swing' && image && (() => {
+                // Use calculated offset if available, else fallback to old logic
+                let top = 'calc(50% - 30%)', left = 'calc(50% - 30%)';
+                if (props.animationData?._iconX !== undefined && props.animationData?._iconY !== undefined) {
+                    // _iconX/_iconY are absolute pixel positions relative to the board, so convert to relative for this tile
+                    // If this tile is at (tileX, tileY), and tileSize is known, offset within tile:
+                    const tileSize = props.tileSize || 64;
+                    const tileX = props.tileX || 0;
+                    const tileY = props.tileY || 0;
+                    const relX = props.animationData._iconX - (tileX * tileSize);
+                    const relY = props.animationData._iconY - (tileY * tileSize);
+                    left = relX - tileSize * 0.3;
+                    top = relY - tileSize * 0.3;
+                }
+                // Flip axe horizontally if attacking left
+                const flip = facing === 'left';
+                const baseTransform = flip ? 'scaleX(-1)' : 'none';
+                return (
+                    <img
+                        key={props.animationData?.startTime || 'axe-swing'}
+                        src={image}
+                        alt="axe swing"
+                        className="axe-swing-icon"
+                        style={{
+                            position: 'absolute',
+                            top: typeof top === 'number' ? `${top}px` : top,
+                            left: typeof left === 'number' ? `${left}px` : left,
+                            width: '60%',
+                            height: '60%',
+                            pointerEvents: 'none',
+                            zIndex: 5000,
+                            transform: baseTransform,
+                            animation: `ArcAnimation_${facing} ${duration / 1000}s linear forwards`,
+                        }}
+                    />
+                );
+            })()}
+            {/* Animated grasp render (same logic as claw) */}
+            {props.animationType === 'grasp' && image && (() => {
+                const flip = facing === 'right';
+                const graspKey = props.animationData?.startTime || 'grasp';
+                return (
+                    <img
+                        key={graspKey}
+                        src={image}
+                        alt="grasp"
+                        className="grasp-icon"
+                        style={{
+                            position: 'absolute',
+                            top: 'calc(50% - 60%)',
+                            left: 'calc(50% - 60%)',
+                            width: '120%',
+                            height: '120%',
+                            pointerEvents: 'none',
+                            zIndex: 5000,
+                            transform: flip ? 'scaleX(-1)' : undefined,
+                            animation: `GraspAnimation_${facing} ${duration / 1000}s linear forwards`,
+                        }}
+                    />
+                );
+            })()}
+            {/* Animated energy_drain render */}
+            {props.animationType === 'energy_drain' && image && (() => {
+                const flip = facing === 'left';
+                const drainKey = props.animationData?.startTime || 'energy-drain';
+                return (
+                    <img
+                        key={drainKey}
+                        src={image}
+                        alt="energy drain"
+                        className="energy-drain-icon"
+                        style={{
+                            position: 'absolute',
+                            top: `calc(50% - 40%)`,
+                            left: `calc(50% - 40%)`,
+                            width: '80%',
+                            height: '80%',
+                            pointerEvents: 'none',
+                            zIndex: 5000,
+                            transform: flip ? 'scaleX(-1)' : undefined,
+                            filter: 'drop-shadow(0 0 6px rgba(255,0,0,0.95)) drop-shadow(0 0 14px rgba(220,30,0,0.7))',
+                            animation: `EnergyDrainAnimation_${facing} ${duration / 1000}s linear forwards`,
+                        }}
+                    />
+                );
+            })()}
             {/* <div className="animation-tile-id">{tileIdFromCoords !== null ? tileIdFromCoords : props.id}</div> */}
-                        {props.animationType === 'spin_attack' && (
+            {props.animationType === 'spin_attack' && (
                             <img
                                 src={images['spear_white']}
                                 alt="spin"
@@ -166,6 +322,38 @@ export default function AnimationTile(props) {
                                 }}
                             />
                         )}
+                        {props.overlayAnimationType === 'sword_swing' && (() => {
+                            const overFacing = props.overlayAnimationData?.facing;
+                            const overDuration = props.overlayAnimationData?.duration;
+                            const overImage = props.fighterType === 'barbarian' ? images['axe_white'] : images['sword_white'];
+                            const swingKey = props.overlayAnimationData?.startTime || 'sword-swing-overlay';
+                            const swingDirection = ['left', 'up', 'down', 'right'].includes(overFacing) ? overFacing : 'right';
+                            return (
+                                <div
+                                    className="sword-swing-icon"
+                                    style={{
+                                        position: 'absolute',
+                                        top: 'calc(50% - 30%)',
+                                        left: 'calc(50% - 30%)',
+                                        width: '60%',
+                                        height: '60%',
+                                        pointerEvents: 'none',
+                                        zIndex: 5000,
+                                    }}
+                                >
+                                    <img
+                                        key={swingKey}
+                                        src={overImage}
+                                        alt={props.fighterType === 'barbarian' ? 'axe swing' : 'sword swing'}
+                                        style={{
+                                            width: '100%',
+                                            height: '100%',
+                                            animation: `ArcAnimation_${swingDirection} ${overDuration / 1000}s linear forwards`,
+                                        }}
+                                    />
+                                </div>
+                            );
+                        })()}
                         {props.animationType === 'dragon_punch' && (() => {
                             // Offset 50px from center in the direction of the target (facing)
                             // Facing can be 'up', 'down', 'left', 'right', or angles
@@ -315,6 +503,20 @@ export default function AnimationTile(props) {
                 targetDistance={this.state.magicMissile_targetDistance}
                 targetLaneDiff={this.state.magicMissile_targetLaneDiff}
             /> */}
+            {/* ── Windmill: burst + 4 fists fly out N/S/E/W ── */}
+            {props.animationType === 'windmill' && (
+                <>
+                    <div className="windmill-burst" />
+                    {['N', 'S', 'E', 'W'].map(dir => (
+                        <img
+                            key={dir}
+                            src={images['fist_punch']}
+                            alt={`windmill-${dir}`}
+                            className={`windmill-fist fist-${dir}`}
+                        />
+                    ))}
+                </>
+            )}
         </div>
     )
 }

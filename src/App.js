@@ -90,12 +90,15 @@ const navToLanding = () =>{
 }
 const login = (userCredentials) => {
   let validUser = null;
+  console.log('Login attempt - credentials:', userCredentials.username);
+  console.log('Login - allUsers:', allUsers.map(u => ({ id: u._id, username: u.username })));
   allUsers.forEach((user)=>{
       if(userCredentials.username === user.username && userCredentials.password === user.password ){
           validUser = user;
       }
   })
   if(validUser){
+    console.log('Login success - validUser.username:', validUser.username);
     // setUser(validUser)
     setTimeout(()=>{
       storeSessionData(validUser._id, validUser.token, validUser.isAdmin, validUser.username, validUser.metadata)
@@ -105,10 +108,11 @@ const login = (userCredentials) => {
         pathname: '/landing'
       })
     })
+    return true;
   } else {
   // ...existing code...
   }
-  return
+  return false;
 }
 
 const refreshAllUsers = () => {
@@ -189,22 +193,23 @@ const toggleMenuTray = () => {
       <div className="App">
         {loggedIn === true && showToolbar === true && <div className="nav-buttons-container">
           <div className="hamburger-button" style={{backgroundImage: `url(${images['hamburger']})`}} onClick={() => toggleMenuTray()}></div>
-          <div className="menu-tray" style={{
-            height: menuTrayExpanded ? '126px' : '0px',
-            border: menuTrayExpanded ? '1px solid lightgrey' : '1px solid #d3d3d300'
+          <div className={`menu-tray${menuTrayExpanded ? ' open' : ''}`} style={{
+            border: menuTrayExpanded ? '1px solid lightgrey' : 'none'
           }}>
-            {<button className="menu-buttons logout-button" onClick={logout}>
-              Logout
-            </button>}
-            {<button className="menu-buttons save-button" onClick={saveUserData}>
-              Save
-            </button>}
-            {<button className="menu-buttons go-home-button" onClick={goHome}>
-              Home
-            </button>}    
-            {isAdmin && <button className="menu-buttons show-coordinates-button" onClick={toggleShowCoordinates}>
-              Show Coordinates
-            </button>}
+            <div className="menu-tray-content">
+              <button className="menu-buttons logout-button" onClick={logout}>
+                Logout
+              </button>
+              <button className="menu-buttons save-button" onClick={saveUserData}>
+                Save
+              </button>
+              <button className="menu-buttons go-home-button" onClick={goHome}>
+                Home
+              </button>
+              {isAdmin && <button className="menu-buttons show-coordinates-button" onClick={toggleShowCoordinates}>
+                Show Coordinates
+              </button>}
+            </div>
           </div>
         </div> }
         <Switch>
@@ -222,7 +227,7 @@ const toggleMenuTray = () => {
           )}/>
           <Route exact path="/userProfilePage" render={() => (
             !loggedIn ? <Redirect to="/login" /> :
-            <UserProfilePage {...props} />
+            <UserProfilePage {...props} refreshAllUsers={refreshAllUsers} />
           )}/>
           <Route exact path="/crewManager" render={() => (
             !loggedIn ? <Redirect to="/login" /> :

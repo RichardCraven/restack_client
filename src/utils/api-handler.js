@@ -51,8 +51,12 @@ const deleteUserRequest = (userId) => {
     })
 }
 
-const updateUserRequest = (userId, metadata) => {
-  return axios.put("http://localhost:5001/api/users/"+userId, {metadata: JSON.stringify(metadata)})
+const updateUserRequest = (userId, metadata, username) => {
+  const payload = { metadata: JSON.stringify(metadata) };
+  if (username !== undefined) {
+    payload.username = username;
+  }
+  return axios.put("http://localhost:5001/api/users/"+userId, payload)
     .then(res=>{
       if(res.status === 200){
         res.data.metadata = metadata

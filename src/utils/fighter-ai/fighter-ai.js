@@ -3,6 +3,7 @@ import { Wizard } from './profiles/Wizard'
 import { Rogue } from './profiles/Rogue'
 import { Soldier } from './profiles/Soldier'
 import { Monk } from './profiles/Monk'
+import { Barbarian } from './profiles/Barbarian'
 import {Methods, getSurroundings} from '../shared-ai-methods/basic-methods';
 import {MovementMethods} from '../shared-ai-methods/movement-methods';
 
@@ -16,9 +17,12 @@ export function FighterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
             ...Methods,
             ...MovementMethods,
             getSurroundings,
+            // Returns the live FIGHT_INTERVAL — set after connectUtilMethods so
+            // AI profiles always read the current speed, not the construction-time snapshot.
+            getFightInterval: () => data.INTERVAL_TIME,
         },
         MAX_DEPTH: this.MAX_DEPTH,
-        MAX_Lanes: this.MAX_LANES,
+        MAX_LANES: this.MAX_LANES,
         INTERVAL_TIME: this.INTERVAL_TIME
     }
 
@@ -36,16 +40,25 @@ export function FighterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
         this.fighterFacingRight = utilMethods.fighterFacingRight;
         this.broadcastDataUpdate = utilMethods.broadcastDataUpdate;
         this.kickoffAttackCooldown = utilMethods.kickoffAttackCooldown;
+        this.kickoffSpecialCooldown = utilMethods.kickoffSpecialCooldown;
         this.missesTarget = utilMethods.missesTarget;
         this.hitsTarget = utilMethods.hitsTarget;
         this.hitsCombatant = utilMethods.hitsCombatant;
         this.targetKilled = utilMethods.targetKilled;
+        // Keep data.INTERVAL_TIME in sync with the live fight interval
+        if (typeof utilMethods.getFightInterval === 'function') {
+            data.methods.getFightInterval = utilMethods.getFightInterval;
+        }
+        if (typeof utilMethods.updateIntervalTime === 'function') {
+            utilMethods.updateIntervalTime((v) => { data.INTERVAL_TIME = v; });
+        }
         this.utilMethods = {
             // fighterFacingDown:this.monsterFacingDown,
             // fighterFacingUp: this.monsterFacingUp,
             // fighterFacingRight: this.fighterFacingRight,
             broadcastDataUpdate: this.broadcastDataUpdate,
             kickoffAttackCooldown: this.kickoffAttackCooldown,
+            kickoffSpecialCooldown: this.kickoffSpecialCooldown,
             missesTarget: this.missesTarget,
             hitsTarget: this.hitsTarget,
             hitsCombatant: this.hitsCombatant,
@@ -58,6 +71,12 @@ export function FighterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
         if (typeof utilMethods.getCurrentInventory === 'function') {
             this.utilMethods.getCurrentInventory = utilMethods.getCurrentInventory;
         }
+        if (typeof utilMethods.hitCheck === 'function') {
+            this.utilMethods.hitCheck = utilMethods.hitCheck;
+        }
+        if (typeof utilMethods.damageCheck === 'function') {
+            this.utilMethods.damageCheck = utilMethods.damageCheck;
+        }
     }
     this.initializeRoster = (animationManager) => {
         this.roster = {
@@ -65,7 +84,8 @@ export function FighterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
             wizard: new Wizard(data, this.utilMethods, animationManager),
             soldier: new Soldier(data, this.utilMethods, animationManager),
             rogue: new Rogue(data, this.utilMethods, animationManager, this.overlayManager),
-            monk: new Monk(data, this.utilMethods, animationManager, this.overlayManager)
+            monk: new Monk(data, this.utilMethods, animationManager, this.overlayManager),
+            barbarian: new Barbarian(data, this.utilMethods, animationManager),
         }
     }
     this.pickRandom = (array) => {
@@ -84,13 +104,7 @@ export function FighterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
         }
 
         if(available.length === 0){
-            caller.attacks.filter(e=>e.range === 'medium' || e.range === 'far').forEach(e=>{
-                if(e.cooldown_position > percentCooledDown){
-                    percentCooledDown = e.cooldown_position;
-                    chosenAttack = e;
-                }
-            })
-            attack = chosenAttack;
+            return null;
         } else {
             if(available.filter(e=>(e.range === 'far' || e.range === 'medium') && e.cooldown_position > 25).length > 0){
                 let percentCooledDown = 0;

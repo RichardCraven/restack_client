@@ -1,47 +1,46 @@
 import React, { useRef, useEffect } from 'react'
 
-// var connect = true
-// setTimeout(()=>{
-//     connect = false
-// }, 1000)
+/**
+ * CanvasMagicMissile
+ *
+ * Props:
+ *   origin              – {x, y} tile coordinates of the caster
+ *   height / width      – canvas size in px (typically 100×100)
+ *   connectParticlesActive – whether to draw lines between particles
+ *   targetDistance      – signed tile distance on the x axis (negative = firing leftward)
+ *   targetLaneDiff      – signed tile distance on the y axis
+ *   target              – optional fallback target tile coords {x, y}
+ *   getCurrentTargetCoords – optional function returning live target coords
+ *   variant             – 'major' (default, purple/magenta, 5 particles)
+ *                         'minor'           (green, 3 particles)
+ */
+const CanvasMagicMissile = ({
+  origin,
+  height,
+  width,
+  connectParticlesActive,
+  targetDistance,
+  targetLaneDiff,
+  target,
+  getCurrentTargetCoords,
+  variant = 'major'
+}) => {
 
-const CanvasMagicMissile = ({origin, height, width, connectParticlesActive, targetDistance, targetLaneDiff}) => {
-
-    // const { connectParticlesActive } = props
-    // console.log('connectParticlesActive === ', connectParticlesActive)
-    // console.log('height: ', height);
     const canvasRef = useRef(null)
 
-    
-
-    // const draw = (context, canvas) => {
-    //     const gradient = context.createLinearGradient(
-    //         0,
-    //         0,
-    //         canvas.width,
-    //         canvas.height
-    //       );
-    //     gradient.addColorStop(0, "#fff");
-    //     gradient.addColorStop(0.5, "magenta");
-    //     gradient.addColorStop(1, "blue");
-    //     context.fillStyle = gradient;
-    //     context.strokeStyle = gradient;
-
-
-    //     context.clearRect(0, 0, canvas.width, canvas.height);
-    //     // window.requestAnimationFrame(animate);
-    //     effect.handleParticles(context);
-    // }
-
-    
+    const isMinor = variant === 'minor';
 
     useEffect(() => {
-        console.log('connectParticlesActive ', connectParticlesActive)
-        console.log('*****************origin: ', origin, `translateX(${origin.x * 100}px) translateY(${origin.y * 100}px)`);
-        console.log(`transform: translateX(${origin.x * 100 + 50}px) translateY(${origin.y * 100}px scale(1)`);
         const canvas = canvasRef.current
+      if (!canvas || !origin) return;
         const context = canvas.getContext('2d')
 
+        // ── Particle color palette ──────────────────────────────────────────
+        // major: purple → magenta → blue
+        // minor: lime → teal → dark green
+        const gradientStops = isMinor
+            ? [['#afffaf', 0], ['#00e887', 0.5], ['#007a3d', 1]]
+            : [['#fff',    0], ['magenta',  0.5], ['blue',    1]];
 
         class Particle {
             constructor(effect) {
@@ -54,7 +53,7 @@ const CanvasMagicMissile = ({origin, height, width, connectParticlesActive, targ
               this.vx = Math.random() * 4 - 2;
               this.vy = Math.random() * 4 - 2;
             }
-        
+
             draw(context) {
               context.beginPath();
               context.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
@@ -73,7 +72,8 @@ const CanvasMagicMissile = ({origin, height, width, connectParticlesActive, targ
               this.width = this.canvas.width;
               this.height = this.canvas.height;
               this.particles = [];
-              this.numberOfParticles = 5;
+              // minor missile: 3 particles; major: 5
+              this.numberOfParticles = isMinor ? 3 : 5;
               this.createParticles();
             }
             createParticles() {
@@ -82,7 +82,6 @@ const CanvasMagicMissile = ({origin, height, width, connectParticlesActive, targ
               }
             }
             handleParticles(context, connect) {
-                // console.log('!!! uhh connectParticlesActive', connect);
               this.particles.forEach((particle) => {
                 particle.draw(context);
                 particle.update();
@@ -91,7 +90,7 @@ const CanvasMagicMissile = ({origin, height, width, connectParticlesActive, targ
                 }
               });
             }
-        
+
             connectParticles(context) {
               const maxDistance = 200;
               for (let a = 0; a < this.particles.length; a++) {
@@ -112,114 +111,119 @@ const CanvasMagicMissile = ({origin, height, width, connectParticlesActive, targ
               }
             }
         }
-        // const effect = new Effect(canvas);
 
-
-
-
-
-
-
-
-
-
-
-
-  let animationFrameId
-        
-        //Our draw came here
-        // const render = () => {
-        // frameCount++
-        // // if(props.data){
-        // //     draw(context, frameCount, props.data)
-        // // } else {
-        // draw(context, frameCount)
-        // // }
-        // animationFrameId = window.requestAnimationFrame(render)
-        // }
-        // render()
-
-
-        const gradient = context.createLinearGradient(
-            0,
-            0,
-            canvas.width,
-            canvas.height
-          );
-        gradient.addColorStop(0, "#fff");
-        gradient.addColorStop(0.5, "magenta");
-        gradient.addColorStop(1, "blue");
+        const gradient = context.createLinearGradient(0, 0, canvas.width, canvas.height);
+        gradientStops.forEach(([color, stop]) => gradient.addColorStop(stop, color));
         context.fillStyle = gradient;
         context.strokeStyle = gradient;
 
-
-        // window.requestAnimationFrame(animate);
-        // effect.handleParticles(context);
-
-
-
         const effect = new Effect(canvas);
-        
-    function animate() {
-      context.clearRect(0, 0, canvas.width, canvas.height);
-      effect.handleParticles(context, connectParticlesActive);
-      animationFrameId = window.requestAnimationFrame(animate);
-    }
-    animationFrameId = window.requestAnimationFrame(animate);
-        
-    return () => {
-      window.cancelAnimationFrame(animationFrameId)
-    }
-  }, [connectParticlesActive, origin, height, width, targetDistance, targetLaneDiff])
-  
-    return <canvas 
-    style={{
-      animation: 'moveRight 1.5s linear forwards',
-    }} 
-    // transform: `translateX(${origin.x * 100}px) translateY(${origin.y * 100}px)`
-    className='spell-animation' 
-    height={height} 
-    width={width} 
-    ref={canvasRef}>
-        <style>{`
-            @keyframes moveRight {
-              0% { transform: translateX(${origin.x * 100}px) translateY(${origin.y * 100}px) scale(0.1) }
-              25% { transform: translateX(${origin.x * 100 + 50}px) translateY(${origin.y * 100}px) scale(1) }
-              50% { transform: translateX(${origin.x * 100 + 100}px) translateY(${origin.y * 100}px) scale(2.75)}
-              100% { transform: translateX(${(origin.x + targetDistance) * 100}px) translateY(${(origin.y + targetLaneDiff) * 100}px) scale(1.5)}
-              }
-              `}</style>
-        {/* 100% { transform: translateX(${targetDistance * 100}px) translateY(${targetLaneDiff * 100}px)   scale(1.5)} */}
 
-              {/* 0% { transform: translateX(0%) scale(0.1) }
-              25% { transform: translateX(50%) scale(1) }
-              50% { transform: translateX(100%) scale(2.75) }
-              100% { transform: translateX(${targetDistance * 100}%) translateY(${targetLaneDiff * 100}%)   scale(1.5)} */}
+        // Total CSS animation duration (ms) — must match the `missileTravel` keyframes below.
+        const MISSILE_DURATION_MS = 1500;
+        // Lines disconnect when the missile has travelled this fraction of the full flight.
+        // 0.72 ≈ halfway between the 50% peak and the 100% impact, so the dots are already
+        // spreading out by the time they arrive and the connection lines vanish just before impact.
+        const LINES_CUTOFF_FRACTION = 0.72;
 
-    </canvas>
-    // 0% { transform: translateX(0%) scale(0.1) }
-    // 10% { transform: translateX(100%) scale(0.5) }
-    // 20% { transform: translateX(150%) scale(1) }
-    // 30% { transform: translateX(180%) scale(1) }
-    // 40% { transform: translateX(200%) scale(1.3) }
-    // 50% { transform: translateX(250%) scale(1.5) }
-    // 60% { transform: translateX(300%) scale(1.7) }
-    // 70% { transform: translateX(400%) scale(1.8) }
-    // 80% { transform: translateX(450%) scale(1.9) }
-    // 100% { transform: translateX(500%) scale(2)}
+        const startTime = performance.now();
+        const TILE_SIZE = 100;
+
+        const resolveTargetCoords = () => {
+          if (typeof getCurrentTargetCoords === 'function') {
+            const liveCoords = getCurrentTargetCoords();
+            if (liveCoords && typeof liveCoords.x === 'number' && typeof liveCoords.y === 'number') {
+              return liveCoords;
+            }
+          }
+          if (target && typeof target.x === 'number' && typeof target.y === 'number') {
+            return target;
+          }
+          return {
+            x: origin.x + (typeof targetDistance === 'number' ? targetDistance : 0),
+            y: origin.y + (typeof targetLaneDiff === 'number' ? targetLaneDiff : 0),
+          };
+        };
+
+        const lerp = (a, b, t) => a + (b - a) * t;
+        const applyTravelTransform = (elapsed) => {
+          const progress = Math.max(0, Math.min(1, elapsed / MISSILE_DURATION_MS));
+          const liveTarget = resolveTargetCoords();
+          const liveTargetDistance = liveTarget.x - origin.x;
+          const liveTargetLaneDiff = liveTarget.y - origin.y;
+          const dirSign = liveTargetDistance >= 0 ? 1 : -1;
+          const nudgeX = dirSign * 50;
+          const nudgeY = liveTargetLaneDiff !== 0
+            ? Math.sign(liveTargetLaneDiff) * Math.min(Math.abs(liveTargetLaneDiff) * 10, 30)
+            : 0;
+
+          const startX = origin.x * TILE_SIZE;
+          const startY = origin.y * TILE_SIZE;
+          const mid1X = startX + nudgeX;
+          const mid1Y = startY + nudgeY;
+          const mid2X = startX + nudgeX * 2;
+          const mid2Y = startY + nudgeY * 2;
+          const finalX = liveTarget.x * TILE_SIZE;
+          const finalY = liveTarget.y * TILE_SIZE;
+
+          let x;
+          let y;
+          let scale;
+          if (progress <= 0.25) {
+            const p = progress / 0.25;
+            x = lerp(startX, mid1X, p);
+            y = lerp(startY, mid1Y, p);
+            scale = lerp(0.1, 1, p);
+          } else if (progress <= 0.5) {
+            const p = (progress - 0.25) / 0.25;
+            x = lerp(mid1X, mid2X, p);
+            y = lerp(mid1Y, mid2Y, p);
+            scale = lerp(1, 2.75, p);
+          } else {
+            const p = (progress - 0.5) / 0.5;
+            x = lerp(mid2X, finalX, p);
+            y = lerp(mid2Y, finalY, p);
+            scale = lerp(2.75, 1.5, p);
+          }
+
+          canvas.style.transform = `translateX(${x}px) translateY(${y}px) scale(${scale})`;
+          canvas.style.animation = 'none';
+        };
+
+        let animationFrameId;
+        function animate(now) {
+          const elapsed = now - startTime;
+          // Draw connecting lines only while the missile is still in flight (before cutoff).
+          const shouldConnect = connectParticlesActive && (elapsed < MISSILE_DURATION_MS * LINES_CUTOFF_FRACTION);
+          applyTravelTransform(elapsed);
+          context.clearRect(0, 0, canvas.width, canvas.height);
+          effect.handleParticles(context, shouldConnect);
+          animationFrameId = window.requestAnimationFrame(animate);
+        }
+        animationFrameId = window.requestAnimationFrame(animate);
+
+        return () => {
+          window.cancelAnimationFrame(animationFrameId)
+        }
+      }, [
+        connectParticlesActive,
+        origin,
+        height,
+        width,
+        targetDistance,
+        targetLaneDiff,
+        target,
+        getCurrentTargetCoords,
+        isMinor
+      ])
+
+    return <canvas
+        style={{ transform: `translateX(${origin.x * 100}px) translateY(${origin.y * 100}px) scale(0.1)` }}
+        className='spell-animation'
+        height={height}
+        width={width}
+        ref={canvasRef}
+      />
 }
 
 export default CanvasMagicMissile
-
-// import React from 'react'
-// import useCanvas from './useCanvas'
-
-// const Canvas = props => {  
-  
-//   const { draw, ...rest } = props
-//   const canvasRef = useCanvas(draw)
-  
-//   return <canvas height={props.size} width={props.size} ref={canvasRef} {...rest}/>
-// }
-
-// export default Canvas
