@@ -3,19 +3,35 @@ import { MonsterManager } from './monster-manager';
 
 // Gate configuration: maps closed gate types to their requirements and opened versions
 const GATE_CONFIG = {
-    'minor_gate': { requires: 'minor_key', opened: 'minor_gate_open', keyName: 'minor key' },
+    // new keyed gates (opened → archway)
+    'minor_gate':           { requires: 'minor_key',           opened: 'archway', keyName: 'minor key' },
+    'major_gate':           { requires: 'major_key',           opened: 'archway', keyName: 'major key' },
+    'treasury_gate':        { requires: 'treasury_key',        opened: 'archway', keyName: 'treasury key' },
+    'imperial_gate':        { requires: 'imperial_key',        opened: 'archway', keyName: 'imperial key' },
+    'necrotic_gate':        { requires: 'necrotic_key',        opened: 'archway', keyName: 'necrotic key' },
+    'master_necrotic_gate': { requires: 'necrotic_master_key', opened: 'archway', keyName: 'necrotic master key' },
+    'dimensional_gate':     { requires: 'dimensional_key',     opened: 'archway', keyName: 'dimensional key' },
+    'cyan_gate':            { requires: 'cyan_key',            opened: 'archway', keyName: 'cyan key' },
+    'violet_gate':          { requires: 'violet_key',          opened: 'archway', keyName: 'violet key' },
+    'rubicund_gate':        { requires: 'rubicund_key',        opened: 'archway', keyName: 'rubicund key' },
+    // legacy gates (kept for backward compatibility with existing boards)
     'dungeon_door': { requires: 'minor_key', opened: 'archway', keyName: 'minor key' },
     'gryphon_gate': { requires: 'major_key', opened: 'gryphon_gate_opened', keyName: 'major key' },
-    'bat_gate': { requires: 'major_key', opened: 'bat_gate_opened', keyName: 'major key' },
-    'evil_gate': { requires: 'ornate_key', opened: 'evil_gate_opened', keyName: 'ornate key' },
+    'bat_gate':     { requires: 'major_key', opened: 'bat_gate_opened', keyName: 'major key' },
+    'evil_gate':    { requires: 'ornate_key', opened: 'evil_gate_opened', keyName: 'ornate key' },
     'archway': { requires: null, opened: null, keyName: null } // already open, passable
 };
 
 // List of all closed gate types that block movement
-const CLOSED_GATE_TYPES = ['minor_gate', 'dungeon_door', 'gryphon_gate', 'bat_gate', 'evil_gate'];
+const CLOSED_GATE_TYPES = [
+    'minor_gate', 'major_gate', 'treasury_gate', 'imperial_gate',
+    'necrotic_gate', 'master_necrotic_gate', 'dimensional_gate',
+    'cyan_gate', 'violet_gate', 'rubicund_gate',
+    'dungeon_door', 'gryphon_gate', 'bat_gate', 'evil_gate'
+];
 
 // List of all opened gate types and archway that are passable
-const OPEN_GATE_TYPES = ['minor_gate_open', 'archway', 'gryphon_gate_opened', 'bat_gate_opened', 'evil_gate_opened', 'dungeon_door_opened'];
+const OPEN_GATE_TYPES = ['archway', 'gryphon_gate_opened', 'bat_gate_opened', 'evil_gate_opened', 'dungeon_door_opened'];
 
 export function BoardManager(){
     // By default, large-monster blocking (marking the tile above a large monster
@@ -131,6 +147,9 @@ export function BoardManager(){
     this.establishAddCurrencyToInventoryCallback = (callback) => {
         this.addCurrencyToInventory = callback
     }
+    this.establishAddFoodToSuppliesCallback = (callback) => {
+        this.addFoodToSupplies = callback
+    }
     this.establishUpdateDungeonCallback = (callback) => {
         this.updateDungeon = callback;
     }
@@ -154,6 +173,9 @@ export function BoardManager(){
     }
     this.establishRitualEncounterCallback = (callback) => {
         this.triggerRitualEncounter = callback
+    }
+    this.establishNarrativeEncounterCallback = (callback) => {
+        this.triggerNarrativeEncounter = callback
     }
     this.establishSetMonsterCallback = (callback) => {
         this.setMonster = callback;
@@ -881,6 +903,8 @@ export function BoardManager(){
                 this.removeTileFromBoard(destinationTile)
                 this.triggerRitualEncounter();
             break;
+            case 'narrative':
+                return 'narrative';
             case 'gold':
                 let factor, num = Math.random();
                 if(num > .85){
@@ -897,6 +921,12 @@ export function BoardManager(){
                     type: 'gold',
                     amount
                 })
+                this.removeTileFromBoard(destinationTile)
+            break;
+            case 'food':
+                if (this.addFoodToSupplies) {
+                    this.addFoodToSupplies();
+                }
                 this.removeTileFromBoard(destinationTile)
             break;
             case 'treasure':
@@ -1335,12 +1365,20 @@ export function BoardManager(){
             } catch (e) { /* best-effort */ }
             try { this.triggerMonsterBattle(true, destinationTile.id); } catch (e) { /* best-effort */ }
         }
-    this.overlayTiles.forEach(t=>t.image = null)
-    let meta = {};
-    try { meta = getMeta() || {}; } catch (e) { meta = {}; }
-    const playerImage = (meta && meta.camping) ? 'camp' : 'avatar';
-    this.overlayTiles[this.getIndexFromCoordinates(this.playerTile.location)].image = playerImage
+        this.overlayTiles.forEach(t=>t.image = null)
+        let meta = {};
+        try { meta = getMeta() || {}; } catch (e) { meta = {}; }
+        const playerImage = (meta && meta.camping) ? 'camp' : 'avatar';
+        this.overlayTiles[this.getIndexFromCoordinates(this.playerTile.location)].image = playerImage
         this.checkAdjacency();
+
+        if (interaction === 'narrative') {
+            try {
+                if (this.triggerNarrativeEncounter) {
+                    this.triggerNarrativeEncounter(destinationTile);
+                }
+            } catch (e) {}
+        }
     }
     this.moveUp = () => {
         if(this.playerTile.location[0] === 15){
@@ -1404,6 +1442,8 @@ export function BoardManager(){
                 return 'lantern'
             case 'magic':
                 return 'spell'
+            case 'narrative':
+                return 'narrative'
             case 'stairs':
                 return 'stairs_down'
             case 'door':

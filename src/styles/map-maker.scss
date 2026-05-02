@@ -441,7 +441,7 @@ ul.dropdown-menu.show{
             // border: 1px solid red;
             position: sticky;
             top: 40px;
-            z-index: 2;
+            z-index: 200;
             // width: 135px;
             height: 38px;
 
@@ -463,6 +463,15 @@ ul.dropdown-menu.show{
             .dropdown-toggle{
                 border-radius: 0px;
             }
+
+            .dropdown-menu,
+            .dropdown-menu.show{
+                z-index: 5000 !important;
+            }
+        }
+
+        .previews-container .map-preview .tile .portrait{
+            z-index: 1 !important;
         }
     }
     .center-board-container{

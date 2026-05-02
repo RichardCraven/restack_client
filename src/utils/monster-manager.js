@@ -40,6 +40,7 @@ export function MonsterManager() {
         // ── Level 2 ──────────────────────────────────────────────────────
         goblin: {
             type: 'goblin',
+            tier: 1,
             subtype: 'brutekin',
             key: 'goblin',
             image_names: ['goblin'],
@@ -66,6 +67,7 @@ export function MonsterManager() {
         // ── Level 3 ──────────────────────────────────────────────────────
         skeleton: {
             type: 'skeleton',
+            tier: 1,
             subtype: 'undead',
             key: 'skeleton',
             image_names: ['skeleton'],
@@ -94,6 +96,7 @@ export function MonsterManager() {
         // ── Level 4 (minion) ─────────────────────────────────────────────
         kabuki_demon_minion: {
             type: 'kabuki_demon_minion',
+            tier: 1,
             subtype: 'demon',
             key: 'kabuki_demon_minion',
             image_names: ['kabuki_demon_minion'],
@@ -121,6 +124,7 @@ export function MonsterManager() {
         // ── Level 5 (minion) ─────────────────────────────────────────────
         beholder_minion: {
             type: 'beholder_minion',
+            tier: 1,
             subtype: 'eldritch',
             key: 'beholder_minion',
             image_names: ['beholder_minion'],
@@ -149,6 +153,7 @@ export function MonsterManager() {
         // ── Level 6 ──────────────────────────────────────────────────────
         troll: {
             type: 'troll',
+            tier: 2,
             subtype: 'brutekin',
             key: 'troll',
             image_names: ['troll'],
@@ -174,6 +179,7 @@ export function MonsterManager() {
         },
         mummy: {
             type: 'mummy',
+            tier: 2,
             subtype: 'undead',
             key: 'mummy',
             image_names: ['mummy'],
@@ -201,6 +207,7 @@ export function MonsterManager() {
         // ── Level 8 ──────────────────────────────────────────────────────
         wraith: {
             type: 'wraith',
+            tier: 2,
             subtype: 'undead',
             key: 'wraith',
             image_names: ['wraith'],
@@ -226,6 +233,7 @@ export function MonsterManager() {
         },
         ogre: {
             type: 'ogre',
+            tier: 2,
             subtype: 'brutekin',
             key: 'ogre',
             image_names: ['ogre'],
@@ -252,6 +260,7 @@ export function MonsterManager() {
         // ── Level 9 ──────────────────────────────────────────────────────
         gorgon: {
             type: 'gorgon',
+            tier: 2,
             subtype: 'serpentine',
             key: 'gorgon',
             image_names: ['gorgon'],
@@ -278,6 +287,7 @@ export function MonsterManager() {
         // ── Level 10 ─────────────────────────────────────────────────────
         vampire: {
             type: 'vampire',
+            tier: 2,
             subtype: 'undead',
             key: 'vampire',
             image_names: ['black_vampire'],
@@ -306,6 +316,7 @@ export function MonsterManager() {
         // ── Level 11 ─────────────────────────────────────────────────────
         goat_demon: {
             type: 'goat_demon',
+            tier: 3,
             subtype: 'demon',
             key: 'goat_demon',
             image_names: ['goat_demon'],
@@ -334,6 +345,7 @@ export function MonsterManager() {
         // ── Level 12 ─────────────────────────────────────────────────────
         witch: {
             type: 'witch',
+            tier: 3,
             subtype: 'eldritch',
             key: 'witch',
             image_names: ['witch_p1_1'],
@@ -384,6 +396,7 @@ export function MonsterManager() {
         // ── Level 14 ─────────────────────────────────────────────────────
         beholder: {
             type: 'beholder',
+            tier: 3,
             subtype: 'eldritch',
             key: 'beholder',
             image_names: ['beholder'],
@@ -438,6 +451,7 @@ export function MonsterManager() {
         // ── Level 15 ─────────────────────────────────────────────────────
         kabuki_demon: {
             type: 'kabuki_demon',
+            tier: 3,
             subtype: 'demon',
             key: 'kabuki_demon',
             image_names: ['kabuki_demon_portrait'],
@@ -466,6 +480,7 @@ export function MonsterManager() {
         // ── Level 19 ─────────────────────────────────────────────────────
         djinn: {
             type: 'djinn',
+            tier: 3,
             subtype: 'eldritch',
             key: 'djinn',
             image_names: ['djinn'],
@@ -492,6 +507,7 @@ export function MonsterManager() {
         // ── Level 29 ─────────────────────────────────────────────────────
         sphinx: {
             type: 'sphinx',
+            tier: 4,
             subtype: 'eldritch',
             key: 'sphinx',
             image_names: ['sphinx'],
@@ -523,6 +539,7 @@ export function MonsterManager() {
         // ── Level 30 ─────────────────────────────────────────────────────
         dragon: {
             type: 'dragon',
+            tier: 4,
             subtype: 'serpentine',
             key: 'dragon',
             image_names: ['dragon'],

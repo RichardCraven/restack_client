@@ -30,11 +30,18 @@ class PlaneView extends React.Component {
     // }
     miniboardClicked(event, board, boardIndex){
         console.log('miniboard clicked', event.detail);
+        if(!board || !board.id){
+            if(this.props.selectedView !== 'board'){
+                this.props.setViewState('board');
+            }
+            this.props.clearLoadedBoard();
+            return;
+        }
         if(this.props.adjacencyHoverIdx === boardIndex && board.tiles){
             this.props.adjacencyFilter(board, boardIndex)
         }
         if (event.detail === 2) {
-            if(board.tiles){
+            if(board.id && board.tiles){
                 this.props.loadBoard(board)
             }
         }

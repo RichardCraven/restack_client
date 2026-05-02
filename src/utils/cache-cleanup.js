@@ -237,3 +237,64 @@ export function resolveItemPools(dungeon, allItems) {
     }
     return resolvedCount;
 }
+
+/**
+ * Resolves tiered monster placeholders (tier_1_monster..tier_4_monster)
+ * into concrete monster subtypes based on MonsterManager tier metadata.
+ *
+ * @param {Object} dungeon - The parsed dungeon object.
+ * @param {Object} monsters - monsterManager.monsters (key -> monster definition).
+ * @returns {number} Number of tiles resolved.
+ */
+export function resolveMonsterPools(dungeon, monsters) {
+    if (!dungeon || !Array.isArray(dungeon.levels) || !monsters) return 0;
+
+    const pools = {
+        tier_1_monster: [],
+        tier_2_monster: [],
+        tier_3_monster: [],
+        tier_4_monster: [],
+    };
+
+    Object.keys(monsters).forEach(monsterKey => {
+        const monster = monsters[monsterKey];
+        if (!monster || typeof monster.tier !== 'number') return;
+        const poolKey = `tier_${monster.tier}_monster`;
+        if (pools[poolKey]) {
+            pools[poolKey].push(monsterKey);
+        }
+    });
+
+    let resolvedCount = 0;
+
+    dungeon.levels.forEach(level => {
+        ['front', 'back'].forEach(side => {
+            const sideData = level[side];
+            if (!sideData || !Array.isArray(sideData.miniboards)) return;
+
+            sideData.miniboards.forEach(miniboard => {
+                if (!miniboard || !Array.isArray(miniboard.tiles)) return;
+
+                miniboard.tiles.forEach(tile => {
+                    if (!tile.contains) return;
+                    const containsType = typeof tile.contains === 'string'
+                        ? tile.contains
+                        : tile.contains.type;
+                    const pool = pools[containsType];
+                    if (!pool || pool.length === 0) return;
+
+                    const chosen = pool[Math.floor(Math.random() * pool.length)];
+                    tile.contains = { type: 'monster', subtype: chosen };
+                    tile.image = null;
+                    resolvedCount++;
+                });
+            });
+        });
+    });
+
+    if (resolvedCount > 0) {
+        console.log(`cache-cleanup.resolveMonsterPools: resolved ${resolvedCount} monster tier tile(s) to specific monsters`);
+    }
+
+    return resolvedCount;
+}

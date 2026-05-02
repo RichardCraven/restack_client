@@ -97,9 +97,10 @@ function getUserName(){
 }
 function setEditorPreference(key, val){
     let meta = getMeta();
-    if(meta.preferences && meta.preferences.editor){
-        meta.preferences.editor[key] = val
-    }
+    if(!meta || typeof meta !== 'object') meta = {};
+    if(!meta.preferences || typeof meta.preferences !== 'object') meta.preferences = {};
+    if(!meta.preferences.editor || typeof meta.preferences.editor !== 'object') meta.preferences.editor = {};
+    meta.preferences.editor[key] = val;
     storeMeta(meta)
 }
 

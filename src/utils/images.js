@@ -26,6 +26,7 @@ import fist_punch from '../assets/icons/combat-icons/__fist-punch.png';
 import monster from '../assets/icons/monster.png'
 import avatar from '../assets/icons/avatar.png'
 import avatar_white from '../assets/icons/avatar_white.png'
+import narrative from '../assets/icons/narrative.png'
 import beholder from '../assets/portraits/monsters/beholder.png'
 import black_banshee from '../assets/icons/monsters/black_banshee.png'
 import black_djinn from '../assets/icons/monsters/black_djinn.png'
@@ -327,10 +328,20 @@ import spell from '../assets/icons/magic/spell.png';
 import white_magic from '../assets/icons/magic/white_magic.png';
 
 // staples
-import minor_gate from '../assets/icons/staples/gate.png'
-import minor_gate_open from '../assets/icons/staples/gate_open.png'
-
 import gate from '../assets/icons/staples/gate.png'
+
+// gates
+import minor_gate from '../assets/gates/minor.png'
+import major_gate from '../assets/gates/major.png'
+import treasury_gate from '../assets/gates/treasury.png'
+import imperial_gate from '../assets/gates/imperial.png'
+import necrotic_gate from '../assets/gates/necrotic.png'
+import master_necrotic_gate from '../assets/gates/master necrotic.png'
+import dimensional_gate from '../assets/gates/dimensional.png'
+import cyan_gate from '../assets/gates/cyan.png'
+import violet_gate from '../assets/gates/violet.png'
+import rubicund_gate from '../assets/gates/rubicund.png'
+
 import gold from '../assets/icons/staples/gold.png'
 import ornate_key from '../assets/icons/staples/key.png'
 import minor_key from '../assets/icons/misc/keys/minor key.png'
@@ -357,6 +368,42 @@ import eye_inverted from '../assets/icons/misc/eye_inverted.png'
 import wide_skull from '../assets/icons/misc/wide_skull.png'
 import eclipse from '../assets/icons/misc/eclipse.png'
 import magic_moon_1 from '../assets/icons/misc/magic_moon_1.png'
+import food from '../assets/icons/misc/food.png'
+
+// loot
+import green_opal from '../assets/icons/misc/loot/green opal.png'
+import blue_opal from '../assets/icons/misc/loot/blue opal.png'
+import red_opal from '../assets/icons/misc/loot/red opal.png'
+import amber_opal from '../assets/icons/misc/loot/amber opal.png'
+import rune from '../assets/icons/misc/loot/rune.png'
+import quest_crown from '../assets/icons/misc/loot/quest crown.png'
+import banner from '../assets/icons/misc/loot/banner.png'
+import quest_57_ore from '../assets/icons/misc/loot/Quest_57_ore.png'
+import quest_58_ore from '../assets/icons/misc/loot/Quest_58_ore.png'
+import res_76_crystal_red from '../assets/icons/misc/loot/Res_76_crystalRed.png'
+import res_77 from '../assets/icons/misc/loot/Res_77.png'
+import res_78 from '../assets/icons/misc/loot/Res_78.png'
+import amber from '../assets/icons/misc/loot/amber.png'
+import sapphire from '../assets/icons/misc/loot/sapphire.png'
+import ruby from '../assets/icons/misc/loot/ruby.png'
+import amber_shards from '../assets/icons/misc/loot/amber shards.png'
+import sapphire_shards from '../assets/icons/misc/loot/sapphire shards.png'
+import ruby_shards from '../assets/icons/misc/loot/ruby shards.png'
+import blue_crystal from '../assets/icons/misc/loot/blue crystal.png'
+import purple_crystal from '../assets/icons/misc/loot/purple crystal.png'
+import pink_crystal from '../assets/icons/misc/loot/pink crystal.png'
+import green_crystal from '../assets/icons/misc/loot/green crystal.png'
+import ruddy_crystal from '../assets/icons/misc/loot/ruddy crystal.png'
+import pyrite from '../assets/icons/misc/loot/pyrite.png'
+import benthite from '../assets/icons/misc/loot/benthite.png'
+import labradite from '../assets/icons/misc/loot/labradite.png'
+import memnite from '../assets/icons/misc/loot/memnite.png'
+import malachite from '../assets/icons/misc/loot/malachite.png'
+import onyx from '../assets/icons/misc/loot/onyx.png'
+import quest_09_goldbar from '../assets/icons/misc/loot/gold/Quest_09_goldbar.png'
+import quest_10_treasure from '../assets/icons/misc/loot/gold/Quest_10_treasure.png'
+import quest_128_dragontreasure from '../assets/icons/misc/loot/gold/Quest_128_dragontreasure.png'
+import quest_48_pirate from '../assets/icons/misc/loot/gold/Quest_48_pirate.png'
 
 // crew
 import archer from '../assets/icons/crew_icons/archer.png'
@@ -673,6 +720,7 @@ export {
     monster,
     avatar,
     avatar_white,
+    narrative,
     beholder,
     beholder_portrait,
     beholder_minion,
@@ -1029,7 +1077,15 @@ export {
     ornate_potion,
     gate,
     minor_gate,
-    minor_gate_open,
+    major_gate,
+    treasury_gate,
+    imperial_gate,
+    necrotic_gate,
+    master_necrotic_gate,
+    dimensional_gate,
+    cyan_gate,
+    violet_gate,
+    rubicund_gate,
     moon_castle,
     gold,
     treasure,
@@ -1042,6 +1098,42 @@ export {
     eye_inverted,
     eclipse,
     magic_moon_1,
+    food,
+
+    green_opal,
+    blue_opal,
+    red_opal,
+    amber_opal,
+    rune,
+    quest_crown,
+    banner,
+    quest_57_ore,
+    quest_58_ore,
+    res_76_crystal_red,
+    res_77,
+    res_78,
+    amber,
+    sapphire,
+    ruby,
+    amber_shards,
+    sapphire_shards,
+    ruby_shards,
+    blue_crystal,
+    purple_crystal,
+    pink_crystal,
+    green_crystal,
+    ruddy_crystal,
+    pyrite,
+    benthite,
+    labradite,
+    memnite,
+    malachite,
+    onyx,
+    quest_09_goldbar,
+    quest_10_treasure,
+    quest_128_dragontreasure,
+    quest_48_pirate,
+
     archer,
     barbarian,
     rogue,

@@ -14,8 +14,10 @@ import {
     addDungeonRequest
   } from '../utils/api-handler';
 import {storeMeta, getMeta, getUserId, getUserName} from '../utils/session-handler';
-import { keyCleanup, itemCleanup, resolveItemPools } from '../utils/cache-cleanup';
+import { keyCleanup, itemCleanup, resolveItemPools, resolveMonsterPools } from '../utils/cache-cleanup';
 import * as CampManager from '../utils/camp-manager';
+import Typewriter from '../utils/typewriter';
+import { getNextNarrativePayload } from '../utils/narrative-manager';
 import { cilCaretRight, cilCaretLeft, cilMenu} from '@coreui/icons';
 import  CIcon  from '@coreui/icons-react';
 
@@ -26,6 +28,34 @@ import { RECIPES } from '../utils/spells-table'
 import '../styles/inventory-modal.scss'
 import '../styles/quests-modal.scss'
 import '../styles/camp-modal.scss'
+import '../styles/narrative-overlay.scss'
+
+const NarrativeOverlay = ({ sequence, onClose }) => {
+    if (!sequence) return null;
+
+    return (
+        <div className="narrative-overlay">
+            <div className="narrative-overlay__panel">
+                <button className="narrative-overlay__close" onClick={onClose} aria-label="Close narrative">
+                    ×
+                </button>
+                <div className="narrative-overlay__figure">
+                    <div
+                        className="narrative-overlay__image"
+                        style={{ backgroundImage: `url(${sequence.narratorImage})` }}
+                    />
+                </div>
+                <div className="narrative-overlay__content">
+                    <div className="narrative-overlay__eyebrow">Narrative Sequence</div>
+                    <div className="narrative-overlay__name">{sequence.narratorName}</div>
+                    <div className="narrative-overlay__text">
+                        <Typewriter key={sequence.id} text={sequence.text} delay={28} />
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
 
 // helper: convert 3/6-digit hex to rgba string
 function hexToRgba(hex, alpha = 1){
@@ -538,6 +568,8 @@ class DungeonPage extends React.Component {
             , showFoodPrepOverlay: false
             , showSpellsOverlay: false
             , showMapOverlay: false
+            , activeNarrativeSequence: null
+            , showNarrativeOverlay: false
         }
     // Native browser tooltip will be used for death-tracker; no custom tooltip state required.
         // Track timers/intervals created by this component so we can clear on unmount
@@ -931,6 +963,7 @@ class DungeonPage extends React.Component {
         this.props.boardManager.establishAddItemToInventoryCallback(this.addItemToInventory)
         this.props.boardManager.establishAddTreasureToInventoryCallback(this.addTreasureToInventory)
         this.props.boardManager.establishAddCurrencyToInventoryCallback(this.addCurrencyToInventory)
+        this.props.boardManager.establishAddFoodToSuppliesCallback(this.addFoodToSupplies)
         this.props.boardManager.establishUpdateDungeonCallback(this.updateDungeon)
         this.props.boardManager.establishPendingCallback(this.setPending)
         this.props.boardManager.establishMessagingCallback(this.messaging)
@@ -939,6 +972,7 @@ class DungeonPage extends React.Component {
         this.props.boardManager.establishSetMonsterCallback(this.setMonster)
         this.props.boardManager.establishGetCurrentInventoryCallback(this.getCurrentInventory)
         this.props.boardManager.establishRitualEncounterCallback(this.triggerRitualEncounter)
+        this.props.boardManager.establishNarrativeEncounterCallback(this.triggerNarrativeEncounter)
 
         this.props.boardManager.establishBoardTransitionCallback(this.boardTransition)
         this.props.boardManager.establishLevelChangeCallback(this.handleLevelChange)
@@ -1808,6 +1842,30 @@ class DungeonPage extends React.Component {
         }
         this.displayMessage(`You found ${data.amount} ${type}!`)
         this.props.inventoryManager.addCurrency(data)
+    }
+    addFoodToSupplies = () => {
+        const crew = (this.props.crewManager && Array.isArray(this.props.crewManager.crew))
+            ? this.props.crewManager.crew
+            : [];
+        const collectiveLevel = crew.reduce((sum, member) => {
+            const level = Number(member && member.level);
+            return sum + (Number.isFinite(level) ? level : 0);
+        }, 0);
+
+        let foodAmount = 30;
+        if (collectiveLevel >= 20) {
+            foodAmount = 90;
+        } else if (collectiveLevel >= 11) {
+            foodAmount = 60;
+        }
+
+        const meta = getMeta() || {};
+        meta.food = (typeof meta.food === 'number' ? meta.food : 0) + foodAmount;
+        storeMeta(meta);
+        try { updateUserRequest(getUserId(), meta).catch(() => {}); } catch (e) {}
+
+        this.displayMessage(`You found food! +${foodAmount} supplies`);
+        this.forceUpdate();
     }
     establishAnimationCallback = () => {
         this.props.animationManager.establishAnimationCallback(this.renderAnimation)
@@ -2870,6 +2928,7 @@ class DungeonPage extends React.Component {
         keyCleanup(dungeon);
         itemCleanup(dungeon, meta.crew);
         resolveItemPools(dungeon, this.props.inventoryManager.allItems);
+        resolveMonsterPools(dungeon, this.props.monsterManager.monsters);
         const cleanupSummary = this.props.boardManager.setDungeon(dungeon)
         console.log('DungeonPage.loadExistingDungeon: called boardManager.setDungeon; cleanupSummary:', cleanupSummary);
         try {
@@ -3596,6 +3655,33 @@ class DungeonPage extends React.Component {
         })
     }
 
+    triggerNarrativeEncounter = () => {
+        let meta = {};
+        try { meta = getMeta() || {}; } catch (e) { meta = {}; }
+
+        const { sequence, meta: updatedMeta } = getNextNarrativePayload(meta);
+        if (!sequence) return;
+
+        try { storeMeta(updatedMeta); } catch (e) {}
+        try { if (typeof this.props.saveUserData === 'function') this.props.saveUserData(); } catch (e) {}
+
+        this._setTimeout(() => {
+            this.setState({
+                activeNarrativeSequence: sequence,
+                showNarrativeOverlay: true,
+                keysLocked: true
+            });
+        }, 140);
+    }
+
+    closeNarrativeOverlay = () => {
+        this.setState({
+            activeNarrativeSequence: null,
+            showNarrativeOverlay: false,
+            keysLocked: false
+        });
+    }
+
     handleCloseQuestsPopup = () => {
         try {
             // Mark as seen for this session only so a full page refresh will show it again
@@ -3783,6 +3869,12 @@ class DungeonPage extends React.Component {
 
         return (
         <div className={`dungeon-container ${this.state.ritualWrecked ? 'wrecked' : ''}`}>
+            {this.state.showNarrativeOverlay && this.state.activeNarrativeSequence && (
+                <NarrativeOverlay
+                    sequence={this.state.activeNarrativeSequence}
+                    onClose={this.closeNarrativeOverlay}
+                />
+            )}
             <CModal className={this.state.modalType === 'PrepComplete' ? 'prep-complete-modal' : this.state.modalType === 'RitualComplete' ? 'ritual-complete-modal' : this.state.modalType === 'Magic' ? 'ritual-encounter-modal' : this.state.modalType === 'FoodComplete' ? 'food-complete-modal' : ''} alignment="center" visible={this.state.showModal} onClose={() => this.onUpdateModalClosed()}>
                 <ModalInner
                     modalType={this.state.modalType}

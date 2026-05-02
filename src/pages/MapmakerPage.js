@@ -43,26 +43,17 @@ import * as images from '../utils/images'
 import BoardsPalette from './dungonBuilderViews/BoardsPalette'
 
 const GATES = [
-  {
-      key: 'archway',
-      requires: ''
-  },
-  {
-      key: 'dungeon_door',
-      requires: 'minor_key'
-  },
-  {
-      key: 'gryphon_gate',
-      requires: 'major_key'
-  },
-  {
-      key: 'bat_gate',
-      requires: 'major_key'
-  },
-  {
-      key: 'evil_gate',
-      requires: 'ornate_key'
-  }
+  { key: 'archway',              requires: '' },
+  { key: 'minor_gate',           requires: 'minor_key' },
+  { key: 'major_gate',           requires: 'major_key' },
+  { key: 'treasury_gate',        requires: 'treasury_key' },
+  { key: 'imperial_gate',        requires: 'imperial_key' },
+  { key: 'necrotic_gate',        requires: 'necrotic_key' },
+  { key: 'master_necrotic_gate', requires: 'necrotic_master_key' },
+  { key: 'dimensional_gate',     requires: 'dimensional_key' },
+  { key: 'cyan_gate',            requires: 'cyan_key' },
+  { key: 'violet_gate',          requires: 'violet_key' },
+  { key: 'rubicund_gate',        requires: 'rubicund_key' },
 ]
 
 const KEYS = [
@@ -102,6 +93,22 @@ class MapMakerPage extends React.Component {
       ) {
         const outputDiv = this.devConsoleOutputRef.current;
         outputDiv.scrollTop = outputDiv.scrollHeight;
+      }
+
+      // Keep dungeon overlay data in sync with the latest loaded dungeon shape.
+      const overlayRelevantChange =
+        prevState.loadedDungeon !== this.state.loadedDungeon ||
+        prevState.dungeonOverlayOn !== this.state.dungeonOverlayOn;
+
+      if (overlayRelevantChange) {
+        const nextOverlayData =
+          this.state.dungeonOverlayOn && this.state.loadedDungeon
+            ? this.props.mapMaker.markPassages(this.state.loadedDungeon)
+            : null;
+
+        if (this.state.overlayData !== nextOverlayData) {
+          this.setState({ overlayData: nextOverlayData });
+        }
       }
     }
   constructor(props){
@@ -171,14 +178,18 @@ class MapMakerPage extends React.Component {
       cachedincoming: null,
       boardsFolders: [],
       boardsFoldersExpanded : {},
+      planesFolders: [],
+      planesFoldersExpanded: {},
       visible: false,
       activeDungeonLevel: 0,
       dungeonOverlayOn: dungeonOverlayOnFromPrefs ?? false,
       overlayData: null,
       loadingData: true,
+      planeSyncInProgress: false,
       imagesMatrix: {},
       selectedThingTitle: '',
       showPlanesNames: false,
+      showCoordinates: this.props.showCoordinates ?? false,
       // Dev console
       devConsoleOpen: false,
       devConsoleInput: '',
@@ -268,8 +279,11 @@ class MapMakerPage extends React.Component {
       }
     })
     this.nameFilterClicked();
-    // Dev console keyboard toggle
-    this._devConsoleKeyHandler = (e) => {
+    // Mapmaker-local keyboard shortcuts
+    this._mapmakerKeyHandler = (e) => {
+      const targetTag = (e.target && e.target.tagName ? e.target.tagName : '').toLowerCase();
+      const isEditable = targetTag === 'input' || targetTag === 'textarea' || targetTag === 'select' || (e.target && e.target.isContentEditable);
+
       if (e.key === ' ' && e.shiftKey) {
         this.setState(prev => ({ devConsoleOpen: !prev.devConsoleOpen }), () => {
           if (this.state.devConsoleOpen && this.devConsoleInputRef.current) {
@@ -277,14 +291,20 @@ class MapMakerPage extends React.Component {
           }
         });
         e.preventDefault();
+        return;
+      }
+
+      if (!isEditable && !e.metaKey && !e.ctrlKey && !e.altKey && (e.key || '').toLowerCase() === 'c') {
+        this.setState(prev => ({ showCoordinates: !prev.showCoordinates }));
+        e.preventDefault();
       }
     };
-    document.addEventListener('keydown', this._devConsoleKeyHandler);
+    document.addEventListener('keydown', this._mapmakerKeyHandler);
   }
 
   componentWillUnmount() {
-    if (this._devConsoleKeyHandler) {
-      document.removeEventListener('keydown', this._devConsoleKeyHandler);
+    if (this._mapmakerKeyHandler) {
+      document.removeEventListener('keydown', this._mapmakerKeyHandler);
     }
   }
   getTileSize(){
@@ -387,20 +407,11 @@ class MapMakerPage extends React.Component {
     this.setLoadedDungeonDropdownValue('Dungeon Selector');
 
     // update user
-    const meta = JSON.parse(sessionStorage.getItem('metadata'))
     const userId = sessionStorage.getItem('userId');
-    
-    // NEED TO ABSTRACT THIS INTO A USER SERVICE
-    if(meta.preferences && meta.preferences.editor){
-      meta.preferences.editor['loadedDungeon'] = null
-    } else {
-      meta.preferences = {
-        ...meta.prerences,
-        editor: { loadedDungeon: null}
-      }
-    }
+    setEditorPreference('loadedDungeon', null);
+    const meta = getMeta();
     console.log('about to update user with meta ', meta);
-    updateUserRequest(userId, meta)
+    if(userId) updateUserRequest(userId, meta)
     storeMeta(meta);
 
 
@@ -667,6 +678,7 @@ class MapMakerPage extends React.Component {
 
   setViewState = (state) => {
     let title = '';
+    const currentOverlayOn = !!this.state.dungeonOverlayOn;
     switch(state){
       case 'plane':
         // console.log('plane...');
@@ -681,27 +693,24 @@ class MapMakerPage extends React.Component {
       default:
       break;
     }
+    const overlayData = currentOverlayOn && this.state.loadedDungeon
+      ? this.props.mapMaker.markPassages(this.state.loadedDungeon)
+      : null;
+
     this.setState({
       selectedView: state,
-      dungeonOverlayOn: false,
-      overlayData: null,
+      dungeonOverlayOn: currentOverlayOn,
+      overlayData,
       selectedThingTitle: title
     })
 
     // update user
-    const meta = JSON.parse(sessionStorage.getItem('metadata'))
     const userId = sessionStorage.getItem('userId');
-    
-    // NEED TO ABSTRACT THIS INTO A USER SERVICE
-    if(meta.preferences && meta.preferences.editor){
-      meta.preferences.editor['selectedView'] = state
-    } else {
-      meta.preferences = {
-        editor: { selectedView: state}
-      }
-    }
+    setEditorPreference('selectedView', state);
+    setEditorPreference('dungeonOverlayOn', currentOverlayOn);
+    const meta = getMeta();
     console.log('about to update user with meta ', meta);
-    updateUserRequest(userId, meta)
+    if(userId) updateUserRequest(userId, meta)
     storeMeta(meta);
   }
 
@@ -709,6 +718,12 @@ class MapMakerPage extends React.Component {
     const matrix = { ...this.state.boardsFoldersExpanded };
     matrix[folderTitle] = !matrix[folderTitle];
     this.setState(() => { return {boardsFoldersExpanded: matrix}})
+  }
+
+  expandCollapsePlaneFolders = (folderTitle) => {
+    const matrix = { ...this.state.planesFoldersExpanded };
+    matrix[folderTitle] = !matrix[folderTitle];
+    this.setState(() => { return { planesFoldersExpanded: matrix } })
   }
 
   // Board CRUD methods
@@ -752,6 +767,7 @@ class MapMakerPage extends React.Component {
       }
       
       await updateBoardRequest(this.state.loadedBoard.id, obj);
+      this.updateBoardInPanel({ ...obj, id: this.state.loadedBoard.id });
       console.log('individual board API request resolved, planestoUpdate: ', planesToUpdate);
       console.log('LOAD ALL BOARDS BYPASSED');
       // this.loadAllBoards();
@@ -811,41 +827,66 @@ class MapMakerPage extends React.Component {
       await updatePlaneRequest(plane.id, obj);
       await this.loadAllPlanes();
 
-      const dungeonClone = clone(this.state.loadedDungeon);
-      let needToUpdateDungeon = false;
-      console.log('checking if ned to update dungeon');
-      dungeonClone.levels.forEach(level => {
-        const frontPlane = level.front,
-        backPlane = level.back;
-        if(frontPlane && frontPlane.id === plane.id){
-          needToUpdateDungeon = true;
-          level.front = clone(plane)
-          console.log('CHICKEN DINNER');
-          // frontPlane.miniboards.forEach((m,i)=>{
-            //   if(m.id === this.state.loadedBoard.id){
-              //     boardMatch = {levelId: l.id, orientation: 'front', miniboardIndex: i}
-              //     f = true;
-              //   }
-              // })
+      // Fetch all dungeons fresh from DB so we don't rely on potentially stale state
+      const allDungeonsRes = await loadAllDungeonsRequest();
+      const freshDungeons = (allDungeonsRes.data || []).map(e => {
+        const d = JSON.parse(e.content);
+        d.id = e._id;
+        return d;
+      });
+
+      // Find dungeons that embed this plane (supports legacy snapshots missing plane.id)
+      const affectedDungeons = freshDungeons.filter(dungeon => {
+        if (!Array.isArray(dungeon.levels)) return false;
+        return dungeon.levels.some(level => {
+          const front = level && level.front;
+          const back = level && level.back;
+
+          const frontHasBoard = front && Array.isArray(front.miniboards) && front.miniboards.some(mb => mb && mb.id === newBoard.id);
+          const backHasBoard = back && Array.isArray(back.miniboards) && back.miniboards.some(mb => mb && mb.id === newBoard.id);
+
+          const frontMatches = front && (
+            front.id === plane.id ||
+            front.name === plane.name ||
+            frontHasBoard
+          );
+          const backMatches = back && (
+            back.id === plane.id ||
+            back.name === plane.name ||
+            backHasBoard
+          );
+
+          return frontMatches || backMatches;
+        });
+      });
+
+      console.log('writeBoard: plane', plane.id, '→ affectedDungeons:', affectedDungeons.length, affectedDungeons.map(d => d.id));
+
+      for (const dungeon of affectedDungeons) {
+        dungeon.levels.forEach(level => {
+          const front = level && level.front;
+          const back = level && level.back;
+
+          const frontHasBoard = front && Array.isArray(front.miniboards) && front.miniboards.some(mb => mb && mb.id === newBoard.id);
+          const backHasBoard = back && Array.isArray(back.miniboards) && back.miniboards.some(mb => mb && mb.id === newBoard.id);
+
+          if (front && (front.id === plane.id || front.name === plane.name || frontHasBoard)) {
+            level.front = clone(plane);
+          }
+          if (back && (back.id === plane.id || back.name === plane.name || backHasBoard)) {
+            level.back = clone(plane);
+          }
+        });
+        await updateDungeonRequest(dungeon.id, dungeon);
+        // If this is the currently loaded dungeon in mapmaker, update state too
+        if (this.state.loadedDungeon && this.state.loadedDungeon.id === dungeon.id) {
+          await new Promise(resolve => this.setState({ loadedDungeon: dungeon }, resolve));
         }
-        console.log('back plane id vs plane id: ', backPlane?.id, plane.id);
-        if(backPlane && backPlane.id === plane.id){
-          needToUpdateDungeon = true;
-          level.back = clone(plane)
-          console.log('CHICKEN DINNER [backside');
-          // backPlane.miniboards.forEach((m,i)=>{
-          //   if(m.id === this.state.loadedBoard.id){
-          //     boardMatch = {levelId: l.id, orientation: 'back', miniboardIndex: i}
-          //     b = true;
-          //   }
-          // })
-        }
-      })
-      if(needToUpdateDungeon){
-        console.log('eyyyy');
-        this.setState({loadedDungeon: dungeonClone})
-        this.writeDungeon();
       }
+      if (affectedDungeons.length > 0) {
+        this.loadAllDungeons();
+      }
+
       setTimeout(()=>{
         console.log('updated plane ref: ', this.state.planes.find(p=>p.id === plane.id));
         this.loadPlane(this.state.planes.find(p=>p.id === plane.id))
@@ -906,11 +947,23 @@ class MapMakerPage extends React.Component {
 
   loadBoard = (board) => {
     console.log('load board: ', board);
+    if(!board || !board.id){
+      if(this.state.selectedView !== 'board'){
+        this.setViewState('board')
+      }
+      this.clearLoadedBoard();
+      this.setState({ selectedThingTitle: 'Board' });
+      return;
+    }
     const boardRef = this.findBoardRefInFolders(board.id)
     console.log('found board ref: ', boardRef);
     if(!boardRef){
-      console.log('somehow you loaded a board that doesnt exist in folders or state.boards... investigate!');
-      debugger
+      if(this.state.selectedView !== 'board'){
+        this.setViewState('board')
+      }
+      this.clearLoadedBoard();
+      this.setState({ selectedThingTitle: 'Board' });
+      return;
     }
     if(this.state.selectedView !== 'board'){
       this.setViewState('board')
@@ -1155,6 +1208,58 @@ class MapMakerPage extends React.Component {
       }
     })
   }
+  updateBoardInPanel = (updatedBoard) => {
+    if(!updatedBoard || !updatedBoard.id) return;
+
+    const boards = clone(this.state.boards || []).map((board) => {
+      if(!board) return board;
+      return board.id === updatedBoard.id ? clone(updatedBoard) : board;
+    });
+
+    const boardsFolders = clone(this.state.boardsFolders || []);
+    boardsFolders.forEach((folder) => {
+      if(Array.isArray(folder.contents)){
+        folder.contents = folder.contents.map((board) => {
+          if(!board) return board;
+          return board.id === updatedBoard.id ? clone(updatedBoard) : board;
+        });
+      }
+
+      if(Array.isArray(folder.subfolders)){
+        folder.subfolders.forEach((subfolder) => {
+          if(Array.isArray(subfolder.contents)){
+            subfolder.contents = subfolder.contents.map((board) => {
+              if(!board) return board;
+              return board.id === updatedBoard.id ? clone(updatedBoard) : board;
+            });
+          }
+
+          if(Array.isArray(subfolder.deepfolders)){
+            subfolder.deepfolders.forEach((deepfolder) => {
+              if(Array.isArray(deepfolder.contents)){
+                deepfolder.contents = deepfolder.contents.map((board) => {
+                  if(!board) return board;
+                  return board.id === updatedBoard.id ? clone(updatedBoard) : board;
+                });
+              }
+            })
+          }
+        })
+      }
+    })
+
+    this.setState((prevState) => {
+      const nextLoadedBoard = prevState.loadedBoard && prevState.loadedBoard.id === updatedBoard.id
+        ? clone(updatedBoard)
+        : prevState.loadedBoard;
+
+      return {
+        boards,
+        boardsFolders,
+        loadedBoard: nextLoadedBoard
+      }
+    })
+  }
   removeBoardFromPanel = (board) => {
     let boards = this.state.boards,
     boardsFolders = this.state.boardsFolders;
@@ -1243,37 +1348,40 @@ class MapMakerPage extends React.Component {
         boardsFoldersExpanded[title] = false;
       })
     })
-    this.setState(() => {
-      return {
-        boards,
-        boardsFolders,
-        boardsFoldersExpanded
-      }
-    }, () => {
-      // Check for cross-page dev console handoff
-      try {
-        const handoffRaw = sessionStorage.getItem('devConsoleHandoff');
-        if (handoffRaw) {
-          const handoff = JSON.parse(handoffRaw);
-          sessionStorage.removeItem('devConsoleHandoff');
-          if (handoff.consoleOpen) {
-            this.setState({ devConsoleOpen: true }, () => {
-              try { if (this.devConsoleInputRef.current) this.devConsoleInputRef.current.focus(); } catch(_) {}
-            });
-          }
-          if (handoff.boardId) {
-            setTimeout(() => {
-              const boardRef = this.findBoardRefInFolders(handoff.boardId);
-              if (boardRef) {
-                this.loadBoard(boardRef);
-                this.setState(prev => ({
-                  devConsoleOutput: [...prev.devConsoleOutput, `Opened board: "${boardRef.name}"`]
-                }));
-              }
-            }, 0);
-          }
+    return new Promise((resolve) => {
+      this.setState(() => {
+        return {
+          boards,
+          boardsFolders,
+          boardsFoldersExpanded
         }
-      } catch(_) {}
+      }, () => {
+        // Check for cross-page dev console handoff
+        try {
+          const handoffRaw = sessionStorage.getItem('devConsoleHandoff');
+          if (handoffRaw) {
+            const handoff = JSON.parse(handoffRaw);
+            sessionStorage.removeItem('devConsoleHandoff');
+            if (handoff.consoleOpen) {
+              this.setState({ devConsoleOpen: true }, () => {
+                try { if (this.devConsoleInputRef.current) this.devConsoleInputRef.current.focus(); } catch(_) {}
+              });
+            }
+            if (handoff.boardId) {
+              setTimeout(() => {
+                const boardRef = this.findBoardRefInFolders(handoff.boardId);
+                if (boardRef) {
+                  this.loadBoard(boardRef);
+                  this.setState(prev => ({
+                    devConsoleOutput: [...prev.devConsoleOutput, `Opened board: "${boardRef.name}"`]
+                  }));
+                }
+              }, 0);
+            }
+          }
+        } catch(_) {}
+        resolve();
+      })
     })
   }
 
@@ -1463,9 +1571,71 @@ class MapMakerPage extends React.Component {
   }
   
   dungeonsContainingPlane = (plane) => {
-    //this actually needs to be a get all dungeons sort of flow, but for now I'm just going to handle the loaded dungeon
-    console.log('loaded dungeon: ', this.state.loadedDungeon);
-    
+    if(!plane || !plane.id) return [];
+    return (this.state.dungeons || []).filter((dungeon) => {
+      if(!dungeon || !Array.isArray(dungeon.levels)) return false;
+      return dungeon.levels.some((level) => {
+        if(!level) return false;
+        return (level.front && level.front.id === plane.id) || (level.back && level.back.id === plane.id);
+      });
+    });
+  }
+
+  removePlaneFromDungeonObject = (dungeon, planeId) => {
+    if(!dungeon || !planeId) return { changed: false, dungeon };
+    let changed = false;
+    const nextDungeon = clone(dungeon);
+
+    if(Array.isArray(nextDungeon.levels)){
+      nextDungeon.levels.forEach((level) => {
+        if(!level) return;
+        if(level.front && level.front.id === planeId){
+          level.front = null;
+          changed = true;
+        }
+        if(level.back && level.back.id === planeId){
+          level.back = null;
+          changed = true;
+        }
+      })
+    }
+
+    if(Array.isArray(nextDungeon.pocket_planes)){
+      nextDungeon.pocket_planes.forEach((entry) => {
+        if(!entry || typeof entry !== 'object') return;
+        Object.keys(entry).forEach((key) => {
+          const val = entry[key];
+          if(val && typeof val === 'object' && val.id === planeId){
+            entry[key] = null;
+            changed = true;
+          }
+        })
+      })
+    }
+
+    return { changed, dungeon: nextDungeon };
+  }
+
+  removePlaneReferencesFromAllDungeons = async (planeId) => {
+    if(!planeId) return 0;
+    const res = await loadAllDungeonsRequest();
+    if(!res || !Array.isArray(res.data)) return 0;
+    let updateCount = 0;
+
+    for(const row of res.data){
+      if(!row || !row.content || !row._id) continue;
+      let parsed;
+      try {
+        parsed = JSON.parse(row.content);
+      } catch (e) {
+        continue;
+      }
+      const { changed, dungeon } = this.removePlaneFromDungeonObject(parsed, planeId);
+      if(!changed) continue;
+      await updateDungeonRequest(row._id, dungeon);
+      updateCount += 1;
+    }
+    return updateCount;
   }
 
   // Dungeon CRUD Methods
@@ -1516,15 +1686,88 @@ class MapMakerPage extends React.Component {
   writePlane = async () => {
     if(this.state.selectedView !== 'plane') return
     if(this.state.loadedPlane && this.state.loadedPlane.id){
-      let obj = {
-        name: this.state.loadedPlane.name,
-        miniboards: this.state.loadedPlane.miniboards,
-        spawnPoints: this.props.mapMaker.getSpawnPoints(this.state.loadedPlane.miniboards),
-        valid: this.props.mapMaker.isValidPlane(this.state.loadedPlane.miniboards)
+      this.setState({ planeSyncInProgress: true });
+      try {
+        let obj = {
+          name: this.state.loadedPlane.name,
+          miniboards: this.state.loadedPlane.miniboards,
+          spawnPoints: this.props.mapMaker.getSpawnPoints(this.state.loadedPlane.miniboards),
+          valid: this.props.mapMaker.isValidPlane(this.state.loadedPlane.miniboards)
+        }
+        await updatePlaneRequest(this.state.loadedPlane.id, obj);
+        const updatedPlane = {
+          ...clone(this.state.loadedPlane),
+          ...obj,
+          id: this.state.loadedPlane.id
+        };
+
+        // Keep embedded dungeon plane snapshots in sync with the latest saved plane.
+        const allDungeonsRes = await loadAllDungeonsRequest();
+        const freshDungeons = (allDungeonsRes.data || []).map((e) => {
+          const dungeon = JSON.parse(e.content);
+          dungeon.id = e._id;
+          return dungeon;
+        });
+
+        const updatedBoardIds = Array.isArray(updatedPlane.miniboards)
+          ? updatedPlane.miniboards.map((mb) => mb && mb.id)
+          : [];
+
+        const planeSnapshotMatches = (snapshot) => {
+          if(!snapshot) return false;
+          // Primary match is by canonical plane id only.
+          if(snapshot.id && snapshot.id === updatedPlane.id) return true;
+
+          // Legacy fallback for snapshots missing id: require exact name and board layout ids.
+          if(!snapshot.id && snapshot.name === updatedPlane.name && Array.isArray(snapshot.miniboards)){
+            const snapshotBoardIds = snapshot.miniboards.map((mb) => mb && mb.id);
+            if(snapshotBoardIds.length !== updatedBoardIds.length) return false;
+            return snapshotBoardIds.every((id, idx) => id === updatedBoardIds[idx]);
+          }
+          return false;
+        };
+
+        const updatedDungeonIds = [];
+        let updatedLoadedDungeon = null;
+
+        for(const dungeon of freshDungeons){
+          if(!Array.isArray(dungeon.levels)) continue;
+          let changed = false;
+
+          dungeon.levels.forEach((level) => {
+            if(!level) return;
+            if(planeSnapshotMatches(level.front)){
+              level.front = clone(updatedPlane);
+              changed = true;
+            }
+            if(planeSnapshotMatches(level.back)){
+              level.back = clone(updatedPlane);
+              changed = true;
+            }
+          });
+
+          if(!changed) continue;
+          await updateDungeonRequest(dungeon.id, dungeon);
+          updatedDungeonIds.push(dungeon.id);
+          if(this.state.loadedDungeon && this.state.loadedDungeon.id === dungeon.id){
+            updatedLoadedDungeon = clone(dungeon);
+          }
+        }
+
+        await this.loadAllPlanes();
+        if(updatedDungeonIds.length > 0){
+          await this.loadAllDungeons();
+        }
+
+        if(updatedLoadedDungeon){
+          await new Promise(resolve => this.setState({ loadedDungeon: updatedLoadedDungeon }, resolve));
+          setEditorPreference('loadedDungeon', updatedLoadedDungeon);
+        }
+
+        this.toast('Plane Saved')
+      } finally {
+        this.setState({ planeSyncInProgress: false });
       }
-      await updatePlaneRequest(this.state.loadedPlane.id, obj);
-      this.loadAllPlanes(); 
-      this.toast('Plane Saved')
     } else {
       let newPlanePayload = {
         name: this.state.loadedPlane.name,
@@ -1574,21 +1817,11 @@ class MapMakerPage extends React.Component {
     console.warn('this update user block NEEDS to be abstracted. you can search "update user" to find all instances of it')
     console.log('HELLO??? MCFLY???????');
     // update user
-    const meta = JSON.parse(sessionStorage.getItem('metadata'))
     const userId = sessionStorage.getItem('userId');
-    
-    // NEED TO ABSTRACT THIS INTO A USER SERVICE
-    if(meta.preferences && meta.preferences.editor){
-      meta.preferences.editor['loadedDungeon'] = this.state.loadedDungeon
-    } else {
-      console.log('about to format...');
-      meta.preferences = {
-        ...meta.prerences,
-        editor: { loadedDungeon: this.props.mapMaker.formatDungeon(this.state.loadedDungeon)}
-      }
-    }
+    setEditorPreference('loadedDungeon', this.state.loadedDungeon);
+    const meta = getMeta();
     console.log('about to update user with meta ', meta);
-    updateUserRequest(userId, meta)
+    if(userId) updateUserRequest(userId, meta)
     storeMeta(meta);
   }
   validatePlane = (plane) => {
@@ -1740,15 +1973,68 @@ class MapMakerPage extends React.Component {
   loadAllPlanes = async () => {
     const val = await loadAllPlanesRequest()
     let planes = [];
+    const planesFolders = [];
+    const planesFoldersExpanded = {};
     val.data.forEach((e)=>{
       if(!e.content) return
       let plane = JSON.parse(e.content)
       plane.id = e._id;
       planes.push(plane)
+
+      if(plane.name && plane.name.includes('_')){
+        let title = plane.name.split('_')[0],
+        subtitle = plane.name.split('_').length > 2 ? plane.name.split('_')[1] : null,
+        deeptitle = subtitle && plane.name.split('_').length > 3 ? plane.name.split('_')[2] : null,
+        folderExists = planesFolders.map(f=>f.title).includes(title),
+        existingSubfolder = planesFolders.find(f=>f.title === title)?.subfolders.find(s=>s.title === subtitle),
+        existingDeepfolder = planesFolders.find(f=>f.title === title)?.subfolders.find(s=>s.title === subtitle)?.deepfolders.find(d=>d.title === deeptitle)
+
+        if(!folderExists){
+          planesFolders.push({
+            title,
+            contents: [],
+            subfolders: []
+          })
+        }
+        if(!existingSubfolder && subtitle){
+          planesFolders.find(f=>f.title === title).subfolders.push({
+            title: subtitle,
+            contents: [],
+            deepfolders: []
+          })
+        }
+        if(!existingDeepfolder && deeptitle){
+          planesFolders.find(f=>f.title === title).subfolders.find(s=>s.title === subtitle).deepfolders.push({
+            title: deeptitle,
+            contents: []
+          })
+        }
+
+        if(!subtitle){
+          planesFolders.find(f=>f.title === title).contents.push(plane)
+        }
+        if(subtitle && !deeptitle){
+          planesFolders.find(f=>f.title === title).subfolders.find(s=>s.title === subtitle).contents.push(plane)
+        }
+        if(deeptitle){
+          planesFolders.find(f=>f.title === title).subfolders.find(s=>s.title === subtitle).deepfolders.find(d=>d.title === deeptitle).contents.push(plane)
+        }
+      }
+    })
+    planesFolders.map(f=>f.title).forEach(t=>planesFoldersExpanded[t] = false)
+    planesFolders.forEach((f)=>{
+      f.subfolders.forEach((s)=>{
+        planesFoldersExpanded[`${f.title}_${s.title}`] = false;
+        s.deepfolders.forEach((d)=>{
+          planesFoldersExpanded[`${f.title}_${s.title}_${d.title}`] = false;
+        })
+      })
     })
     this.setState(() => {
       return {
-        planes
+        planes,
+        planesFolders,
+        planesFoldersExpanded
       }
     })
   }
@@ -1770,15 +2056,18 @@ class MapMakerPage extends React.Component {
   }
   deletePlane = async () => {
     if(this.state.loadedPlane){
-      // const cachedPlane = clone(this.state.loadedPlane)
-      await deletePlaneRequest(this.state.loadedPlane.id);
+      const deletedPlaneId = this.state.loadedPlane.id;
+      if(!deletedPlaneId) return;
+      await deletePlaneRequest(deletedPlaneId);
+      const updatedDungeonCount = await this.removePlaneReferencesFromAllDungeons(deletedPlaneId);
       this.clearLoadedPlane();
       await this.loadAllPlanes(); 
-      this.toast('Plane Deleted')
-      console.log('NEED TO HANDLE DUNGEONS WITH THIS PLANE!!!!!!!');
-
-      // let dungeonsToUpdate = this.dungeonsContainingPlane(cachedPlane)
-      debugger
+      await this.loadAllDungeons();
+      if(updatedDungeonCount > 0){
+        this.toast(`Plane Deleted (${updatedDungeonCount} dungeon${updatedDungeonCount === 1 ? '' : 's'} updated)`)
+      } else {
+        this.toast('Plane Deleted')
+      }
     }
   }
   clearLoadedPlane = () => {
@@ -2032,8 +2321,9 @@ class MapMakerPage extends React.Component {
   }
 
   onDropDungeon = (levelIndex, frontOrBack) => {
-    const dungeon = this.state.loadedDungeon;
-    dungeon.levels[levelIndex][frontOrBack] = this.state.draggedPlane;
+    const dungeon = clone(this.state.loadedDungeon);
+    if(!dungeon || !Array.isArray(dungeon.levels) || !dungeon.levels[levelIndex]) return;
+    dungeon.levels[levelIndex][frontOrBack] = clone(this.state.draggedPlane);
     setTimeout(()=>{
       this.setState({
         loadedDungeon: this.props.mapMaker.formatDungeon(dungeon),
@@ -2081,7 +2371,8 @@ class MapMakerPage extends React.Component {
     }
   }
   addDungeonLevelUp = () => {
-    let dungeon = this.state.loadedDungeon;
+    if(!this.state.loadedDungeon) return;
+    let dungeon = clone(this.state.loadedDungeon);
     // const levels = dungeon.levels
     const upperLevels = dungeon.levels.filter(l=>l.id > 0).sort((a,b) => a.id - b.id)
     // lowerLevels = dungeon.levels.filter(l=>l.id < 0).sort((a,b) => a.id - b.id)
@@ -2103,13 +2394,14 @@ class MapMakerPage extends React.Component {
         back: null
       }
     }
-    dungeon.levels.push(newLevel)
+    dungeon.levels = [...(dungeon.levels || []), newLevel]
     this.setState({
       loadedDungeon: this.props.mapMaker.formatDungeon(dungeon)
     })
   }
   addDungeonLevelDown = () => {
-    let dungeon = this.state.loadedDungeon;
+    if(!this.state.loadedDungeon) return;
+    let dungeon = clone(this.state.loadedDungeon);
     // const levels = dungeon.levels
     // const upperLevels = dungeon.levels.filter(l=>l.id > 0).sort((a,b) => a.id - b.id),
     let lowerLevels = dungeon.levels.filter(l=>l.id < 0).sort((a,b) => a.id - b.id)
@@ -2131,7 +2423,7 @@ class MapMakerPage extends React.Component {
         back: null
       }
     }
-    dungeon.levels.push(newLevel);
+    dungeon.levels = [...(dungeon.levels || []), newLevel];
     this.setState({
       loadedDungeon: this.props.mapMaker.formatDungeon(dungeon)
     })
@@ -2149,17 +2441,12 @@ class MapMakerPage extends React.Component {
     })
     
     // Persist overlay preference
-    const meta = JSON.parse(sessionStorage.getItem('metadata'));
+    setEditorPreference('dungeonOverlayOn', newOverlayState);
+    const meta = getMeta();
     const userId = sessionStorage.getItem('userId');
-    if(meta.preferences && meta.preferences.editor){
-      meta.preferences.editor['dungeonOverlayOn'] = newOverlayState;
-    } else {
-      meta.preferences = {
-        ...meta.preferences,
-        editor: { dungeonOverlayOn: newOverlayState }
-      };
+    if(userId){
+      updateUserRequest(userId, meta);
     }
-    updateUserRequest(userId, meta);
     storeMeta(meta);
   }
   clearFrontPlanePreview = (levelIndex) => {
@@ -2209,15 +2496,18 @@ class MapMakerPage extends React.Component {
           console.log('no loaded board, investigate');
           debugger
         }
-        const needsFolderUpdate = !this.isInSameFolder(this.state.loadedBoard?.name, this.state.boardNameInput.current.value);
+        const boardId = board.id;
         board.name = this.state.boardNameInput.current.value;
         this.setState({
           loadedBoard: board,
           showModal: false
-        })
-        setTimeout(()=>{
-          this.writeBoard()
-          if(needsFolderUpdate) this.updateLoadedBoardInPanel()
+        }, async () => {
+          await this.writeBoard();
+          await this.loadAllBoards();
+          const renamedBoard = this.findBoardRefInFolders(boardId);
+          if (renamedBoard) {
+            this.loadBoard(renamedBoard);
+          }
         })
       break;
       default:
@@ -2228,7 +2518,6 @@ class MapMakerPage extends React.Component {
 
   dungeonSelectOnChange = (e) => {
     let dungeon;
-    const meta = JSON.parse(sessionStorage.getItem('metadata'))
     const userId = sessionStorage.getItem('userId')
     if(e.target && e.target.value && e.target.value !== 'Dungeon Selector'){
       dungeon = this.state.dungeons.find(x=>x.name === e.target.value)
@@ -2243,15 +2532,9 @@ class MapMakerPage extends React.Component {
       })
     }
     
-    // NEED TO ABSTRACT THIS INTO A USER SERVICE
-    if(meta.preferences && meta.preferences.editor){
-      meta.preferences.editor['loadedDungeon'] = dungeon;
-    } else {
-      meta.preferences = {
-        editor: { loadedDungeon: this.props.mapMaker.formatDungeon(dungeon)}
-      }
-    }
-    updateUserRequest(userId, meta)
+    setEditorPreference('loadedDungeon', dungeon || null);
+    const meta = getMeta();
+    if(userId) updateUserRequest(userId, meta)
     storeMeta(meta);
   }
   viewSelectOnChange = (e) => {
@@ -2293,7 +2576,7 @@ class MapMakerPage extends React.Component {
           </div>
         </div>}
 
-        <CModal alignment="center" visible={this.state.showModal} onClose={
+        <CModal alignment="center" backdrop="static" visible={this.state.showModal} onClose={
           () => this.closeModal()
           }>
           <CModalHeader>
@@ -2319,27 +2602,6 @@ class MapMakerPage extends React.Component {
         </CModal>
         <div className="column-wrapper">
           <div className="inputs-container">
-            <div className="board-options-buttons-container" 
-              style={{
-                  width: this.state.tileSize*3+'px',
-                  height: '40px'
-              }}
-              >
-              <CDropdown>
-              <CDropdownToggle color="secondary">Actions</CDropdownToggle>
-              <CDropdownMenu style={{width: '100%'}}>
-                  <CDropdownItem onClick={() => this.addNewBoard()}>New</CDropdownItem>
-                  <CDropdownItem onClick={() => this.cloneBoard()}>Clone</CDropdownItem>
-                  <CDropdownItem onClick={() => this.writeBoard()}>Save</CDropdownItem>
-                  <CDropdownItem disabled={!this.state.loadedBoard} onClick={() => this.clearLoadedBoard()}>Clear</CDropdownItem>
-                  <CDropdownItem disabled={!this.state.loadedBoard} onClick={() => this.deleteBoard(this.state.loadedBoard.id)}>Delete</CDropdownItem>
-                  <CDropdownItem disabled={!this.state.loadedBoard} onClick={() => this.renameBoard()}>Rename Current Map</CDropdownItem>
-                  <CDropdownItem onClick={() => this.adjacencyFilterClicked()}>Filter: Adjacency</CDropdownItem>
-                  <CDropdownItem onClick={() => this.nameFilterClicked()}>Filter: Name</CDropdownItem>
-              </CDropdownMenu>
-              </CDropdown>
-            </div>
-
             <div className="left-text-readout title">
               {this.state.selectedThingTitle}
             </div>
@@ -2401,7 +2663,7 @@ class MapMakerPage extends React.Component {
               hoveredTileId={this.state.hoveredTileIdx}
               optionClickedIdx={this.state.optionClickedIdx}
               selectedView={this.state.selectedView}
-              showCoordinates={this.props.showCoordinates}
+              showCoordinates={this.state.showCoordinates}
               mapMaker={this.props.mapMaker}
 
               setViewState = {this.setViewState}
@@ -2442,7 +2704,7 @@ class MapMakerPage extends React.Component {
               hoveredTileId={this.state.hoveredTileIdx}
               optionClickedIdx={this.state.optionClickedIdx}
               selectedView={this.state.selectedView}
-              showCoordinates={this.props.showCoordinates}
+              showCoordinates={this.state.showCoordinates}
               mapMaker={this.props.mapMaker}
 
               setViewState = {this.setViewState}
@@ -2481,7 +2743,7 @@ class MapMakerPage extends React.Component {
               hoveredTileId={this.state.hoveredTileIdx}
               optionClickedIdx={this.state.optionClickedIdx}
               selectedView={this.state.selectedView}
-              showCoordinates={this.props.showCoordinates}
+              showCoordinates={this.state.showCoordinates}
               mapMaker={this.props.mapMaker}
 
               setViewState = {this.setViewState}
@@ -2520,11 +2782,13 @@ class MapMakerPage extends React.Component {
               hoveredTileId={this.state.hoveredTileIdx}
               optionClickedIdx={this.state.optionClickedIdx}
               selectedView={this.state.selectedView}
-              showCoordinates={this.props.showCoordinates}
+              showCoordinates={this.state.showCoordinates}
               mapMaker={this.props.mapMaker}
 
               loadedPlane={this.state.loadedPlane}
               planes={this.state.planes}
+              planesFolders={this.state.planesFolders}
+              planesFoldersExpanded={this.state.planesFoldersExpanded}
               miniboards={this.state.loadedPlane?.miniboards || [[],[],[],[],[],[],[],[],[]]}
               adjacencyHoverIdx={this.state.adjacencyHoverIdx}
               hoveredSection={this.state.hoveredSection}
@@ -2577,11 +2841,13 @@ class MapMakerPage extends React.Component {
               hoveredTileId={this.state.hoveredTileIdx}
               optionClickedIdx={this.state.optionClickedIdx}
               selectedView={this.state.selectedView}
-              showCoordinates={this.props.showCoordinates}
+              showCoordinates={this.state.showCoordinates}
               mapMaker={this.props.mapMaker}
 
               loadedPlane={this.state.loadedPlane}
               planes={this.state.planes}
+              planesFolders={this.state.planesFolders}
+              planesFoldersExpanded={this.state.planesFoldersExpanded}
               miniboards={this.state.loadedPlane?.miniboards || [[],[],[],[],[],[],[],[],[]]}
               adjacencyHoverIdx={this.state.adjacencyHoverIdx}
               hoveredSection={this.state.hoveredSection}
@@ -2633,6 +2899,7 @@ class MapMakerPage extends React.Component {
               dungeonOverlayOn={this.state.dungeonOverlayOn}
               overlayData={this.state.overlayData}
               loadingData={this.state.loadingData}
+              planeSyncInProgress={this.state.planeSyncInProgress}
               dungeonSelectOnChange={this.dungeonSelectOnChange}
               dungeonSelectVal={this.state.dungeonSelectVal}
 
@@ -2706,6 +2973,7 @@ class MapMakerPage extends React.Component {
               onDragStartDungeon={this.onDragStartDungeon}
 
               toggleShowPlaneNames={this.toggleShowPlaneNames}
+              expandCollapsePlaneFolders={this.expandCollapsePlaneFolders}
             ></PlanesPanel>}
 
           </div>
