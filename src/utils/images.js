@@ -362,7 +362,7 @@ import treasure from '../assets/icons/staples/treasure.png'
 
 // misc
 import trash from '../assets/icons/misc/trash.png'
-import spawn_point from '../assets/icons/misc/spawn_point.png'
+import spawn_point from '../assets/icons/spawn.png'
 import eye from '../assets/icons/misc/eye.png'
 import eye_inverted from '../assets/icons/misc/eye_inverted.png'
 import wide_skull from '../assets/icons/misc/wide_skull.png'

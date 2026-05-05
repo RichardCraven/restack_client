@@ -15,7 +15,6 @@ import arrowDown from '../assets/graphics/arrow_down.png'
 import arrowUp from '../assets/graphics/arrow_up.png'
 import arrowDownInvalid from '../assets/graphics/arrow_down_invalid.png'
 import arrowUpInvalid from '../assets/graphics/arrow_up_invalid.png'
-import spawnPoint from '../assets/graphics/location.png'
 import door from '../assets/icons//portals/closed_door_browner.png'
 
 import { CDropdown, CDropdownToggle, CDropdownMenu, CDropdownItem} from '@coreui/react';
@@ -205,54 +204,54 @@ class MapMakerPage extends React.Component {
 
   componentDidMount(){
     const that = this;
-    let images = {};
+    let loadedImages = {};
     function checkIfAllImagesHaveLoaded(){
       if(
-        images.arrowUpImg &&
-        images.arrowUpImgInvalid &&
-        images.arrowDownImg &&
-        images.arrowDownImgInvalid &&
-        images.doorImg &&
-        images.spawnPointImg
+        loadedImages.arrowUpImg &&
+        loadedImages.arrowUpImgInvalid &&
+        loadedImages.arrowDownImg &&
+        loadedImages.arrowDownImgInvalid &&
+        loadedImages.doorImg &&
+        loadedImages.spawnPointImg
       ){
-        that.setState({imagesMatrix : images})
+        that.setState({imagesMatrix : loadedImages})
       }
     }
     
     let arrowUpImg = new Image()
     arrowUpImg.src = arrowUp
     arrowUpImg.onload = function(){
-        images['arrowUpImg'] = arrowUpImg;
+      loadedImages['arrowUpImg'] = arrowUpImg;
         checkIfAllImagesHaveLoaded()
     }
     let arrowDownImg = new Image()
     arrowDownImg.src = arrowDown
     arrowDownImg.onload = function(){
-        images['arrowDownImg'] = arrowDownImg
+      loadedImages['arrowDownImg'] = arrowDownImg
         checkIfAllImagesHaveLoaded()
     }
     let arrowUpImgInvalid = new Image()
     arrowUpImgInvalid.src = arrowUpInvalid
     arrowUpImgInvalid.onload = function(){
-        images['arrowUpImgInvalid'] = arrowUpImgInvalid
+      loadedImages['arrowUpImgInvalid'] = arrowUpImgInvalid
         checkIfAllImagesHaveLoaded()
     }
     let arrowDownImgInvalid = new Image()
     arrowDownImgInvalid.src = arrowDownInvalid
     arrowDownImgInvalid.onload = function(){
-        images['arrowDownImgInvalid'] = arrowDownImgInvalid;
+      loadedImages['arrowDownImgInvalid'] = arrowDownImgInvalid;
         checkIfAllImagesHaveLoaded()
     }
     let doorImg = new Image()
     doorImg.src = door
     doorImg.onload = function(){
-        images['doorImg'] = doorImg;
+      loadedImages['doorImg'] = doorImg;
         checkIfAllImagesHaveLoaded()
     }
     let spawnPointImg = new Image()
-    spawnPointImg.src = spawnPoint
+    spawnPointImg.src = images['spawn_point']
     spawnPointImg.onload = function(){
-        images['spawnPointImg'] = spawnPointImg;
+      loadedImages['spawnPointImg'] = spawnPointImg;
         checkIfAllImagesHaveLoaded()
     }
     
@@ -692,6 +691,28 @@ class MapMakerPage extends React.Component {
       this.setState({ leftReadoutFlashMessage: null });
       this.leftReadoutFlashTimer = null;
     }, duration);
+  }
+
+  dungeonHasSpawnPoint = (dungeon) => {
+    const levels = Array.isArray(dungeon?.levels) ? dungeon.levels : [];
+    for (const level of levels) {
+      const planes = [level?.front, level?.back];
+      for (const plane of planes) {
+        const miniboards = Array.isArray(plane?.miniboards) ? plane.miniboards : [];
+        for (const miniboard of miniboards) {
+          const tiles = Array.isArray(miniboard?.tiles) ? miniboard.tiles : [];
+          for (const tile of tiles) {
+            if (tile?.image === 'spawn_point') return true;
+            const containsType = typeof tile?.contains === 'object' ? tile?.contains?.type : tile?.contains;
+            const containsSubtype = typeof tile?.contains === 'object' ? tile?.contains?.subtype : null;
+            if (containsType === 'spawn_point') return true;
+            if (containsSubtype === 'spawn_point') return true;
+            if (containsType === 'spawn' && containsSubtype === 'spawn_point') return true;
+          }
+        }
+      }
+    }
+    return false;
   }
 
   setViewState = (state) => {
@@ -1939,7 +1960,8 @@ class MapMakerPage extends React.Component {
         if(!level.back.valid) dungeonValid = false;
       }
     }
-    dungeon.valid = dungeonValid;
+    const hasSpawnPoints = this.dungeonHasSpawnPoint(dungeon);
+    dungeon.valid = dungeonValid && hasSpawnPoints;
     console.log('about to format 3');
     this.setState({
       loadedDungeon: this.props.mapMaker.formatDungeon(dungeon),

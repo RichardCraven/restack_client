@@ -68,6 +68,26 @@ class DungeonView extends React.Component {
         let imageTypes = ['way_up', 'way_down']
         return passagesArray.filter(p=>imageTypes.includes((typeof p.contains === 'object' && p.contains !== null) ? p.contains.type : p.contains)).length
     }
+    getPassageType = (passage) => {
+        const contains = passage?.contains;
+        const containsType = (typeof contains === 'object' && contains !== null)
+            ? contains.type
+            : contains;
+        const containsSubtype = (typeof contains === 'object' && contains !== null)
+            ? contains.subtype
+            : null;
+        const imageType = passage?.image;
+
+        const canonical = ['way_up', 'way_down', 'door', 'spawn_point'];
+        if (canonical.includes(containsType)) return containsType;
+        if (canonical.includes(containsSubtype)) return containsSubtype;
+        if (canonical.includes(imageType)) return imageType;
+
+        if (containsType === 'spawn' && (containsSubtype === 'spawn_point' || imageType === 'spawn_point')) {
+            return 'spawn_point';
+        }
+        return containsType || containsSubtype || imageType || null;
+    }
     // drawPlane: single-canvas replacement for the 9 per-board canvases.
     // Draws all passage overlays for an entire plane (front or back) in one RAF loop.
     drawPlane = (ctx, frameCount, data) => {
@@ -104,7 +124,7 @@ class DungeonView extends React.Component {
             const py = originY + unit * p.coordinates[1] + unit / 2;
 
             const isConnected = levelData.connected.some(c => c.locationCode === p.locationCode);
-            const pType = (typeof p.contains === 'object' && p.contains !== null) ? p.contains.type : p.contains;
+            const pType = this.getPassageType(p);
 
             if (pType === 'door' && isConnected) {
                 const dx = originX + unit * p.coordinates[0] - 0.5 * unit - (Math.sin(frameCount * 0.04) ** 2 * 2);
@@ -127,28 +147,10 @@ class DungeonView extends React.Component {
                 ctx.drawImage(this.props.imagesMatrix[imageKey], dx, dy, size, size);
 
             } else if (pType === 'spawn_point') {
-                // cx/cy = center of this tile in the full-plane canvas
-                const cx = originX + unit * p.coordinates[0] + unit * 0.5;
-                const cy = originY + unit * p.coordinates[1] + unit * 0.5;
-
-                if (frameCount === 3) {
-                    console.log('[spawn_point] boardIndex:', boardIndex, 'coords:', p.coordinates, 'unit:', unit.toFixed(2), 'cx:', cx.toFixed(1), 'cy:', cy.toFixed(1), 'canvasW:', ctx.canvas.width, 'canvasH:', ctx.canvas.height);
-                }
-
-                // DIAGNOSTIC: big red pulsing dot
-                const pulse = 0.5 + 0.5 * Math.sin(frameCount * 0.1);
-                const radius = 14 + pulse * 8; // 14–22px, unmissable
-
-                ctx.beginPath();
-                ctx.arc(cx, cy, radius, 0, 2 * Math.PI);
-                ctx.fillStyle = `rgba(255, 0, 0, ${0.7 + pulse * 0.3})`;
-                ctx.fill();
-
-                ctx.beginPath();
-                ctx.arc(cx, cy, radius + 4, 0, 2 * Math.PI);
-                ctx.strokeStyle = `rgba(255, 80, 80, ${0.5 + pulse * 0.4})`;
-                ctx.lineWidth = 3;
-                ctx.stroke();
+                const dx = originX + unit * p.coordinates[0] - 0.5 * unit - (Math.sin(frameCount * 0.04) ** 2 * 2);
+                const dy = originY + unit * p.coordinates[1];
+                const size = 20 + Math.sin(frameCount * 0.04) ** 2 * 5;
+                ctx.drawImage(this.props.imagesMatrix['spawnPointImg'], dx, dy, size, size);
 
             } else {
                 // Generic pulsing dot (door unconnected, or unknown type)
@@ -196,7 +198,7 @@ class DungeonView extends React.Component {
                     let x = unit*p.coordinates[0] + unit/2
                     let y = unit*p.coordinates[1] + unit/2
                     let isConnected = levelData.connected.some(x => x.locationCode === p.locationCode)
-                    const pType = (typeof p.contains === 'object' && p.contains !== null) ? p.contains.type : p.contains;
+                    const pType = this.getPassageType(p);
                     if(pType === 'door' && isConnected){
                         let x = unit*p.coordinates[0] - 0.5*unit - (Math.sin(frameCount * 0.04)**2 * 2)
                         let y = unit*p.coordinates[1]
@@ -237,40 +239,11 @@ class DungeonView extends React.Component {
                         // ctx.drawImage(this.props.imagesMatrix[imageKey], 120, 120, size, size);
                         ctx.drawImage(this.props.imagesMatrix[imageKey], x, y, size, size);
                     } else if(pType === 'spawn_point'){
-                        // Center the icon on the tile position
-                        const iconSize = 16;
-                        const cx = unit * p.coordinates[0] + unit * 0.5;
-                        const cy = unit * p.coordinates[1] + unit * 0.5;
-                        const ix = cx - iconSize / 2;
-                        const iy = cy - iconSize / 2;
-
-                        // Outer pulsing ring (slow breathe, distinct teal color)
-                        const ringPulse = 0.5 + 0.5 * Math.sin(frameCount * 0.05);
-                        const ringRadius = unit * 0.45 + ringPulse * unit * 0.15;
-                        ctx.beginPath();
-                        ctx.arc(cx, cy, ringRadius, 0, 2 * Math.PI);
-                        ctx.strokeStyle = `rgba(0, 230, 200, ${0.3 + ringPulse * 0.5})`;
-                        ctx.lineWidth = 1.5;
-                        ctx.stroke();
-
-                        // Inner filled circle (solid teal)
-                        ctx.beginPath();
-                        ctx.arc(cx, cy, unit * 0.18, 0, 2 * Math.PI);
-                        ctx.fillStyle = 'rgba(0, 200, 180, 0.75)';
-                        ctx.fill();
-
-                        // Icon image centered on the tile
+                        let x = unit*p.coordinates[0] - 0.5*unit - (Math.sin(frameCount * 0.04)**2 * 2)
+                        let y = unit*p.coordinates[1]
+                        let size = 20 + Math.sin(frameCount * 0.04)**2 * 5
                         const imageKey = 'spawnPointImg';
-                        if (this.props.imagesMatrix && this.props.imagesMatrix[imageKey]) {
-                            ctx.drawImage(this.props.imagesMatrix[imageKey], ix, iy, iconSize, iconSize);
-                        }
-
-                        // "SPAWN" label below the icon
-                        ctx.font = `bold ${Math.max(5, unit * 0.28)}px sans-serif`;
-                        ctx.fillStyle = 'rgba(0, 240, 210, 0.95)';
-                        ctx.textAlign = 'center';
-                        ctx.fillText('SPAWN', cx, cy + iconSize * 0.65 + unit * 0.3);
-                        ctx.textAlign = 'left'; // reset
+                        ctx.drawImage(this.props.imagesMatrix[imageKey], x, y, size, size);
                     } else {
                         ctx.beginPath()
                         let minVal = 3.5;

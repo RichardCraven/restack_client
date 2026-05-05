@@ -59,6 +59,24 @@ export function MapMaker(props){
         if (typeof contains === 'object' && contains !== null) return contains.type;
         return contains;
     }
+    this.getTilePassageType = (tile) => {
+        const contains = tile?.contains;
+        const containsType = this.getContainsType(contains);
+        const containsSubtype = (typeof contains === 'object' && contains !== null) ? contains.subtype : null;
+        const imageType = tile?.image;
+
+        const canonical = ['way_up', 'way_down', 'door', 'spawn_point'];
+
+        if (canonical.includes(containsType)) return containsType;
+        if (canonical.includes(containsSubtype)) return containsSubtype;
+        if (canonical.includes(imageType)) return imageType;
+
+        if (containsType === 'spawn' && (containsSubtype === 'spawn_point' || imageType === 'spawn_point')) {
+            return 'spawn_point';
+        }
+
+        return containsType || containsSubtype || imageType || null;
+    }
     this.resetCoordinates = (tiles) => {
         for(let row = 0; row < 15; row++){
             for(let column = 0; column<15; column++){
@@ -75,7 +93,7 @@ export function MapMaker(props){
             return plane.miniboards.map((board) => {
                 if (!board || !board.tiles) return [];
                 return board.tiles.filter((tile) => {
-                    const type = this.getContainsType(tile.contains);
+                    const type = this.getTilePassageType(tile);
                     return includeSpawnPoint
                         ? (type === 'way_up' || type === 'way_down' || type === 'door' || type === 'spawn_point')
                         : (type === 'way_up' || type === 'way_down' || type === 'door');
@@ -88,7 +106,7 @@ export function MapMaker(props){
                 if(!mb|| !mb.tiles) return
                 mb.tiles.forEach(t=> {
                     t.level = lvl.id
-                    const type = this.getContainsType(t.contains);
+                    const type = this.getTilePassageType(t) || 'none';
                     t.locationCode = `${type}_level-${lvl.id}_miniboard-${i}_F_[${t.coordinates}]`
                 })
             })
@@ -96,7 +114,7 @@ export function MapMaker(props){
                 if(!mb|| !mb.tiles) return
                 mb.tiles.forEach(t=> {
                     t.level = lvl.id
-                    const type = this.getContainsType(t.contains);
+                    const type = this.getTilePassageType(t) || 'none';
                     t.locationCode = `${type}_level-${lvl.id}_miniboard-${i}_B_[${t.coordinates}]`
                 })
             })
@@ -417,7 +435,7 @@ export function MapMaker(props){
             }
             let spawns = []
             passages.frontPassages.forEach(passage=>{
-                if(this.getContainsType(passage.contains) === 'spawn_point'){
+                if(this.getTilePassageType(passage) === 'spawn_point'){
                     spawns.push(passage);
                     dungeonSpawns.push(passage);
                 } else {
@@ -430,7 +448,7 @@ export function MapMaker(props){
             passages.backPassages.forEach(passage=>{
                 // console.log('passage location code', passage.locationCode);
                 // mb.forEach(passage=>{
-                if(this.getContainsType(passage.contains) === 'spawn_point'){
+                if(this.getTilePassageType(passage) === 'spawn_point'){
                     spawns.push(passage);
                     dungeonSpawns.push(passage);
                 } else {
@@ -465,8 +483,8 @@ export function MapMaker(props){
             l.spawns = spawns;
             if(!l.valid) dungeonValid = false;
         })
-        // console.log('dungeonSpawns', dungeonSpawns);
-        dungeonObj.valid = dungeonValid;
+        // Dungeon is only valid if structural checks pass AND at least one spawn exists.
+        dungeonObj.valid = dungeonValid && dungeonSpawns.length > 0;
         dungeonObj.spawn_points = dungeonSpawns;
         if(dungeonObj.spawnPoints) delete dungeonObj.spawnPoints
         return dungeonObj

@@ -398,13 +398,16 @@ class DungeonPage extends React.Component {
     // Scans crew specialActions for finished preparations, marks availability, optionally marks notified,
     // persists meta and returns any collected updates.
     checkAndCollectFinishedSpecialActions = ({ markNotified = true } = {}) => {
-        const meta = getMeta();
+        const meta = getMeta() || {};
+        const crew = Array.isArray(meta.crew)
+            ? meta.crew
+            : (Array.isArray(this.props?.crewManager?.crew) ? this.props.crewManager.crew : []);
         let updates = [];
         let modified = false;
         let numeralUpdate = false;
         let hasRitualUpdate = false;
 
-        meta.crew.forEach(member => {
+        crew.forEach(member => {
             (member.specialActions || []).forEach(a => {
                 if (!a || !a.endDate) return;
                 const end = new Date(a.endDate);
@@ -451,10 +454,14 @@ class DungeonPage extends React.Component {
         });
 
         if (modified) {
-            meta.crew = meta.crew; // eslint-disable-line no-self-assign
+            meta.crew = crew;
             storeMeta(meta);
-            this.props.crewManager.crew = meta.crew;
-            this.props.saveUserData();
+            if (this.props?.crewManager) {
+                this.props.crewManager.crew = crew;
+            }
+            if (typeof this.props?.saveUserData === 'function') {
+                this.props.saveUserData();
+            }
         }
 
         return { updates, modified, numeralUpdate, hasRitualUpdate };
@@ -1873,12 +1880,14 @@ class DungeonPage extends React.Component {
     addItemToInventory = (tile) => {
         //this is coming from a board tile
         const tileContains = tile.contains;
-        this.props.inventoryManager.addItem(this.props.inventoryManager.allItems[tileContains])
+        const itemDefinition = this.props.inventoryManager.allItems[tileContains];
+        const itemDisplayName = itemDefinition?.name || (typeof tileContains === 'string' ? tileContains.replaceAll('_', ' ') : tileContains);
+        this.props.inventoryManager.addItem(itemDefinition)
         const matrix = this.state.inventoryHoverMatrix;
         this.props.inventoryManager.inventory.forEach((e,i)=>{
             matrix[i] = '';
         })
-        this.displayMessage(`You found a ${tileContains}!`)
+        this.displayMessage(`You found a ${itemDisplayName}!`)
         this.setState({
             inventoryHoverMatrix: matrix
         })
@@ -2784,6 +2793,132 @@ class DungeonPage extends React.Component {
         })
 
     }
+    getTileContainsType = (tile) => {
+        if (!tile) return null;
+        if (typeof tile.contains === 'object' && tile.contains !== null) return tile.contains.type;
+        return tile.contains;
+    }
+
+    getSpawnPointsFromDungeon = (dungeon) => {
+        const levels = Array.isArray(dungeon?.levels) ? dungeon.levels : [];
+        const spawnPoints = [];
+
+        levels.forEach((level) => {
+            const planes = [
+                { data: level?.front, orientation: 'front', orientationCode: 'F' },
+                { data: level?.back, orientation: 'back', orientationCode: 'B' }
+            ];
+
+            planes.forEach(({ data: plane, orientation, orientationCode }) => {
+                const miniboards = Array.isArray(plane?.miniboards) ? plane.miniboards : [];
+                miniboards.forEach((miniboard, miniboardIndex) => {
+                    const tiles = Array.isArray(miniboard?.tiles) ? miniboard.tiles : [];
+                    tiles.forEach((tile, tileIndex) => {
+                        const containsType = this.getTileContainsType(tile);
+                        if (tile?.image !== 'spawn_point' && containsType !== 'spawn_point') return;
+
+                        const coords = Array.isArray(tile?.coordinates)
+                            ? tile.coordinates
+                            : [tileIndex % 15, Math.floor(tileIndex / 15)];
+                        const id = tile?.id != null ? tile.id : tileIndex;
+                        spawnPoints.push({
+                            id,
+                            level: level?.id,
+                            miniboardIndex,
+                            coordinates: coords,
+                            orientation,
+                            locationCode: `spawn_point_level-${level?.id}_miniboard-${miniboardIndex}_${orientationCode}_[${coords}]`,
+                            contains: tile?.contains || { type: 'spawn_point', subtype: null },
+                            image: 'spawn_point'
+                        });
+                    });
+                });
+            });
+        });
+
+        return spawnPoints;
+    }
+
+    getResolvedSpawnPoints = (dungeon) => {
+        const scanned = this.getSpawnPointsFromDungeon(dungeon);
+        if (scanned.length > 0) return scanned;
+        return Array.isArray(dungeon?.spawn_points) ? dungeon.spawn_points : [];
+    }
+
+    getSpawnOrientationCode = (spawnPoint) => {
+        const fromLocationCode = spawnPoint?.locationCode && spawnPoint.locationCode.split('_')[4];
+        if (fromLocationCode === 'F' || fromLocationCode === 'B') return fromLocationCode;
+        if (spawnPoint?.orientation === 'F' || spawnPoint?.orientation === 'B') return spawnPoint.orientation;
+        if (spawnPoint?.orientation === 'front') return 'F';
+        if (spawnPoint?.orientation === 'back') return 'B';
+        return 'F';
+    }
+
+    getBoardForLocation = (dungeon, location) => {
+        if (!dungeon || !location || location.levelId == null) return null;
+        const levelId = Number(location.levelId);
+        const boardIndex = location.boardIndex != null ? Number(location.boardIndex) : 0;
+        const orientation = location.orientation === 'B' ? 'B' : 'F';
+        const level = Array.isArray(dungeon.levels)
+            ? dungeon.levels.find((entry) => Number(entry?.id) === levelId)
+            : null;
+        if (!level) return null;
+        const plane = orientation === 'F' ? level.front : level.back;
+        const boards = Array.isArray(plane?.miniboards) ? plane.miniboards : [];
+        return boards[boardIndex] || null;
+    }
+
+    formatTileDiagnostic = (tile, index) => {
+        if (!tile) return { index, exists: false };
+        const containsType = this.getTileContainsType(tile);
+        const containsSubtype = (typeof tile.contains === 'object' && tile.contains !== null)
+            ? tile.contains.subtype
+            : null;
+        const containsRaw = (typeof tile.contains === 'object' && tile.contains !== null)
+            ? { ...tile.contains }
+            : tile.contains;
+        const hasKeyLikeValue = [containsType, containsSubtype, tile.image].some((value) =>
+            typeof value === 'string' && value.indexOf('key') !== -1
+        );
+
+        return {
+            index,
+            id: tile.id,
+            containsType,
+            containsSubtype,
+            containsRaw,
+            image: tile.image,
+            color: tile.color,
+            keyLike: hasKeyLikeValue
+        };
+    }
+
+    logKeyTileDiagnostics = ({ label, dungeon, location, tiles, tileIndexes = [96, 98, 126, 128], extra = {} }) => {
+        try {
+            let tilesToInspect = tiles;
+            let resolvedBoard = null;
+            if (!Array.isArray(tilesToInspect)) {
+                resolvedBoard = this.getBoardForLocation(dungeon, location);
+                tilesToInspect = Array.isArray(resolvedBoard?.tiles) ? resolvedBoard.tiles : [];
+            }
+
+            const snapshot = tileIndexes.map((idx) => this.formatTileDiagnostic(tilesToInspect[idx], idx));
+            const keyLikeCount = snapshot.filter((entry) => entry && entry.keyLike).length;
+
+            console.log('DungeonPage key diagnostics:', {
+                label,
+                location,
+                boardId: resolvedBoard?.id,
+                tileIndexes,
+                keyLikeCount,
+                snapshot,
+                ...extra
+            });
+        } catch (e) {
+            console.warn('DungeonPage key diagnostics failed for label:', label, e);
+        }
+    }
+
     loadNewDungeon = async () => {
         const meta = getMeta(),
               userId = getUserId(),
@@ -2801,22 +2936,34 @@ class DungeonPage extends React.Component {
             dungeons.push(d)
         })
     // dungeons loaded
-        selectedDungeon = dungeons[0]
+        const validDungeons = dungeons.filter((d) => d.valid === true && this.getResolvedSpawnPoints(d).length > 0);
+        const selectedTemplateId = meta && meta.selectedDungeonTemplateId ? meta.selectedDungeonTemplateId : null;
+        if (selectedTemplateId) {
+            selectedDungeon = validDungeons.find((d) => d.id === selectedTemplateId);
+        }
+        if (!selectedDungeon) {
+            const pool = validDungeons.length > 0 ? validDungeons : dungeons;
+            selectedDungeon = pool[Math.floor(Math.random() * pool.length)];
+        }
+        if (!selectedDungeon) {
+            return;
+        }
         // selectedDungeon = dungeons.find(e=>e.name === 'Primari');
         let newDungeonPayload = {
             name: `${selectedDungeon.name}_${userName}_${userId.slice(userId.length-4)}`,
             levels: selectedDungeon.levels,
             pocket_planes: selectedDungeon.pocket_planes,
             descriptions: `${userName}'s dungeon`,
-            spawn_points: selectedDungeon.spawn_points,
+                        spawn_points: this.getResolvedSpawnPoints(selectedDungeon),
             valid: selectedDungeon.valid
           }
         const newDungeonRes = await addDungeonRequest(newDungeonPayload);
         selectedDungeon = JSON.parse(newDungeonRes.data.content);
         selectedDungeon.id = newDungeonRes.data._id;
+                selectedDungeon.spawn_points = this.getResolvedSpawnPoints(selectedDungeon);
         // spawnPoint = selectedDungeon.spawn_points[Math.floor(Math.random()*spawnList.length)]
         // ^ need to populate spawnList
-        spawnPoint = selectedDungeon.spawn_points[0]
+                spawnPoint = selectedDungeon.spawn_points[0]
 
 
         this.props.inventoryManager.initializeItems()
@@ -2824,11 +2971,10 @@ class DungeonPage extends React.Component {
         if(spawnPoint){
             // return
             this.props.boardManager.setDungeon(selectedDungeon);
-            let sp = spawnPoint.locationCode.split('_');
             const levelId =  spawnPoint.level;
             const level = selectedDungeon.levels.find(e=>e.id === levelId)
             const miniboardIndex = spawnPoint.miniboardIndex
-            const orientation = sp[4];
+            const orientation = this.getSpawnOrientationCode(spawnPoint);
             const spawnTileIndex = spawnPoint.id;
             const board = orientation === 'F' ? level.front.miniboards[miniboardIndex] : (orientation === 'B' ? level.back.miniboards[miniboardIndex] : null)
             if(board === null){
@@ -2925,10 +3071,41 @@ class DungeonPage extends React.Component {
         }
         const dungeon = JSON.parse(res.data[0].content)
         dungeon.id = res.data[0]._id;
+        const resolvedSpawnPoints = this.getResolvedSpawnPoints(dungeon);
+        const spawnFallbackForDiagnostics = resolvedSpawnPoints[0] || null;
+        const defaultDiagnosticLocation = meta.location && meta.location.levelId != null
+            ? meta.location
+            : (spawnFallbackForDiagnostics
+                ? {
+                    levelId: spawnFallbackForDiagnostics.level,
+                    orientation: this.getSpawnOrientationCode(spawnFallbackForDiagnostics),
+                    boardIndex: spawnFallbackForDiagnostics.miniboardIndex,
+                    tileIndex: spawnFallbackForDiagnostics.id
+                }
+                : null);
+        this.logKeyTileDiagnostics({
+            label: 'loadExistingDungeon pre-cleanup',
+            dungeon,
+            location: defaultDiagnosticLocation,
+            extra: {
+                spawnFallback: spawnFallbackForDiagnostics,
+                requestedDungeonId: dungeonId
+            }
+        });
+        dungeon.spawn_points = resolvedSpawnPoints;
         keyCleanup(dungeon);
         itemCleanup(dungeon, meta.crew);
         resolveItemPools(dungeon, this.props.inventoryManager.allItems);
         resolveMonsterPools(dungeon, this.props.monsterManager.monsters);
+        this.logKeyTileDiagnostics({
+            label: 'loadExistingDungeon post-cleanup',
+            dungeon,
+            location: defaultDiagnosticLocation,
+            extra: {
+                spawnFallback: spawnFallbackForDiagnostics,
+                requestedDungeonId: dungeonId
+            }
+        });
         const cleanupSummary = this.props.boardManager.setDungeon(dungeon)
         console.log('DungeonPage.loadExistingDungeon: called boardManager.setDungeon; cleanupSummary:', cleanupSummary);
         try {
@@ -2943,10 +3120,10 @@ class DungeonPage extends React.Component {
             const levelZero = dungeon.levels && dungeon.levels.find(level => Number(level.id) === 0);
             const defaultLevel = levelZero || firstLevel;
             // Try to use the dungeon's stored spawn point for a sensible starting tile
-            const spawnFallback = dungeon.spawn_points && dungeon.spawn_points[0];
+            const spawnFallback = resolvedSpawnPoints[0];
             const fallbackTileIndex = spawnFallback ? spawnFallback.id : 112; // 112 = center of 15x15 board
             const fallbackBoardIndex = spawnFallback ? (spawnFallback.miniboardIndex || 0) : 0;
-            const fallbackOrientation = spawnFallback ? (spawnFallback.locationCode && spawnFallback.locationCode.split('_')[4]) || 'F' : 'F';
+            const fallbackOrientation = spawnFallback ? this.getSpawnOrientationCode(spawnFallback) : 'F';
             meta.location = {
                 levelId: defaultLevel ? defaultLevel.id : null,
                 orientation: fallbackOrientation,
@@ -2960,7 +3137,7 @@ class DungeonPage extends React.Component {
         // would place them on the wrong miniboard entirely.
         if (meta.location.tileIndex === 0 || meta.location.tileIndex == null) {
             const levelId = meta.location.levelId;
-            const levelSpawn = dungeon.spawn_points && dungeon.spawn_points.find(
+            const levelSpawn = resolvedSpawnPoints.find(
                 sp => sp.level === levelId || sp.level === Number(levelId)
             );
             if (levelSpawn && levelSpawn.id) {
@@ -3021,10 +3198,36 @@ class DungeonPage extends React.Component {
 
         this.props.boardManager.setCurrentLevel(dungeonLevel);
         this.props.boardManager.setCurrentOrientation(meta.location.orientation);
+        this.logKeyTileDiagnostics({
+            label: 'loadExistingDungeon pre-initialize finalized-location',
+            dungeon,
+            location: meta.location,
+            extra: {
+                spawnFallback: spawnFallbackForDiagnostics,
+                requestedDungeonId: dungeonId
+            }
+        });
         console.log('DungeonPage.loadExistingDungeon: calling initializeTilesFromMap boardIndex=', meta.location.boardIndex, 'tileIndex=', meta.location.tileIndex);
         try {
             this.props.boardManager.initializeTilesFromMap(meta.location.boardIndex, meta.location.tileIndex);
             console.log('DungeonPage.loadExistingDungeon: initializeTilesFromMap complete, tiles.length=', this.props.boardManager.tiles && this.props.boardManager.tiles.length);
+            this.logKeyTileDiagnostics({
+                label: 'loadExistingDungeon post-initialize boardManager.tiles',
+                location: {
+                    levelId: this.props.boardManager?.currentLevel?.id,
+                    orientation: this.props.boardManager?.currentOrientation,
+                    boardIndex: this.props.boardManager?.currentBoard?.id,
+                    tileIndex: this.props.boardManager?.getIndexFromCoordinates
+                        ? this.props.boardManager.getIndexFromCoordinates(this.props.boardManager.playerTile.location)
+                        : null
+                },
+                tiles: this.props.boardManager.tiles,
+                extra: {
+                    currentBoardId: this.props.boardManager?.currentBoard?.id,
+                    playerLocation: this.props.boardManager?.playerTile?.location,
+                    requestedDungeonId: dungeonId
+                }
+            });
         } catch (initErr) {
             console.error('DungeonPage.loadExistingDungeon: initializeTilesFromMap THREW:', initErr);
             return;
@@ -3188,26 +3391,37 @@ class DungeonPage extends React.Component {
                             c.hp = 1;
                             c.dead = false;
                         });
-                        const spawnPoint = meta2.spawnPoint;
-                        console.log('spawn point: ', spawnPoint);
-                        const selectedDungeon = meta2.selectedDungeon;
-                        if (spawnPoint && spawnPoint.locationCode && selectedDungeon) {
-                            let sp = spawnPoint.locationCode.split('_');
-                            const levelId =  spawnPoint.level;
-                            const level = selectedDungeon.levels.find(e=>e.id === levelId)
-                            const miniboardIndex = spawnPoint.miniboardIndex
-                            const orientation = sp[4];
-                            const spawnTileIndex = spawnPoint.id; // eslint-disable-line no-unused-vars
-                            const board = orientation === 'F' ? level.front.miniboards[miniboardIndex] : (orientation === 'B' ? level.back.miniboards[miniboardIndex] : null) // eslint-disable-line no-unused-vars
+                        const selectedDungeon = meta2.selectedDungeon || (this.props.boardManager && this.props.boardManager.dungeon);
+                        const resolvedRespawnPoints = this.getResolvedSpawnPoints(selectedDungeon);
+                        const spawnPoint = resolvedRespawnPoints[0] || meta2.spawnPoint;
+                        console.log('battleOver respawn spawnPoint: ', spawnPoint);
+                        if (spawnPoint && selectedDungeon) {
+                            const levelId = spawnPoint.level;
+                            const level = Array.isArray(selectedDungeon.levels)
+                                ? selectedDungeon.levels.find(e => Number(e.id) === Number(levelId))
+                                : null;
+                            const miniboardIndex = spawnPoint.miniboardIndex != null ? spawnPoint.miniboardIndex : 0;
+                            const orientation = this.getSpawnOrientationCode(spawnPoint);
+                            const spawnTileIndex = spawnPoint.id != null ? spawnPoint.id : 112;
+                            const board = level
+                                ? (orientation === 'F'
+                                    ? level.front && level.front.miniboards && level.front.miniboards[miniboardIndex]
+                                    : (orientation === 'B' ? level.back && level.back.miniboards && level.back.miniboards[miniboardIndex] : null))
+                                : null;
 
-                            meta2.location = {
-                                boardIndex: spawnPoint.miniboardIndex,
-                                tileIndex: spawnPoint.id,
-                                levelId,
-                                orientation
+                            if (level && board) {
+                                meta2.spawnPoint = spawnPoint;
+                                meta2.location = {
+                                    boardIndex: miniboardIndex,
+                                    tileIndex: spawnTileIndex,
+                                    levelId,
+                                    orientation
+                                }
+                            } else {
+                                console.warn('battleOver respawn: resolved spawn did not map to a level/board, keeping current location');
                             }
                         } else {
-                            console.warn('battleOver respawn: no spawnPoint in meta — keeping current location');
+                            console.warn('battleOver respawn: no resolved spawn point found — keeping current location');
                         }
                         // Re-fetch meta so we don't overwrite values (e.g. deathTracker) written
                         // by gameOver in MonsterBattle between when we fetched meta2 and now.
@@ -3270,11 +3484,20 @@ class DungeonPage extends React.Component {
                 if (meta2 && meta2.location && this.props && this.props.boardManager) {
                     try {
                         const bm = this.props.boardManager;
-                        // Place the player at the saved location without reinitializing the
-                        // entire board (which could reintroduce removed items). Then
-                        // respawn monsters only using the boardManager.respawnMonsters
-                        // method which only affects monster tiles.
-                        if (typeof bm.getCoordinatesFromIndex === 'function' && typeof bm.placePlayer === 'function') {
+                        // Rebuild board context from respawn location so tile index is applied
+                        // on the correct level/orientation/miniboard.
+                        const respawnLevel = bm.dungeon && Array.isArray(bm.dungeon.levels)
+                            ? bm.dungeon.levels.find(l => Number(l.id) === Number(meta2.location.levelId))
+                            : null;
+                        if (respawnLevel && typeof bm.setCurrentLevel === 'function') {
+                            bm.setCurrentLevel(respawnLevel);
+                        }
+                        if (typeof bm.setCurrentOrientation === 'function') {
+                            bm.setCurrentOrientation(meta2.location.orientation || 'F');
+                        }
+                        if (typeof bm.initializeTilesFromMap === 'function') {
+                            bm.initializeTilesFromMap(meta2.location.boardIndex || 0, meta2.location.tileIndex != null ? meta2.location.tileIndex : 112);
+                        } else if (typeof bm.getCoordinatesFromIndex === 'function' && typeof bm.placePlayer === 'function') {
                             const coords = bm.getCoordinatesFromIndex(meta2.location.tileIndex);
                             bm.placePlayer(coords);
                         }

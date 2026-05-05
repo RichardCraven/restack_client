@@ -218,6 +218,18 @@
     justify-content: center;
     position: relative;
 }
+.inventory-popup .inventory-strip .tile.inventory-tile,
+.inventory-modal .inventory-strip .tile.inventory-tile{
+    background-color: transparent;
+}
+.inventory-popup .inventory-strip .tile.inventory-tile:hover,
+.inventory-modal .inventory-strip .tile.inventory-tile:hover{
+    background-color: rgba(151, 176, 208, 0.18) !important;
+}
+.inventory-popup .inventory-strip .tile.inventory-tile.active,
+.inventory-modal .inventory-strip .tile.inventory-tile.active{
+    background-color: rgba(249, 177, 21, 0.28) !important;
+}
 .inventory-popup .inventory-strip .strip-item .stack-count-badge,
 .inventory-modal .inventory-strip .strip-item .stack-count-badge{
     position: absolute;

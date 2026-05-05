@@ -248,12 +248,31 @@ export function BoardManager(){
         if (!type) return null;
         // monsters should render subtype image
         if (type === 'monster') {
-            const key = subtype || this.getRandomMonster();
-            return this.getImage(key) ? this.getImage(key) : key;
+            const key = (subtype || this.getRandomMonster());
+            const normalizedKey = (typeof key === 'string') ? key.replace(/\s+/g, '_') : key;
+            return this.getImage(normalizedKey);
         }
         // items/other types - prefer subtype when present
         const key = subtype || type;
-        return this.getImage(key) ? this.getImage(key) : key;
+        const normalizedKey = (typeof key === 'string') ? key.replace(/\s+/g, '_') : key;
+        return this.getImage(normalizedKey);
+    }
+
+    // Resolve gate key from tile shape across legacy/current formats.
+    this.getGateTypeFromTile = (tile) => {
+        if (!tile) return null;
+        const normalize = (value) => (typeof value === 'string' ? value.replace(/\s+/g, '_') : value);
+        const containsType = normalize(this.getContainsType(tile.contains));
+        const containsSubtype = normalize(this.getContainsSubtype(tile.contains));
+        const imageType = normalize(tile.image);
+
+        if (typeof containsType === 'string' && CLOSED_GATE_TYPES.includes(containsType)) return containsType;
+        if (typeof containsSubtype === 'string' && CLOSED_GATE_TYPES.includes(containsSubtype)) return containsSubtype;
+        if (containsType === 'gate' && typeof containsSubtype === 'string' && CLOSED_GATE_TYPES.includes(containsSubtype)) return containsSubtype;
+        if (containsType === 'gate' && typeof imageType === 'string' && CLOSED_GATE_TYPES.includes(imageType)) return imageType;
+        if (typeof imageType === 'string' && CLOSED_GATE_TYPES.includes(imageType)) return imageType;
+
+        return null;
     }
 
     // Normalize a single board's tiles from legacy string format into object format
@@ -862,10 +881,11 @@ export function BoardManager(){
 
         const type = this.getContainsType(destinationTile.contains);
         const subtype = this.getContainsSubtype(destinationTile.contains);
+        const gateType = this.getGateTypeFromTile(destinationTile);
         
         // Check if this is a closed gate that requires a key
-        if (CLOSED_GATE_TYPES.includes(type)) {
-            this.handleGate(destinationTile, type);
+        if (gateType) {
+            this.handleGate(destinationTile, gateType);
             return 'impassable';
         }
         
@@ -1078,6 +1098,17 @@ export function BoardManager(){
         const requiredKeySubtype = config.requires;
         const openedVersion = config.opened;
         
+        if(this.pending && this.pending.type && this.pending.type !== gateType){
+            // If the player switched to a different gate, update pending so
+            // every gate can show/resolve its own requirement.
+            tile.color = 'lightyellow';
+            this.messaging(`This gate requires a ${keyName}`);
+            const p = { type: gateType };
+            this.pending = p;
+            if (this.setPending) this.setPending(p);
+            return;
+        }
+
         if(this.pending && this.pending.type === gateType){
             this.messaging(`This gate requires a ${keyName}`);
             let hasKey = false, key;
@@ -1266,6 +1297,7 @@ export function BoardManager(){
             if (!destTile) return true;
             
             const type = this.getContainsType(destTile.contains);
+            const gateType = this.getGateTypeFromTile(destTile);
             
             // Check for void
             if (type === 'void') return true;
@@ -1274,8 +1306,8 @@ export function BoardManager(){
             if (destTile.blockedByLargeMonster) return true;
             
             // Check for closed gates that require keys
-            if (CLOSED_GATE_TYPES.includes(type)) {
-                const config = GATE_CONFIG[type];
+            if (gateType) {
+                const config = GATE_CONFIG[gateType];
                 if (config && config.requires) {
                     // Check if player has the required key
                     const inventory = this.getCurrentInventory();
@@ -1449,6 +1481,8 @@ export function BoardManager(){
             case 'door':
                 return 'closed_door'
             case 'dream den':
+                return 'moon_castle'
+            case 'dream_den':
                 return 'moon_castle'
             case 'masterkey':
                 return 'ornate_key'  
