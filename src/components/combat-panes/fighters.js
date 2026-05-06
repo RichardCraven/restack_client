@@ -17,6 +17,14 @@ export default function FightersCombatGrid(props) {
     // Delay removal of fighter portrait after death for death animation
     const [showDeathAnimation, setShowDeathAnimation] = React.useState({});
     const [fullyDead, setFullyDead] = React.useState({});
+    const formatDamageIndicatorValue = (value) => {
+        if (typeof value === 'number' && Number.isFinite(value)) return Math.round(value);
+        if (typeof value === 'string') {
+            const numericValue = Number(value);
+            if (value.trim() !== '' && Number.isFinite(numericValue)) return Math.round(numericValue);
+        }
+        return value;
+    };
 
     React.useEffect(() => {
         props.crew.forEach(fighter => {
@@ -231,7 +239,7 @@ export default function FightersCombatGrid(props) {
                                                 {props.getFighterDetails(fighter)?.damageIndicators.map((e,i)=>{
                                                     const isStatDebuff = !e.isCrit && !e.isMiss && typeof e.value === 'string';
                                                     return <div key={e.id || i} className={`damage-indicator${isStatDebuff ? ' stat-debuff' : ''}${e.isCrit ? ' crit' : ''}${e.isMiss ? ' miss' : ''}`}>
-                                                        {e.value}
+                                                        {formatDamageIndicatorValue(e.value)}
                                                     </div>
                                                 })}
                                             </div>

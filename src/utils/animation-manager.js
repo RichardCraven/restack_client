@@ -646,6 +646,7 @@ export function AnimationManager(){
     }
 
     this.getTileIdByCoords = (coords) => {
+        if (!coords || typeof coords.x !== 'number' || typeof coords.y !== 'number') return null;
         let tile = this.tiles.find(e=>e.x === coords.x && e.y === coords.y)
         return tile ? tile.id : null
     }

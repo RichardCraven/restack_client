@@ -275,6 +275,31 @@ export function BoardManager(){
         return null;
     }
 
+    // Returns true when a tile is a closed gate and the player does not currently
+    // have the key required to open it.
+    this.isLockedGateTile = (tile) => {
+        const gateType = this.getGateTypeFromTile(tile);
+        if (!gateType) return false;
+        const config = GATE_CONFIG[gateType];
+        if (!config || !config.requires) return false;
+
+        let inventory = [];
+        try {
+            inventory = (typeof this.getCurrentInventory === 'function' && this.getCurrentInventory()) || [];
+        } catch (e) {
+            inventory = [];
+        }
+
+        const hasKey = inventory.some(e =>
+            e.name === config.keyName ||
+            e.subtype === config.requires ||
+            e.name === config.requires ||
+            (e.name && e.name.replace(/_/g, ' ') === config.keyName)
+        );
+
+        return !hasKey;
+    }
+
     // Normalize a single board's tiles from legacy string format into object format
     this.normalizeBoardTiles = (board) => {
         if (!board || !board.tiles) return;
@@ -1310,20 +1335,7 @@ export function BoardManager(){
             if (destTile.blockedByLargeMonster) return true;
             
             // Check for closed gates that require keys
-            if (gateType) {
-                const config = GATE_CONFIG[gateType];
-                if (config && config.requires) {
-                    // Check if player has the required key
-                    const inventory = this.getCurrentInventory();
-                    const hasKey = inventory.some(e => 
-                        e.name === config.keyName || 
-                        e.subtype === config.requires || 
-                        e.name === config.requires ||
-                        (e.name && e.name.replace(/_/g, ' ') === config.keyName)
-                    );
-                    if (!hasKey) return true; // Blocked - no key
-                }
-            }
+            if (gateType && this.isLockedGateTile(destTile)) return true;
             
             return false; // Movement allowed
         } catch (e) {
@@ -1526,6 +1538,8 @@ export function BoardManager(){
                     const tile = this.tiles[idx];
                     if (!tile) continue;
                     if (this.getContainsType(tile.contains) === 'void') return true;
+                    // Locked gates block vision beyond them until unlocked.
+                    if (this.isLockedGateTile(tile)) return true;
                 }
             } catch (e) { /* ignore errors and assume not blocked */ }
             return false;

@@ -190,12 +190,20 @@ export function Mummy(data, utilMethods, animationManager, overlayManager) {
         // Apply 50% ATK and DEF reduction to all non-monster, non-minion combatants, excluding VCTs
         const enemies = Object.values(combatants).filter(c => !c.dead && !c.isMonster && !c.isMinion && !c.isVCT);
         enemies.forEach(enemy => {
+            const currentAtk = (typeof enemy.atk === 'number')
+                ? enemy.atk
+                : ((enemy.stats && typeof enemy.stats.atk === 'number') ? enemy.stats.atk : 1);
+            const currentDef = (enemy.stats && typeof enemy.stats.def === 'number')
+                ? enemy.stats.def
+                : ((typeof enemy.def === 'number') ? enemy.def : 0);
             // Store originals before first application (guard against double-stack)
-            if (!enemy._fearOriginalAtk) enemy._fearOriginalAtk = enemy.atk;
-            if (!enemy._fearOriginalDef) enemy._fearOriginalDef = enemy.def;
+            if (enemy._fearOriginalAtk == null) enemy._fearOriginalAtk = currentAtk;
+            if (enemy._fearOriginalDef == null) enemy._fearOriginalDef = currentDef;
 
             enemy.atk = Math.max(1, Math.floor(enemy._fearOriginalAtk * 0.5));
-            enemy.def = Math.max(0, Math.floor(enemy._fearOriginalDef * 0.5));
+            const reducedDef = Math.max(0, Math.floor(enemy._fearOriginalDef * 0.5));
+            enemy.def = reducedDef;
+            if (enemy.stats) enemy.stats.def = reducedDef;
             enemy.feared = true;
             // Only set feared_eras on first application. If already counting down,
             // do NOT reset to 5 — that would allow a second Mummy firing mid-countdown
@@ -212,7 +220,7 @@ export function Mummy(data, utilMethods, animationManager, overlayManager) {
             } else {
             }
 
-            console.log(`[Mummy] FEAR applied to ${enemy.name || enemy.type}: atk ${enemy._fearOriginalAtk}→${enemy.atk}, def ${enemy._fearOriginalDef}→${enemy.def}`);
+            console.log(`[Mummy] FEAR applied to ${enemy.name || enemy.type}: atk ${enemy._fearOriginalAtk}→${enemy.atk}, def ${enemy._fearOriginalDef}→${reducedDef}`);
         });
 
         // Broadcast immediately so UI reflects reduced stats

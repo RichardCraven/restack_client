@@ -281,7 +281,21 @@ export default function AnimationTile(props) {
             })()}
             {/* Animated energy_drain render */}
             {props.animationType === 'energy_drain' && image && (() => {
-                const flip = facing === 'left';
+                let drainTransform;
+                switch (facing) {
+                    case 'left':
+                        drainTransform = 'scaleX(-1)';
+                        break;
+                    case 'down':
+                        drainTransform = 'rotate(90deg)';
+                        break;
+                    case 'up':
+                        drainTransform = 'rotate(-90deg)';
+                        break;
+                    default:
+                        drainTransform = undefined;
+                        break;
+                }
                 const drainKey = props.animationData?.startTime || 'energy-drain';
                 return (
                     <img
@@ -297,7 +311,7 @@ export default function AnimationTile(props) {
                             height: '80%',
                             pointerEvents: 'none',
                             zIndex: 5000,
-                            transform: flip ? 'scaleX(-1)' : undefined,
+                            transform: drainTransform,
                             filter: 'drop-shadow(0 0 6px rgba(255,0,0,0.95)) drop-shadow(0 0 14px rgba(220,30,0,0.7))',
                             animation: `EnergyDrainAnimation_${facing} ${duration / 1000}s linear forwards`,
                         }}

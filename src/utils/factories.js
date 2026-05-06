@@ -354,7 +354,7 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
                 this.turnCycleCount = count;
                 if(this.frozen){
                     debugger
-                    this.tempo = Math.floor((count/100)*100);
+                    this.tempo = Math.min(100, count);
                     if(count >= 100){
                         this.frozenPoints--
                         if(this.frozenPoints <= 0){
@@ -369,7 +369,7 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
                     broadcastDataUpdate()
                     return
                 }
-                this.tempo = Math.floor((count/100)*100);
+                this.tempo = Math.min(100, count);
                 if(this.tempo < 1) return;
 
                 // ── Passive energy regen ───────────────────────────────────
@@ -601,6 +601,7 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
         },
         waitForAttack: function(){
             // this.aiming = true;
+            const pollInterval = Math.max(1, this.FIGHT_INTERVAL || 1);
             const waitInterval = setInterval(()=>{
                 if(this.type === 'djinn'){
                     console.log('in WAIT block');
@@ -613,7 +614,7 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
                     this.attack(target)
                     clearInterval(waitInterval)
                 }
-            }, 500)
+            }, pollInterval)
         },
         rockAnimationOn : function(){
             this.rocked = true;

@@ -28,6 +28,14 @@ const MonstersCombatGrid = ({
     teleportingFighterId,
     fearCastingActive,
 }) => {
+    const formatDamageIndicatorValue = (value) => {
+        if (typeof value === 'number' && Number.isFinite(value)) return Math.round(value);
+        if (typeof value === 'string') {
+            const numericValue = Number(value);
+            if (value.trim() !== '' && Number.isFinite(numericValue)) return Math.round(numericValue);
+        }
+        return value;
+    };
     const [monsterHitFlashKey, setMonsterHitFlashKey] = React.useState(0); // eslint-disable-line no-unused-vars
     const [showMonsterHitFlash, setShowMonsterHitFlash] = React.useState(false); // eslint-disable-line no-unused-vars
     const prevMonsterWounded = React.useRef(false); // eslint-disable-line no-unused-vars
@@ -374,7 +382,7 @@ const MonstersCombatGrid = ({
                                                 pointerEvents: 'none',
                                             }}
                                         >
-                                            {indicator.value}
+                                            {formatDamageIndicatorValue(indicator.value)}
                                         </div>
                                     );
                                 })}
@@ -534,7 +542,7 @@ const MonstersCombatGrid = ({
                                                             pointerEvents: 'none',
                                                         }}
                                                     >
-                                                        {indicator.value}
+                                                        {formatDamageIndicatorValue(indicator.value)}
                                                     </div>
                                                 );
                                             })}
@@ -791,7 +799,7 @@ const MonstersCombatGrid = ({
                                                         pointerEvents: 'none',
                                                     }}
                                                 >
-                                                    {indicator.value}
+                                                    {formatDamageIndicatorValue(indicator.value)}
                                                 </div>
                                             );
                                         })}

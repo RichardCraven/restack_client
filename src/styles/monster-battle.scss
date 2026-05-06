@@ -1669,6 +1669,18 @@
     .fighter-portrait.feared {
         animation: fearedTremble 0.5s ease-in-out infinite;
     }
+    @keyframes fearedTrembleNoFilter {
+        0%   { transform: var(--feared-base-transform, none) translateX(0)    rotate(0deg); }
+        20%  { transform: var(--feared-base-transform, none) translateX(-3px) rotate(-1.5deg); }
+        40%  { transform: var(--feared-base-transform, none) translateX(3px)  rotate(1.5deg); }
+        60%  { transform: var(--feared-base-transform, none) translateX(-2px) rotate(-1deg); }
+        80%  { transform: var(--feared-base-transform, none) translateX(2px)  rotate(1deg); }
+        100% { transform: var(--feared-base-transform, none) translateX(0)    rotate(0deg); }
+    }
+    .portrait.feared.charging-up,
+    .fighter-portrait.feared.charging-up {
+        animation: fearedTrembleNoFilter 0.5s ease-in-out infinite;
+    }
     // Per-orientation overrides: set --feared-base-transform to match the
     // static transform that facing classes normally apply, so the fear tremble
     // never drops the portrait's rotation or flip.
@@ -2945,7 +2957,7 @@
             border-radius: 4px;
             background-color: white;
             position: absolute;
-            transition: 0.1s;
+            transition: none;
         }
     }
     .red-fill{

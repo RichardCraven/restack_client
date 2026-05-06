@@ -501,6 +501,11 @@ export function Barbarian(data, utilMethods, animationManager) {
         const computedFacing = callerFacing(caller, target);
         const facing = target ? (computedFacing || caller.facing) : (caller.facing || computedFacing);
 
+        if (!caller.pendingAttack) {
+            caller.attacking = false;
+            return;
+        }
+
         caller.attacking = true;
 
         // Debug log: attack name and icon
@@ -514,6 +519,7 @@ export function Barbarian(data, utilMethods, animationManager) {
             console.log('[Barbarian DEBUG] No pendingAttack');
         }
 
+        try {
         if (manualAttack) {
             if (caller.pendingAttack && caller.pendingAttack.cooldown_position < 99) return;
             if (caller.pendingAttack && caller.pendingAttack.cooldown_position === 100) {
@@ -571,7 +577,9 @@ export function Barbarian(data, utilMethods, animationManager) {
             // pendingAttack recharges and the barbarian can attack again.
             this.kickoffAttackCooldown(caller);
         }
-        caller.attacking = false;
+        } finally {
+            caller.attacking = false;
+        }
     }
 
     // ─── Animation trigger ───────────────────────────────────────────────────
@@ -621,6 +629,10 @@ export function Barbarian(data, utilMethods, animationManager) {
     // Triggers the axe_throw animation
     // Accepts actual target coordinates for ranged throws
     this.triggerAxeThrow = (callerCoords, targetCoords, resolve, fighterType, attackType) => {
+        if (!targetCoords || typeof targetCoords.x !== 'number' || typeof targetCoords.y !== 'number') {
+            if (resolve) resolve(null);
+            return;
+        }
         const sourceTileId = this.animationManager.getTileIdByCoords(callerCoords);
         const targetTileId = this.animationManager.getTileIdByCoords(targetCoords);
         if (sourceTileId !== null && targetTileId !== null) {

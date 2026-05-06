@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document describes the core combat engine systems: turn cycles, era transitions, hit/miss resolution, damage reduction, facing, animation routing, and item/weapon sync. It reflects the current state of the codebase as of April 2026 and is intended as a reference for ongoing development.
+This document describes the core combat engine systems: turn cycles, era transitions, hit/miss resolution, damage reduction, facing, animation routing, and item/weapon sync. It reflects the current state of the codebase as of May 2026 and is intended as a reference for ongoing development.
 
 ---
 
@@ -18,7 +18,7 @@ This document describes the core combat engine systems: turn cycles, era transit
 8. [Weapon Stat Sync — `_im_key` System](#8-weapon-stat-sync--_im_key-system)
 9. [VCT (Virtual Combat Tile) System](#9-vct-virtual-combat-tile-system)
 10. [Shield Wall](#10-shield-wall)
-11. [Monster Speeds Reference](#11-monster-speeds-reference)
+11. [Speed, Dexterity, and Tempo Reference](#11-speed-dexterity-and-tempo-reference)
 12. [Armor & Defense Reference](#12-armor--defense-reference)
 
 ---
@@ -26,17 +26,64 @@ This document describes the core combat engine systems: turn cycles, era transit
 ## 1. Turn Cycle & Era System
 
 ### Constants
-- `FIGHT_INTERVAL`: ~20ms — interval tick rate for all combatants
-- `TICKS_PER_ERA`: 250 — number of ticks per era
-- Each turn cycle consists of 5 eras: era 0–4 are move eras, era 4 triggers an attack attempt
+- `FIGHT_INTERVAL`: live combat tick interval in milliseconds. Default is `40` (`Slow`).
+- Speed presets are defined in `shared-constants.js` as:
+    - `Very Slow = 90ms`
+    - `Slow = 40ms`
+    - `Fast = 10ms`
+    - `Very Fast = 1ms`
+- `TICKS_PER_ERA = 250`
+- A full turn cycle is still divided into 5 eras (`0` through `4`), but era boundaries are derived from the combatant's continuously increasing tempo, not from a fixed real-time duration.
+
+### How Tempo Advances
+
+Each combatant runs `turnCycle()` on its current `FIGHT_INTERVAL`. The combatant maintains an internal `count` and exposes `tempo = Math.min(100, count)` for the UI tempo indicator.
+
+The per-tick increment is derived from fighter `dex` or monster `speed`:
+
+```javascript
+effectiveStat = stats.dex > 0 ? stats.dex : (stats.speed > 0 ? stats.speed : 1)
+increment = effectiveStat / 25
+count += increment
+tempo = Math.min(100, count)
+```
+
+That means the tempo bar speed depends on both:
+
+- the global game speed (`FIGHT_INTERVAL`)
+- the unit's personal `dex` or `speed`
+
+At runtime, the approximate time for a unit to go from `0` tempo to `100` tempo is:
+
+$$
+cycle\_time\_ms = \frac{2500 \times FIGHT\_INTERVAL}{effectiveStat}
+$$
+
+Examples at the default `Slow` setting (`FIGHT_INTERVAL = 40`):
+
+- `effectiveStat = 10` -> about `10,000ms` for a full tempo cycle
+- `effectiveStat = 5` -> about `20,000ms`
+- `effectiveStat = 20` -> about `5,000ms`
+
+So yes: higher fighter dexterity or monster speed makes that unit's tempo indicator move faster even if the global game speed stays the same.
 
 ### How Eras Work
 
-Each combatant runs `turnCycle()` via `setFightInterval`. Inside the interval tick, the engine tracks `_lastEraIndex` on the combatant to detect era transitions (when `eraIndex` increments). Era transitions are used to:
+`eraIndex` is derived from the current tempo band:
+
+- era `0`: tempo `< 21`
+- era `1`: tempo `< 41`
+- era `2`: tempo `< 61`
+- era `3`: tempo `< 81`
+- era `4`: tempo `< 101`
+
+Inside the interval tick, the engine tracks `_lastEraIndex` on the combatant to detect era transitions. Era transitions are used to:
 
 - Decrement fear duration (`feared_eras--`)
 - Trigger `onEraTransition` callbacks (e.g., Barbarian's berserker expiry check)
 - Drive special ability cooldowns (expressed in eras, not milliseconds)
+
+When `tempo >= 100`, `restartTurnCycle()` resets tempo/count/era flags and starts the next cycle.
 
 ### Reentrance Guard: `_inRestartTurnCycle`
 
@@ -49,17 +96,54 @@ this._inRestartTurnCycle = true;
 this._inRestartTurnCycle = false;
 ```
 
-### `eraAttack` Guards
+### Movement and Attack Timing That Also Depend on Speed/Dex
 
-The `eraAttack` function in `factories.js` has three critical early-return guards:
+The tempo bar is not the only place where personal speed matters.
+
+#### Movement cadence
+
+At combatant creation:
 
 ```javascript
-if (!target) return;
-if (!this.pendingAttack) return;
-if (this.attacking) return;
+movesPerTurnCycle = effectiveStat * 2
+moveCooldown = (1 / effectiveStat) * 5000
 ```
 
-The `movesLeft` gate was intentionally **removed** from `eraAttack`. Previously, a surrounded unit that used all move attempts on blocked cells could never attack. Removing the gate allows attacks regardless of whether the unit had moves remaining that era.
+- Higher `dex` / `speed` gives more move attempts per turn cycle.
+- Higher `dex` / `speed` also shortens the per-move cooldown in real milliseconds.
+
+#### Attack cadence
+
+`kickoffAttackCooldown()` uses:
+
+```javascript
+generalCooldown = (10 / callerSpeed) * 1000 / attackSpeedMult
+```
+
+- `callerSpeed` uses `stats.speed`, falling back to `stats.dex`
+- `attackSpeedMult` is an optional per-unit modifier
+
+This means faster units can begin another attack sooner even if the global game speed is unchanged.
+
+#### Special cooldown cadence
+
+Special cooldowns are still stored in eras and converted to ticks with:
+
+```javascript
+totalTicks = special.cooldown * TICKS_PER_ERA
+```
+
+Because the cooldown interval runs at the live `FIGHT_INTERVAL`, changing the game speed changes how fast those era-based cooldowns progress in real time.
+
+#### Energy regeneration
+
+Passive energy regeneration also scales with speed:
+
+```javascript
+regenPerTick = speed * 0.02 * regenMult
+```
+
+So faster monsters/fighters fill energy-based resources more quickly.
 
 ---
 
@@ -434,22 +518,79 @@ shield_wall: {
 
 ---
 
-## 11. Monster Speeds Reference
+## 11. Speed, Dexterity, and Tempo Reference
 
-Speed controls movement rate, attack frequency (`kickoffAttackCooldown`), and miss chance (`hitCheck`).
+### Effective Stat Source
 
-| Monster         | Speed |
-|----------------|-------|
-| Mummy          | 4     |
-| Troll / Ogre   | 5     |
-| Dragon         | 6     |
-| Skeleton       | 7     |
-| Sphinx         | 7     |
-| Gorgon         | 8     |
-| Witch / Beholder | 9   |
-| Goblin / Kabuki | 11   |
-| Wraith         | 12    |
-| Vampire        | 13    |
+- Fighters primarily use `stats.dex`
+- Monsters primarily use `stats.speed`
+- If one is missing, combat falls back to the other, then to `1`
+
+In practice, the engine uses this same fallback pattern in the major timing systems.
+
+### What the Personal Stat Affects
+
+`dex` / `speed` directly affects:
+
+1. Tempo indicator movement speed
+2. Full turn-cycle duration
+3. `movesPerTurnCycle`
+4. `moveCooldown`
+5. General attack cooldown timing
+6. Hit avoidance via `hitCheck`
+7. Passive energy regeneration
+
+### Tempo Formula Summary
+
+```javascript
+incrementPerTick = effectiveStat / 25
+tempo = min(100, accumulatedCount)
+```
+
+Approximate real-time duration for one full tempo cycle:
+
+$$
+cycle\_time\_ms = \frac{2500 \times FIGHT\_INTERVAL}{effectiveStat}
+$$
+
+Approximate cycles at default `Slow` (`40ms`):
+
+| Effective Stat | Full Cycle Time |
+|----------------|-----------------|
+| 4              | 25.0s           |
+| 5              | 20.0s           |
+| 7              | 14.3s           |
+| 10             | 10.0s           |
+| 13             | 7.7s            |
+
+### Movement Formula Summary
+
+```javascript
+movesPerTurnCycle = effectiveStat * 2
+moveCooldown = 5000 / effectiveStat
+```
+
+Examples:
+
+| Effective Stat | Moves / Cycle | Move Cooldown |
+|----------------|---------------|---------------|
+| 4              | 8             | 1250ms        |
+| 5              | 10            | 1000ms        |
+| 10             | 20            | 500ms         |
+
+### Attack Cooldown Summary
+
+```javascript
+generalCooldown = (10 / callerSpeed) * 1000 / attackSpeedMult
+```
+
+Examples with `attackSpeedMult = 1`:
+
+| Speed | General Cooldown |
+|-------|------------------|
+| 4     | 2500ms           |
+| 5     | 2000ms           |
+| 10    | 1000ms           |
 
 ---
 

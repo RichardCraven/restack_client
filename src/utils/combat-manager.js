@@ -42,15 +42,20 @@ const formatCombatText = (value) => String(value || '')
 export function CombatManager() {
     // Update all combatants' intervals and restart their turn cycles
     this.updateAllFightIntervals = (newInterval) => {
-        this.FIGHT_INTERVAL = newInterval;
+        const resolvedInterval = Number(newInterval);
+        if (!Number.isFinite(resolvedInterval) || resolvedInterval <= 0) return;
+        this.FIGHT_INTERVAL = resolvedInterval;
         Object.values(this.combatants).forEach(c => {
             if (typeof c.setFightInterval === 'function') {
-                c.setFightInterval(newInterval);
+                c.setFightInterval(resolvedInterval);
             }
         });
         // Notify AI modules so their internal data.INTERVAL_TIME stays in sync
         if (this._intervalTimeListeners) {
-            this._intervalTimeListeners.forEach(cb => { try { cb(newInterval); } catch (e) { } });
+            this._intervalTimeListeners.forEach(cb => { try { cb(resolvedInterval); } catch (e) { } });
+        }
+        if (typeof this.updateData === 'function') {
+            this.updateData(clone(this.combatants));
         }
     }
     // Assign this.FIGHT_INTERVAL to the instance for external access
@@ -223,7 +228,8 @@ export function CombatManager() {
             return `${attackerName} attacks ${targetName} with ${resolvedAttackName}, misses`;
         }
 
-        let message = `${attackerName} attacks ${targetName} with ${resolvedAttackName}, hits for ${damage} damage`;
+        const displayDamage = Number.isFinite(Number(damage)) ? Math.round(Number(damage)) : damage;
+        let message = `${attackerName} attacks ${targetName} with ${resolvedAttackName}, hits for ${displayDamage} damage`;
         if (criticalHit) message += ' critically';
         if (effectText) message += ` and ${effectText}`;
         return message;
@@ -973,7 +979,6 @@ export function CombatManager() {
             // It is NOT a persistent recurring monitor. Do not rely on it for ongoing cleanup.
             Object.values(this.combatants).forEach(f => {
                 if (f.feared && (typeof f.feared_eras === 'number') && f.feared_eras <= 0) {
-                    debugger; // Induce fear effect expired and is being cleaned up
                     if (f._fearOriginalAtk != null) { f.atk = f._fearOriginalAtk; delete f._fearOriginalAtk; }
                     if (f._fearOriginalDef != null) { f.def = f._fearOriginalDef; delete f._fearOriginalDef; }
                     f.feared = false;
@@ -1449,10 +1454,11 @@ export function CombatManager() {
         const generalAttackCooldown = setTimeout(() => { // eslint-disable-line no-unused-vars
             caller.onGeneralAttackCooldown = false;
         }, generalCooldown)
+        const cooldownTickMs = Math.max(1, this.FIGHT_INTERVAL || 1);
         const intervalRef = setInterval(() => {
             let ratio = 0;
             if (!that.combatPaused) {
-                scopeVar += 100;
+                scopeVar += cooldownTickMs;
                 ratio = Math.ceil((scopeVar / totalTime) * 100);
                 atk['cooldown_position'] = ratio;
             }
@@ -1461,7 +1467,7 @@ export function CombatManager() {
                 // console.log(caller.type, 'done with cooldown for ', atk);
                 clearInterval(intervalRef)
             }
-        }, 100)
+        }, cooldownTickMs)
     }
     this.kickoffSpecialCooldown = (specialAction) => {
         if (!specialAction) return;
@@ -2294,6 +2300,7 @@ export function CombatManager() {
         }
         // Apply armor-based damage reduction via damageCheck
         damage = this.damageCheck(caller, combatantHit, damage);
+        damage = Math.max(0, Math.round(damage));
 
         // Save readout and apply damage
         const bonusReadout = (!isSpecial && weaponBreakdown && weaponBreakdown.equippedCount > 0)
@@ -2534,6 +2541,7 @@ export function CombatManager() {
         }
         // Apply armor-based damage reduction via damageCheck
         damage = this.damageCheck(caller, target, damage);
+        damage = Math.max(0, Math.round(damage));
 
         const bonusReadout = (weaponBreakdown.equippedCount > 0)
             ? ` (weapon bonus: +${weaponBreakdown.percentBonus.toFixed(1)} scaling, +${weaponBreakdown.flatBonus.toFixed(1)} flat)`

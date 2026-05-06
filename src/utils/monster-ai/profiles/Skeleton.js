@@ -20,6 +20,23 @@ export function Skeleton(data, utilMethods, animationManager, overlayManager){
     this.hitsCombatant = utilMethods.hitsCombatant;
     this.chooseAttackType = utilMethods.chooseAttackType
 
+    this.faceTargetImmediately = (caller, combatants) => {
+        if (!caller || !caller.targetId || !combatants) return;
+        const target = combatants[caller.targetId];
+        if (!target || target.dead || target.isVCT || !target.coordinates || !caller.coordinates) return;
+
+        if (target.coordinates.x === caller.coordinates.x) {
+            caller.facing = target.coordinates.y > caller.coordinates.y ? 'down' : 'up';
+        } else {
+            caller.facing = target.coordinates.x > caller.coordinates.x ? 'right' : 'left';
+        }
+
+        // Clear pending/debounced facing state so this immediate update is not
+        // delayed or overridden by the global recalculateFacing debounce.
+        caller._pendingFacing = null;
+        caller._pendingFacingCount = 0;
+    }
+
     this.initialize = (caller) => {
         caller.behaviorSequence = 'brawler'
     }
@@ -29,6 +46,7 @@ export function Skeleton(data, utilMethods, animationManager, overlayManager){
         if (!target) return;
         caller.pendingAttack = this.chooseAttackType(caller, target);
         caller.targetId = target.id;
+        this.faceTargetImmediately(caller, combatants);
     }
     this.handleOverlap = (caller,combatants) => {
         data.methods.closeTheGap(caller, combatants)
@@ -48,8 +66,10 @@ export function Skeleton(data, utilMethods, animationManager, overlayManager){
         }, caller.moveCooldown);
         switch(caller.behaviorSequence){
             case 'brawler': {
+                this.faceTargetImmediately(caller, combatants);
                 // Close in on target every era
                 data.methods.closeTheGap(caller, combatants);
+                this.faceTargetImmediately(caller, combatants);
 
                 // Attack trigger
                 const era = caller.eras ? caller.eras[caller.eraIndex] : null;
@@ -81,7 +101,7 @@ export function Skeleton(data, utilMethods, animationManager, overlayManager){
             default:
                 break;
         }
-        // facing is handled by recalculateFacing in combat-manager.processMove
+        this.faceTargetImmediately(caller, combatants);
     }
 
     this.triggerClawAttack = async (caller, target) => {
