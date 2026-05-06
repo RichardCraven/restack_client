@@ -717,6 +717,14 @@ export function BoardManager(){
             // and enabled only for combat overlays.
             try { delete tile.blockedByLargeMonster; } catch (e) {}
             try { delete tile.blocksAbove; } catch (e) {}
+            // Strip legacy player-position markers — these were stored by old code that put
+            // 'avatar' or 'camp' into tile.contains to render the player as a board tile.
+            // Now the player is rendered on a floating overlay layer, so these markers must
+            // be cleared to prevent the tile from rendering the avatar portrait.
+            const _containsRaw = typeof tile.contains === 'string' ? tile.contains : (tile.contains && tile.contains.type);
+            if (_containsRaw === 'avatar' || _containsRaw === 'camp') {
+                tile.contains = null;
+            }
             // ensure tile.contains is object-shaped (normalizeBoardTiles already attempted this)
             if (typeof tile.contains === 'string') {
                 // defensive fallback: normalize key-like strings into item objects
@@ -828,12 +836,8 @@ export function BoardManager(){
     }
     this.placePlayer = (coordinates) => {
         let index = this.getIndexFromCoordinates(coordinates)
-        let meta = {};
-        try { meta = getMeta() || {}; } catch (e) { meta = {}; }
-        const playerImage = (meta && meta.camping) ? 'camp' : 'avatar';
-        this.overlayTiles[index].image = playerImage
         this.tiles[index].playerTile = true;
-        this.tiles[index].image = playerImage
+        // Player image now rendered as floating overlay, not as tile
     }
     this.isMonster = (tile => {
         if (!tile) return false;
@@ -1398,10 +1402,7 @@ export function BoardManager(){
             try { this.triggerMonsterBattle(true, destinationTile.id); } catch (e) { /* best-effort */ }
         }
         this.overlayTiles.forEach(t=>t.image = null)
-        let meta = {};
-        try { meta = getMeta() || {}; } catch (e) { meta = {}; }
-        const playerImage = (meta && meta.camping) ? 'camp' : 'avatar';
-        this.overlayTiles[this.getIndexFromCoordinates(this.playerTile.location)].image = playerImage
+        // Player image now rendered as floating overlay, not in overlayTiles
         this.checkAdjacency();
 
         if (interaction === 'narrative') {
@@ -1530,9 +1531,16 @@ export function BoardManager(){
             return false;
         };
 
+        // Helper: strip legacy player-position markers that should never render on the board
+        const _clearPlayerMarker = (tile) => {
+            const ct = typeof tile.contains === 'string' ? tile.contains : (tile.contains && tile.contains.type);
+            if (ct === 'avatar' || ct === 'camp') { tile.contains = null; }
+        };
+
         const destCoords = this.getCoordinatesFromIndex(destinationTile.id);
         this.tiles.forEach((e) => {
             try {
+                _clearPlayerMarker(e);
                 const coords = this.getCoordinatesFromIndex(e.id);
                 const dx = Math.abs(coords[0] - destCoords[0]);
                 const dy = Math.abs(coords[1] - destCoords[1]);

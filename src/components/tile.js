@@ -44,6 +44,9 @@ function Tile(props) {
             vctBorder = '2px solid white';
         }
     }
+    const foregroundPortalImages = ['archway', 'gryphon_gate_opened', 'bat_gate_opened', 'evil_gate_opened', 'dungeon_door_opened'];
+    const portraitZIndex = foregroundPortalImages.includes(props.image) ? 12 : 3;
+
     return (
         <div style={{
             pointerEvents: props.passThrough ? 'none' : 'inherit',
@@ -122,7 +125,9 @@ function Tile(props) {
                      })()}
 
                      {/* Portrait sits above the hp-fill and terrain so the image remains visible */}
-                     <div className="portrait" style={{position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundImage: props.imageOverride ? "url('" + props.imageOverride + "')" : images[props.image] ? "url('" + images[props.image] + "')" : undefined, backgroundSize: props.image === 'avatar' ? '100% 80%' : '100% 100%', backgroundPosition: props.image === 'avatar' ? 'center bottom' : 'inherit', backgroundRepeat: 'no-repeat', zIndex: 3}} />
+                     {(props.imageOverride || images[props.image]) && (
+                         <div className="portrait" style={{position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundImage: props.imageOverride ? "url('" + props.imageOverride + "')" : images[props.image] ? "url('" + images[props.image] + "')" : undefined, backgroundSize: '100% 100%', backgroundPosition: 'inherit', backgroundRepeat: 'no-repeat', zIndex: portraitZIndex}} />
+                     )}
 
            {/* Dead overlay: visible when data.dead === true */}
            { props.data && props.data.dead && (

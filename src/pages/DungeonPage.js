@@ -994,6 +994,16 @@ class DungeonPage extends React.Component {
             this.handleResize();
         } catch (e) {}
         
+        // Initialize floating player avatar at current location
+        try {
+            const bm = this.props.boardManager;
+            if (bm && bm.playerTile && bm.playerTile.location) {
+                this.updateFloatingPlayerPosition(bm.playerTile.location);
+            }
+        } catch (e) {
+            console.warn('Failed to initialize floating player on mount', e);
+        }
+        
     let respawnInterval = this._setInterval(()=>{
             // let meta = getMeta();
             // let respawn = new Date(meta.respawnDate);
@@ -1024,6 +1034,41 @@ class DungeonPage extends React.Component {
         const col = index % 15;
         const row = Math.floor(index / 15);
         return { left: col * tileSize, top: row * tileSize };
+    }
+
+    // Position the floating player avatar at the given coordinates without animation
+    updateFloatingPlayerPosition = (coords, retryCount = 0) => {
+        try {
+            if (!coords) return;
+            if ((this.state.tileSize || 0) <= 0) {
+                if (retryCount < 8) {
+                    this._setTimeout(() => this.updateFloatingPlayerPosition(coords, retryCount + 1), 16);
+                }
+                return;
+            }
+
+            const bm = this.props.boardManager;
+            const index = bm.getIndexFromCoordinates(coords);
+            const pixel = this.getPixelForIndex(index);
+
+            // Get appropriate player image (camp or avatar)
+            let meta = {};
+            try { meta = getMeta() || {}; } catch (e) { meta = {}; }
+            const playerImgKey = (meta && meta.camping) ? 'camp' : 'avatar';
+
+            // Position absolutely within the board wrapper (no need for viewport rect calculation)
+            this.setState({
+                playerFloatVisible: true,
+                playerFloatStyle: {
+                    left: pixel.left,
+                    top: pixel.top,
+                    transform: 'translate3d(0px, 0px, 0px)',
+                    backgroundImage: `url(${images[playerImgKey]})`
+                }
+            });
+        } catch (e) {
+            console.warn('updateFloatingPlayerPosition failed', e);
+        }
     }
 
     // High-level move handler that performs a smooth single-stage tween for within-board moves.
@@ -1069,6 +1114,7 @@ class DungeonPage extends React.Component {
                 default: break;
             }
 
+            const originCoords = [curCoords[0], curCoords[1]];
             const originIndex = bm.getIndexFromCoordinates(curCoords);
             const destIndex = bm.getIndexFromCoordinates(destCoords);
             // Check if movement is blocked (void, locked gate, large monster, etc.)
@@ -1099,18 +1145,6 @@ class DungeonPage extends React.Component {
             try { meta = getMeta() || {}; } catch (e) { meta = {}; }
             const playerImgKey = (meta && meta.camping) ? 'camp' : 'avatar';
 
-            // Compute board DOM position so we can place the floating element in viewport coordinates
-            let boardRect = null;
-            try {
-                const boardEl = document.querySelector('.center-board-wrapper .board');
-                boardRect = boardEl ? boardEl.getBoundingClientRect() : null;
-            } catch (e) { boardRect = null }
-
-            // Place floating element at origin (use fixed coords so it's viewport-aligned)
-            // Keep floats (no rounding) to avoid sub-pixel jumps during transform.
-            const floatLeft = (boardRect ? boardRect.left : 0) + originPixel.left;
-            const floatTop = (boardRect ? boardRect.top : 0) + originPixel.top;
-
             // Apply logical move first, then animate overlay from old world position to new one.
             switch (direction) {
                 case 'up': bm.moveUp(); break;
@@ -1118,6 +1152,21 @@ class DungeonPage extends React.Component {
                 case 'left': bm.moveLeft(); break;
                 case 'right': bm.moveRight(); break;
                 default: break;
+            }
+
+            const playerMoved = bm.playerTile.location[0] !== originCoords[0] || bm.playerTile.location[1] !== originCoords[1];
+            if (!playerMoved) {
+                this.setState({
+                    tiles: [...bm.tiles],
+                    overlayTiles: bm.overlayTiles,
+                    playerFloatVisible: true,
+                    playerAnimating: false,
+                    animOriginIndex: null,
+                    animDestIndex: null
+                }, () => {
+                    this.updateFloatingPlayerPosition(originCoords);
+                });
+                return;
             }
 
             this.setState({
@@ -1128,8 +1177,8 @@ class DungeonPage extends React.Component {
                 animOriginIndex: originIndex,
                 animDestIndex: destIndex,
                 playerFloatStyle: {
-                    left: floatLeft,
-                    top: floatTop,
+                    left: originPixel.left,
+                    top: originPixel.top,
                     transform: 'translate3d(0px, 0px, 0px)',
                     backgroundImage: `url(${images[playerImgKey]})`
                 }
@@ -1141,23 +1190,18 @@ class DungeonPage extends React.Component {
                             const el = this.playerFloatRef.current;
                             if (!el) return;
 
-                            let newBoardRect = null;
-                            try {
-                                const boardEl = document.querySelector('.center-board-wrapper .board');
-                                newBoardRect = boardEl ? boardEl.getBoundingClientRect() : null;
-                            } catch (e) { newBoardRect = null; }
-
-                            const newDestAbsLeft = (newBoardRect ? newBoardRect.left : 0) + destPixel.left;
-                            const newDestAbsTop = (newBoardRect ? newBoardRect.top : 0) + destPixel.top;
-                            const fullX = newDestAbsLeft - floatLeft;
-                            const fullY = newDestAbsTop - floatTop;
+                            // Calculate transform delta: from origin to destination within the board
+                            const fullX = deltaX;
+                            const fullY = deltaY;
 
                             el.style.willChange = 'transform';
                             el.style.transition = `transform ${TOTAL_MOVE_MS}ms cubic-bezier(0.22, 0.61, 0.36, 1)`;
                             el.style.transform = `translate3d(${fullX.toFixed(2)}px, ${fullY.toFixed(2)}px, 0px)`;
 
                             this._setTimeout(() => {
-                                this.setState({ playerFloatVisible: false, playerAnimating: false, animOriginIndex: null, animDestIndex: null });
+                                // After animation completes, reposition float to destination without animation
+                                // This keeps the avatar visible and ready for the next move
+                                this.updateFloatingPlayerPosition(bm.playerTile.location);
                                 const el2 = this.playerFloatRef.current;
                                 if (el2) {
                                     el2.style.transition = '';
@@ -1167,7 +1211,8 @@ class DungeonPage extends React.Component {
                             }, TOTAL_MOVE_MS + BUFFER_MS);
                         } catch (e) {
                             console.warn('post-move tween failed', e);
-                            this.setState({ playerFloatVisible: false, playerAnimating: false, animOriginIndex: null, animDestIndex: null });
+                            // Reposition float on error instead of hiding
+                            this.updateFloatingPlayerPosition(bm.playerTile.location);
                         }
                     });
                 });
@@ -2126,6 +2171,13 @@ class DungeonPage extends React.Component {
                 tileSize,
                 boardSize
             }
+        }, () => {
+            try {
+                const bm = this.props.boardManager;
+                if (bm && bm.playerTile && bm.playerTile.location && !this.state.playerAnimating) {
+                    this.updateFloatingPlayerPosition(bm.playerTile.location);
+                }
+            } catch (e) {}
         })
     }
 
@@ -3289,6 +3341,13 @@ class DungeonPage extends React.Component {
                 selectedCrewMember,
                 actionsTrayExpanded: selectedCrewMember ? selectedCrewMember.actionsTrayExpanded : false,
                 actionMenuTypeExpanded: selectedCrewMember ? (Array.isArray(selectedCrewMember.actionMenuTypeExpanded) ? selectedCrewMember.actionMenuTypeExpanded : (selectedCrewMember.actionMenuTypeExpanded ? [selectedCrewMember.actionMenuTypeExpanded] : [])) : []
+            }
+        }, () => {
+            // After board loads, position floating player at its location
+            try {
+                this.updateFloatingPlayerPosition(this.props.boardManager.playerTile.location);
+            } catch (e) {
+                console.warn('Failed to position floating player on load', e);
             }
         })
     }
@@ -5023,9 +5082,7 @@ class DungeonPage extends React.Component {
                     pointerEvents: this.state.minimapPlaceMapMarkerStarted ? 'auto' : 'none'
                     }}>
                     {this.state.overlayTiles && this.state.overlayTiles.map((tile, i) => {
-                        // suppress the player's static avatar on origin/destination while animating
                         let overlayImage = tile.image ? tile.image : null;
-                        if (this.state.playerAnimating && (i === this.state.animOriginIndex || i === this.state.animDestIndex)) overlayImage = null;
                         return <Tile 
                         key={i}
                         id={i}
@@ -5055,9 +5112,7 @@ class DungeonPage extends React.Component {
                     backgroundColor: 'white'
                     }}>
                     {this.state.tiles && this.state.tiles.map((tile, i) => {
-                        // suppress the player's static avatar on origin/destination while animating
                         let boardImage = tile.image ? tile.image : (tile.icon ? tile.icon : null);
-                        if (this.state.playerAnimating && (i === this.state.animOriginIndex || i === this.state.animDestIndex)) boardImage = null;
                         return <Tile 
                         key={i}
                         cursor={this.state.minimapPlaceMapMarkerStarted ? 'crosshair' : 'default'}
@@ -5079,30 +5134,29 @@ class DungeonPage extends React.Component {
                         </Tile>
                     })}
                 </div>
+                {/* Floating player overlay element - positioned absolutely within board wrapper */}
+                {this.state.playerFloatVisible && (
+                    <div
+                        ref={this.playerFloatRef}
+                        className="floating-player"
+                        aria-hidden="true"
+                        style={{
+                            position: 'absolute',
+                            left: this.state.playerFloatStyle.left,
+                            top: this.state.playerFloatStyle.top,
+                            width: this.state.tileSize,
+                            height: this.state.tileSize,
+                            backgroundSize: 'contain',
+                            backgroundRepeat: 'no-repeat',
+                            backgroundPosition: 'center',
+                            pointerEvents: 'none',
+                            transform: this.state.playerFloatStyle.transform,
+                            zIndex: 5,
+                            backgroundImage: this.state.playerFloatStyle.backgroundImage
+                        }}
+                    />
+                )}
             </div>}
-
-            {/* Floating player overlay element used for two-stage movement animation */}
-            {this.state.playerFloatVisible && (
-                <div
-                    ref={this.playerFloatRef}
-                    className="floating-player"
-                    aria-hidden="true"
-                    style={{
-                        position: 'fixed',
-                        left: this.state.playerFloatStyle.left,
-                        top: this.state.playerFloatStyle.top,
-                        width: this.state.tileSize,
-                        height: this.state.tileSize,
-                        backgroundSize: 'contain',
-                        backgroundRepeat: 'no-repeat',
-                        backgroundPosition: 'center',
-                        pointerEvents: 'none',
-                        transform: this.state.playerFloatStyle.transform,
-                        zIndex: 9999,
-                        backgroundImage: this.state.playerFloatStyle.backgroundImage
-                    }}
-                />
-            )}
             
             
             {/* /// ANIMATION GRID ///  */}
