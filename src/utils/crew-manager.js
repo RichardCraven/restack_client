@@ -42,10 +42,29 @@ export function CrewManager(){
         //called everytime game loads, not just first time
         this.crew = [];
         const colors = ['#b710d5', '#6495ed', '#73b746', '#f4d013'];
+
+        const normalizeSpecialName = (value) => String(value || '').replaceAll('_', ' ').trim().toLowerCase();
+        const hasSpecial = (specials, specialName) => {
+            const target = normalizeSpecialName(specialName);
+            return Array.isArray(specials) && specials.some((s) => {
+                if (!s) return false;
+                if (typeof s === 'string') return normalizeSpecialName(s) === target;
+                return normalizeSpecialName(s.name || s.key) === target;
+            });
+        };
+
         crew.forEach((member, index)=> { 
             // Ensure specialActions exists; some persisted meta may omit this field.
             // Default to an empty array so initialization doesn't skip the member.
             member.specialActions = member.specialActions || [];
+            member.specials = Array.isArray(member.specials) ? member.specials : [];
+
+            // Migration/backfill: older saved Barbarian records may predate whirlwind.
+            // Ensure it exists so combat receives both berserker and whirlwind.
+            if ((member.type || member.image) === 'barbarian' && !hasSpecial(member.specials, 'whirlwind')) {
+                member.specials.push('whirlwind');
+            }
+
             member.specialActions.forEach(a=>{
                 let end = new Date(a.endDate),
                 now = new Date();
@@ -471,8 +490,8 @@ export function CrewManager(){
             stats: { str: 8, int: 3, dex: 4, fort: 6, baseHp: 52, experience: 0, attackSpeedMult: 2 },
             portrait: images['barbarian_portrait'],
             inventory: [],
-            specials: ['berserker'],
-                attacks: ['axe_throw', 'axe_swing'],
+            specials: ['berserker', 'whirlwind'],
+            attacks: ['axe_throw', 'axe_swing'],
             passives: ['fury'],
             weaknesses: ['ice', 'curse', 'psionic'],
             description: "Ulaf is the son of the chieftan of the Rootsnarl Clan. He is on a journey to prove his mettle and one day take his father's place",

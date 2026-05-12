@@ -2265,7 +2265,15 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             if (icon && !this.iconToKey[icon]) this.iconToKey[icon] = key;
         }
         for(let key in this.misc){
-            this.allItems[key] = this.misc[key]
+            // Keep richer metadata (especially descriptions on key items)
+            // if a misc entry shares the same key as an existing item.
+            const existing = this.allItems[key];
+            const next = this.misc[key];
+            this.allItems[key] = {
+                ...(existing || {}),
+                ...(next || {}),
+                description: (next && next.description) || (existing && existing.description) || ''
+            }
         }
         this.inventory = [];
         if(!data){

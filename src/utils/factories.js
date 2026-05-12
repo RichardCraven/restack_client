@@ -244,6 +244,7 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
             this.active = false;
             this.attacking = this.attackingReverse = false;
             this.tempo = 1;
+            clearInterval(this.interval);
             this.turnCycle();
         },
         move: function(){
@@ -353,7 +354,6 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
                 count += increment;
                 this.turnCycleCount = count;
                 if(this.frozen){
-                    debugger
                     this.tempo = Math.min(100, count);
                     if(count >= 100){
                         this.frozenPoints--
@@ -538,7 +538,16 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
                 // eraAttack removed — attack logic is now embedded in each AI's processMove
                 switch(eraIndex){
                     case 0: 
-                        if(!this.targetId) acquireTarget(this);
+                        {
+                            const currentTarget = this.targetId ? getCombatant(this.targetId) : null;
+                            const targetInvalid = !currentTarget || currentTarget.dead || currentTarget.isVCT;
+                            // restartTurnCycle can leave a live targetId but a null pendingAttack.
+                            // Reacquire at the start of each cycle when targeting/attack state is invalid.
+                            if (targetInvalid || !this.pendingAttack) {
+                                if (targetInvalid) this.targetId = null;
+                                acquireTarget(this);
+                            }
+                        }
                         eraMove();
                     break;
                     case 1: 

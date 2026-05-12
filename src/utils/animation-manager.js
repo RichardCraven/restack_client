@@ -120,6 +120,7 @@ export function AnimationManager(){
         punch: { duration: 600, animationType: 'tile' },
         spin_attack_arc: { duration: 800, animationType: 'tile' },
         windmill: { duration: 750, animationType: 'tile' },
+        whirlwind: { duration: 650, animationType: 'canvas' },
         axe_swing: { duration: 600, animationType: 'tile' },
         axe_throw: { duration: 1200, animationType: 'canvas' },
         grasp: { duration: 600, animationType: 'canvas' },
@@ -127,6 +128,15 @@ export function AnimationManager(){
         bite: { duration: 600, animationType: 'canvas' },
         tackle: { duration: 600, animationType: 'canvas' },
         crush: { duration: 600, animationType: 'canvas' }
+    };
+
+    this._handIconKeys = Array.from({ length: 22 }, (_, i) => `hand_${i + 1}`);
+    this.getRandomHandIcon = () => {
+        const key = this._handIconKeys[Math.floor(Math.random() * this._handIconKeys.length)];
+        return images[key] || images['fist_punch'];
+    };
+    this.getRandomHandIcons = (count = 1) => {
+        return Array.from({ length: Math.max(1, count) }, () => this.getRandomHandIcon());
     };
 
     // Generic attack animation trigger for AI modules (e.g., Monk)
@@ -143,7 +153,8 @@ export function AnimationManager(){
         if (!resolvedIcon) {
             switch (data.type) {
                 case 'dragon_punch':
-                    resolvedIcon = images['scepter_white'];
+                case 'punch':
+                    resolvedIcon = this.getRandomHandIcon();
                     break;
                 case 'sword_swing':
                     resolvedIcon = images['sword'];
@@ -399,7 +410,10 @@ export function AnimationManager(){
         if (animationTile) {
             animationTile.animationType = 'windmill';
             animationTile.transitionType = null;
-            animationTile.animationData = { duration };
+            animationTile.animationData = {
+                duration,
+                handIcons: this.getRandomHandIcons(4)
+            };
             this.update();
         }
 
@@ -449,6 +463,84 @@ export function AnimationManager(){
                     animationTile.transitionType = null;
                     animationTile.animationData = {};
                     this.update();
+                }
+            }, duration);
+        });
+    };
+
+    /**
+     * Whirlwind — canvas spin around the caller that hits all adjacent enemies once.
+     * Adjacent means the 8 surrounding tiles (orthogonal + diagonal).
+     */
+    this.triggerWhirlwind = (caller, combatants, hitCallback, duration = 650) => {
+        const origin = caller && caller.coordinates
+            ? { x: caller.coordinates.x, y: caller.coordinates.y }
+            : null;
+        if (!origin) return Promise.resolve([]);
+
+        const animId = `whirlwind_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+        const whirlwindAnim = {
+            id: animId,
+            type: 'whirlwind',
+            animationType: 'canvas',
+            origin,
+            duration,
+            onComplete: null,
+        };
+
+        return new Promise((resolve) => {
+            let hitFired = false;
+
+            const hitOnce = () => {
+                if (hitFired) return;
+                hitFired = true;
+
+                const hit = [];
+                const { x, y } = origin;
+                const surroundings = [
+                    { x, y: y - 1 },
+                    { x: x + 1, y: y - 1 },
+                    { x: x + 1, y },
+                    { x: x + 1, y: y + 1 },
+                    { x, y: y + 1 },
+                    { x: x - 1, y: y + 1 },
+                    { x: x - 1, y },
+                    { x: x - 1, y: y - 1 },
+                ];
+
+                const seen = new Set();
+                Object.values(combatants || {}).forEach((e) => {
+                    if (!e || e.dead || !e.coordinates || !e.id || seen.has(e.id)) return;
+                    if (!(e.isMonster || e.isMinion) || e.isVCT) return;
+                    const adjacent = surroundings.some((s) => s.x === e.coordinates.x && s.y === e.coordinates.y);
+                    if (!adjacent) return;
+                    seen.add(e.id);
+                    hit.push(e);
+                    if (typeof hitCallback === 'function') hitCallback(e);
+                });
+                return hit;
+            };
+
+            whirlwindAnim.onComplete = () => {
+                const idx = this.canvasAnimations.findIndex((a) => a.id === animId);
+                if (idx !== -1) {
+                    this.canvasAnimations.splice(idx, 1);
+                    this.update();
+                }
+                const hit = hitOnce() || [];
+                resolve(hit);
+            };
+
+            this.canvasAnimations.push(whirlwindAnim);
+            this.update();
+
+            // Sync impact to mid-animation, then guarantee completion cleanup.
+            setTimeout(() => { hitOnce(); }, Math.round(duration * 0.55));
+            setTimeout(() => {
+                if (whirlwindAnim.onComplete) {
+                    const cb = whirlwindAnim.onComplete;
+                    whirlwindAnim.onComplete = null;
+                    cb();
                 }
             }, duration);
         });
@@ -744,7 +836,7 @@ export function AnimationManager(){
                 to.y = targetTile.y * tileSize + tileSize/2;
             }
             animationTile.animationData = {
-                icon: data.icon || images['fist_punch'],
+                icon: data.icon || this.getRandomHandIcon(),
                 duration,
                 from,
                 to,

@@ -774,7 +774,7 @@
   height: 44px;
   pointer-events: none;
   z-index: 6000;
-  filter: drop-shadow(0 0 6px #fffbe0) brightness(1.3);
+    filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.95)) drop-shadow(0 0 16px rgba(255, 255, 255, 0.65)) brightness(1.3);
   &.fist-N { animation: windmill-fist-N 0.75s ease-out forwards; }
   &.fist-S { animation: windmill-fist-S 0.75s ease-out forwards; }
   &.fist-E { animation: windmill-fist-E 0.75s ease-out forwards; }
@@ -1237,10 +1237,10 @@
             }
             // ENERGY DRAIN animations — travels ~2 tiles toward target
             @keyframes EnergyDrainAnimation_left {
-                0%   { transform: translate(0px, 0px);    opacity: 0.2; }
-                30%  { transform: translate(-80px, 0px);  opacity: 1; }
-                70%  { transform: translate(-160px, 0px); opacity: 1; }
-                100% { transform: translate(-210px, 0px); opacity: 0; }
+                0%   { transform: translate(0px, 0px) scaleX(-1);    opacity: 0.2; }
+                30%  { transform: translate(-80px, 0px) scaleX(-1);  opacity: 1; }
+                70%  { transform: translate(-160px, 0px) scaleX(-1); opacity: 1; }
+                100% { transform: translate(-210px, 0px) scaleX(-1); opacity: 0; }
             }
             @keyframes EnergyDrainAnimation_right {
                 0%   { transform: translate(0px, 0px);   opacity: 0.2; }
@@ -1249,16 +1249,16 @@
                 100% { transform: translate(210px, 0px); opacity: 0; }
             }
             @keyframes EnergyDrainAnimation_down {
-                0%   { transform: translate(0px, 0px);   opacity: 0.2; }
-                30%  { transform: translate(0px, 80px);  opacity: 1; }
-                70%  { transform: translate(0px, 160px); opacity: 1; }
-                100% { transform: translate(0px, 210px); opacity: 0; }
+                0%   { transform: translate(0px, 0px) rotate(90deg);   opacity: 0.2; }
+                30%  { transform: translate(0px, 80px) rotate(90deg);  opacity: 1; }
+                70%  { transform: translate(0px, 160px) rotate(90deg); opacity: 1; }
+                100% { transform: translate(0px, 210px) rotate(90deg); opacity: 0; }
             }
             @keyframes EnergyDrainAnimation_up {
-                0%   { transform: translate(0px, 0px);    opacity: 0.2; }
-                30%  { transform: translate(0px, -80px);  opacity: 1; }
-                70%  { transform: translate(0px, -160px); opacity: 1; }
-                100% { transform: translate(0px, -210px); opacity: 0; }
+                0%   { transform: translate(0px, 0px) rotate(-90deg);    opacity: 0.2; }
+                30%  { transform: translate(0px, -80px) rotate(-90deg);  opacity: 1; }
+                70%  { transform: translate(0px, -160px) rotate(-90deg); opacity: 1; }
+                100% { transform: translate(0px, -210px) rotate(-90deg); opacity: 0; }
             }
             &.line-white-fade{
                 @-webkit-keyframes TileAnimationLineWhiteFade {

@@ -109,7 +109,7 @@ export default function AnimationTile(props) {
 
         break;
         case 'punch':
-            image = images['fist_punch'];
+            image = props.animationData?.icon || images['fist_punch'];
             // For punch, we want to animate from source to target and fade out
             // We'll use animationData: { from: {x, y}, to: {x, y}, duration }
             keyframe = null;
@@ -135,7 +135,7 @@ export default function AnimationTile(props) {
             keyframe = 'spin-attack'
         break;
         case 'dragon_punch':
-            image = images['hand_7']
+            image = props.animationData?.icon || images['hand_7']
             keyframe = 'dragon-punch'
         break;
         case 'windmill':
@@ -420,7 +420,7 @@ export default function AnimationTile(props) {
                                         height: '60%',
                                         pointerEvents: 'none',
                                         zIndex: 5000,
-                                        filter: 'invert(1)',
+                                        filter: 'invert(1) drop-shadow(0 0 8px rgba(255,255,255,0.95)) drop-shadow(0 0 16px rgba(255,255,255,0.7))',
                                         transform: flip ? 'scaleX(-1)' : undefined
                                     }}
                                 />
@@ -440,7 +440,7 @@ export default function AnimationTile(props) {
                                     const top = y - gridRect.top;
                                     return (
                                         <img
-                                            src={images['fist_punch']}
+                                            src={image || images['fist_punch']}
                                             alt="punch"
                                             className="punch-animation-icon"
                                             style={{
@@ -451,6 +451,7 @@ export default function AnimationTile(props) {
                                                 height: props.tileSize * 0.6 + 'px',
                                                 pointerEvents: 'none',
                                                 zIndex: 5000,
+                                                filter: 'drop-shadow(0 0 8px rgba(255,255,255,0.95)) drop-shadow(0 0 16px rgba(255,255,255,0.65))',
                                                 opacity: 1 - progress,
                                                 transition: 'left 0.1s linear, top 0.1s linear, opacity 0.1s linear',
                                             }}
@@ -521,10 +522,10 @@ export default function AnimationTile(props) {
             {props.animationType === 'windmill' && (
                 <>
                     <div className="windmill-burst" />
-                    {['N', 'S', 'E', 'W'].map(dir => (
+                    {['N', 'S', 'E', 'W'].map((dir, idx) => (
                         <img
                             key={dir}
-                            src={images['fist_punch']}
+                            src={props.animationData?.handIcons?.[idx] || images['fist_punch']}
                             alt={`windmill-${dir}`}
                             className={`windmill-fist fist-${dir}`}
                         />

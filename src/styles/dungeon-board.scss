@@ -1009,6 +1009,7 @@
                     background-repeat: no-repeat;
                     background-position: center;
                     opacity: 0.5;
+                    filter: invert(1) brightness(1.05) contrast(1.12);
                     z-index: 0;
                     pointer-events: none;
                 }
@@ -1047,8 +1048,9 @@
                     position: absolute;
                     width: 55px;
                     height: 55px;
-                    border: 1px solid black;
-                    background: transparent;
+                    border: 2px solid rgba(205, 202, 202, 0.68);
+                    background: rgba(255,255,255,0.05);
+                    box-shadow: 0 0 0 1px rgba(0,0,0,0.45) inset;
                     box-sizing: border-box;
                     border-radius: 4px;
                     pointer-events: auto;

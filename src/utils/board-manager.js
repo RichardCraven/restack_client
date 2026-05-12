@@ -473,17 +473,42 @@ export function BoardManager(){
     this.respawnMonsters = (template) => {
         if(!template || !template.levels) return
         let currentOrientation = this.currentOrientation
-        let currentLevel = currentOrientation === 'F' ? this.currentLevel.front : this.currentLevel.back
-        let foundTemplatePlane;
-        template.levels.forEach((templateLevel, templateIndex)=>{
+        const currentLevelEntry = this.currentLevel;
+        const currentPlane = currentLevelEntry && (currentLevelEntry.front || currentLevelEntry.back)
+            ? (currentOrientation === 'F' ? currentLevelEntry.front : currentLevelEntry.back)
+            : currentLevelEntry;
+        const boardIndex = this.playerTile && this.playerTile.boardIndex != null ? this.playerTile.boardIndex : 0;
+        const currentBoardId = this.currentBoard && this.currentBoard.id != null ? this.currentBoard.id : null;
+
+        if (!currentPlane || !Array.isArray(currentPlane.miniboards)) {
+            try { console.warn('respawnMonsters: current plane has no miniboards', { currentOrientation, currentLevelEntry }); } catch (e) {}
+            return 0;
+        }
+
+        let foundTemplatePlane = null;
+        template.levels.forEach((templateLevel) => {
+            if (foundTemplatePlane) return;
             let front = templateLevel.front
             let back = templateLevel.back
             let relevantPlane = currentOrientation === 'F' ? front : back
-            if(relevantPlane.name === currentLevel.name){
+            if (!relevantPlane) return;
+            if (
+                (relevantPlane.id != null && currentPlane.id != null && String(relevantPlane.id) === String(currentPlane.id)) ||
+                (relevantPlane.name && currentPlane.name && relevantPlane.name === currentPlane.name)
+            ) {
                 foundTemplatePlane = relevantPlane
             }
         })
-        let templateBoard = foundTemplatePlane.miniboards[this.playerTile.boardIndex]
+        const templateBoard = foundTemplatePlane && Array.isArray(foundTemplatePlane.miniboards)
+            ? (currentBoardId != null
+                ? foundTemplatePlane.miniboards.find((board) => board && String(board.id) === String(currentBoardId)) || foundTemplatePlane.miniboards[boardIndex]
+                : foundTemplatePlane.miniboards[boardIndex])
+            : null;
+        const currentBoard = Array.isArray(currentPlane.miniboards)
+            ? (currentBoardId != null
+                ? currentPlane.miniboards.find((board) => board && String(board.id) === String(currentBoardId)) || currentPlane.miniboards[boardIndex]
+                : currentPlane.miniboards[boardIndex])
+            : null;
         // console.log('templateLevel');
         // Make sure templateBoard is normalized for legacy templates
         try { this.normalizeBoardTiles(templateBoard); } catch (e) {}
@@ -493,14 +518,20 @@ export function BoardManager(){
     
         if (!templateBoard) {
             // nothing to respawn from - template didn't contain a matching plane/board
-            try { console.warn('respawnMonsters: no templateBoard found for current boardIndex', this.playerTile && this.playerTile.boardIndex); } catch (e) {}
-            return;
+            try { console.warn('respawnMonsters: no templateBoard found for current board', { boardIndex, currentBoardId }); } catch (e) {}
+            return 0;
         }
 
+        if (!currentBoard || !Array.isArray(currentBoard.tiles)) {
+            try { console.warn('respawnMonsters: no currentBoard found for current board', { boardIndex, currentBoardId }); } catch (e) {}
+            return 0;
+        }
+
+        let respawnedCount = 0;
+
         templateBoard.tiles.forEach(templateTile=>{
-            let equivalentTile = currentLevel.miniboards && currentLevel.miniboards[this.playerTile.boardIndex]
-                && currentLevel.miniboards[this.playerTile.boardIndex].tiles
-                ? currentLevel.miniboards[this.playerTile.boardIndex].tiles.find(tile=> tile.id === templateTile.id)
+            let equivalentTile = currentBoard.tiles
+                ? currentBoard.tiles.find(tile=> tile.id === templateTile.id)
                 : null;
             // Defensive: do not respawn monsters on the player's current tile
             const playerIdx = this.getIndexFromCoordinates(this.playerTile.location);
@@ -530,6 +561,7 @@ export function BoardManager(){
                 }
                 equivalentTile.contains = { type: 'monster', subtype: monsterSubtype };
                 equivalentTile.image = this.getImageForContains(equivalentTile.contains);
+                respawnedCount += 1;
                 // Determine a color for the respawned tile. Prefer the template's color, then
                 // the current board definition, then a sensible monster highlight so it won't
                 // remain black after fog-of-war overwrites runtime tile state.
@@ -588,6 +620,7 @@ export function BoardManager(){
             if (this.tiles[playerIdx]) this.handleFogOfWar(this.tiles[playerIdx]);
         } catch (e) {}
         try { if (this.refreshTiles) this.refreshTiles(); } catch (e) {}
+        return respawnedCount;
     }
     // Respawn items based on a template (separate flow from monsters)
     this.respawnItems = (template) => {

@@ -92,7 +92,7 @@ const specialsMatrix = {
         type: 'special',
         icon: images['infantry_shield'],
         cooldown: 15,       // 15-era recharge after expiry
-        duration: 6,        // wall lasts 6 eras
+        duration: 2,        // wall lasts 6 eras
         energy_cost: 30,    // costs 30% energy to erect
         effect: ['special'],
         special_instructions: 'Erect a 5-tile vertical barrier at the Soldier\'s front edge. Blocks all unit movement across the line for 4 eras. Soldier cannot move or attack while active.',
@@ -106,6 +106,16 @@ const specialsMatrix = {
         energy_cost: 60,    // costs 60% energy to activate
         effect: ['buff_self'],
         special_instructions: 'If 3+ enemies are present at the start of combat, enter a berserk state. Costs 60% energy. Doubles movement speed and attack speed for one full turn cycle.',
+        level: 1
+    },
+    whirlwind: {
+        name: 'whirlwind',
+        type: 'special',
+        icon: images['axe_white'],
+        cooldown: 14,
+        energy_cost: 50,
+        effect: ['damage_multi_target', 'special'],
+        special_instructions: 'Costs 50 energy. Strike all adjacent tiles in one spinning sweep, hitting enemies only with normal attack damage.',
         level: 1
     },
     force_back: {

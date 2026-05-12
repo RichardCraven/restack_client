@@ -20,6 +20,21 @@ export function Mummy(data, utilMethods, animationManager, overlayManager) {
     this.getVct = utilMethods.getVct;
     this.triggerBoardEvent = utilMethods.triggerBoardEvent;
 
+    const getOccupiedTiles = (caller) => {
+        if (Array.isArray(caller?.occupiedCoords) && caller.occupiedCoords.length > 0) return caller.occupiedCoords;
+        if (caller?.coordinates) return [caller.coordinates];
+        return [];
+    };
+
+    const getMinDistanceToEnemy = (tiles, enemy) => {
+        if (!Array.isArray(tiles) || !tiles.length || !enemy?.coordinates) return Number.POSITIVE_INFINITY;
+        return Math.min(...tiles.map(tile => {
+            const dx = Math.abs(enemy.coordinates.x - tile.x);
+            const dy = Math.abs(enemy.coordinates.y - tile.y);
+            return dx + dy;
+        }));
+    };
+
     // ── Custom attack selection ──────────────────────────────────────────────
     // Prefer grasp when the target is adjacent (distance ≤ 1).
     // Prefer energy_drain when the target is at medium range.
@@ -34,15 +49,7 @@ export function Mummy(data, utilMethods, animationManager, overlayManager) {
         // --- BEGIN 2x ADJACENCY LOGIC ---
         // For 2x monsters, check adjacency to all occupied tiles
         // Assume scale=2 means 2x2, anchor at (x, y)
-        const occupiedTiles = [];
-        const scale = caller.scale || caller["main-monster"] || caller.isMainMonster ? 2 : 1;
-        const baseX = caller.coordinates.x;
-        const baseY = caller.coordinates.y;
-        for (let dx = 0; dx < scale; dx++) {
-            for (let dy = 0; dy < scale; dy++) {
-                occupiedTiles.push({ x: baseX + dx, y: baseY + dy });
-            }
-        }
+        const occupiedTiles = getOccupiedTiles(caller);
 
         // Check if target is adjacent to any occupied tile
         const isAdjacent = occupiedTiles.some(tile => {
@@ -91,20 +98,7 @@ export function Mummy(data, utilMethods, animationManager, overlayManager) {
             }
         });
         // Use virtually occupied tiles for adjacency checks (for 2x2 monsters)
-        let occupiedTiles = Array.isArray(caller.occupiedTiles) && caller.occupiedTiles.length > 0
-            ? caller.occupiedTiles
-            : (() => {
-                const scale = caller.scale || caller["main-monster"] || caller.isMainMonster ? 2 : 1;
-                const baseX = caller.coordinates.x;
-                const baseY = caller.coordinates.y;
-                const tiles = [];
-                for (let dx = 0; dx < scale; dx++) {
-                    for (let dy = 0; dy < scale; dy++) {
-                        tiles.push({ x: baseX + dx, y: baseY + dy });
-                    }
-                }
-                return tiles;
-            })();
+        const occupiedTiles = getOccupiedTiles(caller);
 
         // Scan all enemies for best possible target/attack pair
         let best = null;
@@ -121,25 +115,23 @@ export function Mummy(data, utilMethods, animationManager, overlayManager) {
                         return (dx + dy === 1);
                     });
                 } else if (attack.range === 'medium') {
-                    const minDist = Math.min(...occupiedTiles.map(tile => {
-                        const dx = Math.abs(enemy.coordinates.x - tile.x);
-                        const dy = Math.abs(enemy.coordinates.y - tile.y);
-                        return dx + dy;
-                    }));
+                    const minDist = getMinDistanceToEnemy(occupiedTiles, enemy);
                     inRange = minDist <= 3;
                 } else if (attack.range === 'far') {
-                    const minDist = Math.min(...occupiedTiles.map(tile => {
-                        const dx = Math.abs(enemy.coordinates.x - tile.x);
-                        const dy = Math.abs(enemy.coordinates.y - tile.y);
-                        return dx + dy;
-                    }));
+                    const minDist = getMinDistanceToEnemy(occupiedTiles, enemy);
                     inRange = minDist <= 6;
                 }
                 if (inRange) {
-                    // Prefer adjacent/close, then medium, then far, then most recovered
-                    if (!best || (attack.range === 'close' && best.attack.range !== 'close') ||
-                        (attack.range === 'medium' && best.attack.range === 'far') ||
-                        (attack.cooldown_position > best.attack.cooldown_position)) {
+                    // Prefer close > medium > far; within same range tier, prefer most recovered
+                    const rangePriority = { close: 0, medium: 1, far: 2 };
+                    const newPriority = rangePriority[attack.range] ?? 99;
+                    const bestPriority = best ? (rangePriority[best.attack.range] ?? 99) : Infinity;
+                    const newDistance = getMinDistanceToEnemy(occupiedTiles, enemy);
+                    const bestDistance = best ? getMinDistanceToEnemy(occupiedTiles, best.enemy) : Infinity;
+                    if (!best ||
+                        newPriority < bestPriority ||
+                        (newPriority === bestPriority && newDistance < bestDistance) ||
+                        (newPriority === bestPriority && newDistance === bestDistance && attack.cooldown_position > best.attack.cooldown_position)) {
                         best = { enemy, attack };
                     }
                 }
@@ -321,20 +313,7 @@ export function Mummy(data, utilMethods, animationManager, overlayManager) {
         // Prevent movement if already adjacent to any enemy (stand and fight)
         if (!caller.castingLock) {
             // Use virtually occupied tiles for adjacency checks
-            let occupiedTiles = Array.isArray(caller.occupiedTiles) && caller.occupiedTiles.length > 0
-                ? caller.occupiedTiles
-                : (() => {
-                    const scale = caller.scale || caller["main-monster"] || caller.isMainMonster ? 2 : 1;
-                    const baseX = caller.coordinates.x;
-                    const baseY = caller.coordinates.y;
-                    const tiles = [];
-                    for (let dx = 0; dx < scale; dx++) {
-                        for (let dy = 0; dy < scale; dy++) {
-                            tiles.push({ x: baseX + dx, y: baseY + dy });
-                        }
-                    }
-                    return tiles;
-                })();
+            const occupiedTiles = getOccupiedTiles(caller);
             // Only check adjacency to the current target
             let target = caller.targetId && combatants[caller.targetId] ? combatants[caller.targetId] : null;
             let isAdjacentToTarget = false;
@@ -368,8 +347,8 @@ export function Mummy(data, utilMethods, animationManager, overlayManager) {
                         // Check anchor
                         if (newTiles.some(t => t.x === e.coordinates.x && t.y === e.coordinates.y)) overlap = true;
                         // Check virtually occupied tiles if present
-                        if (Array.isArray(e.occupiedTiles)) {
-                            if (newTiles.some(t => e.occupiedTiles.some(et => et.x === t.x && et.y === t.y))) overlap = true;
+                        if (Array.isArray(e.occupiedCoords)) {
+                            if (newTiles.some(t => e.occupiedCoords.some(et => et.x === t.x && et.y === t.y))) overlap = true;
                         }
                     });
                     // Undo move if overlap
@@ -384,7 +363,8 @@ export function Mummy(data, utilMethods, animationManager, overlayManager) {
                 const moved = tryMove(() => data.methods.closeTheGap(caller, combatants));
                 if (!moved) {
                     // Movement was blocked or would overlap, try to move around blocker
-                    tryMove(() => this.tryMoveAroundBlocker(caller, combatants));
+                    // NOTE: tryMoveAroundBlocker was undefined and could throw, stalling combat loops.
+                    tryMove(() => data.methods.evade(caller, combatants));
                 }
             }
         }

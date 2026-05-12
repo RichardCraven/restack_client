@@ -1317,6 +1317,36 @@ class MonsterBattle extends React.Component {
     attackTileClicked = (val) => {
         if(val.cooldown_position !== 100) return;
         const formatted_val = val.name.replaceAll(' ', '_');
+
+        const selectedId = this.state.selectedFighter?.id;
+        const selectedCombatant = selectedId && this.props.combatManager?.getCombatant
+            ? this.props.combatManager.getCombatant(selectedId)
+            : null;
+        const isManualControl = !!selectedCombatant?.manualControl;
+
+        if (isManualControl && selectedCombatant) {
+            // Resolve to the live attack object on the combatant so cooldown/state remain authoritative.
+            const resolvedAttack = (selectedCombatant.attacks || []).find((a) =>
+                a &&
+                a.name === val.name &&
+                a.range === val.range &&
+                a.cooldown_position === 100
+            ) || (selectedCombatant.attacks || []).find((a) =>
+                a &&
+                a.name === val.name &&
+                a.cooldown_position === 100
+            ) || val;
+
+            selectedCombatant.pendingAttack = resolvedAttack;
+            this.setState({
+                selectedAttack: resolvedAttack,
+                showCrosshair: false,
+            }, () => {
+                this.props.combatManager.fighterManualAttack();
+            });
+            return;
+        }
+
         this.setState({
             showCrosshair: true,
             selectedAttack: this.props.combatManager.attacksMatrix[formatted_val]
@@ -1388,6 +1418,22 @@ class MonsterBattle extends React.Component {
                 if (sel && this.props.combatManager && typeof this.props.combatManager.getCombatant === 'function') {
                     const cmF = this.props.combatManager.getCombatant(sel.id);
                     if (cmF) {
+                        // If the interaction pane selected an attack tile, prefer that attack for this manual fire.
+                        if (this.state.selectedAttack && this.state.selectedAttack.cooldown_position === 100) {
+                            const selected = this.state.selectedAttack;
+                            const resolvedSelectedAttack = (cmF.attacks || []).find((a) =>
+                                a &&
+                                a.name === selected.name &&
+                                a.range === selected.range &&
+                                a.cooldown_position === 100
+                            ) || (cmF.attacks || []).find((a) =>
+                                a &&
+                                a.name === selected.name &&
+                                a.cooldown_position === 100
+                            );
+                            if (resolvedSelectedAttack) cmF.pendingAttack = resolvedSelectedAttack;
+                        }
+
                         // If no pending attack is set, choose one using the combat manager helper
                         if (!cmF.pendingAttack) {
                             const target = (cmF.targetId) ? this.props.combatManager.getCombatant(cmF.targetId) : null;

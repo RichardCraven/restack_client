@@ -424,7 +424,15 @@ useConsumableFromInventory = (item) => {
 combatKeyDownHandler = (event) => {
     let key = event.key, code = event.code;
     if(code === 'Space'){
-        if(this.monsterBattleComponentRef.current) this.monsterBattleComponentRef.current.manualFire();
+        const battleRef = this.monsterBattleComponentRef.current;
+        const selectedFighter = battleRef?.state?.selectedFighter;
+        const selectedCombatant = selectedFighter && this.props.combatManager?.getCombatant
+            ? this.props.combatManager.getCombatant(selectedFighter.id)
+            : null;
+        if (battleRef && selectedCombatant?.manualControl) {
+            event.preventDefault();
+            battleRef.manualFire();
+        }
     }
     switch(key){
         // =/+ key: increase speed (decrease interval)

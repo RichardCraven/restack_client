@@ -410,7 +410,6 @@ export function CombatManager() {
                 const vctId = `${combatant.id}_VCT`;
                 if (this.combatants[vctId]) {
                     this.combatants[vctId].coordinates = { ...vct.coordinates };
-                    // console.log(`[DIAG] syncVCTs: VCT for ${combatant.name || combatant.type} (${combatant.id}) set to (${vct.coordinates.x},${vct.coordinates.y}) | Monster coords: (${combatant.coordinates.x},${combatant.coordinates.y})`);
                 }
             }
         });
@@ -620,6 +619,11 @@ export function CombatManager() {
                 this.goToDestination(caller);
                 break;
             case 'attack':
+                if (!instruction.targetId || !this.combatants[instruction.targetId] || this.combatants[instruction.targetId].dead) {
+                    caller.pendingAttack = null;
+                    caller.targetId = null;
+                    break;
+                }
                 caller.targetId = instruction.targetId;
                 caller.pendingAttack = instruction.selectedAction;
                 caller.attack();
@@ -933,6 +937,12 @@ export function CombatManager() {
                             }
                             break;
                         }
+                        case 'whirlwind': {
+                            if (fighter && barbarianAI.shouldUseWhirlwind(fighter, this.combatants)) {
+                                barbarianAI.triggerWhirlwind(fighter, this.combatants);
+                            }
+                            break;
+                        }
                         default:
                             break;
                     }
@@ -1061,7 +1071,6 @@ export function CombatManager() {
             (!callerIsMonster && (!currentTarget.isMonster && !currentTarget.isMinion));
 
         if (!targetIsInvalid) return true;
-
         // Remove stale reticles/associations from the previous target and clear combat intent.
         this.clearTargetListById(caller.id);
         this.setTargetId(caller, null, `ensureValidTarget-${context}`);
@@ -1913,7 +1922,6 @@ export function CombatManager() {
         if (newPosition !== undefined) caller.coordinates.y = newPosition;
 
         caller.coordinates = { x: newDepth, y: newPosition }
-        // console.log(`[DIAG] direct assign: ${caller.name || caller.type} (${caller.id}) set to (${caller.coordinates.x},${caller.coordinates.y}) [newDepth=${newDepth}, newPosition=${newPosition}]`);
         // Always sync VCTs after a monster moves
         if (caller.isMonster && typeof this.syncVCTs === 'function') {
             this.syncVCTs();
@@ -2111,15 +2119,49 @@ export function CombatManager() {
     }
     this.clearTargetListById = (targetId) => {
         const combatants = Object.values(this.combatants)
+        const affectedCombatants = [];
         combatants.forEach(e => {
             // Skip VCTs
             if (e.isVCT) return;
+            const previousQueueLength = Array.isArray(e.action_queue) ? e.action_queue.length : 0;
+            let removedQueuedAttack = false;
             if (Array.isArray(e.targettedBy)) {
                 e.targettedBy = e.targettedBy.filter(id => id !== targetId);
             }
             if (e.targetId === targetId) {
                 e.targetId = null;
                 e.pendingAttack = null;
+                affectedCombatants.push({
+                    combatantId: e.id,
+                    combatantName: e.name || e.type,
+                    clearedDirectTarget: true,
+                    removedQueuedAttack: false,
+                    previousQueueLength,
+                    nextQueueLength: previousQueueLength
+                });
+            }
+            if (Array.isArray(e.action_queue) && e.action_queue.length > 0) {
+                e.action_queue = e.action_queue.filter(action => {
+                    const instruction = action && action.instruction;
+                    return !(instruction && instruction.type === 'attack' && instruction.targetId === targetId);
+                });
+                removedQueuedAttack = e.action_queue.length !== previousQueueLength;
+            }
+            if (removedQueuedAttack) {
+                const existing = affectedCombatants.find(entry => entry.combatantId === e.id);
+                if (existing) {
+                    existing.removedQueuedAttack = true;
+                    existing.nextQueueLength = e.action_queue.length;
+                } else {
+                    affectedCombatants.push({
+                        combatantId: e.id,
+                        combatantName: e.name || e.type,
+                        clearedDirectTarget: false,
+                        removedQueuedAttack: true,
+                        previousQueueLength,
+                        nextQueueLength: e.action_queue.length
+                    });
+                }
             }
         })
     }
@@ -2553,7 +2595,6 @@ export function CombatManager() {
         const indicatorObj2 = { id: indicatorId2, value: damage, source: caller?.name || 'unknown' };
         const indicatorTarget = this.getIndicatorAnchor(target) || target;
         indicatorTarget.damageIndicators.push(indicatorObj2);
-        //console.log('[DIAG][combat-manager] Pushed to target.damageIndicators:', indicatorObj2, 'Current:', target.damageIndicators);
         if (typeof this.updateData === 'function') {
             this.updateData(clone(this.combatants));
         }
@@ -2874,6 +2915,7 @@ export function CombatManager() {
         hitCheck: this.hitCheck,
         damageCheck: this.damageCheck,
         targetKilled: this.targetKilled,
+        clearTargetListById: this.clearTargetListById,
         kickoffSpecialCooldown: this.kickoffSpecialCooldown,
         chooseAttackType: this.genericChooseAttackType,
         getCombatants: () => this.combatants,
@@ -2931,8 +2973,6 @@ export function CombatManager() {
 
             // Ensure coordinates exist
             if (!rawMinion.coordinates) rawMinion.coordinates = { x: MAX_DEPTH - 1, y: 0 };
-            console.log(`[DIAG] INIT: rawMinion (${rawMinion.id || rawMinion.type}) at (${rawMinion.coordinates.x},${rawMinion.coordinates.y})`);
-
             // Ensure stats object exists (createFighter reads from stats.*)
             if (!rawMinion.stats) {
                 rawMinion.stats = {
@@ -3030,7 +3070,15 @@ CombatManager.prototype.setTargetId = function (caller, targetId, context = '') 
         caller.targetId = null;
         return;
     }
-    const target = this.combatants[targetId];
+    const resolveById = (id) => {
+        if (!id) return null;
+        if (typeof this.getCombatant === 'function') {
+            const canonical = this.getCombatant(id);
+            if (canonical) return canonical;
+        }
+        return this.combatants[id] || null;
+    };
+    const target = resolveById(targetId);
     // Never allow target assignment to dead/missing combatants.
     if (!target || target.dead || target.invisible) {
         caller.targetId = null;
@@ -3039,23 +3087,27 @@ CombatManager.prototype.setTargetId = function (caller, targetId, context = '') 
     // Monsters/minions: never allow targeting a VCT
     if ((caller.isMonster || caller.isMinion) && target && target.isVCT) {
         // Monsters/minions: redirect VCT to parent if possible, else allow (redundant with redirect below but safe)
-        if (target.parentMonsterId && this.combatants[target.parentMonsterId]) {
-            caller.targetId = target.parentMonsterId;
+        if (target.parentMonsterId && resolveById(target.parentMonsterId)) {
+            const redirectedTarget = resolveById(target.parentMonsterId);
+            if (!redirectedTarget || redirectedTarget.dead || redirectedTarget.invisible) {
+                caller.targetId = null;
+                return;
+            }
+            caller.targetId = redirectedTarget.id;
             return;
         }
     }
     // Fighters: allow targeting VCT, but redirect to parent monster if present
-    if (!(caller.isMonster || caller.isMinion) && target && target.isVCT && target.parentMonsterId && this.combatants[target.parentMonsterId]) {
-        if (typeof console !== 'undefined') {
-            // console.warn('[CombatManager][setTargetId][VCT-REDIRECT] Fighter targeting VCT, redirecting to parent monster.', {
-            //     callerId: caller.id,
-            //     vctId: target.id,
-            //     parentMonsterId: target.parentMonsterId,
-            //     context,
-            //     prevTargetId
-            // });
+    if (!(caller.isMonster || caller.isMinion) && target && target.isVCT && target.parentMonsterId && resolveById(target.parentMonsterId)) {
+        const redirectedTarget = resolveById(target.parentMonsterId);
+        if (!redirectedTarget || redirectedTarget.dead || redirectedTarget.invisible) {
+            const fallbackEnemy = Object.values(this.combatants).find((e) => (
+                e && !e.dead && !e.invisible && (e.isMonster || e.isMinion) && !e.isVCT && e.id !== target.parentMonsterId
+            ));
+            caller.targetId = fallbackEnemy ? fallbackEnemy.id : null;
+            return;
         }
-        caller.targetId = target.parentMonsterId;
+        caller.targetId = redirectedTarget.id;
         return;
     }
     if (caller.targetId !== targetId) {

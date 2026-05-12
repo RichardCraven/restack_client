@@ -189,8 +189,8 @@ export default function FightersCombatGrid(props) {
                                                 verticalFacingClass,
                                                 details?.locked ? 'locked' : '',
                                                 details?.chargingUpActive ? 'charging-up' : '',
-                                                details?.berserkerActive && details?.feared ? 'berserk-feared' : '',
-                                                details?.berserkerActive && !details?.feared ? 'berserk-active' : '',
+                                                details?.berserkerActive && details?.feared && !details?.stunned ? 'berserk-feared' : '',
+                                                details?.berserkerActive && (!details?.feared || details?.stunned) ? 'berserk-active' : '',
                                                 !details?.berserkerActive && details?.feared ? 'feared' : '',
                                                 props.combatManager.getCombatant(fighter.id)?.shieldWallActive ? 'shield-wall-active' : '',
                                                 details?.stunned ? 'stunned' : '',
@@ -201,11 +201,11 @@ export default function FightersCombatGrid(props) {
                                         }
                                         style={{
                                             backgroundImage: `url(${fighter.portrait})`,
-                                            backgroundSize: (details?.berserkerActive && details?.feared) ? '100% 100%' : undefined,
+                                            backgroundSize: (details?.berserkerActive && details?.feared && !details?.stunned) ? '100% 100%' : undefined,
                                             filter: [
                                                 details?.chargingUpActive ? "url('#ripple-effect')" : null,
                                                 `saturate(${((details?.hp / fighter.stats.hp) * 100) / 2}) sepia(${props.portraitHoveredId === fighter.id ? '2' : '0'})`,
-                                                (details?.berserkerActive && details?.feared) ? 'brightness(1.18)' : ''
+                                                (details?.berserkerActive && details?.feared && !details?.stunned) ? 'brightness(1.18)' : ''
                                             ].filter(Boolean).join(' '),
                                             zIndex: 300,
                                             }} 

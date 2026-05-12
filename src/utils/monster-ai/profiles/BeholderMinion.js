@@ -6,12 +6,12 @@
  * BeholderMinion AI profile
  *
  * Abilities
- * ─────────
- * duplicate  — Costs ALL energy. Spawns an exact copy of this minion (same
+ * ---------
+ * duplicate  - Costs ALL energy. Spawns an exact copy of this minion (same
  *              current stats / attacks) as a new minion. The copy does NOT
  *              receive the duplicate special so it cannot chain-duplicate.
  *
- * bifurcate  — Triggers when energy reaches 100 (full pool).
+ * bifurcate  - Triggers when energy reaches 100 (full pool).
  *              The original is destroyed and replaced by TWO new copies, each
  *              with 50% of the original's current HP.
  *              Neither copy inherits the bifurcate (or duplicate) ability.
@@ -36,8 +36,9 @@ export function BeholderMinion(data, utilMethods, animationManager, overlayManag
     this.getCombatants         = utilMethods.getCombatants;
     this.spawnMinion           = utilMethods.spawnMinion;
     this.chooseAttackType      = utilMethods.chooseAttackType;
+    this.clearTargetListById   = utilMethods.clearTargetListById;
 
-    // ── helpers ─────────────────────────────────────────────────────────────
+    // -- helpers -------------------------------------------------------------
 
     /**
      * Find an unoccupied lane near `caller` on the monster side of the board.
@@ -54,7 +55,7 @@ export function BeholderMinion(data, utilMethods, animationManager, overlayManag
                 if (!occupiedYs.has(y)) return { x, y };
             }
         }
-        return null; // board is full — cannot spawn
+        return null; // board is full - cannot spawn
     };
 
     /**
@@ -276,6 +277,15 @@ export function BeholderMinion(data, utilMethods, animationManager, overlayManag
             // Kill the original now that the shrink animation has played
             caller.dead = true;
             caller.bifurcating = false;
+            caller.pendingAttack = null;
+            caller.targetId = null;
+            try {
+                if (typeof this.clearTargetListById === 'function') {
+                    this.clearTargetListById(caller.id);
+                }
+            } catch (err) {
+                console.warn('[BeholderMinion] bifurcate target cleanup failed', err);
+            }
             console.log(`[BeholderMinion] bifurcate — original ${caller.id} marked dead`);
 
             const copy1 = this.spawnMinion(makeTemplate(coords1, ' α'), { hp: halfHp, isBifurcateCopy: true, isBifurcateSmall: true });

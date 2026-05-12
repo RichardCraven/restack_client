@@ -48,6 +48,7 @@ export function Barbarian(data, utilMethods, animationManager) {
         caller.berserkerStartEra      = null;
         caller._berserkerCycleCount   = 0;
         caller._berserkerPatchApplied = false;
+        caller.whirlwindActive        = false;
     }
 
     // ─── Target acquisition ──────────────────────────────────────────────────
@@ -126,7 +127,7 @@ export function Barbarian(data, utilMethods, animationManager) {
 
     // ─── Helpers ─────────────────────────────────────────────────────────────
 
-    this.isSurrounded = (caller, combatants) => {
+    this.getAdjacentEnemies = (caller, combatants) => {
         const surroundings = [
             { x: caller.coordinates.x,     y: caller.coordinates.y - 1 },
             { x: caller.coordinates.x + 1, y: caller.coordinates.y - 1 },
@@ -137,15 +138,56 @@ export function Barbarian(data, utilMethods, animationManager) {
             { x: caller.coordinates.x - 1, y: caller.coordinates.y     },
             { x: caller.coordinates.x - 1, y: caller.coordinates.y - 1 },
         ];
-        let adjacentEnemies = 0;
-        surroundings.forEach(tile => {
-            const enemy = Object.values(combatants).find(e =>
-                this.isEnemy(e) && !e.dead && !e.isVCT &&
-                e.coordinates.x === tile.x && e.coordinates.y === tile.y
-            );
-            if (enemy) adjacentEnemies++;
+        return Object.values(combatants).filter(e =>
+            this.isEnemy(e) && !e.dead && !e.isVCT &&
+            surroundings.some(tile => tile.x === e.coordinates.x && tile.y === e.coordinates.y)
+        );
+    }
+
+    this.shouldUseWhirlwind = (caller, combatants) => {
+        const ww = caller.specials && caller.specials.find(s => s && s.name === 'whirlwind');
+        console.log('caller.specials',caller.specials ,'ww', ww);
+        if (!ww || ww.cooldown_position !== 100 || caller.whirlwindActive) return false;
+        const energy = typeof caller.energy === 'number' ? caller.energy : 0;
+        console.log('energy: ', energy , ' adjacentEnemies: ', this.getAdjacentEnemies(caller, combatants).length);
+        if (energy < (ww.energy_cost ?? 50)) return false;
+        return this.getAdjacentEnemies(caller, combatants).length >= 2;
+    }
+
+    this.triggerWhirlwind = async (caller, combatants) => {
+        console.log('--------------------TRIGGER WHIRLWIND');
+        const ww = caller.specials && caller.specials.find(s => s && s.name === 'whirlwind');
+        if (!ww) return;
+
+        const adjacentCount = this.getAdjacentEnemies(caller, combatants).length;
+        console.log(`[Barbarian] 🌪️ WHIRLWIND TRIGGERED — eraIndex=${caller.eraIndex}, adjacentEnemies=${adjacentCount}, energy=${caller.energy}`);
+
+        ww.cooldown_position = 0;
+        caller.whirlwindActive = true;
+        caller.energy = Math.max(0, (typeof caller.energy === 'number' ? caller.energy : 0) - (ww.energy_cost ?? 50));
+
+        const originalPendingAttack = caller.pendingAttack;
+        const defaultAttack = caller.attacks && (
+            caller.attacks.find(a => a && a.name === 'axe swing') ||
+            caller.attacks.find(a => a && a.range === 'close') ||
+            caller.attacks[0]
+        );
+
+        // Use a normal Barbarian attack profile for damage calculation (no bonus special damage).
+        if (defaultAttack) caller.pendingAttack = defaultAttack;
+
+        await this.animationManager.triggerWhirlwind(caller, combatants, (enemy) => {
+            if (!enemy || !this.isEnemy(enemy)) return;
+            this.hitsCombatant(caller, enemy);
         });
-        return adjacentEnemies >= 3;
+
+        caller.pendingAttack = originalPendingAttack;
+        caller.whirlwindActive = false;
+
+        if (typeof this.kickoffSpecialCooldown === 'function') {
+            this.kickoffSpecialCooldown(ww);
+        }
+        try { if (typeof this.broadcastDataUpdate === 'function') this.broadcastDataUpdate(caller); } catch (e) {}
     }
 
     this.tryUseConsumableForHeal = (caller) => {
@@ -421,9 +463,37 @@ export function Barbarian(data, utilMethods, animationManager) {
                     return;
                 }
 
-                // Spin attack if surrounded (any era)
-                if (this.isSurrounded(caller, combatants)) {
-                    this.triggerSpinAttack(caller, combatants);
+                // Check whirlwind in each behavior era.
+                const tryWhirlwindForEra = () => {
+                    console.log('**************************TRY WHIRLWIND');
+                    if (!this.shouldUseWhirlwind(caller, combatants)) return false;
+                    this.triggerWhirlwind(caller, combatants);
+                    return true;
+                };
+
+                let usedWhirlwind = false;
+                switch (caller.eraIndex) {
+                    case 0:
+                        usedWhirlwind = tryWhirlwindForEra();
+                        break;
+                    case 1:
+                        usedWhirlwind = tryWhirlwindForEra();
+                        break;
+                    case 2:
+                        usedWhirlwind = tryWhirlwindForEra();
+                        break;
+                    case 3:
+                        usedWhirlwind = tryWhirlwindForEra();
+                        break;
+                    case 4:
+                        usedWhirlwind = tryWhirlwindForEra();
+                        break;
+                    default:
+                        usedWhirlwind = tryWhirlwindForEra();
+                        break;
+                }
+
+                if (usedWhirlwind) {
                     break;
                 }
 

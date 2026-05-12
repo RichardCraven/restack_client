@@ -1308,6 +1308,14 @@ class DungeonPage extends React.Component {
     respawnMonsters = async () => {
         let dungeons = [],
         selectedDungeon;
+        let meta = getMeta() || {};
+        const activeDungeon = (this.props && this.props.boardManager && this.props.boardManager.dungeon) || this.dungeon || null;
+        const activeDungeonId = meta.dungeonId
+            || (activeDungeon && activeDungeon.id)
+            || null;
+        const activeDungeonName = (activeDungeon && activeDungeon.name) || null;
+        const selectedTemplateId = meta.selectedDungeonTemplateId || null;
+        const selectedTemplateName = meta.selectedDungeonTemplateName || null;
         
         const allDungeons = await loadAllDungeonsRequest();
 
@@ -1316,16 +1324,37 @@ class DungeonPage extends React.Component {
             d.id = e._id
             dungeons.push(d)
         })
-        selectedDungeon = dungeons[0];
-        // Fallback: if no saved templates are available, try using the current in-memory dungeon
+
+        const candidateTemplates = dungeons.filter((d) => String(d.id) !== String(activeDungeonId));
+
+        if (selectedTemplateId) {
+            selectedDungeon = candidateTemplates.find((d) => String(d.id) === String(selectedTemplateId)) || null;
+        }
+
+        if (!selectedDungeon && selectedTemplateName) {
+            selectedDungeon = candidateTemplates.find((d) => d && d.name === selectedTemplateName) || null;
+        }
+
+        if (!selectedDungeon && activeDungeonName) {
+            const prefixMatches = candidateTemplates
+                .filter((d) => d && d.name && activeDungeonName.startsWith(`${d.name}_`))
+                .sort((a, b) => b.name.length - a.name.length);
+            selectedDungeon = prefixMatches[0] || null;
+        }
+
+        // Fallback: if no parent template can be resolved, use the current in-memory dungeon.
         if (!selectedDungeon) {
             try {
-                selectedDungeon = (this.props && this.props.boardManager && this.props.boardManager.dungeon) || this.dungeon || null;
+                selectedDungeon = activeDungeon;
             } catch (e) { selectedDungeon = null }
+        }
+        if (!selectedDungeon) {
+            selectedDungeon = dungeons[0] || null;
         }
         try {
             if (this.props.boardManager && typeof this.props.boardManager.respawnMonsters === 'function') {
-                this.props.boardManager.respawnMonsters(selectedDungeon)
+                const respawnedCount = this.props.boardManager.respawnMonsters(selectedDungeon)
+                return typeof respawnedCount === 'number' ? respawnedCount : 0;
             } else {
                 console.warn('respawnMonsters: boardManager.respawnMonsters not available');
             }
@@ -1346,6 +1375,7 @@ class DungeonPage extends React.Component {
         } catch (e) {
             console.warn('Error triggering respawnMonsters', e);
         }
+        return 0;
     }
     respawnItems = async () => {
         let dungeons = [],
@@ -1413,7 +1443,7 @@ class DungeonPage extends React.Component {
         this.setState({ devConsoleInput: e.target.value });
     }
 
-    handleDevConsoleKeyDown = (e) => {
+    handleDevConsoleKeyDown = async (e) => {
         if (e.key === 'Enter') {
             const raw = (this.state.devConsoleInput || '').trim();
             const cmd = raw.toLowerCase();
@@ -1428,8 +1458,8 @@ class DungeonPage extends React.Component {
             if (monsterCommandMatch) {
                 // trigger monster spawn without touching timers
                 try {
-                    this.respawnMonsters();
-                    this.setState(prev => ({ devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, 'Triggered monster spawn (dev console)'], devConsoleInput: '' }));
+                    const respawned = await this.respawnMonsters();
+                    this.setState(prev => ({ devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, `Triggered monster spawn (dev console): ${respawned} spawned`], devConsoleInput: '' }));
                 } catch (err) {
                     this.setState(prev => ({ devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, `Error: ${err && err.message ? err.message : err}`], devConsoleInput: '' }));
                 }
@@ -1499,6 +1529,12 @@ class DungeonPage extends React.Component {
                         'weapons t1 / weapons1 / weaponst1 — add 2 random tier-1 weapons',
                         'weapons t2 / weapons2 / weaponst2 — add 2 random tier-2 weapons',
                         'weapons t3 / weapons3 / weaponst3 — add 2 random tier-3 weapons',
+                        'armor t1 / armor1 / armort1 — add 2 random tier-1 armor items',
+                        'armor t2 / armor2 / armort2 — add 2 random tier-2 armor items',
+                        'armor t3 / armor3 / armort3 — add 2 random tier-3 armor items',
+                        'magical t1 / magical1 / magicalt1 — add 2 random tier-1 magical items',
+                        'magical t2 / magical2 / magicalt2 — add 2 random tier-2 magical items',
+                        'magical t3 / magical3 / magicalt3 — add 2 random tier-3 magical items',
                         'open board — jump to mapmaker board view for current board',
                         'launch cardgame — start a card duel battle',
                         'list / help'
@@ -1559,6 +1595,60 @@ class DungeonPage extends React.Component {
                             im.addItemsByName(shuffled);
                             const names = shuffled.map(k => (im.allItems[k] && im.allItems[k].name) ? im.allItems[k].name : k);
                             this.setState(prev => ({ devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, `Added ${names.length} tier-${weaponTier} weapon(s): ${names.join(', ')}`], devConsoleInput: '' }));
+                        }
+                    } catch (err) {
+                        this.setState(prev => ({ devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, `Error: ${err && err.message ? err.message : err}`], devConsoleInput: '' }));
+                    }
+                    try { if (this.devConsoleInputRef.current) this.devConsoleInputRef.current.focus(); } catch (err) {}
+                    e.preventDefault();
+                    return;
+                }
+
+                const armorTierAlias = {
+                    1: ['armor t1', 'armor1', 'armort1'],
+                    2: ['armor t2', 'armor2', 'armort2'],
+                    3: ['armor t3', 'armor3', 'armort3'],
+                };
+                const armorTier = [1, 2, 3].find(t => armorTierAlias[t].includes(cmd));
+                if (armorTier !== undefined) {
+                    try {
+                        const im = this.props.inventoryManager;
+                        const allKeys = Object.keys((im && im.allItems) || {});
+                        const tierKeys = allKeys.filter(k => im.allItems && im.allItems[k] && im.allItems[k].type === 'armor' && im.allItems[k].tier === armorTier);
+                        if (tierKeys.length === 0) {
+                            this.setState(prev => ({ devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, `No tier-${armorTier} armor items found`], devConsoleInput: '' }));
+                        } else {
+                            const shuffled = tierKeys.slice().sort(() => Math.random() - 0.5).slice(0, 2);
+                            im.addItemsByName(shuffled);
+                            const names = shuffled.map(k => (im.allItems[k] && im.allItems[k].name) ? im.allItems[k].name : k);
+                            this.setState(prev => ({ devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, `Added ${names.length} tier-${armorTier} armor item(s): ${names.join(', ')}`], devConsoleInput: '' }));
+                        }
+                    } catch (err) {
+                        this.setState(prev => ({ devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, `Error: ${err && err.message ? err.message : err}`], devConsoleInput: '' }));
+                    }
+                    try { if (this.devConsoleInputRef.current) this.devConsoleInputRef.current.focus(); } catch (err) {}
+                    e.preventDefault();
+                    return;
+                }
+
+                const magicalTierAlias = {
+                    1: ['magical t1', 'magical1', 'magicalt1'],
+                    2: ['magical t2', 'magical2', 'magicalt2'],
+                    3: ['magical t3', 'magical3', 'magicalt3'],
+                };
+                const magicalTier = [1, 2, 3].find(t => magicalTierAlias[t].includes(cmd));
+                if (magicalTier !== undefined) {
+                    try {
+                        const im = this.props.inventoryManager;
+                        const allKeys = Object.keys((im && im.allItems) || {});
+                        const tierKeys = allKeys.filter(k => im.allItems && im.allItems[k] && im.allItems[k].type === 'magical' && im.allItems[k].tier === magicalTier);
+                        if (tierKeys.length === 0) {
+                            this.setState(prev => ({ devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, `No tier-${magicalTier} magical items found`], devConsoleInput: '' }));
+                        } else {
+                            const shuffled = tierKeys.slice().sort(() => Math.random() - 0.5).slice(0, 2);
+                            im.addItemsByName(shuffled);
+                            const names = shuffled.map(k => (im.allItems[k] && im.allItems[k].name) ? im.allItems[k].name : k);
+                            this.setState(prev => ({ devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, `Added ${names.length} tier-${magicalTier} magical item(s): ${names.join(', ')}`], devConsoleInput: '' }));
                         }
                     } catch (err) {
                         this.setState(prev => ({ devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, `Error: ${err && err.message ? err.message : err}`], devConsoleInput: '' }));
@@ -4676,7 +4766,7 @@ class DungeonPage extends React.Component {
                         </div>
                         <div className="equipment-panel">
                             {/* Replaced with a direct copy of the `.crew-body` from the inventory popup */}
-                            <div className='crew-body' style={{filter: 'invert(1)', marginTop: '-16px'}}>
+                            <div className='crew-body' style={{marginTop: '-16px'}}>
                                 <div className='crew-body-image' style={{backgroundImage: `url(${images.body_male})`}} />
                                 {/* equip slots: chest, right-hand, left-hand, head, ancillary-left, ancillary-right */}
                                 {(() => {
@@ -5217,7 +5307,6 @@ class DungeonPage extends React.Component {
                                         }}
                                     ></div>
                                     <div className='crew-body' style={{
-                                        filter: 'invert(1)',
                                         pointerEvents: isSelected ? 'auto' : 'none',
                                         marginTop: '-16px'
                                     }}>
@@ -5236,9 +5325,16 @@ class DungeonPage extends React.Component {
                                             const bottomLeft = findEquipped(member, 'pet');
                                             const ancillaryLeft = findEquipped(member, 'ancillary-left');
                                             const ancillaryRight = findEquipped(member, 'ancillary-right');
+                                            const regularSlotBorder = '2px solid rgba(205, 202, 202, 0.68)';
+                                            const selectedSlotBorder = '2px solid rgba(205, 202, 202, 1)';
+                                            const selectedEquippedSlotBorder = '2px solid rgb(164 234 199)';
+                                            const getSlotBorder = (equippedItem) => {
+                                                if (!isSelected) return regularSlotBorder;
+                                                return equippedItem ? selectedEquippedSlotBorder : selectedSlotBorder;
+                                            };
                                             return (
                                                 <>
-                                                    <div className='equip-slot slot-chest' style={{outline: isSelected && chest ? '2px solid #782d7b' : undefined}}>{chest && (
+                                                    <div className='equip-slot slot-chest' style={{border: getSlotBorder(chest)}}>{chest && (
                                                         <Tile
                                                             id={chest.id}
                                                             data={chest}
@@ -5252,7 +5348,7 @@ class DungeonPage extends React.Component {
                                                             handleHover={this.handleInventoryTileHover}
                                                         />
                                                     )}</div>
-                                                    <div className='equip-slot slot-right' style={{outline: isSelected && right ? '2px solid #782d7b' : undefined}}>{right && (
+                                                    <div className='equip-slot slot-right' style={{border: getSlotBorder(right)}}>{right && (
                                                         <Tile
                                                             id={right.id}
                                                             data={right}
@@ -5266,7 +5362,7 @@ class DungeonPage extends React.Component {
                                                             handleHover={this.handleInventoryTileHover}
                                                         />
                                                     )}</div>
-                                                    <div className='equip-slot slot-left' style={{outline: isSelected && left ? '2px solid #782d7b' : undefined}}>{left && (
+                                                    <div className='equip-slot slot-left' style={{border: getSlotBorder(left)}}>{left && (
                                                         <Tile
                                                             id={left.id}
                                                             data={left}
@@ -5280,7 +5376,7 @@ class DungeonPage extends React.Component {
                                                             handleHover={this.handleInventoryTileHover}
                                                         />
                                                     )}</div>
-                                                    <div className='equip-slot slot-head' style={{outline: isSelected && head ? '2px solid #782d7b' : undefined}}>{head && (
+                                                    <div className='equip-slot slot-head' style={{border: getSlotBorder(head)}}>{head && (
                                                         <Tile
                                                             id={head.id}
                                                             data={head}
@@ -5294,7 +5390,7 @@ class DungeonPage extends React.Component {
                                                             handleHover={this.handleInventoryTileHover}
                                                         />
                                                     )}</div>
-                                                    <div className='equip-slot slot-boots' style={{outline: isSelected && boots ? '2px solid #782d7b' : undefined}}>{boots && (
+                                                    <div className='equip-slot slot-boots' style={{border: getSlotBorder(boots)}}>{boots && (
                                                         <Tile
                                                             id={boots.id}
                                                             data={boots}
@@ -5308,7 +5404,7 @@ class DungeonPage extends React.Component {
                                                             handleHover={this.handleInventoryTileHover}
                                                         />
                                                     )}</div>
-                                                    <div className='equip-slot slot-ancillary-left' style={{outline: isSelected && ancillaryLeft ? '2px solid #782d7b' : undefined}}>{ancillaryLeft && (
+                                                    <div className='equip-slot slot-ancillary-left' style={{border: getSlotBorder(ancillaryLeft)}}>{ancillaryLeft && (
                                                         <Tile
                                                             id={ancillaryLeft.id}
                                                             data={ancillaryLeft}
@@ -5322,7 +5418,7 @@ class DungeonPage extends React.Component {
                                                             handleHover={this.handleInventoryTileHover}
                                                         />
                                                     )}</div>
-                                                    <div className='equip-slot slot-ancillary-right' style={{outline: isSelected && ancillaryRight ? '2px solid #782d7b' : undefined}}>{ancillaryRight && (
+                                                    <div className='equip-slot slot-ancillary-right' style={{border: getSlotBorder(ancillaryRight)}}>{ancillaryRight && (
                                                         <Tile
                                                             id={ancillaryRight.id}
                                                             data={ancillaryRight}
@@ -5336,7 +5432,7 @@ class DungeonPage extends React.Component {
                                                             handleHover={this.handleInventoryTileHover}
                                                         />
                                                     )}</div>
-                                    <div className='equip-slot slot-pet' style={{outline: isSelected && bottomLeft ? '2px solid #782d7b' : undefined}}>{bottomLeft && (
+                                    <div className='equip-slot slot-pet' style={{border: getSlotBorder(bottomLeft)}}>{bottomLeft && (
                                                         <>
                                                         <Tile
                                                             id={bottomLeft.id}
@@ -5445,7 +5541,15 @@ class DungeonPage extends React.Component {
                     <div className="inventory-descriptor-panel">
                         {(() => {
                             const item = this.state.hoveredInventoryItem;
-                            const iconImg = item && item.icon ? images[item.icon] : null;
+                            const iconImg = (() => {
+                                if (!item) return null;
+                                const raw = item.icon || item.iconUrl || item.image;
+                                if (!raw) return null;
+                                if (typeof raw === 'string' && (raw.startsWith('/') || raw.startsWith('http') || raw.startsWith('data:'))) {
+                                    return raw;
+                                }
+                                return images[raw] || null;
+                            })();
                             return (
                                 <div className="idp-content">
                                     {item && (
@@ -5495,7 +5599,8 @@ class DungeonPage extends React.Component {
                                             id={firstIndex}
                                             data={item}
                                             tileSize={this.state.tileSize}
-                                            image={item.icon ? item.icon : null}
+                                            image={item.icon && typeof item.icon === 'string' && !item.icon.includes('/') && !item.icon.startsWith('http') && !item.icon.startsWith('data:') ? item.icon : null}
+                                            imageOverride={item.icon && typeof item.icon === 'string' && (item.icon.includes('/') || item.icon.startsWith('http') || item.icon.startsWith('data:')) ? item.icon : null}
                                             contains={item.name ? item.name.replace(' ', '_') : null}
                                             color={item.color}
                                             editMode={false}

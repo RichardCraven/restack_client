@@ -8,6 +8,7 @@ import CanvasFireball from '../components/Canvas/canvas_fireball'
 import CanvasAxeThrow from '../components/Canvas/canvas_axe_throw'
 import CanvasClawSwipe from '../components/Canvas/canvas_claw_swipe'
 import CanvasPhysicalAttack from '../components/Canvas/canvas_physical_attack'
+import CanvasWhirlwind from '../components/Canvas/canvas_whirlwind'
 
 // class AnimationGrid extends React.Component {
     // constructor(props){
@@ -175,7 +176,20 @@ const AnimationGrid = ({
                                 tracer={typeof anim.tracer === 'boolean' ? anim.tracer : true}
                                 facing={anim.facing}
                             />
-                        } 
+                        } else if (anim.type === 'whirlwind') {
+                            if (!anim.origin) {
+                                console.warn('[AnimationGrid] CanvasWhirlwind missing origin', anim);
+                                return null;
+                            }
+                            return <CanvasWhirlwind
+                                key={animKey}
+                                origin={anim.origin}
+                                width={TILE_SIZE}
+                                height={TILE_SIZE}
+                                duration={anim.duration || 650}
+                                onComplete={anim.onComplete}
+                            />
+                        }
                         else {
                             return <CanvasMagicMissile
                                 key={animKey}
