@@ -30,6 +30,7 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
     this.broadcastDataUpdate = utilMethods.broadcastDataUpdate;
     this.kickoffAttackCooldown = utilMethods.kickoffAttackCooldown;
     this.kickoffSpecialCooldown = utilMethods.kickoffSpecialCooldown;
+    this.runCooldownTicks = utilMethods.runCooldownTicks;
     this.missesTarget = utilMethods.missesTarget;
     this.hitsTarget = utilMethods.hitsTarget;
     this.hitsCombatant = utilMethods.hitsCombatant;
@@ -308,7 +309,7 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
         // Must not already be in a wall
         if (caller.shieldWallActive) return false;
         // Must have enough energy
-        const energy = typeof caller.energy === 'number' ? caller.energy : 100;
+        const energy = typeof caller.energy === 'number' ? caller.energy : 0;
         if (shieldWall.energy_cost != null && energy < shieldWall.energy_cost) return false;
 
         // ── Guard: don't wall if there's nobody left to protect ────────────
@@ -400,16 +401,12 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
 
         // The wall data object is shared so MonsterBattle and movement-methods
         // can both reference it.
-        const liveInterval = (typeof data.methods.getFightInterval === 'function')
-            ? data.methods.getFightInterval()
-            : (data.INTERVAL_TIME || 500);
-        const eraDurationMs = shieldWall.duration * TICKS_PER_ERA * liveInterval;
+        const durationTicks = Math.max(1, Math.ceil((Number(shieldWall.duration) || 1) * TICKS_PER_ERA));
         const wallData = {
             x: wallX,                         // column boundary (between x-1 and x)
             lanesAffected,
             isFacingRight: (caller.facing !== 'left'),
             callerId: caller.id,
-            expiresAt: Date.now() + eraDurationMs
         };
 
         // Flag the Soldier so processMove / initiateAttack skips him
@@ -427,11 +424,24 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
             this.monsterBattleRef.registerShieldWall(wallData, caller);
         }
 
-        // Schedule expiry
-        const expiryTimer = setTimeout(() => {
-            this._expireShieldWall(caller, combatants);
-        }, eraDurationMs);
-        caller._shieldWallExpiryTimer = expiryTimer;
+        // Schedule tick-based expiry so duration scales with game speed
+        if (typeof this.runCooldownTicks === 'function') {
+            caller._shieldWallCancelTicks = this.runCooldownTicks({
+                totalTicks: durationTicks,
+                onComplete: () => {
+                    this._expireShieldWall(caller, combatants);
+                }
+            });
+        } else {
+            // Fallback if runCooldownTicks unavailable
+            const liveInterval = (typeof data.methods.getFightInterval === 'function')
+                ? data.methods.getFightInterval()
+                : (data.INTERVAL_TIME || 500);
+            const eraDurationMs = durationTicks * liveInterval;
+            caller._shieldWallExpiryTimer = setTimeout(() => {
+                this._expireShieldWall(caller, combatants);
+            }, eraDurationMs);
+        }
     }
 
     /**
@@ -441,6 +451,10 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
     this._expireShieldWall = (caller, combatants, options = {}) => { // eslint-disable-line no-unused-vars
         const { startCooldown = true } = options;
         caller.shieldWallActive = false;
+        if (typeof caller._shieldWallCancelTicks === 'function') {
+            caller._shieldWallCancelTicks();
+            caller._shieldWallCancelTicks = null;
+        }
         if (caller._shieldWallExpiryTimer) {
             clearTimeout(caller._shieldWallExpiryTimer);
             caller._shieldWallExpiryTimer = null;

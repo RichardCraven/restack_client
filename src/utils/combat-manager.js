@@ -966,7 +966,9 @@ export function CombatManager() {
             // Skip virtual combatants (VCTs) and any without attacks
             if (combatant.isVCT || !Array.isArray(combatant.attacks)) return;
             combatant.attacks.forEach((a) => {
-                a.cooldown_position = 100
+                if (a && typeof a === 'object') {
+                    a.cooldown_position = 100
+                }
             })
         })
         let c = 0; // eslint-disable-line no-unused-vars
@@ -1102,6 +1104,18 @@ export function CombatManager() {
     this.setTargetFromClick = (callerId, targetId) => {
         const caller = this.getCombatant(callerId)
         this.setTargetId(caller, targetId, 'setTargetFromClick');
+        // Explicitly play the targeting reticle on click so manual target changes
+        // always provide immediate board feedback, even when re-targeting the same unit.
+        const resolvedTargetId = caller?.targetId;
+        if (resolvedTargetId && this.overlayManager && this.overlayManager.overlays && this.overlayManager.overlays[resolvedTargetId]) {
+            this.overlayManager.addAnimation({
+                type: 'targetted',
+                id: resolvedTargetId,
+                data: {
+                    color: caller?.color || (caller?.isMonster || caller?.isMinion ? 'red' : 'light-red')
+                }
+            });
+        }
     }
     this.broadcastDataUpdate = (caller = null) => {
         if (caller) {
@@ -1118,6 +1132,13 @@ export function CombatManager() {
                 this.setTargetId(combatant, null, 'broadcastDataUpdate-target-became-invisible');
                 combatant.pendingAttack = null;
             }
+        });
+
+        // Keep portrait orientation in sync after any movement/state update so units
+        // visually face their current target immediately (not only at attack time).
+        Object.values(this.combatants).forEach((combatant) => {
+            if (!combatant || combatant.dead || combatant.invisible || !combatant.targetId) return;
+            try { this.recalculateFacing(combatant); } catch (e) { }
         });
 
         this.updateData(clone(this.combatants))
@@ -1370,32 +1391,18 @@ export function CombatManager() {
         const target = caller && caller.targetId ? this.combatants[caller.targetId] : null;
         if (!target) return;
         try {
+            if (caller.facingLocked) return;
             let newFacing;
             if (target.coordinates.x === caller.coordinates.x) {
                 newFacing = target.coordinates.y > caller.coordinates.y ? 'down' : 'up';
             } else {
                 newFacing = target.coordinates.x > caller.coordinates.x ? 'right' : 'left';
             }
-            if (newFacing === caller.facing) {
-                // Already correct — clear any pending flip
-                caller._pendingFacing = null;
-                caller._pendingFacingCount = 0;
-            } else {
-                // Debounce: require the same new direction on 2 consecutive calls
-                // before committing. This prevents tick-rate oscillation when a
-                // target passes through the caller's column or bounces ±1 tile.
-                if (caller._pendingFacing === newFacing) {
-                    caller._pendingFacingCount = (caller._pendingFacingCount || 0) + 1;
-                    if (caller._pendingFacingCount >= 3) {
-                        caller.facing = newFacing;
-                        caller._pendingFacing = null;
-                        caller._pendingFacingCount = 0;
-                    }
-                } else {
-                    caller._pendingFacing = newFacing;
-                    caller._pendingFacingCount = 1;
-                }
+            if (newFacing !== caller.facing) {
+                caller.facing = newFacing;
             }
+            caller._pendingFacing = null;
+            caller._pendingFacingCount = 0;
         } catch (e) {
             // be defensive
         }
@@ -1448,6 +1455,33 @@ export function CombatManager() {
             return
         }
     }
+    this.runCooldownTicks = ({ totalTicks, onTick, onComplete }) => {
+        const resolvedTotalTicks = Math.max(1, Math.ceil(Number(totalTicks) || 0));
+        let ticksElapsed = 0;
+        let cancelled = false;
+
+        const step = () => {
+            if (cancelled) return;
+
+            if (!this.combatPaused) {
+                ticksElapsed += 1;
+                const ratio = Math.min(100, Math.ceil((ticksElapsed / resolvedTotalTicks) * 100));
+                if (typeof onTick === 'function') onTick(ratio);
+                if (ratio >= 100) {
+                    if (typeof onComplete === 'function') onComplete();
+                    return;
+                }
+            }
+
+            setTimeout(step, Math.max(1, this.FIGHT_INTERVAL || 1));
+        }
+
+        setTimeout(step, Math.max(1, this.FIGHT_INTERVAL || 1));
+
+        return () => {
+            cancelled = true;
+        }
+    }
     this.kickoffAttackCooldown = (caller) => {
         const atk = caller.pendingAttack;
         if (!atk) return
@@ -1456,48 +1490,46 @@ export function CombatManager() {
         // attackSpeedMult allows per-fighter attack frequency tuning without touching dex/movement
         const attackSpeedMult = (typeof caller.stats.attackSpeedMult === 'number' && caller.stats.attackSpeedMult > 0) ? caller.stats.attackSpeedMult : 1;
         const generalCooldown = (10 / callerSpeed) * 1000 / attackSpeedMult;
+        const generalCooldownTicks = Math.max(1, Math.ceil(generalCooldown / Math.max(1, INTERVALS[1])));
         atk['cooldown_position'] = 0;
-        let totalTime = atk.cooldown * 1000;
-        let scopeVar = 0, that = this;
+        const totalTicks = Math.max(1, Math.ceil((Number(atk.cooldown) || 0) * TICKS_PER_ERA));
         caller.onGeneralAttackCooldown = true;
-        const generalAttackCooldown = setTimeout(() => { // eslint-disable-line no-unused-vars
-            caller.onGeneralAttackCooldown = false;
-        }, generalCooldown)
-        const cooldownTickMs = Math.max(1, this.FIGHT_INTERVAL || 1);
-        const intervalRef = setInterval(() => {
-            let ratio = 0;
-            if (!that.combatPaused) {
-                scopeVar += cooldownTickMs;
-                ratio = Math.ceil((scopeVar / totalTime) * 100);
+        if (typeof this.updateData === 'function') {
+            this.updateData(clone(this.combatants));
+        }
+        this.runCooldownTicks({
+            totalTicks: generalCooldownTicks,
+            onComplete: () => {
+                caller.onGeneralAttackCooldown = false;
+            }
+        });
+        this.runCooldownTicks({
+            totalTicks,
+            onTick: (ratio) => {
                 atk['cooldown_position'] = ratio;
+                if (typeof this.updateData === 'function') {
+                    this.updateData(clone(this.combatants));
+                }
             }
-            if (ratio >= 100) {
-                scopeVar = 0;
-                // console.log(caller.type, 'done with cooldown for ', atk);
-                clearInterval(intervalRef)
-            }
-        }, cooldownTickMs)
+        });
     }
     this.kickoffSpecialCooldown = (specialAction) => {
         if (!specialAction) return;
         specialAction['cooldown_position'] = 0;
-        // cooldown is expressed in eras. One era = TICKS_PER_ERA ticks of FIGHT_INTERVAL ms each.
-        // Reading this.FIGHT_INTERVAL live inside the interval means the cooldown rate
-        // automatically adjusts when the player changes game speed mid-combat.
+        // cooldown is expressed in eras. One era = TICKS_PER_ERA combat ticks.
         const totalTicks = specialAction.cooldown * TICKS_PER_ERA;
-        let ticksElapsed = 0, that = this;
-        const intervalRef = setInterval(() => {
-            let ratio = 0;
-            if (!that.combatPaused) {
-                ticksElapsed++;
-                ratio = Math.ceil((ticksElapsed / totalTicks) * 100);
+        if (typeof this.updateData === 'function') {
+            this.updateData(clone(this.combatants));
+        }
+        this.runCooldownTicks({
+            totalTicks,
+            onTick: (ratio) => {
                 specialAction['cooldown_position'] = ratio;
+                if (typeof this.updateData === 'function') {
+                    this.updateData(clone(this.combatants));
+                }
             }
-            if (ratio >= 100) {
-                ticksElapsed = 0;
-                clearInterval(intervalRef)
-            }
-        }, this.FIGHT_INTERVAL)
+        });
     }
     this.getLaneDifferenceToTarget = (caller, target) => {
         if (!target) return 0;
@@ -2342,6 +2374,13 @@ export function CombatManager() {
         }
         // Apply armor-based damage reduction via damageCheck
         damage = this.damageCheck(caller, combatantHit, damage);
+        // Apply frozen damage reduction (50% reduction unless damage source is arcane or psionic)
+        if (combatantHit && combatantHit.frozen) {
+            const damageType = (caller.pendingAttack && caller.pendingAttack.type) || (supplementalData && supplementalData.type) || null;
+            if (!damageType || (damageType !== 'arcane' && damageType !== 'psionic')) {
+                damage = Math.max(1, Math.floor(damage * 0.5));
+            }
+        }
         damage = Math.max(0, Math.round(damage));
 
         // Save readout and apply damage
@@ -2478,7 +2517,7 @@ export function CombatManager() {
         } else if (criticalHit) {
             // HANDLE PUSHBACK OF TARGET
         }
-        setTimeout(() => {
+        this.runCooldownTicks({ totalTicks: 50, onComplete: () => {
             caller.active = caller.aiming = false;
             caller.attacking = caller.attackingReverse = false;
             caller.missed = false;
@@ -2509,8 +2548,7 @@ export function CombatManager() {
             // setTimeout(()=>{
             //     caller.restartTurnCycle();
             // }, 250)
-
-        }, this.FIGHT_INTERVAL * 50)
+        }})
 
         setTimeout(() => {
             caller.readout.action = ''
@@ -2583,6 +2621,13 @@ export function CombatManager() {
         }
         // Apply armor-based damage reduction via damageCheck
         damage = this.damageCheck(caller, target, damage);
+        // Apply frozen damage reduction (50% reduction unless damage source is arcane or psionic)
+        if (target && target.frozen) {
+            const damageType = (caller.pendingAttack && caller.pendingAttack.type) || null;
+            if (!damageType || (damageType !== 'arcane' && damageType !== 'psionic')) {
+                damage = Math.max(1, Math.floor(damage * 0.5));
+            }
+        }
         damage = Math.max(0, Math.round(damage));
 
         const bonusReadout = (weaponBreakdown.equippedCount > 0)
@@ -2632,7 +2677,7 @@ export function CombatManager() {
         } else if (criticalHit) {
             // HANDLE PUSHBACK OF TARGET
         }
-        setTimeout(() => {
+        this.runCooldownTicks({ totalTicks: 50, onComplete: () => {
             caller.active = caller.aiming = false;
             caller.attacking = caller.attackingReverse = false;
             caller.missed = false;
@@ -2661,8 +2706,7 @@ export function CombatManager() {
             // setTimeout(()=>{
             //     caller.restartTurnCycle();
             // }, 250)
-
-        }, this.FIGHT_INTERVAL * 50)
+        }})
 
         setTimeout(() => {
             caller.readout.action = ''
@@ -2693,7 +2737,7 @@ export function CombatManager() {
         if (typeof this.broadcastDataUpdate === 'function') {
             this.broadcastDataUpdate(caller);
         }
-        setTimeout(() => {
+        this.runCooldownTicks({ totalTicks: 50, onComplete: () => {
             caller.active = caller.aiming = false;
             caller.attacking = caller.attackingReverse = false;
             caller.missed = false;
@@ -2722,8 +2766,7 @@ export function CombatManager() {
             // setTimeout(()=>{
             //     caller.restartTurnCycle();
             // }, 250)
-
-        }, this.FIGHT_INTERVAL * 50)
+        }})
 
         setTimeout(() => {
             caller.readout.action = ''
@@ -2816,15 +2859,7 @@ export function CombatManager() {
             })
             this.combatOver = true;
 
-            // Diagnostic logging to help trace duplicate gameOver triggers
-            try {
-                const remainingMonsters = Object.values(this.combatants).filter(e => (e.isMonster || e.isMinion) && !e.dead && !e.isVCT).map(m => m.id);
-                const remainingCrew = Object.values(this.combatants).filter(e => !e.isMonster && !e.isMinion && !e.dead && !e.isVCT).map(c => c.id);
-                console.log('targetKilled: allMonstersDead=', allMonstersDead, 'allCrewDead=', allCrewDead, 'remainingMonsters=', remainingMonsters, 'remainingCrew=', remainingCrew, 'outcome=', outcome);
-            } catch (err) { console.warn('targetKilled: diagnostic logging failed', err); }
-
             setTimeout(() => {
-                try { console.log('combat-manager: invoking gameOver callback with outcome=', outcome); } catch (e) { }
                 if (typeof this.gameOver === 'function') {
                     this.gameOver(outcome)
                 } else {
@@ -2924,6 +2959,9 @@ export function CombatManager() {
         // Returns the current live fight interval so AI profiles always use the
         // correct value even after updateAllFightIntervals changes the speed.
         getFightInterval: () => this.FIGHT_INTERVAL,
+        // Tick-based duration timer — advances with FIGHT_INTERVAL so it stays
+        // in sync with game speed changes, just like attack/special cooldowns.
+        runCooldownTicks: (args) => this.runCooldownTicks(args),
         // Lets fighter-ai.js register a callback to sync its internal data.INTERVAL_TIME
         // whenever the combat speed changes.
         updateIntervalTime: (cb) => { this._intervalTimeListeners = this._intervalTimeListeners || []; this._intervalTimeListeners.push(cb); },

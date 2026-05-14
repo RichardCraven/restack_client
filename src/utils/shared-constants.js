@@ -4,7 +4,7 @@ export const INTERVALS = [90, 40, 10, 1];
 // Number of FIGHT_INTERVAL ticks in one full turn cycle at reference speed-10.
 // Used by kickoffSpecialCooldown (combat-manager.js) and duration timers in AI profiles.
 // 1 "era" in specials-matrix = TICKS_PER_ERA interval ticks.
-export const TICKS_PER_ERA = 100;
+export const TICKS_PER_ERA = 50;
 export const INTERVAL_DISPLAY_NAMES = ['Very Slow', 'Slow', 'Fast', 'Very Fast'];
 // Duration (ms) for the 'rocked' / hit-flash animation
 export const ROCK_DURATION = 750;

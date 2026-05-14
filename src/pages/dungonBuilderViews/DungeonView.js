@@ -382,11 +382,13 @@ class DungeonView extends React.Component {
                                 <CFormSelect 
                                 aria-label="Dungeon Selector"
                                 ref={this.props.dungeonSelectVal}
-                                options={
-                                    ['Dungeon Selector'].concat(this.props.dungeons.map((e, i)=>{
-                                    return { label: e.name, value: e.name}
-                                    }))
-                                }
+                                    options={[
+                                        { label: 'Dungeon Selector', value: 'Dungeon Selector' },
+                                        ...((Array.isArray(this.props.dungeons) ? this.props.dungeons : []).map((e) => {
+                                            return { label: e.name, value: e.name };
+                                        })),
+                                        { label: 'Clear All Unique Instances', value: '__clear_unique_dungeon_instances__' }
+                                    ]}
                                 onChange={this.props.dungeonSelectOnChange}
                                 />
                             </div>

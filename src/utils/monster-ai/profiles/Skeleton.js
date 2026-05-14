@@ -2,6 +2,8 @@
 //    section at the top of CHANGELOG.md — pendingAttack guard, attacking flag, resolve(null)
 //    fallbacks, and attack-in-processMove are all mandatory.
 
+import { MonsterTargetingHelpers } from '../../shared-ai-methods/monster-targeting-methods';
+
 export function Skeleton(data, utilMethods, animationManager, overlayManager){
     this.MAX_DEPTH = data.MAX_DEPTH;
     this.MAX_LANES = data.MAX_LANES;
@@ -19,6 +21,8 @@ export function Skeleton(data, utilMethods, animationManager, overlayManager){
     this.hitsTarget = utilMethods.hitsTarget;
     this.hitsCombatant = utilMethods.hitsCombatant;
     this.chooseAttackType = utilMethods.chooseAttackType
+
+    const { resolveTarget, isTargetInRange, getBestAttackSourceTile } = MonsterTargetingHelpers;
 
     this.faceTargetImmediately = (caller, combatants) => {
         if (!caller || !caller.targetId || !combatants) return;
@@ -75,23 +79,16 @@ export function Skeleton(data, utilMethods, animationManager, overlayManager){
                 const era = caller.eras ? caller.eras[caller.eraIndex] : null;
                 // Repopulate pendingAttack if cleared by restartTurnCycle
                 if (!caller.pendingAttack) {
-                    const repopTarget = combatants[caller.targetId];
-                    if (repopTarget && !repopTarget.dead && !repopTarget.isVCT) {
+                    const repopTarget = resolveTarget(caller, combatants);
+                    if (repopTarget) {
                         caller.pendingAttack = this.chooseAttackType(caller, repopTarget);
                     }
                 }
                 if (era && !era.attacked && !caller.onGeneralAttackCooldown && !caller.attacking && caller.pendingAttack) {
-                    const target = combatants[caller.targetId];
-                    if (target && !target.dead && !target.isVCT) {
-                        const dx = Math.abs(caller.coordinates.x - target.coordinates.x);
-                        const dy = Math.abs(caller.coordinates.y - target.coordinates.y);
-                        const dist = dx + dy;
-                        const atkRange = caller.pendingAttack.range || 'close';
-                        const inRange = atkRange === 'close' ? dist === 1 : atkRange === 'medium' ? dist <= 3 : dist <= 6;
-                        if (inRange) {
-                            era.attacked = true;
-                            this.initiateAttack(caller, combatants);
-                        }
+                    const target = resolveTarget(caller, combatants);
+                    if (target && isTargetInRange(caller, target, caller.pendingAttack)) {
+                        era.attacked = true;
+                        this.initiateAttack(caller, combatants);
                     }
                 }
                 break;
@@ -107,7 +104,8 @@ export function Skeleton(data, utilMethods, animationManager, overlayManager){
     this.triggerClawAttack = async (caller, target) => {
         // Use the animation manager's canvas-based clawSwipe
         if (this.animationManager && typeof this.animationManager.clawSwipe === 'function') {
-            const sourceTileId = this.animationManager.getTileIdByCoords(caller.coordinates);
+            const sourceCoords = getBestAttackSourceTile(caller, target);
+            const sourceTileId = this.animationManager.getTileIdByCoords(sourceCoords);
             const targetTileId = this.animationManager.getTileIdByCoords(target.coordinates);
             if (sourceTileId == null || targetTileId == null) return target;
             await new Promise(resolve => {
@@ -118,7 +116,7 @@ export function Skeleton(data, utilMethods, animationManager, overlayManager){
     }
     this.initiateAttack = async (caller, combatants) => {
         if (caller.attacking) return;
-        const target = combatants[caller.targetId];
+        const target = resolveTarget(caller, combatants);
         caller.attacking = true;
         try {
         if (!target || target.dead) {
@@ -140,21 +138,7 @@ export function Skeleton(data, utilMethods, animationManager, overlayManager){
                 // trigger a generic attack animation so humans can see the icon and timing.
                 try {
                     if (target) {
-                        // Determine the best source tile for the animation (for large monsters)
-                        const allSourceCoords = (Array.isArray(caller.occupiedCoords) && caller.occupiedCoords.length > 0)
-                            ? caller.occupiedCoords
-                            : [caller.coordinates];
-
-                        // Pick the tile closest to the target
-                        let bestSource = caller.coordinates;
-                        let minDist = Infinity;
-                        allSourceCoords.forEach(c => {
-                            const d = Math.abs(c.x - target.coordinates.x) + Math.abs(c.y - target.coordinates.y);
-                            if (d < minDist) {
-                                minDist = d;
-                                bestSource = c;
-                            }
-                        });
+                        const bestSource = getBestAttackSourceTile(caller, target);
 
                         // Trigger the visual icon flash/animation
                         if (this.animationManager && typeof this.animationManager.triggerAttackAnimation === 'function') {

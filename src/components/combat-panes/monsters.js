@@ -461,10 +461,10 @@ const MonstersCombatGrid = ({
                                     className={`portrait monster-portrait
                                         ${greetingInProcess ? 'enlarged' : ''}
                                         ${battleData[monster.id]?.active ? 'active' : ''}
+                                        ${portraitHoveredId === monster.id ? 'hover-linked-target' : ''}
                                         ${battleData[monster.id]?.dead ? 'dead monsterDeadAnimation' : ''}
                                         ${battleData[monster.id]?.missed ? (battleData[monster.id]?.facing === 'right' ? 'missed-reversed' : 'missed') : ''}
                                         ${selectedMonster?.id === monster.id ? 'selected' : ''}
-                                        ${selectedFighter?.targetId === monster.id ? 'targetted' : ''}
                                         ${battleData[monster.id]?.facing === 'right' ? 'reversed' : ''}
                                         ${battleData[monster.id]?.facing === 'up' ? 'facing-up' : ''}
                                         ${battleData[monster.id]?.facing === 'down' ? 'facing-down' : ''}
@@ -481,7 +481,7 @@ const MonstersCombatGrid = ({
                                     }}
                                     style={{
                                         backgroundImage: monster.portrait ? `url(${monster.portrait})` : 'none',
-                                        filter: `saturate(${((battleData[monster.id]?.hp / monster.stats.hp) * 100) / 2}) sepia(${portraitHoveredId === monster.id ? '2' : '0'})`,
+                                        filter: `saturate(${((battleData[monster.id]?.hp / monster.stats.hp) * 100) / 2}) sepia(${portraitHoveredId === monster.id ? '2' : '0'}) ${battleData[monster.id]?.frozen ? 'hue-rotate(165deg) saturate(1.35) brightness(1.08) contrast(1.05)' : ''}`,
                                         zIndex: 1,
                                         position: 'relative',
                                         // Never apply BulgePortrait when dead — it competes with meltDownDeath
@@ -667,12 +667,12 @@ const MonstersCombatGrid = ({
                                 <div
                                     className={`portrait minion-portrait
                                             ${minion.active ? 'active' : ''}
+                                            ${portraitHoveredId === minion.id ? 'hover-linked-target' : ''}
                                             ${minion.bifurcating ? 'bifurcatingAnimation' : (minion.dead ? 'dead monsterDeadAnimation' : '')}
                                             ${minion.isBifurcateSmall ? 'bifurcate-copy' : ''}
                                             ${minion.isBifurcateCopy ? 'bifurcate-copy-spawning' : ''}
                                             ${minion.missed ? (minion.facing === 'right' ? 'missed-reversed' : 'missed') : ''}
                                             ${selectedMonster?.id === minion.id ? 'selected' : ''}
-                                            ${selectedFighter?.targetId === minion.id ? 'targetted' : ''}
                                             ${minion.facing === 'right' ? 'reversed' : ''}
                                             ${minion.facing === 'up' ? 'facing-up' : ''}
                                             ${minion.facing === 'down' ? 'facing-down' : ''}
@@ -681,7 +681,7 @@ const MonstersCombatGrid = ({
                                         }
                                     style={{
                                         backgroundImage: `url(${minion.portrait})`,
-                                        filter: `saturate(${((minion.hp / minion.stats.hp) * 100) / 2}) ${minion.portraitFilter || ''} sepia(${portraitHoveredId === minion.id ? '2' : '0'})`,
+                                        filter: `saturate(${((minion.hp / minion.stats.hp) * 100) / 2}) ${minion.portraitFilter || ''} sepia(${portraitHoveredId === minion.id ? '2' : '0'}) ${minion.frozen ? 'hue-rotate(165deg) saturate(1.35) brightness(1.08) contrast(1.05)' : ''}`,
                                         zIndex: 2, // Always below fighter portraits
                                         // Never apply BulgePortrait when dead — it competes with meltDownDeath
                                         animation: (minion.wounded && !minion.dead) ? 'BulgePortrait var(--portrait-animation-duration, 420ms) var(--portrait-animation-timing, cubic-bezier(.2,.8,.2,1))' : undefined,

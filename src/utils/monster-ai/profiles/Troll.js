@@ -4,6 +4,7 @@
 
 import { AcquireTargetMethods } from '../../shared-ai-methods/acquire-target-methods';
 import { applyAttackEffect } from '../../combat-effects';
+import { MonsterTargetingHelpers } from '../../shared-ai-methods/monster-targeting-methods';
 
 export function Troll(data, utilMethods, animationManager, overlayManager){
     this.MAX_DEPTH = data.MAX_DEPTH;
@@ -20,6 +21,8 @@ export function Troll(data, utilMethods, animationManager, overlayManager){
     this.hitsTarget = utilMethods.hitsTarget;
     this.hitsCombatant = utilMethods.hitsCombatant;
     this.chooseAttackTypeDefault = utilMethods.chooseAttackType;
+
+    const { resolveTarget, isTargetInRange, getBestAttackSourceTile } = MonsterTargetingHelpers;
 
     this.initialize = (caller) => {
         caller.behaviorSequence = 'brawler'
@@ -89,23 +92,16 @@ export function Troll(data, utilMethods, animationManager, overlayManager){
                 const era = caller.eras ? caller.eras[caller.eraIndex] : null;
                 // Repopulate pendingAttack if cleared by restartTurnCycle
                 if (!caller.pendingAttack) {
-                    const repopTarget = combatants[caller.targetId];
-                    if (repopTarget && !repopTarget.dead && !repopTarget.isVCT) {
+                    const repopTarget = resolveTarget(caller, combatants);
+                    if (repopTarget) {
                         caller.pendingAttack = this.chooseAttackType(caller, repopTarget);
                     }
                 }
                 if (era && !era.attacked && !caller.onGeneralAttackCooldown && !caller.attacking && caller.pendingAttack) {
-                    const target = combatants[caller.targetId];
-                    if (target && !target.dead && !target.isVCT) {
-                        const dx = Math.abs(caller.coordinates.x - target.coordinates.x);
-                        const dy = Math.abs(caller.coordinates.y - target.coordinates.y);
-                        const dist = dx + dy;
-                        const atkRange = caller.pendingAttack.range || 'close';
-                        const inRange = atkRange === 'close' ? dist === 1 : atkRange === 'medium' ? dist <= 3 : dist <= 6;
-                        if (inRange) {
-                            era.attacked = true;
-                            this.initiateAttack(caller, combatants);
-                        }
+                    const target = resolveTarget(caller, combatants);
+                    if (target && isTargetInRange(caller, target, caller.pendingAttack)) {
+                        era.attacked = true;
+                        this.initiateAttack(caller, combatants);
                     }
                 }
                 break;
@@ -117,7 +113,7 @@ export function Troll(data, utilMethods, animationManager, overlayManager){
 
     this.initiateAttack = async (caller, combatants) => {
         if (caller.attacking) return; // Prevent concurrent calls if already animating
-        const target = combatants[caller.targetId];
+        const target = resolveTarget(caller, combatants);
         caller.attacking = true;
 
         try {
@@ -146,21 +142,7 @@ export function Troll(data, utilMethods, animationManager, overlayManager){
             } else {
                 // Standard Physical Attacks (bite, crush, tackle, etc.)
                 try {
-                    // Determine the best source tile for the animation (for large monsters)
-                    const allSourceCoords = (Array.isArray(caller.occupiedCoords) && caller.occupiedCoords.length > 0)
-                        ? caller.occupiedCoords
-                        : [caller.coordinates];
-
-                    // Pick the tile closest to the target
-                    let bestSource = caller.coordinates;
-                    let minDist = Infinity;
-                    allSourceCoords.forEach(c => {
-                        const d = Math.abs(c.x - target.coordinates.x) + Math.abs(c.y - target.coordinates.y);
-                        if (d < minDist) {
-                            minDist = d;
-                            bestSource = c;
-                        }
-                    });
+                    const bestSource = getBestAttackSourceTile(caller, target);
 
                     // Trigger the visual icon flash/animation
                     if (this.animationManager && typeof this.animationManager.triggerAttackAnimation === 'function') {

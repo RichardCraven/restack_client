@@ -153,6 +153,28 @@ export function clearPetrifyEffect(target) {
 }
 
 /**
+ * Applies frozen to a combatant.
+ * - Sets frozen=true, frozen_eras=duration
+ * - While frozen, combatants take 50% reduced damage (except from arcane/psionic sources)
+ * @param {object} target - The combatant object
+ * @param {number} duration - Duration in eras
+ * @param {function} [broadcastDataUpdate] - Optional callback
+ */
+export function applyFrozenEffect(target, duration, broadcastDataUpdate) {
+    if (!target || target.hp <= 0) return false;
+    target.frozen = true;
+    target.frozen_eras = duration || 1;
+    if (typeof broadcastDataUpdate === 'function') broadcastDataUpdate();
+    return true;
+}
+
+export function clearFrozenEffect(target) {
+    if (!target) return;
+    target.frozen = false;
+    target.frozen_eras = 0;
+}
+
+/**
  * Centralized dispatcher for applying combat effects from attacks.
  * Handles the chance roll and routes to the specific effect helper.
  * @param {object} target - The combatant being hit
@@ -206,6 +228,11 @@ export function applyAttackEffect(target, effect, broadcastDataUpdate, isCrit) {
         case 'petrify':
             applied = applyPetrifyEffect(target, effect.duration, broadcastDataUpdate);
             appliedLabel = 'petrifies';
+            break;
+        case 'frozen':
+        case 'freeze':
+            applied = applyFrozenEffect(target, effect.duration, broadcastDataUpdate);
+            appliedLabel = 'freezes';
             break;
         default:
             console.warn(`Unknown effect type: ${type}`);

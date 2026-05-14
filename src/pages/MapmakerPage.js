@@ -37,9 +37,11 @@ import {
   updateDungeonRequest,
   updateUserRequest
 } from '../utils/api-handler';
-
 import * as images from '../utils/images'
 import BoardsPalette from './dungonBuilderViews/BoardsPalette'
+
+const CLEAR_UNIQUE_DUNGEON_INSTANCES_VALUE = '__clear_unique_dungeon_instances__';
+const UNIQUE_DUNGEON_INSTANCE_NAME_REGEX = /.+_.+_[^_]{4}$/i;
 
 const GATES = [
   { key: 'archway',              requires: '' },
@@ -169,6 +171,9 @@ class MapMakerPage extends React.Component {
       dungeonNameInput : React.createRef(),
       planeNameInput : React.createRef(),
       boardNameInput : React.createRef(),
+      showClearUniqueDungeonInstancesModal: false,
+      clearUniqueDungeonInstances: [],
+      clearUniqueDungeonInstancesLoading: false,
 
       // mainViewSelectVal : React.createRef(),
       dungeonSelectVal : React.createRef(),
@@ -421,6 +426,90 @@ class MapMakerPage extends React.Component {
     storeMeta(meta);
 
 
+  }
+  getUniqueDungeonInstances = (dungeons = []) => {
+    return (Array.isArray(dungeons) ? dungeons : [])
+      .filter((dungeon) => UNIQUE_DUNGEON_INSTANCE_NAME_REGEX.test(`${dungeon?.name || ''}`))
+      .sort((a, b) => `${a?.name || ''}`.localeCompare(`${b?.name || ''}`, undefined, { sensitivity: 'base' }));
+  }
+  openClearUniqueDungeonInstancesModal = async () => {
+    const currentLoadedDungeonName = this.state.loadedDungeon?.name || 'Dungeon Selector';
+    this.setLoadedDungeonDropdownValue(currentLoadedDungeonName);
+    this.setState({
+      showClearUniqueDungeonInstancesModal: true,
+      clearUniqueDungeonInstancesLoading: true,
+      clearUniqueDungeonInstances: []
+    });
+
+    try {
+      const val = await loadAllDungeonsRequest();
+      const dungeons = [];
+      (val?.data || []).forEach((entry) => {
+        if (!entry?.content) return;
+        try {
+          const dungeon = JSON.parse(entry.content);
+          dungeon.id = entry._id;
+          dungeons.push(dungeon);
+        } catch (e) {}
+      });
+      const uniqueDungeonInstances = this.getUniqueDungeonInstances(dungeons);
+      this.setState({
+        clearUniqueDungeonInstances: uniqueDungeonInstances,
+        clearUniqueDungeonInstancesLoading: false
+      });
+    } catch (e) {
+      this.setState({
+        clearUniqueDungeonInstances: [],
+        clearUniqueDungeonInstancesLoading: false
+      });
+    }
+  }
+  closeClearUniqueDungeonInstancesModal = () => {
+    this.setState({
+      showClearUniqueDungeonInstancesModal: false,
+      clearUniqueDungeonInstances: [],
+      clearUniqueDungeonInstancesLoading: false
+    });
+    this.setLoadedDungeonDropdownValue(this.state.loadedDungeon?.name || 'Dungeon Selector');
+  }
+  confirmClearUniqueDungeonInstances = async () => {
+    const uniqueDungeonInstances = Array.isArray(this.state.clearUniqueDungeonInstances)
+      ? this.state.clearUniqueDungeonInstances
+      : [];
+    if (uniqueDungeonInstances.length === 0) {
+      this.closeClearUniqueDungeonInstancesModal();
+      return;
+    }
+
+    const uniqueDungeonIds = uniqueDungeonInstances
+      .map((dungeon) => dungeon?.id)
+      .filter(Boolean);
+
+    const currentlyLoadedDungeonId = this.state.loadedDungeon?.id || null;
+    const currentlyLoadedDungeonWillBeDeleted = currentlyLoadedDungeonId
+      ? uniqueDungeonIds.includes(currentlyLoadedDungeonId)
+      : false;
+
+    await Promise.all(uniqueDungeonIds.map((id) => deleteDungeonRequest(id)));
+
+    if (currentlyLoadedDungeonWillBeDeleted) {
+      setEditorPreference('loadedDungeon', null);
+      const userId = sessionStorage.getItem('userId');
+      const meta = getMeta();
+      if (userId) updateUserRequest(userId, meta);
+      storeMeta(meta);
+    }
+
+    await this.loadAllDungeons();
+
+    if (currentlyLoadedDungeonWillBeDeleted) {
+      this.setState({
+        loadedDungeon: null,
+        selectedThingTitle: this.state.selectedView === 'dungeon' ? '' : this.state.selectedThingTitle
+      });
+    }
+
+    this.closeClearUniqueDungeonInstancesModal();
   }
   downloadDungeon = () => {
     const dungeon = this.state.loadedDungeon;
@@ -2612,6 +2701,10 @@ class MapMakerPage extends React.Component {
   dungeonSelectOnChange = (e) => {
     let dungeon;
     const userId = sessionStorage.getItem('userId')
+    if(e.target && e.target.value === CLEAR_UNIQUE_DUNGEON_INSTANCES_VALUE){
+      this.openClearUniqueDungeonInstancesModal();
+      return;
+    }
     if(e.target && e.target.value && e.target.value !== 'Dungeon Selector'){
       dungeon = this.state.dungeons.find(x=>x.name === e.target.value)
       this.setState({
@@ -2694,6 +2787,55 @@ class MapMakerPage extends React.Component {
             </CButton>
             <CButton color="primary" onClick={() => this.modalSaveChanges()}>Save changes</CButton>
           </CModalFooter>
+        </CModal>
+        <CModal
+          alignment="center"
+          backdrop="static"
+          visible={this.state.showClearUniqueDungeonInstancesModal}
+          onClose={() => this.closeClearUniqueDungeonInstancesModal()}
+          className="clear-unique-instances-modal"
+        >
+          <CModalHeader className="clear-unique-instances-modal__header">
+            <CModalTitle>Clear All Unique Instances</CModalTitle>
+            <button
+              type="button"
+              className="clear-unique-instances-modal__close"
+              aria-label="Close clear all unique instances popup"
+              onClick={() => this.closeClearUniqueDungeonInstancesModal()}
+            >
+              ×
+            </button>
+          </CModalHeader>
+          <CModalBody className="clear-unique-instances-modal__body">
+            <div className="main-content">
+              This will delete all individual instances of all dungeons. This is can not be undone. Proceed?
+            </div>
+            <div className="affected-instances-section">
+              <div className="affected-instances-title">Affected Instances</div>
+              <div className="affected-instances-list">
+                {this.state.clearUniqueDungeonInstancesLoading && (
+                  <div className="affected-instances-empty">Loading affected instances...</div>
+                )}
+                {!this.state.clearUniqueDungeonInstancesLoading && this.state.clearUniqueDungeonInstances.length === 0 && (
+                  <div className="affected-instances-empty">No unique dungeon instances found.</div>
+                )}
+                {!this.state.clearUniqueDungeonInstancesLoading && this.state.clearUniqueDungeonInstances.map((dungeon) => (
+                  <div key={dungeon.id} className="affected-instance-row">
+                    <div className="affected-instance-name">{dungeon.name}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="clear-unique-instances-actions">
+              <CButton
+                color="danger"
+                disabled={this.state.clearUniqueDungeonInstancesLoading || this.state.clearUniqueDungeonInstances.length === 0}
+                onClick={() => this.confirmClearUniqueDungeonInstances()}
+              >
+                Confirm
+              </CButton>
+            </div>
+          </CModalBody>
         </CModal>
         <div className="column-wrapper">
           <div className="inputs-container">

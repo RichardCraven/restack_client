@@ -87,10 +87,8 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
     hp: (typeof fighter.hp === 'number') ? fighter.hp : fighter.stats.hp,
     // starting_hp represents the max HP for the fighter (may be provided or fall back to stats.hp)
     starting_hp: (typeof fighter.starting_hp === 'number') ? fighter.starting_hp : fighter.stats.hp,
-        // Minions start with 0 energy so they must earn a full pool before their
-        // special abilities (e.g. bifurcate) can fire. Monsters and fighters start
-        // with a full pool so their openers are immediately available.
-        energy: fighter.isMinion ? 0 : 100,
+        // All units start with an empty energy reserve and build it during combat.
+        energy: 0,
         tempo: 1,
         turnCycleCount: 0,
         turnCycleStarted: false,

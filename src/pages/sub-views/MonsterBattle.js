@@ -215,8 +215,6 @@ class MonsterBattle extends React.Component {
     }
 
     componentDidMount(){
-        console.log('MonsterBattle mounted with props: ', this.props);
-
         // mark mounted so async callbacks can safely call setState
         this._isMounted = true;
         // Reset any previous group-death suppression flag and one-time guards
@@ -236,23 +234,6 @@ class MonsterBattle extends React.Component {
         this.props.combatManager.initialize();
         this.props.combatManager.connectOverlayManager(this.props.overlayManager)
         this.props.combatManager.connectAnimationManager(this.props.animationManager);
-
-        // Log computed movement-related stats for debugging (speed/dex/moveCooldown)
-        try {
-            const cm = this.props.combatManager;
-            if (cm && cm.combatants) {
-                const speeds = Object.values(cm.combatants).map(c => ({
-                    id: c.id,
-                    name: c.name,
-                    type: c.type,
-                    dex: c.stats && c.stats.dex,
-                    speed: c.stats && c.stats.speed,
-                    moveCooldown: c.moveCooldown,
-                    movesPerTurnCycle: c.movesPerTurnCycle
-                }));
-                console.log('Initial combatant movement stats:', speeds);
-            }
-        } catch (e) { console.warn('Failed to log initial combatant speeds', e); }
 
         // Wire Monk teleport callback to set teleportingFighterId
         const monkAI = this.props.combatManager.fighterAI?.roster?.monk;
@@ -381,23 +362,6 @@ class MonsterBattle extends React.Component {
             monsterPortrait: this.props.monster.portrait
         })
 
-        // Log again after initializeCombat so we capture populated combatants
-        try {
-            const cm2 = this.props.combatManager;
-            if (cm2 && cm2.combatants) {
-                const speeds2 = Object.values(cm2.combatants).map(c => ({
-                    id: c.id,
-                    name: c.name,
-                    type: c.type,
-                    dex: c.stats && c.stats.dex,
-                    speed: c.stats && c.stats.speed,
-                    moveCooldown: c.moveCooldown,
-                    movesPerTurnCycle: c.movesPerTurnCycle
-                }));
-                console.log('Initial combatant movement stats (after initializeCombat):', speeds2);
-            }
-        } catch (e) { console.warn('Failed to log post-initialize combatant speeds', e); }
-
         // Wire the MonsterBattle component instance into the AI roster so
         // fighter profiles (e.g. Wizard) can call back to update UI state
         // directly. This is a best-effort hookup; other pages (CombatSimulator)
@@ -477,14 +441,8 @@ class MonsterBattle extends React.Component {
         // fireballs etc. can't appear at the start of the next combat session.
         try { if (this.props && this.props.animationManager && typeof this.props.animationManager.reset === 'function') this.props.animationManager.reset(); } catch(e){}
         // Clear any timers/intervals this component created
-        try { if (Array.isArray(this._timers)) { this._timers.forEach(t => clearTimeout(t)); this._timers = []; console.log('[MonsterBattle] Cleared this._timers'); } } catch(e){}
-        try { if (Array.isArray(this._intervals)) { this._intervals.forEach(i => clearInterval(i)); this._intervals = []; console.log('[MonsterBattle] Cleared this._intervals'); } } catch(e){}
-        // Deep diagnostic: log state of combatManager and timers at unmount
-        try {
-            if (this.props && this.props.combatManager) {
-                console.log('[MonsterBattle] componentWillUnmount: combatManager state:', JSON.parse(JSON.stringify(this.props.combatManager.combatants)));
-            }
-        } catch (e) { console.warn('[MonsterBattle] componentWillUnmount: failed to log combatManager state', e); }
+        try { if (Array.isArray(this._timers)) { this._timers.forEach(t => clearTimeout(t)); this._timers = []; } } catch(e){}
+        try { if (Array.isArray(this._intervals)) { this._intervals.forEach(i => clearInterval(i)); this._intervals = []; } } catch(e){}
     }
     monster = () => {
         // console.log('monster: ', this.state.battleData[this.props.monster.id]);
@@ -750,9 +708,15 @@ class MonsterBattle extends React.Component {
             ? this.props.combatManager.getCombatLog()
             : [];
 
+        const selectedFighterId = this.state.selectedFighter?.id;
+        const nextSelectedFighter = selectedFighterId
+            ? clonedBattleData[selectedFighterId] || null
+            : null;
+
         this.setState({
             battleData: clonedBattleData,
-            combatLog
+            combatLog,
+            ...(selectedFighterId ? { selectedFighter: nextSelectedFighter } : {})
         }, () => {
             // If nothing is selected yet, pick the default top-most / left-most crew member
             if (!this.state.selectedFighter) {
@@ -1720,12 +1684,11 @@ class MonsterBattle extends React.Component {
     }
 
     render(){
-                   
-        // Determine the currently selected fighter's target id from the authoritative battleData
-        const selectedTargetId = this.state.selectedFighter
-            ? (this.state.selectedFighter.targetId ?? this.state.battleData[this.state.selectedFighter.id]?.targetId)
+        const liveSelectedFighter = this.state.selectedFighter
+            ? (this.state.battleData[this.state.selectedFighter.id] || this.state.selectedFighter)
             : null;
-
+        const activeTargetId = liveSelectedFighter?.targetId || null;
+                   
         return (
             <div className={`mb-board ${this.state.showCrosshair ? 'show-crosshair' : ''}`}>
                 {/* Game speed readout in upper right */}
@@ -1787,7 +1750,7 @@ class MonsterBattle extends React.Component {
                             }
                             {this.state.foodGained > 0 &&
                             <div className="experience-container">
-                                <span className="summary-icon" role="img" aria-label="meat">🍖</span>
+                                <span className="summary-icon summary-icon-emoji" role="img" aria-label="meat">🍖</span>
                                 Your crew foraged {this.state.foodGained} food
                             </div>
                             }
@@ -1989,6 +1952,7 @@ class MonsterBattle extends React.Component {
                         monsterData={this.monster()}
                         combatManager={this.props.combatManager}
                         selectedMonster={this.state.selectedMonster}
+                        portraitHoveredId={this.state.portraitHoveredId}
                         // monsterFacingUp={this.monsterFacingUp}
                         // monsterFacingDown={this.monsterFacingDown}
                         portraitHovered={this.portraitHovered}
@@ -2040,17 +2004,29 @@ class MonsterBattle extends React.Component {
                                         const group = grouped[name];
                                         const unit = group[0];
                                         const count = group.length;
+                                        const iconUrl = unit && unit.icon && typeof unit.icon === 'string'
+                                            ? ((unit.icon.includes('/') || unit.icon.startsWith('http') || unit.icon.startsWith('data:'))
+                                                ? unit.icon
+                                                : images[unit.icon])
+                                            : null;
+                                        const cooldownPct = typeof unit?.cooldown_position === 'number' ? unit.cooldown_position : null;
                                         return (
                                             <div key={name} className='interaction-tile-wrapper' style={{position: 'relative'}}>
                                                 <div
                                                     className={`interaction-tile consumable`}
-                                                    style={{backgroundImage: `url(${images[unit.icon]}), radial-gradient(white 40%, black 80%)`, cursor: 'pointer'}}
+                                                    style={{
+                                                        backgroundImage: iconUrl ? `url('${iconUrl}')` : 'none',
+                                                        backgroundColor: iconUrl ? 'transparent' : 'whitesmoke',
+                                                        cursor: 'pointer'
+                                                    }}
                                                     onClick={() => this.combatInventoryTileClicked(unit)}
                                                     onMouseEnter={() => this.inventoryTileHovered(unit.name)}
                                                     onMouseLeave={() => this.inventoryTileHovered(null)}
                                                 >
                                                 </div>
-                                                <div className="interaction-tile-overlay" style={{width: `${unit.cooldown_position}%`, transition: unit.cooldown_position === 0 ? '0s' : '0.2s'}}></div>
+                                                {cooldownPct !== null && (
+                                                    <div className="interaction-tile-overlay" style={{width: `${cooldownPct}%`, transition: cooldownPct === 0 ? '0s' : '0.2s'}}></div>
+                                                )}
                                                 {count > 1 && (
                                                     <div className="stack-badge">{this.romanNumeral(count)}</div>
                                                 )}
@@ -2097,15 +2073,24 @@ class MonsterBattle extends React.Component {
                                     const specialBackgroundImage = specialIcon
                                         ? `${cssUrl(specialIcon)}, radial-gradient(white 40%, black 80%)`
                                         : 'radial-gradient(white 40%, black 80%)';
+                                    const specialCooldownPosition = typeof normalizedSpecial.cooldown_position === 'number'
+                                        ? normalizedSpecial.cooldown_position
+                                        : 100;
+                                    const specialCooldownRemaining = Math.max(0, Math.min(100, 100 - specialCooldownPosition));
                                     return normalizedSpecial && <div key={i} className='interaction-tile-wrapper'>
                                                 <div 
                                                 style={{backgroundImage: specialBackgroundImage, cursor: 'pointer'}} 
-                                                className={`interaction-tile special ${normalizedSpecial.selected ? 'selected' : ''}`}
+                                                className={`interaction-tile special ${specialCooldownPosition === 100 ? 'available' : ''} ${normalizedSpecial.selected ? 'selected' : ''}`}
                                                 onClick={() => this.specialTileClicked(normalizedSpecial)} 
                                                 onMouseEnter={() => this.specialTileHovered(normalizedSpecial)} 
                                                 onMouseLeave={() => this.specialTileHovered(null)}>
                                                 </div>
-                                                <div className="interaction-tile-overlay" style={{width: `${normalizedSpecial.cooldown_position}%`, transition: normalizedSpecial.cooldown_position === 0 ? '0s' : '0.2s', backgroundColor: normalizedSpecial.cooldown_position === 100 && this.state.selectedFighter?.energy >= 100 ? 'green' : '#c2bd0f'}}></div>
+                                                {specialCooldownRemaining > 0 && (
+                                                    <div
+                                                        className="interaction-tile-overlay radial"
+                                                        style={{ '--cooldown-remaining': specialCooldownRemaining }}
+                                                    ></div>
+                                                )}
                                             </div>
                                 })}
                             </div>
@@ -2171,11 +2156,17 @@ class MonsterBattle extends React.Component {
                                             ? displayAttack.cooldown_position
                                             : 100;
                                         const cooldownRemaining = Math.max(0, Math.min(100, 100 - cooldownPosition));
+                                        const normalizedAttackName = String(displayAttack.name || '').replaceAll('_', ' ').trim().toLowerCase();
+                                        const isAxeThrowTile = normalizedAttackName === 'axe throw';
 
                                         return <div key={groupKey} className='interaction-tile-wrapper'>
                                                     <div 
-                                                    className={`interaction-tile ${cooldownPosition === 100 ? 'available' : ''}`} 
-                                                    style={{backgroundImage: "url(" + displayAttack.icon + ")", cursor: this.state.showCrosshair ? 'crosshair' : (cooldownPosition === 100 ? 'pointer' : '')}} 
+                                                    className={`interaction-tile ${cooldownPosition === 100 ? 'available' : ''} ${isAxeThrowTile ? 'attack-axe-throw' : ''}`} 
+                                                    style={{
+                                                        backgroundImage: "url(" + displayAttack.icon + ")",
+                                                        '--attack-icon-url': "url(" + displayAttack.icon + ")",
+                                                        cursor: this.state.showCrosshair ? 'crosshair' : (cooldownPosition === 100 ? 'pointer' : '')
+                                                    }} 
                                                     onClick={() => this.attackTileClicked(displayAttack)} 
                                                     onMouseEnter={() => this.attackTileHovered(displayAttack.name)} 
                                                     onMouseLeave={() => this.attackTileHovered(null)}
@@ -2184,7 +2175,7 @@ class MonsterBattle extends React.Component {
                                                     {cooldownRemaining > 0 && (
                                                         <div
                                                             className="interaction-tile-overlay radial"
-                                                            style={{ '--cooldown-remaining': `${cooldownRemaining}%` }}
+                                                            style={{ '--cooldown-remaining': cooldownRemaining }}
                                                         ></div>
                                                     )}
                                                     {group.length > 1 && <div className="stack-badge">{this.romanNumeral(group.length)}</div>}
@@ -2201,7 +2192,7 @@ class MonsterBattle extends React.Component {
                                     return <div key={a.id} className='interaction-tile-wrapper'>
                                                 <div 
                                                     style={{backgroundImage: "url(" + a.portrait + ")", cursor: this.state.showCrosshair ? 'crosshair' : ''}} 
-                                                    className={`interaction-tile target ${selectedTargetId === a.id ? 'targetted' : ''}`} 
+                                                    className={`interaction-tile target ${activeTargetId === a.id ? 'active-target' : ''} ${this.state.portraitHoveredId === a.id ? 'hover-linked-target' : ''}`} 
                                                     onClick={() => this.targetTileClicked(a)} 
                                                     onMouseEnter={() => this.targetTileHovered(a)} 
                                                     onMouseLeave={() => this.targetTileHovered(null)}>
@@ -2213,7 +2204,7 @@ class MonsterBattle extends React.Component {
                                 return <div 
                                     key={a.id}
                                     style={{backgroundImage: "url(" + a.portrait + ")", cursor: this.state.showCrosshair ? 'crosshair' : ''}} 
-                                    className={`interaction-tile target ${selectedTargetId === a.id ? 'targetted' : ''}`} 
+                                    className={`interaction-tile target ${activeTargetId === a.id ? 'active-target' : ''} ${this.state.portraitHoveredId === a.id ? 'hover-linked-target' : ''}`} 
                                     onClick={() => this.targetTileClicked(a)} 
                                     onMouseEnter={() => this.targetTileHovered(a)} 
                                     onMouseLeave={() => this.targetTileHovered(null)}

@@ -749,7 +749,6 @@ export function AnimationManager(){
 
 
     this.initialize = (MAX_DEPTH, MAX_ROWS) => {
-            console.log('[AnimationManager] initialize called:', { MAX_DEPTH, MAX_ROWS, canvasAnimations: this.canvasAnimations });
         this.MAX_DEPTH = MAX_DEPTH;
         // Only clear canvasAnimations if a full session reset is intended.
         // this.canvasAnimations = [];
@@ -780,7 +779,6 @@ export function AnimationManager(){
     // stale canvas animations (missiles, fireballs, etc.) can't bleed into the
     // next session via in-flight setTimeout cleanup callbacks.
     this.reset = () => {
-            console.log('[AnimationManager] reset called, clearing canvasAnimations:', { canvasAnimations: this.canvasAnimations });
         // Full session reset: clear all canvas animations
         this.canvasAnimations = [];
         // Clear all tile animation state too so tile-based effects don't linger

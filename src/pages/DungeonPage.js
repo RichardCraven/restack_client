@@ -636,6 +636,15 @@ class DungeonPage extends React.Component {
         // meta.crew[0].stats.hp = 1000;
         // remove this after debugging ^
 
+        // Restore persisted combat speed for dungeon battles.
+        if (meta && this.props.combatManager && INTERVALS.includes(meta.combatSpeed)) {
+            if (typeof this.props.combatManager.updateAllFightIntervals === 'function') {
+                this.props.combatManager.updateAllFightIntervals(meta.combatSpeed);
+            } else {
+                this.props.combatManager.FIGHT_INTERVAL = meta.combatSpeed;
+            }
+        }
+
         // Initialize crew-level resource stats if not yet set
         if (meta) {
             let metaDirty = false;
@@ -1081,25 +1090,33 @@ class DungeonPage extends React.Component {
             // detect board-edge moves and fall back to immediate boardManager methods
             if (direction === 'up' && curCoords[0] === 15) {
                 bm.moveUp();
-                this.setState({ tiles: [...bm.tiles], overlayTiles: bm.overlayTiles });
+                this.setState({ tiles: [...bm.tiles], overlayTiles: bm.overlayTiles }, () => {
+                    try { this.updateFloatingPlayerPosition(bm.playerTile.location); } catch (e) {}
+                });
                 this.recordBreadcrumb();
                 return;
             }
             if (direction === 'down' && curCoords[0] === 29) {
                 bm.moveDown();
-                this.setState({ tiles: [...bm.tiles], overlayTiles: bm.overlayTiles });
+                this.setState({ tiles: [...bm.tiles], overlayTiles: bm.overlayTiles }, () => {
+                    try { this.updateFloatingPlayerPosition(bm.playerTile.location); } catch (e) {}
+                });
                 this.recordBreadcrumb();
                 return;
             }
             if (direction === 'left' && curCoords[1] === 15) {
                 bm.moveLeft();
-                this.setState({ tiles: [...bm.tiles], overlayTiles: bm.overlayTiles });
+                this.setState({ tiles: [...bm.tiles], overlayTiles: bm.overlayTiles }, () => {
+                    try { this.updateFloatingPlayerPosition(bm.playerTile.location); } catch (e) {}
+                });
                 this.recordBreadcrumb();
                 return;
             }
             if (direction === 'right' && curCoords[1] === 29) {
                 bm.moveRight();
-                this.setState({ tiles: [...bm.tiles], overlayTiles: bm.overlayTiles });
+                this.setState({ tiles: [...bm.tiles], overlayTiles: bm.overlayTiles }, () => {
+                    try { this.updateFloatingPlayerPosition(bm.playerTile.location); } catch (e) {}
+                });
                 this.recordBreadcrumb();
                 return;
             }
@@ -2641,7 +2658,6 @@ class DungeonPage extends React.Component {
     }
     handleClick = (tile) => {
         // nothing
-        console.log('tile: ', tile);
     }
     handleOverlayClick = (tile, event) => {
         if(!this.state.minimapPlaceMapMarkerStarted) return
@@ -3176,6 +3192,14 @@ class DungeonPage extends React.Component {
                         indicators: newIndicators
                     }
                 }
+            }, () => {
+                // Match loadExistingDungeon behavior: position floating avatar after
+                // first-load tiles are mounted so spawn-on-portal is visible immediately.
+                try {
+                    this.updateFloatingPlayerPosition(this.props.boardManager.playerTile.location);
+                } catch (e) {
+                    console.warn('Failed to position floating player on first dungeon load', e);
+                }
             })
             const firstCrewMember = this.props.crewManager.crew[0];
             this.handleMemberClick({data:firstCrewMember})
@@ -3507,7 +3531,6 @@ class DungeonPage extends React.Component {
     }
     battleOver = (result) => {
         const monsterLabel = this.state.monster ? (this.state.monster.name || this.state.monster.type || 'unknown monster') : 'unknown monster';
-        console.log('battle over result: ', result, '| monster:', monsterLabel);
         if(result === 'win'){
             // Suppress any lingering battle callbacks from overwriting HP/dead after win
             this._suppressFighterDeadHpUpdates = true;

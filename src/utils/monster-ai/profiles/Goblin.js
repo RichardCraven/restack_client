@@ -3,6 +3,7 @@
 //    fallbacks, and attack-in-processMove are all mandatory.
 
 import { AcquireTargetMethods } from '../../shared-ai-methods/acquire-target-methods';
+import { MonsterTargetingHelpers } from '../../shared-ai-methods/monster-targeting-methods';
 
 export function Goblin(data, utilMethods, animationManager, overlayManager){
     this.MAX_DEPTH = data.MAX_DEPTH;
@@ -23,6 +24,8 @@ export function Goblin(data, utilMethods, animationManager, overlayManager){
     this.stealItem = utilMethods.stealItem;
     this.escapeFromCombat = utilMethods.escapeFromCombat;
 
+    const { resolveTarget, getDistanceToTarget, isTargetInRange, getBestAttackSourceTile } = MonsterTargetingHelpers;
+
     this.initialize = (caller) => {
         caller.behaviorSequence = 'brawler';
     }
@@ -41,11 +44,9 @@ export function Goblin(data, utilMethods, animationManager, overlayManager){
 
     // Returns true when the goblin is orthogonally adjacent to its target.
     this._isAdjacentToTarget = (caller, combatants) => {
-        const target = Object.values(combatants).find(e => e.id === caller.targetId);
-        if (!target || target.isVCT) return false;
-        const dx = Math.abs(caller.coordinates.x - target.coordinates.x);
-        const dy = Math.abs(caller.coordinates.y - target.coordinates.y);
-        return (dx === 1 && dy === 0) || (dx === 0 && dy === 1);
+        const target = resolveTarget(caller, combatants);
+        if (!target) return false;
+        return getDistanceToTarget(caller, target) === 1;
     }
 
     // Steal a random non-equipped item from the communal inventory.
@@ -121,9 +122,9 @@ export function Goblin(data, utilMethods, animationManager, overlayManager){
                 }
 
                 // Sticky fingers check: per-era 15% chance when adjacent, energy available, off cooldown
-                const target = Object.values(combatants).find(e => e.id === caller.targetId);
+                const target = resolveTarget(caller, combatants);
                 const isAdj = this._isAdjacentToTarget(caller, combatants);
-                if (target && !target.dead && !target.isVCT && isAdj) {
+                if (target && isAdj) {
                     const allSpecials = caller.specials;
                     const sf = Array.isArray(allSpecials)
                         ? allSpecials.find(s => s && (s.name === 'sticky_fingers' || s.name === 'sticky fingers'))
@@ -140,21 +141,16 @@ export function Goblin(data, utilMethods, animationManager, overlayManager){
                 // Attack trigger
                 {
                     const era = caller.eras ? caller.eras[caller.eraIndex] : null;
-                    const attackTarget = Object.values(combatants).find(e => e.id === caller.targetId);
+                    const attackTarget = resolveTarget(caller, combatants);
                     // restartTurnCycle clears pendingAttack at the start of every turn cycle.
                     // acquireTarget is only called in era 0 when targetId is null, so pendingAttack
                     // would stay null forever after the first cycle. Repopulate it here.
-                    if (!caller.pendingAttack && attackTarget && !attackTarget.dead && !attackTarget.isVCT) {
+                    if (!caller.pendingAttack && attackTarget) {
                         caller.pendingAttack = this.chooseAttackType(caller, attackTarget);
                     }
                     if (era && !era.attacked && !caller.onGeneralAttackCooldown && !caller.attacking &&
-                            caller.pendingAttack && attackTarget && !attackTarget.dead && !attackTarget.isVCT) {
-                        const dx = Math.abs(caller.coordinates.x - attackTarget.coordinates.x);
-                        const dy = Math.abs(caller.coordinates.y - attackTarget.coordinates.y);
-                        const dist = dx + dy;
-                        const atkRange = caller.pendingAttack.range || 'close';
-                        const inRange = atkRange === 'close' ? dist === 1 : atkRange === 'medium' ? dist <= 3 : dist <= 6;
-                        if (inRange) {
+                            caller.pendingAttack && attackTarget) {
+                        if (isTargetInRange(caller, attackTarget, caller.pendingAttack)) {
                             era.attacked = true;
                             this.initiateAttack(caller, combatants);
                         }
@@ -205,7 +201,8 @@ export function Goblin(data, utilMethods, animationManager, overlayManager){
 
     this.triggerClawAttack = async (caller, target) => {
         if (this.animationManager && typeof this.animationManager.clawSwipe === 'function') {
-            const sourceTileId = this.animationManager.getTileIdByCoords(caller.coordinates);
+            const sourceCoords = getBestAttackSourceTile(caller, target);
+            const sourceTileId = this.animationManager.getTileIdByCoords(sourceCoords);
             const targetTileId = this.animationManager.getTileIdByCoords(target.coordinates);
             if (sourceTileId == null || targetTileId == null) return target;
             await new Promise(resolve => {
@@ -218,17 +215,15 @@ export function Goblin(data, utilMethods, animationManager, overlayManager){
     this.initiateAttack = async (caller, combatants) => {
         if (caller.behaviorSequence === 'flee') return;
 
-        const target = Object.values(combatants).find(e => e.id === caller.targetId);
-        if (!target || target.dead || target.isVCT) return;
+        const target = resolveTarget(caller, combatants);
+        if (!target) return;
 
         if (!caller.pendingAttack) {
             caller.pendingAttack = this.chooseAttackType(caller, target);
         }
         if (!caller.pendingAttack) return;
 
-        const dx = Math.abs(caller.coordinates.x - target.coordinates.x);
-        const dy = Math.abs(caller.coordinates.y - target.coordinates.y);
-        const inRange = (dx === 1 && dy === 0) || (dx === 0 && dy === 1);
+        const inRange = isTargetInRange(caller, target, caller.pendingAttack);
         if (!inRange) return;
 
         caller.attacking = true;
@@ -249,7 +244,7 @@ export function Goblin(data, utilMethods, animationManager, overlayManager){
                     try {
                         if (this.animationManager && typeof this.animationManager.triggerAttackAnimation === 'function') {
                             await this.animationManager.triggerAttackAnimation({
-                                coordinates: caller.coordinates,
+                                coordinates: getBestAttackSourceTile(caller, target),
                                 facing: caller.facing,
                                 icon: caller.pendingAttack?.icon,
                                 type: caller.pendingAttack?.name || 'bite',

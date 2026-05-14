@@ -92,7 +92,7 @@ const specialsMatrix = {
         type: 'special',
         icon: images['infantry_shield'],
         cooldown: 15,       // 15-era recharge after expiry
-        duration: 2,        // wall lasts 6 eras
+        duration: 6,        // wall lasts 6 eras
         energy_cost: 30,    // costs 30% energy to erect
         effect: ['special'],
         special_instructions: 'Erect a 5-tile vertical barrier at the Soldier\'s front edge. Blocks all unit movement across the line for 4 eras. Soldier cannot move or attack while active.',
@@ -135,7 +135,7 @@ const specialsMatrix = {
         cooldown: 18,
         damage: 5,
         energy_cost: 80,
-        effect: ['damage_single_target', 'special'],
+        effect: { type: 'frozen', chance: 40, duration: 3 },
         special_instructions: 'each enemy has a 40% chance to be frozen',
         level: 1
     },

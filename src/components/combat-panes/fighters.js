@@ -152,6 +152,17 @@ export default function FightersCombatGrid(props) {
                     // only mark reversed when explicitly facing left; support up/down classes separately
                     const facingClass = details?.facing === 'left' ? 'reversed' : '';
                     const verticalFacingClass = details?.facing === 'up' ? 'facing-up' : (details?.facing === 'down' ? 'facing-down' : '');
+                    const eraIndex = (typeof details?.eraIndex === 'number' && details.eraIndex >= 0)
+                        ? details.eraIndex
+                        : ((typeof fighter?.eraIndex === 'number' && fighter.eraIndex >= 0) ? fighter.eraIndex : 0);
+                    const eraDotCount = Math.max(1, Math.min(5, eraIndex + 1));
+                    const eraRingOffsets = [
+                        { x: 50, y: 10 },
+                        { x: 83, y: 34 },
+                        { x: 70, y: 74 },
+                        { x: 30, y: 74 },
+                        { x: 17, y: 34 }
+                    ];
                     const xPos = props.battleData[fighter.id]?.coordinates.x * 100 + (SHOW_TILE_BORDERS ? props.battleData[fighter.id]?.coordinates.x * 2 : 0);
                     const yPos = props.battleData[fighter.id]?.coordinates.y * TILE_SIZE + (SHOW_TILE_BORDERS ? props.battleData[fighter.id]?.coordinates.y * 2 : 0);
                     return  <div key={fighter.id}  className={`lane-wrapper ${isTeleporting ? ' teleporting' : ''}`}
@@ -170,6 +181,24 @@ export default function FightersCombatGrid(props) {
                                     }}
                                     ref={el => { portraitWrapperRefs.current[fighter.id] = el }}
                                     >
+                                        {!details?.dead && (
+                                            <div className="fighter-color-indicator" style={{ zIndex: 310 }}>
+                                                <div
+                                                    className="fighter-color-dot"
+                                                    style={{ backgroundColor: details?.color || fighter.color || '#ffffff' }}
+                                                >
+                                                    <div className="fighter-color-era-ring">
+                                                        {eraRingOffsets.map((offset, idx) => (
+                                                            <span
+                                                                key={`era-dot-${fighter.id}-${idx}`}
+                                                                className={`fighter-color-era-dot ${idx < eraDotCount ? 'active' : ''}`}
+                                                                style={{ left: `${offset.x}%`, top: `${offset.y}%` }}
+                                                            />
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
                                         <div 
                                         className={
                                             [
@@ -183,7 +212,6 @@ export default function FightersCombatGrid(props) {
                                                 details?.rocked ? 'rocked' : '',
                                                 fighter.isLeader ? 'leader-portrait' : '',
                                                 details?.dead ? 'dead fighterDeadAnimation' : '',
-                                                (props.selectedFighter?.targetId === fighter.id || props.selectedMonster?.targetId === fighter.id) && !details?.dead ? 'targetted' : '',
                                                 details?.active ? 'active' : '',
                                                 facingClass,
                                                 verticalFacingClass,
@@ -197,6 +225,7 @@ export default function FightersCombatGrid(props) {
                                                 details?.drained ? 'drained' : '',
                                                 details?.regenerating ? 'regenerating' : '',
                                                 details?.bleed ? 'bleeding' : '',
+                                                details?.frozen ? 'frozen' : '',
                                             ].filter(Boolean).join(' ')
                                         }
                                         style={{
@@ -205,6 +234,7 @@ export default function FightersCombatGrid(props) {
                                             filter: [
                                                 details?.chargingUpActive ? "url('#ripple-effect')" : null,
                                                 `saturate(${((details?.hp / fighter.stats.hp) * 100) / 2}) sepia(${props.portraitHoveredId === fighter.id ? '2' : '0'})`,
+                                                details?.frozen ? 'hue-rotate(165deg) saturate(1.35) brightness(1.08) contrast(1.05)' : '',
                                                 (details?.berserkerActive && details?.feared && !details?.stunned) ? 'brightness(1.18)' : ''
                                             ].filter(Boolean).join(' '),
                                             zIndex: 300,
@@ -234,7 +264,7 @@ export default function FightersCombatGrid(props) {
                                             };
                                             return <Overlay key={i} animationType={overlay.type} data={overlayData} />;
                                         })}
-                                        <div className={`portrait-overlay${details?.drained ? ' drained' : ''}`} >
+                                        <div className={`portrait-overlay${details?.drained ? ' drained' : ''}${details?.frozen ? ' frozen' : ''}`} >
                                             <div className="damage-indicator-container">
                                                 {props.getFighterDetails(fighter)?.damageIndicators.map((e,i)=>{
                                                     const isStatDebuff = !e.isCrit && !e.isMiss && typeof e.value === 'string';

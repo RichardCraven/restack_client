@@ -2,6 +2,8 @@
 //    section at the top of CHANGELOG.md — pendingAttack guard, attacking flag, resolve(null)
 //    fallbacks, and attack-in-processMove are all mandatory.
 
+import { MonsterTargetingHelpers } from '../../shared-ai-methods/monster-targeting-methods';
+
 export function Sphinx(data, utilMethods, animationManager, overlayManager){
     this.MAX_DEPTH = data.MAX_DEPTH;
     this.MAX_LANES = data.MAX_LANES;
@@ -19,6 +21,8 @@ export function Sphinx(data, utilMethods, animationManager, overlayManager){
     this.hitsTarget = utilMethods.hitsTarget;
     this.hitsCombatant = utilMethods.hitsCombatant;
     this.chooseAttackType = utilMethods.chooseAttackType
+
+    const { resolveTarget, getBestAttackSourceTile } = MonsterTargetingHelpers;
 
     this.initialize = (caller) => {
         console.log('SPHINX initializing')
@@ -203,12 +207,14 @@ export function Sphinx(data, utilMethods, animationManager, overlayManager){
             }
         })
     }
-    this.triggerClawAttack = (callerCoords, targetCoords) => {
+    this.triggerClawAttack = (caller, target) => {
+        const sourceCoords = getBestAttackSourceTile(caller, target);
+        const targetCoords = target.coordinates;
         const targetTileId = this.animationManager.getTileIdByCoords(targetCoords);
-        const sourceTileId = this.animationManager.getTileIdByCoords(callerCoords);
-        const facing = callerCoords.x < targetCoords.x ? 'right' :
-                       callerCoords.x > targetCoords.x ? 'left' :
-                       callerCoords.y < targetCoords.y ? 'down' : 'up';
+        const sourceTileId = this.animationManager.getTileIdByCoords(sourceCoords);
+        const facing = sourceCoords.x < targetCoords.x ? 'right' :
+                       sourceCoords.x > targetCoords.x ? 'left' :
+                       sourceCoords.y < targetCoords.y ? 'down' : 'up';
         return new Promise((resolve) => {
             if (sourceTileId !== null) {
                 this.animationManager.clawSwipe(targetTileId, sourceTileId, facing, resolve);
@@ -217,8 +223,8 @@ export function Sphinx(data, utilMethods, animationManager, overlayManager){
     }
     this.initiateAttack = async (caller, combatants) => {
         // caller.attacking = true;
-        const target = combatants[caller.targetId];
-        if (!target || target.dead || target.isVCT) return;
+        const target = resolveTarget(caller, combatants);
+        if (!target) return;
         const distanceToTarget = data.methods.getDistanceToTarget(caller, target), // eslint-disable-line no-unused-vars
         laneDiff = data.methods.getLaneDifferenceToTarget(caller, target);
 
@@ -243,7 +249,7 @@ export function Sphinx(data, utilMethods, animationManager, overlayManager){
                 }
             break;
             case 'claws':
-                combatantHit = await this.triggerClawAttack(caller.coordinates, target.coordinates)
+                combatantHit = await this.triggerClawAttack(caller, target)
                 if(combatantHit){
                     const supplementalData = {increasedCritChance: true}
                     this.hitsCombatant(caller, combatantHit, supplementalData);

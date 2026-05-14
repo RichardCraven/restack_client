@@ -146,16 +146,13 @@ export function Barbarian(data, utilMethods, animationManager) {
 
     this.shouldUseWhirlwind = (caller, combatants) => {
         const ww = caller.specials && caller.specials.find(s => s && s.name === 'whirlwind');
-        console.log('caller.specials',caller.specials ,'ww', ww);
         if (!ww || ww.cooldown_position !== 100 || caller.whirlwindActive) return false;
         const energy = typeof caller.energy === 'number' ? caller.energy : 0;
-        console.log('energy: ', energy , ' adjacentEnemies: ', this.getAdjacentEnemies(caller, combatants).length);
         if (energy < (ww.energy_cost ?? 50)) return false;
         return this.getAdjacentEnemies(caller, combatants).length >= 2;
     }
 
     this.triggerWhirlwind = async (caller, combatants) => {
-        console.log('--------------------TRIGGER WHIRLWIND');
         const ww = caller.specials && caller.specials.find(s => s && s.name === 'whirlwind');
         if (!ww) return;
 
@@ -291,11 +288,8 @@ export function Barbarian(data, utilMethods, animationManager) {
             console.log(`[Barbarian] shouldUseBerserker: special not ready — cooldown_position=${spec.cooldown_position}`);
             return false;
         }
-        const energy = typeof caller.energy === 'number' ? caller.energy : 100;
-        if (energy < (spec.energy_cost ?? 60)) {
-            console.log(`[Barbarian] shouldUseBerserker: not enough energy — energy=${energy}`);
-            return false;
-        }
+        const energy = typeof caller.energy === 'number' ? caller.energy : 0;
+        if (energy < (spec.energy_cost ?? 60)) return false;
         const liveEnemies = Object.values(combatants).filter(e => !e.dead && (e.isMonster || e.isMinion));
         console.log(`[Barbarian] shouldUseBerserker: liveEnemies=${liveEnemies.length}, need >2`);
         return liveEnemies.length > 2;
@@ -341,7 +335,7 @@ export function Barbarian(data, utilMethods, animationManager) {
         caller.berserkerChecked = true;
 
         // Energy cost
-        caller.energy = Math.max(0, (typeof caller.energy === 'number' ? caller.energy : 100) - (spec.energy_cost ?? 60));
+        caller.energy = Math.max(0, (typeof caller.energy === 'number' ? caller.energy : 0) - (spec.energy_cost ?? 60));
 
         // Store base values for restoration on expiry
         caller._berserkerBaseMoveCooldown      = caller.moveCooldown;
@@ -351,7 +345,7 @@ export function Barbarian(data, utilMethods, animationManager) {
         // Apply speed buffs
         caller.moveCooldown      = caller.moveCooldown / 2;
         caller.movesPerTurnCycle = caller.movesPerTurnCycle * 2;
-        caller.attacks.forEach(a => { a.cooldown = Math.max(0.5, a.cooldown / 2); });
+        caller.attacks.forEach(a => { a.cooldown = Math.max(0.25, a.cooldown / 2); });
 
         // Speed up the turn-cycle tick itself so tempo advances at 2× rate.
         // setFightInterval replaces the current interval with a new one at the
@@ -455,7 +449,6 @@ export function Barbarian(data, utilMethods, animationManager) {
         switch (caller.behaviorSequence) {
             case 'brawler': {
                 // ── Auto-trigger berserker at start of combat (era 0, first tick) ─
-                console.log(`[Barbarian] processMove — eraIndex=${caller.eraIndex}, berserkerChecked=${caller.berserkerChecked}, berserkerActive=${caller.berserkerActive}`);
                 if (this.shouldUseBerserker(caller, combatants)) {
                     this.triggerBerserker(caller, combatants);
                     // triggerBerserker calls restartTurnCycle — return so the new
@@ -465,7 +458,6 @@ export function Barbarian(data, utilMethods, animationManager) {
 
                 // Check whirlwind in each behavior era.
                 const tryWhirlwindForEra = () => {
-                    console.log('**************************TRY WHIRLWIND');
                     if (!this.shouldUseWhirlwind(caller, combatants)) return false;
                     this.triggerWhirlwind(caller, combatants);
                     return true;

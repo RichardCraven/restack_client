@@ -458,7 +458,7 @@ export function CrewManager(){
             attacks: ['meditate', 'heal'],
             passives: ["owls_insight"],
             weaknesses: ['fire', 'electricity', 'ice', 'blood_magic', 'crushing'],
-            description: "Loryastes is the headmaster of Citadel library, chronicled the histories of three monarchies, and a pupil of The Great Scribe",
+            description: "Loryastes is the headmaster of Citadel library, chronicler of the histories of three monarchies, and a pupil of The Great Scribe",
             specialActions: [],
             actionsTrayExpanded: false,
             actionMenuTypeExpanded: false

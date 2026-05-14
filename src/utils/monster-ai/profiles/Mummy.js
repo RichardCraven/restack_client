@@ -2,6 +2,8 @@
 //    section at the top of CHANGELOG.md — pendingAttack guard, attacking flag, resolve(null)
 //    fallbacks, and attack-in-processMove are all mandatory.
 
+import { MonsterTargetingHelpers } from '../../shared-ai-methods/monster-targeting-methods';
+
 export function Mummy(data, utilMethods, animationManager, overlayManager) {
     this.MAX_DEPTH = data.MAX_DEPTH;
     this.MAX_LANES = data.MAX_LANES;
@@ -20,20 +22,7 @@ export function Mummy(data, utilMethods, animationManager, overlayManager) {
     this.getVct = utilMethods.getVct;
     this.triggerBoardEvent = utilMethods.triggerBoardEvent;
 
-    const getOccupiedTiles = (caller) => {
-        if (Array.isArray(caller?.occupiedCoords) && caller.occupiedCoords.length > 0) return caller.occupiedCoords;
-        if (caller?.coordinates) return [caller.coordinates];
-        return [];
-    };
-
-    const getMinDistanceToEnemy = (tiles, enemy) => {
-        if (!Array.isArray(tiles) || !tiles.length || !enemy?.coordinates) return Number.POSITIVE_INFINITY;
-        return Math.min(...tiles.map(tile => {
-            const dx = Math.abs(enemy.coordinates.x - tile.x);
-            const dy = Math.abs(enemy.coordinates.y - tile.y);
-            return dx + dy;
-        }));
-    };
+    const { getOccupiedTiles, getDistanceToTarget, isTargetInRange } = MonsterTargetingHelpers;
 
     // ── Custom attack selection ──────────────────────────────────────────────
     // Prefer grasp when the target is adjacent (distance ≤ 1).
@@ -115,10 +104,10 @@ export function Mummy(data, utilMethods, animationManager, overlayManager) {
                         return (dx + dy === 1);
                     });
                 } else if (attack.range === 'medium') {
-                    const minDist = getMinDistanceToEnemy(occupiedTiles, enemy);
+                    const minDist = getDistanceToTarget(caller, enemy);
                     inRange = minDist <= 3;
                 } else if (attack.range === 'far') {
-                    const minDist = getMinDistanceToEnemy(occupiedTiles, enemy);
+                    const minDist = getDistanceToTarget(caller, enemy);
                     inRange = minDist <= 6;
                 }
                 if (inRange) {
@@ -126,8 +115,8 @@ export function Mummy(data, utilMethods, animationManager, overlayManager) {
                     const rangePriority = { close: 0, medium: 1, far: 2 };
                     const newPriority = rangePriority[attack.range] ?? 99;
                     const bestPriority = best ? (rangePriority[best.attack.range] ?? 99) : Infinity;
-                    const newDistance = getMinDistanceToEnemy(occupiedTiles, enemy);
-                    const bestDistance = best ? getMinDistanceToEnemy(occupiedTiles, best.enemy) : Infinity;
+                    const newDistance = getDistanceToTarget(caller, enemy);
+                    const bestDistance = best ? getDistanceToTarget(caller, best.enemy) : Infinity;
                     if (!best ||
                         newPriority < bestPriority ||
                         (newPriority === bestPriority && newDistance < bestDistance) ||
@@ -418,29 +407,7 @@ export function Mummy(data, utilMethods, animationManager, overlayManager) {
                 caller.pendingAttack.cooldown_position === 100 // attack is ready
             ) {
                 // Check if target is in range for the pending attack
-                const attackRange = caller.pendingAttack.range;
-                // For 2x monsters, check adjacency to all occupied tiles
-                const occupiedTiles = (caller.scale === 2 && Array.isArray(caller.occupiedTiles))
-                    ? caller.occupiedTiles
-                    : [caller.coordinates];
-                let inRange = false;
-                if (attackRange === 'close') {
-                    // Adjacent to any occupied tile
-                    inRange = occupiedTiles.some(tile => {
-                        const dx = Math.abs(tile.x - target.coordinates.x);
-                        const dy = Math.abs(tile.y - target.coordinates.y);
-                        return (dx + dy === 1); // 4-way adjacency
-                    });
-                } else if (attackRange === 'medium' || attackRange === 'far') {
-                    // Use Manhattan distance for range
-                    const minDist = Math.min(...occupiedTiles.map(tile => {
-                        const dx = Math.abs(tile.x - target.coordinates.x);
-                        const dy = Math.abs(tile.y - target.coordinates.y);
-                        return dx + dy;
-                    }));
-                    if (attackRange === 'medium') inRange = minDist <= 3;
-                    if (attackRange === 'far') inRange = minDist <= 6;
-                }
+                const inRange = isTargetInRange(caller, target, caller.pendingAttack);
                 if (inRange) {
                     // Fire the attack!
                     this.initiateAttack(caller, combatants);
