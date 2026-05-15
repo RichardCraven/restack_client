@@ -48,8 +48,7 @@ export function Rogue(data, utilMethods, animationManager){
     }
     this.chooseAttackType = (caller, target) => {
         let attack, available = caller.attacks.filter(e=>e.cooldown_position === 100);
-        let percentCooledDown = 0,
-            chosenAttack;
+        let chosenAttack;
 
         const distanceToTarget = data.methods.getDistanceToTarget(caller, target);
 

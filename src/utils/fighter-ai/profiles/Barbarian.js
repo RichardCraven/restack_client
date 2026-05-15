@@ -272,26 +272,21 @@ export function Barbarian(data, utilMethods, animationManager) {
      */
     this.shouldUseBerserker = (caller, combatants) => {
         if (caller.berserkerActive) {
-            console.log('[Barbarian] shouldUseBerserker: already active — skip');
             return false;
         }
         if (caller.berserkerChecked) {
-            console.log('[Barbarian] shouldUseBerserker: already checked this session — skip');
             return false;
         }
         const spec = caller.specials && caller.specials.find(s => s && s.name === 'berserker');
         if (!spec) {
-            console.warn('[Barbarian] shouldUseBerserker: no berserker special found on caller. specials:', caller.specials);
             return false;
         }
         if (spec.cooldown_position !== 100) {
-            console.log(`[Barbarian] shouldUseBerserker: special not ready — cooldown_position=${spec.cooldown_position}`);
             return false;
         }
         const energy = typeof caller.energy === 'number' ? caller.energy : 0;
         if (energy < (spec.energy_cost ?? 60)) return false;
         const liveEnemies = Object.values(combatants).filter(e => !e.dead && (e.isMonster || e.isMinion));
-        console.log(`[Barbarian] shouldUseBerserker: liveEnemies=${liveEnemies.length}, need >2`);
         return liveEnemies.length > 2;
     }
 
@@ -440,6 +435,7 @@ export function Barbarian(data, utilMethods, animationManager) {
     // ─── processMove ─────────────────────────────────────────────────────────
 
     this.processMove = (caller, combatants) => {
+        if (!caller || caller.dead) return;
         if (typeof caller.moveCooldown === 'undefined') {
             throw new Error('moveCooldown must be defined for all units');
         }
@@ -538,7 +534,7 @@ export function Barbarian(data, utilMethods, animationManager) {
     // ─── initiateAttack ──────────────────────────────────────────────────────
 
     this.initiateAttack = async (caller, manualAttack, combatants) => {
-        console.log(`[Barbarian] initiateAttack called — pendingAttack="${caller.pendingAttack?.name}", manualAttack=${manualAttack}, targetId=${caller.targetId}`);
+        if (!caller || caller.dead) return;
         if (typeof caller.moveCooldown === 'undefined') {
             throw new Error('moveCooldown must be defined for all units');
         }
@@ -571,21 +567,10 @@ export function Barbarian(data, utilMethods, animationManager) {
         caller.attacking = true;
 
         // Debug log: attack name and icon
-        if (caller.pendingAttack) {
-            console.log('[Barbarian DEBUG]', {
-                attackName: caller.pendingAttack.name,
-                attackIcon: caller.pendingAttack.icon,
-                attackObj: caller.pendingAttack
-            });
-        } else {
-            console.log('[Barbarian DEBUG] No pendingAttack');
-        }
-
         try {
         if (manualAttack) {
             if (caller.pendingAttack && caller.pendingAttack.cooldown_position < 99) return;
             if (caller.pendingAttack && caller.pendingAttack.cooldown_position === 100) {
-                console.log(`[Barbarian] ⚔️ manual attack — "${caller.pendingAttack.name}", facing=${facing}`);
                 const combatantHit = await this.triggerAxeSwing(caller.coordinates, facing);
                 if (combatantHit) {
                     this.hitsCombatant(caller, combatantHit);
@@ -599,7 +584,6 @@ export function Barbarian(data, utilMethods, animationManager) {
             await (async () => {
                 switch (caller.pendingAttack.name) {
                     case 'axe swing': {
-                        console.log(`[Barbarian] ⚔️ AI attack — "axe swing", facing=${facing}, coords=(${caller.coordinates.x},${caller.coordinates.y})`);
                         const combatantHit = await this.triggerAxeSwing(caller.coordinates, facing);
                         if (combatantHit) {
                             this.hitsCombatant(caller, combatantHit);
@@ -609,7 +593,6 @@ export function Barbarian(data, utilMethods, animationManager) {
                         break;
                     }
                     case 'axe throw': {
-                        console.log(`[Barbarian] ⚔️ AI attack — "axe throw", coords=(${caller.coordinates.x},${caller.coordinates.y}), target=(${target?.coordinates?.x},${target?.coordinates?.y})`);
                         const axeThrowHit = await new Promise((resolve) => {
                             this.triggerAxeThrow(caller.coordinates, target?.coordinates, resolve, caller.fighterType, caller.pendingAttack?.name);
                         });
@@ -621,7 +604,6 @@ export function Barbarian(data, utilMethods, animationManager) {
                         break;
                     }
                     case 'spear throw': {
-                        console.log(`[Barbarian] ⚔️ AI attack — "spear throw", facing=${facing}, coords=(${caller.coordinates.x},${caller.coordinates.y})`);
                         const spearThrowHit = await this.triggerAxeSwing(caller.coordinates, facing);
                         if (spearThrowHit) {
                             this.hitsCombatant(caller, spearThrowHit);
@@ -631,7 +613,6 @@ export function Barbarian(data, utilMethods, animationManager) {
                         break;
                     }
                     default:
-                        console.warn(`[Barbarian] ⚔️ AI attack — unhandled attack name: "${caller.pendingAttack.name}"`);
                         break;
                 }
             })();

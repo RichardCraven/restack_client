@@ -9,6 +9,22 @@ export const MonsterTargetingHelpers = {
         return caller?.coordinates ? [caller.coordinates] : [];
     },
 
+    // Resolve all occupied tiles for a combatant, including VCT -> parent indirection.
+    getCombatantTiles: (combatant, combatants) => {
+        if (!combatant) return [];
+
+        if (combatant.isVCT && combatant.parentMonsterId && combatants && combatants[combatant.parentMonsterId]) {
+            const parent = combatants[combatant.parentMonsterId];
+            if (Array.isArray(parent?.occupiedCoords) && parent.occupiedCoords.length > 0) return parent.occupiedCoords;
+            if (Array.isArray(parent?.occupiedTiles) && parent.occupiedTiles.length > 0) return parent.occupiedTiles;
+            return parent?.coordinates ? [parent.coordinates] : [];
+        }
+
+        if (Array.isArray(combatant?.occupiedCoords) && combatant.occupiedCoords.length > 0) return combatant.occupiedCoords;
+        if (Array.isArray(combatant?.occupiedTiles) && combatant.occupiedTiles.length > 0) return combatant.occupiedTiles;
+        return combatant?.coordinates ? [combatant.coordinates] : [];
+    },
+
     resolveTarget: (caller, combatants) => {
         if (!caller || !combatants || !caller.targetId) return null;
 
@@ -61,5 +77,72 @@ export const MonsterTargetingHelpers = {
         });
 
         return best;
-    }
+    },
+
+    // Generic line-of-sight helper for attacks that fire along a forward lane.
+    // Returns enemy combatants in one or more target lanes, sorted from nearest
+    // to furthest in caller-facing direction.
+    getForwardLineTargets: (caller, target, combatants, options = {}) => {
+        if (!caller || !target || !combatants || !caller.coordinates) {
+            return {
+                lineTargets: [],
+                targetTiles: [],
+                targetLanes: [],
+                facingRight: true,
+            };
+        }
+
+        const {
+            // Default to selecting enemy fighters (non-monster, non-minion).
+            candidateFilter = (e) => !e?.dead && !e?.isVCT && !e?.isMonster && !e?.isMinion,
+        } = options;
+
+        const targetTiles = MonsterTargetingHelpers.getCombatantTiles(target, combatants);
+        if (targetTiles.length === 0) {
+            return {
+                lineTargets: [],
+                targetTiles: [],
+                targetLanes: [],
+                facingRight: true,
+            };
+        }
+
+        const primaryTargetTile = targetTiles.reduce((best, tile) => {
+            if (!best) return tile;
+            const bestDx = Math.abs((best.x || 0) - caller.coordinates.x);
+            const tileDx = Math.abs((tile.x || 0) - caller.coordinates.x);
+            return tileDx < bestDx ? tile : best;
+        }, null);
+
+        const facingRight = !!primaryTargetTile && primaryTargetTile.x >= caller.coordinates.x;
+        const targetLaneSet = new Set(targetTiles.map((tile) => tile.y));
+
+        const lineTargets = Object.values(combatants).filter((combatant) => {
+            if (!candidateFilter(combatant)) return false;
+
+            const tiles = MonsterTargetingHelpers.getCombatantTiles(combatant, combatants);
+            if (tiles.length === 0) return false;
+
+            const intersectsTargetLane = tiles.some((tile) => targetLaneSet.has(tile.y));
+            if (!intersectsTargetLane) return false;
+
+            if (facingRight) return tiles.some((tile) => tile.x > caller.coordinates.x);
+            return tiles.some((tile) => tile.x < caller.coordinates.x);
+        });
+
+        lineTargets.sort((a, b) => {
+            const aTiles = MonsterTargetingHelpers.getCombatantTiles(a, combatants);
+            const bTiles = MonsterTargetingHelpers.getCombatantTiles(b, combatants);
+            const aX = facingRight ? Math.min(...aTiles.map((tile) => tile.x)) : Math.max(...aTiles.map((tile) => tile.x));
+            const bX = facingRight ? Math.min(...bTiles.map((tile) => tile.x)) : Math.max(...bTiles.map((tile) => tile.x));
+            return facingRight ? (aX - bX) : (bX - aX);
+        });
+
+        return {
+            lineTargets,
+            targetTiles,
+            targetLanes: Array.from(targetLaneSet),
+            facingRight,
+        };
+    },
 };

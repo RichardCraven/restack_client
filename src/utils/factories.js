@@ -127,6 +127,11 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
         invisible_eras: 0,
         petrified: false,
         petrified_eras: 0,
+        defBroken: false,
+        defBroken_eras: 0,
+        _defBrokenOriginalDef: null,
+        psionicBurn: false,
+        psionicBurn_eras: 0,
 
         // -- New Regeneration Properties --
         regenerating: false,
@@ -464,6 +469,29 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
                         if (this.petrified_eras <= 0) {
                             this.petrified = false;
                             this.petrified_eras = 0;
+                            if (typeof broadcastDataUpdate === 'function' && !isCombatOver()) broadcastDataUpdate(this);
+                        }
+                    }
+
+                    if (this.defBroken && this.defBroken_eras > 0) {
+                        this.defBroken_eras--;
+                        if (this.defBroken_eras <= 0) {
+                            if (this._defBrokenOriginalDef != null) {
+                                this.stats.def = this._defBrokenOriginalDef;
+                                this.def = this._defBrokenOriginalDef;
+                            }
+                            this.defBroken = false;
+                            this.defBroken_eras = 0;
+                            this._defBrokenOriginalDef = null;
+                            if (typeof broadcastDataUpdate === 'function' && !isCombatOver()) broadcastDataUpdate(this);
+                        }
+                    }
+
+                    if (this.psionicBurn && this.psionicBurn_eras > 0) {
+                        this.psionicBurn_eras--;
+                        if (this.psionicBurn_eras <= 0) {
+                            this.psionicBurn = false;
+                            this.psionicBurn_eras = 0;
                             if (typeof broadcastDataUpdate === 'function' && !isCombatOver()) broadcastDataUpdate(this);
                         }
                     }

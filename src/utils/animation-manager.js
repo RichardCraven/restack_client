@@ -202,8 +202,11 @@ export function AnimationManager(){
                     duration,
                     facing: data.facing,
                     onComplete: () => {
-                        this.canvasAnimations = this.canvasAnimations.filter(a => a.id !== animId);
-                        this.update();
+                        const idx = this.canvasAnimations.findIndex(a => a.id === animId);
+                        if (idx !== -1) {
+                            this.canvasAnimations.splice(idx, 1);
+                            this.update();
+                        }
                     }
                 };
                 this.canvasAnimations.push(canvasAnim);
@@ -559,10 +562,12 @@ export function AnimationManager(){
         this.canvasAnimations.push(ref)
         this.update();
         setTimeout(()=>{
-            let e = this.canvasAnimations.find(c=>c===ref);
-            this.canvasAnimations = this.canvasAnimations.filter(v=>v!==e);
-            // if(this.state.selectedFighter) this.props.combatManager.unlockFighter(this.state.selectedFighter.id)
-            this.update();
+            const idx = this.canvasAnimations.findIndex(anim => anim.id === ref.id);
+            if (idx !== -1) {
+                this.canvasAnimations.splice(idx, 1);
+                // if(this.state.selectedFighter) this.props.combatManager.unlockFighter(this.state.selectedFighter.id)
+                this.update();
+            }
         }, 2500)
         // ^ travel time + 1 second of damage animation
     }
@@ -613,9 +618,11 @@ export function AnimationManager(){
         }
 
         setTimeout(() => {
-            let e = this.canvasAnimations.find(c => c === ref);
-            this.canvasAnimations = this.canvasAnimations.filter(v => v !== e);
-            this.update();
+            const idx = this.canvasAnimations.findIndex(anim => anim.id === ref.id);
+            if (idx !== -1) {
+                this.canvasAnimations.splice(idx, 1);
+                this.update();
+            }
         }, duration);
     }
         // Magic Triangle Animation: triangle of particles at midpoint between source and target
@@ -669,9 +676,11 @@ export function AnimationManager(){
 
         // Remove the canvas animation after the full visual lifetime
         setTimeout(() => {
-            let e = this.canvasAnimations.find(c => c === ref);
-            this.canvasAnimations = this.canvasAnimations.filter(v => v !== e);
-            this.update();
+            const idx = this.canvasAnimations.findIndex(anim => anim.id === ref.id);
+            if (idx !== -1) {
+                this.canvasAnimations.splice(idx, 1);
+                this.update();
+            }
         }, duration);
     }
     this.fireball = (sourceCoords, targetCoords, options = {}) => {
@@ -718,10 +727,72 @@ export function AnimationManager(){
 
         // Remove after full visual lifetime
         setTimeout(() => {
-            let e = this.canvasAnimations.find(c => c === ref);
-            this.canvasAnimations = this.canvasAnimations.filter(v => v !== e);
-            this.update();
+            const idx = this.canvasAnimations.findIndex(anim => anim.id === ref.id);
+            if (idx !== -1) {
+                this.canvasAnimations.splice(idx, 1);
+                this.update();
+            }
         }, duration);
+    }
+    this.triggerJaggedCircle = (targetCoords, options = {}) => {
+        if (!targetCoords || typeof targetCoords.x !== 'number' || typeof targetCoords.y !== 'number') return;
+
+        const ref = {
+            id: `jagged_circle_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+            type: 'jaggedCircle',
+            origin: options.origin && typeof options.origin.x === 'number' && typeof options.origin.y === 'number'
+                ? { x: options.origin.x, y: options.origin.y }
+                : { x: targetCoords.x, y: targetCoords.y },
+            target: { x: targetCoords.x, y: targetCoords.y },
+            duration: options.duration || 900,
+            travelDuration: options.travelDuration || 260,
+            lingerDuration: options.lingerDuration || 520,
+            color: options.color || '#9f5cff',
+            accentColor: options.accentColor || '#f06bff',
+            radius: options.radius || 0.48,
+            jaggedness: options.jaggedness || 0.18,
+            rotationSpeed: options.rotationSpeed || 0.0045,
+            lineWidth: options.lineWidth || 4,
+        };
+
+        this.canvasAnimations.push(ref);
+        this.update();
+
+        setTimeout(() => {
+            const idx = this.canvasAnimations.findIndex((anim) => anim.id === ref.id);
+            if (idx !== -1) {
+                this.canvasAnimations.splice(idx, 1);
+                this.update();
+            }
+        }, ref.duration);
+    }
+    this.triggerPsionicBurnCircle = (targetCoords, originCoords = null) => {
+        this.triggerJaggedCircle(targetCoords, {
+            origin: originCoords || targetCoords,
+            duration: 900,
+            travelDuration: 240,
+            lingerDuration: 600,
+            color: '#8b5cf6',
+            accentColor: '#f472b6',
+            radius: 0.43,
+            jaggedness: 0.16,
+            rotationSpeed: 0.0055,
+            lineWidth: 3,
+        });
+    }
+    this.triggerObliterateCircle = (targetCoords, originCoords = null) => {
+        this.triggerJaggedCircle(targetCoords, {
+            origin: originCoords || targetCoords,
+            duration: 1100,
+            travelDuration: 280,
+            lingerDuration: 760,
+            color: '#ff8c42',
+            accentColor: '#ffe08a',
+            radius: 0.52,
+            jaggedness: 0.22,
+            rotationSpeed: 0.0018,
+            lineWidth: 4,
+        });
     }
     this.getDistanceToTarget = (sourceCoords, targetCoords) => {
         // if(!target) return 0;
@@ -1033,7 +1104,6 @@ export function AnimationManager(){
             case 'bite':
             case 'tackle':
             case 'crush':
-            case 'grasp':
                 animationTile.animationType = type;
                 animationTile.transitionType = 'fade';
                 animationTile.animationData = {
@@ -1048,6 +1118,18 @@ export function AnimationManager(){
                     animationTile.animationData = {};
                     this.update();
                 }, this.animationsMatrix[type].duration);
+                break;
+            case 'void lance': {
+                if (sourceTileId == null || targetTileId == null) break;
+                const beamColor = 'purple';
+                this.straightBeamTo(targetTileId, sourceTileId, beamColor)
+                    .then(() => {
+                        // this.rippleAnimation(targetTileId, beamColor);
+                    })
+                    .catch(() => {
+                        // Best-effort visuals only.
+                    });
+            }
                 break;
             default:
                 console.log('animation not properly specified... INVESTIGATE', type);
@@ -1181,71 +1263,97 @@ export function AnimationManager(){
             }
         })
     }
-    this.straightBeamNoTarget = (sourceTileId, direction, color = null, resolve) => {
-        const sourceTile = this.tiles.find(e=>e.id === sourceTileId)
-        const maxX = this.MAX_DEPTH-1;
-        let newCoords
-        if(direction === 'left-to-right'){
-            newCoords = {x: maxX, y: sourceTile.y}
-        } else if(direction === "right-to-left"){
-            newCoords = {x: 0, y: sourceTile.y}
+    this.straightBeamNoTarget = (sourceTileId, direction, color = null, onResolve) => {
+        const sourceTile = this.tiles.find(e => e.id === sourceTileId);
+        if (!sourceTile) {
+            if (typeof onResolve === 'function') onResolve(false);
+            return Promise.resolve(false);
         }
-        let destinationTileId = this.getTileIdByCoords(newCoords)
-        let destinationTile = this.tiles[destinationTileId]
-        let isOnSamePlane = sourceTile.y === destinationTile.y; // eslint-disable-line no-unused-vars
-        return new Promise(() => {
-                let distanceAway = Math.abs(sourceTile.x - destinationTile.x)
-                if(sourceTile.x > destinationTile.x && direction === 'right-to-left'){
-                    let sourceX = sourceTile.x
-                    let idArray = [];
-                    for(let i = sourceX -1; i >= destinationTile.x; i--){
-                        let id = this.getTileIdByCoords({x: i, y: destinationTile.y})
-                        idArray.push(id)
-                    }
-                    
-                    const lineInterval = setInterval(()=>{
-                        if(idArray.length === 0){
-                            clearInterval(lineInterval);
-                            resolve(false);
-                        } else {
-                            let id = idArray.shift();
-                            let tileCoords = this.getTileCoordsById(id)
-                            let collision = this.checkForCollision(tileCoords)
+        const maxX = this.MAX_DEPTH - 1;
+        let newCoords;
+        if (direction === 'left-to-right') {
+            newCoords = { x: maxX, y: sourceTile.y };
+        } else if (direction === 'right-to-left') {
+            newCoords = { x: 0, y: sourceTile.y };
+        } else {
+            if (typeof onResolve === 'function') onResolve(false);
+            return Promise.resolve(false);
+        }
 
-                            this.triggerTileAnimation(id, color);
-                            if(collision){
-                                clearInterval(lineInterval);
-                                resolve(collision);
-                            }
-                        }
-                    }, 10 + (distanceAway * 5))
+        const destinationTileId = this.getTileIdByCoords(newCoords);
+        const destinationTile = this.tiles[destinationTileId];
+        if (!destinationTile) {
+            if (typeof onResolve === 'function') onResolve(false);
+            return Promise.resolve(false);
+        }
+
+        return new Promise((promiseResolve) => {
+            const finish = (result) => {
+                try {
+                    if (typeof onResolve === 'function') onResolve(result);
+                } catch (e) {
+                    // non-fatal callback errors should not break animation completion
                 }
-                if(sourceTile.x < destinationTile.x && direction === 'left-to-right'){
-                    let sourceX = sourceTile.x
-                    let idArray = [];
-                    for(let i = sourceX + 1; i < destinationTile.x+1; i++){
-                        let id = this.getTileIdByCoords({x: i, y: destinationTile.y})
-                        idArray.push(id)
-                    }
-                    const lineInterval = setInterval(()=>{
-                        if(idArray.length === 0){
+                promiseResolve(result);
+            };
+
+            const distanceAway = Math.abs(sourceTile.x - destinationTile.x);
+
+            if (sourceTile.x > destinationTile.x && direction === 'right-to-left') {
+                const sourceX = sourceTile.x;
+                const idArray = [];
+                for (let i = sourceX - 1; i >= destinationTile.x; i--) {
+                    const id = this.getTileIdByCoords({ x: i, y: destinationTile.y });
+                    idArray.push(id);
+                }
+
+                const lineInterval = setInterval(() => {
+                    if (idArray.length === 0) {
+                        clearInterval(lineInterval);
+                        finish(false);
+                    } else {
+                        const id = idArray.shift();
+                        const tileCoords = this.getTileCoordsById(id);
+                        const collision = this.checkForCollision(tileCoords);
+
+                        this.triggerTileAnimation(id, color);
+                        if (collision) {
                             clearInterval(lineInterval);
-                            resolve(false);
-                        } else {
-                            let id = idArray.shift();
-                            let tileCoords = this.getTileCoordsById(id)
-                            let collision = this.checkForCollision(tileCoords)
-                            // collision is a combatant object
-                            this.triggerTileAnimation(id, color);
-                            if(collision){
-                                clearInterval(lineInterval);
-                                resolve(collision);
-                            }
+                            finish(collision);
                         }
-                    }, 10 + (distanceAway * 5))
+                    }
+                }, 10 + (distanceAway * 5));
+                return;
+            }
+
+            if (sourceTile.x < destinationTile.x && direction === 'left-to-right') {
+                const sourceX = sourceTile.x;
+                const idArray = [];
+                for (let i = sourceX + 1; i < destinationTile.x + 1; i++) {
+                    const id = this.getTileIdByCoords({ x: i, y: destinationTile.y });
+                    idArray.push(id);
                 }
-            // }
-        })
+
+                const lineInterval = setInterval(() => {
+                    if (idArray.length === 0) {
+                        clearInterval(lineInterval);
+                        finish(false);
+                    } else {
+                        const id = idArray.shift();
+                        const tileCoords = this.getTileCoordsById(id);
+                        const collision = this.checkForCollision(tileCoords);
+                        this.triggerTileAnimation(id, color);
+                        if (collision) {
+                            clearInterval(lineInterval);
+                            finish(collision);
+                        }
+                    }
+                }, 10 + (distanceAway * 5));
+                return;
+            }
+
+            finish(false);
+        });
     }
     this.straightNarrowBeamTo = (targetTileId, sourceTileId, color = null) => {
         const sourceTile = this.tiles.find(e=>e.id === sourceTileId)
@@ -1523,8 +1631,6 @@ export function AnimationManager(){
             const beamInterval = setInterval(() => {
                 if (stepIndex >= idArray.length) {
                     clearInterval(beamInterval);
-                    // Impact burst at the target
-                    this.rippleAnimation(targetTileId, 'purple');
                     resolve(steps * msPerStep);
                     return;
                 }

@@ -108,8 +108,7 @@ export function Wizard(data, utilMethods, animationManager, overlayManager) {
     }
     this.chooseAttackType = (caller, target) => {
         let attack, available = caller.attacks.filter(e => e.cooldown_position === 100);
-        let percentCooledDown = 0,
-            chosenAttack;
+        let chosenAttack;
 
         const distanceToTarget = data.methods.getDistanceToTarget(caller, target);
 
@@ -910,10 +909,6 @@ export function Wizard(data, utilMethods, animationManager, overlayManager) {
             }
             return null;
         }
-        const friendlyInLineBetween = (caller, target, combatants) => {
-            return getClearTargetCoords(caller, target, combatants) === null;
-        }
-
         // Helper: find an enemy on the same row that has a clear path (no friendlies between)
         const findEnemyWithClearPath = (caller, combatants, preferDirection = null) => {
             if (!caller || !combatants) return null;
@@ -1022,23 +1017,31 @@ export function Wizard(data, utilMethods, animationManager, overlayManager) {
             switch (caller.pendingAttack.name) {
                 case 'energy blast':
                     if (laneDiff === 0 || true) { // true because we now use coordinated targeting
-                        // If there's any friendly between caster and target on same plane, try to retarget
+                        // CRITICAL: Check for friendly in line BEFORE initiating attack
+                        // If there's a friendly between caster and target, abort unless alt enemy found
                         const clearTargetCoords = getClearTargetCoords(caller, target, combatants);
                         if (!clearTargetCoords) {
-                            // Prefer enemies in the original direction
+                            // Friendly is blocking the path to primary target
                             const preferDir = (target.coordinates.x > caller.coordinates.x) ? 'right' : 'left';
                             const alt = findEnemyWithClearPath(caller, combatants, preferDir);
-                            if (alt) {
-                                target = alt;
-                                caller.targetId = alt.id;
-                            } else {
-                                // No alternative enemy with a clear path; treat as miss
+                            if (!alt) {
+                                // No alternative enemy with clear path; abort attack
                                 this.missesTarget(caller);
                                 this.kickoffAttackCooldown(caller);
                                 break;
                             }
+                            // Use alternative target instead
+                            target = alt;
+                            caller.targetId = alt.id;
                         }
-                        const finalCoords = getClearTargetCoords(caller, target, combatants) || target.coordinates;
+                        // Double-check the final target has a clear path
+                        const finalCoords = getClearTargetCoords(caller, target, combatants);
+                        if (!finalCoords) {
+                            // Defensive: final target also has friendly blocking; abort
+                            this.missesTarget(caller);
+                            this.kickoffAttackCooldown(caller);
+                            break;
+                        }
                         let combatantHit = await this.triggerBeamAttack(caller.coordinates, finalCoords);
                         if (combatantHit) {
                             // Apply unified wounded/damage logic for AI beam hit

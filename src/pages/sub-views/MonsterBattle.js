@@ -1691,6 +1691,10 @@ class MonsterBattle extends React.Component {
                    
         return (
             <div className={`mb-board ${this.state.showCrosshair ? 'show-crosshair' : ''}`}>
+                {/* Monster name in upper left */}
+                <div style={{position: 'absolute', top: -35, left: 20, color: 'white', fontSize: '18px', zIndex: 1000}}>
+                    {this.props.monster && this.props.monster.name ? `Fighting: ${this.props.monster.name}` : 'Fighting: Unknown'}
+                </div>
                 {/* Game speed readout in upper right */}
                 <div style={{position: 'absolute', top: -35, right: 20, color: 'white', fontSize: '18px', zIndex: 1000}}>
                     Game Speed: {
@@ -2077,6 +2081,11 @@ class MonsterBattle extends React.Component {
                                         ? normalizedSpecial.cooldown_position
                                         : 100;
                                     const specialCooldownRemaining = Math.max(0, Math.min(100, 100 - specialCooldownPosition));
+                                    const specialEnergyCost = Number(normalizedSpecial.energy_cost) || 0;
+                                    const specialEnergyFillPct = specialEnergyCost > 0
+                                        ? Math.min(100, Math.floor(((this.state.selectedFighter?.energy || 0) / specialEnergyCost) * 100))
+                                        : 100;
+                                    const showSpecialEnergyFill = specialEnergyCost > 0 && specialEnergyFillPct < 100;
                                     return normalizedSpecial && <div key={i} className='interaction-tile-wrapper'>
                                                 <div 
                                                 style={{backgroundImage: specialBackgroundImage, cursor: 'pointer'}} 
@@ -2085,6 +2094,12 @@ class MonsterBattle extends React.Component {
                                                 onMouseEnter={() => this.specialTileHovered(normalizedSpecial)} 
                                                 onMouseLeave={() => this.specialTileHovered(null)}>
                                                 </div>
+                                                {showSpecialEnergyFill && (
+                                                    <div
+                                                        className="interaction-tile-overlay energy-fill"
+                                                        style={{ '--energy-fill': specialEnergyFillPct }}
+                                                    ></div>
+                                                )}
                                                 {specialCooldownRemaining > 0 && (
                                                     <div
                                                         className="interaction-tile-overlay radial"
@@ -2127,6 +2142,15 @@ class MonsterBattle extends React.Component {
                                                 {count > 0 && (
                                                     <div className={`stack-badge small`}>{romanNumerals[Math.min(count, 5)]}</div>
                                                 )}
+                                                {(() => {
+                                                    const spellEnergyCost = Number(spellUnit.energy_cost || spellUnit.energyCost) || 0;
+                                                    const spellEnergyFillPct = spellEnergyCost > 0
+                                                        ? Math.min(100, Math.floor(((this.state.selectedFighter?.energy || 0) / spellEnergyCost) * 100))
+                                                        : 100;
+                                                    return spellEnergyCost > 0 && spellEnergyFillPct < 100
+                                                        ? <div className="interaction-tile-overlay energy-fill" style={{ '--energy-fill': spellEnergyFillPct }}></div>
+                                                        : null;
+                                                })()}
                                             </div>
                                         );
                                     });

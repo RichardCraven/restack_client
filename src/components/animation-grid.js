@@ -9,6 +9,7 @@ import CanvasAxeThrow from '../components/Canvas/canvas_axe_throw'
 import CanvasClawSwipe from '../components/Canvas/canvas_claw_swipe'
 import CanvasPhysicalAttack from '../components/Canvas/canvas_physical_attack'
 import CanvasWhirlwind from '../components/Canvas/canvas_whirlwind'
+import CanvasJaggedCircle from '../components/Canvas/canvas_jagged_circle'
 
 // class AnimationGrid extends React.Component {
     // constructor(props){
@@ -97,6 +98,24 @@ const AnimationGrid = ({
                                 targetDistance={anim.targetDistance}
                                 targetLaneDiff={anim.targetLaneDiff}
                                 duration={anim.duration}
+                            />
+                        } else if (anim.type === 'jaggedCircle') {
+                            return <CanvasJaggedCircle
+                                key={animKey}
+                                origin={anim.origin}
+                                target={anim.target}
+                                width={width}
+                                height={height}
+                                tileSize={TILE_SIZE}
+                                duration={anim.duration}
+                                travelDuration={anim.travelDuration}
+                                lingerDuration={anim.lingerDuration}
+                                color={anim.color}
+                                accentColor={anim.accentColor}
+                                radius={anim.radius}
+                                jaggedness={anim.jaggedness}
+                                rotationSpeed={anim.rotationSpeed}
+                                lineWidth={anim.lineWidth}
                             />
                         } else if (anim.type === 'magicTriangle') {
                             return <CanvasMagicTriangle

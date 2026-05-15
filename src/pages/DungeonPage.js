@@ -658,6 +658,9 @@ class DungeonPage extends React.Component {
         // const meta = null
         this.props.boardManager.establishAvailableItems(this.props.inventoryManager.items);
 
+        // Rehydrate persisted minimap breadcrumb trail for this dungeon session.
+        try { this.restoreBreadcrumbsFromMeta(meta); } catch (e) {}
+
         
         if(!meta || !meta.dungeonId){
             console.log('DungeonPage.componentWillMount: no dungeonId, calling initializeCrew with meta.crew=', meta && meta.crew);
@@ -1085,6 +1088,10 @@ class DungeonPage extends React.Component {
     const TOTAL_MOVE_MS = 120;
     const BUFFER_MS = 12;
         try {
+            // Ignore fresh movement input while a tween is still settling.
+            // Overlapping tweens can make the avatar appear to overshoot then snap back.
+            if (this.state.playerAnimating) return;
+
             const bm = this.props.boardManager;
             const curCoords = bm.playerTile.location;
             // detect board-edge moves and fall back to immediate boardManager methods
@@ -1215,7 +1222,11 @@ class DungeonPage extends React.Component {
                             el.style.transition = `transform ${TOTAL_MOVE_MS}ms cubic-bezier(0.22, 0.61, 0.36, 1)`;
                             el.style.transform = `translate3d(${fullX.toFixed(2)}px, ${fullY.toFixed(2)}px, 0px)`;
 
-                            this._setTimeout(() => {
+                            if (this._playerMoveSettleTimeout) {
+                                clearTimeout(this._playerMoveSettleTimeout);
+                                this._playerMoveSettleTimeout = null;
+                            }
+                            this._playerMoveSettleTimeout = this._setTimeout(() => {
                                 // After animation completes, reposition float to destination without animation
                                 // This keeps the avatar visible and ready for the next move
                                 this.updateFloatingPlayerPosition(bm.playerTile.location);
@@ -1225,11 +1236,21 @@ class DungeonPage extends React.Component {
                                     el2.style.transform = 'translate3d(0px, 0px, 0px)';
                                     el2.style.willChange = 'auto';
                                 }
+                                this.setState({
+                                    playerAnimating: false,
+                                    animOriginIndex: null,
+                                    animDestIndex: null
+                                });
                             }, TOTAL_MOVE_MS + BUFFER_MS);
                         } catch (e) {
                             console.warn('post-move tween failed', e);
                             // Reposition float on error instead of hiding
                             this.updateFloatingPlayerPosition(bm.playerTile.location);
+                            this.setState({
+                                playerAnimating: false,
+                                animOriginIndex: null,
+                                animDestIndex: null
+                            });
                         }
                     });
                 });
@@ -2628,6 +2649,65 @@ class DungeonPage extends React.Component {
             overlayHoveredTileId: id
         })
     }
+    buildItemSummaryDescription = (item) => {
+        if (!item) return '';
+        const itemName = (item.name && String(item.name).trim()) ? String(item.name).trim() : 'item';
+        const subtype = item.subtype ? String(item.subtype).toLowerCase() : '';
+        let baseDescription = typeof item.description === 'string' ? item.description.trim() : '';
+        
+        // If item doesn't have description, try to fetch it from the template in inventoryManager
+        if (!baseDescription && this.props.inventoryManager) {
+            const template = this.findItemTemplate(item);
+            if (template && template.description) {
+                baseDescription = String(template.description).trim();
+            }
+        }
+        
+        if (!baseDescription) {
+            if (typeof item.armor === 'number') {
+                if (subtype === 'boots') {
+                    baseDescription = `${itemName} reinforces footing and lower-body protection. Defense: ${item.armor}.`;
+                } else if (subtype === 'helm') {
+                    baseDescription = `${itemName} protects the head and face in combat. Defense: ${item.armor}.`;
+                } else if (subtype === 'shield') {
+                    baseDescription = `${itemName} offers reliable blocking coverage. Defense: ${item.armor}.`;
+                } else {
+                    baseDescription = `${itemName} provides defensive protection. Defense: ${item.armor}.`;
+                }
+            } else if (typeof item.damage === 'number' && item.type === 'weapon') {
+                baseDescription = `${itemName} grants +${item.damage}% base atk and +${(item.damage * 0.1).toFixed(1)} flat damage.`;
+            } else if (item.type === 'magical' && typeof item.power === 'number') {
+                baseDescription = `${itemName} channels arcane focus. Power: ${item.power}.`;
+            }
+        }
+        const tierValue = Number(item.tier);
+        const hasTier = Number.isFinite(tierValue) && tierValue > 0;
+        if (!baseDescription) return '';
+        if (!hasTier) return baseDescription;
+        if (/\[tier\s+\d+\]/i.test(baseDescription)) return baseDescription;
+        return `${baseDescription} [Tier ${tierValue}]`;
+    }
+    findItemTemplate = (item) => {
+        if (!item || !this.props.inventoryManager) return null;
+        const invMgr = this.props.inventoryManager;
+        const icon = item.icon;
+        // Search through all item categories for a matching template
+        if (icon) {
+            // Check weapons
+            if (invMgr.weapons && invMgr.weapons[icon]) {
+                return invMgr.weapons[icon];
+            }
+            // Check armor
+            if (invMgr.armor && invMgr.armor[icon]) {
+                return invMgr.armor[icon];
+            }
+            // Check magical items
+            if (invMgr.magical && invMgr.magical[icon]) {
+                return invMgr.magical[icon];
+            }
+        }
+        return null;
+    }
     handleInventoryTileHover = (tileProps) => {
         let inv = this.state.inventoryHoverMatrix,
         descriptionText = '';
@@ -2636,7 +2716,7 @@ class DungeonPage extends React.Component {
         })
         if(tileProps){
             inv[tileProps.id] = tileProps.contains;
-            descriptionText = tileProps.description
+            descriptionText = this.buildItemSummaryDescription(tileProps.data || null);
         }
 
         this.setState({
@@ -2861,6 +2941,9 @@ class DungeonPage extends React.Component {
         if(['helm','mask'].includes(subtype)){
             targetSlot = 'head';
             if(slotOccupied(targetSlot)) targetSlot = null;
+        } else if (subtype === 'boots') {
+            targetSlot = 'boots';
+            if (slotOccupied(targetSlot)) targetSlot = null;
         } else if(['amulet','armor'].includes(subtype)){
             targetSlot = 'chest';
             if(slotOccupied(targetSlot)) targetSlot = null;
@@ -2906,10 +2989,30 @@ class DungeonPage extends React.Component {
             storeMeta(meta);
             if(this.props.saveUserData) this.props.saveUserData();
 
+            // Keep hover-driven UI in sync after the clicked inventory index shifts.
+            // If the cursor is still over the same strip slot, show the item that
+            // moved into that index immediately (without requiring mouseleave/enter).
+            const inv = (this.props.inventoryManager && Array.isArray(this.props.inventoryManager.inventory))
+                ? this.props.inventoryManager.inventory
+                : [];
+            const shiftedItem = inv[index] || null;
+            const nextHoverMatrix = Array.isArray(this.state.inventoryHoverMatrix)
+                ? [...this.state.inventoryHoverMatrix]
+                : [];
+            nextHoverMatrix.forEach((_, i) => {
+                nextHoverMatrix[i] = '';
+            });
+            if (shiftedItem) {
+                nextHoverMatrix[index] = shiftedItem.name ? shiftedItem.name.replace(' ', '_') : '';
+            }
+
             // update state so UI refreshes
             this.setState({
                 activeInventoryItem: item,
-                selectedCrewMember: selected
+                selectedCrewMember: selected,
+                inventoryHoverMatrix: nextHoverMatrix,
+                hoveredInventoryItem: shiftedItem,
+                descriptionText: shiftedItem ? this.buildItemSummaryDescription(shiftedItem) : ''
             });
         } catch (err) {
             console.warn('failed to equip item', err);
@@ -3739,6 +3842,72 @@ class DungeonPage extends React.Component {
     }
 
     // ── Breadcrumb trail ────────────────────────────────────────────
+    // Persist breadcrumbs in meta so they survive browser refreshes.
+    persistBreadcrumbsToMeta = () => {
+        try {
+            const meta = getMeta() || {};
+            const dungeonId = meta.dungeonId || null;
+            const entries = Array.from(this._breadcrumbs.values())
+                .sort((a, b) => (a.seq || 0) - (b.seq || 0))
+                // Keep payload bounded in case of very long sessions.
+                .slice(-1500);
+            meta.breadcrumbTrail = {
+                dungeonId,
+                seq: this._breadcrumbSeq || 0,
+                entries
+            };
+            storeMeta(meta);
+        } catch (e) {}
+    }
+
+    // Restore breadcrumbs for the currently active dungeon id.
+    restoreBreadcrumbsFromMeta = (metaInput = null) => {
+        try {
+            const meta = metaInput || getMeta() || {};
+            const payload = meta.breadcrumbTrail;
+            if (!payload || !Array.isArray(payload.entries)) return;
+
+            const currentDungeonId = meta.dungeonId || null;
+            // Prevent leaking trails between different dungeon runs.
+            if ((payload.dungeonId || null) !== currentDungeonId) return;
+
+            this._breadcrumbs.clear();
+            payload.entries.forEach((entry) => {
+                if (!entry) return;
+                const {
+                    levelId,
+                    orientation,
+                    boardIndex,
+                    row,
+                    col,
+                    ts,
+                    seq,
+                } = entry;
+                if (
+                    levelId === undefined ||
+                    !orientation ||
+                    typeof boardIndex !== 'number' ||
+                    typeof row !== 'number' ||
+                    typeof col !== 'number'
+                ) return;
+
+                const key = `${levelId}:${orientation}:${boardIndex}:${row}:${col}`;
+                this._breadcrumbs.set(key, {
+                    levelId,
+                    orientation,
+                    boardIndex,
+                    row,
+                    col,
+                    ts: typeof ts === 'number' ? ts : Date.now(),
+                    seq: typeof seq === 'number' ? seq : 0,
+                });
+            });
+
+            const maxSeqFromEntries = Math.max(0, ...Array.from(this._breadcrumbs.values()).map(v => Number(v.seq) || 0));
+            this._breadcrumbSeq = Math.max(Number(payload.seq) || 0, maxSeqFromEntries);
+        } catch (e) {}
+    }
+
     // Record the player's current position onto the breadcrumb map.
     // Each unique (levelId, orientation, boardIndex, row, col) cell gets one entry;
     // revisiting a cell just refreshes its timestamp (keeping the most-recent visit).
@@ -3763,6 +3932,7 @@ class DungeonPage extends React.Component {
                 // preserve original seq so the path stays in order; only update ts
                 seq: existing ? existing.seq : ++this._breadcrumbSeq,
             });
+            this.persistBreadcrumbsToMeta();
         } catch (e) {}
     }
 
@@ -3780,6 +3950,7 @@ class DungeonPage extends React.Component {
                 }
             });
             if (pruned) {
+                this.persistBreadcrumbsToMeta();
                 try { this.forceUpdate(); } catch (e) {}
             }
         } catch (e) {}
@@ -4808,7 +4979,10 @@ class DungeonPage extends React.Component {
                                     const ancillaryRight = findEquipped('ancillary-right');
                                     // Read-only slot — no click, just a name tooltip on hover
                                     const ReadOnlySlot = ({ item, slotClass }) => (
-                                        <div className={`equip-slot ${slotClass} ep-slot-wrapper`}>
+                                        <div 
+                                            className={`equip-slot ${slotClass} ep-slot-wrapper`}
+                                            onMouseLeave={() => this.setState({ descriptionText: '' })}
+                                        >
                                             {item && (
                                                 <>
                                                     <Tile
@@ -4821,7 +4995,7 @@ class DungeonPage extends React.Component {
                                                         editMode={false}
                                                         type={'inventory-tile'}
                                                         handleClick={() => {}}
-                                                        handleHover={() => {}}
+                                                        handleHover={() => this.setState({ descriptionText: this.buildItemSummaryDescription(item) })}
                                                     />
                                                     <div className="ep-slot-name">{item.name}</div>
                                                 </>
@@ -5589,7 +5763,7 @@ class DungeonPage extends React.Component {
                                                     {item.subtype && <span className="idp-tag idp-subtype">{item.subtype}</span>}
                                                     {item.range && <span className="idp-tag idp-range">{item.range}</span>}
                                                 </div>
-                                                {item.description && <div className="idp-description">{item.description}</div>}
+                                                {this.buildItemSummaryDescription(item) && <div className="idp-description">{this.buildItemSummaryDescription(item)}</div>}
                                             </>
                                         }
                                     </div>
@@ -5612,13 +5786,14 @@ class DungeonPage extends React.Component {
                                 const count = group.items.length;
                                 const item = group.items[0];
                                 const firstIndex = group.firstIndex;
+                                const stripKey = `${key}__${firstIndex}__${item?.icon || 'no_icon'}`;
                                 return (
-                                    <div className={`strip-item sub-container ${item.animation === 'consumed' ? 'consumed' : ''}`} key={gIdx} style={{position: 'relative'}}>
+                                    <div className={`strip-item sub-container ${item.animation === 'consumed' ? 'consumed' : ''}`} key={stripKey} style={{position: 'relative'}}>
                                         <div className="hover-message-container">
                                             <div className="hover-message">{this.state.inventoryHoverMatrix[firstIndex] ? this.state.inventoryHoverMatrix[firstIndex].replaceAll('_', ' ') : '\u00A0'}</div>
                                         </div>
                                         <Tile
-                                            key={gIdx}
+                                            key={stripKey}
                                             id={firstIndex}
                                             data={item}
                                             tileSize={this.state.tileSize}

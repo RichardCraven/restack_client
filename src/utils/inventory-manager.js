@@ -652,7 +652,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: "wayfinder's boots",
             equippedBy: null,
             animation: null,
-            description: ''
+            description: 'Boots favored by wayfinders, offering a blend of protection and navigation affinity. Defense: 5 (~3% damage reduction)'
         },
         oily_boots: {
             tier: 1,
@@ -663,7 +663,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'oily boots',
             equippedBy: null,
             animation: null,
-            description: ''
+            description: 'Boots favored by those who prefer a sleek and unobtrusive style, offering a blend of protection and stealth. Defense: 5 (~3% damage reduction)'
         },
         highwaymans_boots: {
             tier: 1,
@@ -674,7 +674,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: "highwayman's boots",
             equippedBy: null,
             animation: null,
-            description: ''
+            description: 'Boots favored by highwaymen, offering a blend of protection and agility. Defense: 5 (~3% damage reduction)'
         },
         voyagers_boots: {
             tier: 1,
@@ -685,7 +685,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: "voyager's boots",
             equippedBy: null,
             animation: null,
-            description: ''
+            description: 'Boots favored by voyagers, offering a blend of protection and exploration affinity. Defense: 5 (~3% damage reduction)'
         },
         northerners_boots: {
             tier: 1,
@@ -696,7 +696,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: "northerner's boots",
             equippedBy: null,
             animation: null,
-            description: ''
+            description: 'Boots favored by northerners, offering a blend of protection and cold resistance. Defense: 5 (~3% damage reduction)'
         },
         midas_boots: {
             tier: 1,
@@ -707,7 +707,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'Midas boots',
             equippedBy: null,
             animation: null,
-            description: ''
+            description: 'Boots favored by those seeking fortune, offering a blend of protection and wealth affinity. Defense: 5 (~3% damage reduction)'
         },
         sentinels_boots: {
             tier: 1,
@@ -718,7 +718,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: "sentinel's boots",
             equippedBy: null,
             animation: null,
-            description: ''
+            description: 'Boots favored by sentinels, offering a blend of protection and vigilance. Defense: 5 (~3% damage reduction)'
         },
         imperial_boots: {
             tier: 1,
@@ -729,7 +729,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'imperial boots',
             equippedBy: null,
             animation: null,
-            description: ''
+            description: 'Boots favored by sentinels, offering a blend of protection and vigilance. Defense: 5 (~3% damage reduction)'
         },
         mariners_boots: {
             tier: 1,
@@ -740,7 +740,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: "mariner's boots",
             equippedBy: null,
             animation: null,
-            description: ''
+            description: 'Boots favored by mariners, offering a blend of protection and water affinity. Defense: 5 (~3% damage reduction)'
         },
         magicians_boots: {
             tier: 1,
@@ -751,7 +751,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: "magician's boots",
             equippedBy: null,
             animation: null,
-            description: ''
+            description: 'Boots favored by magicians, offering a blend of protection and magical affinity. Defense: 5 (~3% damage reduction)'
         },
         sorcerers_boots: {
             tier: 1,
@@ -762,7 +762,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: "sorcerer's boots",
             equippedBy: null,
             animation: null,
-            description: ''
+            description: 'Boots favored by sorcerers, offering a blend of protection and arcane affinity. Defense: 5 (~3% damage reduction)'
         },
         shadow_boots: {
             tier: 1,
@@ -773,7 +773,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'shadow boots',
             equippedBy: null,
             animation: null,
-            description: ''
+            description: 'Boots that blend into the shadows, providing stealth and moderate protection. Defense: 5 (~3% damage reduction)'
         },
         twilight_boots: {
             tier: 3,
@@ -784,7 +784,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'twilight boots',
             equippedBy: null,
             animation: null,
-            description: ''
+            description: 'Boots forged in the twilight realm, granting enhanced agility and protection. Defense: 45 (~30% damage reduction)'
         },
         moonstone_boots: {
             tier: 3,
@@ -795,7 +795,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'moonstone boots',
             equippedBy: null,
             animation: null,
-            description: ''
+            description: 'Boots imbued with the essence of the moonstone, enhancing agility and providing substantial protection. Defense: 45 (~30% damage reduction)   '
         },
         eldritch_boots: {
             tier: 3,
@@ -806,7 +806,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'eldritch boots',
             equippedBy: null,
             animation: null,
-            description: ''
+            description: 'Boots imbued with eldritch energy, enhancing magical prowess and providing substantial protection. Defense: 45 (~30% damage reduction)'
         },
         glimmering_boots: {
             tier: 3,
@@ -817,7 +817,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'glimmering boots',
             equippedBy: null,
             animation: null,
-            description: ''
+            description: 'Boots that shimmer with a glimmering light, providing enhanced agility and substantial protection. Defense: 45 (~30% damage reduction)'
         },
         princes_boots: {
             tier: 2,
@@ -828,7 +828,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: "prince's boots",
             equippedBy: null,
             animation: null,
-            description: ''
+            description: "Boots favored by princes, offering a blend of protection and regal elegance. Defense: 24 (~16% damage reduction)"
         },
         lords_boots: {
             tier: 2,
@@ -839,7 +839,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: "lord's boots",
             equippedBy: null,
             animation: null,
-            description: ''
+            description: "Boots favored by lords, offering a blend of protection and noble authority. Defense: 24 (~16% damage reduction)"
         },
         golems_boots: {
             tier: 2,
@@ -850,7 +850,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: "golem's boots",
             equippedBy: null,
             animation: null,
-            description: ''
+            description: "Boots favored by golems, offering a blend of protection and elemental resilience. Defense: 24 (~16% damage reduction)"
         },
         darklings_boots: {
             tier: 2,
@@ -861,7 +861,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: "darkling's boots",
             equippedBy: null,
             animation: null,
-            description: ''
+            description: "Boots favored by darklings, offering a blend of protection and shadow affinity. Defense: 24 (~16% damage reduction)"
         },
         ornate_boots: {
             tier: 2,
@@ -872,7 +872,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'ornate boots',
             equippedBy: null,
             animation: null,
-            description: ''
+            description: "Boots favored for their ornate design, offering a blend of protection and aesthetic appeal. Defense: 24 (~16% damage reduction)"
         },
         rainmans_boots: {
             tier: 2,
@@ -883,7 +883,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: "rainman's boots",
             equippedBy: null,
             animation: null,
-            description: ''
+            description: "Boots favored by rainmen, offering a blend of protection and weather resistance. Defense: 24 (~16% damage reduction)"
         },
         //////////////// standard helms
         archer_helm: {
@@ -895,7 +895,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'archer helm',
             equippedBy: null,
             animation: null,
-            description: ''
+            description: 'Helm favored by archers, offering a blend of protection and agility. Defense: 8 (~5% damage reduction)'
         },
         kettle_hat: {
             tier: 1,
@@ -906,7 +906,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'kettle hat',
             equippedBy: null,
             animation: null,
-            description: ''
+            description: 'Helm favored by infantry, offering a blend of protection and durability. Defense: 8 (~5% damage reduction)'
         },
         hounskull: {
             tier: 1,
@@ -917,7 +917,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'hounskull',
             equippedBy: null,
             animation: null,
-            description: ''
+            description: 'Helm favored by hounds, offering a blend of protection and keen senses. Defense: 8 (~5% damage reduction)'
         },
         plague_helm: {
             tier: 1,
@@ -928,7 +928,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'plague helm',
             equippedBy: null,
             animation: null,
-            description: ''
+            description: 'Helm favored by plague doctors, offering a blend of protection and disease resistance. Defense: 8 (~5% damage reduction)'
         },
         warlord_helm: {
             tier: 3,
@@ -939,7 +939,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'warlord helm',
             equippedBy: null,
             animation: null,
-            description: ''
+            description: 'Helm favored by warlords, offering a blend of protection and leadership. Defense: 18 (~12% damage reduction)'
         },
         juggernaut_helm: {
             tier: 3,
@@ -950,7 +950,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'juggernaut helm',
             equippedBy: null,
             animation: null,
-            description: ''
+            description: 'Helm favored by juggernauts, offering a blend of protection and brute strength. Defense: 18 (~12% damage reduction)'
         },
         moonlord_helm: {
             tier: 3,
@@ -961,7 +961,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'moonlord helm',
             equippedBy: null,
             animation: null,
-            description: ''
+            description: 'Helm favored by moonlords, offering a blend of protection and lunar power. Defense: 18 (~12% damage reduction)'
         },
         witch_knight_helm: {
             tier: 3,
@@ -972,7 +972,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'witch knight helm',
             equippedBy: null,
             animation: null,
-            description: ''
+            description: 'Helm favored by witch knights, offering a blend of protection and dark magic. Defense: 18 (~12% damage reduction)'
         },
         collosus_helm: {
             tier: 4,
@@ -983,7 +983,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'collosus helm',
             equippedBy: null,
             animation: null,
-            description: ''
+            description: 'Helm favored by colossus warriors, offering a blend of protection and immense strength. Defense: 24 (~16% damage reduction)'
         },
         omega_helm: {
             tier: 4,
@@ -994,7 +994,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'omega helm',
             equippedBy: null,
             animation: null,
-            description: ''
+            description: 'Helm favored by omegas, offering a blend of protection and ultimate power. Defense: 24 (~16% damage reduction)'
         },
         immortal_helm: {
             tier: 4,
@@ -1005,7 +1005,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'immortal helm',
             equippedBy: null,
             animation: null,
-            description: ''
+            description: 'Helm favored by immortals, offering a blend of protection and eternal resilience. Defense: 24 (~16% damage reduction)'
         },
         //////////////// upgradeable helms
         nasal_helm_upgradeable: {
@@ -1018,7 +1018,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             upgradeable: true,
             equippedBy: null,
             animation: null,
-            description: ''
+            description: 'Helm favored by infantry, offering a blend of protection and durability. Defense: 8 (~5% damage reduction)'
         },
         nasal_helm_upgradeable_upgraded: {
             tier: 1,
@@ -1029,7 +1029,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'nasal helm upgraded',
             equippedBy: null,
             animation: null,
-            description: ''
+            description: 'Helm favored by infantry, offering a blend of protection and durability. Defense: 12 (~8% damage reduction)'
         },
         soldier_helm_upgradeable: {
             tier: 1,
@@ -1041,7 +1041,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             upgradeable: true,
             equippedBy: null,
             animation: null,
-            description: ''
+            description: 'Helm favored by soldiers, offering a blend of protection and discipline. Defense: 8 (~5% damage reduction)'
         },
         soldier_helm_upgradeable_upgraded: {
             tier: 1,
@@ -1052,7 +1052,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'soldier helm upgraded',
             equippedBy: null,
             animation: null,
-            description: ''
+            description: 'Helm favored by soldiers, offering a blend of protection and discipline. Defense: 12 (~8% damage reduction)'
         },
         crusader_helm_upgradeable: {
             tier: 1,
@@ -1064,7 +1064,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             upgradeable: true,
             equippedBy: null,
             animation: null,
-            description: ''
+            description: 'Helm favored by crusaders, offering a blend of protection and valor. Defense: 8 (~5% damage reduction)'
         },
         crusader_helm_upgradeable_upgraded: {
             tier: 1,
@@ -1075,7 +1075,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'crusader helm upgraded',
             equippedBy: null,
             animation: null,
-            description: ''
+            description: 'Helm favored by crusaders, offering a blend of protection and valor. Defense: 12 (~8% damage reduction)'
         },
         cavalry_helm_upgradeable: {
             tier: 1,
@@ -1087,7 +1087,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             upgradeable: true,
             equippedBy: null,
             animation: null,
-            description: ''
+            description: 'Helm favored by cavalry, offering a blend of protection and mobility. Defense: 8 (~5% damage reduction)'
         },
         cavalry_helm_upgradeable_upgraded: {
             tier: 1,
@@ -1098,7 +1098,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'cavalry helm upgraded',
             equippedBy: null,
             animation: null,
-            description: ''
+            description: 'Helm favored by cavalry, offering a blend of protection and mobility. Defense: 12 (~8% damage reduction)'
         },
         war_helm_upgradeable: {
             tier: 2,
@@ -1110,7 +1110,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             upgradeable: true,
             equippedBy: null,
             animation: null,
-            description: ''
+            description: 'Helm favored by warriors, offering a blend of protection and strength. Defense: 8 (~5% damage reduction)'
         },
         war_helm_upgradeable_upgraded: {
             tier: 2,
@@ -1121,7 +1121,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'war helm upgraded',
             equippedBy: null,
             animation: null,
-            description: ''
+            description: 'Helm favored by warriors, offering a blend of protection and strength. Defense: 12 (~8% damage reduction)'
         },
         coif_helm_upgradeable: {
             tier: 2,
@@ -1133,7 +1133,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             upgradeable: true,
             equippedBy: null,
             animation: null,
-            description: ''
+            description: 'Helm favored by infantry, offering a blend of protection and durability. Defense: 8 (~5% damage reduction)'
         },
         coif_helm_upgradeable_upgraded: {
             tier: 2,
@@ -1144,7 +1144,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'coif helm upgraded',
             equippedBy: null,
             animation: null,
-            description: ''
+            description: 'Helm favored by infantry, offering a blend of protection and durability. Defense: 12 (~8% damage reduction)'
         },
         gladiator_helm_upgradeable: {
             tier: 2,
@@ -1156,7 +1156,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             upgradeable: true,
             equippedBy: null,
             animation: null,
-            description: ''
+            description: 'Helm favored by gladiators, offering a blend of protection and agility. Defense: 8 (~5% damage reduction)'
         },
         gladiator_helm_upgradeable_upgraded: {
             tier: 2,
@@ -1167,7 +1167,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'gladiator helm upgraded',
             equippedBy: null,
             animation: null,
-            description: ''
+            description: 'Helm favored by gladiators, offering a blend of protection and agility. Defense: 12 (~8% damage reduction)'
         },
         battle_mage_helm_upgradeable: {
             tier: 2,
@@ -1179,7 +1179,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             upgradeable: true,
             equippedBy: null,
             animation: null,
-            description: ''
+            description: 'Helm favored by battle mages, offering a blend of protection and magical prowess. Defense: 8 (~5% damage reduction)'
         },
         battle_mage_helm_upgradeable_upgraded: {
             tier: 2,
@@ -1190,7 +1190,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'battle mage helm upgraded',
             equippedBy: null,
             animation: null,
-            description: ''
+            description: 'Helm favored by battle mages, offering a blend of protection and magical prowess. Defense: 12 (~8% damage reduction)'
         },
         knight_helm_upgradeable: {
             tier: 2,
@@ -1202,7 +1202,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             upgradeable: true,
             equippedBy: null,
             animation: null,
-            description: ''
+            description: 'Helm favored by knights, offering a blend of protection and honor. Defense: 8 (~5% damage reduction)'
         },
         knight_helm_upgradeable_upgraded: {
             tier: 2,
@@ -1213,7 +1213,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'knight helm upgraded',
             equippedBy: null,
             animation: null,
-            description: ''
+            description: 'Helm favored by knights, offering a blend of protection and honor. Defense: 12 (~8% damage reduction)'
         },
         janissary_helm_upgradeable: {
             tier: 2,
@@ -1225,7 +1225,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             upgradeable: true,
             equippedBy: null,
             animation: null,
-            description: ''
+            description: 'Helm favored by janissaries, offering a blend of protection and agility. Defense: 8 (~5% damage reduction)'
         },
         janissary_helm_upgradeable_upgraded: {
             tier: 2,
@@ -1236,7 +1236,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'janissary helm upgraded',
             equippedBy: null,
             animation: null,
-            description: ''
+            description: 'Helm favored by janissaries, offering a blend of protection and agility. Defense: 12 (~8% damage reduction)'
         },
         bascinet_upgradeable: {
             tier: 2,
@@ -1248,7 +1248,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             upgradeable: true,
             equippedBy: null,
             animation: null,
-            description: ''
+            description: 'Helm favored by infantry, offering a blend of protection and durability. Defense: 8 (~5% damage reduction)'
         },
         bascinet_upgradeable_upgraded: {
             tier: 2,
@@ -1259,7 +1259,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'bascinet upgraded',
             equippedBy: null,
             animation: null,
-            description: ''
+            description: 'Helm favored by infantry, offering a blend of protection and durability. Defense: 12 (~8% damage reduction)'
         },
         imperial_helm_upgradeable: {
             tier: 2,
@@ -1271,7 +1271,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             upgradeable: true,
             equippedBy: null,
             animation: null,
-            description: ''
+            description: 'Helm favored by emperors, offering a blend of protection and prestige. Defense: 8 (~5% damage reduction)'
         },
         imperial_helm_upgradeable_upgraded: {
             tier: 2,
@@ -1282,7 +1282,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'imperial helm upgraded',
             equippedBy: null,
             animation: null,
-            description: ''
+            description: 'Helm favored by emperors, offering a blend of protection and prestige. Defense: 12 (~8% damage reduction)'
         },
         rogue_hood_upgradeable: {
             tier: 2,
@@ -1294,7 +1294,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             upgradeable: true,
             equippedBy: null,
             animation: null,
-            description: ''
+            description: 'Hood favored by rogues, offering a blend of protection and stealth. Defense: 8 (~5% damage reduction)'
         },
         rogue_hood_upgradeable_upgraded: {
             tier: 2,
@@ -1305,7 +1305,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'rogue hood upgraded',
             equippedBy: null,
             animation: null,
-            description: ''
+            description: 'Hood favored by rogues, offering a blend of protection and stealth. Defense: 12 (~8% damage reduction)'
         }
         ///////// chest pieces
     }
@@ -1321,7 +1321,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             subtype: 'wand',
             power: null,
             animation: null,
-            description: ''
+            description: 'Wand favored by mages, offering a blend of magical power and versatility.'
         },
         animus_wand: {
             tier: 1,
@@ -1332,7 +1332,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             subtype: 'wand',
             power: null,
             animation: null,
-            description: ''
+            description: 'Wand favored by animus, offering a blend of magical power and versatility.'
         },
         glyndas_wand: {
             tier: 1,
@@ -1343,7 +1343,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             subtype: 'wand',
             power: null,
             animation: null,
-            description: ''
+            description: "Wand favored by Glynda, offering a blend of magical power and versatility."
         },
         justicator_wand: {
             tier: 2,
@@ -1354,7 +1354,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             subtype: 'wand',
             power: null,
             animation: null,
-            description: ''
+            description: 'Wand favored by justicators, offering a blend of magical power and justice.'
         },
         volkas_wand: {
             tier: 2,            
@@ -1365,7 +1365,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             subtype: 'wand',
             power: null,
             animation: null,
-            description: ''
+            description: "Wand favored by Volka, offering a blend of magical power and versatility."
         },
         willowcaster: {
             tier: 2,
@@ -1376,7 +1376,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             subtype: 'wand',
             power: null,
             animation: null,
-            description: ''
+            description: 'Wand favored by willows, offering a blend of magical power and versatility.'
         },
         maerlyns_rod: {
             tier: 3,
@@ -1387,7 +1387,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             subtype: 'wand',
             power: null,
             animation: null,
-            description: ''
+            description: "Rod favored by Maerlyn, offering a blend of magical power and versatility."
         },
         // staves
         archmages_staff: {
@@ -1399,7 +1399,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             subtype: 'staff',
             power: null,
             animation: null,
-            description: ''
+            description: "Staff favored by archmages, offering a blend of magical power and wisdom."
         },
         enchanters_staff: {            
             tier: 1,
@@ -1410,7 +1410,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             subtype: 'staff',
             power: null,
             animation: null,
-            description: ''
+            description: "Staff favored by enchanters, offering a blend of magical power and enchantment."
         },
         imperial_mage_staff: {
             tier: 1,
@@ -1421,7 +1421,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             subtype: 'staff',
             power: null,
             animation: null,
-            description: ''
+            description: "Staff favored by imperial mages, offering a blend of magical power and authority."
         },
         staff_of_espilon: {
             tier: 2,
@@ -1432,7 +1432,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             subtype: 'staff',
             power: null,
             animation: null,
-            description: ''
+            description: "Staff favored by Espilon, offering a blend of magical power and wisdom."
         },
         staff_of_marduk: {
             tier: 2,
@@ -1443,7 +1443,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             subtype: 'staff',
             power: null,
             animation: null,
-            description: ''
+            description: "Staff favored by Marduk, offering a blend of magical power and wisdom."
         },
         staff_of_omicron: {
             tier: 2,
@@ -1454,7 +1454,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             subtype: 'staff',
             power: null,
             animation: null,
-            description: ''
+            description: "Staff favored by Omicron, offering a blend of magical power and wisdom."
         },
         staff_of_tomorrow: {
             tier: 3,
@@ -1465,7 +1465,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             subtype: 'staff',
             power: null,
             animation: null,
-            description: ''
+            description: "Staff favored by the seers of tomorrow, offering a blend of magical power and foresight."
         },
         //charms < charms can only be used once per battle
         beetle_charm: {
@@ -1548,7 +1548,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             subtype: 'amulet',
             power: null,
             animation: null,
-            description: ''
+            description: 'Crafted by the silver-tongued Elasi priestesses, this amulet whispers ancient wards against curses and binding magics.'
         },
         darkarrow_amulet: {
             tier: 1,
@@ -1559,7 +1559,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             subtype: 'amulet',
             power: null,
             animation: null,
-            description: ''
+            description: 'Named for the black arrows of the Shadow Wars, this amulet channels the swiftness and precision of those legendary archers.'
         },
         elemental_amulet: {
             tier: 1,
@@ -1570,7 +1570,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             subtype: 'amulet',
             power: null,
             animation: null,
-            description: ''
+            description: 'A primal stone that channels the breath of all elements—fire, water, earth, and wind bound in harmonious balance.'
         },
         silver_amulet: {
             tier: 1,
@@ -1581,7 +1581,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             subtype: 'amulet',
             power: null,
             animation: null,
-            description: ''
+            description: 'Forged from moonsilver and blessed by the Temple Wardens, this amulet glows softly and repels malevolent spirits.'
         },
         ruby_amulet: {
             tier: 1,
@@ -1592,7 +1592,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             subtype: 'amulet',
             power: null,
             animation: null,
-            description: ''
+            description: 'A blood-red gem pulled from the volcanic heart of the Crimson Wastes, burning with primal fire and passion.'
         },
         acorn_amulet: {
             tier: 1,
@@ -1603,7 +1603,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             subtype: 'amulet',
             power: null,
             animation: null,
-            description: ''
+            description: 'A gift from the Fae, this acorn pulses with ancient forest magic and grants kinship with the natural world.'
         },
         voodoo_amulet: {
             tier: 1,
@@ -1614,7 +1614,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             subtype: 'amulet',
             power: null,
             animation: null,
-            description: ''
+            description: 'Imbued with sympathetic magic by the shadow priests of the Bayou, this amulet allows the wearer to touch distant threads of fate.'
         },
         yaga_amulet: {
             tier: 1,
@@ -1625,7 +1625,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             subtype: 'amulet',
             power: null,
             animation: null,
-            description: ''
+            description: 'Given by the dreaded Yaga herself to those who survive her trials, this amulet carries her capricious blessing.'
         },
         temprance_amulet: {
             tier: 1,
@@ -1636,7 +1636,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             subtype: 'amulet',
             power: null,
             animation: null,
-            description: ''
+            description: 'Blessed by the monks of the Abstinent Order, this amulet brings clarity and balance to turbulent hearts.'
         },
         emerald_amulet: {
             tier: 1,
@@ -1647,7 +1647,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             subtype: 'amulet',
             power: null,
             animation: null,
-            description: ''
+            description: 'A verdant stone treasured by the Druid circles, it thrums with the life force of eternal spring.'
         },
         maconic_amulet: {
             tier: 1,
@@ -1658,7 +1658,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             subtype: 'amulet',
             power: null,
             animation: null,
-            description: ''
+            description: 'Carved with the sacred symbols of the Stoneworkers\' Guild, this amulet draws strength from stone and mountain.'
         },
         warding_amulet: {
             tier: 2,
@@ -1669,7 +1669,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             subtype: 'amulet',
             power: null,
             animation: null,
-            description: ''
+            description: 'A masterwork of protective enchantment from the Sentry Corps, it weaves barriers of pure force around the wearer.'
         },
         bloodvial_amulet: {
             tier: 2,
@@ -1680,7 +1680,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             subtype: 'amulet',
             power: null,
             animation: null,
-            description: ''
+            description: 'A chilling relic said to contain the essence of a fallen hero, it grants vitality bound to sacrifice and blood-debt.'
         },
         enchantress_amulet: {
             tier: 2,
@@ -1691,7 +1691,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             subtype: 'amulet',
             power: null,
             animation: null,
-            description: ''
+            description: 'Woven by the Enchantresses of the Coral Spire, this amulet bends the weave of magic itself around its bearer.'
         },
         goldclaw_amulet: {
             tier: 2,
@@ -1702,7 +1702,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             subtype: 'amulet',
             power: null,
             animation: null,
-            description: ''
+            description: 'Taken from the hoard of an ancient dragon, this amulet burns with avarice and grants the wearer uncanny fortune.'
         },
         clerics_amulet: {
             tier: 2,
@@ -1713,7 +1713,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             subtype: 'amulet',
             power: null,
             animation: null,
-            description: ''
+            description: 'Sanctified in the High Cathedral, this amulet channels divine grace and mends the wounds of body and spirit.'
         },
         queens_amulet: {
             tier: 2,
@@ -1724,7 +1724,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             subtype: 'amulet',
             power: null,
             animation: null,
-            description: ''
+            description: 'Once worn by the last queen before the realm fractured, this amulet carries the weight of sovereignty and ancient command.'
         },
         ice_amulet: {
             tier: 3,
@@ -1735,7 +1735,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             subtype: 'amulet',
             power: null,
             animation: null,
-            description: ''
+            description: 'Frozen from the very heart of the Eternal Glacier, this amulet imprisons a shard of primordial winter and slows all decay.'
         },
         hypnosis_amulet: {
             tier: 3,
@@ -1746,7 +1746,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             subtype: 'amulet',
             power: null,
             animation: null,
-            description: ''
+            description: 'Created by the Dream-Walkers of the Somnium, this amulet bends perception and weaves illusions of hauntingly beautiful deception.'
         },
         vampiric_amulet: {
             tier: 3,
@@ -1757,7 +1757,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             subtype: 'amulet',
             power: null,
             animation: null,
-            description: ''
+            description: 'A terrible treasure from the Crimson Courts, this amulet thirsts for life and grants terrible strength to those who feed it.'
         },
         platinum_amulet: {
             tier: 3,
@@ -1768,7 +1768,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             subtype: 'amulet',
             power: null,
             animation: null,
-            description: ''
+            description: 'Forged from the rarest metal in the Star-Forges of the Celestial Smiths, this amulet blazes with otherworldly radiance.'
         },
         necrotic_amulet: {
             tier: 3,
@@ -1779,7 +1779,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             subtype: 'amulet',
             power: null,
             animation: null,
-            description: ''
+            description: 'Crafted in the Catacombs by warlocks who dare commune with death itself, this amulet whispers promises of undying power.'
         },
         voidward_amulet: {
             tier: 4,
@@ -1790,7 +1790,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             subtype: 'amulet',
             power: null,
             animation: null,
-            description: ''
+            description: 'A legendary artifact sealed with the last breath of a Void Guardian, it creates an impenetrable barrier against the abyss itself.'
         },
         celestial_amulet: {
             tier: 4,
@@ -1801,7 +1801,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             subtype: 'amulet',
             power: null,
             animation: null,
-            description: ''
+            description: 'Fallen from a distant star and blessed by the Heavenly Choir, this amulet bathes the wearer in divine light and cosmic purpose.'
         },
         dimensional_amulet: {
             tier: 4,
@@ -1812,7 +1812,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             subtype: 'amulet',
             power: null,
             animation: null,
-            description: ''
+            description: 'Woven from the fabric of folded space by the Interdimensional Council, this amulet grants glimpses beyond the veil of reality.'
         },
 
         //spellbooks
@@ -2222,6 +2222,61 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             animation: null
         }
     }
+
+    // Fill any explicitly blank descriptions without overwriting authored text.
+    // This ensures all items that declare a `description` key have usable copy.
+    this.buildAutoDescription = (item, key = '') => {
+        if (!item) return '';
+        const itemName = (item.name && String(item.name).trim())
+            ? String(item.name).trim()
+            : String(key || 'item').replaceAll('_', ' ');
+        const subtype = item.subtype ? String(item.subtype).toLowerCase() : '';
+
+        if (item.type === 'weapon' && typeof item.damage === 'number') {
+            return `${itemName} grants +${item.damage}% base atk and +${(item.damage * 0.1).toFixed(1)} flat damage.`;
+        }
+
+        if (typeof item.armor === 'number') {
+            if (subtype === 'boots') {
+                return `${itemName} reinforces footing and lower-body protection. Defense: ${item.armor}.`;
+            }
+            if (subtype === 'helm') {
+                return `${itemName} protects the head and face in combat. Defense: ${item.armor}.`;
+            }
+            if (subtype === 'shield') {
+                return `${itemName} offers reliable blocking coverage. Defense: ${item.armor}.`;
+            }
+            return `${itemName} provides defensive protection. Defense: ${item.armor}.`;
+        }
+
+        if (item.type === 'magical') {
+            if (typeof item.power === 'number') {
+                return `${itemName} channels arcane focus. Power: ${item.power}.`;
+            }
+            if (subtype) {
+                return `${itemName} is a magical ${subtype} used by seasoned adventurers.`;
+            }
+            return `${itemName} is a magical item imbued with arcane properties.`;
+        }
+
+        return `${itemName} is an adventuring item.`;
+    };
+
+    this.hydrateBlankDescriptions = (collection) => {
+        if (!collection || typeof collection !== 'object') return;
+        Object.entries(collection).forEach(([key, item]) => {
+            if (!item || typeof item !== 'object') return;
+            if (!Object.prototype.hasOwnProperty.call(item, 'description')) return;
+            const hasText = typeof item.description === 'string' && item.description.trim().length > 0;
+            if (hasText) return;
+            item.description = this.buildAutoDescription(item, key);
+        });
+    };
+
+    this.hydrateBlankDescriptions(this.weapons);
+    this.hydrateBlankDescriptions(this.armor);
+    this.hydrateBlankDescriptions(this.magical);
+
     this.allItems = {};
     // Build category key list defensively so a missing/undefined category array
     // never crashes InventoryManager construction.

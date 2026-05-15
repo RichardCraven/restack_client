@@ -92,7 +92,7 @@ const specialsMatrix = {
         type: 'special',
         icon: images['infantry_shield'],
         cooldown: 15,       // 15-era recharge after expiry
-        duration: 6,        // wall lasts 6 eras
+        duration: 4,        // wall lasts 4 eras
         energy_cost: 30,    // costs 30% energy to erect
         effect: ['special'],
         special_instructions: 'Erect a 5-tile vertical barrier at the Soldier\'s front edge. Blocks all unit movement across the line for 4 eras. Soldier cannot move or attack while active.',
@@ -257,22 +257,24 @@ const specialsMatrix = {
         name: 'obliterate',
         type: 'special',
         icon: images['void_lance'],
-        cooldown: 'TBD',
-        damage: 'TBD',
-        energy_cost: 'TBD',
-        effect: ['TBD'],
-        special_instructions: 'TBD',
+        cooldown: 10,
+        damage: 30,
+        energy_cost: 60,
+        def_reduction_percent: 50,
+        def_reduction_duration: 5,
+        effect: ['reduce_def_multi_target', 'damage_multi_target'],
+        special_instructions: 'Launches a devastating attack that obliterates everything in its path, dealing massive damage to all targets in a straight line. Deals damage in a straight line and reduces defense by 50% of anything hit for 5 eras',
         level: 1
     },
     invisibility: {
         name: 'invisibility',
         type: 'special',
         icon: images['nukta_charm'],
-        cooldown: 'TBD',
-        duration: 'TBD',
-        energy_cost: 'TBD',
-        effect: ['TBD'],
-        special_instructions: 'TBD',
+        cooldown: 10,
+        duration: 3,
+        energy_cost: 80,
+        effect: ['special'],
+        special_instructions: 'Makes the caster invisible for 3 eras. While invisible, the caster cannot be targeted by enemy attacks or specials, but also cannot use their own attacks or specials.',
         level: 1
     },
     induce_madness: {

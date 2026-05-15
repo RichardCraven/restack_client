@@ -469,7 +469,7 @@ export function MonsterManager() {
             deathCries: ['No! Impossible!'],
             specials: ['obliterate', 'invisibility', 'major_magic_missile'],
             passives: ['flying'],
-            attacks: ['void_lance'],
+            attacks: ['void_lance', 'claws'],
             weaknesses: ['arcane', 'holy-aura'],
             minions: ['kabuki_demon_minion', 'kabuki_demon_minion'],
             drops: [

@@ -77,6 +77,9 @@ export function FighterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
         if (typeof utilMethods.damageCheck === 'function') {
             this.utilMethods.damageCheck = utilMethods.damageCheck;
         }
+        if (typeof utilMethods.runCooldownTicks === 'function') {
+            this.utilMethods.runCooldownTicks = utilMethods.runCooldownTicks;
+        }
     }
     this.initializeRoster = (animationManager) => {
         this.roster = {
@@ -94,8 +97,7 @@ export function FighterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
     }
     this.chooseAttackType = (caller, target) => {
         let attack, available = caller.attacks.filter(e=>e.cooldown_position === 100);
-        let percentCooledDown = 0,
-            chosenAttack;
+        let chosenAttack;
         const distanceToTarget = data.methods.getDistanceToTarget(caller, target);
 
         if(distanceToTarget === 1 && available.find(e=>e.range === 'close')){

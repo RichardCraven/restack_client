@@ -175,6 +175,54 @@ export function clearFrozenEffect(target) {
 }
 
 /**
+ * Applies a temporary defense break to a combatant.
+ * - Stores current DEF once, reduces by percentage, and tracks era duration.
+ * - Restoration is handled by fighter turn-cycle era ticking in factories.js.
+ */
+export function applyDefenseBreakEffect(target, duration, percent, broadcastDataUpdate) {
+    if (!target || !target.stats || typeof target.stats.def !== 'number') return false;
+
+    const currentDef = target.stats.def;
+    if (target._defBrokenOriginalDef == null) target._defBrokenOriginalDef = currentDef;
+
+    const reductionPercent = typeof percent === 'number' ? percent : 50;
+    const reducedDef = Math.max(0, Math.floor(currentDef * (1 - (reductionPercent / 100))));
+    target.stats.def = reducedDef;
+    target.def = reducedDef;
+    target.defBroken = true;
+    target.defBroken_eras = Math.max(1, Math.floor(duration || 1));
+
+    if (typeof broadcastDataUpdate === 'function') broadcastDataUpdate();
+    return true;
+}
+
+export function clearDefenseBreakEffect(target) {
+    if (!target) return;
+    if (target._defBrokenOriginalDef != null) {
+        const restore = target._defBrokenOriginalDef;
+        if (target.stats) target.stats.def = restore;
+        target.def = restore;
+    }
+    target.defBroken = false;
+    target.defBroken_eras = 0;
+    target._defBrokenOriginalDef = null;
+}
+
+export function applyPsionicBurnEffect(target, duration, broadcastDataUpdate) {
+    if (!target || target.hp <= 0) return false;
+    target.psionicBurn = true;
+    target.psionicBurn_eras = duration || 1;
+    if (typeof broadcastDataUpdate === 'function') broadcastDataUpdate();
+    return true;
+}
+
+export function clearPsionicBurnEffect(target) {
+    if (!target) return;
+    target.psionicBurn = false;
+    target.psionicBurn_eras = 0;
+}
+
+/**
  * Centralized dispatcher for applying combat effects from attacks.
  * Handles the chance roll and routes to the specific effect helper.
  * @param {object} target - The combatant being hit
@@ -233,6 +281,17 @@ export function applyAttackEffect(target, effect, broadcastDataUpdate, isCrit) {
         case 'freeze':
             applied = applyFrozenEffect(target, effect.duration, broadcastDataUpdate);
             appliedLabel = 'freezes';
+            break;
+        case 'reduce_def':
+        case 'def_break':
+        case 'defense break':
+            applied = applyDefenseBreakEffect(target, effect.duration, effect.percent, broadcastDataUpdate);
+            appliedLabel = 'reduces defense';
+            break;
+        case 'psionic burn':
+        case 'psionic_burn':
+            applied = applyPsionicBurnEffect(target, effect.duration, broadcastDataUpdate);
+            appliedLabel = 'causes psionic burn';
             break;
         default:
             console.warn(`Unknown effect type: ${type}`);

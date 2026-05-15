@@ -486,6 +486,7 @@ export function CombatManager() {
         this.monsterAI.connectOverlayManager(instance);
     }
     this.connectAnimationManager = (instance) => {
+        this.animationManager = instance;
         this.monsterAI.connectAnimationManager(instance)
         this.fighterAI.connectAnimationManager(instance)
         this.monsterAI.initializeRoster();
@@ -1144,7 +1145,8 @@ export function CombatManager() {
         this.updateData(clone(this.combatants))
     }
     this.genericChooseAttackType = (caller, target) => {
-        let attack, available = caller.attacks.filter(e => e.cooldown_position === 100);
+        if (!caller || !caller.attacks) return null;
+        let attack, available = caller.attacks.filter(e => e && e.cooldown_position === 100);
         const distanceToTarget = this.getDistanceToTarget(caller, target);
         let percentCooledDown = 0,
             chosenAttack;
@@ -1229,7 +1231,8 @@ export function CombatManager() {
                 this.setTargetId(caller, adj.enemy.id, 'chooseAttackType-adjacent');
                 caller.attackOrigin = adj.originTile; // Used for animation/effects if needed
                 // Always pick a close-range attack if available
-                const available = caller.attacks.filter(e => e.cooldown_position === 100 && e.range === 'close');
+                if (!caller.attacks) return null;
+                const available = caller.attacks.filter(e => e && e.cooldown_position === 100 && e.range === 'close');
                 // Ensure pending attack is assigned (redirection handled by setTargetId elsewhere if needed)
                 caller.pendingAttack = available.length > 0 ? available[0] : this.genericChooseAttackType(caller, adj.enemy);
                 return caller.pendingAttack;
@@ -2448,19 +2451,15 @@ export function CombatManager() {
                 combatantHit.wounded.sourceDirection = 'right';
                 pushDest = { x: combatantHit.coordinates.x - 1, y: combatantHit.coordinates.y };
             }
+            // Shield Wall makes the Soldier immovable while active.
+            const immovableShieldWallSoldier = combatantHit.type === 'soldier' && combatantHit.shieldWallActive;
             // Only push if destination is legal (not into virtually occupied space)
-            if (pushDest && this._canMoveToCoords(combatantHit, pushDest)) {
+            // and the defender is not an active Shield Wall Soldier.
+            if (!immovableShieldWallSoldier && pushDest && this._canMoveToCoords(combatantHit, pushDest)) {
                 combatantHit.coordinates = pushDest;
                 this.checkOverlap(combatantHit);
                 if (combatantHit.isMonster && typeof this.syncVCTs === 'function') {
                     this.syncVCTs();
-                }
-                // A pushed-back Soldier can no longer hold the wall line — expire it
-                if (combatantHit.type === 'soldier' && combatantHit.shieldWallActive) {
-                    const soldierAI = this.fighterAI && this.fighterAI.roster && this.fighterAI.roster['soldier'];
-                    if (soldierAI && typeof soldierAI._expireShieldWall === 'function') {
-                        soldierAI._expireShieldWall(combatantHit, this.combatants);
-                    }
                 }
             }
         } else {
@@ -2497,6 +2496,17 @@ export function CombatManager() {
                 ? caller
                 : combatantHit;
             appliedEffectText = applyAttackEffect(effectRecipient, pendingEffect, this.broadcastDataUpdate, criticalHit);
+
+            if (appliedEffectText && this.animationManager && String(resolvedEffectType || '').toLowerCase() === 'psionic burn') {
+                const effectTiles = (Array.isArray(effectRecipient.occupiedCoords) && effectRecipient.occupiedCoords.length > 0)
+                    ? effectRecipient.occupiedCoords
+                    : (effectRecipient.coordinates ? [effectRecipient.coordinates] : []);
+                effectTiles.forEach((tile) => {
+                    if (tile && typeof this.animationManager.triggerPsionicBurnCircle === 'function') {
+                        this.animationManager.triggerPsionicBurnCircle(tile, caller && caller.coordinates ? caller.coordinates : tile);
+                    }
+                });
+            }
         }
 
         this.appendCombatLog(this.buildCombatLogMessage({

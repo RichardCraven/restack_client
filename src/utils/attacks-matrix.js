@@ -65,6 +65,7 @@ const attacksMatrix = {
         type: 'psionic',
         range: 'medium',
         cooldown: 1.5,
+        effect: { type: 'psionic burn', chance: 50, duration: 4 },
     },
     energy_blast: {
         name: 'energy blast',
