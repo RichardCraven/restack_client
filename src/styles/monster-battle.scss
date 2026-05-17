@@ -3073,6 +3073,44 @@
                 width: 40px;
                 // border: 1px solid white;
                 background-size: 100% 100%;
+                background-position: center;
+                position: relative;
+                border-radius: 50%;
+                overflow: hidden;
+
+                .manual-cooldown-mask {
+                    position: absolute;
+                    inset: 0;
+                    pointer-events: none;
+                    border-radius: 50%;
+                    background: conic-gradient(
+                        from -90deg,
+                        rgba(0, 0, 0, 0.82) 0deg,
+                        rgba(0, 0, 0, 0.82) var(--manual-cooldown-angle, 360deg),
+                        rgba(100, 220, 255, 0.16) var(--manual-cooldown-angle, 360deg),
+                        rgba(100, 220, 255, 0.16) 360deg
+                    );
+                    box-shadow:
+                        inset 0 0 8px rgba(0, 0, 0, 0.75),
+                        0 0 6px rgba(90, 210, 255, 0.45);
+                    border: 1px solid rgba(120, 230, 255, 0.7);
+                }
+
+                .manual-cooldown-label {
+                    position: absolute;
+                    left: 50%;
+                    top: 50%;
+                    transform: translate(-50%, -50%);
+                    font-size: 12px;
+                    line-height: 1;
+                    font-weight: 700;
+                    color: #d7f6ff;
+                    text-shadow:
+                        0 0 3px rgba(0, 0, 0, 0.95),
+                        0 0 8px rgba(95, 215, 255, 0.55);
+                    z-index: 2;
+                    pointer-events: none;
+                }
             }
             .title{
                 flex: auto;
@@ -3193,6 +3231,26 @@
                                     transparent 100%
                                 );
                                 transition: background 0.25s ease;
+                            }
+                            &.energy-ring {
+                                left: 0;
+                                top: 0;
+                                width: 100%;
+                                height: 100%;
+                                border-radius: 50%;
+                                z-index: 8;
+                                opacity: 1;
+                                background: conic-gradient(
+                                    from -90deg,
+                                    rgba(255, 220, 60, 0.95) 0deg,
+                                    rgba(255, 220, 60, 0.95) calc(var(--energy-ring-fill, 0) * 3.6deg),
+                                    rgba(0, 0, 0, 0) calc(var(--energy-ring-fill, 0) * 3.6deg),
+                                    rgba(0, 0, 0, 0) 360deg
+                                );
+                                -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px));
+                                mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px));
+                                filter: drop-shadow(0 0 2px rgba(255, 220, 60, 0.75));
+                                transition: background 0.2s linear;
                             }
                         }
                         .interaction-tile{

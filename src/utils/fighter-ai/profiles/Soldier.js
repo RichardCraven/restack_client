@@ -250,6 +250,143 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
 
     return adjacentEnemies >= 3;
 }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // FORCE BACK — push enemies in the forward arc one tile away
+    // ─────────────────────────────────────────────────────────────────────────
+
+    this._getForceBackArcTiles = (caller) => {
+        const { x, y } = caller.coordinates;
+        const facing = caller.facing || 'right';
+        switch (facing) {
+            case 'left':
+                return [
+                    { x: x - 1, y: y - 1 },
+                    { x: x - 1, y },
+                    { x: x - 1, y: y + 1 },
+                ];
+            case 'up':
+                return [
+                    { x: x - 1, y: y - 1 },
+                    { x, y: y - 1 },
+                    { x: x + 1, y: y - 1 },
+                ];
+            case 'down':
+                return [
+                    { x: x - 1, y: y + 1 },
+                    { x, y: y + 1 },
+                    { x: x + 1, y: y + 1 },
+                ];
+            case 'right':
+            default:
+                return [
+                    { x: x + 1, y: y - 1 },
+                    { x: x + 1, y },
+                    { x: x + 1, y: y + 1 },
+                ];
+        }
+    }
+
+    this._getForceBackVector = (caller) => {
+        switch (caller.facing || 'right') {
+            case 'left': return { dx: -1, dy: 0 };
+            case 'up': return { dx: 0, dy: -1 };
+            case 'down': return { dx: 0, dy: 1 };
+            case 'right':
+            default:
+                return { dx: 1, dy: 0 };
+        }
+    }
+
+    this._canPushEnemy = (enemy, vec, combatants) => {
+        // Skip large multi-tile enemies for this first implementation.
+        if (Array.isArray(enemy.occupiedCoords) && enemy.occupiedCoords.length > 1) return false;
+        const destination = {
+            x: enemy.coordinates.x + vec.dx,
+            y: enemy.coordinates.y + vec.dy,
+        };
+        if (destination.x < 0 || destination.x > this.MAX_DEPTH) return false;
+        if (destination.y < 0 || destination.y >= this.MAX_LANES) return false;
+        if (data.methods && typeof data.methods.isAvailableToMoveInto === 'function') {
+            return data.methods.isAvailableToMoveInto(destination, combatants, enemy.coordinates, enemy);
+        }
+        // Fallback occupancy check
+        return !Object.values(combatants).some(e =>
+            e && !e.dead && e.id !== enemy.id && e.coordinates &&
+            e.coordinates.x === destination.x && e.coordinates.y === destination.y
+        );
+    }
+
+    this._getForceBackTargets = (caller, combatants) => {
+        const arc = this._getForceBackArcTiles(caller);
+        const vec = this._getForceBackVector(caller);
+        return Object.values(combatants).filter(e => {
+            if (!e || e.dead || !this.isEnemy(e)) return false;
+            const tiles = (Array.isArray(e.occupiedCoords) && e.occupiedCoords.length > 0)
+                ? e.occupiedCoords
+                : [e.coordinates];
+            const inArc = tiles.some(t => arc.some(a => a.x === t.x && a.y === t.y));
+            if (!inArc) return false;
+            return this._canPushEnemy(e, vec, combatants);
+        });
+    }
+
+    this.shouldUseForceBack = (caller, combatants) => {
+        const forceBack = caller.specials && caller.specials.find(s => s && s.name === 'force back');
+        if (!forceBack || forceBack.cooldown_position !== 100) return false;
+        const energy = typeof caller.energy === 'number' ? caller.energy : 0;
+        if (forceBack.energy_cost != null && energy < forceBack.energy_cost) return false;
+        const pushableTargets = this._getForceBackTargets(caller, combatants);
+        return pushableTargets.length >= 2;
+    }
+
+    this.triggerForceBack = (caller, combatants) => {
+        const forceBack = caller.specials && caller.specials.find(s => s && s.name === 'force back');
+        if (!forceBack || forceBack.cooldown_position !== 100) return false;
+
+        const targets = this._getForceBackTargets(caller, combatants);
+        if (targets.length < 1) return false;
+
+        const vec = this._getForceBackVector(caller);
+
+        // Spend energy and put special on cooldown immediately to prevent double-fire.
+        const energyCost = Number(forceBack.energy_cost) || 0;
+        caller.energy = Math.max(0, (caller.energy || 0) - energyCost);
+        forceBack.cooldown_position = 0;
+
+        targets.forEach(enemy => {
+            const destination = {
+                x: enemy.coordinates.x + vec.dx,
+                y: enemy.coordinates.y + vec.dy,
+            };
+            enemy.coordinates = destination;
+            // Keep occupiedCoords coherent for single-tile units.
+            if (Array.isArray(enemy.occupiedCoords) && enemy.occupiedCoords.length === 1) {
+                enemy.occupiedCoords[0] = { ...destination };
+            }
+            if (typeof forceBack.damage === 'number' && forceBack.damage > 0) {
+                const supplementalData = {
+                    damage: forceBack.damage,
+                    type: 'physical',
+                    effect: forceBack.effect || ['special'],
+                };
+                try {
+                    this.hitsCombatant(caller, enemy, supplementalData, { forceHit: true, forceCritical: false });
+                } catch (e) {
+                    // non-fatal push should still complete
+                }
+            }
+        });
+
+        if (typeof this.kickoffSpecialCooldown === 'function') {
+            this.kickoffSpecialCooldown(forceBack);
+        }
+        if (typeof this.broadcastDataUpdate === 'function') {
+            try { this.broadcastDataUpdate(caller); } catch (e) {}
+        }
+        return true;
+    }
+
     // Attempt to find and use a healing consumable for the caller.
     // Returns true if a consumable was used (so caller's behavior can break/stop).
     this.tryUseConsumableForHeal = (caller) => {
@@ -513,6 +650,14 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
                 // ── Shield Wall check ───────────────────────────────────────
                 if (this.shouldUseShieldWall(caller, combatants)) {
                     this.triggerShieldWall(caller, combatants);
+                    break;
+                }
+                // ────────────────────────────────────────────────────────────
+
+                // ── Force Back check ───────────────────────────────────────
+                // Trigger when at least 2 enemies in the forward arc can be pushed.
+                if (this.shouldUseForceBack(caller, combatants)) {
+                    this.triggerForceBack(caller, combatants);
                     break;
                 }
                 // ────────────────────────────────────────────────────────────

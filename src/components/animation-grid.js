@@ -10,6 +10,7 @@ import CanvasClawSwipe from '../components/Canvas/canvas_claw_swipe'
 import CanvasPhysicalAttack from '../components/Canvas/canvas_physical_attack'
 import CanvasWhirlwind from '../components/Canvas/canvas_whirlwind'
 import CanvasJaggedCircle from '../components/Canvas/canvas_jagged_circle'
+import CanvasEnergyBlast from '../components/Canvas/canvas_energy_blast'
 
 // class AnimationGrid extends React.Component {
     // constructor(props){
@@ -206,6 +207,21 @@ const AnimationGrid = ({
                                 width={TILE_SIZE}
                                 height={TILE_SIZE}
                                 duration={anim.duration || 650}
+                                onComplete={anim.onComplete}
+                            />
+                        } else if (anim.type === 'energy_blast') {
+                            if (!anim.origin || !anim.target) {
+                                console.warn('[AnimationGrid] CanvasEnergyBlast missing origin or target', anim);
+                                return null;
+                            }
+                            return <CanvasEnergyBlast
+                                key={animKey}
+                                origin={anim.origin}
+                                target={anim.target}
+                                width={width}
+                                height={height}
+                                duration={anim.duration || 800}
+                                travelDuration={anim.travelDuration || 800}
                                 onComplete={anim.onComplete}
                             />
                         }

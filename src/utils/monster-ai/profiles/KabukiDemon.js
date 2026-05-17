@@ -77,7 +77,7 @@ export function KabukiDemon(data, utilMethods, animationManager, overlayManager)
     this._getLineTargetsForObliterate = (caller, combatants, target) => {
         if (!caller || !combatants || !target || !caller.coordinates) return [];
 
-        const { lineTargets, targetTiles, targetLanes, facingRight } = getForwardLineTargets(caller, target, combatants);
+        const { lineTargets } = getForwardLineTargets(caller, target, combatants);
 
         // this._debug('obliterate line-target scan', {
         //     callerId: caller.id,

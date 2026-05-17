@@ -71,8 +71,8 @@ const attacksMatrix = {
         name: 'energy blast',
         type: 'arcane',
         range: 'far',
-        icon: images['void_lance'],
-        cooldown: 3,
+        icon: images['energy_blast'],
+        cooldown: 1,
     },
     lightning: {
         name: 'lightning',

@@ -582,14 +582,14 @@ export function Wizard(data, utilMethods, animationManager, overlayManager) {
 
     }
     this.triggerBeamAttack = (callerCoords, targetCoords, color = 'purple') => {
-        const targetTileId = this.animationManager.getTileIdByCoords(targetCoords)
-        const sourceTileId = this.animationManager.getTileIdByCoords(callerCoords)
         return new Promise((resolve) => {
-            if (targetTileId !== null && sourceTileId !== null) {
-                // this.animationManager.beamAnimation(targetTileId, sourceTileId, color, resolve)
-                this.animationManager.straightBeamNoTarget(sourceTileId, 'left-to-right', color, resolve)
+            if (!callerCoords || !targetCoords) {
+                resolve(null);
+                return;
             }
-        })
+            // Use the new energy blast canvas animation
+            this.animationManager.energyBlast(callerCoords, targetCoords, resolve);
+        });
     }
     // this.triggerBeamAttack(callerCoords, targetCoords, 'lightblue').then(res=>{
     //         const hitsTarget = true;
@@ -628,13 +628,22 @@ export function Wizard(data, utilMethods, animationManager, overlayManager) {
     //         caller.energy -= 75;
     //         if(caller.energy < 0) caller.energy = 0; 
     //     })
-    this.triggerBeamAttackManual = (callerCoords, color = 'purple') => {
-        const sourceTileId = this.animationManager.getTileIdByCoords(callerCoords)
-        return new Promise((resolve) => {
-            this.animationManager.straightBeamNoTarget(sourceTileId, 'left-to-right', color, resolve)
-        })
-    }
     this.triggerIceBlast = (caller, target, combatants) => {
+        console.log('[SpecialClickDiag][Wizard] triggerIceBlast entry', {
+            callerId: caller?.id,
+            callerType: caller?.type,
+            targetId: target?.id || null,
+            hasCombatants: !!combatants,
+            callerEnergy: caller?.energy,
+            callerTargetId: caller?.targetId,
+        });
+        if (!target) {
+            console.log('[SpecialClickDiag][Wizard] triggerIceBlast aborted: missing target', {
+                callerId: caller?.id,
+                callerTargetId: caller?.targetId,
+            });
+            return;
+        }
         // Defensive resolution for ice blast (same rationale as fireBlast)
         const resolveLocalSpecial = (caller, specialKey) => { // eslint-disable-line no-unused-vars
             const key = (specialKey || '').toString();
@@ -756,6 +765,21 @@ export function Wizard(data, utilMethods, animationManager, overlayManager) {
 
     }
     this.triggerFireBlast = (caller, target, combatants) => {
+        console.log('[SpecialClickDiag][Wizard] triggerFireBlast entry', {
+            callerId: caller?.id,
+            callerType: caller?.type,
+            targetId: target?.id || null,
+            hasCombatants: !!combatants,
+            callerEnergy: caller?.energy,
+            callerTargetId: caller?.targetId,
+        });
+        if (!target) {
+            console.log('[SpecialClickDiag][Wizard] triggerFireBlast aborted: missing target', {
+                callerId: caller?.id,
+                callerTargetId: caller?.targetId,
+            });
+            return;
+        }
         // Prefer the centralized resolver when available.
         let fireBlast = null;
         if (data && data.methods && typeof data.methods.resolveSpecial === 'function') {
@@ -959,26 +983,29 @@ export function Wizard(data, utilMethods, animationManager, overlayManager) {
         if (manualAttack) {
             if (caller.pendingAttack && caller.pendingAttack.cooldown_position < 99) {
                 // console.log('pending attack not charged fully');
+                caller.attacking = false;
                 return
             } else if (caller.pendingAttack && caller.pendingAttack.cooldown_position === 100) {
                 // For manual beam attacks, check the line of fire along the wizard's facing for any friendlies
+                let firstEnemyClear = null;
                 if (combatants) {
                     const facing = caller.facing || 'right';
                     // If there's a friendly in the direct beam path, try to find another enemy in the lane with a clear path
-                    const firstEnemyClear = findEnemyWithClearPath(caller, combatants, facing === 'right' ? 'right' : 'left');
+                    firstEnemyClear = findEnemyWithClearPath(caller, combatants, facing === 'right' ? 'right' : 'left');
                     if (!firstEnemyClear) {
                         // no clear enemy in preferred direction; try opposite direction
                         const opposite = facing === 'right' ? 'left' : 'right';
                         const alt = findEnemyWithClearPath(caller, combatants, opposite);
                         if (alt) {
                             // Fire beam towards alt enemy
-                            let combatantHit = await this.triggerBeamAttack(caller.coordinates, alt.coordinates);
+                            this.kickoffAttackCooldown(caller);
+                            await this.triggerBeamAttack(caller.coordinates, alt.coordinates);
+                            const combatantHit = alt;
                             if (combatantHit) {
                                 try { this.hitsCombatant(caller, combatantHit); } catch (err) { this.hitsCombatant(caller, combatantHit); }
                             } else {
                                 this.missesTarget(caller);
                             }
-                            this.kickoffAttackCooldown(caller);
                             caller.attacking = false;
                             return;
                         }
@@ -991,24 +1018,30 @@ export function Wizard(data, utilMethods, animationManager, overlayManager) {
                         // There is at least one enemy with a clear path in preferred direction; fire normally (beam will hit first occupant)
                     }
                 }
-                let combatantHit = await this.triggerBeamAttackManual(caller.coordinates)
-                if (combatantHit) {
-                    // Delegate to centralized hitsCombatant so damage, crits, and animations are consistent
-                    try {
-                        if (typeof this.hitsCombatant === 'function') {
-                            this.hitsCombatant(caller, combatantHit);
-                        } else {
-                            this.hitsCombatant(caller, combatantHit);
+                // Use the new energy blast animation with the clear target
+                if (firstEnemyClear) {
+                    this.kickoffAttackCooldown(caller)
+                    await this.triggerBeamAttack(caller.coordinates, firstEnemyClear.coordinates)
+                    const combatantHit = firstEnemyClear
+                    if (combatantHit) {
+                        // Delegate to centralized hitsCombatant so damage, crits, and animations are consistent
+                        try {
+                            if (typeof this.hitsCombatant === 'function') {
+                                this.hitsCombatant(caller, combatantHit);
+                            } else {
+                                this.hitsCombatant(caller, combatantHit);
+                            }
+                        } catch (err) {
+                            console.warn('apply beam manual hit error', err);
+                            // fallback defensively
+                            if (typeof this.hitsCombatant === 'function') this.hitsCombatant(caller, combatantHit);
                         }
-                    } catch (err) {
-                        console.warn('apply beam manual hit error', err);
-                        // fallback defensively
-                        if (typeof this.hitsCombatant === 'function') this.hitsCombatant(caller, combatantHit);
+                    } else {
+                        this.missesTarget(caller);
                     }
                 } else {
                     this.missesTarget(caller);
                 }
-                this.kickoffAttackCooldown(caller)
                 caller.attacking = false;
             }
         } else {
@@ -1042,7 +1075,8 @@ export function Wizard(data, utilMethods, animationManager, overlayManager) {
                             this.kickoffAttackCooldown(caller);
                             break;
                         }
-                        let combatantHit = await this.triggerBeamAttack(caller.coordinates, finalCoords);
+                        await this.triggerBeamAttack(caller.coordinates, finalCoords);
+                        const combatantHit = target;
                         if (combatantHit) {
                             // Apply unified wounded/damage logic for AI beam hit
                             try {

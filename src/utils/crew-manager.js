@@ -32,6 +32,8 @@ export function CrewManager(){
         'barbarian',
         'wizard',
         // 'sorceress',
+        'engineer',
+        'summoner',
         'rogue',
         'sage',
         'soldier'
@@ -107,6 +109,8 @@ export function CrewManager(){
             barbarian: ['str'],
             soldier: ['str','fort'],
             wizard: ['int'],
+            engineer: ['dex','int'],
+            summoner: ['int'],
             rogue: ['dex','str'],
             sage: ['fort']
         },
@@ -115,6 +119,8 @@ export function CrewManager(){
             barbarian: ['str','fort'],
             soldier: ['str','dex'],
             wizard: ['dex','str'],
+            engineer: ['dex','fort'],
+            summoner: ['int','fort'],
             rogue: ['str','fort'],
             sage: ['str','fort']
         },
@@ -249,6 +255,14 @@ export function CrewManager(){
             case 'wizard':
                 crewMember.stats.int = (crewMember.stats.int || 0) + 1;
                 gains.int = 1;
+                break;
+            case 'summoner':
+                crewMember.stats.int = (crewMember.stats.int || 0) + 1;
+                gains.int = 1;
+                break;
+            case 'engineer':
+                crewMember.stats.dex = (crewMember.stats.dex || 0) + 1;
+                gains.dex = 1;
                 break;
             case 'rogue':
                 crewMember.stats.dex = (crewMember.stats.dex || 0) + 1;
@@ -495,6 +509,42 @@ export function CrewManager(){
             passives: ['fury'],
             weaknesses: ['ice', 'curse', 'psionic'],
             description: "Ulaf is the son of the chieftan of the Rootsnarl Clan. He is on a journey to prove his mettle and one day take his father's place",
+            specialActions: [],
+            actionsTrayExpanded: false,
+            actionMenuTypeExpanded: false
+        },
+        {
+            image: 'engineer',
+            type: 'engineer',
+            name: 'Icaron',
+            id: 9901,
+            level: 1,
+            stats: { str: 5, int: 6, dex: 7, fort: 6, baseHp: 10, experience: 0 },
+            portrait: images['engineer'],
+            inventory: [],
+            specials: ['force_back'],
+            attacks: ['sword_swing', 'axe_throw'],
+            passives: ['inspiring_force'],
+            weaknesses: ['curse', 'psionic'],
+            description: 'A battlefield machinist who excels at spacing control and tactical pressure.',
+            specialActions: [],
+            actionsTrayExpanded: false,
+            actionMenuTypeExpanded: false
+        },
+        {
+            image: 'summoner',
+            type: 'summoner',
+            name: 'Vaelis',
+            id: 9902,
+            level: 1,
+            stats: { str: 3, int: 8, dex: 5, fort: 6, baseHp: 10, experience: 0 },
+            portrait: images['summoner'],
+            inventory: [],
+            specials: ['ice_blast', 'fire_blast'],
+            attacks: ['energy_blast'],
+            passives: ['magic_affinity'],
+            weaknesses: ['crushing', 'blood_magic'],
+            description: 'A conduit for unstable arcana who overwhelms enemies with elemental pressure.',
             specialActions: [],
             actionsTrayExpanded: false,
             actionMenuTypeExpanded: false

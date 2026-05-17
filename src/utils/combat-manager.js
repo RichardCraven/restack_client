@@ -40,6 +40,7 @@ const formatCombatText = (value) => String(value || '')
     .join(' ');
 
 export function CombatManager() {
+    this.MANUAL_COMMAND_COOLDOWN_MS = 4000;
     // Update all combatants' intervals and restart their turn cycles
     this.updateAllFightIntervals = (newInterval) => {
         const resolvedInterval = Number(newInterval);
@@ -512,6 +513,30 @@ export function CombatManager() {
         // the selectedFighter reference here but do not toggle `manualControl`.
     }
 
+    this.setManualCommandCooldownMs = (ms) => {
+        const val = Number(ms);
+        if (Number.isFinite(val) && val > 0) {
+            this.MANUAL_COMMAND_COOLDOWN_MS = val;
+        }
+    }
+
+    this.startManualCommandCooldown = (fighterId, durationMs = null) => {
+        const fighter = this.combatants && this.combatants[fighterId];
+        if (!fighter || fighter.dead || fighter.isMonster || fighter.isMinion) return;
+        const hasExplicitDuration = durationMs !== null && typeof durationMs !== 'undefined';
+        const parsedDuration = Number(durationMs);
+        const cooldownMs = (hasExplicitDuration && Number.isFinite(parsedDuration) && parsedDuration > 0)
+            ? parsedDuration
+            : this.MANUAL_COMMAND_COOLDOWN_MS;
+        const now = Date.now();
+        fighter.manualCommandCooldownMs = cooldownMs;
+        fighter.manualCommandCooldownStartedAt = now;
+        fighter.manualCommandCooldownUntil = now + cooldownMs;
+        if (typeof this.updateData === 'function') {
+            this.updateData(clone(this.combatants));
+        }
+    }
+
     // Explicit API to enable/disable manual control for a single fighter.
     // When enabling manual control for a fighter we disable manual control for others.
     this.setManualControl = (fighterId, enabled) => {
@@ -862,30 +887,81 @@ export function CombatManager() {
     this.fighterManualAttack = () => {
         if (!this.selectedFighter) return
         const fighter = this.combatants[this.selectedFighter.id]
+        if (fighter && !fighter.isMonster && !fighter.isMinion) {
+            this.startManualCommandCooldown(fighter.id);
+        }
         fighter.manualAttack();
     }
     this.fighterSpecialAttack = (special) => {
-        if (!this.selectedFighter) return
+        if (!this.selectedFighter) {
+            console.log('[SpecialClickDiag][CombatManager] fighterSpecialAttack aborted: no selectedFighter', { special });
+            return
+        }
 
         const fighter = this.combatants[this.selectedFighter.id];
-        if (!fighter || fighter.dead || fighter.invisible || fighter.petrified) return
+        if (!fighter || fighter.dead || fighter.invisible || fighter.petrified) {
+            console.log('[SpecialClickDiag][CombatManager] fighterSpecialAttack aborted: fighter invalid', {
+                selectedFighterId: this.selectedFighter?.id,
+                exists: !!fighter,
+                dead: fighter?.dead,
+                invisible: fighter?.invisible,
+                petrified: fighter?.petrified,
+                special,
+            });
+            return
+        }
 
         const incomingName = typeof special === 'string'
             ? special
             : (special && special.name) || '';
-        const normalizedIncoming = String(incomingName).replaceAll('_', ' ').toLowerCase();
+        const normalizedIncoming = formatCombatText(incomingName);
+        const normalizedIncomingKey = normalizedIncoming.replaceAll(' ', '_');
         const resolvedSpecial = Array.isArray(fighter.specials)
-            ? (fighter.specials.find(s => s && String(s.name || '').toLowerCase() === normalizedIncoming) || special)
+            ? (fighter.specials.find(s => {
+                if (!s) return false;
+                if (typeof s === 'string') {
+                    const sNorm = formatCombatText(s).replaceAll(' ', '_');
+                    return sNorm === normalizedIncomingKey;
+                }
+                const sNorm = formatCombatText(s.name || '').replaceAll(' ', '_');
+                return sNorm === normalizedIncomingKey;
+            }) || (typeof this.resolveSpecial === 'function' ? this.resolveSpecial(fighter, normalizedIncoming) : null) || special)
             : special;
 
-        if (!resolvedSpecial || !resolvedSpecial.name) return;
+        if (!resolvedSpecial || !resolvedSpecial.name) {
+            console.log('[SpecialClickDiag][CombatManager] fighterSpecialAttack aborted: unresolved special', {
+                incomingName,
+                normalizedIncoming,
+                fighterId: fighter.id,
+                fighterType: fighter.type,
+                fighterSpecials: (fighter.specials || []).map(s => (typeof s === 'string' ? s : s?.name)),
+            });
+            return;
+        }
+        const resolvedSpecialName = formatCombatText(resolvedSpecial.name).toLowerCase();
 
+        if ((!fighter.targetId || !this.combatants[fighter.targetId] || this.combatants[fighter.targetId].dead) && typeof this.acquireTarget === 'function') {
+            try {
+                this.acquireTarget(fighter);
+            } catch (e) {}
+        }
         const target = fighter.targetId ? this.combatants[fighter.targetId] : null;
+        console.log('[SpecialClickDiag][CombatManager] fighterSpecialAttack dispatch', {
+            fighterId: fighter.id,
+            fighterType: fighter.type,
+            incomingName,
+            resolvedSpecialName,
+            targetId: fighter.targetId || null,
+            hasTarget: !!target,
+            cooldownPosition: resolvedSpecial.cooldown_position,
+            energy: fighter.energy,
+            energyCost: resolvedSpecial.energy_cost,
+        });
         switch (fighter.type) {
-            case 'soldier':
-                switch (resolvedSpecial.name) {
+            case 'soldier': {
+                const soldierAI = this.fighterAI && this.fighterAI.roster && this.fighterAI.roster['soldier'];
+                switch (resolvedSpecialName) {
                     case 'shield wall': {
-                        const soldierAI = this.fighterAI && this.fighterAI.roster && this.fighterAI.roster['soldier'];
                         if (soldierAI) {
                             const sw = fighter.specials && fighter.specials.find(s => s && s.name === 'shield wall');
                             const ready = sw && sw.cooldown_position === 100;
@@ -896,25 +972,52 @@ export function CombatManager() {
                         break;
                     }
                     case 'force back':
-                        // stub — not yet implemented
+                        if (soldierAI && typeof soldierAI.triggerForceBack === 'function') {
+                            soldierAI.triggerForceBack(fighter, this.combatants);
+                        }
                         break;
                     default:
                         break;
                 }
                 break;
-            case 'wizard':
-                switch (resolvedSpecial.name) {
+            }
+            case 'wizard': {
+                const wizardAI = this.fighterAI && this.fighterAI.roster && this.fighterAI.roster['wizard'];
+                if (!wizardAI) {
+                    console.log('[SpecialClickDiag][CombatManager] wizard dispatch aborted: no wizardAI roster entry', {
+                        fighterId: fighter.id,
+                        resolvedSpecialName,
+                    });
+                    break;
+                }
+                switch (resolvedSpecialName) {
                     case 'ice blast':
-                        this.fighterAI.roster['wizard'].triggerIceBlast(fighter, target)
+                        console.log('[SpecialClickDiag][CombatManager] wizard triggerIceBlast', {
+                            fighterId: fighter.id,
+                            targetId: target?.id || null,
+                        });
+                        wizardAI.triggerIceBlast(fighter, target)
+                        break;
+                    case 'fire blast':
+                        console.log('[SpecialClickDiag][CombatManager] wizard triggerFireBlast', {
+                            fighterId: fighter.id,
+                            targetId: target?.id || null,
+                        });
+                        wizardAI.triggerFireBlast(fighter, target, this.combatants)
                         break;
                     default:
+                        console.log('[SpecialClickDiag][CombatManager] wizard dispatch fell through default', {
+                            fighterId: fighter.id,
+                            resolvedSpecialName,
+                        });
                         break;
                 }
                 break;
+            }
             case 'monk': {
                 const monkAI = this.fighterAI && this.fighterAI.roster && this.fighterAI.roster['monk'];
                 if (monkAI) {
-                    switch (resolvedSpecial.name) {
+                    switch (resolvedSpecialName) {
                         case 'windmill': {
                             const ws = fighter.specials && fighter.specials.find(s => s && s.name === 'windmill');
                             if (ws && ws.cooldown_position === 100 && !fighter.windmillActive) {
@@ -931,7 +1034,7 @@ export function CombatManager() {
             case 'barbarian': {
                 const barbarianAI = this.fighterAI?.roster?.['barbarian'];
                 if (barbarianAI && resolvedSpecial) {
-                    switch (resolvedSpecial.name) {
+                    switch (resolvedSpecialName) {
                         case 'berserker': {
                             if (fighter && barbarianAI.shouldUseBerserker(fighter, this.combatants)) {
                                 barbarianAI.triggerBerserker(fighter, this.combatants);
@@ -1148,8 +1251,7 @@ export function CombatManager() {
         if (!caller || !caller.attacks) return null;
         let attack, available = caller.attacks.filter(e => e && e.cooldown_position === 100);
         const distanceToTarget = this.getDistanceToTarget(caller, target);
-        let percentCooledDown = 0,
-            chosenAttack;
+        let chosenAttack;
         if (caller.isMonster) {
         }
         if (caller.combatStyle) {
@@ -1329,6 +1431,9 @@ export function CombatManager() {
         if (pendingCoordinates) {
             fighter.coordinates = { ...pendingCoordinates };
             fighter.manualMovesCurrent--;
+            if (!fighter.isMonster && !fighter.isMinion) {
+                this.startManualCommandCooldown(fighter.id);
+            }
             try { fighter.manualMoveCooldown && fighter.manualMoveCooldown(); } catch (e) { }
             try { fighter.restartTurnCycle && fighter.restartTurnCycle(); } catch (e) { }
             try { this._setCombatantOccupiedCoords(fighter); } catch (e) { }

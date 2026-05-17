@@ -15,7 +15,6 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
         handleOverlap,
         // goToDestination,
         processMove,
-        targetInRange,
         getSelectedFighter,
         onEraTransition,
         targetKilled,
@@ -87,8 +86,8 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
     hp: (typeof fighter.hp === 'number') ? fighter.hp : fighter.stats.hp,
     // starting_hp represents the max HP for the fighter (may be provided or fall back to stats.hp)
     starting_hp: (typeof fighter.starting_hp === 'number') ? fighter.starting_hp : fighter.stats.hp,
-        // All units start with an empty energy reserve and build it during combat.
-        energy: 0,
+        // All units start at 50% energy.
+        energy: 50,
         tempo: 1,
         turnCycleCount: 0,
         turnCycleStarted: false,
@@ -155,6 +154,9 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
         action_queue: [],
         turnSkips: 0,
         isOnManualMoveCooldown: false,
+        manualCommandCooldownStartedAt: 0,
+        manualCommandCooldownUntil: 0,
+        manualCommandCooldownMs: 4000,
         manualCount: 0,
         timeAhead: null,
         damageIndicators: [], // Will store objects: { id, value, source }
@@ -202,6 +204,7 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
         facing: initialFacing, // persistent facing property
         attack: function(){
             if (this.invisible || this.petrified) return;
+            if (this.manualCommandCooldownUntil && Date.now() < this.manualCommandCooldownUntil) return;
             const target = getCombatant(this.targetId);
             if(!target) return;
             if(!target){
@@ -252,6 +255,7 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
         },
         move: function(){
             //only ever triggered from turn cycle AI method
+            if (this.manualCommandCooldownUntil && Date.now() < this.manualCommandCooldownUntil) return;
             // AI moves should also consume one manual move point so the
             // manual-moves UI reflects AI actions.
             try {
@@ -331,6 +335,24 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
             
             this.interval = setInterval(()=>{
                 if(this.combatPaused || this.dead || this.locked || isCombatOver()) return
+
+                // Passive energy regen should continue even while manual command
+                // cooldown is active so resource flow remains uninterrupted.
+                if (!this.dead && !this.combatPaused) {
+                    const speed = (this.stats && typeof this.stats.speed === 'number' && this.stats.speed > 0)
+                        ? this.stats.speed
+                        : 1;
+                    // regenPerTick = speed * 0.1
+                    // beholder_minion gets 3x regen for testing so they can reach 100 energy to bifurcate
+                    const regenMult = (this.type === 'beholder_minion') ? 3 : 1;
+                    const regenPerTick = speed * 0.1 * regenMult;
+                    this.energy = Math.min(100, (this.energy || 0) + regenPerTick);
+                }
+
+                if (this.manualCommandCooldownUntil && Date.now() < this.manualCommandCooldownUntil) {
+                    broadcastDataUpdate(this)
+                    return
+                }
                 if(this.isOnManualMoveCooldown){
                     if(this.tempo > 100) this.tempo = 100;
                     broadcastDataUpdate(this)
@@ -374,25 +396,6 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
                 }
                 this.tempo = Math.min(100, count);
                 if(this.tempo < 1) return;
-
-                // ── Passive energy regen ───────────────────────────────────
-                // Ticks every FIGHT_INTERVAL ms. Regen rate is derived from
-                // stats.speed so faster combatants fill their bar quicker.
-                // A combatant with speed=10 at the default 40ms interval will
-                // reach 100 energy in roughly 20 seconds (matching ~one full
-                // turn-cycle duration). Minions start at 0 so this is their
-                // only path to triggering energy-gated abilities.
-                if (!this.dead && !this.combatPaused) {
-                    const speed = (this.stats && typeof this.stats.speed === 'number' && this.stats.speed > 0)
-                        ? this.stats.speed
-                        : 1;
-                    // regenPerTick = speed * 0.02  →  speed-10 unit at 40ms ticks ≈ 20s to fill
-                    // beholder_minion gets 3x regen for testing so they can reach 100 energy to bifurcate
-                    const regenMult = (this.type === 'beholder_minion') ? 3 : 1;
-                    const regenPerTick = speed * 0.02 * regenMult;
-                    this.energy = Math.min(100, (this.energy || 0) + regenPerTick);
-                }
-                // ─────────────────────────────────────────────────────────
 
                 if(isCombatOver() || this.dead){
                     clearInterval(this.interval)

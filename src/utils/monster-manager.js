@@ -4,24 +4,15 @@ import { inventoryManager } from '../utils/inventory-manager'
 // ── Tier weapon pools (from inventoryManager) ────────────────────────────────
 const TIER1_WEAPONS = inventoryManager.TIER1_WEAPONS;
 const TIER2_WEAPONS = inventoryManager.TIER2_WEAPONS;
-const TIER3_WEAPONS = inventoryManager.TIER3_WEAPONS;
-const TIER4_WEAPONS = inventoryManager.TIER4_WEAPONS;
 
 // ── Tier magical pools (from inventoryManager) ──────────────────────────────
-const TIER1_MAGICAL = inventoryManager.TIER1_MAGICAL;
 const TIER2_MAGICAL = inventoryManager.TIER2_MAGICAL;
 const TIER3_MAGICAL = inventoryManager.TIER3_MAGICAL;
-const TIER4_MAGICAL = inventoryManager.TIER4_MAGICAL;
 
 // ── Tier armor pools (from inventoryManager) ───────────────────────────────
-const TIER1_ARMOR = inventoryManager.TIER1_ARMOR;
-const TIER2_ARMOR = inventoryManager.TIER2_ARMOR;
-const TIER3_ARMOR = inventoryManager.TIER3_ARMOR;
-const TIER4_ARMOR = inventoryManager.TIER4_ARMOR;
 
 // Mixed item pools (weapons, armor, magical) per tier
 const TIER1_ITEM = inventoryManager.TIER1_ITEM;
-const TIER2_ITEM = inventoryManager.TIER2_ITEM;
 const TIER3_ITEM = inventoryManager.TIER3_ITEM;
 const TIER4_ITEM = inventoryManager.TIER4_ITEM;
 

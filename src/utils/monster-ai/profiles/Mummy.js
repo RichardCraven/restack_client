@@ -369,29 +369,6 @@ export function Mummy(data, utilMethods, animationManager, overlayManager) {
             } else {
                 caller.facing = _dx > 0 ? 'right' : 'left';
             }
-            // --- Robust attack trigger: allow attack if target is adjacent to any occupied tile ---
-            const occupiedTiles = Array.isArray(caller.occupiedTiles) && caller.occupiedTiles.length > 0
-                ? caller.occupiedTiles
-                : (() => {
-                    const scale = caller.scale || caller["main-monster"] || caller.isMainMonster ? 2 : 1;
-                    const baseX = caller.coordinates.x;
-                    const baseY = caller.coordinates.y;
-                    const tiles = [];
-                    for (let dx = 0; dx < scale; dx++) {
-                        for (let dy = 0; dy < scale; dy++) {
-                            tiles.push({ x: baseX + dx, y: baseY + dy });
-                        }
-                    }
-                    return tiles;
-                })();
-            let isAdjacentToTarget = false;
-            if (target) {
-                isAdjacentToTarget = occupiedTiles.some(tile => {
-                    const dx = Math.abs(target.coordinates.x - tile.x);
-                    const dy = Math.abs(target.coordinates.y - tile.y);
-                    return (dx + dy === 1);
-                });
-            }
             // --- Attack trigger logic ---
             // Single unified path: check pendingAttack ready, then check range.
             // The old duplicate adjacency-only check has been removed — the range

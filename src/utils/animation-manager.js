@@ -1640,6 +1640,49 @@ export function AnimationManager(){
         });
     };
 
+    this.energyBlast = (sourceCoords, targetCoords, onComplete) => {
+        return new Promise((resolve) => {
+            if (!sourceCoords || !targetCoords) {
+                if (onComplete) onComplete();
+                resolve(0);
+                return;
+            }
+
+            const travelDuration = 800;
+            const impactHoldDuration = 180;
+            const fadeOutDuration = 220;
+            const animationDuration = travelDuration + impactHoldDuration + fadeOutDuration;
+            const animObj = {
+                id: `energy_blast_${Date.now()}_${Math.random()}`,
+                type: 'energy_blast',
+                origin: sourceCoords,
+                target: targetCoords,
+                duration: animationDuration,
+                travelDuration,
+                onComplete: () => {
+                    try {
+                        if (onComplete) onComplete();
+                    } catch (e) {
+                        console.warn('energyBlast onComplete callback failed', e);
+                    }
+                    resolve(animationDuration);
+                }
+            };
+
+            this.canvasAnimations.push(animObj);
+            this.update();
+
+            // Remove animation after it completes
+            setTimeout(() => {
+                const idx = this.canvasAnimations.indexOf(animObj);
+                if (idx !== -1) {
+                    this.canvasAnimations.splice(idx, 1);
+                    this.update();
+                }
+            }, animationDuration + 20);
+        });
+    };
+
 
     // UTILS
     this.pickRandom = (array) => {

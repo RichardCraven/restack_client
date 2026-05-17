@@ -423,13 +423,24 @@ useConsumableFromInventory = (item) => {
 }
 combatKeyDownHandler = (event) => {
     let key = event.key, code = event.code;
+    const battleRef = this.monsterBattleComponentRef.current;
+    const selectedFighter = battleRef?.state?.selectedFighter;
+    const selectedCombatant = selectedFighter && this.props.combatManager?.getCombatant
+        ? this.props.combatManager.getCombatant(selectedFighter.id)
+        : null;
+    if (
+        selectedCombatant &&
+        !selectedCombatant.isMonster &&
+        !selectedCombatant.isMinion &&
+        !event.metaKey &&
+        this.props.combatManager &&
+        typeof this.props.combatManager.startManualCommandCooldown === 'function'
+    ) {
+        this.props.combatManager.startManualCommandCooldown(selectedCombatant.id);
+    }
     if(code === 'Space'){
-        const battleRef = this.monsterBattleComponentRef.current;
-        const selectedFighter = battleRef?.state?.selectedFighter;
-        const selectedCombatant = selectedFighter && this.props.combatManager?.getCombatant
-            ? this.props.combatManager.getCombatant(selectedFighter.id)
-            : null;
-        if (battleRef && selectedCombatant?.manualControl) {
+        // Allow spacebar to fire a basic attack if a player fighter (not monster/minion) is selected
+        if (battleRef && selectedCombatant && !selectedCombatant.isMonster && !selectedCombatant.isMinion) {
             event.preventDefault();
             battleRef.manualFire();
         }

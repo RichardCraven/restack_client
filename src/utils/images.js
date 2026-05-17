@@ -414,6 +414,8 @@ import wizard from '../assets/portraits/crew/wizard/wizard_compressed.png'
 import rogue from '../assets/portraits/crew/rogue/rogue_compressed.png'
 import sage from '../assets/portraits/crew/sage/sage_compressed.png'
 import sorceress from '../assets/icons/crew_icons/sorceress.png'
+import engineer from '../assets/portraits/crew/engineer/engineer_compressed.png'
+import summoner from '../assets/portraits/crew/summoner/summoner_compressed.png'
 
 import viking1 from '../assets/icons/crew_icons/viking1.png'
 import viking2 from '../assets/icons/crew_icons/viking2.png'
@@ -490,6 +492,9 @@ import claws from '../assets/icons/combat-icons/monster-attacks/claws.gif'
 import bite from '../assets/icons/combat-icons/monster-attacks/bite.png'
 import crushing from '../assets/icons/combat-icons/monster-attacks/crushing.png'
 import tackle from '../assets/icons/combat-icons/monster-attacks/tackle.png'
+
+import energy_blast from '../assets/icons/combat-icons/wizarding_4.png'
+
 // Placeholder icons for grasp and energy_drain
 import grasp from '../assets/icons/combat-icons/monster-attacks/grasp.gif';
 import energy_drain from '../assets/icons/combat-icons/monster-attacks/lightning.png'
@@ -1140,6 +1145,8 @@ export {
     sage,
     wizard,
     sorceress,
+    engineer,
+    summoner,
     soldier,
     monk,
 
@@ -1306,5 +1313,7 @@ export {
     camp,
     vampire,
     djinn,
-    wraith
+    wraith,
+
+    energy_blast
 };

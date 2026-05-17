@@ -3633,7 +3633,6 @@ class DungeonPage extends React.Component {
         return text.charAt(0).toUpperCase() + text.slice(1);
     }
     battleOver = (result) => {
-        const monsterLabel = this.state.monster ? (this.state.monster.name || this.state.monster.type || 'unknown monster') : 'unknown monster';
         if(result === 'win'){
             // Suppress any lingering battle callbacks from overwriting HP/dead after win
             this._suppressFighterDeadHpUpdates = true;
@@ -4634,7 +4633,7 @@ class DungeonPage extends React.Component {
                         if (!value) return '';
                         const resolved = typeof value === 'string' ? value : (value.default || '');
                         if (!resolved) return '';
-                        return `url(\"${encodeURI(resolved)}\")`;
+                        return `url("${encodeURI(resolved)}")`;
                     };
 
                     return (

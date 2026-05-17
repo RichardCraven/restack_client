@@ -1,7 +1,6 @@
 import React from 'react';
 import Overlay from '../Overlay';
 import { ROCK_DURATION } from '../../utils/shared-constants';
-import * as images from '../../utils/images';
 
 const MonstersCombatGrid = ({
     monster,

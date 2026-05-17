@@ -123,6 +123,7 @@ const specialsMatrix = {
         type: 'special',
         icon: images['buckler'],
         cooldown: 10,
+        energy_cost: 50,
         damage: 5,
         effect: ['special'],
         special_instructions: 'Push all enemies in the forward arc one tile back.',
@@ -135,7 +136,7 @@ const specialsMatrix = {
         cooldown: 18,
         damage: 5,
         energy_cost: 80,
-        effect: { type: 'frozen', chance: 40, duration: 3 },
+        effect: { type: 'frozen', chance: 100, duration: 3 },
         special_instructions: 'each enemy has a 40% chance to be frozen',
         level: 1
     },
@@ -143,9 +144,9 @@ const specialsMatrix = {
         name: 'fire blast',
         type: 'special',
         icon: images['fire_blast'],
-        energy_cost: 30,
+        energy_cost: 50,
         cooldown: 4,
-        damage: 7,
+        damage: 12,
         effect: ['damage_multi_target', 'special'],
         special_instructions: 'each enemy has a 40% chance to be lit aflame',
         level: 1
@@ -179,7 +180,7 @@ const specialsMatrix = {
         special_instructions: 'Costs 100 energy. Steals a random non-equipped item from the crew\'s inventory, then flees to the backline. If the goblin escapes, the item is lost permanently.',
         level: 1
     },
-    petrify: {
+    fighter_petrify: {
         name: 'petrify',
         type: 'special',
         icon: images['hand_1'],
@@ -200,7 +201,7 @@ const specialsMatrix = {
         special_instructions: 'Reduces targets energy by 50% (rounded down), dealing damage to them. Damage is equal to energy lost - targets fortitude value. ',
         level: 1
     },
-    invisibility: {
+    fighter_invisibility: {
         name: 'invisibility',
         type: 'special',
         icon: images['nukta_charm'],
@@ -427,4 +428,5 @@ const passivesMatrix = {
     }
 }
 
+export { passivesMatrix };
 export default specialsMatrix;

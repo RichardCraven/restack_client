@@ -87,23 +87,7 @@ export default function LandingPage(props) {
 
     const validOnly = all.filter((d) => {
       const spawnDiag = findSpawnPointDiagnostic(d);
-      const include = d.valid === true && spawnDiag.found;
-      // Diagnostic logging for dropdown source of truth
-      if (include) {
-        console.log('[LandingPage] include dungeon:', d.name, {
-          id: d.id,
-          valid: d.valid,
-          spawn: spawnDiag
-        });
-      } else {
-        console.log('[LandingPage] exclude dungeon:', d.name, {
-          id: d.id,
-          valid: d.valid,
-          spawnFound: spawnDiag.found,
-          spawn: spawnDiag.found ? spawnDiag : null
-        });
-      }
-      return include;
+      return d.valid === true && spawnDiag.found;
     });
     const baseValidOnly = validOnly.filter((d) => !isInstanceDungeonName(d.name));
     setValidDungeons(baseValidOnly);

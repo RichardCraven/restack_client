@@ -1334,6 +1334,11 @@ class MonsterBattle extends React.Component {
     }
     specialTileClicked = (val) => {
     // special tile clicked
+        console.log('[SpecialClickDiag][MonsterBattle] specialTileClicked', {
+            incoming: val,
+            selectedFighterId: this.state.selectedFighter?.id,
+            selectedFighterType: this.state.selectedFighter?.type,
+        });
         if(val !== null && typeof val === 'string'){
             val = val.replaceAll('_', ' ')
         }
@@ -1363,7 +1368,8 @@ class MonsterBattle extends React.Component {
         selectedConsumableSpecial = consumableSpecials.find(a=> a.selected);
 
         if(selectedSpecial){
-            if(this.state.selectedFighter.energy < 100){
+            const requiredEnergy = Number(selectedSpecial.energy_cost) || 0;
+            if((this.state.selectedFighter.energy || 0) < requiredEnergy){
                 // not enough energy
                 return
             }
@@ -1424,7 +1430,10 @@ class MonsterBattle extends React.Component {
         }
     }
     fireSpecial = (special) => {
-        if(!this.state.selectedFighter) return
+        if(!this.state.selectedFighter) {
+            console.log('[SpecialClickDiag][MonsterBattle] fireSpecial aborted: no selected fighter', { special });
+            return
+        }
     // firing special
         // debugger
 
@@ -1442,10 +1451,55 @@ class MonsterBattle extends React.Component {
             const specialName = (typeof special === 'string' ? special : special?.name || '')
                 .replaceAll('_', ' ')
                 .toLowerCase();
-            const clickedSpecial = specials.find(a => a && a.name && a.name.toLowerCase() === specialName) || special;
-            if (!clickedSpecial || !clickedSpecial.name) return;
-            if (clickedSpecial.cooldown_position !== 100) return;
-            if ((fighterRef.energy || 0) < 100) return;
+            const normalizedName = specialName.replaceAll(' ', '_');
+            const resolvedSpecial = (this.props.combatManager && typeof this.props.combatManager.resolveSpecial === 'function')
+                ? this.props.combatManager.resolveSpecial(fighterRef, specialName)
+                : null;
+            const clickedSpecial = resolvedSpecial || specials.find(a => {
+                if (!a) return false;
+                if (typeof a === 'string') {
+                    const aNorm = a.toLowerCase().replaceAll(' ', '_');
+                    return aNorm === normalizedName;
+                }
+                const aName = String(a.name || '').toLowerCase().replaceAll(' ', '_');
+                return aName === normalizedName;
+            }) || (typeof special === 'object' ? special : null);
+            if (!clickedSpecial || !clickedSpecial.name) {
+                console.log('[SpecialClickDiag][MonsterBattle] fireSpecial aborted: no clickedSpecial resolved', {
+                    special,
+                    specialName,
+                    fighterId: fighterRef?.id,
+                    fighterSpecials: (fighterRef?.specials || []).map(s => (typeof s === 'string' ? s : s?.name)),
+                });
+                return;
+            }
+            const cooldownPosition = typeof clickedSpecial.cooldown_position === 'number'
+                ? clickedSpecial.cooldown_position
+                : 100;
+            if (cooldownPosition !== 100) {
+                console.log('[SpecialClickDiag][MonsterBattle] fireSpecial aborted: cooldown not ready', {
+                    clickedSpecial: clickedSpecial.name,
+                    cooldownPosition,
+                    fighterId: fighterRef?.id,
+                });
+                return;
+            }
+            const requiredEnergy = Number(clickedSpecial.energy_cost) || 0;
+            if ((fighterRef.energy || 0) < requiredEnergy) {
+                console.log('[SpecialClickDiag][MonsterBattle] fireSpecial aborted: not enough energy', {
+                    clickedSpecial: clickedSpecial.name,
+                    requiredEnergy,
+                    currentEnergy: fighterRef.energy || 0,
+                    fighterId: fighterRef?.id,
+                });
+                return;
+            }
+            console.log('[SpecialClickDiag][MonsterBattle] dispatch fighterSpecialAttack', {
+                clickedSpecial: clickedSpecial.name,
+                fighterId: fighterRef?.id,
+                fighterType: fighterRef?.type,
+                targetId: fighterRef?.targetId,
+            });
             this.props.combatManager.fighterSpecialAttack(clickedSpecial)
             specials.forEach(e=>e.selected=false)
             consumableSpecials.forEach(a=>a.selected=false)
@@ -1688,6 +1742,20 @@ class MonsterBattle extends React.Component {
             ? (this.state.battleData[this.state.selectedFighter.id] || this.state.selectedFighter)
             : null;
         const activeTargetId = liveSelectedFighter?.targetId || null;
+        const selectedPortraitUrl = liveSelectedFighter
+            ? (images[liveSelectedFighter.portrait] || liveSelectedFighter.portrait || images.avatar)
+            : images.avatar;
+        const cooldownEnd = Number(liveSelectedFighter?.manualCommandCooldownUntil || 0);
+        const cooldownStarted = Number(liveSelectedFighter?.manualCommandCooldownStartedAt || 0);
+        const cooldownMsRaw = Number(liveSelectedFighter?.manualCommandCooldownMs || 0);
+        const cooldownMs = cooldownMsRaw > 0
+            ? cooldownMsRaw
+            : Number(this.props.combatManager?.MANUAL_COMMAND_COOLDOWN_MS || 4000);
+        const cooldownActive = cooldownEnd > Date.now() && cooldownMs > 0;
+        const cooldownElapsedPct = cooldownActive
+            ? Math.max(0, Math.min(100, ((Date.now() - cooldownStarted) / cooldownMs) * 100))
+            : 100;
+        const cooldownRemainingAngle = `${Math.max(0, Math.min(360, (1 - (cooldownElapsedPct / 100)) * 360))}deg`;
                    
         return (
             <div className={`mb-board ${this.state.showCrosshair ? 'show-crosshair' : ''}`}>
@@ -1978,13 +2046,25 @@ class MonsterBattle extends React.Component {
                 {/* // INTERACTION PANE */}
                 { SHOW_INTERACTION_PANE && <div className={`mb-interaction-pane ${!this.state.greetingInProcess ? 'visible' : ''} `}>
                     <div className="header-row">
-                        <div className="portrait" style={{backgroundImage: "url(" + images[this.state.selectedFighter?.portrait] + ")"}}></div>
+                        <div className="portrait" style={{backgroundImage: `url(${selectedPortraitUrl})`}}>
+                            {cooldownActive && (
+                                <div
+                                    className="manual-cooldown-mask"
+                                    style={{ '--manual-cooldown-angle': cooldownRemainingAngle }}
+                                ></div>
+                            )}
+                            {cooldownActive && (
+                                <div className="manual-cooldown-label">
+                                    {Math.max(1, Math.ceil((cooldownEnd - Date.now()) / 1000))}
+                                </div>
+                            )}
+                        </div>
                         <div className="title">
                             <div className="name">
-                                {this.state.selectedFighter?.name}
+                                {liveSelectedFighter?.name}
                             </div>
                             <div className="readout">
-                                {(this.state.selectedFighter?.readout?.action || '')} {(this.state.selectedFighter?.readout?.result || '')}
+                                {(liveSelectedFighter?.readout?.action || '')} {(liveSelectedFighter?.readout?.result || '')}
                             </div>
                             {this.props.paused && <span className="paused-marker">PAUSED</span>}
                         </div>
@@ -2046,12 +2126,22 @@ class MonsterBattle extends React.Component {
                             <div className="interaction-tile-container">
                                 {this.state.selectedFighter?.specials?.map((a, i)=>{
                                     const cm = this.props.combatManager;
-                                    const fallbackSpecial = (typeof a === 'string' && cm && cm.specialsMatrix)
-                                        ? cm.specialsMatrix[a]
+                                    const toSpecialKey = (value) => String(value || '').toLowerCase().replaceAll(' ', '_');
+                                    const sourceKey = typeof a === 'string' ? a : (a?.key || a?.name || '');
+                                    const canonicalSpecial = (cm && cm.specialsMatrix)
+                                        ? (cm.specialsMatrix[sourceKey] || cm.specialsMatrix[toSpecialKey(sourceKey)] || null)
                                         : null;
-                                    const normalizedSpecial = (typeof a === 'string')
-                                        ? (cm?.resolveSpecial?.([a], a) || fallbackSpecial || { name: a.replaceAll('_', ' '), key: a })
-                                        : a;
+                                    const runtimeSpecial = (cm?.resolveSpecial && this.state.selectedFighter)
+                                        ? cm.resolveSpecial(this.state.selectedFighter, sourceKey)
+                                        : null;
+                                    const normalizedSpecial = {
+                                        ...(canonicalSpecial || {}),
+                                        ...(typeof a === 'object' ? a : {}),
+                                        ...(runtimeSpecial || {}),
+                                    };
+                                    if (!normalizedSpecial.name) {
+                                        normalizedSpecial.name = typeof a === 'string' ? a.replaceAll('_', ' ') : '';
+                                    }
                                     const iconCandidate = normalizedSpecial?.iconUrl || normalizedSpecial?.icon;
                                     const resolveIconSource = (candidate) => {
                                         if (!candidate) return '';
@@ -2059,7 +2149,7 @@ class MonsterBattle extends React.Component {
                                             const trimmed = candidate.trim();
                                             if (!trimmed) return '';
                                             if (trimmed.startsWith('url(')) {
-                                                return trimmed.replace(/^url\((.*)\)$/i, '$1').replace(/^['\"]|['\"]$/g, '');
+                                                return trimmed.replace(/^url\((.*)\)$/i, '$1').replace(/^['"]|['"]$/g, '');
                                             }
                                             const mapped = images[trimmed];
                                             if (mapped) return mapped.default || mapped;
@@ -2070,7 +2160,7 @@ class MonsterBattle extends React.Component {
                                     };
                                     const cssUrl = (value) => {
                                         if (!value) return '';
-                                        const normalizedValue = String(value).trim().replace(/^['\"]|['\"]$/g, '');
+                                        const normalizedValue = String(value).trim().replace(/^['"]|['"]$/g, '');
                                         return `url("${encodeURI(normalizedValue)}")`;
                                     };
                                     const specialIcon = resolveIconSource(iconCandidate);
@@ -2082,10 +2172,11 @@ class MonsterBattle extends React.Component {
                                         : 100;
                                     const specialCooldownRemaining = Math.max(0, Math.min(100, 100 - specialCooldownPosition));
                                     const specialEnergyCost = Number(normalizedSpecial.energy_cost) || 0;
+                                    const currentEnergy = Number(liveSelectedFighter?.energy || this.state.selectedFighter?.energy || 0);
                                     const specialEnergyFillPct = specialEnergyCost > 0
-                                        ? Math.min(100, Math.floor(((this.state.selectedFighter?.energy || 0) / specialEnergyCost) * 100))
+                                        ? Math.min(100, Math.floor((currentEnergy / specialEnergyCost) * 100))
                                         : 100;
-                                    const showSpecialEnergyFill = specialEnergyCost > 0 && specialEnergyFillPct < 100;
+                                    const showSpecialEnergyRing = specialEnergyCost > 0;
                                     return normalizedSpecial && <div key={i} className='interaction-tile-wrapper'>
                                                 <div 
                                                 style={{backgroundImage: specialBackgroundImage, cursor: 'pointer'}} 
@@ -2094,10 +2185,10 @@ class MonsterBattle extends React.Component {
                                                 onMouseEnter={() => this.specialTileHovered(normalizedSpecial)} 
                                                 onMouseLeave={() => this.specialTileHovered(null)}>
                                                 </div>
-                                                {showSpecialEnergyFill && (
+                                                {showSpecialEnergyRing && (
                                                     <div
-                                                        className="interaction-tile-overlay energy-fill"
-                                                        style={{ '--energy-fill': specialEnergyFillPct }}
+                                                        className="interaction-tile-overlay energy-ring"
+                                                        style={{ '--energy-ring-fill': specialEnergyFillPct }}
                                                     ></div>
                                                 )}
                                                 {specialCooldownRemaining > 0 && (

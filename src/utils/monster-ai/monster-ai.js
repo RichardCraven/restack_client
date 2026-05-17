@@ -86,8 +86,6 @@ export function MonsterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
             // console.log('SPHINX CHOOSE ATTACK TYPE');
         }
         let attack, available = caller.attacks.filter(e=>e.cooldown_position === 100);
-        let percentCooledDown = 0,
-            chosenAttack;
         const distanceToTarget = this.methods.getDistanceToTarget(caller, target);
 
         if(distanceToTarget === 1 && available.find(e=>e.range === 'close')){

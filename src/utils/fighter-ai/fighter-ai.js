@@ -4,6 +4,8 @@ import { Rogue } from './profiles/Rogue'
 import { Soldier } from './profiles/Soldier'
 import { Monk } from './profiles/Monk'
 import { Barbarian } from './profiles/Barbarian'
+import { Engineer } from './profiles/Engineer'
+import { Summoner } from './profiles/Summoner'
 import {Methods, getSurroundings} from '../shared-ai-methods/basic-methods';
 import {MovementMethods} from '../shared-ai-methods/movement-methods';
 
@@ -89,6 +91,8 @@ export function FighterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
             rogue: new Rogue(data, this.utilMethods, animationManager, this.overlayManager),
             monk: new Monk(data, this.utilMethods, animationManager, this.overlayManager),
             barbarian: new Barbarian(data, this.utilMethods, animationManager),
+            engineer: new Engineer(data, this.utilMethods, animationManager, this.overlayManager),
+            summoner: new Summoner(data, this.utilMethods, animationManager, this.overlayManager),
         }
     }
     this.pickRandom = (array) => {

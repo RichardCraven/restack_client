@@ -17,8 +17,6 @@ import arrowDownInvalid from '../assets/graphics/arrow_down_invalid.png'
 import arrowUpInvalid from '../assets/graphics/arrow_up_invalid.png'
 import door from '../assets/icons//portals/closed_door_browner.png'
 
-import { CDropdown, CDropdownToggle, CDropdownMenu, CDropdownItem} from '@coreui/react';
-
 // import  CIcon  from '@coreui/icons-react'
 // import { cilList, cilCaretRight, cilCaretBottom, cilGlobeAlt } from '@coreui/icons';
 import {
