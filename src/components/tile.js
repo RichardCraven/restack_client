@@ -66,8 +66,8 @@ function Tile(props) {
             position: 'relative',
             overflow: 'hidden',
             border: vctBorder,
-            borderLeft: vctBorder ? undefined : ((props.type === 'palette-tile' && !props.hovered) ? '2px solid transparent' : 
-                (props.type === 'palette-tile' && props.hovered ? '2px solid red' : ((props.borders && props.borders.left) ? props.borders.left : '1px solid transparent'))),
+            borderLeft: vctBorder ? undefined : (props.borders && props.borders.left ? props.borders.left : ((props.type === 'palette-tile' && !props.hovered) ? '2px solid transparent' : 
+                (props.type === 'palette-tile' && props.hovered ? '2px solid red' : '1px solid transparent'))),
             borderRight: vctBorder ? undefined : ((props.borders && props.borders.right) ? props.borders.right : '1px solid transparent'),
             borderTop: vctBorder ? undefined : ((props.borders && props.borders.top) ? props.borders.top : '1px solid transparent'),
             borderBottom: vctBorder ? undefined : ((props.borders && props.borders.bottom) ? props.borders.bottom : '1px solid transparent')
@@ -104,6 +104,7 @@ function Tile(props) {
                     return null
                 }
             }}
+            onDragStart={(e) => e.preventDefault()}
             className={`tile ${props.className}`}
         >
            {/* HP fill: rendered as a vertical fill using the tile's color when hp & maxHp are provided */}

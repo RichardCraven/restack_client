@@ -6,6 +6,7 @@ export function MapMaker(props){
         'delete',
         'void fill',
         'void',
+        'passage',
         'door',
         'pit',
         'way up',
@@ -297,6 +298,15 @@ export function MapMaker(props){
                     optionType: 'voidfill',
                     image: 'voidfill',
                     color: 'black',
+                    id: i
+                })
+            } else if(key === 'passage'){
+                this.paletteTiles.push({
+                    type: 'palette-tile',
+                    optionType: 'passage',
+                    image: null,
+                    color: 'white',
+                    borders: { top: '2px solid black', left: '2px solid black', right: '2px solid black', bottom: '2px solid transparent' },
                     id: i
                 })
             } else {

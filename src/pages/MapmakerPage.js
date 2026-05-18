@@ -553,11 +553,52 @@ class MapMakerPage extends React.Component {
       if(this.props.mapMaker.paletteTiles[this.state.pinnedOption.id]){
         pinned = this.props.mapMaker.paletteTiles[this.state.pinnedOption.id]
       }
-      if(pinned && pinned.optionType === 'void'){
+      if(pinned && pinned.optionType === 'passage'){
+        let arr = [...this.state.tiles]
+        let prevTileIdx = this.state.hoveredTileIdx;
+        let connectedTop = false, connectedBot = false, connectedLeft = false, connectedRight = false;
+        let isAdjacent = false;
+        if (prevTileIdx !== null && prevTileIdx !== tile.id) {
+            let prevTile = arr[prevTileIdx];
+            if (prevTile && prevTile.contains && prevTile.contains.type === 'passage') {
+                if (tile.id === prevTileIdx - 15) { connectedBot = true; isAdjacent = true; } // moved up
+                if (tile.id === prevTileIdx + 15) { connectedTop = true; isAdjacent = true; } // moved down
+                if (tile.id === prevTileIdx - 1) { connectedRight = true; isAdjacent = true; } // moved left
+                if (tile.id === prevTileIdx + 1) { connectedLeft = true; isAdjacent = true; } // moved right
+                if (isAdjacent) {
+                    let pb = prevTile.borders ? {...prevTile.borders} : { top: '2px solid black', bottom: '2px solid black', left: '2px solid black', right: '2px solid black' };
+                    if (connectedBot) pb.top = '2px solid transparent';
+                    if (connectedTop) pb.bottom = '2px solid transparent';
+                    if (connectedRight) pb.left = '2px solid transparent';
+                    if (connectedLeft) pb.right = '2px solid transparent';
+                    arr[prevTileIdx] = { ...prevTile, borders: pb };
+                }
+            }
+        }
+        let newBorders = { top: '2px solid black', bottom: '2px solid black', left: '2px solid black', right: '2px solid black' };
+        if (arr[tile.id].contains && arr[tile.id].contains.type === 'passage') {
+            newBorders = arr[tile.id].borders ? {...arr[tile.id].borders} : newBorders;
+        }
+        if (connectedBot) newBorders.bottom = '2px solid transparent';
+        if (connectedTop) newBorders.top = '2px solid transparent';
+        if (connectedRight) newBorders.right = '2px solid transparent';
+        if (connectedLeft) newBorders.left = '2px solid transparent';
+        
+        arr[tile.id].image = null;
+        arr[tile.id].color = 'white';
+        arr[tile.id].contains = { type: 'passage', subtype: null };
+        arr[tile.id].borders = newBorders;
+        
+        this.setState({
+          hoveredTileIdx: tile.id,
+          tiles: arr
+        })
+      } else if(pinned && pinned.optionType === 'void'){
         let arr = [...this.state.tiles]
         arr[tile.id].image = null;
         arr[tile.id].color = 'black';
         arr[tile.id].contains = { type: 'void', subtype: null }
+        arr[tile.id].borders = null;
         this.setState({
           hoveredTileIdx: null,
           tiles: arr
@@ -568,6 +609,7 @@ class MapMakerPage extends React.Component {
         arr[tile.id].image = null;
         arr[tile.id].color = null;
         arr[tile.id].contains = null;
+        arr[tile.id].borders = null;
         this.setState({
           tiles: arr,
           hoveredTileIdx: null
@@ -722,11 +764,28 @@ class MapMakerPage extends React.Component {
       }
       console.log('pinned: ', pinned);
       console.log('this.props.mapMaker.paletteTiles', this.props.mapMaker.paletteTiles);
-      if(pinned && pinned.optionType === 'void'){
+      if(pinned && pinned.optionType === 'passage'){
+        let arr = [...this.state.tiles];
+        if (arr[tile.id].contains && arr[tile.id].contains.type === 'passage') {
+          this.setState({
+            hoveredTileIdx: tile.id
+          });
+        } else {
+          arr[tile.id].image = null;
+          arr[tile.id].color = 'white'
+          arr[tile.id].contains = { type: 'passage', subtype: null }
+          arr[tile.id].borders = { top: '2px solid black', bottom: '2px solid black', left: '2px solid black', right: '2px solid black' };
+          this.setState({
+            tiles: arr,
+            hoveredTileIdx: tile.id
+          })
+        }
+      } else if(pinned && pinned.optionType === 'void'){
         let arr = [...this.state.tiles];
         arr[tile.id].image = null;
         arr[tile.id].color = 'black'
         arr[tile.id].contains = { type: 'void', subtype: null }
+        arr[tile.id].borders = null;
         this.setState({
           tiles: arr,
           hoveredTileIdx: null
@@ -734,9 +793,12 @@ class MapMakerPage extends React.Component {
       } else if(pinned && pinned.optionType === 'voidfill'){
         let arr = [...this.state.tiles];
         arr.forEach(e=>{
-          e.image = null;
-          e.color = 'black'
-          e.contains = { type: 'void', subtype: null }
+          if (!e.contains) {
+            e.image = null;
+            e.color = 'black'
+            e.contains = { type: 'void', subtype: null }
+            e.borders = null;
+          }
         })
         this.setState({
           tiles: arr,
@@ -747,6 +809,7 @@ class MapMakerPage extends React.Component {
         arr[tile.id].image = null;
         arr[tile.id].color = null;
         arr[tile.id].contains = null;
+        arr[tile.id].borders = null;
         this.setState({
           tiles: arr,
           hoveredTileIdx: null

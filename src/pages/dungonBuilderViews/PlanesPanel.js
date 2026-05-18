@@ -191,7 +191,7 @@ class PlanesPanel extends React.Component {
                                 id={tIdx}
                                 tileSize={((this.props.tileSize*3)/3-2)/15}
                                 image={tile.image ? tile.image : null}
-                                color={tile.color ? tile.color : 'white'}
+                                color={tile.color ? tile.color : 'white'} borders={tile.borders}
                                 coordinates={tile.coordinates}
                                 index={tile.id}
                                 showCoordinates={false}

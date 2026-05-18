@@ -553,7 +553,7 @@ combatKeyUpListener = (event) => {
             { this.state.navToLanding && <Redirect to='/'/> }
             <div className="content-container">
                 <div className="button-row-top">
-                    <button onClick={() => this.submit()}>Back</button>
+                    <button onClick={() => this.exitSimulator()}>Back</button>
                 </div>
                 <div className="title">
                     Choose your crew

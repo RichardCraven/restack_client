@@ -59,6 +59,7 @@ class BoardsPalette extends React.Component {
                             image={tile.image ? tile.image : null}
                             imageOverride={tile.image && tile.image.includes('/') ? tile.image : null}
                             color={tile.color ? tile.color : 'white'}
+                            borders={tile.borders}
                             coordinates={tile.coordinates}
                             index={tile.id}
                             showCoordinates={false}
