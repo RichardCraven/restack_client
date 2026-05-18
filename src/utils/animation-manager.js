@@ -114,7 +114,7 @@ export function AnimationManager(){
     // - tile: tile-based animation (fixed duration, affects board tiles)
     // - canvas: canvas-based animation (dynamic duration, rendered in overlay/canvas)
     this.animationsMatrix = {
-        sword_swing: { duration: 600, animationType: 'tile' },
+        sword_swing: { duration: 600, animationType: 'canvas' },
         spin_attack: { duration: 900, animationType: 'tile' },
         dragon_punch: { duration: 700, animationType: 'tile' },
         punch: { duration: 600, animationType: 'tile' },
@@ -1535,27 +1535,68 @@ export function AnimationManager(){
         this.cross(tileId, color)
     }
     this.swordSwing = (targetTileId, sourceTileId, facing, resolve) => {
-        const animationTile = this.tiles.find(e => e.id === sourceTileId);
-        if (!animationTile) return;
+        const originCoords = this.getTileCoordsById(sourceTileId);
+        const targetCoords = targetTileId ? this.getTileCoordsById(targetTileId) : null;
+        if (!originCoords) {
+            if (resolve) resolve(null);
+            return;
+        }
+        // If targetTileId is null (edge of board), synthesise a 1-tile offset in the facing direction
+        const effectiveTarget = targetCoords || (() => {
+            const t = { ...originCoords };
+            if (facing === 'right') t.x += 1;
+            else if (facing === 'left') t.x -= 1;
+            else if (facing === 'up') t.y -= 1;
+            else if (facing === 'down') t.y += 1;
+            return t;
+        })();
+
         const duration = 600;
-        const startTime = Date.now();
-        animationTile.overlayAnimationType = 'sword_swing';
-        animationTile.overlayAnimationData = {
-            facing,
+        const animId = `sword_swing_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+        const anim = {
+            id: animId,
+            type: 'sword_swing',
+            animationType: 'canvas',
+            origin: originCoords,
+            target: effectiveTarget,
             duration,
-            startTime
+            facing,
+            onComplete: null,
         };
-        this.update();
-        setTimeout(() => {
-            animationTile.overlayAnimationType = null;
-            animationTile.overlayAnimationData = null;
-            this.update();
+        anim.onComplete = () => {
+            if (!anim.onComplete) return;
+            anim.onComplete = null;
+            const idx = this.canvasAnimations.findIndex(a => a.id === animId);
+            if (idx !== -1) {
+                this.canvasAnimations.splice(idx, 1);
+                this.update();
+            }
+            // Trigger hit-flash on target tile
+            if (targetTileId !== null && targetTileId !== undefined) {
+                const hitTile = this.tiles.find(e => e.id === targetTileId);
+                if (hitTile) {
+                    hitTile.animationType = 'hit-flash';
+                    hitTile.transitionType = 'fade';
+                    hitTile.animationData = { swordSwipeHit: true, duration: 400 };
+                    this.update();
+                    setTimeout(() => {
+                        hitTile.animationType = null;
+                        hitTile.transitionType = null;
+                        hitTile.animationData = {};
+                        this.update();
+                    }, 400);
+                }
+            }
             if (resolve) {
                 const tileCoords = targetTileId ? this.getTileCoordsById(targetTileId) : null;
                 const collision = tileCoords ? this.checkForCollision(tileCoords) : null;
                 resolve(collision);
             }
-        }, duration);
+        };
+        this.canvasAnimations.push(anim);
+        this.update();
+        // Safety fallback
+        setTimeout(() => { if (anim.onComplete) anim.onComplete(); }, duration + 50);
     }
 
     this.zapBurstAnimation = async (targetTileId, sourceTileId, color = null, resolve) => {
@@ -1671,6 +1712,61 @@ export function AnimationManager(){
 
             this.canvasAnimations.push(animObj);
             this.update();
+
+            // Remove animation after it completes
+            setTimeout(() => {
+                const idx = this.canvasAnimations.indexOf(animObj);
+                if (idx !== -1) {
+                    this.canvasAnimations.splice(idx, 1);
+                    this.update();
+                }
+            }, animationDuration + 20);
+        });
+    };
+
+    this.heal = (sourceCoords, targetCoords, onComplete) => {
+        return new Promise((resolve) => {
+            if (!sourceCoords || !targetCoords) {
+                if (onComplete) onComplete();
+                resolve(0);
+                return;
+            }
+
+            const travelDuration = 600;
+            const impactHoldDuration = 200;
+            const fadeOutDuration = 200;
+            const animationDuration = travelDuration + impactHoldDuration + fadeOutDuration;
+            let completed = false;
+            const finish = () => {
+                if (completed) return;
+                completed = true;
+                try {
+                    if (onComplete) onComplete();
+                } catch (e) {
+                    console.warn('heal onComplete callback failed', e);
+                }
+                resolve(animationDuration);
+            };
+            const animObj = {
+                id: `heal_${Date.now()}_${Math.random()}`,
+                type: 'heal',
+                origin: sourceCoords,
+                target: targetCoords,
+                duration: animationDuration,
+                travelDuration,
+                onComplete: () => {
+                    finish();
+                }
+            };
+
+            this.canvasAnimations.push(animObj);
+            this.update();
+
+            // Fallback: ensure heal resolution even if CanvasHeal callback is skipped
+            // due to remount/unmount timing during frequent board updates.
+            setTimeout(() => {
+                finish();
+            }, animationDuration + 30);
 
             // Remove animation after it completes
             setTimeout(() => {

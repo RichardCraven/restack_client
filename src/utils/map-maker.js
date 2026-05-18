@@ -19,6 +19,8 @@ export function MapMaker(props){
         'narrative',
         'key',
         'items',
+        'jewels',
+        'runes',
         
         'gate',
         'treasure',
@@ -44,6 +46,49 @@ export function MapMaker(props){
         { key: 'tier_1_armor',   name: 'Tier 1 Armor',   image: 'tier_1_armor' },
         { key: 'tier_2_armor',   name: 'Tier 2 Armor',   image: 'tier_2_armor' },
         { key: 'tier_3_armor',   name: 'Tier 3 Armor',   image: 'tier_3_armor' },
+    ];
+
+    this.jewelOptions = [
+        { key: 'green_opal', name: 'Green opal', image: 'green_opal' },
+        { key: 'blue_opal', name: 'Blue opal', image: 'blue_opal' },
+        { key: 'red_opal', name: 'Red opal', image: 'red_opal' },
+        { key: 'amber_opal', name: 'Amber opal', image: 'amber_opal' },
+
+        { key: 'amber', name: 'Amber', image: 'amber' },
+        { key: 'sapphire', name: 'Sapphire', image: 'sapphire' },
+        { key: 'ruby', name: 'Ruby', image: 'ruby' },
+        { key: 'amber_shards', name: 'Amber shards', image: 'amber_shards' },
+        { key: 'sapphire_shards', name: 'Sapphire shards', image: 'sapphire_shards' },
+        { key: 'ruby_shards', name: 'Ruby shards', image: 'ruby_shards' },
+
+        { key: 'blue_crystal', name: 'Blue crystal', image: 'blue_crystal' },
+        { key: 'purple_crystal', name: 'Purple crystal', image: 'purple_crystal' },
+        { key: 'pink_crystal', name: 'Pink crystal', image: 'pink_crystal' },
+        { key: 'green_crystal', name: 'Green crystal', image: 'green_crystal' },
+        { key: 'ruddy_crystal', name: 'Ruddy crystal', image: 'ruddy_crystal' },
+        { key: 'saphite_crystal', name: 'Saphite crystal', image: 'saphite_crystal' },
+        { key: 'magentite_crystal', name: 'Magentite crystal', image: 'magentite_crystal' },
+        { key: 'moxite_crystal', name: 'Moxite crystal', image: 'moxite_crystal' },
+        { key: 'abyssal_crystal', name: 'Abyssal crystal', image: 'abyssal_crystal' },
+
+        { key: 'pyrite', name: 'Pyrite', image: 'pyrite' },
+        { key: 'benthite', name: 'Benthite', image: 'benthite' },
+        { key: 'labradite', name: 'Labradite', image: 'labradite' },
+        { key: 'memnite', name: 'Memnite', image: 'memnite' },
+        { key: 'malachite', name: 'Malachite', image: 'malachite' },
+        { key: 'onyx', name: 'Onyx', image: 'onyx' },
+    ];
+
+    this.runeOptions = [
+        { key: 'volcanic_rune', name: 'Volcanic rune', image: 'volcanic_rune' },
+        { key: 'stone_rune', name: 'Stone rune', image: 'stone_rune' },
+        { key: 'pewter_rune', name: 'Pewter rune', image: 'pewter_rune' },
+        { key: 'earthen_rune', name: 'Earthen rune', image: 'earthen_rune' },
+        { key: 'onyxian_rune', name: 'Onyxian rune', image: 'onyxian_rune' },
+        { key: 'shadow_rune', name: 'Shadow rune', image: 'shadow_rune' },
+        { key: 'feldspar_rune', name: 'Feldspar rune', image: 'feldspar_rune' },
+        { key: 'archaic_rune', name: 'Archaic rune', image: 'archaic_rune' },
+        { key: 'sulphuric_rune', name: 'Sulphuric rune', image: 'sulphuric_rune' },
     ];
 
     this.paletteTiles = [];
@@ -568,6 +613,10 @@ export function MapMaker(props){
                 return 'treasury_key'
             case 'items':
                 return 'tier_1_weapon'
+            case 'jewels':
+                return 'abyssal_crystal'
+            case 'runes':
+                return 'archaic_rune'
             case 'stairs':
                 return 'stairs_down'
             case 'door':

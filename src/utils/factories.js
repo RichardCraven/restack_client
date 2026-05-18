@@ -86,8 +86,8 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
     hp: (typeof fighter.hp === 'number') ? fighter.hp : fighter.stats.hp,
     // starting_hp represents the max HP for the fighter (may be provided or fall back to stats.hp)
     starting_hp: (typeof fighter.starting_hp === 'number') ? fighter.starting_hp : fighter.stats.hp,
-        // All units start at 50% energy.
-        energy: 50,
+        // All units start at 0 energy.
+        energy: 0,
         tempo: 1,
         turnCycleCount: 0,
         turnCycleStarted: false,
@@ -267,6 +267,7 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
             processMove(this);
         },
         retargetToCloserEnemyIfNeeded: function(){
+            if (this.disableCloserRetarget) return;
             if (!(this.isMonster || this.isMinion) || this.behaviorSequence !== 'brawler') return;
             if (typeof getAllCombatants !== 'function') return;
 
@@ -342,10 +343,7 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
                     const speed = (this.stats && typeof this.stats.speed === 'number' && this.stats.speed > 0)
                         ? this.stats.speed
                         : 1;
-                    // regenPerTick = speed * 0.1
-                    // beholder_minion gets 3x regen for testing so they can reach 100 energy to bifurcate
-                    const regenMult = (this.type === 'beholder_minion') ? 3 : 1;
-                    const regenPerTick = speed * 0.1 * regenMult;
+                    const regenPerTick = speed * 0.1;
                     this.energy = Math.min(100, (this.energy || 0) + regenPerTick);
                 }
 

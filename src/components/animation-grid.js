@@ -8,9 +8,11 @@ import CanvasFireball from '../components/Canvas/canvas_fireball'
 import CanvasAxeThrow from '../components/Canvas/canvas_axe_throw'
 import CanvasClawSwipe from '../components/Canvas/canvas_claw_swipe'
 import CanvasPhysicalAttack from '../components/Canvas/canvas_physical_attack'
+import CanvasSwordSwing from '../components/Canvas/canvas_sword_swing'
 import CanvasWhirlwind from '../components/Canvas/canvas_whirlwind'
 import CanvasJaggedCircle from '../components/Canvas/canvas_jagged_circle'
 import CanvasEnergyBlast from '../components/Canvas/canvas_energy_blast'
+import CanvasHeal from '../components/Canvas/canvas_heal'
 
 // class AnimationGrid extends React.Component {
     // constructor(props){
@@ -164,6 +166,20 @@ const AnimationGrid = ({
                                     zIndex: 20
                                 }}
                             />
+                        } else if (anim.type === 'sword_swing') {
+                            if (!anim.origin || !anim.target) {
+                                console.warn('[AnimationGrid] CanvasSwordSwing missing origin or target', anim);
+                                return null;
+                            }
+                            return <CanvasSwordSwing
+                                key={animKey}
+                                origin={anim.origin}
+                                target={anim.target}
+                                tileSize={TILE_SIZE}
+                                duration={anim.duration || 600}
+                                facing={anim.facing || 'right'}
+                                onComplete={anim.onComplete}
+                            />
                         } else if (anim.type === 'physical_attack') {
                             if (!anim.origin || !anim.target) {
                                 console.warn('[AnimationGrid] CanvasPhysicalAttack missing origin or target', anim);
@@ -222,6 +238,21 @@ const AnimationGrid = ({
                                 height={height}
                                 duration={anim.duration || 800}
                                 travelDuration={anim.travelDuration || 800}
+                                onComplete={anim.onComplete}
+                            />
+                        } else if (anim.type === 'heal') {
+                            if (!anim.origin || !anim.target) {
+                                console.warn('[AnimationGrid] CanvasHeal missing origin or target', anim);
+                                return null;
+                            }
+                            return <CanvasHeal
+                                key={animKey}
+                                origin={anim.origin}
+                                target={anim.target}
+                                width={width}
+                                height={height}
+                                duration={anim.duration || 1000}
+                                travelDuration={anim.travelDuration || 600}
                                 onComplete={anim.onComplete}
                             />
                         }

@@ -6,6 +6,7 @@ import { Mummy } from './profiles/Mummy'
 import { BeholderMinion } from './profiles/BeholderMinion'
 import { Troll } from './profiles/Troll'
 import { KabukiDemon } from './profiles/KabukiDemon'
+import { KabukiDemonMinion } from './profiles/KabukiDemonMinion'
 import {Methods, getSurroundings} from '../shared-ai-methods/basic-methods';
 import {MovementMethods} from '../shared-ai-methods/movement-methods';
 
@@ -55,6 +56,7 @@ export function MonsterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
             beholder_minion: new BeholderMinion(data, this.utilMethods, this.animationManager, this.overlayManager),
             troll: new Troll(data, this.utilMethods, this.animationManager, this.overlayManager),
             kabuki_demon: new KabukiDemon(data, this.utilMethods, this.animationManager, this.overlayManager),
+            kabuki_demon_minion: new KabukiDemonMinion(data, this.utilMethods, this.animationManager, this.overlayManager),
         }
     }
 

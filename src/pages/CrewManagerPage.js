@@ -169,7 +169,10 @@ goBack = () => {
             <div className="crew-selector">
                 <div className="crew-options">
                     {this.state.options.map((e,i)=> {
-                        return <div className='portrait' key={i}
+                        const isSelected = this.state.selectedCrewMember && (
+                            this.state.selectedCrewMember.id === e.id || this.state.selectedCrewMember.name === e.name
+                        );
+                        return <div className={`portrait${isSelected ? ' selected' : ''}`} key={i}
                         style={{backgroundImage: "url(" + e.portrait + ")"}}
                         onClick={(event) => this.selectCrewMember(event, e)}
                         ></div>
@@ -179,7 +182,6 @@ goBack = () => {
                 <div className="member-panel">
                                         {this.state.selectedCrewMember &&
                                             <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center', marginRight: 15}}>
-                                                <div className="giant-portrait-name">{this.state.selectedCrewMember.name}</div>
                                                 <div
                                                     className="giant-portrait"
                                                     style={{
@@ -198,6 +200,7 @@ goBack = () => {
                                             </div>
                                         }
                     {this.state.selectedCrewMember && <div className="details-pane">
+                        <div className="member-name">{this.state.selectedCrewMember.name}</div>
                         <div className="description">
                             {this.state.selectedCrewMember.description}
                         </div>

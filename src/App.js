@@ -10,6 +10,7 @@ import UserManagerPage from './pages/UserManagerPage'
 import UserProfilePage from './pages/UserProfilePage'
 import CrewManagerPage from './pages/CrewManagerPage'
 import CombatSimulator from './pages/CombatSimulator'
+import SandboxPage from './pages/SandboxPage'
 
 
 import { Route, Switch, Redirect} from "react-router-dom";
@@ -265,6 +266,7 @@ const toggleMenuTray = () => {
             !loggedIn ? <Redirect to="/login" /> :
               <MapmakerPage {...props} showCoordinates={showCoordinates}  />
           )}/>
+          <Route exact path="/sandbox" component={SandboxPage} />
           <Route path="/">
               {loggedIn ? <Redirect to="/landing" /> : 
               <Redirect to="/login" />}

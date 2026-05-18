@@ -23,14 +23,8 @@ export function KabukiDemon(data, utilMethods, animationManager, overlayManager)
 
     const { resolveTarget, isTargetInRange, getBestAttackSourceTile, getForwardLineTargets, getCombatantTiles } = MonsterTargetingHelpers;
 
-    this._debug = (label, payload = null) => {
-        try {
-            if (payload) console.log(`[KABUKI AI] ${label}`, payload);
-            else console.log(`[KABUKI AI] ${label}`);
-        } catch (e) {
-            // no-op
-        }
-    };
+    // Diagnostics disabled per request.
+    this._debug = () => {};
 
     this.initialize = (caller) => {
         caller.behaviorSequence = 'brawler';
@@ -308,13 +302,6 @@ export function KabukiDemon(data, utilMethods, animationManager, overlayManager)
                     this.missesTarget(caller, target, attack);
                     return;
                 }
-
-                console.log('[KABUKI AI] OBLITERATE cast', {
-                    callerId: caller.id,
-                    targetId: target.id,
-                    targetsHit: lineTargets.map((t) => t.id),
-                    lane: target.coordinates.y,
-                });
 
                 await this._triggerObliterateAnimation(caller, target, lineTargets, combatants);
 

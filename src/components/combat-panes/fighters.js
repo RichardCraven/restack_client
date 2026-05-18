@@ -52,6 +52,8 @@ export default function FightersCombatGrid(props) {
     const [actionBarPositions, setActionBarPositions] = React.useState({});
     const [animatingHits, setAnimatingHits] = React.useState({});
     const prevAttackingRef = React.useRef({});
+    const [consumableFlashes, setConsumableFlashes] = React.useState({});
+    const prevConsumableFlashRef = React.useRef({});
 
     // Compute weapon positions based on the rendered portrait positions. Use layout effect to read DOM
     React.useLayoutEffect(() => {
@@ -139,6 +141,17 @@ export default function FightersCombatGrid(props) {
             if (!now) {
                 prevAttackingRef.current[fighter.id] = false;
             }
+
+            // Consumable flash: show item icon for 1.5s when consumableFlash timestamp changes
+            const flashTs = details.consumableFlash?.timestamp;
+            const prevFlashTs = prevConsumableFlashRef.current[fighter.id];
+            if (flashTs && flashTs !== prevFlashTs) {
+                prevConsumableFlashRef.current[fighter.id] = flashTs;
+                setConsumableFlashes(prev => ({ ...prev, [fighter.id]: details.consumableFlash.iconKey }));
+                setTimeout(() => {
+                    setConsumableFlashes(prev => ({ ...prev, [fighter.id]: null }));
+                }, 1500);
+            }
         });
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [props.battleData, props.crew]);
@@ -224,6 +237,7 @@ export default function FightersCombatGrid(props) {
                                                 details?.stunned ? 'stunned' : '',
                                                 details?.drained ? 'drained' : '',
                                                 details?.regenerating ? 'regenerating' : '',
+                                                details?.healPulse ? 'heal-pulse' : '',
                                                 details?.bleed ? 'bleeding' : '',
                                                 details?.frozen ? 'frozen' : '',
                                             ].filter(Boolean).join(' ')
@@ -233,7 +247,7 @@ export default function FightersCombatGrid(props) {
                                             backgroundSize: (details?.berserkerActive && details?.feared && !details?.stunned) ? '100% 100%' : undefined,
                                             filter: [
                                                 details?.chargingUpActive ? "url('#ripple-effect')" : null,
-                                                `saturate(${((details?.hp / fighter.stats.hp) * 100) / 2}) sepia(${props.portraitHoveredId === fighter.id ? '2' : '0'})`,
+                                                `saturate(${fighter.type === 'barbarian' ? Math.min(10, ((details?.hp / fighter.stats.hp) * 100) / 2) : ((details?.hp / fighter.stats.hp) * 100) / 2}) sepia(${props.portraitHoveredId === fighter.id ? '2' : '0'})`,
                                                 details?.frozen ? 'hue-rotate(165deg) saturate(1.35) brightness(1.08) contrast(1.05)' : '',
                                                 (details?.berserkerActive && details?.feared && !details?.stunned) ? 'brightness(1.18)' : ''
                                             ].filter(Boolean).join(' '),
@@ -289,16 +303,6 @@ export default function FightersCombatGrid(props) {
                                                 </div>
                                             )}
                                         </div>
-                                        <div className="hp-bar">
-                                        {!props.getFighterDetails(fighter)?.dead && <div className="red-fill" 
-                                            style={{width: `${(props.getFighterDetails(fighter)?.hp / fighter.stats.hp) * 100}%`}}
-                                            ></div>}
-                                        </div>
-                                        <div className="energy-bar">
-                                            {!props.getFighterDetails(fighter)?.dead && <div className="yellow-fill" style={{width: `calc(${props.getFighterDetails(fighter)?.energy}%)`}}></div>}
-                                        </div>
-                                        <div className="tempo-bar">
-                                            {!props.getFighterDetails(fighter)?.dead &&  <div className="tempo-indicator" style={{left: `calc(${props.getFighterDetails(fighter)?.tempo}% - 4px)`}}></div>}
 
                                         {/* Target indicator: tiny portrait of whoever this fighter is targeting */}
                                         {(() => {
@@ -314,6 +318,27 @@ export default function FightersCombatGrid(props) {
                                                 </div>
                                             ) : null;
                                         })()}
+
+                                        {/* Consumable flash indicator: top-left slot, shows item icon for 1.5s */}
+                                        {consumableFlashes[fighter.id] && !details?.dead && (
+                                            <div className="fighter-consumable-indicator" style={{ zIndex: 310, position: 'absolute' }}>
+                                                <div
+                                                    className="fighter-consumable-portrait"
+                                                    style={{ backgroundImage: `url(${images[consumableFlashes[fighter.id]]})` }}
+                                                />
+                                            </div>
+                                        )}
+
+                                        <div className="hp-bar">
+                                        {!props.getFighterDetails(fighter)?.dead && <div className="red-fill" 
+                                            style={{width: `${(props.getFighterDetails(fighter)?.hp / fighter.stats.hp) * 100}%`}}
+                                            ></div>}
+                                        </div>
+                                        <div className="energy-bar">
+                                            {!props.getFighterDetails(fighter)?.dead && <div className="yellow-fill" style={{width: `calc(${props.getFighterDetails(fighter)?.energy}%)`}}></div>}
+                                        </div>
+                                        <div className="tempo-bar">
+                                            {!props.getFighterDetails(fighter)?.dead &&  <div className="tempo-indicator" style={{left: `calc(${props.getFighterDetails(fighter)?.tempo}% - 4px)`}}></div>}
                                         </div>
                                     { props.getFighterDetails(fighter) && props.getFighterDetails(fighter).pendingAttack && props.getFighterDetails(fighter).attacking && !props.getFighterDetails(fighter).dead && (() => {
                                         const details = props.getFighterDetails(fighter);
@@ -355,16 +380,7 @@ export default function FightersCombatGrid(props) {
                                         <div className={`
                                         action-bar 
                                         ${(animatingHits[fighter.id]) ? (props.getFighterDetails(fighter)?.facing === 'right' ? 'fighterHitsAnimation' : 'fighterHitsAnimation_RtoL') : ''}
-                                        ${(props.getFighterDetails(fighter)?.healing) ? 'fighterHealsAnimation' : ''}
-                                        `}
-                                        onAnimationEnd={e => {
-                                            // Clear heals animation flag when the FighterHits keyframe completes.
-                                            // (Hit animation classes no longer have CSS animations so they are
-                                            //  cleared via the setTimeout in the useEffect below instead.)
-                                            if (e && e.animationName && e.animationName.includes('FighterHits')) {
-                                                setAnimatingHits(prev => ({ ...prev, [fighter.id]: false }));
-                                            }
-                                        }}></div>
+                                        `}></div>
                                     </div>
                                 </div>
                             </div>

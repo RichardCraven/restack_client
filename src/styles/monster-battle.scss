@@ -608,7 +608,7 @@
                         height: 100%;
                         width: 100%;
                         background-size: 100% 100%;
-                        filter: saturate(50) sepia(0);
+                        // filter: saturate(50) sepia(0);
                     }
                     &.dead-member{
                         .portrait{
@@ -1491,33 +1491,6 @@
     }
 
 
-    .fighterHealsAnimation
-    {
-        z-index: 1001;
-        background: linear-gradient(90deg,transparent, rgb(68, 200, 132) 48%, transparent 51%);
-        background-size: 200% 200%;
-        -webkit-animation: FighterHits 1s ease ;
-        -moz-animation: FighterHits 1s ease ;
-        animation: FighterHits 1s ease ;
-        background-position:-98% 110%;
-    }
-
-    @-webkit-keyframes FighterHits {
-        0%{background-position:100% 0%}
-        50%{background-position:0% 100%}
-        100%{background-position:-98% 110%}
-    }
-    @-moz-keyframes FighterHits {
-        0%{background-position:100% 0%}
-        50%{background-position:0% 100%}
-        100%{background-position:-98% 110%}
-    }
-    @keyframes FighterHits { 
-        0%{background-position:100% 0%}
-        50%{background-position:0% 100%}
-        100%{background-position:-98% 110%}
-    }
-
     .monsterHitsAnimation
     {
         z-index: 1001;
@@ -1732,6 +1705,59 @@
     .portrait.feared.facing-down.reversed,
     .fighter-portrait.feared.facing-down.reversed {
         --feared-base-transform: scaleX(-1) rotate(-45deg);
+    }
+
+    // Brief green pulse on heal recipients so support actions are unmistakable.
+    .portrait.heal-pulse,
+    .fighter-portrait.heal-pulse {
+        position: relative;
+        animation: fighterHealPulse 460ms ease-out;
+        box-shadow: 0 0 0 rgba(96, 255, 155, 0);
+    }
+
+    .portrait.heal-pulse::after,
+    .fighter-portrait.heal-pulse::after {
+        content: '';
+        position: absolute;
+        inset: -4px;
+        border-radius: 8px;
+        pointer-events: none;
+        background: radial-gradient(circle at 50% 50%, rgba(126, 255, 170, 0.45) 0%, rgba(88, 240, 138, 0.18) 45%, rgba(88, 240, 138, 0) 75%);
+        animation: fighterHealPulseRing 460ms ease-out;
+        z-index: 2;
+    }
+
+    @keyframes fighterHealPulse {
+        0% {
+            transform: scale(1);
+            filter: brightness(1) saturate(1);
+            box-shadow: 0 0 0 rgba(96, 255, 155, 0);
+        }
+        40% {
+            transform: scale(1.03);
+            filter: brightness(1.2) saturate(1.35);
+            box-shadow: 0 0 18px rgba(96, 255, 155, 0.75);
+        }
+        100% {
+            transform: scale(1);
+            filter: brightness(1) saturate(1);
+            box-shadow: 0 0 0 rgba(96, 255, 155, 0);
+        }
+    }
+
+    @keyframes fighterHealPulseRing {
+        0% {
+            opacity: 0;
+            transform: scale(0.92);
+        }
+        35% {
+            opacity: 1;
+            transform: scale(1.02);
+        }
+        100% {
+            opacity: 0;
+            transform: scale(1.12);
+        }
     }
 
     // ── Board-wide Fear Overlay ───────────────────────────────────────────────
@@ -2231,6 +2257,28 @@
                             bottom: 2px;
                             right: 2px;
                             pointer-events: none;
+                        }
+                        .fighter-consumable-indicator {
+                            position: absolute;
+                            top: 2px;
+                            left: 2px;
+                            pointer-events: none;
+                            animation: consumableFlashIn 0.15s ease-out;
+                        }
+                        @keyframes consumableFlashIn {
+                            from { opacity: 0; transform: scale(0.6); }
+                            to   { opacity: 1; transform: scale(1); }
+                        }
+                        .fighter-consumable-portrait {
+                            width: 28px;
+                            height: 28px;
+                            border-radius: 50%;
+                            background-size: 70% 70%;
+                            background-repeat: no-repeat;
+                            background-position: center;
+                            border: 2px solid rgba(80, 220, 120, 0.9);
+                            box-shadow: 0 0 5px 1px rgba(40, 200, 80, 0.6), inset 0 0 3px rgba(0,0,0,0.4);
+                            background-color: rgba(0, 0, 0, 0.5);
                         }
                         .fighter-color-indicator {
                             position: absolute;
@@ -3174,6 +3222,7 @@
                     flex-direction: column;
                     justify-content: flex-start;
                     align-items: center;
+                    overflow-y: auto;
                     &.queue-tile-container{
                         height: calc(100% - 26px);
                         justify-content: center;
@@ -3189,6 +3238,8 @@
                         position: relative;
                         height: 40px;
                         width: 40px;
+                        min-height: 40px;
+                        flex-shrink: 0;
                         margin-bottom: 5px;
                         .interaction-tile-overlay{
                             position: absolute;
@@ -3213,7 +3264,8 @@
                                     rgba(0, 0, 0, 0.1) calc(var(--cooldown-remaining, 100) * 3.6deg),
                                     rgba(0, 0, 0, 0.1) 360deg
                                 );
-                                transition: background 0.1s linear;
+                                will-change: background;
+                                transform: translateZ(0);
                             }
                             &.energy-fill {
                                 left: 0;

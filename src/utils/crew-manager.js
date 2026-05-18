@@ -480,7 +480,7 @@ export function CrewManager(){
         {
             image: 'rogue',
             type: 'rogue',
-            name: 'Tyra',
+            name: 'Dormund',
             id: 789,
             level: 1,
             stats: { str: 5, int: 5, dex: 6, fort: 3, baseHp: 10, experience: 0 },
@@ -490,7 +490,7 @@ export function CrewManager(){
             attacks: ['fire_arrow', 'dagger_stab'],
             passives: ['nimble_dodge'],
             weaknesses: ['ice', 'curse', 'crushing'],
-            description: "Tyra was born a slave, surviving and advancing through sheer cunning and a ruthless will",
+            description: "Dormund was born a slave, surviving and advancing through sheer cunning and a ruthless will",
             specialActions: [],
             actionsTrayExpanded: false,
             actionMenuTypeExpanded: false

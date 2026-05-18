@@ -2273,13 +2273,30 @@ class MonsterBattle extends React.Component {
                                         const cooldownRemaining = Math.max(0, Math.min(100, 100 - cooldownPosition));
                                         const normalizedAttackName = String(displayAttack.name || '').replaceAll('_', ' ').trim().toLowerCase();
                                         const isAxeThrowTile = normalizedAttackName === 'axe throw';
+                                        const iconCandidate = displayAttack.icon;
+                                        const directIcon = (typeof iconCandidate === 'string')
+                                            ? iconCandidate
+                                            : (iconCandidate && typeof iconCandidate === 'object')
+                                                ? (iconCandidate.default || iconCandidate.src || '')
+                                                : '';
+                                        const fallbackKey = String(displayAttack.key || displayAttack.name || '')
+                                            .trim()
+                                            .toLowerCase()
+                                            .replaceAll(' ', '_');
+                                        const fallbackIconCandidate = images[fallbackKey];
+                                        const fallbackIcon = (typeof fallbackIconCandidate === 'string')
+                                            ? fallbackIconCandidate
+                                            : (fallbackIconCandidate && typeof fallbackIconCandidate === 'object')
+                                                ? (fallbackIconCandidate.default || fallbackIconCandidate.src || '')
+                                                : '';
+                                        const resolvedAttackIcon = directIcon || fallbackIcon;
 
                                         return <div key={groupKey} className='interaction-tile-wrapper'>
                                                     <div 
                                                     className={`interaction-tile ${cooldownPosition === 100 ? 'available' : ''} ${isAxeThrowTile ? 'attack-axe-throw' : ''}`} 
                                                     style={{
-                                                        backgroundImage: "url(" + displayAttack.icon + ")",
-                                                        '--attack-icon-url': "url(" + displayAttack.icon + ")",
+                                                        backgroundImage: resolvedAttackIcon ? `url(${resolvedAttackIcon})` : 'none',
+                                                        '--attack-icon-url': resolvedAttackIcon ? `url(${resolvedAttackIcon})` : 'none',
                                                         cursor: this.state.showCrosshair ? 'crosshair' : (cooldownPosition === 100 ? 'pointer' : '')
                                                     }} 
                                                     onClick={() => this.attackTileClicked(displayAttack)} 

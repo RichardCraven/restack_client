@@ -34,6 +34,7 @@ export function FighterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
     // }
 
     this.connectAnimationManager = (instance) => {
+        this.animationManager = instance;
         this.initializeRoster(instance)
     }
     this.connectUtilMethods = (utilMethods) => {

@@ -628,8 +628,8 @@ class MapMakerPage extends React.Component {
         })
       }
       
-    } else if(tile.type === 'monster-tile' || tile.type === 'gate-tile' || tile.type === 'key-tile' || tile.type === 'tier-tile'){
-      console.log('MONSTER/GATE/KEY/TIER TILE');
+    } else if(tile.type === 'monster-tile' || tile.type === 'gate-tile' || tile.type === 'key-tile' || tile.type === 'tier-tile' || tile.type === 'jewel-tile' || tile.type === 'rune-tile'){
+      console.log('MONSTER/GATE/KEY/TIER/JEWEL/RUNE TILE');
       this.setState({
         pinnedOption: tile
       })
@@ -637,7 +637,7 @@ class MapMakerPage extends React.Component {
         console.log('pinnedoption: ', this.state.pinnedOption);
       },500)
     } else if(tile.type === 'board-tile'){
-      let pinned = null, monster, gate, key, tierOption;
+      let pinned = null, monster, gate, key, tierOption, jewelOption, runeOption;
       if(this.state.pinnedOption && this.state.pinnedOption.type === 'monster-tile'){
         monster = Object.values(this.props.monsterManager.monsters)[this.state.pinnedOption.id];
       };
@@ -650,6 +650,12 @@ class MapMakerPage extends React.Component {
       };
       if(this.state.pinnedOption && this.state.pinnedOption.type === 'tier-tile'){
         tierOption = this.props.mapMaker.tierOptions[this.state.pinnedOption.id];
+      };
+      if(this.state.pinnedOption && this.state.pinnedOption.type === 'jewel-tile'){
+        jewelOption = this.props.mapMaker.jewelOptions[this.state.pinnedOption.id];
+      };
+      if(this.state.pinnedOption && this.state.pinnedOption.type === 'rune-tile'){
+        runeOption = this.props.mapMaker.runeOptions[this.state.pinnedOption.id];
       };
       if(monster){
         console.log('monster get here, monster: ', monster);
@@ -688,6 +694,24 @@ class MapMakerPage extends React.Component {
         let arr = [...this.state.tiles];
         arr[tile.id].contains = { type: tierOption.key, subtype: null }
         arr[tile.id].image = images[tierOption.image]
+        this.setState({
+          tiles: arr,
+          hoveredTileIdx: null
+        })
+        return
+      } else if(jewelOption){
+        let arr = [...this.state.tiles];
+        arr[tile.id].contains = { type: 'item', subtype: jewelOption.key }
+        arr[tile.id].image = images[jewelOption.image]
+        this.setState({
+          tiles: arr,
+          hoveredTileIdx: null
+        })
+        return
+      } else if(runeOption){
+        let arr = [...this.state.tiles];
+        arr[tile.id].contains = { type: 'item', subtype: runeOption.key }
+        arr[tile.id].image = images[runeOption.image]
         this.setState({
           tiles: arr,
           hoveredTileIdx: null

@@ -26,6 +26,7 @@ export function Troll(data, utilMethods, animationManager, overlayManager){
 
     this.initialize = (caller) => {
         caller.behaviorSequence = 'brawler'
+        caller.disableCloserRetarget = true;
     }
 
     this.onEraTransition = (caller, combatants) => {
@@ -41,15 +42,11 @@ export function Troll(data, utilMethods, animationManager, overlayManager){
 
             if (regenSpecials.length > 0) {
                 const chosenRegen = regenSpecials.find(s => s.name.includes('greater')) || regenSpecials[0];
-                console.log(`[TROLL AI DIAGNOSTICS] Era Tick: Evaluated low HP (${caller.hp}/${caller.starting_hp} -> ${(caller.hp/caller.starting_hp*100).toFixed(1)}%). Triggering ${chosenRegen.name} independently.`);
                 
                 // Route directly to the application layer!
                 applyAttackEffect(caller, chosenRegen, this.broadcastDataUpdate);
                 this.kickoffSpecialCooldown(chosenRegen);
                 caller.energy -= (chosenRegen.energy_cost || 0);
-
-            } else {
-                console.log(`[TROLL AI DIAGNOSTICS] Era Tick: Evaluated low HP but lacking ready regeneration specials or energy.`);
             }
         }
     }
@@ -60,9 +57,186 @@ export function Troll(data, utilMethods, animationManager, overlayManager){
         return this.chooseAttackTypeDefault(caller, target);
     }
 
+    this.getEntityTiles = (entity) => {
+        if (!entity) return [];
+        if (Array.isArray(entity.occupiedCoords) && entity.occupiedCoords.length > 0) {
+            return entity.occupiedCoords.map(c => ({ x: c.x, y: c.y }));
+        }
+        if (entity.coordinates && typeof entity.coordinates.x === 'number' && typeof entity.coordinates.y === 'number') {
+            return [{ x: entity.coordinates.x, y: entity.coordinates.y }];
+        }
+        return [];
+    };
+
+    this.isTileEnterable = (caller, tile, combatants) => {
+        if (!tile || typeof tile.x !== 'number' || typeof tile.y !== 'number') return false;
+        if (tile.x < 0 || tile.x > this.MAX_DEPTH || tile.y < 0 || tile.y > this.MAX_LANES) return false;
+
+        // Main monsters are 2-tile tall in this combat system.
+        const callerIsLarge = (caller.isMonster === true && caller.isMinion !== true) || caller.large === true;
+        if (callerIsLarge && tile.y - 1 < 0) return false;
+
+        const blocked = Object.values(combatants || {}).some((e) => {
+            if (!e || e.dead || e.id === caller.id) return false;
+            const tiles = this.getEntityTiles(e);
+            return tiles.some(t => t.x === tile.x && t.y === tile.y);
+        });
+        if (blocked) return false;
+
+        if (callerIsLarge) {
+            const above = { x: tile.x, y: tile.y - 1 };
+            const aboveBlocked = Object.values(combatants || {}).some((e) => {
+                if (!e || e.dead || e.id === caller.id) return false;
+                const tiles = this.getEntityTiles(e);
+                return tiles.some(t => t.x === above.x && t.y === above.y);
+            });
+            if (aboveBlocked) return false;
+        }
+
+        return true;
+    };
+
+    this.getAdjacencyGoalsForTarget = (target) => {
+        const targetTiles = this.getEntityTiles(target);
+        const goals = [];
+        targetTiles.forEach((tile) => {
+            goals.push({ x: tile.x + 1, y: tile.y });
+            goals.push({ x: tile.x - 1, y: tile.y });
+            goals.push({ x: tile.x, y: tile.y + 1 });
+            goals.push({ x: tile.x, y: tile.y - 1 });
+        });
+        const uniq = new Map();
+        goals.forEach(g => uniq.set(`${g.x},${g.y}`, g));
+        return Array.from(uniq.values()).filter(g =>
+            g.x >= 0 && g.x <= this.MAX_DEPTH && g.y >= 0 && g.y <= this.MAX_LANES
+        );
+    };
+
+    this.findPathToTargetAdjacency = (caller, target, combatants, maxPathLen = 18) => {
+        if (!caller || !caller.coordinates || !target) return null;
+
+        const start = { x: caller.coordinates.x, y: caller.coordinates.y };
+        const goals = this.getAdjacencyGoalsForTarget(target);
+        if (!goals.length) return null;
+
+        const isGoal = (node) => goals.some(g => g.x === node.x && g.y === node.y);
+        if (isGoal(start)) return [start];
+
+        const q = [start];
+        const visited = new Set([`${start.x},${start.y}`]);
+        const parent = new Map();
+
+        const desiredDx = target.coordinates.x > start.x ? 1 : -1;
+        const dirs = [
+            { x: desiredDx, y: 0 },
+            { x: 0, y: -1 },
+            { x: 0, y: 1 },
+            { x: -desiredDx, y: 0 }
+        ];
+
+        let foundKey = null;
+        while (q.length > 0) {
+            const cur = q.shift();
+            const curKey = `${cur.x},${cur.y}`;
+
+            const pathDepth = (() => {
+                let d = 0;
+                let k = curKey;
+                while (parent.has(k)) {
+                    d += 1;
+                    k = parent.get(k);
+                }
+                return d;
+            })();
+            if (pathDepth >= maxPathLen) continue;
+
+            for (const d of dirs) {
+                const nxt = { x: cur.x + d.x, y: cur.y + d.y };
+                const nKey = `${nxt.x},${nxt.y}`;
+                if (visited.has(nKey)) continue;
+                if (!this.isTileEnterable(caller, nxt, combatants)) continue;
+                visited.add(nKey);
+                parent.set(nKey, curKey);
+
+                if (isGoal(nxt)) {
+                    foundKey = nKey;
+                    q.length = 0;
+                    break;
+                }
+                q.push(nxt);
+            }
+        }
+
+        if (!foundKey) return null;
+
+        const path = [];
+        let key = foundKey;
+        while (key) {
+            const [x, y] = key.split(',').map(Number);
+            path.push({ x, y });
+            key = parent.get(key);
+        }
+        path.reverse();
+        return path;
+    };
+
+    this.getPathComplexityToTarget = (caller, target, combatants) => {
+        const path = this.findPathToTargetAdjacency(caller, target, combatants);
+        if (!path || path.length === 0) return Number.POSITIVE_INFINITY;
+        return Math.max(0, path.length - 1);
+    };
+
+    this.selectMostAccessibleTarget = (caller, combatants) => {
+        const candidates = Object.values(combatants || {}).filter(e =>
+            e &&
+            !e.dead &&
+            !e.invisible &&
+            !e.isVCT &&
+            !e.isMonster &&
+            !e.isMinion
+        );
+        if (candidates.length === 0) return null;
+
+        const ranked = candidates.map(enemy => {
+            const complexity = this.getPathComplexityToTarget(caller, enemy, combatants);
+            const manhattan = Math.abs((enemy.coordinates?.x || 0) - (caller.coordinates?.x || 0))
+                + Math.abs((enemy.coordinates?.y || 0) - (caller.coordinates?.y || 0));
+            return { enemy, complexity, manhattan };
+        }).sort((a, b) => {
+            if (a.complexity !== b.complexity) return a.complexity - b.complexity;
+            return a.manhattan - b.manhattan;
+        });
+
+        const bestFinite = ranked.find(r => Number.isFinite(r.complexity));
+        return bestFinite ? bestFinite.enemy : ranked[0].enemy;
+    };
+
     this.acquireTarget = (caller, combatants) => {
-        const target = AcquireTargetMethods.acquireClosestSoftTarget(caller, combatants);
-        if (!target) return;
+        const currentTarget = caller && caller.targetId ? combatants[caller.targetId] : null;
+        const currentTargetIsValid = !!(
+            currentTarget &&
+            !currentTarget.dead &&
+            !currentTarget.invisible &&
+            !currentTarget.isVCT &&
+            !currentTarget.isMonster &&
+            !currentTarget.isMinion
+        );
+
+        if (currentTargetIsValid) {
+            if (!caller.pendingAttack) {
+                caller.pendingAttack = this.chooseAttackType(caller, currentTarget);
+            }
+            return;
+        }
+
+        const target = this.selectMostAccessibleTarget(caller, combatants)
+            || AcquireTargetMethods.acquireClosestEnemy(caller, combatants)
+            || AcquireTargetMethods.acquireClosestSoftTarget(caller, combatants);
+        if (!target) {
+            caller.targetId = null;
+            caller.pendingAttack = null;
+            return;
+        }
 
         caller.pendingAttack = this.chooseAttackType(caller, target);
     }
@@ -75,6 +249,10 @@ export function Troll(data, utilMethods, animationManager, overlayManager){
     }
 
     this.processMove = (caller, combatants) => {
+        if (!caller.behaviorSequence) {
+            caller.behaviorSequence = 'brawler';
+        }
+
         if (typeof caller.moveCooldown === 'undefined') {
             throw new Error('moveCooldown must be defined for all units');
         }
@@ -85,20 +263,98 @@ export function Troll(data, utilMethods, animationManager, overlayManager){
 
         switch (caller.behaviorSequence) {
             case 'brawler': {
+                let target = resolveTarget(caller, combatants);
+                if (!target || target.dead) {
+                    this.acquireTarget(caller, combatants);
+                    target = resolveTarget(caller, combatants);
+                }
+                if (!target || target.dead) {
+                    // Nothing valid to pursue this era.
+                    break;
+                }
+
                 // Standard brawler movement: close the gap
+                const beforeMove = caller.coordinates ? { x: caller.coordinates.x, y: caller.coordinates.y } : null;
                 data.methods.closeTheGap(caller, combatants);
+                const afterMove = caller.coordinates ? { x: caller.coordinates.x, y: caller.coordinates.y } : null;
+
+                if (beforeMove && afterMove && beforeMove.x === afterMove.x && beforeMove.y === afterMove.y) {
+                    // If default closeTheGap cannot progress, try a forward-priority step once.
+                    if (typeof data.methods.closeTheGapForwardFirst === 'function') {
+                        data.methods.closeTheGapForwardFirst(caller, combatants);
+                    }
+                    const fallbackAfterMove = caller.coordinates ? { x: caller.coordinates.x, y: caller.coordinates.y } : null;
+                    const movedAfterFallback = !!(fallbackAfterMove && (fallbackAfterMove.x !== beforeMove.x || fallbackAfterMove.y !== beforeMove.y));
+                    let movedByPathing = false;
+                    let pathCandidate = null;
+                    let nextPathStep = null;
+
+                    if (!movedAfterFallback) {
+                        pathCandidate = this.findPathToTargetAdjacency(caller, target, combatants);
+                        if (pathCandidate && pathCandidate.length > 1) {
+                            nextPathStep = pathCandidate[1];
+                            if (this.isTileEnterable(caller, nextPathStep, combatants)) {
+                                caller.coordinates = { x: nextPathStep.x, y: nextPathStep.y };
+                                caller.depth = nextPathStep.x;
+                                caller.position = nextPathStep.y;
+                                movedByPathing = true;
+                            }
+                        }
+                    }
+
+                    const afterRecoveryMove = caller.coordinates ? { x: caller.coordinates.x, y: caller.coordinates.y } : (fallbackAfterMove || afterMove);
+                    const movedAfterRecovery = movedAfterFallback || movedByPathing;
+
+                    if (movedAfterRecovery) {
+                        caller._trollStallCount = 0;
+                    } else {
+                        caller._trollStallCount = (caller._trollStallCount || 0) + 1;
+                    }
+
+                    if (!movedAfterRecovery && caller._trollStallCount >= 3) {
+                        const currentPathComplexity = this.getPathComplexityToTarget(caller, target, combatants);
+                        const alternatives = Object.values(combatants || {}).filter(e =>
+                            e &&
+                            !e.dead &&
+                            !e.invisible &&
+                            !e.isVCT &&
+                            !e.isMonster &&
+                            !e.isMinion &&
+                            e.id !== target.id
+                        );
+                        const alternativeWithComplexity = alternatives.map(enemy => ({
+                            enemy,
+                            complexity: this.getPathComplexityToTarget(caller, enemy, combatants)
+                        })).filter(entry => Number.isFinite(entry.complexity));
+
+                        alternativeWithComplexity.sort((a, b) => a.complexity - b.complexity);
+
+                        const bestAlternative = alternativeWithComplexity.length > 0 ? alternativeWithComplexity[0] : null;
+                        const currentUnreachable = !Number.isFinite(currentPathComplexity);
+                        const bestIsClearlyBetter = !!(bestAlternative && (
+                            currentUnreachable ||
+                            bestAlternative.complexity + 2 < currentPathComplexity
+                        ));
+
+                        if (bestIsClearlyBetter) {
+                            const forcedTarget = bestAlternative.enemy;
+                            caller.targetId = forcedTarget.id;
+                            caller.pendingAttack = this.chooseAttackType(caller, forcedTarget);
+                            caller._trollStallCount = 0;
+                        }
+                    }
+                } else {
+                    caller._trollStallCount = 0;
+                }
 
                 // Attack trigger
                 const era = caller.eras ? caller.eras[caller.eraIndex] : null;
                 // Repopulate pendingAttack if cleared by restartTurnCycle
                 if (!caller.pendingAttack) {
-                    const repopTarget = resolveTarget(caller, combatants);
-                    if (repopTarget) {
-                        caller.pendingAttack = this.chooseAttackType(caller, repopTarget);
-                    }
+                    caller.pendingAttack = this.chooseAttackType(caller, target);
                 }
                 if (era && !era.attacked && !caller.onGeneralAttackCooldown && !caller.attacking && caller.pendingAttack) {
-                    const target = resolveTarget(caller, combatants);
+                    target = resolveTarget(caller, combatants);
                     if (target && isTargetInRange(caller, target, caller.pendingAttack)) {
                         era.attacked = true;
                         this.initiateAttack(caller, combatants);
@@ -125,8 +381,6 @@ export function Troll(data, utilMethods, animationManager, overlayManager){
             if (!attack) {
                 return;
             }
-
-            console.log(`[TROLL AI] initiates ${attack.name} on ${target.name || 'self'}`);
 
             // Handle Specials (Regeneration)
             if (attack.name.includes('regeneration')) {
@@ -163,7 +417,7 @@ export function Troll(data, utilMethods, animationManager, overlayManager){
                     // Apply hits/damage
                     this.hitsCombatant(caller, target);
                 } catch (e) {
-                    console.warn('[TROLL AI] Fallback attack failed', e);
+                    // Intentionally suppress attack animation fallback errors.
                 }
                 this.kickoffAttackCooldown(caller);
             }

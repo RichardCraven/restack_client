@@ -90,7 +90,7 @@ const specialsMatrix = {
     shield_wall: {
         name: 'shield wall',
         type: 'special',
-        icon: images['infantry_shield'],
+        icon: images['shield_wall'],
         cooldown: 15,       // 15-era recharge after expiry
         duration: 4,        // wall lasts 4 eras
         energy_cost: 30,    // costs 30% energy to erect

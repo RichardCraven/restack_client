@@ -18,6 +18,12 @@ class BoardsPalette extends React.Component {
         }
     }
 
+    getOptionLabel = (optionType) => {
+        if (optionType === 'jewels') return 'Jewels';
+        if (optionType === 'runes') return 'Runes';
+        return optionType;
+    }
+
     render (){
         return (
             <div className="palette right-palette" 
@@ -76,7 +82,7 @@ class BoardsPalette extends React.Component {
                                 style={{
                                 color: this.props.optionClickedIdx === i ? 'white' : 'black'
                                 }}
-                                >{tile.optionType}</span>
+                                >{this.getOptionLabel(tile.optionType)}</span>
                             </div>
                         </div>
                         {tile.optionType === 'monsters' && <div className={`palette-option-expandable-container ${this.props.optionClickedIdx === i ? 'expanded' : ''}`}>
@@ -245,6 +251,70 @@ class BoardsPalette extends React.Component {
                                     index={ti}
                                     image={images[tierItem.image]}
                                     imageOverride={images[tierItem.image]}
+                                    handleHover={null}
+                                    handleClick={null}
+                                    type={'item'}>
+                                    </Tile>
+                                </div>
+                            })}
+                        </div>}
+                        {tile.optionType === 'jewels' && <div className={`palette-option-expandable-container ${this.props.optionClickedIdx === i ? 'expanded' : ''}`}>
+                            {(this.props.mapMaker.jewelOptions || []).map((jewelItem, ji) => {
+                                const isHovered = this.state.hoveredSubItem?.type === 'jewel' && this.state.hoveredSubItem?.id === ji;
+                                const isSelected = this.props.pinnedOption?.type === 'jewel-tile' && this.props.pinnedOption?.id === ji;
+                                return <div
+                                key={`jewel-${ji}`}
+                                className={`palette-option-subcontainer${isHovered ? ' sub-hovered' : ''}${isSelected ? ' sub-selected' : ''}`}
+                                onMouseEnter={() => this.setState({ hoveredSubItem: { type: 'jewel', id: ji } })}
+                                onMouseLeave={() => this.setState({ hoveredSubItem: null })}
+                                onClick={() => {
+                                    this.props.handleClick({
+                                        type: 'jewel-tile',
+                                        id: ji
+                                    })
+                                }}
+                                >
+                                    <div className="text-container">
+                                        {jewelItem.name}
+                                    </div>
+                                    <Tile
+                                    id={ji}
+                                    tileSize={this.props.tileSize}
+                                    index={ji}
+                                    image={images[jewelItem.image]}
+                                    imageOverride={images[jewelItem.image]}
+                                    handleHover={null}
+                                    handleClick={null}
+                                    type={'item'}>
+                                    </Tile>
+                                </div>
+                            })}
+                        </div>}
+                        {tile.optionType === 'runes' && <div className={`palette-option-expandable-container ${this.props.optionClickedIdx === i ? 'expanded' : ''}`}>
+                            {(this.props.mapMaker.runeOptions || []).map((runeItem, ri) => {
+                                const isHovered = this.state.hoveredSubItem?.type === 'rune' && this.state.hoveredSubItem?.id === ri;
+                                const isSelected = this.props.pinnedOption?.type === 'rune-tile' && this.props.pinnedOption?.id === ri;
+                                return <div
+                                key={`rune-${ri}`}
+                                className={`palette-option-subcontainer${isHovered ? ' sub-hovered' : ''}${isSelected ? ' sub-selected' : ''}`}
+                                onMouseEnter={() => this.setState({ hoveredSubItem: { type: 'rune', id: ri } })}
+                                onMouseLeave={() => this.setState({ hoveredSubItem: null })}
+                                onClick={() => {
+                                    this.props.handleClick({
+                                        type: 'rune-tile',
+                                        id: ri
+                                    })
+                                }}
+                                >
+                                    <div className="text-container">
+                                        {runeItem.name}
+                                    </div>
+                                    <Tile
+                                    id={ri}
+                                    tileSize={this.props.tileSize}
+                                    index={ri}
+                                    image={images[runeItem.image]}
+                                    imageOverride={images[runeItem.image]}
                                     handleHover={null}
                                     handleClick={null}
                                     type={'item'}>

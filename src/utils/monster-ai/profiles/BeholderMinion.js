@@ -435,12 +435,44 @@ export function BeholderMinion(data, utilMethods, animationManager, overlayManag
                 // Animated projectile — damage fires after beam arrives
                 this.triggerVoidLance(caller, target);
             } else if (attackName === 'claws') {
-                // Melee — direct hit, icon shows via pendingAttack
-                try {
-                    this.hitsCombatant(caller, target);
-                } catch (e) {
-                    console.warn('[BeholderMinion] claws hit failed', e);
-                    try { this.missesTarget(caller); } catch (_) {}
+                // Melee — play claw swipe animation and apply damage on completion.
+                let hitApplied = false;
+                const applyClawHit = () => {
+                    if (hitApplied) return;
+                    hitApplied = true;
+                    try {
+                        this.hitsCombatant(caller, target);
+                    } catch (e) {
+                        console.warn('[BeholderMinion] claws hit failed', e);
+                        try { this.missesTarget(caller); } catch (_) {}
+                    }
+                };
+
+                if (
+                    this.animationManager &&
+                    typeof this.animationManager.clawSwipe === 'function' &&
+                    typeof this.animationManager.getTileIdByCoords === 'function'
+                ) {
+                    const sourceTileId = this.animationManager.getTileIdByCoords(caller.coordinates);
+                    const targetTileId = this.animationManager.getTileIdByCoords(target.coordinates);
+                    if (sourceTileId !== null && sourceTileId !== undefined && targetTileId !== null && targetTileId !== undefined) {
+                        await new Promise((resolve) => {
+                            this.animationManager.clawSwipe(targetTileId, sourceTileId, caller.facing, () => {
+                                applyClawHit();
+                                resolve();
+                            });
+                        });
+                    } else {
+                        console.warn('[BeholderMinion] claws animation ids missing, applying hit directly', {
+                            sourceTileId,
+                            targetTileId,
+                            callerCoords: caller.coordinates,
+                            targetCoords: target.coordinates
+                        });
+                        applyClawHit();
+                    }
+                } else {
+                    applyClawHit();
                 }
             } else {
                 // All other attacks — direct hit
@@ -460,9 +492,30 @@ export function BeholderMinion(data, utilMethods, animationManager, overlayManag
     };
 
     this.acquireTarget = (caller, combatants) => {
+        const currentTarget = caller && caller.targetId ? combatants[caller.targetId] : null;
+        const currentTargetIsValid = !!(
+            currentTarget &&
+            !currentTarget.dead &&
+            !currentTarget.invisible &&
+            !currentTarget.isVCT &&
+            !currentTarget.isMonster &&
+            !currentTarget.isMinion
+        );
+
+        if (currentTargetIsValid) {
+            if (!caller.pendingAttack) {
+                caller.pendingAttack = this.chooseAttackType(caller, currentTarget);
+            }
+            return;
+        }
+
         const { AcquireTargetMethods } = require('../../shared-ai-methods/acquire-target-methods');
         const target = AcquireTargetMethods.acquireClosestSoftTarget(caller, combatants);
-        if (!target) return;
+        if (!target) {
+            caller.targetId = null;
+            caller.pendingAttack = null;
+            return;
+        }
         // Final guard: never allow targeting a VCT
         if (target.isVCT) {
             caller.targetId = null;
@@ -481,6 +534,10 @@ export function BeholderMinion(data, utilMethods, animationManager, overlayManag
     };
 
     this.processMove = (caller, combatants) => {
+        if (!caller.behaviorSequence) {
+            caller.behaviorSequence = 'skirmisher';
+        }
+
         if (typeof caller.moveCooldown === 'undefined') {
             throw new Error('moveCooldown must be defined for all units');
         }

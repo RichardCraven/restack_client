@@ -564,7 +564,10 @@ combatKeyUpListener = (event) => {
                 <div className="crew-selector" ref={this.crewSelectorRef}>
                     <div className="crew-options">
                         {this.state.options.map((e,i)=> {
-                            return <div className='portrait' key={i}
+                            const isSelected = this.state.selectedCrewMember && (
+                                this.state.selectedCrewMember.id === e.id || this.state.selectedCrewMember.name === e.name
+                            );
+                            return <div className={`portrait${isSelected ? ' selected' : ''}`} key={i}
                             style={{backgroundImage: "url(" + e.portrait + ")"}}
                             onClick={(event) => this.selectCrewMember(event, e)}
                             ></div>
@@ -573,10 +576,10 @@ combatKeyUpListener = (event) => {
                     </div>
                     <div className="member-panel">
                         {this.state.selectedCrewMember && <div className='giant-portrait' 
-                        style={{backgroundImage: "url(" + this.state.selectedCrewMember.portrait + ")"}}>
-                            <div className="name">{this.state.selectedCrewMember.name}</div>
-                        </div>}
+                        style={{backgroundImage: "url(" + this.state.selectedCrewMember.portrait + ")"}}
+                        ></div>}
                         {this.state.selectedCrewMember && <div className="details-pane">
+                            <div className="member-name">{this.state.selectedCrewMember.name}</div>
                             <div className="description">
                                 {this.state.selectedCrewMember.description}
                             </div>

@@ -371,18 +371,20 @@ import magic_moon_1 from '../assets/icons/misc/magic_moon_1.png'
 import food from '../assets/icons/misc/food.png'
 
 // loot
+// import quest_57_ore from '../assets/icons/misc/loot/Quest_57_ore.png'
+// import quest_58_ore from '../assets/icons/misc/loot/Quest_58_ore.png'
+// import rune from '../assets/icons/misc/loot/rune.png'
+import quest_crown from '../assets/icons/misc/loot/quest crown.png'
+import banner from '../assets/icons/misc/loot/banner.png'
+// import res_76_crystal_red from '../assets/icons/misc/loot/Res_76_crystalRed.png'
+// import res_77 from '../assets/icons/misc/loot/Res_77.png'
+// import res_78 from '../assets/icons/misc/loot/Res_78.png'
+
+
 import green_opal from '../assets/icons/misc/loot/green opal.png'
 import blue_opal from '../assets/icons/misc/loot/blue opal.png'
 import red_opal from '../assets/icons/misc/loot/red opal.png'
 import amber_opal from '../assets/icons/misc/loot/amber opal.png'
-import rune from '../assets/icons/misc/loot/rune.png'
-import quest_crown from '../assets/icons/misc/loot/quest crown.png'
-import banner from '../assets/icons/misc/loot/banner.png'
-import quest_57_ore from '../assets/icons/misc/loot/Quest_57_ore.png'
-import quest_58_ore from '../assets/icons/misc/loot/Quest_58_ore.png'
-import res_76_crystal_red from '../assets/icons/misc/loot/Res_76_crystalRed.png'
-import res_77 from '../assets/icons/misc/loot/Res_77.png'
-import res_78 from '../assets/icons/misc/loot/Res_78.png'
 import amber from '../assets/icons/misc/loot/amber.png'
 import sapphire from '../assets/icons/misc/loot/sapphire.png'
 import ruby from '../assets/icons/misc/loot/ruby.png'
@@ -394,12 +396,29 @@ import purple_crystal from '../assets/icons/misc/loot/purple crystal.png'
 import pink_crystal from '../assets/icons/misc/loot/pink crystal.png'
 import green_crystal from '../assets/icons/misc/loot/green crystal.png'
 import ruddy_crystal from '../assets/icons/misc/loot/ruddy crystal.png'
+import saphite_crystal from '../assets/icons/misc/loot/Saphite crystal.png'
+import magentite_crystal from '../assets/icons/misc/loot/Magentite crystal.png'
+import moxite_crystal from '../assets/icons/misc/loot/Moxite crystal.png'
+import abyssal_crystal from '../assets/icons/misc/loot/Abyssal crystal.png'
 import pyrite from '../assets/icons/misc/loot/pyrite.png'
 import benthite from '../assets/icons/misc/loot/benthite.png'
 import labradite from '../assets/icons/misc/loot/labradite.png'
 import memnite from '../assets/icons/misc/loot/memnite.png'
 import malachite from '../assets/icons/misc/loot/malachite.png'
 import onyx from '../assets/icons/misc/loot/onyx.png'
+
+// runes
+import volcanic_rune from '../assets/icons/runes/volcanic.png'
+import stone_rune from '../assets/icons/runes/stone.png'
+import pewter_rune from '../assets/icons/runes/pewter.png'
+import earthen_rune from '../assets/icons/runes/earthen.png'
+import onyxian_rune from '../assets/icons/runes/onyxian.png'
+import shadow_rune from '../assets/icons/runes/shadow.png'
+import feldspar_rune from '../assets/icons/runes/feldspar.png'
+import archaic_rune from '../assets/icons/runes/archaic.png'
+import sulphuric_rune from '../assets/icons/runes/sulphuric.png'
+
+
 import quest_09_goldbar from '../assets/icons/misc/loot/gold/Quest_09_goldbar.png'
 import quest_10_treasure from '../assets/icons/misc/loot/gold/Quest_10_treasure.png'
 import quest_128_dragontreasure from '../assets/icons/misc/loot/gold/Quest_128_dragontreasure.png'
@@ -545,6 +564,11 @@ import whiteskull from '../assets/icons/misc/white_skull.png'
 // special
 import ice_blast from '../assets/icons/combat-icons/specials/wizard/ice_blast.png'
 import fire_blast from '../assets/icons/combat-icons/specials/wizard/fire_blast.png'
+import meditate from '../assets/icons/combat-icons/specials/meditate.png'
+import shield_wall from '../assets/icons/combat-icons/specials/soldier/shield wall.png'
+import axe_swing from '../assets/icons/combat-icons/basic attacks/axe swing.png'
+import axe_throw from '../assets/icons/combat-icons/basic attacks/axe throw.png'
+import heal from '../assets/icons/combat-icons/basic attacks/heal.png'
 import magic_missile from '../assets/icons/misc/cycle.png'
 import magic_missile_inverted from '../assets/icons/misc/cycle_inverted.png'
 
@@ -1109,14 +1133,14 @@ export {
     blue_opal,
     red_opal,
     amber_opal,
-    rune,
+    // rune,
     quest_crown,
     banner,
-    quest_57_ore,
-    quest_58_ore,
-    res_76_crystal_red,
-    res_77,
-    res_78,
+    // quest_57_ore,
+    // quest_58_ore,
+    // res_76_crystal_red,
+    // res_77,
+    // res_78,
     amber,
     sapphire,
     ruby,
@@ -1128,12 +1152,25 @@ export {
     pink_crystal,
     green_crystal,
     ruddy_crystal,
+    saphite_crystal,
+    magentite_crystal,
+    moxite_crystal,
+    abyssal_crystal,
     pyrite,
     benthite,
     labradite,
     memnite,
     malachite,
     onyx,
+    volcanic_rune,
+    stone_rune,
+    pewter_rune,
+    earthen_rune,
+    onyxian_rune,
+    shadow_rune,
+    feldspar_rune,
+    archaic_rune,
+    sulphuric_rune,
     quest_09_goldbar,
     quest_10_treasure,
     quest_128_dragontreasure,
@@ -1253,6 +1290,11 @@ export {
 
     ice_blast,
     fire_blast,
+    meditate,
+    shield_wall,
+    axe_swing,
+    axe_throw,
+    heal,
 
     body_male,
     body_female,

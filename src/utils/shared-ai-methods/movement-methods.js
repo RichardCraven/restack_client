@@ -53,6 +53,7 @@ const someoneIsInCoords = (coords, combatants)=>{
     return Object.values(combatants).some(e=>{
         try {
             if(!e) return false;
+            if (e.dead) return false;
             if (e.coordinates && JSON.stringify(e.coordinates) === JSON.stringify(coords)) return true;
             if (Array.isArray(e.occupiedCoords)) {
                 return e.occupiedCoords.some(c => JSON.stringify(c) === JSON.stringify(coords));
@@ -62,7 +63,7 @@ const someoneIsInCoords = (coords, combatants)=>{
     })
 }
 const isOutOfBounds = (coords) => {
-    return coords.x >= MAX_DEPTH || coords.y > MAX_LANES || coords.x < 0 || coords.y < 0
+    return coords.x > MAX_DEPTH || coords.y > MAX_LANES || coords.x < 0 || coords.y < 0
 }
 
 // ─── Shield Wall registry ─────────────────────────────────────────────────────
@@ -719,12 +720,22 @@ export const MovementMethods = {
         caller.coordinates.x = caller.depth
     },
     moveTowardsCloseFriendlyTarget: (caller, combatants) => {
-        let newPosition, newDepth;
-        let liveCombatants = Object.values(combatants).filter(e=>!e.dead)
         const friendlyTarget = Object.values(combatants).find(e=>e.id === caller.targetId)
-        const distanceToTarget = Methods.getDistanceToTarget(caller, friendlyTarget),
-        laneDiff = Methods.getLaneDifferenceToTarget(caller, friendlyTarget);
         if(!friendlyTarget) return
+
+        const liveCombatants = Object.values(combatants).filter(e => !e.dead)
+
+        const callerDepth = (caller.coordinates && typeof caller.coordinates.x === 'number') ? caller.coordinates.x : caller.depth;
+        const callerLane = (caller.coordinates && typeof caller.coordinates.y === 'number') ? caller.coordinates.y : caller.position;
+        const targetDepth = (friendlyTarget.coordinates && typeof friendlyTarget.coordinates.x === 'number') ? friendlyTarget.coordinates.x : friendlyTarget.depth;
+        const targetLane = (friendlyTarget.coordinates && typeof friendlyTarget.coordinates.y === 'number') ? friendlyTarget.coordinates.y : friendlyTarget.position;
+
+        let newDepth = callerDepth;
+        let newPosition = callerLane;
+
+        const dx = targetDepth - callerDepth;
+        const dy = targetLane - callerLane;
+        const manhattan = Math.abs(dx) + Math.abs(dy);
 
         const finalize = () => {
             if(newPosition < 0) newPosition = 0
@@ -732,45 +743,49 @@ export const MovementMethods = {
             if(newDepth < 0) newDepth = 0
             if(newDepth > MAX_DEPTH) newDepth = MAX_DEPTH;
 
-            //set new values
-            if(newDepth !== undefined) caller.depth = newDepth;
-            if(newPosition !== undefined) caller.position = newPosition;
+            caller.depth = newDepth;
+            caller.position = newPosition;
+
+            if (!caller.coordinates) caller.coordinates = { x: caller.depth, y: caller.position };
+            caller.coordinates.x = caller.depth;
+            caller.coordinates.y = caller.position;
         }
 
-        if((laneDiff === 1 || laneDiff === -1 || laneDiff === 0) && Math.abs(distanceToTarget) < 2){
-            newPosition = friendlyTarget.position
-            newDepth = friendlyTarget.depth - 1;
-            finalize();
-            return
-        } else if(laneDiff < -1){
-            newPosition = caller.position - 1
-        } else if(laneDiff > 1){
-            newPosition = caller.position + 1
-        } else if(laneDiff === 0 && distanceToTarget === 1){
-            console.log('LORYASTES: BEHIND ADJACENT!');
-            // newPosition = caller.position - 1
-        }
-        if((distanceToTarget < 0 && laneDiff !== 0) ||  
-        (distanceToTarget < -1 && laneDiff === 0 && caller.depth > 1)){
-            newDepth = caller.depth - 1
-        } else if(distanceToTarget > 1){
-            newDepth = caller.depth + 1
+        // Already orthogonally adjacent to friendly target.
+        if (manhattan === 1) {
+            return;
         }
 
-        if(liveCombatants.some(e=>e.position === newPosition && e.depth === newDepth)){
-            let targetPosition = {x: newDepth, y: newPosition};
-            let upSpaceOccupied = liveCombatants.some(e=>e.depth === targetPosition.x && e.position === targetPosition.y - 1);
-            let downSpaceOccupied = liveCombatants.some(e=>e.depth === targetPosition.x && e.position === targetPosition.y + 1);
-            if(!upSpaceOccupied){
-                newPosition = targetPosition.y-1;
-            } else if(!downSpaceOccupied){
-                newPosition = targetPosition.y+1;
+        // If diagonally adjacent, convert into orthogonal adjacency.
+        if (Math.abs(dx) === 1 && Math.abs(dy) === 1) {
+            newPosition = targetLane;
+            newDepth = (callerDepth <= targetDepth) ? targetDepth - 1 : targetDepth + 1;
+        } else {
+            if (dy < 0) newPosition = callerLane - 1;
+            if (dy > 0) newPosition = callerLane + 1;
+
+            if (dx < 0) newDepth = callerDepth - 1;
+            if (dx > 0) newDepth = callerDepth + 1;
+        }
+
+        const occupied = (x, y) => liveCombatants.some(e => {
+            if (e.id === caller.id) return false;
+            const ex = (e.coordinates && typeof e.coordinates.x === 'number') ? e.coordinates.x : e.depth;
+            const ey = (e.coordinates && typeof e.coordinates.y === 'number') ? e.coordinates.y : e.position;
+            return ex === x && ey === y;
+        });
+
+        if (occupied(newDepth, newPosition)) {
+            if (!occupied(newDepth, newPosition - 1)) {
+                newPosition = newPosition - 1;
+            } else if (!occupied(newDepth, newPosition + 1)) {
+                newPosition = newPosition + 1;
             } else {
-                newPosition = caller.position;
-                newDepth = caller.depth;
+                newDepth = callerDepth;
+                newPosition = callerLane;
             }
         }
-        
+
         finalize();
     }
 }

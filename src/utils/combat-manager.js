@@ -870,18 +870,23 @@ export function CombatManager() {
         return Object.values(this.combatants).filter(e => !e.isMonster && !e.isMinion && !e.dead && !e.invisible)
     }
     this.itemUsed = (item, userInput) => {
-        console.log('item used, ', item);
         const user = this.combatants[userInput.id];
         switch (item.effect) {
             case 'health gain':
-                console.log('inside health gain')
                 const healthGain = Math.ceil(user.starting_hp * 0.01 * item.amount)
                 user.hp += healthGain
                 if (user.hp > user.starting_hp) user.hp = user.starting_hp
                 // this needs to change to 'MAX HP, not starting
                 break;
             default:
-                console.log('CONSUMABLE USED THAT HAS NO .EFFECT');
+                break;
+        }
+        // Set consumableFlash so the portrait overlay can display the item icon briefly
+        if (item && item.icon) {
+            user.consumableFlash = { iconKey: item.icon, timestamp: Date.now() };
+            if (typeof this.broadcastDataUpdate === 'function') {
+                try { this.broadcastDataUpdate(user); } catch (e) {}
+            }
         }
     }
     this.fighterManualAttack = () => {
@@ -2237,6 +2242,7 @@ export function CombatManager() {
                 const e = combatants[i];
                 try {
                     if (!e) continue;
+                    if (e.dead) continue;
                     if (e.coordinates && e.coordinates.x === coordinates.x && e.coordinates.y === coordinates.y) {
                         return e;
                     }
@@ -2320,6 +2326,7 @@ export function CombatManager() {
         return Object.values(this.combatants).some(e => {
             try {
                 if (!e) return false;
+                if (e.dead) return false;
                 if (e.coordinates && JSON.stringify(e.coordinates) === JSON.stringify(coords)) return true;
                 if (Array.isArray(e.occupiedCoords)) return e.occupiedCoords.some(c => JSON.stringify(c) === JSON.stringify(coords));
                 return false;

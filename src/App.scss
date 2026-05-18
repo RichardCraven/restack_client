@@ -761,7 +761,7 @@ button{
   }
 }
 .crew-manager{
-  height: 60vh;
+  height: 90vh;
   width: 70vw;
   display: flex;
   justify-content: space-around;
@@ -818,6 +818,10 @@ button{
           &:hover{
             filter: sepia(1);
           }
+          &.selected {
+            filter: sepia(1);
+            box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.75), 0 0 12px rgba(255, 255, 255, 0.35);
+          }
         }
       }
       .member-panel{
@@ -836,7 +840,10 @@ button{
             background-size: 100% 100%;
             position: relative;
           }
-          .giant-portrait-name {
+        .details-pane{
+          text-align: left;
+          margin-right: 15px;
+          .member-name {
             color: #fff;
             font-size: 2.1em;
             font-weight: bold;
@@ -846,9 +853,6 @@ button{
             letter-spacing: 0.04em;
             line-height: 1.1;
           }
-        .details-pane{
-          text-align: left;
-          margin-right: 15px;
           .description{
             max-width: 200px;
             font-size: 14px;
