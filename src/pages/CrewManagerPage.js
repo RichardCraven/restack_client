@@ -37,11 +37,6 @@ class CrewManagerPage extends React.Component{
     // }
 
   componentDidMount(){
-    console.log('MOUNTED');
-    // ...existing code...
-    // const userData = getMeta();
-    
-    // this.getDungeonDetails();
     // ...existing code...
     let options = this.props.crewManager.adventurers;
     // ...existing code...
@@ -96,13 +91,11 @@ class CrewManagerPage extends React.Component{
     })
   }
   selectCrewMember = (event, crewMember) => {
-    console.log('SELECT');
     clearTimeout(this.timer);
     if (event.detail === 1) {
         this.timer = setTimeout(this.singleClick(crewMember), 200)
     } else if (event.detail === 2) {
         let crew = this.state.selectedCrew;
-        console.log('double click!', crewMember);
         if(crew.length === 3 && !this.state.advancedUser) return
         if(!crew.includes(crewMember)) crew.push(crewMember)
         this.setState({
@@ -112,9 +105,6 @@ class CrewManagerPage extends React.Component{
     this.setState({
         selectedCrewMember: crewMember
     })
-    setTimeout(() => {
-        console.log('this.state.selectedCrewMember.name', this.state.selectedCrewMember.name);
-    }, 1000);
 
   }
   addMember = (index) => {
@@ -145,7 +135,6 @@ submit = async () => {
 }
 clear = () => {
     const meta = getMeta();
-    console.log('meta: ', meta);
     meta.crew = [];
     storeMeta(meta);
     this.setState({
@@ -191,8 +180,9 @@ goBack = () => {
                                                             backgroundPosition: 'center'
                                                         } : {
                                                             backgroundSize: '100% 100%',
-                                                            backgroundPosition: 'inherit'
-                                                        })
+                                                            backgroundPosition: 'center'
+                                                        }),
+                                                        backgroundRepeat: 'no-repeat'
                                                     }}
                                                 >
                                                         {/* <div className="add-button" onClick={()=>this.addMember()}>+</div> */}

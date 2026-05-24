@@ -309,6 +309,123 @@ export function BoardManager(){
         return !hasKey;
     }
 
+    this.hasSolidBorder = (tileData, side) => {
+        if (!tileData || !tileData.borders) return false;
+        const borderValue = tileData.borders[side];
+        return !!borderValue && !String(borderValue).includes('transparent');
+    }
+
+    this.isPassageWallBlockingBetween = (fromIdx, toIdx) => {
+        try {
+            if (fromIdx === toIdx) return false;
+            if (fromIdx == null || toIdx == null) return false;
+
+            const fromRow = Math.floor(fromIdx / 15);
+            const fromCol = fromIdx % 15;
+            const toRow = Math.floor(toIdx / 15);
+            const toCol = toIdx % 15;
+            const rowDelta = toRow - fromRow;
+            const colDelta = toCol - fromCol;
+
+            // Only orthogonal neighboring tiles have a shared border.
+            if (Math.abs(rowDelta) + Math.abs(colDelta) !== 1) return false;
+
+            let fromSide = null;
+            let toSide = null;
+            if (rowDelta === -1) {
+                fromSide = 'top';
+                toSide = 'bottom';
+            } else if (rowDelta === 1) {
+                fromSide = 'bottom';
+                toSide = 'top';
+            } else if (colDelta === -1) {
+                fromSide = 'left';
+                toSide = 'right';
+            } else if (colDelta === 1) {
+                fromSide = 'right';
+                toSide = 'left';
+            }
+
+            const boardTiles = (this.currentBoard && this.currentBoard.tiles) ? this.currentBoard.tiles : null;
+            const fromTile = (boardTiles && boardTiles[fromIdx]) ? boardTiles[fromIdx] : this.tiles[fromIdx];
+            const toTile = (boardTiles && boardTiles[toIdx]) ? boardTiles[toIdx] : this.tiles[toIdx];
+
+            return this.hasSolidBorder(fromTile, fromSide) || this.hasSolidBorder(toTile, toSide);
+        } catch (e) {
+            return false;
+        }
+    }
+
+    this.getReachableTilesWithinSteps = (startIdx, maxSteps = 2) => {
+        const visited = new Map();
+        if (startIdx === null || startIdx === undefined) return new Set();
+
+        const getOrthogonalNeighbors = (idx) => {
+            const row = Math.floor(idx / 15);
+            const col = idx % 15;
+            const out = [];
+            if (row > 0) out.push(idx - 15);
+            if (row < 14) out.push(idx + 15);
+            if (col > 0) out.push(idx - 1);
+            if (col < 14) out.push(idx + 1);
+            return out;
+        };
+
+        const queue = [{ idx: startIdx, steps: 0 }];
+        visited.set(startIdx, 0);
+
+        while (queue.length > 0) {
+            const { idx, steps } = queue.shift();
+            if (steps >= maxSteps) continue;
+
+            const neighbors = getOrthogonalNeighbors(idx);
+            neighbors.forEach((nextIdx) => {
+                const existing = visited.get(nextIdx);
+                if (existing !== undefined && existing <= steps + 1) return;
+                if (this.isPassageWallBlockingBetween(idx, nextIdx)) return;
+
+                const tile = this.tiles[nextIdx] || (this.currentBoard && this.currentBoard.tiles && this.currentBoard.tiles[nextIdx]);
+                if (!tile) return;
+
+                const containsType = this.getContainsType(tile.contains);
+                if (containsType === 'void') return;
+
+                visited.set(nextIdx, steps + 1);
+
+                // Locked gates are visible but block propagation past themselves.
+                if (this.isLockedGateTile(tile)) return;
+
+                queue.push({ idx: nextIdx, steps: steps + 1 });
+            });
+        }
+
+        return new Set(Array.from(visited.keys()));
+    }
+
+    this.normalizeFogBorders = (borders) => {
+        if (!borders) return null;
+        const sides = ['top', 'right', 'bottom', 'left'];
+        const normalized = {};
+        let hasAny = false;
+
+        sides.forEach((side) => {
+            const raw = borders[side];
+            if (!raw) {
+                normalized[side] = null;
+                return;
+            }
+            const asText = String(raw);
+            if (asText.includes('transparent')) {
+                normalized[side] = '1px solid transparent';
+            } else {
+                normalized[side] = '1px solid black';
+            }
+            hasAny = true;
+        });
+
+        return hasAny ? normalized : null;
+    }
+
     // Normalize a single board's tiles from legacy string format into object format
     this.normalizeBoardTiles = (board) => {
         if (!board || !board.tiles) return;
@@ -1600,29 +1717,20 @@ export function BoardManager(){
             return color;
         }
         const curIndex = this.getIndexFromCoordinates(this.playerTile.location);
+        const reachable = this.getReachableTilesWithinSteps(curIndex, 2);
         const leftTile = this.tiles[curIndex-1];
         const rightTile = this.tiles[curIndex+1];
         const topRow = !!this.tiles[curIndex - 15] ? this.tiles.filter(t=>t.id >= curIndex-16 && t.id <= curIndex-14) : null
         const bottomRow = !!this.tiles[curIndex + 15] ? this.tiles.filter(t=>t.id >= curIndex+14 && t.id <= curIndex+16) : null
 
-        if(leftTile && highlightColor(leftTile)) leftTile.color = highlightColor(leftTile)
-        if(rightTile && highlightColor(rightTile)) rightTile.color = highlightColor(rightTile);
+        if(leftTile && reachable.has(leftTile.id) && highlightColor(leftTile)) leftTile.color = highlightColor(leftTile)
+        if(rightTile && reachable.has(rightTile.id) && highlightColor(rightTile)) rightTile.color = highlightColor(rightTile);
         if(topRow) topRow.forEach((t, i)=>{ 
-            if(i === 0){
-                if(this.getContainsType(topRow[1].contains) === 'void' && this.getContainsType(leftTile.contains) === 'void') return
-            }
-            if(i === 2){
-                if(this.getContainsType(topRow[1].contains) === 'void' && this.getContainsType(rightTile.contains) === 'void') return
-            }
+            if(!reachable.has(t.id)) return;
             if(highlightColor(t))t.color = highlightColor(t)
         })
         if(bottomRow) bottomRow.forEach((t, i)=>{if(highlightColor(t)){
-            if(i === 0){
-                if(this.getContainsType(bottomRow[1].contains) === 'void' && this.getContainsType(leftTile.contains) === 'void') return
-            }
-            if(i === 2){
-                if(this.getContainsType(bottomRow[1].contains) === 'void' && this.getContainsType(rightTile.contains) === 'void') return
-            }
+            if(!reachable.has(t.id)) return;
             t.color = highlightColor(t)}
         })
 
@@ -1691,6 +1799,14 @@ export function BoardManager(){
             const destIndex = this.getIndexFromCoordinates(destinationCoords);
             const destTile = this.tiles[destIndex];
             if (!destTile) return true;
+
+            const currentCoords = this.playerTile && this.playerTile.location;
+            if (!currentCoords || currentCoords.length < 2) return true;
+            const stepDistance = Math.abs(destinationCoords[0] - currentCoords[0]) + Math.abs(destinationCoords[1] - currentCoords[1]);
+            if (stepDistance !== 1) return true;
+
+            const currentIndex = this.getIndexFromCoordinates(currentCoords);
+            if (this.isPassageWallBlockingBetween(currentIndex, destIndex)) return true;
             
             const type = this.getContainsType(destTile.contains);
             const gateType = this.getGateTypeFromTile(destTile);
@@ -1715,6 +1831,10 @@ export function BoardManager(){
         const destinationTile = this.tiles[destinationIndex];
         if (!destinationTile || typeof destinationTile.contains === 'undefined') return;
         if (this.getContainsType(destinationTile.contains) === 'void') return;
+        if (this.isPassageWallBlockingBetween(tile.id, destinationIndex)) {
+            try { if (this.messaging) this.messaging('A wall blocks your way.'); } catch (e) {}
+            return;
+        }
                 // Prevent movement into tiles that are logically occupied by a large monster
                 try {
                     if (destinationTile && destinationTile.blockedByLargeMonster) {
@@ -1882,76 +2002,7 @@ export function BoardManager(){
             e.borders = null;
         });
 
-        // Helper: returns true if the given tile (from persisted board data) has a solid (non-transparent) border on the given side
-        const isSolidBorder = (tileData, side) => {
-            if (!tileData || !tileData.borders) return false;
-            const b = tileData.borders[side];
-            return !!b && !b.includes('transparent');
-        };
-
-        // Helper: returns true if the passage wall between (prevX,prevY) and (prevX+stepX, prevY+stepY) blocks LOS.
-        // stepX = row delta (-1, 0, or +1), stepY = col delta (-1, 0, or +1).
-        // Only passage tiles (those with a borders object) can block; open room tiles have no borders and never block.
-        const isBorderWallBlocking = (prevX, prevY, stepX, stepY) => {
-            const prevIdx = this.getIndexFromCoordinates([prevX, prevY]);
-            const prevData = this.currentBoard && this.currentBoard.tiles && this.currentBoard.tiles[prevIdx];
-            const nextX = prevX + stepX, nextY = prevY + stepY;
-            const nextIdx = this.getIndexFromCoordinates([nextX, nextY]);
-            const nextData = this.currentBoard && this.currentBoard.tiles && this.currentBoard.tiles[nextIdx];
-            if (stepX !== 0 && stepY !== 0) {
-                // Diagonal step: block if EITHER the row-axis or column-axis border is solid on either crossing tile
-                const rowSide = stepX > 0 ? 'bottom' : 'top';
-                const rowReverse = stepX > 0 ? 'top' : 'bottom';
-                const colSide = stepY > 0 ? 'right' : 'left';
-                const colReverse = stepY > 0 ? 'left' : 'right';
-                const rowBlocked = isSolidBorder(prevData, rowSide) || isSolidBorder(nextData, rowReverse);
-                const colBlocked = isSolidBorder(prevData, colSide) || isSolidBorder(nextData, colReverse);
-                return rowBlocked || colBlocked;
-            }
-            if (stepX !== 0) {
-                const side = stepX > 0 ? 'bottom' : 'top';
-                const reverse = stepX > 0 ? 'top' : 'bottom';
-                return isSolidBorder(prevData, side) || isSolidBorder(nextData, reverse);
-            }
-            if (stepY !== 0) {
-                const side = stepY > 0 ? 'right' : 'left';
-                const reverse = stepY > 0 ? 'left' : 'right';
-                return isSolidBorder(prevData, side) || isSolidBorder(nextData, reverse);
-            }
-            return false;
-        };
-
-        // Bresenham line algorithm to check for blocking 'void' tiles or passage walls between two coordinates
-        const isBlockedBetween = (fromIdx, toIdx) => {
-            try {
-                const from = this.getCoordinatesFromIndex(fromIdx);
-                const to = this.getCoordinatesFromIndex(toIdx);
-                let x0 = from[0], y0 = from[1];
-                let x1 = to[0], y1 = to[1];
-                let dx = Math.abs(x1 - x0);
-                let dy = Math.abs(y1 - y0);
-                let sx = (x0 < x1) ? 1 : -1;
-                let sy = (y0 < y1) ? 1 : -1;
-                let err = dx - dy;
-                while (!(x0 === x1 && y0 === y1)) {
-                    const prevX = x0, prevY = y0;
-                    const e2 = err * 2;
-                    if (e2 > -dy) { err -= dy; x0 += sx; }
-                    if (e2 < dx) { err += dx; y0 += sy; }
-                    // Check if this crossing is blocked by a passage wall (checked before break so direct neighbours are also covered)
-                    if (isBorderWallBlocking(prevX, prevY, x0 - prevX, y0 - prevY)) return true;
-                    // if we've reached the target, stop before checking intermediate void/gate conditions
-                    if (x0 === x1 && y0 === y1) break;
-                    const idx = this.getIndexFromCoordinates([x0, y0]);
-                    const tile = this.tiles[idx];
-                    if (!tile) continue;
-                    if (this.getContainsType(tile.contains) === 'void') return true;
-                    // Locked gates block vision beyond them until unlocked.
-                    if (this.isLockedGateTile(tile)) return true;
-                }
-            } catch (e) { /* ignore errors and assume not blocked */ }
-            return false;
-        };
+        const visibleTileIds = this.getReachableTilesWithinSteps(destinationTile.id, 2);
 
         // Helper: strip legacy player-position markers that should never render on the board
         const _clearPlayerMarker = (tile) => {
@@ -1967,23 +2018,15 @@ export function BoardManager(){
                 const dx = Math.abs(coords[0] - destCoords[0]);
                 const dy = Math.abs(coords[1] - destCoords[1]);
                 const manhattan = dx + dy;
-                // reveal tiles within radius 2 (Manhattan distance) if not blocked
-                if (manhattan <= 2 && this.getContainsType(e.contains) !== 'void') {
-                    if (!isBlockedBetween(destinationTile.id, e.id)) {
-                        const persistedColor = (this.currentBoard && this.currentBoard.tiles && this.currentBoard.tiles[e.id] && this.currentBoard.tiles[e.id].color);
-                        const runtimeColor = (e.color && e.color !== 'black') ? e.color : null;
-                        const boardColor = (persistedColor && persistedColor !== 'black') ? persistedColor : (runtimeColor || null);
-                        e.color = boardColor || 'white';
-                        e.image = this.getImageForContains(e.contains, e);
-                    }
-                }
-                // also reveal the tile in the same column up/down up to 30/15 offsets if not blocked (preserve some original behavior)
-                if ((e.id === destinationTile.id - 15 || e.id === destinationTile.id + 15) && !isBlockedBetween(destinationTile.id, e.id) && this.getContainsType(e.contains) !== 'void') {
+                // Reveal tiles within radius 2 that are reachable through unblocked edges.
+                if (manhattan <= 2 && visibleTileIds.has(e.id) && this.getContainsType(e.contains) !== 'void') {
                     const persistedColor = (this.currentBoard && this.currentBoard.tiles && this.currentBoard.tiles[e.id] && this.currentBoard.tiles[e.id].color);
+                    const persistedBorders = (this.currentBoard && this.currentBoard.tiles && this.currentBoard.tiles[e.id] && this.currentBoard.tiles[e.id].borders);
                     const runtimeColor = (e.color && e.color !== 'black') ? e.color : null;
                     const boardColor = (persistedColor && persistedColor !== 'black') ? persistedColor : (runtimeColor || null);
                     e.color = boardColor || 'white';
                     e.image = this.getImageForContains(e.contains, e);
+                    e.borders = this.normalizeFogBorders(persistedBorders);
                 }
             } catch (err) {}
     });
@@ -2009,10 +2052,12 @@ export function BoardManager(){
                     if (!contains.vendorGroupId || !visibleVendorGroups.has(contains.vendorGroupId)) return;
 
                     const persistedColor = (this.currentBoard && this.currentBoard.tiles && this.currentBoard.tiles[tile.id] && this.currentBoard.tiles[tile.id].color);
+                    const persistedBorders = (this.currentBoard && this.currentBoard.tiles && this.currentBoard.tiles[tile.id] && this.currentBoard.tiles[tile.id].borders);
                     const runtimeColor = (tile.color && tile.color !== 'black') ? tile.color : null;
                     const boardColor = (persistedColor && persistedColor !== 'black') ? persistedColor : (runtimeColor || null);
                     tile.color = boardColor || 'white';
                     tile.image = this.getImageForContains(tile.contains, tile);
+                    tile.borders = this.normalizeFogBorders(persistedBorders);
                 });
             }
         } catch (e) {}

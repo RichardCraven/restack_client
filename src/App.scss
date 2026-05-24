@@ -817,6 +817,8 @@ button{
           height: 100px;
           width: 100px;
           background-size: 100% 100%;
+          background-repeat: no-repeat;
+          background-position: center;
           cursor: pointer;
           &:hover{
             filter: sepia(1);
@@ -841,6 +843,8 @@ button{
             width: 200px;
             min-width: 200px;
             background-size: 100% 100%;
+            background-repeat: no-repeat;
+            background-position: center;
             position: relative;
           }
         .details-pane{
@@ -897,6 +901,8 @@ button{
           .portrait{
             height: 100%;
             background-size: 100% 100%;
+            background-repeat: no-repeat;
+            background-position: center;
           }
           .add-button{
             position: absolute;
@@ -934,6 +940,8 @@ button{
             height: 100px;
             width: 100px;
             background-size: 100% 100%;
+            background-repeat: no-repeat;
+            background-position: center;
           }
         }
       }
