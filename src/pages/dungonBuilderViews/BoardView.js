@@ -72,6 +72,9 @@ class BoardView extends React.Component {
     }
     
     render (){
+        const hoveredTileFootprint = Array.isArray(this.props.hoveredTileFootprint)
+            ? this.props.hoveredTileFootprint
+            : [];
         return (
             <div className="board-view-container">
                 <div className="center-board-container" style={{flexDirection: 'column'}}>
@@ -101,6 +104,7 @@ class BoardView extends React.Component {
                                 id={tile.id}
                                 index={tile.id}
                                 tileSize={this.props.tileSize}
+                                contains={tile.contains}
                                 image={tile.image ? tile.image : null}
                                 imageOverride={tile.image && tile.image.includes('/') ? tile.image : null}
                                 color={tile.color ? tile.color : 'lightgrey'}
@@ -113,7 +117,7 @@ class BoardView extends React.Component {
                                 delayedHoverLabel={this.getTileHoverLabel(tile)}
                                 type={tile.type}
                                 hovered={
-                                    this.props.hoveredTileIdx === tile.id ?
+                                    (hoveredTileFootprint.length > 0 && hoveredTileFootprint.includes(tile.id)) || this.props.hoveredTileIdx === tile.id ?
                                     true : false
                                 }
                                 combatManager={this.props.combatManager}

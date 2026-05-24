@@ -133,6 +133,7 @@ class MapMakerPage extends React.Component {
       dungeons: [],
       miniboards: [],
       hoveredTileIdx: null,
+      hoveredTileFootprint: null,
       hoveredPaletteTileIdx: null,
       optionClickedIdx: null,
       pinnedOption: null,
@@ -570,8 +571,80 @@ class MapMakerPage extends React.Component {
     };
   }
 
+  getVendorGroupTileIds = (tiles, tileId) => {
+    const tile = tiles?.[tileId];
+    const contains = tile?.contains;
+    if (!contains || contains.type !== 'vendor') return [];
+
+    if (contains.vendorGroupId) {
+      const groupTileIds = [];
+      tiles.forEach((entry, idx) => {
+        if (entry?.contains?.type === 'vendor' && entry.contains.vendorGroupId === contains.vendorGroupId) {
+          groupTileIds.push(idx);
+        }
+      });
+      if (groupTileIds.length > 0) return groupTileIds;
+    }
+
+    const anchorId = (contains.vendorAnchorId !== null && contains.vendorAnchorId !== undefined)
+      ? contains.vendorAnchorId
+      : tileId;
+    return this.getVendorFootprintTileIds(anchorId) || [tileId];
+  }
+
+  deleteTileWithVendorSupport = (tiles, tileId) => {
+    const tile = tiles?.[tileId];
+    if (tile?.contains?.type !== 'vendor') {
+      tiles[tileId] = this.getDeleteResultForTile(tile);
+      return tiles;
+    }
+
+    const vendorTileIds = this.getVendorGroupTileIds(tiles, tileId);
+    vendorTileIds.forEach((id) => {
+      tiles[id] = this.getDeleteResultForTile(tiles[id]);
+    });
+    return tiles;
+  }
+
   isParentPaletteOption = (optionType) => {
-    return ['monsters', 'gate', 'key', 'items', 'jewels', 'runes', 'treasure'].includes(optionType);
+    return ['monsters', 'gate', 'key', 'items', 'jewels', 'runes', 'treasure', 'vendors'].includes(optionType);
+  }
+
+  getVendorFootprintTileIds = (anchorTileId) => {
+    if (anchorTileId === null || anchorTileId === undefined) return null;
+    const row = Math.floor(anchorTileId / 15);
+    const col = anchorTileId % 15;
+    if (row > 13 || col > 13) return null;
+    return [anchorTileId, anchorTileId + 1, anchorTileId + 15, anchorTileId + 16];
+  }
+
+  canPlaceVendorFootprint = (tiles, anchorTileId) => {
+    const footprint = this.getVendorFootprintTileIds(anchorTileId);
+    if (!footprint) return false;
+    return footprint.every((tileId) => {
+      const tile = tiles[tileId];
+      return tile && tile.contains && tile.contains.type === 'empty_space';
+    });
+  }
+
+  placeVendorFootprint = (tiles, anchorTileId, vendorKey) => {
+    const footprint = this.getVendorFootprintTileIds(anchorTileId);
+    if (!footprint) return tiles;
+    const vendorGroupId = `vendor_${vendorKey}_${anchorTileId}`;
+    const vendorCells = ['anchor', 'top_right', 'bottom_left', 'bottom_right'];
+    footprint.forEach((tileId, idx) => {
+      tiles[tileId].contains = {
+        type: 'vendor',
+        subtype: vendorKey,
+        vendorGroupId,
+        vendorAnchorId: anchorTileId,
+        vendorCell: vendorCells[idx] || 'anchor'
+      };
+      tiles[tileId].image = vendorKey;
+      tiles[tileId].color = null;
+      tiles[tileId].borders = null;
+    });
+    return tiles;
   }
 
   getDefaultPassageBorders = (tile) => {
@@ -728,7 +801,7 @@ class MapMakerPage extends React.Component {
       } 
       if(pinned && pinned.optionType === 'delete'){
         let arr = [...this.state.tiles];
-        arr[tile.id] = this.getDeleteResultForTile(arr[tile.id]);
+        arr = this.deleteTileWithVendorSupport(arr, tile.id);
         this.setState({
           tiles: arr,
           hoveredTileIdx: null
@@ -738,11 +811,15 @@ class MapMakerPage extends React.Component {
     }else{
       if(type === 'palette-tile'){
         this.setState({
-          hoveredPaletteTileIdx: id
+          hoveredPaletteTileIdx: id,
+          hoveredTileFootprint: null
         })
       } else {
+        const pinnedIsVendor = this.state.pinnedOption && this.state.pinnedOption.type === 'vendor-tile';
+        const vendorFootprint = pinnedIsVendor ? this.getVendorFootprintTileIds(id) : null;
         this.setState({
-          hoveredTileIdx: id
+          hoveredTileIdx: id,
+          hoveredTileFootprint: vendorFootprint
         })
       }
     }
@@ -789,7 +866,7 @@ class MapMakerPage extends React.Component {
         })
       }
       
-    } else if(tile.type === 'monster-tile' || tile.type === 'gate-tile' || tile.type === 'key-tile' || tile.type === 'tier-tile' || tile.type === 'jewel-tile' || tile.type === 'rune-tile' || tile.type === 'treasure-tile'){
+    } else if(tile.type === 'monster-tile' || tile.type === 'gate-tile' || tile.type === 'key-tile' || tile.type === 'tier-tile' || tile.type === 'jewel-tile' || tile.type === 'rune-tile' || tile.type === 'treasure-tile' || tile.type === 'vendor-tile'){
       console.log('MONSTER/GATE/KEY/TIER/JEWEL/RUNE/TREASURE TILE');
       this.setState({
         pinnedOption: tile
@@ -802,7 +879,7 @@ class MapMakerPage extends React.Component {
         pinnedOption: tile
       })
     } else if(tile.type === 'board-tile'){
-      let pinned = null, monster, gate, key, tierOption, jewelOption, runeOption, treasureOption, passageToolOption;
+      let pinned = null, monster, gate, key, tierOption, jewelOption, runeOption, treasureOption, vendorOption, passageToolOption;
       if(this.state.pinnedOption && this.state.pinnedOption.type === 'monster-tile'){
         monster = Object.values(this.props.monsterManager.monsters)[this.state.pinnedOption.id];
       };
@@ -824,6 +901,9 @@ class MapMakerPage extends React.Component {
       };
       if(this.state.pinnedOption && this.state.pinnedOption.type === 'treasure-tile'){
         treasureOption = this.props.mapMaker.treasureOptions[this.state.pinnedOption.id];
+      };
+      if(this.state.pinnedOption && this.state.pinnedOption.type === 'vendor-tile'){
+        vendorOption = this.props.mapMaker.vendorOptions[this.state.pinnedOption.id];
       };
       if(this.state.pinnedOption && this.state.pinnedOption.type === 'passage-tool-tile'){
         passageToolOption = this.props.mapMaker.passageOptions[this.state.pinnedOption.id];
@@ -892,6 +972,18 @@ class MapMakerPage extends React.Component {
         let arr = [...this.state.tiles];
         arr[tile.id].contains = { type: 'item', subtype: treasureOption.key }
         arr[tile.id].image = images[treasureOption.image]
+        this.setState({
+          tiles: arr,
+          hoveredTileIdx: null
+        })
+        return
+      } else if(vendorOption){
+        let arr = [...this.state.tiles];
+        if (!this.canPlaceVendorFootprint(arr, tile.id)) {
+          this.toast('Vendors require a 2x2 empty space.');
+          return;
+        }
+        arr = this.placeVendorFootprint(arr, tile.id, vendorOption.key);
         this.setState({
           tiles: arr,
           hoveredTileIdx: null
@@ -967,7 +1059,7 @@ class MapMakerPage extends React.Component {
         })
       } else if(pinned && pinned.optionType === 'delete'){
         let arr = [...this.state.tiles];
-        arr[tile.id] = this.getDeleteResultForTile(arr[tile.id]);
+        arr = this.deleteTileWithVendorSupport(arr, tile.id);
         this.setState({
           tiles: arr,
           hoveredTileIdx: null
@@ -996,8 +1088,11 @@ class MapMakerPage extends React.Component {
     }
   }
   setHover = (id) => {
+    const pinnedIsVendor = this.state.pinnedOption && this.state.pinnedOption.type === 'vendor-tile';
+    const vendorFootprint = (id !== null && id !== undefined && pinnedIsVendor) ? this.getVendorFootprintTileIds(id) : null;
     this.setState({
-      hoveredTileIdx: id
+      hoveredTileIdx: id,
+      hoveredTileFootprint: vendorFootprint
     })
   }
   setPaletteHover = (id) => {
@@ -3182,6 +3277,7 @@ class MapMakerPage extends React.Component {
               pinnedOption={this.state.pinnedOption}
               hoveredPaletteTileIdx={this.state.hoveredPaletteTileIdx}
               hoveredTileIdx={this.state.hoveredTileIdx}
+              hoveredTileFootprint={this.state.hoveredTileFootprint}
               hoveredTileId={this.state.hoveredTileIdx}
               optionClickedIdx={this.state.optionClickedIdx}
               selectedView={this.state.selectedView}
@@ -3223,6 +3319,7 @@ class MapMakerPage extends React.Component {
               pinnedOption={this.state.pinnedOption}
               hoveredPaletteTileIdx={this.state.hoveredPaletteTileIdx}
               hoveredTileIdx={this.state.hoveredTileIdx}
+              hoveredTileFootprint={this.state.hoveredTileFootprint}
               hoveredTileId={this.state.hoveredTileIdx}
               optionClickedIdx={this.state.optionClickedIdx}
               selectedView={this.state.selectedView}

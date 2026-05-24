@@ -389,6 +389,38 @@ class BoardsPalette extends React.Component {
                                 </div>
                             })}
                         </div>}
+                        {tile.optionType === 'vendors' && <div className={`palette-option-expandable-container ${this.props.optionClickedIdx === i ? 'expanded' : ''}`}>
+                            {(this.props.mapMaker.vendorOptions || []).map((vendorItem, vi) => {
+                                const isHovered = this.state.hoveredSubItem?.type === 'vendor' && this.state.hoveredSubItem?.id === vi;
+                                const isSelected = this.props.pinnedOption?.type === 'vendor-tile' && this.props.pinnedOption?.id === vi;
+                                return <div
+                                key={`vendor-${vi}`}
+                                className={`palette-option-subcontainer${isHovered ? ' sub-hovered' : ''}${isSelected ? ' sub-selected' : ''}`}
+                                onMouseEnter={() => this.setState({ hoveredSubItem: { type: 'vendor', id: vi } })}
+                                onMouseLeave={() => this.setState({ hoveredSubItem: null })}
+                                onClick={() => {
+                                    this.props.handleClick({
+                                        type: 'vendor-tile',
+                                        id: vi
+                                    })
+                                }}
+                                >
+                                    <div className="text-container">
+                                        {vendorItem.name}
+                                    </div>
+                                    <Tile
+                                    id={vi}
+                                    tileSize={this.props.tileSize}
+                                    index={vi}
+                                    image={images[vendorItem.image]}
+                                    imageOverride={images[vendorItem.image]}
+                                    handleHover={null}
+                                    handleClick={null}
+                                    type={'item'}>
+                                    </Tile>
+                                </div>
+                            })}
+                        </div>}
                     </div>
                     )
                 })}

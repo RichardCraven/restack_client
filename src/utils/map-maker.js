@@ -20,6 +20,7 @@ export function MapMaker(props){
         'items',
         'jewels',
         'runes',
+        'vendors',
         
         'gate',
         'treasure',
@@ -97,6 +98,11 @@ export function MapMaker(props){
         { key: 'silver_chest', name: 'Silver chest', image: 'silver_chest' },
         { key: 'gold_chest', name: 'Gold chest', image: 'gold_chest' },
         { key: 'ornate_chest', name: 'Ornate chest', image: 'ornate_chest' },
+    ];
+
+    this.vendorOptions = [
+        { key: 'merchant', name: 'Merchant', image: 'merchant' },
+        { key: 'alchemist', name: 'Alchemist', image: 'alchemist' },
     ];
 
     this.passageOptions = [
@@ -656,6 +662,8 @@ export function MapMaker(props){
                 return 'archaic_rune'
             case 'treasure':
                 return 'silver_chest'
+            case 'vendors':
+                return 'merchant'
             case 'stairs':
                 return 'stairs_down'
             case 'door':

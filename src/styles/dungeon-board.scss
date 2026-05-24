@@ -550,6 +550,13 @@
                         background-color: rgb(223, 202, 117);
                         transform: rotate3d(55, 28, -59, 79deg);
                     }
+                    &.merchant{
+                        width: 3px;
+                        height: 3px;
+                        border-radius: 3px;
+                        background-color: rgb(120, 255, 134);
+                        box-shadow: 0 0 2px rgba(120, 255, 134, 0.9);
+                    }
                 }
             }
         }

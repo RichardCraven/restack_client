@@ -488,8 +488,9 @@ class DungeonView extends React.Component {
                                                                 {board.tiles && board.tiles.map((tile, i) => {
                                                                 return <Tile
                                                                 key={i}
-                                                                id={i}
+                                                                id={tile.id}
                                                                 tileSize={((this.props.tileSize*6)/3-2)/15}
+                                                                contains={tile.contains}
                                                                 image={tile.image ? tile.image : null}
                                                                 imageOverride={tile.image && tile.image.includes('/') ? tile.image : null}
                                                                 color={tile.color ? tile.color : 'white'} borders={tile.borders}
@@ -574,9 +575,11 @@ class DungeonView extends React.Component {
                                                                 {board.tiles && board.tiles.map((tile, i) => {
                                                                 return <Tile
                                                                 key={i}
-                                                                id={i}
+                                                                id={tile.id}
                                                                 tileSize={((this.props.tileSize*6)/3-2)/15}
+                                                                contains={tile.contains}
                                                                 image={tile.image ? tile.image : null}
+                                                                imageOverride={tile.image && tile.image.includes('/') ? tile.image : null}
                                                                 color={tile.color ? tile.color : 'white'} borders={tile.borders}
                                                                 coordinates={tile.coordinates}
                                                                 index={tile.id}

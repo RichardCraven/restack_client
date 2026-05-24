@@ -233,18 +233,20 @@
 .inventory-popup .inventory-strip .strip-item .stack-count-badge,
 .inventory-modal .inventory-strip .strip-item .stack-count-badge{
     position: absolute;
-    top: 18px;
-    right: 0px;
-    background: rgba(0,0,0,0.7);
+    top: 6px;
+    left: 8px;
+    background: rgba(0,0,0,0.35);
     color: white;
-    min-width: 20px;
-    height: 20px;
-    border-radius: 10px;
+    min-width: 16px;
+    height: 16px;
+    border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 12px;
+    font-size: 10px;
     font-weight: 700;
+    line-height: 1;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.9);
     z-index: 30;
 }
 .inventory-popup .crew-panel,

@@ -180,6 +180,9 @@ export function BoardManager(){
     this.establishNarrativeEncounterCallback = (callback) => {
         this.triggerNarrativeEncounter = callback
     }
+    this.establishVendorEncounterCallback = (callback) => {
+        this.triggerVendorEncounter = callback
+    }
     this.establishSetMonsterCallback = (callback) => {
         this.setMonster = callback;
     }
@@ -245,10 +248,13 @@ export function BoardManager(){
         if (typeof contains === 'string') return contains;
         return null;
     }
-    this.getImageForContains = (contains) => {
+    this.getImageForContains = (contains, tile = null) => {
         const type = this.getContainsType(contains);
         const subtype = this.getContainsSubtype(contains);
         if (!type) return null;
+        if (type === 'vendor') {
+            return this.getImage(subtype);
+        }
         // monsters should render subtype image
         if (type === 'monster') {
             const key = (subtype || this.getRandomMonster());
@@ -410,7 +416,60 @@ export function BoardManager(){
     this.getRandomItemKeyForTier = (tier) => {
         const inventory = this.getCurrentInventory ? this.getCurrentInventory() : null;
         const itemRegistry = inventory && inventory.allItems ? inventory.allItems : null;
-        if (!itemRegistry) return null;
+        const fallbackTierPools = {
+            1: [
+                'woodcutters_axe', 'bloodcleaver_axe', 'hillbiter_axe', 'ironcleaver_axe',
+                'rune_axe', 'timberfall_axe', 'grovehack_axe', 'stormsplitter_axe',
+                'bonecutter_axe', 'frostedge_axe', 'emberchop_axe',
+                'shortsword_sword', 'cutlass_sword', 'gladius_sword', 'falchion_sword',
+                'longsword_sword', 'broadsword_sword', 'golden_gladius_sword',
+                'wyrmsbane_sword', 'katana_sword', 'claymore_sword', 'greatsword_sword',
+                'buckler', 'infantry_shield', 'cold_steel_shield',
+                'basic_helm', 'knight_helm', 'spartan_helm',
+                'cloudfire_wand', 'animus_wand', 'glyndas_wand',
+                'archmages_staff', 'enchanters_staff', 'imperial_mage_staff',
+                'beetle_charm', 'demonskull_charm', 'hamsa_charm',
+                'elasi_amulet', 'darkarrow_amulet', 'elemental_amulet'
+            ],
+            2: [
+                'razorfang_axe', 'stonebreaker_axe', 'mossreaper_axe', 'warcleaver_axe',
+                'blackroot_axe', 'dawnsplitter_axe', 'duskbane_axe',
+                'doomreaver_sword', 'nightfall_sword', 'dreadedge_sword', 'sunsteel_sword',
+                'voidrender_sword', 'warlords_cleaver_sword', 'emberbrand_sword',
+                'crusaders_shield', 'dawnguard', 'twilight_screen',
+                'nasal_helm_upgradeable', 'soldier_helm_upgradeable', 'crusader_helm_upgradeable',
+                'cavalry_helm_upgradeable', 'war_helm_upgradeable', 'coif_helm_upgradeable',
+                'gladiator_helm_upgradeable', 'battle_mage_helm_upgradeable', 'knight_helm_upgradeable',
+                'janissary_helm_upgradeable', 'bascinet_upgradeable', 'imperial_helm_upgradeable',
+                'rogue_hood_upgradeable',
+                'justicator_wand', 'volkas_wand', 'willowcaster',
+                'staff_of_espilon', 'staff_of_marduk', 'staff_of_omicron',
+                'the_watchful_eye', 'moonbird_folio', 'icewing_folio',
+                'emerald_tablet', 'ruby_tablet',
+                'warding_amulet', 'bloodvial_amulet', 'enchantress_amulet', 'goldclaw_amulet',
+                'clerics_amulet', 'queens_amulet'
+            ],
+            3: [
+                'thunderhewer_axe', 'skullsplitter_axe', 'giantsbane_axe', 'vinecutter_axe',
+                'obsidian_axe', 'ashwood_axe', 'drakebane_axe',
+                'frostbite_sword', 'bloodsong_sword', 'shadowfang_sword', 'skymourne_sword',
+                'opalveil_sword', 'titans_claw_sword', 'entropy_sword',
+                'revenants_shield', 'aegis_bulwark',
+                'juggernaut_helm', 'moonlord_helm', 'witch_knight_helm', 'collosus_helm', 'omega_helm',
+                'immortal_helm',
+                'nasal_helm_upgradeable_upgraded', 'soldier_helm_upgradeable_upgraded', 'crusader_helm_upgradeable_upgraded',
+                'cavalry_helm_upgradeable_upgraded', 'war_helm_upgradeable_upgraded', 'coif_helm_upgradeable_upgraded',
+                'gladiator_helm_upgradeable_upgraded', 'battle_mage_helm_upgradeable_upgraded', 'knight_helm_upgradeable_upgraded',
+                'janissary_helm_upgradeable_upgraded', 'bascinet_upgradeable_upgraded', 'imperial_helm_upgradeable_upgraded',
+                'rogue_hood_upgradeable_upgraded',
+                'maerlyns_rod', 'staff_of_tomorrow',
+                'feldons_manual', 'the_beast_book', 'book_of_jade', 'igors_grimoire', 'forbidden_grimoire',
+                'ice_amulet', 'hypnosis_amulet', 'vampiric_amulet', 'platinum_amulet', 'necrotic_amulet'
+            ]
+        };
+
+        const fallbackPool = fallbackTierPools[tier] || [];
+        if (!itemRegistry) return fallbackPool.length ? this.pickRandom(fallbackPool) : null;
 
         const validTypes = ['weapon', 'armor', 'magical'];
         const pool = Object.keys(itemRegistry).filter((key) => {
@@ -419,7 +478,85 @@ export function BoardManager(){
             return item.tier === tier && validTypes.includes(item.type);
         });
 
-        return pool.length ? this.pickRandom(pool) : null;
+        if (pool.length) return this.pickRandom(pool);
+        return fallbackPool.length ? this.pickRandom(fallbackPool) : null;
+    }
+    this.getRandomTierOneShardKey = () => {
+        const shardPool = ['ruby_shards', 'sapphire_shards', 'amber_shards'];
+        return this.pickRandom(shardPool);
+    }
+    this.getRandomRuneShardKey = () => {
+        const fallbackRuneShards = [
+            'volcanic_rune_shard',
+            'stone_rune_shard',
+            'pewter_rune_shard',
+            'earthen_rune_shard',
+            'onyxian_rune_shard',
+            'shadow_rune_shard',
+            'feldspar_rune_shard',
+            'archaic_rune_shard',
+            'sulphuric_rune_shard'
+        ];
+        const inventory = this.getCurrentInventory ? this.getCurrentInventory() : null;
+        const itemRegistry = inventory && !Array.isArray(inventory) && inventory.allItems ? inventory.allItems : null;
+        if (!itemRegistry) return this.pickRandom(fallbackRuneShards);
+
+        const pool = Object.keys(itemRegistry).filter((key) => {
+            const item = itemRegistry[key];
+            return item && item.type === 'rune' && item.shard === true;
+        });
+        return pool.length ? this.pickRandom(pool) : this.pickRandom(fallbackRuneShards);
+    }
+    this.getRandomTierTwoJewelKey = () => {
+        const fallbackTierTwoJewels = ['pyrite', 'benthite', 'memnite', 'labradite', 'malachite', 'onyx'];
+        const inventory = this.getCurrentInventory ? this.getCurrentInventory() : null;
+        const itemRegistry = inventory && !Array.isArray(inventory) && inventory.allItems ? inventory.allItems : null;
+        if (!itemRegistry) return this.pickRandom(fallbackTierTwoJewels);
+
+        const pool = Object.keys(itemRegistry).filter((key) => {
+            const item = itemRegistry[key];
+            return item && item.type === 'jewel' && item.tier === 2 && item.cluster !== true;
+        });
+        return pool.length ? this.pickRandom(pool) : this.pickRandom(fallbackTierTwoJewels);
+    }
+    this.getRandomTierThreeJewelShardKey = () => {
+        const fallbackTierThreeJewelShards = [
+            'yazatas_focus_shards',
+            'mishnes_focus_shards',
+            'masekets_focus_shards',
+            'abyssal_crystal_shards'
+        ];
+        const inventory = this.getCurrentInventory ? this.getCurrentInventory() : null;
+        const itemRegistry = inventory && !Array.isArray(inventory) && inventory.allItems ? inventory.allItems : null;
+        if (!itemRegistry) return this.pickRandom(fallbackTierThreeJewelShards);
+
+        const pool = Object.keys(itemRegistry).filter((key) => {
+            const item = itemRegistry[key];
+            return item && item.type === 'jewel' && item.tier === 3 && item.shard === true;
+        });
+        return pool.length ? this.pickRandom(pool) : this.pickRandom(fallbackTierThreeJewelShards);
+    }
+    this.getRandomRuneKey = () => {
+        const fallbackRunes = [
+            'volcanic_rune',
+            'stone_rune',
+            'pewter_rune',
+            'earthen_rune',
+            'onyxian_rune',
+            'shadow_rune',
+            'feldspar_rune',
+            'archaic_rune',
+            'sulphuric_rune'
+        ];
+        const inventory = this.getCurrentInventory ? this.getCurrentInventory() : null;
+        const itemRegistry = inventory && !Array.isArray(inventory) && inventory.allItems ? inventory.allItems : null;
+        if (!itemRegistry) return this.pickRandom(fallbackRunes);
+
+        const pool = Object.keys(itemRegistry).filter((key) => {
+            const item = itemRegistry[key];
+            return item && item.type === 'rune' && item.shard !== true;
+        });
+        return pool.length ? this.pickRandom(pool) : this.pickRandom(fallbackRunes);
     }
     this.resolveSilverChestReward = () => {
         const roll = Math.random();
@@ -442,14 +579,91 @@ export function BoardManager(){
         if (roll < 0.90) {
             return {
                 kind: 'item',
-                itemKey: 'jewel_shard'
+                itemKey: this.getRandomTierOneShardKey()
             };
         }
 
         return {
             kind: 'item',
-            itemKey: 'rune_shard'
+            itemKey: this.getRandomRuneShardKey()
         };
+    }
+    this.resolveGoldChestReward = () => {
+        const roll = Math.random();
+
+        if (roll < 0.30) {
+            const collectiveLevel = this.getCollectiveCrewLevel();
+            return {
+                kind: 'gold',
+                amount: collectiveLevel * 3
+            };
+        }
+
+        if (roll < 0.60) {
+            return {
+                kind: 'item',
+                itemKey: this.getRandomItemKeyForTier(2)
+            };
+        }
+
+        if (roll < 0.90) {
+            return {
+                kind: 'item',
+                itemKey: this.getRandomTierTwoJewelKey()
+            };
+        }
+
+        return {
+            kind: 'item',
+            itemKey: this.getRandomRuneShardKey()
+        };
+    }
+    this.resolveOrnateChestRewards = () => {
+        const rewards = [];
+        const collectiveLevel = this.getCollectiveCrewLevel();
+        const ornateGoldAmount = collectiveLevel * 4;
+
+        // Independent rolls: each reward category has its own chance check.
+        if (Math.random() < 0.30) {
+            rewards.push({
+                kind: 'gold',
+                amount: ornateGoldAmount
+            });
+        }
+
+        if (Math.random() < 0.30) {
+            rewards.push({
+                kind: 'item',
+                itemKey: this.getRandomItemKeyForTier(3)
+            });
+        }
+
+        if (Math.random() < 0.30) {
+            rewards.push({
+                kind: 'item',
+                itemKey: this.getRandomTierThreeJewelShardKey()
+            });
+        }
+
+        if (Math.random() < 0.10) {
+            rewards.push({
+                kind: 'item',
+                itemKey: this.getRandomRuneKey()
+            });
+        }
+
+        if (!rewards.length) {
+            rewards.push({
+                kind: 'gold',
+                amount: ornateGoldAmount
+            });
+            rewards.push({
+                kind: 'item',
+                itemKey: 'curse_doll'
+            });
+        }
+
+        return rewards;
     }
     this.handleChestPickup = (chestSubtype, destinationTile) => {
         switch (chestSubtype) {
@@ -465,6 +679,39 @@ export function BoardManager(){
                 } else if (reward.itemKey) {
                     this.addItemToInventory({ contains: reward.itemKey });
                 }
+                this.removeTileFromBoard(destinationTile)
+                return 'item';
+            }
+            case 'gold_chest': {
+                const reward = this.resolveGoldChestReward();
+                if (reward.kind === 'gold') {
+                    if (reward.amount > 0) {
+                        this.addCurrencyToInventory({
+                            type: 'gold',
+                            amount: reward.amount
+                        });
+                    }
+                } else if (reward.itemKey) {
+                    this.addItemToInventory({ contains: reward.itemKey });
+                }
+                this.removeTileFromBoard(destinationTile)
+                return 'item';
+            }
+            case 'ornate_chest': {
+                const rewards = this.resolveOrnateChestRewards();
+                rewards.forEach((reward) => {
+                    if (!reward) return;
+                    if (reward.kind === 'gold') {
+                        if (reward.amount > 0) {
+                            this.addCurrencyToInventory({
+                                type: 'gold',
+                                amount: reward.amount
+                            });
+                        }
+                    } else if (reward.itemKey) {
+                        this.addItemToInventory({ contains: reward.itemKey });
+                    }
+                });
                 this.removeTileFromBoard(destinationTile)
                 return 'item';
             }
@@ -636,7 +883,7 @@ export function BoardManager(){
                     }
                 }
                 equivalentTile.contains = { type: 'monster', subtype: monsterSubtype };
-                equivalentTile.image = this.getImageForContains(equivalentTile.contains);
+                equivalentTile.image = this.getImageForContains(equivalentTile.contains, equivalentTile);
                 respawnedCount += 1;
                 // Determine a color for the respawned tile. Prefer the template's color, then
                 // the current board definition, then a sensible monster highlight so it won't
@@ -734,7 +981,7 @@ export function BoardManager(){
                 // assign an item object shape — prefer the template's subtype when available
                 const itemSubtype = this.getContainsSubtype(templateTile.contains) || this.getRandomItem();
                 equivalentTile.contains = { type: 'item', subtype: itemSubtype };
-                equivalentTile.image = this.getImageForContains(equivalentTile.contains);
+                equivalentTile.image = this.getImageForContains(equivalentTile.contains, equivalentTile);
 
                 // Determine a color for the respawned tile. Prefer the template's color, then
                 // the current board definition, otherwise leave as-is.
@@ -882,7 +1129,7 @@ export function BoardManager(){
             if (tile.contains && tile.contains.type === 'item' && !tile.contains.subtype && tile.original && tile.original === 'lantern') {
                 tile.contains.subtype = getRandomItem();
             }
-            const imageKey = this.getImageForContains(tile.contains);
+            const imageKey = this.getImageForContains(tile.contains, tile);
             // Log monster tiles on initialization to verify contains/image are correct
             if (tile.contains && tile.contains.type === 'monster' && tile.contains.subtype) {
                 // regular init tile
@@ -1067,6 +1314,13 @@ export function BoardManager(){
             break;
             case 'narrative':
                 return 'narrative';
+            case 'vendor':
+                try {
+                    if (this.triggerVendorEncounter) {
+                        this.triggerVendorEncounter(subtype);
+                    }
+                } catch (e) {}
+                return 'vendor';
             case 'gold':
                 let factor, num = Math.random();
                 if(num > .85){
@@ -1475,13 +1729,13 @@ export function BoardManager(){
         }
         if(interaction === 'impassable') return
        
-                tile.image = this.getImageForContains(tile.contains);
+                tile.image = this.getImageForContains(tile.contains, tile);
         
         // For monster encounters: do NOT advance playerTile.location onto the monster's
         // tile. The player stays on the pre-encounter tile so that if they lose combat
         // they return to the correct (safe) position. On victory, removeDefeatedMonsterTile
         // clears the monster tile and the player is already adjacent.
-        if (interaction !== 'monster') {
+        if (interaction !== 'monster' && interaction !== 'vendor') {
             switch(direction){
                 case 'up':
                     this.playerTile.location[0] = (this.playerTile.location[0]- 1)
@@ -1720,7 +1974,7 @@ export function BoardManager(){
                         const runtimeColor = (e.color && e.color !== 'black') ? e.color : null;
                         const boardColor = (persistedColor && persistedColor !== 'black') ? persistedColor : (runtimeColor || null);
                         e.color = boardColor || 'white';
-                        e.image = this.getImageForContains(e.contains);
+                        e.image = this.getImageForContains(e.contains, e);
                     }
                 }
                 // also reveal the tile in the same column up/down up to 30/15 offsets if not blocked (preserve some original behavior)
@@ -1729,10 +1983,40 @@ export function BoardManager(){
                     const runtimeColor = (e.color && e.color !== 'black') ? e.color : null;
                     const boardColor = (persistedColor && persistedColor !== 'black') ? persistedColor : (runtimeColor || null);
                     e.color = boardColor || 'white';
-                    e.image = this.getImageForContains(e.contains);
+                    e.image = this.getImageForContains(e.contains, e);
                 }
             } catch (err) {}
     });
+
+        // Vendor 2x2 reveal rule: if any tile in a vendor group becomes visible,
+        // reveal the full 2x2 group in this fog pass.
+        try {
+            const visibleVendorGroups = new Set();
+            this.tiles.forEach((tile) => {
+                if (!tile || tile.color === 'black') return;
+                const contains = tile.contains;
+                if (!contains || typeof contains !== 'object') return;
+                if (contains.type !== 'vendor') return;
+                if (contains.vendorGroupId) visibleVendorGroups.add(contains.vendorGroupId);
+            });
+
+            if (visibleVendorGroups.size > 0) {
+                this.tiles.forEach((tile) => {
+                    if (!tile) return;
+                    const contains = tile.contains;
+                    if (!contains || typeof contains !== 'object') return;
+                    if (contains.type !== 'vendor') return;
+                    if (!contains.vendorGroupId || !visibleVendorGroups.has(contains.vendorGroupId)) return;
+
+                    const persistedColor = (this.currentBoard && this.currentBoard.tiles && this.currentBoard.tiles[tile.id] && this.currentBoard.tiles[tile.id].color);
+                    const runtimeColor = (tile.color && tile.color !== 'black') ? tile.color : null;
+                    const boardColor = (persistedColor && persistedColor !== 'black') ? persistedColor : (runtimeColor || null);
+                    tile.color = boardColor || 'white';
+                    tile.image = this.getImageForContains(tile.contains, tile);
+                });
+            }
+        } catch (e) {}
+
         try { if (this.refreshTiles) this.refreshTiles(); } catch (e) {}
 
         return true

@@ -83,6 +83,40 @@ function Tile(props) {
         }
     }
     const foregroundPortalImages = ['archway', 'gryphon_gate_opened', 'bat_gate_opened', 'evil_gate_opened', 'dungeon_door_opened'];
+    const containsObj = (props.contains && typeof props.contains === 'object') ? props.contains : null;
+    const isVendorCell = !!(containsObj && containsObj.type === 'vendor');
+
+    const getVendorCellRole = () => {
+        if (!isVendorCell) return null;
+        const explicitRole = containsObj.vendorCell;
+        if (explicitRole && explicitRole !== 'footprint') return explicitRole;
+        if (containsObj.vendorAnchorId !== null && containsObj.vendorAnchorId !== undefined && props.id !== null && props.id !== undefined) {
+            const delta = props.id - containsObj.vendorAnchorId;
+            if (delta === 0) return 'anchor';
+            if (delta === 1) return 'top_right';
+            if (delta === 15) return 'bottom_left';
+            if (delta === 16) return 'bottom_right';
+        }
+        if (explicitRole === 'footprint') return 'top_right';
+        return 'anchor';
+    };
+
+    const vendorCellRole = getVendorCellRole();
+    const vendorBorderless = isVendorCell ? '0px solid transparent' : null;
+    const vendorBackgroundPosition = (() => {
+        switch (vendorCellRole) {
+            case 'top_right':
+                return '100% 0%';
+            case 'bottom_left':
+                return '0% 100%';
+            case 'bottom_right':
+                return '100% 100%';
+            case 'anchor':
+            default:
+                return '0% 0%';
+        }
+    })();
+
     const portraitZIndex = foregroundPortalImages.includes(props.image) ? 12 : 3;
 
     return (
@@ -104,11 +138,11 @@ function Tile(props) {
             position: 'relative',
             overflow: 'hidden',
             border: vctBorder,
-            borderLeft: vctBorder ? undefined : (props.borders && props.borders.left ? props.borders.left : ((props.type === 'palette-tile' && !props.hovered) ? '2px solid transparent' : 
-                (props.type === 'palette-tile' && props.hovered ? '2px solid red' : '1px solid transparent'))),
-            borderRight: vctBorder ? undefined : ((props.borders && props.borders.right) ? props.borders.right : '1px solid transparent'),
-            borderTop: vctBorder ? undefined : ((props.borders && props.borders.top) ? props.borders.top : '1px solid transparent'),
-            borderBottom: vctBorder ? undefined : ((props.borders && props.borders.bottom) ? props.borders.bottom : '1px solid transparent')
+            borderLeft: vctBorder ? undefined : (vendorBorderless || (props.borders && props.borders.left ? props.borders.left : ((props.type === 'palette-tile' && !props.hovered) ? '2px solid transparent' : 
+                (props.type === 'palette-tile' && props.hovered ? '2px solid red' : '1px solid transparent')))),
+            borderRight: vctBorder ? undefined : (vendorBorderless || ((props.borders && props.borders.right) ? props.borders.right : '1px solid transparent')),
+            borderTop: vctBorder ? undefined : (vendorBorderless || ((props.borders && props.borders.top) ? props.borders.top : '1px solid transparent')),
+            borderBottom: vctBorder ? undefined : (vendorBorderless || ((props.borders && props.borders.bottom) ? props.borders.bottom : '1px solid transparent'))
             }}
             onMouseEnter={() => {
                 beginDelayedHoverLabel();
@@ -167,7 +201,7 @@ function Tile(props) {
 
                      {/* Portrait sits above the hp-fill and terrain so the image remains visible */}
                      {(props.imageOverride || images[props.image]) && (
-                         <div className="portrait" style={{position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundImage: props.imageOverride ? "url('" + props.imageOverride + "')" : images[props.image] ? "url('" + images[props.image] + "')" : undefined, backgroundSize: '100% 100%', backgroundPosition: 'inherit', backgroundRepeat: 'no-repeat', zIndex: portraitZIndex}} />
+                         <div className="portrait" style={{position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundImage: props.imageOverride ? "url('" + props.imageOverride + "')" : images[props.image] ? "url('" + images[props.image] + "')" : undefined, backgroundSize: isVendorCell ? '200% 200%' : '100% 100%', backgroundPosition: isVendorCell ? vendorBackgroundPosition : 'inherit', backgroundRepeat: 'no-repeat', zIndex: isVendorCell ? 30 : portraitZIndex}} />
                      )}
 
            {/* Dead overlay: visible when data.dead === true */}

@@ -209,6 +209,10 @@ const ModalInner = ({ modalType, updates, crew, tileSize, handleMemberClickRitua
                     })()}
                 </div>
             )}
+
+            {(modalType === 'Merchant' || modalType === 'Alchemist') && (
+                <div />
+            )}
         </CModalBody>
     )
 }
@@ -995,6 +999,7 @@ class DungeonPage extends React.Component {
         this.props.boardManager.establishGetCurrentInventoryCallback(this.getCurrentInventory)
         this.props.boardManager.establishRitualEncounterCallback(this.triggerRitualEncounter)
         this.props.boardManager.establishNarrativeEncounterCallback(this.triggerNarrativeEncounter)
+        this.props.boardManager.establishVendorEncounterCallback(this.triggerVendorEncounter)
 
         this.props.boardManager.establishBoardTransitionCallback(this.boardTransition)
         this.props.boardManager.establishLevelChangeCallback(this.handleLevelChange)
@@ -2121,6 +2126,43 @@ class DungeonPage extends React.Component {
     setPending = (pendingState) => {
         this.setState({pending: pendingState})
     }
+    syncVisibleVendorIndicators = (tilesForBoard) => {
+        if (!Array.isArray(tilesForBoard) || !Array.isArray(this.state.minimapIndicators)) return null;
+        const activeMinimapIndex = this.state.minimap.findIndex(e => e.active);
+        if (activeMinimapIndex < 0 || !this.state.minimapIndicators[activeMinimapIndex]) return null;
+
+        const nextIndicators = this.state.minimapIndicators.map((group) => ({
+            ...(group || {}),
+            enemies: Array.isArray(group?.enemies) ? [...group.enemies] : [],
+            gates: Array.isArray(group?.gates) ? [...group.gates] : [],
+            merchant: Array.isArray(group?.merchant) ? [...group.merchant] : [],
+            stairs: Array.isArray(group?.stairs) ? [...group.stairs] : [],
+            misc: Array.isArray(group?.misc) ? [...group.misc] : [],
+            custom: Array.isArray(group?.custom) ? [...group.custom] : []
+        }));
+
+        const seenVendorGroups = new Set();
+        const merchantMarkers = [];
+
+        tilesForBoard.forEach((tile) => {
+            if (!tile || tile.color === 'black') return;
+            const contains = tile.contains;
+            if (!contains || typeof contains !== 'object' || contains.type !== 'vendor') return;
+
+            const vendorGroupId = contains.vendorGroupId || `${contains.subtype || 'vendor'}_${tile.id}`;
+            if (seenVendorGroups.has(vendorGroupId)) return;
+            seenVendorGroups.add(vendorGroupId);
+
+            merchantMarkers.push({
+                type: contains.subtype || 'merchant',
+                tileId: tile.id,
+                vendorGroupId
+            });
+        });
+
+        nextIndicators[activeMinimapIndex].merchant = merchantMarkers;
+        return nextIndicators;
+    }
     refreshTiles = (levelIdOverride) => {
         let newTiles = this.props.boardManager.tiles,
             newOverlayTiles = this.props.boardManager.overlayTiles
@@ -2150,9 +2192,12 @@ class DungeonPage extends React.Component {
             console.warn('refreshTiles: failed to assign terrain:', e);
         }
 
+        const syncedIndicators = this.syncVisibleVendorIndicators(newTiles);
+
         this.setState({
             tiles: newTiles,
-            overlayTiles: newOverlayTiles
+            overlayTiles: newOverlayTiles,
+            minimapIndicators: syncedIndicators || this.state.minimapIndicators
         })
     }
     triggerMonsterBattle = (bool, tileId) => {
@@ -2785,7 +2830,12 @@ class DungeonPage extends React.Component {
                 }
             break;
             case 'merchant':
-                // merchant marker handling not implemented yet
+                {
+                    const c = this.props.boardManager.tiles[tile.id].contains;
+                    const typeVal = (typeof c === 'object' && c !== null) ? (c.subtype || c.type) : c;
+                    indicatorContainer.merchant.push({ type: typeVal, tileId: tile.id })
+                    inputElement.value = typeVal;
+                }
             break;
             case 'gate':
                 {
@@ -4218,6 +4268,10 @@ class DungeonPage extends React.Component {
             case 'Magic':
                 this.setState({keysLocked: false}, () => this._cleanupModalBodyClass())
             break;
+            case 'Merchant':
+            case 'Alchemist':
+                this.setState({ showModal: false }, () => this._cleanupModalBodyClass())
+            break;
             default: break;
         }
     }
@@ -4265,6 +4319,14 @@ class DungeonPage extends React.Component {
                 keysLocked: true
             });
         }, 140);
+    }
+
+    triggerVendorEncounter = (vendorType) => {
+        const normalized = String(vendorType || '').toLowerCase();
+        this.setState({
+            modalType: normalized === 'alchemist' ? 'Alchemist' : 'Merchant',
+            showModal: true
+        });
     }
 
     closeNarrativeOverlay = () => {
@@ -4479,6 +4541,11 @@ class DungeonPage extends React.Component {
                 />
             )}
             <CModal className={this.state.modalType === 'PrepComplete' ? 'prep-complete-modal' : this.state.modalType === 'RitualComplete' ? 'ritual-complete-modal' : this.state.modalType === 'Magic' ? 'ritual-encounter-modal' : this.state.modalType === 'FoodComplete' ? 'food-complete-modal' : ''} alignment="center" visible={this.state.showModal} onClose={() => this.onUpdateModalClosed()}>
+                {(this.state.modalType === 'Merchant' || this.state.modalType === 'Alchemist') && (
+                    <CModalHeader>
+                        <CModalTitle>{this.state.modalType}</CModalTitle>
+                    </CModalHeader>
+                )}
                 <ModalInner
                     modalType={this.state.modalType}
                     updates={this.state.updates}
@@ -5205,6 +5272,16 @@ class DungeonPage extends React.Component {
                                     </div>
                                 })}
 
+                                {/* // merchants // */}
+                                {this.state.minimapIndicators[i] && this.state.minimapIndicators[i].merchant.map((indicator,idx)=>{
+                                    return <div key={idx} className={`minimap-indicator merchant`}
+                                    style={{
+                                        left: this.calcIndicator(indicator.tileId).left,
+                                        top: this.calcIndicator(indicator.tileId).top
+                                    }}>
+                                    </div>
+                                })}
+
                             </div>
                         })}
                     </div>
@@ -5822,6 +5899,7 @@ class DungeonPage extends React.Component {
                                 const group = grouped[key];
                                 const count = group.items.length;
                                 const item = group.items[0];
+                                const isShardStack = item && item.shard === true && (item.type === 'jewel' || item.type === 'rune');
                                 const firstIndex = group.firstIndex;
                                 const stripKey = `${key}__${firstIndex}__${item?.icon || 'no_icon'}`;
                                 return (
@@ -5845,7 +5923,7 @@ class DungeonPage extends React.Component {
                                             className={`inventory-tile ${this.state.activeInventoryItem?.id === firstIndex ? 'active' : ''}`}
                                             isActiveInventory={this.state.activeInventoryItem?.id === firstIndex}
                                         />
-                                        {count > 1 && (
+                                        {(count > 1 || isShardStack) && (
                                             <div className='stack-count-badge'>
                                                 {count}
                                             </div>

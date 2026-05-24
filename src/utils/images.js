@@ -434,6 +434,9 @@ import quest_48_pirate from '../assets/icons/misc/loot/gold/Quest_48_pirate.png'
 import silver_chest from '../assets/icons/misc/loot/silver chest.png'
 import gold_chest from '../assets/icons/misc/loot/gold chest.png'
 import ornate_chest from '../assets/icons/misc/loot/ornate chest.png'
+import curse_doll from '../assets/icons/misc/loot/curse doll.png'
+import merchant from '../assets/icons/misc/vendors/merchant.png'
+import alchemist from '../assets/icons/misc/vendors/alchemist.png'
 
 // crew
 import archer from '../assets/icons/crew_icons/archer.png'
@@ -1186,6 +1189,9 @@ export {
     silver_chest,
     gold_chest,
     ornate_chest,
+    curse_doll,
+    merchant,
+    alchemist,
 
     archer,
     barbarian,

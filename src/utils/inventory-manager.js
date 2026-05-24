@@ -207,9 +207,33 @@ export function InventoryManager(){
         'malachite_cluster',
         'onyx_cluster',
         'yazatas_focus',
+        'yazatas_focus_shards',
         'mishnes_focus',
+        'mishnes_focus_shards',
         'masekets_focus',
-        'abyssal_crystal'
+        'masekets_focus_shards',
+        'abyssal_crystal',
+        'abyssal_crystal_shards'
+    ]
+    this.runes_names = [
+        'volcanic_rune',
+        'stone_rune',
+        'pewter_rune',
+        'earthen_rune',
+        'onyxian_rune',
+        'shadow_rune',
+        'feldspar_rune',
+        'archaic_rune',
+        'sulphuric_rune',
+        'volcanic_rune_shard',
+        'stone_rune_shard',
+        'pewter_rune_shard',
+        'earthen_rune_shard',
+        'onyxian_rune_shard',
+        'shadow_rune_shard',
+        'feldspar_rune_shard',
+        'archaic_rune_shard',
+        'sulphuric_rune_shard'
     ]
     this.keys_names = [
         'minor_key',
@@ -2296,6 +2320,13 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             shard: false,
             slottedIn: null
         },
+        yazatas_focus_shards: {
+            icon: 'yazatas_focus',
+            type: 'jewel',
+            name: 'yazatas focus shards',
+            tier: 3,
+            shard: true
+        },
         mishnes_focus: {
             icon: 'mishnes_focus',
             type: 'jewel',
@@ -2303,6 +2334,13 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             tier: 3,
             shard: false,
             slottedIn: null
+        },
+        mishnes_focus_shards: {
+            icon: 'mishnes_focus',
+            type: 'jewel',
+            name: 'mishnes focus shards',
+            tier: 3,
+            shard: true
         },
         masekets_focus: {
             icon: 'masekets_focus',
@@ -2312,6 +2350,13 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             shard: false,
             slottedIn: null
         },
+        masekets_focus_shards: {
+            icon: 'masekets_focus',
+            type: 'jewel',
+            name: 'masekets focus shards',
+            tier: 3,
+            shard: true
+        },
         abyssal_crystal: {
             icon: 'abyssal_crystal',
             type: 'jewel',
@@ -2319,6 +2364,141 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             tier: 3,
             shard: false,
             slottedIn: null
+        },
+        abyssal_crystal_shards: {
+            icon: 'abyssal_crystal',
+            type: 'jewel',
+            name: 'abyssal focus shards',
+            tier: 3,
+            shard: true
+        }
+    }
+    this.runes = {
+        volcanic_rune: {
+            icon: 'volcanic_rune',
+            type: 'rune',
+            name: 'volcanic rune',
+            tier: 1,
+            shard: false
+        },
+        stone_rune: {
+            icon: 'stone_rune',
+            type: 'rune',
+            name: 'stone rune',
+            tier: 1,
+            shard: false
+        },
+        pewter_rune: {
+            icon: 'pewter_rune',
+            type: 'rune',
+            name: 'pewter rune',
+            tier: 1,
+            shard: false
+        },
+        earthen_rune: {
+            icon: 'earthen_rune',
+            type: 'rune',
+            name: 'earthen rune',
+            tier: 1,
+            shard: false
+        },
+        onyxian_rune: {
+            icon: 'onyxian_rune',
+            type: 'rune',
+            name: 'onyxian rune',
+            tier: 1,
+            shard: false
+        },
+        shadow_rune: {
+            icon: 'shadow_rune',
+            type: 'rune',
+            name: 'shadow rune',
+            tier: 1,
+            shard: false
+        },
+        feldspar_rune: {
+            icon: 'feldspar_rune',
+            type: 'rune',
+            name: 'feldspar rune',
+            tier: 1,
+            shard: false
+        },
+        archaic_rune: {
+            icon: 'archaic_rune',
+            type: 'rune',
+            name: 'archaic rune',
+            tier: 1,
+            shard: false
+        },
+        sulphuric_rune: {
+            icon: 'sulphuric_rune',
+            type: 'rune',
+            name: 'sulphuric rune',
+            tier: 1,
+            shard: false
+        },
+        volcanic_rune_shard: {
+            icon: 'volcanic_rune',
+            type: 'rune',
+            name: 'volcanic rune shards',
+            tier: 1,
+            shard: true
+        },
+        stone_rune_shard: {
+            icon: 'stone_rune',
+            type: 'rune',
+            name: 'stone rune shards',
+            tier: 1,
+            shard: true
+        },
+        pewter_rune_shard: {
+            icon: 'pewter_rune',
+            type: 'rune',
+            name: 'pewter rune shards',
+            tier: 1,
+            shard: true
+        },
+        earthen_rune_shard: {
+            icon: 'earthen_rune',
+            type: 'rune',
+            name: 'earthen rune shards',
+            tier: 1,
+            shard: true
+        },
+        onyxian_rune_shard: {
+            icon: 'onyxian_rune',
+            type: 'rune',
+            name: 'onyxian rune shards',
+            tier: 1,
+            shard: true
+        },
+        shadow_rune_shard: {
+            icon: 'shadow_rune',
+            type: 'rune',
+            name: 'shadow rune shards',
+            tier: 1,
+            shard: true
+        },
+        feldspar_rune_shard: {
+            icon: 'feldspar_rune',
+            type: 'rune',
+            name: 'feldspar rune shards',
+            tier: 1,
+            shard: true
+        },
+        archaic_rune_shard: {
+            icon: 'archaic_rune',
+            type: 'rune',
+            name: 'archaic rune shards',
+            tier: 1,
+            shard: true
+        },
+        sulphuric_rune_shard: {
+            icon: 'sulphuric_rune',
+            type: 'rune',
+            name: 'sulphuric rune shards',
+            tier: 1,
+            shard: true
         }
     }
     this.misc = {
@@ -2420,6 +2600,13 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             equippedBy: null,
             animation: null
         },
+        curse_doll: {
+            icon: 'curse_doll',
+            type: 'special',
+            name: 'curse doll',
+            equippedBy: null,
+            animation: null
+        },
 
         // crystals
         
@@ -2493,6 +2680,8 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
         this.wands_names || [],
         this.staves_names || [],
         this.misc_names || [],
+        this.jewels_names || [],
+        this.runes_names || [],
         this.shields_names || [],
         this.boots_names || []
     )
@@ -2510,6 +2699,9 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
         }
         for(let key in this.jewels){
             this.allItems[key] = this.jewels[key]
+        }
+        for(let key in this.runes){
+            this.allItems[key] = this.runes[key]
         }
         this.iconToKey = {};
         for(let key in this.weapons){

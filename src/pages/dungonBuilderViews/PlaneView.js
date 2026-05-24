@@ -103,6 +103,7 @@ class PlaneView extends React.Component {
                                             id={i}
                                             // boardIndex={boardIndex}
                                             tileSize={((this.props.tileSize*15)/3-2)/15}
+                                            contains={tile.contains}
                                             image={tile.image ? tile.image : null}
                                             imageOverride={tile.image && tile.image.includes('/') ? tile.image : null}
                                             color={tile.color ? tile.color : 'white'} borders={tile.borders}
