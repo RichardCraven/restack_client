@@ -159,6 +159,40 @@ class BoardsPalette extends React.Component {
                                 </div> 
                             })}
                         </div>}
+                        {tile.optionType === 'passage' && <div className={`palette-option-expandable-container ${this.props.optionClickedIdx === i ? 'expanded' : ''}`}>
+                            {(this.props.mapMaker.passageOptions || []).map((passageItem, pi) => {
+                                const isHovered = this.state.hoveredSubItem?.type === 'passage-tool' && this.state.hoveredSubItem?.id === pi;
+                                const isSelected = this.props.pinnedOption?.type === 'passage-tool-tile' && this.props.pinnedOption?.id === pi;
+                                return <div
+                                key={`passage-tool-${pi}`}
+                                className={`palette-option-subcontainer${isHovered ? ' sub-hovered' : ''}${isSelected ? ' sub-selected' : ''}`}
+                                onMouseEnter={() => this.setState({ hoveredSubItem: { type: 'passage-tool', id: pi } })}
+                                onMouseLeave={() => this.setState({ hoveredSubItem: null })}
+                                onClick={() => {
+                                    this.props.handleClick({
+                                        type: 'passage-tool-tile',
+                                        id: pi
+                                    })
+                                }}
+                                >
+                                    <div className="text-container">
+                                        {passageItem.name}
+                                    </div>
+                                    <Tile
+                                    id={pi}
+                                    tileSize={this.props.tileSize}
+                                    index={pi}
+                                    image={passageItem.image}
+                                    imageOverride={passageItem.image && images[passageItem.image] ? images[passageItem.image] : null}
+                                    color={null}
+                                    borders={{ top: '2px solid black', left: '2px solid black', right: '2px solid transparent', bottom: '2px solid black' }}
+                                    handleHover={null}
+                                    handleClick={null}
+                                    type={'item'}>
+                                    </Tile>
+                                </div>
+                            })}
+                        </div>}
                         {tile.optionType === 'gate' && <div className={`palette-option-expandable-container ${this.props.optionClickedIdx === i ? 'expanded' : ''}`}>
                             {this.props.gates.map((gate,i)=>{
                                 const isHovered = this.state.hoveredSubItem?.type === 'gate' && this.state.hoveredSubItem?.id === i;
@@ -252,6 +286,38 @@ class BoardsPalette extends React.Component {
                                     index={ti}
                                     image={images[tierItem.image]}
                                     imageOverride={images[tierItem.image]}
+                                    handleHover={null}
+                                    handleClick={null}
+                                    type={'item'}>
+                                    </Tile>
+                                </div>
+                            })}
+                        </div>}
+                        {tile.optionType === 'treasure' && <div className={`palette-option-expandable-container ${this.props.optionClickedIdx === i ? 'expanded' : ''}`}>
+                            {(this.props.mapMaker.treasureOptions || []).map((treasureItem, ti) => {
+                                const isHovered = this.state.hoveredSubItem?.type === 'treasure' && this.state.hoveredSubItem?.id === ti;
+                                const isSelected = this.props.pinnedOption?.type === 'treasure-tile' && this.props.pinnedOption?.id === ti;
+                                return <div
+                                key={`treasure-${ti}`}
+                                className={`palette-option-subcontainer${isHovered ? ' sub-hovered' : ''}${isSelected ? ' sub-selected' : ''}`}
+                                onMouseEnter={() => this.setState({ hoveredSubItem: { type: 'treasure', id: ti } })}
+                                onMouseLeave={() => this.setState({ hoveredSubItem: null })}
+                                onClick={() => {
+                                    this.props.handleClick({
+                                        type: 'treasure-tile',
+                                        id: ti
+                                    })
+                                }}
+                                >
+                                    <div className="text-container">
+                                        {treasureItem.name}
+                                    </div>
+                                    <Tile
+                                    id={ti}
+                                    tileSize={this.props.tileSize}
+                                    index={ti}
+                                    image={images[treasureItem.image]}
+                                    imageOverride={images[treasureItem.image]}
                                     handleHover={null}
                                     handleClick={null}
                                     type={'item'}>

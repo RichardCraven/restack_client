@@ -577,6 +577,8 @@ class DungeonPage extends React.Component {
             , showMapOverlay: false
             , activeNarrativeSequence: null
             , showNarrativeOverlay: false
+            , showAmbushPopup: false
+            , ambushMonster: null
         }
     // Native browser tooltip will be used for death-tracker; no custom tooltip state required.
         // Track timers/intervals created by this component so we can clear on unmount
@@ -983,6 +985,7 @@ class DungeonPage extends React.Component {
         this.props.boardManager.establishAddTreasureToInventoryCallback(this.addTreasureToInventory)
         this.props.boardManager.establishAddCurrencyToInventoryCallback(this.addCurrencyToInventory)
         this.props.boardManager.establishAddFoodToSuppliesCallback(this.addFoodToSupplies)
+        this.props.boardManager.establishGetCrewCallback(() => this.props.crewManager?.crew || [])
         this.props.boardManager.establishUpdateDungeonCallback(this.updateDungeon)
         this.props.boardManager.establishPendingCallback(this.setPending)
         this.props.boardManager.establishMessagingCallback(this.messaging)
@@ -1161,9 +1164,6 @@ class DungeonPage extends React.Component {
             const originPixel = this.getPixelForIndex(originIndex);
             const destPixel = this.getPixelForIndex(destIndex);
 
-            const deltaX = destPixel.left - originPixel.left;
-            const deltaY = destPixel.top - originPixel.top;
-
             // Choose image for floating player (camp or avatar)
             let meta = {};
             try { meta = getMeta() || {}; } catch (e) { meta = {}; }
@@ -1179,6 +1179,31 @@ class DungeonPage extends React.Component {
             }
 
             const playerMoved = bm.playerTile.location[0] !== originCoords[0] || bm.playerTile.location[1] !== originCoords[1];
+            
+            let ambushTriggered = false;
+            let ambushMonster = null;
+            if (playerMoved) {
+                let destTileObj = bm.tiles[destIndex];
+                if (destTileObj && destTileObj.contains && destTileObj.contains.type === 'obscured_space') {
+                    if (Math.random() < 0.3) {
+                        ambushTriggered = true;
+                        let ambushMonsterTier = 1;
+                        const tracker = this.state.levelTracker || [];
+                        const activeLevel = tracker.find((entry) => entry && entry.active);
+                        const currentLevelId = activeLevel ? Number(activeLevel.id) : Number((getMeta() || {}).location?.levelId || 0);
+                        const absLevel = Math.abs(currentLevelId);
+                        
+                        if (absLevel === 0) ambushMonsterTier = 1;
+                        else if (absLevel === 1) ambushMonsterTier = Math.random() < 0.5 ? 1 : 2;
+                        else if (absLevel === 2) ambushMonsterTier = Math.random() < 0.5 ? 2 : 3;
+                        else if (absLevel === 3) ambushMonsterTier = Math.random() < 0.5 ? 3 : 4;
+                        else ambushMonsterTier = 4;
+                        
+                        ambushMonster = this.props.monsterManager.getRandomMonsterByTier(ambushMonsterTier);
+                    }
+                }
+            }
+
             if (!playerMoved) {
                 this.setState({
                     tiles: [...bm.tiles],
@@ -1200,14 +1225,15 @@ class DungeonPage extends React.Component {
                 playerAnimating: true,
                 animOriginIndex: originIndex,
                 animDestIndex: destIndex,
-                playerFloatStyle: {
-                    left: originPixel.left,
-                    top: originPixel.top,
-                    transform: 'translate3d(0px, 0px, 0px)',
-                    backgroundImage: `url(${images[playerImgKey]})`
-                }
+                keysLocked: ambushTriggered ? true : this.state.keysLocked,
+                showAmbushPopup: ambushTriggered ? true : this.state.showAmbushPopup,
+                ambushMonster: ambushTriggered ? ambushMonster : this.state.ambushMonster
             }, () => {
-                this.recordBreadcrumb();
+                if (ambushTriggered) {
+                    this.ambushTimeout = setTimeout(() => {
+                        this.startAmbushCombat();
+                    }, 3000);
+                }
                 requestAnimationFrame(() => {
                     requestAnimationFrame(() => {
                         try {
@@ -1215,8 +1241,8 @@ class DungeonPage extends React.Component {
                             if (!el) return;
 
                             // Calculate transform delta: from origin to destination within the board
-                            const fullX = deltaX;
-                            const fullY = deltaY;
+                            const fullX = destPixel.left - originPixel.left;
+                            const fullY = destPixel.top - originPixel.top;
 
                             el.style.willChange = 'transform';
                             el.style.transition = `transform ${TOTAL_MOVE_MS}ms cubic-bezier(0.22, 0.61, 0.36, 1)`;
@@ -2055,7 +2081,9 @@ class DungeonPage extends React.Component {
         const tileContains = tile.contains;
         const itemDefinition = this.props.inventoryManager.allItems[tileContains];
         const itemDisplayName = itemDefinition?.name || (typeof tileContains === 'string' ? tileContains.replaceAll('_', ' ') : tileContains);
-        this.props.inventoryManager.addItem(itemDefinition)
+        if (itemDefinition) {
+            this.props.inventoryManager.addItem(itemDefinition)
+        }
         const matrix = this.state.inventoryHoverMatrix;
         this.props.inventoryManager.inventory.forEach((e,i)=>{
             matrix[i] = '';
@@ -4434,6 +4462,16 @@ class DungeonPage extends React.Component {
 
         return (
         <div className={`dungeon-container ${this.state.ritualWrecked ? 'wrecked' : ''}`}>
+            {this.state.showAmbushPopup && this.state.ambushMonster && (
+                <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ backgroundColor: 'black', border: '2px solid red', padding: '30px', color: 'white', textAlign: 'center', borderRadius: '10px' }}>
+                        <h2 style={{ color: 'red' }}>AMBUSH!</h2>
+                        <p style={{ fontSize: '1.2em' }}>You were ambushed by a {this.state.ambushMonster.name}!</p>
+                        <img src={this.state.ambushMonster.portrait} alt={this.state.ambushMonster.name} style={{ width: '150px', height: '150px', objectFit: 'contain', margin: '20px auto', display: 'block' }} />
+                        <div className="btn" style={{ backgroundColor: 'darkred', color: 'white', padding: '10px 20px', cursor: 'pointer', display: 'inline-block' }} onClick={() => this.startAmbushCombat()}>FIGHT</div>
+                    </div>
+                </div>
+            )}
             {this.state.showNarrativeOverlay && this.state.activeNarrativeSequence && (
                 <NarrativeOverlay
                     sequence={this.state.activeNarrativeSequence}

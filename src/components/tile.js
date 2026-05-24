@@ -3,6 +3,44 @@ import * as images from '../utils/images'
 
 
 function Tile(props) {
+    const hoverLabelTimerRef = React.useRef(null);
+    const [showDelayedHoverLabel, setShowDelayedHoverLabel] = React.useState(false);
+
+    React.useEffect(() => {
+        return () => {
+            if (hoverLabelTimerRef.current) {
+                clearTimeout(hoverLabelTimerRef.current);
+                hoverLabelTimerRef.current = null;
+            }
+        };
+    }, []);
+
+    React.useEffect(() => {
+        if (!props.delayedHoverLabel && showDelayedHoverLabel) {
+            setShowDelayedHoverLabel(false);
+        }
+    }, [props.delayedHoverLabel, showDelayedHoverLabel]);
+
+    const beginDelayedHoverLabel = () => {
+        if (!props.delayedHoverLabel) return;
+        if (hoverLabelTimerRef.current) {
+            clearTimeout(hoverLabelTimerRef.current);
+        }
+        setShowDelayedHoverLabel(false);
+        hoverLabelTimerRef.current = setTimeout(() => {
+            setShowDelayedHoverLabel(true);
+            hoverLabelTimerRef.current = null;
+        }, 1500);
+    };
+
+    const endDelayedHoverLabel = () => {
+        if (hoverLabelTimerRef.current) {
+            clearTimeout(hoverLabelTimerRef.current);
+            hoverLabelTimerRef.current = null;
+        }
+        setShowDelayedHoverLabel(false);
+    };
+
     if(props.image === 'void_fill'){
         console.log('void fill ', images[props.image]);
     }
@@ -73,6 +111,7 @@ function Tile(props) {
             borderBottom: vctBorder ? undefined : ((props.borders && props.borders.bottom) ? props.borders.bottom : '1px solid transparent')
             }}
             onMouseEnter={() => {
+                beginDelayedHoverLabel();
                 if(props.type === 'crew-tile'){
                     return props.handleHover(props)
                 } else if(props.handleHover && props.type === 'overlay-tile'){
@@ -86,6 +125,7 @@ function Tile(props) {
                 }
             }}
             onMouseLeave={() => {
+                endDelayedHoverLabel();
                 if(props.type === 'crew-tile' || props.type === 'inventory-tile'){
                     return props.handleHover(null)
                 } 
@@ -138,6 +178,17 @@ function Tile(props) {
                 </div>
            )}
 
+           {/* Obscured space texture overlay */}
+           { ((props.contains && props.contains.type === 'obscured_space') || props.optionType === 'obscured space') && (
+                <div style={{
+                    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+                    backgroundImage: 'repeating-linear-gradient(45deg, #777 0, #777 2px, transparent 2px, transparent 8px)',
+                    zIndex: 1,
+                    opacity: 0.5,
+                    pointerEvents: 'none'
+                }} />
+           )}
+
            {props.showCoordinates && (() => {
                 const displayCoords = getDisplayCoords(props.coordinates);
                 if (!displayCoords) return null;
@@ -147,6 +198,30 @@ function Tile(props) {
                     </div>
                 )
            })()}
+
+           {showDelayedHoverLabel && props.delayedHoverLabel && (
+                <div style={{
+                    position: 'absolute',
+                    left: '50%',
+                    top: '4px',
+                    transform: 'translateX(-50%)',
+                    maxWidth: '92%',
+                    padding: '2px 5px',
+                    backgroundColor: 'rgba(0, 0, 0, 0.82)',
+                    color: 'white',
+                    fontSize: Math.max(9, props.tileSize * 0.18) + 'px',
+                    lineHeight: 1.15,
+                    borderRadius: '3px',
+                    textAlign: 'center',
+                    zIndex: 20,
+                    pointerEvents: 'none',
+                    whiteSpace: 'nowrap',
+                    textOverflow: 'ellipsis',
+                    overflow: 'hidden'
+                }}>
+                    {props.delayedHoverLabel}
+                </div>
+           )}
         </div>
     )
 }

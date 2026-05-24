@@ -19,6 +19,57 @@ class BoardView extends React.Component {
       super(props)
       this.state = {}
     }
+
+    formatHoverLabel(value) {
+        if (!value) return null;
+        return String(value)
+            .replace(/_/g, ' ')
+            .replace(/\b\w/g, (char) => char.toUpperCase());
+    }
+
+    getTileHoverLabel(tile) {
+        const contains = tile?.contains;
+        if (!contains || typeof contains !== 'object') return null;
+
+        const type = contains.type;
+        const subtype = contains.subtype;
+
+        if (type === 'void' || type === 'empty_space') return null;
+        if (type === 'passage' && !tile?.image) return null;
+
+        if (type === 'item' && subtype) {
+            const keyMatch = (this.props.keys || []).find((entry) => entry.key === subtype);
+            if (keyMatch?.name) return keyMatch.name;
+
+            const jewelMatch = (this.props.mapMaker?.jewelOptions || []).find((entry) => entry.key === subtype);
+            if (jewelMatch?.name) return jewelMatch.name;
+
+            const runeMatch = (this.props.mapMaker?.runeOptions || []).find((entry) => entry.key === subtype);
+            if (runeMatch?.name) return runeMatch.name;
+
+            return this.formatHoverLabel(subtype);
+        }
+
+        if (type && String(type).indexOf('tier_') === 0) {
+            const tierMatch = (this.props.mapMaker?.tierOptions || []).find((entry) => entry.key === type);
+            if (tierMatch?.name) return tierMatch.name;
+        }
+
+        if (type === 'monster' && subtype) {
+            const monsterMatch = Object.values(this.props.monsterManager?.monsters || {}).find((entry) => entry.key === subtype);
+            if (monsterMatch?.name) return monsterMatch.name;
+            return this.formatHoverLabel(subtype);
+        }
+
+        if (type === 'gate' && subtype) {
+            const gateMatch = (this.props.gates || []).find((entry) => entry.key === subtype);
+            if (gateMatch?.name) return gateMatch.name;
+            return this.formatHoverLabel(subtype);
+        }
+
+        if (subtype) return this.formatHoverLabel(subtype);
+        return this.formatHoverLabel(type);
+    }
     
     render (){
         return (
@@ -59,6 +110,7 @@ class BoardView extends React.Component {
                                 editMode={true}
                                 handleHover={this.props.handleHover}
                                 handleClick={this.props.handleClick}
+                                delayedHoverLabel={this.getTileHoverLabel(tile)}
                                 type={tile.type}
                                 hovered={
                                     this.props.hoveredTileIdx === tile.id ?

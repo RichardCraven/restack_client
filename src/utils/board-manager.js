@@ -150,6 +150,9 @@ export function BoardManager(){
     this.establishAddFoodToSuppliesCallback = (callback) => {
         this.addFoodToSupplies = callback
     }
+    this.establishGetCrewCallback = (callback) => {
+        this.getCrew = callback
+    }
     this.establishUpdateDungeonCallback = (callback) => {
         this.updateDungeon = callback;
     }
@@ -395,6 +398,79 @@ export function BoardManager(){
     }
     this.establishAvailableItems = (items) => {
         this.availableItems = items;
+    }
+    this.getCollectiveCrewLevel = () => {
+        const crew = typeof this.getCrew === 'function' ? this.getCrew() : [];
+        if (!Array.isArray(crew)) return 0;
+        return crew.reduce((sum, member) => {
+            const level = Number(member && member.level);
+            return sum + (Number.isFinite(level) ? level : 0);
+        }, 0);
+    }
+    this.getRandomItemKeyForTier = (tier) => {
+        const inventory = this.getCurrentInventory ? this.getCurrentInventory() : null;
+        const itemRegistry = inventory && inventory.allItems ? inventory.allItems : null;
+        if (!itemRegistry) return null;
+
+        const validTypes = ['weapon', 'armor', 'magical'];
+        const pool = Object.keys(itemRegistry).filter((key) => {
+            const item = itemRegistry[key];
+            if (!item) return false;
+            return item.tier === tier && validTypes.includes(item.type);
+        });
+
+        return pool.length ? this.pickRandom(pool) : null;
+    }
+    this.resolveSilverChestReward = () => {
+        const roll = Math.random();
+
+        if (roll < 0.30) {
+            const collectiveLevel = this.getCollectiveCrewLevel();
+            return {
+                kind: 'gold',
+                amount: collectiveLevel * 2
+            };
+        }
+
+        if (roll < 0.60) {
+            return {
+                kind: 'item',
+                itemKey: this.getRandomItemKeyForTier(1)
+            };
+        }
+
+        if (roll < 0.90) {
+            return {
+                kind: 'item',
+                itemKey: 'jewel_shard'
+            };
+        }
+
+        return {
+            kind: 'item',
+            itemKey: 'rune_shard'
+        };
+    }
+    this.handleChestPickup = (chestSubtype, destinationTile) => {
+        switch (chestSubtype) {
+            case 'silver_chest': {
+                const reward = this.resolveSilverChestReward();
+                if (reward.kind === 'gold') {
+                    if (reward.amount > 0) {
+                        this.addCurrencyToInventory({
+                            type: 'gold',
+                            amount: reward.amount
+                        });
+                    }
+                } else if (reward.itemKey) {
+                    this.addItemToInventory({ contains: reward.itemKey });
+                }
+                this.removeTileFromBoard(destinationTile)
+                return 'item';
+            }
+            default:
+                return null;
+        }
     }
     this.getBoardIndexFromBoard = (board) => {
         let v;
@@ -972,6 +1048,10 @@ export function BoardManager(){
                 return 'monster';
             case 'item':
                 console.log('picked up item');
+                if (subtype === 'silver_chest' || subtype === 'gold_chest' || subtype === 'ornate_chest') {
+                    const chestResult = this.handleChestPickup(subtype, destinationTile);
+                    if (chestResult) return chestResult;
+                }
                 // destinationTile.contains may be object; callers expect string contains
                 try {
                     const tileForCallback = Object.assign({}, destinationTile, { contains: subtype });
@@ -1548,7 +1628,46 @@ export function BoardManager(){
             e.borders = null;
         });
 
-        // Bresenham line algorithm to check for blocking 'void' tiles between two coordinates
+        // Helper: returns true if the given tile (from persisted board data) has a solid (non-transparent) border on the given side
+        const isSolidBorder = (tileData, side) => {
+            if (!tileData || !tileData.borders) return false;
+            const b = tileData.borders[side];
+            return !!b && !b.includes('transparent');
+        };
+
+        // Helper: returns true if the passage wall between (prevX,prevY) and (prevX+stepX, prevY+stepY) blocks LOS.
+        // stepX = row delta (-1, 0, or +1), stepY = col delta (-1, 0, or +1).
+        // Only passage tiles (those with a borders object) can block; open room tiles have no borders and never block.
+        const isBorderWallBlocking = (prevX, prevY, stepX, stepY) => {
+            const prevIdx = this.getIndexFromCoordinates([prevX, prevY]);
+            const prevData = this.currentBoard && this.currentBoard.tiles && this.currentBoard.tiles[prevIdx];
+            const nextX = prevX + stepX, nextY = prevY + stepY;
+            const nextIdx = this.getIndexFromCoordinates([nextX, nextY]);
+            const nextData = this.currentBoard && this.currentBoard.tiles && this.currentBoard.tiles[nextIdx];
+            if (stepX !== 0 && stepY !== 0) {
+                // Diagonal step: block if EITHER the row-axis or column-axis border is solid on either crossing tile
+                const rowSide = stepX > 0 ? 'bottom' : 'top';
+                const rowReverse = stepX > 0 ? 'top' : 'bottom';
+                const colSide = stepY > 0 ? 'right' : 'left';
+                const colReverse = stepY > 0 ? 'left' : 'right';
+                const rowBlocked = isSolidBorder(prevData, rowSide) || isSolidBorder(nextData, rowReverse);
+                const colBlocked = isSolidBorder(prevData, colSide) || isSolidBorder(nextData, colReverse);
+                return rowBlocked || colBlocked;
+            }
+            if (stepX !== 0) {
+                const side = stepX > 0 ? 'bottom' : 'top';
+                const reverse = stepX > 0 ? 'top' : 'bottom';
+                return isSolidBorder(prevData, side) || isSolidBorder(nextData, reverse);
+            }
+            if (stepY !== 0) {
+                const side = stepY > 0 ? 'right' : 'left';
+                const reverse = stepY > 0 ? 'left' : 'right';
+                return isSolidBorder(prevData, side) || isSolidBorder(nextData, reverse);
+            }
+            return false;
+        };
+
+        // Bresenham line algorithm to check for blocking 'void' tiles or passage walls between two coordinates
         const isBlockedBetween = (fromIdx, toIdx) => {
             try {
                 const from = this.getCoordinatesFromIndex(fromIdx);
@@ -1560,12 +1679,14 @@ export function BoardManager(){
                 let sx = (x0 < x1) ? 1 : -1;
                 let sy = (y0 < y1) ? 1 : -1;
                 let err = dx - dy;
-                // step through intermediate points (excluding endpoints)
                 while (!(x0 === x1 && y0 === y1)) {
+                    const prevX = x0, prevY = y0;
                     const e2 = err * 2;
                     if (e2 > -dy) { err -= dy; x0 += sx; }
                     if (e2 < dx) { err += dx; y0 += sy; }
-                    // if we've reached the target, break before checking
+                    // Check if this crossing is blocked by a passage wall (checked before break so direct neighbours are also covered)
+                    if (isBorderWallBlocking(prevX, prevY, x0 - prevX, y0 - prevY)) return true;
+                    // if we've reached the target, stop before checking intermediate void/gate conditions
                     if (x0 === x1 && y0 === y1) break;
                     const idx = this.getIndexFromCoordinates([x0, y0]);
                     const tile = this.tiles[idx];

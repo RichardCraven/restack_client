@@ -574,6 +574,13 @@ export function MonsterManager() {
         // return this.monsters['sphinx']
         return this.pickRandom(Object.values(this.monsters))
     }
+    this.getRandomMonsterByTier = (tier) => {
+        let availableMonsters = Object.values(this.monsters).filter(e => e.tier === tier);
+        if (availableMonsters.length > 0) {
+            return JSON.parse(JSON.stringify(this.pickRandom(availableMonsters)));
+        }
+        return this.getRandomMonster();
+    }
 
 
 

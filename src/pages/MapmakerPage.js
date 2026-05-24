@@ -546,12 +546,113 @@ class MapMakerPage extends React.Component {
     window.addEventListener('resize', this.handleResize.bind(this));
   }
 
+  getDeleteResultForTile = (tile) => {
+    const hasPassageBorders = tile && tile.borders && ['top', 'right', 'bottom', 'left'].some(side => {
+      const borderValue = tile.borders[side];
+      return typeof borderValue === 'string' && borderValue.indexOf('2px solid') !== -1;
+    });
+
+    if (tile?.contains?.type === 'item' && hasPassageBorders) {
+      return {
+        ...tile,
+        image: null,
+        color: null,
+        contains: { type: 'passage', subtype: null }
+      };
+    }
+
+    return {
+      ...tile,
+      image: null,
+      color: null,
+      contains: { type: 'empty_space', subtype: null },
+      borders: null
+    };
+  }
+
+  isParentPaletteOption = (optionType) => {
+    return ['monsters', 'gate', 'key', 'items', 'jewels', 'runes', 'treasure'].includes(optionType);
+  }
+
+  getDefaultPassageBorders = (tile) => {
+    return tile?.borders ? { ...tile.borders } : {
+      top: '2px solid black',
+      bottom: '2px solid black',
+      left: '2px solid black',
+      right: '2px solid black'
+    };
+  }
+
+  breakPassageWall = (tiles, fromTileId, toTileId) => {
+    if (fromTileId === null || fromTileId === undefined || toTileId === null || toTileId === undefined || fromTileId === toTileId) {
+      return tiles;
+    }
+
+    const delta = toTileId - fromTileId;
+    let fromSide = null;
+    let toSide = null;
+
+    if (delta === 1) {
+      fromSide = 'right';
+      toSide = 'left';
+    } else if (delta === -1) {
+      fromSide = 'left';
+      toSide = 'right';
+    } else if (delta === 15) {
+      fromSide = 'bottom';
+      toSide = 'top';
+    } else if (delta === -15) {
+      fromSide = 'top';
+      toSide = 'bottom';
+    } else {
+      return tiles;
+    }
+
+    const nextTiles = [...tiles];
+    const sourceTile = nextTiles[fromTileId];
+    if (!sourceTile?.contains || sourceTile.contains.type !== 'passage') {
+      return tiles;
+    }
+
+    nextTiles[fromTileId] = {
+      ...sourceTile,
+      borders: {
+        ...this.getDefaultPassageBorders(sourceTile),
+        [fromSide]: '2px solid transparent'
+      }
+    };
+
+    const targetTile = nextTiles[toTileId];
+    if (targetTile?.contains && targetTile.contains.type === 'passage') {
+      nextTiles[toTileId] = {
+        ...targetTile,
+        borders: {
+          ...this.getDefaultPassageBorders(targetTile),
+          [toSide]: '2px solid transparent'
+        }
+      };
+    }
+
+    return nextTiles;
+  }
+
   handleHover = (id, type) => {
-    if(this.state.mouseDown && this.state.pinnedOption && this.props.mapMaker.paletteTiles[this.state.pinnedOption.id]){
+    const pinnedPaletteTile = this.state.pinnedOption && this.props.mapMaker.paletteTiles[this.state.pinnedOption.id]
+      ? this.props.mapMaker.paletteTiles[this.state.pinnedOption.id]
+      : null;
+    const pinnedPassageTool = this.state.pinnedOption?.type === 'passage-tool-tile'
+      ? this.props.mapMaker.passageOptions?.[this.state.pinnedOption.id]
+      : null;
+    if(this.state.mouseDown && this.state.pinnedOption && (pinnedPaletteTile || pinnedPassageTool)){
       let tile = this.props.mapMaker.tiles[id];
-      let pinned = null;
-      if(this.props.mapMaker.paletteTiles[this.state.pinnedOption.id]){
-        pinned = this.props.mapMaker.paletteTiles[this.state.pinnedOption.id]
+      let pinned = pinnedPaletteTile;
+      if (pinnedPassageTool?.key === 'wall_breaker') {
+        const arr = this.breakPassageWall([...this.state.tiles], this.state.hoveredTileIdx, tile.id);
+        this.setState({
+          tiles: arr,
+          hoveredTileIdx: tile.id
+        })
+        return;
       }
       if(pinned && pinned.optionType === 'passage'){
         let arr = [...this.state.tiles]
@@ -585,10 +686,31 @@ class MapMakerPage extends React.Component {
         if (connectedLeft) newBorders.left = '2px solid transparent';
         
         arr[tile.id].image = null;
-        arr[tile.id].color = 'white';
+        arr[tile.id].color = null;
         arr[tile.id].contains = { type: 'passage', subtype: null };
         arr[tile.id].borders = newBorders;
         
+        this.setState({
+          hoveredTileIdx: tile.id,
+          tiles: arr
+        })
+      } else if(pinned && pinned.optionType === 'empty space'){
+        let arr = [...this.state.tiles]
+        arr[tile.id].image = null;
+        arr[tile.id].color = null;
+        arr[tile.id].contains = { type: 'empty_space', subtype: null }
+        arr[tile.id].borders = null;
+        this.setState({
+          hoveredTileIdx: tile.id,
+          tiles: arr
+        })
+      } else if(pinned && pinned.optionType === 'obscured space'){
+        let arr = [...this.state.tiles]
+        const preservedBorders = arr[tile.id].borders ? { ...arr[tile.id].borders } : null;
+        arr[tile.id].image = null;
+        arr[tile.id].color = '#a8a8a8';
+        arr[tile.id].contains = { type: 'obscured_space', subtype: null }
+        arr[tile.id].borders = preservedBorders;
         this.setState({
           hoveredTileIdx: tile.id,
           tiles: arr
@@ -606,10 +728,7 @@ class MapMakerPage extends React.Component {
       } 
       if(pinned && pinned.optionType === 'delete'){
         let arr = [...this.state.tiles];
-        arr[tile.id].image = null;
-        arr[tile.id].color = null;
-        arr[tile.id].contains = null;
-        arr[tile.id].borders = null;
+        arr[tile.id] = this.getDeleteResultForTile(arr[tile.id]);
         this.setState({
           tiles: arr,
           hoveredTileIdx: null
@@ -670,16 +789,20 @@ class MapMakerPage extends React.Component {
         })
       }
       
-    } else if(tile.type === 'monster-tile' || tile.type === 'gate-tile' || tile.type === 'key-tile' || tile.type === 'tier-tile' || tile.type === 'jewel-tile' || tile.type === 'rune-tile'){
-      console.log('MONSTER/GATE/KEY/TIER/JEWEL/RUNE TILE');
+    } else if(tile.type === 'monster-tile' || tile.type === 'gate-tile' || tile.type === 'key-tile' || tile.type === 'tier-tile' || tile.type === 'jewel-tile' || tile.type === 'rune-tile' || tile.type === 'treasure-tile'){
+      console.log('MONSTER/GATE/KEY/TIER/JEWEL/RUNE/TREASURE TILE');
       this.setState({
         pinnedOption: tile
       })
       setTimeout(()=>{
         console.log('pinnedoption: ', this.state.pinnedOption);
       },500)
+    } else if(tile.type === 'passage-tool-tile'){
+      this.setState({
+        pinnedOption: tile
+      })
     } else if(tile.type === 'board-tile'){
-      let pinned = null, monster, gate, key, tierOption, jewelOption, runeOption;
+      let pinned = null, monster, gate, key, tierOption, jewelOption, runeOption, treasureOption, passageToolOption;
       if(this.state.pinnedOption && this.state.pinnedOption.type === 'monster-tile'){
         monster = Object.values(this.props.monsterManager.monsters)[this.state.pinnedOption.id];
       };
@@ -698,6 +821,12 @@ class MapMakerPage extends React.Component {
       };
       if(this.state.pinnedOption && this.state.pinnedOption.type === 'rune-tile'){
         runeOption = this.props.mapMaker.runeOptions[this.state.pinnedOption.id];
+      };
+      if(this.state.pinnedOption && this.state.pinnedOption.type === 'treasure-tile'){
+        treasureOption = this.props.mapMaker.treasureOptions[this.state.pinnedOption.id];
+      };
+      if(this.state.pinnedOption && this.state.pinnedOption.type === 'passage-tool-tile'){
+        passageToolOption = this.props.mapMaker.passageOptions[this.state.pinnedOption.id];
       };
       if(monster){
         console.log('monster get here, monster: ', monster);
@@ -759,6 +888,17 @@ class MapMakerPage extends React.Component {
           hoveredTileIdx: null
         })
         return
+      } else if(treasureOption){
+        let arr = [...this.state.tiles];
+        arr[tile.id].contains = { type: 'item', subtype: treasureOption.key }
+        arr[tile.id].image = images[treasureOption.image]
+        this.setState({
+          tiles: arr,
+          hoveredTileIdx: null
+        })
+        return
+      } else if(passageToolOption){
+        return
       } else if(this.state.pinnedOption && this.props.mapMaker.paletteTiles[this.state.pinnedOption.id]){ 
         pinned = this.props.mapMaker.paletteTiles[this.state.pinnedOption.id]
       }
@@ -772,7 +912,7 @@ class MapMakerPage extends React.Component {
           });
         } else {
           arr[tile.id].image = null;
-          arr[tile.id].color = 'white'
+          arr[tile.id].color = null
           arr[tile.id].contains = { type: 'passage', subtype: null }
           arr[tile.id].borders = { top: '2px solid black', bottom: '2px solid black', left: '2px solid black', right: '2px solid black' };
           this.setState({
@@ -780,6 +920,27 @@ class MapMakerPage extends React.Component {
             hoveredTileIdx: tile.id
           })
         }
+      } else if(pinned && pinned.optionType === 'empty space'){
+        let arr = [...this.state.tiles];
+        arr[tile.id].image = null;
+        arr[tile.id].color = null
+        arr[tile.id].contains = { type: 'empty_space', subtype: null }
+        arr[tile.id].borders = null;
+        this.setState({
+          tiles: arr,
+          hoveredTileIdx: tile.id
+        })
+      } else if(pinned && pinned.optionType === 'obscured space'){
+        let arr = [...this.state.tiles];
+        const preservedBorders = arr[tile.id].borders ? { ...arr[tile.id].borders } : null;
+        arr[tile.id].image = null;
+        arr[tile.id].color = '#a8a8a8'
+        arr[tile.id].contains = { type: 'obscured_space', subtype: null }
+        arr[tile.id].borders = preservedBorders;
+        this.setState({
+          tiles: arr,
+          hoveredTileIdx: tile.id
+        })
       } else if(pinned && pinned.optionType === 'void'){
         let arr = [...this.state.tiles];
         arr[tile.id].image = null;
@@ -793,7 +954,7 @@ class MapMakerPage extends React.Component {
       } else if(pinned && pinned.optionType === 'voidfill'){
         let arr = [...this.state.tiles];
         arr.forEach(e=>{
-          if (!e.contains) {
+          if (!e.contains || (e.contains && e.contains.type === 'empty_space')) {
             e.image = null;
             e.color = 'black'
             e.contains = { type: 'void', subtype: null }
@@ -806,14 +967,13 @@ class MapMakerPage extends React.Component {
         })
       } else if(pinned && pinned.optionType === 'delete'){
         let arr = [...this.state.tiles];
-        arr[tile.id].image = null;
-        arr[tile.id].color = null;
-        arr[tile.id].contains = null;
-        arr[tile.id].borders = null;
+        arr[tile.id] = this.getDeleteResultForTile(arr[tile.id]);
         this.setState({
           tiles: arr,
           hoveredTileIdx: null
         })
+      } else if(pinned && this.isParentPaletteOption(pinned.optionType)){
+        return
       } else if(pinned){
         let arr = [...this.state.tiles];
         // Store new contains shape for placed tiles. Prefer canonical shapes:
@@ -935,6 +1095,13 @@ class MapMakerPage extends React.Component {
     const matrix = { ...this.state.boardsFoldersExpanded };
     matrix[folderTitle] = !matrix[folderTitle];
     this.setState(() => { return {boardsFoldersExpanded: matrix}})
+
+    // Persist only folder UI expansion state.
+    setEditorPreference('boardsFoldersExpanded', matrix);
+    const userId = sessionStorage.getItem('userId');
+    const meta = getMeta();
+    if(userId) updateUserRequest(userId, meta)
+    storeMeta(meta);
   }
 
   expandCollapsePlaneFolders = (folderTitle) => {
@@ -1190,6 +1357,13 @@ class MapMakerPage extends React.Component {
       tiles: boardRef.tiles,
       selectedThingTitle: `Board: ${board.name}`
     })
+
+    // Persist only selected board identity. Never persist tile/content edits here.
+    setEditorPreference('loadedBoardId', boardRef.id || null);
+    const userId = sessionStorage.getItem('userId');
+    const meta = getMeta();
+    if(userId) updateUserRequest(userId, meta)
+    storeMeta(meta);
   }
   zoomIntoBoard = (levelId, miniboardIndex, frontOrBack) => {
     console.log('zoom into ', levelId, miniboardIndex, frontOrBack);
@@ -1512,6 +1686,7 @@ class MapMakerPage extends React.Component {
     const boards = [],
     boardsFolders = [],
     boardsFoldersExpanded = {};
+    const meta = getMeta();
     val.data.forEach((e)=>{
       let board = JSON.parse(e.content)
       board.id = e._id;
@@ -1565,6 +1740,16 @@ class MapMakerPage extends React.Component {
         boardsFoldersExpanded[title] = false;
       })
     })
+
+    const persistedExpanded = meta?.preferences?.editor?.boardsFoldersExpanded;
+    if(persistedExpanded && typeof persistedExpanded === 'object'){
+      Object.keys(boardsFoldersExpanded).forEach((folderKey) => {
+        if(typeof persistedExpanded[folderKey] === 'boolean'){
+          boardsFoldersExpanded[folderKey] = persistedExpanded[folderKey];
+        }
+      })
+    }
+
     return new Promise((resolve) => {
       this.setState(() => {
         return {
@@ -1573,6 +1758,7 @@ class MapMakerPage extends React.Component {
           boardsFoldersExpanded
         }
       }, () => {
+        let handoffBoardId = null;
         // Check for cross-page dev console handoff
         try {
           const handoffRaw = sessionStorage.getItem('devConsoleHandoff');
@@ -1585,6 +1771,7 @@ class MapMakerPage extends React.Component {
               });
             }
             if (handoff.boardId) {
+              handoffBoardId = handoff.boardId;
               setTimeout(() => {
                 const boardRef = this.findBoardRefInFolders(handoff.boardId);
                 if (boardRef) {
@@ -1597,6 +1784,16 @@ class MapMakerPage extends React.Component {
             }
           }
         } catch(_) {}
+
+        const persistedLoadedBoardId = meta?.preferences?.editor?.loadedBoardId;
+        if (persistedLoadedBoardId && !handoffBoardId) {
+          const persistedBoardRef = this.findBoardRefInFolders(persistedLoadedBoardId);
+          if (persistedBoardRef) {
+            this.loadBoard(persistedBoardRef);
+          } else {
+            setEditorPreference('loadedBoardId', null);
+          }
+        }
         resolve();
       })
     })
@@ -1692,7 +1889,7 @@ class MapMakerPage extends React.Component {
         let arr = [...this.state.tiles]
         for(let t of arr){
           t.image = null;
-          t.contains = null;
+          t.contains = { type: 'empty_space', subtype: null };
           t.color = null
         }
         this.setState({
@@ -1700,6 +1897,14 @@ class MapMakerPage extends React.Component {
           tiles: arr,
           // miniboards
         })
+
+        // Clear persisted selected board identity when board is unloaded.
+        setEditorPreference('loadedBoardId', null);
+        const userId = sessionStorage.getItem('userId');
+        const meta = getMeta();
+        if(userId) updateUserRequest(userId, meta)
+        storeMeta(meta);
+
         console.log('should have cleared thre board');
         setTimeout(()=>{
           console.log('resolving promise');

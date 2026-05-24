@@ -187,6 +187,30 @@ export function InventoryManager(){
         'crown',
         'lantern'
     ]
+    this.jewels_names = [
+        'ruby',
+        'sapphire',
+        'amber',
+        'ruby_shards',
+        'sapphire_shards',
+        'amber_shards',
+        'pyrite',
+        'benthite',
+        'memnite',
+        'labradite',
+        'malachite',
+        'onyx',
+        'pyrite_cluster',
+        'benthite_cluster',
+        'memnite_cluster',
+        'labradite_cluster',
+        'malachite_cluster',
+        'onyx_cluster',
+        'yazatas_focus',
+        'mishnes_focus',
+        'masekets_focus',
+        'abyssal_crystal'
+    ]
     this.keys_names = [
         'minor_key',
         'major_key',
@@ -2122,6 +2146,181 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             description: ''
         }
     });
+    this.jewels = {
+        ruby: {
+            icon: 'ruby',
+            type: 'jewel',
+            name: 'ruby',
+            tier: 1,
+            shard: false,
+            slottedIn: null
+        },
+        sapphire: {
+            icon: 'sapphire',
+            type: 'jewel',
+            name: 'sapphire',
+            tier: 1,
+            shard: false,
+            slottedIn: null
+        },
+        amber: {
+            icon: 'amber',
+            type: 'jewel',
+            name: 'amber',
+            tier: 1,
+            shard: false,
+            slottedIn: null
+        },
+        ruby_shards: {
+            icon: 'ruby_shards',
+            type: 'jewel',
+            name: 'ruby shards',
+            tier: 1,
+            shard: true
+        },
+        sapphire_shards: {
+            icon: 'sapphire_shards',
+            type: 'jewel',
+            name: 'sapphire shards',
+            tier: 1,
+            shard: true
+        },
+        amber_shards: {
+            icon: 'amber_shards',
+            type: 'jewel',
+            name: 'amber shards',
+            tier: 1,
+            shard: true
+        },
+        pyrite: {
+            icon: 'pyrite',
+            type: 'jewel',
+            name: 'pyrite',
+            tier: 2,
+            shard: false,
+            cluster: false,
+            slottedIn: null
+        },
+        benthite: {
+            icon: 'benthite',
+            type: 'jewel',
+            name: 'benthite',
+            tier: 2,
+            shard: false,
+            cluster: false,
+            slottedIn: null
+        },
+        memnite: {
+            icon: 'memnite',
+            type: 'jewel',
+            name: 'memnite',
+            tier: 2,
+            shard: false,
+            cluster: false,
+            slottedIn: null
+        },
+        labradite: {
+            icon: 'labradite',
+            type: 'jewel',
+            name: 'labradite',
+            tier: 2,
+            shard: false,
+            cluster: false,
+            slottedIn: null
+        },
+        malachite: {
+            icon: 'malachite',
+            type: 'jewel',
+            name: 'malachite',
+            tier: 2,
+            shard: false,
+            cluster: false,
+            slottedIn: null
+        },
+        onyx: {
+            icon: 'onyx',
+            type: 'jewel',
+            name: 'onyx',
+            tier: 2,
+            shard: false,
+            cluster: false,
+            slottedIn: null
+        },
+        pyrite_cluster: {
+            icon: 'pyrite_cluster',
+            type: 'jewel',
+            name: 'pyrite cluster',
+            tier: 2,
+            cluster: true
+        },
+        benthite_cluster: {
+            icon: 'benthite_cluster',
+            type: 'jewel',
+            name: 'benthite cluster',
+            tier: 2,
+            cluster: true
+        },
+        memnite_cluster: {
+            icon: 'memnite_cluster',
+            type: 'jewel',
+            name: 'memnite cluster',
+            tier: 2,
+            cluster: true
+        },
+        labradite_cluster: {
+            icon: 'labradite_cluster',
+            type: 'jewel',
+            name: 'labradite cluster',
+            tier: 2,
+            cluster: true
+        },
+        malachite_cluster: {
+            icon: 'malachite_cluster',
+            type: 'jewel',
+            name: 'malachite cluster',
+            tier: 2,
+            cluster: true
+        },
+        onyx_cluster: {
+            icon: 'onyx_cluster',
+            type: 'jewel',
+            name: 'onyx cluster',
+            tier: 2,
+            cluster: true
+        },
+        yazatas_focus: {
+            icon: 'yazatas_focus',
+            type: 'jewel',
+            name: 'yazatas focus',
+            tier: 3,
+            shard: false,
+            slottedIn: null
+        },
+        mishnes_focus: {
+            icon: 'mishnes_focus',
+            type: 'jewel',
+            name: 'mishnes focus',
+            tier: 3,
+            shard: false,
+            slottedIn: null
+        },
+        masekets_focus: {
+            icon: 'masekets_focus',
+            type: 'jewel',
+            name: 'masekets focus',
+            tier: 3,
+            shard: false,
+            slottedIn: null
+        },
+        abyssal_crystal: {
+            icon: 'abyssal_crystal',
+            type: 'jewel',
+            name: 'abyssal focus',
+            tier: 3,
+            shard: false,
+            slottedIn: null
+        }
+    }
     this.misc = {
         ornate_key: {
             icon: 'ornate_key',
@@ -2220,7 +2419,11 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'lantern',
             equippedBy: null,
             animation: null
-        }
+        },
+
+        // crystals
+        
+
     }
 
     // Fill any explicitly blank descriptions without overwriting authored text.
@@ -2304,6 +2507,9 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
         }
         for(let key in this.magical){
             this.allItems[key] = this.magical[key]
+        }
+        for(let key in this.jewels){
+            this.allItems[key] = this.jewels[key]
         }
         this.iconToKey = {};
         for(let key in this.weapons){

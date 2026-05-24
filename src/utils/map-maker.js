@@ -7,16 +7,14 @@ export function MapMaker(props){
         'void fill',
         'void',
         'passage',
+        'empty space',
+        'obscured space',
         'door',
-        'pit',
         'way up',
         'way down',
-        'cloud',
         'spawn',
         
         'monsters',
-        'item',
-        'magic',
         'narrative',
         'key',
         'items',
@@ -30,7 +28,10 @@ export function MapMaker(props){
         'oracle',
         'dream den',
 
-        'devil'
+        'devil',
+        'pit',
+        'cloud',
+        'magic'
     ]
 
     this.tierOptions = [
@@ -90,6 +91,16 @@ export function MapMaker(props){
         { key: 'feldspar_rune', name: 'Feldspar rune', image: 'feldspar_rune' },
         { key: 'archaic_rune', name: 'Archaic rune', image: 'archaic_rune' },
         { key: 'sulphuric_rune', name: 'Sulphuric rune', image: 'sulphuric_rune' },
+    ];
+
+    this.treasureOptions = [
+        { key: 'silver_chest', name: 'Silver chest', image: 'silver_chest' },
+        { key: 'gold_chest', name: 'Gold chest', image: 'gold_chest' },
+        { key: 'ornate_chest', name: 'Ornate chest', image: 'ornate_chest' },
+    ];
+
+    this.passageOptions = [
+        { key: 'wall_breaker', name: 'Wall breaker', image: null }
     ];
 
     this.paletteTiles = [];
@@ -274,7 +285,7 @@ export function MapMaker(props){
                 id: i,
                 color: null,
                 showCoordinates: false,
-                contains: null
+                contains: { type: 'empty_space', subtype: null }
             })
         }
         for(let row = 0; row < 15; row++){
@@ -305,8 +316,24 @@ export function MapMaker(props){
                     type: 'palette-tile',
                     optionType: 'passage',
                     image: null,
-                    color: 'white',
+                    color: null,
                     borders: { top: '2px solid black', left: '2px solid black', right: '2px solid black', bottom: '2px solid transparent' },
+                    id: i
+                })
+            } else if(key === 'empty space'){
+                this.paletteTiles.push({
+                    type: 'palette-tile',
+                    optionType: 'empty space',
+                    image: null,
+                    color: null,
+                    id: i
+                })
+            } else if(key === 'obscured space'){
+                this.paletteTiles.push({
+                    type: 'palette-tile',
+                    optionType: 'obscured space',
+                    image: null,
+                    color: '#a8a8a8',
                     id: i
                 })
             } else {
@@ -627,6 +654,8 @@ export function MapMaker(props){
                 return 'abyssal_crystal'
             case 'runes':
                 return 'archaic_rune'
+            case 'treasure':
+                return 'silver_chest'
             case 'stairs':
                 return 'stairs_down'
             case 'door':

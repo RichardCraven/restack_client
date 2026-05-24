@@ -381,31 +381,39 @@ import banner from '../assets/icons/misc/loot/banner.png'
 // import res_78 from '../assets/icons/misc/loot/Res_78.png'
 
 
-import green_opal from '../assets/icons/misc/loot/green opal.png'
-import blue_opal from '../assets/icons/misc/loot/blue opal.png'
-import red_opal from '../assets/icons/misc/loot/red opal.png'
-import amber_opal from '../assets/icons/misc/loot/amber opal.png'
+// import green_opal from '../assets/icons/misc/loot/green opal.png'
+
 import amber from '../assets/icons/misc/loot/amber.png'
 import sapphire from '../assets/icons/misc/loot/sapphire.png'
 import ruby from '../assets/icons/misc/loot/ruby.png'
+
+
 import amber_shards from '../assets/icons/misc/loot/amber shards.png'
 import sapphire_shards from '../assets/icons/misc/loot/sapphire shards.png'
 import ruby_shards from '../assets/icons/misc/loot/ruby shards.png'
-import blue_crystal from '../assets/icons/misc/loot/blue crystal.png'
-import purple_crystal from '../assets/icons/misc/loot/purple crystal.png'
-import pink_crystal from '../assets/icons/misc/loot/pink crystal.png'
-import green_crystal from '../assets/icons/misc/loot/green crystal.png'
-import ruddy_crystal from '../assets/icons/misc/loot/ruddy crystal.png'
-import saphite_crystal from '../assets/icons/misc/loot/Saphite crystal.png'
-import magentite_crystal from '../assets/icons/misc/loot/Magentite crystal.png'
-import moxite_crystal from '../assets/icons/misc/loot/Moxite crystal.png'
-import abyssal_crystal from '../assets/icons/misc/loot/Abyssal crystal.png'
-import pyrite from '../assets/icons/misc/loot/pyrite.png'
-import benthite from '../assets/icons/misc/loot/benthite.png'
+
+
 import labradite from '../assets/icons/misc/loot/labradite.png'
-import memnite from '../assets/icons/misc/loot/memnite.png'
 import malachite from '../assets/icons/misc/loot/malachite.png'
+import benthite from '../assets/icons/misc/loot/benthite.png'
+import pyrite from '../assets/icons/misc/loot/pyrite.png'
+import memnite from '../assets/icons/misc/loot/memnite.png'
 import onyx from '../assets/icons/misc/loot/onyx.png'
+
+import labradite_cluster from '../assets/icons/misc/loot/labradite cluster.png'
+import malachite_cluster from '../assets/icons/misc/loot/malachite cluster.png'
+import benthite_cluster from '../assets/icons/misc/loot/benthite cluster.png'
+import pyrite_cluster from '../assets/icons/misc/loot/pyrite cluster.png'
+import memnite_cluster from '../assets/icons/misc/loot/memnite cluster.png'
+import onyx_cluster from '../assets/icons/misc/loot/onyx cluster.png'
+
+
+
+import yazatas_focus from '../assets/icons/misc/loot/yazatas focus.png'
+import mishnes_focus from '../assets/icons/misc/loot/mishnes focus.png'
+import masekets_focus from '../assets/icons/misc/loot/masekets focus.png'
+import abyssal_crystal from '../assets/icons/misc/loot/abyssal focus.png'
+
 
 // runes
 import volcanic_rune from '../assets/icons/runes/volcanic.png'
@@ -423,6 +431,9 @@ import quest_09_goldbar from '../assets/icons/misc/loot/gold/Quest_09_goldbar.pn
 import quest_10_treasure from '../assets/icons/misc/loot/gold/Quest_10_treasure.png'
 import quest_128_dragontreasure from '../assets/icons/misc/loot/gold/Quest_128_dragontreasure.png'
 import quest_48_pirate from '../assets/icons/misc/loot/gold/Quest_48_pirate.png'
+import silver_chest from '../assets/icons/misc/loot/silver chest.png'
+import gold_chest from '../assets/icons/misc/loot/gold chest.png'
+import ornate_chest from '../assets/icons/misc/loot/ornate chest.png'
 
 // crew
 import archer from '../assets/icons/crew_icons/archer.png'
@@ -1129,10 +1140,6 @@ export {
     magic_moon_1,
     food,
 
-    green_opal,
-    blue_opal,
-    red_opal,
-    amber_opal,
     // rune,
     quest_crown,
     banner,
@@ -1147,15 +1154,16 @@ export {
     amber_shards,
     sapphire_shards,
     ruby_shards,
-    blue_crystal,
-    purple_crystal,
-    pink_crystal,
-    green_crystal,
-    ruddy_crystal,
-    saphite_crystal,
-    magentite_crystal,
-    moxite_crystal,
+    pyrite_cluster,
+    benthite_cluster,
+    memnite_cluster,
+    labradite_cluster,
+    malachite_cluster,
+    onyx_cluster,
     abyssal_crystal,
+    yazatas_focus,
+    mishnes_focus,
+    masekets_focus,
     pyrite,
     benthite,
     labradite,
@@ -1175,6 +1183,9 @@ export {
     quest_10_treasure,
     quest_128_dragontreasure,
     quest_48_pirate,
+    silver_chest,
+    gold_chest,
+    ornate_chest,
 
     archer,
     barbarian,
