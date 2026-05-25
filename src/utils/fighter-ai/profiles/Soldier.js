@@ -521,7 +521,16 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
      */
     this.triggerShieldWall = (caller, combatants) => {
         const shieldWall = caller.specials && caller.specials.find(s => s && s.name === 'shield wall');
-        if (!shieldWall) return;
+        if (!shieldWall) return false;
+        if (shieldWall.cooldown_position !== 100 || caller.shieldWallActive) return false;
+
+        const energyCost = Number(shieldWall.energy_cost) || 0;
+        const currentEnergy = typeof caller.energy === 'number' ? caller.energy : 0;
+        if (currentEnergy < energyCost) return false;
+
+        // Spend energy at cast time so both AI-triggered and manual-triggered
+        // Shield Wall use the configured energy_cost.
+        caller.energy = Math.max(0, currentEnergy - energyCost);
 
         const wallX = this._wallColumnForCaller(caller);
         const centerY = caller.coordinates.y;
@@ -578,6 +587,12 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
                 this._expireShieldWall(caller, combatants);
             }, eraDurationMs);
         }
+
+        if (typeof this.broadcastDataUpdate === 'function') {
+            try { this.broadcastDataUpdate(caller); } catch (e) { /* non-fatal */ }
+        }
+
+        return true;
     }
 
     /**

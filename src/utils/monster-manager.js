@@ -64,7 +64,7 @@ export function MonsterManager() {
             image_names: ['skeleton'],
             monster_names: ['bones'],
             stats: {
-                hp: 35,
+                hp: 20,
                 atk: 5,
                 def: 7,
                 speed: 7, // shambling undead

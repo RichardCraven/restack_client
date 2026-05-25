@@ -247,7 +247,7 @@ export default function FightersCombatGrid(props) {
                                             backgroundSize: (details?.berserkerActive && details?.feared && !details?.stunned) ? '100% 100%' : undefined,
                                             filter: [
                                                 details?.chargingUpActive ? "url('#ripple-effect')" : null,
-                                                `saturate(${fighter.type === 'barbarian' ? Math.min(10, ((details?.hp / fighter.stats.hp) * 100) / 2) : ((details?.hp / fighter.stats.hp) * 100) / 2}) sepia(${props.portraitHoveredId === fighter.id ? '2' : '0'})`,
+                                                `saturate(${(fighter.type === 'barbarian' || fighter.type === 'monk') ? Math.min(10, ((details?.hp / fighter.stats.hp) * 100) / 2) : ((details?.hp / fighter.stats.hp) * 100) / 2}) sepia(${props.portraitHoveredId === fighter.id ? '2' : '0'})`,
                                                 details?.frozen ? 'hue-rotate(165deg) saturate(1.35) brightness(1.08) contrast(1.05)' : '',
                                                 (details?.berserkerActive && details?.feared && !details?.stunned) ? 'brightness(1.18)' : ''
                                             ].filter(Boolean).join(' '),

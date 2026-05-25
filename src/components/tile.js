@@ -117,6 +117,103 @@ function Tile(props) {
         }
     })();
 
+    const isBoardGridTile = props.type === 'board-tile' && !vctBorder && !isVendorCell;
+    const getContainsType = (contains) => {
+        if (!contains) return null;
+        if (typeof contains === 'object') return contains.type || null;
+        if (typeof contains === 'string') return contains;
+        return null;
+    };
+    const isVoidContains = (contains) => getContainsType(contains) === 'void';
+    const edgeColorFromBorder = (borderValue) => {
+        if (!borderValue) return '#ffffff';
+        return String(borderValue).includes('transparent') ? '#ffffff' : '#000000';
+    };
+    const tileIndex = (typeof props.id === 'number') ? props.id : ((typeof props.index === 'number') ? props.index : null);
+    const tileRow = (tileIndex !== null) ? Math.floor(tileIndex / 15) : null;
+    const tileCol = (tileIndex !== null) ? (tileIndex % 15) : null;
+    const coords = Array.isArray(props.coordinates) ? props.coordinates : null;
+    const isLastCol = coords ? coords[1] === 29 : tileCol === 14;
+    const isLastRow = coords ? coords[0] === 29 : tileRow === 14;
+
+    const boardTiles = Array.isArray(props.boardTiles) ? props.boardTiles : null;
+    const currentTile = (tileIndex !== null && boardTiles && boardTiles[tileIndex]) ? boardTiles[tileIndex] : null;
+    const currentContains = currentTile ? currentTile.contains : props.contains;
+    const currentTileColor = (currentTile && typeof currentTile.color !== 'undefined') ? currentTile.color : props.color;
+    const getNeighborTile = (delta) => {
+        if (tileIndex === null || !boardTiles) return null;
+        if (tileRow === null || tileCol === null) return null;
+
+        if (delta === -1 && tileCol === 0) return null;
+        if (delta === 1 && tileCol === 14) return null;
+        if (delta === -15 && tileRow === 0) return null;
+        if (delta === 15 && tileRow === 14) return null;
+
+        const neighborIndex = tileIndex + delta;
+        const neighbor = boardTiles[neighborIndex];
+        return neighbor || null;
+    };
+    const getBorderColorIntent = (borderValue) => {
+        if (!borderValue) return 'white';
+        return String(borderValue).includes('transparent') ? 'white' : 'black';
+    };
+    const isBlackRenderedTile = (contains, color) => {
+        if (isVoidContains(contains)) return true;
+        if (color === null || color === undefined) return false;
+        const normalized = String(color).trim().toLowerCase();
+        const compact = normalized.replace(/\s+/g, '');
+        return normalized === 'black' ||
+            normalized === '#000' ||
+            normalized === '#000000' ||
+            compact === 'rgb(0,0,0)' ||
+            compact.startsWith('rgba(0,0,0,') ||
+            compact.startsWith('rgb(0,0,0,') ||
+            compact === '#000000ff';
+    };
+    const edgeColorForBoundary = (currentBorderValue, neighborBorderValue, neighborContains, neighborColor) => {
+        if (isBlackRenderedTile(currentContains, currentTileColor) || isBlackRenderedTile(neighborContains, neighborColor)) return '#000000';
+        const currentIntent = getBorderColorIntent(currentBorderValue);
+        const neighborIntent = getBorderColorIntent(neighborBorderValue);
+        if (currentIntent === 'black' || neighborIntent === 'black') return '#000000';
+        return 'transparent';
+    };
+
+    const topNeighbor = getNeighborTile(-15);
+    const leftNeighbor = getNeighborTile(-1);
+    const rightNeighbor = getNeighborTile(1);
+    const bottomNeighbor = getNeighborTile(15);
+    const rightNeighborIsVendor = !!(rightNeighbor && getContainsType(rightNeighbor.contains) === 'vendor');
+    const bottomNeighborIsVendor = !!(bottomNeighbor && getContainsType(bottomNeighbor.contains) === 'vendor');
+    const edgeLines = isBoardGridTile ? {
+        top: edgeColorForBoundary(
+            props.borders && props.borders.top,
+            topNeighbor && topNeighbor.borders ? topNeighbor.borders.bottom : null,
+            topNeighbor ? topNeighbor.contains : null,
+            topNeighbor ? topNeighbor.color : null
+        ),
+        left: edgeColorForBoundary(
+            props.borders && props.borders.left,
+            leftNeighbor && leftNeighbor.borders ? leftNeighbor.borders.right : null,
+            leftNeighbor ? leftNeighbor.contains : null,
+            leftNeighbor ? leftNeighbor.color : null
+        ),
+        // Right/bottom are normally owned by the neighbor's left/top edge.
+        // Vendor cells intentionally skip grid-edge rendering, so render a fallback
+        // right/bottom edge when the neighbor is a vendor tile.
+        right: (isLastCol || rightNeighborIsVendor) ? edgeColorForBoundary(
+            props.borders && props.borders.right,
+            rightNeighbor && rightNeighbor.borders ? rightNeighbor.borders.left : null,
+            rightNeighbor ? rightNeighbor.contains : null,
+            rightNeighbor ? rightNeighbor.color : null
+        ) : null,
+        bottom: (isLastRow || bottomNeighborIsVendor) ? edgeColorForBoundary(
+            props.borders && props.borders.bottom,
+            bottomNeighbor && bottomNeighbor.borders ? bottomNeighbor.borders.top : null,
+            bottomNeighbor ? bottomNeighbor.contains : null,
+            bottomNeighbor ? bottomNeighbor.color : null
+        ) : null
+    } : null;
+
     const portraitZIndex = foregroundPortalImages.includes(props.image) ? 12 : 3;
 
     return (
@@ -138,11 +235,11 @@ function Tile(props) {
             position: 'relative',
             overflow: 'hidden',
             border: vctBorder,
-            borderLeft: vctBorder ? undefined : (vendorBorderless || (props.borders && props.borders.left ? props.borders.left : ((props.type === 'palette-tile' && !props.hovered) ? '2px solid transparent' : 
-                (props.type === 'palette-tile' && props.hovered ? '2px solid red' : '1px solid transparent')))),
-            borderRight: vctBorder ? undefined : (vendorBorderless || ((props.borders && props.borders.right) ? props.borders.right : '1px solid transparent')),
-            borderTop: vctBorder ? undefined : (vendorBorderless || ((props.borders && props.borders.top) ? props.borders.top : '1px solid transparent')),
-            borderBottom: vctBorder ? undefined : (vendorBorderless || ((props.borders && props.borders.bottom) ? props.borders.bottom : '1px solid transparent'))
+            borderLeft: isBoardGridTile ? 'none' : (vctBorder ? undefined : (vendorBorderless || (props.borders && props.borders.left ? props.borders.left : ((props.type === 'palette-tile' && !props.hovered) ? '2px solid transparent' : 
+                (props.type === 'palette-tile' && props.hovered ? '2px solid red' : '1px solid transparent'))))),
+            borderRight: isBoardGridTile ? 'none' : (vctBorder ? undefined : (vendorBorderless || ((props.borders && props.borders.right) ? props.borders.right : '1px solid transparent'))),
+            borderTop: isBoardGridTile ? 'none' : (vctBorder ? undefined : (vendorBorderless || ((props.borders && props.borders.top) ? props.borders.top : '1px solid transparent'))),
+            borderBottom: isBoardGridTile ? 'none' : (vctBorder ? undefined : (vendorBorderless || ((props.borders && props.borders.bottom) ? props.borders.bottom : '1px solid transparent')))
             }}
             onMouseEnter={() => {
                 beginDelayedHoverLabel();
@@ -181,6 +278,15 @@ function Tile(props) {
             onDragStart={(e) => e.preventDefault()}
             className={`tile ${props.className}`}
         >
+           {edgeLines && (
+                <>
+                    <div style={{position: 'absolute', top: 0, left: 0, right: 0, height: 1, backgroundColor: edgeLines.top, zIndex: 40, pointerEvents: 'none'}} />
+                    <div style={{position: 'absolute', top: 0, bottom: 0, left: 0, width: 1, backgroundColor: edgeLines.left, zIndex: 40, pointerEvents: 'none'}} />
+                    {edgeLines.right && <div style={{position: 'absolute', top: 0, bottom: 0, right: 0, width: 1, backgroundColor: edgeLines.right, zIndex: 40, pointerEvents: 'none'}} />}
+                    {edgeLines.bottom && <div style={{position: 'absolute', left: 0, right: 0, bottom: 0, height: 1, backgroundColor: edgeLines.bottom, zIndex: 40, pointerEvents: 'none'}} />}
+                </>
+           )}
+
            {/* HP fill: rendered as a vertical fill using the tile's color when hp & maxHp are provided */}
          { (typeof hpVal === 'number' && typeof maxHpVal === 'number') && (() => {
              // Render a visible left-side vertical HP bar so it shows even when the portrait
@@ -219,6 +325,19 @@ function Tile(props) {
                     backgroundImage: 'repeating-linear-gradient(45deg, #777 0, #777 2px, transparent 2px, transparent 8px)',
                     zIndex: 1,
                     opacity: 0.5,
+                    pointerEvents: 'none'
+                }} />
+           )}
+
+           {props.partialObscured && props.color !== 'black' && (
+                <div style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                    zIndex: 25,
                     pointerEvents: 'none'
                 }} />
            )}

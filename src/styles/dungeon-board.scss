@@ -94,31 +94,44 @@
     }
     .center-board-wrapper{
         position: relative;
+        --hud-row-height: 50px;
+        --hud-row-gap: 4px;
         &.show-map-marker-cursor{
             cursor: crosshair;
         }
-        .message-container{
+        .board-hud-row{
             position: absolute;
-            // border: 1px solid yellow;
-            height: 50px;
+            left: 0;
+            top: 0;
             width: 100%;
-            top: -52px;
+            transform: translateY(calc(-100% - var(--hud-row-gap)));
+            z-index: 20;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            pointer-events: none;
+        }
+        .message-container{
+            position: relative;
+            height: var(--hud-row-height);
+            flex: 1 1 auto;
+            z-index: 20;
+            pointer-events: none;
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
         }
         .respawn-message-container{
-            position: absolute;
-            // border: 1px solid yellow;
-            height: 50px;
-            width: 150px;
-            // border: 1px solid yellow;
-            top: -52px;
-            left: -29px;
+            position: relative;
+            height: var(--hud-row-height);
+            width: max-content;
+            max-width: 92vw;
+            pointer-events: none;
             display: flex;
             align-items: center;
             justify-content: flex-start;
+            white-space: nowrap;
             color: white;
             .hourglass-icon{
                 height: 20px;

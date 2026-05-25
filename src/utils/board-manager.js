@@ -359,6 +359,7 @@ export function BoardManager(){
     this.getReachableTilesWithinSteps = (startIdx, maxSteps = 2) => {
         const visited = new Map();
         if (startIdx === null || startIdx === undefined) return new Set();
+        const boardTiles = (this.currentBoard && this.currentBoard.tiles) ? this.currentBoard.tiles : null;
 
         const getOrthogonalNeighbors = (idx) => {
             const row = Math.floor(idx / 15);
@@ -372,10 +373,11 @@ export function BoardManager(){
         };
 
         const queue = [{ idx: startIdx, steps: 0 }];
+        let queueHead = 0;
         visited.set(startIdx, 0);
 
-        while (queue.length > 0) {
-            const { idx, steps } = queue.shift();
+        while (queueHead < queue.length) {
+            const { idx, steps } = queue[queueHead++];
             if (steps >= maxSteps) continue;
 
             const neighbors = getOrthogonalNeighbors(idx);
@@ -384,7 +386,7 @@ export function BoardManager(){
                 if (existing !== undefined && existing <= steps + 1) return;
                 if (this.isPassageWallBlockingBetween(idx, nextIdx)) return;
 
-                const tile = this.tiles[nextIdx] || (this.currentBoard && this.currentBoard.tiles && this.currentBoard.tiles[nextIdx]);
+                const tile = this.tiles[nextIdx] || (boardTiles && boardTiles[nextIdx]);
                 if (!tile) return;
 
                 const containsType = this.getContainsType(tile.contains);
@@ -1706,7 +1708,7 @@ export function BoardManager(){
         this.initializeTilesFromMap(this.playerTile.boardIndex, this.getIndexFromCoordinates([this.playerTile.location[0], this.playerTile.location[1]]))
         this.broadcastLevelChange(this.currentLevel.id)
     }
-    this.checkAdjacency = () => {
+    this.checkAdjacency = (reachableOverride = null) => {
     // Clear any previous overlay indicators (we will set edge indicators here)
     try { this.overlayTiles.forEach(t => { if (t) { t.color = null; t.borders = null } }) } catch (e) {}
         const highlightColor = (tile) => {
@@ -1717,7 +1719,7 @@ export function BoardManager(){
             return color;
         }
         const curIndex = this.getIndexFromCoordinates(this.playerTile.location);
-        const reachable = this.getReachableTilesWithinSteps(curIndex, 2);
+        const reachable = reachableOverride || this.getReachableTilesWithinSteps(curIndex, 2);
         const leftTile = this.tiles[curIndex-1];
         const rightTile = this.tiles[curIndex+1];
         const topRow = !!this.tiles[curIndex - 15] ? this.tiles.filter(t=>t.id >= curIndex-16 && t.id <= curIndex-14) : null
@@ -1830,7 +1832,10 @@ export function BoardManager(){
         const destinationIndex = this.getIndexFromCoordinates(destinationCoords);
         const destinationTile = this.tiles[destinationIndex];
         if (!destinationTile || typeof destinationTile.contains === 'undefined') return;
-        if (this.getContainsType(destinationTile.contains) === 'void') return;
+        if (this.getContainsType(destinationTile.contains) === 'void') {
+            try { if (this.messaging) this.messaging('A wall blocks your way.'); } catch (e) {}
+            return;
+        }
         if (this.isPassageWallBlockingBetween(tile.id, destinationIndex)) {
             try { if (this.messaging) this.messaging('A wall blocks your way.'); } catch (e) {}
             return;
@@ -1873,11 +1878,14 @@ export function BoardManager(){
                 break;
             }
         }
-        // Recompute fog after updating the player's location so fog centers on the player
+        // Recompute fog after updating the player's location so fog centers on the player.
+        // Skip its immediate refresh and reuse the same reachable set in adjacency highlighting
+        // to avoid duplicate work in one movement tick.
+        let visibleTileIds = null;
         try {
             const playerIdx = this.getIndexFromCoordinates(this.playerTile.location);
-            if (this.tiles[playerIdx]) this.handleFogOfWar(this.tiles[playerIdx]);
-            else this.handleFogOfWar(this.currentBoard.tiles[playerIdx]);
+            if (this.tiles[playerIdx]) visibleTileIds = this.handleFogOfWar(this.tiles[playerIdx], { skipRefresh: true });
+            else visibleTileIds = this.handleFogOfWar(this.currentBoard.tiles[playerIdx], { skipRefresh: true });
         } catch (e) {}
         if(interaction === 'door'){
             this.handlePassingThroughDoor();
@@ -1902,7 +1910,7 @@ export function BoardManager(){
         }
         this.overlayTiles.forEach(t=>t.image = null)
         // Player image now rendered as floating overlay, not in overlayTiles
-        this.checkAdjacency();
+        this.checkAdjacency(visibleTileIds);
 
         if (interaction === 'narrative') {
             try {
@@ -1994,12 +2002,14 @@ export function BoardManager(){
                 return key
         }
     } 
-    this.handleFogOfWar = (destinationTile) => {
+    this.handleFogOfWar = (destinationTile, options = {}) => {
+        const { skipRefresh = false } = options;
         // Reset all tiles to hidden
         this.tiles.forEach((e) => {
             e.color = 'black';
             e.image = null;
             e.borders = null;
+            e.partialObscured = false;
         });
 
         const visibleTileIds = this.getReachableTilesWithinSteps(destinationTile.id, 2);
@@ -2031,39 +2041,100 @@ export function BoardManager(){
             } catch (err) {}
     });
 
-        // Vendor 2x2 reveal rule: if any tile in a vendor group becomes visible,
-        // reveal the full 2x2 group in this fog pass.
+        // Vendor visibility rule:
+        // - If player is cardinal-adjacent to any tile in a vendor 2x2 group,
+        //   reveal the entire group with full vendor art.
+        // - Otherwise, visible vendor tiles stay obscured (no vendor art).
+        const fullyRevealedVendorTileIds = new Set();
         try {
-            const visibleVendorGroups = new Set();
+            const playerCoords = this.getCoordinatesFromIndex(destinationTile.id);
+            const vendorGroups = new Map();
+
             this.tiles.forEach((tile) => {
-                if (!tile || tile.color === 'black') return;
-                const contains = tile.contains;
-                if (!contains || typeof contains !== 'object') return;
-                if (contains.type !== 'vendor') return;
-                if (contains.vendorGroupId) visibleVendorGroups.add(contains.vendorGroupId);
+                if (!tile || !tile.contains || typeof tile.contains !== 'object') return;
+                if (tile.contains.type !== 'vendor') return;
+                const groupId = tile.contains.vendorGroupId;
+                if (!groupId) return;
+                if (!vendorGroups.has(groupId)) vendorGroups.set(groupId, []);
+                vendorGroups.get(groupId).push(tile);
             });
 
-            if (visibleVendorGroups.size > 0) {
-                this.tiles.forEach((tile) => {
-                    if (!tile) return;
-                    const contains = tile.contains;
-                    if (!contains || typeof contains !== 'object') return;
-                    if (contains.type !== 'vendor') return;
-                    if (!contains.vendorGroupId || !visibleVendorGroups.has(contains.vendorGroupId)) return;
-
-                    const persistedColor = (this.currentBoard && this.currentBoard.tiles && this.currentBoard.tiles[tile.id] && this.currentBoard.tiles[tile.id].color);
-                    const persistedBorders = (this.currentBoard && this.currentBoard.tiles && this.currentBoard.tiles[tile.id] && this.currentBoard.tiles[tile.id].borders);
-                    const runtimeColor = (tile.color && tile.color !== 'black') ? tile.color : null;
-                    const boardColor = (persistedColor && persistedColor !== 'black') ? persistedColor : (runtimeColor || null);
-                    tile.color = boardColor || 'white';
-                    tile.image = this.getImageForContains(tile.contains, tile);
-                    tile.borders = this.normalizeFogBorders(persistedBorders);
+            vendorGroups.forEach((groupTiles) => {
+                const isAdjacentToGroup = groupTiles.some((tile) => {
+                    const coords = this.getCoordinatesFromIndex(tile.id);
+                    const manhattan = Math.abs(coords[0] - playerCoords[0]) + Math.abs(coords[1] - playerCoords[1]);
+                    if (manhattan !== 1) return false;
+                    if (!visibleTileIds.has(tile.id)) return false;
+                    if (this.isPassageWallBlockingBetween(destinationTile.id, tile.id)) return false;
+                    return true;
                 });
-            }
+
+                if (isAdjacentToGroup) {
+                    // Fully reveal all four vendor tiles when adjacent to any one of them.
+                    groupTiles.forEach((tile) => {
+                        const persistedColor = (this.currentBoard && this.currentBoard.tiles && this.currentBoard.tiles[tile.id] && this.currentBoard.tiles[tile.id].color);
+                        const persistedBorders = (this.currentBoard && this.currentBoard.tiles && this.currentBoard.tiles[tile.id] && this.currentBoard.tiles[tile.id].borders);
+                        const runtimeColor = (tile.color && tile.color !== 'black') ? tile.color : null;
+                        const boardColor = (persistedColor && persistedColor !== 'black') ? persistedColor : (runtimeColor || null);
+                        tile.color = boardColor || 'white';
+                        tile.image = this.getImageForContains(tile.contains, tile);
+                        tile.borders = this.normalizeFogBorders(persistedBorders);
+                        tile.partialObscured = false;
+                        fullyRevealedVendorTileIds.add(tile.id);
+                    });
+                    return;
+                }
+
+                // Not adjacent: keep vendor tiles obscured when they are otherwise visible.
+                groupTiles.forEach((tile) => {
+                    if (tile.color === 'black') return;
+                    tile.image = null;
+                    tile.partialObscured = true;
+                });
+            });
         } catch (e) {}
 
-        try { if (this.refreshTiles) this.refreshTiles(); } catch (e) {}
+        // Partial obscurity: tile is visible, not directly adjacent to the player,
+        // and has at least one blocked boundary with another visible tile.
+        try {
+            const visibleNow = new Set();
+            this.tiles.forEach((tile) => {
+                if (tile && tile.color !== 'black') visibleNow.add(tile.id);
+            });
 
-        return true
+            const playerCoords = this.getCoordinatesFromIndex(destinationTile.id);
+            const offsets = [-15, 15, -1, 1];
+
+            this.tiles.forEach((tile) => {
+                if (!tile || tile.color === 'black') return;
+                if (fullyRevealedVendorTileIds.has(tile.id)) return;
+                const coords = this.getCoordinatesFromIndex(tile.id);
+                const manhattan = Math.abs(coords[0] - playerCoords[0]) + Math.abs(coords[1] - playerCoords[1]);
+                // Exclude player tile and directly adjacent cardinal tiles.
+                if (manhattan <= 1) return;
+                // Keep shading bounded to the active reveal radius.
+                if (manhattan > 2) return;
+
+                let hasBlockedVisibleBoundary = false;
+                for (let i = 0; i < offsets.length; i++) {
+                    const neighborId = tile.id + offsets[i];
+                    if (!visibleNow.has(neighborId)) continue;
+                    if (this.isPassageWallBlockingBetween(tile.id, neighborId)) {
+                        hasBlockedVisibleBoundary = true;
+                        break;
+                    }
+                }
+
+                if (hasBlockedVisibleBoundary) {
+                    tile.partialObscured = true;
+                }
+            });
+        } catch (e) {}
+
+        if (!skipRefresh) {
+            try { if (this.refreshTiles) this.refreshTiles(); } catch (e) {}
+        }
+
+        return visibleTileIds
     }
 }

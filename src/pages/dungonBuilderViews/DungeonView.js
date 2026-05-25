@@ -491,6 +491,7 @@ class DungeonView extends React.Component {
                                                                 id={tile.id}
                                                                 tileSize={((this.props.tileSize*6)/3-2)/15}
                                                                 contains={tile.contains}
+                                                                boardTiles={board.tiles}
                                                                 image={tile.image ? tile.image : null}
                                                                 imageOverride={tile.image && tile.image.includes('/') ? tile.image : null}
                                                                 color={tile.color ? tile.color : 'white'} borders={tile.borders}
@@ -578,6 +579,7 @@ class DungeonView extends React.Component {
                                                                 id={tile.id}
                                                                 tileSize={((this.props.tileSize*6)/3-2)/15}
                                                                 contains={tile.contains}
+                                                                boardTiles={board.tiles}
                                                                 image={tile.image ? tile.image : null}
                                                                 imageOverride={tile.image && tile.image.includes('/') ? tile.image : null}
                                                                 color={tile.color ? tile.color : 'white'} borders={tile.borders}

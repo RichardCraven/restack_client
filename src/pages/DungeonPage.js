@@ -588,6 +588,8 @@ class DungeonPage extends React.Component {
         // Track timers/intervals created by this component so we can clear on unmount
         this._timers = [];
         this._intervals = [];
+        this._movementQueue = [];
+        this._processingQueuedMove = false;
         this._setTimeout = (fn, t) => { const id = setTimeout(fn, t); try { this._timers.push(id); } catch(e){}; return id };
         
         this._setInterval = (fn, t) => { const id = setInterval(fn, t); try { this._intervals.push(id); } catch(e){}; return id };
@@ -1091,48 +1093,97 @@ class DungeonPage extends React.Component {
         }
     }
 
+    enqueueDirectionalMove = (direction) => {
+        if (!direction) return;
+        if (this.state.keysLocked || this.state.inMonsterBattle) return;
+        if (!Array.isArray(this._movementQueue)) this._movementQueue = [];
+        // Cap pending buffered input to 3 queued moves.
+        if (this._movementQueue.length >= 3) return;
+        this._movementQueue.push(direction);
+        if (!this.state.playerAnimating && !this._processingQueuedMove) {
+            this.processMovementQueue();
+        }
+    }
+
+    processMovementQueue = () => {
+        if (this._processingQueuedMove) return;
+        if (this.state.playerAnimating || this.state.keysLocked || this.state.inMonsterBattle) return;
+        const nextDirection = this._movementQueue.shift();
+        if (!nextDirection) return;
+        this._processingQueuedMove = true;
+        this.handleDirectionalMove(nextDirection, { fromQueue: true });
+    }
+
+    resolveQueuedMovement = (didMove) => {
+        this._processingQueuedMove = false;
+        if (!didMove || this.state.keysLocked || this.state.inMonsterBattle) {
+            // Stop queue processing if the queued step was blocked/invalid or control is locked.
+            this._movementQueue = [];
+            return;
+        }
+        if (this._movementQueue.length > 0) {
+            this.processMovementQueue();
+        }
+    }
+
     // High-level move handler that performs a smooth single-stage tween for within-board moves.
-    handleDirectionalMove = (direction) => {
-    const TOTAL_MOVE_MS = 120;
-    const BUFFER_MS = 12;
+    handleDirectionalMove = (direction, options = {}) => {
+    const { fromQueue = false } = options;
+    const TOTAL_MOVE_MS = 80;
+    const BUFFER_MS = 4;
         try {
             // Ignore fresh movement input while a tween is still settling.
             // Overlapping tweens can make the avatar appear to overshoot then snap back.
-            if (this.state.playerAnimating) return;
+            if (this.state.playerAnimating) {
+                if (fromQueue) this._processingQueuedMove = false;
+                return;
+            }
 
             const bm = this.props.boardManager;
             const curCoords = bm.playerTile.location;
             // detect board-edge moves and fall back to immediate boardManager methods
             if (direction === 'up' && curCoords[0] === 15) {
+                const before = [...bm.playerTile.location];
                 bm.moveUp();
+                const moved = bm.playerTile.location[0] !== before[0] || bm.playerTile.location[1] !== before[1];
                 this.setState({ tiles: [...bm.tiles], overlayTiles: bm.overlayTiles }, () => {
                     try { this.updateFloatingPlayerPosition(bm.playerTile.location); } catch (e) {}
+                    if (moved) this.recordBreadcrumb();
+                    this.resolveQueuedMovement(moved);
                 });
-                this.recordBreadcrumb();
                 return;
             }
             if (direction === 'down' && curCoords[0] === 29) {
+                const before = [...bm.playerTile.location];
                 bm.moveDown();
+                const moved = bm.playerTile.location[0] !== before[0] || bm.playerTile.location[1] !== before[1];
                 this.setState({ tiles: [...bm.tiles], overlayTiles: bm.overlayTiles }, () => {
                     try { this.updateFloatingPlayerPosition(bm.playerTile.location); } catch (e) {}
+                    if (moved) this.recordBreadcrumb();
+                    this.resolveQueuedMovement(moved);
                 });
-                this.recordBreadcrumb();
                 return;
             }
             if (direction === 'left' && curCoords[1] === 15) {
+                const before = [...bm.playerTile.location];
                 bm.moveLeft();
+                const moved = bm.playerTile.location[0] !== before[0] || bm.playerTile.location[1] !== before[1];
                 this.setState({ tiles: [...bm.tiles], overlayTiles: bm.overlayTiles }, () => {
                     try { this.updateFloatingPlayerPosition(bm.playerTile.location); } catch (e) {}
+                    if (moved) this.recordBreadcrumb();
+                    this.resolveQueuedMovement(moved);
                 });
-                this.recordBreadcrumb();
                 return;
             }
             if (direction === 'right' && curCoords[1] === 29) {
+                const before = [...bm.playerTile.location];
                 bm.moveRight();
+                const moved = bm.playerTile.location[0] !== before[0] || bm.playerTile.location[1] !== before[1];
                 this.setState({ tiles: [...bm.tiles], overlayTiles: bm.overlayTiles }, () => {
                     try { this.updateFloatingPlayerPosition(bm.playerTile.location); } catch (e) {}
+                    if (moved) this.recordBreadcrumb();
+                    this.resolveQueuedMovement(moved);
                 });
-                this.recordBreadcrumb();
                 return;
             }
 
@@ -1149,23 +1200,6 @@ class DungeonPage extends React.Component {
             const originCoords = [curCoords[0], curCoords[1]];
             const originIndex = bm.getIndexFromCoordinates(curCoords);
             const destIndex = bm.getIndexFromCoordinates(destCoords);
-            // Check if movement is blocked (void, locked gate, large monster, etc.)
-            // If blocked, do NOT start the animation - just call the move method which
-            // will handle messaging and return early
-            try {
-                if (bm.isMovementBlocked(destCoords)) {
-                    // Call move() to trigger the gate message, but don't animate
-                    switch (direction) {
-                        case 'up': bm.moveUp(); break;
-                        case 'down': bm.moveDown(); break;
-                        case 'left': bm.moveLeft(); break;
-                        case 'right': bm.moveRight(); break;
-                        default: break;
-                    }
-                    this.setState({ tiles: [...bm.tiles], overlayTiles: bm.overlayTiles });
-                    return;
-                }
-            } catch (e) {}
             const originPixel = this.getPixelForIndex(originIndex);
             const destPixel = this.getPixelForIndex(destIndex);
 
@@ -1219,6 +1253,7 @@ class DungeonPage extends React.Component {
                     animDestIndex: null
                 }, () => {
                     this.updateFloatingPlayerPosition(originCoords);
+                    this.resolveQueuedMovement(false);
                 });
                 return;
             }
@@ -1240,50 +1275,53 @@ class DungeonPage extends React.Component {
                     }, 3000);
                 }
                 requestAnimationFrame(() => {
-                    requestAnimationFrame(() => {
-                        try {
-                            const el = this.playerFloatRef.current;
-                            if (!el) return;
+                    try {
+                        const el = this.playerFloatRef.current;
+                        if (!el) return;
 
-                            // Calculate transform delta: from origin to destination within the board
-                            const fullX = destPixel.left - originPixel.left;
-                            const fullY = destPixel.top - originPixel.top;
+                        // Calculate transform delta: from origin to destination within the board
+                        const fullX = destPixel.left - originPixel.left;
+                        const fullY = destPixel.top - originPixel.top;
 
-                            el.style.willChange = 'transform';
-                            el.style.transition = `transform ${TOTAL_MOVE_MS}ms cubic-bezier(0.22, 0.61, 0.36, 1)`;
-                            el.style.transform = `translate3d(${fullX.toFixed(2)}px, ${fullY.toFixed(2)}px, 0px)`;
+                        el.style.willChange = 'transform';
+                        el.style.transition = `transform ${TOTAL_MOVE_MS}ms cubic-bezier(0.22, 0.61, 0.36, 1)`;
+                        el.style.transform = `translate3d(${fullX.toFixed(2)}px, ${fullY.toFixed(2)}px, 0px)`;
 
-                            if (this._playerMoveSettleTimeout) {
-                                clearTimeout(this._playerMoveSettleTimeout);
-                                this._playerMoveSettleTimeout = null;
-                            }
-                            this._playerMoveSettleTimeout = this._setTimeout(() => {
-                                // After animation completes, reposition float to destination without animation
-                                // This keeps the avatar visible and ready for the next move
-                                this.updateFloatingPlayerPosition(bm.playerTile.location);
-                                const el2 = this.playerFloatRef.current;
-                                if (el2) {
-                                    el2.style.transition = '';
-                                    el2.style.transform = 'translate3d(0px, 0px, 0px)';
-                                    el2.style.willChange = 'auto';
-                                }
-                                this.setState({
-                                    playerAnimating: false,
-                                    animOriginIndex: null,
-                                    animDestIndex: null
-                                });
-                            }, TOTAL_MOVE_MS + BUFFER_MS);
-                        } catch (e) {
-                            console.warn('post-move tween failed', e);
-                            // Reposition float on error instead of hiding
+                        if (this._playerMoveSettleTimeout) {
+                            clearTimeout(this._playerMoveSettleTimeout);
+                            this._playerMoveSettleTimeout = null;
+                        }
+                        this._playerMoveSettleTimeout = this._setTimeout(() => {
+                            // After animation completes, reposition float to destination without animation
+                            // This keeps the avatar visible and ready for the next move
                             this.updateFloatingPlayerPosition(bm.playerTile.location);
+                            this.recordBreadcrumb();
+                            const el2 = this.playerFloatRef.current;
+                            if (el2) {
+                                el2.style.transition = '';
+                                el2.style.transform = 'translate3d(0px, 0px, 0px)';
+                                el2.style.willChange = 'auto';
+                            }
                             this.setState({
                                 playerAnimating: false,
                                 animOriginIndex: null,
                                 animDestIndex: null
+                            }, () => {
+                                this.resolveQueuedMovement(true);
                             });
-                        }
-                    });
+                        }, TOTAL_MOVE_MS + BUFFER_MS);
+                    } catch (e) {
+                        console.warn('post-move tween failed', e);
+                        // Reposition float on error instead of hiding
+                        this.updateFloatingPlayerPosition(bm.playerTile.location);
+                        this.setState({
+                            playerAnimating: false,
+                            animOriginIndex: null,
+                            animDestIndex: null
+                        }, () => {
+                            this.resolveQueuedMovement(false);
+                        });
+                    }
                 });
             });
 
@@ -1292,6 +1330,7 @@ class DungeonPage extends React.Component {
             // Fallback: perform immediate move
             try {
                 const bm = this.props.boardManager;
+                const before = [...bm.playerTile.location];
                 switch (direction) {
                     case 'up': bm.moveUp(); break;
                     case 'down': bm.moveDown(); break;
@@ -1299,8 +1338,11 @@ class DungeonPage extends React.Component {
                     case 'right': bm.moveRight(); break;
                     default: break;
                 }
-                this.setState({ tiles: [...bm.tiles], overlayTiles: bm.overlayTiles });
-                this.recordBreadcrumb();
+                const moved = bm.playerTile.location[0] !== before[0] || bm.playerTile.location[1] !== before[1];
+                this.setState({ tiles: [...bm.tiles], overlayTiles: bm.overlayTiles }, () => {
+                    if (moved) this.recordBreadcrumb();
+                    this.resolveQueuedMovement(moved);
+                });
             } catch (err) {}
         }
     }
@@ -2160,7 +2202,24 @@ class DungeonPage extends React.Component {
             });
         });
 
-        nextIndicators[activeMinimapIndex].merchant = merchantMarkers;
+        // Persist discovered merchants: once a vendor group has been seen on the minimap,
+        // keep its marker even if it is no longer currently visible.
+        const existingMerchantMarkers = Array.isArray(nextIndicators[activeMinimapIndex].merchant)
+            ? nextIndicators[activeMinimapIndex].merchant
+            : [];
+        const mergedByKey = new Map();
+        existingMerchantMarkers.forEach((marker) => {
+            if (!marker) return;
+            const key = marker.vendorGroupId || `legacy_${marker.tileId}`;
+            mergedByKey.set(key, marker);
+        });
+        merchantMarkers.forEach((marker) => {
+            if (!marker) return;
+            const key = marker.vendorGroupId || `legacy_${marker.tileId}`;
+            if (!mergedByKey.has(key)) mergedByKey.set(key, marker);
+        });
+
+        nextIndicators[activeMinimapIndex].merchant = Array.from(mergedByKey.values());
         return nextIndicators;
     }
     refreshTiles = (levelIdOverride) => {
@@ -2605,20 +2664,20 @@ class DungeonPage extends React.Component {
         break;
             case 'ArrowUp':
                 if(this.state.keysLocked) return
-                this.handleDirectionalMove('up')
+                this.enqueueDirectionalMove('up')
                 
             break;
             case 'ArrowDown':
                 if(this.state.keysLocked) return
-                this.handleDirectionalMove('down')
+                this.enqueueDirectionalMove('down')
             break;
             case 'ArrowLeft':
                 if(this.state.keysLocked) return
-                this.handleDirectionalMove('left')
+                this.enqueueDirectionalMove('left')
             break;
             case 'ArrowRight':
                 if(this.state.keysLocked) return
-                this.handleDirectionalMove('right')
+                this.enqueueDirectionalMove('right')
             break;
             default:
                 // nathin
@@ -3893,6 +3952,15 @@ class DungeonPage extends React.Component {
         this.setState({
             keysLocked : false,
             inMonsterBattle: false
+        }, () => {
+            try {
+                const bm = this.props.boardManager;
+                if (bm && bm.playerTile && bm.playerTile.location) {
+                    this.updateFloatingPlayerPosition(bm.playerTile.location);
+                }
+            } catch (e) {
+                console.warn('battleOver: failed to re-anchor floating avatar after combat', e);
+            }
         })
     }
     minimapTileClicked = (index) => {
@@ -5274,10 +5342,14 @@ class DungeonPage extends React.Component {
 
                                 {/* // merchants // */}
                                 {this.state.minimapIndicators[i] && this.state.minimapIndicators[i].merchant.map((indicator,idx)=>{
+                                    const footprintPct = `${(2 / 15) * 100}%`;
                                     return <div key={idx} className={`minimap-indicator merchant`}
                                     style={{
                                         left: this.calcIndicator(indicator.tileId).left,
-                                        top: this.calcIndicator(indicator.tileId).top
+                                        top: this.calcIndicator(indicator.tileId).top,
+                                        width: footprintPct,
+                                        height: footprintPct,
+                                        borderRadius: '2px'
                                     }}>
                                     </div>
                                 })}
@@ -5464,17 +5536,19 @@ class DungeonPage extends React.Component {
                     opacity: this.state.tiles.length > 0 ? 1 : 0,
                     transition: 'opacity 1s'
                     }} className={`center-board-wrapper ${this.state.minimapPlaceMapMarkerStarted ? 'show-map-marker-cursor' : ''}`}>
-                <div className="message-container" style={{opacity: this.state.showMessage ? 1 : 0, transition: 'opacity 0.5s'}}>
-                    {this.state.messageToDisplay}
-                </div>
-                <div className="respawn-message-container" style={{display: 'flex', alignItems: 'center', gap: 8}}>
-                    <div style={{display: 'flex', alignItems: 'center', gap: 6}}>
-                        <div style={{width: 10, height: 10, borderRadius: 10, background: 'red'}}></div>
-                        <div style={{fontSize: 12}}>{this.state.timeToRespawn}</div>
+                <div className="board-hud-row">
+                    <div className="respawn-message-container" style={{display: 'flex', alignItems: 'center', gap: 8}}>
+                        <div style={{display: 'flex', alignItems: 'center', gap: 6}}>
+                            <div style={{width: 10, height: 10, borderRadius: 10, background: 'red'}}></div>
+                            <div style={{fontSize: 12}}>{this.state.timeToRespawn}</div>
+                        </div>
+                        <div style={{display: 'flex', alignItems: 'center', gap: 6}}>
+                            <div style={{width: 10, height: 10, borderRadius: 10, background: 'gold'}}></div>
+                            <div style={{fontSize: 12}}>{this.state.itemTimeToRespawn}</div>
+                        </div>
                     </div>
-                    <div style={{display: 'flex', alignItems: 'center', gap: 6}}>
-                        <div style={{width: 10, height: 10, borderRadius: 10, background: 'gold'}}></div>
-                        <div style={{fontSize: 12}}>{this.state.itemTimeToRespawn}</div>
+                    <div className="message-container" style={{opacity: this.state.showMessage ? 1 : 0, transition: 'opacity 0.5s'}}>
+                        {this.state.messageToDisplay}
                     </div>
                 </div>
                 <div  className="overlay-board" style={{
@@ -5492,9 +5566,11 @@ class DungeonPage extends React.Component {
                         image={overlayImage}
                         imageOverride={overlayImage && overlayImage.includes('/') ? overlayImage : null}
                         contains={tile.contains}
+                        boardTiles={this.state.tiles}
                         terrain={tile.terrain}
                         color={tile.color ? tile.color : 'lightgrey'}
                         borders={tile.borders}
+                        partialObscured={!!tile.partialObscured}
                         coordinates={tile.coordinates}
                         index={tile.id}
                         editMode={false}
@@ -5521,9 +5597,11 @@ class DungeonPage extends React.Component {
                         image={boardImage}
                         imageOverride={boardImage && boardImage.includes ? (boardImage.includes('/') ? boardImage : null) : null}
                         contains={tile.contains}
+                        boardTiles={this.state.tiles}
                         terrain={tile.terrain}
                         color={tile.color ? tile.color : 'lightgrey'}
                         borders={tile.borders}
+                        partialObscured={!!tile.partialObscured}
                         coordinates={tile.coordinates}
                         index={tile.id}
                         showCoordinates={this.props.showCoordinates}

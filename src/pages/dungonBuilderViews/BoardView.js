@@ -105,6 +105,7 @@ class BoardView extends React.Component {
                                 index={tile.id}
                                 tileSize={this.props.tileSize}
                                 contains={tile.contains}
+                                boardTiles={this.props.tiles}
                                 image={tile.image ? tile.image : null}
                                 imageOverride={tile.image && tile.image.includes('/') ? tile.image : null}
                                 color={tile.color ? tile.color : 'lightgrey'}

@@ -202,4 +202,50 @@ describe('BoardManager fog/respawn harness', () => {
     expect(bm.tiles[southIndex].borders?.left).toBe('1px solid black');
     expect(bm.tiles[southWestIndex].borders?.right).toBe('1px solid black');
   });
+
+  test('partial obscurity flags non-adjacent visible tiles separated by a wall', () => {
+    const bm = new BoardManager();
+    bm.updateDungeon = jest.fn();
+    bm.refreshTiles = jest.fn();
+
+    const board = makeEmptyBoard(601);
+    const playerIndex = 112;
+    const northIndex = 97;
+    const westIndex = 111;
+    const northWestIndex = 96;
+
+    board.tiles[playerIndex].contains = { type: 'empty_space', subtype: null };
+    board.tiles[northIndex].contains = { type: 'passage', subtype: null };
+    board.tiles[westIndex].contains = { type: 'passage', subtype: null };
+    board.tiles[northWestIndex].contains = { type: 'passage', subtype: null };
+
+    // Block only the boundary between N and NW, while NW remains reachable via W.
+    board.tiles[northIndex].borders = {
+      top: '2px solid transparent',
+      bottom: '2px solid transparent',
+      left: '2px solid black',
+      right: '2px solid transparent'
+    };
+    board.tiles[northWestIndex].borders = {
+      top: '2px solid transparent',
+      bottom: '2px solid transparent',
+      left: '2px solid transparent',
+      right: '2px solid black'
+    };
+
+    const level = { id: 6, front: { miniboards: [board] }, back: { miniboards: [] }, name: 'L6' };
+    bm.dungeon = { levels: [level] };
+    bm.currentLevel = level;
+    bm.currentBoard = board;
+    bm.currentOrientation = 'F';
+
+    bm.playerTile = { location: bm.getCoordinatesFromIndex(playerIndex), boardIndex: 0 };
+    bm.initializeTilesFromMap(0, bm.getIndexFromCoordinates(bm.playerTile.location));
+
+    expect(bm.tiles[northWestIndex].color).not.toBe('black');
+    expect(bm.tiles[northWestIndex].partialObscured).toBe(true);
+
+    // Directly adjacent visible tiles are never partially obscured.
+    expect(bm.tiles[northIndex].partialObscured).not.toBe(true);
+  });
 });

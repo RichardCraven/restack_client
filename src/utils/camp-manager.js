@@ -50,6 +50,11 @@ export async function setUpCamp(component, maybeDuration) {
         if (component.props.boardManager && typeof component.props.boardManager.placePlayer === 'function') {
             try{ component.props.boardManager.placePlayer(component.props.boardManager.playerTile.location); } catch(e){}
         }
+        try {
+            if (typeof component.updateFloatingPlayerPosition === 'function' && component.props.boardManager?.playerTile?.location) {
+                component.updateFloatingPlayerPosition(component.props.boardManager.playerTile.location);
+            }
+        } catch (e) {}
         try { component.setState({ overlayTiles: component.props.boardManager.overlayTiles }); } catch(e){}
         // ensure continuous draw loop while camping to avoid flashing
         try {
@@ -124,6 +129,11 @@ export async function endCamp(component) {
         if (component.props.boardManager && typeof component.props.boardManager.placePlayer === 'function') {
             try{ component.props.boardManager.placePlayer(component.props.boardManager.playerTile.location); } catch(e){}
         }
+        try {
+            if (typeof component.updateFloatingPlayerPosition === 'function' && component.props.boardManager?.playerTile?.location) {
+                component.updateFloatingPlayerPosition(component.props.boardManager.playerTile.location);
+            }
+        } catch (e) {}
         try {
             // Re-read the selectedCrewMember from the freshly-restored crew array so the
             // dead overlay and HP bar reflect the restored state immediately.
