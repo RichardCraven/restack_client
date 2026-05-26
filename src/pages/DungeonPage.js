@@ -4897,6 +4897,12 @@ class DungeonPage extends React.Component {
                         : Number(this.state.mapSelectedLevelId);
                     const activeMinimapIndex = Array.isArray(this.state.minimap) ? this.state.minimap.findIndex((entry) => entry && entry.active) : -1;
                     const boardHighlightImage = this.getMapBoardHighlightSvg(activeMinimapIndex);
+                    const normalizeMapImgUrl = (value) => {
+                        if (!value) return '';
+                        const resolved = typeof value === 'string' ? value : (value.default || '');
+                        if (!resolved) return '';
+                        return `url("${encodeURI(resolved)}")`;
+                    };
                     const playerSlabDot = (() => {
                         try {
                             const bm = this.props.boardManager;
@@ -4930,6 +4936,57 @@ class DungeonPage extends React.Component {
                                 top: `${yPct}%`
                             };
                         } catch (e) { return null; }
+                    })();
+                    const slabVendorMarkers = (() => {
+                        try {
+                            const bm = this.props.boardManager;
+                            const indicatorGroups = Array.isArray(this.state.minimapIndicators) ? this.state.minimapIndicators : [];
+                            if (!bm || typeof bm.getCoordinatesFromIndex !== 'function' || !indicatorGroups.length) return [];
+
+                            const projectedIndexByMinimapIndex = [6, 3, 0, 7, 4, 1, 8, 5, 2];
+                            const markers = [];
+
+                            indicatorGroups.forEach((group, boardIndex) => {
+                                const projectedIndex = projectedIndexByMinimapIndex[boardIndex];
+                                if (typeof projectedIndex !== 'number') return;
+
+                                const cellRow = Math.floor(projectedIndex / 3);
+                                const cellCol = projectedIndex % 3;
+                                const a0 = cellCol / 3;
+                                const a1 = (cellCol + 1) / 3;
+                                const b0 = cellRow / 3;
+                                const b1 = (cellRow + 1) / 3;
+                                const vendors = Array.isArray(group?.merchant) ? group.merchant : [];
+
+                                vendors.forEach((indicator, vendorIndex) => {
+                                    if (!indicator || typeof indicator.tileId !== 'number') return;
+                                    const coords = bm.getCoordinatesFromIndex(indicator.tileId);
+                                    if (!Array.isArray(coords) || coords.length < 2) return;
+
+                                    const pu = (coords[1] - 15) / 14;
+                                    const pv = (coords[0] - 15) / 14;
+                                    const u = a0 + pu * (a1 - a0);
+                                    const v = b0 + pv * (b1 - b0);
+                                    const xPct = 50 + 50 * (u - v);
+                                    const yPct = 50 * (u + v);
+
+                                    const markerType = (indicator.type || 'merchant').toLowerCase();
+                                    const markerIconKey = markerType === 'alchemist' ? 'alchemist' : 'merchant';
+
+                                    markers.push({
+                                        key: `${indicator.vendorGroupId || `${boardIndex}_${indicator.tileId}`}_${vendorIndex}`,
+                                        left: `${xPct.toFixed(2)}%`,
+                                        top: `${yPct.toFixed(2)}%`,
+                                        icon: normalizeMapImgUrl(images[markerIconKey]),
+                                        markerType,
+                                    });
+                                });
+                            });
+
+                            return markers;
+                        } catch (e) {
+                            return [];
+                        }
                     })();
                     const zoomedLevelId = this.state.mapZoomedLevelId;
                     const unzoomingLevelId = this.state.mapUnzoomingLevelId;
@@ -4995,6 +5052,13 @@ class DungeonPage extends React.Component {
                                                 <span className="slab-face slab-top"></span>
                                                 <span className="slab-face slab-grid"></span>
                                                 <span className="slab-face slab-board-highlight" style={showBoardHighlight ? { backgroundImage: boardHighlightImage } : undefined}>
+                                                    {showBoardHighlight && slabVendorMarkers.map((marker) => (
+                                                        <span
+                                                            key={marker.key}
+                                                            className={`slab-vendor-icon ${marker.markerType}`}
+                                                            style={{ left: marker.left, top: marker.top, backgroundImage: marker.icon }}
+                                                        />
+                                                    ))}
                                                     {showBoardHighlight && playerSlabDot && (
                                                         <span className="slab-player-dot" style={playerSlabDot} />
                                                     )}

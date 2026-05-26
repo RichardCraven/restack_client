@@ -572,6 +572,27 @@
   animation: slabDotPulse 1.4s ease-in-out infinite;
 }
 
+.slab-vendor-icon {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  transform: translate(-50%, -50%);
+  z-index: 4;
+  pointer-events: none;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.5));
+
+  &.merchant {
+    border-radius: 2px;
+  }
+
+  &.alchemist {
+    border-radius: 50%;
+  }
+}
+
 @keyframes slabDotPulse {
   0%, 100% {
     box-shadow: 0 0 0 0 rgba(0, 0, 0, 0.7);
