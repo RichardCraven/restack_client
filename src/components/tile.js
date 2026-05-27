@@ -117,6 +117,12 @@ function Tile(props) {
         }
     })();
 
+    const toCssUrl = (rawUrl) => {
+        if (!rawUrl) return undefined;
+        const normalizedUrl = String(rawUrl).trim().replace(/^['"]|['"]$/g, '');
+        return `url("${encodeURI(normalizedUrl)}")`;
+    };
+
     const isBoardGridTile = props.type === 'board-tile' && !vctBorder && !isVendorCell;
     const getContainsType = (contains) => {
         if (!contains) return null;
@@ -302,12 +308,12 @@ function Tile(props) {
                      {/* Terrain background: chosen per-tile (terrain_1..terrain_16) and rendered beneath portrait/items */}
                      { props.terrain && props.color !== 'black' && (() => {
                          let terrainUrl = (props.terrain && props.terrain.includes('/')) ? props.terrain : (images[props.terrain] || null);
-                         return <div className="terrain-bg" style={{position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundImage: terrainUrl ? `url(${terrainUrl})` : 'none', backgroundSize: 'cover', backgroundRepeat: 'no-repeat', backgroundPosition: 'center center', zIndex: 0, opacity: 0.5}} />
+                         return <div className="terrain-bg" style={{position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundImage: terrainUrl ? toCssUrl(terrainUrl) : 'none', backgroundSize: 'cover', backgroundRepeat: 'no-repeat', backgroundPosition: 'center center', zIndex: 0, opacity: 0.5}} />
                      })()}
 
                      {/* Portrait sits above the hp-fill and terrain so the image remains visible */}
                      {(props.imageOverride || images[props.image]) && (
-                         <div className="portrait" style={{position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundImage: props.imageOverride ? "url('" + props.imageOverride + "')" : images[props.image] ? "url('" + images[props.image] + "')" : undefined, backgroundSize: isVendorCell ? '200% 200%' : '100% 100%', backgroundPosition: isVendorCell ? vendorBackgroundPosition : 'inherit', backgroundRepeat: 'no-repeat', zIndex: isVendorCell ? 30 : portraitZIndex}} />
+                         <div className="portrait" style={{position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundImage: toCssUrl(props.imageOverride || images[props.image]), backgroundSize: isVendorCell ? '200% 200%' : '100% 100%', backgroundPosition: isVendorCell ? vendorBackgroundPosition : 'inherit', backgroundRepeat: 'no-repeat', zIndex: isVendorCell ? 30 : portraitZIndex}} />
                      )}
 
            {/* Dead overlay: visible when data.dead === true */}

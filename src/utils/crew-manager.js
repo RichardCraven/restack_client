@@ -351,7 +351,6 @@ export function CrewManager(){
     }
 
     this.beginSpecialAction = (member, actionType, actionSubtype) => {
-        console.log('BEGIN SPECIAL ACTION: ', member, actionType, actionSubtype);
         const startDate = new Date();
         let endDate;
         // Flat structure for special actions
@@ -406,6 +405,7 @@ export function CrewManager(){
         {
             image: 'wizard',
             type: 'wizard',
+            class: 'spellcaster',
             name: 'Zildjikan',
             id: 33344,
             level: 1,
@@ -424,6 +424,7 @@ export function CrewManager(){
         {
             image: 'soldier',
             type: 'soldier',
+            class: 'warrior',
             name: 'Sardonis',
             id: 123,
             level: 1,
@@ -444,6 +445,7 @@ export function CrewManager(){
         {
             image: 'monk',
             type: 'monk',
+            class: 'warrior',
             name: 'Yu',
             id: 8080,
             level: 1,
@@ -462,6 +464,7 @@ export function CrewManager(){
         {
             image: 'sage',
             type: 'sage',
+            class: 'spellcaster',
             name: 'Loryastes',
             id: 456,
             level: 1,
@@ -480,6 +483,7 @@ export function CrewManager(){
         {
             image: 'rogue',
             type: 'rogue',
+            class: 'warrior',
             name: 'Dormund',
             id: 789,
             level: 1,
@@ -498,6 +502,7 @@ export function CrewManager(){
         {
             image: 'barbarian',
             type: 'barbarian',
+            class: 'warrior',
             name: 'Ulaf',
             id: 8822,
             level: 1,
@@ -516,6 +521,7 @@ export function CrewManager(){
         {
             image: 'engineer',
             type: 'engineer',
+            class: 'spellcaster',
             name: 'Icaron',
             id: 9901,
             level: 1,
@@ -534,6 +540,7 @@ export function CrewManager(){
         {
             image: 'summoner',
             type: 'summoner',
+            class: 'spellcaster',
             name: 'Vaelis',
             id: 9902,
             level: 1,

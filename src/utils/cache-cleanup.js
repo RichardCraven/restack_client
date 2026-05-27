@@ -60,8 +60,6 @@ export function keyCleanup(dungeon) {
 
     if (replacedCount > 0) {
         console.log(`cache-cleanup.keyCleanup: replaced ${replacedCount} master key tile(s) with treasury key`);
-    } else {
-        console.log('cache-cleanup.keyCleanup: no master key tiles found — nothing replaced');
     }
 
     return replacedCount;
@@ -160,8 +158,6 @@ export function itemCleanup(dungeon, crew) {
 
     if (replacedCount > 0) {
         console.log(`cache-cleanup.itemCleanup: replaced ${replacedCount} deprecated shield item(s)`);
-    } else {
-        console.log('cache-cleanup.itemCleanup: no deprecated shield items found — nothing replaced');
     }
 
     return replacedCount;

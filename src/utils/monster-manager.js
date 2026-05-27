@@ -76,7 +76,7 @@ export function MonsterManager() {
             deathCries: ['*screech*'],
             specials: [],
             passives: ['reassemble'],
-            attacks: ['claws', 'claws', 'claws'],
+            attacks: ['claws'],
             minions: ['skeleton', 'skeleton'],
             weaknesses: ['fire'],
             drops: [
@@ -131,7 +131,7 @@ export function MonsterManager() {
             portrait: images['beholder_minion_portrait'],
             portraitFilter: 'sepia(0.4) hue-rotate(320deg)',
             greetings: ['Vukdaj kolo gurdu'],
-            deathCries: ['Urdu meklak milnaurku...'],
+            deathCries: ['Urdu meklak milnauru...'],
             specials: ['bifurcate', 'minor_magic_missile'],
             passives: ['flying'],
             attacks: ['claws'],

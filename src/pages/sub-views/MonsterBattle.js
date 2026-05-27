@@ -2099,7 +2099,7 @@ class MonsterBattle extends React.Component {
                                                 <div
                                                     className={`interaction-tile consumable`}
                                                     style={{
-                                                        backgroundImage: iconUrl ? `url('${iconUrl}')` : 'none',
+                                                        backgroundImage: iconUrl ? `url("${encodeURI(String(iconUrl).replace(/^['"]|['"]$/g, ''))}")` : 'none',
                                                         backgroundColor: iconUrl ? 'transparent' : 'whitesmoke',
                                                         cursor: 'pointer'
                                                     }}
@@ -2124,7 +2124,19 @@ class MonsterBattle extends React.Component {
                             <div className="interaction-header">Specials</div>
                             <div className="interaction-tooltip">{this.state.hoveredSpecialTile}</div>
                             <div className="interaction-tile-container">
-                                {this.state.selectedFighter?.specials?.map((a, i)=>{
+                                {(() => {
+                                    const rawSpecials = this.state.selectedFighter?.specials || [];
+                                    const seenSpecials = new Set();
+                                    const uniqueSpecials = rawSpecials.filter((entry) => {
+                                        const rawKey = typeof entry === 'string' ? entry : (entry?.key || entry?.name || '');
+                                        const normalizedKey = String(rawKey || '').trim().toLowerCase().replaceAll(' ', '_');
+                                        if (!normalizedKey) return false;
+                                        if (seenSpecials.has(normalizedKey)) return false;
+                                        seenSpecials.add(normalizedKey);
+                                        return true;
+                                    });
+
+                                    return uniqueSpecials.map((a, i)=>{
                                     const cm = this.props.combatManager;
                                     const toSpecialKey = (value) => String(value || '').toLowerCase().replaceAll(' ', '_');
                                     const sourceKey = typeof a === 'string' ? a : (a?.key || a?.name || '');
@@ -2165,8 +2177,8 @@ class MonsterBattle extends React.Component {
                                     };
                                     const specialIcon = resolveIconSource(iconCandidate);
                                     const specialBackgroundImage = specialIcon
-                                        ? `${cssUrl(specialIcon)}, radial-gradient(white 40%, black 80%)`
-                                        : 'radial-gradient(white 40%, black 80%)';
+                                        ? `${cssUrl(specialIcon)}`
+                                        : 'none';
                                     const specialCooldownPosition = typeof normalizedSpecial.cooldown_position === 'number'
                                         ? normalizedSpecial.cooldown_position
                                         : 100;
@@ -2185,7 +2197,7 @@ class MonsterBattle extends React.Component {
                                                 onMouseEnter={() => this.specialTileHovered(normalizedSpecial)} 
                                                 onMouseLeave={() => this.specialTileHovered(null)}>
                                                 </div>
-                                                {showSpecialEnergyRing && (
+                                                {showSpecialEnergyRing && specialCooldownRemaining === 0 && (
                                                     <div
                                                         className="interaction-tile-overlay energy-ring"
                                                         style={{ '--energy-ring-fill': specialEnergyFillPct }}
@@ -2198,7 +2210,8 @@ class MonsterBattle extends React.Component {
                                                     ></div>
                                                 )}
                                             </div>
-                                })}
+                                })
+                                })()}
                             </div>
                         </div>
                         <div className="spells-col" style={{width: this.state.glyphTrayExpanded ? '100px' : '0px'}}>

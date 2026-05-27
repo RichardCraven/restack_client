@@ -112,12 +112,15 @@ export function Troll(data, utilMethods, animationManager, overlayManager){
         );
     };
 
-    this.findPathToTargetAdjacency = (caller, target, combatants, maxPathLen = 18) => {
+    this.findPathToTargetAdjacency = (caller, target, combatants, maxPathLen = 18, options = {}) => {
         if (!caller || !caller.coordinates || !target) return null;
 
         const start = { x: caller.coordinates.x, y: caller.coordinates.y };
         const goals = this.getAdjacencyGoalsForTarget(target);
         if (!goals.length) return null;
+        const avoidFirstStep = options && options.avoidFirstStep
+            ? { x: options.avoidFirstStep.x, y: options.avoidFirstStep.y }
+            : null;
 
         const isGoal = (node) => goals.some(g => g.x === node.x && g.y === node.y);
         if (isGoal(start)) return [start];
@@ -153,6 +156,9 @@ export function Troll(data, utilMethods, animationManager, overlayManager){
             for (const d of dirs) {
                 const nxt = { x: cur.x + d.x, y: cur.y + d.y };
                 const nKey = `${nxt.x},${nxt.y}`;
+                if (avoidFirstStep && cur.x === start.x && cur.y === start.y && nxt.x === avoidFirstStep.x && nxt.y === avoidFirstStep.y) {
+                    continue;
+                }
                 if (visited.has(nKey)) continue;
                 if (!this.isTileEnterable(caller, nxt, combatants)) continue;
                 visited.add(nKey);
@@ -178,6 +184,11 @@ export function Troll(data, utilMethods, animationManager, overlayManager){
         }
         path.reverse();
         return path;
+    };
+
+    this.areSameTile = (a, b) => {
+        if (!a || !b) return false;
+        return a.x === b.x && a.y === b.y;
     };
 
     this.getPathComplexityToTarget = (caller, target, combatants) => {
@@ -273,37 +284,44 @@ export function Troll(data, utilMethods, animationManager, overlayManager){
                     break;
                 }
 
-                // Standard brawler movement: close the gap
                 const beforeMove = caller.coordinates ? { x: caller.coordinates.x, y: caller.coordinates.y } : null;
-                data.methods.closeTheGap(caller, combatants);
+
+                // Path-first movement: explicitly route around blockers before fallback heuristics.
+                let pathCandidate = this.findPathToTargetAdjacency(caller, target, combatants);
+                if (pathCandidate && pathCandidate.length > 1) {
+                    const nextStep = pathCandidate[1];
+                    const previousTile = caller._trollPreviousTile || null;
+                    // If this step is an immediate backtrack, try an alternate path that avoids that first step.
+                    if (previousTile && this.areSameTile(nextStep, previousTile)) {
+                        const alternatePath = this.findPathToTargetAdjacency(caller, target, combatants, 18, {
+                            avoidFirstStep: previousTile
+                        });
+                        if (alternatePath && alternatePath.length > 1) {
+                            pathCandidate = alternatePath;
+                        }
+                    }
+                }
+
+                if (pathCandidate && pathCandidate.length > 1) {
+                    const nextStep = pathCandidate[1];
+                    if (this.isTileEnterable(caller, nextStep, combatants)) {
+                        caller.coordinates = { x: nextStep.x, y: nextStep.y };
+                        caller.depth = nextStep.x;
+                        caller.position = nextStep.y;
+                    }
+                } else {
+                    // Fallback movement if pathing fails.
+                    data.methods.closeTheGapForwardFirst(caller, combatants);
+                    const fallbackMove = caller.coordinates ? { x: caller.coordinates.x, y: caller.coordinates.y } : null;
+                    if (beforeMove && fallbackMove && beforeMove.x === fallbackMove.x && beforeMove.y === fallbackMove.y) {
+                        data.methods.closeTheGap(caller, combatants);
+                    }
+                }
+
                 const afterMove = caller.coordinates ? { x: caller.coordinates.x, y: caller.coordinates.y } : null;
 
                 if (beforeMove && afterMove && beforeMove.x === afterMove.x && beforeMove.y === afterMove.y) {
-                    // If default closeTheGap cannot progress, try a forward-priority step once.
-                    if (typeof data.methods.closeTheGapForwardFirst === 'function') {
-                        data.methods.closeTheGapForwardFirst(caller, combatants);
-                    }
-                    const fallbackAfterMove = caller.coordinates ? { x: caller.coordinates.x, y: caller.coordinates.y } : null;
-                    const movedAfterFallback = !!(fallbackAfterMove && (fallbackAfterMove.x !== beforeMove.x || fallbackAfterMove.y !== beforeMove.y));
-                    let movedByPathing = false;
-                    let pathCandidate = null;
-                    let nextPathStep = null;
-
-                    if (!movedAfterFallback) {
-                        pathCandidate = this.findPathToTargetAdjacency(caller, target, combatants);
-                        if (pathCandidate && pathCandidate.length > 1) {
-                            nextPathStep = pathCandidate[1];
-                            if (this.isTileEnterable(caller, nextPathStep, combatants)) {
-                                caller.coordinates = { x: nextPathStep.x, y: nextPathStep.y };
-                                caller.depth = nextPathStep.x;
-                                caller.position = nextPathStep.y;
-                                movedByPathing = true;
-                            }
-                        }
-                    }
-
-                    const afterRecoveryMove = caller.coordinates ? { x: caller.coordinates.x, y: caller.coordinates.y } : (fallbackAfterMove || afterMove);
-                    const movedAfterRecovery = movedAfterFallback || movedByPathing;
+                    const movedAfterRecovery = false;
 
                     if (movedAfterRecovery) {
                         caller._trollStallCount = 0;
@@ -347,6 +365,11 @@ export function Troll(data, utilMethods, animationManager, overlayManager){
                     caller._trollStallCount = 0;
                 }
 
+                // Store previous tile to prevent immediate back-and-forth jitter next tick.
+                if (beforeMove && afterMove && (beforeMove.x !== afterMove.x || beforeMove.y !== afterMove.y)) {
+                    caller._trollPreviousTile = { x: beforeMove.x, y: beforeMove.y };
+                }
+
                 // Attack trigger
                 const era = caller.eras ? caller.eras[caller.eraIndex] : null;
                 // Repopulate pendingAttack if cleared by restartTurnCycle
@@ -386,7 +409,7 @@ export function Troll(data, utilMethods, animationManager, overlayManager){
             if (attack.name.includes('regeneration')) {
                 // Visual feedback: pulsing green (handled by .regenerating class)
                 // Specials define their properties (type, duration, chance) on the main object, not within an .effect property
-                applyAttackEffect(target, attack, this.broadcastDataUpdate);
+                applyAttackEffect(caller, attack, this.broadcastDataUpdate);
 
                 this.kickoffSpecialCooldown(attack);
                 caller.energy -= (attack.energy_cost || 0);

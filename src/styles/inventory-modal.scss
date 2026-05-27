@@ -421,6 +421,7 @@
     left: 22px;
     width: 54px;
     z-index: 40;
+    pointer-events: none;
 }
 .inventory-popup .inventory-strip .sub-container .hover-message,
 .inventory-modal .inventory-strip .sub-container .hover-message{
@@ -430,6 +431,7 @@
     display: flex;
     justify-content: center;
     white-space: nowrap;
+    pointer-events: none;
 }
 
 /* Percent modifier shown next to stat values (we use percent-points like +30%) */

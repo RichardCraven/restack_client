@@ -238,9 +238,6 @@ import imperial_helm_upgradeable_upgraded from '../assets/icons/items/helms/upgr
 import rogue_hood_upgradeable from '../assets/icons/items/helms/upgradeable/rogue hood.png';
 import rogue_hood_upgradeable_upgraded from '../assets/icons/items/helms/upgradeable/rogue hood upgraded.png';
 
-import glindas_wand from '../assets/icons/items/wands/glindas_wand.png';
-import maerlyns_rod from '../assets/icons/items/wands/maerlyns_rod.png';
-import volkas_wand from '../assets/icons/items/wands/volkas_wand.png';
 import cloudfire_wand from '../assets/icons/items/wands/cloudfire wand.png';
 import animus_wand from '../assets/icons/items/wands/animus wand.png';
 import glyndas_wand from "../assets/icons/items/wands/glynda's wand.png";
@@ -317,6 +314,7 @@ import cloud from '../assets/icons/portals/cloud.png';
 import way_down from '../assets/icons/portals/way_down.png';
 import way_up from '../assets/icons/portals/way_up.png';
 import door from '../assets/icons/portals/door.png';
+import dungeon_portal from '../assets/icons/portals/dungeon portal.png';
 
 // magic
 import black_magic from '../assets/icons/magic/black_magic.png';
@@ -938,9 +936,6 @@ export {
     rogue_hood_upgradeable,
     rogue_hood_upgradeable_upgraded,
 
-    glindas_wand,
-    maerlyns_rod,
-    volkas_wand,
     cloudfire_wand,
     animus_wand,
     glyndas_wand,
@@ -1086,6 +1081,7 @@ export {
     way_down,
     way_up,
     door,
+    dungeon_portal,
 
     black_magic,
     fireball,

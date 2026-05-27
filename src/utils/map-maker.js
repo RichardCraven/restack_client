@@ -32,6 +32,7 @@ export function MapMaker(props){
         'devil',
         'pit',
         'cloud',
+        'dungeon portal',
         'magic'
     ]
 
@@ -672,6 +673,8 @@ export function MapMaker(props){
                 return 'moon_castle'
             case 'devil':
                 return 'mordu_devil'
+            case 'dungeon portal':
+                return 'dungeon_portal'
             case 'food':
                 return 'food'
             case 'spawn':

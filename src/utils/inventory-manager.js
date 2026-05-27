@@ -170,9 +170,11 @@ export function InventoryManager(){
         'rogue_hood_upgradeable_upgraded'
     ]
     this.wands_names = [
-        'glindas_wand',
-        'volkas_wand',
-        'maerlyns_rod'
+        'cloudfire_wand',
+        'animus_wand',
+        'glyndas_wand',
+        'justicator_wand',
+        'willowcaster'
     ]
     this.staves_names = [
         'archmages_staff',
@@ -1367,7 +1369,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'Cloudfire Wand',
             equippedBy: null,
             subtype: 'wand',
-            power: null,
+            power: 1,
             animation: null,
             description: 'Wand favored by mages, offering a blend of magical power and versatility.'
         },
@@ -1378,7 +1380,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'Animus Wand',
             equippedBy: null,
             subtype: 'wand',
-            power: null,
+            power: 1,
             animation: null,
             description: 'Wand favored by animus, offering a blend of magical power and versatility.'
         },
@@ -1389,7 +1391,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: "Glynda's Wand",
             equippedBy: null,
             subtype: 'wand',
-            power: null,
+            power: 1,
             animation: null,
             description: "Wand favored by Glynda, offering a blend of magical power and versatility."
         },
@@ -1400,20 +1402,9 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'Justicator Wand',
             equippedBy: null,
             subtype: 'wand',
-            power: null,
+            power: 2,
             animation: null,
             description: 'Wand favored by justicators, offering a blend of magical power and justice.'
-        },
-        volkas_wand: {
-            tier: 2,            
-            type: 'magical',
-            icon: 'volkas_wand',
-            name: "Volka's Wand",
-            equippedBy: null,
-            subtype: 'wand',
-            power: null,
-            animation: null,
-            description: "Wand favored by Volka, offering a blend of magical power and versatility."
         },
         willowcaster: {
             tier: 2,
@@ -1422,20 +1413,9 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'Willowcaster',
             equippedBy: null,
             subtype: 'wand',
-            power: null,
+            power: 2,
             animation: null,
             description: 'Wand favored by willows, offering a blend of magical power and versatility.'
-        },
-        maerlyns_rod: {
-            tier: 3,
-            type: 'magical',
-            icon: 'maerlyns_rod',
-            name: "Maerlyn's Rod",
-            equippedBy: null,
-            subtype: 'wand',
-            power: null,
-            animation: null,
-            description: "Rod favored by Maerlyn, offering a blend of magical power and versatility."
         },
         // staves
         archmages_staff: {
@@ -1445,7 +1425,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: "Archmage's Staff",
             equippedBy: null,
             subtype: 'staff',
-            power: null,
+            power: 1,
             animation: null,
             description: "Staff favored by archmages, offering a blend of magical power and wisdom."
         },
@@ -1456,7 +1436,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: "Enchanter's Staff",
             equippedBy: null,
             subtype: 'staff',
-            power: null,
+            power: 1,
             animation: null,
             description: "Staff favored by enchanters, offering a blend of magical power and enchantment."
         },
@@ -1467,7 +1447,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'Imperial Mage Staff',
             equippedBy: null,
             subtype: 'staff',
-            power: null,
+            power: 1,
             animation: null,
             description: "Staff favored by imperial mages, offering a blend of magical power and authority."
         },
@@ -1478,7 +1458,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'Staff of Espilon',
             equippedBy: null,
             subtype: 'staff',
-            power: null,
+            power: 2,
             animation: null,
             description: "Staff favored by Espilon, offering a blend of magical power and wisdom."
         },
@@ -1489,7 +1469,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'Staff of Marduk',
             equippedBy: null,
             subtype: 'staff',
-            power: null,
+            power: 2,
             animation: null,
             description: "Staff favored by Marduk, offering a blend of magical power and wisdom."
         },
@@ -1500,7 +1480,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'Staff of Omicron',
             equippedBy: null,
             subtype: 'staff',
-            power: null,
+            power: 2,
             animation: null,
             description: "Staff favored by Omicron, offering a blend of magical power and wisdom."
         },
@@ -1511,7 +1491,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'Staff of Tomorrow',
             equippedBy: null,
             subtype: 'staff',
-            power: null,
+            power: 3,
             animation: null,
             description: "Staff favored by the seers of tomorrow, offering a blend of magical power and foresight."
         },
@@ -1594,7 +1574,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'Elasi Amulet',
             equippedBy: null,
             subtype: 'amulet',
-            power: null,
+            power: 1,
             animation: null,
             description: 'Crafted by the silver-tongued Elasi priestesses, this amulet whispers ancient wards against curses and binding magics.'
         },
@@ -1605,7 +1585,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'Darkarrow Amulet',
             equippedBy: null,
             subtype: 'amulet',
-            power: null,
+            power: 1,
             animation: null,
             description: 'Named for the black arrows of the Shadow Wars, this amulet channels the swiftness and precision of those legendary archers.'
         },
@@ -1616,7 +1596,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'Elemental Amulet',
             equippedBy: null,
             subtype: 'amulet',
-            power: null,
+            power: 1,
             animation: null,
             description: 'A primal stone that channels the breath of all elements—fire, water, earth, and wind bound in harmonious balance.'
         },
@@ -1627,7 +1607,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'Silver Amulet',
             equippedBy: null,
             subtype: 'amulet',
-            power: null,
+            power: 1,
             animation: null,
             description: 'Forged from moonsilver and blessed by the Temple Wardens, this amulet glows softly and repels malevolent spirits.'
         },
@@ -1638,7 +1618,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'Ruby Amulet',
             equippedBy: null,
             subtype: 'amulet',
-            power: null,
+            power: 1,
             animation: null,
             description: 'A blood-red gem pulled from the volcanic heart of the Crimson Wastes, burning with primal fire and passion.'
         },
@@ -1649,7 +1629,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'Acorn Amulet',
             equippedBy: null,
             subtype: 'amulet',
-            power: null,
+            power: 1,
             animation: null,
             description: 'A gift from the Fae, this acorn pulses with ancient forest magic and grants kinship with the natural world.'
         },
@@ -1660,7 +1640,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'Voodoo Amulet',
             equippedBy: null,
             subtype: 'amulet',
-            power: null,
+            power: 1,
             animation: null,
             description: 'Imbued with sympathetic magic by the shadow priests of the Bayou, this amulet allows the wearer to touch distant threads of fate.'
         },
@@ -1671,7 +1651,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'Yaga Amulet',
             equippedBy: null,
             subtype: 'amulet',
-            power: null,
+            power: 1,
             animation: null,
             description: 'Given by the dreaded Yaga herself to those who survive her trials, this amulet carries her capricious blessing.'
         },
@@ -1682,7 +1662,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'Temprance Amulet',
             equippedBy: null,
             subtype: 'amulet',
-            power: null,
+            power: 1,
             animation: null,
             description: 'Blessed by the monks of the Abstinent Order, this amulet brings clarity and balance to turbulent hearts.'
         },
@@ -1693,7 +1673,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'Emerald Amulet',
             equippedBy: null,
             subtype: 'amulet',
-            power: null,
+            power: 1,
             animation: null,
             description: 'A verdant stone treasured by the Druid circles, it thrums with the life force of eternal spring.'
         },
@@ -1704,7 +1684,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'Maconic Amulet',
             equippedBy: null,
             subtype: 'amulet',
-            power: null,
+            power: 1,
             animation: null,
             description: 'Carved with the sacred symbols of the Stoneworkers\' Guild, this amulet draws strength from stone and mountain.'
         },
@@ -1715,7 +1695,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'Warding Amulet',
             equippedBy: null,
             subtype: 'amulet',
-            power: null,
+            power: 2,
             animation: null,
             description: 'A masterwork of protective enchantment from the Sentry Corps, it weaves barriers of pure force around the wearer.'
         },
@@ -1726,7 +1706,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'Bloodvial Amulet',
             equippedBy: null,
             subtype: 'amulet',
-            power: null,
+            power: 2,
             animation: null,
             description: 'A chilling relic said to contain the essence of a fallen hero, it grants vitality bound to sacrifice and blood-debt.'
         },
@@ -1737,7 +1717,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'Enchantress Amulet',
             equippedBy: null,
             subtype: 'amulet',
-            power: null,
+            power: 2,
             animation: null,
             description: 'Woven by the Enchantresses of the Coral Spire, this amulet bends the weave of magic itself around its bearer.'
         },
@@ -1748,7 +1728,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'Goldclaw Amulet',
             equippedBy: null,
             subtype: 'amulet',
-            power: null,
+            power: 2,
             animation: null,
             description: 'Taken from the hoard of an ancient dragon, this amulet burns with avarice and grants the wearer uncanny fortune.'
         },
@@ -1759,7 +1739,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: "Cleric's Amulet",
             equippedBy: null,
             subtype: 'amulet',
-            power: null,
+            power: 2,
             animation: null,
             description: 'Sanctified in the High Cathedral, this amulet channels divine grace and mends the wounds of body and spirit.'
         },
@@ -1770,7 +1750,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'Queens Amulet',
             equippedBy: null,
             subtype: 'amulet',
-            power: null,
+            power: 2,
             animation: null,
             description: 'Once worn by the last queen before the realm fractured, this amulet carries the weight of sovereignty and ancient command.'
         },
@@ -1781,7 +1761,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'Ice Amulet',
             equippedBy: null,
             subtype: 'amulet',
-            power: null,
+            power: 3,
             animation: null,
             description: 'Frozen from the very heart of the Eternal Glacier, this amulet imprisons a shard of primordial winter and slows all decay.'
         },
@@ -1792,7 +1772,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'Hypnosis Amulet',
             equippedBy: null,
             subtype: 'amulet',
-            power: null,
+            power: 3,
             animation: null,
             description: 'Created by the Dream-Walkers of the Somnium, this amulet bends perception and weaves illusions of hauntingly beautiful deception.'
         },
@@ -1803,7 +1783,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'Vampiric Amulet',
             equippedBy: null,
             subtype: 'amulet',
-            power: null,
+            power: 3,
             animation: null,
             description: 'A terrible treasure from the Crimson Courts, this amulet thirsts for life and grants terrible strength to those who feed it.'
         },
@@ -1814,7 +1794,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'Platinum Amulet',
             equippedBy: null,
             subtype: 'amulet',
-            power: null,
+            power: 3,
             animation: null,
             description: 'Forged from the rarest metal in the Star-Forges of the Celestial Smiths, this amulet blazes with otherworldly radiance.'
         },
@@ -1825,7 +1805,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'Necrotic Amulet',
             equippedBy: null,
             subtype: 'amulet',
-            power: null,
+            power: 3,
             animation: null,
             description: 'Crafted in the Catacombs by warlocks who dare commune with death itself, this amulet whispers promises of undying power.'
         },
@@ -1836,7 +1816,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'Voidward Amulet',
             equippedBy: null,
             subtype: 'amulet',
-            power: null,
+            power: 4,
             animation: null,
             description: 'A legendary artifact sealed with the last breath of a Void Guardian, it creates an impenetrable barrier against the abyss itself.'
         },
@@ -1847,7 +1827,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'Celestial Amulet',
             equippedBy: null,
             subtype: 'amulet',
-            power: null,
+            power: 4,
             animation: null,
             description: 'Fallen from a distant star and blessed by the Heavenly Choir, this amulet bathes the wearer in divine light and cosmic purpose.'
         },
@@ -1858,7 +1838,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'Dimensional Amulet',
             equippedBy: null,
             subtype: 'amulet',
-            power: null,
+            power: 4,
             animation: null,
             description: 'Woven from the fabric of folded space by the Interdimensional Council, this amulet grants glimpses beyond the veil of reality.'
         },
@@ -2096,6 +2076,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'crimson mask',
             subtype: 'mask',
             equippedBy: null,
+            power: 3,
             animation: null,
             description: '50% damage reduction from demons and fire magic'
         },
@@ -2106,6 +2087,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'seraphic mask',
             subtype: 'mask',
             equippedBy: null,
+            power: 3,
             animation: null,
             description: '50% damage reduction from undead and dark magic'
         },
@@ -2116,6 +2098,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'shadow mask',
             subtype: 'mask',
             equippedBy: null,
+            power: 3,
             animation: null,
             description: '50% damage reduction from eldritch and dark magic'
         },
@@ -2126,6 +2109,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'twilight mask',
             subtype: 'mask',
             equippedBy: null,
+            power: 3,
             animation: null,
             description: '50% damage reduction from all magic types'
         },
@@ -2136,6 +2120,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'eldritch mask',
             subtype: 'mask',
             equippedBy: null,
+            power: 4,
             animation: null,
             description: ''
         },
@@ -2146,6 +2131,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'paradox mask',
             subtype: 'mask',
             equippedBy: null,
+            power: 4,
             animation: null,
             description: ''
         },
@@ -2156,6 +2142,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'necrotic mask',
             subtype: 'mask',
             equippedBy: null,
+            power: 4,
             animation: null,
             description: ''
         },
@@ -2166,6 +2153,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             name: 'entropic mask',
             subtype: 'mask',
             equippedBy: null,
+            power: 4,
             animation: null,
             description: ''
         }
@@ -2943,7 +2931,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
         'temprance_amulet', 'emerald_amulet', 'maconic_amulet',
     ];
     this.TIER2_MAGICAL = [
-        'justicator_wand', 'volkas_wand', 'willowcaster',
+        'justicator_wand', 'willowcaster',
         'staff_of_espilon', 'staff_of_marduk', 'staff_of_omicron',
         'the_watchful_eye', 'moonbird_folio', 'icewing_folio',
         'emerald_tablet', 'ruby_tablet',
@@ -2951,7 +2939,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
         'clerics_amulet', 'queens_amulet',
     ];
     this.TIER3_MAGICAL = [
-        'maerlyns_rod', 'staff_of_tomorrow',
+        'staff_of_tomorrow',
         'feldons_manual', 'the_beast_book', 'book_of_jade',
         'igors_grimoire', 'forbidden_grimoire',
         'ice_amulet', 'hypnosis_amulet', 'vampiric_amulet', 'platinum_amulet', 'necrotic_amulet',

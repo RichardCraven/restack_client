@@ -81,6 +81,28 @@ export function Djinn(data, utilMethods, animationManager, overlayManager){
                 break;
         }
     }
+    // Teleport only makes sense when the target is truly in a backline position:
+    //   1. Any live enemy has behaviorSequence 'center-spellcaster' (e.g. Wizard), OR
+    //   2. The target is a brawler whose own summon/minions have advanced further
+    //      (higher depth), leaving the brawler closer to its own backline.
+    this.shouldUseTeleport = (caller, combatants, target) => {
+        const livePlayers = Object.values(combatants).filter(
+            e => !e.dead && !e.isMonster && !e.isMinion && !e.isVCT
+        );
+        if (livePlayers.some(e => e.behaviorSequence === 'center-spellcaster')) {
+            return true;
+        }
+        if (target && target.behaviorSequence === 'brawler') {
+            const playerMinions = Object.values(combatants).filter(
+                e => !e.dead && e.isMinion && !e.isMonster && !e.isVCT
+            );
+            if (playerMinions.some(m => m.depth > target.depth)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     this.triggerVoidLance = (coords) => {
         console.log('TRIGGER VOID LANCE');
         const tileId = this.animationManager.getTileIdByCoords(coords)
@@ -115,7 +137,7 @@ export function Djinn(data, utilMethods, animationManager, overlayManager){
                 caller.energy -= 80;
                 this.triggerVoidLance(target.coordinates);
                 this.hitsTarget(caller)
-            } else if(distanceToTarget > 0){
+            } else if(distanceToTarget > 0 && this.shouldUseTeleport(caller, combatants, target)){
                 this.goBehindAndAttack(caller, target)
             } else if(distanceToTarget === 1 && laneDiff === 0){
                 this.hitsTarget(caller)
