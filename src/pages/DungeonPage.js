@@ -2511,6 +2511,18 @@ class DungeonPage extends React.Component {
                 return;
             }
         } catch (e) {}
+        // Global save shortcut on dungeon screen (Cmd/Ctrl+S)
+        try {
+            const maybeKey = typeof event.key === 'string' ? event.key.toLowerCase() : '';
+            if ((event.metaKey || event.ctrlKey) && !event.altKey && maybeKey === 's') {
+                event.preventDefault();
+                if (typeof this.props.saveUserData === 'function') {
+                    this.props.saveUserData();
+                    this.displayMessage('saving...');
+                }
+                return;
+            }
+        } catch (e) {}
         // Allow global 'i' to toggle MonsterBattle inventory when a battle is active
         // If the developer console is open, disable all hotkeys here (except Shift+Space
         // which is handled above). This prevents typed commands like 'revive' from
@@ -3855,6 +3867,15 @@ class DungeonPage extends React.Component {
                                 this.props.crewManager.crew.forEach(m => { if (m && Array.isArray(m.inventory)) m.inventory = this.props.inventoryManager.refreshWeaponStats(m.inventory); });
                             }
                         } catch(e) {}
+                        try {
+                            if (Array.isArray(this.props.crew)) {
+                                this.props.crew.forEach(c => {
+                                    if (!c) return;
+                                    c.hp = 1;
+                                    c.dead = false;
+                                });
+                            }
+                        } catch(e) {}
                         // Explicitly clear dead/hp on crewManager.crew as a second pass — initializeCrew
                         // rebuilds from meta2.crew (hp=1/dead=false) but any in-flight callbacks from
                         // combat may have mutated the objects. Force-clear here so the Tile dead-overlay
@@ -3894,9 +3915,12 @@ class DungeonPage extends React.Component {
                         refreshCrewUI();
                         setTimeout(() => {
                             refreshCrewUI();
-                            // Safe to re-enable dead/hp updates from battle callbacks now
-                            this._suppressFighterDeadHpUpdates = false;
                         }, 0);
+                        // Keep suppression active through the battle tear-down window so
+                        // delayed callbacks cannot write dead/hp back onto revived crew.
+                        setTimeout(() => {
+                            this._suppressFighterDeadHpUpdates = false;
+                        }, 2500);
                     }
             try {
                 

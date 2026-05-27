@@ -114,7 +114,7 @@ const attacksMatrix = {
         type: 'healing',
         range: 'close',
         icon: images['heal'],
-        cooldown: 3.5,
+        cooldown: 10,
         damage: 10,
     },
     fire_arrow: {

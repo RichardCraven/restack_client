@@ -103,6 +103,11 @@ export function Sage(data, utilMethods, animationManager, overlayManager){ // es
         }, 450);
     }
 
+    this.isAttackReady = (attack) => {
+        if (!attack) return false;
+        return attack.cooldown_position === undefined || attack.cooldown_position >= 100;
+    }
+
     this.tryUseConsumableForHeal = (caller) => {
         try {
             if (!caller || typeof caller.hp !== 'number') return false;
@@ -190,14 +195,14 @@ export function Sage(data, utilMethods, animationManager, overlayManager){ // es
             const needsHealing = Object.values(combatants).some(e =>
                 this.isFriendly(e) && e.id !== caller.id && e.hp < this.getCombatantMaxHp(e)
             );
-            if (needsHealing && healAttack && (healAttack.cooldown_position === undefined || healAttack.cooldown_position >= 100)) {
+            if (needsHealing && healAttack && this.isAttackReady(healAttack)) {
                 return healAttack;
             }
         }
 
-        if (meditateAttack) return meditateAttack;
-        if (healAttack) return healAttack;
-        return caller.attacks.find(Boolean) || null;
+        if (meditateAttack && this.isAttackReady(meditateAttack)) return meditateAttack;
+        if (healAttack && this.isAttackReady(healAttack)) return healAttack;
+        return caller.attacks.find(a => this.isAttackReady(a)) || null;
     }
     
     // Acquire target: prioritize healing friendlies over attacking enemies
@@ -237,7 +242,7 @@ export function Sage(data, utilMethods, animationManager, overlayManager){ // es
             }
             
             caller.targetId = targetToHeal.id;
-            caller.pendingAttack = caller.attacks.find(e => e.name === 'heal') || this.chooseAttackType(caller, targetToHeal, combatants);
+            caller.pendingAttack = this.chooseAttackType(caller, targetToHeal, combatants);
             this.debugLog('acquireTarget:selectedHealTarget', {
                 targetId: caller.targetId,
                 targetName: targetToHeal.name,
@@ -374,7 +379,7 @@ export function Sage(data, utilMethods, animationManager, overlayManager){ // es
         // Attack trigger must live in processMove (eraAttack removed in factories.js)
         {
             const era = caller.eras ? caller.eras[caller.eraIndex] : null;
-            if (era && !era.attacked && !caller.onGeneralAttackCooldown && !caller.attacking && caller.pendingAttack) {
+            if (era && !era.attacked && !caller.onGeneralAttackCooldown && !caller.attacking && caller.pendingAttack && this.isAttackReady(caller.pendingAttack)) {
                 const target = combatants[caller.targetId];
                 if (target && !target.dead && !target.isVCT) {
                     const distanceToTarget = data.methods.getDistanceToTarget(caller, target);
@@ -437,6 +442,16 @@ export function Sage(data, utilMethods, animationManager, overlayManager){ // es
     }
     
     this.initiateAttack = (caller, manualAttack, combatants) => { // eslint-disable-line no-unused-vars
+        if (!caller?.pendingAttack || !this.isAttackReady(caller.pendingAttack)) {
+            this.debugLog('initiateAttack:abort-attackOnCooldown', {
+                callerId: caller?.id,
+                callerName: caller?.name,
+                pendingAttack: caller?.pendingAttack?.name || null,
+                cooldownPosition: caller?.pendingAttack?.cooldown_position
+            });
+            return;
+        }
+
         const target = combatants[caller.targetId];
         if (!target) {
             this.debugLog('initiateAttack:abort-noTarget', {

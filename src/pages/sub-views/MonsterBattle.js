@@ -1543,6 +1543,17 @@ class MonsterBattle extends React.Component {
                 let target = this.props.combatManager.getCombatant(selectedFighter.targetId)
                 // target resolved
                 if(!target) return
+                try {
+                    if (this.props.combatManager && typeof this.props.combatManager.appendCombatLog === 'function') {
+                        const attackerName = (typeof this.props.combatManager.getCombatantLogName === 'function')
+                            ? this.props.combatManager.getCombatantLogName(selectedFighter)
+                            : (selectedFighter.name || selectedFighter.type || 'Wizard');
+                        const targetName = (typeof this.props.combatManager.getCombatantLogName === 'function')
+                            ? this.props.combatManager.getCombatantLogName(target)
+                            : (target.name || target.type || 'target');
+                        this.props.combatManager.appendCombatLog(`${attackerName} casts magic missile at ${targetName}`);
+                    }
+                } catch (e) {}
                 // let targetDistance = this.props.combatManager.getDistanceToTarget(this.state.selectedFighter, target)
                 // let laneDiff = this.props.combatManager.getLaneDifferenceToTarget(this.state.selectedFighter, target)
 
@@ -1550,6 +1561,10 @@ class MonsterBattle extends React.Component {
                 const travelTime = 1500
                 // triggering magic missile via AI
                 this.props.combatManager.fighterAI.roster['wizard'].triggerMagicMissile(selectedFighter, target, travelTime)
+                const combatLog = this.props.combatManager && typeof this.props.combatManager.getCombatLog === 'function'
+                    ? this.props.combatManager.getCombatLog()
+                    : [];
+                this.setState({ combatLog });
                 // this.props.combatManager.lockFighter(this.state.selectedFighter.id)
 
 

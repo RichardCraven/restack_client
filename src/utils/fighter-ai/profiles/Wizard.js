@@ -8,6 +8,13 @@ const pickRandom = (array) => {
 }
 
 export function Wizard(data, utilMethods, animationManager, overlayManager) {
+    const ENERGY_BLAST_DIAGNOSTICS = true;
+    const logEnergyBlastDiag = (stage, payload = {}) => {
+        if (!ENERGY_BLAST_DIAGNOSTICS) return;
+        try {
+            console.log(`[EnergyBlastDiag][Wizard][${stage}]`, payload);
+        } catch (e) {}
+    };
     // Diagnostic: log all decrements to movement points
     const logMPDecrement = (caller, amount, reason) => {
         if (!caller) return;
@@ -33,6 +40,8 @@ export function Wizard(data, utilMethods, animationManager, overlayManager) {
     this.missesTarget = utilMethods.missesTarget;
     this.hitsTarget = utilMethods.hitsTarget;
     this.hitsCombatant = utilMethods.hitsCombatant;
+    this.appendCombatLog = utilMethods.appendCombatLog;
+    this.getCombatantLogName = utilMethods.getCombatantLogName;
     this.useConsumable = utilMethods.useConsumable;
     this.getCurrentInventory = utilMethods.getCurrentInventory;
     // Override targetKilled to match monster/minion death animation and removal
@@ -346,7 +355,7 @@ export function Wizard(data, utilMethods, animationManager, overlayManager) {
                 }
             } else if (clearLane === null) {
                 // Completely obscured: retarget
-                this.acquireTarget(caller);
+                this.acquireTarget(caller, combatants);
                 data.methods.centerBack(caller, combatants);
                 return;
             }
@@ -377,7 +386,12 @@ export function Wizard(data, utilMethods, animationManager, overlayManager) {
                 const enemyIsAdjacent = adjacentCoords.some(coord => {
                     return Object.values(combatants).some(e => isEnemy(e) && e.coordinates.x === coord.x && e.coordinates.y === coord.y);
                 });
-                const target = Object.values(combatants).find(e => e.id === caller.targetId),
+                let target = Object.values(combatants).find(e => e.id === caller.targetId);
+                if (!target || target.dead) {
+                    this.acquireTarget(caller, combatants);
+                    target = Object.values(combatants).find(e => e.id === caller.targetId);
+                }
+                const
                     // isBlocked is true if the current lane either:
                     // 1. Has no enemy tiles at all
                     // 2. Has enemy tiles but ALL of them are obscured by friendlies
@@ -443,7 +457,7 @@ export function Wizard(data, utilMethods, animationManager, overlayManager) {
                 // Attack trigger — fires if no spell was used this era and Wizard is in range
                 {
                     const era = caller.eras ? caller.eras[caller.eraIndex] : null;
-                    if (era && !era.attacked && !caller.onGeneralAttackCooldown && !caller.attacking && caller.pendingAttack) {
+                    if (era && caller.eraIndex > 0 && !era.attacked && !caller.onGeneralAttackCooldown && !caller.attacking && caller.pendingAttack && caller.pendingAttack.cooldown_position >= 100) {
                         const atkTarget = combatants[caller.targetId];
                         if (atkTarget && !atkTarget.dead && !atkTarget.isVCT) {
                             const dx = Math.abs(caller.coordinates.x - atkTarget.coordinates.x);
@@ -451,7 +465,13 @@ export function Wizard(data, utilMethods, animationManager, overlayManager) {
                             const dist = dx + dy;
                             const atkRange = caller.pendingAttack.range || 'far';
                             const inRange = atkRange === 'close' ? dist === 1 : atkRange === 'medium' ? dist <= 3 : dist <= 6;
-                            if (inRange) {
+                            const hasClearBeamShot = String(caller.pendingAttack.name || '').toLowerCase() !== 'energy blast' || (() => {
+                                const allTiles = (Array.isArray(atkTarget.occupiedCoords) && atkTarget.occupiedCoords.length > 0)
+                                    ? atkTarget.occupiedCoords
+                                    : [atkTarget.coordinates];
+                                return allTiles.some(tile => !data.methods.isPathBlockedByFriendly(caller.coordinates, tile, combatants));
+                            })();
+                            if (inRange && hasClearBeamShot) {
                                 era.attacked = true;
                                 caller.attack();
                             }
@@ -540,7 +560,7 @@ export function Wizard(data, utilMethods, animationManager, overlayManager) {
             try {
                 // hitsCombatant handles crit chance, damage application, wounded, and rock animation
                 if (typeof this.hitsCombatant === 'function') {
-                    this.hitsCombatant(caller, target);
+                    this.hitsCombatant(caller, target, { name: 'magic missile', subtype: 'magic missile', type: 'arcane', energy_cost: 1 });
                 } else {
                     // fallback: apply simple damage
                     let r = Math.random();
@@ -1002,7 +1022,7 @@ export function Wizard(data, utilMethods, animationManager, overlayManager) {
                             await this.triggerBeamAttack(caller.coordinates, alt.coordinates);
                             const combatantHit = alt;
                             if (combatantHit) {
-                                try { this.hitsCombatant(caller, combatantHit); } catch (err) { this.hitsCombatant(caller, combatantHit); }
+                                try { this.hitsCombatant(caller, combatantHit, caller.pendingAttack || { name: 'energy blast', type: 'arcane', energy_cost: 1 }); } catch (err) { this.hitsCombatant(caller, combatantHit, caller.pendingAttack || { name: 'energy blast', type: 'arcane', energy_cost: 1 }); }
                             } else {
                                 this.missesTarget(caller);
                             }
@@ -1027,14 +1047,14 @@ export function Wizard(data, utilMethods, animationManager, overlayManager) {
                         // Delegate to centralized hitsCombatant so damage, crits, and animations are consistent
                         try {
                             if (typeof this.hitsCombatant === 'function') {
-                                this.hitsCombatant(caller, combatantHit);
+                                this.hitsCombatant(caller, combatantHit, caller.pendingAttack || { name: 'energy blast', type: 'arcane', energy_cost: 1 });
                             } else {
                                 this.hitsCombatant(caller, combatantHit);
                             }
                         } catch (err) {
                             console.warn('apply beam manual hit error', err);
                             // fallback defensively
-                            if (typeof this.hitsCombatant === 'function') this.hitsCombatant(caller, combatantHit);
+                            if (typeof this.hitsCombatant === 'function') this.hitsCombatant(caller, combatantHit, caller.pendingAttack || { name: 'energy blast', type: 'arcane', energy_cost: 1 });
                         }
                     } else {
                         this.missesTarget(caller);
@@ -1050,6 +1070,21 @@ export function Wizard(data, utilMethods, animationManager, overlayManager) {
             switch (caller.pendingAttack.name) {
                 case 'energy blast':
                     if (laneDiff === 0 || true) { // true because we now use coordinated targeting
+                        const traceId = `eb_${caller?.id || 'unknown'}_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
+                        logEnergyBlastDiag('start', {
+                            traceId,
+                            callerId: caller?.id,
+                            callerName: caller?.name,
+                            callerCoords: caller?.coordinates,
+                            targetId: target?.id,
+                            targetName: target?.name,
+                            targetCoords: target?.coordinates,
+                            laneDiff,
+                            combatPaused: !!caller?.combatPaused,
+                            attacking: !!caller?.attacking,
+                            pendingAttack: caller?.pendingAttack?.name,
+                            pendingCooldown: caller?.pendingAttack?.cooldown_position
+                        });
                         // CRITICAL: Check for friendly in line BEFORE initiating attack
                         // If there's a friendly between caster and target, abort unless alt enemy found
                         const clearTargetCoords = getClearTargetCoords(caller, target, combatants);
@@ -1059,6 +1094,12 @@ export function Wizard(data, utilMethods, animationManager, overlayManager) {
                             const alt = findEnemyWithClearPath(caller, combatants, preferDir);
                             if (!alt) {
                                 // No alternative enemy with clear path; abort attack
+                                logEnergyBlastDiag('abort-no-clear-alt-target', {
+                                    traceId,
+                                    callerId: caller?.id,
+                                    targetId: target?.id,
+                                    combatPaused: !!caller?.combatPaused
+                                });
                                 this.missesTarget(caller);
                                 this.kickoffAttackCooldown(caller);
                                 break;
@@ -1066,34 +1107,166 @@ export function Wizard(data, utilMethods, animationManager, overlayManager) {
                             // Use alternative target instead
                             target = alt;
                             caller.targetId = alt.id;
+                            logEnergyBlastDiag('retargeted-alt', {
+                                traceId,
+                                newTargetId: alt?.id,
+                                newTargetName: alt?.name,
+                                newTargetCoords: alt?.coordinates
+                            });
                         }
                         // Double-check the final target has a clear path
                         const finalCoords = getClearTargetCoords(caller, target, combatants);
                         if (!finalCoords) {
                             // Defensive: final target also has friendly blocking; abort
+                            logEnergyBlastDiag('abort-final-clear-path-failed', {
+                                traceId,
+                                callerId: caller?.id,
+                                targetId: target?.id,
+                                combatPaused: !!caller?.combatPaused
+                            });
                             this.missesTarget(caller);
                             this.kickoffAttackCooldown(caller);
                             break;
                         }
-                        await this.triggerBeamAttack(caller.coordinates, finalCoords);
-                        const combatantHit = target;
-                        if (combatantHit) {
-                            // Apply unified wounded/damage logic for AI beam hit
-                            try {
-                                if (typeof this.hitsCombatant === 'function') {
-                                    this.hitsCombatant(caller, combatantHit);
-                                } else {
-                                    this.hitsCombatant(caller, combatantHit);
-                                }
-                            } catch (err) {
-                                console.warn('apply beam AI hit error', err);
-                                if (typeof this.hitsCombatant === 'function') this.hitsCombatant(caller, combatantHit);
+                        const beamTargetCoords = (() => {
+                            if (Array.isArray(target.occupiedCoords) && target.occupiedCoords.length > 0) {
+                                const total = target.occupiedCoords.reduce((acc, c) => ({ x: acc.x + c.x, y: acc.y + c.y }), { x: 0, y: 0 });
+                                return {
+                                    x: total.x / target.occupiedCoords.length,
+                                    y: total.y / target.occupiedCoords.length
+                                };
                             }
-                            this.kickoffAttackCooldown(caller)
-                        } else {
-                            this.missesTarget(caller);
-                            this.kickoffAttackCooldown(caller)
+                            return target.coordinates || finalCoords;
+                        })();
+                        try {
+                            if (typeof this.appendCombatLog === 'function') {
+                                const attackerName = (typeof this.getCombatantLogName === 'function')
+                                    ? this.getCombatantLogName(caller)
+                                    : (caller.name || caller.type || 'Wizard');
+                                const targetName = (typeof this.getCombatantLogName === 'function')
+                                    ? this.getCombatantLogName(target)
+                                    : (target.name || target.type || 'target');
+                                this.appendCombatLog(`${attackerName} casts energy blast at ${targetName}`);
+                                logEnergyBlastDiag('cast-log-appended', {
+                                    traceId,
+                                    attackerName,
+                                    targetName,
+                                    combatPaused: !!caller?.combatPaused
+                                });
+                            }
+                        } catch (e) {}
+                        let resolvedWithHitOrMiss = false;
+                        const emitMissOnce = (fallbackTarget = null) => {
+                            if (resolvedWithHitOrMiss) return;
+                            logEnergyBlastDiag('emit-miss', {
+                                traceId,
+                                callerId: caller?.id,
+                                fallbackTargetId: fallbackTarget?.id || target?.id || null,
+                                combatPaused: !!caller?.combatPaused
+                            });
+                            this.missesTarget(caller, fallbackTarget || target);
+                            resolvedWithHitOrMiss = true;
+                        };
+
+                        try {
+                            const animationWatchdog = setTimeout(() => {
+                                logEnergyBlastDiag('animation-watchdog-timeout', {
+                                    traceId,
+                                    callerId: caller?.id,
+                                    callerCoords: caller?.coordinates,
+                                    targetId: caller?.targetId || target?.id,
+                                    combatPaused: !!caller?.combatPaused,
+                                    attacking: !!caller?.attacking,
+                                    onGeneralAttackCooldown: !!caller?.onGeneralAttackCooldown
+                                });
+                            }, 1500);
+
+                            logEnergyBlastDiag('animation-start', {
+                                traceId,
+                                callerId: caller?.id,
+                                beamTargetCoords,
+                                combatPaused: !!caller?.combatPaused
+                            });
+                            await this.triggerBeamAttack(caller.coordinates, beamTargetCoords);
+                            clearTimeout(animationWatchdog);
+                            logEnergyBlastDiag('animation-complete', {
+                                traceId,
+                                callerId: caller?.id,
+                                combatPaused: !!caller?.combatPaused
+                            });
+                            // Re-resolve target after animation delay; target may have died/moved to invalid state.
+                            const resolvedTarget = (caller.targetId && combatants[caller.targetId]) ? combatants[caller.targetId] : target;
+                            const combatantHit = (resolvedTarget && !resolvedTarget.dead && !resolvedTarget.isVCT && !resolvedTarget.invisible && !resolvedTarget.petrified)
+                                ? resolvedTarget
+                                : null;
+                            logEnergyBlastDiag('post-animation-target-resolution', {
+                                traceId,
+                                resolvedTargetId: resolvedTarget?.id || null,
+                                resolvedTargetDead: !!resolvedTarget?.dead,
+                                resolvedTargetVct: !!resolvedTarget?.isVCT,
+                                resolvedTargetInvisible: !!resolvedTarget?.invisible,
+                                resolvedTargetPetrified: !!resolvedTarget?.petrified,
+                                willHitTargetId: combatantHit?.id || null
+                            });
+                            if (combatantHit) {
+                                // Apply unified wounded/damage logic for AI beam hit
+                                try {
+                                    if (typeof this.hitsCombatant === 'function') {
+                                        logEnergyBlastDiag('dispatch-hitsCombatant', {
+                                            traceId,
+                                            callerId: caller?.id,
+                                            targetId: combatantHit?.id,
+                                            combatPaused: !!caller?.combatPaused
+                                        });
+                                        this.hitsCombatant(caller, combatantHit, caller.pendingAttack || { name: 'energy blast', type: 'arcane', energy_cost: 1 });
+                                    } else {
+                                        logEnergyBlastDiag('dispatch-hitsTarget', {
+                                            traceId,
+                                            callerId: caller?.id,
+                                            targetId: combatantHit?.id,
+                                            combatPaused: !!caller?.combatPaused
+                                        });
+                                        this.hitsTarget(caller, combatantHit);
+                                    }
+                                    resolvedWithHitOrMiss = true;
+                                    logEnergyBlastDiag('resolved-hit', {
+                                        traceId,
+                                        callerId: caller?.id,
+                                        targetId: combatantHit?.id,
+                                        combatPaused: !!caller?.combatPaused
+                                    });
+                                } catch (err) {
+                                    console.warn('apply beam AI hit error', err);
+                                    logEnergyBlastDiag('hit-dispatch-error', {
+                                        traceId,
+                                        callerId: caller?.id,
+                                        targetId: combatantHit?.id,
+                                        error: err?.message || String(err)
+                                    });
+                                    emitMissOnce(combatantHit);
+                                }
+                            } else {
+                                emitMissOnce(resolvedTarget || target);
+                            }
+                        } catch (err) {
+                            console.warn('trigger beam AI error', err);
+                            logEnergyBlastDiag('animation-error', {
+                                traceId,
+                                callerId: caller?.id,
+                                error: err?.message || String(err),
+                                combatPaused: !!caller?.combatPaused
+                            });
+                            emitMissOnce(target);
                         }
+
+                        logEnergyBlastDiag('kickoff-cooldown', {
+                            traceId,
+                            callerId: caller?.id,
+                            pendingAttack: caller?.pendingAttack?.name,
+                            cooldownPosition: caller?.pendingAttack?.cooldown_position,
+                            combatPaused: !!caller?.combatPaused
+                        });
+                        this.kickoffAttackCooldown(caller)
                     } else {
                         this.missesTarget(caller);
                     }

@@ -89,20 +89,35 @@ export function Goblin(data, utilMethods, animationManager, overlayManager){
             }, 2000);
         }
 
-        // Remove item from inventory and report for battle summary
-        try { this.stealItem(itemKey, displayName, itemIconKey); } catch (e) {}
-
-        // Record stolen item on the goblin and switch to flee behavior
+        // Record pending stolen item on the goblin; only commit theft on successful escape.
         caller.stolenItem = displayName;
         // `_im_key` is a stable inventory identifier, but UI icon resolution
         // uses `images[iconKey]`, so prefer the item's icon key for rendering.
         caller.stolenItemIcon = itemIconKey;
+        caller.pendingStolenItemKey = itemKey;
+        caller.pendingStolenItemName = displayName;
+        caller.pendingStolenItemIcon = itemIconKey;
         caller.isFleeing = true;
         caller.behaviorSequence = 'flee';
         caller.targetId = null;
 
         if (typeof this.broadcastDataUpdate === 'function') this.broadcastDataUpdate();
         return true;
+    }
+
+    this.commitPendingTheft = (caller) => {
+        if (!caller) return;
+        const itemKey = caller.pendingStolenItemKey;
+        const itemName = caller.pendingStolenItemName || caller.stolenItem;
+        const itemIconKey = (caller.pendingStolenItemIcon !== undefined)
+            ? caller.pendingStolenItemIcon
+            : caller.stolenItemIcon;
+
+        if (!itemKey || !itemName) return;
+        try { this.stealItem(itemKey, itemName, itemIconKey); } catch (e) {}
+        caller.pendingStolenItemKey = null;
+        caller.pendingStolenItemName = null;
+        caller.pendingStolenItemIcon = null;
     }
 
     this.processMove = (caller, combatants) => {
@@ -167,6 +182,7 @@ export function Goblin(data, utilMethods, animationManager, overlayManager){
                     // Goblin is at the last visible column — render portrait here for one tick,
                     // then escape on the next processMove call.
                     if (caller._escapePending) {
+                        this.commitPendingTheft(caller);
                         try { this.escapeFromCombat(caller.id); } catch (e) {}
                     } else {
                         caller._escapePending = true;
@@ -186,6 +202,7 @@ export function Goblin(data, utilMethods, animationManager, overlayManager){
                         // Stuck at escapeX-1 (another goblin is blocking escapeX).
                         // Give one tick reprieve, then escape from here to unblock the lane.
                         if (caller._escapePending) {
+                            this.commitPendingTheft(caller);
                             try { this.escapeFromCombat(caller.id); } catch (e) {}
                         } else {
                             caller._escapePending = true;

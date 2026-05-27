@@ -544,7 +544,7 @@ export function CrewManager(){
             name: 'Vaelis',
             id: 9902,
             level: 1,
-            stats: { str: 3, int: 8, dex: 5, fort: 6, baseHp: 10, experience: 0 },
+            stats: { str: 3, int: 8, dex: 25, fort: 6, baseHp: 10, experience: 0 },
             portrait: images['summoner'],
             inventory: [],
             specials: ['ice_blast', 'fire_blast'],

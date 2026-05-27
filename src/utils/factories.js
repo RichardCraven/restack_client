@@ -1,4 +1,5 @@
 export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
+    const SPEED_STAT_MULTIPLIER = 3;
     const {
         acquireTarget, 
         chooseAttackType,
@@ -169,10 +170,10 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
         targetAcquired: null,
     // Use dex when available, otherwise fall back to speed (monsters) or 1.
     // Use explicit numeric checks to avoid treating 0/undefined incorrectly.
-    movesPerTurnCycle: ( ((typeof fighter.stats.dex === 'number' && fighter.stats.dex > 0) ? fighter.stats.dex : ((typeof fighter.stats.speed === 'number' && fighter.stats.speed > 0) ? fighter.stats.speed : 1)) ) * 2,
+    movesPerTurnCycle: ( ((typeof fighter.stats.dex === 'number' && fighter.stats.dex > 0) ? fighter.stats.dex : ((typeof fighter.stats.speed === 'number' && fighter.stats.speed > 0) ? fighter.stats.speed : 1)) * SPEED_STAT_MULTIPLIER ) * 2,
         movesLeft: 0,
     // Compute moveCooldown from dex (fighters) or speed (monsters). Default to 1 to avoid NaN.
-    moveCooldown: 1 / ( ((typeof fighter.stats.dex === 'number' && fighter.stats.dex > 0) ? fighter.stats.dex : ((typeof fighter.stats.speed === 'number' && fighter.stats.speed > 0) ? fighter.stats.speed : 1)) ) * 5000, // Higher dex/speed = lower cooldown
+    moveCooldown: 1 / ( (((typeof fighter.stats.dex === 'number' && fighter.stats.dex > 0) ? fighter.stats.dex : ((typeof fighter.stats.speed === 'number' && fighter.stats.speed > 0) ? fighter.stats.speed : 1)) * SPEED_STAT_MULTIPLIER) ) * 5000, // Higher dex/speed = lower cooldown
         eras: [
             {
                 moved: false,
@@ -327,7 +328,7 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
                 ? startCount
                 : (!this._inRestartTurnCycle && typeof this.turnCycleCount === 'number' ? this.turnCycleCount : 0);
             // Use dex when present (crew), otherwise fall back to speed (monsters). Default to 1.
-            const effectiveStat = (this.stats && (typeof this.stats.dex === 'number') && this.stats.dex > 0) ? this.stats.dex : ((this.stats && (typeof this.stats.speed === 'number') && this.stats.speed > 0) ? this.stats.speed : 1);
+            const effectiveStat = (((this.stats && (typeof this.stats.dex === 'number') && this.stats.dex > 0) ? this.stats.dex : ((this.stats && (typeof this.stats.speed === 'number') && this.stats.speed > 0) ? this.stats.speed : 1)) * SPEED_STAT_MULTIPLIER);
             let factor = (1 / effectiveStat * 25)
             let increment = (1 / factor)
             if(this.hasOverlap) handleOverlap(this)

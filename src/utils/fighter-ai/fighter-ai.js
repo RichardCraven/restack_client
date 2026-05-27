@@ -48,6 +48,8 @@ export function FighterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
         this.hitsTarget = utilMethods.hitsTarget;
         this.hitsCombatant = utilMethods.hitsCombatant;
         this.targetKilled = utilMethods.targetKilled;
+        this.appendCombatLog = utilMethods.appendCombatLog;
+        this.getCombatantLogName = utilMethods.getCombatantLogName;
         // Keep data.INTERVAL_TIME in sync with the live fight interval
         if (typeof utilMethods.getFightInterval === 'function') {
             data.methods.getFightInterval = utilMethods.getFightInterval;
@@ -65,6 +67,8 @@ export function FighterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
             missesTarget: this.missesTarget,
             hitsTarget: this.hitsTarget,
             hitsCombatant: this.hitsCombatant,
+            appendCombatLog: this.appendCombatLog,
+            getCombatantLogName: this.getCombatantLogName,
             targetKilled: this.targetKilled
         }
         // Pass through optional helpers (e.g., useConsumable) when present on utilMethods

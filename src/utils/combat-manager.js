@@ -6,7 +6,7 @@ import specialsMatrix from './specials-matrix'
 import { applyAttackEffect } from './combat-effects'
 import { activeShieldWalls } from './shared-ai-methods/movement-methods'
 // import { cilLifeRing } from '@coreui/icons'
-import { INTERVALS, ROCK_DURATION, CRIT_THRESHOLD_DEFAULT, CRIT_THRESHOLD_INCREASED, CRITICAL_DAMAGE_MULTIPLIER, TICKS_PER_ERA } from './shared-constants';
+import { INTERVALS, ROCK_DURATION, CRIT_THRESHOLD_DEFAULT, CRIT_THRESHOLD_INCREASED, CRITICAL_DAMAGE_MULTIPLIER, TICKS_PER_ERA, SPEED_STAT_MULTIPLIER } from './shared-constants';
 // import test from './factories'
 // import {MovementMethods} from './methods/movement-methods';
 
@@ -50,6 +50,14 @@ export function CombatManager() {
             if (typeof c.setFightInterval === 'function') {
                 c.setFightInterval(resolvedInterval);
             }
+            // Keep move tempo tied to both unit stats and global combat-speed setting.
+            // Baseline formulas are authored for INTERVALS[1] (Slow), then scaled.
+            const unitSpeed = (((c && c.stats && typeof c.stats.speed === 'number' && c.stats.speed > 0)
+                ? c.stats.speed
+                : ((c && c.stats && typeof c.stats.dex === 'number' && c.stats.dex > 0) ? c.stats.dex : 1)) * SPEED_STAT_MULTIPLIER);
+            const baselineMoveCooldown = (1 / Math.max(1, unitSpeed)) * 5000;
+            const intervalScale = resolvedInterval / Math.max(1, INTERVALS[1]);
+            c.moveCooldown = Math.max(1, baselineMoveCooldown * intervalScale);
         });
         // Notify AI modules so their internal data.INTERVAL_TIME stays in sync
         if (this._intervalTimeListeners) {
@@ -211,6 +219,15 @@ export function CombatManager() {
     };
     this.appendCombatLog = (message) => {
         if (!message) return;
+        try {
+            if (String(message).toLowerCase().includes('energy blast')) {
+                console.log('[EnergyBlastDiag][CombatLog][append]', {
+                    message,
+                    paused: !!this.combatPaused,
+                    sequence: this.combatLogSequence + 1
+                });
+            }
+        } catch (e) {}
         this.combatLogSequence += 1;
         this.combatLog.push({
             id: `combat_log_${this.combatLogSequence}`,
@@ -1599,7 +1616,7 @@ export function CombatManager() {
         const atk = caller.pendingAttack;
         if (!atk) return
         // Use speed for cooldown calculations (monsters use speed, fighters may have dex-derived speed)
-        const callerSpeed = (caller.stats && (typeof caller.stats.speed === 'number') && caller.stats.speed > 0) ? caller.stats.speed : ((caller.stats && (typeof caller.stats.dex === 'number') && caller.stats.dex > 0) ? caller.stats.dex : 1);
+        const callerSpeed = (((caller.stats && (typeof caller.stats.speed === 'number') && caller.stats.speed > 0) ? caller.stats.speed : ((caller.stats && (typeof caller.stats.dex === 'number') && caller.stats.dex > 0) ? caller.stats.dex : 1)) * SPEED_STAT_MULTIPLIER);
         // attackSpeedMult allows per-fighter attack frequency tuning without touching dex/movement
         const attackSpeedMult = (typeof caller.stats.attackSpeedMult === 'number' && caller.stats.attackSpeedMult > 0) ? caller.stats.attackSpeedMult : 1;
         const generalCooldown = (10 / callerSpeed) * 1000 / attackSpeedMult;
@@ -2346,10 +2363,10 @@ export function CombatManager() {
      */
     this.hitCheck = (caller, target) => {
         if (!target || !caller) return true;
-        const targetSpeed = (target.stats && typeof target.stats.speed === 'number' && target.stats.speed > 0)
+        const targetSpeed = (((target.stats && typeof target.stats.speed === 'number' && target.stats.speed > 0)
             ? target.stats.speed
             : ((target.stats && typeof target.stats.dex === 'number' && target.stats.dex > 0)
-                ? target.stats.dex : 1);
+                ? target.stats.dex : 1)) * SPEED_STAT_MULTIPLIER);
         const MAX_MISS_CHANCE = 35; // never fully un-hittable
         const missChance = Math.min(targetSpeed * 2.5, MAX_MISS_CHANCE);
         return (Math.random() * 100) >= missChance;
@@ -2403,10 +2420,25 @@ export function CombatManager() {
     };
 
     this.hitsCombatant = (caller, combatantHit, supplementalData = null, options = {}) => {
+        const energyBlastAttackName = String((supplementalData && supplementalData.name) || (caller && caller.pendingAttack && caller.pendingAttack.name) || '').toLowerCase();
+        const isEnergyBlast = energyBlastAttackName === 'energy blast';
+        if (isEnergyBlast) {
+            console.log('[EnergyBlastDiag][CombatManager][hitsCombatant:enter]', {
+                callerId: caller?.id,
+                callerName: caller?.name,
+                targetId: combatantHit?.id,
+                targetName: combatantHit?.name,
+                paused: !!this.combatPaused,
+                pendingAttack: caller?.pendingAttack?.name,
+                supplementalAttack: supplementalData?.name
+            });
+        }
         if (caller && (caller.invisible || caller.petrified)) {
+            if (isEnergyBlast) console.log('[EnergyBlastDiag][CombatManager][hitsCombatant:abort-caller-hidden]', { callerId: caller?.id });
             return;
         }
         if (combatantHit && (combatantHit.invisible || combatantHit.petrified)) {
+            if (isEnergyBlast) console.log('[EnergyBlastDiag][CombatManager][hitsCombatant:abort-target-hidden]', { targetId: combatantHit?.id });
             return;
         }
         // Defensive: never apply damage to an already-dead, missing, or VCT combatant
@@ -2425,14 +2457,17 @@ export function CombatManager() {
         indicatorAnchor = indicatorAnchor || this.getIndicatorAnchor(combatantHit);
         if (!combatantHit || combatantHit.dead || !this.combatants[combatantHit.id] || (combatantHit.isVCT && (!combatantHit.parentMonsterId || !this.combatants[combatantHit.parentMonsterId]))) {
             console.warn('[CombatManager.hitsCombatant] Attempted to hit missing/dead/VCT combatant:', combatantHit && combatantHit.id, combatantHit);
+            if (isEnergyBlast) console.log('[EnergyBlastDiag][CombatManager][hitsCombatant:abort-invalid-target]', { targetId: combatantHit?.id, dead: !!combatantHit?.dead, isVCT: !!combatantHit?.isVCT });
             return;
         }
         if (!caller || !this.combatants[caller.id] || caller.dead) {
             console.warn('[CombatManager.hitsCombatant] Invalid or dead caller:', caller && caller.id, caller);
+            if (isEnergyBlast) console.log('[EnergyBlastDiag][CombatManager][hitsCombatant:abort-invalid-caller]', { callerId: caller?.id, dead: !!caller?.dead });
             return;
         }
         // Run hit-check (speed-based miss chance) unless the caller forces a hit via options
         if (!options.forceHit && !this.hitCheck(caller, combatantHit)) {
+            if (isEnergyBlast) console.log('[EnergyBlastDiag][CombatManager][hitsCombatant:hitcheck-miss]', { callerId: caller?.id, targetId: combatantHit?.id });
             this.missesTarget(caller, combatantHit);
             return;
         }
@@ -2630,6 +2665,14 @@ export function CombatManager() {
             effectText: appliedEffectText,
             criticalHit
         }));
+        if (isEnergyBlast) {
+            console.log('[EnergyBlastDiag][CombatManager][hitsCombatant:logged-hit]', {
+                callerId: caller?.id,
+                targetId: combatantHit?.id,
+                damage,
+                paused: !!this.combatPaused
+            });
+        }
 
         if (combatantHit.hp <= 0) {
             combatantHit.hp = 0;
@@ -2678,7 +2721,17 @@ export function CombatManager() {
         }, 1500)
     }
     this.hitsTarget = (caller, tempTarget = null) => {
+        const isEnergyBlast = String(caller?.pendingAttack?.name || '').toLowerCase() === 'energy blast';
+        if (isEnergyBlast) {
+            console.log('[EnergyBlastDiag][CombatManager][hitsTarget:enter]', {
+                callerId: caller?.id,
+                targetId: tempTarget?.id || caller?.targetId || null,
+                paused: !!this.combatPaused,
+                pendingAttack: caller?.pendingAttack?.name
+            });
+        }
         if (caller && (caller.invisible || caller.petrified)) {
+            if (isEnergyBlast) console.log('[EnergyBlastDiag][CombatManager][hitsTarget:abort-caller-hidden]', { callerId: caller?.id });
             return;
         }
         // Prevent monsters from attacking their own VCT
@@ -2696,10 +2749,12 @@ export function CombatManager() {
         }
         if (!target || target.dead || target.invisible || target.petrified || !this.combatants[target.id] || target.isVCT) {
             console.warn('[CombatManager.hitsTarget] Attempted to hit missing/dead/VCT target:', target && target.id, target);
+            if (isEnergyBlast) console.log('[EnergyBlastDiag][CombatManager][hitsTarget:abort-invalid-target]', { targetId: target?.id, dead: !!target?.dead, isVCT: !!target?.isVCT });
             return;
         }
         if (!caller || !this.combatants[caller.id] || caller.dead) {
             console.warn('[CombatManager.hitsTarget] Invalid or dead caller:', caller && caller.id, caller);
+            if (isEnergyBlast) console.log('[EnergyBlastDiag][CombatManager][hitsTarget:abort-invalid-caller]', { callerId: caller?.id, dead: !!caller?.dead });
             return;
         }
         // If the target is a monster or minion, use hitsCombatant to ensure .wounded is set and hit-flash is triggered
@@ -2789,6 +2844,14 @@ export function CombatManager() {
             effectText: appliedEffectText,
             criticalHit
         }));
+        if (isEnergyBlast) {
+            console.log('[EnergyBlastDiag][CombatManager][hitsTarget:logged-hit]', {
+                callerId: caller?.id,
+                targetId: target?.id,
+                damage,
+                paused: !!this.combatPaused
+            });
+        }
 
         caller.energy = Math.min(100, (caller.energy || 0) + (caller.stats?.fort || 0) + (caller.level ? caller.level / 2 : 0));
         if (target.hp <= 0) {
@@ -2841,6 +2904,15 @@ export function CombatManager() {
         return false;
     }
     this.missesTarget = (caller, tempTarget = null) => {
+        const isEnergyBlast = String(caller?.pendingAttack?.name || '').toLowerCase() === 'energy blast';
+        if (isEnergyBlast) {
+            console.log('[EnergyBlastDiag][CombatManager][missesTarget:enter]', {
+                callerId: caller?.id,
+                targetId: tempTarget?.id || caller?.targetId || null,
+                paused: !!this.combatPaused,
+                pendingAttack: caller?.pendingAttack?.name
+            });
+        }
         caller.missed = true;
         caller.readout.result = `misses`
         let target = tempTarget ? tempTarget : this.getCombatant(caller.targetId);
@@ -2856,6 +2928,13 @@ export function CombatManager() {
             attackName: caller?.pendingAttack,
             result: 'miss'
         }));
+        if (isEnergyBlast) {
+            console.log('[EnergyBlastDiag][CombatManager][missesTarget:logged-miss]', {
+                callerId: caller?.id,
+                targetId: target?.id || null,
+                paused: !!this.combatPaused
+            });
+        }
         if (typeof this.broadcastDataUpdate === 'function') {
             this.broadcastDataUpdate(caller);
         }
@@ -3069,6 +3148,8 @@ export function CombatManager() {
         missesTarget: this.missesTarget,
         hitsTarget: this.hitsTarget,
         hitsCombatant: this.hitsCombatant,
+        appendCombatLog: this.appendCombatLog,
+        getCombatantLogName: this.getCombatantLogName,
         hitCheck: this.hitCheck,
         damageCheck: this.damageCheck,
         targetKilled: this.targetKilled,
