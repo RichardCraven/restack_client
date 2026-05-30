@@ -18,7 +18,6 @@ import {
   voidfill,
   grasp,
   fire_blast,
-  fire_blast,
   heal,
   shield_wall,
   lightning,
@@ -72,15 +71,11 @@ import {
   wizard_annihilation,
   wizard_vortex,
   wizard_acid_blast,
-  m
   broadsword,
   claymore,
   katana,
   falchion,
-    });
-    data.pieces = filteredPieces;
-  }
-});
+} from '../utils/images';
 
 // Predefined list of 8 crew fighters and their test abilities
 const fightersData = [
