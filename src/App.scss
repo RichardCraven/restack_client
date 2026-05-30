@@ -1206,3 +1206,51 @@ canvas.spell-animation {
   z-index: 1000;
   transition: all 0.5s;
 }
+
+// Circle of Protection and Effect Icon styles
+.friendly-portrait-unit {
+  transition: box-shadow 0.3s ease;
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes effectIconGrow {
+  0% { transform: scale(0); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes effectIconShrink {
+  0% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(0); opacity: 0; }
+}
+
+.effect-icon-active {
+  animation: effectIconGrow 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.effect-icon-fading {
+  animation: effectIconShrink 0.3s ease-in forwards;
+}
+
+@keyframes pulseBright {
+  0% { box-shadow: 0 0 8px rgba(0, 191, 255, 0.4); }
+  50% { box-shadow: 0 0 20px rgba(0, 191, 255, 0.9), inset 0 0 10px rgba(0, 191, 255, 0.5); }
+  100% { box-shadow: 0 0 8px rgba(0, 191, 255, 0.4); }
+}
+
+@keyframes pulseDim {
+  0% { box-shadow: 0 0 4px rgba(0, 191, 255, 0.2); }
+  50% { box-shadow: 0 0 10px rgba(0, 191, 255, 0.5), inset 0 0 5px rgba(0, 191, 255, 0.3); }
+  100% { box-shadow: 0 0 4px rgba(0, 191, 255, 0.2); }
+}
+
+.pulse-bright {
+  animation: pulseBright 2s infinite ease-in-out !important;
+}
+
+.pulse-dim {
+  animation: pulseDim 2s infinite ease-in-out !important;
+}

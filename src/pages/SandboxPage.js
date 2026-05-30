@@ -7,7 +7,15 @@ import {
   ranger_loose,
   ranger_mark,
   ranger_execute,
+  ranger_ice_arrow,
+  ranger_force_arrow,
+  ranger_poison_arrow,
+  ranger_celestial_arrow,
   sage,
+  circle_of_protection,
+  shielded,
+  shielded_partial,
+  healing_hands,
   soldier,
   wizard,
   barbarian,
@@ -104,10 +112,8 @@ const fightersData = [
     name: 'Sage',
     portrait: sage,
     abilities: [
-      { id: 'divine_blast', name: 'Divine Blast', desc: 'Fire a projectile of holy energy.', icon: fire_blast, type: 'projectile', projectileIcon: magic_missile },
-      { id: 'heal', name: 'Heal', desc: 'Cast restorative magic on self.', icon: heal, type: 'heal' },
-      { id: 'barrier', name: 'Barrier', desc: 'Enshroud self in a protective energy bubble.', icon: shield_wall, type: 'barrier' },
-      { id: 'smite', name: 'Smite', desc: 'Call down a holy beam of light from the heavens.', icon: lightning, type: 'beam' }
+      { id: 'heal', name: 'Heal', desc: 'Cast restorative magic on an ally.', icon: healing_hands, type: 'heal' },
+      { id: 'circle_of_protection', name: 'Circle of Protection', desc: 'Create a sanctuary shielding allies.', icon: circle_of_protection, type: 'circle_of_protection' }
     ]
   },
   {
@@ -189,6 +195,11 @@ const SandboxPage = () => {
   const [fighterPos, setFighterPos] = useState({ row: 2, col: 1 });
   const [targetPos, setTargetPos] = useState({ row: 2, col: 3 });
   const [placementMode, setPlacementMode] = useState('fighter'); // 'fighter' or 'target'
+  const [notchedArrow, setNotchedArrow] = useState('force'); // 'ice', 'force', 'poison', 'celestial'
+  const [submenuOpen, setSubmenuOpen] = useState(false);
+  const [targetMarked, setTargetMarked] = useState(false);
+  const [copActive, setCopActive] = useState(false);
+  const [copFading, setCopFading] = useState(false);
   const [isAnimating, setAnimating] = useState(false);
   const [animationPhase, setAnimationPhase] = useState(null); // 'lunge', 'leap', 'behind_target', 'teleport_fade', etc.
   const [projectile, setProjectile] = useState(null);
@@ -203,6 +214,8 @@ const SandboxPage = () => {
   const [activeBeam, setActiveBeam] = useState(null); // 'smite', 'lightning', 'drain'
   const [turrets, setTurrets] = useState([]); // List of coordinates {row, col}
   const [minions, setMinions] = useState([]); // List of coordinates {row, col}
+  const [healIcon, setHealIcon] = useState(null); // { row, col, active }
+  const [targetHealGlow, setTargetHealGlow] = useState(false);
 
   const activeData = runesData[selectedRune];
 
@@ -230,6 +243,14 @@ const SandboxPage = () => {
     const dy = targetPos.row - fighterPos.row;
     const dx = targetPos.col - fighterPos.col;
     return Math.atan2(dy, dx) * (180 / Math.PI);
+  };
+
+  // Arrow type color map for CSS arrow rendering
+  const arrowTypeColors = {
+    force: '#ff9f1c',
+    ice: '#00bfff',
+    poison: '#38b000',
+    celestial: '#ffdd57'
   };
 
   // Helper to determine dynamic lunge/jump transform offsets
@@ -265,6 +286,21 @@ const SandboxPage = () => {
         const targetCol = targetPos.col + colOffset - fighterPos.col;
         const targetRow = targetPos.row - fighterPos.row;
         return `translate(${targetCol * 100}%, ${targetRow * 100}%)`;
+      case 'heal_approach': {
+        const dx = targetPos.col - fighterPos.col;
+        const dy = targetPos.row - fighterPos.row;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist > 1) {
+          const stepCol = Math.round(dx / dist);
+          const stepRow = Math.round(dy / dist);
+          const adjCol = targetPos.col - stepCol;
+          const adjRow = targetPos.row - stepRow;
+          const colDiff = adjCol - fighterPos.col;
+          const rowDiff = adjRow - fighterPos.row;
+          return `translate(${colDiff * 100}%, ${rowDiff * 100}%)`;
+        }
+        return 'none';
+      }
       case 'teleport_fade':
         return 'scale(0.8)';
       default:
@@ -278,6 +314,7 @@ const SandboxPage = () => {
     if (animationPhase === 'teleport_fade') return 'opacity 0.15s ease-in-out, transform 0.15s ease-in-out';
     if (animationPhase === 'lunge') return 'transform 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
     if (animationPhase === 'step_adjacent') return 'transform 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+    if (animationPhase === 'heal_approach') return 'transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
     if (animationPhase === 'leap') return 'transform 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
     return 'transform 0.25s ease-in-out, opacity 0.2s';
   };
@@ -385,6 +422,7 @@ const SandboxPage = () => {
           dmg = '-19 DECAY';
           color = '#7209b7';
         } else if (ability.id === 'shoot_rifle') {
+          hitType = 'arrow_hit';
           dmg = '-22 SNIPE!';
           color = '#ffe600';
         }
@@ -400,6 +438,181 @@ const SandboxPage = () => {
 
         setAnimating(false);
       }, 430);
+    }
+
+    // --- RANGER LOOSE (FIRES ARROW) ---
+    else if (ability.id === 'loose') {
+      setAnimating(true);
+      const arrowType = notchedArrow || 'ice';
+      let pIcon = ranger_ice_arrow;
+      if (arrowType === 'force') pIcon = ranger_force_arrow;
+      else if (arrowType === 'poison') pIcon = ranger_poison_arrow;
+      else if (arrowType === 'celestial') pIcon = ranger_celestial_arrow;
+
+      setProjectile({
+        x: fighterPos.col * 20,
+        y: fighterPos.row * 20,
+        icon: pIcon,
+        isRangerArrow: true,
+        arrowType: arrowType
+      });
+
+      // Fly to target
+      setTimeout(() => {
+        setProjectile(prev => prev ? {
+          ...prev,
+          x: targetPos.col * 20,
+          y: targetPos.row * 20
+        } : null);
+      }, 30);
+
+      // Hit target
+      setTimeout(() => {
+        setProjectile(null);
+        setTargetShake(true);
+        setTargetFlash(true);
+
+        let hitType = 'arrow_hit';
+        let dmg = '-16';
+        let color = '#ff4d4d';
+
+        if (arrowType === 'ice') {
+          hitType = 'ice_burst';
+          dmg = '-18 FREEZE';
+          color = '#00bfff';
+          setTargetFrozen(true);
+          setTimeout(() => setTargetFrozen(false), 2000);
+        } else if (arrowType === 'force') {
+          hitType = 'fire_exp';
+          dmg = '-22 FORCE';
+          color = '#ff9f1c';
+        } else if (arrowType === 'poison') {
+          hitType = 'poison_burst';
+          dmg = '-14 POISON';
+          color = '#38b000';
+        } else if (arrowType === 'celestial') {
+          hitType = 'fire_exp';
+          dmg = '-28 HOLY';
+          color = '#ffdd57';
+        }
+
+        setHitEffect({ type: hitType });
+        addFloatingText(dmg, 'normal', color, targetPos.row, targetPos.col);
+
+        if (targetMarked) {
+          setTargetMarked(false);
+          setTimeout(() => {
+            addFloatingText('+15 MARK POP!', 'crit', '#e63946', targetPos.row, targetPos.col);
+          }, 150);
+        }
+
+        setTimeout(() => {
+          setTargetShake(false);
+          setTargetFlash(false);
+          setHitEffect(null);
+        }, 300);
+
+        setAnimating(false);
+      }, 430);
+    }
+
+    // --- RANGER MARK ---
+    else if (ability.id === 'mark') {
+      setAnimating(true);
+      addFloatingText('MARKED!', 'normal', '#ff5400', targetPos.row, targetPos.col);
+      setTargetMarked(true);
+      setTimeout(() => {
+        setAnimating(false);
+      }, 400);
+    }
+
+    // --- RANGER EXECUTE (3 SEQUENTIAL ARROWS) ---
+    else if (ability.id === 'execute') {
+      setAnimating(true);
+      const arrowType = notchedArrow || 'ice';
+      let pIcon = ranger_ice_arrow;
+      if (arrowType === 'force') pIcon = ranger_force_arrow;
+      else if (arrowType === 'poison') pIcon = ranger_poison_arrow;
+      else if (arrowType === 'celestial') pIcon = ranger_celestial_arrow;
+
+      const fireArrow = (delayTime, index) => {
+        setTimeout(() => {
+          const arrowId = Math.random();
+          setProjectiles(prev => [...prev, {
+            id: arrowId,
+            x: fighterPos.col * 20,
+            y: fighterPos.row * 20,
+            icon: pIcon,
+            isRangerArrow: true,
+            arrowType: arrowType
+          }]);
+
+          // Move
+          setTimeout(() => {
+            setProjectiles(prev => prev.map(p => p.id === arrowId ? {
+              ...p,
+              x: targetPos.col * 20,
+              y: targetPos.row * 20
+            } : p));
+          }, 30);
+
+          // Impact
+          setTimeout(() => {
+            setProjectiles(prev => prev.filter(p => p.id !== arrowId));
+            setTargetShake(true);
+            setTargetFlash(true);
+
+            let hitType = 'arrow_hit';
+            let dmg = '-12';
+            let color = '#ff4d4d';
+
+            if (arrowType === 'ice') {
+              hitType = 'ice_burst';
+              dmg = '-14 FREEZE';
+              color = '#00bfff';
+              setTargetFrozen(true);
+              setTimeout(() => setTargetFrozen(false), 1500);
+            } else if (arrowType === 'force') {
+              hitType = 'fire_exp';
+              dmg = '-18 FORCE';
+              color = '#ff9f1c';
+            } else if (arrowType === 'poison') {
+              hitType = 'poison_burst';
+              dmg = '-10 POISON';
+              color = '#38b000';
+            } else if (arrowType === 'celestial') {
+              hitType = 'fire_exp';
+              dmg = '-22 HOLY';
+              color = '#ffdd57';
+            }
+
+            setHitEffect({ type: hitType });
+            addFloatingText(dmg + ` (#${index})`, 'normal', color, targetPos.row, targetPos.col);
+
+            if (targetMarked) {
+              setTargetMarked(false);
+              setTimeout(() => {
+                addFloatingText('+15 MARK POP!', 'crit', '#e63946', targetPos.row, targetPos.col);
+              }, 150);
+            }
+
+            setTimeout(() => {
+              setTargetShake(false);
+              setTargetFlash(false);
+              setHitEffect(null);
+            }, 200);
+
+            if (index === 3) {
+              setAnimating(false);
+            }
+          }, 430);
+
+        }, delayTime);
+      };
+
+      fireArrow(0, 1);
+      fireArrow(250, 2);
+      fireArrow(500, 3);
     }
 
     // --- LEAP ATTACK ---
@@ -493,13 +706,85 @@ const SandboxPage = () => {
         color = '#ffb703';
       }
 
-      setSelfBuffEffect(buff);
-      addFloatingText(txt, 'normal', color, fighterPos.row, fighterPos.col);
+      // Sage heal: approach the ally first, then heal
+      if (selectedFighterId === 'sage' && ability.type === 'heal') {
+        setAnimationPhase('heal_approach');
+        setTimeout(() => {
+          // a) Sage has arrived adjacent (350ms duration)
+          const dx = targetPos.col - fighterPos.col;
+          const dy = targetPos.row - fighterPos.row;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          
+          let midCol = targetPos.col;
+          let midRow = targetPos.row;
+          if (dist > 0) {
+            const stepCol = Math.round(dx / dist);
+            const stepRow = Math.round(dy / dist);
+            const adjCol = targetPos.col - stepCol;
+            const adjRow = targetPos.row - stepRow;
+            midCol = (adjCol + targetPos.col) / 2;
+            midRow = (adjRow + targetPos.row) / 2;
+          }
+
+          // b) Render healing hands icon and target glow
+          setHealIcon({ row: midRow, col: midCol, active: true });
+          setTargetHealGlow(true);
+          
+          addFloatingText(txt, 'normal', color, targetPos.row, targetPos.col);
+          setTimeout(() => {
+            addFloatingText('+30 HEAL', 'normal', '#2ec4b6', targetPos.row, targetPos.col);
+          }, 150);
+
+          // c) Effect is finished: icon fades and color glow fades after 800ms
+          setTimeout(() => {
+            setHealIcon(prev => prev ? { ...prev, active: false } : null);
+            setTargetHealGlow(false);
+
+            // d) Sage moves back to its origin tile after fade duration (300ms)
+            setTimeout(() => {
+              setAnimationPhase('return');
+              setHealIcon(null);
+
+              // Arrives back at origin
+              setTimeout(() => {
+                setAnimationPhase(null);
+                setAnimating(false);
+              }, 350);
+            }, 300);
+          }, 800);
+        }, 350);
+      } else {
+        setSelfBuffEffect(buff);
+        addFloatingText(txt, 'normal', color, fighterPos.row, fighterPos.col);
+
+        if (selectedFighterId === 'sage') {
+          setTimeout(() => {
+            addFloatingText('+30 HEAL', 'normal', '#2ec4b6', targetPos.row, targetPos.col);
+          }, 150);
+        }
+
+        setTimeout(() => {
+          setSelfBuffEffect(null);
+          setAnimating(false);
+        }, 1000);
+      }
+    }
+
+    // --- CIRCLE OF PROTECTION ---
+    else if (ability.type === 'circle_of_protection') {
+      setAnimating(true);
+      setCopActive(true);
+      setCopFading(false);
+      addFloatingText('SANCTUARY!', 'normal', '#00bfff', fighterPos.row, fighterPos.col);
 
       setTimeout(() => {
-        setSelfBuffEffect(null);
-        setAnimating(false);
-      }, 1000);
+        setCopFading(true);
+        setTimeout(() => {
+          setCopActive(false);
+          setCopFading(false);
+          setAnimating(false);
+        }, 300);
+      }, 8000);
     }
 
     // --- SHIELD WALL ---
@@ -714,8 +999,9 @@ const SandboxPage = () => {
           100% { width: 0px; opacity: 0; }
         }
         @keyframes pulse {
-          0% { opacity: 0.6; box-shadow: 0 0 5px #00bfff; }
-          100% { opacity: 1; box-shadow: 0 0 20px #00bfff; }
+          0% { opacity: 0.45; }
+          50% { opacity: 0.8; }
+          100% { opacity: 0.45; }
         }
         @keyframes shake {
           0% { transform: translate(0, 0); }
@@ -724,6 +1010,14 @@ const SandboxPage = () => {
           60% { transform: translate(-5px, -3px); }
           80% { transform: translate(5px, 3px); }
           100% { transform: translate(0, 0); }
+        }
+        @keyframes spin-slow {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        @keyframes poisonDrop {
+          0% { opacity: 0.9; transform: translate(0, 0) scale(1); }
+          100% { opacity: 0; transform: translate(-12px, 6px) scale(0.3); }
         }
         .shield-wall-overlay {
             background: linear-gradient(
@@ -864,7 +1158,8 @@ const SandboxPage = () => {
         }}>
           {/* Left Panel: Fighters */}
           <div style={{
-            flex: '1',
+            flex: '0 0 280px',
+            width: '280px',
             background: 'rgba(255, 255, 255, 0.02)',
             backdropFilter: 'blur(10px)',
             border: '1px solid rgba(255, 255, 255, 0.08)',
@@ -890,6 +1185,9 @@ const SandboxPage = () => {
                     setShieldWallActive(false);
                     setTurrets([]);
                     setMinions([]);
+                    if (f.id === 'sage') {
+                      setTargetPos({ row: 2, col: 3 });
+                    }
                   }}
                   style={{
                     display: 'flex',
@@ -916,7 +1214,7 @@ const SandboxPage = () => {
 
           {/* Center Panel: Combat Arena */}
           <div className="combat-grid-arena" style={{
-            flex: '2.5',
+            flex: '1 1 auto',
             display: 'flex',
             flexDirection: 'column',
             gap: '20px',
@@ -993,8 +1291,8 @@ const SandboxPage = () => {
             {/* Grid Container */}
             <div style={{
               position: 'relative',
-              width: '100%',
-              aspectRatio: '1/1',
+              width: '500px',
+              height: '500px',
               background: '#161618',
               borderRadius: '16px',
               border: '2px solid rgba(255, 255, 255, 0.08)',
@@ -1012,6 +1310,11 @@ const SandboxPage = () => {
                   const isTurret = turrets.some(t => t.row === r && t.col === c);
                   const isMinion = minions.some(m => m.row === r && m.col === c);
 
+                  // Sage friendly units coordinates (c, r)
+                  const isAdditionalRanger = selectedFighterId === 'sage' && r === 3 && c === 0;
+                  const isAdditionalBarbarian = selectedFighterId === 'sage' && r === 0 && c === 3;
+                  const isAdditionalSoldier = selectedFighterId === 'sage' && r === 2 && c === 3;
+
                   return (
                     <div
                       key={`${r}-${c}`}
@@ -1019,9 +1322,12 @@ const SandboxPage = () => {
                         if (isAnimating) return;
                         if (placementMode === 'fighter') {
                           if (isTarget) return; // Overlap guard
+                          // Also restrict placing over additional friendly units
+                          if (selectedFighterId === 'sage' && ((r === 3 && c === 0) || (r === 0 && c === 3) || (r === 2 && c === 3))) return;
                           setFighterPos({ row: r, col: c });
                         } else {
                           if (isFighter) return; // Overlap guard
+                          if (selectedFighterId === 'sage' && ((r === 3 && c === 0) || (r === 0 && c === 3) || (r === 2 && c === 3))) return;
                           setTargetPos({ row: r, col: c });
                         }
                       }}
@@ -1056,10 +1362,238 @@ const SandboxPage = () => {
                           <div style={{ position: 'absolute', bottom: '-8px', left: '0', width: '100%', textAlign: 'center', fontSize: '9px', color: '#a2d2ff', fontWeight: 'bold' }}>BAT</div>
                         </div>
                       )}
+
+                      {/* Render Additional Ranger for Sage */}
+                      {isAdditionalRanger && (
+                        <div
+                          className={`friendly-portrait-unit ${copActive ? 'pulse-bright' : ''}`}
+                          style={{
+                            width: '80%',
+                            height: '80%',
+                            borderRadius: '8px',
+                            border: '2px solid #8ecae6',
+                            backgroundColor: '#222',
+                            backgroundImage: `url(${ranger})`,
+                            backgroundSize: 'cover',
+                            backgroundPosition: 'center',
+                            position: 'relative',
+                            boxShadow: '0 4px 8px rgba(0,0,0,0.5)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            zIndex: 8,
+                            pointerEvents: 'none'
+                          }}
+                        >
+                          {copActive && (
+                            <div
+                              className={copFading ? 'effect-icon-fading' : 'effect-icon-active'}
+                              style={{
+                                position: 'absolute',
+                                top: '-6px',
+                                right: '-6px',
+                                width: '20px',
+                                height: '20px',
+                                borderRadius: '50%',
+                                background: '#111',
+                                border: '2px solid #00bfff',
+                                backgroundImage: `url(${shielded})`,
+                                backgroundSize: 'contain',
+                                backgroundRepeat: 'no-repeat',
+                                backgroundPosition: 'center',
+                                zIndex: 15,
+                                boxShadow: '0 2px 4px rgba(0,0,0,0.5)'
+                              }}
+                            />
+                          )}
+                          <div style={{
+                            position: 'absolute',
+                            bottom: '0',
+                            left: '0',
+                            width: '100%',
+                            background: 'rgba(0,0,0,0.75)',
+                            color: '#fff',
+                            fontSize: '9px',
+                            fontWeight: 'bold',
+                            textAlign: 'center',
+                            padding: '1px 0',
+                            borderBottomLeftRadius: '6px',
+                            borderBottomRightRadius: '6px'
+                          }}>
+                            Ranger
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Render Additional Barbarian for Sage */}
+                      {isAdditionalBarbarian && (
+                        <div
+                          style={{
+                            width: '80%',
+                            height: '80%',
+                            borderRadius: '8px',
+                            border: '2px solid #ffb703',
+                            backgroundColor: '#222',
+                            backgroundImage: `url(${barbarian})`,
+                            backgroundSize: 'cover',
+                            backgroundPosition: 'center',
+                            position: 'relative',
+                            boxShadow: '0 4px 8px rgba(0,0,0,0.5)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            zIndex: 8,
+                            pointerEvents: 'none'
+                          }}
+                        >
+                          <div style={{
+                            position: 'absolute',
+                            bottom: '0',
+                            left: '0',
+                            width: '100%',
+                            background: 'rgba(0,0,0,0.75)',
+                            color: '#fff',
+                            fontSize: '9px',
+                            fontWeight: 'bold',
+                            textAlign: 'center',
+                            padding: '1px 0',
+                            borderBottomLeftRadius: '6px',
+                            borderBottomRightRadius: '6px'
+                          }}>
+                            Barbarian
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Render Additional Soldier for Sage */}
+                      {isAdditionalSoldier && (
+                        <div
+                          className={`friendly-portrait-unit ${copActive ? 'pulse-dim' : ''}`}
+                          style={{
+                            width: '80%',
+                            height: '80%',
+                            borderRadius: '8px',
+                            border: '2px solid #2a9d8f',
+                            backgroundColor: '#222',
+                            backgroundImage: `url(${soldier})`,
+                            backgroundSize: 'cover',
+                            backgroundPosition: 'center',
+                            position: 'relative',
+                            boxShadow: '0 4px 8px rgba(0,0,0,0.5)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            zIndex: 8,
+                            pointerEvents: 'none'
+                          }}
+                        >
+                          {copActive && (
+                            <div
+                              className={copFading ? 'effect-icon-fading' : 'effect-icon-active'}
+                              style={{
+                                position: 'absolute',
+                                top: '-6px',
+                                right: '-6px',
+                                width: '20px',
+                                height: '20px',
+                                borderRadius: '50%',
+                                background: '#111',
+                                border: '2px solid #00bfff',
+                                backgroundImage: `url(${shielded_partial})`,
+                                backgroundSize: 'contain',
+                                backgroundRepeat: 'no-repeat',
+                                backgroundPosition: 'center',
+                                zIndex: 15,
+                                boxShadow: '0 2px 4px rgba(0,0,0,0.5)'
+                              }}
+                            />
+                          )}
+                          <div style={{
+                            position: 'absolute',
+                            bottom: '0',
+                            left: '0',
+                            width: '100%',
+                            background: 'rgba(0,0,0,0.75)',
+                            color: '#fff',
+                            fontSize: '9px',
+                            fontWeight: 'bold',
+                            textAlign: 'center',
+                            padding: '1px 0',
+                            borderBottomLeftRadius: '6px',
+                            borderBottomRightRadius: '6px'
+                          }}>
+                            Soldier
+                          </div>
+                        </div>
+                      )}
                     </div>
                   );
                 })
               ))}
+
+              {/* --- Sage Circle of Protection (COP) Ring Overlay --- */}
+              {selectedFighterId === 'sage' && copActive && (
+                <div
+                  className={copFading ? 'effect-icon-fading' : 'effect-icon-active'}
+                  style={{
+                    position: 'absolute',
+                    width: '80%',
+                    height: '80%',
+                    left: `${fighterPos.col * 20 - 30}%`,
+                    top: `${fighterPos.row * 20 - 30}%`,
+                    zIndex: 7,
+                    pointerEvents: 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  {/* Outer ring with glow */}
+                  <div style={{
+                    width: '100%',
+                    height: '100%',
+                    borderRadius: '50%',
+                    border: '5px solid rgba(0, 191, 255, 0.75)',
+                    boxShadow: '0 0 35px rgba(0, 191, 255, 0.45), inset 0 0 35px rgba(0, 191, 255, 0.15)',
+                    position: 'relative',
+                    animation: 'spin-slow 20s linear infinite',
+                  }}>
+                    {/* Rune characters around the inside */}
+                    {['\u16A0', '\u16A2', '\u16A6', '\u16A8', '\u16B1', '\u16B2', '\u16B7', '\u16B9', '\u16BA', '\u16C1', '\u16C3', '\u16C8'].map((rune, i) => {
+                      const angle = (i / 12) * 360;
+                      const radius = 42;
+                      const rad = (angle - 90) * (Math.PI / 180);
+                      return (
+                        <span
+                          key={i}
+                          style={{
+                            position: 'absolute',
+                            left: `${50 + radius * Math.cos(rad)}%`,
+                            top: `${50 + radius * Math.sin(rad)}%`,
+                            transform: `translate(-50%, -50%) rotate(${angle}deg)`,
+                            color: 'rgba(0, 191, 255, 0.85)',
+                            fontSize: '22px',
+                            textShadow: '0 0 10px rgba(0, 191, 255, 1)',
+                            userSelect: 'none',
+                          }}
+                        >
+                          {rune}
+                        </span>
+                      );
+                    })}
+                    {/* Inner circle accent */}
+                    <div style={{
+                      position: 'absolute',
+                      top: '15%',
+                      left: '15%',
+                      width: '70%',
+                      height: '70%',
+                      borderRadius: '50%',
+                      border: '1px solid rgba(0, 191, 255, 0.2)',
+                    }} />
+                  </div>
+                </div>
+              )}
 
               {/* --- Attacker Portrait Overlay --- */}
               <div
@@ -1080,7 +1614,7 @@ const SandboxPage = () => {
                 }}
               >
                 <div
-                  className={selectedFighterId === 'soldier' && shieldWallActive ? 'shield-wall-active-portrait' : ''}
+                  className={`${selectedFighterId === 'soldier' && shieldWallActive ? 'shield-wall-active-portrait' : ''} ${selectedFighterId === 'sage' && copActive ? 'pulse-bright' : ''}`}
                   style={{
                     width: '80%',
                     height: '80%',
@@ -1099,6 +1633,52 @@ const SandboxPage = () => {
                           : '0 8px 16px rgba(0,0,0,0.5)',
                     position: 'relative'
                   }}>
+                  {selectedFighterId === 'sage' && copActive && (
+                    <div
+                      className={copFading ? 'effect-icon-fading' : 'effect-icon-active'}
+                      style={{
+                        position: 'absolute',
+                        top: '-6px',
+                        right: '-6px',
+                        width: '20px',
+                        height: '20px',
+                        borderRadius: '50%',
+                        background: '#111',
+                        border: '2px solid #00bfff',
+                        backgroundImage: `url(${shielded})`,
+                        backgroundSize: 'contain',
+                        backgroundRepeat: 'no-repeat',
+                        backgroundPosition: 'center',
+                        zIndex: 15,
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.5)'
+                      }}
+                    />
+                  )}
+                  {selectedFighterId === 'ranger' && notchedArrow && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '-6px',
+                      left: '-6px',
+                      width: '24px',
+                      height: '24px',
+                      borderRadius: '50%',
+                      background: '#111',
+                      border: '2px solid #ffb703',
+                      backgroundImage: `url(${
+                        notchedArrow === 'ice' ? ranger_ice_arrow :
+                        notchedArrow === 'force' ? ranger_force_arrow :
+                        notchedArrow === 'poison' ? ranger_poison_arrow :
+                        ranger_celestial_arrow
+                      })`,
+                      backgroundSize: 'contain',
+                      backgroundRepeat: 'no-repeat',
+                      backgroundPosition: 'center',
+                      zIndex: 15,
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.5)',
+                      animation: 'scaleUp 0.2s ease-out'
+                    }} />
+                  )}
+
                   {/* Name Tag */}
                   <div style={{
                     position: 'absolute',
@@ -1145,21 +1725,78 @@ const SandboxPage = () => {
                   backgroundImage: `url(${targetPortrait})`,
                   backgroundSize: 'cover',
                   backgroundPosition: 'center',
-                  filter: targetFrozen ? 'hue-rotate(180deg) brightness(1.2)' : 'none',
+                  filter: targetFrozen ? 'brightness(0.85) saturate(0.6)' : 'none',
                   boxShadow: '0 8px 16px rgba(0,0,0,0.5)',
                   position: 'relative'
                 }}>
+                  {/* Shielded Overlay for target (Soldier when under Sage protection) */}
+                  {selectedFighterId === 'sage' && copActive && (
+                    <div
+                      className={copFading ? 'effect-icon-fading' : 'effect-icon-active'}
+                      style={{
+                        position: 'absolute',
+                        top: '-6px',
+                        right: '-6px',
+                        width: '20px',
+                        height: '20px',
+                        borderRadius: '50%',
+                        background: '#111',
+                        border: '2px solid #00bfff',
+                        backgroundImage: `url(${shielded_partial})`,
+                        backgroundSize: 'contain',
+                        backgroundRepeat: 'no-repeat',
+                        backgroundPosition: 'center',
+                        zIndex: 15,
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.5)'
+                      }}
+                    />
+                  )}
+                  {/* Light Green Overlay/Glow for Healing */}
+                  {selectedFighterId === 'sage' && (
+                    <div style={{
+                      boxSizing: 'border-box',
+                      position: 'absolute',
+                      top: 0, left: 0, width: '100%', height: '100%',
+                      background: 'rgba(46, 196, 182, 0.15)',
+                      border: '3px solid #2ec4b6',
+                      borderRadius: '6px',
+                      boxShadow: '0 0 25px rgba(46, 196, 182, 0.8), inset 0 0 15px rgba(46, 196, 182, 0.5)',
+                      opacity: targetHealGlow ? 1 : 0,
+                      transition: 'opacity 0.3s ease-in-out',
+                      pointerEvents: 'none',
+                      zIndex: 14
+                    }} />
+                  )}
                   {/* Frozen Overlay */}
                   {targetFrozen && (
                     <div style={{
+                      boxSizing: 'border-box',
                       position: 'absolute',
                       top: 0, left: 0, width: '100%', height: '100%',
-                      background: 'rgba(0, 191, 255, 0.25)',
-                      border: '2px solid #00bfff',
+                      background: 'linear-gradient(135deg, rgba(0, 191, 255, 0.35), rgba(100, 200, 255, 0.2))',
+                      border: '2px solid rgba(0, 191, 255, 0.8)',
                       borderRadius: '6px',
-                      pointerEvents: 'none'
+                      pointerEvents: 'none',
+                      boxShadow: 'inset 0 0 15px rgba(0, 191, 255, 0.3)'
                     }}></div>
                   )}
+                  {/* Mark Overlay */}
+                  {targetMarked && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '-12.5%',
+                      left: '-12.5%',
+                      width: '125%',
+                      height: '125%',
+                      backgroundImage: `url(${ranger_mark})`,
+                      backgroundSize: 'contain',
+                      backgroundRepeat: 'no-repeat',
+                      backgroundPosition: 'center',
+                      zIndex: 12,
+                      animation: 'pulse 1.5s infinite ease-in-out'
+                    }}></div>
+                  )}
+
                   {/* Name Tag */}
                   <div style={{
                     position: 'absolute',
@@ -1180,47 +1817,170 @@ const SandboxPage = () => {
                 </div>
               </div>
 
-              {/* --- Projectile Overlay --- */}
-              {projectile && (
-                <img
-                  src={projectile.icon}
-                  alt="projectile"
+              {/* --- Healing Hands Icon Overlay --- */}
+              {healIcon && (
+                <div
                   style={{
                     position: 'absolute',
-                    width: '40px',
-                    height: '40px',
-                    left: `calc(${projectile.x}% + 10% - 20px)`,
-                    top: `calc(${projectile.y}% + 10% - 20px)`,
-                    transform: `rotate(${getProjectileAngle()}deg)`,
-                    objectFit: 'contain',
-                    zIndex: 30,
-                    filter: projectile.icon === magic_missile
-                      ? 'drop-shadow(0 0 2px #fff) drop-shadow(0 0 6px #ff00ff) drop-shadow(0 0 10px #fff) drop-shadow(0 0 2px #000) drop-shadow(0 0 4px #000) brightness(1.4)'
-                      : 'drop-shadow(0 0 8px rgba(255, 255, 255, 0.8))',
-                    transition: 'left 0.4s linear, top 0.4s linear'
+                    left: `calc(${healIcon.col * 20}% + 10%)`,
+                    top: `calc(${healIcon.row * 20}% + 10%)`,
+                    width: '20%',
+                    height: '20%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 25,
+                    pointerEvents: 'none',
+                    opacity: healIcon.active ? 1 : 0,
+                    transform: `translate(-50%, -50%) scale(${healIcon.active ? 1.25 : 0.8})`,
+                    transition: 'opacity 0.3s ease-out, transform 0.3s ease-out',
                   }}
-                />
+                >
+                  <img
+                    src={healing_hands}
+                    alt="healing hands"
+                    style={{
+                      width: '45px',
+                      height: '45px',
+                      filter: 'drop-shadow(0 0 8px #2ec4b6) drop-shadow(0 0 15px rgba(46, 196, 182, 0.6))',
+                    }}
+                  />
+                </div>
               )}
 
-              {/* --- Wizard Magic Missiles (multi-projectiles) --- */}
+              {/* --- Projectile Overlay --- */}
+              {projectile && (
+                projectile.isRangerArrow ? (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      left: `calc(${projectile.x}% + 10% - 40px)`,
+                      top: `calc(${projectile.y}% + 10% - 4px)`,
+                      transform: `rotate(${getProjectileAngle()}deg)`,
+                      zIndex: 30,
+                      transition: 'left 0.4s linear, top 0.4s linear',
+                      pointerEvents: 'none',
+                      width: '80px',
+                      height: '8px',
+                    }}
+                  >
+                    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+                      {/* Arrow head */}
+                      <div style={{
+                        position: 'absolute',
+                        right: 0,
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        width: 0,
+                        height: 0,
+                        borderTop: '4px solid transparent',
+                        borderBottom: '4px solid transparent',
+                        borderLeft: `8px solid ${arrowTypeColors[projectile.arrowType] || '#ff9f1c'}`,
+                        filter: `drop-shadow(0 0 4px ${arrowTypeColors[projectile.arrowType] || '#ff9f1c'})`
+                      }} />
+                      {/* Arrow shaft - tapered tail */}
+                      <div style={{
+                        position: 'absolute',
+                        right: '8px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        width: '72px',
+                        height: '6px',
+                        background: `linear-gradient(to left, ${arrowTypeColors[projectile.arrowType] || '#ff9f1c'}, transparent)`,
+                        clipPath: 'polygon(0% 50%, 100% 10%, 100% 90%)',
+                        boxShadow: `0 0 6px ${arrowTypeColors[projectile.arrowType] || '#ff9f1c'}40`
+                      }} />
+                      {/* Poison droplets */}
+                      {projectile.arrowType === 'poison' && (
+                        <>
+                          <div style={{ position: 'absolute', left: '5px', top: '-4px', width: '4px', height: '4px', borderRadius: '50%', background: '#38b000', opacity: 0.8, animation: 'poisonDrop 0.35s ease-out infinite', boxShadow: '0 0 4px #38b000' }} />
+                          <div style={{ position: 'absolute', left: '15px', top: '8px', width: '3px', height: '3px', borderRadius: '50%', background: '#4ade80', opacity: 0.7, animation: 'poisonDrop 0.35s ease-out 0.12s infinite', boxShadow: '0 0 3px #4ade80' }} />
+                          <div style={{ position: 'absolute', left: '10px', top: '-6px', width: '3px', height: '3px', borderRadius: '50%', background: '#22c55e', opacity: 0.6, animation: 'poisonDrop 0.35s ease-out 0.24s infinite', boxShadow: '0 0 3px #22c55e' }} />
+                        </>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <img
+                    src={projectile.icon}
+                    alt="projectile"
+                    style={{
+                      position: 'absolute',
+                      width: '40px',
+                      height: '40px',
+                      left: `calc(${projectile.x}% + 10% - 20px)`,
+                      top: `calc(${projectile.y}% + 10% - 20px)`,
+                      transform: `rotate(${getProjectileAngle()}deg)`,
+                      objectFit: 'contain',
+                      zIndex: 30,
+                      filter: projectile.icon === magic_missile
+                        ? 'drop-shadow(0 0 2px #fff) drop-shadow(0 0 6px #ff00ff) drop-shadow(0 0 10px #fff) drop-shadow(0 0 2px #000) drop-shadow(0 0 4px #000) brightness(1.4)'
+                        : 'drop-shadow(0 0 8px rgba(255, 255, 255, 0.8))',
+                      transition: 'left 0.4s linear, top 0.4s linear'
+                    }}
+                  />
+                )
+              )}
+
+              {/* --- Multi-projectiles (Wizard missiles / Ranger execute arrows) --- */}
               {projectiles.map(p => (
-                <img
-                  key={p.id}
-                  src={p.icon}
-                  alt="magic missile"
-                  style={{
-                    position: 'absolute',
-                    width: '30px',
-                    height: '30px',
-                    left: `calc(${p.x}% + 10% - 15px)`,
-                    top: `calc(${p.y}% + 10% - 15px)`,
-                    transform: `rotate(${getProjectileAngle()}deg)`,
-                    objectFit: 'contain',
-                    zIndex: 30,
-                    filter: 'drop-shadow(0 0 2px #fff) drop-shadow(0 0 6px #ff00ff) drop-shadow(0 0 10px #fff) drop-shadow(0 0 2px #000) drop-shadow(0 0 4px #000) brightness(1.4)',
-                    transition: 'left 0.4s linear, top 0.4s linear'
-                  }}
-                />
+                p.isRangerArrow ? (
+                  <div
+                    key={p.id}
+                    style={{
+                      position: 'absolute',
+                      left: `calc(${p.x}% + 10% - 30px)`,
+                      top: `calc(${p.y}% + 10% - 3px)`,
+                      transform: `rotate(${getProjectileAngle()}deg)`,
+                      zIndex: 30,
+                      transition: 'left 0.4s linear, top 0.4s linear',
+                      pointerEvents: 'none',
+                      width: '60px',
+                      height: '6px',
+                    }}
+                  >
+                    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+                      <div style={{
+                        position: 'absolute', right: 0, top: '50%', transform: 'translateY(-50%)',
+                        width: 0, height: 0,
+                        borderTop: '3px solid transparent', borderBottom: '3px solid transparent',
+                        borderLeft: `6px solid ${arrowTypeColors[p.arrowType] || '#ff9f1c'}`,
+                        filter: `drop-shadow(0 0 3px ${arrowTypeColors[p.arrowType] || '#ff9f1c'})`
+                      }} />
+                      <div style={{
+                        position: 'absolute', right: '6px', top: '50%', transform: 'translateY(-50%)',
+                        width: '54px', height: '4px',
+                        background: `linear-gradient(to left, ${arrowTypeColors[p.arrowType] || '#ff9f1c'}, transparent)`,
+                        clipPath: 'polygon(0% 50%, 100% 10%, 100% 90%)',
+                        boxShadow: `0 0 4px ${arrowTypeColors[p.arrowType] || '#ff9f1c'}40`
+                      }} />
+                      {p.arrowType === 'poison' && (
+                        <>
+                          <div style={{ position: 'absolute', left: '3px', top: '-3px', width: '3px', height: '3px', borderRadius: '50%', background: '#38b000', opacity: 0.7, animation: 'poisonDrop 0.3s ease-out infinite', boxShadow: '0 0 3px #38b000' }} />
+                          <div style={{ position: 'absolute', left: '10px', top: '6px', width: '2px', height: '2px', borderRadius: '50%', background: '#4ade80', opacity: 0.6, animation: 'poisonDrop 0.3s ease-out 0.1s infinite' }} />
+                        </>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <img
+                    key={p.id}
+                    src={p.icon}
+                    alt="magic missile"
+                    style={{
+                      position: 'absolute',
+                      width: '30px',
+                      height: '30px',
+                      left: `calc(${p.x}% + 10% - 15px)`,
+                      top: `calc(${p.y}% + 10% - 15px)`,
+                      transform: `rotate(${getProjectileAngle()}deg)`,
+                      objectFit: 'contain',
+                      zIndex: 30,
+                      filter: 'drop-shadow(0 0 2px #fff) drop-shadow(0 0 6px #ff00ff) drop-shadow(0 0 10px #fff) drop-shadow(0 0 2px #000) drop-shadow(0 0 4px #000) brightness(1.4)',
+                      transition: 'left 0.4s linear, top 0.4s linear'
+                    }}
+                  />
+                )
               ))}
 
               {/* --- Special Beams / Overlays (like Smite, Lightning) --- */}
@@ -1296,12 +2056,32 @@ const SandboxPage = () => {
                       boxShadow: '0 0 30px #ff5400'
                     }}></div>
                   )}
+                  {hitEffect.type === 'poison_burst' && (
+                    <div style={{
+                      width: '70px',
+                      height: '70px',
+                      borderRadius: '50%',
+                      background: 'radial-gradient(circle, #70e000 20%, #38b000 70%, transparent 100%)',
+                      animation: 'explode 0.3s ease-out forwards',
+                      boxShadow: '0 0 25px #38b000'
+                    }}></div>
+                  )}
+                  {hitEffect.type === 'arrow_hit' && (
+                    <div style={{
+                      width: '50px',
+                      height: '50px',
+                      borderRadius: '50%',
+                      background: 'radial-gradient(circle, #fff 30%, rgba(255, 183, 3, 0.6) 70%, transparent 100%)',
+                      animation: 'explode 0.25s ease-out forwards',
+                      boxShadow: '0 0 20px rgba(255, 183, 3, 0.8)'
+                    }}></div>
+                  )}
                   {hitEffect.type === 'ice_burst' && (
                     <div style={{
                       width: '60px',
                       height: '60px',
                       background: 'radial-gradient(circle, #fff 10%, #00bfff 60%, transparent 100%)',
-                      clipPath: 'polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)',
+                      clipPath: 'polygon(50% 0%, 65% 25%, 100% 50%, 65% 75%, 50% 100%, 35% 75%, 0% 50%, 35% 25%)',
                       animation: 'explode 0.4s ease-out forwards',
                       boxShadow: '0 0 20px #00bfff'
                     }}></div>
@@ -1386,7 +2166,8 @@ const SandboxPage = () => {
 
           {/* Right Panel: Abilities */}
           <div style={{
-            flex: '1',
+            flex: '0 0 280px',
+            width: '280px',
             background: 'rgba(255, 255, 255, 0.02)',
             backdropFilter: 'blur(10px)',
             border: '1px solid rgba(255, 255, 255, 0.08)',
@@ -1399,55 +2180,125 @@ const SandboxPage = () => {
             overflowY: 'auto'
           }}>
             <h3 style={{ margin: '0 0 15px 0', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', paddingBottom: '10px', fontSize: '18px', color: '#ff5400', letterSpacing: '0.05em' }}>ABILITIES</h3>
-            {selectedFighter.abilities.map(a => (
-              <button
-                key={a.id}
-                disabled={isAnimating}
-                onClick={() => triggerAbility(a)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  padding: '12px',
-                  borderRadius: '8px',
-                  background: 'rgba(255, 255, 255, 0.03)',
-                  border: '1px solid rgba(255, 255, 255, 0.08)',
-                  color: '#fff',
-                  cursor: isAnimating ? 'not-allowed' : 'pointer',
-                  textAlign: 'left',
-                  transition: 'all 0.2s',
-                  outline: 'none',
-                  opacity: isAnimating ? 0.6 : 1
-                }}
-                onMouseEnter={(e) => {
-                  if (isAnimating) return;
-                  e.currentTarget.style.background = 'rgba(255, 84, 0, 0.12)';
-                  e.currentTarget.style.borderColor = '#ff5400';
-                }}
-                onMouseLeave={(e) => {
-                  if (isAnimating) return;
-                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)';
-                  e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)';
-                }}
-              >
-                <div style={{
-                  width: '40px',
-                  height: '40px',
-                  borderRadius: '4px',
-                  background: '#222',
-                  backgroundImage: `url(${a.icon})`,
-                  backgroundSize: 'contain',
-                  backgroundRepeat: 'no-repeat',
-                  backgroundPosition: 'center',
-                  border: '1px solid rgba(255,255,255,0.15)',
-                  flexShrink: '0'
-                }}></div>
-                <div>
-                  <div style={{ fontWeight: 'bold', fontSize: '14px', color: '#ff9f1c' }}>{a.name}</div>
-                  <div style={{ fontSize: '11px', color: '#aaa', marginTop: '2px', lineHeight: '1.3' }}>{a.desc}</div>
+            {selectedFighter.abilities.map(a => {
+              const isNotch = a.id === 'notch';
+              return (
+                <div key={a.id} style={{ position: 'relative', width: '100%' }}>
+                  {isNotch && submenuOpen && (
+                    <div style={{
+                      position: 'absolute',
+                      bottom: 'calc(100% + 8px)',
+                      left: '36px',
+                      width: '0',
+                      height: '0',
+                      zIndex: 100,
+                    }}>
+                      {[
+                        { id: 'force', icon: ranger_force_arrow, label: 'Force', x: -30, y: -34 },
+                        { id: 'ice', icon: ranger_ice_arrow, label: 'Ice', x: -6, y: -45 },
+                        { id: 'poison', icon: ranger_poison_arrow, label: 'Poison', x: 18, y: -45 },
+                        { id: 'celestial', icon: ranger_celestial_arrow, label: 'Celestial', x: 42, y: -34 }
+                      ].map((arrow, idx) => {
+                        const isCurrent = notchedArrow === arrow.id;
+                        return (
+                          <button
+                            key={arrow.id}
+                            title={`${arrow.label} Arrow`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setNotchedArrow(arrow.id);
+                              setSubmenuOpen(false);
+                            }}
+                            style={{
+                              position: 'absolute',
+                              left: `${arrow.x}px`,
+                              top: `${arrow.y}px`,
+                              transform: 'translate(-50%, -50%)',
+                              width: '28px',
+                              height: '28px',
+                              borderRadius: '50%',
+                              background: '#222',
+                              backgroundImage: `url(${arrow.icon})`,
+                              backgroundSize: '70%',
+                              backgroundRepeat: 'no-repeat',
+                              backgroundPosition: 'center',
+                              border: isCurrent ? '2px solid #ffb703' : '1px solid rgba(255, 255, 255, 0.25)',
+                              cursor: 'pointer',
+                              boxShadow: isCurrent ? '0 0 8px #ffb703' : '0 4px 8px rgba(0,0,0,0.5)',
+                              transition: 'transform 0.15s, border-color 0.15s, box-shadow 0.15s',
+                              padding: 0,
+                              outline: 'none',
+                              animation: `scaleUp 0.15s ease-out ${idx * 0.03}s both`
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.transform = 'translate(-50%, -50%) scale(1.2)';
+                              e.currentTarget.style.borderColor = '#ffb703';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.transform = 'translate(-50%, -50%) scale(1)';
+                              e.currentTarget.style.borderColor = isCurrent ? '#ffb703' : 'rgba(255, 255, 255, 0.25)';
+                            }}
+                          />
+                        );
+                      })}
+                    </div>
+                  )}
+                  <button
+                    disabled={isAnimating}
+                    onClick={() => {
+                      if (isNotch) {
+                        setSubmenuOpen(!submenuOpen);
+                      } else {
+                        triggerAbility(a);
+                      }
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      padding: '12px',
+                      borderRadius: '8px',
+                      background: 'rgba(255, 255, 255, 0.03)',
+                      border: '1px solid rgba(255, 255, 255, 0.08)',
+                      color: '#fff',
+                      cursor: isAnimating ? 'not-allowed' : 'pointer',
+                      textAlign: 'left',
+                      transition: 'all 0.2s',
+                      outline: 'none',
+                      opacity: isAnimating ? 0.6 : 1,
+                      width: '100%'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (isAnimating) return;
+                      e.currentTarget.style.background = 'rgba(255, 84, 0, 0.12)';
+                      e.currentTarget.style.borderColor = '#ff5400';
+                    }}
+                    onMouseLeave={(e) => {
+                      if (isAnimating) return;
+                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)';
+                      e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)';
+                    }}
+                  >
+                    <div style={{
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '4px',
+                      background: '#222',
+                      backgroundImage: `url(${a.icon})`,
+                      backgroundSize: 'contain',
+                      backgroundRepeat: 'no-repeat',
+                      backgroundPosition: 'center',
+                      border: '1px solid rgba(255,255,255,0.15)',
+                      flexShrink: '0'
+                    }}></div>
+                    <div>
+                      <div style={{ fontWeight: 'bold', fontSize: '14px', color: '#ff9f1c' }}>{a.name}</div>
+                      <div style={{ fontSize: '11px', color: '#aaa', marginTop: '2px', lineHeight: '1.3' }}>{a.desc}</div>
+                    </div>
+                  </button>
                 </div>
-              </button>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
