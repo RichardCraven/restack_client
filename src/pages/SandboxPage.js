@@ -2657,24 +2657,13 @@ const SandboxPage = () => {
                     );
                   })()}
                   {hitEffect.type === 'fist_connect' && (() => {
-                    const dx = fighterPos.col - targetPos.col;
-                    const dy = fighterPos.row - targetPos.row;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-                    let adjCol = fighterPos.col;
-                    let adjRow = fighterPos.row;
-                    if (dist > 0) {
-                      const colStep = Math.round(dx / dist);
-                      const rowStep = Math.round(dy / dist);
-                      adjCol = targetPos.col + colStep;
-                      adjRow = targetPos.row + rowStep;
-                    }
-                    const swingDx = targetPos.col - adjCol;
-                    const swingDy = targetPos.row - adjRow;
-                    const baseAngle = Math.atan2(swingDy, swingDx) * (180 / Math.PI);
+                    const colDiff = targetPos.col - fighterPos.col;
+                    const rowDiff = targetPos.row - fighterPos.row;
+                    const baseAngle = Math.atan2(rowDiff, colDiff) * (180 / Math.PI);
 
-                    // Calculate divide (midpoint) offset relative to Target
-                    const leftOffset = (swingDx / 2) * -100;
-                    const topOffset = (swingDy / 2) * -100;
+                    // Calculate divide (midpoint) offset relative to Target during lunge
+                    const leftOffset = -10 * colDiff;
+                    const topOffset = -10 * rowDiff;
 
                     return (
                       <div
@@ -3131,7 +3120,7 @@ const SandboxPage = () => {
                     <div style={{
                       position: 'absolute',
                       bottom: 'calc(100% + 8px)',
-                      left: '33px',
+                      left: '20px',
                       width: '0',
                       height: '0',
                       zIndex: 100,
