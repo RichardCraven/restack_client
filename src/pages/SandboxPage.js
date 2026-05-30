@@ -51,6 +51,7 @@ import {
   shield_slam,
   inspire,
   soldier_defensive_stance,
+  soldier_defense_stance_mini_icon,
   soldier_fist_of_honor,
   soldier_imbued_strike,
   soldier_one_man_army,
@@ -313,6 +314,41 @@ const SandboxPage = () => {
   });
   const [weaponModalOpen, setWeaponModalOpen] = useState(false);
   const [weaponModalTab, setWeaponModalTab] = useState('swords');
+  const [targetPushback, setTargetPushback] = useState(null);
+  const [defensiveStanceActive, setDefensiveStanceActive] = useState(false);
+  const [defensiveStanceFading, setDefensiveStanceFading] = useState(false);
+  const [copEndTime, setCopEndTime] = useState(null);
+  const [defensiveStanceEndTime, setDefensiveStanceEndTime] = useState(null);
+  const [currentTime, setCurrentTime] = useState(Date.now());
+  const [targetStunned, setTargetStunned] = useState(false);
+
+  useEffect(() => {
+    let interval;
+    if (copActive || defensiveStanceActive) {
+      interval = setInterval(() => {
+        setCurrentTime(Date.now());
+      }, 50);
+    } else {
+      setCurrentTime(Date.now());
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [copActive, defensiveStanceActive]);
+
+  const getCopDashOffset = () => {
+    if (!copEndTime) return 31.42;
+    const remaining = Math.max(0, copEndTime - currentTime);
+    const ratio = remaining / 8000;
+    return (1 - ratio) * 31.42;
+  };
+
+  const getDefensiveStanceDashOffset = () => {
+    if (!defensiveStanceEndTime) return 31.42;
+    const remaining = Math.max(0, defensiveStanceEndTime - currentTime);
+    const ratio = remaining / 8000;
+    return (1 - ratio) * 31.42;
+  };
 
   const activeData = runesData[selectedRune];
 
@@ -425,6 +461,7 @@ const SandboxPage = () => {
       setAnimating(true);
       
       const isSlash = ability.id === 'slash';
+      const isSlam = ability.type === 'melee_slam';
 
       if (isSlash) {
         setAnimationPhase('step_adjacent'); // Move to adjacent (takes 250ms)
@@ -458,6 +495,44 @@ const SandboxPage = () => {
           setAnimating(false);
           setAnimationPhase(null);
         }, 1250);
+      } else if (isSlam) {
+        setAnimating(true);
+        setAnimationPhase('lunge'); // Soldier lunges forward
+
+        const dx = targetPos.col - fighterPos.col;
+        const dy = targetPos.row - fighterPos.row;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const pushCol = dist > 0 ? Math.round(dx / dist) : 1;
+        const pushRow = dist > 0 ? Math.round(dy / dist) : 0;
+
+        // Impact (at 200ms)
+        setTimeout(() => {
+          setTargetShake(true);
+          setTargetFlash(true);
+          setHitEffect({ type: 'slash' });
+          addFloatingText('-18', 'normal', '#ff9f1c', targetPos.row, targetPos.col);
+          
+          // Push target smoothly back 1 tile in direction of attack
+          setTargetPushback(`translate(${pushCol * 100}%, ${pushRow * 100}%)`);
+
+          setTimeout(() => {
+            setTargetShake(false);
+            setTargetFlash(false);
+            setHitEffect(null);
+          }, 250);
+
+          // Return starts at 450ms
+          setTimeout(() => {
+            setAnimationPhase('return');
+          }, 250);
+        }, 200);
+
+        // Soldier returns to origin tile (at 750ms total time)
+        setTimeout(() => {
+          setAnimating(false);
+          setAnimationPhase(null);
+          setTargetPushback(null); // Reset target position smoothly back to origin
+        }, 750);
       } else {
         setAnimationPhase('lunge');
         const hitDelay = 200;
@@ -473,18 +548,14 @@ const SandboxPage = () => {
           let color = '#ff4d4d';
 
           if (ability.type === 'melee_heavy') {
-            dmg = '-38 CRIT!';
+            dmg = '-38';
             color = '#ff3333';
           } else if (ability.type === 'melee_poison') {
-            dmg = '-12 POISON';
+            dmg = '-12';
             color = '#38b000';
             hitType = 'slash';
-          } else if (ability.type === 'melee_slam') {
-            dmg = '-18 SLAM';
-            color = '#ff9f1c';
-            hitType = 'slash';
           } else if (ability.type === 'melee_punches') {
-            dmg = '-10 x2';
+            dmg = '-10';
             color = '#ffdd57';
           }
 
@@ -516,14 +587,15 @@ const SandboxPage = () => {
       setTimeout(() => {
         setTargetShake(true);
         setTargetFlash(true);
-        setHitEffect({ type: 'slash' });
-        addFloatingText('-24 HONOR STRIKE!', 'crit', '#ffdd57', targetPos.row, targetPos.col);
+        setHitEffect({ type: 'fist_connect' });
+        setTargetStunned(true);
+        addFloatingText('-24', 'crit', '#ffdd57', targetPos.row, targetPos.col);
 
         setTimeout(() => {
           setTargetShake(false);
           setTargetFlash(false);
           setHitEffect(null);
-        }, 250);
+        }, 300);
 
         setAnimationPhase('return');
       }, 200);
@@ -532,6 +604,10 @@ const SandboxPage = () => {
         setAnimating(false);
         setAnimationPhase(null);
       }, 500);
+
+      setTimeout(() => {
+        setTargetStunned(false);
+      }, 2200);
     }
 
     // --- SOLDIER IMBUED STRIKE ---
@@ -543,7 +619,7 @@ const SandboxPage = () => {
         setTargetShake(true);
         setTargetFlash(true);
         setHitEffect({ type: 'ice_burst' }); // blue energy blast
-        addFloatingText('-28 IMBUED!', 'normal', '#00ffff', targetPos.row, targetPos.col);
+        addFloatingText('-28', 'normal', '#00ffff', targetPos.row, targetPos.col);
 
         setTimeout(() => {
           setTargetShake(false);
@@ -564,11 +640,22 @@ const SandboxPage = () => {
     else if (ability.type === 'defensive_stance') {
       setAnimating(true);
       setSelfBuffEffect('barrier');
+      setDefensiveStanceActive(true);
+      setDefensiveStanceFading(false);
+      setDefensiveStanceEndTime(Date.now() + 8000);
       addFloatingText('DEFENSIVE STANCE', 'normal', '#3b82f6', fighterPos.row, fighterPos.col);
       setTimeout(() => {
         setSelfBuffEffect(null);
         setAnimating(false);
       }, 1000);
+      setTimeout(() => {
+        setDefensiveStanceFading(true);
+        setTimeout(() => {
+          setDefensiveStanceActive(false);
+          setDefensiveStanceFading(false);
+          setDefensiveStanceEndTime(null);
+        }, 300);
+      }, 8000);
     }
 
     // --- SOLDIER ONE MAN ARMY ---
@@ -635,21 +722,21 @@ const SandboxPage = () => {
 
         if (ability.id === 'fireball' || ability.id === 'throw_grenade') {
           hitType = 'fire_exp';
-          dmg = ability.id === 'fireball' ? '-28 EXPLODE!' : '-20 BOMB!';
+          dmg = ability.id === 'fireball' ? '-28' : '-20';
           color = '#ff5400';
         } else if (ability.id === 'ice_blast') {
           hitType = 'ice_burst';
-          dmg = '-14 FREEZE';
+          dmg = '-14';
           color = '#00bfff';
           setTargetFrozen(true);
           setTimeout(() => setTargetFrozen(false), 2000);
         } else if (ability.id === 'shadow_bolt') {
           hitType = 'shadow';
-          dmg = '-19 DECAY';
+          dmg = '-19';
           color = '#7209b7';
         } else if (ability.id === 'shoot_rifle') {
           hitType = 'arrow_hit';
-          dmg = '-22 SNIPE!';
+          dmg = '-22';
           color = '#ffe600';
         }
 
@@ -704,21 +791,21 @@ const SandboxPage = () => {
 
         if (arrowType === 'ice') {
           hitType = 'ice_burst';
-          dmg = '-18 FREEZE';
+          dmg = '-18';
           color = '#00bfff';
           setTargetFrozen(true);
           setTimeout(() => setTargetFrozen(false), 2000);
         } else if (arrowType === 'force') {
           hitType = 'fire_exp';
-          dmg = '-22 FORCE';
+          dmg = '-22';
           color = '#ff9f1c';
         } else if (arrowType === 'poison') {
           hitType = 'poison_burst';
-          dmg = '-14 POISON';
+          dmg = '-14';
           color = '#38b000';
         } else if (arrowType === 'celestial') {
           hitType = 'fire_exp';
-          dmg = '-28 HOLY';
+          dmg = '-28';
           color = '#ffdd57';
         }
 
@@ -728,7 +815,7 @@ const SandboxPage = () => {
         if (targetMarked) {
           setTargetMarked(false);
           setTimeout(() => {
-            addFloatingText('+15 MARK POP!', 'crit', '#e63946', targetPos.row, targetPos.col);
+            addFloatingText('+15', 'crit', '#e63946', targetPos.row, targetPos.col);
           }, 150);
         }
 
@@ -794,31 +881,31 @@ const SandboxPage = () => {
 
             if (arrowType === 'ice') {
               hitType = 'ice_burst';
-              dmg = '-14 FREEZE';
+              dmg = '-14';
               color = '#00bfff';
               setTargetFrozen(true);
               setTimeout(() => setTargetFrozen(false), 1500);
             } else if (arrowType === 'force') {
               hitType = 'fire_exp';
-              dmg = '-18 FORCE';
+              dmg = '-18';
               color = '#ff9f1c';
             } else if (arrowType === 'poison') {
               hitType = 'poison_burst';
-              dmg = '-10 POISON';
+              dmg = '-10';
               color = '#38b000';
             } else if (arrowType === 'celestial') {
               hitType = 'fire_exp';
-              dmg = '-22 HOLY';
+              dmg = '-22';
               color = '#ffdd57';
             }
 
             setHitEffect({ type: hitType });
-            addFloatingText(dmg + ` (#${index})`, 'normal', color, targetPos.row, targetPos.col);
+            addFloatingText(dmg, 'normal', color, targetPos.row, targetPos.col);
 
             if (targetMarked) {
               setTargetMarked(false);
               setTimeout(() => {
-                addFloatingText('+15 MARK POP!', 'crit', '#e63946', targetPos.row, targetPos.col);
+                addFloatingText('+15', 'crit', '#e63946', targetPos.row, targetPos.col);
               }, 150);
             }
 
@@ -851,7 +938,7 @@ const SandboxPage = () => {
         setTargetShake(true);
         setTargetFlash(true);
         setHitEffect({ type: 'fire_exp' });
-        addFloatingText('-30 HEAVY LANDING!', 'crit', '#e63946', targetPos.row, targetPos.col);
+        addFloatingText('-30', 'crit', '#e63946', targetPos.row, targetPos.col);
 
         // Shake the whole arena momentarily
         const arena = document.querySelector('.combat-grid-arena');
@@ -891,7 +978,7 @@ const SandboxPage = () => {
           setTargetShake(true);
           setTargetFlash(true);
           setHitEffect({ type: 'slash' });
-          addFloatingText('-25 AMBUSH!', 'crit', '#7209b7', targetPos.row, targetPos.col);
+          addFloatingText('-25', 'crit', '#7209b7', targetPos.row, targetPos.col);
 
           setTimeout(() => {
             setTargetShake(false);
@@ -958,7 +1045,7 @@ const SandboxPage = () => {
           
           addFloatingText(txt, 'normal', color, targetPos.row, targetPos.col);
           setTimeout(() => {
-            addFloatingText('+30 HEAL', 'normal', '#2ec4b6', targetPos.row, targetPos.col);
+            addFloatingText('+30', 'normal', '#2ec4b6', targetPos.row, targetPos.col);
           }, 150);
 
           // c) Effect is finished: icon fades and color glow fades after 800ms
@@ -985,7 +1072,7 @@ const SandboxPage = () => {
 
         if (selectedFighterId === 'sage') {
           setTimeout(() => {
-            addFloatingText('+30 HEAL', 'normal', '#2ec4b6', targetPos.row, targetPos.col);
+            addFloatingText('+30', 'normal', '#2ec4b6', targetPos.row, targetPos.col);
           }, 150);
         }
 
@@ -1001,6 +1088,7 @@ const SandboxPage = () => {
       setAnimating(true);
       setCopActive(true);
       setCopFading(false);
+      setCopEndTime(Date.now() + 8000);
       addFloatingText('SANCTUARY!', 'normal', '#00bfff', fighterPos.row, fighterPos.col);
 
       setTimeout(() => {
@@ -1009,6 +1097,7 @@ const SandboxPage = () => {
           setCopActive(false);
           setCopFading(false);
           setAnimating(false);
+          setCopEndTime(null);
         }, 300);
       }, 8000);
     }
@@ -1029,16 +1118,16 @@ const SandboxPage = () => {
       setAnimating(true);
       
       let beamType = 'smite';
-      let dmg = '-32 HOLY';
+      let dmg = '-32';
       let color = '#ffe600';
 
       if (ability.id === 'lightning_strike') {
         beamType = 'lightning';
-        dmg = '-30 LIGHTNING';
+        dmg = '-30';
         color = '#00ffff';
       } else if (ability.id === 'energy_drain') {
         beamType = 'drain';
-        dmg = '-15 DRAIN';
+        dmg = '-15';
         color = '#7209b7';
       }
 
@@ -1052,7 +1141,7 @@ const SandboxPage = () => {
 
         if (beamType === 'drain') {
           setHitEffect({ type: 'shadow' });
-          addFloatingText('+15 HEAL', 'normal', '#2ec4b6', fighterPos.row, fighterPos.col);
+          addFloatingText('+15', 'normal', '#2ec4b6', fighterPos.row, fighterPos.col);
         } else {
           setHitEffect({ type: 'slash' });
         }
@@ -1170,7 +1259,7 @@ const SandboxPage = () => {
       setTimeout(() => {
         setTargetShake(true);
         setTargetFlash(true);
-        addFloatingText('-22 VOID DUST', 'normal', '#7209b7', targetPos.row, targetPos.col);
+        addFloatingText('-22', 'normal', '#7209b7', targetPos.row, targetPos.col);
 
         setTimeout(() => {
           setTargetShake(false);
@@ -1245,6 +1334,19 @@ const SandboxPage = () => {
             transform: rotate(60deg);
             opacity: 0;
           }
+        }
+        @keyframes radialCooldownSweep {
+          0% { stroke-dashoffset: 31.42; }
+          100% { stroke-dashoffset: 0; }
+        }
+        @keyframes dizzySpin {
+          0% { transform: rotate(0deg) translateX(12px) rotate(0deg); }
+          100% { transform: rotate(360deg) translateX(12px) rotate(-360deg); }
+        }
+        @keyframes stunWobble {
+          0%, 100% { transform: rotate(0deg) translateY(0); }
+          25% { transform: rotate(-3deg) translateY(-2px); }
+          75% { transform: rotate(3deg) translateY(1px); }
         }
         @keyframes beamShrink {
           0% { width: 18px; opacity: 1; }
@@ -1654,9 +1756,34 @@ const SandboxPage = () => {
                                 backgroundRepeat: 'no-repeat',
                                 backgroundPosition: 'center',
                                 zIndex: 15,
-                                boxShadow: '0 2px 4px rgba(0,0,0,0.5)'
+                                boxShadow: '0 2px 4px rgba(0,0,0,0.5)',
+                                overflow: 'hidden'
                               }}
-                            />
+                            >
+                              <svg 
+                                style={{
+                                  position: 'absolute',
+                                  top: 0,
+                                  left: 0,
+                                  width: '100%',
+                                  height: '100%',
+                                  transform: 'rotate(-90deg)',
+                                  pointerEvents: 'none'
+                                }}
+                                viewBox="0 0 20 20"
+                              >
+                                <circle
+                                  cx="10"
+                                  cy="10"
+                                  r="5"
+                                  fill="none"
+                                  stroke="rgba(0, 0, 0, 0.55)"
+                                  strokeWidth="10"
+                                  strokeDasharray="31.42"
+                                  strokeDashoffset={getCopDashOffset()}
+                                />
+                              </svg>
+                            </div>
                           )}
                           <div style={{
                             position: 'absolute',
@@ -1756,9 +1883,34 @@ const SandboxPage = () => {
                                 backgroundRepeat: 'no-repeat',
                                 backgroundPosition: 'center',
                                 zIndex: 15,
-                                boxShadow: '0 2px 4px rgba(0,0,0,0.5)'
+                                boxShadow: '0 2px 4px rgba(0,0,0,0.5)',
+                                overflow: 'hidden'
                               }}
-                            />
+                            >
+                              <svg 
+                                style={{
+                                  position: 'absolute',
+                                  top: 0,
+                                  left: 0,
+                                  width: '100%',
+                                  height: '100%',
+                                  transform: 'rotate(-90deg)',
+                                  pointerEvents: 'none'
+                                }}
+                                viewBox="0 0 20 20"
+                              >
+                                <circle
+                                  cx="10"
+                                  cy="10"
+                                  r="5"
+                                  fill="none"
+                                  stroke="rgba(0, 0, 0, 0.55)"
+                                  strokeWidth="10"
+                                  strokeDasharray="31.42"
+                                  strokeDashoffset={getCopDashOffset()}
+                                />
+                              </svg>
+                            </div>
                           )}
                           <div style={{
                             position: 'absolute',
@@ -1902,9 +2054,80 @@ const SandboxPage = () => {
                         backgroundRepeat: 'no-repeat',
                         backgroundPosition: 'center',
                         zIndex: 15,
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.5)'
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.5)',
+                        overflow: 'hidden'
                       }}
-                    />
+                    >
+                      <svg 
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          height: '100%',
+                          transform: 'rotate(-90deg)',
+                          pointerEvents: 'none'
+                        }}
+                        viewBox="0 0 20 20"
+                      >
+                        <circle
+                          cx="10"
+                          cy="10"
+                          r="5"
+                          fill="none"
+                          stroke="rgba(0, 0, 0, 0.55)"
+                          strokeWidth="10"
+                          strokeDasharray="31.42"
+                          strokeDashoffset={getCopDashOffset()}
+                        />
+                      </svg>
+                    </div>
+                  )}
+                  {selectedFighterId === 'soldier' && defensiveStanceActive && (
+                    <div
+                      className={defensiveStanceFading ? 'effect-icon-fading' : 'effect-icon-active'}
+                      style={{
+                        position: 'absolute',
+                        top: '-6px',
+                        right: '-6px',
+                        width: '20px',
+                        height: '20px',
+                        borderRadius: '50%',
+                        background: '#111',
+                        border: '2px solid #3b82f6',
+                        backgroundImage: `url(${soldier_defense_stance_mini_icon})`,
+                        backgroundSize: 'contain',
+                        backgroundRepeat: 'no-repeat',
+                        backgroundPosition: 'center',
+                        zIndex: 15,
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.5)',
+                        overflow: 'hidden'
+                      }}
+                    >
+                      <svg 
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          height: '100%',
+                          transform: 'rotate(-90deg)',
+                          pointerEvents: 'none'
+                        }}
+                        viewBox="0 0 20 20"
+                      >
+                        <circle
+                          cx="10"
+                          cy="10"
+                          r="5"
+                          fill="none"
+                          stroke="rgba(0, 0, 0, 0.55)"
+                          strokeWidth="10"
+                          strokeDasharray="31.42"
+                          strokeDashoffset={getDefensiveStanceDashOffset()}
+                        />
+                      </svg>
+                    </div>
                   )}
                   {selectedFighterId === 'ranger' && notchedArrow && (
                     <div style={{
@@ -1964,8 +2187,8 @@ const SandboxPage = () => {
                   justifyContent: 'center',
                   zIndex: 9,
                   pointerEvents: 'none',
-                  transform: targetShake ? 'translate(5px, 2px) rotate(2deg)' : 'none',
-                  transition: 'transform 0.05s'
+                  transform: targetPushback ? targetPushback : 'none',
+                  transition: 'transform 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94)'
                 }}
               >
                 <div style={{
@@ -1979,8 +2202,54 @@ const SandboxPage = () => {
                   backgroundPosition: 'center',
                   filter: targetFrozen ? 'brightness(0.85) saturate(0.6)' : 'none',
                   boxShadow: '0 8px 16px rgba(0,0,0,0.5)',
-                  position: 'relative'
+                  position: 'relative',
+                  transform: targetShake ? 'translate(5px, 2px) rotate(2deg)' : 'none',
+                  transition: 'transform 0.05s',
+                  animation: targetStunned ? 'stunWobble 0.6s ease-in-out infinite' : 'none'
                 }}>
+                  {targetStunned && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '-15px',
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      width: '60px',
+                      height: '20px',
+                      pointerEvents: 'none',
+                      zIndex: 30,
+                      display: 'flex',
+                      justifyContent: 'center',
+                      gap: '4px'
+                    }}>
+                      {/* Swirling Star 1 */}
+                      <div style={{
+                        width: '8px',
+                        height: '8px',
+                        borderRadius: '50%',
+                        backgroundColor: '#ffe600',
+                        boxShadow: '0 0 8px #ffe600',
+                        animation: 'dizzySpin 1.2s linear infinite'
+                      }} />
+                      {/* Swirling Star 2 */}
+                      <div style={{
+                        width: '8px',
+                        height: '8px',
+                        borderRadius: '50%',
+                        backgroundColor: '#ffdd57',
+                        boxShadow: '0 0 8px #ffdd57',
+                        animation: 'dizzySpin 1.2s linear infinite 0.4s'
+                      }} />
+                      {/* Swirling Star 3 */}
+                      <div style={{
+                        width: '8px',
+                        height: '8px',
+                        borderRadius: '50%',
+                        backgroundColor: '#ffb703',
+                        boxShadow: '0 0 8px #ffb703',
+                        animation: 'dizzySpin 1.2s linear infinite 0.8s'
+                      }} />
+                    </div>
+                  )}
                   {/* Shielded Overlay for target (Soldier when under Sage protection) */}
                   {selectedFighterId === 'sage' && copActive && (
                     <div
@@ -1999,9 +2268,34 @@ const SandboxPage = () => {
                         backgroundRepeat: 'no-repeat',
                         backgroundPosition: 'center',
                         zIndex: 15,
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.5)'
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.5)',
+                        overflow: 'hidden'
                       }}
-                    />
+                    >
+                      <svg 
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          height: '100%',
+                          transform: 'rotate(-90deg)',
+                          pointerEvents: 'none'
+                        }}
+                        viewBox="0 0 20 20"
+                      >
+                        <circle
+                          cx="10"
+                          cy="10"
+                          r="5"
+                          fill="none"
+                          stroke="rgba(0, 0, 0, 0.55)"
+                          strokeWidth="10"
+                          strokeDasharray="31.42"
+                          strokeDashoffset={getCopDashOffset()}
+                        />
+                      </svg>
+                    </div>
                   )}
                   {/* Light Green Overlay/Glow for Healing */}
                   {selectedFighterId === 'sage' && (
@@ -2272,14 +2566,37 @@ const SandboxPage = () => {
                 >
                   {hitEffect.type === 'slash' && (
                     <div style={{
-                      width: '100%',
-                      height: '100%',
-                      backgroundImage: `url(${claws})`,
-                      backgroundSize: 'contain',
-                      backgroundRepeat: 'no-repeat',
-                      backgroundPosition: 'center',
-                      animation: 'slashFade 0.3s ease-out forwards'
-                    }}></div>
+                      width: '80px',
+                      height: '80px',
+                      position: 'relative',
+                      animation: 'slashFade 0.3s ease-out forwards',
+                      pointerEvents: 'none'
+                    }}>
+                      {/* Diagonal Slash Line 1 */}
+                      <div style={{
+                        position: 'absolute',
+                        width: '100%',
+                        height: '6px',
+                        backgroundColor: '#fff',
+                        boxShadow: '0 0 10px #ffe600, 0 0 20px #ff5400',
+                        borderRadius: '3px',
+                        top: '50%',
+                        left: 0,
+                        transform: 'translateY(-50%) rotate(45deg)'
+                      }} />
+                      {/* Diagonal Slash Line 2 */}
+                      <div style={{
+                        position: 'absolute',
+                        width: '100%',
+                        height: '6px',
+                        backgroundColor: '#fff',
+                        boxShadow: '0 0 10px #ffe600, 0 0 20px #ff5400',
+                        borderRadius: '3px',
+                        top: '50%',
+                        left: 0,
+                        transform: 'translateY(-50%) rotate(-45deg)'
+                      }} />
+                    </div>
                   )}
                   {hitEffect.type === 'weapon_slash' && (() => {
                     const activeWeaponId = equippedWeapons['soldier'] || 'shortsword_sword';
@@ -2288,15 +2605,26 @@ const SandboxPage = () => {
                                          WEAPONS_DB.swords[0];
                     const weaponIcon = activeWeapon.image;
 
-                    const dy = targetPos.row - fighterPos.row;
-                    const dx = targetPos.col - fighterPos.col;
-                    const baseAngle = Math.atan2(dy, dx) * (180 / Math.PI);
+                    const dx = fighterPos.col - targetPos.col;
+                    const dy = fighterPos.row - targetPos.row;
                     const dist = Math.sqrt(dx * dx + dy * dy);
-                    const halfDistPx = (dist * 100) / 2;
+                    let adjCol = fighterPos.col;
+                    let adjRow = fighterPos.row;
+                    if (dist > 0) {
+                      const colStep = Math.round(dx / dist);
+                      const rowStep = Math.round(dy / dist);
+                      adjCol = targetPos.col + colStep;
+                      adjRow = targetPos.row + rowStep;
+                    }
+                    const swingDx = targetPos.col - adjCol;
+                    const swingDy = targetPos.row - adjRow;
+                    const baseAngle = Math.atan2(swingDy, swingDx) * (180 / Math.PI);
+                    const adjDist = Math.sqrt(swingDx * swingDx + swingDy * swingDy);
+                    const halfDistPx = (adjDist * 100) / 2;
 
                     // Calculate divide (midpoint) offset relative to Target (which is parent center 50%, 50%)
-                    const leftOffset = (dx / 2) * -100;
-                    const topOffset = (dy / 2) * -100;
+                    const leftOffset = (swingDx / 2) * -100;
+                    const topOffset = (swingDy / 2) * -100;
 
                     return (
                       <div
@@ -2323,6 +2651,55 @@ const SandboxPage = () => {
                             objectFit: 'contain',
                             transformOrigin: `${30 - halfDistPx}px 30px`,
                             animation: 'weaponSwingArc 0.75s ease-in-out forwards'
+                          }}
+                        />
+                      </div>
+                    );
+                  })()}
+                  {hitEffect.type === 'fist_connect' && (() => {
+                    const dx = fighterPos.col - targetPos.col;
+                    const dy = fighterPos.row - targetPos.row;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    let adjCol = fighterPos.col;
+                    let adjRow = fighterPos.row;
+                    if (dist > 0) {
+                      const colStep = Math.round(dx / dist);
+                      const rowStep = Math.round(dy / dist);
+                      adjCol = targetPos.col + colStep;
+                      adjRow = targetPos.row + rowStep;
+                    }
+                    const swingDx = targetPos.col - adjCol;
+                    const swingDy = targetPos.row - adjRow;
+                    const baseAngle = Math.atan2(swingDy, swingDx) * (180 / Math.PI);
+
+                    // Calculate divide (midpoint) offset relative to Target
+                    const leftOffset = (swingDx / 2) * -100;
+                    const topOffset = (swingDy / 2) * -100;
+
+                    return (
+                      <div
+                        style={{
+                          position: 'absolute',
+                          left: `calc(50% + ${leftOffset}px)`,
+                          top: `calc(50% + ${topOffset}px)`,
+                          width: '56px',
+                          height: '56px',
+                          transform: `translate(-50%, -50%) rotate(${baseAngle}deg)`,
+                          pointerEvents: 'none',
+                          zIndex: 5000,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          animation: 'scaleUp 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275) both'
+                        }}
+                      >
+                        <img
+                          src={soldier_fist_of_honor}
+                          alt="fist connect"
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'contain'
                           }}
                         />
                       </div>
@@ -2754,16 +3131,16 @@ const SandboxPage = () => {
                     <div style={{
                       position: 'absolute',
                       bottom: 'calc(100% + 8px)',
-                      left: '36px',
+                      left: '33px',
                       width: '0',
                       height: '0',
                       zIndex: 100,
                     }}>
                       {[
-                        { id: 'force', icon: ranger_force_arrow, label: 'Force', x: -30, y: -34 },
-                        { id: 'ice', icon: ranger_ice_arrow, label: 'Ice', x: -6, y: -45 },
-                        { id: 'poison', icon: ranger_poison_arrow, label: 'Poison', x: 18, y: -45 },
-                        { id: 'celestial', icon: ranger_celestial_arrow, label: 'Celestial', x: 42, y: -34 }
+                        { id: 'force', icon: ranger_force_arrow, label: 'Force', x: -32, y: -35 },
+                        { id: 'ice', icon: ranger_ice_arrow, label: 'Ice', x: -11, y: -46 },
+                        { id: 'poison', icon: ranger_poison_arrow, label: 'Poison', x: 11, y: -46 },
+                        { id: 'celestial', icon: ranger_celestial_arrow, label: 'Celestial', x: 32, y: -35 }
                       ].map((arrow, idx) => {
                         const isCurrent = notchedArrow === arrow.id;
                         return (
