@@ -560,7 +560,7 @@ export function BoardManager(){
                 'cavalry_helm_upgradeable', 'war_helm_upgradeable', 'coif_helm_upgradeable',
                 'gladiator_helm_upgradeable', 'battle_mage_helm_upgradeable', 'knight_helm_upgradeable',
                 'janissary_helm_upgradeable', 'bascinet_upgradeable', 'imperial_helm_upgradeable',
-                'rogue_hood_upgradeable',
+                'ranger_hood_upgradeable',
                 'justicator_wand', 'willowcaster',
                 'staff_of_espilon', 'staff_of_marduk', 'staff_of_omicron',
                 'the_watchful_eye', 'moonbird_folio', 'icewing_folio',
@@ -580,7 +580,7 @@ export function BoardManager(){
                 'cavalry_helm_upgradeable_upgraded', 'war_helm_upgradeable_upgraded', 'coif_helm_upgradeable_upgraded',
                 'gladiator_helm_upgradeable_upgraded', 'battle_mage_helm_upgradeable_upgraded', 'knight_helm_upgradeable_upgraded',
                 'janissary_helm_upgradeable_upgraded', 'bascinet_upgradeable_upgraded', 'imperial_helm_upgradeable_upgraded',
-                'rogue_hood_upgradeable_upgraded',
+                'ranger_hood_upgradeable_upgraded',
                 'staff_of_tomorrow',
                 'feldons_manual', 'the_beast_book', 'book_of_jade', 'igors_grimoire', 'forbidden_grimoire',
                 'ice_amulet', 'hypnosis_amulet', 'vampiric_amulet', 'platinum_amulet', 'necrotic_amulet'

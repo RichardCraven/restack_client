@@ -235,8 +235,9 @@ import bascinet_upgradeable from '../assets/icons/items/helms/upgradeable/bascin
 import bascinet_upgradeable_upgraded from '../assets/icons/items/helms/upgradeable/bascinet upgraded.png';
 import imperial_helm_upgradeable from '../assets/icons/items/helms/upgradeable/imperial helm.png';
 import imperial_helm_upgradeable_upgraded from '../assets/icons/items/helms/upgradeable/imperial helm upgraded.png';
-import rogue_hood_upgradeable from '../assets/icons/items/helms/upgradeable/rogue hood.png';
-import rogue_hood_upgradeable_upgraded from '../assets/icons/items/helms/upgradeable/rogue hood upgraded.png';
+import ranger_hood_upgradeable from '../assets/icons/items/helms/upgradeable/rogue hood.png';
+import ranger_hood_upgradeable_upgraded from '../assets/icons/items/helms/upgradeable/rogue hood upgraded.png';
+
 
 import cloudfire_wand from '../assets/icons/items/wands/cloudfire wand.png';
 import animus_wand from '../assets/icons/items/wands/animus wand.png';
@@ -254,8 +255,6 @@ import staff_of_omicron from '../assets/icons/items/staves/staff of Omicron.png'
 import staff_of_tomorrow from '../assets/icons/items/staves/staff of tomorrow.png';
 
 // weapons
-import axe_upright_white from '../assets/icons/items/weapons/axe_upright_white.png'
-import axe_upright from '../assets/icons/items/weapons/axe_upright.png'
 import axe_white from '../assets/icons/items/weapons/axe_white.png'
 import axe from '../assets/icons/items/weapons/axe.png'
 import longbow from '../assets/icons/items/weapons/longbow.png'
@@ -318,7 +317,7 @@ import dungeon_portal from '../assets/icons/portals/dungeon portal.png';
 
 // magic
 import black_magic from '../assets/icons/magic/black_magic.png';
-import fireball from '../assets/icons/magic/fireball.png';
+import fireball from '../assets/icons/combat-icons/specials/wizard/fireball.png';
 import grimoire from '../assets/icons/magic/grimoire.png';
 import necromancy from '../assets/icons/magic/necromancy.png';
 import exp from '../assets/icons/misc/exp related/exp.png';
@@ -442,7 +441,7 @@ import barbarian from '../assets/portraits/crew/barbarian/barbarian_compressed.p
 import monk from '../assets/portraits/crew/monk/monk_compressed.png'
 import soldier from '../assets/portraits/crew/soldier/soldier_compressed.png'
 import wizard from '../assets/portraits/crew/wizard/wizard_compressed.png'
-import rogue from '../assets/portraits/crew/rogue/rogue_compressed.png'
+import ranger from '../assets/portraits/crew/rogue/rogue_compressed.png'
 import sage from '../assets/portraits/crew/sage/sage_compressed.png'
 import sorceress from '../assets/icons/crew_icons/sorceress.png'
 import engineer from '../assets/portraits/crew/engineer/engineer_compressed.png'
@@ -456,7 +455,7 @@ import monk_portrait from '../assets/portraits/crew/monk/monk_compressed.png'
 import sage_portrait from '../assets/portraits/crew/sage/sage_compressed.png'
 import wizard_portrait from '../assets/portraits/crew/wizard/wizard_compressed.png'
 import soldier_portrait from '../assets/portraits/crew/soldier/soldier_compressed.png'
-import rogue_portrait from '../assets/portraits/crew/rogue/rogue_compressed.png'
+import ranger_portrait from '../assets/portraits/crew/rogue/rogue_compressed.png'
 import barbarian_portrait from '../assets/portraits/crew/barbarian/barbarian_compressed.png'
 
 import ogre_portrait from '../assets/portraits/monsters/ogre.png'
@@ -531,7 +530,7 @@ import grasp from '../assets/icons/combat-icons/monster-attacks/grasp.gif';
 import energy_drain from '../assets/icons/combat-icons/monster-attacks/lightning.png'
 import void_lance from '../assets/icons/combat-icons/monster-attacks/void_lance.png'
 import fire_breath from '../assets/icons/combat-icons/monster-attacks/fire_breath.png'
-import lightning from '../assets/icons/combat-icons/monster-attacks/lightning.png'
+import lightning from '../assets/icons/combat-icons/specials/wizard/lightning.png'
 
 
 // mj_icons
@@ -575,14 +574,63 @@ import whiteskull from '../assets/icons/misc/white_skull.png'
 
 // special
 import ice_blast from '../assets/icons/combat-icons/specials/wizard/ice_blast.png'
-import fire_blast from '../assets/icons/combat-icons/specials/wizard/fire_blast.png'
+import fire_blast from '../assets/icons/combat-icons/specials/wizard/fireball.png'
 import meditate from '../assets/icons/combat-icons/specials/meditate.png'
-import shield_wall from '../assets/icons/combat-icons/specials/soldier/shield wall.png'
+import shield_wall from '../assets/icons/combat-icons/specials/soldier/shield_wall_special.png'
+import soldier_slash from '../assets/icons/combat-icons/specials/soldier/slash.png'
+import shield_slam from '../assets/icons/combat-icons/specials/soldier/shield_slam_special.png'
+import inspire from '../assets/icons/combat-icons/specials/soldier/inspire.png'
+import soldier_defense_stance_mini_icon from '../assets/icons/combat-icons/specials/soldier/defense_stance_mini_icon.png'
+import soldier_defensive_stance from '../assets/icons/combat-icons/specials/soldier/defensive_stance.png'
+import soldier_fist_of_honor from '../assets/icons/combat-icons/specials/soldier/fist_of_honor.png'
+import soldier_imbued_strike from '../assets/icons/combat-icons/specials/soldier/imbued_strike.png'
+import soldier_one_man_army from '../assets/icons/combat-icons/specials/soldier/one_man_army.png'
+import soldier_battlecry from '../assets/icons/combat-icons/specials/soldier/battlecry.png'
 import axe_swing from '../assets/icons/combat-icons/basic attacks/axe swing.png'
 import axe_throw from '../assets/icons/combat-icons/basic attacks/axe throw.png'
 import heal from '../assets/icons/combat-icons/basic attacks/heal.png'
+import barbarian_swing from '../assets/icons/combat-icons/specials/barbarian/swing_barbarian.png'
+import barbarian_cleave from '../assets/icons/combat-icons/specials/barbarian/cleave.png'
+import barbarian_axe_throw from '../assets/icons/combat-icons/specials/barbarian/axe_throw.png'
+import barbarian_berserker from '../assets/icons/combat-icons/specials/barbarian/berserker.png'
+import barbarian_leap_attack from '../assets/icons/combat-icons/specials/barbarian/leap_attack.png'
 import magic_missile from '../assets/icons/misc/cycle.png'
 import magic_missile_inverted from '../assets/icons/misc/cycle_inverted.png'
+import magic_missile_icon from '../assets/icons/combat-icons/specials/wizard/magic_missile_special.png'
+import ice_blast_icon from '../assets/icons/combat-icons/specials/wizard/ice_blast_special.png'
+import wizard_disintegrate from '../assets/icons/combat-icons/specials/wizard/disintegrate.png'
+import wizard_sleep from '../assets/icons/combat-icons/specials/wizard/sleep.png'
+import wizard_annihilation from '../assets/icons/combat-icons/specials/wizard/annihilation.png'
+import wizard_vortex from '../assets/icons/combat-icons/specials/wizard/vortex.png'
+import wizard_acid_blast from '../assets/icons/combat-icons/specials/wizard/acid_blast.png'
+
+import ranger_ice_arrow from '../assets/icons/combat-icons/specials/ranger/ice_arrow.png'
+import ranger_force_arrow from '../assets/icons/combat-icons/specials/ranger/force_arrow.png'
+import ranger_poison_arrow from '../assets/icons/combat-icons/specials/ranger/poison_arrow.png'
+import ranger_celestial_arrow from '../assets/icons/combat-icons/specials/ranger/celestial_arrow.png'
+import ranger_loose from '../assets/icons/combat-icons/specials/ranger/loose.png'
+import ranger_notch from '../assets/icons/combat-icons/specials/ranger/notch.png'
+import ranger_mark from '../assets/icons/combat-icons/specials/ranger/mark.png'
+import ranger_execute from '../assets/icons/combat-icons/specials/ranger/execute.png'
+import healing_hands from '../assets/icons/combat-icons/specials/sage/healing_hands.png'
+import circle_of_protection from '../assets/icons/combat-icons/specials/sage/circle_of_protection.png'
+import shielded from '../assets/icons/combat-icons/specials/sage/shielded.png'
+import shielded_partial from '../assets/icons/combat-icons/specials/sage/shielded_partial.png'
+import bleeding from '../assets/icons/combat-icons/effects/bleeding.png';
+
+import monk_ethereal_speed from '../assets/icons/combat-icons/specials/monk/ethereal_speed.png';
+import monk_astral_focus from '../assets/icons/combat-icons/specials/monk/astral_focus.png';
+import monk_astral_projection from '../assets/icons/combat-icons/specials/monk/astral_projection.png';
+import monk_third_eye from '../assets/icons/combat-icons/specials/monk/third_eye.png';
+import monk_whirlwind from '../assets/icons/combat-icons/specials/monk/whirlwind.png';
+import monk_inner_fire from '../assets/icons/combat-icons/specials/monk/inner_fire.png';
+import monk_meditate from '../assets/icons/combat-icons/specials/monk/meditate.png';
+import monk_force_punch from '../assets/icons/combat-icons/specials/monk/force_punch.png';
+import monk_punch from '../assets/icons/combat-icons/specials/monk/punch.png';
+import monk_twin_finger_authority from '../assets/icons/combat-icons/specials/monk/twin_finger_authority.png';
+import monk_flurry from '../assets/icons/combat-icons/specials/monk/flurry.png';
+import monk_force_punch_flurry from '../assets/icons/combat-icons/specials/monk/force_punch_flurry.png';
+
 
 // body
 import body_male from '../assets/icons/figures/body_man.png'
@@ -933,8 +981,8 @@ export {
     bascinet_upgradeable_upgraded,
     imperial_helm_upgradeable,
     imperial_helm_upgradeable_upgraded,
-    rogue_hood_upgradeable,
-    rogue_hood_upgradeable_upgraded,
+    ranger_hood_upgradeable,
+    ranger_hood_upgradeable_upgraded,
 
     cloudfire_wand,
     animus_wand,
@@ -951,9 +999,7 @@ export {
     staff_of_tomorrow,
 
     axe,
-    axe_upright,
     axe_white,
-    axe_upright_white,
     longbow,
     flail,
     flail_upright,
@@ -1191,7 +1237,7 @@ export {
 
     archer,
     barbarian,
-    rogue,
+    ranger,
     sage,
     wizard,
     sorceress,
@@ -1207,7 +1253,7 @@ export {
     monk_portrait,
     sage_portrait,
     wizard_portrait,
-    rogue_portrait,
+    ranger_portrait,
     barbarian_portrait,
     soldier_portrait,
 
@@ -1291,6 +1337,7 @@ export {
 
     magic_missile,
     magic_missile_inverted,
+    magic_missile_icon,
 
     arrowUp,
     arrowDown,
@@ -1302,12 +1349,57 @@ export {
     whiteskull,
 
     ice_blast,
+    ice_blast_icon,
+    ranger_ice_arrow,
+    ranger_force_arrow,
+    ranger_poison_arrow,
+    ranger_celestial_arrow,
+    ranger_loose,
+    ranger_notch,
+    ranger_mark,
+    ranger_execute,
+    healing_hands,
+    circle_of_protection,
+    shielded,
+    shielded_partial,
+    monk_ethereal_speed,
+    monk_astral_focus,
+    monk_astral_projection,
+    monk_third_eye,
+    monk_whirlwind,
+    monk_inner_fire,
+    monk_meditate,
+    monk_force_punch,
+    monk_punch,
+    monk_twin_finger_authority,
+    monk_flurry,
+    monk_force_punch_flurry,
     fire_blast,
     meditate,
     shield_wall,
+    soldier_slash,
+    shield_slam,
+    inspire,
+    soldier_defense_stance_mini_icon,
+    soldier_defensive_stance,
+    soldier_fist_of_honor,
+    soldier_imbued_strike,
+    soldier_one_man_army,
+    soldier_battlecry,
     axe_swing,
     axe_throw,
     heal,
+    barbarian_swing,
+    barbarian_cleave,
+    barbarian_axe_throw,
+    barbarian_berserker,
+    barbarian_leap_attack,
+    bleeding,
+    wizard_disintegrate,
+    wizard_sleep,
+    wizard_annihilation,
+    wizard_vortex,
+    wizard_acid_blast,
 
     body_male,
     body_female,

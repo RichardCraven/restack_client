@@ -829,112 +829,112 @@
 
             @-webkit-keyframes ArcAnimation_right {
                 0%{
-                    transform: translate(-50px, -35px) rotateZ(-70deg);
+                    transform: translate(40px, -45px) rotateZ(-60deg);
                     opacity: 0.1;
                 }
                 50%{
-                    transform: translate(-50px, -35px) rotateZ(-70deg);
+                    transform: translate(55px, -15px) rotateZ(30deg);
                     opacity: 0.9;
                 }
                 80%{
-                    transform: translate(-10px, 0px) rotateZ(45deg);
+                    transform: translate(55px, 15px) rotateZ(60deg);
                     opacity: 1;
                 }
                 100%{
-                    transform: translate(-50px, 20px) rotateZ(45deg);
+                    transform: translate(40px, 40px) rotateZ(110deg);
                     opacity: 0;
                 }
             }
             @-moz-keyframes ArcAnimation_right {
                 0%{
-                    transform: translate(-50px, -35px) rotateZ(-70deg);
+                    transform: translate(40px, -45px) rotateZ(-60deg);
                     opacity: 0.1;
                 }
                 50%{
-                    transform: translate(-50px, -35px) rotateZ(-70deg);
+                    transform: translate(55px, -15px) rotateZ(30deg);
                     opacity: 0.9;
                 }
                 80%{
-                    transform: translate(-10px, 0px) rotateZ(45deg);
+                    transform: translate(55px, 15px) rotateZ(60deg);
                     opacity: 1;
                 }
                 100%{
-                    transform: translate(-50px, 20px) rotateZ(45deg);
+                    transform: translate(40px, 40px) rotateZ(110deg);
                     opacity: 0;
                 }
             }
             @keyframes ArcAnimation_right {
                 0%{
-                    transform: translate(50px, -50px) rotateZ(-60deg);
+                    transform: translate(40px, -45px) rotateZ(-60deg);
                     opacity: 0.1;
                 }
                 50%{
-                    transform: translate(85px, -15px) rotateZ(30deg);
+                    transform: translate(55px, -15px) rotateZ(30deg);
                     opacity: 0.9;
                 }
                 80%{
-                    transform: translate(85px, 20px) rotateZ(60deg);
+                    transform: translate(55px, 15px) rotateZ(60deg);
                     opacity: 1;
                 }
                 100%{
-                    transform: translate(50px, 45px) rotateZ(110deg);
+                    transform: translate(40px, 40px) rotateZ(110deg);
                     opacity: 0;
                 }
                 
             }
             @keyframes ArcAnimation_left {
                 0%{
-                    transform: translate(-40px, -50px) rotateZ(60deg);
+                    transform: translate(-40px, -45px) rotateZ(60deg);
                     opacity: 0.1;
                 }
                 50%{
-                    transform: translate(-85px, -15px) rotateZ(-30deg);
+                    transform: translate(-55px, -15px) rotateZ(-30deg);
                     opacity: 0.9;
                 }
                 80%{
-                    transform: translate(-85px, 20px) rotateZ(-60deg);
+                    transform: translate(-55px, 15px) rotateZ(-60deg);
                     opacity: 1;
                 }
                 100%{
-                    transform: translate(-50px, 45px) rotateZ(-110deg);
+                    transform: translate(-40px, 40px) rotateZ(-110deg);
                     opacity: 0;
                 }
             }
             // ARC Down to Up
             @keyframes ArcAnimation_up {
                 0%{
-                    transform: translate(-35px, -50px) rotateZ(-60deg);
+                    transform: translate(-35px, -40px) rotateZ(-60deg);
                     opacity: 0.1;
                 }
                 50%{
-                    transform: translate(0px, -85px) rotateZ(-100deg);
+                    transform: translate(0px, -55px) rotateZ(-100deg);
                     opacity: 0.9;
                 }
                 80%{
-                    transform: translate(25px, -85px) rotateZ(-130deg);
+                    transform: translate(20px, -55px) rotateZ(-130deg);
                     opacity: 1;
                 }
                 100%{
-                    transform: translate(35px, -50px) rotateZ(-160deg);
+                    transform: translate(35px, -40px) rotateZ(-160deg);
                     opacity: 0;
                 }
             }
             // ArcAnimation Up to Down
             @keyframes ArcAnimation_down {
                 0%{
-                    transform: translate(-35px, 50px) rotateZ(60deg);
+                    transform: translate(-35px, 40px) rotateZ(60deg);
                     opacity: 0.1;
                 }
                 50%{
-                    transform: translate(0px, 85px) rotateZ(100deg);
+                    transform: translate(0px, 55px) rotateZ(100deg);
                     opacity: 0.9;
                 }
                 80%{
-                    transform: translate(25px, 85px) rotateZ(130deg);
+                    transform: translate(20px, 55px) rotateZ(130deg);
                     opacity: 1;
                 }
                 100%{
-                    transform: translate(35px, 50px) rotateZ(160deg);
+                    transform: translate(35px, 40px) rotateZ(160deg);
                     opacity: 0;
                 }
             }

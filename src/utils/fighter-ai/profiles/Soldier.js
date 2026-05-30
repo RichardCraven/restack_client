@@ -449,7 +449,7 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
         if (shieldWall.energy_cost != null && energy < shieldWall.energy_cost) return false;
 
         // ── Guard: don't wall if there's nobody left to protect ────────────
-        const SOFT_CLASSES = ['wizard', 'sage', 'rogue'];
+        const SOFT_CLASSES = ['wizard', 'sage', 'ranger'];
         const liveFriendlies = Object.values(combatants).filter(
             e => !e.dead && !e.isMonster && !e.isMinion && e.id !== caller.id
         );

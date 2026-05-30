@@ -132,7 +132,7 @@ const specialsMatrix = {
     ice_blast: {
         name: 'ice blast',
         type: 'special',
-        icon: images['ice_blast'],
+        icon: images['ice_blast_icon'],
         cooldown: 18,
         damage: 5,
         energy_cost: 80,
@@ -235,7 +235,7 @@ const specialsMatrix = {
     major_magic_missile: {
         name: 'major magic missile',
         type: 'special',
-        icon: images['magic_missile'],
+        icon: images['magic_missile_icon'],
         cooldown: 5,
         damage: 12,
         energy_cost: 40,
@@ -246,7 +246,7 @@ const specialsMatrix = {
     minor_magic_missile: {
         name: 'minor magic missile',
         type: 'special',
-        icon: images['magic_missile'],
+        icon: images['magic_missile_icon'],
         cooldown: 7,
         damage: 6,
         energy_cost: 30,

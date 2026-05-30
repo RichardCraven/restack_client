@@ -60,9 +60,9 @@ export const MonsterAcquireTargetMethods = {
         return sorted[0];
     },
 
-    // Prioritize closest 'soft' target (wizard, sage, rogue), fallback to closest enemy
+    // Prioritize closest 'soft' target (wizard, sage, ranger), fallback to closest enemy
     acquireClosestSoftTarget: (caller, combatants) => {
-        const SOFT_CLASSES = ['wizard', 'sage', 'rogue'];
+        const SOFT_CLASSES = ['wizard', 'sage', 'ranger'];
         const enemies = Object.values(combatants).filter(e => !e.dead && e.id !== caller.id && !e.isMonster && !e.isMinion);
         if (enemies.length === 0) return null;
         const getDistanceToTarget = (caller.Methods && caller.Methods.getDistanceToTarget) ? caller.Methods.getDistanceToTarget : Methods.getDistanceToTarget;

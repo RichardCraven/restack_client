@@ -1,6 +1,6 @@
 import { Sage } from './profiles/Sage'
 import { Wizard } from './profiles/Wizard'
-import { Rogue } from './profiles/Rogue'
+import { Ranger } from './profiles/Ranger'
 import { Soldier } from './profiles/Soldier'
 import { Monk } from './profiles/Monk'
 import { Barbarian } from './profiles/Barbarian'
@@ -93,7 +93,7 @@ export function FighterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
             sage: new Sage(data, this.utilMethods, this.animationManager, this.overlayManager),
             wizard: new Wizard(data, this.utilMethods, animationManager),
             soldier: new Soldier(data, this.utilMethods, animationManager),
-            rogue: new Rogue(data, this.utilMethods, animationManager, this.overlayManager),
+            ranger: new Ranger(data, this.utilMethods, animationManager, this.overlayManager),
             monk: new Monk(data, this.utilMethods, animationManager, this.overlayManager),
             barbarian: new Barbarian(data, this.utilMethods, animationManager),
             engineer: new Engineer(data, this.utilMethods, animationManager, this.overlayManager),

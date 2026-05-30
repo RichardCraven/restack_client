@@ -47,7 +47,7 @@ const getSurroundings = (coords) => {
               SE = {x: coords.x+1, y: coords.y+1}
     return {N,S,E,W,NW,NE,SW,SE}
 }
-const PC_TYPES = ['soldier','rogue','wizard', 'monk', 'sage', 'barbarian']
+const PC_TYPES = ['soldier','ranger','wizard', 'monk', 'sage', 'barbarian']
 const someoneIsInCoords = (coords, combatants)=>{
     if(!combatants) return false
     return Object.values(combatants).some(e=>{

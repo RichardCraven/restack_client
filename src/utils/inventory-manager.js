@@ -166,8 +166,8 @@ export function InventoryManager(){
         'bascinet_upgradeable_upgraded',
         'imperial_helm_upgradeable',
         'imperial_helm_upgradeable_upgraded',
-        'rogue_hood_upgradeable',
-        'rogue_hood_upgradeable_upgraded'
+        'ranger_hood_upgradeable',
+        'ranger_hood_upgradeable_upgraded'
     ]
     this.wands_names = [
         'cloudfire_wand',
@@ -1334,28 +1334,28 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
             animation: null,
             description: 'Helm favored by emperors, offering a blend of protection and prestige. Defense: 12 (~8% damage reduction)'
         },
-        rogue_hood_upgradeable: {
+        ranger_hood_upgradeable: {
             tier: 2,
             armor: 8,
             type: 'armor',
             subtype: 'helm',
-            icon: 'rogue_hood_upgradeable',
-            name: 'rogue hood',
+            icon: 'ranger_hood_upgradeable',
+            name: 'ranger hood',
             upgradeable: true,
             equippedBy: null,
             animation: null,
-            description: 'Hood favored by rogues, offering a blend of protection and stealth. Defense: 8 (~5% damage reduction)'
+            description: 'Hood favored by rangers, offering a blend of protection and stealth. Defense: 8 (~5% damage reduction)'
         },
-        rogue_hood_upgradeable_upgraded: {
+        ranger_hood_upgradeable_upgraded: {
             tier: 2,
             armor: 12,
             type: 'armor',
             subtype: 'helm',
-            icon: 'rogue_hood_upgradeable_upgraded',
-            name: 'rogue hood upgraded',
+            icon: 'ranger_hood_upgradeable_upgraded',
+            name: 'ranger hood upgraded',
             equippedBy: null,
             animation: null,
-            description: 'Hood favored by rogues, offering a blend of protection and stealth. Defense: 12 (~8% damage reduction)'
+            description: 'Hood favored by rangers, offering a blend of protection and stealth. Defense: 12 (~8% damage reduction)'
         }
         ///////// chest pieces
     }
@@ -2904,7 +2904,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
         'cavalry_helm_upgradeable', 'war_helm_upgradeable', 'coif_helm_upgradeable',
         'gladiator_helm_upgradeable', 'battle_mage_helm_upgradeable', 'knight_helm_upgradeable',
         'janissary_helm_upgradeable', 'bascinet_upgradeable', 'imperial_helm_upgradeable',
-        'rogue_hood_upgradeable',
+        'ranger_hood_upgradeable',
     ];
     this.TIER3_ARMOR = [
         'revenants_shield', 'aegis_bulwark',
@@ -2915,7 +2915,7 @@ entropy_sword: { damage: 190, icon: 'entropy', type: 'weapon', subtype: 'cutting
         'gladiator_helm_upgradeable_upgraded', 'battle_mage_helm_upgradeable_upgraded',
         'knight_helm_upgradeable_upgraded', 'janissary_helm_upgradeable_upgraded',
         'bascinet_upgradeable_upgraded', 'imperial_helm_upgradeable_upgraded',
-        'rogue_hood_upgradeable_upgraded',
+        'ranger_hood_upgradeable_upgraded',
     ];
     this.TIER4_ARMOR = [];
 

@@ -2213,7 +2213,7 @@ export function CombatManager() {
                     let blockerDistanceToTarget = this.getDistanceToTarget(blockerCombatant, this.combatants[blockerCombatant.targetId])
                     depthAvailable = false;
                     switch (combatant.type) {
-                        case 'rogue':
+                        case 'ranger':
                             if (blockerCombatant.pendingAttack.range === 'close' && blockerDistanceToTarget > 2) {
                                 combatant.coordinates.x = 2;
                                 blockerCombatant.coordinates.x++

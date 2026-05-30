@@ -114,7 +114,7 @@ class CrewManagerPage extends React.Component{
 
     selectedCrew.push(this.tempCrewManager.crew.find(e=>e.type==='wizard'))
     // selectedCrew.push(this.tempCrewManager.crew.find(e=>e.type==='soldier'))
-    // selectedCrew.push(this.props.crewManager.crew.find(e=>e.type==='rogue'))
+    // selectedCrew.push(this.props.crewManager.crew.find(e=>e.type==='ranger'))
     selectedCrew.push(this.tempCrewManager.crew.find(e=>e.type==='barbarian'))
     selectedCrew.push(this.tempCrewManager.crew.find(e=>e.type==='monk'))
 

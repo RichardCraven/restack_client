@@ -34,7 +34,7 @@ export function CrewManager(){
         // 'sorceress',
         'engineer',
         'summoner',
-        'rogue',
+        'ranger',
         'sage',
         'soldier'
     ]
@@ -111,7 +111,7 @@ export function CrewManager(){
             wizard: ['int'],
             engineer: ['dex','int'],
             summoner: ['int'],
-            rogue: ['dex','str'],
+            ranger: ['dex','str'],
             sage: ['fort']
         },
         defense: {
@@ -121,7 +121,7 @@ export function CrewManager(){
             wizard: ['dex','str'],
             engineer: ['dex','fort'],
             summoner: ['int','fort'],
-            rogue: ['str','fort'],
+            ranger: ['str','fort'],
             sage: ['str','fort']
         },
         hp: { all: ['fort'] },
@@ -264,7 +264,7 @@ export function CrewManager(){
                 crewMember.stats.dex = (crewMember.stats.dex || 0) + 1;
                 gains.dex = 1;
                 break;
-            case 'rogue':
+            case 'ranger':
                 crewMember.stats.dex = (crewMember.stats.dex || 0) + 1;
                 gains.dex = 1;
                 break;
@@ -481,14 +481,14 @@ export function CrewManager(){
             actionMenuTypeExpanded: false
         },
         {
-            image: 'rogue',
-            type: 'rogue',
+            image: 'ranger',
+            type: 'ranger',
             class: 'warrior',
             name: 'Dormund',
             id: 789,
             level: 1,
             stats: { str: 5, int: 5, dex: 6, fort: 3, baseHp: 10, experience: 0 },
-            portrait: images['rogue_portrait'],
+            portrait: images['ranger_portrait'],
             inventory: [],
             specials: ['deadeye_shot'],
             attacks: ['fire_arrow', 'dagger_stab'],

@@ -2,7 +2,7 @@
 //    section at the top of CHANGELOG.md — pendingAttack guard, attacking flag, resolve(null)
 //    fallbacks, and attack-in-processMove are all mandatory.
 
-export function Rogue(data, utilMethods, animationManager){
+export function Ranger(data, utilMethods, animationManager){
     this.MAX_DEPTH = data.MAX_DEPTH;
     this.MAX_LANES = data.MAX_LANES;
     this.INTERVAL_TIME = data.INTERVAL_TIME
@@ -44,7 +44,7 @@ export function Rogue(data, utilMethods, animationManager){
         }
         caller.pendingAttack = this.chooseAttackType(caller, target);
         caller.targetId = target.id;
-        console.log('rogue acquired target: ', target);
+        console.log('ranger acquired target: ', target);
     }
     this.chooseAttackType = (caller, target) => {
         let attack, available = caller.attacks.filter(e=>e.cooldown_position === 100);
@@ -87,7 +87,7 @@ export function Rogue(data, utilMethods, animationManager){
         const distanceToTarget = data.methods.getDistanceToTarget(caller, enemyTarget), // eslint-disable-line no-unused-vars
         laneDiff = data.methods.getLaneDifferenceToTarget(caller, enemyTarget) // eslint-disable-line no-unused-vars
 
-        // console.log('Rogue process move, pending attack: ', caller.pendingAttack);
+        // console.log('Ranger process move, pending attack: ', caller.pendingAttack);
         if(!caller.pendingAttack){
             return
         }

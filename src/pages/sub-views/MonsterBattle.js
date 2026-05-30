@@ -812,7 +812,7 @@ class MonsterBattle extends React.Component {
                         type: 'spell',
                         subtype: 'magic missile',
                         name: 'magic missile',
-                        iconUrl: images['magic_missile'] || '',
+                        iconUrl: images['magic_missile_icon'] || images['magic_missile'] || '',
                         selected: false,
                         cooldown_position: 100
                     };

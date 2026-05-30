@@ -276,7 +276,7 @@ class DungeonPage extends React.Component {
                 subTypes: [
                     {
                         type: 'magic missile',
-                        iconUrl: images['magic_missile_inverted'],
+                        iconUrl: images['magic_missile_icon'] || images['magic_missile_inverted'],
                         available: true,
                         count: mmCount
                     },
@@ -3107,7 +3107,7 @@ class DungeonPage extends React.Component {
                 : null;
             const selectedType = (((liveMember && liveMember.type) || selected.type || '') + '').toLowerCase();
             const normalizedClass = (((liveMember && liveMember.class) || selected.class || '') + '').toLowerCase();
-            const inferredClass = ['soldier', 'rogue', 'monk', 'barbarian'].includes(selectedType)
+            const inferredClass = ['soldier', 'ranger', 'monk', 'barbarian'].includes(selectedType)
                 ? 'warrior'
                 : (['wizard', 'sage', 'engineer'].includes(selectedType) ? 'spellcaster' : '');
             const crewClass = normalizedClass || inferredClass;
@@ -3203,7 +3203,7 @@ class DungeonPage extends React.Component {
         crew.forEach((c)=>{
             let weapon;
             switch(c.type){
-                case 'rogue':
+                case 'ranger':
                     weapon = this.props.inventoryManager.allItems['longbow']
                     c.inventory.push(weapon);
                 break;
@@ -5710,7 +5710,7 @@ class DungeonPage extends React.Component {
                                         // Prefer iconUrlInverted for DungeonPage (dark bg), fallback to iconUrl, then subtype/default
                                         let iconUrl = action.iconUrlInverted || action.iconUrl;
                                         if (!iconUrl && action.subtype === 'magic missile' && typeof images !== 'undefined') {
-                                            iconUrl = images['magic_missile_inverted'] || images['magic_missile'];
+                                            iconUrl = images['magic_missile_icon'] || images['magic_missile_inverted'] || images['magic_missile'];
                                         }
                                         if (!iconUrl && typeof images !== 'undefined') {
                                             iconUrl = images['glyph_inverted'] || '';

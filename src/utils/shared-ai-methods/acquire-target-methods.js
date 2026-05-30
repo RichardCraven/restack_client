@@ -118,9 +118,9 @@ export const AcquireTargetMethods = {
         return AcquireTargetMethods._pickSpreadTarget(caller, enemies, combatants, null);
     },
 
-    // Prioritize closest 'soft' target (wizard, sage, rogue), fallback to closest enemy
+    // Prioritize closest 'soft' target (wizard, sage, ranger), fallback to closest enemy
     acquireClosestSoftTarget: (caller, combatants) => {
-        const SOFT_CLASSES = ['wizard', 'sage', 'rogue'];
+        const SOFT_CLASSES = ['wizard', 'sage', 'ranger'];
         const SOFT_CLASS_SET = new Set(SOFT_CLASSES);
         const isMonsterOrMinion = caller.isMonster || caller.isMinion;
         // Exclude VCTs from possible targets
