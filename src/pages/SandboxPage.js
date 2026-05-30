@@ -584,30 +584,37 @@ const SandboxPage = () => {
       setAnimating(true);
       setAnimationPhase('lunge');
 
+      // 1. Connection (at 200ms)
       setTimeout(() => {
         setTargetShake(true);
         setTargetFlash(true);
         setHitEffect({ type: 'fist_connect' });
         setTargetStunned(true);
         addFloatingText('-24', 'crit', '#ffdd57', targetPos.row, targetPos.col);
-
-        setTimeout(() => {
-          setTargetShake(false);
-          setTargetFlash(false);
-          setHitEffect(null);
-        }, 300);
-
-        setAnimationPhase('return');
       }, 200);
 
+      // 2. Clear target shake/flash (at 450ms)
+      setTimeout(() => {
+        setTargetShake(false);
+        setTargetFlash(false);
+      }, 450);
+
+      // 3. Clear fist overlay and start return animation (at 1000ms)
+      setTimeout(() => {
+        setHitEffect(null);
+        setAnimationPhase('return');
+      }, 1000);
+
+      // 4. Return completes, end animation (at 1300ms)
       setTimeout(() => {
         setAnimating(false);
         setAnimationPhase(null);
-      }, 500);
+      }, 1300);
 
+      // 5. Stun effect ends (at 6200ms total, giving 6.0 seconds of stun)
       setTimeout(() => {
         setTargetStunned(false);
-      }, 2200);
+      }, 6200);
     }
 
     // --- SOLDIER IMBUED STRIKE ---
@@ -2657,13 +2664,24 @@ const SandboxPage = () => {
                     );
                   })()}
                   {hitEffect.type === 'fist_connect' && (() => {
-                    const colDiff = targetPos.col - fighterPos.col;
-                    const rowDiff = targetPos.row - fighterPos.row;
-                    const baseAngle = Math.atan2(rowDiff, colDiff) * (180 / Math.PI);
+                    const dx = fighterPos.col - targetPos.col;
+                    const dy = fighterPos.row - targetPos.row;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    let adjCol = fighterPos.col;
+                    let adjRow = fighterPos.row;
+                    if (dist > 0) {
+                      const colStep = Math.round(dx / dist);
+                      const rowStep = Math.round(dy / dist);
+                      adjCol = targetPos.col + colStep;
+                      adjRow = targetPos.row + rowStep;
+                    }
+                    const swingDx = targetPos.col - adjCol;
+                    const swingDy = targetPos.row - adjRow;
+                    const baseAngle = Math.atan2(swingDy, swingDx) * (180 / Math.PI);
 
-                    // Calculate divide (midpoint) offset relative to Target during lunge
-                    const leftOffset = -10 * colDiff;
-                    const topOffset = -10 * rowDiff;
+                    // Calculate divide (midpoint) offset relative to Target (like healing hands)
+                    const leftOffset = (swingDx / 2) * -100;
+                    const topOffset = (swingDy / 2) * -100;
 
                     return (
                       <div
@@ -2673,7 +2691,7 @@ const SandboxPage = () => {
                           top: `calc(50% + ${topOffset}px)`,
                           width: '56px',
                           height: '56px',
-                          transform: `translate(-50%, -50%) rotate(${baseAngle}deg)`,
+                          transform: `translate(-50%, -50%) rotate(${baseAngle + 90}deg)`,
                           pointerEvents: 'none',
                           zIndex: 5000,
                           display: 'flex',
@@ -3119,7 +3137,7 @@ const SandboxPage = () => {
                   {isNotch && submenuOpen && (
                     <div style={{
                       position: 'absolute',
-                      bottom: 'calc(100% + 8px)',
+                      bottom: 'calc(100% - 10px)',
                       left: '20px',
                       width: '0',
                       height: '0',
