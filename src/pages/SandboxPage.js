@@ -45,7 +45,47 @@ import {
   arrowUp,
   construct_icon,
   sigil_icon,
-  sword_white
+  sword_white,
+  // Soldier Screenshot 2 abilities
+  soldier_slash,
+  shield_slam,
+  inspire,
+  soldier_defensive_stance,
+  soldier_fist_of_honor,
+  soldier_imbued_strike,
+  soldier_one_man_army,
+  soldier_battlecry,
+  // Swords
+  shortsword,
+  cutlass,
+  gladius,
+  longsword,
+  broadsword,
+  claymore,
+  katana,
+  greatsword,
+  doomreaver,
+  nightfall,
+  dreadedge,
+  sunsteel,
+  frostbite,
+  bloodsong,
+  shadowfang,
+  entropy,
+  // Axes
+  axe_1,
+  axe_2,
+  axe_3,
+  axe_4,
+  axe_5,
+  axe_12,
+  axe_13,
+  axe_15,
+  axe_16,
+  axe_19,
+  axe_20,
+  axe_21,
+  axe_23
 } from '../utils/images';
 
 // Dynamically load all runes from the directory
@@ -94,6 +134,46 @@ Object.keys(runesData).forEach(runeName => {
   }
 });
 
+const WEAPONS_DB = {
+  swords: [
+    // Tier 1
+    { id: 'shortsword_sword', name: 'Shortsword', tier: 1, image: shortsword, description: 'Grants +25% base attack and +2.5 flat damage.' },
+    { id: 'cutlass_sword', name: 'Cutlass', tier: 1, image: cutlass, description: 'Grants +30% base attack and +3.0 flat damage.' },
+    { id: 'gladius_sword', name: 'Gladius', tier: 1, image: gladius, description: 'Grants +40% base attack and +4.0 flat damage.' },
+    { id: 'longsword_sword', name: 'Longsword', tier: 1, image: longsword, description: 'Grants +45% base attack and +4.5 flat damage.' },
+    { id: 'broadsword_sword', name: 'Broadsword', tier: 1, image: broadsword, description: 'Grants +50% base attack and +5.0 flat damage.' },
+    { id: 'claymore_sword', name: 'Claymore', tier: 1, image: claymore, description: 'Grants +60% base attack and +6.0 flat damage.' },
+    // Tier 2
+    { id: 'doomreaver_sword', name: 'Doomreaver', tier: 2, image: doomreaver, description: 'Grants +78% base attack and +7.8 flat damage.' },
+    { id: 'nightfall_sword', name: 'Nightfall', tier: 2, image: nightfall, description: 'Grants +82% base attack and +8.2 flat damage.' },
+    { id: 'dreadedge_sword', name: 'Dreadedge', tier: 2, image: dreadedge, description: 'Grants +88% base attack and +8.8 flat damage.' },
+    { id: 'sunsteel_sword', name: 'Sunsteel', tier: 2, image: sunsteel, description: 'Grants +95% base attack and +9.5 flat damage.' },
+    // Tier 3
+    { id: 'frostbite_sword', name: 'Frostbite', tier: 3, image: frostbite, description: 'Grants +130% base attack and +13.0 flat damage.' },
+    { id: 'bloodsong_sword', name: 'Bloodsong', tier: 3, image: bloodsong, description: 'Grants +140% base attack and +14.0 flat damage.' },
+    { id: 'shadowfang_sword', name: 'Shadowfang', tier: 3, image: shadowfang, description: 'Grants +150% base attack and +15.0 flat damage.' },
+    { id: 'entropy_sword', name: 'Entropy Sword', tier: 3, image: entropy, description: 'Grants +190% base attack and +19.0 flat damage.' },
+  ],
+  axes: [
+    // Tier 1
+    { id: 'woodcutters_axe', name: "Woodcutter's Axe", tier: 1, image: axe_1, description: 'Grants +15% base attack and +1.5 flat damage.' },
+    { id: 'bloodcleaver_axe', name: 'Bloodcleaver Axe', tier: 1, image: axe_2, description: 'Grants +18% base attack and +1.8 flat damage.' },
+    { id: 'hillbiter_axe', name: 'Hillbiter Axe', tier: 1, image: axe_3, description: 'Grants +19% base attack and +1.9 flat damage.' },
+    { id: 'ironcleaver_axe', name: 'Ironcleaver Axe', tier: 1, image: axe_4, description: 'Grants +20% base attack and +2.0 flat damage.' },
+    { id: 'rune_axe', name: 'Rune Axe', tier: 1, image: axe_5, description: 'Grants +22% base attack and +2.2 flat damage.' },
+    // Tier 2
+    { id: 'razorfang_axe', name: 'Razorfang Axe', tier: 2, image: axe_12, description: 'Grants +40% base attack and +4.0 flat damage.' },
+    { id: 'stonebreaker_axe', name: 'Stonebreaker Axe', tier: 2, image: axe_13, description: 'Grants +42% base attack and +4.2 flat damage.' },
+    { id: 'warcleaver_axe', name: 'Warcleaver Axe', tier: 2, image: axe_15, description: 'Grants +46% base attack and +4.6 flat damage.' },
+    { id: 'blackroot_axe', name: 'Blackroot Axe', tier: 2, image: axe_16, description: 'Grants +48% base attack and +4.8 flat damage.' },
+    // Tier 3
+    { id: 'thunderhewer_axe', name: 'Thunderhewer Axe', tier: 3, image: axe_19, description: 'Grants +70% base attack and +7.0 flat damage.' },
+    { id: 'skullsplitter_axe', name: 'Skullsplitter Axe', tier: 3, image: axe_20, description: 'Grants +74% base attack and +7.4 flat damage.' },
+    { id: 'giantsbane_axe', name: 'Giantsbane Axe', tier: 3, image: axe_21, description: 'Grants +78% base attack and +7.8 flat damage.' },
+    { id: 'obsidian_axe', name: 'Obsidian Axe', tier: 3, image: axe_23, description: 'Grants +88% base attack and +8.8 flat damage.' },
+  ]
+};
+
 // Predefined list of 8 crew fighters and their test abilities
 const fightersData = [
   {
@@ -121,10 +201,15 @@ const fightersData = [
     name: 'Soldier',
     portrait: soldier,
     abilities: [
-      { id: 'slash', name: 'Slash', desc: 'Execute a heavy steel blade slash.', icon: sword_white || axe_swing, type: 'melee' },
+      { id: 'slash', name: 'Slash', desc: 'Execute a heavy steel blade slash.', icon: soldier_slash, type: 'melee' },
       { id: 'shield_wall', name: 'Shield Wall', desc: 'Deploy a protective energetic wall overlay.', icon: shield_wall, type: 'shield_wall' },
-      { id: 'shield_slam', name: 'Shield Slam', desc: 'Ram target, causing heavy structural shake.', icon: tackle, type: 'melee_slam' },
-      { id: 'axe_throw', name: 'Axe Throw', desc: 'Throw a spinning hand axe.', icon: axe_throw, type: 'projectile', projectileIcon: axe_throw }
+      { id: 'shield_slam', name: 'Shield Slam', desc: 'Ram target, causing heavy structural shake.', icon: shield_slam, type: 'melee_slam' },
+      { id: 'defensive_stance', name: 'Defensive Stance', desc: 'Adopt a defensive stance to absorb damage.', icon: soldier_defensive_stance, type: 'defensive_stance' },
+      { id: 'fist_of_honor', name: 'Fist of Honor', desc: 'Strike with a fist of pure honor.', icon: soldier_fist_of_honor, type: 'fist_of_honor' },
+      { id: 'imbued_strike', name: 'Imbued Strike', desc: 'Strike with an energy-imbued blade.', icon: soldier_imbued_strike, type: 'imbued_strike' },
+      { id: 'one_man_army', name: 'One Man Army', desc: 'Summon the strength of a one-man army.', icon: soldier_one_man_army, type: 'one_man_army' },
+      { id: 'inspire', name: 'Inspire', desc: 'Inspire nearby allies to fight harder.', icon: inspire, type: 'inspire' },
+      { id: 'battlecry', name: 'Battlecry', desc: 'Unleash a roar, amplifying size and damage.', icon: soldier_battlecry, type: 'battle_cry' }
     ]
   },
   {
@@ -216,6 +301,18 @@ const SandboxPage = () => {
   const [minions, setMinions] = useState([]); // List of coordinates {row, col}
   const [healIcon, setHealIcon] = useState(null); // { row, col, active }
   const [targetHealGlow, setTargetHealGlow] = useState(false);
+  const [equippedWeapons, setEquippedWeapons] = useState({
+    soldier: 'shortsword_sword',
+    barbarian: 'woodcutters_axe',
+    ranger: 'shortsword_sword',
+    sage: 'shortsword_sword',
+    wizard: 'shortsword_sword',
+    monk: 'shortsword_sword',
+    summoner: 'shortsword_sword',
+    engineer: 'shortsword_sword'
+  });
+  const [weaponModalOpen, setWeaponModalOpen] = useState(false);
+  const [weaponModalTab, setWeaponModalTab] = useState('swords');
 
   const activeData = runesData[selectedRune];
 
@@ -235,7 +332,7 @@ const SandboxPage = () => {
     setFloatingTexts(prev => [...prev, { id, text, type, color, row, col }]);
     setTimeout(() => {
       setFloatingTexts(prev => prev.filter(t => t.id !== id));
-    }, 1000);
+    }, 1800);
   };
 
   // Helper to determine projectile rotation angle
@@ -328,38 +425,99 @@ const SandboxPage = () => {
       setAnimating(true);
       
       const isSlash = ability.id === 'slash';
-      setAnimationPhase(isSlash ? 'step_adjacent' : 'lunge');
 
-      const hitDelay = isSlash ? 250 : 200;
-      const totalDuration = isSlash ? 550 : 500;
+      if (isSlash) {
+        setAnimationPhase('step_adjacent'); // Move to adjacent (takes 250ms)
+
+        // Arrives adjacent: trigger weapon slash swing animation (duration 0.75s)
+        setTimeout(() => {
+          setHitEffect({ type: 'weapon_slash' });
+        }, 250);
+
+        // Impact peak (800ms total, 550ms into swing): shake target, flash red, add damage text
+        setTimeout(() => {
+          setTargetShake(true);
+          setTargetFlash(true);
+          addFloatingText('-15', 'normal', '#ff4d4d', targetPos.row, targetPos.col);
+
+          // Clear target shake/flash after 250ms
+          setTimeout(() => {
+            setTargetShake(false);
+            setTargetFlash(false);
+          }, 250);
+        }, 800);
+
+        // Swing completes (1000ms total, 750ms swing): remove weapon icon, return to origin
+        setTimeout(() => {
+          setHitEffect(null);
+          setAnimationPhase('return');
+        }, 1000);
+
+        // Arrives back at origin (1250ms total, return takes 250ms): end animation
+        setTimeout(() => {
+          setAnimating(false);
+          setAnimationPhase(null);
+        }, 1250);
+      } else {
+        setAnimationPhase('lunge');
+        const hitDelay = 200;
+        const totalDuration = 500;
+
+        setTimeout(() => {
+          // Impact
+          setTargetShake(true);
+          setTargetFlash(true);
+
+          let hitType = 'slash';
+          let dmg = '-15';
+          let color = '#ff4d4d';
+
+          if (ability.type === 'melee_heavy') {
+            dmg = '-38 CRIT!';
+            color = '#ff3333';
+          } else if (ability.type === 'melee_poison') {
+            dmg = '-12 POISON';
+            color = '#38b000';
+            hitType = 'slash';
+          } else if (ability.type === 'melee_slam') {
+            dmg = '-18 SLAM';
+            color = '#ff9f1c';
+            hitType = 'slash';
+          } else if (ability.type === 'melee_punches') {
+            dmg = '-10 x2';
+            color = '#ffdd57';
+          }
+
+          setHitEffect({ type: hitType });
+          addFloatingText(dmg, ability.type === 'melee_heavy' ? 'crit' : 'normal', color, targetPos.row, targetPos.col);
+
+          setTimeout(() => {
+            setTargetShake(false);
+            setTargetFlash(false);
+            setHitEffect(null);
+          }, 250);
+
+          // Return
+          setAnimationPhase('return');
+        }, hitDelay);
+
+        setTimeout(() => {
+          setAnimating(false);
+          setAnimationPhase(null);
+        }, totalDuration);
+      }
+    }
+
+    // --- SOLDIER FIST OF HONOR ---
+    else if (ability.type === 'fist_of_honor') {
+      setAnimating(true);
+      setAnimationPhase('lunge');
 
       setTimeout(() => {
-        // Impact
         setTargetShake(true);
         setTargetFlash(true);
-
-        let hitType = isSlash ? 'sword_slash' : 'slash';
-        let dmg = '-15';
-        let color = '#ff4d4d';
-
-        if (ability.type === 'melee_heavy') {
-          dmg = '-38 CRIT!';
-          color = '#ff3333';
-        } else if (ability.type === 'melee_poison') {
-          dmg = '-12 POISON';
-          color = '#38b000';
-          hitType = 'slash';
-        } else if (ability.type === 'melee_slam') {
-          dmg = '-18 SLAM';
-          color = '#ff9f1c';
-          hitType = 'slash';
-        } else if (ability.type === 'melee_punches') {
-          dmg = '-10 x2';
-          color = '#ffdd57';
-        }
-
-        setHitEffect({ type: hitType });
-        addFloatingText(dmg, ability.type === 'melee_heavy' ? 'crit' : 'normal', color, targetPos.row, targetPos.col);
+        setHitEffect({ type: 'slash' });
+        addFloatingText('-24 HONOR STRIKE!', 'crit', '#ffdd57', targetPos.row, targetPos.col);
 
         setTimeout(() => {
           setTargetShake(false);
@@ -367,14 +525,82 @@ const SandboxPage = () => {
           setHitEffect(null);
         }, 250);
 
-        // Return
         setAnimationPhase('return');
-      }, hitDelay);
+      }, 200);
 
       setTimeout(() => {
         setAnimating(false);
         setAnimationPhase(null);
-      }, totalDuration);
+      }, 500);
+    }
+
+    // --- SOLDIER IMBUED STRIKE ---
+    else if (ability.type === 'imbued_strike') {
+      setAnimating(true);
+      setAnimationPhase('lunge');
+
+      setTimeout(() => {
+        setTargetShake(true);
+        setTargetFlash(true);
+        setHitEffect({ type: 'ice_burst' }); // blue energy blast
+        addFloatingText('-28 IMBUED!', 'normal', '#00ffff', targetPos.row, targetPos.col);
+
+        setTimeout(() => {
+          setTargetShake(false);
+          setTargetFlash(false);
+          setHitEffect(null);
+        }, 250);
+
+        setAnimationPhase('return');
+      }, 200);
+
+      setTimeout(() => {
+        setAnimating(false);
+        setAnimationPhase(null);
+      }, 500);
+    }
+
+    // --- SOLDIER DEFENSIVE STANCE ---
+    else if (ability.type === 'defensive_stance') {
+      setAnimating(true);
+      setSelfBuffEffect('barrier');
+      addFloatingText('DEFENSIVE STANCE', 'normal', '#3b82f6', fighterPos.row, fighterPos.col);
+      setTimeout(() => {
+        setSelfBuffEffect(null);
+        setAnimating(false);
+      }, 1000);
+    }
+
+    // --- SOLDIER ONE MAN ARMY ---
+    else if (ability.type === 'one_man_army') {
+      setAnimating(true);
+      setSelfBuffEffect('rage');
+      addFloatingText('ONE MAN ARMY!', 'crit', '#e63946', fighterPos.row, fighterPos.col);
+      
+      const arena = document.querySelector('.combat-grid-arena');
+      if (arena) {
+        arena.style.animation = 'shake 0.4s ease-out';
+        setTimeout(() => arena.style.animation = 'none', 400);
+      }
+
+      setTimeout(() => {
+        setSelfBuffEffect(null);
+        setAnimating(false);
+      }, 1500);
+    }
+
+    // --- SOLDIER INSPIRE ---
+    else if (ability.type === 'inspire') {
+      setAnimating(true);
+      addFloatingText('INSPIRED!', 'normal', '#ffdd57', fighterPos.row, fighterPos.col);
+      
+      // Float combat stats on other friendly units (Ranger at 3,0 and Barbarian at 0,3)
+      setTimeout(() => addFloatingText('ATTACK UP!', 'normal', '#ffdd57', 3, 0), 100);
+      setTimeout(() => addFloatingText('SPEED UP!', 'normal', '#ffdd57', 0, 3), 200);
+
+      setTimeout(() => {
+        setAnimating(false);
+      }, 1000);
     }
 
     // --- PROJECTILE ATTACKS ---
@@ -972,7 +1198,7 @@ const SandboxPage = () => {
       <style>{`
         @keyframes floatUp {
           0% { transform: translate(-50%, 0); opacity: 1; }
-          100% { transform: translate(-50%, -80px); opacity: 0; }
+          100% { transform: translate(-50%, -40px); opacity: 0; }
         }
         @keyframes slashFade {
           0% { transform: scale(0.6) rotate(-20deg); opacity: 1; }
@@ -993,6 +1219,32 @@ const SandboxPage = () => {
         @keyframes scaleUp {
           0% { transform: scale(0); opacity: 0; }
           100% { transform: scale(1); opacity: 1; }
+        }
+        @keyframes modalScaleUp {
+          0% { transform: scale(0.95); opacity: 0; }
+          100% { transform: scale(1); opacity: 1; }
+        }
+        @keyframes fadeIn {
+          0% { opacity: 0; }
+          100% { opacity: 1; }
+        }
+        @keyframes weaponSwingArc {
+          0% {
+            transform: rotate(-60deg);
+            opacity: 0;
+          }
+          10% {
+            transform: rotate(-60deg);
+            opacity: 1;
+          }
+          90% {
+            transform: rotate(60deg);
+            opacity: 1;
+          }
+          100% {
+            transform: rotate(60deg);
+            opacity: 0;
+          }
         }
         @keyframes beamShrink {
           0% { width: 18px; opacity: 1; }
@@ -2029,21 +2281,51 @@ const SandboxPage = () => {
                       animation: 'slashFade 0.3s ease-out forwards'
                     }}></div>
                   )}
-                  {hitEffect.type === 'sword_slash' && (() => {
+                  {hitEffect.type === 'weapon_slash' && (() => {
+                    const activeWeaponId = equippedWeapons['soldier'] || 'shortsword_sword';
+                    const activeWeapon = WEAPONS_DB.swords.find(w => w.id === activeWeaponId) ||
+                                         WEAPONS_DB.axes.find(w => w.id === activeWeaponId) ||
+                                         WEAPONS_DB.swords[0];
+                    const weaponIcon = activeWeapon.image;
+
+                    const dy = targetPos.row - fighterPos.row;
                     const dx = targetPos.col - fighterPos.col;
-                    const direction = dx >= 0 ? 'right' : 'left';
+                    const baseAngle = Math.atan2(dy, dx) * (180 / Math.PI);
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    const halfDistPx = (dist * 100) / 2;
+
+                    // Calculate divide (midpoint) offset relative to Target (which is parent center 50%, 50%)
+                    const leftOffset = (dx / 2) * -100;
+                    const topOffset = (dy / 2) * -100;
+
                     return (
-                      <img
-                        src={sword_white}
-                        alt="sword swing"
+                      <div
                         style={{
+                          position: 'absolute',
+                          left: `calc(50% + ${leftOffset}px)`,
+                          top: `calc(50% + ${topOffset}px)`,
                           width: '60px',
                           height: '60px',
+                          transform: `translate(-50%, -50%) rotate(${baseAngle}deg)`,
                           pointerEvents: 'none',
                           zIndex: 5000,
-                          animation: `ArcAnimation_${direction} 0.35s linear forwards`
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
                         }}
-                      />
+                      >
+                        <img
+                          src={weaponIcon}
+                          alt="weapon slash"
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'contain',
+                            transformOrigin: `${30 - halfDistPx}px 30px`,
+                            animation: 'weaponSwingArc 0.75s ease-in-out forwards'
+                          }}
+                        />
+                      </div>
                     );
                   })()}
                   {hitEffect.type === 'fire_exp' && (
@@ -2126,7 +2408,7 @@ const SandboxPage = () => {
                     textShadow: '0 2px 4px #000, 0 0 8px rgba(0,0,0,0.8)',
                     zIndex: 60,
                     pointerEvents: 'none',
-                    animation: 'floatUp 0.9s cubic-bezier(0.1, 0.8, 0.3, 1) forwards'
+                    animation: 'floatUp 1.8s cubic-bezier(0.1, 0.8, 0.3, 1) forwards'
                   }}
                 >
                   {ft.text}
@@ -2161,7 +2443,291 @@ const SandboxPage = () => {
                   />
                 );
               })()}
+
+              {/* Scoped Weapon Selector Modal Overlay */}
+              {weaponModalOpen && (() => {
+                const activeWeaponId = equippedWeapons[selectedFighterId] || 'shortsword_sword';
+                return (
+                  <div style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    backgroundColor: 'rgba(20, 20, 22, 0.97)',
+                    zIndex: 1000,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    animation: 'fadeIn 0.2s ease-out'
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                  >
+                    {/* Modal Header */}
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '12px 16px',
+                      borderBottom: '1px solid rgba(255, 255, 255, 0.08)'
+                    }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', textAlign: 'left' }}>
+                        <span style={{ fontSize: '13px', color: '#ffb703', fontWeight: 'bold', letterSpacing: '0.05em' }}>SELECT WEAPON</span>
+                        <span style={{ fontSize: '10px', color: '#888' }}>Equipping for {selectedFighter.name}</span>
+                      </div>
+                      <button
+                        onClick={() => setWeaponModalOpen(false)}
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          color: '#aaa',
+                          fontSize: '20px',
+                          cursor: 'pointer',
+                          padding: '2px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          lineHeight: 1
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.color = '#fff'}
+                        onMouseLeave={(e) => e.currentTarget.style.color = '#aaa'}
+                      >
+                        &times;
+                      </button>
+                    </div>
+
+                    {/* Tabs */}
+                    <div style={{
+                      display: 'flex',
+                      background: 'rgba(0, 0, 0, 0.25)',
+                      padding: '3px',
+                      margin: '10px 16px 5px 16px',
+                      borderRadius: '6px',
+                      border: '1px solid rgba(255, 255, 255, 0.04)'
+                    }}>
+                      {['swords', 'axes'].map((tab) => {
+                        const isActive = weaponModalTab === tab;
+                        return (
+                          <button
+                            key={tab}
+                            onClick={() => setWeaponModalTab(tab)}
+                            style={{
+                              flex: 1,
+                              padding: '6px',
+                              borderRadius: '4px',
+                              background: isActive ? 'rgba(255, 183, 3, 0.12)' : 'transparent',
+                              border: 'none',
+                              color: isActive ? '#ffb703' : '#aaa',
+                              fontWeight: 'bold',
+                              fontSize: '11px',
+                              cursor: 'pointer',
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.05em',
+                              transition: 'all 0.15s'
+                            }}
+                          >
+                            {tab}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Scrollable Body */}
+                    <div style={{
+                      flex: 1,
+                      padding: '5px 16px 16px 16px',
+                      overflowY: 'auto',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '15px',
+                      willChange: 'transform',
+                      WebkitOverflowScrolling: 'touch',
+                      transform: 'translateZ(0)'
+                    }}>
+                      {[1, 2, 3].map((tier) => {
+                        const weaponsInTier = WEAPONS_DB[weaponModalTab].filter(w => w.tier === tier);
+                        if (weaponsInTier.length === 0) return null;
+
+                        const tierColors = {
+                          1: '#a8a29e',
+                          2: '#3b82f6',
+                          3: '#d97706'
+                        };
+
+                        return (
+                          <div key={tier} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <span style={{
+                                width: '6px',
+                                height: '6px',
+                                borderRadius: '50%',
+                                background: tierColors[tier],
+                                boxShadow: `0 0 6px ${tierColors[tier]}`
+                              }} />
+                              <span style={{ fontSize: '9px', fontWeight: 'bold', color: tierColors[tier], letterSpacing: '0.08em' }}>TIER {tier}</span>
+                            </div>
+
+                            <div style={{
+                              display: 'grid',
+                              gridTemplateColumns: 'repeat(2, 1fr)',
+                              gap: '8px'
+                            }}>
+                              {weaponsInTier.map((weapon) => {
+                                const isEquipped = activeWeaponId === weapon.id;
+                                return (
+                                  <div
+                                    key={weapon.id}
+                                    onClick={() => {
+                                      setEquippedWeapons(prev => ({
+                                        ...prev,
+                                        [selectedFighterId]: weapon.id
+                                      }));
+                                      setWeaponModalOpen(false);
+                                    }}
+                                    style={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: '8px',
+                                      padding: '6px 8px',
+                                      background: isEquipped ? 'rgba(255, 183, 3, 0.05)' : 'rgba(255, 255, 255, 0.02)',
+                                      border: isEquipped ? '1px solid #ffb703' : '1px solid rgba(255, 255, 255, 0.05)',
+                                      borderRadius: '6px',
+                                      cursor: 'pointer',
+                                      transition: 'all 0.15s',
+                                      position: 'relative'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                      if (!isEquipped) {
+                                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                                        e.currentTarget.style.borderColor = 'rgba(255, 183, 3, 0.3)';
+                                      }
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      if (!isEquipped) {
+                                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)';
+                                        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.05)';
+                                      }
+                                    }}
+                                  >
+                                    <div style={{
+                                      width: '28px',
+                                      height: '28px',
+                                      borderRadius: '4px',
+                                      background: 'rgba(0, 0, 0, 0.3)',
+                                      border: isEquipped ? '1px solid #ffb703' : '1px solid rgba(255, 255, 255, 0.1)',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      padding: '3px',
+                                      flexShrink: 0
+                                    }}>
+                                      <img src={weapon.image} alt={weapon.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                                    </div>
+
+                                    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, textAlign: 'left' }}>
+                                      <span style={{ fontSize: '11px', fontWeight: 'bold', color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{weapon.name}</span>
+                                      <span style={{ fontSize: '8px', color: '#888', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={weapon.description}>{weapon.description}</span>
+                                    </div>
+
+                                    {isEquipped && (
+                                      <div style={{
+                                        position: 'absolute',
+                                        top: '-4px',
+                                        right: '-4px',
+                                        width: '12px',
+                                        height: '12px',
+                                        borderRadius: '50%',
+                                        background: '#ffb703',
+                                        color: '#000',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        fontSize: '8px',
+                                        fontWeight: 'bold'
+                                      }}>
+                                        ✓
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
+
+            {/* Weapon Selector Component */}
+            {(() => {
+              const activeWeaponId = equippedWeapons[selectedFighterId] || 'shortsword_sword';
+              const activeWeapon = WEAPONS_DB.swords.find(w => w.id === activeWeaponId) ||
+                                   WEAPONS_DB.axes.find(w => w.id === activeWeaponId) ||
+                                   WEAPONS_DB.swords[0];
+              return (
+                <div
+                  onClick={() => {
+                    const isAxe = WEAPONS_DB.axes.some(w => w.id === activeWeaponId);
+                    setWeaponModalTab(isAxe ? 'axes' : 'swords');
+                    setWeaponModalOpen(true);
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '15px',
+                    padding: '12px 20px',
+                    borderRadius: '12px',
+                    background: 'rgba(255, 255, 255, 0.03)',
+                    backdropFilter: 'blur(10px)',
+                    WebkitBackdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    width: '500px',
+                    boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.3)',
+                    marginTop: '10px',
+                    boxSizing: 'border-box'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.06)';
+                    e.currentTarget.style.borderColor = 'rgba(255, 183, 3, 0.4)';
+                    e.currentTarget.style.boxShadow = '0 8px 32px 0 rgba(255, 183, 3, 0.08)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)';
+                    e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)';
+                    e.currentTarget.style.boxShadow = '0 8px 32px 0 rgba(0, 0, 0, 0.3)';
+                  }}
+                >
+                  <div style={{
+                    width: '48px',
+                    height: '48px',
+                    borderRadius: '8px',
+                    background: 'rgba(0, 0, 0, 0.4)',
+                    border: '1px solid rgba(255, 183, 3, 0.4)',
+                    boxShadow: '0 0 12px rgba(255, 183, 3, 0.15)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '6px',
+                    flexShrink: 0
+                  }}>
+                    <img src={activeWeapon.image} alt={activeWeapon.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', flex: 1, textAlign: 'left' }}>
+                    <span style={{ fontSize: '9px', color: '#ffb703', fontWeight: 'bold', letterSpacing: '0.12em' }}>EQUIPPED WEAPON</span>
+                    <span style={{ fontSize: '15px', fontWeight: 'bold', color: '#fff' }}>{activeWeapon.name}</span>
+                    <span style={{ fontSize: '11px', color: '#888' }}>Tier {activeWeapon.tier}</span>
+                  </div>
+                  {/* Subtle selection settings indicator */}
+                  <div style={{ color: 'rgba(255, 255, 255, 0.35)', fontSize: '18px', paddingLeft: '10px' }}>
+                    ⚙
+                  </div>
+                </div>
+              );
+            })()}
           </div>
 
           {/* Right Panel: Abilities */}
