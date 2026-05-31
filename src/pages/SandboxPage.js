@@ -393,6 +393,7 @@ const SandboxPage = () => {
   const [targetDisintegrating, setTargetDisintegrating] = useState(false);
   const [vortexActive, setVortexActive] = useState(null); // { row, col }
   const [poisonDuration, setPoisonDuration] = useState(8000);
+  const [annihilationSweepActive, setAnnihilationSweepActive] = useState(false);
 
   const [etherealSpeedActive, setEtherealSpeedActive] = useState(false);
   const [etherealSpeedFading, setEtherealSpeedFading] = useState(false);
@@ -968,6 +969,62 @@ const SandboxPage = () => {
         setAnimating(false);
         setAnimationPhase(null);
       }, 1100);
+    }
+
+    // --- MONK TWIN FINGER AUTHORITY ---
+    else if (ability.type === 'monk_twin_finger_type') {
+      setAnimating(true);
+
+      const options = [
+        { row: fighterPos.row, col: fighterPos.col + 1 },
+        { row: fighterPos.row, col: fighterPos.col - 1 },
+        { row: fighterPos.row + 1, col: fighterPos.col },
+        { row: fighterPos.row - 1, col: fighterPos.col }
+      ];
+      const validOptions = options.filter(opt => opt.row >= 0 && opt.row < 5 && opt.col >= 0 && opt.col < 5);
+
+      let bestAdjacent = targetPos;
+      let minD = Infinity;
+      validOptions.forEach(opt => {
+        const dr = targetPos.row - opt.row;
+        const dc = targetPos.col - opt.col;
+        const d = dr * dr + dc * dc;
+        if (d < minD) {
+          minD = d;
+          bestAdjacent = opt;
+        }
+      });
+
+      const isAlreadyAdjacent = targetPos.row === bestAdjacent.row && targetPos.col === bestAdjacent.col;
+
+      if (!isAlreadyAdjacent) {
+        setTargetPos(bestAdjacent);
+      }
+
+      const strikeDelay = isAlreadyAdjacent ? 0 : 350;
+
+      setTimeout(() => {
+        setTargetShake(true);
+        setTargetFlash(true);
+        setHitEffect({ type: 'monk_twin_finger_effect' });
+        setTargetStunned(true);
+        addFloatingText('-20', 'normal', '#ffb703', bestAdjacent.row, bestAdjacent.col);
+
+        setTimeout(() => {
+          addFloatingText('STUNNED!', 'normal', '#ffe600', bestAdjacent.row, bestAdjacent.col);
+        }, 150);
+
+        setTimeout(() => {
+          setTargetShake(false);
+          setTargetFlash(false);
+          setHitEffect(null);
+          setAnimating(false);
+        }, 400);
+
+        setTimeout(() => {
+          setTargetStunned(false);
+        }, 3000);
+      }, strikeDelay);
     }
 
     // --- BARBARIAN CLEAVE ---
@@ -1925,12 +1982,18 @@ const SandboxPage = () => {
     else if (ability.type === 'annihilation') {
       setAnimating(true);
       setActiveBeam('annihilation');
+      setAnnihilationSweepActive(false);
+
+      setTimeout(() => {
+        setAnnihilationSweepActive(true);
+      }, 50);
 
       setTimeout(() => {
         setActiveBeam(null);
+        setAnnihilationSweepActive(false);
         setTargetShake(true);
         setTargetFlash(true);
-        setHitEffect({ type: 'void_portal' });
+        setHitEffect({ type: 'annihilation_portal' });
         addFloatingText('-48', 'crit', '#9d4edd', targetPos.row, targetPos.col);
 
         setAnnihilationExplosion({ row: targetPos.row, col: targetPos.col });
@@ -1940,10 +2003,10 @@ const SandboxPage = () => {
           setTargetShake(false);
           setTargetFlash(false);
           setHitEffect(null);
-        }, 400);
+        }, 800);
 
         setAnimating(false);
-      }, 400);
+      }, 850);
     }
 
     // --- WIZARD VORTEX ---
@@ -2232,6 +2295,22 @@ const SandboxPage = () => {
             border: 1px solid transparent;
             background: rgba(142, 45, 226, 0);
             box-shadow: 0 0 45px #ff007f, inset 0 0 30px #8e2de2;
+            opacity: 0;
+          }
+        }
+        @keyframes collapsarRing {
+          0% {
+            transform: scale(1.3);
+            opacity: 0;
+          }
+          15% {
+            opacity: 0.95;
+          }
+          85% {
+            opacity: 0.95;
+          }
+          100% {
+            transform: scale(0.15);
             opacity: 0;
           }
         }
@@ -3678,7 +3757,7 @@ const SandboxPage = () => {
                   zIndex: 9,
                   pointerEvents: 'none',
                   transform: targetPushback ? targetPushback : 'none',
-                  transition: 'transform 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+                  transition: 'transform 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94), left 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94), top 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94)'
                 }}
               >
                 <div style={{
@@ -4518,24 +4597,36 @@ const SandboxPage = () => {
                   <div
                     style={{
                       position: 'absolute',
-                      left: `calc(${projectile.x}% + 10% - 15px)`,
-                      top: `calc(${projectile.y}% + 10% - 15px)`,
-                      width: '30px',
-                      height: '30px',
+                      left: `calc(${projectile.x}% + 10% - 20px)`,
+                      top: `calc(${projectile.y}% + 10% - 20px)`,
+                      width: '40px',
+                      height: '40px',
                       zIndex: 30,
                       transition: 'left 0.4s linear, top 0.4s linear',
                       transform: `rotate(${getProjectileAngle()}deg)`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      pointerEvents: 'none'
                     }}
                   >
                     <div style={{
-                      width: 0,
-                      height: 0,
-                      borderLeft: '30px solid #39ff14',
-                      borderTop: '12px solid transparent',
-                      borderBottom: '12px solid transparent',
-                      filter: 'drop-shadow(0 0 8px #38b000) drop-shadow(0 0 15px #38b000)',
-                      opacity: 0.95
-                    }} />
+                      position: 'relative',
+                      width: '40px',
+                      height: '36px',
+                      filter: 'drop-shadow(0 0 6px #39ff14) drop-shadow(0 0 12px #38b000)'
+                    }}>
+                      <div style={{ position: 'absolute', right: '2px', top: '13px', width: '10px', height: '10px', borderRadius: '50%', background: 'radial-gradient(circle, #adff2f 10%, #39ff14 80%)', opacity: 0.95 }} />
+                      <div style={{ position: 'absolute', right: '10px', top: '8px', width: '12px', height: '12px', borderRadius: '50%', background: 'radial-gradient(circle, #39ff14 20%, #38b000 80%)', opacity: 0.9 }} />
+                      <div style={{ position: 'absolute', right: '10px', top: '18px', width: '11px', height: '11px', borderRadius: '50%', background: 'radial-gradient(circle, #39ff14 20%, #38b000 80%)', opacity: 0.9 }} />
+                      <div style={{ position: 'absolute', left: '2px', top: '2px', width: '13px', height: '13px', borderRadius: '50%', background: 'radial-gradient(circle, #39ff14 20%, #38b000 80%)', opacity: 0.85 }} />
+                      <div style={{ position: 'absolute', left: '2px', top: '21px', width: '14px', height: '14px', borderRadius: '50%', background: 'radial-gradient(circle, #39ff14 20%, #38b000 80%)', opacity: 0.85 }} />
+                      <div style={{ position: 'absolute', left: '6px', top: '11px', width: '15px', height: '15px', borderRadius: '50%', background: 'radial-gradient(circle, #adff2f 10%, #38b000 80%)', opacity: 0.95 }} />
+                      <div style={{ position: 'absolute', left: '16px', top: '5px', width: '11px', height: '11px', borderRadius: '50%', background: 'radial-gradient(circle, #39ff14 20%, #38b000 80%)', opacity: 0.85 }} />
+                      <div style={{ position: 'absolute', left: '16px', top: '20px', width: '12px', height: '12px', borderRadius: '50%', background: 'radial-gradient(circle, #39ff14 20%, #38b000 80%)', opacity: 0.85 }} />
+                      <div style={{ position: 'absolute', left: '0px', top: '16px', width: '6px', height: '6px', borderRadius: '50%', background: '#adff2f', opacity: 0.8 }} />
+                      <div style={{ position: 'absolute', left: '10px', top: '3px', width: '5px', height: '5px', borderRadius: '50%', background: '#adff2f', opacity: 0.8 }} />
+                    </div>
                   </div>
                 ) : projectile.isIceBlast ? (
                   <div
@@ -4667,25 +4758,19 @@ const SandboxPage = () => {
               ))}
 
               {/* --- Special Beams / Overlays (like Smite, Lightning) --- */}
-              {activeBeam && (
+              {activeBeam && activeBeam !== 'annihilation' && (
                 <div
                   style={{
                     position: 'absolute',
                     left: `${targetPos.col * 20 + 10}%`,
                     width: activeBeam === 'disintegrate'
                       ? '8px'
-                      : activeBeam === 'annihilation'
-                        ? '16px'
-                        : '12px',
+                      : '12px',
                     background: activeBeam === 'smite'
                       ? 'linear-gradient(to bottom, #fff, #ffe600)'
                       : activeBeam === 'lightning'
                         ? 'linear-gradient(to bottom, #ffffff 15%, #00bfff 85%)'
-                        : activeBeam === 'disintegrate'
-                          ? 'linear-gradient(to right, #ff1a1a, #ffffff 40%, #ffffff 60%, #ff1a1a)'
-                          : activeBeam === 'annihilation'
-                            ? 'linear-gradient(to right, #7b2cbf, #ffffff 40%, #ffffff 60%, #7b2cbf)'
-                            : 'linear-gradient(to bottom, #00ffff, #0088ff)',
+                        : 'linear-gradient(to right, #ff1a1a, #ffffff 40%, #ffffff 60%, #ff1a1a)',
                     top: 0,
                     height: `${targetPos.row * 20 + 10}%`,
                     transform: 'translateX(-50%)',
@@ -4693,18 +4778,91 @@ const SandboxPage = () => {
                       ? '0 0 20px #ffe600, 0 0 40px #ffe600'
                       : activeBeam === 'lightning'
                         ? '0 0 10px #ffffff, 0 0 25px #00bfff, 0 0 45px #00bfff'
-                        : activeBeam === 'disintegrate'
-                          ? 'none'
-                          : activeBeam === 'annihilation'
-                            ? '0 0 20px #ff007f, 0 0 40px #8e2de2, 0 0 60px #8e2de2'
-                            : '0 0 20px #00ffff, 0 0 40px #00ffff',
+                        : 'none',
                     zIndex: 25,
                     animation: activeBeam === 'disintegrate'
                       ? 'disintegrateBeam 2.2s linear forwards'
                       : 'beamShrink 0.35s ease-out forwards'
                   }}
-                ></div>
+                />
               )}
+
+              {/* Centered wobbly ball tip for Disintegrate (centered directly at target tile coordinates) */}
+              {activeBeam === 'disintegrate' && (
+                <div style={{
+                  position: 'absolute',
+                  left: `${targetPos.col * 20 + 10}%`,
+                  top: `${targetPos.row * 20 + 10}%`,
+                  transform: 'translate(-50%, -50%)',
+                  width: '45px',
+                  height: '45px',
+                  zIndex: 26,
+                  pointerEvents: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <div style={{
+                    width: '100%',
+                    height: '100%',
+                    background: 'radial-gradient(circle, #ffffff 20%, #ff1a1a 60%, rgba(255, 26, 26, 0) 100%)',
+                    borderRadius: '60% 40% 30% 70% / 60% 30% 70% 40%',
+                    animation: 'organicGlow 1.5s linear infinite',
+                    boxShadow: '0 0 15px #ff1a1a, 0 0 30px #ff1a1a',
+                    opacity: 0.95
+                  }} />
+                </div>
+              )}
+
+              {/* --- Annihilation Horizontal Beam --- */}
+              {activeBeam === 'annihilation' && (() => {
+                const dx = (targetPos.col - fighterPos.col) * 20;
+                const dy_start = (targetPos.row + 1) * 20 - (fighterPos.row * 20 + 10);
+                const dy_end = targetPos.row * 20 - (fighterPos.row * 20 + 10);
+                
+                const length_start = Math.sqrt(dx * dx + dy_start * dy_start);
+                const angle_start = Math.atan2(dy_start, dx) * (180 / Math.PI);
+                
+                const length_end = Math.sqrt(dx * dx + dy_end * dy_end);
+                const angle_end = Math.atan2(dy_end, dx) * (180 / Math.PI);
+                
+                const length = annihilationSweepActive ? length_end : length_start;
+                const angle = annihilationSweepActive ? angle_end : angle_start;
+                
+                return (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      left: `${fighterPos.col * 20 + 10}%`,
+                      top: `${fighterPos.row * 20 + 10}%`,
+                      width: `${length}%`,
+                      height: '16px',
+                      background: 'linear-gradient(to bottom, #7b2cbf, #ffffff 40%, #ffffff 60%, #7b2cbf)',
+                      transform: `rotate(${angle}deg) translateY(-50%)`,
+                      transformOrigin: 'left center',
+                      boxShadow: '0 0 20px #ff007f, 0 0 40px #8e2de2, 0 0 60px #8e2de2',
+                      zIndex: 25,
+                      transition: annihilationSweepActive ? 'width 0.8s ease-in-out, transform 0.8s ease-in-out, opacity 0.2s' : 'none',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'flex-end',
+                      overflow: 'visible'
+                    }}
+                  >
+                    {/* Undulating organic tip at the end of the beam touching the target */}
+                    <div style={{
+                      position: 'absolute',
+                      right: '-20px',
+                      width: '40px',
+                      height: '40px',
+                      background: 'radial-gradient(circle, #ffffff 20%, #8e2de2 60%, rgba(142, 45, 226, 0) 100%)',
+                      borderRadius: '50% 50% 30% 70% / 60% 40% 60% 40%',
+                      animation: 'organicGlow 1.2s linear infinite',
+                      boxShadow: '0 0 15px #ff007f, 0 0 25px #8e2de2'
+                    }} />
+                  </div>
+                );
+              })()}
 
               {/* Fireball Expanding Explosion Ring */}
               {fireballExplosion && (
@@ -5077,6 +5235,54 @@ const SandboxPage = () => {
                       </div>
                     );
                   })()}
+                  {hitEffect.type === 'monk_twin_finger_effect' && (() => {
+                    const dx = fighterPos.col - targetPos.col;
+                    const dy = fighterPos.row - targetPos.row;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    let adjCol = fighterPos.col;
+                    let adjRow = fighterPos.row;
+                    if (dist > 0) {
+                      const colStep = Math.round(dx / dist);
+                      const rowStep = Math.round(dy / dist);
+                      adjCol = targetPos.col + colStep;
+                      adjRow = targetPos.row + rowStep;
+                    }
+                    const swingDx = targetPos.col - adjCol;
+                    const swingDy = targetPos.row - adjRow;
+
+                    const leftOffset = (swingDx / 2) * -100;
+                    const topOffset = (swingDy / 2) * -100;
+
+                    return (
+                      <div
+                        style={{
+                          position: 'absolute',
+                          left: `calc(50% + ${leftOffset}px)`,
+                          top: `calc(50% + ${topOffset}px)`,
+                          width: '56px',
+                          height: '56px',
+                          transform: 'translate(-50%, -50%)',
+                          pointerEvents: 'none',
+                          zIndex: 5000,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          animation: 'scaleUp 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275) both'
+                        }}
+                      >
+                        <img
+                          src={monk_twin_finger_authority}
+                          alt="monk twin finger authority"
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'contain',
+                            filter: 'drop-shadow(0 0 6px #ff9f1c)'
+                          }}
+                        />
+                      </div>
+                    );
+                  })()}
                   {hitEffect.type === 'fist_connect' && (() => {
                     const dx = fighterPos.col - targetPos.col;
                     const dy = fighterPos.row - targetPos.row;
@@ -5160,10 +5366,10 @@ const SandboxPage = () => {
                     <div style={{
                       width: '60px',
                       height: '60px',
-                      background: 'radial-gradient(circle, #fff 10%, #00bfff 60%, transparent 100%)',
-                      clipPath: 'polygon(50% 0%, 65% 25%, 100% 50%, 65% 75%, 50% 100%, 35% 75%, 0% 50%, 35% 25%)',
-                      animation: 'explode 0.4s ease-out forwards',
-                      boxShadow: '0 0 20px #00bfff'
+                      background: 'radial-gradient(circle, #ffffff 25%, #e0f7fa 55%, #00bfff 85%, transparent 100%)',
+                      borderRadius: '52% 48% 46% 54% / 54% 46% 54% 46%',
+                      animation: 'explode 0.4s ease-out forwards, organicGlow 0.4s linear infinite',
+                      boxShadow: '0 0 20px 4px #00bfff, inset 0 0 10px rgba(0, 191, 255, 0.5)'
                     }}></div>
                   )}
                   {hitEffect.type === 'shadow' && (
@@ -5187,6 +5393,37 @@ const SandboxPage = () => {
                       animation: 'portalGrow 0.8s ease-out forwards',
                       transform: 'scaleY(0.5)'
                     }}></div>
+                  )}
+                  {hitEffect.type === 'annihilation_portal' && (
+                    <div style={{
+                      position: 'relative',
+                      width: '90px',
+                      height: '90px',
+                      pointerEvents: 'none',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      zIndex: 35
+                    }}>
+                      {[0, 1, 2].map((i) => (
+                        <div
+                          key={i}
+                          style={{
+                            position: 'absolute',
+                            width: '100%',
+                            height: '100%',
+                            background: i === 0 ? 'rgba(0,0,0,0.65)' : 'transparent',
+                            border: '3px solid #9d4edd',
+                            borderRadius: '60% 40% 50% 50% / 40% 50% 60% 50%',
+                            boxShadow: '0 0 15px #7b2cbf, inset 0 0 10px #7b2cbf',
+                            animation: 'organicGlow 3s linear infinite, collapsarRing 1.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) infinite',
+                            animationDelay: `${i * 0.5}s`,
+                            opacity: 0,
+                            boxSizing: 'border-box'
+                          }}
+                        />
+                       ))}
+                    </div>
                   )}
                 </div>
               )}
