@@ -2482,22 +2482,23 @@ const SandboxPage = () => {
 
       if (summonRow < 5) {
         setAnimating(true);
-        setActiveSummon({
+        setActiveSummons([{
+          id: Math.random(),
           row: summonRow,
           col: summonCol,
           icon: summon_icon,
           type: 'skeleton',
           shrinking: false
-        });
+        }]);
 
         // 800ms: start shrink
         setTimeout(() => {
-          setActiveSummon(prev => prev ? { ...prev, shrinking: true } : null);
+          setActiveSummons(prev => prev.map(p => ({ ...p, shrinking: true })));
         }, 800);
 
         // 1200ms: disappear and spawn skeleton minion
         setTimeout(() => {
-          setActiveSummon(null);
+          setActiveSummons([]);
           setMinions(prev => [
             ...prev.filter(m => !(m.row === summonRow && m.col === summonCol)),
             {
@@ -2524,22 +2525,23 @@ const SandboxPage = () => {
 
       if (summonRow < 5) {
         setAnimating(true);
-        setActiveSummon({
+        setActiveSummons([{
+          id: Math.random(),
           row: summonRow,
           col: summonCol,
           icon: summon2_icon,
           type: 'skeleton_knight',
           shrinking: false
-        });
+        }]);
 
         // 800ms: start shrink
         setTimeout(() => {
-          setActiveSummon(prev => prev ? { ...prev, shrinking: true } : null);
+          setActiveSummons(prev => prev.map(p => ({ ...p, shrinking: true })));
         }, 800);
 
         // 1200ms: disappear and spawn skeleton knight minion
         setTimeout(() => {
-          setActiveSummon(null);
+          setActiveSummons([]);
           setMinions(prev => [
             ...prev.filter(m => !(m.row === summonRow && m.col === summonCol)),
             {
@@ -2556,6 +2558,131 @@ const SandboxPage = () => {
           }, 500);
           setAnimating(false);
         }, 1200);
+      }
+    }
+
+    // --- SUMMONER DUPLICATE ---
+    else if (ability.type === 'summoner_duplicate_type') {
+      if (minions.length === 0) {
+        addFloatingText('NO MINION TO DUPLICATE!', 'normal', '#e63946', fighterPos.row, fighterPos.col);
+        return;
+      }
+      
+      const sourceMinion = minions[minions.length - 1];
+      // Behind target is defined by facing direction. Default player unit faces right, so left is col - 1.
+      const isFacingRight = fighterPos.col <= targetPos.col;
+      const dupCol = isFacingRight ? sourceMinion.col - 1 : sourceMinion.col + 1;
+      const dupRow = sourceMinion.row;
+
+      if (dupCol >= 0 && dupCol < 5 && dupRow >= 0 && dupRow < 5) {
+        setAnimating(true);
+        setActiveSummons([{
+          id: Math.random(),
+          row: dupRow,
+          col: dupCol,
+          icon: duplicate_transition_icon,
+          type: 'duplicate',
+          shrinking: false
+        }]);
+
+        // 800ms: start shrink
+        setTimeout(() => {
+          setActiveSummons(prev => prev.map(p => ({ ...p, shrinking: true })));
+        }, 800);
+
+        // 1200ms: disappear and spawn duplicate minion
+        setTimeout(() => {
+          setActiveSummons([]);
+          setMinions(prev => [
+            ...prev.filter(m => !(m.row === dupRow && m.col === dupCol)),
+            {
+              ...sourceMinion,
+              row: dupRow,
+              col: dupCol,
+              fadingIn: true
+            }
+          ]);
+          setTimeout(() => {
+            setMinions(prev => prev.map(m => m.row === dupRow && m.col === dupCol ? { ...m, fadingIn: false } : m));
+          }, 500);
+          setAnimating(false);
+        }, 1200);
+      } else {
+        addFloatingText('OUT OF BOUNDS!', 'normal', '#e63946', sourceMinion.row, sourceMinion.col);
+      }
+    }
+
+    // --- SUMMONER TRIPLICATE ---
+    else if (ability.type === 'summoner_triplicate_type') {
+      if (minions.length === 0) {
+        addFloatingText('NO MINION TO TRIPLICATE!', 'normal', '#e63946', fighterPos.row, fighterPos.col);
+        return;
+      }
+
+      const sourceMinion = minions[minions.length - 1];
+      const isFacingRight = fighterPos.col <= targetPos.col;
+      const colOffset = isFacingRight ? -1 : 1;
+      
+      // Triplicate positions at NW and SW (NE and SE if Summoner is facing left)
+      const targets = [];
+      const nwRow = sourceMinion.row - 1;
+      const nwCol = sourceMinion.col + colOffset;
+      const swRow = sourceMinion.row + 1;
+      const swCol = sourceMinion.col + colOffset;
+
+      if (nwRow >= 0 && nwRow < 5 && nwCol >= 0 && nwCol < 5) {
+        targets.push({ row: nwRow, col: nwCol });
+      }
+      if (swRow >= 0 && swRow < 5 && swCol >= 0 && swCol < 5) {
+        targets.push({ row: swRow, col: swCol });
+      }
+
+      if (targets.length > 0) {
+        setAnimating(true);
+        const newPortals = targets.map(t => ({
+          id: Math.random(),
+          row: t.row,
+          col: t.col,
+          icon: triplicate_transition_icon,
+          type: 'triplicate',
+          shrinking: false
+        }));
+        setActiveSummons(newPortals);
+
+        // 800ms: start shrink
+        setTimeout(() => {
+          setActiveSummons(prev => prev.map(p => ({ ...p, shrinking: true })));
+        }, 800);
+
+        // 1200ms: disappear and spawn triplicate minions
+        setTimeout(() => {
+          setActiveSummons([]);
+          setMinions(prev => {
+            let nextMinions = [...prev];
+            targets.forEach(t => {
+              nextMinions = nextMinions.filter(m => !(m.row === t.row && m.col === t.col));
+              nextMinions.push({
+                ...sourceMinion,
+                row: t.row,
+                col: t.col,
+                fadingIn: true
+              });
+            });
+            return nextMinions;
+          });
+          setTimeout(() => {
+            setMinions(prev => {
+              let nextMinions = [...prev];
+              targets.forEach(t => {
+                nextMinions = nextMinions.map(m => m.row === t.row && m.col === t.col ? { ...m, fadingIn: false } : m);
+              });
+              return nextMinions;
+            });
+          }, 500);
+          setAnimating(false);
+        }, 1200);
+      } else {
+        addFloatingText('OUT OF BOUNDS!', 'normal', '#e63946', sourceMinion.row, sourceMinion.col);
       }
     }
 
@@ -4557,6 +4684,62 @@ const SandboxPage = () => {
                     gap: '2px',
                     zIndex: 15
                   }}>
+                    {targetEnsnared && (
+                      <div
+                        className={targetEnsnaredFading ? 'effect-icon-fading' : 'effect-icon-active'}
+                        style={{
+                          width: '20px',
+                          height: '20px',
+                          borderRadius: '50%',
+                          background: '#111',
+                          border: '2px solid #8bc34a',
+                          backgroundImage: `url(${ranger_ensnare})`,
+                          backgroundSize: 'contain',
+                          backgroundRepeat: 'no-repeat',
+                          backgroundPosition: 'center',
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.5)',
+                          overflow: 'hidden',
+                          position: 'relative'
+                        }}
+                      >
+                        <svg
+                          style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: '100%',
+                            transform: 'rotate(-90deg)',
+                            pointerEvents: 'none'
+                          }}
+                          viewBox="0 0 20 20"
+                        >
+                          <circle
+                            cx="10"
+                            cy="10"
+                            r="5"
+                            fill="none"
+                            stroke="rgba(0, 0, 0, 0.45)"
+                            strokeWidth="10"
+                            strokeDasharray="31.42"
+                            strokeDashoffset={getEnsnareDashOffset()}
+                          />
+                          {(() => {
+                            const coords = getRadialLineCoords(ensnareEndTime, 3000);
+                            return coords ? (
+                              <line
+                                x1="10"
+                                y1="10"
+                                x2={coords.x2}
+                                y2={coords.y2}
+                                stroke="#ffffff"
+                                strokeWidth="0.8"
+                              />
+                            ) : null;
+                          })()}
+                        </svg>
+                      </div>
+                    )}
                     {targetBleeding && (
                       <div
                         className={bleedFading ? 'effect-icon-fading' : 'effect-icon-active'}
@@ -4897,66 +5080,7 @@ const SandboxPage = () => {
                       </svg>
                     </div>
                   )}
-                  {/* Ensnare Effect Icon with Timer Ring */}
-                  {targetEnsnared && (
-                    <div
-                      className={targetEnsnaredFading ? 'effect-icon-fading' : 'effect-icon-active'}
-                      style={{
-                        position: 'absolute',
-                        top: '14px',
-                        left: '-6px',
-                        width: '20px',
-                        height: '20px',
-                        borderRadius: '50%',
-                        background: '#111',
-                        border: '2px solid #8bc34a',
-                        backgroundImage: `url(${ranger_ensnare})`,
-                        backgroundSize: 'contain',
-                        backgroundRepeat: 'no-repeat',
-                        backgroundPosition: 'center',
-                        zIndex: 15,
-                        boxShadow: '0 0 6px rgba(139, 195, 74, 0.7)',
-                        overflow: 'hidden'
-                      }}
-                    >
-                      <svg
-                        style={{
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          width: '100%',
-                          height: '100%',
-                          transform: 'rotate(-90deg)',
-                          pointerEvents: 'none'
-                        }}
-                        viewBox="0 0 20 20"
-                      >
-                        <circle
-                          cx="10"
-                          cy="10"
-                          r="5"
-                          fill="none"
-                          stroke="rgba(0, 0, 0, 0.4)"
-                          strokeWidth="10"
-                          strokeDasharray="31.42"
-                          strokeDashoffset={getEnsnareDashOffset()}
-                        />
-                        {(() => {
-                          const coords = getRadialLineCoords(ensnareEndTime, 3000);
-                          return coords ? (
-                            <line
-                              x1="10"
-                              y1="10"
-                              x2={coords.x2}
-                              y2={coords.y2}
-                              stroke="#ffffff"
-                              strokeWidth="0.8"
-                            />
-                          ) : null;
-                        })()}
-                      </svg>
-                    </div>
-                  )}
+
                   {/* Shielded Overlay for target (Soldier when under Sage protection) */}
                   {selectedFighterId === 'sage' && copActive && (
                     <div
