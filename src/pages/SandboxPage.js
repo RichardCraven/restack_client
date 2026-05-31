@@ -25,8 +25,12 @@ import {
   goblin_portrait,
   soldier_portrait,
   claws,
-  axe_throw,
-  axe_swing,
+  barbarian_slash,
+  barbarian_cleave,
+  barbarian_axe_throw,
+  barbarian_berserker,
+  barbarian_leap_attack,
+  bleeding,
   voidfill,
   grasp,
   fire_blast,
@@ -34,7 +38,6 @@ import {
   shield_wall,
   lightning,
   magic_missile,
-  tackle,
   ice_blast,
   meditate,
   energy_blast,
@@ -229,10 +232,11 @@ const fightersData = [
     name: 'Barbarian',
     portrait: barbarian,
     abilities: [
-      { id: 'heavy_swing', name: 'Heavy Swing', desc: 'A massive double-handed strike.', icon: axe_swing, type: 'melee_heavy' },
-      { id: 'leap_attack', name: 'Leap Attack', desc: 'Leap high and crush target on landing.', icon: tackle, type: 'leap' },
-      { id: 'battle_cry', name: 'Battle Cry', desc: 'Unleash a roar, amplifying size and damage.', icon: meditate, type: 'battle_cry' },
-      { id: 'axe_throw', name: 'Axe Throw', desc: 'Throw a rotating combat axe.', icon: axe_throw, type: 'projectile', projectileIcon: axe_throw }
+      { id: 'barbarian_slash', name: 'Slash', desc: 'Execute a fast horizontal slash.', icon: barbarian_slash, type: 'barbarian_slash' },
+      { id: 'barbarian_cleave', name: 'Cleave', desc: 'Crush target skull with axe, causing bleed.', icon: barbarian_cleave, type: 'barbarian_cleave' },
+      { id: 'barbarian_axe_throw', name: 'Axe Throw', desc: 'Hurl a spinning axe at the target.', icon: barbarian_axe_throw, type: 'projectile', projectileIcon: barbarian_axe_throw },
+      { id: 'barbarian_berserker', name: 'Berserker', desc: 'Enter a state of absolute fury.', icon: barbarian_berserker, type: 'barbarian_berserker' },
+      { id: 'barbarian_leap_attack', name: 'Leap Attack', desc: 'Leap onto the target, knocking them back and stunning.', icon: barbarian_leap_attack, type: 'barbarian_leap' }
     ]
   },
   {
@@ -321,10 +325,15 @@ const SandboxPage = () => {
   const [defensiveStanceEndTime, setDefensiveStanceEndTime] = useState(null);
   const [currentTime, setCurrentTime] = useState(Date.now());
   const [targetStunned, setTargetStunned] = useState(false);
+  const [targetConfused, setTargetConfused] = useState(false);
+  const [targetBleeding, setTargetBleeding] = useState(false);
+  const [berserkerActive, setBerserkerActive] = useState(false);
+  const [berserkerFading, setBerserkerFading] = useState(false);
+  const [berserkerEndTime, setBerserkerEndTime] = useState(null);
 
   useEffect(() => {
     let interval;
-    if (copActive || defensiveStanceActive) {
+    if (copActive || defensiveStanceActive || berserkerActive) {
       interval = setInterval(() => {
         setCurrentTime(Date.now());
       }, 50);
@@ -334,7 +343,7 @@ const SandboxPage = () => {
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [copActive, defensiveStanceActive]);
+  }, [copActive, defensiveStanceActive, berserkerActive]);
 
   const getCopDashOffset = () => {
     if (!copEndTime) return 31.42;
@@ -348,6 +357,26 @@ const SandboxPage = () => {
     const remaining = Math.max(0, defensiveStanceEndTime - currentTime);
     const ratio = remaining / 8000;
     return (1 - ratio) * 31.42;
+  };
+
+  const getBerserkerDashOffset = () => {
+    if (!berserkerEndTime) return 31.42;
+    const remaining = Math.max(0, berserkerEndTime - currentTime);
+    const ratio = remaining / 8000;
+    return (1 - ratio) * 31.42;
+  };
+
+  const getRadialLineCoords = (endTime, totalDuration = 8000) => {
+    if (!endTime) return null;
+    const remaining = Math.max(0, endTime - currentTime);
+    if (remaining <= 0 || remaining >= totalDuration) return null;
+    const ratio = remaining / totalDuration;
+    const angle = -(1 - ratio) * 360;
+    const rad = angle * (Math.PI / 180);
+    return {
+      x2: 10 + 10 * Math.cos(rad),
+      y2: 10 + 10 * Math.sin(rad)
+    };
   };
 
   const activeData = runesData[selectedRune];
@@ -434,6 +463,19 @@ const SandboxPage = () => {
         }
         return 'none';
       }
+      case 'leap_landing': {
+        const dx = targetPos.col - fighterPos.col;
+        const dy = targetPos.row - fighterPos.row;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist > 0) {
+          const colStep = Math.round(dx / dist);
+          const rowStep = Math.round(dy / dist);
+          const targetColOffset = (targetPos.col - colStep * 0.5) - fighterPos.col;
+          const targetRowOffset = (targetPos.row - rowStep * 0.5) - fighterPos.row;
+          return `translate(${targetColOffset * 100}%, ${targetRowOffset * 100}%)`;
+        }
+        return 'none';
+      }
       case 'teleport_fade':
         return 'scale(0.8)';
       default:
@@ -447,6 +489,7 @@ const SandboxPage = () => {
     if (animationPhase === 'teleport_fade') return 'opacity 0.15s ease-in-out, transform 0.15s ease-in-out';
     if (animationPhase === 'lunge') return 'transform 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
     if (animationPhase === 'step_adjacent') return 'transform 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+    if (animationPhase === 'leap_landing') return 'transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
     if (animationPhase === 'heal_approach') return 'transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
     if (animationPhase === 'leap') return 'transform 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
     return 'transform 0.25s ease-in-out, opacity 0.2s';
@@ -456,11 +499,10 @@ const SandboxPage = () => {
   const triggerAbility = (ability) => {
     if (isAnimating) return;
 
-    // --- MELEE ATTACKS ---
-    if (ability.type === 'melee' || ability.type === 'melee_poison' || ability.type === 'melee_slam' || ability.type === 'melee_heavy' || ability.type === 'melee_punches' || ability.type === 'melee_spin') {
+    if (ability.type === 'melee' || ability.type === 'melee_poison' || ability.type === 'melee_slam' || ability.type === 'melee_heavy' || ability.type === 'melee_punches' || ability.type === 'melee_spin' || ability.type === 'barbarian_slash') {
       setAnimating(true);
       
-      const isSlash = ability.id === 'slash';
+      const isSlash = ability.id === 'slash' || ability.id === 'barbarian_slash';
       const isSlam = ability.type === 'melee_slam';
 
       if (isSlash) {
@@ -509,7 +551,7 @@ const SandboxPage = () => {
         setTimeout(() => {
           setTargetShake(true);
           setTargetFlash(true);
-          setHitEffect({ type: 'slash' });
+          setHitEffect({ type: 'shield_slam_connect' });
           addFloatingText('-18', 'normal', '#ff9f1c', targetPos.row, targetPos.col);
           
           // Push target smoothly back 1 tile in direction of attack
@@ -582,65 +624,75 @@ const SandboxPage = () => {
     // --- SOLDIER FIST OF HONOR ---
     else if (ability.type === 'fist_of_honor') {
       setAnimating(true);
-      setAnimationPhase('lunge');
+      setAnimationPhase('step_adjacent');
 
-      // 1. Connection (at 200ms)
+      // 1. Connection (at 250ms when step_adjacent arrives)
       setTimeout(() => {
         setTargetShake(true);
         setTargetFlash(true);
         setHitEffect({ type: 'fist_connect' });
         setTargetStunned(true);
         addFloatingText('-24', 'crit', '#ffdd57', targetPos.row, targetPos.col);
-      }, 200);
+      }, 250);
 
-      // 2. Clear target shake/flash (at 450ms)
+      // 2. Clear target shake/flash (at 500ms, 250ms duration)
       setTimeout(() => {
         setTargetShake(false);
         setTargetFlash(false);
-      }, 450);
+      }, 500);
 
-      // 3. Clear fist overlay and start return animation (at 1000ms)
+      // 3. Clear fist overlay and start return animation (at 1050ms, 800ms connect duration)
       setTimeout(() => {
         setHitEffect(null);
         setAnimationPhase('return');
-      }, 1000);
+      }, 1050);
 
-      // 4. Return completes, end animation (at 1300ms)
+      // 4. Return completes, end animation (at 1300ms, 250ms return duration)
       setTimeout(() => {
         setAnimating(false);
         setAnimationPhase(null);
       }, 1300);
 
-      // 5. Stun effect ends (at 6200ms total, giving 6.0 seconds of stun)
+      // 5. Stun effect ends (at 6250ms total, giving 6.0 seconds of stun starting at 250ms)
       setTimeout(() => {
         setTargetStunned(false);
-      }, 6200);
+      }, 6250);
     }
 
     // --- SOLDIER IMBUED STRIKE ---
     else if (ability.type === 'imbued_strike') {
       setAnimating(true);
-      setAnimationPhase('lunge');
+      setAnimationPhase('step_adjacent');
 
+      // 1. Trigger weapon slash overlay (at 250ms when step_adjacent arrives)
+      setTimeout(() => {
+        setHitEffect({ type: 'imbued_strike_effect' });
+      }, 250);
+
+      // 2. Thrust peak connection (at 900ms: 250ms start + 650ms thrust peak)
       setTimeout(() => {
         setTargetShake(true);
         setTargetFlash(true);
-        setHitEffect({ type: 'ice_burst' }); // blue energy blast
         addFloatingText('-28', 'normal', '#00ffff', targetPos.row, targetPos.col);
+      }, 900);
 
-        setTimeout(() => {
-          setTargetShake(false);
-          setTargetFlash(false);
-          setHitEffect(null);
-        }, 250);
+      // 3. Clear target shake/flash (at 1150ms, 250ms duration)
+      setTimeout(() => {
+        setTargetShake(false);
+        setTargetFlash(false);
+      }, 1150);
 
+      // 4. Clear weapon overlay and return (at 1250ms, 1000ms swing duration)
+      setTimeout(() => {
+        setHitEffect(null);
         setAnimationPhase('return');
-      }, 200);
+      }, 1250);
 
+      // 5. Return completes (at 1500ms, 250ms return duration)
       setTimeout(() => {
         setAnimating(false);
         setAnimationPhase(null);
-      }, 500);
+      }, 1500);
     }
 
     // --- SOLDIER DEFENSIVE STANCE ---
@@ -697,6 +749,130 @@ const SandboxPage = () => {
       }, 1000);
     }
 
+    // --- BARBARIAN CLEAVE ---
+    else if (ability.type === 'barbarian_cleave') {
+      setAnimating(true);
+      setAnimationPhase('step_adjacent');
+
+      // 1. Trigger weapon slash overlay (at 250ms when step_adjacent arrives)
+      setTimeout(() => {
+        setHitEffect({ type: 'barbarian_cleave_effect' });
+      }, 250);
+
+      // 2. Stuck impact peak (at 600ms: 250ms start + 350ms swing to mid-arc)
+      setTimeout(() => {
+        setTargetShake(true);
+        setTargetFlash(true);
+        setTargetBleeding(true);
+        addFloatingText('-22', 'normal', '#ff3333', targetPos.row, targetPos.col);
+      }, 600);
+
+      // 3. Clear target shake/flash (at 950ms, 350ms duration)
+      setTimeout(() => {
+        setTargetShake(false);
+        setTargetFlash(false);
+      }, 950);
+
+      // 4. Clear weapon overlay and return (at 1100ms)
+      setTimeout(() => {
+        setHitEffect(null);
+        setAnimationPhase('return');
+      }, 1100);
+
+      // 5. Return completes (at 1350ms)
+      setTimeout(() => {
+        setAnimating(false);
+        setAnimationPhase(null);
+      }, 1350);
+
+      // 6. Bleed effect ends (after 4000ms duration, ending at 4600ms total)
+      setTimeout(() => {
+        setTargetBleeding(false);
+      }, 4600);
+
+      // 7. Bleed ticks (every 500ms starting at 1100ms, ending at 4600ms: 8 ticks)
+      for (let i = 1; i <= 8; i++) {
+        setTimeout(() => {
+          setTargetShake(true);
+          setTargetFlash(true);
+          addFloatingText('-3', 'normal', '#e63946', targetPos.row, targetPos.col);
+          setTimeout(() => {
+            setTargetShake(false);
+            setTargetFlash(false);
+          }, 150);
+        }, 600 + i * 500);
+      }
+    }
+
+    // --- BARBARIAN BERSERKER ---
+    else if (ability.type === 'barbarian_berserker') {
+      setAnimating(true);
+      setBerserkerActive(true);
+      setBerserkerFading(false);
+      setBerserkerEndTime(Date.now() + 8000);
+
+      setTimeout(() => {
+        setAnimating(false);
+      }, 1000);
+
+      setTimeout(() => {
+        setBerserkerFading(true);
+        setTimeout(() => {
+          setBerserkerActive(false);
+          setBerserkerFading(false);
+          setBerserkerEndTime(null);
+        }, 300);
+      }, 8000);
+    }
+
+    // --- BARBARIAN LEAP ATTACK ---
+    else if (ability.type === 'barbarian_leap') {
+      setAnimating(true);
+      setAnimationPhase('leap_landing');
+
+      // 1. Connection (at 600ms when leap landing completes)
+      setTimeout(() => {
+        setTargetShake(true);
+        setTargetFlash(true);
+        setTargetStunned(true);
+
+        // Push target back 1 tile in direction of attack
+        const dx = targetPos.col - fighterPos.col;
+        const dy = targetPos.row - fighterPos.row;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist > 0) {
+          const pushX = Math.round(dx / dist) * 100;
+          const pushY = Math.round(dy / dist) * 100;
+          setTargetPushback(`translate(${pushX}%, ${pushY}%)`);
+        }
+
+        addFloatingText('-30', 'crit', '#ffaa00', targetPos.row, targetPos.col);
+      }, 600);
+
+      // 2. Clear target shake/flash (at 950ms)
+      setTimeout(() => {
+        setTargetShake(false);
+        setTargetFlash(false);
+      }, 950);
+
+      // 3. Clear lunge position, return to origin, and reset target position (at 1400ms)
+      setTimeout(() => {
+        setAnimationPhase('return');
+        setTargetPushback(null);
+      }, 1400);
+
+      // 4. Return completes, end animation (at 1650ms)
+      setTimeout(() => {
+        setAnimating(false);
+        setAnimationPhase(null);
+      }, 1650);
+
+      // 5. Stun effect ends (at 6600ms total, giving 6.0 seconds of stun starting at 600ms)
+      setTimeout(() => {
+        setTargetStunned(false);
+      }, 6600);
+    }
+
     // --- PROJECTILE ATTACKS ---
     else if (ability.type === 'projectile' || ability.type === 'projectile_arc') {
       setAnimating(true);
@@ -745,6 +921,10 @@ const SandboxPage = () => {
           hitType = 'arrow_hit';
           dmg = '-22';
           color = '#ffe600';
+        } else if (ability.id === 'barbarian_axe_throw') {
+          hitType = 'slash';
+          dmg = '-20';
+          color = '#ff5400';
         }
 
         setHitEffect({ type: hitType });
@@ -806,6 +986,18 @@ const SandboxPage = () => {
           hitType = 'fire_exp';
           dmg = '-22';
           color = '#ff9f1c';
+
+          const dx = targetPos.col - fighterPos.col;
+          const dy = targetPos.row - fighterPos.row;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist > 0) {
+            const pushX = Math.round(dx / dist) * 100;
+            const pushY = Math.round(dy / dist) * 100;
+            setTargetPushback(`translate(${pushX}%, ${pushY}%)`);
+            setTimeout(() => {
+              setTargetPushback(null);
+            }, 800);
+          }
         } else if (arrowType === 'poison') {
           hitType = 'poison_burst';
           dmg = '-14';
@@ -896,6 +1088,18 @@ const SandboxPage = () => {
               hitType = 'fire_exp';
               dmg = '-18';
               color = '#ff9f1c';
+
+              const dx = targetPos.col - fighterPos.col;
+              const dy = targetPos.row - fighterPos.row;
+              const dist = Math.sqrt(dx * dx + dy * dy);
+              if (dist > 0) {
+                const pushX = Math.round(dx / dist) * 100;
+                const pushY = Math.round(dy / dist) * 100;
+                setTargetPushback(`translate(${pushX}%, ${pushY}%)`);
+                setTimeout(() => {
+                  setTargetPushback(null);
+                }, 800);
+              }
             } else if (arrowType === 'poison') {
               hitType = 'poison_burst';
               dmg = '-10';
@@ -1009,7 +1213,7 @@ const SandboxPage = () => {
     else if (ability.type === 'heal' || ability.type === 'heal_gold' || ability.type === 'barrier' || ability.type === 'battle_cry' || ability.type === 'overdrive') {
       setAnimating(true);
       let buff = 'heal';
-      let txt = '+30 HEAL';
+      let txt = '+30';
       let color = '#2ec4b6';
 
       if (ability.type === 'barrier') {
@@ -1345,6 +1549,87 @@ const SandboxPage = () => {
         @keyframes radialCooldownSweep {
           0% { stroke-dashoffset: 31.42; }
           100% { stroke-dashoffset: 0; }
+        }
+        @keyframes birdieOrbit1 {
+          0% { transform: translate(25px, 0px) scale(1.1); z-index: 5; }
+          25% { transform: translate(0px, 6px) scale(0.95); z-index: 5; }
+          50% { transform: translate(-25px, 0px) scale(0.8); z-index: 1; }
+          75% { transform: translate(0px, -6px) scale(0.95); z-index: 1; }
+          100% { transform: translate(25px, 0px) scale(1.1); z-index: 5; }
+        }
+        @keyframes birdieOrbit2 {
+          0% { transform: translate(-25px, 0px) scale(0.8); z-index: 1; }
+          25% { transform: translate(0px, -6px) scale(0.95); z-index: 1; }
+          50% { transform: translate(25px, 0px) scale(1.1); z-index: 5; }
+          75% { transform: translate(0px, 6px) scale(0.95); z-index: 5; }
+          100% { transform: translate(-25px, 0px) scale(0.8); z-index: 1; }
+        }
+        @keyframes imbuedStrikeThrust {
+          0% {
+            transform: rotate(-60deg) translateX(0);
+            opacity: 0;
+          }
+          10% {
+            transform: rotate(-60deg) translateX(0);
+            opacity: 1;
+          }
+          35% {
+            transform: rotate(0deg) translateX(0);
+            opacity: 1;
+          }
+          55% {
+            transform: rotate(0deg) translateX(0);
+            opacity: 1;
+          }
+          65% {
+            transform: rotate(0deg) translateX(24px);
+            opacity: 1;
+          }
+          85% {
+            transform: rotate(0deg) translateX(24px);
+            opacity: 1;
+          }
+          100% {
+            transform: rotate(0deg) translateX(24px);
+            opacity: 0;
+          }
+        }
+        @keyframes cleaveStuck {
+          0% {
+            transform: rotate(-60deg);
+            opacity: 0;
+          }
+          10% {
+            transform: rotate(-60deg);
+            opacity: 1;
+          }
+          35% {
+            transform: rotate(0deg);
+            opacity: 1;
+          }
+          85% {
+            transform: rotate(0deg);
+            opacity: 1;
+          }
+          100% {
+            transform: rotate(0deg);
+            opacity: 0;
+          }
+        }
+        @keyframes leapScale {
+          0% { transform: scale(1); }
+          50% { transform: scale(1.55); }
+          100% { transform: scale(1); }
+        }
+        @keyframes pulseRedIntense {
+          0%, 100% {
+            box-shadow: 0 0 15px rgba(255, 0, 0, 0.6), inset 0 0 8px rgba(255, 0, 0, 0.4);
+            filter: brightness(1);
+          }
+          50% {
+            box-shadow: 0 0 35px rgba(255, 0, 0, 0.95), inset 0 0 20px rgba(255, 0, 0, 0.85);
+            filter: brightness(1.2) saturate(1.5);
+          }
         }
         @keyframes dizzySpin {
           0% { transform: rotate(0deg) translateX(12px) rotate(0deg); }
@@ -1784,11 +2069,24 @@ const SandboxPage = () => {
                                   cy="10"
                                   r="5"
                                   fill="none"
-                                  stroke="rgba(0, 0, 0, 0.55)"
+                                  stroke="rgba(0, 0, 0, 0.35)"
                                   strokeWidth="10"
                                   strokeDasharray="31.42"
                                   strokeDashoffset={getCopDashOffset()}
                                 />
+                                {(() => {
+                                  const coords = getRadialLineCoords(copEndTime);
+                                  return coords ? (
+                                    <line
+                                      x1="10"
+                                      y1="10"
+                                      x2={coords.x2}
+                                      y2={coords.y2}
+                                      stroke="#ffffff"
+                                      strokeWidth="0.8"
+                                    />
+                                  ) : null;
+                                })()}
                               </svg>
                             </div>
                           )}
@@ -1911,11 +2209,24 @@ const SandboxPage = () => {
                                   cy="10"
                                   r="5"
                                   fill="none"
-                                  stroke="rgba(0, 0, 0, 0.55)"
+                                  stroke="rgba(0, 0, 0, 0.35)"
                                   strokeWidth="10"
                                   strokeDasharray="31.42"
                                   strokeDashoffset={getCopDashOffset()}
                                 />
+                                {(() => {
+                                  const coords = getRadialLineCoords(copEndTime);
+                                  return coords ? (
+                                    <line
+                                      x1="10"
+                                      y1="10"
+                                      x2={coords.x2}
+                                      y2={coords.y2}
+                                      stroke="#ffffff"
+                                      strokeWidth="0.8"
+                                    />
+                                  ) : null;
+                                })()}
                               </svg>
                             </div>
                           )}
@@ -2030,18 +2341,31 @@ const SandboxPage = () => {
                     width: '80%',
                     height: '80%',
                     borderRadius: '8px',
-                    border: '2px solid #ffb703',
+                    border: (selectedFighterId === 'soldier' && defensiveStanceActive)
+                      ? '3px solid #ffffff'
+                      : (selectedFighterId === 'barbarian' && berserkerActive)
+                        ? '2px solid #ff3333'
+                        : '2px solid #ffb703',
                     backgroundColor: '#222',
                     backgroundImage: `url(${selectedFighter.portrait})`,
                     backgroundSize: 'cover',
                     backgroundPosition: 'center',
-                    boxShadow: (selectedFighterId === 'soldier' && shieldWallActive)
-                      ? undefined
-                      : selfBuffEffect === 'rage'
-                        ? '0 0 20px rgba(255, 0, 0, 0.7), inset 0 0 10px rgba(255, 0, 0, 0.5)'
-                        : selfBuffEffect === 'barrier'
-                          ? '0 0 20px rgba(0, 150, 255, 0.7), inset 0 0 10px rgba(0, 150, 255, 0.5)'
-                          : '0 8px 16px rgba(0,0,0,0.5)',
+                    boxShadow: (selectedFighterId === 'soldier' && defensiveStanceActive)
+                      ? '0 0 12px 3px rgba(255, 255, 255, 0.9), inset 0 0 8px rgba(255, 255, 255, 0.5)'
+                      : (selectedFighterId === 'soldier' && shieldWallActive)
+                        ? undefined
+                        : (selectedFighterId === 'barbarian' && berserkerActive)
+                          ? 'none'
+                          : selfBuffEffect === 'rage'
+                            ? '0 0 20px rgba(255, 0, 0, 0.7), inset 0 0 10px rgba(255, 0, 0, 0.5)'
+                            : selfBuffEffect === 'barrier'
+                              ? '0 0 20px rgba(0, 150, 255, 0.7), inset 0 0 10px rgba(0, 150, 255, 0.5)'
+                              : '0 8px 16px rgba(0,0,0,0.5)',
+                    animation: (selectedFighterId === 'barbarian' && animationPhase === 'leap_landing')
+                      ? 'leapScale 0.6s ease-in-out forwards'
+                      : (selectedFighterId === 'barbarian' && berserkerActive)
+                        ? 'pulseRedIntense 1.0s infinite alternate'
+                        : 'none',
                     position: 'relative'
                   }}>
                   {selectedFighterId === 'sage' && copActive && (
@@ -2082,11 +2406,24 @@ const SandboxPage = () => {
                           cy="10"
                           r="5"
                           fill="none"
-                          stroke="rgba(0, 0, 0, 0.55)"
+                          stroke="rgba(0, 0, 0, 0.35)"
                           strokeWidth="10"
                           strokeDasharray="31.42"
                           strokeDashoffset={getCopDashOffset()}
                         />
+                        {(() => {
+                          const coords = getRadialLineCoords(copEndTime);
+                          return coords ? (
+                            <line
+                              x1="10"
+                              y1="10"
+                              x2={coords.x2}
+                              y2={coords.y2}
+                              stroke="#ffffff"
+                              strokeWidth="0.8"
+                            />
+                          ) : null;
+                        })()}
                       </svg>
                     </div>
                   )}
@@ -2128,11 +2465,83 @@ const SandboxPage = () => {
                           cy="10"
                           r="5"
                           fill="none"
-                          stroke="rgba(0, 0, 0, 0.55)"
+                          stroke="rgba(0, 0, 0, 0.35)"
                           strokeWidth="10"
                           strokeDasharray="31.42"
                           strokeDashoffset={getDefensiveStanceDashOffset()}
                         />
+                        {(() => {
+                          const coords = getRadialLineCoords(defensiveStanceEndTime);
+                          return coords ? (
+                            <line
+                              x1="10"
+                              y1="10"
+                              x2={coords.x2}
+                              y2={coords.y2}
+                              stroke="#ffffff"
+                              strokeWidth="0.8"
+                            />
+                          ) : null;
+                        })()}
+                      </svg>
+                    </div>
+                  )}
+                  {selectedFighterId === 'barbarian' && berserkerActive && (
+                    <div
+                      className={berserkerFading ? 'effect-icon-fading' : 'effect-icon-active'}
+                      style={{
+                        position: 'absolute',
+                        top: '-6px',
+                        right: '-6px',
+                        width: '20px',
+                        height: '20px',
+                        borderRadius: '50%',
+                        background: '#111',
+                        border: '2px solid #ff3333',
+                        backgroundImage: `url(${barbarian_berserker})`,
+                        backgroundSize: 'contain',
+                        backgroundRepeat: 'no-repeat',
+                        backgroundPosition: 'center',
+                        zIndex: 15,
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.5)',
+                        overflow: 'hidden'
+                      }}
+                    >
+                      <svg 
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          height: '100%',
+                          transform: 'rotate(-90deg)',
+                          pointerEvents: 'none'
+                        }}
+                        viewBox="0 0 20 20"
+                      >
+                        <circle
+                          cx="10"
+                          cy="10"
+                          r="5"
+                          fill="none"
+                          stroke="rgba(0, 0, 0, 0.35)"
+                          strokeWidth="10"
+                          strokeDasharray="31.42"
+                          strokeDashoffset={getBerserkerDashOffset()}
+                        />
+                        {(() => {
+                          const coords = getRadialLineCoords(berserkerEndTime);
+                          return coords ? (
+                            <line
+                              x1="10"
+                              y1="10"
+                              x2={coords.x2}
+                              y2={coords.y2}
+                              stroke="#ffffff"
+                              strokeWidth="0.8"
+                            />
+                          ) : null;
+                        })()}
                       </svg>
                     </div>
                   )}
@@ -2217,6 +2626,56 @@ const SandboxPage = () => {
                   {targetStunned && (
                     <div style={{
                       position: 'absolute',
+                      top: '-12px',
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      width: '60px',
+                      height: '20px',
+                      pointerEvents: 'none',
+                      zIndex: 35,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      {/* Tilted Ellipse Ring */}
+                      <div style={{
+                        position: 'absolute',
+                        width: '50px',
+                        height: '12px',
+                        borderRadius: '50%',
+                        border: '1.2px dashed rgba(255, 221, 87, 0.45)',
+                        boxShadow: '0 0 4px rgba(255, 221, 87, 0.15)',
+                        pointerEvents: 'none'
+                      }} />
+                      {/* Orbiting Star 1 */}
+                      <div style={{
+                        position: 'absolute',
+                        fontSize: '12px',
+                        color: '#ffe600',
+                        textShadow: '0 0 5px #ffe600',
+                        animation: 'birdieOrbit1 1.6s linear infinite',
+                        fontWeight: 'bold',
+                        userSelect: 'none'
+                      }}>
+                        ✦
+                      </div>
+                      {/* Orbiting Star 2 */}
+                      <div style={{
+                        position: 'absolute',
+                        fontSize: '12px',
+                        color: '#ffdd57',
+                        textShadow: '0 0 5px #ffdd57',
+                        animation: 'birdieOrbit2 1.6s linear infinite',
+                        fontWeight: 'bold',
+                        userSelect: 'none'
+                      }}>
+                        ✦
+                      </div>
+                    </div>
+                  )}
+                  {targetConfused && (
+                    <div style={{
+                      position: 'absolute',
                       top: '-15px',
                       left: '50%',
                       transform: 'translateX(-50%)',
@@ -2257,6 +2716,28 @@ const SandboxPage = () => {
                       }} />
                     </div>
                   )}
+                  {targetBleeding && (
+                    <div
+                      className="effect-icon-active"
+                      style={{
+                        position: 'absolute',
+                        top: '-6px',
+                        right: '-6px',
+                        width: '20px',
+                        height: '20px',
+                        borderRadius: '50%',
+                        background: '#111',
+                        border: '2px solid #ff3333',
+                        backgroundImage: `url(${bleeding})`,
+                        backgroundSize: 'contain',
+                        backgroundRepeat: 'no-repeat',
+                        backgroundPosition: 'center',
+                        zIndex: 15,
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.5)',
+                        overflow: 'hidden'
+                      }}
+                    />
+                  )}
                   {/* Shielded Overlay for target (Soldier when under Sage protection) */}
                   {selectedFighterId === 'sage' && copActive && (
                     <div
@@ -2296,11 +2777,24 @@ const SandboxPage = () => {
                           cy="10"
                           r="5"
                           fill="none"
-                          stroke="rgba(0, 0, 0, 0.55)"
+                          stroke="rgba(0, 0, 0, 0.35)"
                           strokeWidth="10"
                           strokeDasharray="31.42"
                           strokeDashoffset={getCopDashOffset()}
                         />
+                        {(() => {
+                          const coords = getRadialLineCoords(copEndTime);
+                          return coords ? (
+                            <line
+                              x1="10"
+                              y1="10"
+                              x2={coords.x2}
+                              y2={coords.y2}
+                              stroke="#ffffff"
+                              strokeWidth="0.8"
+                            />
+                          ) : null;
+                        })()}
                       </svg>
                     </div>
                   )}
@@ -2606,7 +3100,7 @@ const SandboxPage = () => {
                     </div>
                   )}
                   {hitEffect.type === 'weapon_slash' && (() => {
-                    const activeWeaponId = equippedWeapons['soldier'] || 'shortsword_sword';
+                    const activeWeaponId = equippedWeapons[selectedFighterId] || 'shortsword_sword';
                     const activeWeapon = WEAPONS_DB.swords.find(w => w.id === activeWeaponId) ||
                                          WEAPONS_DB.axes.find(w => w.id === activeWeaponId) ||
                                          WEAPONS_DB.swords[0];
@@ -2658,6 +3152,169 @@ const SandboxPage = () => {
                             objectFit: 'contain',
                             transformOrigin: `${30 - halfDistPx}px 30px`,
                             animation: 'weaponSwingArc 0.75s ease-in-out forwards'
+                          }}
+                        />
+                      </div>
+                    );
+                  })()}
+                  {hitEffect.type === 'imbued_strike_effect' && (() => {
+                    const activeWeaponId = equippedWeapons[selectedFighterId] || 'shortsword_sword';
+                    const activeWeapon = WEAPONS_DB.swords.find(w => w.id === activeWeaponId) ||
+                                         WEAPONS_DB.axes.find(w => w.id === activeWeaponId) ||
+                                         WEAPONS_DB.swords[0];
+                    const weaponIcon = activeWeapon.image;
+
+                    const dx = fighterPos.col - targetPos.col;
+                    const dy = fighterPos.row - targetPos.row;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    let adjCol = fighterPos.col;
+                    let adjRow = fighterPos.row;
+                    if (dist > 0) {
+                      const colStep = Math.round(dx / dist);
+                      const rowStep = Math.round(dy / dist);
+                      adjCol = targetPos.col + colStep;
+                      adjRow = targetPos.row + rowStep;
+                    }
+                    const swingDx = targetPos.col - adjCol;
+                    const swingDy = targetPos.row - adjRow;
+                    const baseAngle = Math.atan2(swingDy, swingDx) * (180 / Math.PI);
+                    const adjDist = Math.sqrt(swingDx * swingDx + swingDy * swingDy);
+                    const halfDistPx = (adjDist * 100) / 2;
+
+                    const leftOffset = (swingDx / 2) * -100;
+                    const topOffset = (swingDy / 2) * -100;
+
+                    return (
+                      <div
+                        style={{
+                          position: 'absolute',
+                          left: `calc(50% + ${leftOffset}px)`,
+                          top: `calc(50% + ${topOffset}px)`,
+                          width: '60px',
+                          height: '60px',
+                          transform: `translate(-50%, -50%) rotate(${baseAngle}deg)`,
+                          pointerEvents: 'none',
+                          zIndex: 5000,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                      >
+                        <img
+                          src={weaponIcon}
+                          alt="imbued strike weapon"
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'contain',
+                            transformOrigin: `${30 - halfDistPx}px 30px`,
+                            animation: 'imbuedStrikeThrust 1.0s ease-in-out forwards',
+                            filter: 'drop-shadow(0 0 6px rgba(0, 191, 255, 0.95)) drop-shadow(0 0 12px rgba(0, 191, 255, 0.6))'
+                          }}
+                        />
+                      </div>
+                    );
+                  })()}
+                  {hitEffect.type === 'barbarian_cleave_effect' && (() => {
+                    const activeWeaponId = equippedWeapons['barbarian'] || 'woodcutters_axe';
+                    const activeWeapon = WEAPONS_DB.axes.find(w => w.id === activeWeaponId) ||
+                                         WEAPONS_DB.swords.find(w => w.id === activeWeaponId) ||
+                                         WEAPONS_DB.axes[0];
+                    const weaponIcon = activeWeapon.image;
+
+                    const dx = fighterPos.col - targetPos.col;
+                    const dy = fighterPos.row - targetPos.row;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    let adjCol = fighterPos.col;
+                    let adjRow = fighterPos.row;
+                    if (dist > 0) {
+                      const colStep = Math.round(dx / dist);
+                      const rowStep = Math.round(dy / dist);
+                      adjCol = targetPos.col + colStep;
+                      adjRow = targetPos.row + rowStep;
+                    }
+                    const swingDx = targetPos.col - adjCol;
+                    const swingDy = targetPos.row - adjRow;
+                    const baseAngle = Math.atan2(swingDy, swingDx) * (180 / Math.PI);
+                    const adjDist = Math.sqrt(swingDx * swingDx + swingDy * swingDy);
+                    const halfDistPx = (adjDist * 100) / 2;
+
+                    const leftOffset = (swingDx / 2) * -100;
+                    const topOffset = (swingDy / 2) * -100;
+
+                    return (
+                      <div
+                        style={{
+                          position: 'absolute',
+                          left: `calc(50% + ${leftOffset}px)`,
+                          top: `calc(50% + ${topOffset}px)`,
+                          width: '60px',
+                          height: '60px',
+                          transform: `translate(-50%, -50%) rotate(${baseAngle}deg)`,
+                          pointerEvents: 'none',
+                          zIndex: 5000,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                      >
+                        <img
+                          src={weaponIcon}
+                          alt="cleave weapon"
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'contain',
+                            transformOrigin: `${30 - halfDistPx}px 30px`,
+                            animation: 'cleaveStuck 1.1s ease-in-out forwards'
+                          }}
+                        />
+                      </div>
+                    );
+                  })()}
+                  {hitEffect.type === 'shield_slam_connect' && (() => {
+                    const dx = fighterPos.col - targetPos.col;
+                    const dy = fighterPos.row - targetPos.row;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    let adjCol = fighterPos.col;
+                    let adjRow = fighterPos.row;
+                    if (dist > 0) {
+                      const colStep = Math.round(dx / dist);
+                      const rowStep = Math.round(dy / dist);
+                      adjCol = targetPos.col + colStep;
+                      adjRow = targetPos.row + rowStep;
+                    }
+                    const swingDx = targetPos.col - adjCol;
+                    const swingDy = targetPos.row - adjRow;
+
+                    // Calculate divide (midpoint) offset relative to Target (like healing hands)
+                    const leftOffset = (swingDx / 2) * -100;
+                    const topOffset = (swingDy / 2) * -100;
+
+                    return (
+                      <div
+                        style={{
+                          position: 'absolute',
+                          left: `calc(50% + ${leftOffset}px)`,
+                          top: `calc(50% + ${topOffset}px)`,
+                          width: '56px',
+                          height: '56px',
+                          transform: 'translate(-50%, -50%)',
+                          pointerEvents: 'none',
+                          zIndex: 5000,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          animation: 'scaleUp 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275) both'
+                        }}
+                      >
+                        <img
+                          src={shield_slam}
+                          alt="shield slam connect"
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'contain'
                           }}
                         />
                       </div>

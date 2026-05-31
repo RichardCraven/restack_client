@@ -589,7 +589,7 @@ import soldier_battlecry from '../assets/icons/combat-icons/specials/soldier/bat
 import axe_swing from '../assets/icons/combat-icons/basic attacks/axe swing.png'
 import axe_throw from '../assets/icons/combat-icons/basic attacks/axe throw.png'
 import heal from '../assets/icons/combat-icons/basic attacks/heal.png'
-import barbarian_swing from '../assets/icons/combat-icons/specials/barbarian/swing_barbarian.png'
+import barbarian_slash from '../assets/icons/combat-icons/specials/barbarian/slash_barbarian.png'
 import barbarian_cleave from '../assets/icons/combat-icons/specials/barbarian/cleave.png'
 import barbarian_axe_throw from '../assets/icons/combat-icons/specials/barbarian/axe_throw.png'
 import barbarian_berserker from '../assets/icons/combat-icons/specials/barbarian/berserker.png'
@@ -1389,7 +1389,7 @@ export {
     axe_swing,
     axe_throw,
     heal,
-    barbarian_swing,
+    barbarian_slash,
     barbarian_cleave,
     barbarian_axe_throw,
     barbarian_berserker,
