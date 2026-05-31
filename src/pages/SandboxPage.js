@@ -393,6 +393,12 @@ const SandboxPage = () => {
   const [targetDisintegrating, setTargetDisintegrating] = useState(false);
   const [vortexActive, setVortexActive] = useState(null); // { row, col }
   const [poisonDuration, setPoisonDuration] = useState(8000);
+  const [frozenDuration, setFrozenDuration] = useState(3000);
+  const [bleedEndTime, setBleedEndTime] = useState(null);
+  const [bleedFading, setBleedFading] = useState(false);
+  const [poisonFading, setPoisonFading] = useState(false);
+  const [frozenFading, setFrozenFading] = useState(false);
+  const [monkTwinGlow, setMonkTwinGlow] = useState(null); // { direction: 'left'|'right'|'up'|'down' }
   const [annihilationSweepActive, setAnnihilationSweepActive] = useState(false);
   const [extraGoblin1Shake, setExtraGoblin1Shake] = useState(false);
   const [extraGoblin1Flash, setExtraGoblin1Flash] = useState(false);
@@ -408,7 +414,7 @@ const SandboxPage = () => {
 
   useEffect(() => {
     let interval;
-    if (copActive || defensiveStanceActive || berserkerActive || inspireActive || etherealSpeedActive || innerFireActive || targetEnsnared || targetMarked || frozenIconActive || targetPoisoned || sleepIconActive) {
+    if (copActive || defensiveStanceActive || berserkerActive || inspireActive || etherealSpeedActive || innerFireActive || targetEnsnared || targetMarked || frozenIconActive || targetPoisoned || sleepIconActive || bleedEndTime) {
       interval = setInterval(() => {
         setCurrentTime(Date.now());
       }, 50);
@@ -418,7 +424,7 @@ const SandboxPage = () => {
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [copActive, defensiveStanceActive, berserkerActive, inspireActive, etherealSpeedActive, innerFireActive, targetEnsnared, targetMarked, frozenIconActive, targetPoisoned, sleepIconActive]);
+  }, [copActive, defensiveStanceActive, berserkerActive, inspireActive, etherealSpeedActive, innerFireActive, targetEnsnared, targetMarked, frozenIconActive, targetPoisoned, sleepIconActive, bleedEndTime]);
 
   const getCopDashOffset = () => {
     if (!copEndTime) return 31.42;
@@ -494,6 +500,13 @@ const SandboxPage = () => {
     if (!sleepEndTime) return 31.42;
     const remaining = Math.max(0, sleepEndTime - currentTime);
     const ratio = remaining / 8000;
+    return (1 - ratio) * 31.42;
+  };
+
+  const getBleedDashOffset = () => {
+    if (!bleedEndTime) return 31.42;
+    const remaining = Math.max(0, bleedEndTime - currentTime);
+    const ratio = remaining / 4000;
     return (1 - ratio) * 31.42;
   };
 
@@ -979,6 +992,18 @@ const SandboxPage = () => {
     else if (ability.type === 'monk_twin_finger_type') {
       setAnimating(true);
 
+      // Calculate swipe direction from Monk to Target (front to back)
+      const dx = targetPos.col - fighterPos.col;
+      const dy = targetPos.row - fighterPos.row;
+      let dir = 'left'; // default
+      if (Math.abs(dx) >= Math.abs(dy)) {
+        dir = dx > 0 ? 'left' : 'right'; // if target is on right, swipe to left (front to back)
+      } else {
+        dir = dy > 0 ? 'up' : 'down'; // if target is below, swipe to up (front to back)
+      }
+      setMonkTwinGlow({ direction: dir });
+      setTimeout(() => setMonkTwinGlow(null), 600);
+
       const options = [
         { row: fighterPos.row, col: fighterPos.col + 1 },
         { row: fighterPos.row, col: fighterPos.col - 1 },
@@ -1046,6 +1071,8 @@ const SandboxPage = () => {
         setTargetShake(true);
         setTargetFlash(true);
         setTargetBleeding(true);
+        setBleedFading(false);
+        setBleedEndTime(Date.now() + 4000);
         addFloatingText('-22', 'normal', '#ff3333', targetPos.row, targetPos.col);
       }, 600);
 
@@ -1069,7 +1096,12 @@ const SandboxPage = () => {
 
       // 6. Bleed effect ends (after 4000ms duration, ending at 4600ms total)
       setTimeout(() => {
-        setTargetBleeding(false);
+        setBleedFading(true);
+        setTimeout(() => {
+          setTargetBleeding(false);
+          setBleedFading(false);
+          setBleedEndTime(null);
+        }, 300);
       }, 4600);
 
       // 7. Bleed ticks (every 500ms starting at 1100ms, ending at 4600ms: 8 ticks)
@@ -1178,6 +1210,35 @@ const SandboxPage = () => {
         // Expanding fire ring
         setFireballExplosion({ row: targetPos.row, col: targetPos.col });
         setTimeout(() => setFireballExplosion(null), 700);
+
+        // Blast radius damage to adjacent extra Goblins
+        const isGoblin1Main = targetPos.row === 1 && targetPos.col === 4;
+        const isGoblin2Main = targetPos.row === 3 && targetPos.col === 4;
+
+        if (!isGoblin1Main && Math.abs(1 - targetPos.row) <= 1 && Math.abs(4 - targetPos.col) <= 1) {
+          setTimeout(() => {
+            setExtraGoblin1Shake(true);
+            setExtraGoblin1Flash(true);
+            addFloatingText('-12', 'normal', '#ff5400', 1, 4);
+            setTimeout(() => {
+              setExtraGoblin1Shake(false);
+              setExtraGoblin1Flash(false);
+            }, 250);
+          }, 300);
+        }
+
+        if (!isGoblin2Main && Math.abs(3 - targetPos.row) <= 1 && Math.abs(4 - targetPos.col) <= 1) {
+          setTimeout(() => {
+            setExtraGoblin2Shake(true);
+            setExtraGoblin2Flash(true);
+            addFloatingText('-12', 'normal', '#ff5400', 3, 4);
+            setTimeout(() => {
+              setExtraGoblin2Shake(false);
+              setExtraGoblin2Flash(false);
+            }, 250);
+          }, 300);
+        }
+
         setTimeout(() => {
           setTargetShake(false);
           setTargetFlash(false);
@@ -1210,13 +1271,19 @@ const SandboxPage = () => {
         // Frozen overlay on portrait
         setTargetFrozen(true);
         // Frozen effect icon with timer
+        setFrozenDuration(3000);
         const fEndTime = Date.now() + 3000;
         setFrozenEndTime(fEndTime);
         setFrozenIconActive(true);
+        setFrozenFading(false);
         setTimeout(() => {
-          setTargetFrozen(false);
-          setFrozenIconActive(false);
-          setFrozenEndTime(null);
+          setFrozenFading(true);
+          setTimeout(() => {
+            setTargetFrozen(false);
+            setFrozenIconActive(false);
+            setFrozenFading(false);
+            setFrozenEndTime(null);
+          }, 300);
         }, 3000);
         setTimeout(() => {
           setTargetShake(false);
@@ -1329,13 +1396,19 @@ const SandboxPage = () => {
           dmg = '-18';
           color = '#00bfff';
           setTargetFrozen(true);
+          setFrozenDuration(2000);
           const fEndTime = Date.now() + 2000;
           setFrozenEndTime(fEndTime);
           setFrozenIconActive(true);
+          setFrozenFading(false);
           setTimeout(() => {
-            setTargetFrozen(false);
-            setFrozenIconActive(false);
-            setFrozenEndTime(null);
+            setFrozenFading(true);
+            setTimeout(() => {
+              setTargetFrozen(false);
+              setFrozenIconActive(false);
+              setFrozenFading(false);
+              setFrozenEndTime(null);
+            }, 300);
           }, 2000);
         } else if (arrowType === 'force') {
           hitType = 'fire_exp';
@@ -1359,17 +1432,23 @@ const SandboxPage = () => {
           color = '#38b000';
           // Start poison DoT — 8s duration, ticks every 1.5s
           if (poisonIntervalRef.current) clearInterval(poisonIntervalRef.current);
+          setPoisonDuration(8000);
           const pEndTime = Date.now() + 8000;
           setPoisonEndTime(pEndTime);
           setTargetPoisoned(true);
+          setPoisonFading(false);
           let ticks = 0;
           poisonIntervalRef.current = setInterval(() => {
             ticks++;
             addFloatingText('-4', 'normal', '#38b000', targetPos.row, targetPos.col);
             if (ticks >= 5) {
               clearInterval(poisonIntervalRef.current);
-              setTargetPoisoned(false);
-              setPoisonEndTime(null);
+              setPoisonFading(true);
+              setTimeout(() => {
+                setTargetPoisoned(false);
+                setPoisonFading(false);
+                setPoisonEndTime(null);
+              }, 300);
             }
           }, 1500);
         } else if (arrowType === 'celestial') {
@@ -1500,13 +1579,19 @@ const SandboxPage = () => {
               dmg = '-14';
               color = '#00bfff';
               setTargetFrozen(true);
+              setFrozenDuration(1500);
               const fEndTime = Date.now() + 1500;
               setFrozenEndTime(fEndTime);
               setFrozenIconActive(true);
+              setFrozenFading(false);
               setTimeout(() => {
-                setTargetFrozen(false);
-                setFrozenIconActive(false);
-                setFrozenEndTime(null);
+                setFrozenFading(true);
+                setTimeout(() => {
+                  setTargetFrozen(false);
+                  setFrozenIconActive(false);
+                  setFrozenFading(false);
+                  setFrozenEndTime(null);
+                }, 300);
               }, 1500);
             } else if (arrowType === 'force') {
               hitType = 'fire_exp';
@@ -1887,6 +1972,7 @@ const SandboxPage = () => {
         setPoisonDuration(4000);
         setPoisonEndTime(Date.now() + 4000);
         setTargetPoisoned(true);
+        setPoisonFading(false);
 
         let ticks = 0;
         poisonIntervalRef.current = setInterval(() => {
@@ -1894,8 +1980,12 @@ const SandboxPage = () => {
           addFloatingText('-3', 'normal', '#38b000', targetPos.row, targetPos.col);
           if (ticks >= 4) {
             clearInterval(poisonIntervalRef.current);
-            setTargetPoisoned(false);
-            setPoisonEndTime(null);
+            setPoisonFading(true);
+            setTimeout(() => {
+              setTargetPoisoned(false);
+              setPoisonFading(false);
+              setPoisonEndTime(null);
+            }, 300);
           }
         }, 1000);
 
@@ -2171,6 +2261,30 @@ const SandboxPage = () => {
             border-radius: 40% 60% 50% 50% / 40% 40% 60% 60%;
             transform: rotate(0deg) scale(1.05);
           }
+        }
+        @keyframes monkGlowSwipeLeft {
+          0% { transform: translateX(100%); opacity: 0; }
+          15% { opacity: 1; }
+          85% { opacity: 1; }
+          100% { transform: translateX(-100%); opacity: 0; }
+        }
+        @keyframes monkGlowSwipeRight {
+          0% { transform: translateX(-100%); opacity: 0; }
+          15% { opacity: 1; }
+          85% { opacity: 1; }
+          100% { transform: translateX(100%); opacity: 0; }
+        }
+        @keyframes monkGlowSwipeUp {
+          0% { transform: translateY(100%); opacity: 0; }
+          15% { opacity: 1; }
+          85% { opacity: 1; }
+          100% { transform: translateY(-100%); opacity: 0; }
+        }
+        @keyframes monkGlowSwipeDown {
+          0% { transform: translateY(-100%); opacity: 0; }
+          15% { opacity: 1; }
+          85% { opacity: 1; }
+          100% { transform: translateY(100%); opacity: 0; }
         }
         @keyframes poisonPulseGlow {
           0% {
@@ -2694,6 +2808,15 @@ const SandboxPage = () => {
                     setSelectedFighterId(f.id);
                     // Reset character specific visual states
                     setTargetFrozen(false);
+                    setFrozenIconActive(false);
+                    setFrozenFading(false);
+                    setFrozenEndTime(null);
+                    setTargetPoisoned(false);
+                    setPoisonFading(false);
+                    setPoisonEndTime(null);
+                    setTargetBleeding(false);
+                    setBleedFading(false);
+                    setBleedEndTime(null);
                     setShieldWallActive(false);
                     setTurrets([]);
                     setMinions([]);
@@ -2783,6 +2906,15 @@ const SandboxPage = () => {
                   setTurrets([]);
                   setMinions([]);
                   setTargetFrozen(false);
+                  setFrozenIconActive(false);
+                  setFrozenFading(false);
+                  setFrozenEndTime(null);
+                  setTargetPoisoned(false);
+                  setPoisonFading(false);
+                  setPoisonEndTime(null);
+                  setTargetBleeding(false);
+                  setBleedFading(false);
+                  setBleedEndTime(null);
                   setShieldWallActive(false);
                 }}
                 style={{
@@ -3421,6 +3553,27 @@ const SandboxPage = () => {
                     position: 'relative'
                   }}>
                   {/* Monk Organic Glows */}
+                  {selectedFighterId === 'monk' && monkTwinGlow && (
+                    <div style={{
+                      position: 'absolute',
+                      top: 0, left: 0, right: 0, bottom: 0,
+                      borderRadius: '6px',
+                      overflow: 'hidden',
+                      pointerEvents: 'none',
+                      zIndex: 10
+                    }}>
+                      <div style={{
+                        position: 'absolute',
+                        width: '100%',
+                        height: '100%',
+                        background: ['left', 'right'].includes(monkTwinGlow.direction)
+                          ? 'linear-gradient(to right, rgba(255, 221, 87, 0) 25%, rgba(255, 221, 87, 0.95) 50%, rgba(255, 221, 87, 0) 75%)'
+                          : 'linear-gradient(to bottom, rgba(255, 221, 87, 0) 25%, rgba(255, 221, 87, 0.95) 50%, rgba(255, 221, 87, 0) 75%)',
+                        boxShadow: '0 0 15px #ffdd57',
+                        animation: `monkGlowSwipe${monkTwinGlow.direction.charAt(0).toUpperCase() + monkTwinGlow.direction.slice(1)} 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards`
+                      }} />
+                    </div>
+                  )}
                   {selectedFighterId === 'monk' && etherealSpeedActive && (
                     <div style={{
                       position: 'absolute',
@@ -3955,7 +4108,7 @@ const SandboxPage = () => {
                   }}>
                     {targetBleeding && (
                       <div
-                        className="effect-icon-active"
+                        className={bleedFading ? 'effect-icon-fading' : 'effect-icon-active'}
                         style={{
                           width: '20px',
                           height: '20px',
@@ -3967,13 +4120,51 @@ const SandboxPage = () => {
                           backgroundRepeat: 'no-repeat',
                           backgroundPosition: 'center',
                           boxShadow: '0 2px 4px rgba(0,0,0,0.5)',
-                          overflow: 'hidden'
+                          overflow: 'hidden',
+                          position: 'relative'
                         }}
-                      />
+                      >
+                        <svg
+                          style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: '100%',
+                            transform: 'rotate(-90deg)',
+                            pointerEvents: 'none'
+                          }}
+                          viewBox="0 0 20 20"
+                        >
+                          <circle
+                            cx="10"
+                            cy="10"
+                            r="5"
+                            fill="none"
+                            stroke="rgba(0, 0, 0, 0.45)"
+                            strokeWidth="10"
+                            strokeDasharray="31.42"
+                            strokeDashoffset={getBleedDashOffset()}
+                          />
+                          {(() => {
+                            const coords = getRadialLineCoords(bleedEndTime, 4000);
+                            return coords ? (
+                              <line
+                                x1="10"
+                                y1="10"
+                                x2={coords.x2}
+                                y2={coords.y2}
+                                stroke="#ffffff"
+                                strokeWidth="0.8"
+                              />
+                            ) : null;
+                          })()}
+                        </svg>
+                      </div>
                     )}
                     {targetPoisoned && (
                       <div
-                        className="effect-icon-active"
+                        className={poisonFading ? 'effect-icon-fading' : 'effect-icon-active'}
                         style={{
                           width: '20px',
                           height: '20px',
@@ -4012,7 +4203,7 @@ const SandboxPage = () => {
                             strokeDashoffset={getPoisonDashOffset()}
                           />
                           {(() => {
-                            const coords = getRadialLineCoords(poisonEndTime, 8000);
+                            const coords = getRadialLineCoords(poisonEndTime, poisonDuration);
                             return coords ? (
                               <line
                                 x1="10"
@@ -4029,7 +4220,7 @@ const SandboxPage = () => {
                     )}
                     {frozenIconActive && (
                       <div
-                        className="effect-icon-active"
+                        className={frozenFading ? 'effect-icon-fading' : 'effect-icon-active'}
                         style={{
                           width: '20px',
                           height: '20px',
@@ -4068,7 +4259,7 @@ const SandboxPage = () => {
                             strokeDashoffset={getFrozenDashOffset()}
                           />
                           {(() => {
-                            const coords = getRadialLineCoords(frozenEndTime, 3000);
+                            const coords = getRadialLineCoords(frozenEndTime, frozenDuration);
                             return coords ? (
                               <line
                                 x1="10"
