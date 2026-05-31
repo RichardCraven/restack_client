@@ -394,6 +394,10 @@ const SandboxPage = () => {
   const [vortexActive, setVortexActive] = useState(null); // { row, col }
   const [poisonDuration, setPoisonDuration] = useState(8000);
   const [annihilationSweepActive, setAnnihilationSweepActive] = useState(false);
+  const [extraGoblin1Shake, setExtraGoblin1Shake] = useState(false);
+  const [extraGoblin1Flash, setExtraGoblin1Flash] = useState(false);
+  const [extraGoblin2Shake, setExtraGoblin2Shake] = useState(false);
+  const [extraGoblin2Flash, setExtraGoblin2Flash] = useState(false);
 
   const [etherealSpeedActive, setEtherealSpeedActive] = useState(false);
   const [etherealSpeedFading, setEtherealSpeedFading] = useState(false);
@@ -489,7 +493,7 @@ const SandboxPage = () => {
   const getSleepDashOffset = () => {
     if (!sleepEndTime) return 31.42;
     const remaining = Math.max(0, sleepEndTime - currentTime);
-    const ratio = remaining / 4000;
+    const ratio = remaining / 8000;
     return (1 - ratio) * 31.42;
   };
 
@@ -1956,25 +1960,28 @@ const SandboxPage = () => {
         setProjectile(null);
         setTargetShake(true);
         setTargetFlash(true);
-        setHitEffect({ type: 'shadow' });
-        addFloatingText('SLEEP', 'normal', '#90caf9', targetPos.row, targetPos.col);
-
-        setTargetAsleep(true);
-        setSleepIconActive(true);
-        setSleepEndTime(Date.now() + 4000);
-
-        setTimeout(() => {
-          setTargetAsleep(false);
-          setSleepIconActive(false);
-          setSleepEndTime(null);
-        }, 4000);
+        setHitEffect({ type: 'sleep_rings' });
 
         setTimeout(() => {
           setTargetShake(false);
           setTargetFlash(false);
-          setHitEffect(null);
         }, 350);
-        setAnimating(false);
+
+        setTimeout(() => {
+          setHitEffect(null);
+          setTargetAsleep(true);
+          setSleepIconActive(true);
+          setSleepEndTime(Date.now() + 8000);
+          addFloatingText('SLEEP', 'normal', '#90caf9', targetPos.row, targetPos.col);
+
+          setTimeout(() => {
+            setTargetAsleep(false);
+            setSleepIconActive(false);
+            setSleepEndTime(null);
+          }, 8000);
+
+          setAnimating(false);
+        }, 2000);
       }, 430);
     }
 
@@ -2015,9 +2022,32 @@ const SandboxPage = () => {
       setVortexActive({ row: targetPos.row, col: targetPos.col });
 
       const interval = setInterval(() => {
+        // Main target
         setTargetShake(true);
         setTimeout(() => setTargetShake(false), 80);
         addFloatingText('-5', 'normal', '#7b2cbf', targetPos.row, targetPos.col);
+
+        // Check Extra Goblin 1 (row: 1, col: 4)
+        if (Math.abs(1 - targetPos.row) <= 1 && Math.abs(4 - targetPos.col) <= 1) {
+          setExtraGoblin1Shake(true);
+          setExtraGoblin1Flash(true);
+          setTimeout(() => {
+            setExtraGoblin1Shake(false);
+            setExtraGoblin1Flash(false);
+          }, 80);
+          addFloatingText('-5', 'normal', '#7b2cbf', 1, 4);
+        }
+
+        // Check Extra Goblin 2 (row: 3, col: 4)
+        if (Math.abs(3 - targetPos.row) <= 1 && Math.abs(4 - targetPos.col) <= 1) {
+          setExtraGoblin2Shake(true);
+          setExtraGoblin2Flash(true);
+          setTimeout(() => {
+            setExtraGoblin2Shake(false);
+            setExtraGoblin2Flash(false);
+          }, 80);
+          addFloatingText('-5', 'normal', '#7b2cbf', 3, 4);
+        }
       }, 350);
 
       setTimeout(() => {
@@ -2311,6 +2341,24 @@ const SandboxPage = () => {
           }
           100% {
             transform: scale(0.15);
+            opacity: 0;
+          }
+        }
+        @keyframes sleepShrinkRing {
+          0% {
+            transform: translate(-50%, -50%) rotate(0deg) scale(1.6);
+            opacity: 0;
+          }
+          15% {
+            opacity: 0.65;
+            transform: translate(-50%, -50%) rotate(27deg) scale(1.36);
+          }
+          85% {
+            opacity: 0.65;
+            transform: translate(-50%, -50%) rotate(153deg) scale(0.34);
+          }
+          100% {
+            transform: translate(-50%, -50%) rotate(180deg) scale(0.1);
             opacity: 0;
           }
         }
@@ -4076,7 +4124,7 @@ const SandboxPage = () => {
                             strokeDashoffset={getSleepDashOffset()}
                           />
                           {(() => {
-                            const coords = getRadialLineCoords(sleepEndTime, 4000);
+                            const coords = getRadialLineCoords(sleepEndTime, 8000);
                             return coords ? (
                               <line
                                 x1="10"
@@ -4494,6 +4542,105 @@ const SandboxPage = () => {
                 </div>
               </div>
 
+              {/* --- Extra Goblins (col 4, row 1 & col 4, row 3) for Wizard --- */}
+              {selectedFighterId === 'wizard' && (
+                <>
+                  <div
+                    style={{
+                      position: 'absolute',
+                      width: '20%',
+                      height: '20%',
+                      left: `${4 * 20}%`,
+                      top: `${1 * 20}%`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      zIndex: 9,
+                      pointerEvents: 'none'
+                    }}
+                  >
+                    <div style={{
+                      width: '80%',
+                      height: '80%',
+                      borderRadius: '8px',
+                      border: extraGoblin1Flash ? '3px solid #ff4d4d' : '2px solid #ff5400',
+                      backgroundColor: extraGoblin1Flash ? '#990000' : '#222',
+                      backgroundImage: `url(${targetPortrait})`,
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
+                      boxShadow: '0 8px 16px rgba(0,0,0,0.5)',
+                      position: 'relative',
+                      transform: extraGoblin1Shake ? 'translate(5px, 2px) rotate(2deg)' : 'none',
+                      transition: 'transform 0.05s'
+                    }}>
+                      <div style={{
+                        position: 'absolute',
+                        bottom: '0',
+                        left: '0',
+                        width: '100%',
+                        background: 'rgba(0,0,0,0.75)',
+                        color: '#fff',
+                        fontSize: '10px',
+                        fontWeight: 'bold',
+                        textAlign: 'center',
+                        padding: '2px 0',
+                        borderBottomLeftRadius: '6px',
+                        borderBottomRightRadius: '6px'
+                      }}>
+                        {targetName}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      position: 'absolute',
+                      width: '20%',
+                      height: '20%',
+                      left: `${4 * 20}%`,
+                      top: `${3 * 20}%`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      zIndex: 9,
+                      pointerEvents: 'none'
+                    }}
+                  >
+                    <div style={{
+                      width: '80%',
+                      height: '80%',
+                      borderRadius: '8px',
+                      border: extraGoblin2Flash ? '3px solid #ff4d4d' : '2px solid #ff5400',
+                      backgroundColor: extraGoblin2Flash ? '#990000' : '#222',
+                      backgroundImage: `url(${targetPortrait})`,
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
+                      boxShadow: '0 8px 16px rgba(0,0,0,0.5)',
+                      position: 'relative',
+                      transform: extraGoblin2Shake ? 'translate(5px, 2px) rotate(2deg)' : 'none',
+                      transition: 'transform 0.05s'
+                    }}>
+                      <div style={{
+                        position: 'absolute',
+                        bottom: '0',
+                        left: '0',
+                        width: '100%',
+                        background: 'rgba(0,0,0,0.75)',
+                        color: '#fff',
+                        fontSize: '10px',
+                        fontWeight: 'bold',
+                        textAlign: 'center',
+                        padding: '2px 0',
+                        borderBottomLeftRadius: '6px',
+                        borderBottomRightRadius: '6px'
+                      }}>
+                        {targetName}
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+
               {/* --- Healing Hands Icon Overlay --- */}
               {healIcon && (
                 <div
@@ -4849,10 +4996,24 @@ const SandboxPage = () => {
                       overflow: 'visible'
                     }}
                   >
+                    {/* Fuzzy bubbling orb at the origin of the beam (left edge) to obscure sharp square lines */}
+                    <div style={{
+                      position: 'absolute',
+                      left: '-20px',
+                      top: '-12px',
+                      width: '40px',
+                      height: '40px',
+                      background: 'radial-gradient(circle, #ffffff 20%, #7b2cbf 60%, rgba(123, 44, 191, 0) 100%)',
+                      borderRadius: '60% 40% 50% 50% / 40% 50% 60% 50%',
+                      animation: 'organicGlow 1.2s linear infinite',
+                      boxShadow: '0 0 15px #ff007f, 0 0 25px #8e2de2'
+                    }} />
+
                     {/* Undulating organic tip at the end of the beam touching the target */}
                     <div style={{
                       position: 'absolute',
                       right: '-20px',
+                      top: '-12px',
                       width: '40px',
                       height: '40px',
                       background: 'radial-gradient(circle, #ffffff 20%, #8e2de2 60%, rgba(142, 45, 226, 0) 100%)',
@@ -4899,8 +5060,8 @@ const SandboxPage = () => {
                     position: 'absolute',
                     left: `${vortexActive.col * 20 + 10}%`,
                     top: `${vortexActive.row * 20 + 10}%`,
-                    width: '80px',
-                    height: '80px',
+                    width: '60%',
+                    height: '60%',
                     backgroundImage: `url(${wizard_vortex})`,
                     backgroundSize: 'contain',
                     backgroundRepeat: 'no-repeat',
@@ -4908,9 +5069,11 @@ const SandboxPage = () => {
                     transform: 'translate(-50%, -50%)',
                     pointerEvents: 'none',
                     zIndex: 35,
-                    animation: 'vortexSpin 1.6s linear infinite',
-                    opacity: 0.95,
-                    filter: 'drop-shadow(0 0 10px #7b2cbf) drop-shadow(0 0 20px #8e2de2)'
+                    animation: 'vortexSpin 4s linear infinite',
+                    opacity: 0.5,
+                    maskImage: 'radial-gradient(circle, rgba(0,0,0,1) 45%, rgba(0,0,0,0) 70%)',
+                    WebkitMaskImage: 'radial-gradient(circle, rgba(0,0,0,1) 45%, rgba(0,0,0,0) 70%)',
+                    filter: 'drop-shadow(0 0 12px #7b2cbf) drop-shadow(0 0 25px #8e2de2)'
                   }}
                 />
               )}
@@ -5171,8 +5334,7 @@ const SandboxPage = () => {
                           zIndex: 5000,
                           display: 'flex',
                           alignItems: 'center',
-                          justifyContent: 'center',
-                          animation: 'scaleUp 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275) both'
+                          justifyContent: 'center'
                         }}
                       >
                         <img
@@ -5181,7 +5343,8 @@ const SandboxPage = () => {
                           style={{
                             width: '100%',
                             height: '100%',
-                            objectFit: 'contain'
+                            objectFit: 'contain',
+                            animation: 'scaleUp 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275) both'
                           }}
                         />
                       </div>
@@ -5219,8 +5382,7 @@ const SandboxPage = () => {
                           zIndex: 5000,
                           display: 'flex',
                           alignItems: 'center',
-                          justifyContent: 'center',
-                          animation: 'scaleUp 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275) both'
+                          justifyContent: 'center'
                         }}
                       >
                         <img
@@ -5229,7 +5391,8 @@ const SandboxPage = () => {
                           style={{
                             width: '100%',
                             height: '100%',
-                            objectFit: 'contain'
+                            objectFit: 'contain',
+                            animation: 'scaleUp 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275) both'
                           }}
                         />
                       </div>
@@ -5266,8 +5429,7 @@ const SandboxPage = () => {
                           zIndex: 5000,
                           display: 'flex',
                           alignItems: 'center',
-                          justifyContent: 'center',
-                          animation: 'scaleUp 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275) both'
+                          justifyContent: 'center'
                         }}
                       >
                         <img
@@ -5277,7 +5439,8 @@ const SandboxPage = () => {
                             width: '100%',
                             height: '100%',
                             objectFit: 'contain',
-                            filter: 'drop-shadow(0 0 6px #ff9f1c)'
+                            filter: 'drop-shadow(0 0 6px #ff9f1c)',
+                            animation: 'scaleUp 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275) both'
                           }}
                         />
                       </div>
@@ -5316,8 +5479,7 @@ const SandboxPage = () => {
                           zIndex: 5000,
                           display: 'flex',
                           alignItems: 'center',
-                          justifyContent: 'center',
-                          animation: 'scaleUp 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275) both'
+                          justifyContent: 'center'
                         }}
                       >
                         <img
@@ -5326,7 +5488,8 @@ const SandboxPage = () => {
                           style={{
                             width: '100%',
                             height: '100%',
-                            objectFit: 'contain'
+                            objectFit: 'contain',
+                            animation: 'scaleUp 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275) both'
                           }}
                         />
                       </div>
@@ -5423,6 +5586,39 @@ const SandboxPage = () => {
                           }}
                         />
                        ))}
+                    </div>
+                  )}
+                  {hitEffect.type === 'sleep_rings' && (
+                    <div style={{
+                      position: 'relative',
+                      width: '100px',
+                      height: '100px',
+                      pointerEvents: 'none',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      zIndex: 35
+                    }}>
+                      {[0, 1, 2].map((i) => (
+                        <div
+                          key={i}
+                          style={{
+                            position: 'absolute',
+                            left: '50%',
+                            top: '50%',
+                            transform: 'translate(-50%, -50%)',
+                            width: '100%',
+                            height: '100%',
+                            border: '2.2px dashed rgba(160, 160, 165, 0.75)',
+                            borderRadius: '60% 40% 50% 50% / 40% 50% 60% 50%',
+                            boxShadow: '0 0 10px rgba(160, 160, 165, 0.35), inset 0 0 6px rgba(160, 160, 165, 0.25)',
+                            animation: 'sleepShrinkRing 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards',
+                            animationDelay: `${i * 0.4}s`,
+                            opacity: 0,
+                            boxSizing: 'border-box'
+                          }}
+                        />
+                      ))}
                     </div>
                   )}
                 </div>
