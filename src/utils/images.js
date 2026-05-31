@@ -636,6 +636,16 @@ import monk_twin_finger_authority from '../assets/icons/combat-icons/specials/mo
 import monk_flurry from '../assets/icons/combat-icons/specials/monk/flurry.png';
 import monk_force_punch_flurry from '../assets/icons/combat-icons/specials/monk/force_punch_flurry.png';
 
+// summoner
+import summon_icon from '../assets/icons/combat-icons/specials/summoner/summon.png';
+import summon2_icon from '../assets/icons/combat-icons/specials/summoner/summon2.png';
+import summon_skeleton_icon from '../assets/icons/combat-icons/specials/summoner/summon_skeleton.png';
+import summon_skeleton_knight_icon from '../assets/icons/combat-icons/specials/summoner/summon_skeleton_knight.png';
+import duplicate_icon from '../assets/icons/combat-icons/specials/summoner/duplicate.png';
+import duplicate_transition_icon from '../assets/icons/combat-icons/specials/summoner/duplicate transition.png';
+import triplicate_icon from '../assets/icons/combat-icons/specials/summoner/triplicate.png';
+import triplicate_transition_icon from '../assets/icons/combat-icons/specials/summoner/triplicate transition.png';
+
 
 // body
 import body_male from '../assets/icons/figures/body_man.png'
@@ -1381,6 +1391,14 @@ export {
     monk_twin_finger_authority,
     monk_flurry,
     monk_force_punch_flurry,
+    summon_icon,
+    summon2_icon,
+    summon_skeleton_icon,
+    summon_skeleton_knight_icon,
+    duplicate_icon,
+    duplicate_transition_icon,
+    triplicate_icon,
+    triplicate_transition_icon,
     fire_blast,
     meditate,
     shield_wall,

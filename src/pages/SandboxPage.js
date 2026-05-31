@@ -85,6 +85,15 @@ import {
   monk_force_punch,
   monk_flurry,
   monk_punch,
+  // Summoner icons
+  summon_icon,
+  summon2_icon,
+  summon_skeleton_icon,
+  summon_skeleton_knight_icon,
+  duplicate_icon,
+  duplicate_transition_icon,
+  triplicate_icon,
+  triplicate_transition_icon,
   // Swords
   shortsword,
   cutlass,
@@ -295,10 +304,10 @@ const fightersData = [
     name: 'Summoner',
     portrait: summoner,
     abilities: [
-      { id: 'summon_familiar', name: 'Summon Bat', desc: 'Open a dark portal and summon a bat minion.', icon: bat_gate, type: 'summon' },
-      { id: 'energy_drain', name: 'Energy Drain', desc: 'Siphon lifeforce from target to summoner.', icon: energy_drain, type: 'beam_drain' },
-      { id: 'void_portal', name: 'Void Portal', desc: 'Open a black hole directly under the target.', icon: voidfill, type: 'void_portal' },
-      { id: 'shadow_bolt', name: 'Shadow Bolt', desc: 'Hurl a bolt of condensed dark shadow.', icon: void_lance, type: 'projectile', projectileIcon: void_lance }
+      { id: 'summon_skeleton', name: 'Summon Skeleton', desc: 'Summon a skeleton warrior to the field.', icon: summon_skeleton_icon, type: 'summon_skeleton_type' },
+      { id: 'summon_skeleton_knight', name: 'Summon Skeleton Knight', desc: 'Summon a heavily armored skeleton knight.', icon: summon_skeleton_knight_icon, type: 'summon_skeleton_knight_type' },
+      { id: 'summoner_duplicate', name: 'Duplicate', desc: 'Create a duplicate of the summoned minion behind it.', icon: duplicate_icon, type: 'summoner_duplicate_type' },
+      { id: 'summoner_triplicate', name: 'Triplicate', desc: 'Create two duplicates of the summoned minion NW and SW of it.', icon: triplicate_icon, type: 'summoner_triplicate_type' }
     ]
   },
   {
@@ -322,8 +331,8 @@ const SandboxPage = () => {
 
   // --- Combat Animations States ---
   const [selectedFighterId, setSelectedFighterId] = useState('ranger');
-  const [fighterPos, setFighterPos] = useState({ row: 2, col: 1 });
-  const [targetPos, setTargetPos] = useState({ row: 2, col: 3 });
+  const [fighterPos, setFighterPos] = useState({ row: 2, col: 0 });
+  const [targetPos, setTargetPos] = useState({ row: 2, col: 2 });
   const [placementMode, setPlacementMode] = useState('fighter'); // 'fighter' or 'target'
   const [notchedArrow, setNotchedArrow] = useState('force'); // 'ice', 'force', 'poison', 'celestial'
   const [submenuOpen, setSubmenuOpen] = useState(false);
@@ -378,6 +387,10 @@ const SandboxPage = () => {
   const [targetPoisoned, setTargetPoisoned] = useState(false);
   const [poisonEndTime, setPoisonEndTime] = useState(null);
   const poisonIntervalRef = useRef(null);
+  const targetPosRef = useRef(targetPos);
+  useEffect(() => {
+    targetPosRef.current = targetPos;
+  }, [targetPos]);
   const [fireballExplosion, setFireballExplosion] = useState(null); // { col, row } when active
   const [annihilationExplosion, setAnnihilationExplosion] = useState(null); // { col, row } when active
   const [lightningJagged, setLightningJagged] = useState(false);
@@ -394,6 +407,8 @@ const SandboxPage = () => {
   const [vortexActive, setVortexActive] = useState(null); // { row, col }
   const [poisonDuration, setPoisonDuration] = useState(8000);
   const [frozenDuration, setFrozenDuration] = useState(3000);
+  const [poisonSingleDuration, setPoisonSingleDuration] = useState(8000);
+  const [frozenSingleDuration, setFrozenSingleDuration] = useState(2000);
   const [bleedEndTime, setBleedEndTime] = useState(null);
   const [bleedFading, setBleedFading] = useState(false);
   const [poisonFading, setPoisonFading] = useState(false);
@@ -404,6 +419,18 @@ const SandboxPage = () => {
   const [extraGoblin1Flash, setExtraGoblin1Flash] = useState(false);
   const [extraGoblin2Shake, setExtraGoblin2Shake] = useState(false);
   const [extraGoblin2Flash, setExtraGoblin2Flash] = useState(false);
+
+  // Monk Extra Goblins States
+  const [monkGoblin1Shake, setMonkGoblin1Shake] = useState(false);
+  const [monkGoblin1Flash, setMonkGoblin1Flash] = useState(false);
+  const [monkGoblin1Push, setMonkGoblin1Push] = useState(null);
+  const [monkGoblin2Shake, setMonkGoblin2Shake] = useState(false);
+  const [monkGoblin2Flash, setMonkGoblin2Flash] = useState(false);
+  const [monkGoblin2Push, setMonkGoblin2Push] = useState(null);
+  const [monkExtraPunches, setMonkExtraPunches] = useState([]);
+
+  // Summoner Summoning State
+  const [activeSummons, setActiveSummons] = useState([]); // Array of portals { id, row, col, icon, type, shrinking: boolean }
 
   const [etherealSpeedActive, setEtherealSpeedActive] = useState(false);
   const [etherealSpeedFading, setEtherealSpeedFading] = useState(false);
@@ -425,6 +452,56 @@ const SandboxPage = () => {
       if (interval) clearInterval(interval);
     };
   }, [copActive, defensiveStanceActive, berserkerActive, inspireActive, etherealSpeedActive, innerFireActive, targetEnsnared, targetMarked, frozenIconActive, targetPoisoned, sleepIconActive, bleedEndTime]);
+
+  // Central status cleanups effect
+  useEffect(() => {
+    // Check frozen
+    if (frozenEndTime) {
+      const remaining = frozenEndTime - currentTime;
+      if (remaining <= 0) {
+        setTargetFrozen(false);
+        setFrozenIconActive(false);
+        setFrozenFading(false);
+        setFrozenEndTime(null);
+      } else if (remaining <= 300) {
+        setFrozenFading(true);
+      } else {
+        setFrozenFading(false);
+      }
+    }
+    
+    // Check poison
+    if (poisonEndTime) {
+      const remaining = poisonEndTime - currentTime;
+      if (remaining <= 0) {
+        setTargetPoisoned(false);
+        setPoisonFading(false);
+        setPoisonEndTime(null);
+        if (poisonIntervalRef.current) {
+          clearInterval(poisonIntervalRef.current);
+          poisonIntervalRef.current = null;
+        }
+      } else if (remaining <= 300) {
+        setPoisonFading(true);
+      } else {
+        setPoisonFading(false);
+      }
+    }
+
+    // Check bleed
+    if (bleedEndTime) {
+      const remaining = bleedEndTime - currentTime;
+      if (remaining <= 0) {
+        setTargetBleeding(false);
+        setBleedFading(false);
+        setBleedEndTime(null);
+      } else if (remaining <= 300) {
+        setBleedFading(true);
+      } else {
+        setBleedFading(false);
+      }
+    }
+  }, [currentTime, frozenEndTime, poisonEndTime, bleedEndTime]);
 
   const getCopDashOffset = () => {
     if (!copEndTime) return 31.42;
@@ -485,14 +562,20 @@ const SandboxPage = () => {
   const getFrozenDashOffset = () => {
     if (!frozenEndTime) return 31.42;
     const remaining = Math.max(0, frozenEndTime - currentTime);
-    const ratio = remaining / 3000;
+    if (remaining <= 0) return 31.42;
+    const singleDur = frozenSingleDuration || 2000;
+    const modulo = remaining % singleDur;
+    const ratio = (modulo === 0 && remaining > 0) ? 1.0 : modulo / singleDur;
     return (1 - ratio) * 31.42;
   };
 
   const getPoisonDashOffset = () => {
     if (!poisonEndTime) return 31.42;
     const remaining = Math.max(0, poisonEndTime - currentTime);
-    const ratio = remaining / poisonDuration;
+    if (remaining <= 0) return 31.42;
+    const singleDur = poisonSingleDuration || 8000;
+    const modulo = remaining % singleDur;
+    const ratio = (modulo === 0 && remaining > 0) ? 1.0 : modulo / singleDur;
     return (1 - ratio) * 31.42;
   };
 
@@ -510,11 +593,14 @@ const SandboxPage = () => {
     return (1 - ratio) * 31.42;
   };
 
-  const getRadialLineCoords = (endTime, totalDuration = 8000) => {
+  const getRadialLineCoords = (endTime, totalDuration = 8000, singleDuration) => {
     if (!endTime) return null;
     const remaining = Math.max(0, endTime - currentTime);
-    if (remaining <= 0 || remaining >= totalDuration) return null;
-    const ratio = remaining / totalDuration;
+    if (remaining <= 0) return null;
+    const singleDur = singleDuration || totalDuration;
+    if (!singleDuration && remaining >= totalDuration) return null;
+    const modulo = remaining % singleDur;
+    const ratio = (modulo === 0 && remaining > 0) ? 1.0 : modulo / singleDur;
     const angle = -(1 - ratio) * 360;
     const rad = angle * (Math.PI / 180);
     return {
@@ -542,6 +628,42 @@ const SandboxPage = () => {
     setTimeout(() => {
       setFloatingTexts(prev => prev.filter(t => t.id !== id));
     }, 1800);
+  };
+
+  const applyPoison = (duration, tickInterval = 1500, tickDamage = 4) => {
+    setPoisonSingleDuration(duration);
+    const now = Date.now();
+    let newEndTime;
+    if (poisonEndTime && poisonEndTime > now) {
+      newEndTime = poisonEndTime + duration;
+    } else {
+      newEndTime = now + duration;
+    }
+    setPoisonDuration(duration);
+    setPoisonEndTime(newEndTime);
+    setTargetPoisoned(true);
+    setPoisonFading(false);
+
+    if (poisonIntervalRef.current) clearInterval(poisonIntervalRef.current);
+    poisonIntervalRef.current = setInterval(() => {
+      addFloatingText(`-${tickDamage}`, 'normal', '#38b000', targetPosRef.current.row, targetPosRef.current.col);
+    }, tickInterval);
+  };
+
+  const applyFreeze = (duration) => {
+    setFrozenSingleDuration(duration);
+    const now = Date.now();
+    let newEndTime;
+    if (frozenEndTime && frozenEndTime > now) {
+      newEndTime = frozenEndTime + duration;
+    } else {
+      newEndTime = now + duration;
+    }
+    setFrozenDuration(duration);
+    setFrozenEndTime(newEndTime);
+    setTargetFrozen(true);
+    setFrozenIconActive(true);
+    setFrozenFading(false);
   };
 
   // Helper to determine projectile rotation angle
@@ -683,7 +805,9 @@ const SandboxPage = () => {
         }, 1250);
       } else if (isSlam) {
         setAnimating(true);
-        setAnimationPhase('lunge'); // Soldier lunges forward
+        // 0ms: Render the shield slam icon on the edge of the Soldier tile facing the target.
+        setHitEffect({ type: 'shield_slam_connect' });
+        setAnimationPhase(null); // Keep at origin
 
         const dx = targetPos.col - fighterPos.col;
         const dy = targetPos.row - fighterPos.row;
@@ -691,11 +815,15 @@ const SandboxPage = () => {
         const pushCol = dist > 0 ? Math.round(dx / dist) : 1;
         const pushRow = dist > 0 ? Math.round(dy / dist) : 0;
 
-        // Impact (at 200ms)
+        // 300ms: Lunge the Soldier forward
+        setTimeout(() => {
+          setAnimationPhase('lunge');
+        }, 300);
+
+        // 500ms: Impact target (shake, flash, damage text, and start pushback)
         setTimeout(() => {
           setTargetShake(true);
           setTargetFlash(true);
-          setHitEffect({ type: 'shield_slam_connect' });
           addFloatingText('-18', 'normal', '#ff9f1c', targetPos.row, targetPos.col);
           
           // Push target smoothly back 1 tile in direction of attack
@@ -704,21 +832,21 @@ const SandboxPage = () => {
           setTimeout(() => {
             setTargetShake(false);
             setTargetFlash(false);
-            setHitEffect(null);
           }, 250);
+        }, 500);
 
-          // Return starts at 450ms
-          setTimeout(() => {
-            setAnimationPhase('return');
-          }, 250);
-        }, 200);
+        // 750ms: Icon disappears (clear hit effect) and Soldier returns to origin
+        setTimeout(() => {
+          setHitEffect(null);
+          setAnimationPhase('return');
+        }, 750);
 
-        // Soldier returns to origin tile (at 750ms total time)
+        // 1000ms: Soldier return completes, animation state and pushbacks are cleared
         setTimeout(() => {
           setAnimating(false);
           setAnimationPhase(null);
           setTargetPushback(null); // Reset target position smoothly back to origin
-        }, 750);
+        }, 1000);
       } else {
         setAnimationPhase('lunge');
         const hitDelay = 200;
@@ -986,6 +1114,238 @@ const SandboxPage = () => {
         setAnimating(false);
         setAnimationPhase(null);
       }, 1100);
+    }
+
+    // --- MONK FORCE PUNCH ---
+    else if (ability.type === 'monk_force_punch_type') {
+      setAnimating(true);
+      setAnimationPhase('step_adjacent');
+
+      setTimeout(() => {
+        setTargetShake(true);
+        setTargetFlash(true);
+        setHitEffect({ type: 'monk_force_punch_effect' });
+        addFloatingText('-18', 'normal', '#ffb703', targetPos.row, targetPos.col);
+
+        // Push target back 1 tile
+        const dx = targetPos.col - fighterPos.col;
+        const dy = targetPos.row - fighterPos.row;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist > 0) {
+          const pushX = Math.round(dx / dist) * 100;
+          const pushY = Math.round(dy / dist) * 100;
+          setTargetPushback(`translate(${pushX}%, ${pushY}%)`);
+        }
+
+        setTimeout(() => {
+          setTargetShake(false);
+          setTargetFlash(false);
+        }, 250);
+
+        setTimeout(() => {
+          setHitEffect(null);
+          setAnimationPhase('return');
+        }, 800);
+      }, 250);
+
+      setTimeout(() => {
+        setAnimating(false);
+        setAnimationPhase(null);
+        setTargetPushback(null);
+      }, 1100);
+    }
+
+    // --- MONK FLURRY ---
+    else if (ability.type === 'monk_flurry_type') {
+      setAnimating(true);
+      setAnimationPhase('step_adjacent');
+
+      // Punch 1
+      setTimeout(() => {
+        setTargetShake(true);
+        setTargetFlash(true);
+        setHitEffect({ type: 'monk_punch_effect' });
+        addFloatingText('-10', 'normal', '#ffb703', targetPos.row, targetPos.col);
+        setTimeout(() => {
+          setTargetShake(false);
+          setTargetFlash(false);
+        }, 150);
+      }, 250);
+
+      // Punch 2
+      setTimeout(() => {
+        setHitEffect(null); // clear first to trigger transition again
+        setTimeout(() => {
+          setTargetShake(true);
+          setTargetFlash(true);
+          setHitEffect({ type: 'monk_punch_effect' });
+          addFloatingText('-10', 'normal', '#ffb703', targetPos.row, targetPos.col);
+          setTimeout(() => {
+            setTargetShake(false);
+            setTargetFlash(false);
+          }, 150);
+        }, 30);
+      }, 500);
+
+      // Punch 3
+      setTimeout(() => {
+        setHitEffect(null);
+        setTimeout(() => {
+          setTargetShake(true);
+          setTargetFlash(true);
+          setHitEffect({ type: 'monk_punch_effect' });
+          addFloatingText('-12', 'crit', '#ffb703', targetPos.row, targetPos.col);
+          setTimeout(() => {
+            setTargetShake(false);
+            setTargetFlash(false);
+          }, 150);
+        }, 30);
+      }, 750);
+
+      // Return
+      setTimeout(() => {
+        setHitEffect(null);
+        setAnimationPhase('return');
+      }, 1050);
+
+      // End
+      setTimeout(() => {
+        setAnimating(false);
+        setAnimationPhase(null);
+      }, 1300);
+    }
+
+    // --- MONK FORCE PUNCH FLURRY ---
+    else if (ability.type === 'monk_fp_flurry_type') {
+      setAnimating(true);
+      setAnimationPhase('step_adjacent');
+
+      // Determine where the Monk actually strikes from (strikeCol, strikeRow)
+      const dxStart = targetPos.col - fighterPos.col;
+      const dyStart = targetPos.row - fighterPos.row;
+      const startDist = Math.sqrt(dxStart * dxStart + dyStart * dyStart);
+      const isAlreadyAdjacent = Math.abs(dxStart) <= 1 && Math.abs(dyStart) <= 1;
+
+      let strikeCol = fighterPos.col;
+      let strikeRow = fighterPos.row;
+      if (!isAlreadyAdjacent && startDist > 0) {
+        const colStep = Math.round(dxStart / startDist);
+        const rowStep = Math.round(dyStart / startDist);
+        strikeCol = targetPos.col - colStep;
+        strikeRow = targetPos.row - rowStep;
+      }
+
+      // Adjacency check for extra Goblins
+      const isGoblin1Adjacent = Math.abs(2 - strikeCol) <= 1 && Math.abs(1 - strikeRow) <= 1;
+      const isGoblin2Adjacent = Math.abs(3 - strikeCol) <= 1 && Math.abs(1 - strikeRow) <= 1;
+
+      // Attack 1: Strike main target at targetPos (at 250ms)
+      setTimeout(() => {
+        setTargetShake(true);
+        setTargetFlash(true);
+        setHitEffect({ type: 'monk_force_punch_effect' });
+        addFloatingText('-18', 'normal', '#ffb703', targetPos.row, targetPos.col);
+
+        // Push main target back 1 tile
+        const dx = targetPos.col - fighterPos.col;
+        const dy = targetPos.row - fighterPos.row;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist > 0) {
+          const pushX = Math.round(dx / dist) * 100;
+          const pushY = Math.round(dy / dist) * 100;
+          setTargetPushback(`translate(${pushX}%, ${pushY}%)`);
+        }
+
+        setTimeout(() => {
+          setTargetShake(false);
+          setTargetFlash(false);
+        }, 150);
+      }, 250);
+
+      // Attack 2: Strike extra Goblin at 2,1 (at 550ms)
+      setTimeout(() => {
+        setHitEffect(null); // Clear main punch icon
+        
+        if (isGoblin1Adjacent) {
+          setMonkGoblin1Shake(true);
+          setMonkGoblin1Flash(true);
+
+          const midCol1 = (strikeCol + 2) / 2;
+          const midRow1 = (strikeRow + 1) / 2;
+          const leftPct = (midCol1 + 0.5) * 20;
+          const topPct = (midRow1 + 0.5) * 20;
+          const dx1 = 2 - strikeCol;
+          const dy1 = 1 - strikeRow;
+          const angle1 = Math.atan2(dy1, dx1) * (180 / Math.PI) + 90;
+
+          setMonkExtraPunches([
+            {
+              id: Math.random(),
+              left: `${leftPct}%`,
+              top: `${topPct}%`,
+              angle: angle1,
+              icon: monk_force_punch
+            }
+          ]);
+          addFloatingText('-18', 'normal', '#ffb703', 1, 2);
+          setMonkGoblin1Push('translateY(-100%)');
+
+          setTimeout(() => {
+            setMonkGoblin1Shake(false);
+            setMonkGoblin1Flash(false);
+          }, 150);
+        }
+      }, 550);
+
+      // Attack 3: Strike extra Goblin at 3,1 (at 850ms)
+      setTimeout(() => {
+        setMonkExtraPunches([]); // Clear Goblin 1 punch icon
+
+        if (isGoblin2Adjacent) {
+          setMonkGoblin2Shake(true);
+          setMonkGoblin2Flash(true);
+
+          const midCol2 = (strikeCol + 3) / 2;
+          const midRow2 = (strikeRow + 1) / 2;
+          const leftPct = (midCol2 + 0.5) * 20;
+          const topPct = (midRow2 + 0.5) * 20;
+          const dx2 = 3 - strikeCol;
+          const dy2 = 1 - strikeRow;
+          const angle2 = Math.atan2(dy2, dx2) * (180 / Math.PI) + 90;
+
+          setMonkExtraPunches([
+            {
+              id: Math.random(),
+              left: `${leftPct}%`,
+              top: `${topPct}%`,
+              angle: angle2,
+              icon: monk_force_punch
+            }
+          ]);
+          addFloatingText('-18', 'normal', '#ffb703', 1, 3);
+          setMonkGoblin2Push('translateY(-100%)');
+
+          setTimeout(() => {
+            setMonkGoblin2Shake(false);
+            setMonkGoblin2Flash(false);
+          }, 150);
+        }
+      }, 850);
+
+      // Return starts (at 1150ms)
+      setTimeout(() => {
+        setMonkExtraPunches([]);
+        setAnimationPhase('return');
+      }, 1150);
+
+      // Animation complete (at 1400ms)
+      setTimeout(() => {
+        setAnimating(false);
+        setAnimationPhase(null);
+        setTargetPushback(null);
+        setMonkGoblin1Push(null);
+        setMonkGoblin2Push(null);
+      }, 1400);
     }
 
     // --- MONK TWIN FINGER AUTHORITY ---
@@ -1268,23 +1628,9 @@ const SandboxPage = () => {
         setTargetFlash(true);
         setHitEffect({ type: 'ice_burst' });
         addFloatingText('-22', 'normal', '#00bfff', targetPos.row, targetPos.col);
-        // Frozen overlay on portrait
-        setTargetFrozen(true);
-        // Frozen effect icon with timer
-        setFrozenDuration(3000);
-        const fEndTime = Date.now() + 3000;
-        setFrozenEndTime(fEndTime);
-        setFrozenIconActive(true);
-        setFrozenFading(false);
-        setTimeout(() => {
-          setFrozenFading(true);
-          setTimeout(() => {
-            setTargetFrozen(false);
-            setFrozenIconActive(false);
-            setFrozenFading(false);
-            setFrozenEndTime(null);
-          }, 300);
-        }, 3000);
+        // Frozen overlay on portrait & effect icon
+        applyFreeze(3000);
+        
         setTimeout(() => {
           setTargetShake(false);
           setTargetFlash(false);
@@ -1337,7 +1683,7 @@ const SandboxPage = () => {
           dmg = '-22';
           color = '#ffe600';
         } else if (ability.id === 'barbarian_axe_throw') {
-          hitType = 'slash';
+          hitType = null;
           dmg = '-20';
           color = '#ff5400';
         }
@@ -1395,21 +1741,7 @@ const SandboxPage = () => {
           hitType = 'ice_burst';
           dmg = '-18';
           color = '#00bfff';
-          setTargetFrozen(true);
-          setFrozenDuration(2000);
-          const fEndTime = Date.now() + 2000;
-          setFrozenEndTime(fEndTime);
-          setFrozenIconActive(true);
-          setFrozenFading(false);
-          setTimeout(() => {
-            setFrozenFading(true);
-            setTimeout(() => {
-              setTargetFrozen(false);
-              setFrozenIconActive(false);
-              setFrozenFading(false);
-              setFrozenEndTime(null);
-            }, 300);
-          }, 2000);
+          applyFreeze(2000);
         } else if (arrowType === 'force') {
           hitType = 'fire_exp';
           dmg = '-22';
@@ -1419,38 +1751,27 @@ const SandboxPage = () => {
           const dy = targetPos.row - fighterPos.row;
           const dist = Math.sqrt(dx * dx + dy * dy);
           if (dist > 0) {
-            const pushX = Math.round(dx / dist) * 100;
-            const pushY = Math.round(dy / dist) * 100;
-            setTargetPushback(`translate(${pushX}%, ${pushY}%)`);
-            setTimeout(() => {
-              setTargetPushback(null);
-            }, 800);
+            const pushCol = Math.round(dx / dist);
+            const pushRow = Math.round(dy / dist);
+            
+            setTargetPos(prev => {
+              const newCol = Math.max(0, Math.min(4, prev.col + pushCol));
+              const newRow = Math.max(0, Math.min(4, prev.row + pushRow));
+              
+              if (newCol !== prev.col || newRow !== prev.row) {
+                setTargetPushback(`translate(${pushCol * 100}%, ${pushRow * 100}%)`);
+                setTimeout(() => {
+                  setTargetPushback(null);
+                }, 250);
+              }
+              return { row: newRow, col: newCol };
+            });
           }
         } else if (arrowType === 'poison') {
           hitType = 'poison_burst';
           dmg = '-14';
           color = '#38b000';
-          // Start poison DoT — 8s duration, ticks every 1.5s
-          if (poisonIntervalRef.current) clearInterval(poisonIntervalRef.current);
-          setPoisonDuration(8000);
-          const pEndTime = Date.now() + 8000;
-          setPoisonEndTime(pEndTime);
-          setTargetPoisoned(true);
-          setPoisonFading(false);
-          let ticks = 0;
-          poisonIntervalRef.current = setInterval(() => {
-            ticks++;
-            addFloatingText('-4', 'normal', '#38b000', targetPos.row, targetPos.col);
-            if (ticks >= 5) {
-              clearInterval(poisonIntervalRef.current);
-              setPoisonFading(true);
-              setTimeout(() => {
-                setTargetPoisoned(false);
-                setPoisonFading(false);
-                setPoisonEndTime(null);
-              }, 300);
-            }
-          }, 1500);
+          applyPoison(8000, 1500, 4);
         } else if (arrowType === 'celestial') {
           hitType = 'fire_exp';
           dmg = '-28';
@@ -1511,7 +1832,7 @@ const SandboxPage = () => {
         setProjectile(null);
         setTargetShake(true);
         setTargetFlash(true);
-        setHitEffect({ type: 'slash' });
+        setHitEffect(null);
         addFloatingText('ENSNARED!', 'normal', '#8bc34a', targetPos.row, targetPos.col);
         const endTime = Date.now() + 3000;
         setEnsnareEndTime(endTime);
@@ -1559,8 +1880,8 @@ const SandboxPage = () => {
           setTimeout(() => {
             setProjectiles(prev => prev.map(p => p.id === arrowId ? {
               ...p,
-              x: targetPos.col * 20,
-              y: targetPos.row * 20
+              x: targetPosRef.current.col * 20,
+              y: targetPosRef.current.row * 20
             } : p));
           }, 30);
 
@@ -1578,41 +1899,43 @@ const SandboxPage = () => {
               hitType = 'ice_burst';
               dmg = '-14';
               color = '#00bfff';
-              setTargetFrozen(true);
-              setFrozenDuration(1500);
-              const fEndTime = Date.now() + 1500;
-              setFrozenEndTime(fEndTime);
-              setFrozenIconActive(true);
-              setFrozenFading(false);
-              setTimeout(() => {
-                setFrozenFading(true);
-                setTimeout(() => {
-                  setTargetFrozen(false);
-                  setFrozenIconActive(false);
-                  setFrozenFading(false);
-                  setFrozenEndTime(null);
-                }, 300);
-              }, 1500);
+              applyFreeze(1500);
             } else if (arrowType === 'force') {
               hitType = 'fire_exp';
               dmg = '-18';
               color = '#ff9f1c';
 
-              const dx = targetPos.col - fighterPos.col;
-              const dy = targetPos.row - fighterPos.row;
+              const dx = targetPosRef.current.col - fighterPos.col;
+              const dy = targetPosRef.current.row - fighterPos.row;
               const dist = Math.sqrt(dx * dx + dy * dy);
               if (dist > 0) {
-                const pushX = Math.round(dx / dist) * 100;
-                const pushY = Math.round(dy / dist) * 100;
-                setTargetPushback(`translate(${pushX}%, ${pushY}%)`);
-                setTimeout(() => {
-                  setTargetPushback(null);
-                }, 800);
+                const pushCol = Math.round(dx / dist);
+                const pushRow = Math.round(dy / dist);
+                
+                setTargetPos(prev => {
+                  const newCol = Math.max(0, Math.min(4, prev.col + pushCol));
+                  const newRow = Math.max(0, Math.min(4, prev.row + pushRow));
+                  
+                  if (newCol !== prev.col || newRow !== prev.row) {
+                    setProjectiles(projs => projs.map(p => p.isRangerArrow ? {
+                      ...p,
+                      x: newCol * 20,
+                      y: newRow * 20
+                    } : p));
+                    
+                    setTargetPushback(`translate(${pushCol * 100}%, ${pushRow * 100}%)`);
+                    setTimeout(() => {
+                      setTargetPushback(null);
+                    }, 250);
+                  }
+                  return { row: newRow, col: newCol };
+                });
               }
             } else if (arrowType === 'poison') {
               hitType = 'poison_burst';
               dmg = '-10';
               color = '#38b000';
+              applyPoison(8000, 1500, 4);
             } else if (arrowType === 'celestial') {
               hitType = 'fire_exp';
               dmg = '-22';
@@ -1620,13 +1943,13 @@ const SandboxPage = () => {
             }
 
             setHitEffect({ type: hitType });
-            addFloatingText(dmg, 'normal', color, targetPos.row, targetPos.col);
+            addFloatingText(dmg, 'normal', color, targetPosRef.current.row, targetPosRef.current.col);
 
             if (targetMarked) {
               setTargetMarked(false);
               setMarkEndTime(null);
               setTimeout(() => {
-                addFloatingText('+15', 'crit', '#e63946', targetPos.row, targetPos.col);
+                addFloatingText('+15', 'crit', '#e63946', targetPosRef.current.row, targetPosRef.current.col);
               }, 150);
             }
 
@@ -1968,26 +2291,7 @@ const SandboxPage = () => {
         setHitEffect({ type: 'poison_burst' });
         addFloatingText('-12', 'normal', '#38b000', targetPos.row, targetPos.col);
 
-        if (poisonIntervalRef.current) clearInterval(poisonIntervalRef.current);
-        setPoisonDuration(4000);
-        setPoisonEndTime(Date.now() + 4000);
-        setTargetPoisoned(true);
-        setPoisonFading(false);
-
-        let ticks = 0;
-        poisonIntervalRef.current = setInterval(() => {
-          ticks++;
-          addFloatingText('-3', 'normal', '#38b000', targetPos.row, targetPos.col);
-          if (ticks >= 4) {
-            clearInterval(poisonIntervalRef.current);
-            setPoisonFading(true);
-            setTimeout(() => {
-              setTargetPoisoned(false);
-              setPoisonFading(false);
-              setPoisonEndTime(null);
-            }, 300);
-          }
-        }, 1000);
+        applyPoison(4000, 1000, 3);
 
         setTimeout(() => {
           setTargetShake(false);
@@ -2169,6 +2473,90 @@ const SandboxPage = () => {
         setHitEffect(null);
         setAnimating(false);
       }, 800);
+    }
+
+    // --- SUMMON SKELETON ---
+    else if (ability.type === 'summon_skeleton_type') {
+      const summonRow = fighterPos.row + 1;
+      const summonCol = fighterPos.col;
+
+      if (summonRow < 5) {
+        setAnimating(true);
+        setActiveSummon({
+          row: summonRow,
+          col: summonCol,
+          icon: summon_icon,
+          type: 'skeleton',
+          shrinking: false
+        });
+
+        // 800ms: start shrink
+        setTimeout(() => {
+          setActiveSummon(prev => prev ? { ...prev, shrinking: true } : null);
+        }, 800);
+
+        // 1200ms: disappear and spawn skeleton minion
+        setTimeout(() => {
+          setActiveSummon(null);
+          setMinions(prev => [
+            ...prev.filter(m => !(m.row === summonRow && m.col === summonCol)),
+            {
+              row: summonRow,
+              col: summonCol,
+              type: 'skeleton',
+              icon: summon_skeleton_icon,
+              label: 'SKELETON',
+              fadingIn: true
+            }
+          ]);
+          setTimeout(() => {
+            setMinions(prev => prev.map(m => m.row === summonRow && m.col === summonCol ? { ...m, fadingIn: false } : m));
+          }, 500);
+          setAnimating(false);
+        }, 1200);
+      }
+    }
+
+    // --- SUMMON SKELETON KNIGHT ---
+    else if (ability.type === 'summon_skeleton_knight_type') {
+      const summonRow = fighterPos.row + 1;
+      const summonCol = fighterPos.col;
+
+      if (summonRow < 5) {
+        setAnimating(true);
+        setActiveSummon({
+          row: summonRow,
+          col: summonCol,
+          icon: summon2_icon,
+          type: 'skeleton_knight',
+          shrinking: false
+        });
+
+        // 800ms: start shrink
+        setTimeout(() => {
+          setActiveSummon(prev => prev ? { ...prev, shrinking: true } : null);
+        }, 800);
+
+        // 1200ms: disappear and spawn skeleton knight minion
+        setTimeout(() => {
+          setActiveSummon(null);
+          setMinions(prev => [
+            ...prev.filter(m => !(m.row === summonRow && m.col === summonCol)),
+            {
+              row: summonRow,
+              col: summonCol,
+              type: 'skeleton_knight',
+              icon: summon_skeleton_knight_icon,
+              label: 'KNIGHT',
+              fadingIn: true
+            }
+          ]);
+          setTimeout(() => {
+            setMinions(prev => prev.map(m => m.row === summonRow && m.col === summonCol ? { ...m, fadingIn: false } : m));
+          }, 500);
+          setAnimating(false);
+        }, 1200);
+      }
     }
 
     // --- DEPLOY TURRET ---
@@ -2491,6 +2879,37 @@ const SandboxPage = () => {
           20% { transform: scaleX(1) scaleY(0.5); opacity: 1; }
           80% { transform: scaleX(1) scaleY(0.5); opacity: 1; }
           100% { transform: scaleX(0.1) scaleY(0.05); opacity: 0; }
+        }
+        @keyframes summonPortalIn {
+          0% {
+            transform: translate(-50%, -50%) scale(0.01) rotate(0deg);
+            opacity: 0;
+          }
+          10% {
+            opacity: 0.8;
+          }
+          65% {
+            transform: translate(-50%, -50%) scale(1) rotate(540deg);
+            opacity: 0.8;
+          }
+          80% {
+            transform: translate(-50%, -50%) scale(1) rotate(600deg);
+            opacity: 0.8;
+          }
+          100% {
+            transform: translate(-50%, -50%) scale(1) rotate(620deg);
+            opacity: 0;
+          }
+        }
+        @keyframes minionFadeIn {
+          0% {
+            opacity: 0;
+            transform: scale(0.3);
+          }
+          100% {
+            opacity: 1;
+            transform: scale(1);
+          }
         }
         @keyframes scaleUp {
           0% { transform: scale(0); opacity: 0; }
@@ -2820,6 +3239,14 @@ const SandboxPage = () => {
                     setShieldWallActive(false);
                     setTurrets([]);
                     setMinions([]);
+                    setMonkGoblin1Shake(false);
+                    setMonkGoblin1Flash(false);
+                    setMonkGoblin1Push(null);
+                    setMonkGoblin2Shake(false);
+                    setMonkGoblin2Flash(false);
+                    setMonkGoblin2Push(null);
+                    setMonkExtraPunches([]);
+                    setActiveSummons([]);
                     if (f.id === 'sage') {
                       setTargetPos({ row: 2, col: 3 });
                     }
@@ -2901,8 +3328,8 @@ const SandboxPage = () => {
               
               <button
                 onClick={() => {
-                  setFighterPos({ row: 2, col: 1 });
-                  setTargetPos({ row: 2, col: 3 });
+                  setFighterPos({ row: 2, col: 0 });
+                  setTargetPos({ row: 2, col: 2 });
                   setTurrets([]);
                   setMinions([]);
                   setTargetFrozen(false);
@@ -2912,10 +3339,24 @@ const SandboxPage = () => {
                   setTargetPoisoned(false);
                   setPoisonFading(false);
                   setPoisonEndTime(null);
+                  if (poisonIntervalRef.current) {
+                    clearInterval(poisonIntervalRef.current);
+                    poisonIntervalRef.current = null;
+                  }
+                  setPoisonSingleDuration(8000);
+                  setFrozenSingleDuration(2000);
                   setTargetBleeding(false);
                   setBleedFading(false);
                   setBleedEndTime(null);
                   setShieldWallActive(false);
+                  setMonkGoblin1Shake(false);
+                  setMonkGoblin1Flash(false);
+                  setMonkGoblin1Push(null);
+                  setMonkGoblin2Shake(false);
+                  setMonkGoblin2Flash(false);
+                  setMonkGoblin2Push(null);
+                  setMonkExtraPunches([]);
+                  setActiveSummons([]);
                 }}
                 style={{
                   background: 'rgba(255,255,255,0.05)',
@@ -3001,12 +3442,22 @@ const SandboxPage = () => {
                       )}
 
                       {/* Render Minion */}
-                      {isMinion && (
-                        <div style={{ width: '60%', height: '60%', position: 'relative', animation: 'scaleUp 0.3s ease-out' }}>
-                          <img src={bat_gate} alt="bat minion" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-                          <div style={{ position: 'absolute', bottom: '-8px', left: '0', width: '100%', textAlign: 'center', fontSize: '9px', color: '#a2d2ff', fontWeight: 'bold' }}>BAT</div>
-                        </div>
-                      )}
+                      {isMinion && (() => {
+                        const minion = minions.find(m => m.row === r && m.col === c);
+                        if (!minion) return null;
+                        
+                        const minionIcon = minion.icon || bat_gate;
+                        const minionLabel = minion.label || 'BAT';
+                        const labelColor = minion.type === 'skeleton' ? '#a8a29e' : minion.type === 'skeleton_knight' ? '#3b82f6' : '#a2d2ff';
+                        const anim = minion.fadingIn ? 'minionFadeIn 0.5s ease-out both' : 'scaleUp 0.3s ease-out';
+
+                        return (
+                          <div style={{ width: '60%', height: '60%', position: 'relative', animation: anim }}>
+                            <img src={minionIcon} alt={minionLabel} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                            <div style={{ position: 'absolute', bottom: '-8px', left: '0', width: '100%', textAlign: 'center', fontSize: '9px', color: labelColor, fontWeight: 'bold' }}>{minionLabel}</div>
+                          </div>
+                        );
+                      })()}
 
                       {/* Render Additional Ranger for Sage */}
                       {isAdditionalRanger && (
@@ -4176,7 +4627,7 @@ const SandboxPage = () => {
                           backgroundRepeat: 'no-repeat',
                           backgroundPosition: 'center',
                           boxShadow: '0 2px 4px rgba(0,0,0,0.5)',
-                          overflow: 'hidden',
+                          overflow: 'visible',
                           position: 'relative'
                         }}
                       >
@@ -4203,7 +4654,7 @@ const SandboxPage = () => {
                             strokeDashoffset={getPoisonDashOffset()}
                           />
                           {(() => {
-                            const coords = getRadialLineCoords(poisonEndTime, poisonDuration);
+                            const coords = getRadialLineCoords(poisonEndTime, poisonDuration, poisonSingleDuration);
                             return coords ? (
                               <line
                                 x1="10"
@@ -4216,6 +4667,34 @@ const SandboxPage = () => {
                             ) : null;
                           })()}
                         </svg>
+                        {/* Poison stack badge */}
+                        {(() => {
+                          const remaining = Math.max(0, poisonEndTime - currentTime);
+                          const stacks = Math.ceil(remaining / (poisonSingleDuration || 8000));
+                          return stacks > 1 ? (
+                            <div
+                              style={{
+                                position: 'absolute',
+                                bottom: '-4px',
+                                right: '-4px',
+                                background: '#38b000',
+                                color: '#fff',
+                                fontSize: '9px',
+                                fontWeight: 'bold',
+                                borderRadius: '50%',
+                                width: '12px',
+                                height: '12px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                border: '1px solid #111',
+                                zIndex: 10
+                              }}
+                            >
+                              {stacks}
+                            </div>
+                          ) : null;
+                        })()}
                       </div>
                     )}
                     {frozenIconActive && (
@@ -4232,7 +4711,7 @@ const SandboxPage = () => {
                           backgroundRepeat: 'no-repeat',
                           backgroundPosition: 'center',
                           boxShadow: '0 2px 4px rgba(0,0,0,0.5)',
-                          overflow: 'hidden',
+                          overflow: 'visible',
                           position: 'relative'
                         }}
                       >
@@ -4259,7 +4738,7 @@ const SandboxPage = () => {
                             strokeDashoffset={getFrozenDashOffset()}
                           />
                           {(() => {
-                            const coords = getRadialLineCoords(frozenEndTime, frozenDuration);
+                            const coords = getRadialLineCoords(frozenEndTime, frozenDuration, frozenSingleDuration);
                             return coords ? (
                               <line
                                 x1="10"
@@ -4272,6 +4751,34 @@ const SandboxPage = () => {
                             ) : null;
                           })()}
                         </svg>
+                        {/* Frozen stack badge */}
+                        {(() => {
+                          const remaining = Math.max(0, frozenEndTime - currentTime);
+                          const stacks = Math.ceil(remaining / (frozenSingleDuration || 2000));
+                          return stacks > 1 ? (
+                            <div
+                              style={{
+                                position: 'absolute',
+                                bottom: '-4px',
+                                right: '-4px',
+                                background: '#00bfff',
+                                color: '#fff',
+                                fontSize: '9px',
+                                fontWeight: 'bold',
+                                borderRadius: '50%',
+                                width: '12px',
+                                height: '12px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                border: '1px solid #111',
+                                zIndex: 10
+                              }}
+                            >
+                              {stacks}
+                            </div>
+                          ) : null;
+                        })()}
                       </div>
                     )}
                     {sleepIconActive && (
@@ -4832,6 +5339,109 @@ const SandboxPage = () => {
                 </>
               )}
 
+              {/* --- Extra Goblins (col 2, row 1 & col 3, row 1) for Monk --- */}
+              {selectedFighterId === 'monk' && (
+                <>
+                  <div
+                    style={{
+                      position: 'absolute',
+                      width: '20%',
+                      height: '20%',
+                      left: `${2 * 20}%`,
+                      top: `${1 * 20}%`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      zIndex: 9,
+                      pointerEvents: 'none',
+                      transform: monkGoblin1Push ? monkGoblin1Push : 'none',
+                      transition: 'transform 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+                    }}
+                  >
+                    <div style={{
+                      width: '80%',
+                      height: '80%',
+                      borderRadius: '8px',
+                      border: monkGoblin1Flash ? '3px solid #ff4d4d' : '2px solid #ff5400',
+                      backgroundColor: monkGoblin1Flash ? '#990000' : '#222',
+                      backgroundImage: `url(${targetPortrait})`,
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
+                      boxShadow: '0 8px 16px rgba(0,0,0,0.5)',
+                      position: 'relative',
+                      transform: monkGoblin1Shake ? 'translate(5px, 2px) rotate(2deg)' : 'none',
+                      transition: 'transform 0.05s'
+                    }}>
+                      <div style={{
+                        position: 'absolute',
+                        bottom: '0',
+                        left: '0',
+                        width: '100%',
+                        background: 'rgba(0,0,0,0.75)',
+                        color: '#fff',
+                        fontSize: '10px',
+                        fontWeight: 'bold',
+                        textAlign: 'center',
+                        padding: '2px 0',
+                        borderBottomLeftRadius: '6px',
+                        borderBottomRightRadius: '6px'
+                      }}>
+                        {targetName}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      position: 'absolute',
+                      width: '20%',
+                      height: '20%',
+                      left: `${3 * 20}%`,
+                      top: `${1 * 20}%`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      zIndex: 9,
+                      pointerEvents: 'none',
+                      transform: monkGoblin2Push ? monkGoblin2Push : 'none',
+                      transition: 'transform 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+                    }}
+                  >
+                    <div style={{
+                      width: '80%',
+                      height: '80%',
+                      borderRadius: '8px',
+                      border: monkGoblin2Flash ? '3px solid #ff4d4d' : '2px solid #ff5400',
+                      backgroundColor: monkGoblin2Flash ? '#990000' : '#222',
+                      backgroundImage: `url(${targetPortrait})`,
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
+                      boxShadow: '0 8px 16px rgba(0,0,0,0.5)',
+                      position: 'relative',
+                      transform: monkGoblin2Shake ? 'translate(5px, 2px) rotate(2deg)' : 'none',
+                      transition: 'transform 0.05s'
+                    }}>
+                      <div style={{
+                        position: 'absolute',
+                        bottom: '0',
+                        left: '0',
+                        width: '100%',
+                        background: 'rgba(0,0,0,0.75)',
+                        color: '#fff',
+                        fontSize: '10px',
+                        fontWeight: 'bold',
+                        textAlign: 'center',
+                        padding: '2px 0',
+                        borderBottomLeftRadius: '6px',
+                        borderBottomRightRadius: '6px'
+                      }}>
+                        {targetName}
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+
               {/* --- Healing Hands Icon Overlay --- */}
               {healIcon && (
                 <div
@@ -5015,6 +5625,68 @@ const SandboxPage = () => {
                   />
                 )
               )}
+
+              {/* --- Monk Extra Punches (for Force Punch Flurry / split strikes) --- */}
+              {monkExtraPunches.map(p => (
+                <div
+                  key={p.id}
+                  style={{
+                    position: 'absolute',
+                    left: p.left,
+                    top: p.top,
+                    width: '56px',
+                    height: '56px',
+                    transform: `translate(-50%, -50%) rotate(${p.angle}deg)`,
+                    pointerEvents: 'none',
+                    zIndex: 5000,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  <img
+                    src={p.icon}
+                    alt="monk extra punch"
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'contain',
+                      animation: 'scaleUp 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275) both'
+                    }}
+                  />
+                </div>
+              ))}
+
+              {/* --- Summoner Summoning Overlay --- */}
+              {activeSummons.map((summon) => (
+                <div
+                  key={summon.id}
+                  style={{
+                    position: 'absolute',
+                    left: `${summon.col * 20 + 10}%`,
+                    top: `${summon.row * 20 + 10}%`,
+                    width: '90px',
+                    height: '90px',
+                    backgroundImage: `url(${summon.icon})`,
+                    backgroundSize: 'contain',
+                    backgroundRepeat: 'no-repeat',
+                    backgroundPosition: 'center',
+                    animation: 'summonPortalIn 1.2s linear both',
+                    pointerEvents: 'none',
+                    zIndex: 35,
+                    opacity: 0.8,
+                    maskImage: 'radial-gradient(circle, rgba(0,0,0,1) 45%, rgba(0,0,0,0) 70%)',
+                    WebkitMaskImage: 'radial-gradient(circle, rgba(0,0,0,1) 45%, rgba(0,0,0,0) 70%)',
+                    filter: summon.type === 'skeleton_knight' 
+                      ? 'drop-shadow(0 0 8px #00bfff) drop-shadow(0 0 15px #00ffff)' 
+                      : summon.type === 'duplicate'
+                        ? 'drop-shadow(0 0 8px #d800ff) drop-shadow(0 0 15px #ff007f)'
+                        : summon.type === 'triplicate'
+                          ? 'drop-shadow(0 0 8px #8a2be2) drop-shadow(0 0 15px #4b0082)'
+                          : 'drop-shadow(0 0 8px #2ec4b6) drop-shadow(0 0 15px #a2d2ff)'
+                  }}
+                />
+              ))}
 
               {/* --- Multi-projectiles (Wizard missiles / Ranger execute arrows) --- */}
               {projectiles.map(p => (
@@ -5494,23 +6166,14 @@ const SandboxPage = () => {
                     );
                   })()}
                   {hitEffect.type === 'shield_slam_connect' && (() => {
-                    const dx = fighterPos.col - targetPos.col;
-                    const dy = fighterPos.row - targetPos.row;
+                    const dx = targetPos.col - fighterPos.col;
+                    const dy = targetPos.row - fighterPos.row;
                     const dist = Math.sqrt(dx * dx + dy * dy);
-                    let adjCol = fighterPos.col;
-                    let adjRow = fighterPos.row;
-                    if (dist > 0) {
-                      const colStep = Math.round(dx / dist);
-                      const rowStep = Math.round(dy / dist);
-                      adjCol = targetPos.col + colStep;
-                      adjRow = targetPos.row + rowStep;
-                    }
-                    const swingDx = targetPos.col - adjCol;
-                    const swingDy = targetPos.row - adjRow;
-
-                    // Calculate divide (midpoint) offset relative to Target (like healing hands)
-                    const leftOffset = (swingDx / 2) * -100;
-                    const topOffset = (swingDy / 2) * -100;
+                    const stepX = dist > 0 ? dx / dist : 1;
+                    const stepY = dist > 0 ? dy / dist : 0;
+                    
+                    const leftOffset = (-dx * 100) + stepX * 50;
+                    const topOffset = (-dy * 100) + stepY * 50;
 
                     return (
                       <div
@@ -5531,6 +6194,53 @@ const SandboxPage = () => {
                         <img
                           src={shield_slam}
                           alt="shield slam connect"
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'contain',
+                            animation: 'scaleUp 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275) both'
+                          }}
+                        />
+                      </div>
+                    );
+                  })()}
+                  {hitEffect.type === 'monk_force_punch_effect' && (() => {
+                    const dx = fighterPos.col - targetPos.col;
+                    const dy = fighterPos.row - targetPos.row;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    let adjCol = fighterPos.col;
+                    let adjRow = fighterPos.row;
+                    if (dist > 0) {
+                      const colStep = Math.round(dx / dist);
+                      const rowStep = Math.round(dy / dist);
+                      adjCol = targetPos.col + colStep;
+                      adjRow = targetPos.row + rowStep;
+                    }
+                    const swingDx = targetPos.col - adjCol;
+                    const swingDy = targetPos.row - adjRow;
+
+                    const leftOffset = (swingDx / 2) * -100;
+                    const topOffset = (swingDy / 2) * -100;
+
+                    return (
+                      <div
+                        style={{
+                          position: 'absolute',
+                          left: `calc(50% + ${leftOffset}px)`,
+                          top: `calc(50% + ${topOffset}px)`,
+                          width: '56px',
+                          height: '56px',
+                          transform: 'translate(-50%, -50%)',
+                          pointerEvents: 'none',
+                          zIndex: 5000,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                      >
+                        <img
+                          src={monk_force_punch}
+                          alt="monk force punch connect"
                           style={{
                             width: '100%',
                             height: '100%',
@@ -5665,7 +6375,7 @@ const SandboxPage = () => {
                           top: `calc(50% + ${topOffset}px)`,
                           width: '56px',
                           height: '56px',
-                          transform: `translate(-50%, -50%) rotate(${baseAngle + 90}deg)`,
+                          transform: `translate(-50%, -50%) rotate(${baseAngle + 90}deg) scaleY(-1)`,
                           pointerEvents: 'none',
                           zIndex: 5000,
                           display: 'flex',
