@@ -612,11 +612,16 @@ import ranger_loose from '../assets/icons/combat-icons/specials/ranger/loose.png
 import ranger_notch from '../assets/icons/combat-icons/specials/ranger/notch.png'
 import ranger_mark from '../assets/icons/combat-icons/specials/ranger/mark.png'
 import ranger_execute from '../assets/icons/combat-icons/specials/ranger/execute.png'
+import ranger_ensnare from '../assets/icons/combat-icons/specials/ranger/ensnare.png'
+import ranger_net_throw from '../assets/icons/combat-icons/specials/ranger/net-throw.png'
 import healing_hands from '../assets/icons/combat-icons/specials/sage/healing_hands.png'
 import circle_of_protection from '../assets/icons/combat-icons/specials/sage/circle_of_protection.png'
 import shielded from '../assets/icons/combat-icons/specials/sage/shielded.png'
 import shielded_partial from '../assets/icons/combat-icons/specials/sage/shielded_partial.png'
 import bleeding from '../assets/icons/combat-icons/effects/bleeding.png';
+import poison from '../assets/icons/combat-icons/effects/poison.png';
+import frozen from '../assets/icons/combat-icons/effects/frozen.png';
+import acid_drop from '../assets/icons/combat-icons/effects/acid drop.png';
 
 import monk_ethereal_speed from '../assets/icons/combat-icons/specials/monk/ethereal_speed.png';
 import monk_astral_focus from '../assets/icons/combat-icons/specials/monk/astral_focus.png';
@@ -1358,6 +1363,8 @@ export {
     ranger_notch,
     ranger_mark,
     ranger_execute,
+    ranger_ensnare,
+    ranger_net_throw,
     healing_hands,
     circle_of_protection,
     shielded,
@@ -1395,6 +1402,9 @@ export {
     barbarian_berserker,
     barbarian_leap_attack,
     bleeding,
+    poison,
+    frozen,
+    acid_drop,
     wizard_disintegrate,
     wizard_sleep,
     wizard_annihilation,

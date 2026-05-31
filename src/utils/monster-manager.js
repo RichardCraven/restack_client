@@ -282,7 +282,7 @@ export function MonsterManager() {
             subtype: 'undead',
             key: 'vampire',
             image_names: ['black_vampire'],
-            monster_names: ['Vukodlak', 'Morias', 'Roterach'],
+            monster_names: ['Vukodlak', 'Morias', 'Sekhem Apep'],
             stats: {
                 hp: 194,
                 atk: 9,
