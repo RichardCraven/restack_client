@@ -18,6 +18,9 @@ import {
   shielded,
   shielded_partial,
   healing_hands,
+  perceive,
+  weakness_doubled,
+  beholder_minion_portrait,
   soldier,
   wizard,
   barbarian,
@@ -74,6 +77,7 @@ import {
   soldier_battlecry,
   // Monk abilities
   monk_ethereal_speed,
+  monk_astral_being,
   monk_astral_focus,
   monk_astral_projection,
   monk_force_punch_flurry,
@@ -94,6 +98,16 @@ import {
   duplicate_transition_icon,
   triplicate_icon,
   triplicate_transition_icon,
+  open_rift_icon,
+  portal_icon,
+  summon3_icon,
+  summon_imp_army_icon,
+  summon_skeleton_army_icon,
+  summon_devil_icon,
+  summon_zombie_icon,
+  summon_ghoul_icon,
+  summon_imp_icon,
+  duration_icon,
   // Swords
   shortsword,
   cutlass,
@@ -233,7 +247,8 @@ const fightersData = [
     portrait: sage,
     abilities: [
       { id: 'heal', name: 'Heal', desc: 'Cast restorative magic on an ally.', icon: healing_hands, type: 'heal' },
-      { id: 'circle_of_protection', name: 'Circle of Protection', desc: 'Create a sanctuary shielding allies.', icon: circle_of_protection, type: 'circle_of_protection' }
+      { id: 'circle_of_protection', name: 'Circle of Protection', desc: 'Create a sanctuary shielding allies.', icon: circle_of_protection, type: 'circle_of_protection' },
+      { id: 'perceive', name: 'Perceive', desc: 'Affects all enemy units. Doubles the weakness of each enemy for a 2x long duration.', icon: perceive, type: 'perceive_type' }
     ]
   },
   {
@@ -289,10 +304,10 @@ const fightersData = [
       { id: 'monk_astral_focus', name: 'Astral Focus', desc: 'Enter astral focus, boosting concentration.', icon: monk_astral_focus, type: 'monk_astral_focus_type' },
       { id: 'monk_astral_projection', name: 'Astral Projection', desc: 'Project spirit forward to strike.', icon: monk_astral_projection, type: 'monk_astral_proj_type' },
       { id: 'monk_force_punch_flurry', name: 'Force Punch Flurry', desc: 'Unleash a flurry of force punches.', icon: monk_force_punch_flurry, type: 'monk_fp_flurry_type' },
-      { id: 'monk_third_eye', name: 'Third Eye', desc: 'Open the third eye to foresee strikes.', icon: monk_third_eye, type: 'monk_third_eye_type' },
+      { id: 'monk_third_eye', name: 'Third Eye', desc: 'Open the third eye, doubling the chance that enemy attacks will miss (4s duration).', icon: monk_third_eye, type: 'monk_third_eye_type' },
       { id: 'monk_twin_finger_authority', name: 'Twin Finger Authority', desc: 'Strike critical chakra points.', icon: monk_twin_finger_authority, type: 'monk_twin_finger_type' },
       { id: 'monk_inner_fire', name: 'Inner Fire', desc: 'Awaken the inner blaze, gaining orange glow and fiery attacks.', icon: monk_inner_fire, type: 'monk_inner' },
-      { id: 'monk_meditate', name: 'Meditate', desc: 'Restores chi and heals deep wounds.', icon: monk_meditate, type: 'heal_gold' },
+      { id: 'monk_meditate', name: 'Meditate', desc: 'Restores chi and heals deep wounds.', icon: monk_meditate, type: 'monk_meditate_type' },
       { id: 'monk_whirlwind', name: 'Whirlwind', desc: 'Attack all adjacent units with a spinning vortex.', icon: monk_whirlwind, type: 'monk_whirlwind_type' },
       { id: 'monk_force_punch', name: 'Force Punch', desc: 'Concentrate force to strike.', icon: monk_force_punch, type: 'monk_force_punch_type' },
       { id: 'monk_flurry', name: 'Flurry', desc: 'Unleash a rapid flurry of strikes.', icon: monk_flurry, type: 'monk_flurry_type' },
@@ -304,10 +319,17 @@ const fightersData = [
     name: 'Summoner',
     portrait: summoner,
     abilities: [
-      { id: 'summon_skeleton', name: 'Summon Skeleton', desc: 'Summon a skeleton warrior to the field.', icon: summon_skeleton_icon, type: 'summon_skeleton_type' },
-      { id: 'summon_skeleton_knight', name: 'Summon Skeleton Knight', desc: 'Summon a heavily armored skeleton knight.', icon: summon_skeleton_knight_icon, type: 'summon_skeleton_knight_type' },
-      { id: 'summoner_duplicate', name: 'Duplicate', desc: 'Create a duplicate of the summoned minion behind it.', icon: duplicate_icon, type: 'summoner_duplicate_type' },
-      { id: 'summoner_triplicate', name: 'Triplicate', desc: 'Create two duplicates of the summoned minion NW and SW of it.', icon: triplicate_icon, type: 'summoner_triplicate_type' }
+      { id: 'open_rift', name: 'Open the Rift', desc: 'Summon a rift portal at a random open tile on the board for 3 long durations.', icon: open_rift_icon, type: 'open_rift_type', tier: 'rift' },
+      { id: 'summon_skeleton', name: 'Summon Skeleton', desc: 'Summon a skeleton warrior to the field.', icon: summon_skeleton_icon, type: 'summon_skeleton_type', tier: 1 },
+      { id: 'summon_imp', name: 'Summon Imp', desc: 'Summon a fiery imp minion.', icon: summon_imp_icon, type: 'summon_imp_type', tier: 1 },
+      { id: 'summon_skeleton_knight', name: 'Summon Skeleton Knight', desc: 'Summon a heavily armored skeleton knight.', icon: summon_skeleton_knight_icon, type: 'summon_skeleton_knight_type', tier: 2 },
+      { id: 'summon_zombie', name: 'Summon Zombie', desc: 'Summon a plague-carrying zombie.', icon: summon_zombie_icon, type: 'summon_zombie_type', tier: 2 },
+      { id: 'summon_ghoul', name: 'Summon Ghoul', desc: 'Summon a ravenous flesh-eating ghoul.', icon: summon_ghoul_icon, type: 'summon_ghoul_type', tier: 2 },
+      { id: 'summon_imp_army', name: 'Summon Imp Army', desc: 'Summon a swarm of imp minions.', icon: summon_imp_army_icon, type: 'summon_imp_army_type', tier: 3 },
+      { id: 'summon_skeleton_army', name: 'Summon Skeleton Army', desc: 'Summon a legion of skeleton warriors.', icon: summon_skeleton_army_icon, type: 'summon_skeleton_army_type', tier: 3 },
+      { id: 'summon_devil', name: 'Summon Devil', desc: 'Summon a high devil minion.', icon: summon_devil_icon, type: 'summon_devil_type', tier: 3 },
+      { id: 'summoner_duplicate', name: 'Duplicate', desc: 'Create a duplicate of the summoned minion behind it.', icon: duplicate_icon, type: 'summoner_duplicate_type', tier: 'utility' },
+      { id: 'summoner_triplicate', name: 'Triplicate', desc: 'Create two duplicates of the summoned minion NW and SW of it.', icon: triplicate_icon, type: 'summoner_triplicate_type', tier: 'utility' }
     ]
   },
   {
@@ -330,14 +352,30 @@ const SandboxPage = () => {
   const [selectedRune, setSelectedRune] = useState('archaic');
 
   // --- Combat Animations States ---
-  const [selectedFighterId, setSelectedFighterId] = useState('ranger');
+  const [selectedFighterId, setSelectedFighterId] = useState(localStorage.getItem('sandboxFighter') || 'ranger');
   const [fighterPos, setFighterPos] = useState({ row: 2, col: 0 });
   const [targetPos, setTargetPos] = useState({ row: 2, col: 2 });
+
+  useEffect(() => {
+    localStorage.setItem('sandboxFighter', selectedFighterId);
+    if (selectedFighterId === 'ranger') {
+      setFighterPos({ row: 2, col: 0 });
+      setTargetPos({ row: 2, col: 2 });
+    } else {
+      setFighterPos({ row: 2, col: 1 });
+      setTargetPos({ row: 2, col: 3 });
+    }
+  }, [selectedFighterId]);
   const [placementMode, setPlacementMode] = useState('fighter'); // 'fighter' or 'target'
   const [notchedArrow, setNotchedArrow] = useState('force'); // 'ice', 'force', 'poison', 'celestial'
   const [submenuOpen, setSubmenuOpen] = useState(false);
   const [targetMarked, setTargetMarked] = useState(false);
   const [copActive, setCopActive] = useState(false);
+  const [sagePerceiveEndTime, setSagePerceiveEndTime] = useState(null);
+  const [sagePerceiveDuration, setSagePerceiveDuration] = useState(3000);
+  const [sagePerceiveSingleDuration, setSagePerceiveSingleDuration] = useState(3000);
+  const [sagePerceiveFading, setSagePerceiveFading] = useState(false);
+  const [sagePerceiveActive, setSagePerceiveActive] = useState(false);
   const [copFading, setCopFading] = useState(false);
   const [isAnimating, setAnimating] = useState(false);
   const [animationPhase, setAnimationPhase] = useState(null); // 'lunge', 'leap', 'behind_target', 'teleport_fade', etc.
@@ -432,6 +470,12 @@ const SandboxPage = () => {
   // Summoner Summoning State
   const [activeSummons, setActiveSummons] = useState([]); // Array of portals { id, row, col, icon, type, shrinking: boolean }
 
+  // Rift Portal State
+  const [riftPortalActive, setRiftPortalActive] = useState(false);
+  const [riftPortalPos, setRiftPortalPos] = useState(null);
+  const [riftPortalEndTime, setRiftPortalEndTime] = useState(null);
+  const [riftPortalFading, setRiftPortalFading] = useState(false);
+
   const [etherealSpeedActive, setEtherealSpeedActive] = useState(false);
   const [etherealSpeedFading, setEtherealSpeedFading] = useState(false);
   const [etherealSpeedEndTime, setEtherealSpeedEndTime] = useState(null);
@@ -439,9 +483,22 @@ const SandboxPage = () => {
   const [innerFireFading, setInnerFireFading] = useState(false);
   const [innerFireEndTime, setInnerFireEndTime] = useState(null);
 
+  // Meditation & Astral Mode States
+  const [meditateAnimActive, setMeditateAnimActive] = useState(false);
+  const [astralFocusAnimActive, setAstralFocusAnimActive] = useState(false);
+  const [astralModeActive, setAstralModeActive] = useState(false);
+  const [astralModeFading, setAstralModeFading] = useState(false);
+  const [astralModeEndTime, setAstralModeEndTime] = useState(null);
+  const astralModeSingleDuration = 3000;
+
+  // Third Eye State
+  const [thirdEyeActive, setThirdEyeActive] = useState(false);
+  const [thirdEyeFading, setThirdEyeFading] = useState(false);
+  const [thirdEyeEndTime, setThirdEyeEndTime] = useState(null);
+
   useEffect(() => {
     let interval;
-    if (copActive || defensiveStanceActive || berserkerActive || inspireActive || etherealSpeedActive || innerFireActive || targetEnsnared || targetMarked || frozenIconActive || targetPoisoned || sleepIconActive || bleedEndTime) {
+    if (copActive || defensiveStanceActive || berserkerActive || inspireActive || etherealSpeedActive || innerFireActive || targetEnsnared || targetMarked || frozenIconActive || targetPoisoned || sleepIconActive || bleedEndTime || astralModeActive || sagePerceiveActive || thirdEyeActive || riftPortalActive) {
       interval = setInterval(() => {
         setCurrentTime(Date.now());
       }, 50);
@@ -451,7 +508,7 @@ const SandboxPage = () => {
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [copActive, defensiveStanceActive, berserkerActive, inspireActive, etherealSpeedActive, innerFireActive, targetEnsnared, targetMarked, frozenIconActive, targetPoisoned, sleepIconActive, bleedEndTime]);
+  }, [copActive, defensiveStanceActive, berserkerActive, inspireActive, etherealSpeedActive, innerFireActive, targetEnsnared, targetMarked, frozenIconActive, targetPoisoned, sleepIconActive, bleedEndTime, astralModeActive, sagePerceiveActive, thirdEyeActive, riftPortalActive]);
 
   // Central status cleanups effect
   useEffect(() => {
@@ -501,62 +558,119 @@ const SandboxPage = () => {
         setBleedFading(false);
       }
     }
-  }, [currentTime, frozenEndTime, poisonEndTime, bleedEndTime]);
+
+    // Check perceive
+    if (sagePerceiveEndTime) {
+      const remaining = sagePerceiveEndTime - currentTime;
+      if (remaining <= 0) {
+        setSagePerceiveActive(false);
+        setSagePerceiveFading(false);
+        setSagePerceiveEndTime(null);
+      } else if (remaining <= 300) {
+        setSagePerceiveFading(true);
+      } else {
+        setSagePerceiveFading(false);
+      }
+    }
+
+    // Check astral mode
+    if (astralModeEndTime) {
+      const remaining = astralModeEndTime - currentTime;
+      if (remaining <= 0) {
+        setAstralModeActive(false);
+        setAstralModeFading(false);
+        setAstralModeEndTime(null);
+      } else if (remaining <= 300) {
+        setAstralModeFading(true);
+      } else {
+        setAstralModeFading(false);
+      }
+    }
+
+    // Check third eye
+    if (thirdEyeEndTime) {
+      const remaining = thirdEyeEndTime - currentTime;
+      if (remaining <= 0) {
+        setThirdEyeActive(false);
+        setThirdEyeFading(false);
+        setThirdEyeEndTime(null);
+      } else if (remaining <= 300) {
+        setThirdEyeFading(true);
+      } else {
+        setThirdEyeFading(false);
+      }
+    }
+
+    // Check rift portal
+    if (riftPortalEndTime) {
+      const remaining = riftPortalEndTime - currentTime;
+      if (remaining <= 0) {
+        setRiftPortalActive(false);
+        setRiftPortalFading(false);
+        setRiftPortalEndTime(null);
+        setRiftPortalPos(null);
+      } else if (remaining <= 300) {
+        setRiftPortalFading(true);
+      } else {
+        setRiftPortalFading(false);
+      }
+    }
+  }, [currentTime, frozenEndTime, poisonEndTime, bleedEndTime, sagePerceiveEndTime, astralModeEndTime, thirdEyeEndTime, riftPortalEndTime]);
 
   const getCopDashOffset = () => {
     if (!copEndTime) return 31.42;
     const remaining = Math.max(0, copEndTime - currentTime);
     const ratio = remaining / 8000;
-    return (1 - ratio) * 31.42;
+    return ratio * 31.42;
   };
 
   const getDefensiveStanceDashOffset = () => {
     if (!defensiveStanceEndTime) return 31.42;
     const remaining = Math.max(0, defensiveStanceEndTime - currentTime);
     const ratio = remaining / 8000;
-    return (1 - ratio) * 31.42;
+    return ratio * 31.42;
   };
 
   const getBerserkerDashOffset = () => {
     if (!berserkerEndTime) return 31.42;
     const remaining = Math.max(0, berserkerEndTime - currentTime);
     const ratio = remaining / 8000;
-    return (1 - ratio) * 31.42;
+    return ratio * 31.42;
   };
 
   const getInspireDashOffset = () => {
     if (!inspireEndTime) return 31.42;
     const remaining = Math.max(0, inspireEndTime - currentTime);
     const ratio = remaining / 8000;
-    return (1 - ratio) * 31.42;
+    return ratio * 31.42;
   };
 
   const getEtherealSpeedDashOffset = () => {
     if (!etherealSpeedEndTime) return 31.42;
     const remaining = Math.max(0, etherealSpeedEndTime - currentTime);
     const ratio = remaining / 8000;
-    return (1 - ratio) * 31.42;
+    return ratio * 31.42;
   };
 
   const getInnerFireDashOffset = () => {
     if (!innerFireEndTime) return 31.42;
     const remaining = Math.max(0, innerFireEndTime - currentTime);
     const ratio = remaining / 8000;
-    return (1 - ratio) * 31.42;
+    return ratio * 31.42;
   };
 
   const getMarkDashOffset = () => {
     if (!markEndTime) return 31.42;
     const remaining = Math.max(0, markEndTime - currentTime);
     const ratio = remaining / 8000;
-    return (1 - ratio) * 31.42;
+    return ratio * 31.42;
   };
 
   const getEnsnareDashOffset = () => {
     if (!ensnareEndTime) return 31.42;
     const remaining = Math.max(0, ensnareEndTime - currentTime);
     const ratio = remaining / 3000;
-    return (1 - ratio) * 31.42;
+    return ratio * 31.42;
   };
 
   const getFrozenDashOffset = () => {
@@ -566,7 +680,7 @@ const SandboxPage = () => {
     const singleDur = frozenSingleDuration || 2000;
     const modulo = remaining % singleDur;
     const ratio = (modulo === 0 && remaining > 0) ? 1.0 : modulo / singleDur;
-    return (1 - ratio) * 31.42;
+    return ratio * 31.42;
   };
 
   const getPoisonDashOffset = () => {
@@ -576,21 +690,164 @@ const SandboxPage = () => {
     const singleDur = poisonSingleDuration || 8000;
     const modulo = remaining % singleDur;
     const ratio = (modulo === 0 && remaining > 0) ? 1.0 : modulo / singleDur;
-    return (1 - ratio) * 31.42;
+    return ratio * 31.42;
+  };
+
+  const getPerceiveDashOffset = () => {
+    if (!sagePerceiveEndTime) return 31.42;
+    const remaining = Math.max(0, sagePerceiveEndTime - currentTime);
+    if (remaining <= 0) return 31.42;
+    const singleDur = sagePerceiveSingleDuration || 3000;
+    const modulo = remaining % singleDur;
+    const ratio = (modulo === 0 && remaining > 0) ? 1.0 : modulo / singleDur;
+    return ratio * 31.42;
+  };
+
+  const getAstralModeDashOffset = () => {
+    if (!astralModeEndTime) return 31.42;
+    const remaining = Math.max(0, astralModeEndTime - currentTime);
+    if (remaining <= 0) return 31.42;
+    const singleDur = astralModeSingleDuration || 3000;
+    const modulo = remaining % singleDur;
+    const ratio = (modulo === 0 && remaining > 0) ? 1.0 : modulo / singleDur;
+    return ratio * 31.42;
   };
 
   const getSleepDashOffset = () => {
     if (!sleepEndTime) return 31.42;
     const remaining = Math.max(0, sleepEndTime - currentTime);
     const ratio = remaining / 8000;
-    return (1 - ratio) * 31.42;
+    return ratio * 31.42;
   };
 
   const getBleedDashOffset = () => {
     if (!bleedEndTime) return 31.42;
     const remaining = Math.max(0, bleedEndTime - currentTime);
     const ratio = remaining / 4000;
-    return (1 - ratio) * 31.42;
+    return ratio * 31.42;
+  };
+
+  const getThirdEyeDashOffset = () => {
+    if (!thirdEyeEndTime) return 31.42;
+    const remaining = Math.max(0, thirdEyeEndTime - currentTime);
+    const ratio = remaining / 4000;
+    return ratio * 31.42;
+  };
+
+  const getRiftPortalDashOffset = () => {
+    if (!riftPortalEndTime) return 31.42;
+    const remaining = Math.max(0, riftPortalEndTime - currentTime);
+    if (remaining <= 0) return 31.42;
+    const singleDur = 3000; // Each long duration segment is 3000ms
+    const modulo = remaining % singleDur;
+    const ratio = (modulo === 0 && remaining > 0) ? 1.0 : modulo / singleDur;
+    return ratio * 31.42;
+  };
+
+  const getRiftPortalSegmentsRemaining = () => {
+    if (!riftPortalEndTime) return 0;
+    const remaining = Math.max(0, riftPortalEndTime - currentTime);
+    return Math.ceil(remaining / 3000);
+  };
+
+  const getEmptyGridTiles = () => {
+    const occupied = new Set();
+    occupied.add(`${fighterPos.row}-${fighterPos.col}`);
+    occupied.add(`${targetPos.row}-${targetPos.col}`);
+    minions.forEach(m => occupied.add(`${m.row}-${m.col}`));
+    turrets.forEach(t => occupied.add(`${t.row}-${t.col}`));
+    if (selectedFighterId === 'sage') {
+      occupied.add('3-0');
+      occupied.add('0-3');
+      occupied.add('2-3');
+      occupied.add('1-4');
+      occupied.add('3-4');
+    } else if (selectedFighterId === 'soldier') {
+      occupied.add('0-1');
+      occupied.add('0-3');
+    }
+    if (riftPortalActive && riftPortalPos) {
+      occupied.add(`${riftPortalPos.row}-${riftPortalPos.col}`);
+    }
+    const empty = [];
+    for (let r = 0; r < 5; r++) {
+      for (let c = 0; c < 5; c++) {
+        if (!occupied.has(`${r}-${c}`)) {
+          empty.push({ row: r, col: c });
+        }
+      }
+    }
+    return empty;
+  };
+
+  const getSummonPlacement = () => {
+    const offsets = [
+      { r: 0, c: 1 },
+      { r: 0, c: -1 },
+      { r: 1, c: 0 },
+      { r: -1, c: 0 }
+    ];
+    const occupied = new Set();
+    occupied.add(`${fighterPos.row}-${fighterPos.col}`);
+    occupied.add(`${targetPos.row}-${targetPos.col}`);
+    minions.forEach(m => occupied.add(`${m.row}-${m.col}`));
+    turrets.forEach(t => occupied.add(`${t.row}-${t.col}`));
+    if (selectedFighterId === 'sage') {
+      occupied.add('3-0'); occupied.add('0-3'); occupied.add('2-3');
+      occupied.add('1-4'); occupied.add('3-4');
+    } else if (selectedFighterId === 'soldier') {
+      occupied.add('0-1'); occupied.add('0-3');
+    }
+    if (riftPortalActive && riftPortalPos) {
+      occupied.add(`${riftPortalPos.row}-${riftPortalPos.col}`);
+    }
+    for (const offset of offsets) {
+      const r = fighterPos.row + offset.r;
+      const c = fighterPos.col + offset.c;
+      if (r >= 0 && r < 5 && c >= 0 && c < 5 && !occupied.has(`${r}-${c}`)) {
+        return { row: r, col: c };
+      }
+    }
+    for (let r = 0; r < 5; r++) {
+      for (let c = 0; c < 5; c++) {
+        if (!occupied.has(`${r}-${c}`)) {
+          return { row: r, col: c };
+        }
+      }
+    }
+    return { row: (fighterPos.row + 1) % 5, col: fighterPos.col };
+  };
+
+  const executeSummonAnimation = (summonType, transitionIcon, minionIcon, minionLabel) => {
+    const spawnPos = getSummonPlacement();
+    setAnimating(true);
+    setActiveSummons([{
+      id: Math.random(),
+      row: spawnPos.row,
+      col: spawnPos.col,
+      icon: transitionIcon,
+      type: summonType,
+      shrinking: false
+    }]);
+    setTimeout(() => {
+      setActiveSummons(prev => prev.map(p => ({ ...p, shrinking: true })));
+    }, 800);
+    setTimeout(() => {
+      setActiveSummons([]);
+      setMinions(prev => [
+        ...prev.filter(m => !(m.row === spawnPos.row && m.col === spawnPos.col)),
+        {
+          id: Math.random(),
+          row: spawnPos.row,
+          col: spawnPos.col,
+          type: summonType,
+          icon: minionIcon,
+          label: minionLabel,
+          fadingIn: true
+        }
+      ]);
+      setAnimating(false);
+    }, 1200);
   };
 
   const getRadialLineCoords = (endTime, totalDuration = 8000, singleDuration) => {
@@ -632,15 +889,11 @@ const SandboxPage = () => {
 
   const applyPoison = (duration, tickInterval = 1500, tickDamage = 4) => {
     setPoisonSingleDuration(duration);
-    const now = Date.now();
-    let newEndTime;
-    if (poisonEndTime && poisonEndTime > now) {
-      newEndTime = poisonEndTime + duration;
-    } else {
-      newEndTime = now + duration;
-    }
-    setPoisonDuration(duration);
-    setPoisonEndTime(newEndTime);
+    setPoisonDuration(prev => (prev || 0) + duration);
+    setPoisonEndTime(prev => {
+      const now = Date.now();
+      return (prev && prev > now) ? prev + duration : now + duration;
+    });
     setTargetPoisoned(true);
     setPoisonFading(false);
 
@@ -650,17 +903,24 @@ const SandboxPage = () => {
     }, tickInterval);
   };
 
+  const applyPerceive = (duration) => {
+    setSagePerceiveSingleDuration(duration);
+    setSagePerceiveDuration(prev => (prev || 0) + duration);
+    setSagePerceiveEndTime(prev => {
+      const now = Date.now();
+      return (prev && prev > now) ? prev + duration : now + duration;
+    });
+    setSagePerceiveActive(true);
+    setSagePerceiveFading(false);
+  };
+
   const applyFreeze = (duration) => {
     setFrozenSingleDuration(duration);
-    const now = Date.now();
-    let newEndTime;
-    if (frozenEndTime && frozenEndTime > now) {
-      newEndTime = frozenEndTime + duration;
-    } else {
-      newEndTime = now + duration;
-    }
-    setFrozenDuration(duration);
-    setFrozenEndTime(newEndTime);
+    setFrozenDuration(prev => (prev || 0) + duration);
+    setFrozenEndTime(prev => {
+      const now = Date.now();
+      return (prev && prev > now) ? prev + duration : now + duration;
+    });
     setTargetFrozen(true);
     setFrozenIconActive(true);
     setFrozenFading(false);
@@ -1086,6 +1346,80 @@ const SandboxPage = () => {
           setInnerFireEndTime(null);
         }, 300);
       }, 8000);
+    }
+
+    // --- MONK MEDITATE ---
+    else if (ability.type === 'monk_meditate_type') {
+      setAnimating(true);
+      setMeditateAnimActive(true);
+      addFloatingText('+30', 'normal', '#ffdd57', fighterPos.row, fighterPos.col);
+
+      setTimeout(() => {
+        setMeditateAnimActive(false);
+        setAnimating(false);
+      }, 2000);
+    }
+
+    // --- MONK ASTRAL FOCUS ---
+    else if (ability.type === 'monk_astral_focus_type') {
+      setAnimating(true);
+      setAstralFocusAnimActive(true);
+      addFloatingText('ASTRAL FOCUS!', 'normal', '#21e6c1', fighterPos.row, fighterPos.col);
+
+      setTimeout(() => {
+        setAstralFocusAnimActive(false);
+        setAnimating(false);
+
+        // Enter Astral Mode for 2 long durations (6000ms)
+        setAstralModeActive(true);
+        setAstralModeFading(false);
+        setAstralModeEndTime(Date.now() + 6000);
+      }, 2000);
+    }
+
+    // --- MONK THIRD EYE ---
+    else if (ability.type === 'monk_third_eye_type') {
+      setAnimating(true);
+      addFloatingText('FORESIGHT!', 'normal', '#21e6c1', fighterPos.row, fighterPos.col);
+      addFloatingText('DOUBLED EVASION', 'normal', '#21e6c1', fighterPos.row, fighterPos.col);
+      setHitEffect({ type: 'monk_third_eye_effect' });
+      
+      setThirdEyeActive(true);
+      setThirdEyeFading(false);
+      setThirdEyeEndTime(Date.now() + 4000);
+
+      setTimeout(() => {
+        setHitEffect(null);
+        setAnimating(false);
+      }, 1000);
+    }
+
+    // --- MONK ASTRAL PROJECTION ---
+    else if (ability.type === 'monk_astral_proj_type') {
+      setAnimating(true);
+      setAnimationPhase('step_adjacent');
+      
+      setTimeout(() => {
+        setTargetShake(true);
+        setTargetFlash(true);
+        addFloatingText('-25', 'normal', '#21e6c1', targetPos.row, targetPos.col);
+        setHitEffect({ type: 'astral_projection_strike' });
+        
+        setTimeout(() => {
+          setTargetShake(false);
+          setTargetFlash(false);
+          setHitEffect(null);
+        }, 300);
+      }, 250);
+
+      setTimeout(() => {
+        setAnimationPhase('return');
+      }, 700);
+
+      setTimeout(() => {
+        setAnimationPhase(null);
+        setAnimating(false);
+      }, 950);
     }
 
     // --- MONK PUNCH ---
@@ -2047,7 +2381,7 @@ const SandboxPage = () => {
       setAnimating(true);
       let buff = 'heal';
       let txt = '+30';
-      let color = '#2ec4b6';
+      let color = '#38b000';
 
       if (ability.type === 'barrier') {
         buff = 'barrier';
@@ -2088,9 +2422,6 @@ const SandboxPage = () => {
           setTargetHealGlow(true);
           
           addFloatingText(txt, 'normal', color, targetPos.row, targetPos.col);
-          setTimeout(() => {
-            addFloatingText('+30', 'normal', '#2ec4b6', targetPos.row, targetPos.col);
-          }, 150);
 
           // c) Effect is finished: icon fades and color glow fades after 800ms
           setTimeout(() => {
@@ -2114,17 +2445,20 @@ const SandboxPage = () => {
         setSelfBuffEffect(buff);
         addFloatingText(txt, 'normal', color, fighterPos.row, fighterPos.col);
 
-        if (selectedFighterId === 'sage') {
-          setTimeout(() => {
-            addFloatingText('+30', 'normal', '#2ec4b6', targetPos.row, targetPos.col);
-          }, 150);
-        }
-
         setTimeout(() => {
           setSelfBuffEffect(null);
           setAnimating(false);
         }, 1000);
       }
+    }
+
+    // --- PERCEIVE ---
+    else if (ability.type === 'perceive_type') {
+      setAnimating(true);
+      applyPerceive(3000);
+      setTimeout(() => {
+        setAnimating(false);
+      }, 500);
     }
 
     // --- CIRCLE OF PROTECTION ---
@@ -2389,20 +2723,30 @@ const SandboxPage = () => {
         setAnnihilationSweepActive(true);
       }, 50);
 
+      let ticks = 0;
+      const dmgInterval = setInterval(() => {
+        ticks++;
+        setTargetShake(true);
+        setTargetFlash(true);
+        addFloatingText('-16', 'crit', '#9d4edd', targetPos.row, targetPos.col);
+        setTimeout(() => {
+          setTargetShake(false);
+          setTargetFlash(false);
+        }, 150);
+        if (ticks >= 3) {
+          clearInterval(dmgInterval);
+        }
+      }, 250);
+
       setTimeout(() => {
         setActiveBeam(null);
         setAnnihilationSweepActive(false);
-        setTargetShake(true);
-        setTargetFlash(true);
         setHitEffect({ type: 'annihilation_portal' });
-        addFloatingText('-48', 'crit', '#9d4edd', targetPos.row, targetPos.col);
 
         setAnnihilationExplosion({ row: targetPos.row, col: targetPos.col });
         setTimeout(() => setAnnihilationExplosion(null), 700);
 
         setTimeout(() => {
-          setTargetShake(false);
-          setTargetFlash(false);
           setHitEffect(null);
         }, 800);
 
@@ -2475,90 +2819,66 @@ const SandboxPage = () => {
       }, 800);
     }
 
+    // --- OPEN THE RIFT ---
+    else if (ability.type === 'open_rift_type') {
+      const openTiles = getEmptyGridTiles();
+      if (openTiles.length === 0) {
+        addFloatingText('NO EMPTY TILES FOR RIFT!', 'normal', '#e63946', fighterPos.row, fighterPos.col);
+        return;
+      }
+      const randomTile = openTiles[Math.floor(Math.random() * openTiles.length)];
+      setAnimating(true);
+      setHitEffect({ type: 'void_portal' });
+      addFloatingText('RIFT OPENED!', 'normal', '#8a2be2', randomTile.row, randomTile.col);
+
+      setTimeout(() => {
+        setRiftPortalActive(true);
+        setRiftPortalPos(randomTile);
+        setRiftPortalEndTime(Date.now() + 9000);
+        setRiftPortalFading(false);
+        setHitEffect(null);
+        setAnimating(false);
+      }, 800);
+    }
+
     // --- SUMMON SKELETON ---
     else if (ability.type === 'summon_skeleton_type') {
-      const summonRow = fighterPos.row + 1;
-      const summonCol = fighterPos.col;
+      executeSummonAnimation('skeleton', summon_icon, summon_skeleton_icon, 'SKELETON');
+    }
 
-      if (summonRow < 5) {
-        setAnimating(true);
-        setActiveSummons([{
-          id: Math.random(),
-          row: summonRow,
-          col: summonCol,
-          icon: summon_icon,
-          type: 'skeleton',
-          shrinking: false
-        }]);
-
-        // 800ms: start shrink
-        setTimeout(() => {
-          setActiveSummons(prev => prev.map(p => ({ ...p, shrinking: true })));
-        }, 800);
-
-        // 1200ms: disappear and spawn skeleton minion
-        setTimeout(() => {
-          setActiveSummons([]);
-          setMinions(prev => [
-            ...prev.filter(m => !(m.row === summonRow && m.col === summonCol)),
-            {
-              row: summonRow,
-              col: summonCol,
-              type: 'skeleton',
-              icon: summon_skeleton_icon,
-              label: 'SKELETON',
-              fadingIn: true
-            }
-          ]);
-          setTimeout(() => {
-            setMinions(prev => prev.map(m => m.row === summonRow && m.col === summonCol ? { ...m, fadingIn: false } : m));
-          }, 500);
-          setAnimating(false);
-        }, 1200);
-      }
+    // --- SUMMON IMP ---
+    else if (ability.type === 'summon_imp_type') {
+      executeSummonAnimation('imp', summon_icon, summon_imp_icon, 'IMP');
     }
 
     // --- SUMMON SKELETON KNIGHT ---
     else if (ability.type === 'summon_skeleton_knight_type') {
-      const summonRow = fighterPos.row + 1;
-      const summonCol = fighterPos.col;
+      executeSummonAnimation('skeleton_knight', summon2_icon, summon_skeleton_knight_icon, 'KNIGHT');
+    }
 
-      if (summonRow < 5) {
-        setAnimating(true);
-        setActiveSummons([{
-          id: Math.random(),
-          row: summonRow,
-          col: summonCol,
-          icon: summon2_icon,
-          type: 'skeleton_knight',
-          shrinking: false
-        }]);
+    // --- SUMMON ZOMBIE ---
+    else if (ability.type === 'summon_zombie_type') {
+      executeSummonAnimation('zombie', summon2_icon, summon_zombie_icon, 'ZOMBIE');
+    }
 
-        // 800ms: start shrink
-        setTimeout(() => {
-          setActiveSummons(prev => prev.map(p => ({ ...p, shrinking: true })));
-        }, 800);
+    // --- SUMMON GHOUL ---
+    else if (ability.type === 'summon_ghoul_type') {
+      executeSummonAnimation('ghoul', summon2_icon, summon_ghoul_icon, 'GHOUL');
+    }
 
-        // 1200ms: disappear and spawn skeleton knight minion
-        setTimeout(() => {
-          setActiveSummons([]);
-          setMinions(prev => [
-            ...prev.filter(m => !(m.row === summonRow && m.col === summonCol)),
-            {
-              row: summonRow,
-              col: summonCol,
-              type: 'skeleton_knight',
-              icon: summon_skeleton_knight_icon,
-              label: 'KNIGHT',
-              fadingIn: true
-            }
-          ]);
-          setTimeout(() => {
-            setMinions(prev => prev.map(m => m.row === summonRow && m.col === summonCol ? { ...m, fadingIn: false } : m));
-          }, 500);
-          setAnimating(false);
-        }, 1200);
-      }
+    // --- SUMMON IMP ARMY ---
+    else if (ability.type === 'summon_imp_army_type') {
+      executeSummonAnimation('imp_army', summon3_icon, summon_imp_army_icon, 'IMP ARMY');
+    }
+
+    // --- SUMMON SKELETON ARMY ---
+    else if (ability.type === 'summon_skeleton_army_type') {
+      executeSummonAnimation('skeleton_army', summon3_icon, summon_skeleton_army_icon, 'SKELETON ARMY');
+    }
+
+    // --- SUMMON DEVIL ---
+    else if (ability.type === 'summon_devil_type') {
+      executeSummonAnimation('devil', summon3_icon, summon_devil_icon, 'DEVIL');
     }
 
     // --- SUMMONER DUPLICATE ---
@@ -2739,6 +3059,41 @@ const SandboxPage = () => {
     }}>
       {/* Dynamic Keyframes Stylesheet */}
       <style>{`
+        .yellow-ray {
+          position: absolute;
+          bottom: -100%;
+          background: linear-gradient(to top, rgba(255, 221, 87, 0) 0%, rgba(255, 221, 87, 0.7) 70%, rgba(255, 255, 255, 0.95) 100%);
+          filter: blur(2px);
+          opacity: 0;
+          animation: upwardRay 1.5s ease-in-out infinite;
+        }
+        .teal-ray {
+          position: absolute;
+          bottom: -100%;
+          background: linear-gradient(to top, rgba(33, 230, 193, 0) 0%, rgba(33, 230, 193, 0.7) 70%, rgba(255, 255, 255, 0.95) 100%);
+          filter: blur(2px);
+          opacity: 0;
+          animation: upwardRay 1.5s ease-in-out infinite;
+        }
+        @keyframes upwardRay {
+          0% { bottom: -100%; opacity: 0; }
+          20% { opacity: 0.8; }
+          80% { opacity: 0.8; }
+          100% { bottom: 100%; opacity: 0; }
+        }
+        @keyframes hoverFloat {
+          0% { transform: translateX(-50%) translateY(10px) scale(0.8); opacity: 0; }
+          20% { transform: translateX(-50%) translateY(0) scale(1); opacity: 1; }
+          80% { transform: translateX(-50%) translateY(0) scale(1); opacity: 1; }
+          100% { transform: translateX(-50%) translateY(-10px) scale(0.8); opacity: 0; }
+        }
+        @keyframes astralFocusFloat {
+          0% { transform: translateX(-50%) translateY(5px) scale(0.95); opacity: 0; }
+          20% { transform: translateX(-50%) translateY(0) scale(1); opacity: 1; }
+          80% { transform: translateX(-50%) translateY(0) scale(1); opacity: 1; }
+          100% { transform: translateX(-50%) translateY(-5px) scale(0.95); opacity: 0; }
+        }
+
         @keyframes organicMorphYellow {
           0% { border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; transform: rotate(0deg); }
           50% { border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%; transform: rotate(180deg); }
@@ -2935,9 +3290,8 @@ const SandboxPage = () => {
           100% { transform: translate(15px, -35px) scale(1.25); opacity: 0; }
         }
         @keyframes vortexSpin {
-          0% { transform: translate(-50%, -50%) rotate(0deg) scale(0.85); }
-          50% { transform: translate(-50%, -50%) rotate(180deg) scale(1.15); }
-          100% { transform: translate(-50%, -50%) rotate(360deg) scale(0.85); }
+          0% { transform: translate(-50%, -50%) rotate(0deg); }
+          100% { transform: translate(-50%, -50%) rotate(360deg); }
         }
         @keyframes annihilationRing {
           0% {
@@ -3095,7 +3449,7 @@ const SandboxPage = () => {
             transform: rotate(-60deg) translateX(0);
             opacity: 1;
           }
-          35% {
+          22% {
             transform: rotate(0deg) translateX(0);
             opacity: 1;
           }
@@ -3364,6 +3718,14 @@ const SandboxPage = () => {
                     setBleedFading(false);
                     setBleedEndTime(null);
                     setShieldWallActive(false);
+                    setAstralModeActive(false);
+                    setAstralModeEndTime(null);
+                    setAstralModeFading(false);
+                    setThirdEyeActive(false);
+                    setThirdEyeEndTime(null);
+                    setThirdEyeFading(false);
+                    setMeditateAnimActive(false);
+                    setAstralFocusAnimActive(false);
                     setTurrets([]);
                     setMinions([]);
                     setMonkGoblin1Shake(false);
@@ -3374,6 +3736,10 @@ const SandboxPage = () => {
                     setMonkGoblin2Push(null);
                     setMonkExtraPunches([]);
                     setActiveSummons([]);
+                    setRiftPortalActive(false);
+                    setRiftPortalPos(null);
+                    setRiftPortalEndTime(null);
+                    setRiftPortalFading(false);
                     if (f.id === 'sage') {
                       setTargetPos({ row: 2, col: 3 });
                     }
@@ -3455,8 +3821,13 @@ const SandboxPage = () => {
               
               <button
                 onClick={() => {
-                  setFighterPos({ row: 2, col: 0 });
-                  setTargetPos({ row: 2, col: 2 });
+                  if (selectedFighterId === 'ranger') {
+                    setFighterPos({ row: 2, col: 0 });
+                    setTargetPos({ row: 2, col: 2 });
+                  } else {
+                    setFighterPos({ row: 2, col: 1 });
+                    setTargetPos({ row: 2, col: 3 });
+                  }
                   setTurrets([]);
                   setMinions([]);
                   setTargetFrozen(false);
@@ -3521,6 +3892,7 @@ const SandboxPage = () => {
                   const isTarget = targetPos.row === r && targetPos.col === c;
                   const isTurret = turrets.some(t => t.row === r && t.col === c);
                   const isMinion = minions.some(m => m.row === r && m.col === c);
+                  const isPortal = riftPortalActive && riftPortalPos && riftPortalPos.row === r && riftPortalPos.col === c;
 
                   // Sage & Soldier friendly units coordinates
                   const isAdditionalRanger = (selectedFighterId === 'sage' && r === 3 && c === 0) || (selectedFighterId === 'soldier' && r === 0 && c === 1);
@@ -3534,12 +3906,12 @@ const SandboxPage = () => {
                       onClick={() => {
                         if (isAnimating) return;
                         if (placementMode === 'fighter') {
-                          if (isTarget) return; // Overlap guard
+                          if (isTarget || isPortal) return; // Overlap guard
                           // Also restrict placing over additional friendly units
                           if (selectedFighterId === 'sage' && ((r === 3 && c === 0) || (r === 0 && c === 3) || (r === 2 && c === 3))) return;
                           setFighterPos({ row: r, col: c });
                         } else {
-                          if (isFighter) return; // Overlap guard
+                          if (isFighter || isPortal) return; // Overlap guard
                           if (selectedFighterId === 'sage' && ((r === 3 && c === 0) || (r === 0 && c === 3) || (r === 2 && c === 3))) return;
                           setTargetPos({ row: r, col: c });
                         }
@@ -3576,7 +3948,7 @@ const SandboxPage = () => {
                         const minionIcon = minion.icon || bat_gate;
                         const minionLabel = minion.label || 'BAT';
                         const labelColor = minion.type === 'skeleton' ? '#a8a29e' : minion.type === 'skeleton_knight' ? '#3b82f6' : '#a2d2ff';
-                        const anim = minion.fadingIn ? 'minionFadeIn 0.5s ease-out both' : 'scaleUp 0.3s ease-out';
+                        const anim = minion.fadingIn ? 'minionFadeIn 0.5s ease-out both' : (minion.fadingIn === false ? 'minionFadeIn 0.5s ease-out both' : 'scaleUp 0.3s ease-out');
 
                         return (
                           <div style={{ width: '60%', height: '60%', position: 'relative', animation: anim }}>
@@ -3585,6 +3957,79 @@ const SandboxPage = () => {
                           </div>
                         );
                       })()}
+
+                      {/* Render Portal */}
+                      {isPortal && (
+                        <div style={{ width: '80%', height: '80%', position: 'relative', animation: 'scaleUp 0.3s ease-out' }}>
+                          <img src={portal_icon} alt="rift portal" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                          
+                          {/* Duration Overlay on Portal */}
+                          <div
+                            className={riftPortalFading ? 'effect-icon-fading' : 'effect-icon-active'}
+                            style={{
+                              position: 'absolute',
+                              top: '-6px',
+                              right: '-6px',
+                              width: '24px',
+                              height: '24px',
+                              borderRadius: '50%',
+                              background: '#111',
+                              border: '2px solid #8a2be2',
+                              backgroundImage: `url(${duration_icon})`,
+                              backgroundSize: 'contain',
+                              backgroundRepeat: 'no-repeat',
+                              backgroundPosition: 'center',
+                              zIndex: 15,
+                              boxShadow: '0 2px 4px rgba(0,0,0,0.5)',
+                              overflow: 'hidden'
+                            }}
+                          >
+                            <svg 
+                              style={{
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                width: '100%',
+                                height: '100%',
+                                transform: 'rotate(-90deg)',
+                                pointerEvents: 'none'
+                              }}
+                              viewBox="0 0 20 20"
+                            >
+                              <circle
+                                cx="10"
+                                cy="10"
+                                r="5"
+                                fill="none"
+                                stroke="rgba(0, 0, 0, 0.55)"
+                                strokeWidth="10"
+                                strokeDasharray="31.42"
+                                strokeDashoffset={getRiftPortalDashOffset()}
+                              />
+                            </svg>
+                            {/* Stacks display: shows remaining segment count */}
+                            <div style={{
+                              position: 'absolute',
+                              bottom: '-4px',
+                              left: '-8px',
+                              background: '#a855f7',
+                              color: '#fff',
+                              borderRadius: '50%',
+                              width: '12px',
+                              height: '12px',
+                              fontSize: '9px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontWeight: 'bold',
+                              border: '1px solid #111',
+                              zIndex: 10
+                            }}>
+                              {getRiftPortalSegmentsRemaining()}
+                            </div>
+                          </div>
+                        </div>
+                      )}
 
                       {/* Render Additional Ranger for Sage */}
                       {isAdditionalRanger && (
@@ -4182,123 +4627,147 @@ const SandboxPage = () => {
                       pointerEvents: 'none'
                     }} />
                   )}
-                  {selectedFighterId === 'monk' && etherealSpeedActive && (
-                    <div
-                      className={etherealSpeedFading ? 'effect-icon-fading' : 'effect-icon-active'}
-                      style={{
-                        position: 'absolute',
-                        top: '-6px',
-                        right: '-6px',
-                        width: '20px',
-                        height: '20px',
-                        borderRadius: '50%',
-                        background: '#111',
-                        border: '2px solid #ffdd57',
-                        backgroundImage: `url(${monk_ethereal_speed})`,
-                        backgroundSize: 'contain',
-                        backgroundRepeat: 'no-repeat',
-                        backgroundPosition: 'center',
-                        zIndex: 15,
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.5)',
-                        overflow: 'hidden'
-                      }}
-                    >
-                      <svg 
+                  {(() => {
+                    if (selectedFighterId !== 'monk') return null;
+                    const activeMonkEffects = [];
+                    if (etherealSpeedActive) activeMonkEffects.push({ key: 'ethereal', icon: monk_ethereal_speed, border: '#ffdd57', getOffset: getEtherealSpeedDashOffset, endTime: etherealSpeedEndTime, fading: etherealSpeedFading });
+                    if (innerFireActive) activeMonkEffects.push({ key: 'inner_fire', icon: monk_inner_fire, border: '#ff5400', getOffset: getInnerFireDashOffset, endTime: innerFireEndTime, fading: innerFireFading });
+                    if (astralModeActive) activeMonkEffects.push({ key: 'astral_mode', icon: monk_astral_being, border: '#21e6c1', getOffset: getAstralModeDashOffset, endTime: astralModeEndTime, fading: astralModeFading });
+                    if (thirdEyeActive) activeMonkEffects.push({ key: 'third_eye', icon: monk_third_eye, border: '#21e6c1', getOffset: getThirdEyeDashOffset, endTime: thirdEyeEndTime, fading: thirdEyeFading });
+
+                    return activeMonkEffects.map((eff, index) => (
+                      <div
+                        key={eff.key}
+                        className={eff.fading ? 'effect-icon-fading' : 'effect-icon-active'}
                         style={{
                           position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          width: '100%',
-                          height: '100%',
-                          transform: 'rotate(-90deg)',
-                          pointerEvents: 'none'
+                          top: '-6px',
+                          right: `${-6 + index * 22}px`,
+                          width: '20px',
+                          height: '20px',
+                          borderRadius: '50%',
+                          background: '#111',
+                          border: `2px solid ${eff.border}`,
+                          backgroundImage: `url(${eff.icon})`,
+                          backgroundSize: 'contain',
+                          backgroundRepeat: 'no-repeat',
+                          backgroundPosition: 'center',
+                          zIndex: 15,
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.5)',
+                          overflow: 'visible'
                         }}
-                        viewBox="0 0 20 20"
                       >
-                        <circle
-                          cx="10"
-                          cy="10"
-                          r="5"
-                          fill="none"
-                          stroke="rgba(0, 0, 0, 0.35)"
-                          strokeWidth="10"
-                          strokeDasharray="31.42"
-                          strokeDashoffset={getEtherealSpeedDashOffset()}
-                        />
-                        {(() => {
-                          const coords = getRadialLineCoords(etherealSpeedEndTime);
-                          return coords ? (
-                            <line
-                              x1="10"
-                              y1="10"
-                              x2={coords.x2}
-                              y2={coords.y2}
-                              stroke="#ffffff"
-                              strokeWidth="0.8"
-                            />
-                          ) : null;
-                        })()}
-                      </svg>
+                        <svg 
+                          style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: '100%',
+                            transform: 'rotate(-90deg)',
+                            pointerEvents: 'none'
+                          }}
+                          viewBox="0 0 20 20"
+                        >
+                          <circle
+                            cx="10"
+                            cy="10"
+                            r="5"
+                            fill="none"
+                            stroke="rgba(0, 0, 0, 0.35)"
+                            strokeWidth="10"
+                            strokeDasharray="31.42"
+                            strokeDashoffset={eff.getOffset()}
+                          />
+                          {(() => {
+                            const isMultiDur = ['astral_mode'].includes(eff.key);
+                            const coords = isMultiDur 
+                              ? getRadialLineCoords(eff.endTime, 6000, 3000)
+                              : getRadialLineCoords(eff.endTime, eff.key === 'third_eye' ? 4000 : 8000);
+                            return coords ? (
+                              <line
+                                x1="10"
+                                y1="10"
+                                x2={coords.x2}
+                                y2={coords.y2}
+                                stroke="#ffffff"
+                                strokeWidth="0.8"
+                              />
+                            ) : null;
+                          })()}
+                        </svg>
+                      </div>
+                    ));
+                  })()}
+
+                  {/* Monk Meditate Animation overlays */}
+                  {selectedFighterId === 'monk' && meditateAnimActive && (
+                    <div style={{
+                      position: 'absolute',
+                      top: 0, left: 0, right: 0, bottom: 0,
+                      borderRadius: '6px',
+                      overflow: 'hidden',
+                      pointerEvents: 'none',
+                      zIndex: 5,
+                      background: 'rgba(255, 221, 87, 0.05)'
+                    }}>
+                      <div className="yellow-ray" style={{ left: '15%', width: '15%', height: '80%', animationDelay: '0s' }} />
+                      <div className="yellow-ray" style={{ left: '45%', width: '20%', height: '100%', animationDelay: '0.2s' }} />
+                      <div className="yellow-ray" style={{ left: '75%', width: '12%', height: '70%', animationDelay: '0.4s' }} />
                     </div>
                   )}
-                  {selectedFighterId === 'monk' && innerFireActive && (
-                    <div
-                      className={innerFireFading ? 'effect-icon-fading' : 'effect-icon-active'}
-                      style={{
-                        position: 'absolute',
-                        top: '-6px',
-                        right: etherealSpeedActive ? '16px' : '-6px',
-                        width: '20px',
-                        height: '20px',
-                        borderRadius: '50%',
-                        background: '#111',
-                        border: '2px solid #ff5400',
-                        backgroundImage: `url(${monk_inner_fire})`,
-                        backgroundSize: 'contain',
-                        backgroundRepeat: 'no-repeat',
-                        backgroundPosition: 'center',
-                        zIndex: 15,
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.5)',
-                        overflow: 'hidden'
-                      }}
-                    >
-                      <svg 
-                        style={{
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          width: '100%',
-                          height: '100%',
-                          transform: 'rotate(-90deg)',
-                          pointerEvents: 'none'
-                        }}
-                        viewBox="0 0 20 20"
-                      >
-                        <circle
-                          cx="10"
-                          cy="10"
-                          r="5"
-                          fill="none"
-                          stroke="rgba(0, 0, 0, 0.35)"
-                          strokeWidth="10"
-                          strokeDasharray="31.42"
-                          strokeDashoffset={getInnerFireDashOffset()}
-                        />
-                        {(() => {
-                          const coords = getRadialLineCoords(innerFireEndTime);
-                          return coords ? (
-                            <line
-                              x1="10"
-                              y1="10"
-                              x2={coords.x2}
-                              y2={coords.y2}
-                              stroke="#ffffff"
-                              strokeWidth="0.8"
-                            />
-                          ) : null;
-                        })()}
-                      </svg>
+                  {selectedFighterId === 'monk' && meditateAnimActive && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '-35px',
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      width: '28px',
+                      height: '28px',
+                      borderRadius: '4px',
+                      border: '2px solid #ffdd57',
+                      backgroundImage: `url(${monk_meditate})`,
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
+                      boxShadow: '0 0 10px #ffdd57',
+                      zIndex: 20,
+                      animation: 'hoverFloat 2s ease-in-out forwards'
+                    }} />
+                  )}
+
+                  {/* Monk Astral Focus Animation overlays */}
+                  {selectedFighterId === 'monk' && astralFocusAnimActive && (
+                    <div style={{
+                      position: 'absolute',
+                      top: 0, left: 0, right: 0, bottom: 0,
+                      borderRadius: '6px',
+                      overflow: 'hidden',
+                      pointerEvents: 'none',
+                      zIndex: 5,
+                      background: 'rgba(33, 230, 193, 0.05)'
+                    }}>
+                      <div className="teal-ray" style={{ left: '15%', width: '15%', height: '80%', animationDelay: '0s' }} />
+                      <div className="teal-ray" style={{ left: '45%', width: '20%', height: '100%', animationDelay: '0.2s' }} />
+                      <div className="teal-ray" style={{ left: '75%', width: '12%', height: '70%', animationDelay: '0.4s' }} />
                     </div>
+                  )}
+                  {selectedFighterId === 'monk' && astralFocusAnimActive && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '-20px',
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '4px',
+                      border: '2px solid #21e6c1',
+                      backgroundImage: `url(${monk_astral_focus})`,
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
+                      boxShadow: '0 0 10px #21e6c1',
+                      zIndex: 20,
+                      animation: 'astralFocusFloat 2s ease-in-out forwards'
+                    }} />
                   )}
                   {selectedFighterId === 'sage' && copActive && (
                     <div
@@ -4859,7 +5328,7 @@ const SandboxPage = () => {
                               style={{
                                 position: 'absolute',
                                 bottom: '-4px',
-                                right: '-4px',
+                                left: '-8px',
                                 background: '#38b000',
                                 color: '#fff',
                                 fontSize: '9px',
@@ -4943,7 +5412,7 @@ const SandboxPage = () => {
                               style={{
                                 position: 'absolute',
                                 bottom: '-4px',
-                                right: '-4px',
+                                left: '-8px',
                                 background: '#00bfff',
                                 color: '#fff',
                                 fontSize: '9px',
@@ -5147,10 +5616,10 @@ const SandboxPage = () => {
                       boxSizing: 'border-box',
                       position: 'absolute',
                       top: 0, left: 0, width: '100%', height: '100%',
-                      background: 'rgba(46, 196, 182, 0.15)',
-                      border: '3px solid #2ec4b6',
+                      background: 'rgba(56, 176, 0, 0.15)',
+                      border: '3px solid #38b000',
                       borderRadius: '6px',
-                      boxShadow: '0 0 25px rgba(46, 196, 182, 0.8), inset 0 0 15px rgba(46, 196, 182, 0.5)',
+                      boxShadow: '0 0 25px rgba(56, 176, 0, 0.8), inset 0 0 15px rgba(56, 176, 0, 0.5)',
                       opacity: targetHealGlow ? 1 : 0,
                       transition: 'opacity 0.3s ease-in-out',
                       pointerEvents: 'none',
@@ -5363,6 +5832,248 @@ const SandboxPage = () => {
                   </div>
                 </div>
               </div>
+
+              {/* --- Extra Enemies for Sage --- */}
+              {selectedFighterId === 'sage' && (
+                <>
+                  <div
+                    style={{
+                      position: 'absolute',
+                      width: '20%',
+                      height: '20%',
+                      left: `${4 * 20}%`,
+                      top: `${1 * 20}%`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      zIndex: 9,
+                      pointerEvents: 'none'
+                    }}
+                  >
+                    <div style={{
+                      width: '80%',
+                      height: '80%',
+                      borderRadius: '8px',
+                      border: '2px solid #ff5400',
+                      backgroundColor: '#222',
+                      backgroundImage: `url(${goblin_portrait})`,
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
+                      boxShadow: '0 8px 16px rgba(0,0,0,0.5)',
+                      position: 'relative',
+                    }}>
+                      <div style={{
+                        position: 'absolute',
+                        bottom: '0',
+                        left: '0',
+                        width: '100%',
+                        background: 'rgba(0,0,0,0.75)',
+                        color: 'white',
+                        fontSize: '10px',
+                        textAlign: 'center',
+                        borderBottomLeftRadius: '6px',
+                        borderBottomRightRadius: '6px'
+                      }}>Goblin Target</div>
+                      {sagePerceiveActive && (
+                        <div
+                          className={sagePerceiveFading ? 'effect-icon-fading' : 'effect-icon-active'}
+                          style={{
+                            position: 'absolute',
+                            top: '-5px',
+                            right: '-5px',
+                            width: '20px',
+                            height: '20px',
+                            borderRadius: '50%',
+                            background: '#111',
+                            border: '2px solid #ff007f',
+                            backgroundImage: `url(${weakness_doubled})`,
+                            backgroundSize: 'contain',
+                            backgroundRepeat: 'no-repeat',
+                            backgroundPosition: 'center',
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.5)',
+                            overflow: 'visible',
+                            zIndex: 15
+                          }}
+                        >
+                          <svg
+                            style={{
+                              position: 'absolute',
+                              top: 0,
+                              left: 0,
+                              width: '100%',
+                              height: '100%',
+                              transform: 'rotate(-90deg)',
+                              pointerEvents: 'none'
+                            }}
+                            viewBox="0 0 20 20"
+                          >
+                            <circle
+                              cx="10"
+                              cy="10"
+                              r="5"
+                              fill="none"
+                              stroke="rgba(0, 0, 0, 0.4)"
+                              strokeWidth="10"
+                              strokeDasharray="31.42"
+                              strokeDashoffset={getPerceiveDashOffset()}
+                            />
+                            {(() => {
+                              const coords = getRadialLineCoords(sagePerceiveEndTime, sagePerceiveDuration, sagePerceiveSingleDuration);
+                              return coords ? (
+                                <line
+                                  x1="10"
+                                  y1="10"
+                                  x2={coords.x2}
+                                  y2={coords.y2}
+                                  stroke="#ffffff"
+                                  strokeWidth="0.8"
+                                />
+                              ) : null;
+                            })()}
+                          </svg>
+                          <div style={{
+                            position: 'absolute',
+                            bottom: '-4px',
+                            left: '-8px',
+                            background: '#000',
+                            color: '#fff',
+                            fontSize: '9px',
+                            fontWeight: 'bold',
+                            borderRadius: '50%',
+                            width: '12px',
+                            height: '12px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            border: '1px solid #ff007f',
+                            zIndex: 16
+                          }}>
+                            2
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div
+                    style={{
+                      position: 'absolute',
+                      width: '20%',
+                      height: '20%',
+                      left: `${4 * 20}%`,
+                      top: `${3 * 20}%`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      zIndex: 9,
+                      pointerEvents: 'none'
+                    }}
+                  >
+                    <div style={{
+                      width: '80%',
+                      height: '80%',
+                      borderRadius: '8px',
+                      border: '2px solid #ff5400',
+                      backgroundColor: '#222',
+                      backgroundImage: `url(${beholder_minion_portrait})`,
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
+                      boxShadow: '0 8px 16px rgba(0,0,0,0.5)',
+                      position: 'relative',
+                    }}>
+                      <div style={{
+                        position: 'absolute',
+                        bottom: '0',
+                        left: '0',
+                        width: '100%',
+                        background: 'rgba(0,0,0,0.75)',
+                        color: 'white',
+                        fontSize: '10px',
+                        textAlign: 'center',
+                        borderBottomLeftRadius: '6px',
+                        borderBottomRightRadius: '6px'
+                      }}>Beholder Minion</div>
+                      {sagePerceiveActive && (
+                        <div
+                          className={sagePerceiveFading ? 'effect-icon-fading' : 'effect-icon-active'}
+                          style={{
+                            position: 'absolute',
+                            top: '-5px',
+                            right: '-5px',
+                            width: '20px',
+                            height: '20px',
+                            borderRadius: '50%',
+                            background: '#111',
+                            border: '2px solid #ff007f',
+                            backgroundImage: `url(${weakness_doubled})`,
+                            backgroundSize: 'contain',
+                            backgroundRepeat: 'no-repeat',
+                            backgroundPosition: 'center',
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.5)',
+                            overflow: 'visible',
+                            zIndex: 15
+                          }}
+                        >
+                          <svg
+                            style={{
+                              position: 'absolute',
+                              top: 0,
+                              left: 0,
+                              width: '100%',
+                              height: '100%',
+                              transform: 'rotate(-90deg)',
+                              pointerEvents: 'none'
+                            }}
+                            viewBox="0 0 20 20"
+                          >
+                            <circle
+                              cx="10"
+                              cy="10"
+                              r="5"
+                              fill="none"
+                              stroke="rgba(0, 0, 0, 0.4)"
+                              strokeWidth="10"
+                              strokeDasharray="31.42"
+                              strokeDashoffset={getPerceiveDashOffset()}
+                            />
+                            {(() => {
+                              const coords = getRadialLineCoords(sagePerceiveEndTime, sagePerceiveDuration, sagePerceiveSingleDuration);
+                              return coords ? (
+                                <line
+                                  x1="10"
+                                  y1="10"
+                                  x2={coords.x2}
+                                  y2={coords.y2}
+                                  stroke="#ffffff"
+                                  strokeWidth="0.8"
+                                />
+                              ) : null;
+                            })()}
+                          </svg>
+                          <div style={{
+                            position: 'absolute',
+                            bottom: '-4px',
+                            left: '-8px',
+                            background: '#000',
+                            color: '#fff',
+                            fontSize: '9px',
+                            fontWeight: 'bold',
+                            borderRadius: '50%',
+                            width: '12px',
+                            height: '12px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            border: '1px solid #ff007f',
+                            zIndex: 16
+                          }}>
+                            2
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
 
               {/* --- Extra Goblins (col 4, row 1 & col 4, row 3) for Wizard --- */}
               {selectedFighterId === 'wizard' && (
@@ -5609,7 +6320,7 @@ const SandboxPage = () => {
                       zIndex: 30,
                       transition: 'left 0.4s linear, top 0.4s linear',
                       pointerEvents: 'none',
-                      width: '80px',
+                      width: '160px',
                       height: '8px',
                     }}
                   >
@@ -5633,7 +6344,7 @@ const SandboxPage = () => {
                         right: '8px',
                         top: '50%',
                         transform: 'translateY(-50%)',
-                        width: '72px',
+                        width: '144px',
                         height: '6px',
                         background: `linear-gradient(to left, ${arrowTypeColors[projectile.arrowType] || '#ff9f1c'}, transparent)`,
                         clipPath: 'polygon(0% 50%, 100% 10%, 100% 90%)',
@@ -5791,7 +6502,7 @@ const SandboxPage = () => {
                     top: `${summon.row * 20 + 10}%`,
                     width: '90px',
                     height: '90px',
-                    backgroundImage: `url(${summon.icon})`,
+                    backgroundImage: `url("${summon.icon}")`,
                     backgroundSize: 'contain',
                     backgroundRepeat: 'no-repeat',
                     backgroundPosition: 'center',
@@ -5825,7 +6536,7 @@ const SandboxPage = () => {
                       zIndex: 30,
                       transition: 'left 0.4s linear, top 0.4s linear',
                       pointerEvents: 'none',
-                      width: '60px',
+                      width: '120px',
                       height: '6px',
                     }}
                   >
@@ -5839,7 +6550,7 @@ const SandboxPage = () => {
                       }} />
                       <div style={{
                         position: 'absolute', right: '6px', top: '50%', transform: 'translateY(-50%)',
-                        width: '54px', height: '4px',
+                        width: '108px', height: '4px',
                         background: `linear-gradient(to left, ${arrowTypeColors[p.arrowType] || '#ff9f1c'}, transparent)`,
                         clipPath: 'polygon(0% 50%, 100% 10%, 100% 90%)',
                         boxShadow: `0 0 4px ${arrowTypeColors[p.arrowType] || '#ff9f1c'}40`
@@ -5990,11 +6701,24 @@ const SandboxPage = () => {
                       top: '-12px',
                       width: '40px',
                       height: '40px',
-                      background: 'radial-gradient(circle, #ffffff 20%, #7b2cbf 60%, rgba(123, 44, 191, 0) 100%)',
+                      background: 'radial-gradient(circle, #ffffff 10%, #7b2cbf 40%, rgba(123, 44, 191, 0) 100%)',
                       borderRadius: '60% 40% 50% 50% / 40% 50% 60% 50%',
                       animation: 'organicGlow 1.2s linear infinite',
-                      boxShadow: '0 0 15px #ff007f, 0 0 25px #8e2de2'
-                    }} />
+                      boxShadow: '0 0 15px #ff007f, 0 0 25px #8e2de2',
+                      filter: 'blur(4px)'
+                    }}>
+                      {[...Array(4)].map((_, i) => (
+                        <div key={`org-spark-${i}`} style={{
+                          position: 'absolute',
+                          left: '10px', top: '10px',
+                          width: '6px', height: '6px',
+                          background: '#fff',
+                          borderRadius: '50%',
+                          boxShadow: '0 0 10px #ff007f, 0 0 15px #8e2de2',
+                          animation: `particleSpark 0.8s ease-out infinite ${i * 0.2}s`
+                        }} />
+                      ))}
+                    </div>
 
                     {/* Undulating organic tip at the end of the beam touching the target */}
                     <div style={{
@@ -6003,11 +6727,24 @@ const SandboxPage = () => {
                       top: '-12px',
                       width: '40px',
                       height: '40px',
-                      background: 'radial-gradient(circle, #ffffff 20%, #8e2de2 60%, rgba(142, 45, 226, 0) 100%)',
+                      background: 'radial-gradient(circle, #ffffff 10%, #8e2de2 40%, rgba(142, 45, 226, 0) 100%)',
                       borderRadius: '50% 50% 30% 70% / 60% 40% 60% 40%',
                       animation: 'organicGlow 1.2s linear infinite',
-                      boxShadow: '0 0 15px #ff007f, 0 0 25px #8e2de2'
-                    }} />
+                      boxShadow: '0 0 15px #ff007f, 0 0 25px #8e2de2',
+                      filter: 'blur(4px)'
+                    }}>
+                      {[...Array(4)].map((_, i) => (
+                        <div key={`tip-spark-${i}`} style={{
+                          position: 'absolute',
+                          left: '10px', top: '10px',
+                          width: '6px', height: '6px',
+                          background: '#fff',
+                          borderRadius: '50%',
+                          boxShadow: '0 0 10px #ff007f, 0 0 15px #8e2de2',
+                          animation: `particleSpark 0.8s ease-out infinite ${i * 0.2}s`
+                        }} />
+                      ))}
+                    </div>
                   </div>
                 );
               })()}
@@ -6307,7 +7044,8 @@ const SandboxPage = () => {
                           top: `calc(50% + ${topOffset}px)`,
                           width: '56px',
                           height: '56px',
-                          transform: 'translate(-50%, -50%)',
+                          transform: `translate(-50%, -50%) ${animationPhase === 'lunge' ? `translate(${dx * 90}px, ${dy * 90}px)` : ''}`,
+                          transition: 'transform 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
                           pointerEvents: 'none',
                           zIndex: 5000,
                           display: 'flex',
@@ -6499,7 +7237,7 @@ const SandboxPage = () => {
                           top: `calc(50% + ${topOffset}px)`,
                           width: '56px',
                           height: '56px',
-                          transform: `translate(-50%, -50%) rotate(${baseAngle + 90}deg) scaleY(-1)`,
+                          transform: `translate(-50%, -50%) rotate(${baseAngle}deg) scaleY(-1)`,
                           pointerEvents: 'none',
                           zIndex: 5000,
                           display: 'flex',
@@ -6660,7 +7398,7 @@ const SandboxPage = () => {
                     transform: 'translateX(-50%)',
                     color: ft.color || '#ff4d4d',
                     fontWeight: 'bold',
-                    fontSize: ft.type === 'crit' ? '22px' : '17px',
+                    fontSize: isNaN(parseInt(ft.text)) ? (ft.type === 'crit' ? '12px' : '9px') : (ft.type === 'crit' ? '22px' : '17px'),
                     textShadow: '0 2px 4px #000, 0 0 8px rgba(0,0,0,0.8)',
                     zIndex: 60,
                     pointerEvents: 'none',
@@ -7002,125 +7740,246 @@ const SandboxPage = () => {
             overflowY: 'auto'
           }}>
             <h3 style={{ margin: '0 0 15px 0', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', paddingBottom: '10px', fontSize: '18px', color: '#ff5400', letterSpacing: '0.05em' }}>ABILITIES</h3>
-            {selectedFighter.abilities.map(a => {
-              const isNotch = a.id === 'notch';
-              return (
-                <div key={a.id} style={{ position: 'relative', width: '100%' }}>
-                  {isNotch && submenuOpen && (
-                    <div style={{
-                      position: 'absolute',
-                      bottom: 'calc(100% - 10px)',
-                      left: '20px',
-                      width: '0',
-                      height: '0',
-                      zIndex: 100,
-                    }}>
-                      {[
-                        { id: 'force', icon: ranger_force_arrow, label: 'Force', x: -32, y: -35 },
-                        { id: 'ice', icon: ranger_ice_arrow, label: 'Ice', x: -11, y: -46 },
-                        { id: 'poison', icon: ranger_poison_arrow, label: 'Poison', x: 11, y: -46 },
-                        { id: 'celestial', icon: ranger_celestial_arrow, label: 'Celestial', x: 32, y: -35 }
-                      ].map((arrow, idx) => {
-                        const isCurrent = notchedArrow === arrow.id;
-                        return (
-                          <button
-                            key={arrow.id}
-                            title={`${arrow.label} Arrow`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setNotchedArrow(arrow.id);
-                              setSubmenuOpen(false);
-                            }}
-                            style={{
-                              position: 'absolute',
-                              left: `${arrow.x}px`,
-                              top: `${arrow.y}px`,
-                              transform: 'translate(-50%, -50%)',
-                              width: '28px',
-                              height: '28px',
-                              borderRadius: '50%',
-                              background: '#222',
-                              backgroundImage: `url(${arrow.icon})`,
-                              backgroundSize: '70%',
-                              backgroundRepeat: 'no-repeat',
-                              backgroundPosition: 'center',
-                              border: isCurrent ? '2px solid #ffb703' : '1px solid rgba(255, 255, 255, 0.25)',
-                              cursor: 'pointer',
-                              boxShadow: isCurrent ? '0 0 8px #ffb703' : '0 4px 8px rgba(0,0,0,0.5)',
-                              transition: 'transform 0.15s, border-color 0.15s, box-shadow 0.15s',
-                              padding: 0,
-                              outline: 'none',
-                              animation: `scaleUp 0.15s ease-out ${idx * 0.03}s both`
-                            }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.transform = 'translate(-50%, -50%) scale(1.2)';
-                              e.currentTarget.style.borderColor = '#ffb703';
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.transform = 'translate(-50%, -50%) scale(1)';
-                              e.currentTarget.style.borderColor = isCurrent ? '#ffb703' : 'rgba(255, 255, 255, 0.25)';
-                            }}
-                          />
-                        );
-                      })}
+            {selectedFighter.id === 'summoner' ? (
+              // Grouped Summoner UI
+              (() => {
+                const riftAbility = selectedFighter.abilities.find(a => a.tier === 'rift');
+                const tier1Abilities = selectedFighter.abilities.filter(a => a.tier === 1);
+                const tier2Abilities = selectedFighter.abilities.filter(a => a.tier === 2);
+                const tier3Abilities = selectedFighter.abilities.filter(a => a.tier === 3);
+                const utilityAbilities = selectedFighter.abilities.filter(a => a.tier === 'utility');
+
+                const renderAbilityButton = (a) => {
+                  const isTier3 = a.tier === 3;
+                  const isDisabled = isAnimating || (isTier3 && !riftPortalActive);
+                  return (
+                    <div key={a.id} style={{ position: 'relative', width: '100%', marginBottom: '8px' }}>
+                      <button
+                        disabled={isDisabled}
+                        onClick={() => triggerAbility(a)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '12px',
+                          padding: '10px 12px',
+                          borderRadius: '8px',
+                          background: 'rgba(255, 255, 255, 0.03)',
+                          border: '1px solid rgba(255, 255, 255, 0.08)',
+                          color: '#fff',
+                          cursor: isDisabled ? 'not-allowed' : 'pointer',
+                          textAlign: 'left',
+                          transition: 'all 0.2s',
+                          outline: 'none',
+                          opacity: isDisabled ? 0.4 : 1,
+                          width: '100%'
+                        }}
+                        onMouseEnter={(e) => {
+                          if (isDisabled) return;
+                          e.currentTarget.style.background = 'rgba(255, 84, 0, 0.12)';
+                          e.currentTarget.style.borderColor = '#ff5400';
+                        }}
+                        onMouseLeave={(e) => {
+                          if (isDisabled) return;
+                          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)';
+                          e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)';
+                        }}
+                      >
+                        <div style={{
+                          width: '36px',
+                          height: '36px',
+                          borderRadius: '4px',
+                          background: '#222',
+                          backgroundImage: `url(${a.icon})`,
+                          backgroundSize: 'contain',
+                          backgroundRepeat: 'no-repeat',
+                          backgroundPosition: 'center',
+                          border: '1px solid rgba(255,255,255,0.15)',
+                          flexShrink: '0'
+                        }}></div>
+                        <div>
+                          <div style={{ fontWeight: 'bold', fontSize: '13px', color: '#ff9f1c' }}>{a.name}</div>
+                          <div style={{ fontSize: '10px', color: '#aaa', marginTop: '2px', lineHeight: '1.3' }}>{a.desc}</div>
+                        </div>
+                      </button>
                     </div>
-                  )}
-                  <button
-                    disabled={isAnimating}
-                    onClick={() => {
-                      if (isNotch) {
-                        setSubmenuOpen(!submenuOpen);
-                      } else {
-                        triggerAbility(a);
-                      }
-                    }}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '12px',
-                      padding: '12px',
-                      borderRadius: '8px',
-                      background: 'rgba(255, 255, 255, 0.03)',
-                      border: '1px solid rgba(255, 255, 255, 0.08)',
-                      color: '#fff',
-                      cursor: isAnimating ? 'not-allowed' : 'pointer',
-                      textAlign: 'left',
-                      transition: 'all 0.2s',
-                      outline: 'none',
-                      opacity: isAnimating ? 0.6 : 1,
-                      width: '100%'
-                    }}
-                    onMouseEnter={(e) => {
-                      if (isAnimating) return;
-                      e.currentTarget.style.background = 'rgba(255, 84, 0, 0.12)';
-                      e.currentTarget.style.borderColor = '#ff5400';
-                    }}
-                    onMouseLeave={(e) => {
-                      if (isAnimating) return;
-                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)';
-                      e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)';
-                    }}
-                  >
-                    <div style={{
-                      width: '40px',
-                      height: '40px',
-                      borderRadius: '4px',
-                      background: '#222',
-                      backgroundImage: `url(${a.icon})`,
-                      backgroundSize: 'contain',
-                      backgroundRepeat: 'no-repeat',
-                      backgroundPosition: 'center',
-                      border: '1px solid rgba(255,255,255,0.15)',
-                      flexShrink: '0'
-                    }}></div>
+                  );
+                };
+
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {/* Rift Portal at the top */}
+                    {riftAbility && (
+                      <div>
+                        <div style={{ fontSize: '11px', color: '#888', fontWeight: 'bold', textTransform: 'uppercase', marginBottom: '6px', letterSpacing: '0.05em' }}>Rift Spells</div>
+                        {renderAbilityButton(riftAbility)}
+                      </div>
+                    )}
+                    
+                    {/* Tier 1 Group */}
                     <div>
-                      <div style={{ fontWeight: 'bold', fontSize: '14px', color: '#ff9f1c' }}>{a.name}</div>
-                      <div style={{ fontSize: '11px', color: '#aaa', marginTop: '2px', lineHeight: '1.3' }}>{a.desc}</div>
+                      <div style={{ fontSize: '11px', color: '#888', fontWeight: 'bold', textTransform: 'uppercase', marginBottom: '6px', marginTop: '6px', letterSpacing: '0.05em' }}>Tier 1 Summon Spells</div>
+                      {tier1Abilities.map(renderAbilityButton)}
                     </div>
-                  </button>
-                </div>
-              );
-            })}
+                    
+                    {/* Tier 2 Group */}
+                    <div>
+                      <div style={{ fontSize: '11px', color: '#888', fontWeight: 'bold', textTransform: 'uppercase', marginBottom: '6px', marginTop: '6px', letterSpacing: '0.05em' }}>Tier 2 Summon Spells</div>
+                      {tier2Abilities.map(renderAbilityButton)}
+                    </div>
+                    
+                    {/* Tier 3 Group */}
+                    <div>
+                      <div style={{ 
+                        fontSize: '11px', 
+                        color: riftPortalActive ? '#a855f7' : '#888', 
+                        fontWeight: 'bold', 
+                        textTransform: 'uppercase', 
+                        marginBottom: '6px', 
+                        marginTop: '6px', 
+                        letterSpacing: '0.05em',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between'
+                      }}>
+                        <span>Tier 3 Summon Spells</span>
+                        {!riftPortalActive && <span style={{ fontSize: '9px', color: '#ff4d4d', textTransform: 'none', fontWeight: 'normal' }}>(Locked)</span>}
+                      </div>
+                      {tier3Abilities.map(renderAbilityButton)}
+                    </div>
+                    
+                    {/* Utilities Group */}
+                    {utilityAbilities.length > 0 && (
+                      <div>
+                        <div style={{ fontSize: '11px', color: '#888', fontWeight: 'bold', textTransform: 'uppercase', marginBottom: '6px', marginTop: '6px', letterSpacing: '0.05em' }}>Utility Spells</div>
+                        {utilityAbilities.map(renderAbilityButton)}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()
+            ) : (
+              selectedFighter.abilities.map(a => {
+                const isNotch = a.id === 'notch';
+                const isAstralSkill = a.id === 'monk_third_eye' || a.id === 'monk_astral_projection';
+                const isDisabled = isAnimating || (isAstralSkill && !astralModeActive);
+                return (
+                  <div key={a.id} style={{ position: 'relative', width: '100%' }}>
+                    {isNotch && submenuOpen && (
+                      <div style={{
+                        position: 'absolute',
+                        bottom: 'calc(100% - 10px)',
+                        left: '20px',
+                        width: '0',
+                        height: '0',
+                        zIndex: 100,
+                      }}>
+                        {[
+                          { id: 'force', icon: ranger_force_arrow, label: 'Force', x: -32, y: -35 },
+                          { id: 'ice', icon: ranger_ice_arrow, label: 'Ice', x: -11, y: -46 },
+                          { id: 'poison', icon: ranger_poison_arrow, label: 'Poison', x: 11, y: -46 },
+                          { id: 'celestial', icon: ranger_celestial_arrow, label: 'Celestial', x: 32, y: -35 }
+                        ].map((arrow, idx) => {
+                          const isCurrent = notchedArrow === arrow.id;
+                          return (
+                            <button
+                              key={arrow.id}
+                              title={`${arrow.label} Arrow`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setNotchedArrow(arrow.id);
+                                setSubmenuOpen(false);
+                              }}
+                              style={{
+                                position: 'absolute',
+                                left: `${arrow.x}px`,
+                                top: `${arrow.y}px`,
+                                transform: 'translate(-50%, -50%)',
+                                width: '28px',
+                                height: '28px',
+                                borderRadius: '50%',
+                                background: '#222',
+                                backgroundImage: `url(${arrow.icon})`,
+                                backgroundSize: '70%',
+                                backgroundRepeat: 'no-repeat',
+                                backgroundPosition: 'center',
+                                border: isCurrent ? '2px solid #ffb703' : '1px solid rgba(255, 255, 255, 0.25)',
+                                cursor: 'pointer',
+                                boxShadow: isCurrent ? '0 0 8px #ffb703' : '0 4px 8px rgba(0,0,0,0.5)',
+                                transition: 'transform 0.15s, border-color 0.15s, box-shadow 0.15s',
+                                padding: 0,
+                                outline: 'none',
+                                animation: `scaleUp 0.15s ease-out ${idx * 0.03}s both`
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.transform = 'translate(-50%, -50%) scale(1.2)';
+                                e.currentTarget.style.borderColor = '#ffb703';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.transform = 'translate(-50%, -50%) scale(1)';
+                                e.currentTarget.style.borderColor = isCurrent ? '#ffb703' : 'rgba(255, 255, 255, 0.25)';
+                              }}
+                            />
+                          );
+                        })}
+                      </div>
+                    )}
+                    <button
+                      disabled={isDisabled}
+                      onClick={() => {
+                        if (isNotch) {
+                          setSubmenuOpen(!submenuOpen);
+                        } else {
+                          triggerAbility(a);
+                        }
+                      }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        padding: '12px',
+                        borderRadius: '8px',
+                        background: 'rgba(255, 255, 255, 0.03)',
+                        border: '1px solid rgba(255, 255, 255, 0.08)',
+                        color: '#fff',
+                        cursor: isDisabled ? 'not-allowed' : 'pointer',
+                        textAlign: 'left',
+                        transition: 'all 0.2s',
+                        outline: 'none',
+                        opacity: isDisabled ? 0.4 : 1,
+                        width: '100%'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (isDisabled) return;
+                        e.currentTarget.style.background = 'rgba(255, 84, 0, 0.12)';
+                        e.currentTarget.style.borderColor = '#ff5400';
+                      }}
+                      onMouseLeave={(e) => {
+                        if (isDisabled) return;
+                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)';
+                        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)';
+                      }}
+                    >
+                      <div style={{
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: '4px',
+                        background: '#222',
+                        backgroundImage: `url(${a.icon})`,
+                        backgroundSize: 'contain',
+                        backgroundRepeat: 'no-repeat',
+                        backgroundPosition: 'center',
+                        border: '1px solid rgba(255,255,255,0.15)',
+                        flexShrink: '0'
+                      }}></div>
+                      <div>
+                        <div style={{ fontWeight: 'bold', fontSize: '14px', color: '#ff9f1c' }}>{a.name}</div>
+                        <div style={{ fontSize: '11px', color: '#aaa', marginTop: '2px', lineHeight: '1.3' }}>{a.desc}</div>
+                      </div>
+                    </button>
+                  </div>
+                );
+              })
+            )}
           </div>
         </div>
       )}

@@ -60,3 +60,10 @@ This document defines terminology and visual concepts used in the combat simulat
 - **Definition**: The visual mark placed on a target when marked by the Ranger's Mark ability.
 - **Visual**: A glowing crosshair-like indicator that is scaled 25% larger than the portrait card (width: 125%, height: 125%, centered) and pulses opacity dynamically between 45% and 80% to keep the portrait clearly visible.
 - **Trigger**: Detonates with Loose or Execute to deal bonus damage.
+
+### Buff
+- **Definition**: A positive status effect applied to a unit, enhancing their stats or providing a beneficial condition.
+- **Visual**: Typically indicated by floating text in a positive color (e.g., green, blue, yellow) and an associated effect icon.
+
+### Self Buff
+- **Definition**: A positive status effect applied by a unit to themselves (e.g., Monk's Inner Fire).

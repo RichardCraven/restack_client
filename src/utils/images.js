@@ -618,12 +618,15 @@ import healing_hands from '../assets/icons/combat-icons/specials/sage/healing_ha
 import circle_of_protection from '../assets/icons/combat-icons/specials/sage/circle_of_protection.png'
 import shielded from '../assets/icons/combat-icons/specials/sage/shielded.png'
 import shielded_partial from '../assets/icons/combat-icons/specials/sage/shielded_partial.png'
+import perceive from '../assets/icons/combat-icons/specials/sage/perceive.png'
+import weakness_doubled from '../assets/icons/combat-icons/specials/sage/weakness_doubled.png'
 import bleeding from '../assets/icons/combat-icons/effects/bleeding.png';
 import poison from '../assets/icons/combat-icons/effects/poison.png';
 import frozen from '../assets/icons/combat-icons/effects/frozen.png';
 import acid_drop from '../assets/icons/combat-icons/effects/acid drop.png';
 
 import monk_ethereal_speed from '../assets/icons/combat-icons/specials/monk/ethereal_speed.png';
+import monk_astral_being from '../assets/icons/combat-icons/specials/monk/astral_being.png';
 import monk_astral_focus from '../assets/icons/combat-icons/specials/monk/astral_focus.png';
 import monk_astral_projection from '../assets/icons/combat-icons/specials/monk/astral_projection.png';
 import monk_third_eye from '../assets/icons/combat-icons/specials/monk/third_eye.png';
@@ -645,6 +648,18 @@ import duplicate_icon from '../assets/icons/combat-icons/specials/summoner/dupli
 import duplicate_transition_icon from '../assets/icons/combat-icons/specials/summoner/duplicate transition.png';
 import triplicate_icon from '../assets/icons/combat-icons/specials/summoner/triplicate.png';
 import triplicate_transition_icon from '../assets/icons/combat-icons/specials/summoner/triplicate transition.png';
+
+import open_rift_icon from '../assets/icons/combat-icons/specials/summoner/open_rift.png';
+import portal_icon from '../assets/icons/combat-icons/specials/summoner/portal.png';
+import summon3_icon from '../assets/icons/combat-icons/specials/summoner/summon3.png';
+import summon_imp_army_icon from '../assets/icons/combat-icons/specials/summoner/summon_imp_army.png';
+import summon_skeleton_army_icon from '../assets/icons/combat-icons/specials/summoner/summon_skeleton_army.png';
+import summon_devil_icon from '../assets/icons/combat-icons/specials/summoner/summon_devil.png';
+import summon_zombie_icon from '../assets/icons/combat-icons/specials/summoner/summon_zombie.png';
+import summon_ghoul_icon from '../assets/icons/combat-icons/specials/summoner/summon_ghoul.png';
+import summon_imp_icon from '../assets/icons/combat-icons/specials/summoner/summon_imp.png';
+import duration_icon from '../assets/icons/combat-icons/effects/duration.png';
+
 
 
 // body
@@ -1376,10 +1391,13 @@ export {
     ranger_ensnare,
     ranger_net_throw,
     healing_hands,
+    perceive,
+    weakness_doubled,
     circle_of_protection,
     shielded,
     shielded_partial,
     monk_ethereal_speed,
+    monk_astral_being,
     monk_astral_focus,
     monk_astral_projection,
     monk_third_eye,
@@ -1399,6 +1417,16 @@ export {
     duplicate_transition_icon,
     triplicate_icon,
     triplicate_transition_icon,
+    open_rift_icon,
+    portal_icon,
+    summon3_icon,
+    summon_imp_army_icon,
+    summon_skeleton_army_icon,
+    summon_devil_icon,
+    summon_zombie_icon,
+    summon_ghoul_icon,
+    summon_imp_icon,
+    duration_icon,
     fire_blast,
     meditate,
     shield_wall,
