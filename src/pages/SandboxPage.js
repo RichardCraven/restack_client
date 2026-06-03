@@ -580,6 +580,11 @@ const SandboxPage = () => {
         setAstralModeActive(false);
         setAstralModeFading(false);
         setAstralModeEndTime(null);
+
+        // Auto-end other active astral skills/effects
+        setThirdEyeActive(false);
+        setThirdEyeFading(false);
+        setThirdEyeEndTime(null);
       } else if (remaining <= 300) {
         setAstralModeFading(true);
       } else {
@@ -780,7 +785,7 @@ const SandboxPage = () => {
     return empty;
   };
 
-  const getSummonPlacement = () => {
+  const getSummonPlacement = (summonType) => {
     const offsets = [
       { r: 0, c: 1 },
       { r: 0, c: -1 },
@@ -801,17 +806,61 @@ const SandboxPage = () => {
     if (riftPortalActive && riftPortalPos) {
       occupied.add(`${riftPortalPos.row}-${riftPortalPos.col}`);
     }
-    for (const offset of offsets) {
-      const r = fighterPos.row + offset.r;
-      const c = fighterPos.col + offset.c;
-      if (r >= 0 && r < 5 && c >= 0 && c < 5 && !occupied.has(`${r}-${c}`)) {
-        return { row: r, col: c };
+
+    const isTier3 = ['imp_army', 'skeleton_army', 'devil'].includes(summonType);
+    if (isTier3 && riftPortalActive && riftPortalPos) {
+      const orthoOffsets = [
+        { r: -1, c: 0 }, { r: 1, c: 0 },
+        { r: 0, c: -1 }, { r: 0, c: 1 }
+      ];
+      const diagOffsets = [
+        { r: -1, c: -1 }, { r: -1, c: 1 },
+        { r: 1, c: -1 }, { r: 1, c: 1 }
+      ];
+      let freeAdjacent = [];
+      for (const offset of orthoOffsets) {
+        const r = riftPortalPos.row + offset.r;
+        const c = riftPortalPos.col + offset.c;
+        if (r >= 0 && r < 5 && c >= 0 && c < 5 && !occupied.has(`${r}-${c}`)) {
+          freeAdjacent.push({ row: r, col: c });
+        }
       }
-    }
-    for (let r = 0; r < 5; r++) {
-      for (let c = 0; c < 5; c++) {
-        if (!occupied.has(`${r}-${c}`)) {
+      if (freeAdjacent.length === 0) {
+        for (const offset of diagOffsets) {
+          const r = riftPortalPos.row + offset.r;
+          const c = riftPortalPos.col + offset.c;
+          if (r >= 0 && r < 5 && c >= 0 && c < 5 && !occupied.has(`${r}-${c}`)) {
+            freeAdjacent.push({ row: r, col: c });
+          }
+        }
+      }
+      if (freeAdjacent.length > 0) {
+        return freeAdjacent[Math.floor(Math.random() * freeAdjacent.length)];
+      }
+      const emptyTiles = [];
+      for (let r = 0; r < 5; r++) {
+        for (let c = 0; c < 5; c++) {
+          if (!occupied.has(`${r}-${c}`)) {
+            emptyTiles.push({ row: r, col: c });
+          }
+        }
+      }
+      if (emptyTiles.length > 0) {
+        return emptyTiles[Math.floor(Math.random() * emptyTiles.length)];
+      }
+    } else {
+      for (const offset of offsets) {
+        const r = fighterPos.row + offset.r;
+        const c = fighterPos.col + offset.c;
+        if (r >= 0 && r < 5 && c >= 0 && c < 5 && !occupied.has(`${r}-${c}`)) {
           return { row: r, col: c };
+        }
+      }
+      for (let r = 0; r < 5; r++) {
+        for (let c = 0; c < 5; c++) {
+          if (!occupied.has(`${r}-${c}`)) {
+            return { row: r, col: c };
+          }
         }
       }
     }
@@ -819,7 +868,7 @@ const SandboxPage = () => {
   };
 
   const executeSummonAnimation = (summonType, transitionIcon, minionIcon, minionLabel) => {
-    const spawnPos = getSummonPlacement();
+    const spawnPos = getSummonPlacement(summonType);
     setAnimating(true);
     setActiveSummons([{
       id: Math.random(),
@@ -1018,6 +1067,7 @@ const SandboxPage = () => {
     if (animationPhase === 'leap_landing') return 'transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
     if (animationPhase === 'heal_approach') return 'transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
     if (animationPhase === 'leap') return 'transform 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+    if (animationPhase === 'astral_projection') return 'left 1.2s ease-in-out, top 1.2s ease-in-out, opacity 1.2s';
     return 'transform 0.25s ease-in-out, opacity 0.2s';
   };
 
@@ -1374,7 +1424,7 @@ const SandboxPage = () => {
         setAstralModeActive(true);
         setAstralModeFading(false);
         setAstralModeEndTime(Date.now() + 6000);
-      }, 2000);
+      }, 4000); // Doubled from 2000 to 4000
     }
 
     // --- MONK THIRD EYE ---
@@ -1396,30 +1446,63 @@ const SandboxPage = () => {
 
     // --- MONK ASTRAL PROJECTION ---
     else if (ability.type === 'monk_astral_proj_type') {
+      // Find empty tile within 2 tiles in any direction
+      const destTiles = [];
+      const occupied = new Set();
+      occupied.add(`${targetPos.row}-${targetPos.col}`);
+      minions.forEach(m => occupied.add(`${m.row}-${m.col}`));
+      turrets.forEach(t => occupied.add(`${t.row}-${t.col}`));
+      if (riftPortalActive && riftPortalPos) {
+        occupied.add(`${riftPortalPos.row}-${riftPortalPos.col}`);
+      }
+      if (selectedFighterId === 'sage') {
+        occupied.add('3-0'); occupied.add('0-3'); occupied.add('2-3');
+      } else if (selectedFighterId === 'soldier') {
+        occupied.add('0-1'); occupied.add('0-3');
+      }
+
+      for (let dr = -2; dr <= 2; dr++) {
+        for (let dc = -2; dc <= 2; dc++) {
+          if (dr === 0 && dc === 0) continue;
+          const nr = fighterPos.row + dr;
+          const nc = fighterPos.col + dc;
+          if (nr >= 0 && nr < 5 && nc >= 0 && nc < 5) {
+            if (!occupied.has(`${nr}-${nc}`)) {
+              destTiles.push({ row: nr, col: nc });
+            }
+          }
+        }
+      }
+
+      const destTile = destTiles.length > 0 
+        ? destTiles[Math.floor(Math.random() * destTiles.length)]
+        : fighterPos;
+
       setAnimating(true);
-      setAnimationPhase('step_adjacent');
-      
+      setAnimationPhase('astral_projection');
+      setFighterPos(destTile);
+
+      // Reaches the destination tile after 1.2s (1200ms)
       setTimeout(() => {
+        setAnimationPhase('astral_projection_delay');
         setTargetShake(true);
         setTargetFlash(true);
         addFloatingText('-25', 'normal', '#21e6c1', targetPos.row, targetPos.col);
         setHitEffect({ type: 'astral_projection_strike' });
-        
+
+        // Strike ends after 300ms (1500ms total)
         setTimeout(() => {
           setTargetShake(false);
           setTargetFlash(false);
           setHitEffect(null);
         }, 300);
-      }, 250);
+      }, 1200);
 
-      setTimeout(() => {
-        setAnimationPhase('return');
-      }, 700);
-
+      // Animation concludes after delay (total 1600ms)
       setTimeout(() => {
         setAnimationPhase(null);
         setAnimating(false);
-      }, 950);
+      }, 1600);
     }
 
     // --- MONK PUNCH ---
@@ -2719,13 +2802,15 @@ const SandboxPage = () => {
       setActiveBeam('annihilation');
       setAnnihilationSweepActive(false);
 
+      // Start concentric organic rings simultaneously as the beam starts
+      setAnnihilationExplosion({ row: targetPos.row, col: targetPos.col });
+
       setTimeout(() => {
         setAnnihilationSweepActive(true);
       }, 50);
 
-      let ticks = 0;
-      const dmgInterval = setInterval(() => {
-        ticks++;
+      // First damage tick triggers instantly when the beam first hits (at 50ms)
+      setTimeout(() => {
         setTargetShake(true);
         setTargetFlash(true);
         addFloatingText('-16', 'crit', '#9d4edd', targetPos.row, targetPos.col);
@@ -2733,25 +2818,43 @@ const SandboxPage = () => {
           setTargetShake(false);
           setTargetFlash(false);
         }, 150);
-        if (ticks >= 3) {
-          clearInterval(dmgInterval);
-        }
-      }, 250);
+      }, 50);
 
+      // Second damage tick at 600ms
+      setTimeout(() => {
+        setTargetShake(true);
+        setTargetFlash(true);
+        addFloatingText('-16', 'crit', '#9d4edd', targetPos.row, targetPos.col);
+        setTimeout(() => {
+          setTargetShake(false);
+          setTargetFlash(false);
+        }, 150);
+      }, 600);
+
+      // Third damage tick at 1150ms
+      setTimeout(() => {
+        setTargetShake(true);
+        setTargetFlash(true);
+        addFloatingText('-16', 'crit', '#9d4edd', targetPos.row, targetPos.col);
+        setTimeout(() => {
+          setTargetShake(false);
+          setTargetFlash(false);
+        }, 150);
+      }, 1150);
+
+      // Beam and explosion end at 1400ms (slower sweep)
       setTimeout(() => {
         setActiveBeam(null);
         setAnnihilationSweepActive(false);
+        setAnnihilationExplosion(null);
         setHitEffect({ type: 'annihilation_portal' });
-
-        setAnnihilationExplosion({ row: targetPos.row, col: targetPos.col });
-        setTimeout(() => setAnnihilationExplosion(null), 700);
 
         setTimeout(() => {
           setHitEffect(null);
         }, 800);
 
         setAnimating(false);
-      }, 850);
+      }, 1400);
     }
 
     // --- WIZARD VORTEX ---
@@ -2828,7 +2931,7 @@ const SandboxPage = () => {
       }
       const randomTile = openTiles[Math.floor(Math.random() * openTiles.length)];
       setAnimating(true);
-      setHitEffect({ type: 'void_portal' });
+      setHitEffect({ type: 'void_portal', row: randomTile.row, col: randomTile.col });
       addFloatingText('RIFT OPENED!', 'normal', '#8a2be2', randomTile.row, randomTile.col);
 
       setTimeout(() => {
@@ -4511,7 +4614,9 @@ const SandboxPage = () => {
                   zIndex: 10,
                   pointerEvents: 'none',
                   transform: getFighterTransformStyle(),
-                  opacity: selfBuffEffect === 'stealth' ? 0.3 : 1,
+                  opacity: (animationPhase === 'astral_projection' || animationPhase === 'astral_projection_delay')
+                    ? 0.4
+                    : (selfBuffEffect === 'stealth' ? 0.3 : 1),
                   transition: getFighterTransitionStyle()
                 }}
               >
@@ -4754,11 +4859,11 @@ const SandboxPage = () => {
                   {selectedFighterId === 'monk' && astralFocusAnimActive && (
                     <div style={{
                       position: 'absolute',
-                      top: '-20px',
+                      top: '-15px',
                       left: '50%',
                       transform: 'translateX(-50%)',
-                      width: '40px',
-                      height: '40px',
+                      width: '30px',
+                      height: '30px',
                       borderRadius: '4px',
                       border: '2px solid #21e6c1',
                       backgroundImage: `url(${monk_astral_focus})`,
@@ -4766,7 +4871,7 @@ const SandboxPage = () => {
                       backgroundPosition: 'center',
                       boxShadow: '0 0 10px #21e6c1',
                       zIndex: 20,
-                      animation: 'astralFocusFloat 2s ease-in-out forwards'
+                      animation: 'astralFocusFloat 4s ease-in-out forwards'
                     }} />
                   )}
                   {selectedFighterId === 'sage' && copActive && (
@@ -6687,7 +6792,7 @@ const SandboxPage = () => {
                       transformOrigin: 'left center',
                       boxShadow: '0 0 20px #ff007f, 0 0 40px #8e2de2, 0 0 60px #8e2de2',
                       zIndex: 25,
-                      transition: annihilationSweepActive ? 'width 0.8s ease-in-out, transform 0.8s ease-in-out, opacity 0.2s' : 'none',
+                      transition: annihilationSweepActive ? 'width 1.2s ease-in-out, transform 1.2s ease-in-out, opacity 0.2s' : 'none',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'flex-end',
@@ -6809,8 +6914,8 @@ const SandboxPage = () => {
                     position: 'absolute',
                     width: '120px',
                     height: '120px',
-                    left: `${targetPos.col * 20 + 10}%`,
-                    top: `${targetPos.row * 20 + 10}%`,
+                    left: `${(hitEffect.col !== undefined ? hitEffect.col : targetPos.col) * 20 + 10}%`,
+                    top: `${(hitEffect.row !== undefined ? hitEffect.row : targetPos.row) * 20 + 10}%`,
                     transform: 'translate(-50%, -50%)',
                     zIndex: 40,
                     pointerEvents: 'none',
@@ -7237,7 +7342,7 @@ const SandboxPage = () => {
                           top: `calc(50% + ${topOffset}px)`,
                           width: '56px',
                           height: '56px',
-                          transform: `translate(-50%, -50%) rotate(${baseAngle}deg) scaleY(-1)`,
+                          transform: `translate(-50%, -50%) rotate(${baseAngle + 180}deg)`,
                           pointerEvents: 'none',
                           zIndex: 5000,
                           display: 'flex',
