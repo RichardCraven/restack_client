@@ -4,6 +4,7 @@ import {storeMeta, getMeta} from '../utils/session-handler';
 import { CrewManager } from '../utils/crew-manager'
 import { Redirect} from "react-router-dom";
 import MonsterBattle from './sub-views/MonsterBattle';
+import { CombatManagerRedux } from '../utils/combat-manager-redux';
 
 
 // import useScript from '../hooks/useScript.js'
@@ -54,6 +55,7 @@ class CrewManagerPage extends React.Component{
         // Simulator-only: per-fighter target level (keyed by fighter type) and gear option
         fighterLevels: {},
         outfitWithEquipment: true,
+        useReduxCombat: true,
         // Enemy selection
         selectedMonsterKey: 'mummy',
         selectedMinionKeys: ['skeleton', 'skeleton', 'skeleton', null],
@@ -156,14 +158,15 @@ class CrewManagerPage extends React.Component{
     }
 
     wireMonsterBattleRefToWizardAI = () => {
+        const cm = this.state.useReduxCombat ? this.reduxCombatManager : this.props.combatManager;
         if (
             this.monsterBattleComponentRef.current &&
-            this.props.combatManager &&
-            this.props.combatManager.fighterAI &&
-            this.props.combatManager.fighterAI.roster &&
-            this.props.combatManager.fighterAI.roster.wizard
+            cm &&
+            cm.fighterAI &&
+            cm.fighterAI.roster &&
+            cm.fighterAI.roster.wizard
         ) {
-            this.props.combatManager.fighterAI.roster.wizard.monsterBattleRef = this.monsterBattleComponentRef.current;
+            cm.fighterAI.roster.wizard.monsterBattleRef = this.monsterBattleComponentRef.current;
         }
   }
 //   useScript('../assets/fullYear.js')
@@ -392,6 +395,11 @@ class CrewManagerPage extends React.Component{
           });
       }
       this.setMonster()
+      if (this.state.useReduxCombat) {
+          this.reduxCombatManager = new CombatManagerRedux();
+      } else {
+          this.reduxCombatManager = null;
+      }
       this.setState({
           crewSelected: true
       })
@@ -651,6 +659,15 @@ combatKeyUpListener = (event) => {
                             />
                             <label htmlFor="outfit-equipment-cb">Outfit with equipment</label>
                         </div>
+                        <div className="sim-redux-combat-option" style={{marginTop:'10px', display:'flex', alignItems:'center', gap:'6px', color:'#ccc', fontSize:'12px'}}>
+                            <input
+                                id="redux-combat-cb"
+                                type="checkbox"
+                                checked={this.state.useReduxCombat}
+                                onChange={e => this.setState({ useReduxCombat: e.target.checked })}
+                            />
+                            <label htmlFor="redux-combat-cb">Use Rounds System (Redux Combat)</label>
+                        </div>
                     </div>
                 </div>
 
@@ -781,7 +798,7 @@ combatKeyUpListener = (event) => {
                 exitSimulator={this.exitSimulator}
                 ref={this.monsterBattleComponentRef}
                 overlayManager={this.props.overlayManager}
-                combatManager={this.props.combatManager || null}
+                combatManager={this.state.useReduxCombat ? this.reduxCombatManager : (this.props.combatManager || null)}
                 inventoryManager={this.props.inventoryManager}
                 animationManager={this.props.animationManager}
                 crewManager={this.tempCrewManager || this.props.crewManager || null}

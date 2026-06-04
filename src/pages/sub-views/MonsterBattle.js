@@ -355,6 +355,10 @@ class MonsterBattle extends React.Component {
 
         })
 
+        if (this.props.combatManager && typeof this.props.combatManager.pauseCombat === 'function') {
+            this.props.combatManager.pauseCombat(!!this.props.paused);
+        }
+
         this.props.animationManager.initialize(NUM_COLUMNS, MAX_ROWS);
 
         this.setState({
@@ -392,6 +396,10 @@ class MonsterBattle extends React.Component {
         // key handling moved to parent DungeonPage
     }
     componentDidUpdate(prevProps, prevState) {
+        if (prevProps.paused !== this.props.paused && this.props.combatManager && typeof this.props.combatManager.pauseCombat === 'function') {
+            this.props.combatManager.pauseCombat(!!this.props.paused);
+        }
+
         // When the summary panel appears, schedule clearing of any
         // `justLeveled` flags recorded on crew members so the arrow and
         // gain details are only visible temporarily. We clear the flags on
@@ -1778,18 +1786,91 @@ class MonsterBattle extends React.Component {
                 <div style={{position: 'absolute', top: -35, left: 20, color: 'white', fontSize: '18px', zIndex: 1000}}>
                     {this.props.monster && this.props.monster.name ? `Fighting: ${this.props.monster.name}` : 'Fighting: Unknown'}
                 </div>
-                {/* Game speed readout in upper right */}
-                <div style={{position: 'absolute', top: -35, right: 20, color: 'white', fontSize: '18px', zIndex: 1000}}>
-                    Game Speed: {
-                        (() => {
-                            // Try to get intervalDisplayNames from parent props (CombatSimulator)
-                            const intervalDisplayNames = INTERVAL_DISPLAY_NAMES;
-                            const intervals = INTERVALS;
-                            const current = this.getGameSpeed();
-                            const idx = intervals.indexOf(current);
-                            return idx !== -1 ? intervalDisplayNames[idx] : `${current} ms`;
-                        })()
-                    }
+                {/* Game speed / Round clock readout in upper right */}
+                <div style={{position: 'absolute', top: -45, right: 20, display: 'flex', alignItems: 'center', gap: '15px', color: 'white', fontSize: '14px', zIndex: 1000}}>
+                    {this.props.combatManager && this.props.combatManager.round !== undefined ? (
+                        <>
+                            {/* Fast/Slow selector */}
+                            <div style={{ display: 'flex', gap: '5px' }}>
+                                <button 
+                                    onClick={() => this.setGameSpeed(INTERVALS[1])}
+                                    style={{
+                                        backgroundColor: this.props.combatManager.gameSpeed === 'slow' ? '#ffffff' : 'rgba(255,255,255,0.1)',
+                                        color: this.props.combatManager.gameSpeed === 'slow' ? '#000000' : '#ffffff',
+                                        border: '1px solid rgba(255,255,255,0.3)',
+                                        borderRadius: '4px',
+                                        padding: '4px 8px',
+                                        cursor: 'pointer',
+                                        fontSize: '12px',
+                                        fontWeight: 'bold',
+                                        transition: 'all 0.2s'
+                                    }}
+                                >
+                                    Slow
+                                </button>
+                                <button 
+                                    onClick={() => this.setGameSpeed(INTERVALS[2])}
+                                    style={{
+                                        backgroundColor: this.props.combatManager.gameSpeed === 'fast' ? '#ffffff' : 'rgba(255,255,255,0.1)',
+                                        color: this.props.combatManager.gameSpeed === 'fast' ? '#000000' : '#ffffff',
+                                        border: '1px solid rgba(255,255,255,0.3)',
+                                        borderRadius: '4px',
+                                        padding: '4px 8px',
+                                        cursor: 'pointer',
+                                        fontSize: '12px',
+                                        fontWeight: 'bold',
+                                        transition: 'all 0.2s'
+                                    }}
+                                >
+                                    Fast
+                                </button>
+                            </div>
+                            
+                            {/* Round Clock Widget */}
+                            <div 
+                                style={{
+                                    position: 'relative',
+                                    width: '40px',
+                                    height: '40px',
+                                    borderRadius: '50%',
+                                    background: `conic-gradient(rgba(255,255,255,0.8) 0deg, rgba(255,255,255,0.8) ${this.props.combatManager.roundTimeRemainingRatio * 360}deg, rgba(255,255,255,0.1) ${this.props.combatManager.roundTimeRemainingRatio * 360}deg, rgba(255,255,255,0.1) 360deg)`,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    boxShadow: '0 0 8px rgba(0,0,0,0.5)',
+                                }}
+                            >
+                                <div 
+                                    style={{
+                                        width: '32px',
+                                        height: '32px',
+                                        borderRadius: '50%',
+                                        backgroundColor: '#111111',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        color: '#ffffff',
+                                        fontSize: '14px',
+                                        fontWeight: 'bold',
+                                    }}
+                                >
+                                    {this.props.combatManager.round}
+                                </div>
+                            </div>
+                        </>
+                    ) : (
+                        <div>
+                            Game Speed: {
+                                (() => {
+                                    const intervalDisplayNames = INTERVAL_DISPLAY_NAMES;
+                                    const intervals = INTERVALS;
+                                    const current = this.getGameSpeed();
+                                    const idx = intervals.indexOf(current);
+                                    return idx !== -1 ? intervalDisplayNames[idx] : `${current} ms`;
+                                })()
+                            }
+                        </div>
+                    )}
                 </div>
                 { this.state.navToDeathScene && <Redirect to='/death'/>}
                 <div className="combat-grid-container"
@@ -2084,6 +2165,194 @@ class MonsterBattle extends React.Component {
                             {this.props.paused && <span className="paused-marker">PAUSED</span>}
                         </div>
                     </div>
+
+                    {/* ── Redux AI Mode: read-only status panel ───────────────────────── */}
+                    {this.props.combatManager && this.props.combatManager.round !== undefined ? (
+                        <div className="interaction-row redux-status-panel">
+
+                            {/* LEFT COLUMN: stat bars + current target */}
+                            <div className="redux-stats-col">
+                                <div className="interaction-header">Status</div>
+                                {liveSelectedFighter ? (
+                                    <div className="redux-stat-block">
+                                        {/* HP Bar */}
+                                        <div className="redux-stat-label">
+                                            <span>HP</span>
+                                            <span className="redux-stat-value">
+                                                {Math.max(0, Math.round(liveSelectedFighter.hp ?? 0))} / {Math.round(liveSelectedFighter.starting_hp ?? liveSelectedFighter.stats?.hp ?? 0)}
+                                            </span>
+                                        </div>
+                                        <div className="redux-bar-track">
+                                            <div
+                                                className="redux-bar-fill hp-fill"
+                                                style={{ width: `${Math.max(0, Math.min(100, ((liveSelectedFighter.hp ?? 0) / (liveSelectedFighter.starting_hp || liveSelectedFighter.stats?.hp || 1)) * 100))}%` }}
+                                            />
+                                        </div>
+
+                                        {/* Endurance Bar */}
+                                        <div className="redux-stat-label">
+                                            <span>Endurance</span>
+                                            <span className="redux-stat-value">
+                                                {Math.max(0, Math.round(liveSelectedFighter.endurance ?? 0))} / {Math.round(liveSelectedFighter.maxEndurance ?? 100)}
+                                            </span>
+                                        </div>
+                                        <div className="redux-bar-track">
+                                            <div
+                                                className="redux-bar-fill endurance-fill"
+                                                style={{ width: `${Math.max(0, Math.min(100, ((liveSelectedFighter.endurance ?? 100) / (liveSelectedFighter.maxEndurance || 100)) * 100))}%` }}
+                                            />
+                                        </div>
+
+                                        {/* Active status effects */}
+                                        {(() => {
+                                            const liveUnit = this.props.combatManager.getCombatant?.(liveSelectedFighter.id);
+                                            const statuses = [];
+                                            if (liveUnit?.frozen || liveSelectedFighter.frozen) statuses.push({ label: 'Frozen', color: '#7dd5f5' });
+                                            if (liveUnit?.stunned || liveSelectedFighter.stunned) statuses.push({ label: 'Stunned', color: '#f5c842' });
+                                            if (liveUnit?.bleed || liveSelectedFighter.bleed) statuses.push({ label: 'Bleeding', color: '#e05555' });
+                                            if (liveUnit?.astralBeingActive) statuses.push({ label: 'Astral Being', color: '#21e6c1' });
+                                            if (liveUnit?.thirdEyeActive) statuses.push({ label: 'Third Eye', color: '#21e6c1' });
+                                            if (liveUnit?.shieldWallActive) statuses.push({ label: 'Shield Wall', color: '#90c4ff' });
+                                            if (liveUnit?.berserkerActive || liveSelectedFighter.berserkerActive) statuses.push({ label: 'Berserk', color: '#ff4444' });
+                                            if (liveUnit?.riftPortalActive) statuses.push({ label: 'Rift Open', color: '#cc44ff' });
+                                            // Active buffs from _applyBuff
+                                            if (Array.isArray(liveUnit?.activeBuffs)) {
+                                                liveUnit.activeBuffs.forEach(b => {
+                                                    if (b && b.label && !statuses.find(s => s.label === b.label)) {
+                                                        statuses.push({ label: `${b.label} (${b.roundsLeft}r)`, color: '#7affa0' });
+                                                    }
+                                                });
+                                            }
+                                            if (Array.isArray(liveUnit?.activeDebuffs)) {
+                                                liveUnit.activeDebuffs.forEach(d => {
+                                                    if (d && d.label) {
+                                                        statuses.push({ label: d.label, color: '#ff8844' });
+                                                    }
+                                                });
+                                            }
+                                            if (!statuses.length) return null;
+                                            return (
+                                                <div className="redux-status-badges">
+                                                    {statuses.map((s, i) => (
+                                                        <span key={i} className="redux-status-badge" style={{ borderColor: s.color, color: s.color }}>{s.label}</span>
+                                                    ))}
+                                                </div>
+                                            );
+                                        })()}
+
+                                        {/* Current Target */}
+                                        {(() => {
+                                            const liveUnit = this.props.combatManager.getCombatant?.(liveSelectedFighter.id);
+                                            const targetId = liveUnit?.targetId;
+                                            const target = targetId ? this.props.combatManager.getCombatant?.(targetId) : null;
+                                            if (!target || target.dead) return null;
+                                            return (
+                                                <div className="redux-target-row">
+                                                    <span className="redux-stat-label-inline">Target:</span>
+                                                    <div
+                                                        className="redux-target-portrait"
+                                                        style={{ backgroundImage: `url(${target.portrait})` }}
+                                                    />
+                                                    <span className="redux-target-name">{target.name || target.type}</span>
+                                                </div>
+                                            );
+                                        })()}
+                                    </div>
+                                ) : (
+                                    <div className="redux-no-selection">Click a unit portrait to inspect</div>
+                                )}
+                            </div>
+
+                            {/* MIDDLE COLUMN: ability cooldown grid */}
+                            <div className="redux-abilities-col">
+                                <div className="interaction-header">Abilities</div>
+                                <div className="interaction-tile-container">
+                                    {liveSelectedFighter && (() => {
+                                        const rawSpecials = liveSelectedFighter.specials || [];
+                                        const seenKeys = new Set();
+                                        const cm = this.props.combatManager;
+                                        return rawSpecials.filter(entry => {
+                                            const key = typeof entry === 'string' ? entry : (entry?.key || entry?.name || '');
+                                            const nk = String(key).trim().toLowerCase().replaceAll(' ', '_');
+                                            if (!nk || seenKeys.has(nk)) return false;
+                                            seenKeys.add(nk);
+                                            return true;
+                                        }).map((a, i) => {
+                                            const sourceKey = typeof a === 'string' ? a : (a?.key || a?.name || '');
+                                            const canonicalSpecial = cm?.specialsMatrix
+                                                ? (cm.specialsMatrix[sourceKey] || cm.specialsMatrix[String(sourceKey).toLowerCase().replaceAll(' ', '_')] || {})
+                                                : {};
+                                            const runtimeSpecial = (cm?.resolveSpecial && liveSelectedFighter)
+                                                ? (cm.resolveSpecial(liveSelectedFighter, sourceKey) || {})
+                                                : {};
+                                            const spec = { ...canonicalSpecial, ...(typeof a === 'object' ? a : {}), ...runtimeSpecial };
+                                            const iconCandidate = spec.iconUrl || spec.icon;
+                                            const resolveIcon = (candidate) => {
+                                                if (!candidate) return '';
+                                                if (typeof candidate === 'string') {
+                                                    if (candidate.trim().startsWith('url(')) return candidate.replace(/^url\((.*)?\)$/i, '$1').replace(/^['\"]|['\"]$/g, '');
+                                                    const mapped = images[candidate.trim()];
+                                                    if (mapped) return mapped.default || mapped;
+                                                    return candidate;
+                                                }
+                                                if (typeof candidate === 'object' && candidate.default) return candidate.default;
+                                                return '';
+                                            };
+                                            const iconUrl = resolveIcon(iconCandidate);
+                                            const remainingRounds = liveSelectedFighter?.cooldowns?.[spec.id] || liveSelectedFighter?.cooldowns?.[sourceKey] || 0;
+                                            const baseCd = spec.cooldown || 5;
+                                            const cooldownPct = remainingRounds > 0 ? Math.ceil((remainingRounds / baseCd) * 100) : 0;
+                                            const isReady = cooldownPct === 0;
+                                            return (
+                                                <div key={i} className="interaction-tile-wrapper">
+                                                    <div
+                                                        className={`interaction-tile special read-only ${isReady ? 'available' : ''}`}
+                                                        style={{
+                                                            backgroundImage: iconUrl ? `url("${encodeURI(String(iconUrl).replace(/^['\"]|['\"]$/g, ''))}")` : 'none',
+                                                            cursor: 'default',
+                                                            opacity: isReady ? 1 : 0.7,
+                                                        }}
+                                                        title={spec.name || sourceKey}
+                                                    />
+                                                    {cooldownPct > 0 && (
+                                                        <div
+                                                            className="interaction-tile-overlay radial"
+                                                            style={{ '--cooldown-remaining': cooldownPct }}
+                                                        />
+                                                    )}
+                                                    {!isReady && (
+                                                        <div className="redux-cd-badge">{Math.ceil(remainingRounds)}</div>
+                                                    )}
+                                                </div>
+                                            );
+                                        });
+                                    })()}
+                                </div>
+                            </div>
+
+                            {/* RIGHT COLUMN: event log */}
+                            <div className="queue-col redux-log-col">
+                                <div className="interaction-header">Event Log</div>
+                                <div className="event-log-container" ref={this.combatLogContainerRef}>
+                                    {this.state.combatLog.map((entry, index) => {
+                                        const isLatest = index === this.state.combatLog.length - 1;
+                                        return (
+                                            <div
+                                                key={entry.id || index}
+                                                ref={isLatest ? this.latestCombatLogEntryRef : null}
+                                                className="event-log-entry"
+                                            >
+                                                {entry.message}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                        </div>
+                    ) : (
+
+                    /* ── Legacy Manual Mode ─────────────────────────────────────────── */
                     <div className="interaction-row">
                         <div className="inventory-col">
                             <div className="interaction-header">Consumables</div>
@@ -2194,10 +2463,19 @@ class MonsterBattle extends React.Component {
                                     const specialBackgroundImage = specialIcon
                                         ? `${cssUrl(specialIcon)}`
                                         : 'none';
-                                    const specialCooldownPosition = typeof normalizedSpecial.cooldown_position === 'number'
-                                        ? normalizedSpecial.cooldown_position
-                                        : 100;
-                                    const specialCooldownRemaining = Math.max(0, Math.min(100, 100 - specialCooldownPosition));
+                                    let specialCooldownRemaining = 0;
+                                    if (this.props.combatManager && this.props.combatManager.round !== undefined) {
+                                        const remainingSec = liveSelectedFighter?.cooldowns?.[normalizedSpecial.id] || liveSelectedFighter?.cooldowns?.[normalizedSpecial.key] || liveSelectedFighter?.cooldowns?.[sourceKey] || 0;
+                                        if (remainingSec > 0) {
+                                            const baseCooldown = normalizedSpecial.cooldown || 5;
+                                            specialCooldownRemaining = Math.ceil((remainingSec / baseCooldown) * 100);
+                                        }
+                                    } else {
+                                        const specialCooldownPosition = typeof normalizedSpecial.cooldown_position === 'number'
+                                            ? normalizedSpecial.cooldown_position
+                                            : 100;
+                                        specialCooldownRemaining = Math.max(0, Math.min(100, 100 - specialCooldownPosition));
+                                    }
                                     const specialEnergyCost = Number(normalizedSpecial.energy_cost) || 0;
                                     const currentEnergy = Number(liveSelectedFighter?.energy || this.state.selectedFighter?.energy || 0);
                                     const specialEnergyFillPct = specialEnergyCost > 0
@@ -2207,7 +2485,7 @@ class MonsterBattle extends React.Component {
                                     return normalizedSpecial && <div key={i} className='interaction-tile-wrapper'>
                                                 <div 
                                                 style={{backgroundImage: specialBackgroundImage, cursor: 'pointer'}} 
-                                                className={`interaction-tile special ${specialCooldownPosition === 100 ? 'available' : ''} ${normalizedSpecial.selected ? 'selected' : ''}`}
+                                                className={`interaction-tile special ${specialCooldownRemaining === 0 ? 'available' : ''} ${normalizedSpecial.selected ? 'selected' : ''}`}
                                                 onClick={() => this.specialTileClicked(normalizedSpecial)} 
                                                 onMouseEnter={() => this.specialTileHovered(normalizedSpecial)} 
                                                 onMouseLeave={() => this.specialTileHovered(null)}>
@@ -2296,9 +2574,45 @@ class MonsterBattle extends React.Component {
                                         if (!displayAttack) return null;
 
                                         const cooldownPosition = typeof displayAttack.cooldown_position === 'number'
+
+
                                             ? displayAttack.cooldown_position
+
+
                                             : 100;
-                                        const cooldownRemaining = Math.max(0, Math.min(100, 100 - cooldownPosition));
+
+
+                                        let cooldownRemaining = Math.max(0, Math.min(100, 100 - cooldownPosition));
+
+
+                                        if (this.props.combatManager && this.props.combatManager.round !== undefined) {
+
+
+                                            const fKey = String(displayAttack.key || displayAttack.name || '').trim().toLowerCase().replaceAll(' ', '_');
+
+
+                                            const remainingSec = liveSelectedFighter?.cooldowns?.[displayAttack.id] || liveSelectedFighter?.cooldowns?.[displayAttack.key] || liveSelectedFighter?.cooldowns?.[fKey] || 0;
+
+
+                                            if (remainingSec > 0) {
+
+
+                                                const baseCooldown = displayAttack.cooldown || 3;
+
+
+                                                cooldownRemaining = Math.ceil((remainingSec / baseCooldown) * 100);
+
+
+                                            } else {
+
+
+                                                cooldownRemaining = 0;
+
+
+                                            }
+
+
+                                        }
                                         const normalizedAttackName = String(displayAttack.name || '').replaceAll('_', ' ').trim().toLowerCase();
                                         const isAxeThrowTile = normalizedAttackName === 'axe throw';
                                         const iconCandidate = displayAttack.icon;
@@ -2394,7 +2708,10 @@ class MonsterBattle extends React.Component {
                             </div>
                         </div>
                     </div>
+                    )}
                 </div>}
+
+
             </div>
         );
     }

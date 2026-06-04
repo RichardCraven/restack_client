@@ -127,7 +127,8 @@ export function CrewManager(){
         hp: { all: ['fort'] },
         energy: { all: ['fort'] },
         willpower: { all: ['int'] },
-        speed: { all: ['dex'] }
+        speed: { all: ['dex'] },
+        vitality: { all: ['fort'] }
     }
 
     // Compute derived substats for a crew member based on their base stats and class
@@ -181,6 +182,10 @@ export function CrewManager(){
         // Speed
         const spCon = this.statConstituents.speed.all[0];
         s.speed = combine(spCon);
+
+        // Vitality / Endurance
+        const vitCon = this.statConstituents.vitality.all[0];
+        s.vitality = 20 + combine(vitCon) * 3;
 
         // ensure experience exists
         s.experience = typeof s.experience === 'number' ? s.experience : 0;
@@ -544,14 +549,26 @@ export function CrewManager(){
             name: 'Vaelis',
             id: 9902,
             level: 1,
-            stats: { str: 3, int: 8, dex: 25, fort: 6, baseHp: 10, experience: 0 },
+            stats: { str: 3, int: 8, dex: 5, fort: 6, baseHp: 10, experience: 0 },
             portrait: images['summoner'],
             inventory: [],
-            specials: ['ice_blast', 'fire_blast'],
+            specials: [
+                'open_rift',
+                'summon_skeleton',
+                'summon_imp',
+                'summon_skeleton_knight',
+                'summon_zombie',
+                'summon_ghoul',
+                'summon_imp_army',
+                'summon_skeleton_army',
+                'summon_devil',
+                'summoner_duplicate',
+                'summoner_triplicate'
+            ],
             attacks: ['energy_blast'],
             passives: ['magic_affinity'],
             weaknesses: ['crushing', 'blood_magic'],
-            description: 'A conduit for unstable arcana who overwhelms enemies with elemental pressure.',
+            description: 'A conduit for unstable arcana who overwhelms enemies with elemental pressure by opening rifts and summoning minions.',
             specialActions: [],
             actionsTrayExpanded: false,
             actionMenuTypeExpanded: false

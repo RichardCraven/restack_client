@@ -602,16 +602,26 @@ const MonstersCombatGrid = ({
                                         <div className="red-fill" style={{ width: `${(battleData[monster.id]?.hp / battleData[monster.id]?.stats.hp) * 100}%` }}></div>
                                     )}
                                 </div>
-                                <div className="monster-energy-bar energy-bar">
-                                    {!battleData[monster.id]?.dead && (
-                                        <div className="yellow-fill" style={{ width: `calc(${battleData[monster.id]?.energy}%)` }}></div>
-                                    )}
-                                </div>
-                                <div className="tempo-bar">
-                                    {!battleData[monster.id]?.dead && (
-                                        <div className="tempo-indicator" style={{ left: `calc(${battleData[monster.id]?.tempo}% - 4px)` }}></div>
-                                    )}
-                                </div>
+                                {combatManager && combatManager.round !== undefined ? (
+                                    <div className="endurance-bar" style={{ height: '6px', backgroundColor: 'rgba(255,255,255,0.2)', width: '100%', marginTop: '2px', position: 'relative' }}>
+                                        {!battleData[monster.id]?.dead && (
+                                            <div className="white-fill" style={{ height: '100%', backgroundColor: '#ffffff', width: `${(battleData[monster.id]?.endurance / battleData[monster.id]?.maxEndurance) * 100}%` }}></div>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <>
+                                        <div className="monster-energy-bar energy-bar">
+                                            {!battleData[monster.id]?.dead && (
+                                                <div className="yellow-fill" style={{ width: `calc(${battleData[monster.id]?.energy}%)` }}></div>
+                                            )}
+                                        </div>
+                                        <div className="tempo-bar">
+                                            {!battleData[monster.id]?.dead && (
+                                                <div className="tempo-indicator" style={{ left: `calc(${battleData[monster.id]?.tempo}% - 4px)` }}></div>
+                                            )}
+                                        </div>
+                                    </>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -810,16 +820,26 @@ const MonstersCombatGrid = ({
                                             <div className="red-fill" style={{ width: `${(minion.hp / minion.stats.hp) * 100}%` }}></div>
                                         )}
                                     </div>
-                                    <div className="monster-energy-bar energy-bar">
-                                        {!minion.dead && (
-                                            <div className="yellow-fill" style={{ width: `calc(${minion.energy}%)` }}></div>
-                                        )}
-                                    </div>
-                                    <div className="tempo-bar">
-                                        {!minion.dead && (
-                                            <div className="tempo-indicator" style={{ left: `calc(${minion.tempo}% - 4px)` }}></div>
-                                        )}
-                                    </div>
+                                    {combatManager && combatManager.round !== undefined ? (
+                                        <div className="endurance-bar" style={{ height: '6px', backgroundColor: 'rgba(255,255,255,0.2)', width: '100%', marginTop: '2px', position: 'relative' }}>
+                                            {!minion.dead && (
+                                                <div className="white-fill" style={{ height: '100%', backgroundColor: '#ffffff', width: `${(minion.endurance / minion.maxEndurance) * 100}%` }}></div>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <div className="monster-energy-bar energy-bar">
+                                                {!minion.dead && (
+                                                    <div className="yellow-fill" style={{ width: `calc(${minion.energy}%)` }}></div>
+                                                )}
+                                            </div>
+                                            <div className="tempo-bar">
+                                                {!minion.dead && (
+                                                    <div className="tempo-indicator" style={{ left: `calc(${minion.tempo}% - 4px)` }}></div>
+                                                )}
+                                            </div>
+                                        </>
+                                    )}
                                 </div>
                             </div>
                         </div>

@@ -398,11 +398,215 @@ const specialsMatrix = {
         name: 'firestorm',
         type: 'special',
         icon: images['fire_blast'],
-        cooldown: 'TBD',
-        damage: 'TBD',
-        energy_cost: 'TBD',
+        cooldown: 18,
+        damage: 20,
         effect: ['damage_multi_target'],
         special_instructions: 'TBD',
+        level: 1
+    },
+    // --- Summoner Specials ---
+    open_rift: {
+        name: 'open the rift',
+        type: 'special',
+        icon: images['open_rift_icon'],
+        cooldown: 15,
+        effect: ['special'],
+        special_instructions: 'Summon a rift portal at a random open tile on the board for 3 long durations. Enables Tier 3 summon spells.',
+        level: 1
+    },
+    summon_skeleton: {
+        name: 'summon skeleton',
+        type: 'special',
+        icon: images['summon_skeleton_icon'],
+        cooldown: 6,
+        effect: ['special'],
+        special_instructions: 'Summon a skeleton warrior to the field.',
+        level: 1
+    },
+    summon_imp: {
+        name: 'summon imp',
+        type: 'special',
+        icon: images['summon_imp_icon'],
+        cooldown: 6,
+        effect: ['special'],
+        special_instructions: 'Summon a fiery imp minion.',
+        level: 1
+    },
+    summon_skeleton_knight: {
+        name: 'summon skeleton knight',
+        type: 'special',
+        icon: images['summon_skeleton_knight_icon'],
+        cooldown: 10,
+        effect: ['special'],
+        special_instructions: 'Summon a heavily armored skeleton knight.',
+        level: 1
+    },
+    summon_zombie: {
+        name: 'summon zombie',
+        type: 'special',
+        icon: images['summon_zombie_icon'],
+        cooldown: 10,
+        effect: ['special'],
+        special_instructions: 'Summon a plague-carrying zombie.',
+        level: 1
+    },
+    summon_ghoul: {
+        name: 'summon ghoul',
+        type: 'special',
+        icon: images['summon_ghoul_icon'],
+        cooldown: 10,
+        effect: ['special'],
+        special_instructions: 'Summon a ravenous flesh-eating ghoul.',
+        level: 1
+    },
+    summon_imp_army: {
+        name: 'summon imp army',
+        type: 'special',
+        icon: images['summon_imp_army_icon'],
+        cooldown: 18,
+        effect: ['special'],
+        special_instructions: 'Summon a swarm of imp minions adjacent to the rift portal. Requires active rift portal.',
+        level: 1
+    },
+    summon_skeleton_army: {
+        name: 'summon skeleton army',
+        type: 'special',
+        icon: images['summon_skeleton_army_icon'],
+        cooldown: 18,
+        effect: ['special'],
+        special_instructions: 'Summon a legion of skeleton warriors adjacent to the rift portal. Requires active rift portal.',
+        level: 1
+    },
+    summon_devil: {
+        name: 'summon devil',
+        type: 'special',
+        icon: images['summon_devil_icon'],
+        cooldown: 20,
+        effect: ['special'],
+        special_instructions: 'Summon a high devil minion adjacent to the rift portal. Requires active rift portal.',
+        level: 1
+    },
+    summoner_duplicate: {
+        name: 'duplicate',
+        type: 'special',
+        icon: images['duplicate_icon'],
+        cooldown: 8,
+        effect: ['special'],
+        special_instructions: 'Create a duplicate of the summoned minion behind it.',
+        level: 1
+    },
+    summoner_triplicate: {
+        name: 'triplicate',
+        type: 'special',
+        icon: images['triplicate_icon'],
+        cooldown: 12,
+        effect: ['special'],
+        special_instructions: 'Create two duplicates of the summoned minion NW and SW of it.',
+        level: 1
+    },
+    // --- Monk Specials ---
+    monk_ethereal: {
+        name: 'ethereal speed',
+        type: 'special',
+        icon: images['monk_ethereal_speed'],
+        cooldown: 15,
+        effect: ['buff_self'],
+        special_instructions: 'Gain Ethereal Speed (boosts evasion and speed) for 8s.',
+        level: 1
+    },
+    monk_astral_focus: {
+        name: 'astral focus',
+        type: 'special',
+        icon: images['monk_astral_focus'],
+        cooldown: 20,
+        effect: ['buff_self'],
+        special_instructions: 'Concentrate to enter Astral Being mode (enables astral skills) after a 4s float animation.',
+        level: 1
+    },
+    monk_astral_projection: {
+        name: 'astral projection',
+        type: 'special',
+        icon: images['monk_astral_projection'],
+        cooldown: 12,
+        effect: ['special'],
+        special_instructions: 'Project spirit translucent and slide to a random tile within 2 tiles, striking target for 25 damage.',
+        level: 1
+    },
+    monk_third_eye: {
+        name: 'third eye',
+        type: 'special',
+        icon: images['monk_third_eye'],
+        cooldown: 15,
+        effect: ['buff_self'],
+        special_instructions: 'Doubles the chance that an enemy attack will miss (for 4 seconds). Requires Astral Being mode.',
+        level: 1
+    },
+    monk_force_punch: {
+        name: 'force punch',
+        type: 'special',
+        icon: images['monk_force_punch'],
+        cooldown: 5,
+        effect: ['damage_single_target'],
+        special_instructions: 'Concentrated force punch strike.',
+        level: 1
+    },
+    monk_whirlwind: {
+        name: 'whirlwind',
+        type: 'special',
+        icon: images['monk_whirlwind'],
+        cooldown: 12,
+        effect: ['damage_multi_target'],
+        special_instructions: 'Spinning sweep attacking all adjacent tiles.',
+        level: 1
+    },
+    monk_punch: {
+        name: 'punch',
+        type: 'special',
+        icon: images['monk_punch'],
+        cooldown: 3,
+        effect: ['damage_single_target'],
+        level: 1
+    },
+    monk_flurry: {
+        name: 'flurry',
+        type: 'special',
+        icon: images['monk_flurry'],
+        cooldown: 8,
+        effect: ['damage_single_target'],
+        level: 1
+    },
+    monk_twin_finger: {
+        name: 'twin finger authority',
+        type: 'special',
+        icon: images['monk_twin_finger_authority'],
+        cooldown: 10,
+        effect: ['special'],
+        special_instructions: 'Stuns the target and strikes critical chakra points.',
+        level: 1
+    },
+    monk_fp_flurry: {
+        name: 'force punch flurry',
+        type: 'special',
+        icon: images['monk_force_punch_flurry'],
+        cooldown: 12,
+        effect: ['damage_multi_target'],
+        level: 1
+    },
+    monk_inner: {
+        name: 'inner fire',
+        type: 'special',
+        icon: images['monk_inner_fire'],
+        cooldown: 15,
+        effect: ['buff_self'],
+        special_instructions: 'Fiery orange aura enhances damage and strikes for 8s.',
+        level: 1
+    },
+    monk_meditate: {
+        name: 'meditate',
+        type: 'special',
+        icon: images['monk_meditate'],
+        cooldown: 12,
+        effect: ['heal_self'],
         level: 1
     },
 }

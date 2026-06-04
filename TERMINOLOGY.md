@@ -67,3 +67,10 @@ This document defines terminology and visual concepts used in the combat simulat
 
 ### Self Buff
 - **Definition**: A positive status effect applied by a unit to themselves (e.g., Monk's Inner Fire).
+
+### Endurance
+- **Definition**: A statistic representing a unit's physical exertion level. Depleted by movement and actions, recovery is governed by Recovery Rate. When low or empty, it increases ability cooldown times.
+
+### Recovery Rate
+- **Definition**: The rate at which a combatant regenerates endurance. By default, units regain 1% of their max endurance (rounded down) every 2 rounds.
+

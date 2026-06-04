@@ -240,11 +240,16 @@ export default function FightersCombatGrid(props) {
                                                 details?.healPulse ? 'heal-pulse' : '',
                                                 details?.bleed ? 'bleeding' : '',
                                                 details?.frozen ? 'frozen' : '',
+                                                // ── Redux AI visual states ───────────────────────
+                                                props.combatManager.getCombatant(fighter.id)?.astralBeingActive ? 'astral-being' : '',
+                                                props.combatManager.getCombatant(fighter.id)?.astralProjectionActive ? 'astral-projection-active' : '',
                                             ].filter(Boolean).join(' ')
                                         }
                                         style={{
                                             backgroundImage: `url(${fighter.portrait})`,
                                             backgroundSize: (details?.berserkerActive && details?.feared && !details?.stunned) ? '100% 100%' : undefined,
+                                            // Astral Being: portrait becomes translucent with cyan glow
+                                            opacity: props.combatManager.getCombatant(fighter.id)?.astralBeingActive ? 0.55 : 1,
                                             filter: [
                                                 details?.chargingUpActive ? "url('#ripple-effect')" : null,
                                                 `saturate(${(fighter.type === 'barbarian' || fighter.type === 'monk') ? Math.min(10, ((details?.hp / fighter.stats.hp) * 100) / 2) : ((details?.hp / fighter.stats.hp) * 100) / 2}) sepia(${props.portraitHoveredId === fighter.id ? '2' : '0'})`,
@@ -252,6 +257,10 @@ export default function FightersCombatGrid(props) {
                                                 (details?.berserkerActive && details?.feared && !details?.stunned) ? 'brightness(1.18)' : ''
                                             ].filter(Boolean).join(' '),
                                             zIndex: 300,
+                                            // CSS transition for astral projection slide
+                                            transition: props.combatManager.getCombatant(fighter.id)?.astralProjectionActive
+                                                ? 'opacity 0.4s ease-in-out'
+                                                : undefined,
                                             }} 
                                         onClick={() => props.fighterPortraitClicked(fighter.id)}
                                         onMouseEnter={() => props.portraitHovered(fighter.id)} 
@@ -334,12 +343,22 @@ export default function FightersCombatGrid(props) {
                                             style={{width: `${(props.getFighterDetails(fighter)?.hp / fighter.stats.hp) * 100}%`}}
                                             ></div>}
                                         </div>
-                                        <div className="energy-bar">
-                                            {!props.getFighterDetails(fighter)?.dead && <div className="yellow-fill" style={{width: `calc(${props.getFighterDetails(fighter)?.energy}%)`}}></div>}
-                                        </div>
-                                        <div className="tempo-bar">
-                                            {!props.getFighterDetails(fighter)?.dead &&  <div className="tempo-indicator" style={{left: `calc(${props.getFighterDetails(fighter)?.tempo}% - 4px)`}}></div>}
-                                        </div>
+                                        {props.combatManager && props.combatManager.round !== undefined ? (
+                                            <div className="endurance-bar" style={{ height: '6px', backgroundColor: 'rgba(255,255,255,0.2)', width: '100%', marginTop: '2px', position: 'relative' }}>
+                                                {!props.getFighterDetails(fighter)?.dead && (
+                                                    <div className="white-fill" style={{ height: '100%', backgroundColor: '#ffffff', width: `${(props.getFighterDetails(fighter)?.endurance / props.getFighterDetails(fighter)?.maxEndurance) * 100}%` }}></div>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <div className="energy-bar">
+                                                    {!props.getFighterDetails(fighter)?.dead && <div className="yellow-fill" style={{width: `calc(${props.getFighterDetails(fighter)?.energy}%)`}}></div>}
+                                                </div>
+                                                <div className="tempo-bar">
+                                                    {!props.getFighterDetails(fighter)?.dead &&  <div className="tempo-indicator" style={{left: `calc(${props.getFighterDetails(fighter)?.tempo}% - 4px)`}}></div>}
+                                                </div>
+                                            </>
+                                        )}
                                     { props.getFighterDetails(fighter) && props.getFighterDetails(fighter).pendingAttack && props.getFighterDetails(fighter).attacking && !props.getFighterDetails(fighter).dead && (() => {
                                         const details = props.getFighterDetails(fighter);
                                         const isMonk = fighter.type === 'monk';
@@ -386,6 +405,36 @@ export default function FightersCombatGrid(props) {
                             </div>
                         </div>
                     })}
+                {/* ── Rift Portal tile overlay ──────────────────────────────────────── */}
+                {(() => {
+                    // Find any crew Summoner with an active rift portal
+                    const summoner = props.crew.find(f => f.type === 'summoner');
+                    if (!summoner) return null;
+                    const liveSummoner = props.combatManager.getCombatant(summoner.id);
+                    if (!liveSummoner?.riftPortalActive || !liveSummoner?.riftPortalPos) return null;
+                    const { x, y } = liveSummoner.riftPortalPos; // {x, y} tile coords
+                    const portalLeft = x * TILE_SIZE + (SHOW_TILE_BORDERS ? x * 2 : 0);
+                    const portalTop  = y * TILE_SIZE + (SHOW_TILE_BORDERS ? y * 2 : 0);
+                    const roundsLeft = liveSummoner.riftPortalRoundsLeft ?? 3;
+                    return (
+                        <div
+                            className="rift-portal-tile"
+                            style={{
+                                position: 'absolute',
+                                left: portalLeft + 'px',
+                                top: portalTop + 'px',
+                                width: TILE_SIZE + 'px',
+                                height: TILE_SIZE + 'px',
+                                zIndex: 350,
+                                pointerEvents: 'none',
+                            }}
+                        >
+                            <div className="rift-portal-inner">
+                                <div className="rift-portal-rounds">{roundsLeft}</div>
+                            </div>
+                        </div>
+                    );
+                })()}
             </div>
         </div>
     )
