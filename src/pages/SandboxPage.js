@@ -43,6 +43,7 @@ import {
   claws,
   claw_strike,
   claw_hit,
+  claw_strike_animation,
   barbarian_slash,
   barbarian_cleave,
   barbarian_axe_throw,
@@ -1124,6 +1125,7 @@ const SandboxPage = () => {
       
       const isSlash = ability.id === 'slash' || ability.id === 'barbarian_slash';
       const isSlam = ability.type === 'melee_slam';
+      const isClawStrike = ability.type === 'claw_strike' || ability.id === 'claw_strike';
 
       if (isSlash) {
         setAnimationPhase('step_adjacent'); // Move to adjacent (takes 250ms)
@@ -1154,6 +1156,31 @@ const SandboxPage = () => {
 
         // Arrives back at origin (1250ms total, return takes 250ms): end animation
         setTimeout(() => {
+          setAnimating(false);
+          setAnimationPhase(null);
+        }, 1250);
+      } else if (isClawStrike) {
+        setAnimationPhase('step_adjacent'); // Move to adjacent (takes 250ms)
+
+        // Arrives adjacent: trigger claw strike swipe swing animation (duration 0.75s)
+        setTimeout(() => {
+          setHitEffect({ type: 'claw_strike_swipe' });
+        }, 250);
+
+        // Swing completes (1000ms total, 750ms swing): remove swipe icon, show claw_hit overlay, shake target, flash red, add damage text, and return to origin
+        setTimeout(() => {
+          setHitEffect({ type: 'claw_hit' });
+          setTargetShake(true);
+          setTargetFlash(true);
+          addFloatingText('-18', 'normal', '#ff9f1c', targetPos.row, targetPos.col);
+          setAnimationPhase('return');
+        }, 1000);
+
+        // Arrives back at origin (1250ms total, return takes 250ms): end animation, clear target shake/flash/hit effect
+        setTimeout(() => {
+          setTargetShake(false);
+          setTargetFlash(false);
+          setHitEffect(null);
           setAnimating(false);
           setAnimationPhase(null);
         }, 1250);
@@ -3570,6 +3597,42 @@ const SandboxPage = () => {
           }
           100% {
             transform: rotate(60deg);
+            opacity: 0;
+          }
+        }
+        @keyframes leftFacingClawArc {
+          0% {
+            transform: rotate(60deg);
+            opacity: 0;
+          }
+          10% {
+            transform: rotate(60deg);
+            opacity: 1;
+          }
+          90% {
+            transform: rotate(-90deg);
+            opacity: 1;
+          }
+          100% {
+            transform: rotate(-90deg);
+            opacity: 0;
+          }
+        }
+        @keyframes rightFacingClawArc {
+          0% {
+            transform: scaleX(-1) rotate(-60deg);
+            opacity: 0;
+          }
+          10% {
+            transform: scaleX(-1) rotate(-60deg);
+            opacity: 1;
+          }
+          90% {
+            transform: scaleX(-1) rotate(90deg);
+            opacity: 1;
+          }
+          100% {
+            transform: scaleX(-1) rotate(90deg);
             opacity: 0;
           }
         }
@@ -7163,6 +7226,60 @@ const SandboxPage = () => {
                             objectFit: 'contain',
                             transformOrigin: `${30 - halfDistPx}px 30px`,
                             animation: 'weaponSwingArc 0.75s ease-in-out forwards'
+                          }}
+                        />
+                      </div>
+                    );
+                  })()}
+                  {hitEffect.type === 'claw_strike_swipe' && (() => {
+                    const dx = fighterPos.col - targetPos.col;
+                    const dy = fighterPos.row - targetPos.row;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    let adjCol = fighterPos.col;
+                    let adjRow = fighterPos.row;
+                    if (dist > 0) {
+                      const colStep = Math.round(dx / dist);
+                      const rowStep = Math.round(dy / dist);
+                      adjCol = targetPos.col + colStep;
+                      adjRow = targetPos.row + rowStep;
+                    }
+                    const swingDx = targetPos.col - adjCol;
+                    const swingDy = targetPos.row - adjRow;
+
+                    const isAttackingLeft = swingDx < 0;
+                    const animationName = isAttackingLeft ? 'leftFacingClawArc' : 'rightFacingClawArc';
+
+                    const leftOffset = (swingDx / 2) * -100;
+                    const topOffset = (swingDy / 2) * -100;
+
+                    const originX = 30 - (swingDx * 50);
+                    const originY = 30 - (swingDy * 50);
+
+                    return (
+                      <div
+                        style={{
+                          position: 'absolute',
+                          left: `calc(50% + ${leftOffset}px)`,
+                          top: `calc(50% + ${topOffset}px)`,
+                          width: '60px',
+                          height: '60px',
+                          transform: 'translate(-50%, -50%)',
+                          pointerEvents: 'none',
+                          zIndex: 5000,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                      >
+                        <img
+                          src={claw_strike_animation}
+                          alt="claw strike swipe"
+                          style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'contain',
+                            transformOrigin: `${originX}px ${originY}px`,
+                            animation: `${animationName} 0.75s ease-in-out forwards`
                           }}
                         />
                       </div>

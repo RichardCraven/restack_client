@@ -668,6 +668,9 @@ import monster_bite from '../assets/icons/combat-icons/specials/monsters/bite.pn
 import claw_strike from '../assets/icons/combat-icons/specials/monsters/claw_strike.png';
 import claw_hit from '../assets/icons/combat-icons/specials/monsters/claw_hit.png';
 import claw_hit_crit from '../assets/icons/combat-icons/specials/monsters/claw_hit_crit.png';
+import claw_strike_animation from '../assets/icons/combat-icons/specials/monsters/claw_strike_animation.png';
+import gore from '../assets/icons/combat-icons/specials/monsters/gore.png';
+import spineskin from '../assets/icons/combat-icons/specials/monsters/spineskin.png';
 
 // body
 import body_male from '../assets/icons/figures/body_man.png'
@@ -1440,6 +1443,9 @@ export {
     claw_strike,
     claw_hit,
     claw_hit_crit,
+    claw_strike_animation,
+    gore,
+    spineskin,
     duration_icon,
     fire_blast,
     meditate,
