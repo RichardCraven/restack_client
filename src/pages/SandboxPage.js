@@ -29,7 +29,20 @@ import {
   engineer,
   goblin_portrait,
   soldier_portrait,
+  skeleton_portrait,
+  mummy_portrait,
+  ogre_portrait,
+  sphinx_portrait,
+  wyvern_portrait,
+  djinn_portrait,
+  vampire_portrait,
+  troll_portrait,
+  wraith_portrait,
+  goat_demon_portrait,
+  gorgon_portrait,
   claws,
+  claw_strike,
+  claw_hit,
   barbarian_slash,
   barbarian_cleave,
   barbarian_axe_throw,
@@ -227,6 +240,22 @@ const WEAPONS_DB = {
   ]
 };
 
+// Predefined list of monsters for sandbox selection
+const monstersData = [
+  { id: 'goblin', name: 'Goblin', portrait: goblin_portrait, abilities: [{ id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' }] },
+  { id: 'skeleton', name: 'Skeleton', portrait: skeleton_portrait, abilities: [{ id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' }] },
+  { id: 'mummy', name: 'Mummy', portrait: mummy_portrait, abilities: [{ id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' }] },
+  { id: 'ogre', name: 'Ogre', portrait: ogre_portrait, abilities: [{ id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' }] },
+  { id: 'sphinx', name: 'Sphinx', portrait: sphinx_portrait, abilities: [{ id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' }] },
+  { id: 'wyvern', name: 'Wyvern', portrait: wyvern_portrait, abilities: [{ id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' }] },
+  { id: 'djinn', name: 'Djinn', portrait: djinn_portrait, abilities: [{ id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' }] },
+  { id: 'vampire', name: 'Vampire', portrait: vampire_portrait, abilities: [{ id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' }] },
+  { id: 'troll', name: 'Troll', portrait: troll_portrait, abilities: [{ id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' }] },
+  { id: 'wraith', name: 'Wraith', portrait: wraith_portrait, abilities: [{ id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' }] },
+  { id: 'goat_demon', name: 'Goat Demon', portrait: goat_demon_portrait, abilities: [{ id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' }] },
+  { id: 'gorgon', name: 'Gorgon', portrait: gorgon_portrait, abilities: [{ id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' }] }
+];
+
 // Predefined list of 8 crew fighters and their test abilities
 const fightersData = [
   {
@@ -352,20 +381,29 @@ const SandboxPage = () => {
   const [selectedRune, setSelectedRune] = useState('archaic');
 
   // --- Combat Animations States ---
+  const [selectedUnitType, setSelectedUnitType] = useState(localStorage.getItem('sandboxUnitType') || 'fighter');
   const [selectedFighterId, setSelectedFighterId] = useState(localStorage.getItem('sandboxFighter') || 'ranger');
+  const [selectedMonsterId, setSelectedMonsterId] = useState(localStorage.getItem('sandboxMonster') || 'goblin');
   const [fighterPos, setFighterPos] = useState({ row: 2, col: 0 });
   const [targetPos, setTargetPos] = useState({ row: 2, col: 2 });
 
   useEffect(() => {
+    localStorage.setItem('sandboxUnitType', selectedUnitType);
     localStorage.setItem('sandboxFighter', selectedFighterId);
-    if (selectedFighterId === 'ranger') {
-      setFighterPos({ row: 2, col: 0 });
-      setTargetPos({ row: 2, col: 2 });
+    localStorage.setItem('sandboxMonster', selectedMonsterId);
+    if (selectedUnitType === 'monster') {
+      setFighterPos({ row: 2, col: 3 });
+      setTargetPos({ row: 2, col: 1 });
     } else {
-      setFighterPos({ row: 2, col: 1 });
-      setTargetPos({ row: 2, col: 3 });
+      if (selectedFighterId === 'ranger') {
+        setFighterPos({ row: 2, col: 0 });
+        setTargetPos({ row: 2, col: 2 });
+      } else {
+        setFighterPos({ row: 2, col: 1 });
+        setTargetPos({ row: 2, col: 3 });
+      }
     }
-  }, [selectedFighterId]);
+  }, [selectedUnitType, selectedFighterId, selectedMonsterId]);
   const [placementMode, setPlacementMode] = useState('fighter'); // 'fighter' or 'target'
   const [notchedArrow, setNotchedArrow] = useState('force'); // 'ice', 'force', 'poison', 'celestial'
   const [submenuOpen, setSubmenuOpen] = useState(false);
@@ -923,9 +961,15 @@ const SandboxPage = () => {
     { id: 'item upgrade', label: 'Item Upgrade', enabled: false }
   ];
 
-  const selectedFighter = fightersData.find(f => f.id === selectedFighterId) || fightersData[0];
-  const targetPortrait = selectedFighterId === 'sage' ? soldier_portrait : goblin_portrait;
-  const targetName = selectedFighterId === 'sage' ? 'Soldier Target' : 'Goblin Target';
+  const selectedFighter = selectedUnitType === 'monster'
+    ? (monstersData.find(m => m.id === selectedMonsterId) || monstersData[0])
+    : (fightersData.find(f => f.id === selectedFighterId) || fightersData[0]);
+  const targetPortrait = selectedUnitType === 'monster'
+    ? soldier_portrait
+    : (selectedFighterId === 'sage' ? soldier_portrait : goblin_portrait);
+  const targetName = selectedUnitType === 'monster'
+    ? 'Soldier Target'
+    : (selectedFighterId === 'sage' ? 'Soldier Target' : 'Goblin Target');
 
   // Helper to push floating combat numbers
   const addFloatingText = (text, type, color, row, col) => {
@@ -1075,7 +1119,7 @@ const SandboxPage = () => {
   const triggerAbility = (ability) => {
     if (isAnimating) return;
 
-    if (ability.type === 'melee' || ability.type === 'melee_poison' || ability.type === 'melee_slam' || ability.type === 'melee_heavy' || ability.type === 'melee_punches' || ability.type === 'melee_spin' || ability.type === 'barbarian_slash') {
+    if (ability.type === 'melee' || ability.type === 'melee_poison' || ability.type === 'melee_slam' || ability.type === 'melee_heavy' || ability.type === 'melee_punches' || ability.type === 'melee_spin' || ability.type === 'barbarian_slash' || ability.type === 'claw_strike') {
       setAnimating(true);
       
       const isSlash = ability.id === 'slash' || ability.id === 'barbarian_slash';
@@ -1181,6 +1225,10 @@ const SandboxPage = () => {
           } else if (ability.type === 'melee_punches') {
             dmg = '-10';
             color = '#ffdd57';
+          } else if (ability.type === 'claw_strike') {
+            dmg = '-18';
+            color = '#ff9f1c';
+            hitType = 'claw_hit';
           }
 
           setHitEffect({ type: hitType });
@@ -3800,15 +3848,58 @@ const SandboxPage = () => {
             maxHeight: '75vh',
             overflowY: 'auto'
           }}>
-            <h3 style={{ margin: '0 0 15px 0', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', paddingBottom: '10px', fontSize: '18px', color: '#ffb703', letterSpacing: '0.05em' }}>FIGHTERS</h3>
-            {fightersData.map(f => {
-              const isSelected = selectedFighterId === f.id;
+            <div style={{ display: 'flex', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', marginBottom: '15px' }}>
+              <button
+                onClick={() => !isAnimating && setSelectedUnitType('fighter')}
+                style={{
+                  flex: 1,
+                  background: 'none',
+                  border: 'none',
+                  borderBottom: selectedUnitType === 'fighter' ? '2px solid #ffb703' : '2px solid transparent',
+                  color: selectedUnitType === 'fighter' ? '#ffb703' : '#888',
+                  paddingBottom: '10px',
+                  fontWeight: 'bold',
+                  fontSize: '14px',
+                  cursor: isAnimating ? 'not-allowed' : 'pointer',
+                  letterSpacing: '0.05em',
+                  transition: 'all 0.2s',
+                  outline: 'none'
+                }}
+              >
+                FIGHTERS
+              </button>
+              <button
+                onClick={() => !isAnimating && setSelectedUnitType('monster')}
+                style={{
+                  flex: 1,
+                  background: 'none',
+                  border: 'none',
+                  borderBottom: selectedUnitType === 'monster' ? '2px solid #ffb703' : '2px solid transparent',
+                  color: selectedUnitType === 'monster' ? '#ffb703' : '#888',
+                  paddingBottom: '10px',
+                  fontWeight: 'bold',
+                  fontSize: '14px',
+                  cursor: isAnimating ? 'not-allowed' : 'pointer',
+                  letterSpacing: '0.05em',
+                  transition: 'all 0.2s',
+                  outline: 'none'
+                }}
+              >
+                MONSTERS
+              </button>
+            </div>
+            {(selectedUnitType === 'monster' ? monstersData : fightersData).map(f => {
+              const isSelected = selectedUnitType === 'monster' ? selectedMonsterId === f.id : selectedFighterId === f.id;
               return (
                 <div
                   key={f.id}
                   onClick={() => {
                     if (isAnimating) return;
-                    setSelectedFighterId(f.id);
+                    if (selectedUnitType === 'monster') {
+                      setSelectedMonsterId(f.id);
+                    } else {
+                      setSelectedFighterId(f.id);
+                    }
                     // Reset character specific visual states
                     setTargetFrozen(false);
                     setFrozenIconActive(false);
@@ -3843,7 +3934,7 @@ const SandboxPage = () => {
                     setRiftPortalPos(null);
                     setRiftPortalEndTime(null);
                     setRiftPortalFading(false);
-                    if (f.id === 'sage') {
+                    if (selectedUnitType === 'fighter' && f.id === 'sage') {
                       setTargetPos({ row: 2, col: 3 });
                     }
                   }}
@@ -3998,10 +4089,10 @@ const SandboxPage = () => {
                   const isPortal = riftPortalActive && riftPortalPos && riftPortalPos.row === r && riftPortalPos.col === c;
 
                   // Sage & Soldier friendly units coordinates
-                  const isAdditionalRanger = (selectedFighterId === 'sage' && r === 3 && c === 0) || (selectedFighterId === 'soldier' && r === 0 && c === 1);
-                  const isAdditionalBarbarian = selectedFighterId === 'sage' && r === 0 && c === 3;
-                  const isAdditionalSoldier = selectedFighterId === 'sage' && r === 2 && c === 3;
-                  const isAdditionalMonk = selectedFighterId === 'soldier' && r === 0 && c === 3;
+                  const isAdditionalRanger = selectedUnitType === 'fighter' && ((selectedFighterId === 'sage' && r === 3 && c === 0) || (selectedFighterId === 'soldier' && r === 0 && c === 1));
+                  const isAdditionalBarbarian = selectedUnitType === 'fighter' && (selectedFighterId === 'sage' && r === 0 && c === 3);
+                  const isAdditionalSoldier = selectedUnitType === 'fighter' && (selectedFighterId === 'sage' && r === 2 && c === 3);
+                  const isAdditionalMonk = selectedUnitType === 'fighter' && (selectedFighterId === 'soldier' && r === 0 && c === 3);
 
                   return (
                     <div
@@ -6181,7 +6272,7 @@ const SandboxPage = () => {
               )}
 
               {/* --- Extra Goblins (col 4, row 1 & col 4, row 3) for Wizard --- */}
-              {selectedFighterId === 'wizard' && (
+              {selectedUnitType === 'fighter' && selectedFighterId === 'wizard' && (
                 <>
                   <div
                     style={{
@@ -6280,7 +6371,7 @@ const SandboxPage = () => {
               )}
 
               {/* --- Extra Goblins (col 2, row 1 & col 3, row 1) for Monk --- */}
-              {selectedFighterId === 'monk' && (
+              {selectedUnitType === 'fighter' && selectedFighterId === 'monk' && (
                 <>
                   <div
                     style={{
@@ -6380,6 +6471,54 @@ const SandboxPage = () => {
                     </div>
                   </div>
                 </>
+              )}
+
+              {/* --- Extra Ranger Target (col 0, row 3) for Monsters --- */}
+              {selectedUnitType === 'monster' && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    width: '20%',
+                    height: '20%',
+                    left: `${0 * 20}%`,
+                    top: `${3 * 20}%`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 9,
+                    pointerEvents: 'none'
+                  }}
+                >
+                  <div style={{
+                    width: '80%',
+                    height: '80%',
+                    borderRadius: '8px',
+                    border: '2px solid #ff5400',
+                    backgroundColor: '#222',
+                    backgroundImage: `url(${ranger})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    boxShadow: '0 8px 16px rgba(0,0,0,0.5)',
+                    position: 'relative'
+                  }}>
+                    <div style={{
+                      position: 'absolute',
+                      bottom: '0',
+                      left: '0',
+                      width: '100%',
+                      background: 'rgba(0,0,0,0.75)',
+                      color: '#fff',
+                      fontSize: '10px',
+                      fontWeight: 'bold',
+                      textAlign: 'center',
+                      padding: '2px 0',
+                      borderBottomLeftRadius: '6px',
+                      borderBottomRightRadius: '6px'
+                    }}>
+                      Ranger Target
+                    </div>
+                  </div>
+                </div>
               )}
 
               {/* --- Healing Hands Icon Overlay --- */}
@@ -6924,6 +7063,19 @@ const SandboxPage = () => {
                     justifyContent: 'center'
                   }}
                 >
+                  {hitEffect.type === 'claw_hit' && (
+                    <div style={{
+                      width: '90px',
+                      height: '90px',
+                      backgroundImage: `url(${claw_hit})`,
+                      backgroundSize: 'contain',
+                      backgroundRepeat: 'no-repeat',
+                      backgroundPosition: 'center',
+                      animation: 'scaleUp 0.25s ease-out forwards',
+                      pointerEvents: 'none'
+                    }} />
+                  )}
+
                   {hitEffect.type === 'slash' && (
                     <div style={{
                       width: '80px',
@@ -7760,7 +7912,7 @@ const SandboxPage = () => {
             </div>
 
             {/* Weapon Selector Component */}
-            {(() => {
+            {selectedUnitType === 'fighter' && (() => {
               const activeWeaponId = equippedWeapons[selectedFighterId] || 'shortsword_sword';
               const activeWeapon = WEAPONS_DB.swords.find(w => w.id === activeWeaponId) ||
                                    WEAPONS_DB.axes.find(w => w.id === activeWeaponId) ||

@@ -660,7 +660,14 @@ import summon_ghoul_icon from '../assets/icons/combat-icons/specials/summoner/su
 import summon_imp_icon from '../assets/icons/combat-icons/specials/summoner/summon_imp.png';
 import duration_icon from '../assets/icons/combat-icons/effects/duration.png';
 
-
+// monster skills
+import wound from '../assets/icons/combat-icons/specials/monsters/wound.png';
+import stomp from '../assets/icons/combat-icons/specials/monsters/stomp.png';
+import head_butt from '../assets/icons/combat-icons/specials/monsters/head_butt.png';
+import monster_bite from '../assets/icons/combat-icons/specials/monsters/bite.png';
+import claw_strike from '../assets/icons/combat-icons/specials/monsters/claw_strike.png';
+import claw_hit from '../assets/icons/combat-icons/specials/monsters/claw_hit.png';
+import claw_hit_crit from '../assets/icons/combat-icons/specials/monsters/claw_hit_crit.png';
 
 // body
 import body_male from '../assets/icons/figures/body_man.png'
@@ -1426,6 +1433,13 @@ export {
     summon_zombie_icon,
     summon_ghoul_icon,
     summon_imp_icon,
+    wound,
+    stomp,
+    head_butt,
+    monster_bite,
+    claw_strike,
+    claw_hit,
+    claw_hit_crit,
     duration_icon,
     fire_blast,
     meditate,
