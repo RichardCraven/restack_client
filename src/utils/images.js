@@ -258,6 +258,13 @@ import staff_of_tomorrow from '../assets/icons/items/staves/staff of tomorrow.pn
 import axe_white from '../assets/icons/items/weapons/axe_white.png'
 import axe from '../assets/icons/items/weapons/axe.png'
 import longbow from '../assets/icons/items/weapons/longbow.png'
+import sylvan_bow from '../assets/icons/items/weapons/bows/sylvan bow.png'
+import sentinels_bow from '../assets/icons/items/weapons/bows/sentinel\'s bow.png'
+import outriders_bow from '../assets/icons/items/weapons/bows/outrider\'s bow.png'
+import cryonic_bow from '../assets/icons/items/weapons/bows/cryonic bow.png'
+import vitriolic_bow from '../assets/icons/items/weapons/bows/vitriolic bow.png'
+import arcane_bow from '../assets/icons/items/weapons/bows/arcane bow.png'
+import merklins_peacekeeper from '../assets/icons/items/weapons/bows/Merklin\'s Peacekeeper.png'
 import flail_upright_white from '../assets/icons/items/weapons/flail_upright_white.png'
 import flail_upright from '../assets/icons/items/weapons/flail_upright.png'
 import flail_white from '../assets/icons/items/weapons/flail_white.png'
@@ -527,8 +534,26 @@ import energy_blast from '../assets/icons/combat-icons/wizarding_4.png'
 
 // Placeholder icons for grasp and energy_drain
 import grasp from '../assets/icons/combat-icons/monster-attacks/grasp.gif';
-import energy_drain from '../assets/icons/combat-icons/monster-attacks/lightning.png'
-import void_lance from '../assets/icons/combat-icons/monster-attacks/void_lance.png'
+import energy_drain from '../assets/icons/combat-icons/specials/monsters/mummy/energy_drain.png';
+import induce_fear from '../assets/icons/combat-icons/specials/monsters/mummy/induce_fear.png';
+import bat_fly from '../assets/icons/combat-icons/specials/monsters/vampire/bat_fly.png';
+import bat_individual from '../assets/icons/combat-icons/specials/monsters/vampire/bat_individual.png';
+import crimson_sight from '../assets/icons/combat-icons/specials/monsters/vampire/crimson_sight.png';
+import soul_suck from '../assets/icons/combat-icons/specials/monsters/vampire/soul_suck.png';
+import vamp_bite_bottom from '../assets/icons/combat-icons/specials/monsters/vampire/vamp_bite_bottom.png';
+import vamp_bite_background from '../assets/icons/combat-icons/specials/monsters/vampire/vamp_bite_background.png';
+import vamp_bite_top from '../assets/icons/combat-icons/specials/monsters/vampire/vamp_bite_top.png';
+import vampiric_bite from '../assets/icons/combat-icons/specials/monsters/vampire/vampiric_bite.png';
+import heartbeat from '../assets/icons/combat-icons/specials/monsters/vampire/heartbeat.png';
+import reassembly from '../assets/icons/combat-icons/specials/monsters/skeleton/reassmbly.png';
+import bones from '../assets/icons/combat-icons/specials/monsters/skeleton/bones.png';
+import betrayal from '../assets/icons/combat-icons/specials/monsters/djinn/betrayal.png';
+import betrayal_hit from '../assets/icons/combat-icons/specials/monsters/djinn/betrayal_hit.png';
+import arcane_barrier from '../assets/icons/combat-icons/specials/monsters/djinn/arcane_barrier.png';
+import death_missile from '../assets/icons/combat-icons/specials/monsters/djinn/death_missile.png';
+import death_missile_hit from '../assets/icons/combat-icons/specials/monsters/djinn/death_missile_hit.png';
+import bind from '../assets/icons/combat-icons/specials/monsters/djinn/bind.png';
+import void_lance from '../assets/icons/combat-icons/monster-attacks/void_lance.png';
 import fire_breath from '../assets/icons/combat-icons/monster-attacks/fire_breath.png'
 import lightning from '../assets/icons/combat-icons/specials/wizard/lightning.png'
 
@@ -662,9 +687,13 @@ import duration_icon from '../assets/icons/combat-icons/effects/duration.png';
 
 // monster skills
 import wound from '../assets/icons/combat-icons/specials/monsters/wound.png';
+import major_wound from '../assets/icons/combat-icons/specials/monsters/major_wound.png';
 import stomp from '../assets/icons/combat-icons/specials/monsters/stomp.png';
 import head_butt from '../assets/icons/combat-icons/specials/monsters/head_butt.png';
 import monster_bite from '../assets/icons/combat-icons/specials/monsters/bite.png';
+import bite_animation_top from '../assets/icons/combat-icons/specials/monsters/bite_animation_top.png';
+import bite_animation_bottom from '../assets/icons/combat-icons/specials/monsters/bite_animation_bottom.png';
+import bite_animation_full from '../assets/icons/combat-icons/specials/monsters/bite_animation_full.png';
 import claw_strike from '../assets/icons/combat-icons/specials/monsters/claw_strike.png';
 import claw_hit from '../assets/icons/combat-icons/specials/monsters/claw_hit.png';
 import claw_hit_crit from '../assets/icons/combat-icons/specials/monsters/claw_hit_crit.png';
@@ -1041,6 +1070,13 @@ export {
     axe,
     axe_white,
     longbow,
+    sylvan_bow,
+    sentinels_bow,
+    outriders_bow,
+    cryonic_bow,
+    vitriolic_bow,
+    arcane_bow,
+    merklins_peacekeeper,
     flail,
     flail_upright,
     flail_upright_white,
@@ -1341,6 +1377,7 @@ export {
     tackle,
     grasp,
     energy_drain,
+    induce_fear,
 
     archway,
     bat_gate,
@@ -1437,9 +1474,13 @@ export {
     summon_ghoul_icon,
     summon_imp_icon,
     wound,
+    major_wound,
     stomp,
     head_butt,
     monster_bite,
+    bite_animation_top,
+    bite_animation_bottom,
+    bite_animation_full,
     claw_strike,
     claw_hit,
     claw_hit_crit,
@@ -1537,6 +1578,24 @@ export {
     vampire,
     djinn,
     wraith,
+    bat_fly,
+    bat_individual,
+    crimson_sight,
+    soul_suck,
+    vamp_bite_bottom,
+    vamp_bite_background,
+    vamp_bite_top,
+    vampiric_bite,
+    heartbeat,
+    reassembly,
+    bones,
+
+    betrayal,
+    betrayal_hit,
+    arcane_barrier,
+    death_missile,
+    death_missile_hit,
+    bind,
 
     energy_blast
 };

@@ -12,6 +12,19 @@ This document defines terminology and visual concepts used in the combat simulat
   - They exit the screen with a **shrink transition** (scaling down from 1 to 0) before unmounting.
 - **File Reference**: [SandboxPage.js](file:///Users/richardcraven/Documents/Projects/restack/restack_client/src/pages/SandboxPage.js)
 
+### Instance Icon
+- **Definition**: An icon displayed at the top edge of a portrait, partially overlapping (typically centered horizontally with a negative top offset, e.g. `top: -14px` or `top: -15px`).
+- **Behavior**: It represents an ongoing active effect or status on a target that does not have a standard countdown duration timer, but remains applied to show the target's current state.
+- **Duration**: For skills representing temporary action instances (such as the Monk's Meditate or Sage's Perceive), the instance icon is shown for a standardized duration of **2000ms** (matching the Monk's meditation instance-icon duration).
+- **Example**: The Monk's `astral focus` / `meditate` icons and the Mummy's `energy drain` target indicator.
+- **File Reference**: [SandboxPage.js](file:///Users/richardcraven/Documents/Projects/restack/restack_client/src/pages/SandboxPage.js)
+
+### VCT (Virtually occupied Combat Tile)
+- **Definition**: The grid tile directly above a large monster's base tile on the combat board.
+- **Behavior**: Large monsters (defined as any monster that is NOT a goblin or skeleton) are 2x scale representations. They physically take up two vertical tiles: their base combat tile and the VCT directly above it.
+- **Rules**: Other units cannot be placed on or occupy a VCT tile, as it is considered fully occupied by the large monster. Large monsters cannot be placed on row 0 to prevent their VCT from going out-of-bounds.
+- **File Reference**: [SandboxPage.js](file:///Users/richardcraven/Documents/Projects/restack/restack_client/src/pages/SandboxPage.js)
+
 ### Notch Submenu
 - **Definition**: The arced popup menu that appears above the Ranger's **Notch** ability icon when clicked.
 - **Layout**: A shallow arc of small (28px) circular icons fanning out above the ability icon. The outer icons sit lower, inner icons sit higher, forming a gentle curve.

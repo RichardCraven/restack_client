@@ -755,7 +755,9 @@ combatKeyUpListener = (event) => {
                     {/* Monster roster */}
                     <div className="monster-roster-label">Monster Roster — double-click to add to slot</div>
                     <div className="monster-roster">
-                        {Object.values(this.props.monsterManager.monsters).map((m, i) => (
+                        {Object.values(this.props.monsterManager.monsters)
+                            .filter(m => ['skeleton', 'goblin', 'ogre', 'vampire', 'mummy', 'djinn'].includes(m.key))
+                            .map((m, i) => (
                             <div
                                 key={i}
                                 className="monster-roster-portrait"

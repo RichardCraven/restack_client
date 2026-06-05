@@ -13,6 +13,14 @@ const clone = (val) => {
     return JSON.parse(JSON.stringify(val));
 };
 
+const DURATION_ROUNDS = {
+    'instant': 0,
+    'short': 2,
+    'long': 4,
+    '2x-long': 8,
+    '3x-long': 12
+};
+
 const formatCombatText = (value) => String(value || '')
     .replaceAll('_', ' ')
     .trim()
@@ -34,6 +42,14 @@ export function CombatManagerRedux() {
     this.combatLogSequence = 0;
     this.selectedFighter = null;
     this.vctByMonster = {};
+
+    const getDurationRounds = (dur) => {
+        if (typeof dur === 'number') return dur;
+        if (typeof dur === 'string') {
+            return DURATION_ROUNDS[dur] !== undefined ? DURATION_ROUNDS[dur] : 4;
+        }
+        return 4;
+    };
 
     this.getCombatLog = () => this.combatLog.slice();
 
@@ -512,11 +528,50 @@ export function CombatManagerRedux() {
     };
 
     this.targetKilled = (target) => {
+        if (this.tryTriggerReassemble(target)) {
+            return;
+        }
         target.dead = true;
         target.locked = true;
         this.appendCombatLog(`${this.getCombatantLogName(target)} has been defeated.`);
         this.removeCombatant(target.id);
         this.combatOverCheck();
+    };
+
+    this.tryTriggerReassemble = (combatant) => {
+        if (!combatant) return false;
+        if ((combatant.type || '').toLowerCase() !== 'skeleton') return false;
+        const hasReassemble = Array.isArray(combatant.specials) && combatant.specials.includes('reassembly');
+        if (!hasReassemble) return false;
+        if (combatant.reassembleUsed || combatant.hasReassembled) return false;
+
+        combatant.reassembleUsed = true;
+        if (Math.random() > 0.40) {
+            return false;
+        }
+
+        const reviveHp = Math.max(1, Math.floor((combatant.starting_hp || combatant.stats?.hp || 1) * 0.30));
+        combatant.hp = reviveHp;
+        combatant.hasReassembled = true;
+        combatant.dead = false;
+        combatant.locked = false;
+        combatant.wounded = false;
+        combatant.frozen = false;
+        combatant.petrified = false;
+
+        combatant.specials = [];
+        
+        const currentAtk = typeof combatant.stats?.atk === 'number' ? combatant.stats.atk : 5;
+        const currentSpeed = typeof combatant.stats?.speed === 'number' ? combatant.stats.speed : 7;
+
+        if (combatant.stats) {
+            combatant.stats.atk = Math.max(1, Math.round(currentAtk * 2));
+            combatant.stats.speed = Math.max(1, Math.round(currentSpeed * 2));
+        }
+
+        this.appendCombatLog(`${this.getCombatantLogName(combatant)} reassembles with berserk fury!`);
+        if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+        return true;
     };
 
     this.combatOverCheck = () => {
@@ -660,6 +715,7 @@ export function CombatManagerRedux() {
 
                     // Tick down active buff/debuff durations
                     this._tickUnitBuffs(unit);
+                    this._tickUnitDebuffs(unit);
 
                     // Incapacitation check
                     if (unit.frozen || unit.stunned || unit.petrified) {
@@ -694,6 +750,50 @@ export function CombatManagerRedux() {
             }
             buff.roundsLeft--;
             return true;
+        });
+    };
+
+    this._tickUnitDebuffs = (unit) => {
+        if (!unit.activeDebuffs) unit.activeDebuffs = [];
+        unit.activeDebuffs = unit.activeDebuffs.filter(debuff => {
+            if (debuff.roundsLeft <= 0) {
+                // Revert stat changes when debuff expires
+                this._revertDebuff(unit, debuff);
+                this.appendCombatLog(`${this.getCombatantLogName(unit)}'s ${debuff.name} has worn off.`);
+                return false;
+            }
+            debuff.roundsLeft--;
+            return true;
+        });
+
+        // Tick down custom debuffs
+        if (unit.weaknessRevealed && typeof unit.weaknessRevealedRounds === 'number') {
+            unit.weaknessRevealedRounds--;
+            if (unit.weaknessRevealedRounds <= 0) {
+                unit.weaknessRevealed = false;
+                this.appendCombatLog(`${this.getCombatantLogName(unit)}'s exposed weakness has faded.`);
+            }
+        }
+        if (unit.ensnared && typeof unit.ensnaredRounds === 'number') {
+            unit.ensnaredRounds--;
+            if (unit.ensnaredRounds <= 0) {
+                unit.ensnared = false;
+                this.appendCombatLog(`${this.getCombatantLogName(unit)} is no longer ensnared.`);
+            }
+        }
+        if (unit.marked && typeof unit.markedRounds === 'number') {
+            unit.markedRounds--;
+            if (unit.markedRounds <= 0) {
+                unit.marked = false;
+                this.appendCombatLog(`${this.getCombatantLogName(unit)}'s mark has expired.`);
+            }
+        }
+    };
+
+    this._revertDebuff = (unit, debuff) => {
+        if (!debuff.statChanges) return;
+        Object.entries(debuff.statChanges).forEach(([stat, amount]) => {
+            unit.stats[stat] = (unit.stats[stat] || 0) + amount;
         });
     };
 
@@ -795,37 +895,44 @@ export function CombatManagerRedux() {
             if (!resolved) return;
 
             let score = 0;
-            const effects = Array.isArray(resolved.effect) ? resolved.effect : [];
+            const effects = Array.isArray(resolved.effect) ? resolved.effect : (resolved.effect ? [resolved.effect] : []);
 
-            // Healing is highly valuable when allies are wounded
-            if (effects.some(e => typeof e === 'string' && e.includes('heal'))) {
+            // Healing
+            if (resolved.type === 'heal' || key === 'heal' || key === 'monk_meditate') {
                 const woundedPct = woundedAlly ? (woundedAlly.hp / woundedAlly.starting_hp) : 1;
-                score += (1 - woundedPct) * 20;
-                if (woundedPct < 0.4) score += 15; // urgent heal bonus
+                score += (1 - woundedPct) * 30;
+                if (woundedPct < 0.4) score += 20; // urgent heal bonus
             }
 
-            // Self-buffs are valuable at decent HP (not wasted when almost dead)
-            if (effects.some(e => typeof e === 'string' && e.includes('buff_self'))) {
-                score += selfHpPct > 0.3 ? 8 : 2;
+            // Self-buffs / Buffs
+            else if (resolved.type === 'buff' || effects.some(e => typeof e === 'string' && e.includes('buff_self'))) {
+                score += selfHpPct > 0.3 ? 12 : 4;
             }
 
-            // AoE attacks are more valuable with more enemies
-            if (effects.some(e => typeof e === 'string' && e.includes('multi_target'))) {
-                score += enemyCount * 3;
+            // Debuffs
+            else if (resolved.type === 'debuff' || effects.some(e => typeof e === 'object' && e.type)) {
+                score += 10 + enemyCount * 2;
+                if (target) {
+                    const isStunnedOrFrozen = target.stunned || target.frozen;
+                    if (!isStunnedOrFrozen) score += 8;
+                }
             }
 
-            // Debuffs on all enemies are very valuable when outnumbered
-            if (effects.some(e => typeof e === 'string' && e.includes('nerf_all'))) {
-                score += enemyCount * 4;
-            }
-
-            // Single-target damage baseline
-            if (effects.some(e => typeof e === 'string' && e.includes('damage_single'))) {
-                score += 6;
+            // Damage
+            else if (resolved.type === 'damage') {
+                score += 8;
+                if (resolved.damage > 25) score += 6;
                 if (target) {
                     const targetHpPct = target.starting_hp > 0 ? target.hp / target.starting_hp : 1;
-                    if (targetHpPct < 0.25) score += 8; // finishing blow value
+                    if (targetHpPct < 0.25) score += 10;
                 }
+            }
+
+            // Utility (like summons)
+            else if (resolved.type === 'utility') {
+                score += 10;
+                const minionCount = Object.values(this.combatants).filter(c => c && !c.dead && c.isMinion).length;
+                if (minionCount < 3) score += 5;
             }
 
             if (score > bestScore) {
@@ -1049,38 +1156,23 @@ export function CombatManagerRedux() {
         const enemyCount = this.countEnemies(unit);
 
         // Priority 1: Berserker mode when low HP or many enemies
-        if ((selfHpPct < 0.4 || enemyCount >= 3) && this._abilityReady(unit, 'berserker')) {
-            const pick = this.resolveSpecial(unit, 'berserker');
+        if ((selfHpPct < 0.4 || enemyCount >= 3) && this._abilityReady(unit, 'barbarian_berserker')) {
+            const pick = this.resolveSpecial(unit, 'barbarian_berserker');
             if (pick) {
-                this._applyBuff(unit, pick.buff || {}, 'berserker', 4);
+                this._applyBuff(unit, pick.buff || {}, 'barbarian_berserker', getDurationRounds(pick.duration || 'long'));
                 this.appendCombatLog(`${this.getCombatantLogName(unit)} enters BERSERKER rage!`);
-                this._setCooldown(unit, 'berserker', pick.cooldown || 20);
+                this._setCooldown(unit, 'barbarian_berserker', pick.cooldown || 12);
             }
         }
 
-        // Priority 2: Whirlwind if surrounded (2+ adjacent enemies)
-        const adjacentEnemies = Object.values(this.combatants).filter(c => {
-            if (!c || c.dead || c.isVCT) return false;
-            const isEnemy = (unit.isMonster || unit.isMinion) ? (!c.isMonster && !c.isMinion) : (c.isMonster || c.isMinion);
-            if (!isEnemy) return false;
-            const dist = Math.abs(c.coordinates.x - unit.coordinates.x) + Math.abs(c.coordinates.y - unit.coordinates.y);
-            return dist <= 1;
-        });
+        // Default: charge and attack using scored ability
+        const scored = this._scoredAbilityPick(unit, target);
+        const range = (scored && scored.resolved.range) || 'close';
 
-        if (adjacentEnemies.length >= 2 && this._abilityReady(unit, 'whirlwind')) {
-            const pick = this.resolveSpecial(unit, 'whirlwind');
-            if (pick) {
-                adjacentEnemies.forEach(e => this.useAbility(unit, pick, e));
-                return;
-            }
-        }
-
-        // Default: charge and attack
-        if (!this.targetInRange(unit, target, 'close')) {
+        if (!this.targetInRange(unit, target, range)) {
             this.moveCloser(unit, target);
         }
-        if (this.targetInRange(unit, target, 'close')) {
-            const scored = this._scoredAbilityPick(unit, target);
+        if (this.targetInRange(unit, target, range)) {
             if (scored) this.useAbility(unit, scored.resolved, target);
             else this._basicAttack(unit, target);
         }
@@ -1109,45 +1201,63 @@ export function CombatManagerRedux() {
         }
     };
 
-    // SAGE: Support/healer. Top priority is healing allies, then debuffing enemies.
+    // SAGE: Support/healer. Top priority is healing allies, then defensive shielding, then perceive.
     this._aiSage = (unit) => {
         const woundedAlly = this.findWoundedAlly(unit);
         const woundedPct = woundedAlly && woundedAlly.starting_hp > 0
             ? woundedAlly.hp / woundedAlly.starting_hp : 1;
 
-        // Priority 1: Healing Hymn if any ally is below 70% HP
-        if (woundedPct < 0.7 && this._abilityReady(unit, 'healing_hymn')) {
-            const pick = this.resolveSpecial(unit, 'healing_hymn');
-            if (pick) {
-                // Heal all allies
-                const healAmount = (pick.buff && pick.buff.heal && pick.buff.heal.amount) || 12;
-                Object.values(this.combatants).forEach(c => {
-                    if (!c || c.dead || c.isVCT) return;
-                    const sameTeam = (unit.isMonster || unit.isMinion)
-                        ? (c.isMonster || c.isMinion) : (!c.isMonster && !c.isMinion);
-                    if (!sameTeam) return;
-                    c.hp = Math.min(c.starting_hp || c.hp, c.hp + healAmount);
-                    c.damageIndicators = c.damageIndicators || [];
-                    c.damageIndicators.push({ id: Date.now() + Math.random(), value: `+${healAmount}`, source: 'Healing Hymn', type: 'heal' });
-                });
-                this.appendCombatLog(`${this.getCombatantLogName(unit)} sings Healing Hymn — all allies healed for ${healAmount}.`);
-                this._setCooldown(unit, 'healing_hymn', pick.cooldown || 12);
+        // Priority 1: Healing Hands (heal) if any ally is below 70% HP
+        if (woundedPct < 0.7 && this._abilityReady(unit, 'heal')) {
+            const pick = this.resolveSpecial(unit, 'heal');
+            if (pick && woundedAlly) {
+                const healAmount = 30; // base healing
+                woundedAlly.hp = Math.min(woundedAlly.starting_hp || woundedAlly.hp, woundedAlly.hp + healAmount);
+                woundedAlly.damageIndicators = woundedAlly.damageIndicators || [];
+                woundedAlly.damageIndicators.push({ id: Date.now() + Math.random(), value: `+${healAmount}`, source: 'Healing Hands', type: 'heal' });
+                this.appendCombatLog(`${this.getCombatantLogName(unit)} uses Healing Hands on ${this.getCombatantLogName(woundedAlly)} for +${healAmount} HP.`);
+                this._setCooldown(unit, 'heal', pick.cooldown || 4);
                 unit.actionsTakenThisRound += 1;
                 if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
                 return;
             }
         }
 
-        // Priority 2: Reveal Weakness debuff
-        this.acquireTarget(unit, true);
-        const target = this.combatants[unit.targetId];
-        if (target && this._abilityReady(unit, 'reveal_weakness')) {
-            const pick = this.resolveSpecial(unit, 'reveal_weakness');
+        // Priority 2: Circle of Protection if we have 2+ allies
+        if (this._abilityReady(unit, 'circle_of_protection')) {
+            const pick = this.resolveSpecial(unit, 'circle_of_protection');
             if (pick) {
-                // Mark target as revealed (increases damage taken)
-                target.weaknessRevealed = true;
-                this.appendCombatLog(`${this.getCombatantLogName(unit)} reveals ${this.getCombatantLogName(target)}'s weakness!`);
-                this._setCooldown(unit, 'reveal_weakness', pick.cooldown || 12);
+                const dur = getDurationRounds(pick.duration || 'long');
+                Object.values(this.combatants).forEach(c => {
+                    if (!c || c.dead || c.isVCT) return;
+                    const sameTeam = (unit.isMonster || unit.isMinion)
+                        ? (c.isMonster || c.isMinion) : (!c.isMonster && !c.isMinion);
+                    if (!sameTeam) return;
+                    this._applyBuff(c, pick.buff || {}, 'circle_of_protection', dur);
+                });
+                this.appendCombatLog(`${this.getCombatantLogName(unit)} casts Circle of Protection on allies.`);
+                this._setCooldown(unit, 'circle_of_protection', pick.cooldown || 8);
+                unit.actionsTakenThisRound += 1;
+                if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+                return;
+            }
+        }
+
+        // Priority 3: Perceive (doubles weakness of all enemies for 2x-long duration: 8 rounds)
+        if (this._abilityReady(unit, 'perceive')) {
+            const pick = this.resolveSpecial(unit, 'perceive');
+            if (pick) {
+                const dur = getDurationRounds(pick.duration || '2x-long');
+                Object.values(this.combatants).forEach(c => {
+                    if (!c || c.dead || c.isVCT) return;
+                    const isEnemy = (unit.isMonster || unit.isMinion)
+                        ? (!c.isMonster && !c.isMinion) : (c.isMonster || c.isMinion);
+                    if (!isEnemy) return;
+                    c.weaknessRevealed = true;
+                    c.weaknessRevealedRounds = dur;
+                    this.appendCombatLog(`${this.getCombatantLogName(unit)} perceives ${this.getCombatantLogName(c)} — weakness exposed!`);
+                });
+                this._setCooldown(unit, 'perceive', pick.cooldown || 12);
                 unit.actionsTakenThisRound += 1;
                 if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
                 return;
@@ -1155,10 +1265,14 @@ export function CombatManagerRedux() {
         }
 
         // Fallback: stay at range and basic attack
-        if (target) this._basicAttack(unit, target);
+        this.acquireTarget(unit, true);
+        const target = this.combatants[unit.targetId];
+        if (target) {
+            this._basicAttack(unit, target);
+        }
     };
 
-    // RANGER: Ranged DPS. Deadeye shot prioritized; stays at range.
+    // RANGER: Ranged DPS. Prioritizes execute and mark.
     this._aiRanger = (unit) => {
         this.acquireTarget(unit, true);
         const target = this.combatants[unit.targetId];
@@ -1171,15 +1285,41 @@ export function CombatManagerRedux() {
             this.repositionUnit(unit, target, 'retreat');
         }
 
-        // Priority: Deadeye shot (high-damage single target)
-        if (this._abilityReady(unit, 'deadeye_shot')) {
-            const pick = this.resolveSpecial(unit, 'deadeye_shot');
+        // Priority 1: Ensnare if target is not ensnared
+        if (this._abilityReady(unit, 'ensnare') && !target.ensnared) {
+            const pick = this.resolveSpecial(unit, 'ensnare');
             if (pick) {
                 this.useAbility(unit, pick, target);
+                target.ensnared = true;
+                target.ensnaredRounds = getDurationRounds(pick.duration || 'short');
+                this._setCooldown(unit, 'ensnare', pick.cooldown || 6);
                 return;
             }
         }
 
+        // Priority 2: Mark target
+        if (this._abilityReady(unit, 'mark') && !target.marked) {
+            const pick = this.resolveSpecial(unit, 'mark');
+            if (pick) {
+                this.useAbility(unit, pick, target);
+                target.marked = true;
+                target.markedRounds = getDurationRounds(pick.duration || 'long');
+                this._setCooldown(unit, 'mark', pick.cooldown || 4);
+                return;
+            }
+        }
+
+        // Priority 3: Execute (rapid three arrows)
+        if (this._abilityReady(unit, 'execute')) {
+            const pick = this.resolveSpecial(unit, 'execute');
+            if (pick) {
+                this.useAbility(unit, pick, target);
+                this._setCooldown(unit, 'execute', pick.cooldown || 8);
+                return;
+            }
+        }
+
+        // Default: loose (basic attack)
         this._basicAttack(unit, target);
     };
 
@@ -1430,10 +1570,10 @@ export function CombatManagerRedux() {
         }
 
         // Apply self-buffs
-        const effects = Array.isArray(ability.effect) ? ability.effect : [];
+        const effects = Array.isArray(ability.effect) ? ability.effect : (ability.effect ? [ability.effect] : []);
         if (effects.some(e => typeof e === 'string' && e.includes('buff_self')) && ability.buff) {
             this._applyBuff(unit, ability.buff.increase_stats ? ability.buff : { increase_stats: { stats: [] } },
-                ability.name, ability.duration || 4);
+                ability.name, getDurationRounds(ability.duration || 'long'));
         }
 
         // Apply all-enemy debuffs
@@ -1442,7 +1582,7 @@ export function CombatManagerRedux() {
                 if (!c || c.dead || c.isVCT) return;
                 const isEnemy = (unit.isMonster || unit.isMinion) ? (!c.isMonster && !c.isMinion) : (c.isMonster || c.isMinion);
                 if (isEnemy) this._applyDebuff(c, ability.nerf.decrease_stats ? ability.nerf : { decrease_stats: { stats: [] } },
-                    ability.name, ability.duration || 4);
+                    ability.name, getDurationRounds(ability.duration || 'long'));
             });
             this.appendCombatLog(`${this.getCombatantLogName(unit)} uses ${ability.name}!`);
             if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
@@ -1488,7 +1628,6 @@ export function CombatManagerRedux() {
 
         // Single-target damage (default path)
         const rawDamage = (typeof ability.damage === 'number') ? ability.damage : (unit.stats.atk || 5);
-        // Bonus damage if target's weakness is revealed
         const dmgMult = target.weaknessRevealed ? 1.25 : 1.0;
         const hit = this.hitCheck(unit, target);
         if (hit) {
@@ -1503,25 +1642,37 @@ export function CombatManagerRedux() {
             });
             this.appendCombatLog(`${this.getCombatantLogName(unit)} uses ${this.getCombatActionName(ability)} on ${this.getCombatantLogName(target)} for ${finalDmg} damage${target.weaknessRevealed ? ' (weakness exposed!)' : ''}.`);
 
-            // Apply stun side-effect (e.g. flying_lotus, twin_finger)
-            if (ability.special_instructions && ability.special_instructions.toLowerCase().includes('stun')) {
-                if (Math.random() < 0.5) {
-                    target.stunned = true;
-                    target.stunnedRounds = 1;
-                    this.appendCombatLog(`${this.getCombatantLogName(target)} is stunned!`);
+            // Process side effects (stun, frozen, ensnared, fear, poison, bleed)
+            const resolvedEffects = effects.filter(e => typeof e === 'object' && e && e.type);
+            resolvedEffects.forEach(eff => {
+                const chance = typeof eff.chance === 'number' ? eff.chance : 100;
+                if (Math.random() * 100 <= chance) {
+                    const dur = getDurationRounds(eff.duration || 'short');
+                    if (eff.type === 'frozen') {
+                        target.frozen = true;
+                        target.frozenRounds = dur;
+                        this.appendCombatLog(`${this.getCombatantLogName(target)} is frozen!`);
+                    } else if (eff.type === 'ensnared') {
+                        target.ensnared = true;
+                        target.ensnaredRounds = dur;
+                        this.appendCombatLog(`${this.getCombatantLogName(target)} is ensnared!`);
+                    } else if (eff.type === 'fear') {
+                        target.stunned = true;
+                        target.stunnedRounds = dur;
+                        this.appendCombatLog(`${this.getCombatantLogName(target)} is terrified and cannot act.`);
+                    } else if (eff.type === 'stun') {
+                        target.stunned = true;
+                        target.stunnedRounds = dur;
+                        this.appendCombatLog(`${this.getCombatantLogName(target)} is stunned!`);
+                    } else if (eff.type === 'poison') {
+                        this._applyDebuff(target, { decrease_stats: { stats: [{ stat: 'atk', amount: 3 }] } }, 'poison', dur);
+                        this.appendCombatLog(`${this.getCombatantLogName(target)} is poisoned!`);
+                    } else if (eff.type === 'bleed') {
+                        this._applyDebuff(target, { decrease_stats: { stats: [{ stat: 'atk', amount: 2 }] } }, 'bleed', dur);
+                        this.appendCombatLog(`${this.getCombatantLogName(target)} is bleeding!`);
+                    }
                 }
-            }
-
-            // Apply freeze side-effect (ice_blast)
-            if (ability.effect && (Array.isArray(ability.effect) ? ability.effect : [ability.effect])
-                    .some(e => typeof e === 'object' && e.type === 'frozen')) {
-                const eff = (Array.isArray(ability.effect) ? ability.effect : [ability.effect]).find(e => typeof e === 'object' && e.type === 'frozen');
-                if (eff && Math.random() * 100 <= (eff.chance || 40)) {
-                    target.frozen = true;
-                    target.frozenRounds = eff.duration || 2;
-                    this.appendCombatLog(`${this.getCombatantLogName(target)} is frozen!`);
-                }
-            }
+            });
 
             if (target.hp <= 0) this.targetKilled(target);
         } else {
@@ -1558,6 +1709,10 @@ export function CombatManagerRedux() {
 
     // ── Movement ──────────────────────────────────────────────────────────────
     this.moveCloser = (unit, target) => {
+        if (unit.ensnared) {
+            this.appendCombatLog(`${this.getCombatantLogName(unit)} is ensnared and cannot move!`);
+            return;
+        }
         if (unit.movesTakenThisRound >= 1 || !target) return;
 
         const dx = target.coordinates.x - unit.coordinates.x;
@@ -1596,6 +1751,10 @@ export function CombatManagerRedux() {
 
     // Reposition: ranged units try to move away from close enemies
     this.repositionUnit = (unit, enemyTarget, mode = 'reposition') => {
+        if (unit.ensnared) {
+            this.appendCombatLog(`${this.getCombatantLogName(unit)} is ensnared and cannot move!`);
+            return;
+        }
         if (unit.movesTakenThisRound >= 1 || !enemyTarget) return;
         if (mode === 'retreat') {
             // Move away from the enemy

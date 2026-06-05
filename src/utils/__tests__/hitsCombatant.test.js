@@ -46,7 +46,8 @@ describe('hitsCombatant', () => {
       rockAnimationOff: jest.fn()
     };
 
-    cm.hitsCombatant(caller, target, null, { forceCritical: false });
+    cm.combatants = { [caller.id]: caller, [target.id]: target };
+    cm.hitsCombatant(caller, target, null, { forceHit: true, forceCritical: false });
 
     expect(target.hp).toBe(40);
     expect(target.damageIndicators.length).toBe(1);
@@ -83,11 +84,12 @@ describe('hitsCombatant', () => {
       rockAnimationOff: jest.fn()
     };
 
-    cm.hitsCombatant(caller, target, null, { forceCritical: true });
+    cm.combatants = { [caller.id]: caller, [target.id]: target };
+    cm.hitsCombatant(caller, target, null, { forceHit: true, forceCritical: true });
 
     // critical => 3x damage
     expect(target.hp).toBe(100 - (caller.atk * 3));
-    expect(target.damageIndicators.length).toBe(1);
+    expect(target.damageIndicators.length).toBe(2);
     expect(target.wounded.severity).toBe('severe');
     expect(target.rockAnimationOn).toHaveBeenCalled();
 
@@ -121,7 +123,8 @@ describe('hitsCombatant', () => {
       rockAnimationOff: jest.fn()
     };
 
-    cm.hitsCombatant(caller, target, null, { forceCritical: true });
+    cm.combatants = { [caller.id]: caller, [target.id]: target };
+    cm.hitsCombatant(caller, target, null, { forceHit: true, forceCritical: true });
 
     expect(target.hp).toBe(0);
     expect(target.wounded.severity).toBe('lethal');

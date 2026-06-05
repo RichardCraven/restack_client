@@ -255,6 +255,13 @@ export function InventoryManager(){
         'spear',
         'sword',
         'longbow',
+        'sylvan_bow',
+        'sentinels_bow',
+        'outriders_bow',
+        'cryonic_bow',
+        'vitriolic_bow',
+        'arcane_bow',
+        'merklins_peacekeeper',
         'scepter',
     'longsword_sword',
     'broadsword_sword',
@@ -478,6 +485,16 @@ export function InventoryManager(){
     obsidian_axe: { damage: 88, icon: 'axe_23', type: 'weapon', subtype: 'cutting', tier: 3, name: 'Obsidian Axe', range: 'close', equippedBy: null, animation: null, description: 'An obsidian axe +74% atk [Tier 3]' },
     ashwood_axe: { damage: 98, icon: 'axe_24', type: 'weapon', subtype: 'cutting', tier: 3, name: 'Ashwood Axe', range: 'close', equippedBy: null, animation: null, description: 'An ashwood axe +76% atk [Tier 3]' },
     drakebane_axe: { damage: 104, icon: 'axe_25', type: 'weapon', subtype: 'cutting', tier: 3, name: 'Drakebane Axe', range: 'close', equippedBy: null, animation: null, description: 'A drakebane axe +78% atk [Tier 3]' },
+
+    sylvan_bow: { damage: 42, icon: 'sylvan_bow', type: 'weapon', subtype: 'cutting', tier: 1, name: 'Sylvan Bow', range: 'far', equippedBy: null, animation: null, description: 'A balanced woodland bow [Tier 1]' },
+    sentinels_bow: { damage: 46, icon: 'sentinels_bow', type: 'weapon', subtype: 'cutting', tier: 1, name: "Sentinel's Bow", range: 'far', equippedBy: null, animation: null, description: 'A sentry-crafted longbow [Tier 1]' },
+    outriders_bow: { damage: 50, icon: 'outriders_bow', type: 'weapon', subtype: 'cutting', tier: 1, name: "Outrider's Bow", range: 'far', equippedBy: null, animation: null, description: 'A swift cavalry bow [Tier 1]' },
+
+    cryonic_bow: { damage: 72, icon: 'cryonic_bow', type: 'weapon', subtype: 'cutting', tier: 2, name: 'Cryonic Bow', range: 'far', equippedBy: null, animation: null, description: 'A frost-laced war bow [Tier 2]' },
+    vitriolic_bow: { damage: 78, icon: 'vitriolic_bow', type: 'weapon', subtype: 'cutting', tier: 2, name: 'Vitriolic Bow', range: 'far', equippedBy: null, animation: null, description: 'An acid-etched composite bow [Tier 2]' },
+    arcane_bow: { damage: 84, icon: 'arcane_bow', type: 'weapon', subtype: 'cutting', tier: 2, name: 'Arcane Bow', range: 'far', equippedBy: null, animation: null, description: 'An enchanted focus bow [Tier 2]' },
+
+    merklins_peacekeeper: { damage: 120, icon: 'merklins_peacekeeper', type: 'weapon', subtype: 'cutting', tier: 3, name: "Merklin's Peacekeeper", range: 'far', equippedBy: null, animation: null, description: 'A masterwork legend bow [Tier 3]' },
 
     
 shortsword_sword: { damage: 25, icon: 'shortsword', type: 'weapon', subtype: 'cutting', tier: 1, name: 'shortsword', range: 'close', equippedBy: null, animation: null, description: 'The shortsword does +25% atk [Tier 1]' },

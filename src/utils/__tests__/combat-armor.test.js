@@ -27,13 +27,14 @@ describe('CombatManager armor percent reduction', () => {
       ]
     };
 
+    cm.combatants = { [caller.id]: caller, [combatantHit.id]: combatantHit };
     // Use supplementalData.damage to force a known damage value of 100
-    cm.hitsCombatant(caller, combatantHit, { damage: 100 }, { forceCritical: false });
+    cm.hitsCombatant(caller, combatantHit, { damage: 100 }, { forceHit: true, forceCritical: false });
 
-    // After 50% armor, damage applied should be 50
-    expect(combatantHit.hp).toBe(150);
+    // After 50% armor + natural armor (total 70 armor => 49% reduction), damage applied should be 51
+    expect(combatantHit.hp).toBe(149);
     expect(combatantHit.damageIndicators.length).toBeGreaterThan(0);
-    expect(combatantHit.damageIndicators[0]).toBe(50);
-    expect(caller.readout.result).toContain('hits Defender for 50');
+    expect(combatantHit.damageIndicators[0].value).toBe(51);
+    expect(caller.readout.result).toContain('hits Defender for 51');
   });
 });
