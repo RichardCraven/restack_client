@@ -5,7 +5,7 @@ import { activeShieldWalls } from './shared-ai-methods/movement-methods';
 import { INTERVALS } from './shared-constants';
 
 const MAX_DEPTH = 7;
-const MAX_LANES = 5;
+const MAX_LANES = 6;
 
 
 const clone = (val) => {
@@ -353,7 +353,7 @@ export function CombatManagerRedux() {
         if (!combatant) return;
         combatant.occupiedCoords = [];
         if (combatant.coordinates) combatant.occupiedCoords.push({ x: combatant.coordinates.x, y: combatant.coordinates.y });
-        const LARGE_COMBAT_KEYS = ['dragon', 'beholder', 'ogre', 'sphinx', 'manticore', 'wyvern', 'wyvern_alt', 'mummy'];
+        const LARGE_COMBAT_KEYS = ['dragon', 'beholder', 'ogre', 'sphinx', 'manticore', 'wyvern', 'wyvern_alt', 'mummy', 'djinn', 'vampire', 'summoned_djinn', 'summoned_mummy', 'summoned_ogre', 'summoned_vampire'];
         const isLarge = (
             (typeof combatant.large === 'boolean' && combatant.large === true)
             || (combatant.type && LARGE_COMBAT_KEYS.includes(combatant.type))
@@ -362,9 +362,22 @@ export function CombatManagerRedux() {
             || (combatant.isMonster === true && combatant.isMinion !== true)
         );
         if (isLarge && combatant.coordinates) {
+            const hOffset = (combatant.coordinates.x >= 4) ? -1 : 1;
+            const extraCoords = [
+                { x: combatant.coordinates.x, y: combatant.coordinates.y - 1 },
+                { x: combatant.coordinates.x + hOffset, y: combatant.coordinates.y },
+                { x: combatant.coordinates.x + hOffset, y: combatant.coordinates.y - 1 }
+            ];
+            extraCoords.forEach(coord => {
+                if (coord.x >= 0 && coord.x < 8 && coord.y >= 0 && coord.y < 6) {
+                    if (!combatant.occupiedCoords.some(c => c.x === coord.x && c.y === coord.y)) {
+                        combatant.occupiedCoords.push(coord);
+                    }
+                }
+            });
+
             const above = { x: combatant.coordinates.x, y: combatant.coordinates.y - 1 };
-            if (above.y >= 0 && !combatant.occupiedCoords.some(c => c.x === above.x && c.y === above.y)) {
-                combatant.occupiedCoords.push(above);
+            if (above.y >= 0) {
                 this.vctByMonster[combatant.id] = {
                     monsterId: combatant.id,
                     coordinates: { ...above },
@@ -415,6 +428,35 @@ export function CombatManagerRedux() {
             if (Array.isArray(c.occupiedCoords) && c.occupiedCoords.some(coord => coord.x === x && coord.y === y)) return true;
             return false;
         });
+    };
+
+    this.canFitAt = (unit, x, y) => {
+        if (!unit) return false;
+        if (x < 0 || x > MAX_DEPTH || y < 0 || y >= MAX_LANES) return false;
+        if (this.isTileOccupied(x, y, unit.id)) return false;
+
+        const LARGE_COMBAT_KEYS = ['dragon', 'beholder', 'ogre', 'sphinx', 'manticore', 'wyvern', 'wyvern_alt', 'mummy', 'djinn', 'vampire', 'summoned_djinn', 'summoned_mummy', 'summoned_ogre', 'summoned_vampire'];
+        const isLarge = (
+            (typeof unit.large === 'boolean' && unit.large === true)
+            || (unit.type && LARGE_COMBAT_KEYS.includes(unit.type))
+            || (typeof unit.size === 'number' && unit.size >= 2)
+            || (typeof unit.scale === 'number' && unit.scale >= 2)
+            || (unit.isMonster === true && unit.isMinion !== true)
+        );
+
+        if (isLarge) {
+            const hOffset = (x >= 4) ? -1 : 1;
+            const extraCoords = [
+                { x: x, y: y - 1 },
+                { x: x + hOffset, y: y },
+                { x: x + hOffset, y: y - 1 }
+            ];
+            for (let coord of extraCoords) {
+                if (coord.x < 0 || coord.x > MAX_DEPTH || coord.y < 0 || coord.y >= MAX_LANES) return false;
+                if (this.isTileOccupied(coord.x, coord.y, unit.id)) return false;
+            }
+        }
+        return true;
     };
 
     this.updateUnitCoordinates = (unit, nx, ny) => {
@@ -707,7 +749,6 @@ export function CombatManagerRedux() {
         activeUnits.forEach((unit, index) => {
             setTimeout(() => {
                 try {
-                    this.appendCombatLog(`DEBUG: Turn started for ${unit.name} (${unit.type})`);
                     if (this.combatPaused || this.combatOver || unit.dead) {
                         this.appendCombatLog(`DEBUG: Skip turn for ${unit.name} - paused: ${this.combatPaused}, over: ${this.combatOver}, dead: ${unit.dead}`);
                         return;
@@ -1133,14 +1174,9 @@ export function CombatManagerRedux() {
             if (Math.abs(dx) <= 1 && dy <= 1) {
                 // Push one tile further away
                 const nx = c.coordinates.x + forwardDir;
-                if (nx >= 0 && nx <= MAX_DEPTH) {
-                    const blocked = Object.values(this.combatants).some(
-                        e => e && !e.dead && e.id !== c.id && e.coordinates && e.coordinates.x === nx && e.coordinates.y === c.coordinates.y
-                    );
-                    if (!blocked) {
-                        c.coordinates.x = nx;
-                        this.appendCombatLog(`${this.getCombatantLogName(c)} is pushed back!`);
-                    }
+                if (this.canFitAt(c, nx, c.coordinates.y)) {
+                    this.updateUnitCoordinates(c, nx, c.coordinates.y);
+                    this.appendCombatLog(`${this.getCombatantLogName(c)} is pushed back!`);
                 }
             }
         });
@@ -1545,6 +1581,18 @@ export function CombatManagerRedux() {
     // ── Ability Use ───────────────────────────────────────────────────────────
     this.useAbility = (unit, ability, target) => {
         if (!ability || !target) return;
+        
+        unit.attacking = true;
+        if (typeof this.updateData === 'function') {
+            this.updateData(clone(this.combatants));
+        }
+        setTimeout(() => {
+            unit.attacking = false;
+            if (typeof this.updateData === 'function') {
+                this.updateData(clone(this.combatants));
+            }
+        }, 350);
+
         if (unit.actionsTakenThisRound >= 1) return;
         unit.actionsTakenThisRound += 1;
         unit.endurance = Math.max(0, unit.endurance - 1);
@@ -1627,22 +1675,27 @@ export function CombatManagerRedux() {
         }
 
         // Single-target damage (default path)
-        const rawDamage = (typeof ability.damage === 'number') ? ability.damage : (unit.stats.atk || 5);
+        const hasDamageProp = (typeof ability.damage === 'number');
+        const rawDamage = hasDamageProp ? ability.damage : (ability.type === 'damage' ? (unit.stats.atk || 5) : 0);
         const dmgMult = target.weaknessRevealed ? 1.25 : 1.0;
         const hit = this.hitCheck(unit, target);
         if (hit) {
             const finalDmg = Math.round(this.damageCheck(unit, target, rawDamage) * dmgMult);
-            target.hp = Math.max(0, target.hp - finalDmg);
-            target.damageIndicators = target.damageIndicators || [];
-            target.damageIndicators.push({
-                id: Date.now() + Math.random(),
-                value: `-${finalDmg}`,
-                source: ability.name,
-                type: 'damage'
-            });
-            this.appendCombatLog(`${this.getCombatantLogName(unit)} uses ${this.getCombatActionName(ability)} on ${this.getCombatantLogName(target)} for ${finalDmg} damage${target.weaknessRevealed ? ' (weakness exposed!)' : ''}.`);
+            if (finalDmg > 0) {
+                target.hp = Math.max(0, target.hp - finalDmg);
+                target.damageIndicators = target.damageIndicators || [];
+                target.damageIndicators.push({
+                    id: Date.now() + Math.random(),
+                    value: `-${finalDmg}`,
+                    source: ability.name,
+                    type: 'damage'
+                });
+                this.appendCombatLog(`${this.getCombatantLogName(unit)} uses ${this.getCombatActionName(ability)} on ${this.getCombatantLogName(target)} for ${finalDmg} damage${target.weaknessRevealed ? ' (weakness exposed!)' : ''}.`);
+            } else {
+                this.appendCombatLog(`${this.getCombatantLogName(unit)} uses ${this.getCombatActionName(ability)} on ${this.getCombatantLogName(target)}.`);
+            }
 
-            // Process side effects (stun, frozen, ensnared, fear, poison, bleed)
+            // Process side effects (stun, frozen, ensnared, fear, poison, bleed, sleep)
             const resolvedEffects = effects.filter(e => typeof e === 'object' && e && e.type);
             resolvedEffects.forEach(eff => {
                 const chance = typeof eff.chance === 'number' ? eff.chance : 100;
@@ -1670,6 +1723,10 @@ export function CombatManagerRedux() {
                     } else if (eff.type === 'bleed') {
                         this._applyDebuff(target, { decrease_stats: { stats: [{ stat: 'atk', amount: 2 }] } }, 'bleed', dur);
                         this.appendCombatLog(`${this.getCombatantLogName(target)} is bleeding!`);
+                    } else if (eff.type === 'sleep') {
+                        target.stunned = true;
+                        target.stunnedRounds = dur;
+                        this.appendCombatLog(`${this.getCombatantLogName(target)} is put to sleep!`);
                     }
                 }
             });
@@ -1722,8 +1779,7 @@ export function CombatManagerRedux() {
 
         // Prefer whichever axis needs more correction; try the other if blocked
         const tryMove = (ax, ay) => {
-            const blocked = this.isTileOccupied(ax, ay, unit.id);
-            if (!blocked && ax >= 0 && ax <= MAX_DEPTH && ay >= 0 && ay < MAX_LANES) {
+            if (this.canFitAt(unit, ax, ay)) {
                 return { x: ax, y: ay };
             }
             return null;
@@ -1763,8 +1819,7 @@ export function CombatManagerRedux() {
             const newX = unit.coordinates.x + Math.sign(dx);
             const newY = unit.coordinates.y + Math.sign(dy || 0);
 
-            const blocked = this.isTileOccupied(newX, newY, unit.id);
-            if (!blocked && newX >= 0 && newX <= MAX_DEPTH && newY >= 0 && newY < MAX_LANES) {
+            if (this.canFitAt(unit, newX, newY)) {
                 this.updateUnitCoordinates(unit, newX, newY);
                 unit.movesTakenThisRound += 1;
                 this.appendCombatLog(`${this.getCombatantLogName(unit)} retreats from ${this.getCombatantLogName(enemyTarget)}.`);

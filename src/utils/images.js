@@ -1511,6 +1511,7 @@ export {
     bleeding,
     poison,
     frozen,
+    frozen as frozen_icon,
     acid_drop,
     wizard_disintegrate,
     wizard_sleep,

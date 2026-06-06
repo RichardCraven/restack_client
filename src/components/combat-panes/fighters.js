@@ -49,16 +49,12 @@ export default function FightersCombatGrid(props) {
     const portraitWrapperRefs = React.useRef({});
     const fighterWrapperRefs = React.useRef({});
     const [weaponPositions, setWeaponPositions] = React.useState({});
-    const [actionBarPositions, setActionBarPositions] = React.useState({});
-    const [animatingHits, setAnimatingHits] = React.useState({});
     const prevAttackingRef = React.useRef({});
     const [consumableFlashes, setConsumableFlashes] = React.useState({});
     const prevConsumableFlashRef = React.useRef({});
 
-    // Compute weapon positions based on the rendered portrait positions. Use layout effect to read DOM
     React.useLayoutEffect(() => {
         const newWeaponPos = {};
-        const newActionBarPos = {};
         props.crew.forEach(fighter => {
             const details = props.getFighterDetails(fighter);
             if (!details || details.dead || !details.pendingAttack) return;
@@ -98,17 +94,9 @@ export default function FightersCombatGrid(props) {
                     top = portraitOffsetTop;
                 }
                 newWeaponPos[fighter.id] = { left: `${Math.round(left)}px`, top: `${Math.round(top)}px` };
-
-                // Compute action-bar left anchored to the portrait's tile so it matches
-                // the grid-based calculation in `getActionBarLeftValForFighter`.
-                const rangeWidth = props.combatManager.getRangeWidthVal(details) || 0;
-                const offset = (details?.facing === 'left') ? (-(rangeWidth * 100)) : 100;
-                const barLeft = portraitOffsetLeft + offset;
-                newActionBarPos[fighter.id] = { left: `${Math.round(barLeft)}px` };
             }
         });
         setWeaponPositions(newWeaponPos);
-        setActionBarPositions(newActionBarPos);
         // Recompute when battle data changes, overlays change, or crew list changes
     }, [props.crew, props.battleData, props.animationOverlays, props.selectedFighter]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -124,17 +112,7 @@ export default function FightersCombatGrid(props) {
         props.crew.forEach(fighter => {
             const details = props.getFighterDetails(fighter);
             if (!details) return;
-            const prev = !!prevAttackingRef.current[fighter.id];
             const now = !!details.attacking;
-            if (!prev && now) {
-                // attacking went from false -> true: start visual animation
-                setAnimatingHits(prevState => ({ ...prevState, [fighter.id]: true }));
-                // Clear the hit class after 1s since the CSS animation was removed
-                // (the onAnimationEnd handler is no longer reliable for this class).
-                setTimeout(() => {
-                    setAnimatingHits(prevState => ({ ...prevState, [fighter.id]: false }));
-                }, 1000);
-            }
             // update prev ref for next tick
             prevAttackingRef.current[fighter.id] = now;
             // If attacking has ended, clear prev flag so next attack can trigger
@@ -252,7 +230,7 @@ export default function FightersCombatGrid(props) {
                                             opacity: props.combatManager.getCombatant(fighter.id)?.astralBeingActive ? 0.55 : 1,
                                             filter: [
                                                 details?.chargingUpActive ? "url('#ripple-effect')" : null,
-                                                `saturate(${(fighter.type === 'barbarian' || fighter.type === 'monk') ? Math.min(10, ((details?.hp / fighter.stats.hp) * 100) / 2) : ((details?.hp / fighter.stats.hp) * 100) / 2}) sepia(${props.portraitHoveredId === fighter.id ? '2' : '0'})`,
+                                                `sepia(${props.portraitHoveredId === fighter.id ? '2' : '0'})`,
                                                 details?.frozen ? 'hue-rotate(165deg) saturate(1.35) brightness(1.08) contrast(1.05)' : '',
                                                 (details?.berserkerActive && details?.feared && !details?.stunned) ? 'brightness(1.18)' : ''
                                             ].filter(Boolean).join(' '),
@@ -387,20 +365,7 @@ export default function FightersCombatGrid(props) {
                                             </div>
                                         );
                                     })()}
-                                    <div className={`action-bar-wrapper ${verticalFacingClass === 'facing-up' ? 'pointing-up' : (verticalFacingClass === 'facing-down' ? 'pointing-down' : '')}`} 
-                                        style={{
-                                        zIndex: 1001,
-                                        height: '100%',
-                                        width: !!props.getFighterDetails(fighter)?.pendingAttack ? `${props.combatManager.getRangeWidthVal(props.getFighterDetails(fighter)) * 100}px` : '0px',
-                                        // Prefer measured DOM position for pixel-perfect alignment; fall back to grid math
-                                        left: props.getFighterDetails(fighter)?.pendingAttack ? (actionBarPositions[fighter.id]?.left || `${props.getActionBarLeftValForFighter(props.getFighterDetails(fighter)?.id)}px`) : 0
-                                    }}
-                                    >
-                                        <div className={`
-                                        action-bar 
-                                        ${(animatingHits[fighter.id]) ? (props.getFighterDetails(fighter)?.facing === 'right' ? 'fighterHitsAnimation' : 'fighterHitsAnimation_RtoL') : ''}
-                                        `}></div>
-                                    </div>
+
                                 </div>
                             </div>
                         </div>

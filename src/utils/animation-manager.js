@@ -6,76 +6,27 @@ export function AnimationManager(){
 
     // Canvas-based claw swipe animation (for Skeleton)
     this.clawSwipe = async (targetTileId, sourceTileId, facing, resolve) => {
-        const sourceTile = this.tiles.find(e => e.id === sourceTileId);
-        if (!sourceTile) {
-            if (resolve) resolve();
-            return;
-        }
-        const targetTile = this.tiles.find(e => e.id === targetTileId);
-        if (!targetTile) {
-            if (resolve) resolve();
-            return;
-        }
-        // Calculate origin and target tile coordinates
-        const originCoords = this.getTileCoordsById(sourceTileId);
-        const targetCoords = this.getTileCoordsById(targetTileId);
-        const clawAnimId = `claw_swipe_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
-        let duration = 1000; // ms, doubled for longer GIF playback
-        let tracer = false; // Toggle this to true to enable tracer effect
-        // 10000ms = tracer, 1000ms is not
-        if (tracer) {
-            duration = 10000;
-        }
-        const clawAnim = {
-            id: clawAnimId,
-            type: 'claw_swipe',
-            animationType: 'canvas',
-            origin: originCoords,
-            target: targetCoords,
-            duration,
-            tracer,
-            facing,
-            onComplete: () => {
-                // Guard against double-fire: both the component's setTimeout and the
-                // manager's fallback setTimeout fire at the same duration. Null out
-                // onComplete after first call so it only runs once.
-                if (!clawAnim.onComplete) return;
-                clawAnim.onComplete = null;
-                // Remove the canvas animation
-                const idx = this.canvasAnimations.findIndex(anim => anim.id === clawAnimId);
-                if (idx !== -1) {
-                    this.canvasAnimations.splice(idx, 1);
+        // Trigger hit-flash effect on the target tile instantly
+        if (targetTileId !== null && targetTileId !== undefined) {
+            const animationTile = this.tiles.find(e => e.id === targetTileId);
+            if (animationTile) {
+                animationTile.animationType = 'hit-flash';
+                animationTile.transitionType = 'fade';
+                animationTile.animationData = {
+                    clawSwipeHit: true,
+                    duration: 500
+                };
+                this.update();
+                setTimeout(() => {
+                    animationTile.animationType = null;
+                    animationTile.transitionType = null;
+                    animationTile.animationData = {};
                     this.update();
-                }
-                // Trigger hit-flash effect on the target tile
-                if (targetTileId !== null && targetTileId !== undefined) {
-                    const animationTile = this.tiles.find(e => e.id === targetTileId);
-                    if (animationTile) {
-                        animationTile.animationType = 'hit-flash';
-                        animationTile.transitionType = 'fade';
-                        animationTile.animationData = {
-                            clawSwipeHit: true,
-                            duration: 500
-                        };
-                        this.update();
-                        setTimeout(() => {
-                            animationTile.animationType = null;
-                            animationTile.transitionType = null;
-                            animationTile.animationData = {};
-                            this.update();
-                        }, 500);
-                    }
-                }
-                if (resolve) resolve();
+                }, 500);
             }
-        };
-        this.canvasAnimations.push(clawAnim);
-        this.update();
-        // Fallback: auto-complete after duration if onComplete was not called by the canvas component
-        setTimeout(() => {
-            if (clawAnim.onComplete) clawAnim.onComplete();
-        }, duration);
-    }
+        }
+        if (resolve) resolve();
+    };
 
     this.axeSwing = (targetTileId, sourceTileId, facing, resolve) => {
         const animationTile = this.tiles.find(e => e.id === sourceTileId);
@@ -1535,68 +1486,27 @@ export function AnimationManager(){
         this.cross(tileId, color)
     }
     this.swordSwing = (targetTileId, sourceTileId, facing, resolve) => {
-        const originCoords = this.getTileCoordsById(sourceTileId);
-        const targetCoords = targetTileId ? this.getTileCoordsById(targetTileId) : null;
-        if (!originCoords) {
-            if (resolve) resolve(null);
-            return;
-        }
-        // If targetTileId is null (edge of board), synthesise a 1-tile offset in the facing direction
-        const effectiveTarget = targetCoords || (() => {
-            const t = { ...originCoords };
-            if (facing === 'right') t.x += 1;
-            else if (facing === 'left') t.x -= 1;
-            else if (facing === 'up') t.y -= 1;
-            else if (facing === 'down') t.y += 1;
-            return t;
-        })();
-
-        const duration = 600;
-        const animId = `sword_swing_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
-        const anim = {
-            id: animId,
-            type: 'sword_swing',
-            animationType: 'canvas',
-            origin: originCoords,
-            target: effectiveTarget,
-            duration,
-            facing,
-            onComplete: null,
-        };
-        anim.onComplete = () => {
-            if (!anim.onComplete) return;
-            anim.onComplete = null;
-            const idx = this.canvasAnimations.findIndex(a => a.id === animId);
-            if (idx !== -1) {
-                this.canvasAnimations.splice(idx, 1);
+        // Trigger hit-flash on target tile instantly
+        if (targetTileId !== null && targetTileId !== undefined) {
+            const hitTile = this.tiles.find(e => e.id === targetTileId);
+            if (hitTile) {
+                hitTile.animationType = 'hit-flash';
+                hitTile.transitionType = 'fade';
+                hitTile.animationData = { swordSwipeHit: true, duration: 400 };
                 this.update();
-            }
-            // Trigger hit-flash on target tile
-            if (targetTileId !== null && targetTileId !== undefined) {
-                const hitTile = this.tiles.find(e => e.id === targetTileId);
-                if (hitTile) {
-                    hitTile.animationType = 'hit-flash';
-                    hitTile.transitionType = 'fade';
-                    hitTile.animationData = { swordSwipeHit: true, duration: 400 };
+                setTimeout(() => {
+                    hitTile.animationType = null;
+                    hitTile.transitionType = null;
+                    hitTile.animationData = {};
                     this.update();
-                    setTimeout(() => {
-                        hitTile.animationType = null;
-                        hitTile.transitionType = null;
-                        hitTile.animationData = {};
-                        this.update();
-                    }, 400);
-                }
+                }, 400);
             }
-            if (resolve) {
-                const tileCoords = targetTileId ? this.getTileCoordsById(targetTileId) : null;
-                const collision = tileCoords ? this.checkForCollision(tileCoords) : null;
-                resolve(collision);
-            }
-        };
-        this.canvasAnimations.push(anim);
-        this.update();
-        // Safety fallback
-        setTimeout(() => { if (anim.onComplete) anim.onComplete(); }, duration + 50);
+        }
+        if (resolve) {
+            const tileCoords = targetTileId ? this.getTileCoordsById(targetTileId) : null;
+            const collision = tileCoords ? this.checkForCollision(tileCoords) : null;
+            resolve(collision);
+        }
     }
 
     this.zapBurstAnimation = async (targetTileId, sourceTileId, color = null, resolve) => {

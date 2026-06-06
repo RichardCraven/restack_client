@@ -449,7 +449,10 @@ const SandboxPage = () => {
     } else {
       if (selectedFighterId === 'ranger') {
         setFighterPos({ row: 2, col: 0 });
-        setTargetPos({ row: 2, col: 2 });
+        setTargetPos({ row: 2, col: 3 }); // Positions 2x scale Ogre Target correctly on col: 2-3, row: 1-2
+      } else if (selectedFighterId === 'sage') {
+        setFighterPos({ row: 2, col: 1 });
+        setTargetPos({ row: 1, col: 3 }); // Move Goblin/Soldier target away from (2, 3) where friendly Soldier extra spawns
       } else {
         setFighterPos({ row: 2, col: 1 });
         setTargetPos({ row: 2, col: 3 });
@@ -1303,13 +1306,20 @@ const SandboxPage = () => {
     : (fightersData.find(f => f.id === selectedFighterId) || fightersData[0]);
   const targetPortrait = selectedUnitType === 'monster'
     ? soldier_portrait
-    : (selectedFighterId === 'sage' ? soldier_portrait : goblin_portrait);
+    : (selectedFighterId === 'sage' 
+        ? soldier_portrait 
+        : (selectedFighterId === 'ranger' ? ogre_portrait : goblin_portrait));
   const targetName = selectedUnitType === 'monster'
     ? 'Soldier Target'
-    : (selectedFighterId === 'sage' ? 'Soldier Target' : 'Goblin Target');
+    : (selectedFighterId === 'sage' 
+        ? 'Soldier Target' 
+        : (selectedFighterId === 'ranger' ? 'Ogre Target' : 'Goblin Target'));
 
   const isFighterLarge = selectedUnitType === 'monster' && selectedMonsterId !== 'goblin' && selectedMonsterId !== 'skeleton';
-  const isTargetLarge = selectedUnitType === 'fighter' && selectedFighterId !== 'sage' && selectedMonsterId !== 'goblin' && selectedMonsterId !== 'skeleton';
+  const isTargetLarge = selectedUnitType === 'fighter' && (
+    (selectedFighterId === 'ranger') || // Ranger target is Ogre (2x)
+    (selectedFighterId !== 'sage' && selectedMonsterId !== 'goblin' && selectedMonsterId !== 'skeleton')
+  );
 
   // Safety check: if fighter or target is large but positioned at row 0, push them to row 1
   useEffect(() => {
@@ -1374,8 +1384,12 @@ const SandboxPage = () => {
 
   // Helper to determine projectile rotation angle
   const getProjectileAngle = () => {
-    const dy = targetPos.row - fighterPos.row;
-    const dx = targetPos.col - fighterPos.col;
+    const fromCol = isFighterLarge ? (fighterPos.col >= 3 ? fighterPos.col - 0.5 : fighterPos.col + 0.5) : fighterPos.col;
+    const fromRow = isFighterLarge ? fighterPos.row - 0.5 : fighterPos.row;
+    const toCol = isTargetLarge ? (targetPos.col >= 3 ? targetPos.col - 0.5 : targetPos.col + 0.5) : targetPos.col;
+    const toRow = isTargetLarge ? targetPos.row - 0.5 : targetPos.row;
+    const dy = toRow - fromRow;
+    const dx = toCol - fromCol;
     return Math.atan2(dy, dx) * (180 / Math.PI);
   };
 
@@ -2898,9 +2912,14 @@ const SandboxPage = () => {
       else if (arrowType === 'poison') pIcon = ranger_poison_arrow;
       else if (arrowType === 'celestial') pIcon = ranger_celestial_arrow;
 
+      const startCol = isFighterLarge ? (fighterPos.col >= 3 ? fighterPos.col - 0.5 : fighterPos.col + 0.5) : fighterPos.col;
+      const startRow = isFighterLarge ? fighterPos.row - 0.5 : fighterPos.row;
+      const targetCol = isTargetLarge ? (targetPos.col >= 3 ? targetPos.col - 0.5 : targetPos.col + 0.5) : targetPos.col;
+      const targetRow = isTargetLarge ? targetPos.row - 0.5 : targetPos.row;
+
       setProjectile({
-        x: fighterPos.col * 20,
-        y: fighterPos.row * 20,
+        x: startCol * 20,
+        y: startRow * 20,
         icon: pIcon,
         isRangerArrow: true,
         arrowType: arrowType
@@ -2910,8 +2929,8 @@ const SandboxPage = () => {
       setTimeout(() => {
         setProjectile(prev => prev ? {
           ...prev,
-          x: targetPos.col * 20,
-          y: targetPos.row * 20
+          x: targetCol * 20,
+          y: targetRow * 20
         } : null);
       }, 30);
 
@@ -3052,13 +3071,16 @@ const SandboxPage = () => {
       else if (arrowType === 'poison') pIcon = ranger_poison_arrow;
       else if (arrowType === 'celestial') pIcon = ranger_celestial_arrow;
 
+      const startCol = isFighterLarge ? (fighterPos.col >= 3 ? fighterPos.col - 0.5 : fighterPos.col + 0.5) : fighterPos.col;
+      const startRow = isFighterLarge ? fighterPos.row - 0.5 : fighterPos.row;
+
       const fireArrow = (delayTime, index) => {
         setTimeout(() => {
           const arrowId = Math.random();
           setProjectiles(prev => [...prev, {
             id: arrowId,
-            x: fighterPos.col * 20,
-            y: fighterPos.row * 20,
+            x: startCol * 20,
+            y: startRow * 20,
             icon: pIcon,
             isRangerArrow: true,
             arrowType: arrowType
@@ -3066,10 +3088,12 @@ const SandboxPage = () => {
 
           // Move
           setTimeout(() => {
+            const targetCol = isTargetLarge ? (targetPosRef.current.col >= 3 ? targetPosRef.current.col - 0.5 : targetPosRef.current.col + 0.5) : targetPosRef.current.col;
+            const targetRow = isTargetLarge ? targetPosRef.current.row - 0.5 : targetPosRef.current.row;
             setProjectiles(prev => prev.map(p => p.id === arrowId ? {
               ...p,
-              x: targetPosRef.current.col * 20,
-              y: targetPosRef.current.row * 20
+              x: targetCol * 20,
+              y: targetRow * 20
             } : p));
           }, 30);
 
@@ -3965,7 +3989,9 @@ const SandboxPage = () => {
           
           // Projectile starts traveling
           setTimeout(() => {
-            setProjectile(prev => prev ? { ...prev, x: targetPos.col * 20, y: targetPos.row * 20 } : null);
+            const targetCol = isTargetLarge ? (targetPos.col >= 3 ? targetPos.col - 0.5 : targetPos.col + 0.5) : targetPos.col;
+            const targetRow = isTargetLarge ? targetPos.row - 0.5 : targetPos.row;
+            setProjectile(prev => prev ? { ...prev, x: targetCol * 20, y: targetRow * 20 } : null);
           }, 30);
           
           // Projectile hits Soldier target
@@ -5969,10 +5995,10 @@ const SandboxPage = () => {
                   className={djinnArcaneBarrierFading ? 'effect-icon-fading' : 'effect-icon-active'}
                   style={{
                     position: 'absolute',
-                    width: `${TILE_PCT}%`,
-                    height: `${TILE_PCT}%`,
-                    left: `${fighterPos.col * TILE_PCT}%`,
-                    top: `${fighterPos.row * TILE_PCT}%`,
+                    width: `${TILE_PCT * 2}%`,
+                    height: `${TILE_PCT * 2}%`,
+                    left: `${(fighterPos.col >= 3 ? fighterPos.col - 1 : fighterPos.col) * TILE_PCT}%`,
+                    top: `${(fighterPos.row - 1) * TILE_PCT}%`,
                     zIndex: 11,
                     pointerEvents: 'none',
                     display: 'flex',
@@ -5986,7 +6012,7 @@ const SandboxPage = () => {
                     height: '90%',
                     borderRadius: '50%',
                     border: '3px solid rgba(255, 84, 0, 0.85)',
-                    boxShadow: '0 0 15px rgba(255, 84, 0, 0.6), inset 0 0 10px rgba(255, 84, 0, 0.3)',
+                    boxShadow: '0 0 25px rgba(255, 84, 0, 0.7), inset 0 0 15px rgba(255, 84, 0, 0.4)',
                     position: 'relative',
                     animation: 'spin-slow 20s linear infinite',
                   }}>
@@ -6004,8 +6030,8 @@ const SandboxPage = () => {
                             top: `${50 + radius * Math.sin(rad)}%`,
                             transform: `translate(-50%, -50%) rotate(${angle}deg)`,
                             color: 'rgba(255, 84, 0, 0.95)',
-                            fontSize: '10px',
-                            textShadow: '0 0 6px rgba(255, 84, 0, 1)',
+                            fontSize: '16px',
+                            textShadow: '0 0 8px rgba(255, 84, 0, 1)',
                             userSelect: 'none',
                           }}
                         >
@@ -6021,7 +6047,7 @@ const SandboxPage = () => {
                       width: '70%',
                       height: '70%',
                       borderRadius: '50%',
-                      border: '1px solid rgba(255, 84, 0, 0.2)',
+                      border: '1px solid rgba(255, 84, 0, 0.3)',
                     }} />
                   </div>
                 </div>
@@ -6739,12 +6765,12 @@ const SandboxPage = () => {
                     : (innerFireActive && targetFlash)
                       ? '3px solid #ff5400'
                       : targetFlash
-                        ? '3px solid #ff4d4d'
-                        : '2px solid #ff5400',
+                        ? (targetName === 'Soldier Target' ? '3px solid #ffea00' : '3px solid #ff4d4d')
+                        : (targetName === 'Soldier Target' ? '2px solid #ffb703' : '2px solid #ff5400'),
                   backgroundColor: (innerFireActive && targetFlash)
                     ? '#cc4400'
                     : targetFlash
-                      ? '#990000'
+                      ? (targetName === 'Soldier Target' ? 'rgba(255, 183, 3, 0.3)' : '#990000')
                       : '#222',
                   backgroundImage: `url(${targetPortrait})`,
                   backgroundSize: 'cover',
@@ -7334,7 +7360,7 @@ const SandboxPage = () => {
                         </svg>
                       </div>
                     )}
-                    {sagePerceiveActive && (
+                    {sagePerceiveActive && targetName !== 'Soldier Target' && (
                       <div
                         className={sagePerceiveFading ? 'effect-icon-fading' : 'effect-icon-active'}
                         style={{
@@ -8549,8 +8575,8 @@ const SandboxPage = () => {
                   <div
                     style={{
                       position: 'absolute',
-                      left: `calc(${projectile.x}% + 10% - 40px)`,
-                      top: `calc(${projectile.y}% + 10% - 4px)`,
+                      left: `calc(${(projectile.x / 20) * TILE_PCT}% + ${TILE_PCT / 2}% - 40px)`,
+                      top: `calc(${(projectile.y / 20) * TILE_PCT}% + ${TILE_PCT / 2}% - 4px)`,
                       transform: `rotate(${getProjectileAngle()}deg)`,
                       zIndex: 30,
                       transition: 'left 0.4s linear, top 0.4s linear',
@@ -8620,7 +8646,7 @@ const SandboxPage = () => {
                       width: '40px',
                       height: '40px',
                       zIndex: 30,
-                      transition: 'left 0.4s linear, top 0.4s linear',
+                      transition: 'left 0.4s ease-in-out, top 0.4s ease-in-out',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -8794,8 +8820,8 @@ const SandboxPage = () => {
                     key={p.id}
                     style={{
                       position: 'absolute',
-                      left: `calc(${p.x}% + ${TILE_PCT / 2}% - 30px)`,
-                      top: `calc(${p.y}% + ${TILE_PCT / 2}% - 3px)`,
+                      left: `calc(${(p.x / 20) * TILE_PCT}% + ${TILE_PCT / 2}% - 30px)`,
+                      top: `calc(${(p.y / 20) * TILE_PCT}% + ${TILE_PCT / 2}% - 3px)`,
                       transform: `rotate(${getProjectileAngle()}deg)`,
                       zIndex: 30,
                       transition: 'left 0.4s linear, top 0.4s linear',

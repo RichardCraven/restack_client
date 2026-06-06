@@ -405,15 +405,7 @@ const MonstersCombatGrid = ({
                         className={`monster-wrapper ${battleData[monster.id]?.rocked ? 'rocked' : ''} ${battleData[monster.id]?.wounded ? 'hit' : ''} ${battleData[monster.id]?.wounded ? getHitAnimation(battleData[monster.id]) : ''} ${battleData[monster.id]?.wounded ? 'hit-flash' : ''} ${battleData[monster.id]?.facing === 'right' ? 'reversed' : ''} ${battleData[monster.id]?.stunned ? 'stunned' : ''}`}
                         style={computeHitVars(battleData[monster.id])}
                     >
-                        <div
-                            className="action-bar-wrapper"
-                            style={{
-                                width: !!battleData[monster.id]?.targetId ? `${combatManager.getDistanceToTargetWidthString(battleData[monster.id])}px` : '5px',
-                                left: `calc(100px * ${combatManager.getCombatant(battleData[monster.id]?.targetId)?.coordinates.x} + 50px)`
-                            }}
-                        >
-                            <div className={`action-bar ${battleData[monster.id]?.attacking ? (battleData[monster.id]?.facing === 'right' ? 'monsterHitsAnimation_LtoR' : 'monsterHitsAnimation') : ''}`}></div>
-                        </div>
+
                         {/* {(() => {
                             let weaponWrapper = null;
                             if (battleData[monster.id] && battleData[monster.id].pendingAttack) {
@@ -480,7 +472,7 @@ const MonstersCombatGrid = ({
                                     }}
                                     style={{
                                         backgroundImage: monster.portrait ? `url(${monster.portrait})` : 'none',
-                                        filter: `saturate(${((battleData[monster.id]?.hp / monster.stats.hp) * 100) / 2}) sepia(${portraitHoveredId === monster.id ? '2' : '0'}) ${battleData[monster.id]?.frozen ? 'hue-rotate(165deg) saturate(1.35) brightness(1.08) contrast(1.05)' : ''}`,
+                                        filter: `sepia(${portraitHoveredId === monster.id ? '2' : '0'}) ${battleData[monster.id]?.frozen ? 'hue-rotate(165deg) saturate(1.35) brightness(1.08) contrast(1.05)' : ''}`,
                                         zIndex: 1,
                                         position: 'relative',
                                         // Never apply BulgePortrait when dead — it competes with meltDownDeath
@@ -642,15 +634,7 @@ const MonstersCombatGrid = ({
                             className={`monster-wrapper ${minion.rocked ? 'rocked' : ''} ${minion.wounded ? 'hit' : ''} ${minion.wounded ? getHitAnimation(minion) : ''} ${minion.wounded ? 'hit-flash' : ''} ${minion.facing === 'right' ? 'reversed' : ''} ${minion.stunned ? 'stunned' : ''}`}
                             style={computeHitVars(minion)}
                         >
-                            <div
-                                className="action-bar-wrapper"
-                                style={{
-                                    width: !!minion.targetId ? `${combatManager.getDistanceToTargetWidthString(minion)}px` : '5px',
-                                    left: `calc(100px * ${combatManager.getCombatant(minion.targetId)?.coordinates.x} + 50px)`
-                                }}
-                            >
-                                <div className={`action-bar ${minion.attacking ? (minion.facing === 'right' ? 'monsterHitsAnimation_LtoR' : 'monsterHitsAnimation') : ''}`}></div>
-                            </div>
+
                             {/* {minion.pendingAttack && (
                                 <div
                                     className={`weapon-wrapper
@@ -690,7 +674,7 @@ const MonstersCombatGrid = ({
                                         }
                                     style={{
                                         backgroundImage: `url(${minion.portrait})`,
-                                        filter: `saturate(${((minion.hp / minion.stats.hp) * 100) / 2}) ${minion.portraitFilter || ''} sepia(${portraitHoveredId === minion.id ? '2' : '0'}) ${minion.frozen ? 'hue-rotate(165deg) saturate(1.35) brightness(1.08) contrast(1.05)' : ''}`,
+                                        filter: `${minion.portraitFilter || ''} sepia(${portraitHoveredId === minion.id ? '2' : '0'}) ${minion.frozen ? 'hue-rotate(165deg) saturate(1.35) brightness(1.08) contrast(1.05)' : ''}`,
                                         zIndex: 2, // Always below fighter portraits
                                         // Never apply BulgePortrait when dead — it competes with meltDownDeath
                                         animation: (minion.wounded && !minion.dead) ? 'BulgePortrait var(--portrait-animation-duration, 420ms) var(--portrait-animation-timing, cubic-bezier(.2,.8,.2,1))' : undefined,
