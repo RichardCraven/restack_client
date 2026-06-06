@@ -109,7 +109,9 @@ export function AnimationManager(){
         one_man_army: { duration: 600, animationType: 'tile' },
         inspire: { duration: 600, animationType: 'tile' },
         annihilation: { duration: 600, animationType: 'tile' },
-        berserker: { duration: 600, animationType: 'tile' }
+        berserker: { duration: 600, animationType: 'tile' },
+        astral_projection: { duration: 700, animationType: 'tile' },
+        monk_astral_projection: { duration: 700, animationType: 'tile' }
     };
 
     this._handIconKeys = Array.from({ length: 22 }, (_, i) => `hand_${i + 1}`);
@@ -124,7 +126,8 @@ export function AnimationManager(){
     // Generic attack animation trigger for AI modules (e.g., Monk)
     this.triggerAttackAnimation = async (data) => {
         // Default to using 'type' as animationType if not provided
-        const animType = data.animationType || data.type;
+        const requestedType = data.animationType || data.type;
+        const animType = requestedType === 'monk_astral_projection' ? 'astral_projection' : requestedType;
         const sourceTileId = this.getTileIdByCoords(data.coordinates);
         if (sourceTileId === null || sourceTileId === undefined) {
             console.warn('triggerAttackAnimation: Invalid coordinates for tile:', data.coordinates);
@@ -1106,7 +1109,9 @@ export function AnimationManager(){
             case 'one_man_army':
             case 'inspire':
             case 'annihilation':
-            case 'berserker': {
+            case 'berserker':
+            case 'astral_projection':
+            case 'monk_astral_projection': {
                 let iconKey = type;
                 if (type === 'sleep') iconKey = 'wizard_sleep';
                 else if (type === 'vortex') iconKey = 'wizard_vortex';
@@ -1120,6 +1125,7 @@ export function AnimationManager(){
                 else if (type === 'inspire') iconKey = 'inspire';
                 else if (type === 'annihilation') iconKey = 'wizard_annihilation';
                 else if (type === 'berserker') iconKey = 'barbarian_berserker';
+                else if (type === 'astral_projection' || type === 'monk_astral_projection') iconKey = 'monk_astral_projection';
 
                 animationTile.animationType = type;
                 animationTile.transitionType = 'fade';

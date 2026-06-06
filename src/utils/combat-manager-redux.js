@@ -500,10 +500,30 @@ export function CombatManagerRedux() {
 
     this.targetInRange = (caller, target, rangeType) => {
         if (!caller || !target) return false;
-        const distance = Math.abs(caller.coordinates.x - target.coordinates.x) + Math.abs(caller.coordinates.y - target.coordinates.y);
-        if (rangeType === 'close') return distance <= 1;
-        if (rangeType === 'medium') return distance <= 3;
-        return true; // far/any
+        
+        // Support multi-tile large callers/targets by checking range from every occupied tile
+        const targetTiles = (Array.isArray(target.occupiedCoords) && target.occupiedCoords.length > 0)
+            ? target.occupiedCoords
+            : [target.coordinates];
+        const callerTiles = (Array.isArray(caller.occupiedCoords) && caller.occupiedCoords.length > 0)
+            ? caller.occupiedCoords
+            : [caller.coordinates];
+
+        const tileInRange = (cc, tc) => {
+            const dx = Math.abs(cc.x - tc.x);
+            const dy = Math.abs(cc.y - tc.y);
+            const dist = dx + dy; // Manhattan distance
+            
+            if (rangeType === 'close') {
+                // Adjacent orthogonally (Manhattan distance of 1) or Chebyshev distance of 1 (diagonals included)
+                // Let's support both cardinally and diagonally adjacent close range (dx <= 1 && dy <= 1)
+                return dx <= 1 && dy <= 1;
+            }
+            if (rangeType === 'medium') return dist <= 3;
+            return true; // far/any
+        };
+
+        return callerTiles.some(cc => targetTiles.some(tc => tileInRange(cc, tc)));
     };
 
     // ── Target Acquisition ────────────────────────────────────────────────────
@@ -642,6 +662,11 @@ export function CombatManagerRedux() {
                 this.triggerVisualAbility(unitId, targetId, ability);
             };
         }
+    };
+
+    /** Wire the new Sandbox-style AnimationManagerRedux (pure state, no canvas) */
+    this.connectAnimationManagerRedux = (instance) => {
+        this.animManagerRedux = instance;
     };
 
     this.triggerVisualAbility = (unitId, targetId, ability) => {
@@ -1013,10 +1038,41 @@ export function CombatManagerRedux() {
         const target = this.combatants[unit.targetId];
         if (!target) return;
 
+        // Priority 0: Ethereal Speed (speed buff and yellow glow)
+        if (this._abilityReady(unit, 'monk_ethereal_speed') && !unit.etherealSpeedActive) {
+            const pick = this.resolveSpecial(unit, 'monk_ethereal_speed');
+            if (pick) {
+                unit.etherealSpeedActive = true;
+                unit.etherealSpeedRoundsLeft = 4;
+                this.appendCombatLog(`${this.getCombatantLogName(unit)} activates Ethereal Speed — glowing with power!`);
+                this._setCooldown(unit, 'monk_ethereal_speed', pick.cooldown || 15);
+                if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+            }
+        }
+
+        // Tick Ethereal Speed timer
+        if (unit.etherealSpeedActive) {
+            unit.etherealSpeedRoundsLeft = (unit.etherealSpeedRoundsLeft || 1) - 1;
+            if (unit.etherealSpeedRoundsLeft <= 0) {
+                unit.etherealSpeedActive = false;
+                this.appendCombatLog(`${this.getCombatantLogName(unit)}'s Ethereal Speed fades.`);
+            }
+        }
+
         // Astral Being: required for third_eye and projection; entered via astral_focus
         const astralActive = !!unit.astralBeingActive;
 
-        // Priority 1: If not in astral mode, consider monk_astral_focus
+        // Priority 1: Scored ability selection (punch, flurry, force punch flurry, etc.)
+        const scored = this._scoredAbilityPick(unit, target);
+        const inRange = target && this.targetInRange(unit, target, 'close');
+
+        // Prioritize punch and close melee attacks if ready and in range
+        if (inRange && scored && scored.resolved.range === 'close') {
+            this.useAbility(unit, scored.resolved, target);
+            return;
+        }
+
+        // Priority 2: If not in astral mode and no close attack was triggered, consider entering astral focus
         if (!astralActive && this._abilityReady(unit, 'monk_astral_focus')) {
             const pick = this.resolveSpecial(unit, 'monk_astral_focus');
             if (pick && unit.hp / unit.starting_hp > 0.5) { // don't focus if low HP
@@ -1024,7 +1080,7 @@ export function CombatManagerRedux() {
                 unit.astralBeingActive = true;
                 unit.astralBeingRoundsLeft = 6;
                 this.appendCombatLog(`${this.getCombatantLogName(unit)} enters Astral Being mode.`);
-                this._setCooldown(unit, 'monk_astral_focus', pick.cooldown || 20);
+                this._setCooldown(unit, 'monk_astral_focus', pick.cooldown || 60);
                 if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
                 // Astral focus is a concentrative action — no attack this round
                 return;
@@ -1082,20 +1138,17 @@ export function CombatManagerRedux() {
             }
         }
 
-        // Priority 4: Standard scored ability selection
-        const scored = this._scoredAbilityPick(unit, target);
-        const inRange = target && this.targetInRange(unit, target, 'close');
-
-        if (inRange) {
-            if (scored) this.useAbility(unit, scored.resolved, target);
-            else this._basicAttack(unit, target);
-        } else {
+        // Fallback: If not in range, move closer and attack if possible
+        if (!inRange) {
             this.moveCloser(unit, target);
             const nowInRange = this.targetInRange(unit, target, 'close');
             if (nowInRange) {
                 if (scored) this.useAbility(unit, scored.resolved, target);
                 else this._basicAttack(unit, target);
             }
+        } else {
+            // Already in range but scored close attack was not used (or none ready); basic attack.
+            this._basicAttack(unit, target);
         }
     };
 
@@ -1254,12 +1307,68 @@ export function CombatManagerRedux() {
         const target = this.combatants[unit.targetId];
         if (!target) return;
 
-        // Wizards prefer medium range — retreat if enemy is too close
-        const dist = target ? Math.abs(unit.coordinates.x - target.coordinates.x)
-                            + Math.abs(unit.coordinates.y - target.coordinates.y) : 999;
-        if (dist <= 1) {
-            // Too close — try to back away
-            this.repositionUnit(unit, target, 'retreat');
+        // Wizards prefer medium/long range. If an active enemy is adjacent (Manhattan/Chebyshev distance <= 1), Wizard flees.
+        const isEnemyAdjacent = Object.values(this.combatants).some(c => {
+            if (!c || c.dead || c.isVCT || (!c.isMonster && !c.isMinion)) return false;
+            // Support large monsters by checking all their occupied coordinates
+            const enemyTiles = (Array.isArray(c.occupiedCoords) && c.occupiedCoords.length > 0) ? c.occupiedCoords : [c.coordinates];
+            return enemyTiles.some(tile => {
+                const dx = Math.abs(unit.coordinates.x - tile.x);
+                const dy = Math.abs(unit.coordinates.y - tile.y);
+                return dx <= 1 && dy <= 1; // Adjacent horizontally, vertically, or diagonally
+            });
+        });
+
+        if (isEnemyAdjacent && unit.movesTakenThisRound === 0) {
+            // Find a tile {x, y} that is within 1 step (left, right, up, down)
+            // which is a valid fit, and has NO adjacent enemies.
+            const directions = [
+                { dx: -1, dy: 0 }, // retreat further back (left/right depending on side)
+                { dx: 0, dy: -1 }, // step up
+                { dx: 0, dy: 1 },  // step down
+                { dx: 1, dy: 0 }   // step forward (as a last resort if backing up is blocked)
+            ];
+            
+            // For fighters, "retreat" usually means moving left (away from depth MAX_DEPTH)
+            // Let's determine direction. If unit.coordinates.x > 0, backing up is -1.
+            const preferredDx = -1;
+            const sortedDirections = [
+                { dx: preferredDx, dy: 0 },
+                { dx: 0, dy: -1 },
+                { dx: 0, dy: 1 },
+                { dx: -preferredDx, dy: 0 }
+            ];
+
+            let fled = false;
+            for (let dir of sortedDirections) {
+                const nx = unit.coordinates.x + dir.dx;
+                const ny = unit.coordinates.y + dir.dy;
+                if (this.canFitAt(unit, nx, ny)) {
+                    // Check if this new position nx, ny is adjacent to any active enemy
+                    const anyEnemyNear = Object.values(this.combatants).some(c => {
+                        if (!c || c.dead || c.isVCT || (!c.isMonster && !c.isMinion)) return false;
+                        const enemyTiles = (Array.isArray(c.occupiedCoords) && c.occupiedCoords.length > 0) ? c.occupiedCoords : [c.coordinates];
+                        return enemyTiles.some(tile => {
+                            const adx = Math.abs(nx - tile.x);
+                            const ady = Math.abs(ny - tile.y);
+                            return adx <= 1 && ady <= 1;
+                        });
+                    });
+
+                    if (!anyEnemyNear) {
+                        this.updateUnitCoordinates(unit, nx, ny);
+                        unit.movesTakenThisRound += 1;
+                        this.appendCombatLog(`${this.getCombatantLogName(unit)} flees to safety at (${nx}, ${ny}).`);
+                        fled = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!fled) {
+                // Default fallback retreat reposition if no perfectly safe adjacent tile is found
+                this.repositionUnit(unit, target, 'retreat');
+            }
         } else if (unit.coordinates.y !== target.coordinates.y && unit.movesTakenThisRound === 0) {
             // Strives to be in line with target but doesn't necessarily need to be in line to use his skills
             const targetY = target.coordinates.y;
@@ -1662,9 +1771,14 @@ export function CombatManagerRedux() {
             }
         }
 
-        // Visual animation hook
+        // Visual animation hook (legacy canvas system)
         if (this.animationManager && typeof this.animationManager.triggerVisualAbility === 'function') {
             this.animationManager.triggerVisualAbility(unit.id, target.id, ability);
+        }
+        // Sandbox-style Redux animation hook (pure CSS/state)
+        if (this.animManagerRedux && typeof this.animManagerRedux.triggerAbility === 'function') {
+            const isTargetLarge = target.isLarge || target.size === 2;
+            this.animManagerRedux.triggerAbility(unit.coordinates, target.coordinates, abilityId, isTargetLarge);
         }
 
         // Apply self-buffs
@@ -1826,8 +1940,23 @@ export function CombatManagerRedux() {
         }
         if (unit.movesTakenThisRound >= 1 || !target) return;
 
-        const dx = target.coordinates.x - unit.coordinates.x;
-        const dy = target.coordinates.y - unit.coordinates.y;
+        // Support multi-tile large targets: find the closest occupied coordinate of the target to the unit
+        const targetTiles = (Array.isArray(target.occupiedCoords) && target.occupiedCoords.length > 0)
+            ? target.occupiedCoords
+            : [target.coordinates];
+
+        let closestTile = targetTiles[0];
+        let minDist = Infinity;
+        targetTiles.forEach(tile => {
+            const dist = Math.abs(unit.coordinates.x - tile.x) + Math.abs(unit.coordinates.y - tile.y);
+            if (dist < minDist) {
+                minDist = dist;
+                closestTile = tile;
+            }
+        });
+
+        const dx = closestTile.x - unit.coordinates.x;
+        const dy = closestTile.y - unit.coordinates.y;
         let newX = unit.coordinates.x;
         let newY = unit.coordinates.y;
 
@@ -1847,7 +1976,7 @@ export function CombatManagerRedux() {
         } else {
             moved = tryMove(newX, newY + Math.sign(dy))
                  || tryMove(newX + Math.sign(dx), newY)
-                 || tryMove(newX - Math.sign(dx), newY);
+                 || moved || tryMove(newX - Math.sign(dx), newY);
         }
 
         if (moved) {
@@ -1940,11 +2069,18 @@ export function CombatManagerRedux() {
             if (this.round % 2 === 0) {
                 if (c.enduranceFrozenRounds > 0) {
                     c.enduranceFrozenRounds--;
-                } else if (c.endurance < c.maxEndurance) {
+                }
+            }
+            // Recovery happens every 4 rounds (half as often)
+            // Commented out to turn off stamina recovery for now
+            /*
+            if (this.round % 4 === 0) {
+                if (c.enduranceFrozenRounds <= 0 && c.endurance < c.maxEndurance) {
                     const recovery = Math.floor(c.maxEndurance * 0.01);
                     c.endurance = Math.min(c.maxEndurance, c.endurance + Math.max(1, recovery));
                 }
             }
+            */
 
             // Tick down skeleton reassembly bones duration
             if (c.isBones) {

@@ -43,7 +43,7 @@ useEffect(() => {
     return array[index]
 }
   getAllUsersRequest().then((response)=>{
-    setAllUsers(response.data)
+    setAllUsers(Array.isArray(response?.data) ? response.data : [])
   })
   if(getUserId()){
     setLoggedIn(true)
@@ -91,9 +91,10 @@ const navToLanding = () =>{
 }
 const login = (userCredentials) => {
   let validUser = null;
+  const users = Array.isArray(allUsers) ? allUsers : [];
   console.log('Login attempt - credentials:', userCredentials.username);
-  console.log('Login - allUsers:', allUsers.map(u => ({ id: u._id, username: u.username })));
-  allUsers.forEach((user)=>{
+  console.log('Login - allUsers:', users.map(u => ({ id: u._id, username: u.username })));
+  users.forEach((user)=>{
       if(userCredentials.username === user.username && userCredentials.password === user.password ){
           validUser = user;
       }
@@ -118,7 +119,7 @@ const login = (userCredentials) => {
 
 const refreshAllUsers = () => {
   getAllUsersRequest().then((response)=>{
-    setAllUsers(response.data);
+    setAllUsers(Array.isArray(response?.data) ? response.data : []);
   })
 }
 

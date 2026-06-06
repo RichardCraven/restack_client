@@ -3,8 +3,6 @@ import React from 'react'
 // Show/hide tile coordinates overlay
 import '../../styles/monster-battle.scss'
 import * as images from '../../utils/images'
-// import AnimationTile from '../../components/animation-tile';
-import AnimationGrid from '../../components/animation-grid';
 import { CModal } from '@coreui/react';
 import '../../styles/inventory-modal.scss';
 import { Redirect } from "react-router-dom";
@@ -17,6 +15,7 @@ import Canvas from '../../components/Canvas/canvas'
 // import Overlay from '../../components/Overlay'
 // import CanvasMagicMissile from '../../components/Canvas/canvas_magic_missile'
 import CombatGrid from '../../components/combat-panes/CombatGrid'
+import { AnimationManagerRedux } from '../../utils/animation-manager-redux';
 
 import { INTERVALS, INTERVAL_DISPLAY_NAMES } from '../../utils/shared-constants';
 
@@ -187,6 +186,8 @@ class MonsterBattle extends React.Component {
             // Transient glow on the casting monster portrait when induce_fear fires
             fearCastingActive: false,
             combatLog: [],
+            // Sandbox-style CSS animation events from AnimationManagerRedux
+            activeAnimations: [],
         }
         this.combatLogContainerRef = React.createRef();
         this.latestCombatLogEntryRef = React.createRef();
@@ -233,6 +234,15 @@ class MonsterBattle extends React.Component {
         this.props.combatManager.initialize();
         this.props.combatManager.connectOverlayManager(this.props.overlayManager)
         this.props.combatManager.connectAnimationManager(this.props.animationManager);
+
+        // Wire Sandbox-style AnimationManagerRedux (pure CSS state animations)
+        this._animManagerRedux = new AnimationManagerRedux();
+        this._animManagerRedux.connect((anims) => {
+            if (this._isMounted) this.setState({ activeAnimations: anims });
+        });
+        if (typeof this.props.combatManager.connectAnimationManagerRedux === 'function') {
+            this.props.combatManager.connectAnimationManagerRedux(this._animManagerRedux);
+        }
 
         // Wire Monk teleport callback to set teleportingFighterId
         const monkAI = this.props.combatManager.fighterAI?.roster?.monk;
@@ -1313,7 +1323,11 @@ class MonsterBattle extends React.Component {
                 selectedAttack: resolvedAttack,
                 showCrosshair: false,
             }, () => {
-                this.props.combatManager.fighterManualAttack();
+                if (selectedCombatant.targetId) {
+                    this.props.combatManager.fighterManualAttack();
+                } else {
+                    console.log('[MonsterBattle] No target selected for immediate manual attack.');
+                }
             });
             return;
         }
@@ -1501,6 +1515,19 @@ class MonsterBattle extends React.Component {
                 });
                 return;
             }
+            const isSelfTarget = clickedSpecial.effect && (
+                (Array.isArray(clickedSpecial.effect) && clickedSpecial.effect.some(e => typeof e === 'string' && e.includes('buff_self'))) ||
+                (typeof clickedSpecial.effect === 'string' && clickedSpecial.effect.includes('buff_self')) ||
+                clickedSpecial.id === 'monk_ethereal_speed' ||
+                clickedSpecial.id === 'monk_meditate' ||
+                clickedSpecial.id === 'monk_inner_fire'
+            );
+
+            if (!isSelfTarget && !fighterRef.targetId) {
+                console.log('[SpecialClickDiag][MonsterBattle] fireSpecial aborted: ability requires a target, but none is selected.', clickedSpecial.name);
+                return;
+            }
+
             console.log('[SpecialClickDiag][MonsterBattle] dispatch fighterSpecialAttack', {
                 clickedSpecial: clickedSpecial.name,
                 fighterId: fighterRef?.id,
@@ -2017,22 +2044,96 @@ class MonsterBattle extends React.Component {
                         </div>
                     </CModal>
 
-                    {(this.state.message) && <div className="message-container">
+                    {(() => {
+                        if (!this.state.message) return null;
+                        
+                        // Find the main monster (isMonster = true, not a minion)
+                        const mainMonster = this.state.battleData && Object.values(this.state.battleData).find(c => c && c.isMonster && !c.isMinion);
+                        if (mainMonster && mainMonster.coordinates) {
+                            // Main monster is 2x scale (occupies coordinates.x, coordinates.y anchor, which is bottom-right or bottom-left of a 2x2).
+                            // Let's compute its visual center X/Y using tilePos style logic.
+                            // Anchor coordinates:
+                            const mx = mainMonster.coordinates.x;
+                            const my = mainMonster.coordinates.y;
+                            
+                            // Width is 2 tiles = 200px.
+                            // Anchor is at bottom-right if mx >= 4 (hOffset = -100px), else bottom-left (hOffset = 0).
+                            const hOffset = (mx >= 4) ? -TILE_SIZE : 0;
+                            const leftPos = mx * TILE_SIZE + hOffset;
+                            const topPos = my * TILE_SIZE - TILE_SIZE; // Top row of the 2x2
+                            
+                            // Center X of the 2x2 monster is leftPos + 100px.
+                            // We place a speech bubble styled container pointing to this center.
+                            const bubbleCenterX = leftPos + TILE_SIZE;
+                            const bubbleCenterY = topPos; // Directly above the top row
+                            
+                            return (
+                                <div 
+                                    className="message-container speech-bubble"
+                                    style={{
+                                        position: 'absolute',
+                                        left: `${bubbleCenterX}px`,
+                                        top: `${bubbleCenterY - 45}px`, // Place it slightly above the monster's top border
+                                        transform: 'translateX(-50%)',
+                                        width: 'max-content',
+                                        maxWidth: '220px',
+                                        height: 'auto',
+                                        padding: '10px 14px',
+                                        background: 'rgba(20, 20, 22, 0.96)',
+                                        border: '2px solid #ff5400',
+                                        borderRadius: '12px',
+                                        color: '#ffffff',
+                                        fontSize: '14px',
+                                        fontWeight: '600',
+                                        textAlign: 'center',
+                                        boxShadow: '0 8px 24px rgba(0,0,0,0.8), 0 0 15px rgba(255, 84, 0, 0.4)',
+                                        zIndex: 450,
+                                        pointerEvents: 'none',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                    }}
+                                >
+                                    {this.state.message}
+                                    {/* Small arrow pointing down towards the monster */}
+                                    <div style={{
+                                        position: 'absolute',
+                                        bottom: '-8px',
+                                        left: '50%',
+                                        transform: 'translateX(-50%)',
+                                        width: '0',
+                                        height: '0',
+                                        borderLeft: '8px solid transparent',
+                                        borderRight: '8px solid transparent',
+                                        borderTop: '8px solid rgba(20, 20, 22, 0.96)',
+                                        zIndex: 451
+                                    }} />
+                                    {/* Outline for the arrow */}
+                                    <div style={{
+                                        position: 'absolute',
+                                        bottom: '-10px',
+                                        left: '50%',
+                                        transform: 'translateX(-50%)',
+                                        width: '0',
+                                        height: '0',
+                                        borderLeft: '9px solid transparent',
+                                        borderRight: '9px solid transparent',
+                                        borderTop: '9px solid #ff5400',
+                                        zIndex: 450
+                                    }} />
+                                </div>
+                            );
+                        }
+                        
+                        // Fallback default message styling if no monster is active
+                        return (
+                            <div className="message-container">
                                 {this.state.message}
-                    </div>}
+                            </div>
+                        );
+                    })()}
 
-                    {/* /// ANIMATION GRID ///  */}
-                    <AnimationGrid
-                    animationManager={this.props.animationManager}
-                    animationData={this.state.animationData}
-                    tileProps={{
-                        TILE_SIZE,
-                        NUM_COLUMNS,
-                        MAX_DEPTH: NUM_COLUMNS,
-                        SHOW_TILE_BORDERS,
-                        MAX_ROWS
-                    }}
-                    ></AnimationGrid>
+
 
                     {/* Unified Combat Grid Cells (Sandbox Style) */}
                     <div className="combat-grid" style={{
@@ -2166,6 +2267,9 @@ class MonsterBattle extends React.Component {
                         fearCastingActive={this.state.fearCastingActive}
                         greetingInProcess={this.state.greetingInProcess}
                         SHOW_MONSTER_IDS={SHOW_MONSTER_IDS}
+                        activeAnimations={this.state.activeAnimations}
+                        TILE_SIZE={TILE_SIZE}
+                        SHOW_TILE_BORDERS={SHOW_TILE_BORDERS}
                     />
                 </div>
             </div>
@@ -2346,10 +2450,30 @@ class MonsterBattle extends React.Component {
                                                         title={spec.name || sourceKey}
                                                     />
                                                     {cooldownPct > 0 && (
-                                                        <div
-                                                            className="interaction-tile-overlay radial"
-                                                            style={{ '--cooldown-remaining': cooldownPct }}
-                                                        />
+                                                         <svg 
+                                                             style={{
+                                                                 position: 'absolute',
+                                                                 top: 0,
+                                                                 left: 0,
+                                                                 width: '100%',
+                                                                 height: '100%',
+                                                                 transform: 'rotate(-90deg)',
+                                                                 pointerEvents: 'none',
+                                                                 zIndex: 10
+                                                             }}
+                                                             viewBox="0 0 20 20"
+                                                         >
+                                                             <circle
+                                                                 cx="10"
+                                                                 cy="10"
+                                                                 r="10"
+                                                                 fill="none"
+                                                                 stroke="rgba(0, 0, 0, 0.75)"
+                                                                 strokeWidth="20"
+                                                                 strokeDasharray="62.83"
+                                                                 strokeDashoffset={(1 - (cooldownPct / 100)) * 62.83}
+                                                             />
+                                                         </svg>
                                                     )}
                                                     {!isReady && (
                                                         <div className="redux-cd-badge">{Math.ceil(remainingRounds)}</div>
@@ -2521,18 +2645,39 @@ class MonsterBattle extends React.Component {
                                                 onMouseEnter={() => this.specialTileHovered(normalizedSpecial)} 
                                                 onMouseLeave={() => this.specialTileHovered(null)}>
                                                 </div>
+                                                {specialCooldownRemaining > 0 && (
+                                                     <svg 
+                                                         style={{
+                                                             position: 'absolute',
+                                                             top: 0,
+                                                             left: 0,
+                                                             width: '100%',
+                                                             height: '100%',
+                                                             transform: 'rotate(-90deg)',
+                                                             pointerEvents: 'none',
+                                                             zIndex: 10
+                                                         }}
+                                                         viewBox="0 0 20 20"
+                                                     >
+                                                         <circle
+                                                             cx="10"
+                                                             cy="10"
+                                                             r="10"
+                                                             fill="none"
+                                                             stroke="rgba(0, 0, 0, 0.75)"
+                                                             strokeWidth="20"
+                                                             strokeDasharray="62.83"
+                                                             strokeDashoffset={(1 - (specialCooldownRemaining / 100)) * 62.83}
+                                                         />
+                                                     </svg>
+                                                 )}
                                                 {showSpecialEnergyRing && specialCooldownRemaining === 0 && (
                                                     <div
                                                         className="interaction-tile-overlay energy-ring"
                                                         style={{ '--energy-ring-fill': specialEnergyFillPct }}
                                                     ></div>
                                                 )}
-                                                {specialCooldownRemaining > 0 && (
-                                                    <div
-                                                        className="interaction-tile-overlay radial"
-                                                        style={{ '--cooldown-remaining': specialCooldownRemaining }}
-                                                    ></div>
-                                                )}
+
                                             </div>
                                 })
                                 })()}
@@ -2676,13 +2821,33 @@ class MonsterBattle extends React.Component {
                                                     onMouseEnter={() => this.attackTileHovered(displayAttack.name)} 
                                                     onMouseLeave={() => this.attackTileHovered(null)}
                                                     >
-                                                    </div>
                                                     {cooldownRemaining > 0 && (
-                                                        <div
-                                                            className="interaction-tile-overlay radial"
-                                                            style={{ '--cooldown-remaining': cooldownRemaining }}
-                                                        ></div>
-                                                    )}
+                                                         <svg 
+                                                             style={{
+                                                                 position: 'absolute',
+                                                                 top: 0,
+                                                                 left: 0,
+                                                                 width: '100%',
+                                                                 height: '100%',
+                                                                 transform: 'rotate(-90deg)',
+                                                                 pointerEvents: 'none',
+                                                                 zIndex: 10
+                                                             }}
+                                                             viewBox="0 0 20 20"
+                                                         >
+                                                             <circle
+                                                                 cx="10"
+                                                                 cy="10"
+                                                                 r="10"
+                                                                 fill="none"
+                                                                 stroke="rgba(0, 0, 0, 0.75)"
+                                                                 strokeWidth="20"
+                                                                 strokeDasharray="62.83"
+                                                                 strokeDashoffset={(1 - (cooldownRemaining / 100)) * 62.83}
+                                                             />
+                                                         </svg>
+                                                     )}
+                                                    </div>
                                                     {group.length > 1 && <div className="stack-badge">{this.romanNumeral(group.length)}</div>}
                                                 </div>
                                     });

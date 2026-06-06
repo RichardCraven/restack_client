@@ -389,7 +389,7 @@ const skillsMatrix = {
         name: 'Astral Focus',
         desc: 'Enter astral focus, boosting concentration.',
         icon: images['monk_astral_focus'],
-        cooldown: 4,
+        cooldown: 12,
         duration: 'short',
         range: 'self',
         type: 'buff'

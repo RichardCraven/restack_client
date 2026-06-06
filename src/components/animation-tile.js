@@ -201,6 +201,8 @@ export default function AnimationTile(props) {
         case 'inspire':
         case 'annihilation':
         case 'berserker':
+        case 'astral_projection':
+        case 'monk_astral_projection':
             image = props.animationData?.icon;
             keyframe = `skillPulse`;
             break;
@@ -346,7 +348,7 @@ export default function AnimationTile(props) {
                     />
                 );
             })()}
-            {['bite', 'tackle', 'crush', 'reassembly', 'acid_blast', 'sleep', 'claw_strike', 'shield_slam', 'vortex', 'induce_fear', 'defensive_stance', 'shield_wall', 'cleave', 'leap_attack', 'disintegrate', 'one_man_army', 'inspire', 'annihilation', 'berserker'].includes(props.animationType) && image && (() => {
+            {['bite', 'tackle', 'crush', 'reassembly', 'acid_blast', 'sleep', 'claw_strike', 'shield_slam', 'vortex', 'induce_fear', 'defensive_stance', 'shield_wall', 'cleave', 'leap_attack', 'disintegrate', 'one_man_army', 'inspire', 'annihilation', 'berserker', 'astral_projection', 'monk_astral_projection'].includes(props.animationType) && image && (() => {
                 const flip = facing === 'left';
                 const animKey = props.animationData?.startTime || props.animationType;
                 return (
