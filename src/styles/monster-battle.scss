@@ -163,6 +163,121 @@
     letter-spacing: 0.5px;
 }
 
+// ── Unit Tile portrait rules (Sandbox-style, no lane-wrapper) ─────────────────
+// These top-level rules ensure .unit-tile portraits have size and background
+// properties regardless of DOM ancestry.
+.unit-tile {
+    .portrait.fighter-portrait {
+        width: 100px;
+        height: 100px;
+        aspect-ratio: 1/1;
+        border-radius: 100px;
+        background-size: 100% 100%;
+        background-repeat: no-repeat;
+        background-position: center;
+        position: absolute;
+        top: 0;
+        left: 0;
+        cursor: pointer;
+        transition: filter 1s, box-shadow 1s;
+        z-index: 1;
+        &.reversed { transform: scaleX(-1); }
+        &.facing-up { transform: rotate(-45deg); }
+        &.facing-up.reversed { transform: scaleX(-1) rotate(45deg); }
+        &.facing-down { transform: rotate(45deg); }
+        &.facing-down.reversed { transform: scaleX(-1) rotate(-45deg); }
+        &.locked { filter: invert(1) !important; }
+        &.rocked {
+            animation: Rocked 0.75s linear;
+            &.reversed               { --portrait-base-transform: scaleX(-1); }
+            &.facing-up              { --portrait-base-transform: rotate(-45deg); }
+            &.facing-up.reversed     { --portrait-base-transform: scaleX(-1) rotate(45deg); }
+            &.facing-down            { --portrait-base-transform: rotate(45deg); }
+            &.facing-down.reversed   { --portrait-base-transform: scaleX(-1) rotate(-45deg); }
+        }
+        &.dead { opacity: 0.4; }
+    }
+    .portrait.monster-portrait {
+        width: 100px;
+        height: 100px;
+        border-radius: 100px;
+        background-size: 100% 100%;
+        background-repeat: no-repeat;
+        background-position: center;
+        position: absolute;
+        top: 0;
+        left: 0;
+        transform: scale(2);
+        transform-origin: bottom;
+        transition: all 0.5s;
+        pointer-events: initial;
+        cursor: pointer;
+        z-index: 1;
+        &.reversed { transform: scale(-2, 2); transform-origin: bottom; }
+        &.facing-up.reversed { transform: scale(-2, 2); transform-origin: bottom; }
+        &.facing-down.reversed { transform: scale(-2, 2); transform-origin: bottom; }
+        &.enlarged { transform: scale(3); transform-origin: 86px 68px; }
+        &.rocked { animation: Rocked 1s linear; }
+    }
+    .portrait.minion-portrait {
+        width: 100px;
+        height: 100px;
+        border-radius: 100px;
+        background-size: 100% 100%;
+        background-repeat: no-repeat;
+        background-position: center;
+        position: absolute;
+        top: 0;
+        left: 0;
+        transition: all 0.5s;
+        pointer-events: initial;
+        cursor: pointer;
+        z-index: 2;
+        &.reversed { transform: scaleX(-1); }
+        &.facing-up { transform: rotate(45deg); }
+        &.facing-up.reversed { transform: scaleX(-1) rotate(-45deg); }
+        &.facing-down { transform: rotate(-45deg); }
+        &.facing-down.reversed { transform: scaleX(-1) rotate(45deg); }
+        &.rocked { animation: Rocked 1s linear; }
+    }
+    // HP and status bars at the bottom of the tile
+    .hp-bar, .monster-hp-bar, .energy-bar, .tempo-bar {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        height: 4px;
+        width: 100%;
+        overflow: hidden;
+    }
+    .endurance-bar {
+        position: absolute;
+        bottom: 4px;
+        left: 0;
+        width: 100%;
+    }
+    .tempo-bar {
+        position: relative;
+        .tempo-indicator {
+            height: 4px;
+            width: 4px;
+            background-color: yellow;
+            position: absolute;
+            top: 0;
+        }
+    }
+    .red-fill  { background-color: red;    height: 100%; transition: width 0.3s; }
+    .yellow-fill { background-color: yellow; height: 100%; transition: width 0.3s; }
+    .white-fill  { background-color: white;  height: 100%; transition: width 0.3s; }
+    // Overlay for damage indicators
+    .portrait-overlay {
+        position: absolute;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        pointer-events: none;
+        overflow: visible;
+    }
+}
+
 // ── Berserker: red pulse on barbarian portrait while berserk is active ────────
 .fighter-portrait.berserk-active {
 }
@@ -1350,6 +1465,12 @@
                 80%  { transform: translate(0px, -40px); opacity: 1; }
                 100% { transform: translate(0px, -50px); opacity: 0; }
             }
+            @keyframes skillPulse {
+                0% { transform: scale(0.6); opacity: 0; }
+                30% { transform: scale(1.1); opacity: 1; }
+                80% { transform: scale(1.0); opacity: 1; }
+                100% { transform: scale(0.8); opacity: 0; }
+            }
             // ENERGY DRAIN animations — travels ~2 tiles toward target
             @keyframes EnergyDrainAnimation_left {
                 0%   { transform: translate(0px, 0px) scaleX(-1);    opacity: 0.2; }
@@ -1685,6 +1806,7 @@
         100% { box-shadow: 0 0 6px 2px #ffe066, 0 0 0px #a855f7; filter: brightness(1.0) saturate(1.0); transform: var(--stunned-base-transform, none) translateX(0); }
     }
     .monster-wrapper.stunned,
+    .unit-tile.stunned,
     .portrait.stunned {
         animation: stunnedPulse 0.6s ease-in-out infinite;
         position: relative;
@@ -2352,7 +2474,15 @@
         }
     }
 
-    .fighter-pane{
+    .combat-units-layer {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        overflow: visible;
+    }
+
+    .fighter-pane, .combat-units-layer{
         position: absolute;
         width: 100%;
         height: 100%;
@@ -2579,15 +2709,54 @@
             }
         }
     }
-    .monster-pane{
+    .combat-units-layer, .monster-pane{
         position: absolute;
         pointer-events: none;
         width: 100%;
         height: 100%;
-        display: flex;
-        flex-direction: column;
-        justify-content: flex-start;
-        align-items: flex-end;
+        // unit-tile: each unit is a 100×100 absolutely-positioned tile (no lane-wrapper needed)
+        .unit-tile {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            overflow: visible;
+            pointer-events: none;
+            will-change: transform;
+            .portrait-relative-container {
+                position: relative;
+                width: 100%;
+                height: 100%;
+            }
+            .portrait-overlay {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                pointer-events: none;
+            }
+            .monster-target-indicator {
+                position: absolute;
+                bottom: 2px;
+                right: 2px;
+                pointer-events: none;
+            }
+            .fighter-consumable-indicator {
+                position: absolute;
+                top: 2px;
+                left: 2px;
+                pointer-events: none;
+                animation: consumableFlashIn 0.15s ease-out;
+            }
+            .indicators-wrapper {
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                width: 100%;
+                pointer-events: none;
+            }
+        }
+        // Legacy lane-wrapper/monster-wrapper kept for backwards compat with monsters.js (Sandbox)
         .lane-wrapper{
             width: 100%;
             position: absolute;
@@ -2602,10 +2771,6 @@
                 align-items: center;
                 position: relative;
                 transition: 1s;
-    
-                // border: 1px solid green;
-                // display: inline-flex;
-    
                 .portrait-wrapper{
                     position: absolute;
                     width: 100px;
@@ -2613,9 +2778,6 @@
                     transition: 1s;
                     top: 0;
                     z-index: 100;
-                    // &.monster-portrait-wrapper{
-                    //     transform: scale(2);
-                    // }
                     .portrait-overlay {
                         position: absolute;
                         top: 0;
@@ -2925,7 +3087,11 @@
                 }
                 /* Apply hit transforms to the wrapper so the portrait's own scale(2) is preserved */
                 .monster-pane .monster-wrapper.hit-from-left-minor,
-                .monster-pane .monster-wrapper.hit-from-right-minor {
+                .monster-pane .monster-wrapper.hit-from-right-minor,
+                .combat-units-layer .monster-wrapper.hit-from-left-minor,
+                .combat-units-layer .monster-wrapper.hit-from-right-minor,
+                .combat-units-layer .unit-tile.hit-from-left-minor,
+                .combat-units-layer .unit-tile.hit-from-right-minor {
                     transform: perspective(600px) rotateY(-10deg) translateX(4px);
                     --portrait-perspective: 600px;
                     --portrait-rotateY: -10deg;
@@ -2934,7 +3100,11 @@
                     --portrait-bulge-y: 1;
                 }
                 .monster-pane .monster-wrapper.hit-from-left-severe,
-                .monster-pane .monster-wrapper.hit-from-right-severe {
+                .monster-pane .monster-wrapper.hit-from-right-severe,
+                .combat-units-layer .monster-wrapper.hit-from-left-severe,
+                .combat-units-layer .monster-wrapper.hit-from-right-severe,
+                .combat-units-layer .unit-tile.hit-from-left-severe,
+                .combat-units-layer .unit-tile.hit-from-right-severe {
                     transform: perspective(800px) rotateY(-18deg) translateX(10px);
                     --portrait-perspective: 800px;
                     --portrait-rotateY: -18deg;
@@ -2943,7 +3113,11 @@
                     --portrait-bulge-y: 1;
                 }
                 .monster-pane .monster-wrapper.hit-from-left-lethal,
-                .monster-pane .monster-wrapper.hit-from-right-lethal {
+                .monster-pane .monster-wrapper.hit-from-right-lethal,
+                .combat-units-layer .monster-wrapper.hit-from-left-lethal,
+                .combat-units-layer .monster-wrapper.hit-from-right-lethal,
+                .combat-units-layer .unit-tile.hit-from-left-lethal,
+                .combat-units-layer .unit-tile.hit-from-right-lethal {
                     transform: perspective(1000px) rotateY(-30deg) translateX(18px);
                     --portrait-perspective: 1000px;
                     --portrait-rotateY: -30deg;
@@ -2952,9 +3126,13 @@
                     --portrait-bulge-y: 1;
                     opacity: 0.5;
                 }
-                /* Reversed monster wrapper variants (flip rotate direction and translate) */
+                /* Reversed variants (flip rotate direction and translate) */
                 .monster-pane .monster-wrapper.reversed.hit-from-left-minor,
-                .monster-pane .monster-wrapper.reversed.hit-from-right-minor {
+                .monster-pane .monster-wrapper.reversed.hit-from-right-minor,
+                .combat-units-layer .monster-wrapper.reversed.hit-from-left-minor,
+                .combat-units-layer .monster-wrapper.reversed.hit-from-right-minor,
+                .combat-units-layer .unit-tile.reversed.hit-from-left-minor,
+                .combat-units-layer .unit-tile.reversed.hit-from-right-minor {
                     transform: perspective(600px) rotateY(10deg) translateX(-4px);
                     --portrait-perspective: 600px;
                     --portrait-rotateY: 10deg;
@@ -2963,7 +3141,11 @@
                     --portrait-bulge-y: 1;
                 }
                 .monster-pane .monster-wrapper.reversed.hit-from-left-severe,
-                .monster-pane .monster-wrapper.reversed.hit-from-right-severe {
+                .monster-pane .monster-wrapper.reversed.hit-from-right-severe,
+                .combat-units-layer .monster-wrapper.reversed.hit-from-left-severe,
+                .combat-units-layer .monster-wrapper.reversed.hit-from-right-severe,
+                .combat-units-layer .unit-tile.reversed.hit-from-left-severe,
+                .combat-units-layer .unit-tile.reversed.hit-from-right-severe {
                     transform: perspective(800px) rotateY(18deg) translateX(-10px);
                     --portrait-perspective: 800px;
                     --portrait-rotateY: 18deg;
@@ -2972,7 +3154,11 @@
                     --portrait-bulge-y: 1;
                 }
                 .monster-pane .monster-wrapper.reversed.hit-from-left-lethal,
-                .monster-pane .monster-wrapper.reversed.hit-from-right-lethal {
+                .monster-pane .monster-wrapper.reversed.hit-from-right-lethal,
+                .combat-units-layer .monster-wrapper.reversed.hit-from-left-lethal,
+                .combat-units-layer .monster-wrapper.reversed.hit-from-right-lethal,
+                .combat-units-layer .unit-tile.reversed.hit-from-left-lethal,
+                .combat-units-layer .unit-tile.reversed.hit-from-right-lethal {
                     transform: perspective(1000px) rotateY(30deg) translateX(-18px);
                     --portrait-perspective: 1000px;
                     --portrait-rotateY: 30deg;
@@ -3010,24 +3196,31 @@
                     }
 
                     .monster-pane .monster-wrapper.hit .monster-portrait,
-                    .monster-pane .monster-wrapper.hit .minion-portrait {
+                    .monster-pane .monster-wrapper.hit .minion-portrait,
+                    .combat-units-layer .monster-wrapper.hit .monster-portrait,
+                    .combat-units-layer .monster-wrapper.hit .minion-portrait,
+                    .combat-units-layer .unit-tile.hit .monster-portrait,
+                    .combat-units-layer .unit-tile.hit .minion-portrait {
                         transform-origin: var(--portrait-transform-origin, 50% 80%);
-                        /* Use CSS vars for animation timing so JS can tune per-element (e.g. minions)
-                           and enable GPU-friendly hints for smoother animation. */
                         animation: BulgePortrait var(--portrait-animation-duration, 420ms) var(--portrait-animation-timing, cubic-bezier(.2,.8,.2,1));
                         animation-fill-mode: forwards;
                         will-change: transform;
                         backface-visibility: hidden;
-                        /* baseline: composed transform preserving flip and base scale */
                         transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-flip, 1) * var(--portrait-base-scale, 1))) scaleY(var(--portrait-base-scale, 1));
                     }
                     /* Main monster portraits are scale(2); set the base scale variable accordingly */
-                    .monster-pane .monster-wrapper.hit .monster-portrait {
+                    .monster-pane .monster-wrapper.hit .monster-portrait,
+                    .combat-units-layer .monster-wrapper.hit .monster-portrait,
+                    .combat-units-layer .unit-tile.hit .monster-portrait {
                         --portrait-base-scale: 2;
                     }
                     /* Reversed wrappers: set flip to -1 so all scaleX values in the animation are negated */
                     .monster-pane .monster-wrapper.reversed.hit .monster-portrait,
-                    .monster-pane .monster-wrapper.reversed.hit .minion-portrait {
+                    .monster-pane .monster-wrapper.reversed.hit .minion-portrait,
+                    .combat-units-layer .monster-wrapper.reversed.hit .monster-portrait,
+                    .combat-units-layer .monster-wrapper.reversed.hit .minion-portrait,
+                    .combat-units-layer .unit-tile.reversed.hit .monster-portrait,
+                    .combat-units-layer .unit-tile.reversed.hit .minion-portrait {
                         --portrait-flip: -1;
                     }
 
@@ -3745,8 +3938,8 @@
 
 // Middle column: ability grid (read-only)
 .redux-abilities-col {
-    flex: 0 0 auto;
-    width: 100px;
+    flex: 0 0 240px;
+    width: 240px;
     border: 1px solid #ffffff5c;
     color: white;
     overflow: hidden;
@@ -3765,11 +3958,14 @@
         height: calc(100% - 26px);
         width: 100%;
         display: flex;
-        flex-direction: column;
+        flex-direction: row;
+        flex-wrap: wrap;
         justify-content: flex-start;
-        align-items: center;
+        align-content: flex-start;
         overflow-y: auto;
-        padding-top: 5px;
+        padding: 8px;
+        gap: 8px;
+        box-sizing: border-box;
     }
 
     .interaction-tile-wrapper {
@@ -3778,7 +3974,6 @@
         width: 40px;
         min-height: 40px;
         flex-shrink: 0;
-        margin-bottom: 5px;
     }
 
     .interaction-tile {
@@ -3787,9 +3982,9 @@
         height: 100%;
         width: 100%;
         cursor: default !important;
-        background-color: whitesmoke;
+        background-color: transparent;
         background-size: 100% 100%;
-        border: 2px solid black;
+        border: none;
     }
 
     .interaction-tile.read-only {

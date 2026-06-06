@@ -4,28 +4,43 @@ import * as images from '../utils/images';
 export function AnimationManager(){
     // ...existing code...
 
-    // Canvas-based claw swipe animation (for Skeleton)
-    this.clawSwipe = async (targetTileId, sourceTileId, facing, resolve) => {
-        // Trigger hit-flash effect on the target tile instantly
-        if (targetTileId !== null && targetTileId !== undefined) {
-            const animationTile = this.tiles.find(e => e.id === targetTileId);
-            if (animationTile) {
-                animationTile.animationType = 'hit-flash';
-                animationTile.transitionType = 'fade';
-                animationTile.animationData = {
-                    clawSwipeHit: true,
-                    duration: 500
-                };
-                this.update();
-                setTimeout(() => {
-                    animationTile.animationType = null;
-                    animationTile.transitionType = null;
-                    animationTile.animationData = {};
-                    this.update();
-                }, 500);
-            }
+    // Canvas-based claw swipe animation (for Skeleton and claw attacks)
+    this.clawSwipe = (targetTileId, sourceTileId, facing, resolve) => {
+        const originCoords = this.getTileCoordsById(sourceTileId);
+        const targetCoords = this.getTileCoordsById(targetTileId);
+
+        if (originCoords && targetCoords) {
+            const animId = `claw_swipe_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+            const duration = 500;
+            const canvasAnim = {
+                id: animId,
+                type: 'claw_swipe',
+                origin: originCoords,
+                target: targetCoords,
+                facing: facing || 'left',
+                duration,
+                tracer: false,
+                onComplete: () => {
+                    const idx = this.canvasAnimations.findIndex(a => a.id === animId);
+                    if (idx !== -1) {
+                        this.canvasAnimations.splice(idx, 1);
+                        this.update();
+                    }
+                    if (resolve) resolve();
+                }
+            };
+            this.canvasAnimations.push(canvasAnim);
+            this.update();
+            setTimeout(() => {
+                if (canvasAnim.onComplete) {
+                    const cb = canvasAnim.onComplete;
+                    canvasAnim.onComplete = null;
+                    cb();
+                }
+            }, duration);
+        } else {
+            if (resolve) resolve();
         }
-        if (resolve) resolve();
     };
 
     this.axeSwing = (targetTileId, sourceTileId, facing, resolve) => {
@@ -78,7 +93,23 @@ export function AnimationManager(){
         energy_drain: { duration: 1400, animationType: 'tile' },
         bite: { duration: 600, animationType: 'canvas' },
         tackle: { duration: 600, animationType: 'canvas' },
-        crush: { duration: 600, animationType: 'canvas' }
+        crush: { duration: 600, animationType: 'canvas' },
+        reassembly: { duration: 600, animationType: 'tile' },
+        acid_blast: { duration: 600, animationType: 'tile' },
+        sleep: { duration: 600, animationType: 'tile' },
+        claw_strike: { duration: 600, animationType: 'tile' },
+        shield_slam: { duration: 600, animationType: 'tile' },
+        vortex: { duration: 600, animationType: 'tile' },
+        induce_fear: { duration: 600, animationType: 'tile' },
+        defensive_stance: { duration: 600, animationType: 'tile' },
+        shield_wall: { duration: 600, animationType: 'tile' },
+        cleave: { duration: 600, animationType: 'tile' },
+        leap_attack: { duration: 600, animationType: 'tile' },
+        disintegrate: { duration: 600, animationType: 'tile' },
+        one_man_army: { duration: 600, animationType: 'tile' },
+        inspire: { duration: 600, animationType: 'tile' },
+        annihilation: { duration: 600, animationType: 'tile' },
+        berserker: { duration: 600, animationType: 'tile' }
     };
 
     this._handIconKeys = Array.from({ length: 22 }, (_, i) => `hand_${i + 1}`);
@@ -502,6 +533,8 @@ export function AnimationManager(){
 
     this.magicMissile = (sourceCoords, targetCoords, variant = 'major', options = {}) => {
         const ref = {
+            id: `magic_missile_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+            type: 'magicMissile',
             origin: sourceCoords,
             distanceToTarget: this.getDistanceToTarget(sourceCoords, targetCoords), 
             verticalDistanceToTarget: this.getVerticalDistanceToTarget(sourceCoords, targetCoords),
@@ -540,6 +573,7 @@ export function AnimationManager(){
         const targetDistance = this.getDistanceToTarget(sourceCoords, targetCoords);
         const targetLaneDiff = this.getVerticalDistanceToTarget(sourceCoords, targetCoords);
         const ref = {
+            id: `magic_circle_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
             type: 'magicCircle',
             center: { x: midX, y: midY },
             radius,
@@ -591,6 +625,7 @@ export function AnimationManager(){
         const targetLaneDiff = this.getVerticalDistanceToTarget(sourceCoords, targetCoords);
         // The triangle is always drawn at the center of the canvas (0.5, 0.5 in tile units)
         const ref = {
+            id: `magic_triangle_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
             type: 'magicTriangle',
             center: { x: 0.5, y: 0.5 }, // always draw at canvas center
             radius,
@@ -646,6 +681,7 @@ export function AnimationManager(){
         const targetDistance = this.getDistanceToTarget(sourceCoords, targetCoords);
         const targetLaneDiff = this.getVerticalDistanceToTarget(sourceCoords, targetCoords);
         const ref = {
+            id: `fireball_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
             type: 'fireball',
             center: { x: 0.5, y: 0.5 },
             radius,
@@ -1055,10 +1091,40 @@ export function AnimationManager(){
             case 'bite':
             case 'tackle':
             case 'crush':
+            case 'reassembly':
+            case 'acid_blast':
+            case 'sleep':
+            case 'claw_strike':
+            case 'shield_slam':
+            case 'vortex':
+            case 'induce_fear':
+            case 'defensive_stance':
+            case 'shield_wall':
+            case 'cleave':
+            case 'leap_attack':
+            case 'disintegrate':
+            case 'one_man_army':
+            case 'inspire':
+            case 'annihilation':
+            case 'berserker': {
+                let iconKey = type;
+                if (type === 'sleep') iconKey = 'wizard_sleep';
+                else if (type === 'vortex') iconKey = 'wizard_vortex';
+                else if (type === 'acid_blast') iconKey = 'wizard_acid_blast';
+                else if (type === 'defensive_stance') iconKey = 'soldier_defensive_stance';
+                else if (type === 'claw_strike') iconKey = 'claw_strike_animation';
+                else if (type === 'cleave') iconKey = 'barbarian_cleave';
+                else if (type === 'leap_attack') iconKey = 'barbarian_leap_attack';
+                else if (type === 'disintegrate') iconKey = 'wizard_disintegrate';
+                else if (type === 'one_man_army') iconKey = 'soldier_one_man_army';
+                else if (type === 'inspire') iconKey = 'inspire';
+                else if (type === 'annihilation') iconKey = 'wizard_annihilation';
+                else if (type === 'berserker') iconKey = 'barbarian_berserker';
+
                 animationTile.animationType = type;
                 animationTile.transitionType = 'fade';
                 animationTile.animationData = {
-                    icon: data.icon || images[type],
+                    icon: data.icon || images[iconKey] || images[type],
                     duration: this.animationsMatrix[type].duration,
                     facing
                 };
@@ -1069,6 +1135,7 @@ export function AnimationManager(){
                     animationTile.animationData = {};
                     this.update();
                 }, this.animationsMatrix[type].duration);
+            }
                 break;
             case 'void lance': {
                 if (sourceTileId == null || targetTileId == null) break;

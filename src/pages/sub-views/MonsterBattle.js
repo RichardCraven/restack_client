@@ -16,8 +16,7 @@ import {
 import Canvas from '../../components/Canvas/canvas'
 // import Overlay from '../../components/Overlay'
 // import CanvasMagicMissile from '../../components/Canvas/canvas_magic_missile'
-import FightersCombatGrid from '../../components/combat-panes/fighters'
-import MonstersCombatGrid from '../../components/combat-panes/monsters'
+import CombatGrid from '../../components/combat-panes/CombatGrid'
 
 import { INTERVALS, INTERVAL_DISPLAY_NAMES } from '../../utils/shared-constants';
 
@@ -28,10 +27,10 @@ const NUM_COLUMNS = 8;
 const MAX_ROWS = 6;
 const TILE_SIZE = 100;
 const SHOW_TILE_BORDERS = true;
-const SHOW_COMBAT_BORDER_COLORS = false;
+// const SHOW_COMBAT_BORDER_COLORS = false;
 const SHOW_INTERACTION_PANE = true;
 const SHOW_MONSTER_IDS = false;
-const SHOW_COORDINATES = false;
+// const SHOW_COORDINATES = false;
 
 // const RANGES = {
 //     close: 1,
@@ -1875,8 +1874,14 @@ class MonsterBattle extends React.Component {
                 { this.state.navToDeathScene && <Redirect to='/death'/>}
                 <div className="combat-grid-container"
                     style={{
+                        position: 'relative',
                         width: TILE_SIZE * NUM_COLUMNS + (SHOW_TILE_BORDERS ? NUM_COLUMNS * 2 : 0) + 'px',
-                        height: TILE_SIZE * MAX_ROWS + (SHOW_TILE_BORDERS ? MAX_ROWS * 2 : 0) + 'px'
+                        height: TILE_SIZE * MAX_ROWS + (SHOW_TILE_BORDERS ? MAX_ROWS * 2 : 0) + 'px',
+                        background: '#161618',
+                        borderRadius: '16px',
+                        border: '2px solid rgba(255, 255, 255, 0.08)',
+                        boxShadow: '0 20px 40px rgba(0,0,0,0.6)',
+                        overflow: 'visible'
                     }}>
                     {this.state.showSummaryPanel && 
                     <div className='summary-panel'>
@@ -2023,121 +2028,147 @@ class MonsterBattle extends React.Component {
                     tileProps={{
                         TILE_SIZE,
                         NUM_COLUMNS,
+                        MAX_DEPTH: NUM_COLUMNS,
                         SHOW_TILE_BORDERS,
                         MAX_ROWS
                     }}
                     ></AnimationGrid>
 
-                    {/* /// COMBAT GRID .   <--- not really in use, only shows grid lines */}
-                    <div className="combat-grid" style={{width: TILE_SIZE * NUM_COLUMNS + (SHOW_TILE_BORDERS ? NUM_COLUMNS * 2 : 0) + 'px'}}>
-                        {this.state.combatTiles.map((t,i)=>{
-                            return <div 
-                            key={i} 
-                            className="combat-tile"
-                            onDragOver={(event)=>this.onDragOver(event, i)}
-                            onDrop={()=>{this.onDrop(i)}}
-                            style={{
-                                backgroundColor: this.state.draggedOverCombatTileId === i ? '#cccca4c1' : 'inherit',
-                                border: SHOW_COMBAT_BORDER_COLORS ? '1px solid #e8e880' : '1px solid transparent'
-                            }}
-                            >
-                                {SHOW_COORDINATES && (
-                                    <div className="coord-container">
-                                        {t.x}, {t.y}
+                    {/* Unified Combat Grid Cells (Sandbox Style) */}
+                    <div className="combat-grid" style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%'
+                    }}>
+                        {this.state.combatTiles.map((t, i) => {
+                            const isSelectedFighter = this.state.selectedFighter?.id && Object.values(this.state.battleData).some(e => e.id === this.state.selectedFighter.id && !e.dead && e.coordinates && e.coordinates.x === t.x && e.coordinates.y === t.y);
+                            const isSelectedMonster = this.state.selectedMonster?.id && Object.values(this.state.battleData).some(e => e.id === this.state.selectedMonster.id && !e.dead && e.coordinates && e.coordinates.x === t.x && e.coordinates.y === t.y);
+                            return (
+                                <div
+                                    key={i}
+                                    className="combat-tile"
+                                    onDragOver={(event)=>this.onDragOver(event, i)}
+                                    onDrop={()=>{this.onDrop(i)}}
+                                    style={{
+                                        border: isSelectedFighter
+                                            ? '1px dashed rgba(255, 183, 3, 0.25)'
+                                            : isSelectedMonster
+                                                ? '1px dashed rgba(255, 84, 0, 0.25)'
+                                                : '1px solid rgba(255, 255, 255, 0.04)',
+                                        background: this.state.draggedOverCombatTileId === i
+                                            ? '#cccca4c1'
+                                            : isSelectedFighter
+                                                ? 'rgba(255, 183, 3, 0.06)'
+                                                : isSelectedMonster
+                                                    ? 'rgba(255, 84, 0, 0.06)'
+                                                    : (t.x + t.y) % 2 === 0 ? 'rgba(255, 255, 255, 0.01)' : 'rgba(0, 0, 0, 0.15)',
+                                        position: 'relative',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        cursor: 'pointer',
+                                    }}
+                                >
+                                    {/* Cell Coordinates */}
+                                    <div style={{ position: 'absolute', top: '5px', left: '5px', fontSize: '9px', color: 'rgba(255,255,255,0.15)', pointerEvents: 'none' }}>
+                                        {t.x},{t.y}
                                     </div>
-                                )}
-                                {this.state.ghostPortraitMatrix[i] && <div className="ghost-portrait"
-                                style={{
-                                    backgroundImage: "url(" + this.state.ghostPortraitMatrix[i] + ")"
-                                }}>
-                                </div>}
-                            </div>
+                                    {this.state.ghostPortraitMatrix[i] && <div className="ghost-portrait"
+                                    style={{
+                                        backgroundImage: "url(" + this.state.ghostPortraitMatrix[i] + ")"
+                                    }}>
+                                    </div>}
+                                </div>
+                            );
                         })}
-                    </div>
+                    
+
                     {/* /// SHIELD WALL OVERLAYS */}
-                    {this.state.activeWalls.map((wall) => {
-                        // Each wall occupies lanesAffected.length tiles vertically.
-                        // Position: the wall is a thin vertical line sitting between
-                        // column (wall.x - 1) and column (wall.x).
-                        // left = wall.x * TILE_SIZE  (right edge of the tile at wall.x-1)
-                        // top  = min(lanesAffected) * TILE_SIZE
-                        // height = lanesAffected.length * TILE_SIZE
-                        if (!wall.lanesAffected || !wall.lanesAffected.length) return null;
-                        const minLane = Math.min(...wall.lanesAffected);
-                        const topPx = minLane * TILE_SIZE;
-                        const heightPx = wall.lanesAffected.length * TILE_SIZE;
-                        // The wall line sits at the leading edge of wall.x column
-                        const leftPx = wall.isFacingRight
-                            ? wall.x * TILE_SIZE - 3
-                            : (wall.x + 1) * TILE_SIZE - 3;
-                        return (
-                            <div
-                                key={wall.id}
-                                className="shield-wall-overlay"
-                                style={{
-                                    position: 'absolute',
-                                    left: leftPx + 'px',
-                                    top: topPx + 'px',
-                                    width: '6px',
-                                    height: heightPx + 'px',
-                                    zIndex: 20,
-                                    pointerEvents: 'none'
-                                }}
-                            />
-                        );
-                    })}
+                    {(() => {
+                        const reduxWalls = [];
+                        if (this.state.battleData) {
+                            Object.values(this.state.battleData).forEach(c => {
+                                if (c && !c.dead && c.shieldWallActive) {
+                                    const wallX = (c.facing !== 'left') ? c.coordinates.x + 1 : c.coordinates.x - 1;
+                                    const centerY = c.coordinates.y;
+                                    const lanesAffected = [];
+                                    for (let dy = -2; dy <= 2; dy++) {
+                                        const lane = centerY + dy;
+                                        if (lane >= 0 && lane < 5) {
+                                            lanesAffected.push(lane);
+                                        }
+                                    }
+                                    reduxWalls.push({
+                                        id: `wall_${c.id}_redux`,
+                                        x: wallX,
+                                        lanesAffected,
+                                        isFacingRight: (c.facing !== 'left'),
+                                        callerId: c.id
+                                    });
+                                }
+                            });
+                        }
+                        const allWalls = [...(this.state.activeWalls || []), ...reduxWalls];
+                        return allWalls.map((wall) => {
+                            if (!wall.lanesAffected || !wall.lanesAffected.length) return null;
+                            const minLane = Math.min(...wall.lanesAffected);
+                            const topPx = minLane * TILE_SIZE;
+                            const heightPx = wall.lanesAffected.length * TILE_SIZE;
+                            const leftPx = wall.isFacingRight
+                                ? wall.x * TILE_SIZE - 3
+                                : (wall.x + 1) * TILE_SIZE - 3;
+                            return (
+                                <div
+                                    key={wall.id}
+                                    className="shield-wall-overlay"
+                                    style={{
+                                        position: 'absolute',
+                                        left: leftPx + 'px',
+                                        top: topPx + 'px',
+                                        width: '6px',
+                                        height: heightPx + 'px',
+                                        zIndex: 20,
+                                        pointerEvents: 'none'
+                                    }}
+                                />
+                            );
+                        });
+                    })()}
+
                     {/* /// FEAR OVERLAY — board-wide shroud when induce_fear is active */}
                     {this.state.boardFearActive && (
                         <div className="fear-overlay" />
                     )}
-                    {/* /// FIGHTERS */}
-                    <FightersCombatGrid 
+
+                    {/* /// UNIFIED COMBAT GRID — fighters, monsters & minions share the same board */}
+                    <CombatGrid
                         crew={this.props.crew}
                         combatManager={this.props.combatManager}
-                        selectedFighter={this.state.selectedFighter}
                         battleData={this.state.battleData}
-                        getFighterDetails={this.getFighterDetails}
+                        selectedFighter={this.state.selectedFighter}
                         selectedMonster={this.state.selectedMonster}
-                        // fighterFacingRight={this.fighterFacingRight}
-                        // fighterFacingUp={this.fighterFacingUp}
-                        // fighterFacingDown={this.fighterFacingDown}
                         portraitHoveredId={this.state.portraitHoveredId}
-                        onDragStart={this.onDragStart}
-                        getActionBarLeftValForFighter={this.getActionBarLeftValForFighter}
-                        getManualMovementArc={this.getManualMovementArc}
-                        getManualMovementArcColor={this.getManualMovementArcColor}
                         animationOverlays={this.state.animationOverlays}
                         getAllOverlaysById={this.getAllOverlaysById}
                         portraitHovered={this.portraitHovered}
                         fighterPortraitClicked={this.fighterPortraitClicked}
-                        teleportingFighterId={this.state.teleportingFighterId}
-                    />
-                    {/* /// MONSTERS & MINIONS */}
-                    <MonstersCombatGrid
-                        monster={this.props.monster}
-                        minions={this.props.minions}
-                        battleData={this.state.battleData}
-                        monsterData={this.monster()}
-                        combatManager={this.props.combatManager}
-                        selectedMonster={this.state.selectedMonster}
-                        portraitHoveredId={this.state.portraitHoveredId}
-                        // monsterFacingUp={this.monsterFacingUp}
-                        // monsterFacingDown={this.monsterFacingDown}
-                        portraitHovered={this.portraitHovered}
-                        greetingInProcess={this.state.greetingInProcess}
                         monsterCombatPortraitClicked={this.monsterCombatPortraitClicked}
-                        animationOverlays={this.state.animationOverlays}
-                        getAllOverlaysById={this.getAllOverlaysById}
-                        minionDirectionReversed={this.minionDirectionReversed}
+                        onDragStart={this.onDragStart}
+                        getActionBarLeftValForFighter={this.getActionBarLeftValForFighter}
+                        getManualMovementArc={this.getManualMovementArc}
+                        getManualMovementArcColor={this.getManualMovementArcColor}
+                        getFighterDetails={this.getFighterDetails}
                         getMonsterWeaponAnimation={this.getMonsterWeaponAnimation}
                         getHitAnimation={this.getHitAnimation}
-                        images={images}
-                        TILE_SIZE={TILE_SIZE}
-                        SHOW_TILE_BORDERS={SHOW_TILE_BORDERS}
-                        SHOW_MONSTER_IDS={SHOW_MONSTER_IDS}
+                        teleportingFighterId={this.state.teleportingFighterId}
                         fearCastingActive={this.state.fearCastingActive}
+                        greetingInProcess={this.state.greetingInProcess}
+                        SHOW_MONSTER_IDS={SHOW_MONSTER_IDS}
                     />
                 </div>
+            </div>
 
                 {/* // INTERACTION PANE */}
                 { SHOW_INTERACTION_PANE && <div className={`mb-interaction-pane ${!this.state.greetingInProcess ? 'visible' : ''} `}>
@@ -2290,7 +2321,7 @@ class MonsterBattle extends React.Component {
                                             const resolveIcon = (candidate) => {
                                                 if (!candidate) return '';
                                                 if (typeof candidate === 'string') {
-                                                    if (candidate.trim().startsWith('url(')) return candidate.replace(/^url\((.*)?\)$/i, '$1').replace(/^['\"]|['\"]$/g, '');
+                                                    if (candidate.trim().startsWith('url(')) return candidate.replace(/^url\((.*)?\)$/i, '$1').replace(/^['"]|['"]$/g, '');
                                                     const mapped = images[candidate.trim()];
                                                     if (mapped) return mapped.default || mapped;
                                                     return candidate;
@@ -2308,7 +2339,7 @@ class MonsterBattle extends React.Component {
                                                     <div
                                                         className={`interaction-tile special read-only ${isReady ? 'available' : ''}`}
                                                         style={{
-                                                            backgroundImage: iconUrl ? `url("${encodeURI(String(iconUrl).replace(/^['\"]|['\"]$/g, ''))}")` : 'none',
+                                                            backgroundImage: iconUrl ? `url("${encodeURI(String(iconUrl).replace(/^['"]|['"]$/g, ''))}")` : 'none',
                                                             cursor: 'default',
                                                             opacity: isReady ? 1 : 0.7,
                                                         }}

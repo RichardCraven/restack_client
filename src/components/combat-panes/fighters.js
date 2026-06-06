@@ -12,6 +12,26 @@ const SHOW_TILE_BORDERS = false;
 const SHOW_COMBAT_BORDER_COLORS = true; // eslint-disable-line no-unused-vars
 const SHOW_INTERACTION_PANE=true // eslint-disable-line no-unused-vars
 
+const getActiveEffects = (combatant, combatManager) => {
+    const list = [];
+    if (!combatant) return list;
+    const liveUnit = combatManager?.getCombatant?.(combatant.id) || combatant;
+
+    if (liveUnit.frozen) list.push({ key: 'frozen', icon: images.frozen, border: '#00bfff' });
+    if (liveUnit.stunned) list.push({ key: 'stunned', icon: images.whiteskull || images.induce_fear, border: '#f5c842' });
+    if (liveUnit.bleed) list.push({ key: 'bleed', icon: images.bleeding, border: '#e05555' });
+    if (liveUnit.poison) list.push({ key: 'poison', icon: images.poison, border: '#7affa0' });
+    if (liveUnit.shieldWallActive) list.push({ key: 'shield_wall', icon: images.shield_wall, border: '#90c4ff' });
+    if (liveUnit.defensiveStanceActive || liveUnit.defensiveStance) list.push({ key: 'defensive_stance', icon: images.soldier_defensive_stance, border: '#cccccc' });
+    if (liveUnit.berserkerActive) list.push({ key: 'berserker', icon: images.barbarian_berserker, border: '#ff4444' });
+    if (liveUnit.weaknessRevealed) list.push({ key: 'weakness', icon: images.weakness_doubled, border: '#cc44ff' });
+    if (liveUnit.marked) list.push({ key: 'marked', icon: images.ranger_mark, border: '#ffaa00' });
+    if (liveUnit.ensnared) list.push({ key: 'ensnared', icon: images.ranger_ensnare, border: '#00ff00' });
+    if (liveUnit.astralBeingActive) list.push({ key: 'astral_being', icon: images.monk_astral_being, border: '#21e6c1' });
+    if (liveUnit.thirdEyeActive) list.push({ key: 'third_eye', icon: images.monk_third_eye, border: '#21e6c1' });
+
+    return list;
+};
 
 export default function FightersCombatGrid(props) {
     // Delay removal of fighter portrait after death for death animation
@@ -134,31 +154,26 @@ export default function FightersCombatGrid(props) {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [props.battleData, props.crew]);
     return (
-        <div className="mb-col fighter-pane">
-            <div className="fighter-content">
+        <div className="mb-col fighter-pane" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
+            <div className="fighter-content" style={{ width: '100%', height: '100%' }}>
                 {activeCrew.map((fighter) => {
-                    const isTeleporting = props.teleportingFighterId === fighter.id;
+                const isTeleporting = props.teleportingFighterId === fighter.id;
                     // Always use the facing at the moment of death for the death animation
                     const details = props.getFighterDetails(fighter);
                     // only mark reversed when explicitly facing left; support up/down classes separately
                     const facingClass = details?.facing === 'left' ? 'reversed' : '';
                     const verticalFacingClass = details?.facing === 'up' ? 'facing-up' : (details?.facing === 'down' ? 'facing-down' : '');
-                    const eraIndex = (typeof details?.eraIndex === 'number' && details.eraIndex >= 0)
-                        ? details.eraIndex
-                        : ((typeof fighter?.eraIndex === 'number' && fighter.eraIndex >= 0) ? fighter.eraIndex : 0);
-                    const eraDotCount = Math.max(1, Math.min(5, eraIndex + 1));
-                    const eraRingOffsets = [
-                        { x: 50, y: 10 },
-                        { x: 83, y: 34 },
-                        { x: 70, y: 74 },
-                        { x: 30, y: 74 },
-                        { x: 17, y: 34 }
-                    ];
+
                     const xPos = props.battleData[fighter.id]?.coordinates.x * 100 + (SHOW_TILE_BORDERS ? props.battleData[fighter.id]?.coordinates.x * 2 : 0);
                     const yPos = props.battleData[fighter.id]?.coordinates.y * TILE_SIZE + (SHOW_TILE_BORDERS ? props.battleData[fighter.id]?.coordinates.y * 2 : 0);
                     return  <div key={fighter.id}  className={`lane-wrapper ${isTeleporting ? ' teleporting' : ''}`}
                                 style={{ 
                                     height: `${TILE_SIZE}px`,
+                                    position: 'absolute',
+                                    top: '0px',
+                                    left: '0px',
+                                    width: '100%',
+                                    pointerEvents: 'none'
                                 }}>
                                 <div 
                                 ref={el => { fighterWrapperRefs.current[fighter.id] = el }}
@@ -169,27 +184,39 @@ export default function FightersCombatGrid(props) {
                                         transform: `translate(${xPos}px, ${yPos}px)`,
                                         transition: isTeleporting ? 'none' : `transform ${FIGHTER_MOVE_TRANSITION_MS}ms`,
                                         zIndex: 300,
+                                        pointerEvents: 'auto'
                                     }}
                                     ref={el => { portraitWrapperRefs.current[fighter.id] = el }}
                                     >
-                                        {!details?.dead && (
-                                            <div className="fighter-color-indicator" style={{ zIndex: 310 }}>
+                                        {/* Effect Icons Overlay */}
+                                        <div style={{
+                                            position: 'absolute',
+                                            top: '-6px',
+                                            right: '-6px',
+                                            display: 'flex',
+                                            gap: '2px',
+                                            zIndex: 350,
+                                            pointerEvents: 'none'
+                                        }}>
+                                            {getActiveEffects(fighter, props.combatManager).map((eff) => (
                                                 <div
-                                                    className="fighter-color-dot"
-                                                    style={{ backgroundColor: details?.color || fighter.color || '#ffffff' }}
-                                                >
-                                                    <div className="fighter-color-era-ring">
-                                                        {eraRingOffsets.map((offset, idx) => (
-                                                            <span
-                                                                key={`era-dot-${fighter.id}-${idx}`}
-                                                                className={`fighter-color-era-dot ${idx < eraDotCount ? 'active' : ''}`}
-                                                                style={{ left: `${offset.x}%`, top: `${offset.y}%` }}
-                                                            />
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        )}
+                                                    key={eff.key}
+                                                    className="effect-icon-active"
+                                                    style={{
+                                                        width: '20px',
+                                                        height: '20px',
+                                                        borderRadius: '50%',
+                                                        backgroundColor: '#111',
+                                                        border: `2px solid ${eff.border}`,
+                                                        backgroundImage: `url(${eff.icon})`,
+                                                        backgroundSize: 'contain',
+                                                        backgroundRepeat: 'no-repeat',
+                                                        backgroundPosition: 'center',
+                                                        boxShadow: '0 2px 4px rgba(0,0,0,0.5)',
+                                                    }}
+                                                />
+                                            ))}
+                                        </div>
                                         <div 
                                         className={
                                             [

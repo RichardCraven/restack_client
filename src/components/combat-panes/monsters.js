@@ -27,6 +27,27 @@ const MonstersCombatGrid = ({
     teleportingFighterId,
     fearCastingActive,
 }) => {
+    const getActiveEffects = (combatant) => {
+        const list = [];
+        if (!combatant) return list;
+        const liveUnit = combatManager?.getCombatant?.(combatant.id) || combatant;
+
+        if (liveUnit.frozen) list.push({ key: 'frozen', icon: images.frozen, border: '#00bfff' });
+        if (liveUnit.stunned) list.push({ key: 'stunned', icon: images.whiteskull || images.induce_fear, border: '#f5c842' });
+        if (liveUnit.bleed) list.push({ key: 'bleed', icon: images.bleeding, border: '#e05555' });
+        if (liveUnit.poison) list.push({ key: 'poison', icon: images.poison, border: '#7affa0' });
+        if (liveUnit.shieldWallActive) list.push({ key: 'shield_wall', icon: images.shield_wall, border: '#90c4ff' });
+        if (liveUnit.defensiveStanceActive || liveUnit.defensiveStance) list.push({ key: 'defensive_stance', icon: images.soldier_defensive_stance, border: '#cccccc' });
+        if (liveUnit.berserkerActive) list.push({ key: 'berserker', icon: images.barbarian_berserker, border: '#ff4444' });
+        if (liveUnit.weaknessRevealed) list.push({ key: 'weakness', icon: images.weakness_doubled, border: '#cc44ff' });
+        if (liveUnit.marked) list.push({ key: 'marked', icon: images.ranger_mark, border: '#ffaa00' });
+        if (liveUnit.ensnared) list.push({ key: 'ensnared', icon: images.ranger_ensnare, border: '#00ff00' });
+        if (liveUnit.astralBeingActive) list.push({ key: 'astral_being', icon: images.monk_astral_being, border: '#21e6c1' });
+        if (liveUnit.thirdEyeActive) list.push({ key: 'third_eye', icon: images.monk_third_eye, border: '#21e6c1' });
+
+        return list;
+    };
+
     const formatDamageIndicatorValue = (value) => {
         if (typeof value === 'number' && Number.isFinite(value)) return Math.round(value);
         if (typeof value === 'string') {
@@ -337,7 +358,7 @@ const MonstersCombatGrid = ({
         vct = battleData[`${monster.id}_VCT`];
     }
     return (
-        <div className="mb-col monster-pane" style={{ overflow: 'visible' }}>
+        <div className="mb-col monster-pane" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', overflow: 'visible' }}>
             {/* VCT: render above the monster if present */}
             {vct && (
                 <div
@@ -353,11 +374,11 @@ const MonstersCombatGrid = ({
                         className="vct-portrait-wrapper"
                         style={{
                             left: `${vct.coordinates.x * 100 + (SHOW_TILE_BORDERS ? vct.coordinates.x * 2 : 0)}px`,
+                            pointerEvents: 'auto',
                             zIndex: 300,
                             width: `${TILE_SIZE}px`,
                             height: `${TILE_SIZE}px`,
                             position: 'absolute',
-                            pointerEvents: 'none',
                             overflow: 'visible',
                         }}
                     >
@@ -434,12 +455,42 @@ const MonstersCombatGrid = ({
                             className="portrait-wrapper monster-portrait-wrapper"
                             style={{
                                 left: `${battleData[monster.id]?.coordinates.x * 100 + (SHOW_TILE_BORDERS ? battleData[monster.id]?.coordinates.x * 2 : 0)}px`,
+                                pointerEvents: 'auto',
                                 zIndex: `${battleData[monster.id]?.dead ? '0' : '200'}`,
                                 overflow: 'visible',
                                 ...transitionStyle(monster.id),
                                 border: undefined
                             }}
                         >
+                            {/* Effect Icons Overlay */}
+                            <div style={{
+                                position: 'absolute',
+                                top: '-6px',
+                                right: '-6px',
+                                display: 'flex',
+                                gap: '2px',
+                                zIndex: 350,
+                                pointerEvents: 'none'
+                            }}>
+                                {getActiveEffects(battleData[monster.id]).map((eff) => (
+                                    <div
+                                        key={eff.key}
+                                        className="effect-icon-active"
+                                        style={{
+                                            width: '20px',
+                                            height: '20px',
+                                            borderRadius: '50%',
+                                            backgroundColor: '#111',
+                                            border: `2px solid ${eff.border}`,
+                                            backgroundImage: `url(${eff.icon})`,
+                                            backgroundSize: 'contain',
+                                            backgroundRepeat: 'no-repeat',
+                                            backgroundPosition: 'center',
+                                            boxShadow: '0 2px 4px rgba(0,0,0,0.5)',
+                                        }}
+                                    />
+                                ))}
+                            </div>
                             <div
                                 className="portrait-relative-container"
                                 onMouseEnter={() => portraitHovered(monster.id)}
@@ -625,8 +676,12 @@ const MonstersCombatGrid = ({
                         key={minion.id}
                         className="lane-wrapper"
                         style={{
-                            top: `${minion.coordinates.y * TILE_SIZE + (SHOW_TILE_BORDERS ? minion.coordinates.y * 2 : 0)}px`,
-                            height: `${TILE_SIZE}px`,
+                        top: `${minion.coordinates.y * TILE_SIZE + (SHOW_TILE_BORDERS ? minion.coordinates.y * 2 : 0)}px`,
+                        height: `${TILE_SIZE}px`,
+                        position: 'absolute',
+                        left: '0px',
+                        width: '100%',
+                        pointerEvents: 'none',
                             ...transitionStyle(minion.id)
                         }}
                     >
@@ -653,10 +708,40 @@ const MonstersCombatGrid = ({
                                 className="portrait-wrapper"
                                 style={{
                                     left: `${minion.coordinates.x * 100 + (SHOW_TILE_BORDERS ? minion.coordinates.x * 2 : 0)}px`,
+                                    pointerEvents: 'auto',
                                     zIndex: `${minion.dead ? '0' : '100'}`,
                                     ...transitionStyle(minion.id)
                                 }}
                             >
+                                {/* Effect Icons Overlay */}
+                                <div style={{
+                                    position: 'absolute',
+                                    top: '-6px',
+                                    right: '-6px',
+                                    display: 'flex',
+                                    gap: '2px',
+                                    zIndex: 350,
+                                    pointerEvents: 'none'
+                                }}>
+                                    {getActiveEffects(minion).map((eff) => (
+                                        <div
+                                            key={eff.key}
+                                            className="effect-icon-active"
+                                            style={{
+                                                width: '20px',
+                                                height: '20px',
+                                                borderRadius: '50%',
+                                                backgroundColor: '#111',
+                                                border: `2px solid ${eff.border}`,
+                                                backgroundImage: `url(${eff.icon})`,
+                                                backgroundSize: 'contain',
+                                                backgroundRepeat: 'no-repeat',
+                                                backgroundPosition: 'center',
+                                                boxShadow: '0 2px 4px rgba(0,0,0,0.5)',
+                                            }}
+                                        />
+                                    ))}
+                                </div>
                                 <div
                                     className={`portrait minion-portrait
                                             ${minion.active ? 'active' : ''}
@@ -829,7 +914,6 @@ const MonstersCombatGrid = ({
                         </div>
                     </div>
                 ))}
-            {/* </div> */}
         </div>
     );
 };

@@ -3,6 +3,7 @@ import attacksMatrix from './attacks-matrix';
 import specialsMatrix from './specials-matrix';
 import { activeShieldWalls } from './shared-ai-methods/movement-methods';
 import { INTERVALS } from './shared-constants';
+import * as images from './images';
 
 const MAX_DEPTH = 7;
 const MAX_LANES = 6;
@@ -516,7 +517,7 @@ export function CombatManagerRedux() {
         const HEALER_TYPES = new Set(['sage', 'summoner', 'wizard']);
 
         Object.values(this.combatants).forEach(c => {
-            if (!c || c.dead || c.isVCT) return;
+            if (!c || c.dead || c.isVCT || c.isBones) return;
             // Crew targets monsters/minions, monsters/minions target crew
             const callerIsEnemy = !!(caller.isMonster || caller.isMinion);
             const cIsEnemy = !!(c.isMonster || c.isMinion);
@@ -583,35 +584,25 @@ export function CombatManagerRedux() {
     this.tryTriggerReassemble = (combatant) => {
         if (!combatant) return false;
         if ((combatant.type || '').toLowerCase() !== 'skeleton') return false;
-        const hasReassemble = Array.isArray(combatant.specials) && combatant.specials.includes('reassembly');
-        if (!hasReassemble) return false;
-        if (combatant.reassembleUsed || combatant.hasReassembled) return false;
-
+        if (combatant.reassembleUsed) return false;
         combatant.reassembleUsed = true;
-        if (Math.random() > 0.40) {
+
+        if (Math.random() > 0.50) {
             return false;
         }
 
-        const reviveHp = Math.max(1, Math.floor((combatant.starting_hp || combatant.stats?.hp || 1) * 0.30));
-        combatant.hp = reviveHp;
-        combatant.hasReassembled = true;
-        combatant.dead = false;
-        combatant.locked = false;
-        combatant.wounded = false;
-        combatant.frozen = false;
-        combatant.petrified = false;
+        combatant.isBones = true;
+        combatant.bonesRoundsLeft = 2;
+        combatant.originalPortrait = combatant.portrait;
+        combatant.portrait = images.bones;
+        combatant.originalName = combatant.name;
+        combatant.name = `${combatant.name || 'Skeleton'} (Bones)`;
 
-        combatant.specials = [];
-        
-        const currentAtk = typeof combatant.stats?.atk === 'number' ? combatant.stats.atk : 5;
-        const currentSpeed = typeof combatant.stats?.speed === 'number' ? combatant.stats.speed : 7;
-
-        if (combatant.stats) {
-            combatant.stats.atk = Math.max(1, Math.round(currentAtk * 2));
-            combatant.stats.speed = Math.max(1, Math.round(currentSpeed * 2));
+        if (this.animationManager && typeof this.animationManager.triggerVisualAbility === 'function') {
+            this.animationManager.triggerVisualAbility(combatant.id, combatant.id, { name: 'reassembly' });
         }
 
-        this.appendCombatLog(`${this.getCombatantLogName(combatant)} reassembles with berserk fury!`);
+        this.appendCombatLog(`${this.getCombatantLogName(combatant)} collapsed into a pile of bones.`);
         if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
         return true;
     };
@@ -703,7 +694,33 @@ export function CombatManagerRedux() {
             }
         } else if (name === 'reveal_weakness' || name === 'ice_blast') {
             if (typeof this.animationManager.rippleAnimation === 'function') {
-                this.animationManager.rippleAnimation(targetTileId, 'blue');
+                this.animationManager.rippleAnimation(targetTileId, 'lightblue');
+            }
+        } else if (name === 'energy_drain') {
+            // Use canvas beam animation for visual energy drain
+            if (typeof this.animationManager.energyBlast === 'function') {
+                this.animationManager.energyBlast(unit.coordinates, target.coordinates);
+            } else if (typeof this.animationManager.straightBeamTo === 'function') {
+                this.animationManager.straightBeamTo(targetTileId, sourceTileId, 'purple');
+            }
+        } else if (name === 'induce_fear') {
+            // Board-wide ripple on all enemy tiles
+            if (typeof this.animationManager.rippleAnimation === 'function') {
+                this.animationManager.rippleAnimation(sourceTileId, 'red');
+            }
+        } else if (name === 'claw_strike') {
+            // Canvas claw swipe projectile
+            if (typeof this.animationManager.clawSwipe === 'function') {
+                this.animationManager.clawSwipe(targetTileId, sourceTileId, facing);
+            }
+        } else if (['cleave', 'leap_attack', 'disintegrate', 'one_man_army', 'inspire', 'annihilation', 'berserker'].includes(name)) {
+            if (typeof this.animationManager.triggerTileAnimationComplex === 'function') {
+                this.animationManager.triggerTileAnimationComplex({
+                    sourceTileId,
+                    targetTileId: ['berserker', 'one_man_army', 'inspire'].includes(name) ? sourceTileId : targetTileId,
+                    type: name,
+                    facing
+                });
             }
         } else if (name === 'whirlwind') {
             if (typeof this.animationManager.triggerWhirlwind === 'function') {
@@ -759,7 +776,11 @@ export function CombatManagerRedux() {
                     this._tickUnitDebuffs(unit);
 
                     // Incapacitation check
-                    if (unit.frozen || unit.stunned || unit.petrified) {
+                    if (unit.frozen || unit.stunned || unit.petrified || unit.isBones) {
+                        if (unit.isBones) {
+                            this.appendCombatLog(`${this.getCombatantLogName(unit)} is a pile of bones and cannot act.`);
+                            return;
+                        }
                         this.appendCombatLog(`${this.getCombatantLogName(unit)} is incapacitated and skips this round.`);
                         // Still tick down the incapacitation
                         if (unit.frozenRounds > 0) { unit.frozenRounds--; if (unit.frozenRounds <= 0) { unit.frozen = false; } }
@@ -933,7 +954,7 @@ export function CombatManagerRedux() {
             const key = this._resolveAbilityKey(s);
             if (!key || !this._abilityReady(unit, key)) return;
             const resolved = this.resolveSpecial(unit, key);
-            if (!resolved) return;
+            if (!resolved || resolved.type === 'passive' || resolved.isPassive) return;
 
             let score = 0;
             const effects = Array.isArray(resolved.effect) ? resolved.effect : (resolved.effect ? [resolved.effect] : []);
@@ -1120,6 +1141,19 @@ export function CombatManagerRedux() {
 
     // SOLDIER: Frontline tank. Shield wall when multiple enemies, force back to create space.
     this._aiSoldier = (unit) => {
+        // Tick shield wall timer
+        if (unit.shieldWallActive) {
+            unit.shieldWallRoundsLeft = (unit.shieldWallRoundsLeft || 1) - 1;
+            if (unit.shieldWallRoundsLeft <= 0) {
+                unit.shieldWallActive = false;
+                this.appendCombatLog(`${this.getCombatantLogName(unit)}'s Shield Wall collapses.`);
+                if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+            } else {
+                this.appendCombatLog(`${this.getCombatantLogName(unit)} maintains Shield Wall.`);
+                return; // stands perfectly still, skips turn actions/movement
+            }
+        }
+
         this.acquireTarget(unit, false); // soldiers go for closest, not weakest
         const target = this.combatants[unit.targetId];
         if (!target) return;
@@ -1226,6 +1260,16 @@ export function CombatManagerRedux() {
         if (dist <= 1) {
             // Too close — try to back away
             this.repositionUnit(unit, target, 'retreat');
+        } else if (unit.coordinates.y !== target.coordinates.y && unit.movesTakenThisRound === 0) {
+            // Strives to be in line with target but doesn't necessarily need to be in line to use his skills
+            const targetY = target.coordinates.y;
+            const newY = unit.coordinates.y + Math.sign(targetY - unit.coordinates.y);
+            const backlineX = unit.coordinates.x;
+            if (this.canFitAt(unit, backlineX, newY)) {
+                this.updateUnitCoordinates(unit, backlineX, newY);
+                unit.movesTakenThisRound += 1;
+                this.appendCombatLog(`${this.getCombatantLogName(unit)} shifts position to align with ${this.getCombatantLogName(target)}.`);
+            }
         }
 
         const scored = this._scoredAbilityPick(unit, target);
@@ -1612,6 +1656,12 @@ export function CombatManagerRedux() {
             || 'ability';
         unit.cooldowns[abilityId] = finalCooldown;
 
+        if (abilityId === 'induce_fear') {
+            if (typeof this.triggerBoardEvent === 'function') {
+                this.triggerBoardEvent('induce_fear', { duration: 1800 });
+            }
+        }
+
         // Visual animation hook
         if (this.animationManager && typeof this.animationManager.triggerVisualAbility === 'function') {
             this.animationManager.triggerVisualAbility(unit.id, target.id, ability);
@@ -1770,6 +1820,10 @@ export function CombatManagerRedux() {
             this.appendCombatLog(`${this.getCombatantLogName(unit)} is ensnared and cannot move!`);
             return;
         }
+        if (unit.shieldWallActive) {
+            this.appendCombatLog(`${this.getCombatantLogName(unit)} cannot move while Shield Wall is active!`);
+            return;
+        }
         if (unit.movesTakenThisRound >= 1 || !target) return;
 
         const dx = target.coordinates.x - unit.coordinates.x;
@@ -1809,6 +1863,10 @@ export function CombatManagerRedux() {
     this.repositionUnit = (unit, enemyTarget, mode = 'reposition') => {
         if (unit.ensnared) {
             this.appendCombatLog(`${this.getCombatantLogName(unit)} is ensnared and cannot move!`);
+            return;
+        }
+        if (unit.shieldWallActive) {
+            this.appendCombatLog(`${this.getCombatantLogName(unit)} cannot move while Shield Wall is active!`);
             return;
         }
         if (unit.movesTakenThisRound >= 1 || !enemyTarget) return;
@@ -1885,6 +1943,21 @@ export function CombatManagerRedux() {
                 } else if (c.endurance < c.maxEndurance) {
                     const recovery = Math.floor(c.maxEndurance * 0.01);
                     c.endurance = Math.min(c.maxEndurance, c.endurance + Math.max(1, recovery));
+                }
+            }
+
+            // Tick down skeleton reassembly bones duration
+            if (c.isBones) {
+                c.bonesRoundsLeft--;
+                if (c.bonesRoundsLeft <= 0) {
+                    c.isBones = false;
+                    c.portrait = c.originalPortrait || c.portrait;
+                    c.name = c.originalName || c.name;
+                    c.hp = c.starting_hp || c.stats?.hp || 30;
+                    this.appendCombatLog(`${this.getCombatantLogName(c)} has reassembled with full health!`);
+                    if (this.animationManager && typeof this.animationManager.triggerVisualAbility === 'function') {
+                        this.animationManager.triggerVisualAbility(c.id, c.id, { name: 'reassembly' });
+                    }
                 }
             }
         });

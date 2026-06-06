@@ -176,6 +176,34 @@ export default function AnimationTile(props) {
                 keyframe = null;
             }
         break;
+        case 'bite':
+        case 'tackle':
+        case 'crush':
+            image = props.animationData?.icon || images['claws'];
+            keyframe = `GraspAnimation_${facing || 'right'}`;
+            break;
+        case 'claw_strike':
+            image = props.animationData?.icon || images['claws'];
+            keyframe = `ClawAnimation_${facing || 'right'}`;
+            break;
+        case 'reassembly':
+        case 'acid_blast':
+        case 'sleep':
+        case 'shield_slam':
+        case 'vortex':
+        case 'induce_fear':
+        case 'defensive_stance':
+        case 'shield_wall':
+        case 'cleave':
+        case 'leap_attack':
+        case 'disintegrate':
+        case 'one_man_army':
+        case 'inspire':
+        case 'annihilation':
+        case 'berserker':
+            image = props.animationData?.icon;
+            keyframe = `skillPulse`;
+            break;
         default:
             break;
     }
@@ -314,6 +342,29 @@ export default function AnimationTile(props) {
                             transform: drainTransform,
                             filter: 'drop-shadow(0 0 6px rgba(255,0,0,0.95)) drop-shadow(0 0 14px rgba(220,30,0,0.7))',
                             animation: `EnergyDrainAnimation_${facing} ${duration / 1000}s linear forwards`,
+                        }}
+                    />
+                );
+            })()}
+            {['bite', 'tackle', 'crush', 'reassembly', 'acid_blast', 'sleep', 'claw_strike', 'shield_slam', 'vortex', 'induce_fear', 'defensive_stance', 'shield_wall', 'cleave', 'leap_attack', 'disintegrate', 'one_man_army', 'inspire', 'annihilation', 'berserker'].includes(props.animationType) && image && (() => {
+                const flip = facing === 'left';
+                const animKey = props.animationData?.startTime || props.animationType;
+                return (
+                    <img
+                        key={animKey}
+                        src={image}
+                        alt={props.animationType}
+                        className={`${props.animationType}-icon`}
+                        style={{
+                            position: 'absolute',
+                            top: 'calc(50% - 30%)',
+                            left: 'calc(50% - 30%)',
+                            width: '60%',
+                            height: '60%',
+                            pointerEvents: 'none',
+                            zIndex: 5000,
+                            transform: flip ? 'scaleX(-1)' : undefined,
+                            animation: `${keyframe} ${duration / 1000}s linear forwards`,
                         }}
                     />
                 );
