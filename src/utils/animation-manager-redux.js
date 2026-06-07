@@ -126,6 +126,13 @@ export class AnimationManagerRedux {
       case 'imbued_strike':
         this._imbuedStrike(sourceCoords, targetCoords);
         break;
+      case 'shield_slam':
+      case 'shield_bash':
+        this._shieldSlam(sourceCoords, targetCoords);
+        break;
+      case 'shield_wall':
+        this._shieldWall(sourceCoords);
+        break;
       case 'cleave':
       case 'barbarian_cleave':
         this._barbarianCleave(sourceCoords, targetCoords);
@@ -170,6 +177,15 @@ export class AnimationManagerRedux {
       case 'heal':
       case 'healing_hymn':
         this._heal(sourceCoords, targetCoords);
+        break;
+      case 'vampiric_bite':
+        this._vampiricBite(sourceCoords, targetCoords);
+        break;
+      case 'bat_fly':
+        this._batFly(sourceCoords, targetCoords);
+        break;
+      case 'soul_suck':
+        this._soulSuck(sourceCoords, targetCoords);
         break;
       case 'crimson_sight':
         this._crimsonSight(sourceCoords, targetCoords);
@@ -446,6 +462,15 @@ export class AnimationManagerRedux {
       arrowType,
       duration: 700,
     });
+    if (arrowType === 'ice') {
+      setTimeout(() => {
+        this._emit({ type: 'ice_burst', tgtPx, duration: 500 });
+      }, 600);
+    } else if (arrowType === 'poison') {
+      setTimeout(() => {
+        this._emit({ type: 'poison_burst', tgtPx, duration: 500 });
+      }, 600);
+    }
   }
 
   _ensnareNet(src, tgt) {
@@ -483,6 +508,15 @@ export class AnimationManagerRedux {
         arrowType,
         duration: 700,
       });
+      if (arrowType === 'ice') {
+        setTimeout(() => {
+          this._emit({ type: 'ice_burst', tgtPx, duration: 500 });
+        }, 600);
+      } else if (arrowType === 'poison') {
+        setTimeout(() => {
+          this._emit({ type: 'poison_burst', tgtPx, duration: 500 });
+        }, 600);
+      }
     };
 
     fireArrow();
@@ -659,12 +693,47 @@ export class AnimationManagerRedux {
     });
   }
 
+  _shieldSlam(src, tgt) {
+    const srcPx = this._px(src);
+    const tgtPx = this._px(tgt);
+    this._emit({
+      type: 'shield_slam_connect',
+      srcPx,
+      tgtPx,
+      duration: 600,
+    });
+  }
+
+  _shieldWall(src) {
+    const srcPx = this._px(src);
+    this._emit({
+      type: 'shield_wall',
+      srcPx,
+      duration: 1500
+    });
+  }
+
   _disintegrate(src, tgt) {
     const tgtPx = this._getImpactTargetPx(tgt);
     this._emit({
       type: 'disintegrate_beam',
       tgtPx,
       duration: 2200
+    });
+  }
+
+  triggerSummon(coords, summonType, transitionIcon) {
+    this._summon(coords, summonType, transitionIcon);
+  }
+
+  _summon(tgt, summonType, transitionIcon) {
+    const tgtPx = this._px(tgt);
+    this._emit({
+      type: 'summon_portal',
+      tgtPx,
+      summonType,
+      icon: transitionIcon,
+      duration: 1200
     });
   }
 
@@ -702,6 +771,38 @@ export class AnimationManagerRedux {
       dx,
       dy,
       duration: 1650
+    });
+  }
+
+  _vampiricBite(src, tgt) {
+    const tgtPx = this._px(tgt);
+    this._emit({
+      type: 'vampiric_bite_chomping',
+      srcPx: this._px(src),
+      tgtPx,
+      duration: 1000
+    });
+  }
+
+  _batFly(src, tgt) {
+    const srcPx = this._px(src);
+    const tgtPx = this._px(tgt);
+    this._emit({
+      type: 'bat_fly_anim',
+      srcPx,
+      tgtPx,
+      duration: 800
+    });
+  }
+
+  _soulSuck(src, tgt) {
+    const srcPx = this._px(src);
+    const tgtPx = this._px(tgt);
+    this._emit({
+      type: 'soul_suck_beam',
+      srcPx,
+      tgtPx,
+      duration: 1000
     });
   }
 }

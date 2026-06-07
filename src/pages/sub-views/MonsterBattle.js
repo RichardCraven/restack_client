@@ -709,12 +709,32 @@ class MonsterBattle extends React.Component {
     }
     updateBattleData = (battleData) => {
         if (!this._isMounted) return;
-        // Deep clone to ensure new reference for React
-        // if (Object.values(battleData).some(e => e.dead)) {
-        //     console.log('*****************battleData update received in MB   ', battleData);
-        //     debugger;
-        // }
+
+        // Mummy diagnostics
+        const mummyBefore = Object.values(battleData || {}).find(c => c && (c.id === 'mummy' || c.type === 'mummy' || c.key === 'mummy' || String(c.id).includes('mummy')));
         const clonedBattleData = JSON.parse(JSON.stringify(battleData));
+        const mummyAfter = Object.values(clonedBattleData || {}).find(c => c && (c.id === 'mummy' || c.type === 'mummy' || c.key === 'mummy' || String(c.id).includes('mummy')));
+        
+        if (mummyBefore || mummyAfter) {
+            console.log('[MUMMY-DIAG][MonsterBattle] updateBattleData clone comparison:', {
+                beforeExists: !!mummyBefore,
+                afterExists: !!mummyAfter,
+                beforeHP: mummyBefore?.hp,
+                afterHP: mummyAfter?.hp,
+                beforeDebuffs: mummyBefore?.activeDebuffs?.map(d => ({ name: d.name, rounds: d.roundsLeft })),
+                afterDebuffs: mummyAfter?.activeDebuffs?.map(d => ({ name: d.name, rounds: d.roundsLeft })),
+                beforePoison: mummyBefore?.poison,
+                afterPoison: mummyAfter?.poison,
+                beforeFrozen: mummyBefore?.frozen,
+                afterFrozen: mummyAfter?.frozen,
+                beforeEnsnared: mummyBefore?.ensnared,
+                afterEnsnared: mummyAfter?.ensnared,
+                beforeMarked: mummyBefore?.marked,
+                afterMarked: mummyAfter?.marked,
+                beforeStunned: mummyBefore?.stunned,
+                afterStunned: mummyAfter?.stunned,
+            });
+        }
 
         // Ensure wizards have at least 3 "magic missile" spells available in their specialActions
         // Only for simulation-originated battles.

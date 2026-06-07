@@ -411,6 +411,7 @@ export default function CombatGrid(props) {
     // ── Death animation state ─────────────────────────────────────────────────
     const [showDeathAnimation, setShowDeathAnimation] = React.useState({});
     const [fullyDead, setFullyDead] = React.useState({});
+    const [meltScales, setMeltScales] = React.useState({});
     const deathTimeoutsRef = React.useRef({});
     const consumableTimeoutsRef = React.useRef({});
 
@@ -421,26 +422,61 @@ export default function CombatGrid(props) {
             if (unit.dead && !showDeathAnimation[unit.id] && !fullyDead[unit.id]) {
                 setShowDeathAnimation(prev => ({ ...prev, [unit.id]: true }));
                 const id = unit.id;
+                
+                // Animate organic melt scale from 0 to 120 using requestAnimationFrame
+                const duration = 2000;
+                const startTime = performance.now();
+                let animId;
+                const animate = (now) => {
+                    const elapsed = now - startTime;
+                    const progress = Math.min(elapsed / duration, 1);
+                    const currentScale = progress * 120;
+                    setMeltScales(prev => ({ ...prev, [id]: currentScale }));
+                    if (progress < 1) {
+                        animId = requestAnimationFrame(animate);
+                        if (deathTimeoutsRef.current[id]) {
+                            deathTimeoutsRef.current[id].animId = animId;
+                        }
+                    }
+                };
+                animId = requestAnimationFrame(animate);
+
                 if (deathTimeoutsRef.current[id]) {
-                    clearTimeout(deathTimeoutsRef.current[id]);
+                    if (deathTimeoutsRef.current[id].timeout) clearTimeout(deathTimeoutsRef.current[id].timeout);
+                    if (deathTimeoutsRef.current[id].animId) cancelAnimationFrame(deathTimeoutsRef.current[id].animId);
                 }
                 const t = setTimeout(() => {
                     setFullyDead(prev => { if (!prev[id]) return { ...prev, [id]: true }; return prev; });
                     setShowDeathAnimation(prev => ({ ...prev, [id]: false }));
+                    setMeltScales(prev => {
+                        const next = { ...prev };
+                        delete next[id];
+                        return next;
+                    });
                     delete deathTimeoutsRef.current[id];
                 }, 2400);
-                deathTimeoutsRef.current[id] = t;
+                deathTimeoutsRef.current[id] = { timeout: t, animId };
             } else if (!unit.dead && (showDeathAnimation[unit.id] || fullyDead[unit.id])) {
                 if (deathTimeoutsRef.current[unit.id]) {
-                    clearTimeout(deathTimeoutsRef.current[unit.id]);
+                    const item = deathTimeoutsRef.current[unit.id];
+                    if (item.timeout) clearTimeout(item.timeout);
+                    if (item.animId) cancelAnimationFrame(item.animId);
                     delete deathTimeoutsRef.current[unit.id];
                 }
                 setShowDeathAnimation(prev => ({ ...prev, [unit.id]: false }));
                 setFullyDead(prev => ({ ...prev, [unit.id]: false }));
+                setMeltScales(prev => {
+                    const next = { ...prev };
+                    delete next[unit.id];
+                    return next;
+                });
             }
         });
         return () => {
-            Object.values(deathTimeoutsRef.current).forEach(clearTimeout);
+            Object.values(deathTimeoutsRef.current).forEach(item => {
+                if (item.timeout) clearTimeout(item.timeout);
+                if (item.animId) cancelAnimationFrame(item.animId);
+            });
             deathTimeoutsRef.current = {};
         };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -740,8 +776,8 @@ export default function CombatGrid(props) {
                     height: `${TILE_SIZE}px`,
                     overflow: 'visible',
                     pointerEvents: 'none',
-                    zIndex: 300,
-                    transition: isTelep ? 'none' : `left ${FIGHTER_MOVE_TRANSITION_MS}ms, top ${FIGHTER_MOVE_TRANSITION_MS}ms`,
+                    zIndex: activeLeapAnim ? 350 : 300,
+                    transition: (isTelep || activeLeapAnim) ? 'none' : `left ${FIGHTER_MOVE_TRANSITION_MS}ms, top ${FIGHTER_MOVE_TRANSITION_MS}ms`,
                     ...computeHitVars(details || fighter, getHitAnimation),
                 }}
                 ref={el => { portraitWrapperRefs.current[fighter.id] = el; }}
@@ -770,7 +806,8 @@ export default function CombatGrid(props) {
                                 details?.chargingUpActive ? "url('#ripple-effect')" : null,
                                 `sepia(${portraitHoveredId === fighter.id ? '2' : '0'})`,
                                 details?.frozen ? 'hue-rotate(165deg) saturate(1.35) brightness(1.08) contrast(1.05)' : '',
-                                (details?.berserkerActive && details?.feared && !details?.stunned) ? 'brightness(1.18)' : ''
+                                (details?.berserkerActive && details?.feared && !details?.stunned) ? 'brightness(1.18)' : '',
+                                meltScales[fighter.id] !== undefined ? `url('#melt-effect-${fighter.id}')` : null
                             ].filter(Boolean).join(' '),
                             zIndex: 300,
                             animation: (details?.stunned && !isAsleepFighter && !details?.dead)
@@ -1235,6 +1272,7 @@ export default function CombatGrid(props) {
             unit.chargingUpActive ? 'charging-up' : '',
             unit.regenerating ? 'regenerating' : '',
             unit.bleed ? 'bleeding' : '',
+            unit.fadingIn ? 'minion-fade-in' : '',
         ].filter(Boolean).join(' ');
 
         return (
@@ -1273,7 +1311,7 @@ export default function CombatGrid(props) {
                         className={portraitClasses}
                         style={{
                             backgroundImage: unit.portrait ? `url(${unit.portrait})` : 'none',
-                            filter: `${unit.portraitFilter || ''} sepia(${portraitHoveredId === unit.id ? '2' : '0'}) ${unit.frozen ? 'hue-rotate(165deg) saturate(1.35) brightness(1.08) contrast(1.05)' : ''}`,
+                            filter: `${unit.portraitFilter || ''} sepia(${portraitHoveredId === unit.id ? '2' : '0'}) ${unit.frozen ? 'hue-rotate(165deg) saturate(1.35) brightness(1.08) contrast(1.05)' : ''} ${meltScales[unit.id] !== undefined ? `url(#melt-effect-${unit.id})` : ''}`,
                             zIndex: isMinion ? 2 : 1,
                             position: 'relative',
                             width: '100%',
@@ -1580,6 +1618,120 @@ export default function CombatGrid(props) {
         if (!anim) return null;
         const key = anim.id;
 
+        if (anim.type === 'vampiric_bite_chomping' && anim.tgtPx) {
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: `${anim.tgtPx.x}px`,
+                    top: `${anim.tgtPx.y}px`,
+                    width: '120px',
+                    height: '120px',
+                    transform: 'translate(-50%, -50%)',
+                    pointerEvents: 'none',
+                    zIndex: 5000,
+                }}>
+                    <div style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                        backgroundImage: `url(${images.vamp_bite_background})`,
+                        backgroundSize: 'contain',
+                        backgroundRepeat: 'no-repeat',
+                        backgroundPosition: 'center',
+                        animation: 'vampBiteBackgroundFade 1s ease-in-out forwards',
+                    }} />
+                    <div style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                        backgroundImage: `url(${images.vamp_bite_top})`,
+                        backgroundSize: 'contain',
+                        backgroundRepeat: 'no-repeat',
+                        backgroundPosition: 'center',
+                        animation: 'vampBiteCloseTop 1s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards',
+                    }} />
+                    <div style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                        backgroundImage: `url(${images.vamp_bite_bottom})`,
+                        backgroundSize: 'contain',
+                        backgroundRepeat: 'no-repeat',
+                        backgroundPosition: 'center',
+                        animation: 'vampBiteCloseBottom 1s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards',
+                    }} />
+                </div>
+            );
+        }
+
+        if (anim.type === 'bat_fly_anim' && anim.srcPx && anim.tgtPx) {
+            const dx = anim.tgtPx.x - anim.srcPx.x;
+            const dy = anim.tgtPx.y - anim.srcPx.y;
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: 0,
+                    top: 0,
+                    width: '100%',
+                    height: '100%',
+                    pointerEvents: 'none',
+                    zIndex: 4500,
+                }}>
+                    {[0, 1, 2, 3, 4].map(i => {
+                        const delay = i * 0.1;
+                        const offsetLeft = (i - 2) * 15;
+                        const offsetTop = (i - 2) * 10;
+                        return (
+                            <div key={i} style={{
+                                position: 'absolute',
+                                left: `${anim.srcPx.x + offsetLeft}px`,
+                                top: `${anim.srcPx.y + offsetTop}px`,
+                                width: '30px',
+                                height: '30px',
+                                backgroundImage: `url(${images.bat_individual || images.bat_fly})`,
+                                backgroundSize: 'contain',
+                                backgroundRepeat: 'no-repeat',
+                                backgroundPosition: 'center',
+                                animation: `fireballTravel 0.6s linear ${delay}s forwards`,
+                                '--fb-dx': `${dx}px`,
+                                '--fb-dy': `${dy}px`,
+                            }} />
+                        );
+                    })}
+                </div>
+            );
+        }
+
+        if (anim.type === 'soul_suck_beam' && anim.srcPx && anim.tgtPx) {
+            const dx = anim.tgtPx.x - anim.srcPx.x;
+            const dy = anim.tgtPx.y - anim.srcPx.y;
+            const len = Math.sqrt(dx * dx + dy * dy);
+            const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: `${anim.srcPx.x}px`,
+                    top: `${anim.srcPx.y}px`,
+                    width: `${len}px`,
+                    height: '12px',
+                    background: 'linear-gradient(to right, rgba(139, 0, 0, 0.1), #8b0000, #ff3333, #8b0000, rgba(139, 0, 0, 0.1))',
+                    boxShadow: '0 0 12px #ff3333, 0 0 24px #8b0000',
+                    transformOrigin: '0 50%',
+                    transform: `rotate(${angle}deg) translateY(-50%)`,
+                    zIndex: 4000,
+                    pointerEvents: 'none',
+                    filter: 'blur(1px)',
+                    animation: 'pinkBeamPulse 1s ease-out forwards',
+                }} />
+            );
+        }
+
         if (anim.type === 'claw_swipe' && anim.midPx && anim.icon) {
             // Rotated claw image placed between attacker and target
             return (
@@ -1789,8 +1941,8 @@ export default function CombatGrid(props) {
                     top: `${anim.tgtPx.y}px`,
                     width: '60px',
                     height: '60px',
-                    borderRadius: '50%',
-                    background: 'radial-gradient(circle, #e0f7fa 20%, #80deea 70%, transparent 100%)',
+                    clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)',
+                    background: 'linear-gradient(135deg, #e0f7fa 0%, #80deea 50%, #00bfff 100%)',
                     boxShadow: '0 0 20px #80deea',
                     transform: 'translate(-50%, -50%)',
                     pointerEvents: 'none',
@@ -1876,13 +2028,13 @@ export default function CombatGrid(props) {
                     top: `${anim.tgtPx.y}px`,
                     width: '70px',
                     height: '70px',
-                    borderRadius: '42% 56% 52% 48% / 48% 52% 48% 52%',
-                    background: 'radial-gradient(circle, #70e000 20%, #38b000 70%, transparent 100%)',
+                    clipPath: 'polygon(50% 0%, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0% 50%, 38% 38%)',
+                    background: 'linear-gradient(135deg, #adff2f 0%, #70e000 50%, #38b000 100%)',
                     boxShadow: '0 0 25px #38b000',
                     transform: 'translate(-50%, -50%)',
                     pointerEvents: 'none',
                     zIndex: 4100,
-                    opacity: 0.5,
+                    opacity: 0.9,
                     animation: 'explode 0.3s ease-out forwards',
                 }} />
             );
@@ -1904,6 +2056,85 @@ export default function CombatGrid(props) {
                     zIndex: 4120,
                     animation: 'annihilationRing 0.45s cubic-bezier(0.1, 0.8, 0.3, 1) forwards'
                 }} />
+            );
+        }
+
+        if (anim.type === 'shield_wall' && anim.srcPx) {
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: `${anim.srcPx.x}px`,
+                    top: `${anim.srcPx.y}px`,
+                    width: '100px',
+                    height: '100px',
+                    transform: 'translate(-50%, -50%)',
+                    background: 'rgba(0, 191, 255, 0.25)',
+                    border: '3px solid #00bfff',
+                    boxShadow: '0 0 15px #00ffff, inset 0 0 15px #00ffff',
+                    borderRadius: '10px',
+                    pointerEvents: 'none',
+                    zIndex: 4050,
+                    animation: 'shieldWallPulse 1.2s ease-in-out infinite alternate',
+                }} />
+            );
+        }
+
+        if (anim.type === 'shield_slam_connect' && anim.srcPx && anim.tgtPx) {
+            const dx = anim.tgtPx.x - anim.srcPx.x;
+            const dy = anim.tgtPx.y - anim.srcPx.y;
+            const midX = anim.srcPx.x + dx * 0.5;
+            const midY = anim.srcPx.y + dy * 0.5;
+            const shieldSlamIcon = images.shield_slam?.default || images.shield_slam || '';
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: `${midX}px`,
+                    top: `${midY}px`,
+                    width: '56px',
+                    height: '56px',
+                    backgroundImage: `url("${shieldSlamIcon}")`,
+                    backgroundSize: 'contain',
+                    backgroundRepeat: 'no-repeat',
+                    backgroundPosition: 'center',
+                    transform: 'translate(-50%, -50%)',
+                    pointerEvents: 'none',
+                    zIndex: 4100,
+                    animation: 'scaleUp 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275) both',
+                }} />
+            );
+        }
+
+        if (anim.type === 'summon_portal' && anim.tgtPx) {
+            const portalIcon = anim.icon?.default || anim.icon || '';
+            return (
+                <div
+                    key={key}
+                    style={{
+                        position: 'absolute',
+                        left: `${anim.tgtPx.x}px`,
+                        top: `${anim.tgtPx.y}px`,
+                        width: '90px',
+                        height: '90px',
+                        backgroundImage: `url("${portalIcon}")`,
+                        backgroundSize: 'contain',
+                        backgroundRepeat: 'no-repeat',
+                        backgroundPosition: 'center',
+                        transform: 'translate(-50%, -50%)',
+                        animation: 'summonPortalIn 1.2s linear both',
+                        pointerEvents: 'none',
+                        zIndex: 4100,
+                        opacity: 0.8,
+                        maskImage: 'radial-gradient(circle, rgba(0,0,0,1) 45%, rgba(0,0,0,0) 70%)',
+                        WebkitMaskImage: 'radial-gradient(circle, rgba(0,0,0,1) 45%, rgba(0,0,0,0) 70%)',
+                        filter: anim.summonType === 'skeleton_knight' 
+                            ? 'drop-shadow(0 0 8px #00bfff) drop-shadow(0 0 15px #00ffff)' 
+                            : anim.summonType === 'duplicate'
+                                ? 'drop-shadow(0 0 8px #d800ff) drop-shadow(0 0 15px #ff007f)'
+                                : anim.summonType === 'triplicate'
+                                    ? 'drop-shadow(0 0 8px #8a2be2) drop-shadow(0 0 15px #4b0082)'
+                                    : 'drop-shadow(0 0 8px #2ec4b6) drop-shadow(0 0 15px #a2d2ff)'
+                    }}
+                />
             );
         }
         if (anim.type === 'generic_projectile' && anim.srcPx && anim.tgtPx) {
@@ -2587,6 +2818,16 @@ export default function CombatGrid(props) {
     // ── Main render ───────────────────────────────────────────────────────────
     return (
         <div className="combat-units-layer" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', overflow: 'visible' }}>
+            <svg style={{ position: 'absolute', width: 0, height: 0 }}>
+                <defs>
+                    {Object.entries(meltScales).map(([unitId, scale]) => (
+                        <filter key={unitId} id={`melt-effect-${unitId}`}>
+                            <feTurbulence type="fractalNoise" baseFrequency="0.02 0.15" numOctaves="2" result="noise" />
+                            <feDisplacementMap in="SourceGraphic" in2="noise" scale={scale} xChannelSelector="R" yChannelSelector="G" />
+                        </filter>
+                    ))}
+                </defs>
+            </svg>
             {/* Fighters */}
             {activeCrew.map(renderFighter)}
             {renderRiftPortal()}

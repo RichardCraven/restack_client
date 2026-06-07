@@ -4,9 +4,9 @@ import {Methods} from './basic-methods';
 // Teleport the caller to an empty tile on the back line (or next available column)
 // Optionally accepts a callback (onTeleport) to notify when teleport occurs
 const teleportToBackLine = (caller, combatants, onTeleport) => {
-    const isMonsterOrMinion = caller.isMonster || caller.isMinion;
-    const backCol = isMonsterOrMinion ? 0 : MAX_DEPTH;
-    const secondBackCol = isMonsterOrMinion ? 1 : MAX_DEPTH - 1;
+    const isMonster = !!caller.isMonster;
+    const backCol = isMonster ? 0 : MAX_DEPTH;
+    const secondBackCol = isMonster ? 1 : MAX_DEPTH - 1;
     const startLane = caller.coordinates.y;
     // Helper to find available tile in a column, searching vertically from startLane
     function findAvailableInCol(col) {
@@ -98,7 +98,17 @@ const crossesShieldWall = (fromCoords, toCoords) => {
     return false;
 }
 
-const LARGE_MOVER_TYPES = ['dragon','beholder','ogre','sphinx','manticore','wyvern','wyvern_alt'];
+const LARGE_MOVER_TYPES = ['beholder','ogre','sphinx','manticore','wyvern','wyvern_alt','mummy','djinn','vampire','summoned_djinn','summoned_mummy','summoned_ogre','summoned_vampire'];
+
+const isHugeMover = (caller) => {
+    if (!caller) return false;
+    if (typeof caller.huge === 'boolean' && caller.huge) return true;
+    if (caller.type === 'dragon') return true;
+    if (caller.tier === 4) return true;
+    if (typeof caller.size === 'number' && caller.size === 3) return true;
+    if (typeof caller.scale === 'number' && caller.scale === 3) return true;
+    return false;
+};
 
 /**
  * Returns true if `caller` is a large (2-tile-tall) combatant that needs
@@ -106,6 +116,7 @@ const LARGE_MOVER_TYPES = ['dragon','beholder','ogre','sphinx','manticore','wyve
  */
 const isLargeMover = (caller) => {
     if (!caller) return false;
+    if (isHugeMover(caller)) return false;
     if (typeof caller.large === 'boolean' && caller.large) return true;
     if (caller.type && LARGE_MOVER_TYPES.includes(caller.type)) return true;
     if (typeof caller.size === 'number' && caller.size >= 2) return true;
@@ -119,8 +130,31 @@ const isAvailableToMoveInto = (coords, combatants, fromCoords = null, caller = n
     if (isOutOfBounds(coords)) return false;
     if (someoneIsInCoords(coords, combatants)) return false;
     if (fromCoords && crossesShieldWall(fromCoords, coords)) return false;
+    // Huge movers occupy 3x3 tiles
+    if (caller && isHugeMover(caller)) {
+        const hOffsetDir = (coords.x >= 4) ? -1 : 1;
+        const hugeCoords = [
+            { x: coords.x, y: coords.y - 1 },
+            { x: coords.x, y: coords.y - 2 },
+            { x: coords.x + hOffsetDir, y: coords.y },
+            { x: coords.x + hOffsetDir, y: coords.y - 1 },
+            { x: coords.x + hOffsetDir, y: coords.y - 2 },
+            { x: coords.x + 2 * hOffsetDir, y: coords.y },
+            { x: coords.x + 2 * hOffsetDir, y: coords.y - 1 },
+            { x: coords.x + 2 * hOffsetDir, y: coords.y - 2 }
+        ];
+        for (const hc of hugeCoords) {
+            if (isOutOfBounds(hc)) return false;
+            if (Object.values(combatants).some(e => {
+                if (!e || e.id === caller.id) return false;
+                if (e.coordinates && e.coordinates.x === hc.x && e.coordinates.y === hc.y) return true;
+                if (Array.isArray(e.occupiedCoords)) return e.occupiedCoords.some(c => c.x === hc.x && c.y === hc.y);
+                return false;
+            })) return false;
+        }
+    }
     // Large movers occupy coords + tile above: both must be free
-    if (caller && isLargeMover(caller)) {
+    else if (caller && isLargeMover(caller)) {
         const above = { x: coords.x, y: coords.y - 1 };
         // If above tile is out of bounds we can't fit — block the move
         if (above.y < 0) return false;
@@ -542,21 +576,23 @@ export const MovementMethods = {
     evadeBack: (caller, combatants) => {
         // Determine if caller is a monster/minion or a fighter
         // Fighters: back is x = 0 (left side)
-        // Monsters/Minions: back is x = MAX_DEPTH (right side)
-        const isMonsterOrMinion = caller.isMonster || caller.isMinion;
-        const targetX = isMonsterOrMinion ? MAX_DEPTH : 0;
+        // Monsters: back is x = MAX_DEPTH (right side)
+        const isMonster = !!caller.isMonster;
+        const targetX = isMonster ? MAX_DEPTH : 0;
         let newCoords = { ...caller.coordinates };
         const atBack = caller.coordinates.x === targetX;
         // Helper to check if enemy is directly in front
-        const inFront = isMonsterOrMinion
+        const inFront = isMonster
             ? { x: caller.coordinates.x - 1, y: caller.coordinates.y }
             : { x: caller.coordinates.x + 1, y: caller.coordinates.y };
-        const enemyInFront = Object.values(combatants).some(e =>
-            (e.isMonster || e.isMinion || e.isFighter) && !e.dead && e.coordinates.x === inFront.x && e.coordinates.y === inFront.y
-        );
+        const enemyInFront = Object.values(combatants).some(e => {
+            if (!e || e.dead || e.isVCT) return false;
+            const otherIsMonster = !!e.isMonster;
+            return (isMonster !== otherIsMonster) && e.coordinates.x === inFront.x && e.coordinates.y === inFront.y;
+        });
         if (!atBack) {
             // Move toward back
-            if (isMonsterOrMinion) {
+            if (isMonster) {
                 const nextCoords = { x: caller.coordinates.x + 1, y: caller.coordinates.y };
                 if (isAvailableToMoveInto(nextCoords, combatants, null, caller)) {
                     newCoords = nextCoords;
