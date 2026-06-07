@@ -147,6 +147,18 @@ export class AnimationManagerRedux {
       case 'perceive':
         this._perceive(sourceCoords, targetCoords);
         break;
+      case 'disintegrate':
+        this._disintegrate(sourceCoords, targetCoords);
+        break;
+      case 'barbarian_berserker':
+      case 'berserker':
+        this._berserker(sourceCoords, targetCoords);
+        break;
+      case 'barbarian_leap_attack':
+      case 'leap_attack':
+      case 'leap':
+        this._leapAttack(sourceCoords, targetCoords);
+        break;
       default:
         // Generic melee hit for unknown abilities
         this._genericHit(sourceCoords, targetCoords);
@@ -435,6 +447,39 @@ export class AnimationManagerRedux {
       type: 'sleep_rings',
       tgtPx,
       duration: 1500
+    });
+  }
+
+  _disintegrate(src, tgt) {
+    const tgtPx = this._px(tgt);
+    this._emit({
+      type: 'disintegrate_beam',
+      tgtPx,
+      duration: 2200
+    });
+  }
+
+  _berserker(src, tgt) {
+    const srcPx = this._px(src);
+    this._emit({
+      type: 'berserker_rage',
+      srcPx,
+      duration: 1000
+    });
+  }
+
+  _leapAttack(src, tgt) {
+    const srcPx = this._px(src);
+    const tgtPx = this._px(tgt);
+    const dx = tgtPx.x - srcPx.x;
+    const dy = tgtPx.y - srcPx.y;
+    this._emit({
+      type: 'leap_attack_jump',
+      srcPx,
+      tgtPx,
+      dx,
+      dy,
+      duration: 1650
     });
   }
 }

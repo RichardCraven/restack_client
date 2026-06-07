@@ -659,7 +659,7 @@ export default function CombatGrid(props) {
                 {animationOverlays[fighter.id] && getAllOverlaysById(fighter.id).map((overlay, i) => (
                     <Overlay key={i} animationType={overlay.type} data={{ ...overlay.data, dead: details?.dead }} />
                 ))}
-                <div className={`portrait-overlay${details?.drained ? ' drained' : ''}${details?.frozen ? ' frozen' : ''}`}>
+                <div className={`portrait-overlay${details?.drained ? ' drained' : ''}${details?.frozen ? ' frozen' : ''}`} style={{ overflow: 'visible' }}>
                     <div className="damage-indicator-container">
                         {getFighterDetails(fighter)?.damageIndicators.map((e, i) => {
                             const isStatDebuff = !e.isCrit && !e.isMiss && typeof e.value === 'string';
@@ -991,7 +991,7 @@ export default function CombatGrid(props) {
                         </div>
                     )}
                     {fearCastingActive && !unit.isMinion && <div className="fear-cast-glow" />}
-                    <div className={`portrait-overlay ${unit.frozen ? 'frozen' : ''}`} style={{ zIndex: 2, position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', borderRadius: 0 }}>
+                    <div className={`portrait-overlay ${unit.frozen ? 'frozen' : ''}`} style={{ zIndex: 2, position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', borderRadius: 0, overflow: 'visible' }}>
                         {renderDamageIndicators(unit.id)}
                     </div>
                     {/* Target indicator */}
@@ -1271,6 +1271,8 @@ export default function CombatGrid(props) {
                     pointerEvents: 'none',
                     zIndex: 4000,
                     animation: 'fireballTravel 0.7s ease-in forwards',
+                    '--fb-dx': `${anim.tgtPx.x - anim.srcPx.x}px`,
+                    '--fb-dy': `${anim.tgtPx.y - anim.srcPx.y}px`,
                 }} />
             );
         }
@@ -1451,6 +1453,92 @@ export default function CombatGrid(props) {
                         />
                     ))}
                 </div>
+            );
+        }
+
+        if (anim.type === 'disintegrate_beam' && anim.tgtPx) {
+            return (
+                <React.Fragment key={key}>
+                    {/* Vertical beam */}
+                    <div style={{
+                        position: 'absolute',
+                        left: `${anim.tgtPx.x}px`,
+                        width: '8px',
+                        background: 'linear-gradient(to right, #ff1a1a, #ffffff 40%, #ffffff 60%, #ff1a1a)',
+                        top: 0,
+                        height: `${anim.tgtPx.y}px`,
+                        transform: 'translateX(-50%)',
+                        zIndex: 4000,
+                        pointerEvents: 'none',
+                        animation: 'disintegrateBeam 2.2s linear forwards'
+                    }} />
+                    {/* Wobbly organic glow ball tip */}
+                    <div style={{
+                        position: 'absolute',
+                        left: `${anim.tgtPx.x}px`,
+                        top: `${anim.tgtPx.y}px`,
+                        transform: 'translate(-50%, -50%)',
+                        width: '45px',
+                        height: '45px',
+                        zIndex: 4100,
+                        pointerEvents: 'none',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                    }}>
+                        <div style={{
+                            width: '100%',
+                            height: '100%',
+                            background: 'radial-gradient(circle, #ffffff 20%, #ff1a1a 60%, rgba(255, 26, 26, 0) 100%)',
+                            borderRadius: '60% 40% 30% 70% / 60% 30% 70% 40%',
+                            animation: 'organicGlow 1.5s linear infinite',
+                            boxShadow: '0 0 15px #ff1a1a, 0 0 30px #ff1a1a',
+                            opacity: 0.95
+                        }} />
+                    </div>
+                </React.Fragment>
+            );
+        }
+
+        if (anim.type === 'berserker_rage' && anim.srcPx) {
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: `${anim.srcPx.x}px`,
+                    top: `${anim.srcPx.y}px`,
+                    transform: 'translate(-50%, -50%)',
+                    width: '120px',
+                    height: '120px',
+                    borderRadius: '50%',
+                    border: '4px solid #ff3333',
+                    boxShadow: '0 0 20px #ff3333, inset 0 0 20px #ff3333',
+                    pointerEvents: 'none',
+                    zIndex: 4200,
+                    animation: 'berserkerRageExpansion 1.0s ease-out forwards'
+                }} />
+            );
+        }
+
+        if (anim.type === 'leap_attack_jump' && anim.srcPx && anim.tgtPx) {
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: `${anim.srcPx.x}px`,
+                    top: `${anim.srcPx.y}px`,
+                    width: '100px',
+                    height: '100px',
+                    transform: 'translate(-50%, -50%)',
+                    backgroundImage: `url(${crew.find(f => f.type === 'barbarian')?.portrait})`,
+                    backgroundSize: 'cover',
+                    borderRadius: '50%',
+                    border: '2px solid #ff5500',
+                    boxShadow: '0 0 15px #ff5500',
+                    pointerEvents: 'none',
+                    zIndex: 4500,
+                    animation: 'barbarianLeapTravel 1.65s ease-in-out forwards',
+                    '--leap-dx': `${anim.dx}px`,
+                    '--leap-dy': `${anim.dy}px`
+                }} />
             );
         }
 

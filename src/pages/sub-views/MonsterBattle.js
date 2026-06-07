@@ -1494,13 +1494,10 @@ class MonsterBattle extends React.Component {
                 });
                 return;
             }
-            const cooldownPosition = typeof clickedSpecial.cooldown_position === 'number'
-                ? clickedSpecial.cooldown_position
-                : 100;
-            if (cooldownPosition !== 100) {
+                        const hasCooldown = fighterRef?.cooldowns?.[clickedSpecial.id] > 0 || fighterRef?.cooldowns?.[clickedSpecial.id?.replace('barbarian_leap_attack', 'leap_attack')?.replace('barbarian_berserker', 'berserker')] > 0;
+            if (hasCooldown) {
                 console.log('[SpecialClickDiag][MonsterBattle] fireSpecial aborted: cooldown not ready', {
                     clickedSpecial: clickedSpecial.name,
-                    cooldownPosition,
                     fighterId: fighterRef?.id,
                 });
                 return;
