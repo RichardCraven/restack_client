@@ -131,10 +131,6 @@ function Tile(props) {
         return null;
     };
     const isVoidContains = (contains) => getContainsType(contains) === 'void';
-    const edgeColorFromBorder = (borderValue) => {
-        if (!borderValue) return '#ffffff';
-        return String(borderValue).includes('transparent') ? '#ffffff' : '#000000';
-    };
     const tileIndex = (typeof props.id === 'number') ? props.id : ((typeof props.index === 'number') ? props.index : null);
     const tileRow = (tileIndex !== null) ? Math.floor(tileIndex / 15) : null;
     const tileCol = (tileIndex !== null) ? (tileIndex % 15) : null;

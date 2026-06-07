@@ -201,6 +201,10 @@ export default function AnimationTile(props) {
         case 'inspire':
         case 'annihilation':
         case 'berserker':
+        case 'meditate':
+        case 'monk_meditate':
+        case 'force_punch_flurry':
+        case 'monk_force_punch_flurry':
         case 'astral_projection':
         case 'monk_astral_projection':
             image = props.animationData?.icon;
@@ -348,7 +352,7 @@ export default function AnimationTile(props) {
                     />
                 );
             })()}
-            {['bite', 'tackle', 'crush', 'reassembly', 'acid_blast', 'sleep', 'claw_strike', 'shield_slam', 'vortex', 'induce_fear', 'defensive_stance', 'shield_wall', 'cleave', 'leap_attack', 'disintegrate', 'one_man_army', 'inspire', 'annihilation', 'berserker', 'astral_projection', 'monk_astral_projection'].includes(props.animationType) && image && (() => {
+            {['bite', 'tackle', 'crush', 'reassembly', 'acid_blast', 'sleep', 'claw_strike', 'shield_slam', 'vortex', 'induce_fear', 'defensive_stance', 'shield_wall', 'cleave', 'leap_attack', 'disintegrate', 'one_man_army', 'inspire', 'annihilation', 'berserker', 'meditate', 'monk_meditate', 'force_punch_flurry', 'monk_force_punch_flurry', 'astral_projection', 'monk_astral_projection'].includes(props.animationType) && image && (() => {
                 const flip = facing === 'left';
                 const animKey = props.animationData?.startTime || props.animationType;
                 return (

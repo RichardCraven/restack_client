@@ -263,6 +263,8 @@ export default function CombatGrid(props) {
     // ── Death animation state ─────────────────────────────────────────────────
     const [showDeathAnimation, setShowDeathAnimation] = React.useState({});
     const [fullyDead, setFullyDead] = React.useState({});
+    const deathTimeoutsRef = React.useRef({});
+    const consumableTimeoutsRef = React.useRef({});
 
     React.useEffect(() => {
         const allUnits = Object.values(battleData);
@@ -271,16 +273,28 @@ export default function CombatGrid(props) {
             if (unit.dead && !showDeathAnimation[unit.id] && !fullyDead[unit.id]) {
                 setShowDeathAnimation(prev => ({ ...prev, [unit.id]: true }));
                 const id = unit.id;
+                if (deathTimeoutsRef.current[id]) {
+                    clearTimeout(deathTimeoutsRef.current[id]);
+                }
                 const t = setTimeout(() => {
                     setFullyDead(prev => { if (!prev[id]) return { ...prev, [id]: true }; return prev; });
                     setShowDeathAnimation(prev => ({ ...prev, [id]: false }));
+                    delete deathTimeoutsRef.current[id];
                 }, 2400);
-                return () => clearTimeout(t);
+                deathTimeoutsRef.current[id] = t;
             } else if (!unit.dead && (showDeathAnimation[unit.id] || fullyDead[unit.id])) {
+                if (deathTimeoutsRef.current[unit.id]) {
+                    clearTimeout(deathTimeoutsRef.current[unit.id]);
+                    delete deathTimeoutsRef.current[unit.id];
+                }
                 setShowDeathAnimation(prev => ({ ...prev, [unit.id]: false }));
                 setFullyDead(prev => ({ ...prev, [unit.id]: false }));
             }
         });
+        return () => {
+            Object.values(deathTimeoutsRef.current).forEach(clearTimeout);
+            deathTimeoutsRef.current = {};
+        };
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [battleData]);
 
@@ -355,9 +369,19 @@ export default function CombatGrid(props) {
             if (flashTs && flashTs !== prevFlashTs) {
                 prevConsumableFlashRef.current[fighter.id] = flashTs;
                 setConsumableFlashes(prev => ({ ...prev, [fighter.id]: details.consumableFlash.iconKey }));
-                setTimeout(() => { setConsumableFlashes(prev => ({ ...prev, [fighter.id]: null })); }, 1500);
+                if (consumableTimeoutsRef.current[fighter.id]) {
+                    clearTimeout(consumableTimeoutsRef.current[fighter.id]);
+                }
+                consumableTimeoutsRef.current[fighter.id] = setTimeout(() => {
+                    setConsumableFlashes(prev => ({ ...prev, [fighter.id]: null }));
+                    delete consumableTimeoutsRef.current[fighter.id];
+                }, 1500);
             }
         });
+        return () => {
+            Object.values(consumableTimeoutsRef.current).forEach(clearTimeout);
+            consumableTimeoutsRef.current = {};
+        };
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [battleData, crew]);
 
@@ -372,7 +396,8 @@ export default function CombatGrid(props) {
             {getActiveEffects(unit, combatManager).map((eff) => {
                 const roundsLeft = eff.roundsLeft || 0;
                 const total = eff.totalDuration || 4;
-                const roundProgress = (combatManager?.roundTimeElapsedMs || 0) / (combatManager?.gameSpeed === 'fast' ? 1000 : 2000);
+                const roundDurationMs = combatManager?.roundDurationMs || (combatManager?.gameSpeed === 'fast' ? 1000 : 2000);
+                const roundProgress = (combatManager?.roundTimeElapsedMs || 0) / roundDurationMs;
                 const preciseRoundsLeft = roundsLeft > 0 ? Math.max(0, roundsLeft - roundProgress) : 0;
                 const pct = total > 0 ? Math.min(100, Math.max(0, (preciseRoundsLeft / total) * 100)) : 0;
                 // Radial cooldown sweep math: radius=5, circumference=31.42
@@ -468,8 +493,15 @@ export default function CombatGrid(props) {
         if (!coords) return null;
         const xPos = tilePos(coords.x);
         const yPos = tilePos(coords.y);
+        const activeLeapAnim = activeAnimations.find((anim) => {
+            if (anim.type !== 'leap_attack_jump') return false;
+            if (anim.sourceUnitId) return anim.sourceUnitId === fighter.id;
+            if (!anim.srcPx) return false;
+            return Math.abs(anim.srcPx.x - (xPos + TILE_SIZE / 2)) < 1 && Math.abs(anim.srcPx.y - (yPos + TILE_SIZE / 2)) < 1;
+        });
 
         // All visual-state classes go on the unit-tile (100×100) — no full-width ancestors
+        const isDisintegrating = activeAnimations.some(a => a.type === 'disintegrate_beam' && a.tgtPx && Math.abs(a.tgtPx.x - xPos - TILE_SIZE/2) < 5 && Math.abs(a.tgtPx.y - yPos - TILE_SIZE/2) < 5);
         const unitTileClasses = [
             'unit-tile',
             'fighter-unit-tile',
@@ -481,6 +513,7 @@ export default function CombatGrid(props) {
             details?.wounded ? 'hit-flash' : '',
             details?.facing === 'right' ? 'reversed' : '',
             details?.stunned ? 'stunned' : '',
+            isDisintegrating ? 'disintegrate-shaking' : '',
         ].filter(Boolean).join(' ');
 
         const portraitClasses = [
@@ -525,7 +558,19 @@ export default function CombatGrid(props) {
                 ref={el => { portraitWrapperRefs.current[fighter.id] = el; }}
             >
                 {renderEffectIcons(details || fighter)}
-                <div className="portrait-relative-container" style={{ position: 'relative', pointerEvents: 'auto', overflow: 'visible' }}>
+                <div
+                    className="portrait-relative-container"
+                    style={{
+                        position: 'relative',
+                        pointerEvents: 'auto',
+                        overflow: 'visible',
+                        animation: activeLeapAnim ? 'barbarianLeapTravel 1.65s ease-in-out' : undefined,
+                        '--leap-dx': activeLeapAnim ? `${activeLeapAnim.dx}px` : '0px',
+                        '--leap-dy': activeLeapAnim ? `${activeLeapAnim.dy}px` : '0px',
+                        transformOrigin: '50% 50%',
+                        zIndex: activeLeapAnim ? 4500 : undefined,
+                    }}
+                >
                     <div
                         className={portraitClasses}
                         style={{
@@ -824,6 +869,7 @@ export default function CombatGrid(props) {
         const leftPos = xPos + hOffset;
         const topPos = yPos + vOffset;
 
+        const isDisintegrating = activeAnimations.some(a => a.type === 'disintegrate_beam' && a.tgtPx && Math.abs(a.tgtPx.x - (leftPos + width/2)) < 15 && Math.abs(a.tgtPx.y - (topPos + height/2)) < 15);
         // All state classes go on unit-tile — not on any full-width wrapper
         const unitTileClasses = [
             'unit-tile',
@@ -835,6 +881,7 @@ export default function CombatGrid(props) {
             unit.wounded ? 'hit-flash' : '',
             unit.facing === 'right' ? 'reversed' : '',
             unit.stunned ? 'stunned' : '',
+            isDisintegrating ? 'disintegrate-shaking' : '',
         ].filter(Boolean).join(' ');
 
         const portraitClasses = [
@@ -1276,6 +1323,65 @@ export default function CombatGrid(props) {
                 }} />
             );
         }
+
+        if (anim.type === 'ice_burst' && anim.tgtPx) {
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: `${anim.tgtPx.x}px`,
+                    top: `${anim.tgtPx.y}px`,
+                    width: '60px',
+                    height: '60px',
+                    borderRadius: '50%',
+                    background: 'radial-gradient(circle, #e0f7fa 20%, #80deea 70%, transparent 100%)',
+                    boxShadow: '0 0 20px #80deea',
+                    transform: 'translate(-50%, -50%)',
+                    pointerEvents: 'none',
+                    zIndex: 4100,
+                    animation: 'explode 0.3s ease-out forwards',
+                }} />
+            );
+        }
+
+        if (anim.type === 'acid_projectile' && anim.srcPx && anim.tgtPx) {
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: `${anim.srcPx.x}px`,
+                    top: `${anim.srcPx.y}px`,
+                    width: '26px',
+                    height: '26px',
+                    borderRadius: '50%',
+                    background: 'radial-gradient(circle, #d8f3dc 0%, #70e000 50%, #38b000 100%)',
+                    boxShadow: '0 0 12px #70e000, 0 0 24px #38b000',
+                    transform: 'translate(-50%, -50%)',
+                    pointerEvents: 'none',
+                    zIndex: 4000,
+                    animation: 'fireballTravel 0.7s ease-in forwards',
+                    '--fb-dx': `${anim.tgtPx.x - anim.srcPx.x}px`,
+                    '--fb-dy': `${anim.tgtPx.y - anim.srcPx.y}px`,
+                }} />
+            );
+        }
+
+        if (anim.type === 'poison_burst' && anim.tgtPx) {
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: `${anim.tgtPx.x}px`,
+                    top: `${anim.tgtPx.y}px`,
+                    width: '70px',
+                    height: '70px',
+                    borderRadius: '50%',
+                    background: 'radial-gradient(circle, #70e000 20%, #38b000 70%, transparent 100%)',
+                    boxShadow: '0 0 25px #38b000',
+                    transform: 'translate(-50%, -50%)',
+                    pointerEvents: 'none',
+                    zIndex: 4100,
+                    animation: 'explode 0.3s ease-out forwards',
+                }} />
+            );
+        }
         if (anim.type === 'generic_projectile' && anim.srcPx && anim.tgtPx) {
             let projectileImage = images.barbarian_axe_throw || images.axe_throw || images.axe || '';
             if (anim.subtype === 'spear_throw') {
@@ -1520,26 +1626,7 @@ export default function CombatGrid(props) {
         }
 
         if (anim.type === 'leap_attack_jump' && anim.srcPx && anim.tgtPx) {
-            return (
-                <div key={key} style={{
-                    position: 'absolute',
-                    left: `${anim.srcPx.x}px`,
-                    top: `${anim.srcPx.y}px`,
-                    width: '100px',
-                    height: '100px',
-                    transform: 'translate(-50%, -50%)',
-                    backgroundImage: `url(${crew.find(f => f.type === 'barbarian')?.portrait})`,
-                    backgroundSize: 'cover',
-                    borderRadius: '50%',
-                    border: '2px solid #ff5500',
-                    boxShadow: '0 0 15px #ff5500',
-                    pointerEvents: 'none',
-                    zIndex: 4500,
-                    animation: 'barbarianLeapTravel 1.65s ease-in-out forwards',
-                    '--leap-dx': `${anim.dx}px`,
-                    '--leap-dy': `${anim.dy}px`
-                }} />
-            );
+            return null;
         }
 
         if ((anim.type === 'monk_punch_effect' || anim.type === 'monk_force_punch_effect') && anim.tgtPx) {

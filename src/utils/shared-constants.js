@@ -5,7 +5,7 @@ export const INTERVALS = [90, 40, 10, 1];
 // Used by kickoffSpecialCooldown (combat-manager.js) and duration timers in AI profiles.
 // 1 "era" in specials-matrix = TICKS_PER_ERA interval ticks.
 export const TICKS_PER_ERA = 50;
-export const INTERVAL_DISPLAY_NAMES = ['Very Slow', 'Slow', 'Fast', 'Very Fast'];
+export const INTERVAL_DISPLAY_NAMES = ['Slowest', 'Slow', 'Fast', 'Very Fast'];
 // Multiplier applied to speed/dex contributions in tempo and cooldown formulas.
 export const SPEED_STAT_MULTIPLIER = 15;
 // Duration (ms) for the 'rocked' / hit-flash animation

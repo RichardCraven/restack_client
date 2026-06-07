@@ -19,7 +19,8 @@ const DURATION_ROUNDS = {
     'short': 2,
     'long': 4,
     '2x-long': 8,
-    '3x-long': 12
+    '3x-long': 12,
+    '4x-long': 16
 };
 
 const formatCombatText = (value) => String(value || '')
@@ -31,12 +32,14 @@ const formatCombatText = (value) => String(value || '')
     .join(' ');
 
 export function CombatManagerRedux() {
+    this.DEATH_ANIMATION_MS = 2200;
     this.FIGHT_INTERVAL = INTERVALS[1]; // default Slow
     this.combatants = {};
     this.round = 1;
     this.roundTimeRemainingRatio = 1.0;
     this.roundTimeElapsedMs = 0;
-    this.gameSpeed = 'slow'; // 'slow' or 'fast'
+    this.gameSpeed = 'slow'; // 'slowest' | 'slow' | 'fast'
+    this.roundDurationMs = 2000;
     this.combatPaused = false;
     this.combatOver = false;
     this.combatLog = [];
@@ -94,6 +97,8 @@ export function CombatManagerRedux() {
         this.round = 1;
         this.roundTimeRemainingRatio = 1.0;
         this.roundTimeElapsedMs = 0;
+        this.gameSpeed = 'slow';
+        this.roundDurationMs = 2000;
         this.combatants = {};
         this.vctByMonster = {};
         if (typeof this.updateData === 'function') this.updateData({});
@@ -152,10 +157,15 @@ export function CombatManagerRedux() {
 
     this.updateAllFightIntervals = (newInterval) => {
         this.FIGHT_INTERVAL = newInterval;
-        if (newInterval === INTERVALS[0] || newInterval === INTERVALS[1]) {
+        if (newInterval === INTERVALS[0]) {
+            this.gameSpeed = 'slowest';
+            this.roundDurationMs = 3000;
+        } else if (newInterval === INTERVALS[1]) {
             this.gameSpeed = 'slow';
+            this.roundDurationMs = 2000;
         } else {
             this.gameSpeed = 'fast';
+            this.roundDurationMs = 1000;
         }
     };
 
@@ -594,10 +604,22 @@ export function CombatManagerRedux() {
         if (this.tryTriggerReassemble(target)) {
             return;
         }
+        if (!target || target.dead) {
+            return;
+        }
         target.dead = true;
         target.locked = true;
+        target.deathRemovalScheduled = true;
         this.appendCombatLog(`${this.getCombatantLogName(target)} has been defeated.`);
-        this.removeCombatant(target.id);
+        if (typeof this.updateData === 'function') {
+            this.updateData(clone(this.combatants));
+        }
+        setTimeout(() => {
+            const live = this.combatants[target.id];
+            if (live && live.dead) {
+                this.removeCombatant(target.id);
+            }
+        }, this.DEATH_ANIMATION_MS);
         this.combatOverCheck();
     };
 
@@ -612,11 +634,19 @@ export function CombatManagerRedux() {
         }
 
         combatant.isBones = true;
-        combatant.bonesRoundsLeft = 2;
+        combatant.bonesRoundsLeft = 4;
+        combatant.bonesMaxHp = 10;
         combatant.originalPortrait = combatant.portrait;
         combatant.portrait = images.bones;
         combatant.originalName = combatant.name;
         combatant.name = `${combatant.name || 'Skeleton'} (Bones)`;
+        combatant.originalStartingHp = combatant.starting_hp;
+        combatant.starting_hp = combatant.bonesMaxHp;
+        if (combatant.stats) {
+            combatant.originalStatsHp = combatant.stats.hp;
+            combatant.stats.hp = combatant.bonesMaxHp;
+        }
+        combatant.hp = combatant.bonesMaxHp;
 
         if (this.animationManager && typeof this.animationManager.triggerVisualAbility === 'function') {
             this.animationManager.triggerVisualAbility(combatant.id, combatant.id, { name: 'reassembly' });
@@ -1322,13 +1352,6 @@ export function CombatManagerRedux() {
         if (isEnemyAdjacent && unit.movesTakenThisRound === 0) {
             // Find a tile {x, y} that is within 1 step (left, right, up, down)
             // which is a valid fit, and has NO adjacent enemies.
-            const directions = [
-                { dx: -1, dy: 0 }, // retreat further back (left/right depending on side)
-                { dx: 0, dy: -1 }, // step up
-                { dx: 0, dy: 1 },  // step down
-                { dx: 1, dy: 0 }   // step forward (as a last resort if backing up is blocked)
-            ];
-            
             // For fighters, "retreat" usually means moving left (away from depth MAX_DEPTH)
             // Let's determine direction. If unit.coordinates.x > 0, backing up is -1.
             const preferredDx = -1;
@@ -1778,7 +1801,23 @@ export function CombatManagerRedux() {
         // Sandbox-style Redux animation hook (pure CSS/state)
         if (this.animManagerRedux && typeof this.animManagerRedux.triggerAbility === 'function') {
             const isTargetLarge = target.isLarge || target.size === 2;
-            this.animManagerRedux.triggerAbility(unit.coordinates, target.coordinates, abilityId, isTargetLarge);
+            // Find closest tiles between caller and target
+            const callerTiles = (Array.isArray(unit.occupiedCoords) && unit.occupiedCoords.length > 0) ? unit.occupiedCoords : [unit.coordinates];
+            const targetTiles = (Array.isArray(target.occupiedCoords) && target.occupiedCoords.length > 0) ? target.occupiedCoords : [target.coordinates];
+            let bestCallerCoord = unit.coordinates;
+            let bestTargetCoord = target.coordinates;
+            let minDistance = Infinity;
+            callerTiles.forEach(cc => {
+                targetTiles.forEach(tc => {
+                    const dist = Math.abs(cc.x - tc.x) + Math.abs(cc.y - tc.y);
+                    if (dist < minDistance) {
+                        minDistance = dist;
+                        bestCallerCoord = cc;
+                        bestTargetCoord = tc;
+                    }
+                });
+            });
+            this.animManagerRedux.triggerAbility(bestCallerCoord, bestTargetCoord, abilityId, isTargetLarge, targetTiles, unit.id);
         }
 
         // Apply self-buffs
@@ -2043,7 +2082,7 @@ export function CombatManagerRedux() {
 
             if (this.combatPaused || this.combatOver || Object.keys(this.combatants).length === 0) return;
             
-            const roundDurationMs = this.gameSpeed === 'fast' ? 1000 : 2000;
+            const roundDurationMs = this.roundDurationMs || (this.gameSpeed === 'fast' ? 1000 : 2000);
             this.roundTimeElapsedMs += deltaMs;
             
             if (this.roundTimeElapsedMs >= roundDurationMs) {
@@ -2089,7 +2128,16 @@ export function CombatManagerRedux() {
                     c.isBones = false;
                     c.portrait = c.originalPortrait || c.portrait;
                     c.name = c.originalName || c.name;
+                    if (typeof c.originalStartingHp === 'number') {
+                        c.starting_hp = c.originalStartingHp;
+                    }
+                    if (c.stats && typeof c.originalStatsHp === 'number') {
+                        c.stats.hp = c.originalStatsHp;
+                    }
                     c.hp = c.starting_hp || c.stats?.hp || 30;
+                    delete c.bonesMaxHp;
+                    delete c.originalStartingHp;
+                    delete c.originalStatsHp;
                     this.appendCombatLog(`${this.getCombatantLogName(c)} has reassembled with full health!`);
                     if (this.animationManager && typeof this.animationManager.triggerVisualAbility === 'function') {
                         this.animationManager.triggerVisualAbility(c.id, c.id, { name: 'reassembly' });
@@ -2154,6 +2202,17 @@ export function CombatManagerRedux() {
             clearInterval(this.roundTimerInterval);
             this.roundTimerInterval = null;
         }
+        this.combatOver = true;
+        this.setMessage = null;
+        this.updateIndicatorsMatrix = null;
+        this.updateActor = null;
+        this.updateData = null;
+        this.triggerBoardEvent = null;
+        this.gameOver = null;
+        this.greetingComplete = null;
+        this.fighterMovedToDestination = null;
+        this.onFighterDeath = null;
+        this.morphPortrait = null;
     };
     this.disconnectOverlayManager = () => { this.overlayManager = null; };
 

@@ -188,6 +188,8 @@ class MonsterBattle extends React.Component {
             combatLog: [],
             // Sandbox-style CSS animation events from AnimationManagerRedux
             activeAnimations: [],
+            logFilterSelectedFighter: false,
+            logFontSize: 12,
         }
         this.combatLogContainerRef = React.createRef();
         this.latestCombatLogEntryRef = React.createRef();
@@ -451,6 +453,22 @@ class MonsterBattle extends React.Component {
     componentWillUnmount() {
         // mark unmounted to prevent async callbacks attempting setState
         try { this._isMounted = false; } catch(e){}
+        // Detach callbacks first so in-flight manager timers cannot call setState.
+        try {
+            if (this.props && this.props.combatManager) {
+                const noop = () => {};
+                if (typeof this.props.combatManager.establishMessageCallback === 'function') this.props.combatManager.establishMessageCallback(noop);
+                if (typeof this.props.combatManager.establishUpdateMatrixCallback === 'function') this.props.combatManager.establishUpdateMatrixCallback(noop);
+                if (typeof this.props.combatManager.establishUpdateActorCallback === 'function') this.props.combatManager.establishUpdateActorCallback(noop);
+                if (typeof this.props.combatManager.establishUpdateDataCallback === 'function') this.props.combatManager.establishUpdateDataCallback(noop);
+                if (typeof this.props.combatManager.establishBoardEventCallback === 'function') this.props.combatManager.establishBoardEventCallback(noop);
+                if (typeof this.props.combatManager.establishGameOverCallback === 'function') this.props.combatManager.establishGameOverCallback(noop);
+                if (typeof this.props.combatManager.establishGreetingCompleteCallback === 'function') this.props.combatManager.establishGreetingCompleteCallback(noop);
+                if (typeof this.props.combatManager.establishOnFighterMovedToDestinationCallback === 'function') this.props.combatManager.establishOnFighterMovedToDestinationCallback(noop);
+                if (typeof this.props.combatManager.establishOnFighterDeathCallback === 'function') this.props.combatManager.establishOnFighterDeathCallback(noop);
+                if (typeof this.props.combatManager.establishMorphPortraitCallback === 'function') this.props.combatManager.establishMorphPortraitCallback(noop);
+            }
+        } catch(e){}
         // Best-effort: disconnect combat manager callbacks so no further calls come in
         try { if (this.props && this.props.combatManager && typeof this.props.combatManager.shutdown === 'function') this.props.combatManager.shutdown(); } catch(e){}
         try { if (this.props && this.props.combatManager && typeof this.props.combatManager.disconnectOverlayManager === 'function') this.props.combatManager.disconnectOverlayManager(); } catch(e){}
@@ -690,6 +708,7 @@ class MonsterBattle extends React.Component {
         // console.log('animation overlays from state: ', this.state.animationOverlays);
     }
     updateBattleData = (battleData) => {
+        if (!this._isMounted) return;
         // Deep clone to ensure new reference for React
         // if (Object.values(battleData).some(e => e.dead)) {
         //     console.log('*****************battleData update received in MB   ', battleData);
@@ -735,6 +754,7 @@ class MonsterBattle extends React.Component {
             combatLog,
             ...(selectedFighterId ? { selectedFighter: nextSelectedFighter } : {})
         }, () => {
+            if (!this._isMounted) return;
             // If nothing is selected yet, pick the default top-most / left-most crew member
             if (!this.state.selectedFighter) {
                 const liveCrew = this.getSortedLiveCrew();
@@ -1816,6 +1836,22 @@ class MonsterBattle extends React.Component {
                             {/* Fast/Slow selector */}
                             <div style={{ display: 'flex', gap: '5px' }}>
                                 <button 
+                                    onClick={() => this.setGameSpeed(INTERVALS[0])}
+                                    style={{
+                                        backgroundColor: this.props.combatManager.gameSpeed === 'slowest' ? '#ffffff' : 'rgba(255,255,255,0.1)',
+                                        color: this.props.combatManager.gameSpeed === 'slowest' ? '#000000' : '#ffffff',
+                                        border: '1px solid rgba(255,255,255,0.3)',
+                                        borderRadius: '4px',
+                                        padding: '4px 8px',
+                                        cursor: 'pointer',
+                                        fontSize: '12px',
+                                        fontWeight: 'bold',
+                                        transition: 'all 0.2s'
+                                    }}
+                                >
+                                    Slowest
+                                </button>
+                                <button 
                                     onClick={() => this.setGameSpeed(INTERVALS[1])}
                                     style={{
                                         backgroundColor: this.props.combatManager.gameSpeed === 'slow' ? '#ffffff' : 'rgba(255,255,255,0.1)',
@@ -2484,20 +2520,58 @@ class MonsterBattle extends React.Component {
 
                             {/* RIGHT COLUMN: event log */}
                             <div className="queue-col redux-log-col">
-                                <div className="interaction-header">Event Log</div>
-                                <div className="event-log-container" ref={this.combatLogContainerRef}>
-                                    {this.state.combatLog.map((entry, index) => {
-                                        const isLatest = index === this.state.combatLog.length - 1;
-                                        return (
-                                            <div
-                                                key={entry.id || index}
-                                                ref={isLatest ? this.latestCombatLogEntryRef : null}
-                                                className="event-log-entry"
+                                <div className="interaction-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                                    <span>Event Log</span>
+                                    <div className="log-controls" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#aaa', cursor: 'pointer', userSelect: 'none' }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={this.state.logFilterSelectedFighter}
+                                                onChange={(e) => this.setState({ logFilterSelectedFighter: e.target.checked })}
+                                                style={{ cursor: 'pointer' }}
+                                            />
+                                            Filter Selected
+                                        </label>
+                                        <div style={{ display: 'flex', gap: '2px' }}>
+                                            <button
+                                                onClick={() => this.setState(prev => ({ logFontSize: Math.max(8, prev.logFontSize - 1) }))}
+                                                style={{ padding: '2px 6px', fontSize: '10px', lineHeight: '1', cursor: 'pointer', background: '#333', color: '#fff', border: '1px solid #555', borderRadius: '3px' }}
+                                                title="Decrease Font Size"
                                             >
-                                                {entry.message}
-                                            </div>
-                                        );
-                                    })}
+                                                −
+                                            </button>
+                                            <button
+                                                onClick={() => this.setState(prev => ({ logFontSize: Math.min(24, prev.logFontSize + 1) }))}
+                                                style={{ padding: '2px 6px', fontSize: '10px', lineHeight: '1', cursor: 'pointer', background: '#333', color: '#fff', border: '1px solid #555', borderRadius: '3px' }}
+                                                title="Increase Font Size"
+                                            >
+                                                +
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="event-log-container" ref={this.combatLogContainerRef}>
+                                    {this.state.combatLog
+                                        .filter((entry) => {
+                                            if (!this.state.logFilterSelectedFighter || !this.state.selectedFighter) return true;
+                                            const fName = String(this.state.selectedFighter.name || '').toLowerCase();
+                                            const fType = String(this.state.selectedFighter.type || '').toLowerCase();
+                                            const msg = String(entry.message || '').toLowerCase();
+                                            return msg.includes(fName) || msg.includes(fType);
+                                        })
+                                        .map((entry, index, filteredArray) => {
+                                            const isLatest = index === filteredArray.length - 1;
+                                            return (
+                                                <div
+                                                    key={entry.id || index}
+                                                    ref={isLatest ? this.latestCombatLogEntryRef : null}
+                                                    className="event-log-entry"
+                                                    style={{ fontSize: `${this.state.logFontSize}px` }}
+                                                >
+                                                    {entry.message}
+                                                </div>
+                                            );
+                                        })}
                                 </div>
                             </div>
 
@@ -2884,20 +2958,58 @@ class MonsterBattle extends React.Component {
 
                         </div>
                         <div className="queue-col">
-                            <div className="interaction-header">Event Log</div>
-                            <div className="event-log-container" ref={this.combatLogContainerRef}>
-                                {this.state.combatLog.map((entry, index) => {
-                                    const isLatest = index === this.state.combatLog.length - 1;
-                                    return (
-                                        <div
-                                            key={entry.id || index}
-                                            ref={isLatest ? this.latestCombatLogEntryRef : null}
-                                            className="event-log-entry"
+                            <div className="interaction-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                                <span>Event Log</span>
+                                <div className="log-controls" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#aaa', cursor: 'pointer', userSelect: 'none' }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={this.state.logFilterSelectedFighter}
+                                            onChange={(e) => this.setState({ logFilterSelectedFighter: e.target.checked })}
+                                            style={{ cursor: 'pointer' }}
+                                        />
+                                        Filter Selected
+                                    </label>
+                                    <div style={{ display: 'flex', gap: '2px' }}>
+                                        <button
+                                            onClick={() => this.setState(prev => ({ logFontSize: Math.max(8, prev.logFontSize - 1) }))}
+                                            style={{ padding: '2px 6px', fontSize: '10px', lineHeight: '1', cursor: 'pointer', background: '#333', color: '#fff', border: '1px solid #555', borderRadius: '3px' }}
+                                            title="Decrease Font Size"
                                         >
-                                            {entry.message}
-                                        </div>
-                                    );
-                                })}
+                                            −
+                                        </button>
+                                        <button
+                                            onClick={() => this.setState(prev => ({ logFontSize: Math.min(24, prev.logFontSize + 1) }))}
+                                            style={{ padding: '2px 6px', fontSize: '10px', lineHeight: '1', cursor: 'pointer', background: '#333', color: '#fff', border: '1px solid #555', borderRadius: '3px' }}
+                                            title="Increase Font Size"
+                                        >
+                                            +
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="event-log-container" ref={this.combatLogContainerRef}>
+                                {this.state.combatLog
+                                    .filter((entry) => {
+                                        if (!this.state.logFilterSelectedFighter || !this.state.selectedFighter) return true;
+                                        const fName = String(this.state.selectedFighter.name || '').toLowerCase();
+                                        const fType = String(this.state.selectedFighter.type || '').toLowerCase();
+                                        const msg = String(entry.message || '').toLowerCase();
+                                        return msg.includes(fName) || msg.includes(fType);
+                                    })
+                                    .map((entry, index, filteredArray) => {
+                                        const isLatest = index === filteredArray.length - 1;
+                                        return (
+                                            <div
+                                                key={entry.id || index}
+                                                ref={isLatest ? this.latestCombatLogEntryRef : null}
+                                                className="event-log-entry"
+                                                style={{ fontSize: `${this.state.logFontSize}px` }}
+                                            >
+                                                {entry.message}
+                                            </div>
+                                        );
+                                    })}
                             </div>
                         </div>
                     </div>

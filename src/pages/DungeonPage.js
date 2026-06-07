@@ -1209,7 +1209,6 @@ class DungeonPage extends React.Component {
             // Choose image for floating player (camp or avatar)
             let meta = {};
             try { meta = getMeta() || {}; } catch (e) { meta = {}; }
-            const playerImgKey = (meta && meta.camping) ? 'camp' : 'avatar';
 
             // Apply logical move first, then animate overlay from old world position to new one.
             switch (direction) {
@@ -3343,7 +3342,6 @@ class DungeonPage extends React.Component {
             }
 
             const snapshot = tileIndexes.map((idx) => this.formatTileDiagnostic(tilesToInspect[idx], idx));
-            const keyLikeCount = snapshot.filter((entry) => entry && entry.keyLike).length;
         } catch (e) {
             // Diagnostics helper is best-effort only; swallow failures.
         }
@@ -3544,7 +3542,7 @@ class DungeonPage extends React.Component {
                 requestedDungeonId: dungeonId
             }
         });
-        const cleanupSummary = this.props.boardManager.setDungeon(dungeon)
+        this.props.boardManager.setDungeon(dungeon)
         try {
             getMeta();
         } catch (e) {}

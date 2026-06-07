@@ -74,11 +74,13 @@ export class AnimationManagerRedux {
    * @param {object} targetCoords  { x, y }
    * @param {string} abilityName   e.g. 'claw_strike', 'energy_drain'
    */
-  triggerAbility(sourceCoords, targetCoords, abilityName, isTargetLarge = false) {
+  triggerAbility(sourceCoords, targetCoords, abilityName, isTargetLarge = false, targetOccupiedCoords = null, sourceUnitId = null) {
     if (!sourceCoords || !targetCoords) return;
     const name = (abilityName || '').toLowerCase().replace(/\s+/g, '_');
     this._currentTargetCoords = targetCoords;
     this._isTargetLarge = isTargetLarge;
+    this._currentTargetOccupiedCoords = Array.isArray(targetOccupiedCoords) ? targetOccupiedCoords : null;
+    this._currentAbilityName = name;
 
     switch (name) {
       case 'claw_strike':
@@ -107,6 +109,9 @@ export class AnimationManagerRedux {
       case 'ice_blast':
       case 'reveal_weakness':
         this._iceBlast(sourceCoords, targetCoords);
+        break;
+      case 'acid_blast':
+        this._acidBlast(sourceCoords, targetCoords);
         break;
       case 'sword_swing':
       case 'slash':
@@ -157,13 +162,50 @@ export class AnimationManagerRedux {
       case 'barbarian_leap_attack':
       case 'leap_attack':
       case 'leap':
-        this._leapAttack(sourceCoords, targetCoords);
+        this._leapAttack(sourceCoords, targetCoords, sourceUnitId);
         break;
       default:
         // Generic melee hit for unknown abilities
         this._genericHit(sourceCoords, targetCoords);
         break;
     }
+  }
+
+  _isProjectileAbility(name) {
+    return [
+      'axe_throw',
+      'deadeye_shot',
+      'spear_throw',
+      'energy_drain',
+      'fireball',
+      'fire_blast',
+      'magic_missile',
+      'ice_blast',
+      'reveal_weakness',
+      'disintegrate',
+    ].includes(name);
+  }
+
+  _getLargeTargetCenterPx() {
+    if (!this._isTargetLarge) return null;
+    const tiles = this._currentTargetOccupiedCoords;
+    if (Array.isArray(tiles) && tiles.length > 0) {
+      const sum = tiles.reduce((acc, tile) => {
+        if (!tile || typeof tile.x !== 'number' || typeof tile.y !== 'number') return acc;
+        return { x: acc.x + tile.x, y: acc.y + tile.y, n: acc.n + 1 };
+      }, { x: 0, y: 0, n: 0 });
+      if (sum.n > 0) {
+        return this._px({ x: sum.x / sum.n, y: sum.y / sum.n });
+      }
+    }
+    return this._px(this._currentTargetCoords);
+  }
+
+  _getImpactTargetPx(tgt) {
+    if (this._isProjectileAbility(this._currentAbilityName) && this._isTargetLarge) {
+      return this._getLargeTargetCenterPx();
+    }
+    return this._px(tgt);
   }
 
   // ─── Animation implementations ───────────────────────────────────────────────
@@ -201,7 +243,7 @@ export class AnimationManagerRedux {
 
   _energyDrain(src, tgt) {
     const srcPx = this._px(src);
-    const tgtPx = this._px(tgt);
+    const tgtPx = this._getImpactTargetPx(tgt);
     const dx = tgtPx.x - srcPx.x;
     const dy = tgtPx.y - srcPx.y;
     const length = Math.sqrt(dx * dx + dy * dy);
@@ -228,7 +270,7 @@ export class AnimationManagerRedux {
 
   _fireball(src, tgt) {
     const srcPx = this._px(src);
-    const tgtPx = this._px(tgt);
+    const tgtPx = this._getImpactTargetPx(tgt);
     const dx = tgtPx.x - srcPx.x;
     const dy = tgtPx.y - srcPx.y;
     const angle = Math.atan2(dy, dx) * (180 / Math.PI);
@@ -246,7 +288,7 @@ export class AnimationManagerRedux {
 
   _magicMissile(src, tgt) {
     const srcPx = this._px(src);
-    const tgtPx = this._px(tgt);
+    const tgtPx = this._getImpactTargetPx(tgt);
     const dx = tgtPx.x - srcPx.x;
     const dy = tgtPx.y - srcPx.y;
     const angle = Math.atan2(dy, dx) * (180 / Math.PI);
@@ -261,7 +303,7 @@ export class AnimationManagerRedux {
 
   _iceBlast(src, tgt) {
     const srcPx = this._px(src);
-    const tgtPx = this._px(tgt);
+    const tgtPx = this._getImpactTargetPx(tgt);
     const dx = tgtPx.x - srcPx.x;
     const dy = tgtPx.y - srcPx.y;
     const angle = Math.atan2(dy, dx) * (180 / Math.PI);
@@ -274,6 +316,24 @@ export class AnimationManagerRedux {
     });
     setTimeout(() => {
       this._emit({ type: 'ice_burst', tgtPx, duration: 500 });
+    }, 600);
+  }
+
+  _acidBlast(src, tgt) {
+    const srcPx = this._px(src);
+    const tgtPx = this._px(tgt);
+    const dx = tgtPx.x - srcPx.x;
+    const dy = tgtPx.y - srcPx.y;
+    const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+    this._emit({
+      type: 'acid_projectile',
+      srcPx,
+      tgtPx,
+      angle,
+      duration: 700,
+    });
+    setTimeout(() => {
+      this._emit({ type: 'poison_burst', tgtPx, duration: 500 });
     }, 600);
   }
 
@@ -294,7 +354,7 @@ export class AnimationManagerRedux {
 
   _projectileThrow(src, tgt, name) {
     const srcPx = this._px(src);
-    const tgtPx = this._px(tgt);
+    const tgtPx = this._getImpactTargetPx(tgt);
     const dx = tgtPx.x - srcPx.x;
     const dy = tgtPx.y - srcPx.y;
     const angle = Math.atan2(dy, dx) * (180 / Math.PI);
@@ -451,7 +511,7 @@ export class AnimationManagerRedux {
   }
 
   _disintegrate(src, tgt) {
-    const tgtPx = this._px(tgt);
+    const tgtPx = this._getImpactTargetPx(tgt);
     this._emit({
       type: 'disintegrate_beam',
       tgtPx,
@@ -468,13 +528,14 @@ export class AnimationManagerRedux {
     });
   }
 
-  _leapAttack(src, tgt) {
+  _leapAttack(src, tgt, sourceUnitId = null) {
     const srcPx = this._px(src);
     const tgtPx = this._px(tgt);
     const dx = tgtPx.x - srcPx.x;
     const dy = tgtPx.y - srcPx.y;
     this._emit({
       type: 'leap_attack_jump',
+      sourceUnitId,
       srcPx,
       tgtPx,
       dx,

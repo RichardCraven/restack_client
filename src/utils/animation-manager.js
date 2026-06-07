@@ -110,6 +110,10 @@ export function AnimationManager(){
         inspire: { duration: 600, animationType: 'tile' },
         annihilation: { duration: 600, animationType: 'tile' },
         berserker: { duration: 600, animationType: 'tile' },
+        meditate: { duration: 600, animationType: 'tile' },
+        monk_meditate: { duration: 600, animationType: 'tile' },
+        force_punch_flurry: { duration: 700, animationType: 'tile' },
+        monk_force_punch_flurry: { duration: 700, animationType: 'tile' },
         astral_projection: { duration: 700, animationType: 'tile' },
         monk_astral_projection: { duration: 700, animationType: 'tile' }
     };
@@ -127,7 +131,10 @@ export function AnimationManager(){
     this.triggerAttackAnimation = async (data) => {
         // Default to using 'type' as animationType if not provided
         const requestedType = data.animationType || data.type;
-        const animType = requestedType === 'monk_astral_projection' ? 'astral_projection' : requestedType;
+        let animType = requestedType;
+        if (requestedType === 'monk_astral_projection') animType = 'astral_projection';
+        if (requestedType === 'monk_meditate') animType = 'meditate';
+        if (requestedType === 'monk_force_punch_flurry') animType = 'force_punch_flurry';
         const sourceTileId = this.getTileIdByCoords(data.coordinates);
         if (sourceTileId === null || sourceTileId === undefined) {
             console.warn('triggerAttackAnimation: Invalid coordinates for tile:', data.coordinates);
@@ -1110,6 +1117,10 @@ export function AnimationManager(){
             case 'inspire':
             case 'annihilation':
             case 'berserker':
+            case 'meditate':
+            case 'monk_meditate':
+            case 'force_punch_flurry':
+            case 'monk_force_punch_flurry':
             case 'astral_projection':
             case 'monk_astral_projection': {
                 let iconKey = type;
@@ -1125,6 +1136,8 @@ export function AnimationManager(){
                 else if (type === 'inspire') iconKey = 'inspire';
                 else if (type === 'annihilation') iconKey = 'wizard_annihilation';
                 else if (type === 'berserker') iconKey = 'barbarian_berserker';
+                else if (type === 'meditate' || type === 'monk_meditate') iconKey = 'monk_meditate';
+                else if (type === 'force_punch_flurry' || type === 'monk_force_punch_flurry') iconKey = 'monk_force_punch_flurry';
                 else if (type === 'astral_projection' || type === 'monk_astral_projection') iconKey = 'monk_astral_projection';
 
                 animationTile.animationType = type;

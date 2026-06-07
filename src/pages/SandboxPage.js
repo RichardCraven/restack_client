@@ -40,7 +40,6 @@ import {
   wraith_portrait,
   goat_demon_portrait,
   gorgon_portrait,
-  claws,
   claw_strike,
   claw_hit,
   claw_strike_animation,
@@ -73,15 +72,11 @@ import {
   barbarian_leap_attack,
   bleeding,
   poison,
-  voidfill,
-  grasp,
   fire_blast,
-  heal,
   shield_wall,
   lightning,
   magic_missile,
   magic_missile_icon,
-  ice_blast,
   ice_blast_icon,
   wizard_disintegrate,
   wizard_sleep,
@@ -91,17 +86,13 @@ import {
   fireball,
   frozen,
   acid_drop,
-  meditate,
-  energy_blast,
   bat_gate,
   energy_drain,
   induce_fear,
-  void_lance,
   bow_and_arrow,
   arrowUp,
   construct_icon,
   sigil_icon,
-  sword_white,
   // Soldier Screenshot 2 abilities
   soldier_slash,
   shield_slam,
@@ -152,8 +143,6 @@ import {
   longsword,
   broadsword,
   claymore,
-  katana,
-  greatsword,
   doomreaver,
   nightfall,
   dreadedge,
@@ -506,7 +495,7 @@ const SandboxPage = () => {
   const [defensiveStanceEndTime, setDefensiveStanceEndTime] = useState(null);
   const [currentTime, setCurrentTime] = useState(Date.now());
   const [targetStunned, setTargetStunned] = useState(false);
-  const [targetConfused, setTargetConfused] = useState(false);
+  const [targetConfused] = useState(false);
   const [targetBleeding, setTargetBleeding] = useState(false);
   const [berserkerActive, setBerserkerActive] = useState(false);
   const [berserkerFading, setBerserkerFading] = useState(false);
@@ -878,7 +867,7 @@ const SandboxPage = () => {
         setRangerPos({ row: 3, col: 0 }); // return to original tile
       }
     }
-  }, [currentTime, frozenEndTime, poisonEndTime, bleedEndTime, sagePerceiveEndTime, astralModeEndTime, thirdEyeEndTime, riftPortalEndTime, fearEndTime, extraRangerFearEndTime, vampireCrimsonSightEndTime, skeletonHourglassEndTime, skeletonReassemblyCooldownEndTime, djinnDeathMissileHitEndTime, djinnArcaneBarrierEndTime, djinnBindEndTime, rangerBetrayalEffectEndTime]);
+  }, [currentTime, frozenEndTime, poisonEndTime, bleedEndTime, sagePerceiveEndTime, astralModeEndTime, thirdEyeEndTime, riftPortalEndTime, fearEndTime, extraRangerFearEndTime, vampireCrimsonSightEndTime, skeletonHourglassEndTime, skeletonReassemblyCooldownEndTime, djinnDeathMissileHitEndTime, djinnArcaneBarrierEndTime, djinnBindEndTime, rangerBetrayalEffectEndTime, fighterPos.row, fighterPos.col]);
 
   const getBatPosition = (idx) => {
     const startX = fighterPos.col * 20 + 10;
@@ -5274,8 +5263,6 @@ const SandboxPage = () => {
               {/* Render grid cells */}
               {Array.from({ length: GRID_SIZE }).map((_, r) => (
                 Array.from({ length: GRID_SIZE }).map((_, c) => {
-                  const isFighter = fighterPos.row === r && fighterPos.col === c;
-                  const isTarget = targetPos.row === r && targetPos.col === c;
                   const isTurret = turrets.some(t => t.row === r && t.col === c);
                   const isMinion = minions.some(m => m.row === r && m.col === c);
                   const isPortal = riftPortalActive && riftPortalPos && riftPortalPos.row === r && riftPortalPos.col === c;
