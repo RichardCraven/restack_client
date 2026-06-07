@@ -50,12 +50,16 @@ const getActiveEffects = (combatant, combatManager) => {
     };
 
     if (liveUnit.frozen) {
+        const frozenRounds = liveUnit.frozenRounds || 0;
+        const frozenStackDuration = liveUnit.frozenStackDuration || frozenRounds || 1;
         list.push({
             key: 'frozen',
             icon: images.frozen,
             border: '#00bfff',
-            roundsLeft: liveUnit.frozenRounds || 0,
-            totalDuration: liveUnit.enduranceFrozenRounds || 4
+            roundsLeft: frozenRounds,
+            totalDuration: liveUnit.frozenTotalRounds || frozenRounds || frozenStackDuration,
+            stackDuration: frozenStackDuration,
+            stacks: Math.ceil(frozenRounds / frozenStackDuration)
         });
     }
     if (liveUnit.stunned) {
@@ -64,25 +68,50 @@ const getActiveEffects = (combatant, combatManager) => {
             icon: images.whiteskull || images.induce_fear,
             border: '#f5c842',
             roundsLeft: liveUnit.stunnedRounds || 0,
-            totalDuration: 4
+            totalDuration: liveUnit.stunnedTotalRounds || liveUnit.stunnedRounds || 4
+        });
+    }
+    if (liveUnit.asleep) {
+        list.push({
+            key: 'sleep',
+            icon: images.wizard_sleep,
+            border: '#90caf9',
+            roundsLeft: liveUnit.sleepRounds || liveUnit.stunnedRounds || 0,
+            totalDuration: liveUnit.sleepTotalRounds || liveUnit.stunnedTotalRounds || liveUnit.sleepRounds || liveUnit.stunnedRounds || 4
+        });
+    }
+    if (liveUnit.feared) {
+        list.push({
+            key: 'fear',
+            icon: images.induce_fear,
+            border: '#8e2de2',
+            roundsLeft: liveUnit.fearRounds || liveUnit.stunnedRounds || 0,
+            totalDuration: liveUnit.fearTotalRounds || liveUnit.stunnedTotalRounds || liveUnit.fearRounds || liveUnit.stunnedRounds || 4
         });
     }
     if (liveUnit.bleed) {
+        const bleedDebuff = Array.isArray(liveUnit.activeDebuffs) ? liveUnit.activeDebuffs.find(d => d && d.name === 'bleed') : null;
         list.push({
             key: 'bleed',
             icon: images.bleeding,
             border: '#e05555',
-            roundsLeft: getDebuffRounds('bleed'),
-            totalDuration: 4
+            roundsLeft: bleedDebuff?.roundsLeft || getDebuffRounds('bleed'),
+            totalDuration: bleedDebuff?.totalRounds || bleedDebuff?.roundsLeft || 4
         });
     }
     if (liveUnit.poison) {
+        const poisonDebuff = Array.isArray(liveUnit.activeDebuffs) ? liveUnit.activeDebuffs.find(d => d && d.name === 'poison') : null;
+        const poisonRounds = poisonDebuff?.roundsLeft || getDebuffRounds('poison');
+        const poisonSingleDuration = poisonDebuff?.singleDurationRounds || poisonRounds || 1;
         list.push({
             key: 'poison',
             icon: images.poison,
             border: '#7affa0',
-            roundsLeft: getDebuffRounds('poison'),
-            totalDuration: 4
+            roundsLeft: poisonRounds,
+            totalDuration: poisonDebuff?.totalRounds || poisonRounds || poisonSingleDuration,
+            stackDuration: poisonSingleDuration,
+            stacks: Math.ceil(poisonRounds / poisonSingleDuration),
+            segmented: true
         });
     }
     if (liveUnit.shieldWallActive) {
@@ -91,7 +120,7 @@ const getActiveEffects = (combatant, combatManager) => {
             icon: images.shield_wall,
             border: '#90c4ff',
             roundsLeft: liveUnit.shieldWallRoundsLeft || liveUnit.shieldWallRounds || 0,
-            totalDuration: 3
+            totalDuration: liveUnit.shieldWallTotalRounds || liveUnit.shieldWallRoundsLeft || liveUnit.shieldWallRounds || 4
         });
     }
     if (liveUnit.defensiveStanceActive || liveUnit.defensiveStance) {
@@ -100,25 +129,34 @@ const getActiveEffects = (combatant, combatManager) => {
             icon: images.soldier_defensive_stance,
             border: '#cccccc',
             roundsLeft: liveUnit.defensiveStanceRoundsLeft || liveUnit.defensiveStanceRounds || 0,
-            totalDuration: 3
+            totalDuration: liveUnit.defensiveStanceTotalRounds || liveUnit.defensiveStanceRoundsLeft || liveUnit.defensiveStanceRounds || 4
         });
     }
     if (liveUnit.berserkerActive) {
+        const berserkerBuff = Array.isArray(liveUnit.activeBuffs) ? liveUnit.activeBuffs.find(b => b && (b.name === 'barbarian_berserker' || b.name === 'berserker')) : null;
         list.push({
             key: 'berserker',
             icon: images.barbarian_berserker,
             border: '#ff4444',
-            roundsLeft: liveUnit.berserkerRoundsLeft || liveUnit.berserkerRounds || getBuffRounds('barbarian_berserker') || getBuffRounds('berserker') || 0,
-            totalDuration: 4
+            roundsLeft: liveUnit.berserkerRoundsLeft || liveUnit.berserkerRounds || berserkerBuff?.roundsLeft || getBuffRounds('barbarian_berserker') || getBuffRounds('berserker') || 0,
+            totalDuration: berserkerBuff?.totalRounds || liveUnit.berserkerTotalRounds || liveUnit.berserkerRoundsLeft || liveUnit.berserkerRounds || 4
         });
     }
     if (liveUnit.weaknessRevealed) {
+        const weaknessRounds = liveUnit.weaknessRevealedRounds || liveUnit.weaknessRounds || 0;
+        const weaknessSingleDuration = liveUnit.weaknessRevealedStackDuration || weaknessRounds || 1;
         list.push({
             key: 'weakness',
             icon: images.weakness_doubled,
             border: '#cc44ff',
-            roundsLeft: liveUnit.weaknessRevealedRounds || liveUnit.weaknessRounds || 0,
-            totalDuration: 4
+            roundsLeft: weaknessRounds,
+            totalDuration: liveUnit.weaknessRevealedTotalRounds || weaknessRounds || weaknessSingleDuration,
+            stackDuration: weaknessSingleDuration,
+            stacks: Math.max(1, Math.ceil(weaknessRounds / weaknessSingleDuration)),
+            segmented: true,
+            alwaysShowBadge: true,
+            badgeBackground: '#000',
+            badgeBorder: '#ff007f'
         });
     }
     if (liveUnit.marked) {
@@ -127,7 +165,7 @@ const getActiveEffects = (combatant, combatManager) => {
             icon: images.ranger_mark,
             border: '#ffaa00',
             roundsLeft: liveUnit.markedRounds || 0,
-            totalDuration: 4
+            totalDuration: liveUnit.markedTotalRounds || liveUnit.markedRounds || 4
         });
     }
     if (liveUnit.ensnared) {
@@ -136,7 +174,7 @@ const getActiveEffects = (combatant, combatManager) => {
             icon: images.ranger_ensnare,
             border: '#00ff00',
             roundsLeft: liveUnit.ensnaredRounds || 0,
-            totalDuration: 3
+            totalDuration: liveUnit.ensnaredTotalRounds || liveUnit.ensnaredRounds || 3
         });
     }
     if (liveUnit.astralBeingActive) {
@@ -145,7 +183,16 @@ const getActiveEffects = (combatant, combatManager) => {
             icon: images.monk_astral_being,
             border: '#21e6c1',
             roundsLeft: liveUnit.astralBeingRoundsLeft || liveUnit.astralBeingRounds || 0,
-            totalDuration: 4
+            totalDuration: liveUnit.astralBeingTotalRounds || liveUnit.astralBeingRoundsLeft || liveUnit.astralBeingRounds || 6
+        });
+    }
+    if (liveUnit.etherealSpeedActive) {
+        list.push({
+            key: 'ethereal_speed',
+            icon: images.monk_ethereal_speed,
+            border: '#ffdd57',
+            roundsLeft: liveUnit.etherealSpeedRoundsLeft || 0,
+            totalDuration: liveUnit.etherealSpeedTotalRounds || liveUnit.etherealSpeedRoundsLeft || 4
         });
     }
     if (liveUnit.thirdEyeActive) {
@@ -154,11 +201,11 @@ const getActiveEffects = (combatant, combatManager) => {
             icon: images.monk_third_eye,
             border: '#21e6c1',
             roundsLeft: liveUnit.thirdEyeRoundsLeft || liveUnit.thirdEyeRounds || 0,
-            totalDuration: 4
+            totalDuration: liveUnit.thirdEyeTotalRounds || liveUnit.thirdEyeRoundsLeft || liveUnit.thirdEyeRounds || 4
         });
     }
 
-    return list;
+    return list.filter((eff, index, arr) => arr.findIndex(candidate => candidate.key === eff.key) === index);
 };
 
 const formatDamageValue = (value) => {
@@ -399,10 +446,19 @@ export default function CombatGrid(props) {
                 const roundDurationMs = combatManager?.roundDurationMs || (combatManager?.gameSpeed === 'fast' ? 1000 : 2000);
                 const roundProgress = (combatManager?.roundTimeElapsedMs || 0) / roundDurationMs;
                 const preciseRoundsLeft = roundsLeft > 0 ? Math.max(0, roundsLeft - roundProgress) : 0;
-                const pct = total > 0 ? Math.min(100, Math.max(0, (preciseRoundsLeft / total) * 100)) : 0;
+                const segmentedDuration = eff.stackDuration || 0;
+                const segmentedRoundsLeft = eff.segmented && segmentedDuration > 0
+                    ? (() => {
+                        const modulo = preciseRoundsLeft % segmentedDuration;
+                        return modulo === 0 && preciseRoundsLeft > 0 ? segmentedDuration : modulo;
+                    })()
+                    : preciseRoundsLeft;
+                const pctBase = eff.segmented && segmentedDuration > 0 ? segmentedDuration : total;
+                const pct = pctBase > 0 ? Math.min(100, Math.max(0, (segmentedRoundsLeft / pctBase) * 100)) : 0;
                 // Radial cooldown sweep math: radius=5, circumference=31.42
                 const dashOffset = (pct / 100) * 31.42;
                 const coords = getRadialLineCoordsFromPct(pct);
+                const showBadge = eff.alwaysShowBadge ? (eff.stacks || 0) > 0 : (eff.stacks || 0) > 1;
 
                 return (
                     <div key={eff.key} className="effect-icon-active" style={{
@@ -412,7 +468,7 @@ export default function CombatGrid(props) {
                         backgroundRepeat: 'no-repeat', backgroundPosition: 'center',
                         boxShadow: '0 2px 4px rgba(0,0,0,0.5)',
                         position: 'relative',
-                        overflow: 'hidden'
+                        overflow: 'visible'
                     }}>
                         {roundsLeft > 0 && (
                             <svg 
@@ -449,6 +505,27 @@ export default function CombatGrid(props) {
                                     />
                                 )}
                             </svg>
+                        )}
+                        {showBadge && (
+                            <div style={{
+                                position: 'absolute',
+                                bottom: '-4px',
+                                left: '-8px',
+                                background: eff.badgeBackground || eff.border,
+                                color: '#fff',
+                                fontSize: '9px',
+                                fontWeight: 'bold',
+                                borderRadius: '50%',
+                                width: '12px',
+                                height: '12px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                border: `1px solid ${eff.badgeBorder || '#111'}`,
+                                zIndex: 11
+                            }}>
+                                {eff.stacks}
+                            </div>
                         )}
                     </div>
                 );
@@ -933,7 +1010,7 @@ export default function CombatGrid(props) {
                         width: '100%',
                         height: '100%',
                         borderRadius: '8px',
-                        overflow: 'hidden',
+                        overflow: 'visible',
                     }}
                 >
                     <div

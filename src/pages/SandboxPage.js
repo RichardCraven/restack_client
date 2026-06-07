@@ -3015,14 +3015,18 @@ const SandboxPage = () => {
     // --- RANGER ENSNARE ---
     else if (ability.id === 'ensnare') {
       setAnimating(true);
+      const startCol = isFighterLarge ? (fighterPos.col >= 3 ? fighterPos.col - 0.5 : fighterPos.col + 0.5) : fighterPos.col;
+      const startRow = isFighterLarge ? fighterPos.row - 0.5 : fighterPos.row;
+      const targetCol = isTargetLarge ? (targetPos.col >= 3 ? targetPos.col - 0.5 : targetPos.col + 0.5) : targetPos.col;
+      const targetRow = isTargetLarge ? targetPos.row - 0.5 : targetPos.row;
       setProjectile({
-        x: fighterPos.col * 20,
-        y: fighterPos.row * 20,
+        x: startCol * 20,
+        y: startRow * 20,
         icon: ranger_net_throw,
         isNet: true
       });
       setTimeout(() => {
-        setProjectile(prev => prev ? { ...prev, x: targetPos.col * 20, y: targetPos.row * 20 } : null);
+        setProjectile(prev => prev ? { ...prev, x: targetCol * 20, y: targetRow * 20 } : null);
       }, 30);
       setTimeout(() => {
         setProjectile(null);

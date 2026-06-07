@@ -838,8 +838,30 @@ export function CombatManagerRedux() {
                         }
                         this.appendCombatLog(`${this.getCombatantLogName(unit)} is incapacitated and skips this round.`);
                         // Still tick down the incapacitation
-                        if (unit.frozenRounds > 0) { unit.frozenRounds--; if (unit.frozenRounds <= 0) { unit.frozen = false; } }
-                        if (unit.stunnedRounds > 0) { unit.stunnedRounds--; if (unit.stunnedRounds <= 0) { unit.stunned = false; } }
+                        if (unit.frozenRounds > 0) {
+                            unit.frozenRounds--;
+                            if (unit.frozenRounds <= 0) {
+                                unit.frozen = false;
+                                unit.frozenRounds = 0;
+                                unit.frozenTotalRounds = 0;
+                                unit.frozenStackDuration = 0;
+                            }
+                        }
+                        if (unit.stunnedRounds > 0) {
+                            unit.stunnedRounds--;
+                            if (unit.stunnedRounds <= 0) {
+                                unit.stunned = false;
+                                unit.stunnedRounds = 0;
+                                unit.stunnedTotalRounds = 0;
+                                unit.stunnedStackDuration = 0;
+                                unit.feared = false;
+                                unit.fearRounds = 0;
+                                unit.fearTotalRounds = 0;
+                                unit.asleep = false;
+                                unit.sleepRounds = 0;
+                                unit.sleepTotalRounds = 0;
+                            }
+                        }
                         if (unit.petrifiedRounds > 0) { unit.petrifiedRounds--; if (unit.petrifiedRounds <= 0) { unit.petrified = false; } }
                         if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
                         return;
@@ -888,6 +910,9 @@ export function CombatManagerRedux() {
             unit.weaknessRevealedRounds--;
             if (unit.weaknessRevealedRounds <= 0) {
                 unit.weaknessRevealed = false;
+                unit.weaknessRevealedRounds = 0;
+                unit.weaknessRevealedTotalRounds = 0;
+                unit.weaknessRevealedStackDuration = 0;
                 this.appendCombatLog(`${this.getCombatantLogName(unit)}'s exposed weakness has faded.`);
             }
         }
@@ -895,6 +920,9 @@ export function CombatManagerRedux() {
             unit.ensnaredRounds--;
             if (unit.ensnaredRounds <= 0) {
                 unit.ensnared = false;
+                unit.ensnaredRounds = 0;
+                unit.ensnaredTotalRounds = 0;
+                unit.ensnaredStackDuration = 0;
                 this.appendCombatLog(`${this.getCombatantLogName(unit)} is no longer ensnared.`);
             }
         }
@@ -902,6 +930,9 @@ export function CombatManagerRedux() {
             unit.markedRounds--;
             if (unit.markedRounds <= 0) {
                 unit.marked = false;
+                unit.markedRounds = 0;
+                unit.markedTotalRounds = 0;
+                unit.markedStackDuration = 0;
                 this.appendCombatLog(`${this.getCombatantLogName(unit)}'s mark has expired.`);
             }
         }
@@ -916,10 +947,15 @@ export function CombatManagerRedux() {
 
     this._applyBuff = (unit, buffDef, name, durationRounds) => {
         if (!unit.activeBuffs) unit.activeBuffs = [];
-        // Don't stack the same buff type
-        if (unit.activeBuffs.some(b => b.name === name)) return;
+        const existing = unit.activeBuffs.find(b => b.name === name);
+        if (existing) {
+            existing.roundsLeft += durationRounds;
+            existing.totalRounds = (existing.totalRounds || existing.roundsLeft) + durationRounds;
+            existing.singleDurationRounds = durationRounds;
+            return;
+        }
 
-        const applied = { name, roundsLeft: durationRounds, statChanges: {} };
+        const applied = { name, roundsLeft: durationRounds, totalRounds: durationRounds, singleDurationRounds: durationRounds, statChanges: {} };
         if (buffDef && buffDef.increase_stats && Array.isArray(buffDef.increase_stats.stats)) {
             buffDef.increase_stats.stats.forEach(({ stat, amount }) => {
                 unit.stats[stat] = (unit.stats[stat] || 0) + amount;
@@ -938,9 +974,15 @@ export function CombatManagerRedux() {
 
     this._applyDebuff = (unit, nerfDef, name, durationRounds) => {
         if (!unit.activeDebuffs) unit.activeDebuffs = [];
-        if (unit.activeDebuffs.some(d => d.name === name)) return;
+        const existing = unit.activeDebuffs.find(d => d.name === name);
+        if (existing) {
+            existing.roundsLeft += durationRounds;
+            existing.totalRounds = (existing.totalRounds || existing.roundsLeft) + durationRounds;
+            existing.singleDurationRounds = durationRounds;
+            return;
+        }
 
-        const applied = { name, roundsLeft: durationRounds, statChanges: {} };
+        const applied = { name, roundsLeft: durationRounds, totalRounds: durationRounds, singleDurationRounds: durationRounds, statChanges: {} };
         if (nerfDef && nerfDef.decrease_stats && Array.isArray(nerfDef.decrease_stats.stats)) {
             nerfDef.decrease_stats.stats.forEach(({ stat, amount, isPercent }) => {
                 const reduction = isPercent ? Math.round((unit.stats[stat] || 0) * (amount / 100)) : amount;
@@ -1074,6 +1116,7 @@ export function CombatManagerRedux() {
             if (pick) {
                 unit.etherealSpeedActive = true;
                 unit.etherealSpeedRoundsLeft = 4;
+                unit.etherealSpeedTotalRounds = 4;
                 this.appendCombatLog(`${this.getCombatantLogName(unit)} activates Ethereal Speed — glowing with power!`);
                 this._setCooldown(unit, 'monk_ethereal_speed', pick.cooldown || 15);
                 if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
@@ -1085,6 +1128,8 @@ export function CombatManagerRedux() {
             unit.etherealSpeedRoundsLeft = (unit.etherealSpeedRoundsLeft || 1) - 1;
             if (unit.etherealSpeedRoundsLeft <= 0) {
                 unit.etherealSpeedActive = false;
+                unit.etherealSpeedRoundsLeft = 0;
+                unit.etherealSpeedTotalRounds = 0;
                 this.appendCombatLog(`${this.getCombatantLogName(unit)}'s Ethereal Speed fades.`);
             }
         }
@@ -1109,6 +1154,7 @@ export function CombatManagerRedux() {
                 this._applyBuff(unit, pick.buff || {}, 'astral_being', 6);
                 unit.astralBeingActive = true;
                 unit.astralBeingRoundsLeft = 6;
+                unit.astralBeingTotalRounds = 6;
                 this.appendCombatLog(`${this.getCombatantLogName(unit)} enters Astral Being mode.`);
                 this._setCooldown(unit, 'monk_astral_focus', pick.cooldown || 60);
                 if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
@@ -1122,6 +1168,8 @@ export function CombatManagerRedux() {
             unit.astralBeingRoundsLeft = (unit.astralBeingRoundsLeft || 1) - 1;
             if (unit.astralBeingRoundsLeft <= 0) {
                 unit.astralBeingActive = false;
+                unit.astralBeingRoundsLeft = 0;
+                unit.astralBeingTotalRounds = 0;
                 this.appendCombatLog(`${this.getCombatantLogName(unit)}'s Astral Being mode ends.`);
                 // Cancel any active astral skills
                 ['monk_third_eye', 'monk_astral_projection'].forEach(k => {
@@ -1139,6 +1187,7 @@ export function CombatManagerRedux() {
             if (pick) {
                 unit.thirdEyeActive = true;
                 unit.thirdEyeRoundsLeft = 4;
+                unit.thirdEyeTotalRounds = 4;
                 this.appendCombatLog(`${this.getCombatantLogName(unit)} activates Third Eye — evasion doubled.`);
                 this._setCooldown(unit, 'monk_third_eye', pick.cooldown || 15);
                 if (!unit.astralSkills) unit.astralSkills = {};
@@ -1151,6 +1200,8 @@ export function CombatManagerRedux() {
             unit.thirdEyeRoundsLeft = (unit.thirdEyeRoundsLeft || 1) - 1;
             if (unit.thirdEyeRoundsLeft <= 0) {
                 unit.thirdEyeActive = false;
+                unit.thirdEyeRoundsLeft = 0;
+                unit.thirdEyeTotalRounds = 0;
                 if (unit.astralSkills) unit.astralSkills.monk_third_eye = false;
             }
         }
@@ -1229,6 +1280,8 @@ export function CombatManagerRedux() {
             unit.shieldWallRoundsLeft = (unit.shieldWallRoundsLeft || 1) - 1;
             if (unit.shieldWallRoundsLeft <= 0) {
                 unit.shieldWallActive = false;
+                unit.shieldWallRoundsLeft = 0;
+                unit.shieldWallTotalRounds = 0;
                 this.appendCombatLog(`${this.getCombatantLogName(unit)}'s Shield Wall collapses.`);
                 if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
             } else {
@@ -1250,6 +1303,7 @@ export function CombatManagerRedux() {
             if (pick) {
                 unit.shieldWallActive = true;
                 unit.shieldWallRoundsLeft = pick.duration || 4;
+                unit.shieldWallTotalRounds = pick.duration || 4;
                 this.appendCombatLog(`${this.getCombatantLogName(unit)} erects Shield Wall!`);
                 this._setCooldown(unit, 'shield_wall', pick.cooldown || 15);
                 unit.actionsTakenThisRound += 1;
@@ -1467,6 +1521,8 @@ export function CombatManagerRedux() {
                     if (!isEnemy) return;
                     c.weaknessRevealed = true;
                     c.weaknessRevealedRounds = dur;
+                    c.weaknessRevealedTotalRounds = dur;
+                    c.weaknessRevealedStackDuration = dur;
                     this.appendCombatLog(`${this.getCombatantLogName(unit)} perceives ${this.getCombatantLogName(c)} — weakness exposed!`);
                 });
                 this._setCooldown(unit, 'perceive', pick.cooldown || 12);
@@ -1504,6 +1560,8 @@ export function CombatManagerRedux() {
                 this.useAbility(unit, pick, target);
                 target.ensnared = true;
                 target.ensnaredRounds = getDurationRounds(pick.duration || 'short');
+                target.ensnaredTotalRounds = target.ensnaredRounds;
+                target.ensnaredStackDuration = target.ensnaredRounds;
                 this._setCooldown(unit, 'ensnare', pick.cooldown || 6);
                 return;
             }
@@ -1516,6 +1574,8 @@ export function CombatManagerRedux() {
                 this.useAbility(unit, pick, target);
                 target.marked = true;
                 target.markedRounds = getDurationRounds(pick.duration || 'long');
+                target.markedTotalRounds = target.markedRounds;
+                target.markedStackDuration = target.markedRounds;
                 this._setCooldown(unit, 'mark', pick.cooldown || 4);
                 return;
             }
@@ -1906,19 +1966,33 @@ export function CombatManagerRedux() {
                     const dur = getDurationRounds(eff.duration || 'short');
                     if (eff.type === 'frozen') {
                         target.frozen = true;
-                        target.frozenRounds = dur;
+                        target.frozenRounds = (target.frozenRounds || 0) + dur;
+                        target.frozenTotalRounds = (target.frozenTotalRounds || 0) + dur;
+                        target.frozenStackDuration = dur;
                         this.appendCombatLog(`${this.getCombatantLogName(target)} is frozen!`);
                     } else if (eff.type === 'ensnared') {
                         target.ensnared = true;
                         target.ensnaredRounds = dur;
+                        target.ensnaredTotalRounds = dur;
+                        target.ensnaredStackDuration = dur;
                         this.appendCombatLog(`${this.getCombatantLogName(target)} is ensnared!`);
                     } else if (eff.type === 'fear') {
                         target.stunned = true;
                         target.stunnedRounds = dur;
+                        target.stunnedTotalRounds = dur;
+                        target.stunnedStackDuration = dur;
+                        target.feared = true;
+                        target.fearRounds = dur;
+                        target.fearTotalRounds = dur;
+                        target.asleep = false;
                         this.appendCombatLog(`${this.getCombatantLogName(target)} is terrified and cannot act.`);
                     } else if (eff.type === 'stun') {
                         target.stunned = true;
                         target.stunnedRounds = dur;
+                        target.stunnedTotalRounds = dur;
+                        target.stunnedStackDuration = dur;
+                        target.feared = false;
+                        target.asleep = false;
                         this.appendCombatLog(`${this.getCombatantLogName(target)} is stunned!`);
                     } else if (eff.type === 'poison') {
                         this._applyDebuff(target, { decrease_stats: { stats: [{ stat: 'atk', amount: 3 }] } }, 'poison', dur);
@@ -1929,6 +2003,12 @@ export function CombatManagerRedux() {
                     } else if (eff.type === 'sleep') {
                         target.stunned = true;
                         target.stunnedRounds = dur;
+                        target.stunnedTotalRounds = dur;
+                        target.stunnedStackDuration = dur;
+                        target.asleep = true;
+                        target.sleepRounds = dur;
+                        target.sleepTotalRounds = dur;
+                        target.feared = false;
                         this.appendCombatLog(`${this.getCombatantLogName(target)} is put to sleep!`);
                     }
                 }
