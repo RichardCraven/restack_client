@@ -31,11 +31,12 @@ const getActiveEffects = (combatant, combatManager) => {
     const list = [];
     if (!combatant) return list;
     const liveUnit = combatManager?.getCombatant?.(combatant.id) || combatant;
+    const normalizeName = (value) => String(value || '').trim().toLowerCase().replace(/\s+/g, '_');
 
     // Helper to extract debuff rounds
     const getDebuffRounds = (name) => {
         if (Array.isArray(liveUnit.activeDebuffs)) {
-            const match = liveUnit.activeDebuffs.find(d => d && d.name === name);
+            const match = liveUnit.activeDebuffs.find(d => d && normalizeName(d.name) === normalizeName(name));
             return match ? match.roundsLeft || 0 : 0;
         }
         return 0;
@@ -43,11 +44,15 @@ const getActiveEffects = (combatant, combatManager) => {
 
     const getBuffRounds = (name) => {
         if (Array.isArray(liveUnit.activeBuffs)) {
-            const match = liveUnit.activeBuffs.find(b => b && b.name === name);
+            const match = liveUnit.activeBuffs.find(b => b && normalizeName(b.name) === normalizeName(name));
             return match ? match.roundsLeft || 0 : 0;
         }
         return 0;
     };
+
+    const getBuff = (name) => Array.isArray(liveUnit.activeBuffs)
+        ? liveUnit.activeBuffs.find(b => b && normalizeName(b.name) === normalizeName(name))
+        : null;
 
     if (liveUnit.frozen) {
         const frozenRounds = liveUnit.frozenRounds || 0;
@@ -59,16 +64,20 @@ const getActiveEffects = (combatant, combatManager) => {
             roundsLeft: frozenRounds,
             totalDuration: liveUnit.frozenTotalRounds || frozenRounds || frozenStackDuration,
             stackDuration: frozenStackDuration,
-            stacks: Math.ceil(frozenRounds / frozenStackDuration)
+            stacks: Math.ceil(frozenRounds / frozenStackDuration),
+            endTimeMs: liveUnit.frozenEndTimeMs,
+            totalDurationMs: liveUnit.frozenTotalDurationMs
         });
     }
-    if (liveUnit.stunned) {
+    if (liveUnit.stunned && !liveUnit.asleep && !liveUnit.feared) {
         list.push({
             key: 'stunned',
             icon: images.whiteskull || images.induce_fear,
             border: '#f5c842',
             roundsLeft: liveUnit.stunnedRounds || 0,
-            totalDuration: liveUnit.stunnedTotalRounds || liveUnit.stunnedRounds || 4
+            totalDuration: liveUnit.stunnedTotalRounds || liveUnit.stunnedRounds || 4,
+            endTimeMs: liveUnit.stunnedEndTimeMs,
+            totalDurationMs: liveUnit.stunnedTotalDurationMs
         });
     }
     if (liveUnit.asleep) {
@@ -77,7 +86,9 @@ const getActiveEffects = (combatant, combatManager) => {
             icon: images.wizard_sleep,
             border: '#90caf9',
             roundsLeft: liveUnit.sleepRounds || liveUnit.stunnedRounds || 0,
-            totalDuration: liveUnit.sleepTotalRounds || liveUnit.stunnedTotalRounds || liveUnit.sleepRounds || liveUnit.stunnedRounds || 4
+            totalDuration: liveUnit.sleepTotalRounds || liveUnit.stunnedTotalRounds || liveUnit.sleepRounds || liveUnit.stunnedRounds || 4,
+            endTimeMs: liveUnit.sleepEndTimeMs,
+            totalDurationMs: liveUnit.sleepTotalDurationMs
         });
     }
     if (liveUnit.feared) {
@@ -86,7 +97,9 @@ const getActiveEffects = (combatant, combatManager) => {
             icon: images.induce_fear,
             border: '#8e2de2',
             roundsLeft: liveUnit.fearRounds || liveUnit.stunnedRounds || 0,
-            totalDuration: liveUnit.fearTotalRounds || liveUnit.stunnedTotalRounds || liveUnit.fearRounds || liveUnit.stunnedRounds || 4
+            totalDuration: liveUnit.fearTotalRounds || liveUnit.stunnedTotalRounds || liveUnit.fearRounds || liveUnit.stunnedRounds || 4,
+            endTimeMs: liveUnit.fearEndTimeMs,
+            totalDurationMs: liveUnit.fearTotalDurationMs
         });
     }
     if (liveUnit.bleed) {
@@ -96,7 +109,9 @@ const getActiveEffects = (combatant, combatManager) => {
             icon: images.bleeding,
             border: '#e05555',
             roundsLeft: bleedDebuff?.roundsLeft || getDebuffRounds('bleed'),
-            totalDuration: bleedDebuff?.totalRounds || bleedDebuff?.roundsLeft || 4
+            totalDuration: bleedDebuff?.totalRounds || bleedDebuff?.roundsLeft || 4,
+            endTimeMs: bleedDebuff?.endTimeMs,
+            totalDurationMs: bleedDebuff?.totalDurationMs
         });
     }
     if (liveUnit.poison) {
@@ -111,35 +126,33 @@ const getActiveEffects = (combatant, combatManager) => {
             totalDuration: poisonDebuff?.totalRounds || poisonRounds || poisonSingleDuration,
             stackDuration: poisonSingleDuration,
             stacks: Math.ceil(poisonRounds / poisonSingleDuration),
-            segmented: true
+            segmented: true,
+            endTimeMs: poisonDebuff?.endTimeMs,
+            totalDurationMs: poisonDebuff?.totalDurationMs
         });
     }
-    if (liveUnit.shieldWallActive) {
-        list.push({
-            key: 'shield_wall',
-            icon: images.shield_wall,
-            border: '#90c4ff',
-            roundsLeft: liveUnit.shieldWallRoundsLeft || liveUnit.shieldWallRounds || 0,
-            totalDuration: liveUnit.shieldWallTotalRounds || liveUnit.shieldWallRoundsLeft || liveUnit.shieldWallRounds || 4
-        });
-    }
-    if (liveUnit.defensiveStanceActive || liveUnit.defensiveStance) {
+    const defensiveStanceBuff = getBuff('Defensive Stance');
+    if (defensiveStanceBuff || liveUnit.defensiveStanceActive || liveUnit.defensiveStance) {
         list.push({
             key: 'defensive_stance',
-            icon: images.soldier_defensive_stance,
-            border: '#cccccc',
-            roundsLeft: liveUnit.defensiveStanceRoundsLeft || liveUnit.defensiveStanceRounds || 0,
-            totalDuration: liveUnit.defensiveStanceTotalRounds || liveUnit.defensiveStanceRoundsLeft || liveUnit.defensiveStanceRounds || 4
+            icon: images.soldier_defense_stance_mini_icon || images.soldier_defensive_stance,
+            border: '#3b82f6',
+            roundsLeft: defensiveStanceBuff?.roundsLeft || liveUnit.defensiveStanceRoundsLeft || liveUnit.defensiveStanceRounds || 0,
+            totalDuration: defensiveStanceBuff?.totalRounds || liveUnit.defensiveStanceTotalRounds || liveUnit.defensiveStanceRoundsLeft || liveUnit.defensiveStanceRounds || 4,
+            endTimeMs: defensiveStanceBuff?.endTimeMs,
+            totalDurationMs: defensiveStanceBuff?.totalDurationMs
         });
     }
-    if (liveUnit.berserkerActive) {
-        const berserkerBuff = Array.isArray(liveUnit.activeBuffs) ? liveUnit.activeBuffs.find(b => b && (b.name === 'barbarian_berserker' || b.name === 'berserker')) : null;
+    const berserkerBuff = getBuff('barbarian_berserker') || getBuff('berserker');
+    if (liveUnit.berserkerActive || berserkerBuff) {
         list.push({
             key: 'berserker',
             icon: images.barbarian_berserker,
-            border: '#ff4444',
+            border: '#ff3333',
             roundsLeft: liveUnit.berserkerRoundsLeft || liveUnit.berserkerRounds || berserkerBuff?.roundsLeft || getBuffRounds('barbarian_berserker') || getBuffRounds('berserker') || 0,
-            totalDuration: berserkerBuff?.totalRounds || liveUnit.berserkerTotalRounds || liveUnit.berserkerRoundsLeft || liveUnit.berserkerRounds || 4
+            totalDuration: berserkerBuff?.totalRounds || liveUnit.berserkerTotalRounds || liveUnit.berserkerRoundsLeft || liveUnit.berserkerRounds || 4,
+            endTimeMs: berserkerBuff?.endTimeMs,
+            totalDurationMs: berserkerBuff?.totalDurationMs
         });
     }
     if (liveUnit.weaknessRevealed) {
@@ -156,7 +169,9 @@ const getActiveEffects = (combatant, combatManager) => {
             segmented: true,
             alwaysShowBadge: true,
             badgeBackground: '#000',
-            badgeBorder: '#ff007f'
+            badgeBorder: '#ff007f',
+            endTimeMs: liveUnit.weaknessRevealedEndTimeMs,
+            totalDurationMs: liveUnit.weaknessRevealedTotalDurationMs
         });
     }
     if (liveUnit.marked) {
@@ -165,25 +180,45 @@ const getActiveEffects = (combatant, combatManager) => {
             icon: images.ranger_mark,
             border: '#ffaa00',
             roundsLeft: liveUnit.markedRounds || 0,
-            totalDuration: liveUnit.markedTotalRounds || liveUnit.markedRounds || 4
+            totalDuration: liveUnit.markedTotalRounds || liveUnit.markedRounds || 4,
+            endTimeMs: liveUnit.markedEndTimeMs,
+            totalDurationMs: liveUnit.markedTotalDurationMs
         });
     }
     if (liveUnit.ensnared) {
         list.push({
             key: 'ensnared',
             icon: images.ranger_ensnare,
-            border: '#00ff00',
+            border: '#8bc34a',
             roundsLeft: liveUnit.ensnaredRounds || 0,
-            totalDuration: liveUnit.ensnaredTotalRounds || liveUnit.ensnaredRounds || 3
+            totalDuration: liveUnit.ensnaredTotalRounds || liveUnit.ensnaredRounds || 3,
+            endTimeMs: liveUnit.ensnaredEndTimeMs,
+            totalDurationMs: liveUnit.ensnaredTotalDurationMs
         });
     }
-    if (liveUnit.astralBeingActive) {
+    if (liveUnit.isBones) {
+        list.push({
+            key: 'skeleton_bones_hourglass',
+            icon: images.hourglass1,
+            border: '#9d4edd',
+            roundsLeft: liveUnit.bonesRoundsLeft || 0,
+            totalDuration: liveUnit.bonesTotalRounds || liveUnit.bonesRoundsLeft || 4,
+            endTimeMs: liveUnit.bonesEndTimeMs,
+            totalDurationMs: liveUnit.bonesTotalDurationMs
+        });
+    }
+    const astralBeingBuff = getBuff('astral_being');
+    if (liveUnit.astralBeingActive || astralBeingBuff) {
         list.push({
             key: 'astral_being',
             icon: images.monk_astral_being,
             border: '#21e6c1',
-            roundsLeft: liveUnit.astralBeingRoundsLeft || liveUnit.astralBeingRounds || 0,
-            totalDuration: liveUnit.astralBeingTotalRounds || liveUnit.astralBeingRoundsLeft || liveUnit.astralBeingRounds || 6
+            roundsLeft: liveUnit.astralBeingRoundsLeft || liveUnit.astralBeingRounds || astralBeingBuff?.roundsLeft || 0,
+            totalDuration: liveUnit.astralBeingTotalRounds || liveUnit.astralBeingRoundsLeft || liveUnit.astralBeingRounds || astralBeingBuff?.totalRounds || 6,
+            stackDuration: 3,
+            segmented: true,
+            endTimeMs: liveUnit.astralBeingEndTimeMs || astralBeingBuff?.endTimeMs,
+            totalDurationMs: liveUnit.astralBeingTotalDurationMs || astralBeingBuff?.totalDurationMs
         });
     }
     if (liveUnit.etherealSpeedActive) {
@@ -192,7 +227,33 @@ const getActiveEffects = (combatant, combatManager) => {
             icon: images.monk_ethereal_speed,
             border: '#ffdd57',
             roundsLeft: liveUnit.etherealSpeedRoundsLeft || 0,
-            totalDuration: liveUnit.etherealSpeedTotalRounds || liveUnit.etherealSpeedRoundsLeft || 4
+            totalDuration: liveUnit.etherealSpeedTotalRounds || liveUnit.etherealSpeedRoundsLeft || 4,
+            endTimeMs: liveUnit.etherealSpeedEndTimeMs,
+            totalDurationMs: liveUnit.etherealSpeedTotalDurationMs
+        });
+    }
+    const innerFireBuff = getBuff('Inner Fire');
+    if (innerFireBuff) {
+        list.push({
+            key: 'inner_fire',
+            icon: images.monk_inner_fire,
+            border: '#ff5400',
+            roundsLeft: innerFireBuff.roundsLeft || 0,
+            totalDuration: innerFireBuff.totalRounds || innerFireBuff.roundsLeft || 4,
+            endTimeMs: innerFireBuff.endTimeMs,
+            totalDurationMs: innerFireBuff.totalDurationMs
+        });
+    }
+    const inspireBuff = getBuff('Inspire');
+    if (inspireBuff) {
+        list.push({
+            key: 'inspire',
+            icon: images.inspire,
+            border: '#ffdd57',
+            roundsLeft: inspireBuff.roundsLeft || 0,
+            totalDuration: inspireBuff.totalRounds || inspireBuff.roundsLeft || 4,
+            endTimeMs: inspireBuff.endTimeMs,
+            totalDurationMs: inspireBuff.totalDurationMs
         });
     }
     if (liveUnit.thirdEyeActive) {
@@ -201,8 +262,46 @@ const getActiveEffects = (combatant, combatManager) => {
             icon: images.monk_third_eye,
             border: '#21e6c1',
             roundsLeft: liveUnit.thirdEyeRoundsLeft || liveUnit.thirdEyeRounds || 0,
-            totalDuration: liveUnit.thirdEyeTotalRounds || liveUnit.thirdEyeRoundsLeft || liveUnit.thirdEyeRounds || 4
+            totalDuration: liveUnit.thirdEyeTotalRounds || liveUnit.thirdEyeRoundsLeft || liveUnit.thirdEyeRounds || 4,
+            endTimeMs: liveUnit.thirdEyeEndTimeMs,
+            totalDurationMs: liveUnit.thirdEyeTotalDurationMs
         });
+    }
+    const copBuff = getBuff('circle_of_protection');
+    if (copBuff) {
+        const sameTeamSage = combatManager && combatManager.combatants && Object.values(combatManager.combatants).find(c => {
+            if (!c || c.dead || c.isVCT) return false;
+            const sameTeam = (liveUnit.isMonster || liveUnit.isMinion)
+                ? (c.isMonster || c.isMinion)
+                : (!c.isMonster && !c.isMinion);
+            return sameTeam && c.type === 'sage';
+        });
+        if (sameTeamSage) {
+            const dx = liveUnit.coordinates.x - sameTeamSage.coordinates.x;
+            const dy = liveUnit.coordinates.y - sameTeamSage.coordinates.y;
+            const d = Math.sqrt(dx * dx + dy * dy);
+            if (d < 1.9) {
+                list.push({
+                    key: 'shielded',
+                    icon: images.shielded,
+                    border: '#00bfff',
+                    roundsLeft: copBuff.roundsLeft || 0,
+                    totalDuration: copBuff.totalRounds || copBuff.roundsLeft || 4,
+                    endTimeMs: copBuff.endTimeMs,
+                    totalDurationMs: copBuff.totalDurationMs
+                });
+            } else if (d <= 2.25) {
+                list.push({
+                    key: 'shielded_partial',
+                    icon: images.shielded_partial,
+                    border: '#00bfff',
+                    roundsLeft: copBuff.roundsLeft || 0,
+                    totalDuration: copBuff.totalRounds || copBuff.roundsLeft || 4,
+                    endTimeMs: copBuff.endTimeMs,
+                    totalDurationMs: copBuff.totalDurationMs
+                });
+            }
+        }
     }
 
     return list.filter((eff, index, arr) => arr.findIndex(candidate => candidate.key === eff.key) === index);
@@ -445,6 +544,8 @@ export default function CombatGrid(props) {
                 const total = eff.totalDuration || 4;
                 const roundDurationMs = combatManager?.roundDurationMs || (combatManager?.gameSpeed === 'fast' ? 1000 : 2000);
                 const roundProgress = (combatManager?.roundTimeElapsedMs || 0) / roundDurationMs;
+                const currentTimeMs = Date.now();
+                const msRemaining = typeof eff.endTimeMs === 'number' ? Math.max(0, eff.endTimeMs - currentTimeMs) : null;
                 const preciseRoundsLeft = roundsLeft > 0 ? Math.max(0, roundsLeft - roundProgress) : 0;
                 const segmentedDuration = eff.stackDuration || 0;
                 const segmentedRoundsLeft = eff.segmented && segmentedDuration > 0
@@ -454,7 +555,10 @@ export default function CombatGrid(props) {
                     })()
                     : preciseRoundsLeft;
                 const pctBase = eff.segmented && segmentedDuration > 0 ? segmentedDuration : total;
-                const pct = pctBase > 0 ? Math.min(100, Math.max(0, (segmentedRoundsLeft / pctBase) * 100)) : 0;
+                let pct = pctBase > 0 ? Math.min(100, Math.max(0, (segmentedRoundsLeft / pctBase) * 100)) : 0;
+                if (!eff.segmented && msRemaining !== null && eff.totalDurationMs) {
+                    pct = Math.min(100, Math.max(0, (msRemaining / eff.totalDurationMs) * 100));
+                }
                 // Radial cooldown sweep math: radius=5, circumference=31.42
                 const dashOffset = (pct / 100) * 31.42;
                 const coords = getRadialLineCoordsFromPct(pct);
@@ -570,6 +674,12 @@ export default function CombatGrid(props) {
         if (!coords) return null;
         const xPos = tilePos(coords.x);
         const yPos = tilePos(coords.y);
+        const liveFighter = combatManager.getCombatant(fighter.id) || details || fighter;
+        const berserkerBuffActive = Array.isArray(liveFighter.activeBuffs)
+            && liveFighter.activeBuffs.some(b => b && ['barbarian_berserker', 'berserker'].includes((b.name || '').toLowerCase().replace(/\s+/g, '_')));
+        const fighterSleepDebuff = Array.isArray(liveFighter.activeDebuffs)
+            && liveFighter.activeDebuffs.some(d => d && d.name && ['sleep', 'sleep_spell'].includes(d.name.toLowerCase()) && (d.roundsLeft || 0) > 0);
+        const isAsleepFighter = !!liveFighter.asleep || (liveFighter.sleepRounds || 0) > 0 || fighterSleepDebuff;
         const activeLeapAnim = activeAnimations.find((anim) => {
             if (anim.type !== 'leap_attack_jump') return false;
             if (anim.sourceUnitId) return anim.sourceUnitId === fighter.id;
@@ -589,7 +699,7 @@ export default function CombatGrid(props) {
             details?.wounded ? (getHitAnimation ? getHitAnimation(details) : '') : '',
             details?.wounded ? 'hit-flash' : '',
             details?.facing === 'right' ? 'reversed' : '',
-            details?.stunned ? 'stunned' : '',
+            (details?.stunned && !isAsleepFighter) ? 'stunned' : '',
             isDisintegrating ? 'disintegrate-shaking' : '',
         ].filter(Boolean).join(' ');
 
@@ -602,9 +712,9 @@ export default function CombatGrid(props) {
             facingClass, verticalFacingClass,
             details?.locked ? 'locked' : '',
             details?.chargingUpActive ? 'charging-up' : '',
-            details?.berserkerActive && details?.feared && !details?.stunned ? 'berserk-feared' : '',
-            details?.berserkerActive && (!details?.feared || details?.stunned) ? 'berserk-active' : '',
-            !details?.berserkerActive && details?.feared ? 'feared' : '',
+            berserkerBuffActive && details?.feared && !details?.stunned ? 'berserk-feared' : '',
+            berserkerBuffActive && (!details?.feared || details?.stunned) ? 'berserk-active' : '',
+            !berserkerBuffActive && details?.feared ? 'feared' : '',
             combatManager.getCombatant(fighter.id)?.shieldWallActive ? 'shield-wall-active' : '',
             details?.drained ? 'drained' : '',
             details?.regenerating ? 'regenerating' : '',
@@ -641,10 +751,11 @@ export default function CombatGrid(props) {
                         position: 'relative',
                         pointerEvents: 'auto',
                         overflow: 'visible',
-                        animation: activeLeapAnim ? 'barbarianLeapTravel 1.65s ease-in-out' : undefined,
+                        animation: activeLeapAnim ? 'barbarianLeapTravel 1.65s cubic-bezier(0.22, 0.61, 0.36, 1) both' : undefined,
                         '--leap-dx': activeLeapAnim ? `${activeLeapAnim.dx}px` : '0px',
                         '--leap-dy': activeLeapAnim ? `${activeLeapAnim.dy}px` : '0px',
                         transformOrigin: '50% 50%',
+                        willChange: activeLeapAnim ? 'transform' : 'auto',
                         zIndex: activeLeapAnim ? 4500 : undefined,
                     }}
                 >
@@ -660,7 +771,7 @@ export default function CombatGrid(props) {
                                 (details?.berserkerActive && details?.feared && !details?.stunned) ? 'brightness(1.18)' : ''
                             ].filter(Boolean).join(' '),
                             zIndex: 300,
-                            animation: (details?.stunned && !details?.dead)
+                            animation: (details?.stunned && !isAsleepFighter && !details?.dead)
                                 ? 'stunWobble 0.6s ease-in-out infinite'
                                 : ((details?.wounded && !details?.dead)
                                     ? 'BulgePortrait var(--portrait-animation-duration, 420ms) var(--portrait-animation-timing, cubic-bezier(.2,.8,.2,1)) forwards'
@@ -680,16 +791,7 @@ export default function CombatGrid(props) {
                     />
                     {details?.wounded && <div className="hit-flash-overlay" />}
                     {(() => {
-                        const liveUnit = combatManager.getCombatant(fighter.id) || fighter;
-                        const getDebuffRounds = (name) => {
-                            if (Array.isArray(liveUnit.activeDebuffs)) {
-                                const match = liveUnit.activeDebuffs.find(d => d && d.name && d.name.toLowerCase() === name.toLowerCase());
-                                return match ? match.roundsLeft || 0 : 0;
-                            }
-                            return 0;
-                        };
-                        const isAsleep = getDebuffRounds('sleep') > 0 || getDebuffRounds('sleep_spell') > 0;
-                        if (isAsleep && !details?.dead) {
+                        if (isAsleepFighter && !details?.dead) {
                             return (
                                 <>
                                     <div style={{ position: 'absolute', right: '15%', top: '20%', color: '#90caf9', fontSize: '18px', fontWeight: 'bold', fontFamily: 'monospace', animation: 'zzzFloat 2s infinite', textShadow: '0 0 4px rgba(0,0,0,0.8)', zIndex: 320 }}>Z</div>
@@ -727,7 +829,7 @@ export default function CombatGrid(props) {
                             </div>
                         ) : null}
                     </div>
-                    {details?.stunned && !details?.dead && (
+                    {details?.stunned && !isAsleepFighter && !details?.dead && (
                         <div style={{
                             position: 'absolute',
                             top: '-12px',
@@ -857,6 +959,7 @@ export default function CombatGrid(props) {
                 {(() => {
                     const hasPerceiveActive = details && activeAnimations.some(anim => anim.type === 'perceive_anim' && Math.floor(anim.srcPx.x / 102) === details.coordinates.x && Math.floor(anim.srcPx.y / 102) === details.coordinates.y);
                     const hasEnergyDrainActive = details && activeAnimations.some(anim => anim.type === 'energy_drain_beam' && Math.floor(anim.tgtPx.x / 102) === details.coordinates.x && Math.floor(anim.tgtPx.y / 102) === details.coordinates.y);
+                    const hasMeditateActive = details && activeAnimations.some(anim => anim.type === 'monk_meditate' && anim.srcPx && Math.floor(anim.srcPx.x / 102) === details.coordinates.x && Math.floor(anim.srcPx.y / 102) === details.coordinates.y);
                     const hasCrimsonSightActive = details && activeAnimations.some(anim => anim.type === 'crimson_sight_anim' && Math.floor(anim.tgtPx.x / 102) === details.coordinates.x && Math.floor(anim.tgtPx.y / 102) === details.coordinates.y);
 
                     return (
@@ -895,6 +998,24 @@ export default function CombatGrid(props) {
                                     boxShadow: '0 0 10px #ff00ff',
                                     zIndex: 320,
                                     animation: 'hoverFloat 1.5s ease-in-out forwards'
+                                }} />
+                            )}
+                            {hasMeditateActive && (
+                                <div style={{
+                                    position: 'absolute',
+                                    top: '-14px',
+                                    left: '50%',
+                                    transform: 'translateX(-50%)',
+                                    width: '28px',
+                                    height: '28px',
+                                    borderRadius: '4px',
+                                    border: '2px solid #ffdd57',
+                                    backgroundImage: `url(${images.monk_meditate})`,
+                                    backgroundSize: 'cover',
+                                    backgroundPosition: 'center',
+                                    boxShadow: '0 0 10px #ffdd57',
+                                    zIndex: 320,
+                                    animation: 'hoverFloat 1.8s ease-in-out forwards'
                                 }} />
                             )}
                             {hasCrimsonSightActive && (
@@ -947,6 +1068,10 @@ export default function CombatGrid(props) {
         const topPos = yPos + vOffset;
 
         const isDisintegrating = activeAnimations.some(a => a.type === 'disintegrate_beam' && a.tgtPx && Math.abs(a.tgtPx.x - (leftPos + width/2)) < 15 && Math.abs(a.tgtPx.y - (topPos + height/2)) < 15);
+        const liveMonster = combatManager.getCombatant(unit.id) || unit;
+        const monsterSleepDebuff = Array.isArray(liveMonster.activeDebuffs)
+            && liveMonster.activeDebuffs.some(d => d && d.name && ['sleep', 'sleep_spell'].includes(d.name.toLowerCase()) && (d.roundsLeft || 0) > 0);
+        const isAsleepMonster = !!liveMonster.asleep || (liveMonster.sleepRounds || 0) > 0 || monsterSleepDebuff;
         // All state classes go on unit-tile — not on any full-width wrapper
         const unitTileClasses = [
             'unit-tile',
@@ -957,7 +1082,7 @@ export default function CombatGrid(props) {
             unit.wounded ? hitAnim : '',
             unit.wounded ? 'hit-flash' : '',
             unit.facing === 'right' ? 'reversed' : '',
-            unit.stunned ? 'stunned' : '',
+            (unit.stunned && !isAsleepMonster) ? 'stunned' : '',
             isDisintegrating ? 'disintegrate-shaking' : '',
         ].filter(Boolean).join(' ');
 
@@ -968,7 +1093,7 @@ export default function CombatGrid(props) {
             greetingInProcess ? 'enlarged' : '',
             unit.active ? 'active' : '',
             portraitHoveredId === unit.id ? 'hover-linked-target' : '',
-            unit.bifurcating ? 'bifurcatingAnimation' : (isDead ? 'dead monsterDeadAnimation' : ''),
+            unit.bifurcating ? 'bifurcatingAnimation' : (isDead ? (unit.type === 'mummy' || unit.key === 'mummy' ? 'dead mummyDeadAnimation' : 'dead monsterDeadAnimation') : ''),
             unit.isBifurcateSmall ? 'bifurcate-copy' : '',
             unit.isBifurcateCopy ? 'bifurcate-copy-spawning' : '',
             unit.missed ? (unit.facing === 'right' ? 'missed-reversed' : 'missed') : '',
@@ -1024,7 +1149,7 @@ export default function CombatGrid(props) {
                             height: '100%',
                             transform: 'none', // skip CSS transform scale(2)
                             borderRadius: '0',
-                            animation: (unit.stunned && !isDead)
+                            animation: (unit.stunned && !isAsleepMonster && !isDead)
                                 ? 'stunWobble 0.6s ease-in-out infinite'
                                 : ((unit.wounded && !isDead)
                                     ? 'BulgePortrait var(--portrait-animation-duration, 420ms) var(--portrait-animation-timing, cubic-bezier(.2,.8,.2,1)) forwards'
@@ -1043,16 +1168,7 @@ export default function CombatGrid(props) {
                         {SHOW_MONSTER_IDS ? unit.id : null}
                         {unit.wounded && <div className="hit-flash-overlay" />}
                         {(() => {
-                            const liveUnit = combatManager.getCombatant(unit.id) || unit;
-                            const getDebuffRounds = (name) => {
-                                if (Array.isArray(liveUnit.activeDebuffs)) {
-                                    const match = liveUnit.activeDebuffs.find(d => d && d.name && d.name.toLowerCase() === name.toLowerCase());
-                                    return match ? match.roundsLeft || 0 : 0;
-                                }
-                                return 0;
-                            };
-                            const isAsleep = getDebuffRounds('sleep') > 0 || getDebuffRounds('sleep_spell') > 0;
-                            if (isAsleep && !isDead) {
+                            if (isAsleepMonster && !isDead) {
                                 return (
                                     <>
                                         <div style={{ position: 'absolute', right: '15%', top: '20%', color: '#90caf9', fontSize: '18px', fontWeight: 'bold', fontFamily: 'monospace', animation: 'zzzFloat 2s infinite', textShadow: '0 0 4px rgba(0,0,0,0.8)', zIndex: 320 }}>Z</div>
@@ -1064,7 +1180,7 @@ export default function CombatGrid(props) {
                             return null;
                         })()}
                     </div>
-                    {unit.stunned && !isDead && (
+                    {unit.stunned && !isAsleepMonster && !isDead && (
                         <div style={{
                             position: 'absolute',
                             top: '-12px',
@@ -1359,24 +1475,53 @@ export default function CombatGrid(props) {
             );
         }
 
+        if (anim.type === 'fire_secondary_ring' && anim.tgtPx) {
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: `${anim.tgtPx.x}px`,
+                    top: `${anim.tgtPx.y}px`,
+                    width: '22px',
+                    height: '22px',
+                    borderRadius: '50%',
+                    border: '3px solid rgba(255, 140, 0, 0.95)',
+                    boxShadow: '0 0 16px rgba(255, 140, 0, 0.85), 0 0 28px rgba(255, 106, 0, 0.65)',
+                    transform: 'translate(-50%, -50%)',
+                    pointerEvents: 'none',
+                    zIndex: 4460,
+                    animation: 'annihilationRing 0.5s cubic-bezier(0.1, 0.8, 0.3, 1) forwards'
+                }} />
+            );
+        }
+
         if (anim.type === 'magic_missile_projectile' && anim.srcPx && anim.tgtPx) {
+            const durationS = anim.duration ? anim.duration / 1000 : 0.4;
             return (
                 <div key={key} style={{
                     position: 'absolute',
                     left: `${anim.srcPx.x}px`,
                     top: `${anim.srcPx.y}px`,
-                    width: '16px',
-                    height: '16px',
-                    borderRadius: '50%',
-                    background: 'radial-gradient(circle, #fff 0%, #9b59b6 60%, transparent 100%)',
-                    boxShadow: '0 0 8px #9b59b6, 0 0 16px #6c3483',
-                    transform: 'translate(-50%, -50%)',
+                    width: '18px',
+                    height: '18px',
                     pointerEvents: 'none',
                     zIndex: 4000,
-                    animation: 'fireballTravel 0.8s ease-in forwards',
+                    animation: `fireballTravel ${durationS}s linear forwards`,
                     '--fb-dx': `${anim.tgtPx.x - anim.srcPx.x}px`,
                     '--fb-dy': `${anim.tgtPx.y - anim.srcPx.y}px`,
-                }} />
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                }}>
+                    <div style={{
+                        width: '18px',
+                        height: '18px',
+                        borderRadius: '50%',
+                        border: '2px solid #ffffff',
+                        background: 'radial-gradient(circle, #ffffff 15%, #d946ef 45%, #701a75 80%)',
+                        boxShadow: '0 0 10px #d946ef, 0 0 20px #701a75, inset 0 0 4px #ffffff',
+                        animation: 'missileGlow 0.15s ease-in-out infinite alternate',
+                    }} />
+                </div>
             );
         }
 
@@ -1426,18 +1571,65 @@ export default function CombatGrid(props) {
                     position: 'absolute',
                     left: `${anim.srcPx.x}px`,
                     top: `${anim.srcPx.y}px`,
-                    width: '26px',
-                    height: '26px',
-                    borderRadius: '50%',
-                    background: 'radial-gradient(circle, #d8f3dc 0%, #70e000 50%, #38b000 100%)',
-                    boxShadow: '0 0 12px #70e000, 0 0 24px #38b000',
-                    transform: 'translate(-50%, -50%)',
+                    width: '40px',
+                    height: '40px',
                     pointerEvents: 'none',
                     zIndex: 4000,
-                    animation: 'fireballTravel 0.7s ease-in forwards',
+                    animation: 'fireballTravel 0.7s linear forwards',
                     '--fb-dx': `${anim.tgtPx.x - anim.srcPx.x}px`,
                     '--fb-dy': `${anim.tgtPx.y - anim.srcPx.y}px`,
-                }} />
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                }}>
+                    {/* Intermediate wrapper that applies the vertical lob translation */}
+                    <div style={{
+                        animation: 'acidBlastLobY 0.7s ease-in-out forwards',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                    }}>
+                        {/* Rotated wrapper so the projectile graphic faces the direction of travel */}
+                        <div style={{
+                            transform: `rotate(${anim.angle}deg)`,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}>
+                            {/* Conical Bubble Projectile Graphic */}
+                            <div style={{
+                                position: 'relative',
+                                width: '45px',
+                                height: '40px',
+                                filter: 'drop-shadow(0 0 6px #39ff14) drop-shadow(0 0 12px #38b000)'
+                            }}>
+                                {/* Front tip of the cone (small bubbles) */}
+                                <div style={{ position: 'absolute', right: '1px', top: '15px', width: '7px', height: '7px', borderRadius: '50%', background: 'radial-gradient(circle, #adff2f 10%, #39ff14 80%)', opacity: 0.95, animation: 'bubbleWobble 0.2s ease-in-out infinite' }} />
+                                <div style={{ position: 'absolute', right: '5px', top: '18px', width: '4px', height: '4px', borderRadius: '50%', background: '#adff2f', opacity: 0.85, animation: 'bubbleWobbleAlt 0.18s ease-in-out infinite 0.05s' }} />
+                                <div style={{ position: 'absolute', right: '6px', top: '12px', width: '5px', height: '5px', borderRadius: '50%', background: '#adff2f', opacity: 0.85, animation: 'bubbleWobble 0.22s ease-in-out infinite 0.1s' }} />
+                                
+                                {/* Mid-front section (medium-small bubbles) */}
+                                <div style={{ position: 'absolute', right: '10px', top: '9px', width: '10px', height: '10px', borderRadius: '50%', background: 'radial-gradient(circle, #39ff14 20%, #38b000 80%)', opacity: 0.9, animation: 'bubbleWobbleAlt 0.25s ease-in-out infinite 0.03s' }} />
+                                <div style={{ position: 'absolute', right: '10px', top: '21px', width: '9px', height: '9px', borderRadius: '50%', background: 'radial-gradient(circle, #39ff14 20%, #38b000 80%)', opacity: 0.9, animation: 'bubbleWobble 0.23s ease-in-out infinite 0.08s' }} />
+                                
+                                {/* Mid section (medium-large bubbles) */}
+                                <div style={{ position: 'absolute', right: '18px', top: '5px', width: '13px', height: '13px', borderRadius: '50%', background: 'radial-gradient(circle, #39ff14 20%, #38b000 80%)', opacity: 0.85, animation: 'bubbleWobble 0.3s ease-in-out infinite 0.12s' }} />
+                                <div style={{ position: 'absolute', right: '18px', top: '22px', width: '12px', height: '12px', borderRadius: '50%', background: 'radial-gradient(circle, #39ff14 20%, #38b000 80%)', opacity: 0.85, animation: 'bubbleWobbleAlt 0.28s ease-in-out infinite 0.05s' }} />
+                                <div style={{ position: 'absolute', right: '16px', top: '13px', width: '16px', height: '16px', borderRadius: '50%', background: 'radial-gradient(circle, #adff2f 10%, #38b000 80%)', opacity: 0.95, animation: 'bubbleWobble 0.26s ease-in-out infinite 0.02s' }} />
+                                
+                                {/* Back tail of the cone (largest bubbles and dispersion) */}
+                                <div style={{ position: 'absolute', left: '4px', top: '2px', width: '11px', height: '11px', borderRadius: '50%', background: 'radial-gradient(circle, #39ff14 20%, #38b000 80%)', opacity: 0.85, animation: 'bubbleWobbleAlt 0.32s ease-in-out infinite 0.15s' }} />
+                                <div style={{ position: 'absolute', left: '4px', top: '27px', width: '10px', height: '10px', borderRadius: '50%', background: 'radial-gradient(circle, #39ff14 20%, #38b000 80%)', opacity: 0.85, animation: 'bubbleWobble 0.34s ease-in-out infinite 0.07s' }} />
+                                <div style={{ position: 'absolute', left: '8px', top: '10px', width: '18px', height: '18px', borderRadius: '50%', background: 'radial-gradient(circle, #adff2f 10%, #38b000 80%)', opacity: 0.95, animation: 'bubbleWobbleAlt 0.24s ease-in-out infinite 0.1s' }} />
+                                
+                                {/* Scattered tiny bubbles at the tail/perimeters */}
+                                <div style={{ position: 'absolute', left: '0px', top: '16px', width: '6px', height: '6px', borderRadius: '50%', background: '#adff2f', opacity: 0.8, animation: 'bubbleWobble 0.2s ease-in-out infinite 0.18s' }} />
+                                <div style={{ position: 'absolute', left: '10px', top: '0px', width: '4px', height: '4px', borderRadius: '50%', background: '#adff2f', opacity: 0.8, animation: 'bubbleWobbleAlt 0.22s ease-in-out infinite 0.04s' }} />
+                                <div style={{ position: 'absolute', left: '15px', top: '34px', width: '5px', height: '5px', borderRadius: '50%', background: '#adff2f', opacity: 0.8, animation: 'bubbleWobble 0.19s ease-in-out infinite 0.11s' }} />
+                            </div>
+                        </div>
+                    </div>
+                </div>
             );
         }
 
@@ -1449,20 +1641,43 @@ export default function CombatGrid(props) {
                     top: `${anim.tgtPx.y}px`,
                     width: '70px',
                     height: '70px',
-                    borderRadius: '50%',
+                    borderRadius: '42% 56% 52% 48% / 48% 52% 48% 52%',
                     background: 'radial-gradient(circle, #70e000 20%, #38b000 70%, transparent 100%)',
                     boxShadow: '0 0 25px #38b000',
                     transform: 'translate(-50%, -50%)',
                     pointerEvents: 'none',
                     zIndex: 4100,
+                    opacity: 0.5,
                     animation: 'explode 0.3s ease-out forwards',
                 }} />
             );
         }
+
+        if (anim.type === 'acid_secondary_ring' && anim.tgtPx) {
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: `${anim.tgtPx.x}px`,
+                    top: `${anim.tgtPx.y}px`,
+                    width: '20px',
+                    height: '20px',
+                    borderRadius: '50%',
+                    border: '2px solid rgba(112, 224, 0, 0.95)',
+                    boxShadow: '0 0 14px rgba(112, 224, 0, 0.8), 0 0 24px rgba(56, 176, 0, 0.6)',
+                    transform: 'translate(-50%, -50%)',
+                    pointerEvents: 'none',
+                    zIndex: 4120,
+                    animation: 'annihilationRing 0.45s cubic-bezier(0.1, 0.8, 0.3, 1) forwards'
+                }} />
+            );
+        }
         if (anim.type === 'generic_projectile' && anim.srcPx && anim.tgtPx) {
+            const isArrow = ['loose', 'execute', 'deadeye_shot'].includes(anim.subtype);
             let projectileImage = images.barbarian_axe_throw || images.axe_throw || images.axe || '';
             if (anim.subtype === 'spear_throw') {
                 projectileImage = images.spear || '';
+            } else if (isArrow) {
+                projectileImage = images.bow_and_arrow || '';
             }
             return (
                 <div key={key} style={{
@@ -1471,16 +1686,76 @@ export default function CombatGrid(props) {
                     top: `${anim.srcPx.y}px`,
                     width: '32px',
                     height: '32px',
-                    backgroundImage: projectileImage ? `url(${projectileImage})` : 'none',
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center',
-                    transform: 'translate(-50%, -50%)',
                     pointerEvents: 'none',
                     zIndex: 4000,
-                    animation: 'fireballTravel 0.7s linear forwards, spinAxis 0.7s linear infinite',
+                    animation: 'fireballTravel 0.7s linear forwards',
                     '--fb-dx': `${anim.tgtPx.x - anim.srcPx.x}px`,
                     '--fb-dy': `${anim.tgtPx.y - anim.srcPx.y}px`,
-                }} />
+                }}>
+                    <div style={{
+                        width: '100%',
+                        height: '100%',
+                        backgroundImage: projectileImage ? `url(${projectileImage})` : 'none',
+                        backgroundSize: 'contain',
+                        backgroundRepeat: 'no-repeat',
+                        backgroundPosition: 'center',
+                        transform: `translate(-50%, -50%) rotate(${isArrow ? anim.angle : 0}deg)`,
+                        animation: isArrow ? 'none' : 'spinAxis 0.7s linear infinite'
+                    }} />
+                </div>
+            );
+        }
+
+        if (anim.type === 'circle_of_protection' && anim.srcPx) {
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: `${anim.srcPx.x}px`,
+                    top: `${anim.srcPx.y}px`,
+                    width: '400px',
+                    height: '400px',
+                    transform: 'translate(-50%, -50%)',
+                    zIndex: 2000,
+                    pointerEvents: 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                }}>
+                  <div style={{
+                    width: '100%',
+                    height: '100%',
+                    borderRadius: '50%',
+                    border: '5px solid rgba(0, 191, 255, 0.75)',
+                    boxShadow: '0 0 35px rgba(0, 191, 255, 0.45), inset 0 0 35px rgba(0, 191, 255, 0.15)',
+                    position: 'relative',
+                    animation: 'spin-slow 20s linear infinite',
+                  }}>
+                    {['\u16A0', '\u16A2', '\u16A6', '\u16A8', '\u16B1', '\u16B2', '\u16B7', '\u16B9', '\u16BA', '\u16C1', '\u16C3', '\u16C8'].map((rune, i) => {
+                      const angle = (i / 12) * 360;
+                      const radius = 42;
+                      const rad = (angle - 90) * (Math.PI / 180);
+                      return (
+                        <span
+                          key={i}
+                          style={{
+                            position: 'absolute',
+                            left: `${50 + radius * Math.cos(rad)}%`,
+                            top: `${50 + radius * Math.sin(rad)}%`,
+                            transform: `translate(-50%, -50%) rotate(${angle}deg)`,
+                            color: 'rgba(0, 191, 255, 0.85)',
+                            fontSize: '22px',
+                            fontWeight: 'bold',
+                            textShadow: '0 0 10px rgba(0, 191, 255, 0.65)',
+                            pointerEvents: 'none',
+                            userSelect: 'none'
+                          }}
+                        >
+                          {rune}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
             );
         }
 
@@ -1532,14 +1807,14 @@ export default function CombatGrid(props) {
                     left: `${anim.srcPx.x}px`,
                     top: `${anim.srcPx.y}px`,
                     width: `${anim.length}px`,
-                    height: '10px',
-                    background: 'linear-gradient(to right, rgba(142, 45, 226, 0.2), #ff007f, #fff, #ff007f, rgba(142, 45, 226, 0.2))',
-                    boxShadow: '0 0 12px #ff007f, 0 0 24px #8e2de2',
+                    height: '12px',
+                    background: 'linear-gradient(to right, rgba(123, 44, 191, 0.18), #8e2de2 25%, #c77dff 50%, #8e2de2 75%, rgba(123, 44, 191, 0.18))',
+                    boxShadow: '0 0 14px #7b2cbf, 0 0 28px #8e2de2, 0 0 42px rgba(199, 125, 255, 0.7)',
                     transformOrigin: '0 50%',
                     transform: `rotate(${anim.angle}deg) translateY(-50%)`,
                     zIndex: 4000,
                     pointerEvents: 'none',
-                    filter: 'blur(1px)',
+                    filter: 'blur(0.8px) saturate(1.2)',
                     animation: 'pinkBeamPulse 1.2s ease-out forwards',
                 }} />
             );
@@ -1706,6 +1981,35 @@ export default function CombatGrid(props) {
             return null;
         }
 
+        if (anim.type === 'vortex' && anim.tgtPx) {
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: `${anim.tgtPx.x}px`,
+                    top: `${anim.tgtPx.y}px`,
+                    width: `${TILE_SIZE * 3}px`,
+                    height: `${TILE_SIZE * 3}px`,
+                    transform: 'translate(-50%, -50%)',
+                    borderRadius: '50%',
+                    backgroundImage: `url(${images['wizard_vortex']})`,
+                    backgroundSize: 'contain',
+                    backgroundRepeat: 'no-repeat',
+                    backgroundPosition: 'center',
+                    pointerEvents: 'none',
+                    zIndex: 4400,
+                    opacity: 0.5,
+                    maskImage: 'radial-gradient(circle, rgba(0,0,0,1) 45%, rgba(0,0,0,0) 70%)',
+                    WebkitMaskImage: 'radial-gradient(circle, rgba(0,0,0,1) 45%, rgba(0,0,0,0) 70%)',
+                    filter: 'drop-shadow(0 0 12px #7b2cbf) drop-shadow(0 0 25px #8e2de2)',
+                    animation: 'combatVortexSpin 4s linear infinite'
+                }} />
+            );
+        }
+
+        if (anim.type === 'monk_meditate' && anim.srcPx) {
+            return null;
+        }
+
         if ((anim.type === 'monk_punch_effect' || anim.type === 'monk_force_punch_effect') && anim.tgtPx) {
             return (
                 <div key={key} style={{
@@ -1766,6 +2070,96 @@ export default function CombatGrid(props) {
                         }}
                     />
                 </div>
+            );
+        }
+
+        if (anim.type === 'lightning_beam' && anim.tgtPx) {
+            const width = 100;
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: `${anim.tgtPx.x - width / 2}px`,
+                    top: 0,
+                    width: `${width}px`,
+                    height: `${anim.tgtPx.y}px`,
+                    pointerEvents: 'none',
+                    zIndex: 4000,
+                    overflow: 'hidden'
+                }}>
+                    <svg
+                        style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: '100%',
+                            filter: 'drop-shadow(0 0 4px #00ffff) drop-shadow(0 0 8px #ffffff)'
+                        }}
+                        viewBox="0 0 100 100"
+                        preserveAspectRatio="none"
+                    >
+                        <polyline
+                            points="30,0 20,40 50,35 25,75 45,70 15,100"
+                            fill="none"
+                            stroke="#ffffff"
+                            strokeWidth="3.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            style={{
+                                animation: 'lightningFlash 0.15s ease-in-out infinite'
+                            }}
+                        />
+                        <polyline
+                            points="75,0 85,35 60,30 80,65 55,60 70,100"
+                            fill="none"
+                            stroke="#00ffff"
+                            strokeWidth="3"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            style={{
+                                animation: 'lightningFlash 0.15s ease-in-out infinite 0.05s'
+                            }}
+                        />
+                        <polyline
+                            points="50,10 40,45 65,40 45,75 55,70 35,90"
+                            fill="none"
+                            stroke="#ffffff"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            style={{
+                                animation: 'lightningFlash 0.15s ease-in-out infinite 0.1s'
+                            }}
+                        />
+                    </svg>
+                    <div style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                        backgroundColor: 'rgba(0, 255, 255, 0.25)',
+                        animation: 'lightningBgFlash 0.12s ease-in-out infinite'
+                    }} />
+                </div>
+            );
+        }
+
+        if (anim.type === 'lightning_hit' && anim.tgtPx) {
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: `${anim.tgtPx.x - 50}px`,
+                    top: `${anim.tgtPx.y - 50}px`,
+                    width: '100px',
+                    height: '100px',
+                    borderRadius: '50%',
+                    background: 'radial-gradient(circle, rgba(255,255,255,1) 0%, rgba(0,255,255,0.8) 40%, transparent 70%)',
+                    boxShadow: '0 0 20px #00ffff, 0 0 40px #ffffff',
+                    pointerEvents: 'none',
+                    zIndex: 4100,
+                    animation: 'explosionPop 0.4s ease-out forwards',
+                }} />
             );
         }
 

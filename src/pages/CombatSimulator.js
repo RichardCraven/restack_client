@@ -5,6 +5,45 @@ import { CrewManager } from '../utils/crew-manager'
 import { Redirect} from "react-router-dom";
 import MonsterBattle from './sub-views/MonsterBattle';
 import { CombatManagerRedux } from '../utils/combat-manager-redux';
+import skillsMatrix from '../utils/skills-matrix';
+
+const filterSpecialsByTier = (specials, selectedTier) => {
+    // Resolve all specials to their detail object to know their tier
+    const resolved = specials.map(s => {
+        const key = typeof s === 'string' ? s : (s.id || s.key || '');
+        const match = skillsMatrix[key];
+        return match ? { ...match, original: s } : { id: key, tier: 1, original: s };
+    });
+
+    const tier1List = resolved.filter(s => s.tier === 1);
+    const tier2List = resolved.filter(s => s.tier === 2);
+    const tier3List = resolved.filter(s => s.tier === 3);
+    const tier4List = resolved.filter(s => s.tier === 4);
+
+    const result = [];
+
+    if (selectedTier === 1) {
+        // Up to 4 tier-1 skills
+        result.push(...tier1List.slice(0, 4));
+    } else if (selectedTier === 2) {
+        // Up to 3 tier-1, 1 tier-2 skill
+        result.push(...tier1List.slice(0, 3));
+        result.push(...tier2List.slice(0, 1));
+    } else if (selectedTier === 3) {
+        // Up to 2 tier-1, 1 tier-2, 1 tier-3 skill
+        result.push(...tier1List.slice(0, 2));
+        result.push(...tier2List.slice(0, 1));
+        result.push(...tier3List.slice(0, 1));
+    } else if (selectedTier === 4) {
+        // Up to 2 tier-1, 2 tier-2, 1 tier-3, 1 tier-4 skill
+        result.push(...tier1List.slice(0, 2));
+        result.push(...tier2List.slice(0, 2));
+        result.push(...tier3List.slice(0, 1));
+        result.push(...tier4List.slice(0, 1));
+    }
+
+    return result.map(s => s.original);
+};
 
 
 // import useScript from '../hooks/useScript.js'
@@ -54,6 +93,8 @@ class CrewManagerPage extends React.Component{
         ctrlDown: false,
         // Simulator-only: per-fighter target level (keyed by fighter type) and gear option
         fighterLevels: {},
+        fighterSkillTiers: {},
+        preppedCrew: [],
         outfitWithEquipment: true,
         useReduxCombat: true,
         // Enemy selection
@@ -146,6 +187,7 @@ class CrewManagerPage extends React.Component{
         selectedCrew,
         selectedCrewMember: selectedCrew[0],
         ...(savedDefaults?.fighterLevels ? { fighterLevels: savedDefaults.fighterLevels } : {}),
+        ...(savedDefaults?.fighterSkillTiers ? { fighterSkillTiers: savedDefaults.fighterSkillTiers } : {}),
         ...enemyState,
     })
     }
@@ -292,6 +334,7 @@ class CrewManagerPage extends React.Component{
         selectedMinionKeys: this.state.selectedMinionKeys,
         selectedCrewTypes: this.state.selectedCrew.filter(Boolean).map(m => m.type),
         fighterLevels: this.state.fighterLevels,
+        fighterSkillTiers: this.state.fighterSkillTiers,
     };
     storeMeta(meta);
     this.setState({ defaultEnemySaved: true });
@@ -355,6 +398,17 @@ class CrewManagerPage extends React.Component{
       }));
   }
 
+  getSimSkillTier = (type) => {
+      const { fighterSkillTiers } = this.state;
+      return (fighterSkillTiers && typeof fighterSkillTiers[type] === 'number') ? fighterSkillTiers[type] : 1;
+  }
+
+  setSimSkillTier = (type, tier) => {
+      this.setState(prev => ({
+          fighterSkillTiers: { ...prev.fighterSkillTiers, [type]: tier }
+      }));
+  }
+
   /**
    * Apply level-up bonuses (up to targetLevel) and optionally equip a weapon,
    * on a cloned crew member that is already in tempCrewManager.
@@ -388,21 +442,53 @@ class CrewManagerPage extends React.Component{
   }
 
   submit = async () => {
-      // Apply simulator level + gear to each selected crew member before combat starts
+      // Create a fresh clone of selectedCrew to keep original intact when returning or displaying
+      const clonedCrew = clone(this.state.selectedCrew);
+
+      // Apply simulator level + gear to each cloned crew member
       if (this.tempCrewManager) {
-          this.state.selectedCrew.forEach(member => {
-              if (member) this.applySimulatorPrep(member);
+          clonedCrew.forEach(member => {
+              if (member) {
+                  // Level up
+                  const targetLevel = this.getSimLevel(member.type);
+                  const currentLevel = typeof member.level === 'number' ? member.level : 0;
+                  for (let i = currentLevel; i < targetLevel; i++) {
+                      try { this.tempCrewManager.levelUp(member); } catch(e) {}
+                  }
+
+                  // Filter specials by selected skill tier
+                  const selectedTier = this.getSimSkillTier(member.type);
+                  member.specials = filterSpecialsByTier(member.specials, selectedTier);
+
+                  // Gear assignment
+                  if (this.state.outfitWithEquipment) {
+                      const tier = targetLevel >= 20 ? 3 : targetLevel >= 10 ? 2 : 1;
+                      try {
+                          const allWeapons = this.props.inventoryManager.weapons;
+                          const tierWeapons = Object.values(allWeapons).filter(w => w && w.tier === tier);
+                          if (tierWeapons.length > 0) {
+                              const weapon = clone(tierWeapons[Math.floor(Math.random() * tierWeapons.length)]);
+                              weapon.equippedBy = member.id;
+                              member.inventory = member.inventory || [];
+                              member.inventory = member.inventory.filter(i => !i || i.type !== 'weapon');
+                              member.inventory.push(weapon);
+                          }
+                      } catch(e) {}
+                  }
+              }
           });
       }
-      this.setMonster()
+
+      this.setMonster();
       if (this.state.useReduxCombat) {
           this.reduxCombatManager = new CombatManagerRedux();
       } else {
           this.reduxCombatManager = null;
       }
       this.setState({
+          preppedCrew: clonedCrew,
           crewSelected: true
-      })
+      });
   }
 clear = () => {
         // Clear only the simulator-local crew selection and temp manager; do not mutate global meta or the app's crewManager
@@ -648,6 +734,20 @@ combatKeyUpListener = (event) => {
                                     <button style={{padding:'0 5px', fontSize:'11px', lineHeight:'16px'}}
                                         onClick={() => this.setSimLevel(this.state.selectedCrew[i].type, 1)}>+</button>
                                 </div>}
+
+                                {this.state.selectedCrew[i] && <div className="sim-tier-control" style={{display:'flex', alignItems:'center', justifyContent:'center', gap:'4px', marginTop:'4px'}}>
+                                    <span style={{fontSize:'11px', color:'#ccc'}}>Tier:</span>
+                                    <select 
+                                        value={this.getSimSkillTier(this.state.selectedCrew[i].type)}
+                                        onChange={(e) => this.setSimSkillTier(this.state.selectedCrew[i].type, Number(e.target.value))}
+                                        style={{fontSize:'11px', padding:'1px 2px', background:'#222', color:'#fff', border:'1px solid #444', borderRadius:'3px'}}
+                                    >
+                                        <option value={1}>Tier 1</option>
+                                        <option value={2}>Tier 2</option>
+                                        <option value={3}>Tier 3</option>
+                                        <option value={4}>Tier 4</option>
+                                    </select>
+                                </div>}
                             </div>
                         })}
                         <div className="sim-gear-option" style={{marginTop:'10px', display:'flex', alignItems:'center', gap:'6px', color:'#ccc', fontSize:'12px'}}>
@@ -804,7 +904,7 @@ combatKeyUpListener = (event) => {
                 inventoryManager={this.props.inventoryManager}
                 animationManager={this.props.animationManager}
                 crewManager={this.tempCrewManager || this.props.crewManager || null}
-                crew={JSON.parse(JSON.stringify(this.state.selectedCrew)) || null}
+                crew={this.state.preppedCrew || null}
                 monster={this.state.monster ? JSON.parse(JSON.stringify(this.state.monster)) : null}
                 minions={this.state.minions ? JSON.parse(JSON.stringify(this.state.minions)) : null}
                 battleOver={this.battleOver || null}

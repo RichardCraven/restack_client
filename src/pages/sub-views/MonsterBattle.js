@@ -717,10 +717,9 @@ class MonsterBattle extends React.Component {
         const clonedBattleData = JSON.parse(JSON.stringify(battleData));
 
         // Ensure wizards have at least 3 "magic missile" spells available in their specialActions
-        // Only for simulation-originated battles, and only once per component instance.
-        if (this.props.isSimulation && !this._wizardSpellsEnsured) {
+        // Only for simulation-originated battles.
+        if (this.props.isSimulation) {
             this.ensureWizardSpells(clonedBattleData);
-            this._wizardSpellsEnsured = true;
         }
 
         // Normalize battleData entries to ensure UI rendering doesn't get tripped
@@ -849,7 +848,7 @@ class MonsterBattle extends React.Component {
                         type: 'spell',
                         subtype: 'magic missile',
                         name: 'magic missile',
-                        iconUrl: images['magic_missile_icon'] || images['magic_missile'] || '',
+                        iconUrl: (images['magic_missile_icon']?.default || images['magic_missile_icon']) || (images['magic_missile']?.default || images['magic_missile']) || '',
                         selected: false,
                         cooldown_position: 100
                     };
@@ -925,14 +924,23 @@ class MonsterBattle extends React.Component {
         // authoritative combatManager.combatants snapshot.
         let latestBattleData = (this.state.battleData && Object.keys(this.state.battleData).length) ? this.state.battleData : (this.props.combatManager && this.props.combatManager.combatants ? JSON.parse(JSON.stringify(this.props.combatManager.combatants)) : {});
 
-        this.props.overlayManager.reset();
-        this.props.combatManager.reset();
+        const executeTeardown = () => {
+            this.props.overlayManager.reset();
+            this.props.combatManager.reset();
 
-        if(this.props.isSimulation){
-            // exit simulation
-            this.props.exitSimulator();
-            return
+            if (this.props.isSimulation) {
+                // exit simulation
+                this.props.exitSimulator();
+                return;
+            }
+        };
+
+        if (this.props.isSimulation) {
+            setTimeout(executeTeardown, 2500);
+            return;
         }
+
+        executeTeardown();
 
         let experienceGained,
             goldGained,
@@ -2474,13 +2482,14 @@ class MonsterBattle extends React.Component {
                                             return (
                                                 <div key={i} className="interaction-tile-wrapper">
                                                     <div
-                                                        className={`interaction-tile special read-only ${isReady ? 'available' : ''}`}
+                                                        className={`interaction-tile special ${isReady ? 'available' : ''}`}
                                                         style={{
                                                             backgroundImage: iconUrl ? `url("${encodeURI(String(iconUrl).replace(/^['"]|['"]$/g, ''))}")` : 'none',
-                                                            cursor: 'default',
+                                                            cursor: 'pointer',
                                                             opacity: isReady ? 1 : 0.7,
                                                         }}
                                                         title={spec.name || sourceKey}
+                                                        onClick={() => this.specialTileClicked(spec)}
                                                     />
                                                     {cooldownPct > 0 && (
                                                          <svg 
@@ -2774,10 +2783,20 @@ class MonsterBattle extends React.Component {
                                         const group = grouped[type];
                                         const spellUnit = group[0];
                                         const count = group.length;
+                                        const rawIcon = spellUnit.iconUrl || spellUnit.icon;
+                                        let resolvedIconUrl = '';
+                                        if (rawIcon) {
+                                            if (typeof rawIcon === 'string') {
+                                                const mapped = images[rawIcon.trim()];
+                                                resolvedIconUrl = mapped ? (mapped.default || mapped) : rawIcon;
+                                            } else if (typeof rawIcon === 'object') {
+                                                resolvedIconUrl = rawIcon.default || rawIcon;
+                                            }
+                                        }
                                         return (
                                             <div key={type} className='interaction-tile-wrapper' style={{position: 'relative'}}>
                                                 <div
-                                                    style={{ backgroundImage: `url(${spellUnit.iconUrl}), radial-gradient(white 0%, black 60%)`, cursor: 'pointer' }}
+                                                    style={{ backgroundImage: resolvedIconUrl ? `url(${resolvedIconUrl}), radial-gradient(white 0%, black 60%)` : 'none', cursor: 'pointer' }}
                                                     className={`interaction-tile special ${spellUnit.selected ? 'selected' : ''}`}
                                                     onClick={() => this.fireSpell(spellUnit)}
                                                     onMouseEnter={() => this.spellTileHovered(spellUnit)}

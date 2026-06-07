@@ -110,6 +110,8 @@ export function AnimationManager(){
         inspire: { duration: 600, animationType: 'tile' },
         annihilation: { duration: 600, animationType: 'tile' },
         berserker: { duration: 600, animationType: 'tile' },
+        inner_fire: { duration: 600, animationType: 'tile' },
+        astral_focus: { duration: 600, animationType: 'tile' },
         meditate: { duration: 600, animationType: 'tile' },
         monk_meditate: { duration: 600, animationType: 'tile' },
         force_punch_flurry: { duration: 700, animationType: 'tile' },
@@ -1117,6 +1119,8 @@ export function AnimationManager(){
             case 'inspire':
             case 'annihilation':
             case 'berserker':
+            case 'inner_fire':
+            case 'astral_focus':
             case 'meditate':
             case 'monk_meditate':
             case 'force_punch_flurry':
@@ -1136,6 +1140,8 @@ export function AnimationManager(){
                 else if (type === 'inspire') iconKey = 'inspire';
                 else if (type === 'annihilation') iconKey = 'wizard_annihilation';
                 else if (type === 'berserker') iconKey = 'barbarian_berserker';
+                else if (type === 'inner_fire') iconKey = 'monk_inner_fire';
+                else if (type === 'astral_focus') iconKey = 'monk_astral_focus';
                 else if (type === 'meditate' || type === 'monk_meditate') iconKey = 'monk_meditate';
                 else if (type === 'force_punch_flurry' || type === 'monk_force_punch_flurry') iconKey = 'monk_force_punch_flurry';
                 else if (type === 'astral_projection' || type === 'monk_astral_projection') iconKey = 'monk_astral_projection';

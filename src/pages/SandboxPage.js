@@ -2695,6 +2695,18 @@ const SandboxPage = () => {
       setAnimating(true);
       setAnimationPhase('leap_landing');
 
+      const dx = targetPos.col - fighterPos.col;
+      const dy = targetPos.row - fighterPos.row;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      let adjCol = fighterPos.col;
+      let adjRow = fighterPos.row;
+      if (dist > 0) {
+        const colStep = Math.round(dx / dist);
+        const rowStep = Math.round(dy / dist);
+        adjCol = targetPos.col - colStep;
+        adjRow = targetPos.row - rowStep;
+      }
+
       // 1. Connection (at 600ms when leap landing completes)
       setTimeout(() => {
         setTargetShake(true);
@@ -2702,9 +2714,6 @@ const SandboxPage = () => {
         setTargetStunned(true);
 
         // Push target back 1 tile in direction of attack
-        const dx = targetPos.col - fighterPos.col;
-        const dy = targetPos.row - fighterPos.row;
-        const dist = Math.sqrt(dx * dx + dy * dy);
         if (dist > 0) {
           const pushX = Math.round(dx / dist) * 100;
           const pushY = Math.round(dy / dist) * 100;
@@ -2720,10 +2729,11 @@ const SandboxPage = () => {
         setTargetFlash(false);
       }, 950);
 
-      // 3. Clear lunge position, return to origin, and reset target position (at 1400ms)
+      // 3. Clear lunge position, return to adjacent, and reset target position (at 1400ms)
       setTimeout(() => {
         setAnimationPhase('return');
         setTargetPushback(null);
+        setFighterPos({ row: adjRow, col: adjCol });
       }, 1400);
 
       // 4. Return completes, end animation (at 1650ms)

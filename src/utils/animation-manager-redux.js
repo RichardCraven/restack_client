@@ -106,6 +106,10 @@ export class AnimationManagerRedux {
       case 'magic_missile':
         this._magicMissile(sourceCoords, targetCoords);
         break;
+      case 'lightning_strike':
+      case 'lightning':
+        this._lightning(sourceCoords, targetCoords);
+        break;
       case 'ice_blast':
       case 'reveal_weakness':
         this._iceBlast(sourceCoords, targetCoords);
@@ -137,10 +141,22 @@ export class AnimationManagerRedux {
       case 'sleep_spell':
         this._sleep(sourceCoords, targetCoords);
         break;
+      case 'vortex':
+        this._vortex(sourceCoords, targetCoords);
+        break;
+      case 'monk_meditate':
+      case 'meditate':
+        this._monkMeditate(sourceCoords, targetCoords);
+        break;
       case 'axe_throw':
       case 'deadeye_shot':
       case 'spear_throw':
+      case 'loose':
+      case 'execute':
         this._projectileThrow(sourceCoords, targetCoords, name);
+        break;
+      case 'circle_of_protection':
+        this._circleOfProtection(sourceCoords, targetCoords);
         break;
       case 'heal':
       case 'healing_hymn':
@@ -176,6 +192,8 @@ export class AnimationManagerRedux {
       'axe_throw',
       'deadeye_shot',
       'spear_throw',
+      'loose',
+      'execute',
       'energy_drain',
       'fireball',
       'fire_blast',
@@ -284,21 +302,55 @@ export class AnimationManagerRedux {
     setTimeout(() => {
       this._emit({ type: 'explosion', tgtPx, duration: 600 });
     }, 900);
+    setTimeout(() => {
+      this._emit({ type: 'fire_secondary_ring', tgtPx, duration: 500 });
+    }, 980);
   }
 
   _magicMissile(src, tgt) {
     const srcPx = this._px(src);
     const tgtPx = this._getImpactTargetPx(tgt);
-    const dx = tgtPx.x - srcPx.x;
-    const dy = tgtPx.y - srcPx.y;
-    const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+
+    const fireMissile = (delayTime, offsetY) => {
+      setTimeout(() => {
+        const adjustedTgtPx = {
+          x: tgtPx.x,
+          y: tgtPx.y + offsetY
+        };
+        const dx = adjustedTgtPx.x - srcPx.x;
+        const dy = adjustedTgtPx.y - srcPx.y;
+        const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+        this._emit({
+          type: 'magic_missile_projectile',
+          srcPx,
+          tgtPx: adjustedTgtPx,
+          angle,
+          duration: 400,
+        });
+      }, delayTime);
+    };
+
+    fireMissile(0, -15);
+    fireMissile(200, 0);
+    fireMissile(400, 15);
+  }
+
+  _lightning(src, tgt) {
+    const tgtPx = this._px(tgt);
+    // Emit lightning vertical beam
     this._emit({
-      type: 'magic_missile_projectile',
-      srcPx,
+      type: 'lightning_beam',
       tgtPx,
-      angle,
-      duration: 800,
+      duration: 700
     });
+    // Emit lightning hit burst (or background flash overlays)
+    setTimeout(() => {
+      this._emit({
+        type: 'lightning_hit',
+        tgtPx,
+        duration: 400
+      });
+    }, 150);
   }
 
   _iceBlast(src, tgt) {
@@ -335,6 +387,9 @@ export class AnimationManagerRedux {
     setTimeout(() => {
       this._emit({ type: 'poison_burst', tgtPx, duration: 500 });
     }, 600);
+    setTimeout(() => {
+      this._emit({ type: 'acid_secondary_ring', tgtPx, duration: 450 });
+    }, 690);
   }
 
   _swordSlash(src, tgt) {
@@ -375,6 +430,15 @@ export class AnimationManagerRedux {
       srcPx: this._px(src),
       tgtPx,
       duration: 800,
+    });
+  }
+
+  _circleOfProtection(src, tgt) {
+    const srcPx = this._px(src);
+    this._emit({
+      type: 'circle_of_protection',
+      srcPx,
+      duration: 8000,
     });
   }
 
@@ -510,6 +574,24 @@ export class AnimationManagerRedux {
     });
   }
 
+  _vortex(src, tgt) {
+    const tgtPx = this._getImpactTargetPx(tgt);
+    this._emit({
+      type: 'vortex',
+      tgtPx,
+      duration: 4000
+    });
+  }
+
+  _monkMeditate(src) {
+    const srcPx = this._px(src);
+    this._emit({
+      type: 'monk_meditate',
+      srcPx,
+      duration: 1800
+    });
+  }
+
   _disintegrate(src, tgt) {
     const tgtPx = this._getImpactTargetPx(tgt);
     this._emit({
@@ -531,13 +613,25 @@ export class AnimationManagerRedux {
   _leapAttack(src, tgt, sourceUnitId = null) {
     const srcPx = this._px(src);
     const tgtPx = this._px(tgt);
-    const dx = tgtPx.x - srcPx.x;
-    const dy = tgtPx.y - srcPx.y;
+    const dxFull = tgtPx.x - srcPx.x;
+    const dyFull = tgtPx.y - srcPx.y;
+    const dist = Math.sqrt(dxFull * dxFull + dyFull * dyFull);
+    let landPx = tgtPx;
+    if (dist > 0) {
+      const stepX = (dxFull / dist) * 102;
+      const stepY = (dyFull / dist) * 102;
+      landPx = {
+        x: tgtPx.x - stepX,
+        y: tgtPx.y - stepY
+      };
+    }
+    const dx = landPx.x - srcPx.x;
+    const dy = landPx.y - srcPx.y;
     this._emit({
       type: 'leap_attack_jump',
       sourceUnitId,
       srcPx,
-      tgtPx,
+      tgtPx: landPx,
       dx,
       dy,
       duration: 1650

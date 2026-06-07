@@ -41,7 +41,11 @@ export function MonsterManager() {
                 atk: 3,
                 def: 5,
                 speed: 11, // nimble, hard to pin down
-                willpower: 0
+                willpower: 0,
+                str: 3,
+                int: 2,
+                dex: 8,
+                fort: 3
             },
             level: 2,
             portrait: images['goblin_portrait'],
@@ -68,7 +72,11 @@ export function MonsterManager() {
                 atk: 5,
                 def: 7,
                 speed: 7, // shambling undead
-                willpower: 0
+                willpower: 0,
+                str: 4,
+                int: 1,
+                dex: 4,
+                fort: 5
             },
             level: 3,
             portrait: images['skeleton_portrait'],
@@ -96,7 +104,11 @@ export function MonsterManager() {
                 atk: 5,
                 def: 3,
                 speed: 10, // agile demon
-                willpower: 0
+                willpower: 0,
+                str: 4,
+                int: 6,
+                dex: 7,
+                fort: 4
             },
             level: 4,
             portrait: images['kabuki_demon_minion_portrait'],
@@ -124,7 +136,11 @@ export function MonsterManager() {
                 atk: 7,
                 def: 2,
                 speed: 8, // floating eyeball
-                willpower: 0
+                willpower: 0,
+                str: 3,
+                int: 7,
+                dex: 5,
+                fort: 4
             },
             level: 5,
             portrait: images['beholder_minion_portrait'],
@@ -153,7 +169,11 @@ export function MonsterManager() {
                 atk: 10,
                 def: 13,
                 speed: 5, // big lumbering brute
-                willpower: 0
+                willpower: 0,
+                str: 9,
+                int: 2,
+                dex: 3,
+                fort: 9
             },
             level: 6,
             portrait: images['troll_portrait'],
@@ -179,7 +199,11 @@ export function MonsterManager() {
                 atk: 10,
                 def: 13,
                 speed: 4, // slow ancient undead — easy to hit but very tanky
-                willpower: 0
+                willpower: 0,
+                str: 7,
+                int: 5,
+                dex: 2,
+                fort: 10
             },
             level: 6,
             portrait: images['mummy_portrait'],
@@ -207,7 +231,11 @@ export function MonsterManager() {
                 atk: 9,
                 def: 8,
                 speed: 12, // ghostly, nearly untouchable
-                willpower: 0
+                willpower: 0,
+                str: 3,
+                int: 7,
+                dex: 9,
+                fort: 4
             },
             level: 8,
             portrait: images['wraith_portrait'],
@@ -233,7 +261,11 @@ export function MonsterManager() {
                 atk: 9,
                 def: 11,
                 speed: 5, // massive but slow
-                willpower: 0
+                willpower: 0,
+                str: 8,
+                int: 2,
+                dex: 3,
+                fort: 8
             },
             level: 8,
             portrait: images['ogre_portrait'],
@@ -260,7 +292,11 @@ export function MonsterManager() {
                 atk: 8,
                 def: 9,
                 speed: 8, // serpentine, medium agility
-                willpower: 0
+                willpower: 0,
+                str: 6,
+                int: 5,
+                dex: 6,
+                fort: 6
             },
             level: 9,
             portrait: images['gorgon_portrait'],
@@ -287,7 +323,11 @@ export function MonsterManager() {
                 atk: 9,
                 def: 12,
                 speed: 13, // supernaturally fast
-                willpower: 0
+                willpower: 0,
+                str: 6,
+                int: 7,
+                dex: 10,
+                fort: 6
             },
             level: 10,
             portrait: images['vampire_portrait'],
@@ -315,7 +355,11 @@ export function MonsterManager() {
                 atk: 11,
                 def: 11,
                 speed: 10, // demonic quickness
-                willpower: 0
+                willpower: 0,
+                str: 7,
+                int: 6,
+                dex: 7,
+                fort: 6
             },
             level: 11,
             portrait: images['goat_demon_portrait'],
@@ -344,7 +388,11 @@ export function MonsterManager() {
                 atk: 13,
                 def: 8,
                 speed: 9, // elusive spell-caster
-                willpower: 0
+                willpower: 0,
+                str: 4,
+                int: 10,
+                dex: 6,
+                fort: 5
             },
             level: 12,
             portrait: images['witch_p1_1'],
@@ -395,7 +443,11 @@ export function MonsterManager() {
                 atk: 15,
                 def: 5,
                 speed: 9, // drifts and repositions
-                willpower: 0
+                willpower: 0,
+                str: 4,
+                int: 12,
+                dex: 6,
+                fort: 4
             },
             level: 14,
             portrait: images['beholder_portrait'],
@@ -450,7 +502,11 @@ export function MonsterManager() {
                 atk: 13,
                 def: 3,
                 speed: 11, // swift leader demon
-                willpower: 0
+                willpower: 0,
+                str: 5,
+                int: 8,
+                dex: 8,
+                fort: 4
             },
             level: 15,
             portrait: images['kabuki_demon_portrait'],
@@ -479,7 +535,11 @@ export function MonsterManager() {
                 atk: 10,
                 def: 11,
                 speed: 10, // elemental mastery enhances evasion
-                willpower: 0
+                willpower: 0,
+                str: 5,
+                int: 8,
+                dex: 7,
+                fort: 7
             },
             level: 19,
             portrait: images['djinn_portrait'],
@@ -507,7 +567,11 @@ export function MonsterManager() {
                 // atk: 2,
                 def: 13,
                 speed: 7, // large creature, deliberate movements
-                willpower: 0
+                willpower: 0,
+                str: 8,
+                int: 10,
+                dex: 5,
+                fort: 10
             },
             level: 29,
             // portrait: images[this.pickRandom(['sphinx_portrait', 'sphinx_portrait2'])],
@@ -538,7 +602,11 @@ export function MonsterManager() {
                 atk: 20,
                 def: 17,
                 speed: 6, // immense, slow but near-immune to damage
-                willpower: 0
+                willpower: 0,
+                str: 12,
+                int: 6,
+                dex: 4,
+                fort: 14
             },
             level: 30,
             portrait: images[this.pickRandom(['wyvern_portrait', 'wyvern_portrait2'])],

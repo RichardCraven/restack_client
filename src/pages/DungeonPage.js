@@ -4,6 +4,7 @@ import { INTERVALS } from '../utils/shared-constants';
 import '../styles/dungeon-board.scss'
 import Tile from '../components/tile'
 import MonsterBattle from './sub-views/MonsterBattle';
+import { CombatManagerRedux } from '../utils/combat-manager-redux';
 import CardDuel from './sub-views/CardDuel';
 // import ExpositionPane from './sub-views/ExpositionPane';
 import {
@@ -630,6 +631,9 @@ class DungeonPage extends React.Component {
                         }, 0);
                     }
                 }, 0);
+            }
+            if (this.state.inMonsterBattle && !prevState.inMonsterBattle) {
+                this.wireMonsterBattleRefToWizardAI();
             }
     }
     UNSAFE_componentWillMount(){
@@ -2264,6 +2268,11 @@ class DungeonPage extends React.Component {
         if (hasNewMonsterSightings) this.persistBreadcrumbsToMeta();
     }
     triggerMonsterBattle = (bool, tileId) => {
+        if (bool) {
+            this.reduxCombatManager = new CombatManagerRedux();
+        } else {
+            this.reduxCombatManager = null;
+        }
         // When entering combat: remember current side-panel state and
         // collapse both panels. On exit, restore the saved state.
         try {
@@ -2301,6 +2310,13 @@ class DungeonPage extends React.Component {
             })
         }
     }
+    wireMonsterBattleRefToWizardAI = () => {
+        const cm = this.reduxCombatManager || this.props.combatManager;
+        if (cm && cm.fighterAI && cm.fighterAI.roster && cm.fighterAI.roster.wizard) {
+            this.monsterBattleComponentRef.current &&
+            (cm.fighterAI.roster.wizard.monsterBattleRef = this.monsterBattleComponentRef.current);
+        }
+    };
     setMonster = (monsterString) => {
         // monsterString = 'beholder'
         let monster = this.props.monsterManager.getMonster(monsterString), 
@@ -3796,6 +3812,12 @@ class DungeonPage extends React.Component {
             this.props.boardManager.removeDefeatedMonsterTile(this.state.monsterBattleTileId)
             this.props.crewManager.checkForLevelUp(this.props.crewManager.crew)
             let meta = getMeta()
+            
+            // Adjust resolve on victory: +10 for bosses (tier >= 3), +5 otherwise
+            const isBoss = this.state.monster && (this.state.monster.tier >= 3 || this.state.monster.isBoss);
+            const currentResolve = typeof meta.resolve === 'number' ? meta.resolve : 100;
+            meta.resolve = Math.min(100, currentResolve + (isBoss ? 10 : 5));
+            
             meta.crew = this.props.crewManager.crew;
             storeMeta(meta)
             this.props.saveUserData()
@@ -3816,6 +3838,10 @@ class DungeonPage extends React.Component {
         } else if(result === 'respawn'){
                   // Try to respawn the player at spawn point (guard against missing boardManager)
                   const meta2 = getMeta();
+                  
+                  // Adjust resolve on defeat: -5 resolve
+                  const currentResolve = typeof meta2.resolve === 'number' ? meta2.resolve : 100;
+                  meta2.resolve = Math.max(0, currentResolve - 5);
                     if (meta2 && Array.isArray(meta2.crew)) {
                         meta2.crew.forEach(c => {
                             if (!c) return;
@@ -6353,7 +6379,7 @@ class DungeonPage extends React.Component {
             { this.state.keysLocked && this.state.inMonsterBattle &&
             <MonsterBattle
                 ref={this.monsterBattleComponentRef}
-                combatManager={this.props.combatManager}
+                combatManager={this.reduxCombatManager || this.props.combatManager}
                 overlayManager={this.props.overlayManager}
                 inventoryManager={this.props.inventoryManager}
                 animationManager={this.props.animationManager}

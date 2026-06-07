@@ -4,6 +4,7 @@ import specialsMatrix from './specials-matrix';
 import { activeShieldWalls } from './shared-ai-methods/movement-methods';
 import { INTERVALS } from './shared-constants';
 import * as images from './images';
+import { getMeta, storeMeta } from './session-handler';
 
 const MAX_DEPTH = 7;
 const MAX_LANES = 6;
@@ -53,6 +54,37 @@ export function CombatManagerRedux() {
             return DURATION_ROUNDS[dur] !== undefined ? DURATION_ROUNDS[dur] : 4;
         }
         return 4;
+    };
+
+    const getRoundDurationMs = () => this.roundDurationMs || (this.gameSpeed === 'fast' ? 1000 : 2000);
+    const getDurationMsFromRounds = (rounds) => Math.max(0, (rounds || 0) * getRoundDurationMs());
+
+    this.ACTION_ENDURANCE_COST = 2;
+    this.MOVE_ENDURANCE_COST = 2;
+
+    this.applyEnduranceCost = (unit, cost = this.ACTION_ENDURANCE_COST, source = 'action') => {
+        if (!unit) return;
+        if ((unit.endurance || 0) <= 0 && unit.exhausted) return;
+        unit.endurance = Math.max(0, (unit.endurance || 0) - cost);
+        if (unit.endurance > 0) return;
+
+        const longDuration = getDurationRounds('long');
+        const longDurationMs = getDurationMsFromRounds(longDuration);
+        const now = Date.now();
+        unit.exhausted = true;
+        unit.asleep = true;
+        unit.sleepRounds = Math.max(unit.sleepRounds || 0, longDuration);
+        unit.sleepTotalRounds = Math.max(unit.sleepTotalRounds || 0, longDuration);
+        unit.sleepTotalDurationMs = Math.max(unit.sleepTotalDurationMs || 0, longDurationMs);
+        unit.sleepEndTimeMs = unit.sleepEndTimeMs && unit.sleepEndTimeMs > now ? unit.sleepEndTimeMs + longDurationMs : now + longDurationMs;
+        unit.stunned = true;
+        unit.stunnedRounds = Math.max(unit.stunnedRounds || 0, longDuration);
+        unit.stunnedTotalRounds = Math.max(unit.stunnedTotalRounds || 0, longDuration);
+        unit.stunnedStackDuration = longDuration;
+        unit.stunnedTotalDurationMs = Math.max(unit.stunnedTotalDurationMs || 0, longDurationMs);
+        unit.stunnedEndTimeMs = unit.stunnedEndTimeMs && unit.stunnedEndTimeMs > now ? unit.stunnedEndTimeMs + longDurationMs : now + longDurationMs;
+        if (unit.enduranceFrozenRounds <= 0) unit.enduranceFrozenRounds = longDuration;
+        this.appendCombatLog(`${this.getCombatantLogName(unit)} is exhausted and collapses into sleep.`);
     };
 
     this.getCombatLog = () => this.combatLog.slice();
@@ -479,8 +511,11 @@ export function CombatManagerRedux() {
 
     this.hitCheck = (caller, target) => {
         if (!target || !caller) return true;
-        const targetSpeed = target.stats.speed || target.stats.dex || 1;
-        const baseMissChance = targetSpeed * 3.0; // scales with speed
+        // Dex is the primary dodge stat; fall back to speed for backward compat
+        const targetDex = target.stats.dex || target.stats.speed || 1;
+        const targetSpeed = target.stats.speed || targetDex;
+        // Combine dex and speed for dodge: dex contributes 2% per point, speed 1%
+        const baseMissChance = (targetDex * 2.0) + (targetSpeed * 1.0);
         let missChance = Math.min(baseMissChance, 45); // cap at 45% normally
 
         // Monk's Third Eye: doubles the chance that enemy attack will miss
@@ -488,11 +523,31 @@ export function CombatManagerRedux() {
             missChance = Math.min(missChance * 2.0, 75);
         }
 
+        // Morale Dodge Modifier (applied to target if target is a crew member)
+        if (target && !target.isMonster && !target.isMinion) {
+            const meta = getMeta();
+            const resolve = (meta && typeof meta.resolve === 'number') ? meta.resolve : 100;
+            if (resolve >= 80) {
+                missChance += 5;
+            } else if (resolve >= 20 && resolve <= 39) {
+                missChance -= 5;
+            } else if (resolve < 20) {
+                missChance -= 10;
+            }
+            missChance = Math.max(0, Math.min(missChance, 95));
+        }
+
         return (Math.random() * 100) >= missChance;
     };
 
     this.damageCheck = (caller, target, rawDamage) => {
         if (!target || typeof rawDamage !== 'number' || rawDamage <= 0) return rawDamage || 0;
+
+        // STR-based flat damage reduction: 1 point reduced per 2 STR
+        const targetStr = (target.stats && typeof target.stats.str === 'number') ? target.stats.str : 0;
+        const strReduction = Math.floor(targetStr / 2);
+        let damage = Math.max(1, rawDamage - strReduction);
+
         let equippedArmor = 0;
         try {
             const inv = target.inventory || [];
@@ -500,12 +555,50 @@ export function CombatManagerRedux() {
                 .filter(i => i && i.type === 'armor' && (i.equippedSlot || i.equippedBy === target.id))
                 .reduce((acc, a) => acc + (typeof a.armor === 'number' ? a.armor : 0), 0);
         } catch (e) { equippedArmor = 0; }
+        let copMultiplier = 1.0;
+        const hasCop = target.activeBuffs && target.activeBuffs.some(b => b.name === 'circle_of_protection');
+        if (hasCop) {
+            const sameTeamSage = Object.values(this.combatants).find(c => {
+                if (!c || c.dead || c.isVCT) return false;
+                const sameTeam = (target.isMonster || target.isMinion)
+                    ? (c.isMonster || c.isMinion)
+                    : (!target.isMonster && !target.isMinion);
+                return sameTeam && c.type === 'sage';
+            });
+            if (sameTeamSage) {
+                const dx = target.coordinates.x - sameTeamSage.coordinates.x;
+                const dy = target.coordinates.y - sameTeamSage.coordinates.y;
+                const d = Math.sqrt(dx * dx + dy * dy);
+                if (d < 1.9) {
+                    copMultiplier = 2.0;
+                } else if (d <= 2.25) {
+                    copMultiplier = 1.5;
+                }
+            }
+        }
         const naturalArmor = (target.stats && typeof target.stats.def === 'number' && target.stats.def > 0)
-            ? target.stats.def * 4 : 0;
+            ? target.stats.def * 4 * copMultiplier : 0;
         const totalArmor = Math.min(equippedArmor + naturalArmor, 200);
-        if (totalArmor <= 0) return rawDamage;
-        const reduction = Math.min(totalArmor / 2.5, 75); // max 75% reduction
-        return Math.max(1, Math.round(rawDamage * (1 - reduction / 100)));
+        
+        let finalDamage = damage;
+        if (totalArmor > 0) {
+            const reduction = Math.min(totalArmor / 2.5, 75); // max 75% reduction
+            finalDamage = Math.max(1, Math.round(damage * (1 - reduction / 100)));
+        }
+
+        // Morale Damage Modifier (applied if caller is a crew member)
+        if (caller && !caller.isMonster && !caller.isMinion) {
+            const meta = getMeta();
+            const resolve = (meta && typeof meta.resolve === 'number') ? meta.resolve : 100;
+            if (resolve >= 80) {
+                finalDamage = Math.round(finalDamage * 1.10);
+            } else if (resolve >= 20 && resolve <= 39) {
+                finalDamage = Math.round(finalDamage * 0.90);
+            } else if (resolve < 20) {
+                finalDamage = Math.round(finalDamage * 0.80);
+            }
+        }
+        return Math.max(1, finalDamage);
     };
 
     this.targetInRange = (caller, target, rangeType) => {
@@ -546,12 +639,17 @@ export function CombatManagerRedux() {
         // Healers are high-value targets for enemies
         const HEALER_TYPES = new Set(['sage', 'summoner', 'wizard']);
 
-        Object.values(this.combatants).forEach(c => {
-            if (!c || c.dead || c.isVCT || c.isBones) return;
-            // Crew targets monsters/minions, monsters/minions target crew
+        const candidateTargets = Object.values(this.combatants).filter(c => {
+            if (!c || c.dead || c.isVCT) return false;
             const callerIsEnemy = !!(caller.isMonster || caller.isMinion);
             const cIsEnemy = !!(c.isMonster || c.isMinion);
-            if (callerIsEnemy === cIsEnemy) return;
+            return callerIsEnemy !== cIsEnemy;
+        });
+        const callerIsEnemy = !!(caller.isMonster || caller.isMinion);
+        const awakeTargetsExist = !callerIsEnemy && candidateTargets.some(c => !c.asleep);
+
+        candidateTargets.forEach(c => {
+            if (!callerIsEnemy && awakeTargetsExist && c.asleep) return;
 
             const dist = Math.abs(caller.coordinates.x - c.coordinates.x)
                        + Math.abs(caller.coordinates.y - c.coordinates.y);
@@ -562,6 +660,7 @@ export function CombatManagerRedux() {
             score -= dist * 2;                          // prefer close targets
             if (preferWeakest) score += (1 - hpPct) * 10; // prefer wounded targets
             if (!callerIsEnemy && HEALER_TYPES.has(c.type)) score += 5;
+            if (!callerIsEnemy && c.isBones) score += 18; // aggressive but not full tunnel-vision
 
             if (score > bestScore) {
                 bestScore = score;
@@ -572,6 +671,23 @@ export function CombatManagerRedux() {
             caller.targetId = bestTarget.id;
         }
         return bestTarget;
+    };
+
+    this.wakeSleepingTarget = (target, sourceName = 'damage') => {
+        if (!target || !target.asleep) return false;
+        target.asleep = false;
+        target.sleepRounds = 0;
+        target.sleepTotalRounds = 0;
+        target.sleepTotalDurationMs = 0;
+        target.sleepEndTimeMs = 0;
+        target.stunned = false;
+        target.stunnedRounds = 0;
+        target.stunnedTotalRounds = 0;
+        target.stunnedStackDuration = 0;
+        target.stunnedTotalDurationMs = 0;
+        target.stunnedEndTimeMs = 0;
+        this.appendCombatLog(`${this.getCombatantLogName(target)} wakes up from ${sourceName}.`);
+        return true;
     };
 
     // Find the friendliest ally who needs healing (lowest HP%)
@@ -611,6 +727,16 @@ export function CombatManagerRedux() {
         target.locked = true;
         target.deathRemovalScheduled = true;
         this.appendCombatLog(`${this.getCombatantLogName(target)} has been defeated.`);
+
+        // Decrement Resolve by 10 on crew member death
+        if (target && !target.isMonster && !target.isMinion) {
+            const meta = getMeta();
+            const currentResolve = (meta && typeof meta.resolve === 'number') ? meta.resolve : 100;
+            meta.resolve = Math.max(0, currentResolve - 10);
+            storeMeta(meta);
+            this.appendCombatLog(`Resolve decreased by 10. Current Resolve: ${meta.resolve}`);
+        }
+
         if (typeof this.updateData === 'function') {
             this.updateData(clone(this.combatants));
         }
@@ -635,6 +761,9 @@ export function CombatManagerRedux() {
 
         combatant.isBones = true;
         combatant.bonesRoundsLeft = 4;
+        combatant.bonesTotalRounds = 4;
+        combatant.bonesTotalDurationMs = getDurationMsFromRounds(4);
+        combatant.bonesEndTimeMs = Date.now() + combatant.bonesTotalDurationMs;
         combatant.bonesMaxHp = 10;
         combatant.originalPortrait = combatant.portrait;
         combatant.portrait = images.bones;
@@ -845,6 +974,8 @@ export function CombatManagerRedux() {
                                 unit.frozenRounds = 0;
                                 unit.frozenTotalRounds = 0;
                                 unit.frozenStackDuration = 0;
+                                unit.frozenTotalDurationMs = 0;
+                                unit.frozenEndTimeMs = 0;
                             }
                         }
                         if (unit.stunnedRounds > 0) {
@@ -854,17 +985,34 @@ export function CombatManagerRedux() {
                                 unit.stunnedRounds = 0;
                                 unit.stunnedTotalRounds = 0;
                                 unit.stunnedStackDuration = 0;
+                                unit.stunnedTotalDurationMs = 0;
+                                unit.stunnedEndTimeMs = 0;
                                 unit.feared = false;
                                 unit.fearRounds = 0;
                                 unit.fearTotalRounds = 0;
+                                unit.fearTotalDurationMs = 0;
+                                unit.fearEndTimeMs = 0;
                                 unit.asleep = false;
                                 unit.sleepRounds = 0;
                                 unit.sleepTotalRounds = 0;
+                                unit.sleepTotalDurationMs = 0;
+                                unit.sleepEndTimeMs = 0;
                             }
                         }
                         if (unit.petrifiedRounds > 0) { unit.petrifiedRounds--; if (unit.petrifiedRounds <= 0) { unit.petrified = false; } }
                         if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
                         return;
+                    }
+
+                    // Morale Broken check: 10% chance to skip turn entirely
+                    if (unit && !unit.isMonster && !unit.isMinion) {
+                        const meta = getMeta();
+                        const resolve = (meta && typeof meta.resolve === 'number') ? meta.resolve : 100;
+                        if (resolve < 20 && Math.random() < 0.10) {
+                            this.appendCombatLog(`${this.getCombatantLogName(unit)}'s resolve is broken! They refuse to act this turn.`);
+                            if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+                            return;
+                        }
                     }
 
                     // Execute class-specific AI decision tree
@@ -913,6 +1061,8 @@ export function CombatManagerRedux() {
                 unit.weaknessRevealedRounds = 0;
                 unit.weaknessRevealedTotalRounds = 0;
                 unit.weaknessRevealedStackDuration = 0;
+                unit.weaknessRevealedTotalDurationMs = 0;
+                unit.weaknessRevealedEndTimeMs = 0;
                 this.appendCombatLog(`${this.getCombatantLogName(unit)}'s exposed weakness has faded.`);
             }
         }
@@ -923,6 +1073,8 @@ export function CombatManagerRedux() {
                 unit.ensnaredRounds = 0;
                 unit.ensnaredTotalRounds = 0;
                 unit.ensnaredStackDuration = 0;
+                unit.ensnaredTotalDurationMs = 0;
+                unit.ensnaredEndTimeMs = 0;
                 this.appendCombatLog(`${this.getCombatantLogName(unit)} is no longer ensnared.`);
             }
         }
@@ -933,6 +1085,8 @@ export function CombatManagerRedux() {
                 unit.markedRounds = 0;
                 unit.markedTotalRounds = 0;
                 unit.markedStackDuration = 0;
+                unit.markedTotalDurationMs = 0;
+                unit.markedEndTimeMs = 0;
                 this.appendCombatLog(`${this.getCombatantLogName(unit)}'s mark has expired.`);
             }
         }
@@ -947,15 +1101,27 @@ export function CombatManagerRedux() {
 
     this._applyBuff = (unit, buffDef, name, durationRounds) => {
         if (!unit.activeBuffs) unit.activeBuffs = [];
+        const durationMs = durationRounds * (this.roundDurationMs || (this.gameSpeed === 'fast' ? 1000 : 2000));
+        const now = Date.now();
         const existing = unit.activeBuffs.find(b => b.name === name);
         if (existing) {
             existing.roundsLeft += durationRounds;
             existing.totalRounds = (existing.totalRounds || existing.roundsLeft) + durationRounds;
             existing.singleDurationRounds = durationRounds;
+            existing.totalDurationMs = (existing.totalDurationMs || 0) + durationMs;
+            existing.endTimeMs = existing.endTimeMs && existing.endTimeMs > now ? existing.endTimeMs + durationMs : now + durationMs;
             return;
         }
 
-        const applied = { name, roundsLeft: durationRounds, totalRounds: durationRounds, singleDurationRounds: durationRounds, statChanges: {} };
+        const applied = {
+            name,
+            roundsLeft: durationRounds,
+            totalRounds: durationRounds,
+            singleDurationRounds: durationRounds,
+            totalDurationMs: durationMs,
+            endTimeMs: now + durationMs,
+            statChanges: {}
+        };
         if (buffDef && buffDef.increase_stats && Array.isArray(buffDef.increase_stats.stats)) {
             buffDef.increase_stats.stats.forEach(({ stat, amount }) => {
                 unit.stats[stat] = (unit.stats[stat] || 0) + amount;
@@ -1021,7 +1187,23 @@ export function CombatManagerRedux() {
     // Returns true if the ability is off cooldown and available
     this._abilityReady = (unit, abilityKey) => {
         if (!abilityKey) return false;
-        return !unit.cooldowns[abilityKey];
+        if (unit.cooldowns[abilityKey]) return false;
+
+        const normalize = (s) => String(s || '').replace(/\s+/g, '_').toLowerCase();
+        const normKey = normalize(abilityKey);
+
+        const hasSpecial = Array.isArray(unit.specials) && unit.specials.some(s => {
+            if (typeof s === 'string') return normalize(s) === normKey;
+            if (typeof s === 'object' && s) return normalize(s.id || s.key || s.name) === normKey;
+            return false;
+        });
+        const hasAttack = Array.isArray(unit.attacks) && unit.attacks.some(a => {
+            if (typeof a === 'string') return normalize(a) === normKey;
+            if (typeof a === 'object' && a) return normalize(a.id || a.key || a.name) === normKey;
+            return false;
+        });
+
+        return hasSpecial || hasAttack;
     };
 
     // Returns first ready special matching any of the provided keys
@@ -1110,13 +1292,70 @@ export function CombatManagerRedux() {
         const target = this.combatants[unit.targetId];
         if (!target) return;
 
+        const isLowHp = unit.hp <= (unit.starting_hp || 1) * 0.4;
+        const meditateReady = this._abilityReady(unit, 'monk_meditate');
+        
+        if (isLowHp && meditateReady) {
+            // Find if we are already in one of the corners of the grid
+            const corners = [
+                { x: 0, y: 0 },
+                { x: 0, y: MAX_LANES - 1 },
+                { x: MAX_DEPTH, y: 0 },
+                { x: MAX_DEPTH, y: MAX_LANES - 1 }
+            ];
+            const inCorner = corners.some(c => c.x === unit.coordinates.x && c.y === unit.coordinates.y);
+            
+            if (!inCorner && this._abilityReady(unit, 'monk_astral_projection')) {
+                // Find an unoccupied corner to project to
+                const targetCorner = corners.find(c => !this.isTileOccupied(c.x, c.y, unit.id));
+                if (targetCorner) {
+                    const pick = this.resolveSpecial(unit, 'monk_astral_projection');
+                    if (pick) {
+                        unit.astralProjectionActive = true;
+                        this.updateUnitCoordinates(unit, targetCorner.x, targetCorner.y);
+                        unit.movesTakenThisRound += 1;
+                        this.applyEnduranceCost(unit, this.MOVE_ENDURANCE_COST, 'astral_projection_move');
+                        this.appendCombatLog(`${this.getCombatantLogName(unit)} projects to safety in the corner (${targetCorner.x},${targetCorner.y}).`);
+                        this.useAbility(unit, pick, target);
+                        if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+                        setTimeout(() => {
+                            if (this.combatants[unit.id]) {
+                                this.combatants[unit.id].astralProjectionActive = false;
+                                if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+                            }
+                        }, 1300);
+                        return;
+                    }
+                }
+            }
+            
+            // Meditate if already in corner, or if projection failed/not ready
+            const meditate = this.resolveSpecial(unit, 'monk_meditate');
+            if (meditate) {
+                this.useAbility(unit, meditate, unit);
+                return;
+            }
+        }
+
+        // Keep standard fallback meditate if endurance is low
+        if (unit.endurance <= (unit.maxEndurance || 1) * 0.4 && meditateReady) {
+            const meditate = this.resolveSpecial(unit, 'monk_meditate');
+            if (meditate) {
+                this.useAbility(unit, meditate, unit);
+                return;
+            }
+        }
+
         // Priority 0: Ethereal Speed (speed buff and yellow glow)
         if (this._abilityReady(unit, 'monk_ethereal_speed') && !unit.etherealSpeedActive) {
             const pick = this.resolveSpecial(unit, 'monk_ethereal_speed');
             if (pick) {
+                const durMs = getDurationMsFromRounds(4);
                 unit.etherealSpeedActive = true;
                 unit.etherealSpeedRoundsLeft = 4;
                 unit.etherealSpeedTotalRounds = 4;
+                unit.etherealSpeedTotalDurationMs = durMs;
+                unit.etherealSpeedEndTimeMs = Date.now() + durMs;
                 this.appendCombatLog(`${this.getCombatantLogName(unit)} activates Ethereal Speed — glowing with power!`);
                 this._setCooldown(unit, 'monk_ethereal_speed', pick.cooldown || 15);
                 if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
@@ -1130,6 +1369,8 @@ export function CombatManagerRedux() {
                 unit.etherealSpeedActive = false;
                 unit.etherealSpeedRoundsLeft = 0;
                 unit.etherealSpeedTotalRounds = 0;
+                unit.etherealSpeedTotalDurationMs = 0;
+                unit.etherealSpeedEndTimeMs = 0;
                 this.appendCombatLog(`${this.getCombatantLogName(unit)}'s Ethereal Speed fades.`);
             }
         }
@@ -1151,10 +1392,13 @@ export function CombatManagerRedux() {
         if (!astralActive && this._abilityReady(unit, 'monk_astral_focus')) {
             const pick = this.resolveSpecial(unit, 'monk_astral_focus');
             if (pick && unit.hp / unit.starting_hp > 0.5) { // don't focus if low HP
+                const durMs = getDurationMsFromRounds(6);
                 this._applyBuff(unit, pick.buff || {}, 'astral_being', 6);
                 unit.astralBeingActive = true;
                 unit.astralBeingRoundsLeft = 6;
                 unit.astralBeingTotalRounds = 6;
+                unit.astralBeingTotalDurationMs = durMs;
+                unit.astralBeingEndTimeMs = Date.now() + durMs;
                 this.appendCombatLog(`${this.getCombatantLogName(unit)} enters Astral Being mode.`);
                 this._setCooldown(unit, 'monk_astral_focus', pick.cooldown || 60);
                 if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
@@ -1170,6 +1414,8 @@ export function CombatManagerRedux() {
                 unit.astralBeingActive = false;
                 unit.astralBeingRoundsLeft = 0;
                 unit.astralBeingTotalRounds = 0;
+                unit.astralBeingTotalDurationMs = 0;
+                unit.astralBeingEndTimeMs = 0;
                 this.appendCombatLog(`${this.getCombatantLogName(unit)}'s Astral Being mode ends.`);
                 // Cancel any active astral skills
                 ['monk_third_eye', 'monk_astral_projection'].forEach(k => {
@@ -1185,9 +1431,12 @@ export function CombatManagerRedux() {
         if (astralActive && this._abilityReady(unit, 'monk_third_eye') && !unit.thirdEyeActive) {
             const pick = this.resolveSpecial(unit, 'monk_third_eye');
             if (pick) {
+                const durMs = getDurationMsFromRounds(4);
                 unit.thirdEyeActive = true;
                 unit.thirdEyeRoundsLeft = 4;
                 unit.thirdEyeTotalRounds = 4;
+                unit.thirdEyeTotalDurationMs = durMs;
+                unit.thirdEyeEndTimeMs = Date.now() + durMs;
                 this.appendCombatLog(`${this.getCombatantLogName(unit)} activates Third Eye — evasion doubled.`);
                 this._setCooldown(unit, 'monk_third_eye', pick.cooldown || 15);
                 if (!unit.astralSkills) unit.astralSkills = {};
@@ -1202,6 +1451,8 @@ export function CombatManagerRedux() {
                 unit.thirdEyeActive = false;
                 unit.thirdEyeRoundsLeft = 0;
                 unit.thirdEyeTotalRounds = 0;
+                unit.thirdEyeTotalDurationMs = 0;
+                unit.thirdEyeEndTimeMs = 0;
                 if (unit.astralSkills) unit.astralSkills.monk_third_eye = false;
             }
         }
@@ -1257,6 +1508,7 @@ export function CombatManagerRedux() {
             if (!blocked) {
                 this.updateUnitCoordinates(unit, nx, ny);
                 unit.movesTakenThisRound += 1;
+                this.applyEnduranceCost(unit, this.MOVE_ENDURANCE_COST, 'astral_projection_move');
                 this.appendCombatLog(`${this.getCombatantLogName(unit)} projects to (${nx},${ny}).`);
                 if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
                 break;
@@ -1282,6 +1534,8 @@ export function CombatManagerRedux() {
                 unit.shieldWallActive = false;
                 unit.shieldWallRoundsLeft = 0;
                 unit.shieldWallTotalRounds = 0;
+                unit.shieldWallTotalDurationMs = 0;
+                unit.shieldWallEndTimeMs = 0;
                 this.appendCombatLog(`${this.getCombatantLogName(unit)}'s Shield Wall collapses.`);
                 if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
             } else {
@@ -1301,9 +1555,13 @@ export function CombatManagerRedux() {
         if (enemyCount >= 3 && selfHpPct > 0.5 && this._abilityReady(unit, 'shield_wall')) {
             const pick = this.resolveSpecial(unit, 'shield_wall');
             if (pick) {
+                const durationRounds = pick.duration || 4;
+                const durMs = getDurationMsFromRounds(durationRounds);
                 unit.shieldWallActive = true;
-                unit.shieldWallRoundsLeft = pick.duration || 4;
-                unit.shieldWallTotalRounds = pick.duration || 4;
+                unit.shieldWallRoundsLeft = durationRounds;
+                unit.shieldWallTotalRounds = durationRounds;
+                unit.shieldWallTotalDurationMs = durMs;
+                unit.shieldWallEndTimeMs = Date.now() + durMs;
                 this.appendCombatLog(`${this.getCombatantLogName(unit)} erects Shield Wall!`);
                 this._setCooldown(unit, 'shield_wall', pick.cooldown || 15);
                 unit.actionsTakenThisRound += 1;
@@ -1369,6 +1627,17 @@ export function CombatManagerRedux() {
                 this._applyBuff(unit, pick.buff || {}, 'barbarian_berserker', getDurationRounds(pick.duration || 'long'));
                 this.appendCombatLog(`${this.getCombatantLogName(unit)} enters BERSERKER rage!`);
                 this._setCooldown(unit, 'barbarian_berserker', pick.cooldown || 12);
+            }
+        }
+
+        // Priority 2: Leap Attack to close the gap if not adjacent but within medium range (3 tiles)
+        const isAdjacent = this.targetInRange(unit, target, 'close');
+        const leapReady = this._abilityReady(unit, 'barbarian_leap_attack');
+        if (!isAdjacent && leapReady && this.targetInRange(unit, target, 'medium')) {
+            const pick = this.resolveSpecial(unit, 'barbarian_leap_attack');
+            if (pick) {
+                this.useAbility(unit, pick, target);
+                return;
             }
         }
 
@@ -1458,6 +1727,39 @@ export function CombatManagerRedux() {
             }
         }
 
+        if (this._abilityReady(unit, 'lightning_strike')) {
+            const lightning = this.resolveSpecial(unit, 'lightning_strike');
+            if (lightning && this.targetInRange(unit, target, lightning.range || 'medium')) {
+                this.useAbility(unit, lightning, target);
+                return;
+            }
+        }
+
+        if (this._abilityReady(unit, 'vortex')) {
+            const vortex = this.resolveSpecial(unit, 'vortex');
+            if (vortex) {
+                const nearbyEnemies = Object.values(this.combatants).filter(c => {
+                    if (!c || c.dead || c.isVCT) return false;
+                    const isEnemy = (unit.isMonster || unit.isMinion) ? (!c.isMonster && !c.isMinion) : (c.isMonster || c.isMinion);
+                    if (!isEnemy) return false;
+                    const dist = Math.abs(unit.coordinates.x - c.coordinates.x) + Math.abs(unit.coordinates.y - c.coordinates.y);
+                    return dist <= 3;
+                }).length;
+                if (nearbyEnemies >= 2) {
+                    this.useAbility(unit, vortex, target);
+                    return;
+                }
+            }
+        }
+
+        if (this._abilityReady(unit, 'annihilation')) {
+            const annihilation = this.resolveSpecial(unit, 'annihilation');
+            if (annihilation && this.targetInRange(unit, target, annihilation.range || 'far')) {
+                this.useAbility(unit, annihilation, target);
+                return;
+            }
+        }
+
         const scored = this._scoredAbilityPick(unit, target);
         if (scored) {
             this.useAbility(unit, scored.resolved, target);
@@ -1484,15 +1786,77 @@ export function CombatManagerRedux() {
                 this.appendCombatLog(`${this.getCombatantLogName(unit)} uses Healing Hands on ${this.getCombatantLogName(woundedAlly)} for +${healAmount} HP.`);
                 this._setCooldown(unit, 'heal', pick.cooldown || 4);
                 unit.actionsTakenThisRound += 1;
+                
+                // Trigger animation
+                if (this.animManagerRedux && typeof this.animManagerRedux.triggerAbility === 'function') {
+                    this.animManagerRedux.triggerAbility(unit.coordinates, woundedAlly.coordinates, 'heal', false, null, unit.id);
+                }
+
                 if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
                 return;
             }
         }
 
-        // Priority 2: Circle of Protection if we have 2+ allies
-        if (this._abilityReady(unit, 'circle_of_protection')) {
+        // Priority 2: Circle of Protection if combat has started to develop (round > 1)
+        if (this.round > 1 && this._abilityReady(unit, 'circle_of_protection')) {
             const pick = this.resolveSpecial(unit, 'circle_of_protection');
             if (pick) {
+                // Determine best repositioning space to reach maximum allies
+                const candidates = [
+                    { x: unit.coordinates.x, y: unit.coordinates.y },
+                    { x: unit.coordinates.x + 1, y: unit.coordinates.y },
+                    { x: unit.coordinates.x - 1, y: unit.coordinates.y },
+                    { x: unit.coordinates.x, y: unit.coordinates.y + 1 },
+                    { x: unit.coordinates.x, y: unit.coordinates.y - 1 }
+                ];
+
+                const getScore = (nx, ny) => {
+                    let score = 0;
+                    Object.values(this.combatants).forEach(c => {
+                        if (!c || c.dead || c.isVCT || c.id === unit.id) return;
+                        const sameTeam = (unit.isMonster || unit.isMinion)
+                            ? (c.isMonster || c.isMinion)
+                            : (!c.isMonster && !c.isMinion);
+                        if (!sameTeam) return;
+
+                        // Euclidean distance
+                        const dx = c.coordinates.x - nx;
+                        const dy = c.coordinates.y - ny;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist < 1.9) {
+                            score += 2; // Fully covered
+                        } else if (dist <= 2.25) {
+                            score += 1; // Partially covered
+                        }
+                    });
+                    return score;
+                };
+
+                let bestTile = { x: unit.coordinates.x, y: unit.coordinates.y };
+                let maxScore = getScore(bestTile.x, bestTile.y);
+
+                if (!unit.ensnared && !unit.shieldWallActive && unit.movesTakenThisRound < 1) {
+                    candidates.forEach(cand => {
+                        if (cand.x < 0 || cand.x > MAX_DEPTH || cand.y < 0 || cand.y >= MAX_LANES) return;
+                        if (cand.x !== unit.coordinates.x || cand.y !== unit.coordinates.y) {
+                            if (!this.canFitAt(unit, cand.x, cand.y)) return;
+                        }
+                        const score = getScore(cand.x, cand.y);
+                        if (score > maxScore) {
+                            maxScore = score;
+                            bestTile = cand;
+                        }
+                    });
+                }
+
+                // Perform repositioning if a better tile was chosen
+                if (bestTile.x !== unit.coordinates.x || bestTile.y !== unit.coordinates.y) {
+                    this.updateUnitCoordinates(unit, bestTile.x, bestTile.y);
+                    unit.movesTakenThisRound += 1;
+                    this.applyEnduranceCost(unit, this.MOVE_ENDURANCE_COST, 'move');
+                    this.appendCombatLog(`${this.getCombatantLogName(unit)} repositions to optimize Circle of Protection.`);
+                }
+
                 const dur = getDurationRounds(pick.duration || 'long');
                 Object.values(this.combatants).forEach(c => {
                     if (!c || c.dead || c.isVCT) return;
@@ -1501,9 +1865,16 @@ export function CombatManagerRedux() {
                     if (!sameTeam) return;
                     this._applyBuff(c, pick.buff || {}, 'circle_of_protection', dur);
                 });
-                this.appendCombatLog(`${this.getCombatantLogName(unit)} casts Circle of Protection on allies.`);
+
+                this.appendCombatLog(`${this.getCombatantLogName(unit)} casts Circle of Protection.`);
                 this._setCooldown(unit, 'circle_of_protection', pick.cooldown || 8);
                 unit.actionsTakenThisRound += 1;
+
+                // Trigger animation
+                if (this.animManagerRedux && typeof this.animManagerRedux.triggerAbility === 'function') {
+                    this.animManagerRedux.triggerAbility(unit.coordinates, unit.coordinates, 'circle_of_protection', false, null, unit.id);
+                }
+
                 if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
                 return;
             }
@@ -1514,6 +1885,7 @@ export function CombatManagerRedux() {
             const pick = this.resolveSpecial(unit, 'perceive');
             if (pick) {
                 const dur = getDurationRounds(pick.duration || '2x-long');
+                const durMs = getDurationMsFromRounds(dur);
                 Object.values(this.combatants).forEach(c => {
                     if (!c || c.dead || c.isVCT) return;
                     const isEnemy = (unit.isMonster || unit.isMinion)
@@ -1523,6 +1895,8 @@ export function CombatManagerRedux() {
                     c.weaknessRevealedRounds = dur;
                     c.weaknessRevealedTotalRounds = dur;
                     c.weaknessRevealedStackDuration = dur;
+                    c.weaknessRevealedTotalDurationMs = durMs;
+                    c.weaknessRevealedEndTimeMs = Date.now() + durMs;
                     this.appendCombatLog(`${this.getCombatantLogName(unit)} perceives ${this.getCombatantLogName(c)} — weakness exposed!`);
                 });
                 this._setCooldown(unit, 'perceive', pick.cooldown || 12);
@@ -1562,6 +1936,9 @@ export function CombatManagerRedux() {
                 target.ensnaredRounds = getDurationRounds(pick.duration || 'short');
                 target.ensnaredTotalRounds = target.ensnaredRounds;
                 target.ensnaredStackDuration = target.ensnaredRounds;
+                const durMs = getDurationMsFromRounds(target.ensnaredRounds);
+                target.ensnaredTotalDurationMs = durMs;
+                target.ensnaredEndTimeMs = Date.now() + durMs;
                 this._setCooldown(unit, 'ensnare', pick.cooldown || 6);
                 return;
             }
@@ -1576,6 +1953,9 @@ export function CombatManagerRedux() {
                 target.markedRounds = getDurationRounds(pick.duration || 'long');
                 target.markedTotalRounds = target.markedRounds;
                 target.markedStackDuration = target.markedRounds;
+                const durMs = getDurationMsFromRounds(target.markedRounds);
+                target.markedTotalDurationMs = durMs;
+                target.markedEndTimeMs = Date.now() + durMs;
                 this._setCooldown(unit, 'mark', pick.cooldown || 4);
                 return;
             }
@@ -1817,6 +2197,20 @@ export function CombatManagerRedux() {
     // ── Ability Use ───────────────────────────────────────────────────────────
     this.useAbility = (unit, ability, target) => {
         if (!ability || !target) return;
+
+        // Morale Shaken check: 5% chance to refuse to use a special ability and use basic attack instead
+        const abilityId = ability.id || ability.key || (ability.name && ability.name.replace(/\s+/g, '_').toLowerCase()) || 'ability';
+        const isBasicAttack = unit.attacks && unit.attacks.includes(abilityId);
+        if (unit && !unit.isMonster && !unit.isMinion && !isBasicAttack) {
+            const meta = getMeta();
+            const resolve = (meta && typeof meta.resolve === 'number') ? meta.resolve : 100;
+            if (resolve >= 20 && resolve <= 39 && Math.random() < 0.05) {
+                const basicAttackKey = (unit.attacks && unit.attacks[0]) || 'slash';
+                const basicAttack = this.resolveSpecial(unit.attacks, basicAttackKey) || attacksMatrix[basicAttackKey] || { id: basicAttackKey, name: basicAttackKey, range: 'close', type: 'damage' };
+                this.appendCombatLog(`${this.getCombatantLogName(unit)} is shaken and refuses to use ${ability.name || abilityId}! They use ${basicAttack.name || basicAttackKey} instead.`);
+                return this.useAbility(unit, basicAttack, target);
+            }
+        }
         
         unit.attacking = true;
         if (typeof this.updateData === 'function') {
@@ -1831,26 +2225,74 @@ export function CombatManagerRedux() {
 
         if (unit.actionsTakenThisRound >= 1) return;
         unit.actionsTakenThisRound += 1;
-        unit.endurance = Math.max(0, unit.endurance - 1);
+        this.applyEnduranceCost(unit, this.ACTION_ENDURANCE_COST, ability.id || ability.name || 'ability');
 
         // Endurance-penalty cooldown scaling
         const baseCooldown = (typeof ability.cooldown === 'number') ? ability.cooldown : 5;
-        let cooldownPenalty = 1.0;
-        if (unit.endurance <= 0) {
-            cooldownPenalty = 2.0;
-            if (unit.enduranceFrozenRounds <= 0) unit.enduranceFrozenRounds = 4;
-        } else if (unit.endurance <= unit.maxEndurance * 0.5) {
+        let cooldownPenalty = unit.exhausted ? 2.0 : 1.0;
+        if (!unit.exhausted && unit.endurance <= unit.maxEndurance * 0.5) {
             cooldownPenalty = 1.5;
         }
         const finalCooldown = Math.round(baseCooldown * cooldownPenalty);
-        const abilityId = ability.id || ability.key
-            || (ability.name && ability.name.replace(/\s+/g, '_').toLowerCase())
-            || 'ability';
         unit.cooldowns[abilityId] = finalCooldown;
 
         if (abilityId === 'induce_fear') {
             if (typeof this.triggerBoardEvent === 'function') {
                 this.triggerBoardEvent('induce_fear', { duration: 1800 });
+            }
+        }
+
+        if (abilityId === 'monk_meditate') {
+            unit.endurance = unit.maxEndurance;
+            unit.asleep = false;
+            unit.sleepRounds = 0;
+            unit.sleepTotalRounds = 0;
+            unit.sleepTotalDurationMs = 0;
+            unit.sleepEndTimeMs = 0;
+            unit.stunned = false;
+            unit.stunnedRounds = 0;
+            unit.stunnedTotalRounds = 0;
+            unit.stunnedStackDuration = 0;
+            unit.stunnedTotalDurationMs = 0;
+            unit.stunnedEndTimeMs = 0;
+            // Restore 25% HP
+            const healAmt = Math.round((unit.starting_hp || unit.hp || 100) * 0.25);
+            unit.hp = Math.min(unit.starting_hp || unit.hp, unit.hp + healAmt);
+            unit.damageIndicators = unit.damageIndicators || [];
+            unit.damageIndicators.push({ id: Date.now() + Math.random(), value: `+${healAmt}`, source: 'Meditate', type: 'heal' });
+            this.appendCombatLog(`${this.getCombatantLogName(unit)} meditates, restoring stamina to full and +${healAmt} HP.`);
+        }
+
+        if (abilityId === 'barbarian_leap_attack') {
+            const targetTiles = (Array.isArray(target.occupiedCoords) && target.occupiedCoords.length > 0)
+                ? target.occupiedCoords
+                : [target.coordinates];
+            
+            let bestAdj = null;
+            let minSelfDist = Infinity;
+            for (const tile of targetTiles) {
+                for (let dx = -1; dx <= 1; dx++) {
+                    for (let dy = -1; dy <= 1; dy++) {
+                        if (dx === 0 && dy === 0) continue;
+                        const nx = tile.x + dx;
+                        const ny = tile.y + dy;
+                        if (nx < 0 || nx > MAX_DEPTH || ny < 0 || ny >= MAX_LANES) continue;
+                        if (this.isTileOccupied(nx, ny, unit.id)) continue;
+                        const dSelf = Math.abs(unit.coordinates.x - nx) + Math.abs(unit.coordinates.y - ny);
+                        if (dSelf < minSelfDist) {
+                            minSelfDist = dSelf;
+                            bestAdj = { x: nx, y: ny };
+                        }
+                    }
+                }
+            }
+            if (bestAdj) {
+                setTimeout(() => {
+                    if (this.combatants[unit.id] && !this.combatants[unit.id].dead) {
+                        this.updateUnitCoordinates(this.combatants[unit.id], bestAdj.x, bestAdj.y);
+                        if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+                    }
+                }, 1000);
             }
         }
 
@@ -1887,6 +2329,34 @@ export function CombatManagerRedux() {
                 ability.name, getDurationRounds(ability.duration || 'long'));
         }
 
+        const selfBuffDuration = getDurationRounds(ability.duration || 'long');
+        const selfBuffDurationMs = getDurationMsFromRounds(selfBuffDuration);
+        if (abilityId === 'inspire') {
+            this._applyBuff(unit, { increase_stats: { stats: [] } }, 'Inspire', selfBuffDuration);
+        }
+        if (abilityId === 'monk_ethereal_speed') {
+            unit.etherealSpeedActive = true;
+            unit.etherealSpeedRoundsLeft = selfBuffDuration;
+            unit.etherealSpeedTotalRounds = selfBuffDuration;
+            unit.etherealSpeedTotalDurationMs = selfBuffDurationMs;
+            unit.etherealSpeedEndTimeMs = Date.now() + selfBuffDurationMs;
+        }
+        if (abilityId === 'monk_astral_focus') {
+            this._applyBuff(unit, { increase_stats: { stats: [] } }, 'astral_being', selfBuffDuration);
+            unit.astralBeingActive = true;
+            unit.astralBeingRoundsLeft = selfBuffDuration;
+            unit.astralBeingTotalRounds = selfBuffDuration;
+            unit.astralBeingTotalDurationMs = selfBuffDurationMs;
+            unit.astralBeingEndTimeMs = Date.now() + selfBuffDurationMs;
+        }
+        if (abilityId === 'monk_third_eye') {
+            unit.thirdEyeActive = true;
+            unit.thirdEyeRoundsLeft = selfBuffDuration;
+            unit.thirdEyeTotalRounds = selfBuffDuration;
+            unit.thirdEyeTotalDurationMs = selfBuffDurationMs;
+            unit.thirdEyeEndTimeMs = Date.now() + selfBuffDurationMs;
+        }
+
         // Apply all-enemy debuffs
         if (effects.some(e => typeof e === 'string' && e.includes('nerf_all_enemies')) && ability.nerf) {
             Object.values(this.combatants).forEach(c => {
@@ -1912,6 +2382,28 @@ export function CombatManagerRedux() {
             return;
         }
 
+        if (abilityId === 'vortex') {
+            const base = typeof ability.damage === 'number' ? ability.damage : 10;
+            const splash = Math.max(1, Math.round(base));
+            let totalHits = 0;
+            Object.values(this.combatants).forEach(c => {
+                if (!c || c.dead || c.isVCT) return;
+                const isEnemy = (unit.isMonster || unit.isMinion) ? (!c.isMonster && !c.isMinion) : (c.isMonster || c.isMinion);
+                if (!isEnemy) return;
+                const dist = Math.abs(target.coordinates.x - c.coordinates.x) + Math.abs(target.coordinates.y - c.coordinates.y);
+                if (dist > 1) return;
+                c.hp = Math.max(0, c.hp - splash);
+                this.wakeSleepingTarget(c, ability.name || this.getCombatActionName(ability));
+                c.damageIndicators = c.damageIndicators || [];
+                c.damageIndicators.push({ id: Date.now() + Math.random(), value: `-${splash}`, source: ability.name, type: 'damage' });
+                totalHits++;
+                if (c.hp <= 0) this.targetKilled(c);
+            });
+            this.appendCombatLog(`${this.getCombatantLogName(unit)} tears a Vortex through nearby enemies (${totalHits} hit).`);
+            if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+            return;
+        }
+
         // AoE damage — hits all enemies in range
         if (effects.some(e => typeof e === 'string' && e.includes('multi_target'))) {
             const rawDamage = ability.damage || unit.stats.atk || 5;
@@ -1926,6 +2418,7 @@ export function CombatManagerRedux() {
                 if (hit) {
                     const finalDmg = this.damageCheck(unit, c, rawDamage);
                     c.hp = Math.max(0, c.hp - finalDmg);
+                    if (finalDmg > 0) this.wakeSleepingTarget(c, ability.name || this.getCombatActionName(ability));
                     c.damageIndicators = c.damageIndicators || [];
                     c.damageIndicators.push({ id: Date.now() + Math.random(), value: `-${finalDmg}`, source: ability.name, type: 'damage' });
                     totalHits++;
@@ -1939,13 +2432,37 @@ export function CombatManagerRedux() {
 
         // Single-target damage (default path)
         const hasDamageProp = (typeof ability.damage === 'number');
-        const rawDamage = hasDamageProp ? ability.damage : (ability.type === 'damage' ? (unit.stats.atk || 5) : 0);
+        let rawDamage = hasDamageProp ? ability.damage : (ability.type === 'damage' ? (unit.stats.atk || 5) : 0);
+
+        // INT-based spell damage scaling for spellcaster classes
+        const SPELLCASTER_TYPES = new Set(['wizard', 'sage', 'summoner']);
+        const unitInt = (unit.stats && typeof unit.stats.int === 'number') ? unit.stats.int : 0;
+        const unitStr = (unit.stats && typeof unit.stats.str === 'number') ? unit.stats.str : 0;
+        if (SPELLCASTER_TYPES.has(unit.type) && unitInt > 0) {
+            rawDamage = Math.round(rawDamage * (1 + unitInt * 0.05));
+        }
+        // STR-based physical damage scaling for warrior classes
+        const WARRIOR_TYPES = new Set(['soldier', 'barbarian', 'monk', 'ranger']);
+        if (WARRIOR_TYPES.has(unit.type) && unitStr > 0) {
+            rawDamage = Math.round(rawDamage * (1 + unitStr * 0.04));
+        }
+        // Monsters also get stat-based damage scaling
+        if ((unit.isMonster || unit.isMinion) && !SPELLCASTER_TYPES.has(unit.type) && !WARRIOR_TYPES.has(unit.type)) {
+            // Monsters scale with whichever is higher: STR for physical or INT for magical
+            if (unitInt > unitStr && unitInt > 0) {
+                rawDamage = Math.round(rawDamage * (1 + unitInt * 0.05));
+            } else if (unitStr > 0) {
+                rawDamage = Math.round(rawDamage * (1 + unitStr * 0.04));
+            }
+        }
+
         const dmgMult = target.weaknessRevealed ? 1.25 : 1.0;
         const hit = this.hitCheck(unit, target);
         if (hit) {
             const finalDmg = Math.round(this.damageCheck(unit, target, rawDamage) * dmgMult);
             if (finalDmg > 0) {
                 target.hp = Math.max(0, target.hp - finalDmg);
+                this.wakeSleepingTarget(target, ability.name || this.getCombatActionName(ability));
                 target.damageIndicators = target.damageIndicators || [];
                 target.damageIndicators.push({
                     id: Date.now() + Math.random(),
@@ -1954,45 +2471,105 @@ export function CombatManagerRedux() {
                     type: 'damage'
                 });
                 this.appendCombatLog(`${this.getCombatantLogName(unit)} uses ${this.getCombatActionName(ability)} on ${this.getCombatantLogName(target)} for ${finalDmg} damage${target.weaknessRevealed ? ' (weakness exposed!)' : ''}.`);
+
+                if (abilityId === 'fire_blast' || abilityId === 'fireball') {
+                    const splashDamage = Math.max(1, Math.round(finalDmg * 0.5));
+                    Object.values(this.combatants).forEach(c => {
+                        if (!c || c.dead || c.isVCT || c.id === target.id) return;
+                        const isEnemy = (unit.isMonster || unit.isMinion) ? (!c.isMonster && !c.isMinion) : (c.isMonster || c.isMinion);
+                        if (!isEnemy) return;
+                        const adx = Math.abs(target.coordinates.x - c.coordinates.x);
+                        const ady = Math.abs(target.coordinates.y - c.coordinates.y);
+                        if (adx > 1 || ady > 1) return;
+                        c.hp = Math.max(0, c.hp - splashDamage);
+                        this.wakeSleepingTarget(c, `${ability.name || this.getCombatActionName(ability)} splash`);
+                        c.damageIndicators = c.damageIndicators || [];
+                        c.damageIndicators.push({ id: Date.now() + Math.random(), value: `-${splashDamage}`, source: `${ability.name} splash`, type: 'damage' });
+                        if (c.hp <= 0) this.targetKilled(c);
+                    });
+                    this.appendCombatLog(`${this.getCombatantLogName(unit)}'s fire blast secondary ring scorches adjacent enemies.`);
+                }
             } else {
                 this.appendCombatLog(`${this.getCombatantLogName(unit)} uses ${this.getCombatActionName(ability)} on ${this.getCombatantLogName(target)}.`);
             }
 
             // Process side effects (stun, frozen, ensnared, fear, poison, bleed, sleep)
             const resolvedEffects = effects.filter(e => typeof e === 'object' && e && e.type);
+            // Fortitude-based resistance: target's fort stat grants % chance to resist certain ailments
+            const targetFort = (target.stats && typeof target.stats.fort === 'number') ? target.stats.fort : 0;
             resolvedEffects.forEach(eff => {
                 const chance = typeof eff.chance === 'number' ? eff.chance : 100;
                 if (Math.random() * 100 <= chance) {
+                    // Fortitude resistance check for applicable effects
+                    if (eff.type === 'poison' && targetFort > 0) {
+                        const resistChance = targetFort * 3; // 3% per fort point
+                        if (Math.random() * 100 < resistChance) {
+                            this.appendCombatLog(`${this.getCombatantLogName(target)} resists the poison! (Fortitude)`);
+                            return;
+                        }
+                    }
+                    if (eff.type === 'stun' && targetFort > 0) {
+                        const resistChance = targetFort * 2; // 2% per fort point
+                        if (Math.random() * 100 < resistChance) {
+                            this.appendCombatLog(`${this.getCombatantLogName(target)} resists the stun! (Fortitude)`);
+                            return;
+                        }
+                    }
+                    if (eff.type === 'sleep' && targetFort > 0) {
+                        const resistChance = targetFort * 2; // 2% per fort point
+                        if (Math.random() * 100 < resistChance) {
+                            this.appendCombatLog(`${this.getCombatantLogName(target)} resists sleep! (Fortitude)`);
+                            return;
+                        }
+                    }
                     const dur = getDurationRounds(eff.duration || 'short');
+                    const durMs = getDurationMsFromRounds(dur);
+                    const now = Date.now();
                     if (eff.type === 'frozen') {
                         target.frozen = true;
                         target.frozenRounds = (target.frozenRounds || 0) + dur;
                         target.frozenTotalRounds = (target.frozenTotalRounds || 0) + dur;
                         target.frozenStackDuration = dur;
+                        target.frozenTotalDurationMs = (target.frozenTotalDurationMs || 0) + durMs;
+                        target.frozenEndTimeMs = target.frozenEndTimeMs && target.frozenEndTimeMs > now ? target.frozenEndTimeMs + durMs : now + durMs;
                         this.appendCombatLog(`${this.getCombatantLogName(target)} is frozen!`);
                     } else if (eff.type === 'ensnared') {
                         target.ensnared = true;
                         target.ensnaredRounds = dur;
                         target.ensnaredTotalRounds = dur;
                         target.ensnaredStackDuration = dur;
+                        target.ensnaredTotalDurationMs = durMs;
+                        target.ensnaredEndTimeMs = now + durMs;
                         this.appendCombatLog(`${this.getCombatantLogName(target)} is ensnared!`);
                     } else if (eff.type === 'fear') {
                         target.stunned = true;
                         target.stunnedRounds = dur;
                         target.stunnedTotalRounds = dur;
                         target.stunnedStackDuration = dur;
+                        target.stunnedTotalDurationMs = durMs;
+                        target.stunnedEndTimeMs = now + durMs;
                         target.feared = true;
                         target.fearRounds = dur;
                         target.fearTotalRounds = dur;
+                        target.fearTotalDurationMs = durMs;
+                        target.fearEndTimeMs = now + durMs;
                         target.asleep = false;
+                        target.sleepTotalDurationMs = 0;
+                        target.sleepEndTimeMs = 0;
                         this.appendCombatLog(`${this.getCombatantLogName(target)} is terrified and cannot act.`);
                     } else if (eff.type === 'stun') {
                         target.stunned = true;
                         target.stunnedRounds = dur;
                         target.stunnedTotalRounds = dur;
                         target.stunnedStackDuration = dur;
+                        target.stunnedTotalDurationMs = durMs;
+                        target.stunnedEndTimeMs = now + durMs;
                         target.feared = false;
+                        target.fearTotalDurationMs = 0;
+                        target.fearEndTimeMs = 0;
                         target.asleep = false;
+                        target.sleepTotalDurationMs = 0;
+                        target.sleepEndTimeMs = 0;
                         this.appendCombatLog(`${this.getCombatantLogName(target)} is stunned!`);
                     } else if (eff.type === 'poison') {
                         this._applyDebuff(target, { decrease_stats: { stats: [{ stat: 'atk', amount: 3 }] } }, 'poison', dur);
@@ -2005,10 +2582,16 @@ export function CombatManagerRedux() {
                         target.stunnedRounds = dur;
                         target.stunnedTotalRounds = dur;
                         target.stunnedStackDuration = dur;
+                        target.stunnedTotalDurationMs = durMs;
+                        target.stunnedEndTimeMs = now + durMs;
                         target.asleep = true;
                         target.sleepRounds = dur;
                         target.sleepTotalRounds = dur;
+                        target.sleepTotalDurationMs = durMs;
+                        target.sleepEndTimeMs = now + durMs;
                         target.feared = false;
+                        target.fearTotalDurationMs = 0;
+                        target.fearEndTimeMs = 0;
                         this.appendCombatLog(`${this.getCombatantLogName(target)} is put to sleep!`);
                     }
                 }
@@ -2101,8 +2684,7 @@ export function CombatManagerRedux() {
         if (moved) {
             this.updateUnitCoordinates(unit, moved.x, moved.y);
             unit.movesTakenThisRound += 1;
-            unit.endurance = Math.max(0, unit.endurance - 1);
-            if (unit.endurance <= 0 && unit.enduranceFrozenRounds <= 0) unit.enduranceFrozenRounds = 4;
+            this.applyEnduranceCost(unit, this.MOVE_ENDURANCE_COST, 'move');
             this.appendCombatLog(`${this.getCombatantLogName(unit)} moves toward ${this.getCombatantLogName(target)}.`);
         }
     };
@@ -2128,6 +2710,7 @@ export function CombatManagerRedux() {
             if (this.canFitAt(unit, newX, newY)) {
                 this.updateUnitCoordinates(unit, newX, newY);
                 unit.movesTakenThisRound += 1;
+                this.applyEnduranceCost(unit, this.MOVE_ENDURANCE_COST, 'retreat');
                 this.appendCombatLog(`${this.getCombatantLogName(unit)} retreats from ${this.getCombatantLogName(enemyTarget)}.`);
             }
         }
@@ -2206,6 +2789,10 @@ export function CombatManagerRedux() {
                 c.bonesRoundsLeft--;
                 if (c.bonesRoundsLeft <= 0) {
                     c.isBones = false;
+                    c.bonesRoundsLeft = 0;
+                    c.bonesTotalRounds = 0;
+                    c.bonesTotalDurationMs = 0;
+                    c.bonesEndTimeMs = 0;
                     c.portrait = c.originalPortrait || c.portrait;
                     c.name = c.originalName || c.name;
                     if (typeof c.originalStartingHp === 'number') {

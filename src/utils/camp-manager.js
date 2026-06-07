@@ -22,12 +22,16 @@ export async function setUpCamp(component, maybeDuration) {
         const foodCost = crew.reduce((sum, m) => sum + (3 + (typeof m.level === 'number' ? m.level : 1)), 0);
         const currentFood = typeof meta.food === 'number' ? meta.food : 55;
         if (currentFood < foodCost) {
+            const currentResolve = typeof meta.resolve === 'number' ? meta.resolve : 100;
+            meta.resolve = Math.max(0, currentResolve - 2);
+            storeMeta(meta);
             try {
-                component.setState({ campWarningMessage: `Not enough food to camp (need ${foodCost}, have ${currentFood})` });
+                component.setState({ campWarningMessage: `Not enough food to camp (need ${foodCost}, have ${currentFood}). Resolve decreased by 2!` });
                 // auto-clear after 4s
                 const setTimeoutFn = (component._setTimeout && typeof component._setTimeout === 'function') ? component._setTimeout : setTimeout;
                 setTimeoutFn(() => { try { component.setState({ campWarningMessage: null }); } catch(e){} }, 4000);
             } catch(e) {}
+            try { if (component.props.saveUserData) component.props.saveUserData(); } catch (e) {}
             return; // block camping
         }
         // Deduct food cost
@@ -108,6 +112,8 @@ export async function endCamp(component) {
         m.camping = false;
         delete m.campingStart;
         delete m.campingEnd;
+        const currentResolve = typeof m.resolve === 'number' ? m.resolve : 100;
+        m.resolve = Math.min(100, currentResolve + 15);
         try {
             const crew = (component.props.crewManager && component.props.crewManager.crew) || [];
             // Build a new array of spread objects so React sees new prop references on Tile
