@@ -1324,27 +1324,33 @@ class MonsterBattle extends React.Component {
     }
 
     attackTileClicked = (val) => {
-        if(val.cooldown_position !== 100) return;
-        const formatted_val = val.name.replaceAll(' ', '_');
-
         const selectedId = this.state.selectedFighter?.id;
         const selectedCombatant = selectedId && this.props.combatManager?.getCombatant
             ? this.props.combatManager.getCombatant(selectedId)
             : null;
+        const fighterRef = selectedCombatant || this.state.selectedFighter;
+
+        // Check if attack is off cooldown
+        let isReady = false;
+        if (this.props.combatManager && this.props.combatManager.round !== undefined && fighterRef) {
+            const fKey = String(val.id || val.key || val.name || '').trim().toLowerCase().replaceAll(' ', '_');
+            const remainingSec = fighterRef.cooldowns?.[val.id] || fighterRef.cooldowns?.[val.key] || fighterRef.cooldowns?.[fKey] || 0;
+            isReady = remainingSec === 0;
+        } else {
+            isReady = val.cooldown_position === 100;
+        }
+        if (!isReady) return;
+
+        const formatted_val = String(val.id || val.key || val.name || '').trim().toLowerCase().replaceAll(' ', '_');
         const isManualControl = !!selectedCombatant?.manualControl;
 
         if (isManualControl && selectedCombatant) {
             // Resolve to the live attack object on the combatant so cooldown/state remain authoritative.
-            const resolvedAttack = (selectedCombatant.attacks || []).find((a) =>
-                a &&
-                a.name === val.name &&
-                a.range === val.range &&
-                a.cooldown_position === 100
-            ) || (selectedCombatant.attacks || []).find((a) =>
-                a &&
-                a.name === val.name &&
-                a.cooldown_position === 100
-            ) || val;
+            const resolvedAttack = (selectedCombatant.attacks || []).find((a) => {
+                if (!a) return false;
+                const aKey = String(a.id || a.key || a.name || '').trim().toLowerCase().replaceAll(' ', '_');
+                return aKey === formatted_val;
+            }) || val;
 
             selectedCombatant.pendingAttack = resolvedAttack;
             this.setState({
@@ -1362,7 +1368,9 @@ class MonsterBattle extends React.Component {
 
         this.setState({
             showCrosshair: true,
-            selectedAttack: this.props.combatManager.attacksMatrix[formatted_val]
+            selectedAttack: (this.props.combatManager && this.props.combatManager.attacksMatrix) 
+                ? (this.props.combatManager.attacksMatrix[formatted_val] || this.props.combatManager.attacksMatrix[val.name] || val) 
+                : val
         })
     }
     attackTileHovered = (val) => {
@@ -1540,13 +1548,13 @@ class MonsterBattle extends React.Component {
                 });
                 return;
             }
-            const isSelfTarget = clickedSpecial.effect && (
+            const isSelfTarget = clickedSpecial.range === 'self' || clickedSpecial.id === 'notch' || (clickedSpecial.effect && (
                 (Array.isArray(clickedSpecial.effect) && clickedSpecial.effect.some(e => typeof e === 'string' && e.includes('buff_self'))) ||
                 (typeof clickedSpecial.effect === 'string' && clickedSpecial.effect.includes('buff_self')) ||
                 clickedSpecial.id === 'monk_ethereal_speed' ||
                 clickedSpecial.id === 'monk_meditate' ||
                 clickedSpecial.id === 'monk_inner_fire'
-            );
+            ));
 
             if (!isSelfTarget && !fighterRef.targetId) {
                 console.log('[SpecialClickDiag][MonsterBattle] fireSpecial aborted: ability requires a target, but none is selected.', clickedSpecial.name);

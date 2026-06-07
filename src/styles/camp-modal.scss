@@ -1239,3 +1239,256 @@
     margin: 0;
   }
 }
+
+// ─── Map Overlay Redesign ────────────────────────────────────────────────────
+
+// --- Orientation toggle (Front / Back) ---
+.camp-map-orientation-toggle {
+  display: flex;
+  gap: 0;
+  border: 1px solid rgba(155, 199, 255, 0.25);
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(8, 16, 28, 0.7);
+  align-self: center;
+  margin-left: auto;
+}
+
+.orientation-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  border: none;
+  background: transparent;
+  color: rgba(180, 205, 230, 0.65);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  padding: 4px 14px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+  white-space: nowrap;
+
+  .orientation-icon {
+    font-size: 13px;
+    opacity: 0.7;
+  }
+
+  &:hover:not(.active) {
+    background: rgba(100, 160, 220, 0.12);
+    color: #d6e4f2;
+  }
+
+  &.active {
+    background: linear-gradient(135deg, rgba(85, 167, 255, 0.28), rgba(30, 80, 140, 0.55));
+    color: #ffffff;
+    box-shadow: 0 0 12px rgba(100, 180, 255, 0.2);
+
+    .orientation-icon {
+      opacity: 1;
+      filter: drop-shadow(0 0 3px rgba(150, 210, 255, 0.5));
+    }
+  }
+}
+
+// --- Header layout fix: make it 3-col ---
+.camp-map-header {
+  grid-template-columns: auto 1fr auto !important;
+  grid-template-areas: 'back title toggle' !important;
+}
+
+.camp-map-orientation-toggle {
+  grid-area: toggle;
+}
+
+// --- Enhanced slab visuals ---
+
+// Rune glyph decoration on slab top
+.slab-top::before {
+  content: '᚛ ᚜';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 11px;
+  color: rgba(30, 60, 90, 0.28);
+  letter-spacing: 12px;
+  font-family: monospace;
+  pointer-events: none;
+  z-index: 1;
+}
+
+// Subtle noise texture overlay on slab top
+.slab-top::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  clip-path: polygon(50% 0.2%, 99.6% 50%, 50% 99.8%, 0.4% 50%);
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 2;
+}
+
+// Glowing edge on current/active slab
+.tower-floor-slab.active .slab-top::before {
+  color: rgba(200, 170, 80, 0.35);
+  text-shadow: 0 0 6px rgba(255, 214, 124, 0.25);
+}
+
+// Enhanced slab depth with layered shadows
+.slab-left {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), inset 0 -3px 8px rgba(0, 0, 0, 0.12);
+}
+
+.slab-right {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), inset 0 -3px 8px rgba(0, 0, 0, 0.15);
+}
+
+// Slab label: fantasy typography
+.slab-label {
+  font-family: 'Georgia', 'Times New Roman', serif !important;
+  text-transform: uppercase;
+  font-size: 10px !important;
+  letter-spacing: 1.5px !important;
+  border: 1px solid rgba(20, 40, 60, 0.35) !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+// --- Floating dust particles on the scene ---
+.camp-map-scene-wrap::before,
+.camp-map-scene-wrap::after {
+  content: '';
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: rgba(180, 210, 240, 0.35);
+  pointer-events: none;
+  z-index: 10;
+}
+
+.camp-map-scene-wrap::before {
+  top: 20%;
+  left: 15%;
+  animation: dustFloat 8s ease-in-out infinite;
+  box-shadow: 
+    60px 40px 0 rgba(180, 210, 240, 0.2),
+    120px -20px 0 rgba(180, 210, 240, 0.15),
+    200px 80px 0 rgba(180, 210, 240, 0.25),
+    280px 20px 0 rgba(180, 210, 240, 0.12);
+}
+
+.camp-map-scene-wrap::after {
+  bottom: 30%;
+  right: 20%;
+  animation: dustFloat 11s ease-in-out infinite 2s;
+  box-shadow: 
+    -40px -30px 0 rgba(180, 210, 240, 0.18),
+    -100px 50px 0 rgba(180, 210, 240, 0.22),
+    -160px -10px 0 rgba(180, 210, 240, 0.14);
+}
+
+@keyframes dustFloat {
+  0%, 100% {
+    transform: translateY(0px) translateX(0px);
+    opacity: 0.4;
+  }
+  25% {
+    transform: translateY(-12px) translateX(5px);
+    opacity: 0.7;
+  }
+  50% {
+    transform: translateY(-8px) translateX(-3px);
+    opacity: 0.3;
+  }
+  75% {
+    transform: translateY(-16px) translateX(8px);
+    opacity: 0.6;
+  }
+}
+
+// --- Enhanced scene-wrap border ---
+.camp-map-scene-wrap {
+  border-color: rgba(120, 180, 255, 0.22) !important;
+  box-shadow: 
+    inset 0 0 40px rgba(20, 50, 90, 0.15),
+    0 0 20px rgba(60, 120, 200, 0.08);
+}
+
+// --- Plane-level (zoomed) enhancements ---
+
+// Compass rose for the plane detail view
+.tower-floor-slab.board-detail-active .slab-board-plane-layer::before {
+  content: '⊕';
+  position: absolute;
+  bottom: 4px;
+  right: 8px;
+  font-size: 18px;
+  color: rgba(155, 199, 255, 0.35);
+  z-index: 10;
+  pointer-events: none;
+}
+
+// Fog at diamond edges during plane zoom
+.tower-floor-slab.zoomed-in .slab-board-highlight::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  clip-path: polygon(50% -2%, 102% 50%, 50% 102%, -2% 50%);
+  background: radial-gradient(
+    ellipse at 50% 50%,
+    transparent 45%,
+    rgba(8, 16, 30, 0.35) 75%,
+    rgba(8, 16, 30, 0.65) 100%
+  );
+  pointer-events: none;
+  z-index: 4;
+  animation: fogPulse 6s ease-in-out infinite;
+}
+
+@keyframes fogPulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+// Enhance the board detail 2D grid
+.slab-board-detail-2d {
+  border-color: rgba(120, 180, 255, 0.45) !important;
+  box-shadow: 
+    inset 0 0 0 1px rgba(255, 255, 255, 0.06),
+    0 8px 32px rgba(4, 10, 24, 0.55),
+    0 0 60px rgba(60, 120, 200, 0.08) !important;
+}
+
+// Player dot: brighter glow on detail view
+.board-detail-player-tile {
+  border-color: rgba(100, 200, 255, 1) !important;
+  box-shadow: 
+    0 0 8px rgba(100, 200, 255, 0.6),
+    inset 0 0 4px rgba(160, 232, 255, 0.4) !important;
+  animation: playerTileGlow 2s ease-in-out infinite;
+}
+
+@keyframes playerTileGlow {
+  0%, 100% {
+    box-shadow: 0 0 8px rgba(100, 200, 255, 0.6), inset 0 0 4px rgba(160, 232, 255, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 16px rgba(100, 200, 255, 0.85), inset 0 0 8px rgba(160, 232, 255, 0.55);
+  }
+}
+
+// Enemy tiles: pulsing red glow
+.board-detail-enemy-tile {
+  animation: enemyTileGlow 2.5s ease-in-out infinite;
+}
+
+@keyframes enemyTileGlow {
+  0%, 100% {
+    box-shadow: inset 0 0 0 1px rgba(255, 166, 166, 0.72), 0 0 0 1px rgba(116, 16, 16, 0.65);
+  }
+  50% {
+    box-shadow: inset 0 0 0 1px rgba(255, 166, 166, 0.72), 0 0 6px rgba(232, 62, 62, 0.45);
+  }
+}

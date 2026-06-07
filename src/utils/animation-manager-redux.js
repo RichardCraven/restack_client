@@ -19,6 +19,7 @@ import {
   perceive,
   monk_punch,
   monk_force_punch,
+  ranger_net_throw,
 } from './images';
 
 export class AnimationManagerRedux {
@@ -74,7 +75,7 @@ export class AnimationManagerRedux {
    * @param {object} targetCoords  { x, y }
    * @param {string} abilityName   e.g. 'claw_strike', 'energy_drain'
    */
-  triggerAbility(sourceCoords, targetCoords, abilityName, isTargetLarge = false, targetOccupiedCoords = null, sourceUnitId = null) {
+  triggerAbility(sourceCoords, targetCoords, abilityName, isTargetLarge = false, targetOccupiedCoords = null, sourceUnitId = null, arrowType = null) {
     if (!sourceCoords || !targetCoords) return;
     const name = (abilityName || '').toLowerCase().replace(/\s+/g, '_');
     this._currentTargetCoords = targetCoords;
@@ -122,6 +123,9 @@ export class AnimationManagerRedux {
       case 'barbarian_slash':
         this._swordSlash(sourceCoords, targetCoords);
         break;
+      case 'imbued_strike':
+        this._imbuedStrike(sourceCoords, targetCoords);
+        break;
       case 'cleave':
       case 'barbarian_cleave':
         this._barbarianCleave(sourceCoords, targetCoords);
@@ -148,12 +152,17 @@ export class AnimationManagerRedux {
       case 'meditate':
         this._monkMeditate(sourceCoords, targetCoords);
         break;
+      case 'ensnare':
+        this._ensnareNet(sourceCoords, targetCoords);
+        break;
       case 'axe_throw':
       case 'deadeye_shot':
       case 'spear_throw':
       case 'loose':
+        this._projectileThrow(sourceCoords, targetCoords, name, arrowType);
+        break;
       case 'execute':
-        this._projectileThrow(sourceCoords, targetCoords, name);
+        this._executeMultiShots(sourceCoords, targetCoords, name, arrowType);
         break;
       case 'circle_of_protection':
         this._circleOfProtection(sourceCoords, targetCoords);
@@ -407,7 +416,22 @@ export class AnimationManagerRedux {
     });
   }
 
-  _projectileThrow(src, tgt, name) {
+  _imbuedStrike(src, tgt) {
+    const srcPx = this._px(src);
+    const tgtPx = this._px(tgt);
+    const dx = tgtPx.x - srcPx.x;
+    const dy = tgtPx.y - srcPx.y;
+    const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+    this._emit({
+      type: 'imbued_strike',
+      srcPx,
+      tgtPx,
+      angle,
+      duration: 600,
+    });
+  }
+
+  _projectileThrow(src, tgt, name, arrowType = null) {
     const srcPx = this._px(src);
     const tgtPx = this._getImpactTargetPx(tgt);
     const dx = tgtPx.x - srcPx.x;
@@ -419,8 +443,51 @@ export class AnimationManagerRedux {
       srcPx,
       tgtPx,
       angle,
+      arrowType,
       duration: 700,
     });
+  }
+
+  _ensnareNet(src, tgt) {
+    const srcPx = this._px(src);
+    const tgtPx = this._getImpactTargetPx(tgt);
+    const dx = tgtPx.x - srcPx.x;
+    const dy = tgtPx.y - srcPx.y;
+    const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+    this._emit({
+      type: 'generic_projectile',
+      subtype: 'ensnare_net',
+      srcPx,
+      tgtPx,
+      angle,
+      isNet: true,
+      netIcon: ranger_net_throw,
+      duration: 500,
+    });
+  }
+
+  _executeMultiShots(src, tgt, name, arrowType = null) {
+    const srcPx = this._px(src);
+    const tgtPx = this._getImpactTargetPx(tgt);
+    const dx = tgtPx.x - srcPx.x;
+    const dy = tgtPx.y - srcPx.y;
+    const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+
+    const fireArrow = () => {
+      this._emit({
+        type: 'generic_projectile',
+        subtype: name,
+        srcPx,
+        tgtPx,
+        angle,
+        arrowType,
+        duration: 700,
+      });
+    };
+
+    fireArrow();
+    setTimeout(fireArrow, 250);
+    setTimeout(fireArrow, 500);
   }
 
   _heal(src, tgt) {

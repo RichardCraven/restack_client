@@ -285,6 +285,40 @@ export default function FightersCombatGrid(props) {
                                         }}
                                         >
                                         </div>
+                                        {/* Ensnare Visual Overlay – green vine corners matching Sandbox */}
+                                        {(() => {
+                                            const liveFighter = props.combatManager?.getCombatant?.(fighter.id) || fighter;
+                                            if (!liveFighter?.ensnared || details?.dead) return null;
+                                            return (
+                                                <div style={{
+                                                    boxSizing: 'border-box',
+                                                    position: 'absolute',
+                                                    top: 0, left: 0, width: '100px', height: '100px',
+                                                    border: '3px solid #8bc34a',
+                                                    borderRadius: '6px',
+                                                    boxShadow: '0 0 18px rgba(139, 195, 74, 0.9), inset 0 0 10px rgba(139, 195, 74, 0.4)',
+                                                    pointerEvents: 'none',
+                                                    zIndex: 13
+                                                }}>
+                                                    {[
+                                                        { left: 0, top: 0, borderRadius: '0 0 100% 0' },
+                                                        { right: 0, top: 0, borderRadius: '0 0 0 100%' },
+                                                        { left: 0, bottom: 0, borderRadius: '0 100% 0 0' },
+                                                        { right: 0, bottom: 0, borderRadius: '100% 0 0 0' }
+                                                    ].map((pos, i) => (
+                                                        <div key={i} style={{
+                                                            position: 'absolute',
+                                                            ...pos,
+                                                            width: '18px', height: '18px',
+                                                            border: '3.5px solid #558b2f',
+                                                            boxShadow: '0 0 8px rgba(85,139,47,0.8)',
+                                                            animation: `ensnarePulse 0.8s ease-in-out infinite ${i * 0.2}s`,
+                                                            boxSizing: 'border-box'
+                                                        }} />
+                                                    ))}
+                                                </div>
+                                            );
+                                        })()}
                                         {props.animationOverlays[fighter.id] && props.getAllOverlaysById(fighter.id).map((overlay, i) => {
                                             const overlayData = {
                                                 ...overlay.data,

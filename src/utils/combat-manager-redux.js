@@ -163,28 +163,50 @@ export function CombatManagerRedux() {
     this.resolveSpecial = (callerOrArray, specialKey) => {
         const key = (specialKey || '').toString();
         const normalized = key.replace(/\s+/g, '_').toLowerCase();
-        let arr = null;
+        let arr = [];
         if (callerOrArray) {
-            if (Array.isArray(callerOrArray.specials)) arr = callerOrArray.specials;
-            else if (Array.isArray(callerOrArray)) arr = callerOrArray;
+            if (Array.isArray(callerOrArray.specials)) arr = arr.concat(callerOrArray.specials);
+            if (Array.isArray(callerOrArray.attacks)) arr = arr.concat(callerOrArray.attacks);
+            if (Array.isArray(callerOrArray.specialActions)) arr = arr.concat(callerOrArray.specialActions);
+            if (Array.isArray(callerOrArray)) arr = arr.concat(callerOrArray);
         }
-        if (!Array.isArray(arr)) return null;
+        if (!Array.isArray(arr) || arr.length === 0) return null;
 
         for (let s of arr) {
             if (!s) continue;
             if (typeof s === 'string') {
                 const sNorm = s.replace(/\s+/g, '_').toLowerCase();
                 if (s.toLowerCase() === key.toLowerCase() || sNorm === normalized) {
-                    const expanded = specialsMatrix[normalized];
-                    return expanded ? clone(expanded) : { name: key };
+                    const expanded = specialsMatrix[normalized] || attacksMatrix[normalized];
+                    if (expanded) return clone(expanded);
+                    if (normalized === 'loose') {
+                        return {
+                            id: 'loose',
+                            name: 'Loose',
+                            range: 'far',
+                            type: 'damage',
+                            cooldown: 2
+                        };
+                    }
+                    return { name: key };
                 }
             } else if (typeof s === 'object') {
                 if (s.name && (s.name.toLowerCase() === key.toLowerCase() || s.name.toLowerCase() === normalized)) return s;
                 if (s.key && s.key.toLowerCase() === normalized) return s;
             }
         }
-        const expanded = specialsMatrix[normalized];
-        return expanded ? clone(expanded) : null;
+        const expanded = specialsMatrix[normalized] || attacksMatrix[normalized];
+        if (expanded) return clone(expanded);
+        if (normalized === 'loose') {
+            return {
+                id: 'loose',
+                name: 'Loose',
+                range: 'far',
+                type: 'damage',
+                cooldown: 2
+            };
+        }
+        return null;
     };
 
     this.updateAllFightIntervals = (newInterval) => {
@@ -1015,8 +1037,10 @@ export function CombatManagerRedux() {
                         }
                     }
 
-                    // Execute class-specific AI decision tree
-                    this.executeUnitAI(unit);
+                    // Execute class-specific AI decision tree if not under manual control
+                    if (!unit.manualControl) {
+                        this.executeUnitAI(unit);
+                    }
                 } catch (err) {
                     this.appendCombatLog(`ERROR in unit ${unit.name} AI: ${err.message}`);
                     console.error(err);
@@ -1088,6 +1112,27 @@ export function CombatManagerRedux() {
                 unit.markedTotalDurationMs = 0;
                 unit.markedEndTimeMs = 0;
                 this.appendCombatLog(`${this.getCombatantLogName(unit)}'s mark has expired.`);
+            }
+        }
+        if (unit.poison && typeof unit.poisonRounds === 'number') {
+            unit.poisonRounds--;
+            const poisonDmg = 4;
+            unit.hp = Math.max(0, unit.hp - poisonDmg);
+            unit.damageIndicators = unit.damageIndicators || [];
+            unit.damageIndicators.push({
+                id: Date.now() + Math.random(),
+                value: `-${poisonDmg}`,
+                source: 'Poison',
+                type: 'damage'
+            });
+            this.appendCombatLog(`${this.getCombatantLogName(unit)} takes ${poisonDmg} poison damage.`);
+            if (unit.hp <= 0) {
+                this.targetKilled(unit);
+            }
+            if (unit.poisonRounds <= 0) {
+                unit.poison = false;
+                unit.poisonRounds = 0;
+                this.appendCombatLog(`${this.getCombatantLogName(unit)} is no longer poisoned.`);
             }
         }
     };
@@ -1927,7 +1972,35 @@ export function CombatManagerRedux() {
             this.repositionUnit(unit, target, 'retreat');
         }
 
-        // Priority 1: Ensnare if target is not ensnared
+        // Fire Phase (arrow is notched)
+        if (unit.arrowNotched) {
+            // Priority 1: Execute if ready
+            if (this._abilityReady(unit, 'execute')) {
+                const pick = this.resolveSpecial(unit, 'execute');
+                if (pick) {
+                    this.useAbility(unit, pick, target);
+                    this._setCooldown(unit, 'execute', pick.cooldown || 8);
+                    unit.arrowNotched = false;
+                    return;
+                }
+            }
+
+            // Default fire action: Loose
+            const pick = this.resolveSpecial(unit, 'loose') || {
+                id: 'loose',
+                name: 'Loose',
+                range: 'far',
+                type: 'damage',
+                cooldown: 2
+            };
+            const looseAttack = { ...pick, cooldown: 2, range: 'far' };
+            this.useAbility(unit, looseAttack, target);
+            unit.arrowNotched = false;
+            return;
+        }
+
+        // Setup Phase (no arrow notched yet)
+        // Priority 2: Ensnare if target is not ensnared
         if (this._abilityReady(unit, 'ensnare') && !target.ensnared) {
             const pick = this.resolveSpecial(unit, 'ensnare');
             if (pick) {
@@ -1944,7 +2017,7 @@ export function CombatManagerRedux() {
             }
         }
 
-        // Priority 2: Mark target
+        // Priority 3: Mark target
         if (this._abilityReady(unit, 'mark') && !target.marked) {
             const pick = this.resolveSpecial(unit, 'mark');
             if (pick) {
@@ -1961,18 +2034,17 @@ export function CombatManagerRedux() {
             }
         }
 
-        // Priority 3: Execute (rapid three arrows)
-        if (this._abilityReady(unit, 'execute')) {
-            const pick = this.resolveSpecial(unit, 'execute');
-            if (pick) {
-                this.useAbility(unit, pick, target);
-                this._setCooldown(unit, 'execute', pick.cooldown || 8);
-                return;
-            }
-        }
-
-        // Default: loose (basic attack)
-        this._basicAttack(unit, target);
+        // If no setup action is taken, notch an arrow!
+        const pick = this.resolveSpecial(unit, 'notch') || {
+            id: 'notch',
+            name: 'Notch',
+            range: 'self',
+            type: 'utility',
+            cooldown: 0
+        };
+        const notchAction = { ...pick, cooldown: 0 };
+        this.useAbility(unit, notchAction, unit);
+        unit.arrowNotched = true;
     };
 
     // SUMMONER: Support/summon. Opens rift first, then summons minions based on priority.
@@ -2200,6 +2272,10 @@ export function CombatManagerRedux() {
 
         // Morale Shaken check: 5% chance to refuse to use a special ability and use basic attack instead
         const abilityId = ability.id || ability.key || (ability.name && ability.name.replace(/\s+/g, '_').toLowerCase()) || 'ability';
+        if (abilityId === 'notch') {
+            unit.arrowNotched = true;
+            unit.notchedArrowType = ['force', 'ice', 'poison', 'celestial'][Math.floor(Math.random() * 4)];
+        }
         const isBasicAttack = unit.attacks && unit.attacks.includes(abilityId);
         if (unit && !unit.isMonster && !unit.isMinion && !isBasicAttack) {
             const meta = getMeta();
@@ -2319,7 +2395,12 @@ export function CombatManagerRedux() {
                     }
                 });
             });
-            this.animManagerRedux.triggerAbility(bestCallerCoord, bestTargetCoord, abilityId, isTargetLarge, targetTiles, unit.id);
+            this.animManagerRedux.triggerAbility(bestCallerCoord, bestTargetCoord, abilityId, isTargetLarge, targetTiles, unit.id, unit.notchedArrowType);
+        }
+
+        if (abilityId === 'loose' || abilityId === 'execute' || abilityId === 'deadeye_shot') {
+            unit.arrowNotched = false;
+            unit.notchedArrowType = null;
         }
 
         // Apply self-buffs
@@ -2457,40 +2538,107 @@ export function CombatManagerRedux() {
         }
 
         const dmgMult = target.weaknessRevealed ? 1.25 : 1.0;
-        const hit = this.hitCheck(unit, target);
-        if (hit) {
-            const finalDmg = Math.round(this.damageCheck(unit, target, rawDamage) * dmgMult);
-            if (finalDmg > 0) {
-                target.hp = Math.max(0, target.hp - finalDmg);
-                this.wakeSleepingTarget(target, ability.name || this.getCombatActionName(ability));
-                target.damageIndicators = target.damageIndicators || [];
-                target.damageIndicators.push({
-                    id: Date.now() + Math.random(),
-                    value: `-${finalDmg}`,
-                    source: ability.name,
-                    type: 'damage'
-                });
-                this.appendCombatLog(`${this.getCombatantLogName(unit)} uses ${this.getCombatActionName(ability)} on ${this.getCombatantLogName(target)} for ${finalDmg} damage${target.weaknessRevealed ? ' (weakness exposed!)' : ''}.`);
+        const isSelfTarget = target.id === unit.id || ability.range === 'self';
+        const arrowType = (abilityId === 'loose' || abilityId === 'execute') ? (unit.notchedArrowType || 'force') : null;
+        const hitCount = (abilityId === 'execute') ? 3 : 1;
+        let hitsSucceeded = 0;
+        let anyHitConnected = false;
 
-                if (abilityId === 'fire_blast' || abilityId === 'fireball') {
-                    const splashDamage = Math.max(1, Math.round(finalDmg * 0.5));
-                    Object.values(this.combatants).forEach(c => {
-                        if (!c || c.dead || c.isVCT || c.id === target.id) return;
-                        const isEnemy = (unit.isMonster || unit.isMinion) ? (!c.isMonster && !c.isMinion) : (c.isMonster || c.isMinion);
-                        if (!isEnemy) return;
-                        const adx = Math.abs(target.coordinates.x - c.coordinates.x);
-                        const ady = Math.abs(target.coordinates.y - c.coordinates.y);
-                        if (adx > 1 || ady > 1) return;
-                        c.hp = Math.max(0, c.hp - splashDamage);
-                        this.wakeSleepingTarget(c, `${ability.name || this.getCombatActionName(ability)} splash`);
-                        c.damageIndicators = c.damageIndicators || [];
-                        c.damageIndicators.push({ id: Date.now() + Math.random(), value: `-${splashDamage}`, source: `${ability.name} splash`, type: 'damage' });
-                        if (c.hp <= 0) this.targetKilled(c);
+        for (let h = 0; h < hitCount; h++) {
+            if (target.hp <= 0 || target.dead) break;
+
+            const hit = isSelfTarget ? true : this.hitCheck(unit, target);
+            if (hit) {
+                anyHitConnected = true;
+                let currentRawDmg = rawDamage;
+                if (abilityId === 'execute') {
+                    currentRawDmg = Math.round(rawDamage * 0.75);
+                }
+
+                let finalDmg = Math.round(this.damageCheck(unit, target, currentRawDmg) * dmgMult);
+                if (arrowType === 'celestial') {
+                    finalDmg = Math.round(finalDmg * 1.75);
+                }
+
+                if (finalDmg > 0) {
+                    target.hp = Math.max(0, target.hp - finalDmg);
+                    this.wakeSleepingTarget(target, ability.name || this.getCombatActionName(ability));
+                    target.damageIndicators = target.damageIndicators || [];
+                    target.damageIndicators.push({
+                        id: Date.now() + Math.random() + h,
+                        value: `-${finalDmg}`,
+                        source: ability.name,
+                        type: 'damage'
                     });
-                    this.appendCombatLog(`${this.getCombatantLogName(unit)}'s fire blast secondary ring scorches adjacent enemies.`);
+                    this.appendCombatLog(`${this.getCombatantLogName(unit)} uses ${this.getCombatActionName(ability)} on ${this.getCombatantLogName(target)} for ${finalDmg} damage${target.weaknessRevealed ? ' (weakness exposed!)' : ''}.`);
+
+                    hitsSucceeded++;
+
+                    // Consume mark on the first hit that connects
+                    if (target.marked && hitsSucceeded === 1) {
+                        target.marked = false;
+                        target.markedRounds = 0;
+                        const markBonus = 15;
+                        target.hp = Math.max(0, target.hp - markBonus);
+                        target.damageIndicators.push({
+                            id: Date.now() + Math.random() + 99,
+                            value: `+${markBonus}`,
+                            source: 'Mark detonated',
+                            type: 'crit'
+                        });
+                        this.appendCombatLog(`${this.getCombatantLogName(unit)} detonates the mark on ${this.getCombatantLogName(target)} for +${markBonus} bonus damage.`);
+                    }
+
+                    if (abilityId === 'fire_blast' || abilityId === 'fireball') {
+                        const splashDamage = Math.max(1, Math.round(finalDmg * 0.5));
+                        Object.values(this.combatants).forEach(c => {
+                            if (!c || c.dead || c.isVCT || c.id === target.id) return;
+                            const isEnemy = (unit.isMonster || unit.isMinion) ? (!c.isMonster && !c.isMinion) : (c.isMonster || c.isMinion);
+                            if (!isEnemy) return;
+                            const adx = Math.abs(target.coordinates.x - c.coordinates.x);
+                            const ady = Math.abs(target.coordinates.y - c.coordinates.y);
+                            if (adx > 1 || ady > 1) return;
+                            c.hp = Math.max(0, c.hp - splashDamage);
+                            this.wakeSleepingTarget(c, `${ability.name || this.getCombatActionName(ability)} splash`);
+                            c.damageIndicators = c.damageIndicators || [];
+                            c.damageIndicators.push({ id: Date.now() + Math.random(), value: `-${splashDamage}`, source: `${ability.name} splash`, type: 'damage' });
+                            if (c.hp <= 0) this.targetKilled(c);
+                        });
+                        this.appendCombatLog(`${this.getCombatantLogName(unit)}'s fire blast secondary ring scorches adjacent enemies.`);
+                    }
+
+                    if (target.hp <= 0) {
+                        this.targetKilled(target);
+                        break;
+                    }
                 }
             } else {
-                this.appendCombatLog(`${this.getCombatantLogName(unit)} uses ${this.getCombatActionName(ability)} on ${this.getCombatantLogName(target)}.`);
+                this.appendCombatLog(`${this.getCombatantLogName(unit)} missed ${this.getCombatActionName(ability)} on ${this.getCombatantLogName(target)}.`);
+            }
+        }
+
+        if (anyHitConnected) {
+            if (arrowType === 'ice' && hitsSucceeded > 0 && !target.dead && target.hp > 0) {
+                effects.push({ type: 'frozen', duration: 'short' });
+            }
+            if (arrowType === 'poison' && hitsSucceeded > 0 && !target.dead && target.hp > 0) {
+                effects.push({ type: 'poison', duration: 'medium' });
+            }
+            if (arrowType === 'force' && hitsSucceeded > 0 && !target.dead && target.hp > 0) {
+                const dx = target.coordinates.x - unit.coordinates.x;
+                const dy = target.coordinates.y - unit.coordinates.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist > 0) {
+                    const pushX = Math.round(dx / dist);
+                    const pushY = Math.round(dy / dist);
+                    const newX = Math.max(0, Math.min(MAX_DEPTH, target.coordinates.x + pushX));
+                    const newY = Math.max(0, Math.min(MAX_LANES - 1, target.coordinates.y + pushY));
+
+                    if ((newX !== target.coordinates.x || newY !== target.coordinates.y) && !this.isTileOccupied(newX, newY, target.id)) {
+                        this.updateUnitCoordinates(target, newX, newY);
+                        this.appendCombatLog(`${this.getCombatantLogName(target)} is pushed back by the force arrow!`);
+                    }
+                }
             }
 
             // Process side effects (stun, frozen, ensnared, fear, poison, bleed, sleep)
@@ -2572,6 +2720,8 @@ export function CombatManagerRedux() {
                         target.sleepEndTimeMs = 0;
                         this.appendCombatLog(`${this.getCombatantLogName(target)} is stunned!`);
                     } else if (eff.type === 'poison') {
+                        target.poison = true;
+                        target.poisonRounds = dur;
                         this._applyDebuff(target, { decrease_stats: { stats: [{ stat: 'atk', amount: 3 }] } }, 'poison', dur);
                         this.appendCombatLog(`${this.getCombatantLogName(target)} is poisoned!`);
                     } else if (eff.type === 'bleed') {
@@ -2598,10 +2748,6 @@ export function CombatManagerRedux() {
             });
 
             if (target.hp <= 0) this.targetKilled(target);
-        } else {
-            this.appendCombatLog(`${this.getCombatantLogName(unit)} attacks ${this.getCombatantLogName(target)} but misses!`);
-            target.damageIndicators = target.damageIndicators || [];
-            target.damageIndicators.push({ id: Date.now() + Math.random(), value: 'MISS', source: ability.name, type: 'miss' });
         }
 
         if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
@@ -2618,9 +2764,29 @@ export function CombatManagerRedux() {
                 damage: unit.stats.atk || baseAttack.damage || 5,
                 cooldown: 0
             };
+        } else if (typeof baseAttack === 'string') {
+            const resolved = this.resolveSpecial(unit, baseAttack);
+            if (resolved) {
+                attack = {
+                    ...resolved,
+                    id: resolved.id || baseAttack,
+                    damage: unit.stats.atk || resolved.damage || 5,
+                    cooldown: 0
+                };
+            } else {
+                attack = {
+                    id: baseAttack,
+                    name: baseAttack,
+                    range: 'close',
+                    type: 'cutting',
+                    damage: unit.stats.atk || 5,
+                    cooldown: 0
+                };
+            }
         } else {
             attack = {
-                name: typeof baseAttack === 'string' ? baseAttack : 'attack',
+                id: 'attack',
+                name: 'attack',
                 range: 'close',
                 type: 'cutting',
                 damage: unit.stats.atk || 5,
@@ -2884,13 +3050,61 @@ export function CombatManagerRedux() {
     this.disconnectOverlayManager = () => { this.overlayManager = null; };
 
     // Action and control stubs to avoid crash
-    this.setManualControl = (fighterId, enabled) => {};
+    this.setManualControl = (fighterId, enabled) => {
+        Object.values(this.combatants).forEach(f => {
+            if (!f.isMonster && !f.isMinion) {
+                f.manualControl = (enabled && f.id === fighterId);
+            }
+        });
+        if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+    };
     this.manualRetarget = (fighter) => {};
     this.getRangeWidthVal = (details) => 0;
     this.queueAction = (fighterId, actionId, action) => {};
-    this.fighterManualAttack = () => {};
-    this.fighterSpecialAttack = (special) => {};
-    this.setTargetFromClick = (fighterId, tileId) => {};
+    this.fighterManualAttack = () => {
+        if (!this.selectedFighter) return;
+        const fighter = this.combatants[this.selectedFighter.id];
+        if (!fighter || fighter.dead) return;
+
+        const target = fighter.targetId ? this.combatants[fighter.targetId] : null;
+        if (!target) return;
+
+        this._basicAttack(fighter, target);
+        if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+    };
+    this.fighterSpecialAttack = (special) => {
+        if (!this.selectedFighter) return;
+        const fighter = this.combatants[this.selectedFighter.id];
+        if (!fighter || fighter.dead) return;
+
+        const resolved = this.resolveSpecial(fighter, special.id || special.name || special);
+        if (!resolved) return;
+
+        const target = fighter.targetId ? this.combatants[fighter.targetId] : null;
+        
+        // Some abilities (self utility) don't need a hostile target
+        const isSelfTarget = resolved.range === 'self' || resolved.id === 'notch' || resolved.id === 'monk_meditate' || resolved.id === 'monk_ethereal_speed';
+        
+        const targetUnit = isSelfTarget ? fighter : target;
+        if (!targetUnit) return;
+
+        this.useAbility(fighter, resolved, targetUnit);
+
+        // Custom Notch / Loose manual check
+        if (resolved.id === 'notch') {
+            fighter.arrowNotched = true;
+        } else if (resolved.id === 'loose') {
+            fighter.arrowNotched = false;
+        }
+
+        if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+    };
+    this.setTargetFromClick = (fighterId, targetId) => {
+        const fighter = this.combatants[fighterId];
+        if (!fighter) return;
+        fighter.targetId = targetId;
+        if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+    };
     this.setFighterDestination = (fighterId, coords) => {};
     this.chooseAttackType = (fighter, target) => {};
     this.startManualCommandCooldown = (fighterId, durationMs = null) => {};

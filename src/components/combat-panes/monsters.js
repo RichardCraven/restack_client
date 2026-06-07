@@ -504,7 +504,7 @@ const MonstersCombatGrid = ({
                                         ${greetingInProcess ? 'enlarged' : ''}
                                         ${battleData[monster.id]?.active ? 'active' : ''}
                                         ${portraitHoveredId === monster.id ? 'hover-linked-target' : ''}
-                                        ${battleData[monster.id]?.dead ? (monster.key === 'mummy' || monster.type === 'mummy' || battleData[monster.id]?.key === 'mummy' || battleData[monster.id]?.type === 'mummy' ? 'dead mummyDeadAnimation' : 'dead monsterDeadAnimation') : ''}
+                                        ${battleData[monster.id]?.dead ? 'dead mummyDeadAnimation' : ''}
                                         ${battleData[monster.id]?.missed ? (battleData[monster.id]?.facing === 'right' ? 'missed-reversed' : 'missed') : ''}
                                         ${selectedMonster?.id === monster.id ? 'selected' : ''}
                                         ${battleData[monster.id]?.facing === 'right' ? 'reversed' : ''}

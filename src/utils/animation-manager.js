@@ -1174,9 +1174,24 @@ export function AnimationManager(){
                     });
             }
                 break;
-            default:
-                console.log('animation not properly specified... INVESTIGATE', type);
+            default: {
+                const standardSkills = [
+                    'notch', 'mark', 'execute', 'ensnare', 'loose', 'deadeye_shot',
+                    'healing_hands', 'circle_of_protection', 'perceive', 'weakness_doubled',
+                    'lightning_strike', 'lightning', 'ethereal_speed', 'astral_being',
+                    'astral_focus', 'astral_projection', 'third_eye', 'whirlwind',
+                    'inner_fire', 'meditate', 'monk_meditate', 'force_punch', 'monk_punch',
+                    'twin_finger_authority', 'flurry', 'force_punch_flurry', 'monk_force_punch_flurry',
+                    'summon', 'summon2', 'summon_skeleton', 'summon_skeleton_knight',
+                    'duplicate', 'triplicate', 'open_rift', 'portal', 'summon3',
+                    'summon_imp_army', 'summon_skeleton_army', 'summon_devil', 'summon_zombie',
+                    'summon_ghoul', 'summon_imp', 'heal', 'healing_hymn', 'spear_throw'
+                ];
+                if (!standardSkills.includes(type)) {
+                    console.debug('animation not properly specified... INVESTIGATE', type);
+                }
                 break;
+            }
 
         }
     }

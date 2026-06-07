@@ -5552,7 +5552,31 @@ class DungeonPage extends React.Component {
                                         </button>
                                     </div>
                                 </div>
-                                {/* <div className="camp-map-subtitle">Stacked floors from an isometric view</div> */}
+                                {/* Front / Back orientation toggle */}
+                                <div className="camp-map-orientation-toggle">
+                                    <button
+                                        className={`orientation-btn ${(this.props.boardManager?.currentOrientation || 'F') === 'F' ? 'active' : ''}`}
+                                        onClick={() => {
+                                            if (this.props.boardManager) {
+                                                this.props.boardManager.currentOrientation = 'F';
+                                                this.forceUpdate();
+                                            }
+                                        }}
+                                    >
+                                        <span className="orientation-icon">◈</span> Front
+                                    </button>
+                                    <button
+                                        className={`orientation-btn ${(this.props.boardManager?.currentOrientation || 'F') === 'B' ? 'active' : ''}`}
+                                        onClick={() => {
+                                            if (this.props.boardManager) {
+                                                this.props.boardManager.currentOrientation = 'B';
+                                                this.forceUpdate();
+                                            }
+                                        }}
+                                    >
+                                        <span className="orientation-icon">◇</span> Back
+                                    </button>
+                                </div>
                             </div>
 
                             <div className="camp-map-scene-wrap" onClick={(e) => e.stopPropagation()}>

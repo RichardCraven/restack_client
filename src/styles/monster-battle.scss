@@ -4173,11 +4173,11 @@
 
 @keyframes beamShrink {
     0% {
-        width: 18px;
+        transform: translate(-50%, -50%) rotate(var(--slash-angle, 0deg)) scaleX(1);
         opacity: 1;
     }
     100% {
-        width: 0px;
+        transform: translate(-50%, -50%) rotate(var(--slash-angle, 0deg)) scaleX(0.1);
         opacity: 0;
     }
 }
@@ -4562,4 +4562,61 @@
 @keyframes missileGlow {
     0% { transform: scale(0.9); box-shadow: 0 0 8px #d946ef, 0 0 15px #701a75; }
     100% { transform: scale(1.1); box-shadow: 0 0 14px #d946ef, 0 0 25px #701a75; }
+}
+
+@keyframes acidDrip {
+    0% {
+        transform: translateY(-20px) scale(0.6);
+        opacity: 0;
+    }
+    20% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+    80% {
+        opacity: 0.8;
+        transform: translateY(60px) scale(1);
+    }
+    100% {
+        transform: translateY(90px) scale(0.4);
+        opacity: 0;
+    }
+}
+
+@keyframes pulse {
+    0% { opacity: 0.45; }
+    50% { opacity: 0.8; }
+    100% { opacity: 0.45; }
+}
+
+@keyframes poisonDrop {
+    0% { opacity: 0.9; transform: translate(0, 0) scale(1); }
+    100% { opacity: 0; transform: translate(-12px, 6px) scale(0.3); }
+}
+
+@-webkit-keyframes poisonDrop {
+    0% { opacity: 0.9; -webkit-transform: translate(0, 0) scale(1); }
+    100% { opacity: 0; -webkit-transform: translate(-12px, 6px) scale(0.3); }
+}
+
+@-moz-keyframes poisonDrop {
+    0% { opacity: 0.9; -moz-transform: translate(0, 0) scale(1); }
+    100% { opacity: 0; -moz-transform: translate(-12px, 6px) scale(0.3); }
+}
+
+@keyframes ensnarePulse {
+    0% { transform: scale(1); opacity: 0.8; }
+    50% { transform: scale(1.15); opacity: 1; }
+    100% { transform: scale(1); opacity: 0.8; }
+}
+
+@keyframes poisonPulseGlow {
+    0% {
+        box-shadow: inset 0 0 10px rgba(56, 176, 0, 0.3), 0 0 8px rgba(56, 176, 0, 0.2);
+        background: rgba(56, 176, 0, 0.05);
+    }
+    100% {
+        box-shadow: inset 0 0 25px rgba(56, 176, 0, 0.7), 0 0 20px rgba(56, 176, 0, 0.6);
+        background: rgba(56, 176, 0, 0.2);
+    }
 }

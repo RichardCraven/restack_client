@@ -321,7 +321,9 @@ const DEBUG_FORCE_BIG_BULGE = true;
 const MINION_DEBUG_FACTOR = 0.3;
 
 const computeHitVars = (combatant, getHitAnimation) => {
-    const baseScale = (combatant && combatant.isMinion) ? '1' : '2';
+    // CombatGrid portraits fill their container via width:100%/height:100%,
+    // so --portrait-base-scale should always be 1 (container is already 200px for large monsters).
+    const baseScale = '1';
     const flip = (combatant && combatant.facing === 'right') ? '-1' : '1';
     if (!combatant || !combatant.wounded) return { '--portrait-base-scale': baseScale, '--portrait-flip': flip };
     const hc = (getHitAnimation && getHitAnimation(combatant)) || '';
@@ -789,7 +791,136 @@ export default function CombatGrid(props) {
                             }
                         }}
                     />
+                    {details?.marked && !details?.dead && (
+                        <div style={{
+                            position: 'absolute',
+                            top: '-12.5%',
+                            left: '-12.5%',
+                            width: '125%',
+                            height: '125%',
+                            backgroundImage: `url(${images.ranger_mark?.default || images.ranger_mark})`,
+                            backgroundSize: 'contain',
+                            backgroundRepeat: 'no-repeat',
+                            backgroundPosition: 'center',
+                            zIndex: 310,
+                            animation: 'pulse 1.5s infinite ease-in-out',
+                            opacity: 0.5,
+                            pointerEvents: 'none',
+                        }}></div>
+                    )}
+                    {fighter.type === 'ranger' && details?.arrowNotched && details?.notchedArrowType && (
+                        <div style={{
+                            position: 'absolute',
+                            top: '-6px',
+                            left: '-6px',
+                            width: '24px',
+                            height: '24px',
+                            borderRadius: '50%',
+                            backgroundColor: '#111',
+                            border: '2px solid #ffb703',
+                            backgroundImage: `url(${
+                                details.notchedArrowType === 'ice' ? (images.ranger_ice_arrow?.default || images.ranger_ice_arrow) :
+                                details.notchedArrowType === 'force' ? (images.ranger_force_arrow?.default || images.ranger_force_arrow) :
+                                details.notchedArrowType === 'poison' ? (images.ranger_poison_arrow?.default || images.ranger_poison_arrow) :
+                                (images.ranger_celestial_arrow?.default || images.ranger_celestial_arrow)
+                            })`,
+                            backgroundSize: 'contain',
+                            backgroundRepeat: 'no-repeat',
+                            backgroundPosition: 'center',
+                            zIndex: 350,
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.5)',
+                            animation: 'scaleUp 0.2s ease-out'
+                        }} />
+                    )}
                     {details?.wounded && <div className="hit-flash-overlay" />}
+                    {/* Ensnare Visual Overlay – green vine corners matching Sandbox */}
+                    {details?.ensnared && !details?.dead && (
+                        <div style={{
+                            boxSizing: 'border-box',
+                            position: 'absolute',
+                            top: 0, left: 0, width: '100%', height: '100%',
+                            border: '3px solid #8bc34a',
+                            borderRadius: '6px',
+                            boxShadow: '0 0 18px rgba(139, 195, 74, 0.9), inset 0 0 10px rgba(139, 195, 74, 0.4)',
+                            pointerEvents: 'none',
+                            zIndex: 315
+                        }}>
+                            {[
+                                { left: 0, top: 0, borderRadius: '0 0 100% 0' },
+                                { right: 0, top: 0, borderRadius: '0 0 0 100%' },
+                                { left: 0, bottom: 0, borderRadius: '0 100% 0 0' },
+                                { right: 0, bottom: 0, borderRadius: '100% 0 0 0' }
+                            ].map((pos, i) => (
+                                <div key={i} style={{
+                                    position: 'absolute',
+                                    ...pos,
+                                    width: '18px', height: '18px',
+                                    border: '3.5px solid #558b2f',
+                                    boxShadow: '0 0 8px rgba(85,139,47,0.8)',
+                                    animation: `ensnarePulse 0.8s ease-in-out infinite ${i * 0.2}s`,
+                                    boxSizing: 'border-box'
+                                }} />
+                            ))}
+                        </div>
+                    )}
+                    {/* Poison Overlay (pulsing green glow) */}
+                    {details?.poison && !details?.dead && (
+                        <div style={{
+                            boxSizing: 'border-box',
+                            position: 'absolute',
+                            top: 0, left: 0, width: '100%', height: '100%',
+                            borderRadius: '6px',
+                            pointerEvents: 'none',
+                            zIndex: 314,
+                            animation: 'poisonPulseGlow 1.5s ease-in-out infinite alternate',
+                            border: '2px solid rgba(56, 176, 0, 0.6)'
+                        }} />
+                    )}
+                    {/* Dripping Acid Drops */}
+                    {details?.poison && !details?.dead && (images.acid_drop || images.poison) && (
+                        <div style={{
+                            position: 'absolute',
+                            top: 0, left: 0, width: '100%', height: '100%',
+                            pointerEvents: 'none',
+                            zIndex: 315,
+                            overflow: 'hidden',
+                            borderRadius: '6px'
+                        }}>
+                            <img
+                                src={images.acid_drop?.default || images.acid_drop || images.poison?.default || images.poison}
+                                alt="drip 1"
+                                style={{
+                                    position: 'absolute',
+                                    left: '20%',
+                                    width: '10px',
+                                    height: '15px',
+                                    animation: 'acidDrip 2s linear infinite'
+                                }}
+                            />
+                            <img
+                                src={images.acid_drop?.default || images.acid_drop || images.poison?.default || images.poison}
+                                alt="drip 2"
+                                style={{
+                                    position: 'absolute',
+                                    left: '70%',
+                                    width: '8px',
+                                    height: '12px',
+                                    animation: 'acidDrip 2.4s linear infinite 0.7s'
+                                }}
+                            />
+                            <img
+                                src={images.acid_drop?.default || images.acid_drop || images.poison?.default || images.poison}
+                                alt="drip 3"
+                                style={{
+                                    position: 'absolute',
+                                    left: '45%',
+                                    width: '12px',
+                                    height: '18px',
+                                    animation: 'acidDrip 1.7s linear infinite 1.3s'
+                                }}
+                            />
+                        </div>
+                    )}
                     {(() => {
                         if (isAsleepFighter && !details?.dead) {
                             return (
@@ -1093,7 +1224,7 @@ export default function CombatGrid(props) {
             greetingInProcess ? 'enlarged' : '',
             unit.active ? 'active' : '',
             portraitHoveredId === unit.id ? 'hover-linked-target' : '',
-            unit.bifurcating ? 'bifurcatingAnimation' : (isDead ? (unit.type === 'mummy' || unit.key === 'mummy' ? 'dead mummyDeadAnimation' : 'dead monsterDeadAnimation') : ''),
+            unit.bifurcating ? 'bifurcatingAnimation' : (isDead ? (unit.type === 'mummy' || unit.key === 'mummy' || isLarge ? 'dead mummyDeadAnimation' : 'dead monsterDeadAnimation') : ''),
             unit.isBifurcateSmall ? 'bifurcate-copy' : '',
             unit.isBifurcateCopy ? 'bifurcate-copy-spawning' : '',
             unit.missed ? (unit.facing === 'right' ? 'missed-reversed' : 'missed') : '',
@@ -1179,7 +1310,111 @@ export default function CombatGrid(props) {
                             }
                             return null;
                         })()}
+                        {/* Poison Overlay (pulsing green glow) */}
+                        {liveMonster?.poison && !isDead && (
+                            <div style={{
+                                boxSizing: 'border-box',
+                                position: 'absolute',
+                                top: 0, left: 0, width: '100%', height: '100%',
+                                borderRadius: '6px',
+                                pointerEvents: 'none',
+                                zIndex: 14,
+                                animation: 'poisonPulseGlow 1.5s ease-in-out infinite alternate',
+                                border: '2px solid rgba(56, 176, 0, 0.6)'
+                            }} />
+                        )}
+                        {liveMonster?.poison && !isDead && (images.acid_drop || images.poison) && (
+                            <div style={{
+                                position: 'absolute',
+                                top: 0, left: 0, width: '100%', height: '100%',
+                                pointerEvents: 'none',
+                                zIndex: 15,
+                                overflow: 'hidden',
+                                borderRadius: '6px'
+                            }}>
+                                <img
+                                    src={images.acid_drop?.default || images.acid_drop || images.poison?.default || images.poison}
+                                    alt="drip 1"
+                                    style={{
+                                        position: 'absolute',
+                                        left: '20%',
+                                        width: '10px',
+                                        height: '15px',
+                                        animation: 'acidDrip 2s linear infinite'
+                                    }}
+                                />
+                                <img
+                                    src={images.acid_drop?.default || images.acid_drop || images.poison?.default || images.poison}
+                                    alt="drip 2"
+                                    style={{
+                                        position: 'absolute',
+                                        left: '70%',
+                                        width: '8px',
+                                        height: '12px',
+                                        animation: 'acidDrip 2.4s linear infinite 0.7s'
+                                    }}
+                                />
+                                <img
+                                    src={images.acid_drop?.default || images.acid_drop || images.poison?.default || images.poison}
+                                    alt="drip 3"
+                                    style={{
+                                        position: 'absolute',
+                                        left: '45%',
+                                        width: '12px',
+                                        height: '18px',
+                                        animation: 'acidDrip 1.7s linear infinite 1.3s'
+                                    }}
+                                />
+                            </div>
+                        )}
                     </div>
+                    {liveMonster?.marked && !isDead && (
+                        <div style={{
+                            position: 'absolute',
+                            top: '-12.5%',
+                            left: '-12.5%',
+                            width: '125%',
+                            height: '125%',
+                            backgroundImage: `url(${images.ranger_mark?.default || images.ranger_mark})`,
+                            backgroundSize: 'contain',
+                            backgroundRepeat: 'no-repeat',
+                            backgroundPosition: 'center',
+                            zIndex: 12,
+                            animation: 'pulse 1.5s infinite ease-in-out',
+                            opacity: 0.5,
+                            pointerEvents: 'none',
+                        }}></div>
+                    )}
+                    {/* Ensnare Visual Overlay – green vine corners matching Sandbox */}
+                    {liveMonster?.ensnared && !isDead && (
+                        <div style={{
+                            boxSizing: 'border-box',
+                            position: 'absolute',
+                            top: 0, left: 0, width: '100%', height: '100%',
+                            border: '3px solid #8bc34a',
+                            borderRadius: '6px',
+                            boxShadow: '0 0 18px rgba(139, 195, 74, 0.9), inset 0 0 10px rgba(139, 195, 74, 0.4)',
+                            pointerEvents: 'none',
+                            zIndex: 13
+                        }}>
+                            {[
+                                { left: 0, top: 0, borderRadius: '0 0 100% 0' },
+                                { right: 0, top: 0, borderRadius: '0 0 0 100%' },
+                                { left: 0, bottom: 0, borderRadius: '0 100% 0 0' },
+                                { right: 0, bottom: 0, borderRadius: '100% 0 0 0' }
+                            ].map((pos, i) => (
+                                <div key={i} style={{
+                                    position: 'absolute',
+                                    ...pos,
+                                    width: '18px', height: '18px',
+                                    border: '3.5px solid #558b2f',
+                                    boxShadow: '0 0 8px rgba(85,139,47,0.8)',
+                                    animation: `ensnarePulse 0.8s ease-in-out infinite ${i * 0.2}s`,
+                                    boxSizing: 'border-box'
+                                }} />
+                            ))}
+                        </div>
+                    )}
                     {unit.stunned && !isAsleepMonster && !isDead && (
                         <div style={{
                             position: 'absolute',
@@ -1673,12 +1908,119 @@ export default function CombatGrid(props) {
         }
         if (anim.type === 'generic_projectile' && anim.srcPx && anim.tgtPx) {
             const isArrow = ['loose', 'execute', 'deadeye_shot'].includes(anim.subtype);
+            if (isArrow) {
+                const arrowTypeColors = {
+                    force: '#ff9f1c',
+                    ice: '#00bfff',
+                    poison: '#38b000',
+                    celestial: '#ffdd57'
+                };
+                const arrowColor = arrowTypeColors[anim.arrowType] || '#ff9f1c';
+                return (
+                    <div key={key} style={{
+                        position: 'absolute',
+                        left: `${anim.srcPx.x}px`,
+                        top: `${anim.srcPx.y}px`,
+                        width: '32px',
+                        height: '32px',
+                        pointerEvents: 'none',
+                        zIndex: 4000,
+                        animation: 'fireballTravel 0.7s linear forwards',
+                        '--fb-dx': `${anim.tgtPx.x - anim.srcPx.x}px`,
+                        '--fb-dy': `${anim.tgtPx.y - anim.srcPx.y}px`,
+                    }}>
+                        <div style={{
+                            position: 'absolute',
+                            left: '50%',
+                            top: '50%',
+                            width: '120px',
+                            height: '8px',
+                            transform: `translate(-100%, -50%) rotate(${anim.angle}deg)`,
+                            transformOrigin: '100% 50%',
+                            pointerEvents: 'none',
+                        }}>
+                            <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+                                {/* Arrow head */}
+                                <div style={{
+                                    position: 'absolute',
+                                    right: 0,
+                                    top: '50%',
+                                    transform: 'translateY(-50%)',
+                                    width: 0,
+                                    height: 0,
+                                    borderTop: '4px solid transparent',
+                                    borderBottom: '4px solid transparent',
+                                    borderLeft: `8px solid ${arrowColor}`,
+                                    filter: `drop-shadow(0 0 4px ${arrowColor})`
+                                }} />
+                                {/* Arrow shaft - tapered tail */}
+                                <div style={{
+                                    position: 'absolute',
+                                    right: '8px',
+                                    top: '50%',
+                                    transform: 'translateY(-50%)',
+                                    width: '112px',
+                                    height: '6px',
+                                    background: `linear-gradient(to left, ${arrowColor}, transparent)`,
+                                    clipPath: 'polygon(0% 50%, 100% 10%, 100% 90%)',
+                                    boxShadow: `0 0 6px ${arrowColor}40`
+                                }} />
+                                {/* Poison droplets */}
+                                {anim.arrowType === 'poison' && (
+                                    <>
+                                        <div style={{ position: 'absolute', left: '5px', top: '-4px', width: '4px', height: '4px', borderRadius: '50%', background: '#38b000', opacity: 0.8, animation: 'poisonDrop 0.35s ease-out infinite', boxShadow: '0 0 4px #38b000' }} />
+                                        <div style={{ position: 'absolute', left: '15px', top: '8px', width: '3px', height: '3px', borderRadius: '50%', background: '#4ade80', opacity: 0.7, animation: 'poisonDrop 0.35s ease-out 0.12s infinite', boxShadow: '0 0 3px #4ade80' }} />
+                                        <div style={{ position: 'absolute', left: '10px', top: '-6px', width: '3px', height: '3px', borderRadius: '50%', background: '#22c55e', opacity: 0.6, animation: 'poisonDrop 0.35s ease-out 0.24s infinite', boxShadow: '0 0 3px #22c55e' }} />
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            // Net projectile for Ensnare
+            if (anim.subtype === 'ensnare_net' && anim.isNet) {
+                const netIcon = anim.netIcon?.default || anim.netIcon || '';
+                return (
+                    <div key={key} style={{
+                        position: 'absolute',
+                        left: `${anim.srcPx.x}px`,
+                        top: `${anim.srcPx.y}px`,
+                        width: '40px',
+                        height: '40px',
+                        pointerEvents: 'none',
+                        zIndex: 4000,
+                        animation: 'fireballTravel 0.5s linear forwards',
+                        '--fb-dx': `${anim.tgtPx.x - anim.srcPx.x}px`,
+                        '--fb-dy': `${anim.tgtPx.y - anim.srcPx.y}px`,
+                    }}>
+                        <div style={{
+                            width: '100%',
+                            height: '100%',
+                            animation: 'acidBlastLobY 0.5s ease-in-out forwards',
+                        }}>
+                            <div style={{
+                                width: '100%',
+                                height: '100%',
+                                backgroundImage: netIcon ? `url(${netIcon})` : 'none',
+                                backgroundSize: 'contain',
+                                backgroundRepeat: 'no-repeat',
+                                backgroundPosition: 'center',
+                                transform: 'translate(-50%, -50%)',
+                                filter: 'drop-shadow(0 0 6px rgba(139, 195, 74, 0.8))',
+                                animation: 'spinAxis 0.5s linear infinite'
+                            }} />
+                        </div>
+                    </div>
+                );
+            }
+
             let projectileImage = images.barbarian_axe_throw || images.axe_throw || images.axe || '';
             if (anim.subtype === 'spear_throw') {
                 projectileImage = images.spear || '';
-            } else if (isArrow) {
-                projectileImage = images.bow_and_arrow || '';
             }
+            const resolvedImg = projectileImage?.default || projectileImage || '';
             return (
                 <div key={key} style={{
                     position: 'absolute',
@@ -1695,12 +2037,12 @@ export default function CombatGrid(props) {
                     <div style={{
                         width: '100%',
                         height: '100%',
-                        backgroundImage: projectileImage ? `url(${projectileImage})` : 'none',
+                        backgroundImage: resolvedImg ? `url(${resolvedImg})` : 'none',
                         backgroundSize: 'contain',
                         backgroundRepeat: 'no-repeat',
                         backgroundPosition: 'center',
-                        transform: `translate(-50%, -50%) rotate(${isArrow ? anim.angle : 0}deg)`,
-                        animation: isArrow ? 'none' : 'spinAxis 0.7s linear infinite'
+                        transform: `translate(-50%, -50%) rotate(0deg)`,
+                        animation: 'spinAxis 0.7s linear infinite'
                     }} />
                 </div>
             );
@@ -1774,9 +2116,31 @@ export default function CombatGrid(props) {
                     height: '6px',
                     background: 'linear-gradient(to right, transparent, rgba(255,255,255,0.9), transparent)',
                     boxShadow: '0 0 8px rgba(255,255,255,0.8)',
-                    transform: `translate(-50%, -50%) rotate(${anim.angle}deg)`,
                     pointerEvents: 'none',
                     zIndex: 4000,
+                    '--slash-angle': `${anim.angle}deg`,
+                    animation: 'beamShrink 0.6s ease-out forwards',
+                }} />
+            );
+        }
+
+        if (anim.type === 'imbued_strike' && anim.srcPx && anim.tgtPx) {
+            const dx = anim.tgtPx.x - anim.srcPx.x;
+            const dy = anim.tgtPx.y - anim.srcPx.y;
+            const midX = anim.srcPx.x + dx * 0.5;
+            const midY = anim.srcPx.y + dy * 0.5;
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: `${midX}px`,
+                    top: `${midY}px`,
+                    width: '80px',
+                    height: '10px',
+                    background: 'linear-gradient(to right, transparent, rgba(0, 240, 255, 0.95), transparent)',
+                    boxShadow: '0 0 15px rgba(0, 240, 255, 0.9), 0 0 5px rgba(255, 255, 255, 0.8)',
+                    pointerEvents: 'none',
+                    zIndex: 4000,
+                    '--slash-angle': `${anim.angle}deg`,
                     animation: 'beamShrink 0.6s ease-out forwards',
                 }} />
             );

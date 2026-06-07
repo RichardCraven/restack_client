@@ -156,7 +156,7 @@ class CrewManagerPage extends React.Component{
     // selectedCrew.push(options[2])
 
     selectedCrew.push(this.tempCrewManager.crew.find(e=>e.type==='wizard'))
-    // selectedCrew.push(this.tempCrewManager.crew.find(e=>e.type==='soldier'))
+    selectedCrew.push(this.tempCrewManager.crew.find(e=>e.type==='soldier'))
     // selectedCrew.push(this.props.crewManager.crew.find(e=>e.type==='ranger'))
     selectedCrew.push(this.tempCrewManager.crew.find(e=>e.type==='barbarian'))
     selectedCrew.push(this.tempCrewManager.crew.find(e=>e.type==='monk'))
@@ -262,7 +262,7 @@ class CrewManagerPage extends React.Component{
         this.timer = setTimeout(this.singleClick(crewMember), 200)
     } else if (event.detail === 2) {
         let crew = this.state.selectedCrew;
-        if(crew.length === 3 && !this.state.advancedUser) return
+        if(crew.length === 4) return
         if(!crew.includes(crewMember)) crew.push(crewMember)
         this.setState({
             selectedCrew: crew
@@ -276,6 +276,7 @@ class CrewManagerPage extends React.Component{
   addMember = (index) => {
     let member = this.state.selectedCrewMember
     let crew = this.state.selectedCrew;
+    if(crew.length >= 4) return
     if(!crew.includes(member)) crew.push(member)
     this.setState({
         selectedCrew: crew
@@ -459,6 +460,17 @@ class CrewManagerPage extends React.Component{
                   // Filter specials by selected skill tier
                   const selectedTier = this.getSimSkillTier(member.type);
                   member.specials = filterSpecialsByTier(member.specials, selectedTier);
+
+                  // Ensure notch and loose are always available for Ranger
+                  if (member.type === 'ranger') {
+                      if (!member.specials.includes('notch')) {
+                          member.specials.push('notch');
+                      }
+                      member.attacks = member.attacks || [];
+                      if (!member.attacks.includes('loose')) {
+                          member.attacks.push('loose');
+                      }
+                  }
 
                   // Gear assignment
                   if (this.state.outfitWithEquipment) {
@@ -714,9 +726,9 @@ combatKeyUpListener = (event) => {
                     </div>
                     <div className="crew-tray">
                         {this.state.crewSlots.map((slot, i)=>{
-                    return  <div key={i} className={`selected-crew-portrait-container ${i === 3 && !this.state.advancedUser ? 'closed' : ''}`}>
+                    return  <div key={i} className="selected-crew-portrait-container">
 
-                                {(i === 3 && !this.state.advancedUser) === false && <div className={`add-button ${!this.state.selectedCrewMember ? 'disabled' : ''}`} onClick={()=>this.addMember(i)}>&oplus;</div>}
+                                <div className={`add-button ${!this.state.selectedCrewMember ? 'disabled' : ''}`} onClick={()=>this.addMember(i)}>&oplus;</div>
 
                                 {this.state.selectedCrew[i] && <div
                                     className="portrait"
