@@ -218,7 +218,7 @@ export default function FightersCombatGrid(props) {
                                                         borderRadius: '50%',
                                                         backgroundColor: '#111',
                                                         border: `2px solid ${eff.border}`,
-                                                        backgroundImage: `url(${eff.icon})`,
+                                                        backgroundImage: `url(${eff.icon?.default || eff.icon})`,
                                                         backgroundSize: 'contain',
                                                         backgroundRepeat: 'no-repeat',
                                                         backgroundPosition: 'center',

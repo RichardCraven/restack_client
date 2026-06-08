@@ -672,7 +672,7 @@ export default function CombatGrid(props) {
                     <div key={eff.key} className="effect-icon-active" style={{
                         width: '20px', height: '20px', borderRadius: '50%',
                         backgroundColor: '#111', border: `2px solid ${eff.border}`,
-                        backgroundImage: `url(${eff.icon})`, backgroundSize: 'contain',
+                        backgroundImage: `url(${eff.icon?.default || eff.icon})`, backgroundSize: 'contain',
                         backgroundRepeat: 'no-repeat', backgroundPosition: 'center',
                         boxShadow: '0 2px 4px rgba(0,0,0,0.5)',
                         position: 'relative',

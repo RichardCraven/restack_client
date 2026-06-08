@@ -749,6 +749,9 @@ import body_female from '../assets/icons/figures/body_fem.png'
 
 //camp
 import camp from '../assets/icons/misc/camp/camp.png'
+import camping from '../assets/gemini_images/camping.png';
+import merchant_bg from '../assets/gemini_images/merchant.png';
+import alchemist_bg from '../assets/gemini_images/alchemist.png';
 
 //terrain
 import terrain_1 from '../assets/icons/terrain/stone-1.png'
@@ -1680,5 +1683,8 @@ export {
     summon_spiders_icon as summon_spiders,
     witch_dispell,
     demonic_whispers,
-    transform
+    transform,
+    camping,
+    merchant_bg,
+    alchemist_bg
 };

@@ -668,7 +668,7 @@ export class AnimationManagerRedux {
 
   _annihilation(src, tgt) {
     const srcPx = this._px(src);
-    const tgtPx = this._px(tgt);
+    const tgtPx = this._isTargetLarge ? (this._getLargeTargetCenterPx() || this._px(tgt)) : this._px(tgt);
     const dx = tgtPx.x - srcPx.x;
     const dy = tgtPx.y - srcPx.y;
     const length = Math.sqrt(dx * dx + dy * dy);
@@ -684,14 +684,14 @@ export class AnimationManagerRedux {
       duration: 1200
     });
 
-    // Phase 2: Concentric ring explosion on target
+    // Phase 2: Concentric ring explosion on target (triggers at 150ms when beam makes contact)
     setTimeout(() => {
       this._emit({
         type: 'annihilation_burst',
         tgtPx,
         duration: 700
       });
-    }, 1100);
+    }, 150);
 
     // Phase 3: Hit effect annihilation_portal on target
     setTimeout(() => {

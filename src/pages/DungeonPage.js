@@ -73,7 +73,182 @@ function hexToRgba(hex, alpha = 1){
 }
 
 // Small subcomponent to render modal header + body based on modalType
-const ModalInner = ({ modalType, updates, crew, tileSize, handleMemberClickRitual, handleCrewTileHover, setMemberRitualOptions, onLearnRitual }) => {
+const ModalInner = ({ modalType, updates, crew, tileSize, handleMemberClickRitual, handleCrewTileHover, setMemberRitualOptions, onLearnRitual, inventoryManager, saveUserData, onForceUpdate }) => {
+    const [merchantStock, setMerchantStock] = React.useState([]);
+    const [feedbackMsg, setFeedbackMsg] = React.useState('');
+    const [feedbackColor, setFeedbackColor] = React.useState('#fff');
+
+    React.useEffect(() => {
+        if (modalType === 'Merchant' && inventoryManager) {
+            const stock = [];
+            stock.push({ ...inventoryManager.allItems['minor_health_potion'], price: 20 });
+            stock.push({ ...inventoryManager.allItems['major_health_potion'], price: 50 });
+            
+            const weaponKeys = Object.keys(inventoryManager.weapons || {});
+            for (let i = 0; i < 2; i++) {
+                const rKey = weaponKeys[Math.floor(Math.random() * weaponKeys.length)];
+                const item = inventoryManager.allItems[rKey];
+                if (item) {
+                    stock.push({ ...item, _im_key: rKey, price: (item.tier === 2 ? 150 : item.tier === 3 ? 350 : 50) });
+                }
+            }
+            
+            const armorKeys = Object.keys(inventoryManager.armor || {});
+            const rArmorKey = armorKeys[Math.floor(Math.random() * armorKeys.length)];
+            const armorItem = inventoryManager.allItems[rArmorKey];
+            if (armorItem) {
+                stock.push({ ...armorItem, _im_key: rArmorKey, price: (armorItem.tier === 2 ? 120 : armorItem.tier === 3 ? 280 : 45) });
+            }
+
+            const magicalKeys = Object.keys(inventoryManager.magical || {});
+            const rMagKey = magicalKeys[Math.floor(Math.random() * magicalKeys.length)];
+            const magItem = inventoryManager.allItems[rMagKey];
+            if (magItem) {
+                stock.push({ ...magItem, _im_key: rMagKey, price: (magItem.tier === 2 ? 160 : magItem.tier === 3 ? 320 : 60) });
+            }
+            
+            stock.push({ name: 'shimmering dust', icon: 'shimmering_dust', type: 'currency', currencyType: 'shimmering_dust', price: 10, description: 'Magical dust used for brewing potions.' });
+            
+            setMerchantStock(stock);
+        }
+    }, [modalType, inventoryManager]);
+
+    const getItemSellPrice = (item) => {
+        if (item.type === 'consumable') {
+            if (item.name.includes('minor')) return 10;
+            if (item.name.includes('major')) return 25;
+            if (item.name.includes('grand')) return 60;
+            if (item.name.includes('supreme')) return 125;
+            return 10;
+        }
+        const tier = item.tier || 1;
+        if (tier === 1) return 25;
+        if (tier === 2) return 75;
+        if (tier === 3) return 175;
+        if (tier === 4) return 400;
+        return 30;
+    };
+
+    const handleBuyItem = (item) => {
+        if (inventoryManager.gold < item.price) {
+            setFeedbackMsg('Not enough gold!');
+            setFeedbackColor('#ff4d4d');
+            return;
+        }
+        inventoryManager.gold -= item.price;
+        if (item.type === 'currency') {
+            inventoryManager.addCurrency({ type: item.currencyType, amount: 1 });
+        } else {
+            const { price, ...cleanItem } = item;
+            inventoryManager.addItem(cleanItem);
+        }
+        setFeedbackMsg(`Purchased ${item.name}!`);
+        setFeedbackColor('#2ecc71');
+        if (saveUserData) saveUserData().catch(() => {});
+        if (onForceUpdate) onForceUpdate();
+    };
+
+    const handleSellItem = (item, invIndex) => {
+        const sellPrice = getItemSellPrice(item);
+        inventoryManager.removeItemByIndex(invIndex);
+        inventoryManager.gold += sellPrice;
+        setFeedbackMsg(`Sold ${item.name} for ${sellPrice} gold!`);
+        setFeedbackColor('#2ecc71');
+        if (saveUserData) saveUserData().catch(() => {});
+        if (onForceUpdate) onForceUpdate();
+    };
+
+    const handleBrewPotion = (potionKey, goldCost, dustCost) => {
+        if (inventoryManager.gold < goldCost) {
+            setFeedbackMsg('Not enough gold!');
+            setFeedbackColor('#ff4d4d');
+            return;
+        }
+        if (inventoryManager.shimmering_dust < dustCost) {
+            setFeedbackMsg('Not enough Shimmering Dust!');
+            setFeedbackColor('#ff4d4d');
+            return;
+        }
+        inventoryManager.gold -= goldCost;
+        inventoryManager.shimmering_dust -= dustCost;
+        const item = inventoryManager.allItems[potionKey];
+        if (item) {
+            inventoryManager.addItem({ ...item });
+        }
+        setFeedbackMsg(`Successfully brewed ${item?.name || 'potion'}!`);
+        setFeedbackColor('#2ecc71');
+        if (saveUserData) saveUserData().catch(() => {});
+        if (onForceUpdate) onForceUpdate();
+    };
+
+    const handleTradeIngredient = (action, type, goldAmount) => {
+        if (action === 'buy') {
+            if (inventoryManager.gold < goldAmount) {
+                setFeedbackMsg('Not enough gold!');
+                setFeedbackColor('#ff4d4d');
+                return;
+            }
+            inventoryManager.gold -= goldAmount;
+            inventoryManager.addCurrency({ type, amount: 1 });
+            setFeedbackMsg(`Bought 1 ${type.replace('_', ' ')}!`);
+        } else {
+            const count = type === 'shimmering_dust' ? inventoryManager.shimmering_dust : inventoryManager.totems;
+            if (count <= 0) {
+                setFeedbackMsg(`No ${type.replace('_', ' ')} to sell!`);
+                setFeedbackColor('#ff4d4d');
+                return;
+            }
+            inventoryManager.addCurrency({ type, amount: -1 });
+            inventoryManager.gold += goldAmount;
+            setFeedbackMsg(`Sold 1 ${type.replace('_', ' ')}!`);
+        }
+        setFeedbackColor('#2ecc71');
+        if (saveUserData) saveUserData().catch(() => {});
+        if (onForceUpdate) onForceUpdate();
+    };
+
+    const handleFullHeal = () => {
+        if (inventoryManager.gold < 100) {
+            setFeedbackMsg('Not enough gold!');
+            setFeedbackColor('#ff4d4d');
+            return;
+        }
+        inventoryManager.gold -= 100;
+        let healCount = 0;
+        crew.forEach(member => {
+            if (member && !member.dead) {
+                const maxHp = member.stats?.hp || member.starting_hp || 10;
+                if (member.hp < maxHp) {
+                    member.hp = maxHp;
+                    healCount++;
+                }
+            }
+        });
+        if (healCount > 0) {
+            setFeedbackMsg('All living crew members restored to full health!');
+            setFeedbackColor('#2ecc71');
+        } else {
+            setFeedbackMsg('Gold deducted, but all crew members were already healthy.');
+            setFeedbackColor('#ffd700');
+        }
+        if (saveUserData) saveUserData().catch(() => {});
+        if (onForceUpdate) onForceUpdate();
+    };
+
+    const renderItemIcon = (iconName) => {
+        const src = images[iconName]?.default || images[iconName] || '';
+        if (!src) return <div style={{width: 32, height: 32, backgroundColor: '#333', borderRadius: 4, flexShrink: 0}} />;
+        return <div style={{
+            width: 32,
+            height: 32,
+            backgroundImage: `url(${src})`,
+            backgroundSize: 'contain',
+            backgroundRepeat: 'no-repeat',
+            backgroundPosition: 'center',
+            borderRadius: 4,
+            flexShrink: 0
+        }} />;
+    };
 
     // Helper: format ms as "1 hour", "3 hours", "6 hours" etc.
     const formatPrepTime = (ms) => {
@@ -158,7 +333,7 @@ const ModalInner = ({ modalType, updates, crew, tileSize, handleMemberClickRitua
                         ))}
                     </div>
 
-                    {/* Ritual cards — always show all 3; grey out unknown */}
+                    {/* Ritual cards */}
                     {(() => {
                         const activeMagicUser = setMemberRitualOptions
                             || (crew.find(e => e.type === 'wizard' || e.type === 'sage'));
@@ -211,8 +386,158 @@ const ModalInner = ({ modalType, updates, crew, tileSize, handleMemberClickRitua
                 </div>
             )}
 
-            {(modalType === 'Merchant' || modalType === 'Alchemist') && (
-                <div />
+            {modalType === 'Merchant' && (
+                <div className="merchant-screen">
+                    <div className="vendor-split-container">
+                        <div className="vendor-panel">
+                            <h3 className="panel-title">Merchant's Stock</h3>
+                            <div className="item-list scroll-container">
+                                {merchantStock.map((item, idx) => (
+                                    <div key={idx} className="item-card">
+                                        {renderItemIcon(item.icon)}
+                                        <div className="item-details">
+                                            <div className="item-name">{item.name}</div>
+                                            <div className="item-description">{item.description}</div>
+                                        </div>
+                                        <button className="buy-btn" onClick={() => handleBuyItem(item)}>
+                                            <span>Buy</span>
+                                            <span className="price-tag">🪙 {item.price}</span>
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="vendor-panel">
+                            <h3 className="panel-title">Your Unequipped Items</h3>
+                            <div className="item-list scroll-container">
+                                {(() => {
+                                    const sellableItems = (inventoryManager?.inventory || []).filter(item => item && item.equippedBy == null);
+                                    if (sellableItems.length === 0) {
+                                        return <div className="empty-message">No sellable items in inventory.</div>;
+                                    }
+                                    return sellableItems.map((item, idx) => {
+                                        const originalIndex = inventoryManager.inventory.indexOf(item);
+                                        const sellPrice = getItemSellPrice(item);
+                                        return (
+                                            <div key={idx} className="item-card">
+                                                {renderItemIcon(item.icon)}
+                                                <div className="item-details">
+                                                    <div className="item-name">{item.name}</div>
+                                                    <div className="item-description">{item.description || item.type}</div>
+                                                </div>
+                                                <button className="sell-btn" onClick={() => handleSellItem(item, originalIndex)}>
+                                                    <span>Sell</span>
+                                                    <span className="price-tag">🪙 {sellPrice}</span>
+                                                </button>
+                                            </div>
+                                        );
+                                    });
+                                })()}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="vendor-status-bar">
+                        <div className="wallet-info">
+                            <span>Gold: <strong style={{color: '#ffd700'}}>🪙 {inventoryManager?.gold || 0}</strong></span>
+                            <span>Dust: <strong style={{color: '#b388ff'}}>✨ {inventoryManager?.shimmering_dust || 0}</strong></span>
+                        </div>
+                        {feedbackMsg && (
+                            <div className="feedback-message" style={{color: feedbackColor}}>{feedbackMsg}</div>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {modalType === 'Alchemist' && (
+                <div className="alchemist-screen">
+                    <div className="vendor-split-container">
+                        <div className="vendor-panel">
+                            <h3 className="panel-title">Potion Brewing</h3>
+                            <div className="item-list scroll-container">
+                                {[
+                                    { key: 'minor_health_potion', name: 'Minor Health Potion', desc: 'Restores 55 HP', gold: 15, dust: 5, icon: 'minor_health_potion' },
+                                    { key: 'major_health_potion', name: 'Major Health Potion', desc: 'Restores 110 HP', gold: 40, dust: 10, icon: 'minor_health_potion' },
+                                    { key: 'grand_health_potion', name: 'Grand Health Potion', desc: 'Restores 220 HP', gold: 100, dust: 20, icon: 'minor_health_potion' },
+                                    { key: 'supreme_health_potion', name: 'Supreme Health Potion', desc: 'Restores 440 HP', gold: 200, dust: 40, icon: 'minor_health_potion' },
+                                ].map((recipe, idx) => (
+                                    <div key={idx} className="item-card">
+                                        {renderItemIcon(recipe.icon)}
+                                        <div className="item-details">
+                                            <div className="item-name">{recipe.name}</div>
+                                            <div className="item-description">{recipe.desc}</div>
+                                        </div>
+                                        <button className="buy-btn brew-btn" onClick={() => handleBrewPotion(recipe.key, recipe.gold, recipe.dust)}>
+                                            <span>Brew</span>
+                                            <span className="price-tag">🪙 {recipe.gold} + ✨ {recipe.dust}</span>
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="vendor-panel">
+                            <h3 className="panel-title">Alchemical Services</h3>
+                            <div className="item-list scroll-container">
+                                <div className="item-card service-card">
+                                    <div className="service-icon"><span role="img" aria-label="healing elixir">🧪</span></div>
+                                    <div className="item-details">
+                                        <div className="item-name">Elixir of Restoration</div>
+                                        <div className="item-description">Restores all living crew members to max HP.</div>
+                                    </div>
+                                    <button className="buy-btn heal-service-btn" onClick={handleFullHeal}>
+                                        <span>Restore HP</span>
+                                        <span className="price-tag">🪙 100</span>
+                                    </button>
+                                </div>
+
+                                <div className="item-card trade-card">
+                                    {renderItemIcon('shimmering_dust')}
+                                    <div className="item-details">
+                                        <div className="item-name">Shimmering Dust</div>
+                                        <div className="item-description">Trade Shimmering Dust.</div>
+                                    </div>
+                                    <div className="trade-btn-group">
+                                        <button className="trade-sub-btn" onClick={() => handleTradeIngredient('buy', 'shimmering_dust', 10)}>
+                                            <span>Buy (🪙10)</span>
+                                        </button>
+                                        <button className="trade-sub-btn sell" onClick={() => handleTradeIngredient('sell', 'shimmering_dust', 5)}>
+                                            <span>Sell (🪙5)</span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="item-card trade-card">
+                                    {renderItemIcon('totems')}
+                                    <div className="item-details">
+                                        <div className="item-name">Totems</div>
+                                        <div className="item-description">Trade Totems.</div>
+                                    </div>
+                                    <div className="trade-btn-group">
+                                        <button className="trade-sub-btn" onClick={() => handleTradeIngredient('buy', 'totems', 50)}>
+                                            <span>Buy (🪙50)</span>
+                                        </button>
+                                        <button className="trade-sub-btn sell" onClick={() => handleTradeIngredient('sell', 'totems', 25)}>
+                                            <span>Sell (🪙25)</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="vendor-status-bar">
+                        <div className="wallet-info">
+                            <span>Gold: <strong style={{color: '#ffd700'}}>🪙 {inventoryManager?.gold || 0}</strong></span>
+                            <span>Dust: <strong style={{color: '#b388ff'}}>✨ {inventoryManager?.shimmering_dust || 0}</strong></span>
+                            <span>Totems: <strong style={{color: '#4db8ff'}}>🗿 {inventoryManager?.totems || 0}</strong></span>
+                        </div>
+                        {feedbackMsg && (
+                            <div className="feedback-message" style={{color: feedbackColor}}>{feedbackMsg}</div>
+                        )}
+                    </div>
+                </div>
             )}
         </CModalBody>
     )
@@ -4522,7 +4847,7 @@ class DungeonPage extends React.Component {
             break;
             case 'Merchant':
             case 'Alchemist':
-                this.setState({ showModal: false }, () => this._cleanupModalBodyClass())
+                this.setState({ showModal: false, keysLocked: false }, () => this._cleanupModalBodyClass())
             break;
             default: break;
         }
@@ -4576,6 +4901,7 @@ class DungeonPage extends React.Component {
     triggerVendorEncounter = (vendorType) => {
         const normalized = String(vendorType || '').toLowerCase();
         this.setState({
+            keysLocked: true,
             modalType: normalized === 'alchemist' ? 'Alchemist' : 'Merchant',
             showModal: true
         });
@@ -4946,10 +5272,37 @@ class DungeonPage extends React.Component {
                     onClose={this.closeNarrativeOverlay}
                 />
             )}
-            <CModal className={this.state.modalType === 'PrepComplete' ? 'prep-complete-modal' : this.state.modalType === 'RitualComplete' ? 'ritual-complete-modal' : this.state.modalType === 'Magic' ? 'ritual-encounter-modal' : this.state.modalType === 'FoodComplete' ? 'food-complete-modal' : ''} alignment="center" visible={this.state.showModal} onClose={() => this.onUpdateModalClosed()}>
+            <CModal className={this.state.modalType === 'PrepComplete' ? 'prep-complete-modal' : this.state.modalType === 'RitualComplete' ? 'ritual-complete-modal' : this.state.modalType === 'Magic' ? 'ritual-encounter-modal' : this.state.modalType === 'FoodComplete' ? 'food-complete-modal' : this.state.modalType === 'Merchant' ? 'merchant-modal' : this.state.modalType === 'Alchemist' ? 'alchemist-modal' : ''} alignment="center" visible={this.state.showModal} onClose={() => this.onUpdateModalClosed()}>
+                {this.state.modalType === 'Merchant' && (
+                    <div className="merchant-modal-bg" style={{
+                        position: 'absolute',
+                        top: 0, left: 0, right: 0, bottom: 0,
+                        backgroundImage: `url(${images.merchant_bg?.default || images.merchant_bg})`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                        opacity: 0.18,
+                        zIndex: 0,
+                        pointerEvents: 'none'
+                    }} />
+                )}
+                {this.state.modalType === 'Alchemist' && (
+                    <div className="alchemist-modal-bg" style={{
+                        position: 'absolute',
+                        top: 0, left: 0, right: 0, bottom: 0,
+                        backgroundImage: `url(${images.alchemist_bg?.default || images.alchemist_bg})`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                        opacity: 0.18,
+                        zIndex: 0,
+                        pointerEvents: 'none'
+                    }} />
+                )}
                 {(this.state.modalType === 'Merchant' || this.state.modalType === 'Alchemist') && (
-                    <CModalHeader>
-                        <CModalTitle>{this.state.modalType}</CModalTitle>
+                    <CModalHeader style={{position: 'relative', zIndex: 2}}>
+                        <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', width:'100%', position:'relative', zIndex:2}}>
+                            <CModalTitle>{this.state.modalType}</CModalTitle>
+                            <button aria-label="Close vendor" className="camp-close" onClick={() => this.onUpdateModalClosed()} style={{background:'transparent', border:'none', color:'#fff', fontSize:20}}>✕</button>
+                        </div>
                     </CModalHeader>
                 )}
                 <ModalInner
@@ -4961,6 +5314,9 @@ class DungeonPage extends React.Component {
                     handleCrewTileHover={this.handleCrewTileHover}
                     setMemberRitualOptions={this.state.setMemberRitualOptions}
                     onLearnRitual={this.handleLearnRitual}
+                    inventoryManager={this.props.inventoryManager}
+                    saveUserData={this.props.saveUserData}
+                    onForceUpdate={() => this.forceUpdate()}
                 />
             </CModal>
             {/* Quests popup */}
@@ -5012,7 +5368,7 @@ class DungeonPage extends React.Component {
             {/* Camp popup */}
             <CModal className={'camp-modal'} alignment="center" visible={this.state.showCampPopup} onClose={this.handleCloseCampPopup} backdrop={true}>
                 {/* Background: camp icon at cover opacity 0.3 */}
-                <div className="camp-modal-bg" style={{backgroundImage: `url(${images.camp})`}}></div>
+                <div className="camp-modal-bg" style={{backgroundImage: `url(${images.camping?.default || images.camping})`}}></div>
                 <CModalHeader>
                     <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', width:'100%', position:'relative', zIndex:2}}>
                         <CModalTitle>Camp</CModalTitle>

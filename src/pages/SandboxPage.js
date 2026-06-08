@@ -691,6 +691,8 @@ const SandboxPage = () => {
   const [monsterHexed, setMonsterHexed] = useState(false);
   const [fighterHexEndTime, setFighterHexEndTime] = useState(null);
   const [monsterHexEndTime, setMonsterHexEndTime] = useState(null);
+  const [fighterHexedFading, setFighterHexedFading] = useState(false);
+  const [monsterHexedFading, setMonsterHexedFading] = useState(false);
   const [fighterPolymorphed, setFighterPolymorphed] = useState(false);
   const [monsterPolymorphed, setMonsterPolymorphed] = useState(false);
   const [fighterPolymorphEndTime, setFighterPolymorphEndTime] = useState(null);
@@ -798,14 +800,30 @@ const SandboxPage = () => {
       }
     }
     
-    // Check poison
-    if (fighterHexEndTime && fighterHexEndTime <= currentTime) {
-      setFighterHexed(false);
-      setFighterHexEndTime(null);
+    // Check Hex
+    if (fighterHexEndTime) {
+      const remaining = fighterHexEndTime - currentTime;
+      if (remaining <= 0) {
+        setFighterHexed(false);
+        setFighterHexedFading(false);
+        setFighterHexEndTime(null);
+      } else if (remaining <= 500) {
+        setFighterHexedFading(true);
+      } else {
+        setFighterHexedFading(false);
+      }
     }
-    if (monsterHexEndTime && monsterHexEndTime <= currentTime) {
-      setMonsterHexed(false);
-      setMonsterHexEndTime(null);
+    if (monsterHexEndTime) {
+      const remaining = monsterHexEndTime - currentTime;
+      if (remaining <= 0) {
+        setMonsterHexed(false);
+        setMonsterHexedFading(false);
+        setMonsterHexEndTime(null);
+      } else if (remaining <= 500) {
+        setMonsterHexedFading(true);
+      } else {
+        setMonsterHexedFading(false);
+      }
     }
     if (fighterPolymorphEndTime && fighterPolymorphEndTime <= currentTime) {
       if (fighterPolymorphed) addFloatingText('RESTORED!', 'normal', '#2ecc71', fighterPos.row, fighterPos.col);
@@ -1051,7 +1069,7 @@ const SandboxPage = () => {
         setRangerPos({ row: 3, col: 0 }); // return to original tile
       }
     }
-  }, [currentTime, frozenEndTime, poisonEndTime, bleedEndTime, sagePerceiveEndTime, astralModeEndTime, thirdEyeEndTime, riftPortalEndTime, fearEndTime, extraRangerFearEndTime, vampireCrimsonSightEndTime, skeletonHourglassEndTime, skeletonReassemblyCooldownEndTime, djinnDeathMissileHitEndTime, djinnArcaneBarrierEndTime, djinnBindEndTime, rangerBetrayalEffectEndTime, fighterPos.row, fighterPos.col]);
+  }, [currentTime, frozenEndTime, poisonEndTime, bleedEndTime, sagePerceiveEndTime, astralModeEndTime, thirdEyeEndTime, riftPortalEndTime, fearEndTime, extraRangerFearEndTime, vampireCrimsonSightEndTime, skeletonHourglassEndTime, skeletonReassemblyCooldownEndTime, djinnDeathMissileHitEndTime, djinnArcaneBarrierEndTime, djinnBindEndTime, rangerBetrayalEffectEndTime, fighterHexEndTime, monsterHexEndTime, fighterPos.row, fighterPos.col]);
 
   const TIER4_MONSTER_IDS = ['sphinx', 'dragon', 'hagigah', 'hashmallim'];
   const isFighterHuge = selectedUnitType === 'monster' && TIER4_MONSTER_IDS.includes(selectedMonsterId);
@@ -1217,6 +1235,13 @@ const SandboxPage = () => {
     if (!ensnareEndTime) return 31.42;
     const remaining = Math.max(0, ensnareEndTime - currentTime);
     const ratio = remaining / 3000;
+    return ratio * 31.42;
+  };
+
+  const getHexDashOffset = (endTime) => {
+    if (!endTime) return 31.42;
+    const remaining = Math.max(0, endTime - currentTime);
+    const ratio = remaining / 16000;
     return ratio * 31.42;
   };
 
@@ -3959,8 +3984,13 @@ const SandboxPage = () => {
       setActiveBeam('annihilation');
       setAnnihilationSweepActive(false);
 
-      // Start concentric organic rings simultaneously as the beam starts
-      setAnnihilationExplosion({ row: targetPos.row, col: targetPos.col });
+      const targetColCenter = getUnitVisualCol(targetPos.col, isTargetHuge, isTargetLarge);
+      const targetRowCenter = getUnitVisualRow(targetPos.row, isTargetHuge, isTargetLarge);
+
+      // Start concentric organic rings as soon as the beam makes contact (at 150ms)
+      setTimeout(() => {
+        setAnnihilationExplosion({ row: targetRowCenter, col: targetColCenter });
+      }, 150);
 
       setTimeout(() => {
         setAnnihilationSweepActive(true);
@@ -3970,7 +4000,7 @@ const SandboxPage = () => {
       setTimeout(() => {
         setTargetShake(true);
         setTargetFlash(true);
-        addFloatingText('-16', 'crit', '#9d4edd', targetPos.row, targetPos.col);
+        addFloatingText('-16', 'crit', '#9d4edd', targetRowCenter, targetColCenter);
         setTimeout(() => {
           setTargetShake(false);
           setTargetFlash(false);
@@ -3981,7 +4011,7 @@ const SandboxPage = () => {
       setTimeout(() => {
         setTargetShake(true);
         setTargetFlash(true);
-        addFloatingText('-16', 'crit', '#9d4edd', targetPos.row, targetPos.col);
+        addFloatingText('-16', 'crit', '#9d4edd', targetRowCenter, targetColCenter);
         setTimeout(() => {
           setTargetShake(false);
           setTargetFlash(false);
@@ -3992,7 +4022,7 @@ const SandboxPage = () => {
       setTimeout(() => {
         setTargetShake(true);
         setTargetFlash(true);
-        addFloatingText('-16', 'crit', '#9d4edd', targetPos.row, targetPos.col);
+        addFloatingText('-16', 'crit', '#9d4edd', targetRowCenter, targetColCenter);
         setTimeout(() => {
           setTargetShake(false);
           setTargetFlash(false);
@@ -4004,7 +4034,7 @@ const SandboxPage = () => {
         setActiveBeam(null);
         setAnnihilationSweepActive(false);
         setAnnihilationExplosion(null);
-        setHitEffect({ type: 'annihilation_portal' });
+        setHitEffect({ type: 'annihilation_portal', row: targetRowCenter, col: targetColCenter });
 
         setTimeout(() => {
           setHitEffect(null);
@@ -6973,6 +7003,69 @@ const SandboxPage = () => {
                       </svg>
                     </div>
                   )}
+                  {((selectedUnitType === 'fighter' ? fighterHexed : monsterHexed)) && (() => {
+                    const endTime = selectedUnitType === 'fighter' ? fighterHexEndTime : monsterHexEndTime;
+                    const fading = selectedUnitType === 'fighter' ? fighterHexedFading : monsterHexedFading;
+                    return (
+                      <div
+                        className={fading ? 'effect-icon-fading' : 'effect-icon-active'}
+                        style={{
+                          position: 'absolute',
+                          top: '18px',
+                          right: '-6px',
+                          width: '20px',
+                          height: '20px',
+                          borderRadius: '50%',
+                          backgroundColor: '#111',
+                          border: '2px solid #cc44ff',
+                          backgroundImage: `url(${hex?.default || hex})`,
+                          backgroundSize: 'contain',
+                          backgroundRepeat: 'no-repeat',
+                          backgroundPosition: 'center',
+                          zIndex: 15,
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.5)',
+                          overflow: 'hidden'
+                        }}
+                      >
+                        <svg 
+                          style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: '100%',
+                            transform: 'rotate(-90deg)',
+                            pointerEvents: 'none'
+                          }}
+                          viewBox="0 0 20 20"
+                        >
+                          <circle
+                            cx="10"
+                            cy="10"
+                            r="5"
+                            fill="none"
+                            stroke="rgba(0, 0, 0, 0.35)"
+                            strokeWidth="10"
+                            strokeDasharray="31.42"
+                            strokeDashoffset={getHexDashOffset(endTime)}
+                          />
+                          {(() => {
+                            const coords = getRadialLineCoords(endTime, 16000);
+                            return coords ? (
+                              <line
+                                x1="10"
+                                y1="10"
+                                x2={coords.x2}
+                                y2={coords.y2}
+                                stroke="#ffffff"
+                                strokeWidth="0.8"
+                              />
+                            ) : null;
+                          })()}
+                        </svg>
+                      </div>
+                    );
+                  })()}
                   {selectedFighterId === 'ranger' && notchedArrow && (
                     <div style={{
                       position: 'absolute',
@@ -7360,24 +7453,66 @@ const SandboxPage = () => {
                         </svg>
                       </div>
                     )}
-                    {(selectedUnitType === 'monster' ? fighterHexed : monsterHexed) && (
-                      <div
-                        className="effect-icon-active"
-                        style={{
-                          width: '20px',
-                          height: '20px',
-                          borderRadius: '50%',
-                          backgroundColor: '#111',
-                          border: '2px solid #ff00ff',
-                          backgroundImage: `url(${hex})`,
-                          backgroundSize: 'contain',
-                          backgroundRepeat: 'no-repeat',
-                          backgroundPosition: 'center',
-                          boxShadow: '0 2px 4px rgba(0,0,0,0.5)',
-                          position: 'relative'
-                        }}
-                      />
-                    )}
+                    {(selectedUnitType === 'monster' ? fighterHexed : monsterHexed) && (() => {
+                      const endTime = selectedUnitType === 'monster' ? fighterHexEndTime : monsterHexEndTime;
+                      const fading = selectedUnitType === 'monster' ? fighterHexedFading : monsterHexedFading;
+                      return (
+                        <div
+                          className={fading ? 'effect-icon-fading' : 'effect-icon-active'}
+                          style={{
+                            width: '20px',
+                            height: '20px',
+                            borderRadius: '50%',
+                            backgroundColor: '#111',
+                            border: '2px solid #cc44ff',
+                            backgroundImage: `url(${hex?.default || hex})`,
+                            backgroundSize: 'contain',
+                            backgroundRepeat: 'no-repeat',
+                            backgroundPosition: 'center',
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.5)',
+                            position: 'relative',
+                            overflow: 'hidden'
+                          }}
+                        >
+                          <svg
+                            style={{
+                              position: 'absolute',
+                              top: 0,
+                              left: 0,
+                              width: '100%',
+                              height: '100%',
+                              transform: 'rotate(-90deg)',
+                              pointerEvents: 'none'
+                            }}
+                            viewBox="0 0 20 20"
+                          >
+                            <circle
+                              cx="10"
+                              cy="10"
+                              r="5"
+                              fill="none"
+                              stroke="rgba(0, 0, 0, 0.45)"
+                              strokeWidth="10"
+                              strokeDasharray="31.42"
+                              strokeDashoffset={getHexDashOffset(endTime)}
+                            />
+                            {(() => {
+                              const coords = getRadialLineCoords(endTime, 16000);
+                              return coords ? (
+                                <line
+                                  x1="10"
+                                  y1="10"
+                                  x2={coords.x2}
+                                  y2={coords.y2}
+                                  stroke="#ffffff"
+                                  strokeWidth="0.8"
+                                />
+                              ) : null;
+                            })()}
+                          </svg>
+                        </div>
+                      );
+                    })()}
                     {targetEnsnared && (
                       <div
                         className={targetEnsnaredFading ? 'effect-icon-fading' : 'effect-icon-active'}
@@ -9395,9 +9530,14 @@ const SandboxPage = () => {
 
               {/* --- Annihilation Horizontal Beam --- */}
               {activeBeam === 'annihilation' && (() => {
-                const dx = (targetPos.col - fighterPos.col) * TILE_PCT;
-                const dy_start = (targetPos.row + 1) * TILE_PCT - (fighterPos.row * TILE_PCT + TILE_PCT / 2);
-                const dy_end = targetPos.row * TILE_PCT - (fighterPos.row * TILE_PCT + TILE_PCT / 2);
+                const fCol = getUnitVisualCol(fighterPos.col, isFighterHuge, isFighterLarge);
+                const fRow = getUnitVisualRow(fighterPos.row, isFighterHuge, isFighterLarge);
+                const tCol = getUnitVisualCol(targetPos.col, isTargetHuge, isTargetLarge);
+                const tRow = getUnitVisualRow(targetPos.row, isTargetHuge, isTargetLarge);
+
+                const dx = (tCol - fCol) * TILE_PCT;
+                const dy_start = (tRow + 0.5) * TILE_PCT - (fRow * TILE_PCT + TILE_PCT / 2);
+                const dy_end = (tRow - 0.5) * TILE_PCT - (fRow * TILE_PCT + TILE_PCT / 2);
                 
                 const length_start = Math.sqrt(dx * dx + dy_start * dy_start);
                 const angle_start = Math.atan2(dy_start, dx) * (180 / Math.PI);
@@ -9412,8 +9552,8 @@ const SandboxPage = () => {
                   <div
                     style={{
                       position: 'absolute',
-                      left: `${fighterPos.col * TILE_PCT + TILE_PCT / 2}%`,
-                      top: `${fighterPos.row * TILE_PCT + TILE_PCT / 2}%`,
+                      left: `${fCol * TILE_PCT + TILE_PCT / 2}%`,
+                      top: `${fRow * TILE_PCT + TILE_PCT / 2}%`,
                       width: `${length}%`,
                       height: '16px',
                       background: 'linear-gradient(to bottom, #7b2cbf, #ffffff 40%, #ffffff 60%, #7b2cbf)',
