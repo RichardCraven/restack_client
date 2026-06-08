@@ -307,13 +307,15 @@ const skillsMatrix = {
         id: 'sleep',
         tier: 2,
         name: 'Sleep',
-        desc: 'Cast a soothing spell that puts the target to sleep.',
+        desc: 'Cast a soothing spell that puts the target to sleep. Broken by damage.',
         icon: images['wizard_sleep'],
         cooldown: 10,
         duration: 'long',
         range: 'medium',
         type: 'debuff',
-        effect: { type: 'sleep', chance: 100, duration: 8 }
+        mentalityDebuff: true,
+        power: 40,
+        effect: { type: 'sleep', duration: 8 }
     },
     annihilation: {
         id: 'annihilation',
@@ -466,12 +468,15 @@ const skillsMatrix = {
         id: 'monk_twin_finger_authority',
         tier: 3,
         name: 'Twin Finger Authority',
-        desc: 'Strike critical chakra points.',
+        desc: 'Strike critical chakra points, stunning and weakening the target\'s resolve.',
         icon: images['monk_twin_finger_authority'],
         cooldown: 8,
-        duration: 'instant',
+        duration: 'short',
         range: 'close',
-        type: 'damage'
+        type: 'damage/debuff',
+        mentalityDebuff: true,
+        power: 45,
+        effect: { type: 'twin_finger_stun', duration: 3, atkReductionPercent: 20 }
     },
     monk_inner_fire: {
         id: 'monk_inner_fire',
@@ -737,13 +742,15 @@ const skillsMatrix = {
         id: 'induce_fear',
         tier: 1,
         name: 'Induce Fear',
-        desc: 'Scream, filling targets with dread.',
+        desc: 'Scream, filling targets with dread. Reduces ATK and DEF.',
         icon: images['induce_fear'],
         cooldown: 16,
         duration: 'short',
         range: 'medium',
         type: 'debuff',
-        effect: { type: 'fear', chance: 100, duration: 2 }
+        mentalityDebuff: true,
+        power: 30,
+        effect: { type: 'fear', duration: 2, atkReductionPercent: 30, defReductionPercent: 30 }
     },
     energy_drain: {
         id: 'energy_drain',
@@ -810,36 +817,42 @@ const skillsMatrix = {
         id: 'crimson_sight',
         tier: 1,
         name: 'Crimson Sight',
-        desc: 'Perceive critical target vulnerabilities.',
+        desc: 'Pierce the target\'s mind, exposing critical vulnerabilities and reducing their defense.',
         icon: images['crimson_sight'],
         cooldown: 10,
         duration: 'short',
-        range: 'self',
-        type: 'buff'
+        range: 'medium',
+        type: 'debuff',
+        mentalityDebuff: true,
+        power: 25,
+        effect: { type: 'crimson_sight', duration: 3, defReductionPercent: 40 }
     },
     soul_suck: {
         id: 'soul_suck',
-        tier: 1,
+        tier: 3,
         name: 'Soul Suck',
         desc: 'Drain target\'s soul energy.',
         icon: images['soul_suck'],
         cooldown: 12,
         duration: 'short',
         range: 'medium',
-        type: 'debuff',
-        effect: { type: 'poison', chance: 100, duration: 2 }
+        type: 'damage/debuff',
+        effect: { type: 'stun', chance: 10, duration: 4 }
     },
     // Djinn
     betrayal: {
         id: 'betrayal',
         tier: 1,
         name: 'Betrayal',
-        desc: 'Sow discord among enemies.',
+        desc: 'Sow discord in the target\'s mind, forcing them to switch sides and fight their allies.',
         icon: images['betrayal'],
         cooldown: 12,
         duration: 'short',
         range: 'medium',
-        type: 'debuff'
+        type: 'debuff',
+        mentalityDebuff: true,
+        power: 50,
+        effect: { type: 'betrayal', duration: 4 }
     },
     arcane_barrier: {
         id: 'arcane_barrier',
@@ -868,13 +881,15 @@ const skillsMatrix = {
         id: 'bind',
         tier: 1,
         name: 'Bind',
-        desc: 'Restrict target movement.',
+        desc: 'Restrict target movement with psychic shackles.',
         icon: images['bind'],
         cooldown: 8,
         duration: 'short',
         range: 'medium',
         type: 'debuff',
-        effect: { type: 'ensnared', chance: 100, duration: 2 }
+        mentalityDebuff: true,
+        power: 35,
+        effect: { type: 'ensnared', duration: 2 }
     }
 };
 

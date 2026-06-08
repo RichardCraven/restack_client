@@ -88,12 +88,16 @@ export function CombatManager() {
             // --- VCT CLEANUP LOGIC ---
             // If this combatant is a monster with a VCT, remove its VCT and VCT combatant
             if (this.vctByMonster && this.vctByMonster[id]) {
-                const vctId = `${id}_VCT`;
-                // Remove VCT combatant from combatants list
-                if (this.combatants[vctId]) {
-                    delete this.combatants[vctId];
+                const vctData = this.vctByMonster[id];
+                if (Array.isArray(vctData)) {
+                    vctData.forEach((v, index) => {
+                        const vctId = `${id}_VCT${index === 0 ? '' : '2'}`;
+                        if (this.combatants[vctId]) delete this.combatants[vctId];
+                    });
+                } else {
+                    const vctId = `${id}_VCT`;
+                    if (this.combatants[vctId]) delete this.combatants[vctId];
                 }
-                // Remove VCT object from vctByMonster
                 delete this.vctByMonster[id];
             }
             // Defensive: if this is a VCT combatant, also remove from vctByMonster
@@ -371,15 +375,86 @@ export function CombatManager() {
         try {
             combatant.occupiedCoords = [];
             if (combatant.coordinates) combatant.occupiedCoords.push({ x: combatant.coordinates.x, y: combatant.coordinates.y });
-            const LARGE_COMBAT_KEYS = ['dragon', 'beholder', 'ogre', 'sphinx', 'manticore', 'wyvern', 'wyvern_alt', 'mummy'];
-            const isLarge = (
-                (typeof combatant.large === 'boolean' && combatant.large === true)
-                || (combatant.type && LARGE_COMBAT_KEYS.includes(combatant.type))
-                || (typeof combatant.size === 'number' && combatant.size >= 2)
-                || (typeof combatant.scale === 'number' && combatant.scale >= 2)
-                || (combatant.isMonster === true && combatant.isMinion !== true)
+            
+            const isHuge = (
+                (typeof combatant.huge === 'boolean' && combatant.huge === true)
+                || (combatant.type === 'dragon')
+                || (combatant.tier === 4)
+                || (typeof combatant.size === 'number' && combatant.size === 3)
+                || (typeof combatant.scale === 'number' && combatant.scale === 3)
             );
-            if (isLarge && combatant.coordinates) {
+            
+            const LARGE_COMBAT_KEYS = ['dragon', 'beholder', 'ogre', 'sphinx', 'manticore', 'wyvern', 'wyvern_alt', 'mummy', 'djinn', 'vampire', 'summoned_djinn', 'summoned_mummy', 'summoned_ogre', 'summoned_vampire'];
+            const isLarge = (
+                !isHuge && (
+                    (typeof combatant.large === 'boolean' && combatant.large === true)
+                    || (combatant.type && LARGE_COMBAT_KEYS.includes(combatant.type) && combatant.isMinion !== true)
+                    || (typeof combatant.size === 'number' && combatant.size >= 2)
+                    || (typeof combatant.scale === 'number' && combatant.scale >= 2)
+                    || (combatant.isMonster === true && combatant.isMinion !== true)
+                )
+            );
+
+            if (isHuge && combatant.coordinates) {
+                const hOffset = (combatant.coordinates.x >= 4) ? -1 : 1;
+                const extraCoords = [
+                    { x: combatant.coordinates.x, y: combatant.coordinates.y - 1 },
+                    { x: combatant.coordinates.x, y: combatant.coordinates.y - 2 },
+                    { x: combatant.coordinates.x + hOffset, y: combatant.coordinates.y },
+                    { x: combatant.coordinates.x + hOffset, y: combatant.coordinates.y - 1 },
+                    { x: combatant.coordinates.x + hOffset, y: combatant.coordinates.y - 2 },
+                    { x: combatant.coordinates.x + 2 * hOffset, y: combatant.coordinates.y },
+                    { x: combatant.coordinates.x + 2 * hOffset, y: combatant.coordinates.y - 1 },
+                    { x: combatant.coordinates.x + 2 * hOffset, y: combatant.coordinates.y - 2 }
+                ];
+                extraCoords.forEach(coord => {
+                    if (coord.x >= 0 && coord.x < 8 && coord.y >= 0 && coord.y < 6) {
+                        if (!combatant.occupiedCoords.some(c => c.x === coord.x && c.y === coord.y)) {
+                            combatant.occupiedCoords.push(coord);
+                        }
+                    }
+                });
+
+                if (!this.vctByMonster) this.vctByMonster = {};
+                this.vctByMonster[combatant.id] = [];
+                const vcts = [
+                    { suffix: '_VCT', offset: 1 },
+                    { suffix: '_VCT2', offset: 2 }
+                ];
+                vcts.forEach(({ suffix, offset }) => {
+                    const targetY = combatant.coordinates.y - offset;
+                    if (targetY >= 0) {
+                        const coord = { x: combatant.coordinates.x, y: targetY };
+                        const vctObj = {
+                            monsterId: combatant.id,
+                            coordinates: { ...coord },
+                            get isVCT() { return true; },
+                            get parentMonster() { return combatant; }
+                        };
+                        this.vctByMonster[combatant.id].push(vctObj);
+
+                        if (battleData) {
+                            const vctId = `${combatant.id}${suffix}`;
+                            battleData[vctId] = {
+                                id: vctId,
+                                isVCT: true,
+                                parentMonsterId: combatant.id,
+                                coordinates: { ...coord },
+                                hp: null,
+                                stats: {},
+                                dead: false,
+                                portrait: null,
+                                type: 'virtual',
+                                scale: 1,
+                                isMonster: combatant.isMonster === true,
+                                isMinion: combatant.isMinion === true,
+                                damageIndicators: [],
+                            };
+                        }
+                    }
+                });
+            }
+            else if (isLarge && combatant.coordinates) {
                 const above = { x: combatant.coordinates.x, y: combatant.coordinates.y - 1 };
                 if (above.y >= 0 && !combatant.occupiedCoords.some(c => c.x === above.x && c.y === above.y)) {
                     combatant.occupiedCoords.push(above);
@@ -421,13 +496,26 @@ export function CombatManager() {
         if (!this.vctByMonster) return;
         Object.values(this.combatants).forEach(combatant => {
             if (!combatant || !this.vctByMonster[combatant.id]) return;
-            const vct = this.vctByMonster[combatant.id];
-            if (combatant.coordinates) {
-                vct.coordinates = { x: combatant.coordinates.x, y: combatant.coordinates.y - 1 };
-                // Also update the VCT's coordinates in battleData
-                const vctId = `${combatant.id}_VCT`;
-                if (this.combatants[vctId]) {
-                    this.combatants[vctId].coordinates = { ...vct.coordinates };
+            const vctData = this.vctByMonster[combatant.id];
+            if (Array.isArray(vctData)) {
+                vctData.forEach((vct, index) => {
+                    const offset = index + 1;
+                    if (combatant.coordinates) {
+                        vct.coordinates = { x: combatant.coordinates.x, y: combatant.coordinates.y - offset };
+                        const vctId = `${combatant.id}_VCT${offset === 1 ? '' : '2'}`;
+                        if (this.combatants[vctId]) {
+                            this.combatants[vctId].coordinates = { ...vct.coordinates };
+                        }
+                    }
+                });
+            } else {
+                const vct = vctData;
+                if (combatant.coordinates) {
+                    vct.coordinates = { x: combatant.coordinates.x, y: combatant.coordinates.y - 1 };
+                    const vctId = `${combatant.id}_VCT`;
+                    if (this.combatants[vctId]) {
+                        this.combatants[vctId].coordinates = { ...vct.coordinates };
+                    }
                 }
             }
         });
@@ -437,7 +525,7 @@ export function CombatManager() {
         }
     }
 
-    // Returns true if combatant is a large (2-tile-tall) creature.
+    // Returns true if combatant is a large (2-tile-tall) or huge (3-tile-tall) creature.
     this._isLargeCombatant = (combatant) => {
         if (!combatant) return false;
         const LARGE_KEYS = ['dragon', 'beholder', 'ogre', 'sphinx', 'manticore', 'wyvern', 'wyvern_alt'];
@@ -447,14 +535,12 @@ export function CombatManager() {
             || (typeof combatant.size === 'number' && combatant.size >= 2)
             || (typeof combatant.scale === 'number' && combatant.scale >= 2)
             || (combatant.isMonster === true && combatant.isMinion !== true)
+            || (combatant.tier === 4 && combatant.isMinion !== true)
         );
     }
 
     /**
      * Checks whether `caller` can legally move to `coords`.
-     * - The tile must be in-bounds and unoccupied (checking occupiedCoords too).
-     * - If `caller` is a large combatant, the tile directly above `coords`
-     *   must also be in-bounds and unoccupied (no one else occupies it).
      */
     this._canMoveToCoords = (caller, coords) => {
         if (!coords || typeof coords.x !== 'number' || typeof coords.y !== 'number') return false;
@@ -468,25 +554,47 @@ export function CombatManager() {
             return false;
         });
         if (destOccupied) {
-            // console.log(`[CombatManager._canMoveToCoords] Move blocked: destination (${coords.x},${coords.y}) occupied (including virtual tiles).`);
             return false;
         }
-        // For large combatants, also check the tile above the destination
         if (this._isLargeCombatant(caller)) {
-            const above = { x: coords.x, y: coords.y - 1 };
-            if (above.y < 0) {
-                console.log(`[CombatManager._canMoveToCoords] Move blocked: large combatant can't fit above top of board.`);
-                return false; // can't fit — top of board
-            }
-            const aboveOccupied = Object.values(this.combatants).some(e => {
-                if (!e || e.id === caller.id) return false;
-                if (e.coordinates && e.coordinates.x === above.x && e.coordinates.y === above.y) return true;
-                if (Array.isArray(e.occupiedCoords)) return e.occupiedCoords.some(c => c.x === above.x && c.y === above.y);
-                return false;
-            });
-            if (aboveOccupied) {
-                console.log(`[CombatManager._canMoveToCoords] Move blocked: large combatant's virtual tile (${above.x},${above.y}) occupied.`);
-                return false;
+            const isHuge = (
+                (typeof caller.huge === 'boolean' && caller.huge === true)
+                || (caller.type === 'dragon')
+                || (caller.tier === 4)
+                || (typeof caller.size === 'number' && caller.size === 3)
+                || (typeof caller.scale === 'number' && caller.scale === 3)
+            );
+            if (isHuge) {
+                const above1 = { x: coords.x, y: coords.y - 1 };
+                const above2 = { x: coords.x, y: coords.y - 2 };
+                if (above2.y < 0) return false;
+                const above1Occupied = Object.values(this.combatants).some(e => {
+                    if (!e || e.id === caller.id) return false;
+                    if (e.coordinates && e.coordinates.x === above1.x && e.coordinates.y === above1.y) return true;
+                    if (Array.isArray(e.occupiedCoords)) return e.occupiedCoords.some(c => c.x === above1.x && c.y === above1.y);
+                    return false;
+                });
+                const above2Occupied = Object.values(this.combatants).some(e => {
+                    if (!e || e.id === caller.id) return false;
+                    if (e.coordinates && e.coordinates.x === above2.x && e.coordinates.y === above2.y) return true;
+                    if (Array.isArray(e.occupiedCoords)) return e.occupiedCoords.some(c => c.x === above2.x && c.y === above2.y);
+                    return false;
+                });
+                if (above1Occupied || above2Occupied) return false;
+            } else {
+                const above = { x: coords.x, y: coords.y - 1 };
+                if (above.y < 0) {
+                    return false; // can't fit — top of board
+                }
+                const aboveOccupied = Object.values(this.combatants).some(e => {
+                    if (!e || e.id === caller.id) return false;
+                    if (e.coordinates && e.coordinates.x === above.x && e.coordinates.y === above.y) return true;
+                    if (Array.isArray(e.occupiedCoords)) return e.occupiedCoords.some(c => c.x === above.x && c.y === above.y);
+                    return false;
+                });
+                if (aboveOccupied) {
+                    return false;
+                }
             }
         }
         return true;
@@ -2539,6 +2647,14 @@ export function CombatManager() {
             : '';
         caller.readout.result = `${caller.name} hits ${combatantHit.name} for ${damage} damage${bonusReadout}`;
         combatantHit.hp -= damage;
+
+        // ── Sleep break: taking damage wakes the target up ──────────────
+        if (combatantHit.asleep && damage > 0) {
+            combatantHit.asleep = false;
+            combatantHit.asleep_eras = 0;
+            this.appendCombatLog(`${combatantHit.name} wakes up from the hit!`);
+        }
+
         // Generate unique id for this indicator
         const indicatorId = Date.now() + Math.random();
         // Always use a number for value, even for critical hits

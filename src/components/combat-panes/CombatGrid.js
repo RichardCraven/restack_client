@@ -764,6 +764,8 @@ export default function CombatGrid(props) {
             fighter.isLeader ? 'leader-portrait' : '',
         ].filter(Boolean).join(' ');
 
+        const isBatFlying = activeAnimations.some(a => a.type === 'bat_fly_anim' && a.sourceUnitId === fighter.id);
+
         return (
             <div
                 key={fighter.id}
@@ -777,7 +779,7 @@ export default function CombatGrid(props) {
                     overflow: 'visible',
                     pointerEvents: 'none',
                     zIndex: activeLeapAnim ? 350 : 300,
-                    transition: (isTelep || activeLeapAnim) ? 'none' : `left ${FIGHTER_MOVE_TRANSITION_MS}ms, top ${FIGHTER_MOVE_TRANSITION_MS}ms`,
+                    transition: (isTelep || activeLeapAnim || liveFighter.attacking) ? 'none' : `left ${FIGHTER_MOVE_TRANSITION_MS}ms, top ${FIGHTER_MOVE_TRANSITION_MS}ms`,
                     ...computeHitVars(details || fighter, getHitAnimation),
                 }}
                 ref={el => { portraitWrapperRefs.current[fighter.id] = el; }}
@@ -795,6 +797,8 @@ export default function CombatGrid(props) {
                         transformOrigin: '50% 50%',
                         willChange: activeLeapAnim ? 'transform' : 'auto',
                         zIndex: activeLeapAnim ? 4500 : undefined,
+                        opacity: isBatFlying ? 0 : 1,
+                        transition: 'opacity 0.25s ease-in-out'
                     }}
                 >
                     <div
@@ -911,6 +915,19 @@ export default function CombatGrid(props) {
                             zIndex: 314,
                             animation: 'poisonPulseGlow 1.5s ease-in-out infinite alternate',
                             border: '2px solid rgba(56, 176, 0, 0.6)'
+                        }} />
+                    )}
+                    {/* Bleed Overlay (pulsing red glow) */}
+                    {details?.bleed && !details?.dead && (
+                        <div style={{
+                            boxSizing: 'border-box',
+                            position: 'absolute',
+                            top: 0, left: 0, width: '100%', height: '100%',
+                            borderRadius: '6px',
+                            pointerEvents: 'none',
+                            zIndex: 314,
+                            animation: 'bleedPulseGlow 1.5s ease-in-out infinite alternate',
+                            border: '2px solid rgba(224, 85, 85, 0.6)'
                         }} />
                     )}
                     {/* Dripping Acid Drops */}
@@ -1128,7 +1145,10 @@ export default function CombatGrid(props) {
                     const hasPerceiveActive = details && activeAnimations.some(anim => anim.type === 'perceive_anim' && Math.floor(anim.srcPx.x / 102) === details.coordinates.x && Math.floor(anim.srcPx.y / 102) === details.coordinates.y);
                     const hasEnergyDrainActive = details && activeAnimations.some(anim => anim.type === 'energy_drain_beam' && Math.floor(anim.tgtPx.x / 102) === details.coordinates.x && Math.floor(anim.tgtPx.y / 102) === details.coordinates.y);
                     const hasMeditateActive = details && activeAnimations.some(anim => anim.type === 'monk_meditate' && anim.srcPx && Math.floor(anim.srcPx.x / 102) === details.coordinates.x && Math.floor(anim.srcPx.y / 102) === details.coordinates.y);
-                    const hasCrimsonSightActive = details && activeAnimations.some(anim => anim.type === 'crimson_sight_anim' && Math.floor(anim.tgtPx.x / 102) === details.coordinates.x && Math.floor(anim.tgtPx.y / 102) === details.coordinates.y);
+                    const hasHeartbeatActive = Object.values(battleData).some(m =>
+                        m && m.isMonster && !m.dead && m.activeBuffs && m.activeBuffs.some(b => b.name === 'Crimson Sight')
+                    );
+                    const hasEyeActive = details?.activeBuffs && details.activeBuffs.some(b => b.name === 'Crimson Sight');
 
                     return (
                         <>
@@ -1186,7 +1206,25 @@ export default function CombatGrid(props) {
                                     animation: 'hoverFloat 1.8s ease-in-out forwards'
                                 }} />
                             )}
-                            {hasCrimsonSightActive && (
+                            {hasEyeActive && (
+                                <div style={{
+                                    position: 'absolute',
+                                    top: '-14px',
+                                    left: '50%',
+                                    transform: 'translateX(-50%)',
+                                    width: '28px',
+                                    height: '28px',
+                                    borderRadius: '4px',
+                                    border: '2px solid #ff3333',
+                                    backgroundImage: `url(${images.crimson_sight?.default || images.crimson_sight})`,
+                                    backgroundSize: 'cover',
+                                    backgroundPosition: 'center',
+                                    boxShadow: '0 0 10px #ff3333',
+                                    zIndex: 320,
+                                    animation: 'hoverFloatLoop 2s ease-in-out infinite'
+                                }} />
+                            )}
+                            {hasHeartbeatActive && (
                                 <div style={{
                                     position: 'absolute',
                                     top: '-21px',
@@ -1194,7 +1232,7 @@ export default function CombatGrid(props) {
                                     transform: 'translateX(-50%)',
                                     width: '42px',
                                     height: '42px',
-                                    backgroundImage: `url(${images.heartbeat})`,
+                                    backgroundImage: `url(${images.heartbeat?.default || images.heartbeat})`,
                                     backgroundSize: 'cover',
                                     backgroundPosition: 'center',
                                     zIndex: 320,
@@ -1222,20 +1260,27 @@ export default function CombatGrid(props) {
         const yPos = tilePos(unit.coordinates.y);
         const isTelep = isTeleporting(unit.id);
 
-        const isLarge = isMonster && !isMinion;
-        const width = isLarge ? TILE_SIZE * 2 + (SHOW_TILE_BORDERS ? 2 : 0) : TILE_SIZE;
-        const height = isLarge ? TILE_SIZE * 2 + (SHOW_TILE_BORDERS ? 2 : 0) : TILE_SIZE;
+        const isHuge = isMonster && !isMinion && (unit.tier === 4 || unit.type === 'dragon' || unit.key === 'dragon' || unit.huge === true || unit.size === 3);
+        const isLarge = isMonster && !isMinion && !isHuge;
+        const width = isHuge 
+            ? TILE_SIZE * 3 + (SHOW_TILE_BORDERS ? 4 : 0) 
+            : (isLarge ? TILE_SIZE * 2 + (SHOW_TILE_BORDERS ? 2 : 0) : TILE_SIZE);
+        const height = isHuge 
+            ? TILE_SIZE * 3 + (SHOW_TILE_BORDERS ? 4 : 0) 
+            : (isLarge ? TILE_SIZE * 2 + (SHOW_TILE_BORDERS ? 2 : 0) : TILE_SIZE);
 
-        // Large monsters position is anchor at bottom-right or bottom-left depending on side.
-        // If x >= 4, anchor col is the right col of the 2x2. Left should be shifted left by TILE_SIZE.
-        // Since anchor row y is the bottom row of the 2x2, top should be shifted up by TILE_SIZE.
-        const hOffset = (isLarge && unit.coordinates.x >= 4) ? -TILE_SIZE - (SHOW_TILE_BORDERS ? 2 : 0) : 0;
-        const vOffset = isLarge ? -TILE_SIZE - (SHOW_TILE_BORDERS ? 2 : 0) : 0;
+        const hOffset = isHuge 
+            ? ((unit.coordinates.x >= 4) ? -TILE_SIZE * 2 - (SHOW_TILE_BORDERS ? 4 : 0) : 0)
+            : ((isLarge && unit.coordinates.x >= 4) ? -TILE_SIZE - (SHOW_TILE_BORDERS ? 2 : 0) : 0);
+        const vOffset = isHuge 
+            ? -TILE_SIZE * 2 - (SHOW_TILE_BORDERS ? 4 : 0) 
+            : (isLarge ? -TILE_SIZE - (SHOW_TILE_BORDERS ? 2 : 0) : 0);
 
         const leftPos = xPos + hOffset;
         const topPos = yPos + vOffset;
 
         const isDisintegrating = activeAnimations.some(a => a.type === 'disintegrate_beam' && a.tgtPx && Math.abs(a.tgtPx.x - (leftPos + width/2)) < 15 && Math.abs(a.tgtPx.y - (topPos + height/2)) < 15);
+        const isBatFlying = activeAnimations.some(a => a.type === 'bat_fly_anim' && a.sourceUnitId === unit.id);
         const liveMonster = combatManager.getCombatant(unit.id) || unit;
         const monsterSleepDebuff = Array.isArray(liveMonster.activeDebuffs)
             && liveMonster.activeDebuffs.some(d => d && d.name && ['sleep', 'sleep_spell'].includes(d.name.toLowerCase()) && (d.roundsLeft || 0) > 0);
@@ -1244,7 +1289,7 @@ export default function CombatGrid(props) {
         const unitTileClasses = [
             'unit-tile',
             isMinion ? 'minion-unit-tile' : 'monster-unit-tile',
-            isLarge ? 'large-monster-unit-tile' : '',
+            isHuge ? 'huge-monster-unit-tile' : (isLarge ? 'large-monster-unit-tile' : ''),
             unit.rocked ? 'rocked' : '',
             unit.wounded ? 'hit' : '',
             unit.wounded ? hitAnim : '',
@@ -1257,11 +1302,11 @@ export default function CombatGrid(props) {
         const portraitClasses = [
             'portrait',
             isMinion ? 'minion-portrait' : 'monster-portrait',
-            isLarge ? 'large-portrait' : '',
+            isHuge ? 'huge-portrait' : (isLarge ? 'large-portrait' : ''),
             greetingInProcess ? 'enlarged' : '',
             unit.active ? 'active' : '',
             portraitHoveredId === unit.id ? 'hover-linked-target' : '',
-            unit.bifurcating ? 'bifurcatingAnimation' : (isDead ? (unit.type === 'mummy' || unit.key === 'mummy' || isLarge ? 'dead mummyDeadAnimation' : 'dead monsterDeadAnimation') : ''),
+            unit.bifurcating ? 'bifurcatingAnimation' : (isDead ? (unit.type === 'mummy' || unit.key === 'mummy' || isLarge || isHuge ? 'dead mummyDeadAnimation' : 'dead monsterDeadAnimation') : ''),
             unit.isBifurcateSmall ? 'bifurcate-copy' : '',
             unit.isBifurcateCopy ? 'bifurcate-copy-spawning' : '',
             unit.missed ? (unit.facing === 'right' ? 'missed-reversed' : 'missed') : '',
@@ -1269,9 +1314,10 @@ export default function CombatGrid(props) {
             unit.facing === 'right' ? 'reversed' : '',
             unit.facing === 'up' ? 'facing-up' : '',
             unit.facing === 'down' ? 'facing-down' : '',
-            unit.chargingUpActive ? 'charging-up' : '',
-            unit.regenerating ? 'regenerating' : '',
-            unit.bleed ? 'bleeding' : '',
+            liveMonster.chargingUpActive ? 'charging-up' : '',
+            liveMonster.regenerating ? 'regenerating' : '',
+            liveMonster.bleed ? 'bleeding' : '',
+            liveMonster.frozen ? 'frozen' : '',
             unit.fadingIn ? 'minion-fade-in' : '',
         ].filter(Boolean).join(' ');
 
@@ -1305,13 +1351,15 @@ export default function CombatGrid(props) {
                         height: '100%',
                         borderRadius: '8px',
                         overflow: 'visible',
+                        opacity: isBatFlying ? 0 : 1,
+                        transition: 'opacity 0.25s ease-in-out'
                     }}
                 >
                     <div
                         className={portraitClasses}
                         style={{
                             backgroundImage: unit.portrait ? `url(${unit.portrait})` : 'none',
-                            filter: `${unit.portraitFilter || ''} sepia(${portraitHoveredId === unit.id ? '2' : '0'}) ${unit.frozen ? 'hue-rotate(165deg) saturate(1.35) brightness(1.08) contrast(1.05)' : ''} ${meltScales[unit.id] !== undefined ? `url(#melt-effect-${unit.id})` : ''}`,
+                            filter: `${unit.portraitFilter || ''} sepia(${portraitHoveredId === unit.id ? '2' : '0'}) ${liveMonster.frozen ? 'hue-rotate(165deg) saturate(1.35) brightness(1.08) contrast(1.05)' : ''} ${meltScales[unit.id] !== undefined ? `url(#melt-effect-${unit.id})` : ''}`,
                             zIndex: isMinion ? 2 : 1,
                             position: 'relative',
                             width: '100%',
@@ -1404,6 +1452,19 @@ export default function CombatGrid(props) {
                                     }}
                                 />
                             </div>
+                        )}
+                        {/* Bleed Overlay (pulsing red glow) */}
+                        {liveMonster?.bleed && !isDead && (
+                            <div style={{
+                                boxSizing: 'border-box',
+                                position: 'absolute',
+                                top: 0, left: 0, width: '100%', height: '100%',
+                                borderRadius: '6px',
+                                pointerEvents: 'none',
+                                zIndex: 14,
+                                animation: 'bleedPulseGlow 1.5s ease-in-out infinite alternate',
+                                border: '2px solid rgba(224, 85, 85, 0.6)'
+                            }} />
                         )}
                     </div>
                     {liveMonster?.marked && !isDead && (
@@ -1504,7 +1565,7 @@ export default function CombatGrid(props) {
                         </div>
                     )}
                     {fearCastingActive && !unit.isMinion && <div className="fear-cast-glow" />}
-                    <div className={`portrait-overlay ${unit.frozen ? 'frozen' : ''}`} style={{ zIndex: 2, position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', borderRadius: 0, overflow: 'visible' }}>
+                    <div className={`portrait-overlay ${liveMonster.frozen ? 'frozen' : ''}`} style={{ zIndex: 2, position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', borderRadius: 0, overflow: 'visible' }}>
                         {renderDamageIndicators(unit.id)}
                     </div>
                     {/* Target indicator */}
@@ -1532,7 +1593,10 @@ export default function CombatGrid(props) {
                 {(() => {
                     const hasPerceiveActive = activeAnimations.some(anim => anim.type === 'perceive_anim' && Math.floor(anim.srcPx.x / 102) === unit.coordinates.x && Math.floor(anim.srcPx.y / 102) === unit.coordinates.y);
                     const hasEnergyDrainActive = activeAnimations.some(anim => anim.type === 'energy_drain_beam' && Math.floor(anim.tgtPx.x / 102) === unit.coordinates.x && Math.floor(anim.tgtPx.y / 102) === unit.coordinates.y);
-                    const hasCrimsonSightActive = activeAnimations.some(anim => anim.type === 'crimson_sight_anim' && Math.floor(anim.tgtPx.x / 102) === unit.coordinates.x && Math.floor(anim.tgtPx.y / 102) === unit.coordinates.y);
+                    const hasHeartbeatActive = Object.values(battleData).some(f =>
+                        f && !f.isMonster && !f.dead && f.activeBuffs && f.activeBuffs.some(b => b.name === 'Crimson Sight')
+                    );
+                    const hasEyeActive = liveMonster?.activeBuffs && liveMonster.activeBuffs.some(b => b.name === 'Crimson Sight');
 
                     return (
                         <>
@@ -1572,7 +1636,25 @@ export default function CombatGrid(props) {
                                     animation: 'hoverFloat 1.5s ease-in-out forwards'
                                 }} />
                             )}
-                            {hasCrimsonSightActive && (
+                            {hasEyeActive && (
+                                <div style={{
+                                    position: 'absolute',
+                                    top: '-14px',
+                                    left: '50%',
+                                    transform: 'translateX(-50%)',
+                                    width: '28px',
+                                    height: '28px',
+                                    borderRadius: '4px',
+                                    border: '2px solid #ff3333',
+                                    backgroundImage: `url(${images.crimson_sight?.default || images.crimson_sight})`,
+                                    backgroundSize: 'cover',
+                                    backgroundPosition: 'center',
+                                    boxShadow: '0 0 10px #ff3333',
+                                    zIndex: 320,
+                                    animation: 'hoverFloatLoop 2s ease-in-out infinite'
+                                }} />
+                            )}
+                            {hasHeartbeatActive && (
                                 <div style={{
                                     position: 'absolute',
                                     top: '-21px',
@@ -1580,7 +1662,7 @@ export default function CombatGrid(props) {
                                     transform: 'translateX(-50%)',
                                     width: '42px',
                                     height: '42px',
-                                    backgroundImage: `url(${images.heartbeat})`,
+                                    backgroundImage: `url(${images.heartbeat?.default || images.heartbeat})`,
                                     backgroundSize: 'cover',
                                     backgroundPosition: 'center',
                                     zIndex: 320,
@@ -1698,7 +1780,7 @@ export default function CombatGrid(props) {
                                 backgroundSize: 'contain',
                                 backgroundRepeat: 'no-repeat',
                                 backgroundPosition: 'center',
-                                animation: `fireballTravel 0.6s linear ${delay}s forwards`,
+                                animation: `batTravelMeander${i} 0.6s ease-in-out ${0.3 + delay}s forwards`,
                                 '--fb-dx': `${dx}px`,
                                 '--fb-dy': `${dy}px`,
                             }} />
@@ -1912,6 +1994,40 @@ export default function CombatGrid(props) {
             );
         }
 
+        if (anim.type === 'magic_missile_hit_sigil' && anim.tgtPx) {
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: `${anim.tgtPx.x}px`,
+                    top: `${anim.tgtPx.y}px`,
+                    width: '60px',
+                    height: '60px',
+                    transform: 'translate(-50%, -50%)',
+                    pointerEvents: 'none',
+                    zIndex: 4100,
+                    animation: 'explode 0.35s ease-out forwards',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                }}>
+                    <svg viewBox="0 0 100 100" style={{ 
+                        width: '100%', 
+                        height: '100%', 
+                        animation: 'geomSpinClockwise 1.2s linear infinite',
+                        filter: 'drop-shadow(0 0 4px #b5179e)'
+                    }}>
+                        {/* Outer circle */}
+                        <circle cx="50" cy="50" r="42" fill="none" stroke="#b5179e" strokeWidth="3" />
+                        {/* Inner dashed circle */}
+                        <circle cx="50" cy="50" r="28" fill="none" stroke="#9d4edd" strokeWidth="2" strokeDasharray="6 6" />
+                        {/* Star / Hexagram double triangle */}
+                        <polygon points="50,15 80,70 20,70" fill="none" stroke="#7209b7" strokeWidth="2.5" />
+                        <polygon points="50,85 80,30 20,30" fill="none" stroke="#7209b7" strokeWidth="2.5" />
+                    </svg>
+                </div>
+            );
+        }
+
         if (anim.type === 'ice_projectile' && anim.srcPx && anim.tgtPx) {
             return (
                 <div key={key} style={{
@@ -1941,14 +2057,41 @@ export default function CombatGrid(props) {
                     top: `${anim.tgtPx.y}px`,
                     width: '60px',
                     height: '60px',
-                    clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)',
-                    background: 'linear-gradient(135deg, #e0f7fa 0%, #80deea 50%, #00bfff 100%)',
-                    boxShadow: '0 0 20px #80deea',
                     transform: 'translate(-50%, -50%)',
                     pointerEvents: 'none',
                     zIndex: 4100,
                     animation: 'explode 0.3s ease-out forwards',
-                }} />
+                }}>
+                    {/* Solid Hexagon Spinning Clockwise */}
+                    <div style={{
+                        position: 'absolute',
+                        left: 0,
+                        top: 0,
+                        width: '100%',
+                        height: '100%',
+                        clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)',
+                        background: 'linear-gradient(135deg, #e0f7fa 0%, #80deea 50%, #00bfff 100%)',
+                        animation: 'geomSpinClockwise 3s linear infinite',
+                    }} />
+                    {/* Hollow Hexagon Spinning Counter-Clockwise */}
+                    <svg style={{
+                        position: 'absolute',
+                        left: 0,
+                        top: 0,
+                        width: '100%',
+                        height: '100%',
+                        animation: 'geomSpinCounter 4.5s linear infinite',
+                    }} viewBox="0 0 100 100">
+                        <polygon
+                            points="50,2 98,26 98,74 50,98 2,74 2,26"
+                            fill="none"
+                            stroke="#00bfff"
+                            strokeWidth="5"
+                            strokeLinejoin="round"
+                            style={{ filter: 'drop-shadow(0 0 4px #00bfff)' }}
+                        />
+                    </svg>
+                </div>
             );
         }
 
@@ -2028,15 +2171,41 @@ export default function CombatGrid(props) {
                     top: `${anim.tgtPx.y}px`,
                     width: '70px',
                     height: '70px',
-                    clipPath: 'polygon(50% 0%, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0% 50%, 38% 38%)',
-                    background: 'linear-gradient(135deg, #adff2f 0%, #70e000 50%, #38b000 100%)',
-                    boxShadow: '0 0 25px #38b000',
                     transform: 'translate(-50%, -50%)',
                     pointerEvents: 'none',
                     zIndex: 4100,
-                    opacity: 0.9,
                     animation: 'explode 0.3s ease-out forwards',
-                }} />
+                }}>
+                    {/* Solid Star Spinning Clockwise */}
+                    <div style={{
+                        position: 'absolute',
+                        left: 0,
+                        top: 0,
+                        width: '100%',
+                        height: '100%',
+                        clipPath: 'polygon(50% 0%, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0% 50%, 38% 38%)',
+                        background: 'linear-gradient(135deg, #adff2f 0%, #70e000 50%, #38b000 100%)',
+                        animation: 'geomSpinClockwise 3s linear infinite',
+                    }} />
+                    {/* Hollow Star Spinning Counter-Clockwise */}
+                    <svg style={{
+                        position: 'absolute',
+                        left: 0,
+                        top: 0,
+                        width: '100%',
+                        height: '100%',
+                        animation: 'geomSpinCounter 4.5s linear infinite',
+                    }} viewBox="0 0 100 100">
+                        <polygon
+                            points="50,2 62,38 98,50 62,62 50,98 38,62 2,50 38,38"
+                            fill="none"
+                            stroke="#38b000"
+                            strokeWidth="5"
+                            strokeLinejoin="round"
+                            style={{ filter: 'drop-shadow(0 0 4px #adff2f)' }}
+                        />
+                    </svg>
+                </div>
             );
         }
 
@@ -2758,6 +2927,44 @@ export default function CombatGrid(props) {
             );
         }
 
+        if (anim.type === 'bind_hit_ropes' && anim.tgtPx) {
+            const size = anim.isTargetLarge ? TILE_SIZE * 2 : TILE_SIZE;
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: `${anim.tgtPx.x}px`,
+                    top: `${anim.tgtPx.y}px`,
+                    width: `${size}px`,
+                    height: `${size}px`,
+                    transform: 'translate(-50%, -50%)',
+                    pointerEvents: 'none',
+                    zIndex: 4100,
+                    animation: 'explode 0.3s ease-out forwards',
+                }}>
+                    <svg style={{
+                        position: 'absolute',
+                        left: 0,
+                        top: 0,
+                        width: '100%',
+                        height: '100%',
+                    }} viewBox="0 0 100 100">
+                        <path d="M 10,25 C 30,15 70,35 90,25 M 5,50 C 25,65 75,35 95,50 M 10,75 C 30,65 70,85 90,75 M 20,10 C 10,40 40,60 30,90 M 80,10 C 90,40 60,60 70,90" 
+                              fill="none" 
+                              stroke="#ffffff" 
+                              strokeWidth="4" 
+                              strokeLinecap="round"
+                              style={{ 
+                                  filter: 'drop-shadow(0 0 3px rgba(0,0,0,0.5))',
+                                  strokeDasharray: '300',
+                                  strokeDashoffset: '300',
+                                  animation: 'drawRopes 0.8s ease-out forwards'
+                              }} 
+                        />
+                    </svg>
+                </div>
+            );
+        }
+
         if (anim.type === 'generic_hit' && anim.tgtPx) {
             return (
                 <div key={key} style={{
@@ -2815,6 +3022,74 @@ export default function CombatGrid(props) {
     // ── Monster units — exclude VCT ───────────────────────────────────────────
     const monsterUnits = Object.values(battleData).filter(u => u && (u.isMonster || u.isMinion) && !crewIds.has(u.id) && !u.isVCT);
 
+    const getUnitCenterPx = (unitId) => {
+        // Find in crew
+        const fighter = crew.find(f => f.id === unitId);
+        if (fighter) {
+            const coords = battleData[fighter.id]?.coordinates;
+            if (!coords) return null;
+            return {
+                x: tilePos(coords.x) + TILE_SIZE / 2,
+                y: tilePos(coords.y) + TILE_SIZE / 2
+            };
+        }
+        // Find in monsters
+        const unit = Object.values(battleData).find(u => u && u.id === unitId);
+        if (unit && unit.coordinates) {
+            const isHuge = unit.isMonster && !unit.isMinion && (unit.tier === 4 || unit.type === 'dragon' || unit.key === 'dragon' || unit.huge === true || unit.size === 3);
+            const isLarge = unit.isMonster && !unit.isMinion && !isHuge;
+            const width = isHuge 
+                ? TILE_SIZE * 3 + (SHOW_TILE_BORDERS ? 4 : 0) 
+                : (isLarge ? TILE_SIZE * 2 + (SHOW_TILE_BORDERS ? 2 : 0) : TILE_SIZE);
+            const height = isHuge 
+                ? TILE_SIZE * 3 + (SHOW_TILE_BORDERS ? 4 : 0) 
+                : (isLarge ? TILE_SIZE * 2 + (SHOW_TILE_BORDERS ? 2 : 0) : TILE_SIZE);
+            const hOffset = isHuge 
+                ? ((unit.coordinates.x >= 4) ? -TILE_SIZE * 2 - (SHOW_TILE_BORDERS ? 4 : 0) : 0)
+                : ((isLarge && unit.coordinates.x >= 4) ? -TILE_SIZE - (SHOW_TILE_BORDERS ? 2 : 0) : 0);
+            const vOffset = isHuge 
+                ? -TILE_SIZE * 2 - (SHOW_TILE_BORDERS ? 4 : 0) 
+                : (isLarge ? -TILE_SIZE - (SHOW_TILE_BORDERS ? 2 : 0) : 0);
+            return {
+                x: tilePos(unit.coordinates.x) + hOffset + width / 2,
+                y: tilePos(unit.coordinates.y) + vOffset + height / 2
+            };
+        }
+        return null;
+    };
+
+    const renderSoulSuckChannelingBeams = () => {
+        return Object.values(battleData).map(unit => {
+            if (!unit || !unit.soulSuckChanneling || unit.dead) return null;
+            const { targetId } = unit.soulSuckChanneling;
+            const srcPx = getUnitCenterPx(unit.id);
+            const tgtPx = getUnitCenterPx(targetId);
+            if (!srcPx || !tgtPx) return null;
+
+            const dx = tgtPx.x - srcPx.x;
+            const dy = tgtPx.y - srcPx.y;
+            const len = Math.sqrt(dx * dx + dy * dy);
+            const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+
+            return (
+                <div key={`soul_suck_channel_${unit.id}`} style={{
+                    position: 'absolute',
+                    left: `${srcPx.x}px`,
+                    top: `${srcPx.y}px`,
+                    width: `${len}px`,
+                    height: '24px',
+                    background: 'linear-gradient(to bottom, rgba(255, 255, 255, 0.2) 0%, #ffffff 50%, rgba(255, 255, 255, 0.2) 100%)',
+                    boxShadow: '0 0 15px #ffffff, 0 0 30px #ffffff',
+                    transformOrigin: '0 50%',
+                    transform: `rotate(${angle}deg) translateY(-50%)`,
+                    zIndex: 4000,
+                    pointerEvents: 'none',
+                    animation: 'pinkBeamPulse 0.8s ease-in-out infinite alternate',
+                }} />
+            );
+        });
+    };
+
     // ── Main render ───────────────────────────────────────────────────────────
     return (
         <div className="combat-units-layer" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', overflow: 'visible' }}>
@@ -2855,6 +3130,9 @@ export default function CombatGrid(props) {
 
             {/* Monsters + Minions */}
             {monsterUnits.map(renderMonsterUnit)}
+
+            {/* Soul Suck continuous channeling beams */}
+            {renderSoulSuckChannelingBeams()}
 
             {/* Sandbox-style CSS animation overlays from AnimationManagerRedux */}
             {activeAnimations.map(renderAnimation)}

@@ -40,6 +40,12 @@ import {
   wraith_portrait,
   goat_demon_portrait,
   gorgon_portrait,
+  Hagigah,
+  Hashmallim,
+  ghoul_portrait,
+  precipice_guardian_portrait,
+  blalok,
+  shade,
   claw_strike,
   claw_hit,
   claw_strike_animation,
@@ -164,7 +170,21 @@ import {
   axe_19,
   axe_20,
   axe_21,
-  axe_23
+  axe_23,
+  gore,
+  regenerate,
+  blue_dragon_breath,
+  bombard,
+  dispell,
+  elder_presence,
+  impenetrable_scales,
+  lay_eggs,
+  serpent_vision,
+  whirlwind,
+  begin_trials,
+  polymorph,
+  hex,
+  third_eye,
 } from '../utils/images';
 
 // Dynamically load all runes from the directory
@@ -286,12 +306,52 @@ const monstersData = [
     { id: 'death_missile', name: 'Death Missile', desc: 'Fires a skull missile that curses the target on impact.', icon: death_missile, type: 'death_missile_type' },
     { id: 'bind', name: 'Bind', desc: 'Conjure ethereal energy to restrict target movement.', icon: bind, type: 'bind_type' }
   ] },
-  { id: 'sphinx', name: 'Sphinx', portrait: sphinx_portrait, abilities: [{ id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' }] },
+  { id: 'sphinx', name: 'Sphinx', portrait: sphinx_portrait, abilities: [
+    { id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' },
+    { id: 'begin_trials', name: 'Begin the Trials', desc: 'Unleash the Trials of the Sphinx.', icon: begin_trials, type: 'begin_trials_type' },
+    { id: 'polymorph', name: 'Polymorph', desc: 'Transform the target into a helpless frog for a long duration.', icon: polymorph, type: 'polymorph_type' },
+    { id: 'hex', name: 'Hex', desc: 'Curse the target, giving their skills a chance to backfire.', icon: hex, type: 'hex_type' },
+    { id: 'third_eye', name: 'Third Eye', desc: 'Chance to dodge incoming physical attacks.', icon: third_eye, type: 'third_eye_type', isPassive: true }
+  ] },
   { id: 'wyvern', name: 'Wyvern', portrait: wyvern_portrait, abilities: [{ id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' }] },
-  { id: 'troll', name: 'Troll', portrait: troll_portrait, abilities: [{ id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' }] },
+  { id: 'troll', name: 'Troll', portrait: troll_portrait, abilities: [
+    { id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' },
+    { id: 'gore', name: 'Gore', desc: 'A heavy strike that causes severe bleeding.', icon: gore, type: 'gore_type' },
+    { id: 'regenerate', name: 'Regenerate', desc: 'Heals continuously for a long duration.', icon: regenerate, type: 'regenerate_type' }
+  ] },
   { id: 'wraith', name: 'Wraith', portrait: wraith_portrait, abilities: [{ id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' }] },
   { id: 'goat_demon', name: 'Goat Demon', portrait: goat_demon_portrait, abilities: [{ id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' }] },
-  { id: 'gorgon', name: 'Gorgon', portrait: gorgon_portrait, abilities: [{ id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' }] }
+  { id: 'gorgon', name: 'Gorgon', portrait: gorgon_portrait, abilities: [{ id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' }] },
+  { id: 'dragon', name: 'Dragon', portrait: wyvern_portrait, abilities: [
+    { id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' },
+    { id: 'bite', name: 'Bite', desc: 'Savage bite attack.', icon: monster_bite, type: 'bite' },
+    { id: 'blue_dragon_breath', name: 'Blue Dragon Breath', desc: 'A fat, wavy beam that deals heavy damage over time.', icon: blue_dragon_breath, type: 'blue_dragon_breath_type' },
+    { id: 'whirlwind', name: 'Whirlwind', desc: 'Creates a devastating whirlwind.', icon: whirlwind, type: 'whirlwind_type' },
+    { id: 'bombard', name: 'Bombard', desc: 'Bombard the enemy from above.', icon: bombard, type: 'bombard_type' },
+    { id: 'dispell', name: 'Dispell', desc: 'Remove magical effects.', icon: dispell, type: 'dispell_type' },
+    { id: 'serpent_vision', name: 'Serpent Vision', desc: 'Enhanced vision to see vulnerabilities.', icon: serpent_vision, type: 'serpent_vision_type' },
+    { id: 'lay_eggs', name: 'Lay Eggs', desc: 'Lays dragon eggs on the battlefield.', icon: lay_eggs, type: 'lay_eggs_type' },
+    { id: 'impenetrable_scales', name: 'Impenetrable Scales (Passive)', desc: 'Thick dragon scales that reduce damage.', icon: impenetrable_scales, type: 'impenetrable_scales_type', isPassive: true },
+    { id: 'elder_presence', name: 'Elder Presence (Passive)', desc: 'An imposing aura that intimidates foes.', icon: elder_presence, type: 'elder_presence_type', isPassive: true }
+  ] },
+  { id: 'hagigah', name: 'Hagigah', portrait: Hagigah, abilities: [
+    { id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' }
+  ] },
+  { id: 'hashmallim', name: 'Hashmallim', portrait: Hashmallim, abilities: [
+    { id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' }
+  ] },
+  { id: 'ghoul', name: 'Ghoul', portrait: ghoul_portrait, abilities: [
+    { id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' }
+  ] },
+  { id: 'precipice_guardian', name: 'Precipice Guardian', portrait: precipice_guardian_portrait, abilities: [
+    { id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' }
+  ] },
+  { id: 'blalok', name: 'Blalok', portrait: blalok, abilities: [
+    { id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' }
+  ] },
+  { id: 'shade', name: 'Shade', portrait: shade, abilities: [
+    { id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' }
+  ] }
 ];
 
 // Predefined list of 8 crew fighters and their test abilities
@@ -414,6 +474,52 @@ const fightersData = [
 
 const GRID_SIZE = 6;
 const TILE_PCT = 100 / GRID_SIZE; // 16.666667
+
+// --- Sizing and Footprint Helpers ---
+const getUnitVisualCol = (col, isHuge, isLarge) => {
+  if (isHuge) return col >= 4 ? col - 1 : col + 1;
+  if (isLarge) return col >= 3 ? col - 0.5 : col + 0.5;
+  return col;
+};
+const getUnitVisualRow = (row, isHuge, isLarge) => {
+  if (isHuge) return row - 1;
+  if (isLarge) return row - 0.5;
+  return row;
+};
+const getUnitLeftTileCol = (col, isHuge, isLarge) => {
+  if (isHuge) return col >= 4 ? col - 2 : col;
+  if (isLarge) return col >= 3 ? col - 1 : col;
+  return col;
+};
+const getUnitTopTileRow = (row, isHuge, isLarge) => {
+  if (isHuge) return row - 2;
+  if (isLarge) return row - 1;
+  return row;
+};
+const getUnitSizeFactor = (isHuge, isLarge) => {
+  if (isHuge) return 3;
+  if (isLarge) return 2;
+  return 1;
+};
+const getCandidateTiles = (row, col, isHuge, isLarge) => {
+  if (isHuge) {
+    const offset = col >= 4 ? -1 : 1;
+    return [
+      { row, col }, { row: row - 1, col }, { row: row - 2, col },
+      { row, col: col + offset }, { row: row - 1, col: col + offset }, { row: row - 2, col: col + offset },
+      { row, col: col + 2 * offset }, { row: row - 1, col: col + 2 * offset }, { row: row - 2, col: col + 2 * offset }
+    ];
+  } else if (isLarge) {
+    const offset = col >= 3 ? -1 : 1;
+    return [
+      { row, col },
+      { row: row - 1, col },
+      { row, col: col + offset },
+      { row: row - 1, col: col + offset }
+    ];
+  }
+  return [{ row, col }];
+};
 
 const SandboxPage = () => {
   const history = useHistory();
@@ -572,6 +678,28 @@ const SandboxPage = () => {
   const [lightningJagged, setLightningJagged] = useState(false);
   const [frozenIconActive, setFrozenIconActive] = useState(false);
   const [frozenEndTime, setFrozenEndTime] = useState(null);
+  
+  // --- Troll & Dragon States ---
+  const [trollHpPct, setTrollHpPct] = useState(30);
+  const [trollRegenActive, setTrollRegenActive] = useState(false);
+  const [trollRegenEndTime, setTrollRegenEndTime] = useState(null);
+  const trollRegenIntervalRef = useRef(null);
+  
+  const [blueDragonBreathActive, setBlueDragonBreathActive] = useState(false);
+  const [thirdEyeTriggered, setThirdEyeTriggered] = useState(false);
+  const [fighterHexed, setFighterHexed] = useState(false);
+  const [monsterHexed, setMonsterHexed] = useState(false);
+  const [fighterHexEndTime, setFighterHexEndTime] = useState(null);
+  const [monsterHexEndTime, setMonsterHexEndTime] = useState(null);
+  const [fighterPolymorphed, setFighterPolymorphed] = useState(false);
+  const [monsterPolymorphed, setMonsterPolymorphed] = useState(false);
+  const [fighterPolymorphEndTime, setFighterPolymorphEndTime] = useState(null);
+  const [monsterPolymorphEndTime, setMonsterPolymorphEndTime] = useState(null);
+  const fighterFrogIntervalRef = useRef(null);
+  const monsterFrogIntervalRef = useRef(null);
+  const [hexCastExplosion, setHexCastExplosion] = useState(null); // { row, col }
+
+
   const [targetEnsnared, setTargetEnsnared] = useState(false);
   const [targetEnsnaredFading, setTargetEnsnaredFading] = useState(false);
   const [ensnareEndTime, setEnsnareEndTime] = useState(null);
@@ -583,6 +711,11 @@ const SandboxPage = () => {
   const [vortexActive, setVortexActive] = useState(null); // { row, col }
   const [poisonDuration, setPoisonDuration] = useState(8000);
   const [frozenDuration, setFrozenDuration] = useState(3000);
+  const bleedIntervalRef = useRef(null);
+  const isThirdEyeDodgeRef = useRef(false);
+  const [bleedSingleDuration, setBleedSingleDuration] = useState(0);
+  const [bleedDuration, setBleedDuration] = useState(0);
+  
   const [poisonSingleDuration, setPoisonSingleDuration] = useState(8000);
   const [frozenSingleDuration, setFrozenSingleDuration] = useState(2000);
   const [bleedEndTime, setBleedEndTime] = useState(null);
@@ -666,6 +799,57 @@ const SandboxPage = () => {
     }
     
     // Check poison
+    if (fighterHexEndTime && fighterHexEndTime <= currentTime) {
+      setFighterHexed(false);
+      setFighterHexEndTime(null);
+    }
+    if (monsterHexEndTime && monsterHexEndTime <= currentTime) {
+      setMonsterHexed(false);
+      setMonsterHexEndTime(null);
+    }
+    if (fighterPolymorphEndTime && fighterPolymorphEndTime <= currentTime) {
+      if (fighterPolymorphed) addFloatingText('RESTORED!', 'normal', '#2ecc71', fighterPos.row, fighterPos.col);
+      setFighterPolymorphed(false);
+      setFighterPolymorphEndTime(null);
+      if (fighterFrogIntervalRef.current) clearInterval(fighterFrogIntervalRef.current);
+    }
+    if (monsterPolymorphEndTime && monsterPolymorphEndTime <= currentTime) {
+      // Find monster pos: it's not explicitly tracked but we assume targetPos or fighterPos depending on selectedUnitType
+      // In sandbox, we just clear it
+      setMonsterPolymorphed(false);
+      setMonsterPolymorphEndTime(null);
+      if (monsterFrogIntervalRef.current) clearInterval(monsterFrogIntervalRef.current);
+    }
+    
+    if (trollRegenEndTime) {
+      const remaining = trollRegenEndTime - currentTime;
+      if (remaining <= 0) {
+        setTrollRegenActive(false);
+        setTrollRegenEndTime(null);
+        if (trollRegenIntervalRef.current) {
+          clearInterval(trollRegenIntervalRef.current);
+          trollRegenIntervalRef.current = null;
+        }
+      }
+    }
+    
+    if (bleedEndTime) {
+      const remaining = bleedEndTime - currentTime;
+      if (remaining <= 0) {
+        setTargetBleeding(false);
+        setBleedFading(false);
+        setBleedEndTime(null);
+        if (bleedIntervalRef.current) {
+          clearInterval(bleedIntervalRef.current);
+          bleedIntervalRef.current = null;
+        }
+      } else if (remaining <= 300) {
+        setBleedFading(true);
+      } else {
+        setBleedFading(false);
+      }
+    }
+    
     if (poisonEndTime) {
       const remaining = poisonEndTime - currentTime;
       if (remaining <= 0) {
@@ -868,6 +1052,35 @@ const SandboxPage = () => {
       }
     }
   }, [currentTime, frozenEndTime, poisonEndTime, bleedEndTime, sagePerceiveEndTime, astralModeEndTime, thirdEyeEndTime, riftPortalEndTime, fearEndTime, extraRangerFearEndTime, vampireCrimsonSightEndTime, skeletonHourglassEndTime, skeletonReassemblyCooldownEndTime, djinnDeathMissileHitEndTime, djinnArcaneBarrierEndTime, djinnBindEndTime, rangerBetrayalEffectEndTime, fighterPos.row, fighterPos.col]);
+
+  const TIER4_MONSTER_IDS = ['sphinx', 'dragon', 'hagigah', 'hashmallim'];
+  const isFighterHuge = selectedUnitType === 'monster' && TIER4_MONSTER_IDS.includes(selectedMonsterId);
+  const isFighterLarge = selectedUnitType === 'monster' && !isFighterHuge && selectedMonsterId !== 'goblin' && selectedMonsterId !== 'skeleton' && selectedMonsterId !== 'beholder_minion';
+  const isTargetHuge = selectedUnitType === 'fighter' && TIER4_MONSTER_IDS.includes(selectedMonsterId);
+  const isTargetLarge = selectedUnitType === 'fighter' && !isTargetHuge && (
+    (selectedFighterId === 'ranger') || // Ranger target is Ogre (2x)
+    (selectedFighterId !== 'sage' && selectedMonsterId !== 'goblin' && selectedMonsterId !== 'skeleton' && selectedMonsterId !== 'beholder_minion')
+  );
+
+
+  // Safety check: if fighter or target is large/huge but positioned out of bounds, push them
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  useEffect(() => {
+    if (isFighterHuge && fighterPos.row < 2) {
+      setFighterPos(prev => ({ ...prev, row: 2 }));
+    } else if (isFighterLarge && fighterPos.row < 1) {
+      setFighterPos(prev => ({ ...prev, row: 1 }));
+    }
+  }, [isFighterHuge, isFighterLarge, fighterPos.row]);
+
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  useEffect(() => {
+    if (isTargetHuge && targetPos.row < 2) {
+      setTargetPos(prev => ({ ...prev, row: 2 }));
+    } else if (isTargetLarge && targetPos.row < 1) {
+      setTargetPos(prev => ({ ...prev, row: 1 }));
+    }
+  }, [isTargetHuge, isTargetLarge, targetPos.row]);
 
   const getBatPosition = (idx) => {
     const startX = fighterPos.col * 20 + 10;
@@ -1201,6 +1414,7 @@ const SandboxPage = () => {
           }
         }
       }
+
       if (freeAdjacent.length > 0) {
         return freeAdjacent[Math.floor(Math.random() * freeAdjacent.length)];
       }
@@ -1293,38 +1507,28 @@ const SandboxPage = () => {
   const selectedFighter = selectedUnitType === 'monster'
     ? (monstersData.find(m => m.id === selectedMonsterId) || monstersData[0])
     : (fightersData.find(f => f.id === selectedFighterId) || fightersData[0]);
-  const targetPortrait = selectedUnitType === 'monster'
+  const targetPortraitBase = selectedUnitType === 'monster'
     ? soldier_portrait
     : (selectedFighterId === 'sage' 
         ? soldier_portrait 
         : (selectedFighterId === 'ranger' ? ogre_portrait : goblin_portrait));
+  const isTargetPolymorphActive = selectedUnitType === 'monster' ? fighterPolymorphed : monsterPolymorphed;
+  const targetPortrait = isTargetPolymorphActive ? polymorph : targetPortraitBase;
   const targetName = selectedUnitType === 'monster'
     ? 'Soldier Target'
     : (selectedFighterId === 'sage' 
         ? 'Soldier Target' 
         : (selectedFighterId === 'ranger' ? 'Ogre Target' : 'Goblin Target'));
 
-  const isFighterLarge = selectedUnitType === 'monster' && selectedMonsterId !== 'goblin' && selectedMonsterId !== 'skeleton';
-  const isTargetLarge = selectedUnitType === 'fighter' && (
-    (selectedFighterId === 'ranger') || // Ranger target is Ogre (2x)
-    (selectedFighterId !== 'sage' && selectedMonsterId !== 'goblin' && selectedMonsterId !== 'skeleton')
-  );
 
-  // Safety check: if fighter or target is large but positioned at row 0, push them to row 1
-  useEffect(() => {
-    if (isFighterLarge && fighterPos.row < 1) {
-      setFighterPos(prev => ({ ...prev, row: 1 }));
-    }
-  }, [isFighterLarge, fighterPos.row]);
-
-  useEffect(() => {
-    if (isTargetLarge && targetPos.row < 1) {
-      setTargetPos(prev => ({ ...prev, row: 1 }));
-    }
-  }, [isTargetLarge, targetPos.row]);
 
   // Helper to push floating combat numbers
   const addFloatingText = (text, type, color, row, col) => {
+    if (isThirdEyeDodgeRef.current && String(text).startsWith('-')) {
+      text = 'DODGE!';
+      type = 'normal';
+      color = '#ffffff';
+    }
     const id = Math.random();
     setFloatingTexts(prev => [...prev, { id, text, type, color, row, col }]);
     setTimeout(() => {
@@ -1332,6 +1536,37 @@ const SandboxPage = () => {
     }, 1800);
   };
 
+  const applyRegen = (duration, tickInterval = 1500) => {
+    setTrollRegenEndTime(prev => {
+      const now = Date.now();
+      return (prev && prev > now) ? prev + duration : now + duration;
+    });
+    setTrollRegenActive(true);
+
+    if (trollRegenIntervalRef.current) clearInterval(trollRegenIntervalRef.current);
+    trollRegenIntervalRef.current = setInterval(() => {
+      const healAmt = Math.floor(Math.random() * 6) + 5; // 5 to 10
+      addFloatingText(`+${healAmt}`, 'normal', '#2ecc71', fighterPos.row, fighterPos.col);
+      setTrollHpPct(prev => Math.min(100, prev + healAmt));
+    }, tickInterval);
+  };
+
+  const applyBleeding = (duration, tickInterval = 1500, tickDamage = 4) => {
+    setBleedSingleDuration(duration);
+    setBleedDuration(prev => (prev || 0) + duration);
+    setBleedEndTime(prev => {
+      const now = Date.now();
+      return (prev && prev > now) ? prev + duration : now + duration;
+    });
+    setTargetBleeding(true);
+    setBleedFading(false);
+
+    if (bleedIntervalRef.current) clearInterval(bleedIntervalRef.current);
+    bleedIntervalRef.current = setInterval(() => {
+      addFloatingText(`-${tickDamage}`, 'normal', '#e74c3c', targetPosRef.current.row, targetPosRef.current.col);
+    }, tickInterval);
+  };
+  
   const applyPoison = (duration, tickInterval = 1500, tickDamage = 4) => {
     setPoisonSingleDuration(duration);
     setPoisonDuration(prev => (prev || 0) + duration);
@@ -1373,10 +1608,10 @@ const SandboxPage = () => {
 
   // Helper to determine projectile rotation angle
   const getProjectileAngle = () => {
-    const fromCol = isFighterLarge ? (fighterPos.col >= 3 ? fighterPos.col - 0.5 : fighterPos.col + 0.5) : fighterPos.col;
-    const fromRow = isFighterLarge ? fighterPos.row - 0.5 : fighterPos.row;
-    const toCol = isTargetLarge ? (targetPos.col >= 3 ? targetPos.col - 0.5 : targetPos.col + 0.5) : targetPos.col;
-    const toRow = isTargetLarge ? targetPos.row - 0.5 : targetPos.row;
+    const fromCol = getUnitVisualCol(fighterPos.col, isFighterHuge, isFighterLarge);
+    const fromRow = getUnitVisualRow(fighterPos.row, isFighterHuge, isFighterLarge);
+    const toCol = getUnitVisualCol(targetPos.col, isTargetHuge, isTargetLarge);
+    const toRow = getUnitVisualRow(targetPos.row, isTargetHuge, isTargetLarge);
     const dy = toRow - fromRow;
     const dx = toCol - fromCol;
     return Math.atan2(dy, dx) * (180 / Math.PI);
@@ -1395,8 +1630,8 @@ const SandboxPage = () => {
     if (!isAnimating) return 'none';
     const colDiff = targetPos.col - fighterPos.col;
     const rowDiff = targetPos.row - fighterPos.row;
-    const xFactor = isFighterLarge ? 0.5 : 1;
-    const yFactor = isFighterLarge ? 0.5 : 1;
+    const xFactor = 1 / getUnitSizeFactor(isFighterHuge, isFighterLarge);
+    const yFactor = 1 / getUnitSizeFactor(isFighterHuge, isFighterLarge);
 
     switch (animationPhase) {
       case 'lunge':
@@ -1500,8 +1735,40 @@ const SandboxPage = () => {
   const triggerAbility = (ability) => {
     if (isAnimating) return;
 
+    const isFighterSource = selectedUnitType === 'fighter';
+    const sourceHexed = isFighterSource ? fighterHexed : monsterHexed;
+    const sourcePolymorphed = isFighterSource ? fighterPolymorphed : monsterPolymorphed;
+    
+    isThirdEyeDodgeRef.current = false;
+    const isTargetSphinx = isFighterSource ? selectedMonsterId === 'sphinx' : selectedFighterId === 'sphinx';
+    if (isTargetSphinx && Math.random() <= 0.35) {
+      setThirdEyeTriggered(true);
+      setTimeout(() => setThirdEyeTriggered(false), 1500);
+      addFloatingText('THIRD EYE!', 'crit', '#00ffff', targetPosRef.current.row, targetPosRef.current.col);
+      if (Math.random() <= 0.70) {
+        isThirdEyeDodgeRef.current = true;
+      }
+    }
+
+    if (sourcePolymorphed) {
+      addFloatingText('FROGS CANNOT ATTACK!', 'normal', '#e74c3c', fighterPos.row, fighterPos.col);
+      return;
+    }
+
+    if (sourceHexed) {
+      const backfireRoll = Math.random();
+      if (backfireRoll <= 0.35) {
+        setHitEffect({ type: 'hex_backfire' });
+        addFloatingText('HEX BACKFIRE!', 'crit', '#ff00ff', fighterPos.row, fighterPos.col);
+        addFloatingText('-10', 'normal', '#ff00ff', fighterPos.row, fighterPos.col);
+        setTimeout(() => setHitEffect(null), 500);
+        return;
+      }
+    }
+
     if (ability.type === 'melee' || ability.type === 'melee_poison' || ability.type === 'melee_slam' || ability.type === 'melee_heavy' || ability.type === 'melee_punches' || ability.type === 'melee_spin' || ability.type === 'barbarian_slash' || ability.type === 'claw_strike' || ability.type === 'bite' || ability.type === 'head_butt' || ability.type === 'vampiric_bite') {
       setAnimating(true);
+      
       
       const isSlash = ability.id === 'slash' || ability.id === 'barbarian_slash';
       const isSlam = ability.type === 'melee_slam' || ability.type === 'head_butt';
@@ -2535,9 +2802,97 @@ const SandboxPage = () => {
       }, 900);
     }
 
+    // --- SPHINX POLYMORPH ---
+    else if (ability.type === 'polymorph_type') {
+      setAnimationPhase('cast_spell');
+      setAnimating(true);
+      setTimeout(() => {
+        setHitEffect({ type: 'polymorph_impact' });
+        addFloatingText('POLYMORPHED!', 'crit', '#9b59b6', targetPosRef.current.row, targetPosRef.current.col);
+        addFloatingText('15 HP', 'normal', '#2ecc71', targetPosRef.current.row, targetPosRef.current.col);
+
+        if (isFighterSource) {
+          setMonsterPolymorphed(true);
+          setMonsterPolymorphEndTime(Date.now() + 16000);
+          if (monsterFrogIntervalRef.current) clearInterval(monsterFrogIntervalRef.current);
+          monsterFrogIntervalRef.current = setInterval(() => {
+             addFloatingText('hop!', 'normal', '#2ecc71', targetPosRef.current.row, targetPosRef.current.col);
+          }, 2000);
+        } else {
+          setFighterPolymorphed(true);
+          setFighterPolymorphEndTime(Date.now() + 16000);
+          if (fighterFrogIntervalRef.current) clearInterval(fighterFrogIntervalRef.current);
+          fighterFrogIntervalRef.current = setInterval(() => {
+             addFloatingText('hop!', 'normal', '#2ecc71', targetPosRef.current.row, targetPosRef.current.col);
+          }, 2000);
+        }
+
+        // Clear target buffs
+        setDefensiveStanceActive(false);
+        setBerserkerActive(false);
+        setAstralModeActive(false);
+        setThirdEyeTriggered(false);
+        setInspireActive(false);
+        setInnerFireActive(false);
+
+        setTimeout(() => setHitEffect(null), 500);
+        setAnimationPhase('return');
+        setTimeout(() => { setAnimationPhase(null); setAnimating(false); }, 250);
+      }, 500);
+    }
+    // --- SPHINX HEX ---
+    else if (ability.type === 'hex_type') {
+      setAnimationPhase('cast_spell');
+      setAnimating(true);
+      setHexCastExplosion({ row: fighterPos.row, col: fighterPos.col });
+      setTimeout(() => {
+        setHexCastExplosion(null);
+        setHitEffect({ type: 'hex_impact' });
+        addFloatingText('HEXED!', 'crit', '#ff00ff', targetPosRef.current.row, targetPosRef.current.col);
+        
+        if (isFighterSource) {
+          setMonsterHexed(true);
+          setMonsterHexEndTime(Date.now() + 16000);
+        } else {
+          setFighterHexed(true);
+          setFighterHexEndTime(Date.now() + 16000);
+        }
+
+        setTimeout(() => setHitEffect(null), 800);
+        setAnimationPhase('return');
+        setTimeout(() => { setAnimationPhase(null); setAnimating(false); }, 250);
+      }, 500);
+    }
+
     // --- SKELETON REASSEMBLY PASSIVE ---
     else if (ability.type === 'reassembly_type') {
       triggerSkeletonDeath();
+    }
+
+    // --- DRAGON BREATH ---
+    else if (ability.type === 'blue_dragon_breath_type') {
+      setAnimating(true);
+      setActiveBeam('blue_dragon_breath');
+      setBlueDragonBreathActive(true);
+      
+      const targetR = targetPosRef.current.row;
+      const targetC = targetPosRef.current.col;
+
+      for (let i = 0; i < 6; i++) {
+        setTimeout(() => {
+          setHitEffect({ type: 'dragon_fire_breath' });
+          setTargetShake(true);
+          setTargetFlash(true);
+          addFloatingText('-45', 'crit', '#00ffff', targetR, targetC);
+        }, 500 * i);
+      }
+
+      setTimeout(() => {
+        setActiveBeam(null);
+        setBlueDragonBreathActive(false);
+        setHitEffect(null);
+        setAnimating(false);
+      }, 3000);
     }
 
     // --- OGRE STOMP ---
@@ -2911,10 +3266,10 @@ const SandboxPage = () => {
       else if (arrowType === 'poison') pIcon = ranger_poison_arrow;
       else if (arrowType === 'celestial') pIcon = ranger_celestial_arrow;
 
-      const startCol = isFighterLarge ? (fighterPos.col >= 3 ? fighterPos.col - 0.5 : fighterPos.col + 0.5) : fighterPos.col;
-      const startRow = isFighterLarge ? fighterPos.row - 0.5 : fighterPos.row;
-      const targetCol = isTargetLarge ? (targetPos.col >= 3 ? targetPos.col - 0.5 : targetPos.col + 0.5) : targetPos.col;
-      const targetRow = isTargetLarge ? targetPos.row - 0.5 : targetPos.row;
+      const startCol = getUnitVisualCol(fighterPos.col, isFighterHuge, isFighterLarge);
+      const startRow = getUnitVisualRow(fighterPos.row, isFighterHuge, isFighterLarge);
+      const targetCol = getUnitVisualCol(targetPos.col, isTargetHuge, isTargetLarge);
+      const targetRow = getUnitVisualRow(targetPos.row, isTargetHuge, isTargetLarge);
 
       setProjectile({
         x: startCol * 20,
@@ -3025,10 +3380,10 @@ const SandboxPage = () => {
     // --- RANGER ENSNARE ---
     else if (ability.id === 'ensnare') {
       setAnimating(true);
-      const startCol = isFighterLarge ? (fighterPos.col >= 3 ? fighterPos.col - 0.5 : fighterPos.col + 0.5) : fighterPos.col;
-      const startRow = isFighterLarge ? fighterPos.row - 0.5 : fighterPos.row;
-      const targetCol = isTargetLarge ? (targetPos.col >= 3 ? targetPos.col - 0.5 : targetPos.col + 0.5) : targetPos.col;
-      const targetRow = isTargetLarge ? targetPos.row - 0.5 : targetPos.row;
+      const startCol = getUnitVisualCol(fighterPos.col, isFighterHuge, isFighterLarge);
+      const startRow = getUnitVisualRow(fighterPos.row, isFighterHuge, isFighterLarge);
+      const targetCol = getUnitVisualCol(targetPos.col, isTargetHuge, isTargetLarge);
+      const targetRow = getUnitVisualRow(targetPos.row, isTargetHuge, isTargetLarge);
       setProjectile({
         x: startCol * 20,
         y: startRow * 20,
@@ -3074,8 +3429,8 @@ const SandboxPage = () => {
       else if (arrowType === 'poison') pIcon = ranger_poison_arrow;
       else if (arrowType === 'celestial') pIcon = ranger_celestial_arrow;
 
-      const startCol = isFighterLarge ? (fighterPos.col >= 3 ? fighterPos.col - 0.5 : fighterPos.col + 0.5) : fighterPos.col;
-      const startRow = isFighterLarge ? fighterPos.row - 0.5 : fighterPos.row;
+      const startCol = getUnitVisualCol(fighterPos.col, isFighterHuge, isFighterLarge);
+      const startRow = getUnitVisualRow(fighterPos.row, isFighterHuge, isFighterLarge);
 
       const fireArrow = (delayTime, index) => {
         setTimeout(() => {
@@ -3091,8 +3446,8 @@ const SandboxPage = () => {
 
           // Move
           setTimeout(() => {
-            const targetCol = isTargetLarge ? (targetPosRef.current.col >= 3 ? targetPosRef.current.col - 0.5 : targetPosRef.current.col + 0.5) : targetPosRef.current.col;
-            const targetRow = isTargetLarge ? targetPosRef.current.row - 0.5 : targetPosRef.current.row;
+            const targetCol = getUnitVisualCol(targetPosRef.current.col, isTargetHuge, isTargetLarge);
+            const targetRow = getUnitVisualRow(targetPosRef.current.row, isTargetHuge, isTargetLarge);
             setProjectiles(prev => prev.map(p => p.id === arrowId ? {
               ...p,
               x: targetCol * 20,
@@ -3992,8 +4347,8 @@ const SandboxPage = () => {
           
           // Projectile starts traveling
           setTimeout(() => {
-            const targetCol = isTargetLarge ? (targetPos.col >= 3 ? targetPos.col - 0.5 : targetPos.col + 0.5) : targetPos.col;
-            const targetRow = isTargetLarge ? targetPos.row - 0.5 : targetPos.row;
+            const targetCol = getUnitVisualCol(targetPos.col, isTargetHuge, isTargetLarge);
+            const targetRow = getUnitVisualRow(targetPos.row, isTargetHuge, isTargetLarge);
             setProjectile(prev => prev ? { ...prev, x: targetCol * 20, y: targetRow * 20 } : null);
           }, 30);
           
@@ -4345,6 +4700,14 @@ const SandboxPage = () => {
         @keyframes vortexSpin {
           0% { transform: translate(-50%, -50%) rotate(0deg); }
           100% { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+        @keyframes wavyBeam {
+          0% { height: 30px; filter: hue-rotate(0deg); }
+          100% { height: 45px; filter: hue-rotate(15deg); }
+        }
+        @keyframes beamGrow {
+          from { width: 0; opacity: 0; }
+          to { opacity: 0.9; }
         }
         @keyframes annihilationRing {
           0% {
@@ -5286,18 +5649,10 @@ const SandboxPage = () => {
                   const isAdditionalBarbarian = selectedUnitType === 'fighter' && (selectedFighterId === 'sage' && r === 0 && c === 3);
                   const isAdditionalSoldier = selectedUnitType === 'fighter' && (selectedFighterId === 'sage' && r === 2 && c === 3);
                   const isAdditionalMonk = selectedUnitType === 'fighter' && (selectedFighterId === 'soldier' && r === 0 && c === 3);
-                  const fOffset = fighterPos.col >= 3 ? -1 : 1;
-                  const isFighterVCT = isFighterLarge && (
-                    (fighterPos.row - 1 === r && fighterPos.col === c) ||
-                    (fighterPos.row === r && fighterPos.col + fOffset === c) ||
-                    (fighterPos.row - 1 === r && fighterPos.col + fOffset === c)
-                  );
-                  const tOffset = targetPos.col >= 3 ? -1 : 1;
-                  const isTargetVCT = isTargetLarge && (
-                    (targetPos.row - 1 === r && targetPos.col === c) ||
-                    (targetPos.row === r && targetPos.col + tOffset === c) ||
-                    (targetPos.row - 1 === r && targetPos.col + tOffset === c)
-                  );
+                  const isFighterVCT = getCandidateTiles(fighterPos.row, fighterPos.col, isFighterHuge, isFighterLarge)
+                    .some(t => (t.row !== fighterPos.row || t.col !== fighterPos.col) && t.row === r && t.col === c);
+                  const isTargetVCT = getCandidateTiles(targetPos.row, targetPos.col, isTargetHuge, isTargetLarge)
+                    .some(t => (t.row !== targetPos.row || t.col !== targetPos.col) && t.row === r && t.col === c);
 
                   return (
                     <div
@@ -5324,42 +5679,12 @@ const SandboxPage = () => {
                           return isPortalAt(row, col) || isMinionAt(row, col) || isTurretAt(row, col) || isFriendlyExtraAt(row, col);
                         };
 
-                        const getFighterOccupiedTiles = () => {
-                          if (!isFighterLarge) return [{ row: fighterPos.row, col: fighterPos.col }];
-                          const offset = fighterPos.col >= 3 ? -1 : 1;
-                          return [
-                            { row: fighterPos.row, col: fighterPos.col },
-                            { row: fighterPos.row - 1, col: fighterPos.col },
-                            { row: fighterPos.row, col: fighterPos.col + offset },
-                            { row: fighterPos.row - 1, col: fighterPos.col + offset }
-                          ];
-                        };
-
-                        const getTargetOccupiedTiles = () => {
-                          if (!isTargetLarge) return [{ row: targetPos.row, col: targetPos.col }];
-                          const offset = targetPos.col >= 3 ? -1 : 1;
-                          return [
-                            { row: targetPos.row, col: targetPos.col },
-                            { row: targetPos.row - 1, col: targetPos.col },
-                            { row: targetPos.row, col: targetPos.col + offset },
-                            { row: targetPos.row - 1, col: targetPos.col + offset }
-                          ];
-                        };
-
-                        const getCandidateTiles = (row, col, isLarge) => {
-                          if (!isLarge) return [{ row, col }];
-                          const offset = col >= 3 ? -1 : 1;
-                          return [
-                            { row, col },
-                            { row: row - 1, col },
-                            { row, col: col + offset },
-                            { row: row - 1, col: col + offset }
-                          ];
-                        };
+                        const getFighterOccupiedTiles = () => getCandidateTiles(fighterPos.row, fighterPos.col, isFighterHuge, isFighterLarge);
+                        const getTargetOccupiedTiles = () => getCandidateTiles(targetPos.row, targetPos.col, isTargetHuge, isTargetLarge);
 
                         if (placementMode === 'fighter') {
-                          if (isFighterLarge && r < 1) return; // Vertically out of bounds
-                          const candidateTiles = getCandidateTiles(r, c, isFighterLarge);
+                          if ((isFighterHuge && r < 2) || (isFighterLarge && r < 1)) return; // Vertically out of bounds
+                          const candidateTiles = getCandidateTiles(r, c, isFighterHuge, isFighterLarge);
                           if (candidateTiles.some(tile => isTileBlocked(tile.row, tile.col))) return;
                           
                           const targetTiles = getTargetOccupiedTiles();
@@ -5370,8 +5695,8 @@ const SandboxPage = () => {
 
                           setFighterPos({ row: r, col: c });
                         } else {
-                          if (isTargetLarge && r < 1) return; // Vertically out of bounds
-                          const candidateTiles = getCandidateTiles(r, c, isTargetLarge);
+                          if ((isTargetHuge && r < 2) || (isTargetLarge && r < 1)) return; // Vertically out of bounds
+                          const candidateTiles = getCandidateTiles(r, c, isTargetHuge, isTargetLarge);
                           if (candidateTiles.some(tile => isTileBlocked(tile.row, tile.col))) return;
 
                           const fighterTiles = getFighterOccupiedTiles();
@@ -6058,10 +6383,10 @@ const SandboxPage = () => {
               <div
                 style={{
                   position: 'absolute',
-                  width: isFighterLarge ? `${TILE_PCT * 2}%` : `${TILE_PCT}%`,
-                  height: isFighterLarge ? `${TILE_PCT * 2}%` : `${TILE_PCT}%`,
-                  left: `${(isFighterLarge ? (fighterPos.col >= 3 ? fighterPos.col - 1 : fighterPos.col) : fighterPos.col) * TILE_PCT}%`,
-                  top: `${(isFighterLarge ? fighterPos.row - 1 : fighterPos.row) * TILE_PCT}%`,
+                  width: `${TILE_PCT * getUnitSizeFactor(isFighterHuge, isFighterLarge)}%`,
+                  height: `${TILE_PCT * getUnitSizeFactor(isFighterHuge, isFighterLarge)}%`,
+                  left: `${getUnitLeftTileCol(fighterPos.col, isFighterHuge, isFighterLarge) * TILE_PCT}%`,
+                  top: `${getUnitTopTileRow(fighterPos.row, isFighterHuge, isFighterLarge) * TILE_PCT}%`,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -6120,7 +6445,9 @@ const SandboxPage = () => {
                     })`,
                     backgroundSize: 'cover',
                     backgroundPosition: 'center',
-                    boxShadow: (selectedFighterId === 'soldier' && defensiveStanceActive)
+                    boxShadow: (selectedUnitType === 'fighter' ? fighterHexed : monsterHexed)
+                      ? '0 0 15px 5px rgba(255, 0, 255, 0.8), inset 0 0 10px rgba(255, 0, 255, 0.5)'
+                      : (selectedFighterId === 'soldier' && defensiveStanceActive)
                       ? '0 0 12px 3px rgba(255, 255, 255, 0.9), inset 0 0 8px rgba(255, 255, 255, 0.5)'
                       : (selectedFighterId === 'soldier' && shieldWallActive)
                         ? undefined
@@ -6142,6 +6469,12 @@ const SandboxPage = () => {
                     opacity: (selectedUnitType === 'monster' && selectedMonsterId === 'vampire' && vampireHidden) ? 0 : 1,
                     transition: 'opacity 0.3s ease-in-out'
                   }}>
+                  {/* Troll HP Bar */}
+                  {selectedUnitType === 'monster' && selectedMonsterId === 'troll' && (
+                    <div style={{ position: 'absolute', top: '-15px', left: '0', width: '100%', height: '6px', backgroundColor: '#333', border: '1px solid #111', borderRadius: '3px', overflow: 'hidden' }}>
+                      <div style={{ width: `${trollHpPct}%`, height: '100%', backgroundColor: '#2ecc71', transition: 'width 0.5s ease-out' }} />
+                    </div>
+                  )}
                   {/* Skeleton Reassembly Hourglass Overlay */}
                   {selectedUnitType === 'monster' && selectedMonsterId === 'skeleton' && skeletonReassemblyActive && (
                     <div
@@ -6733,10 +7066,10 @@ const SandboxPage = () => {
               <div
                 style={{
                   position: 'absolute',
-                  width: isTargetLarge ? `${TILE_PCT * 2}%` : `${TILE_PCT}%`,
-                  height: isTargetLarge ? `${TILE_PCT * 2}%` : `${TILE_PCT}%`,
-                  left: `${(isTargetLarge ? (targetPos.col >= 3 ? targetPos.col - 1 : targetPos.col) : targetPos.col) * TILE_PCT}%`,
-                  top: `${(isTargetLarge ? targetPos.row - 1 : targetPos.row) * TILE_PCT}%`,
+                  width: `${TILE_PCT * getUnitSizeFactor(isTargetHuge, isTargetLarge)}%`,
+                  height: `${TILE_PCT * getUnitSizeFactor(isTargetHuge, isTargetLarge)}%`,
+                  left: `${getUnitLeftTileCol(targetPos.col, isTargetHuge, isTargetLarge) * TILE_PCT}%`,
+                  top: `${getUnitTopTileRow(targetPos.row, isTargetHuge, isTargetLarge) * TILE_PCT}%`,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -6777,7 +7110,9 @@ const SandboxPage = () => {
                   backgroundSize: 'cover',
                   backgroundPosition: 'center',
                   filter: targetFrozen ? 'brightness(0.85) saturate(0.6)' : targetAsleep ? 'brightness(0.65) saturate(0.4) contrast(0.9)' : 'none',
-                  boxShadow: djinnBindActive
+                  boxShadow: (selectedUnitType === 'monster' ? fighterHexed : monsterHexed)
+                    ? '0 0 15px 5px rgba(255, 0, 255, 0.8), inset 0 0 10px rgba(255, 0, 255, 0.5)'
+                    : djinnBindActive
                     ? '0 0 18px 4px rgba(179, 136, 255, 0.85), inset 0 0 10px rgba(179, 136, 255, 0.4)'
                     : (innerFireActive && targetFlash)
                       ? '0 0 24px 8px rgba(255, 84, 0, 0.95), inset 0 0 12px rgba(255, 84, 0, 0.8)'
@@ -7024,6 +7359,24 @@ const SandboxPage = () => {
                           })()}
                         </svg>
                       </div>
+                    )}
+                    {(selectedUnitType === 'monster' ? fighterHexed : monsterHexed) && (
+                      <div
+                        className="effect-icon-active"
+                        style={{
+                          width: '20px',
+                          height: '20px',
+                          borderRadius: '50%',
+                          backgroundColor: '#111',
+                          border: '2px solid #ff00ff',
+                          backgroundImage: `url(${hex})`,
+                          backgroundSize: 'contain',
+                          backgroundRepeat: 'no-repeat',
+                          backgroundPosition: 'center',
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.5)',
+                          position: 'relative'
+                        }}
+                      />
                     )}
                     {targetEnsnared && (
                       <div
@@ -9008,6 +9361,38 @@ const SandboxPage = () => {
                 </div>
               )}
 
+              {/* --- Blue Dragon Breath Beam --- */}
+              {activeBeam === 'blue_dragon_breath' && (() => {
+                const px1 = fighterPos.col * TILE_PCT + TILE_PCT / 2;
+                const py1 = fighterPos.row * TILE_PCT + TILE_PCT / 2;
+                const px2 = targetPos.col * TILE_PCT + TILE_PCT / 2;
+                const py2 = targetPos.row * TILE_PCT + TILE_PCT / 2;
+                const dx = px2 - px1;
+                const dy = py2 - py1;
+                const length = Math.sqrt(dx * dx + dy * dy);
+                const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+                return (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      left: `${px1}%`,
+                      top: `${py1}%`,
+                      width: `${length}%`,
+                      height: '35px',
+                      background: 'linear-gradient(to bottom, rgba(0,212,255,0.8), rgba(0,100,255,1), rgba(0,212,255,0.8))',
+                      boxShadow: '0 0 20px #00d4ff, 0 0 40px #0055ff, inset 0 0 15px #ffffff',
+                      transformOrigin: '0 50%',
+                      transform: `translateY(-50%) rotate(${angle}deg)`,
+                      zIndex: 25,
+                      borderRadius: '10px',
+                      animation: 'wavyBeam 0.5s infinite alternate, beamGrow 0.3s ease-out forwards',
+                      opacity: 0.9,
+                      filter: 'contrast(1.2) brightness(1.3)'
+                    }}
+                  />
+                );
+              })()}
+
               {/* --- Annihilation Horizontal Beam --- */}
               {activeBeam === 'annihilation' && (() => {
                 const dx = (targetPos.col - fighterPos.col) * TILE_PCT;
@@ -9864,6 +10249,22 @@ const SandboxPage = () => {
                       animation: 'explode 0.25s ease-out forwards',
                       boxShadow: '0 0 20px rgba(255, 183, 3, 0.8)'
                     }}></div>
+                  )}
+                  {hitEffect && hitEffect.type === 'dragon_fire_breath' && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '-50%',
+                      left: '-50%',
+                      width: '200%',
+                      height: '200%',
+                      background: 'radial-gradient(circle, rgba(0,255,255,1) 10%, rgba(0,191,255,0.8) 40%, transparent 70%)',
+                      borderRadius: '50%',
+                      filter: 'blur(5px)',
+                      animation: 'explode 0.5s ease-out forwards',
+                      boxShadow: '0 0 30px #00ffff',
+                      zIndex: 30,
+                      pointerEvents: 'none'
+                    }} />
                   )}
                   {hitEffect.type === 'ice_burst' && (
                     <div style={{

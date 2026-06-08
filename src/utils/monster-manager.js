@@ -319,7 +319,7 @@ export function MonsterManager() {
             image_names: ['black_vampire'],
             monster_names: ['Vukodlak', 'Morias', 'Sekhem Apep'],
             stats: {
-                hp: 194,
+                hp: 204,
                 atk: 9,
                 def: 12,
                 speed: 13, // supernaturally fast
@@ -334,13 +334,49 @@ export function MonsterManager() {
             greetings: ['My hunger sees you'],
             deathCries: ['Peace at last...'],
             specials: ['bat_fly', 'crimson_sight', 'soul_suck'],
-            attacks: ['vampiric_bite'],
+            attacks: ['vampiric_bite', 'claw_strike'],
             weaknesses: ['arcane', 'holy-aura'],
             minions: ['goblin', 'goblin'],
             drops: [
                 { item: TIER2_POTION, percentChance: 35 },
                 { itemPool: TIER2_WEAPONS, percentChance: 45 },
             ]
+        },
+        ghoul: {
+            type: 'ghoul',
+            tier: 2,
+            subtype: 'undead',
+            key: 'ghoul',
+            image_names: ['ghoul'],
+            monster_names: [],
+            stats: { hp: 1, atk: 0, def: 0, speed: 0, willpower: 0, str: 0, int: 0, dex: 0, fort: 0 },
+            level: 1,
+            portrait: images['ghoul_portrait'],
+            greetings: [], deathCries: [], specials: [], attacks: [], weaknesses: [], drops: []
+        },
+        blalok: {
+            type: 'blalok',
+            tier: 2,
+            subtype: 'aberration',
+            key: 'blalok',
+            image_names: ['blalok'],
+            monster_names: [],
+            stats: { hp: 1, atk: 0, def: 0, speed: 0, willpower: 0, str: 0, int: 0, dex: 0, fort: 0 },
+            level: 1,
+            portrait: images['blalok'],
+            greetings: [], deathCries: [], specials: [], attacks: [], weaknesses: [], drops: []
+        },
+        shade: {
+            type: 'shade',
+            tier: 2,
+            subtype: 'undead',
+            key: 'shade',
+            image_names: ['shade'],
+            monster_names: [],
+            stats: { hp: 1, atk: 0, def: 0, speed: 0, willpower: 0, str: 0, int: 0, dex: 0, fort: 0 },
+            level: 1,
+            portrait: images['shade'],
+            greetings: [], deathCries: [], specials: [], attacks: [], weaknesses: [], drops: []
         },
         // ── Level 11 ─────────────────────────────────────────────────────
         goat_demon: {
@@ -553,6 +589,18 @@ export function MonsterManager() {
                 { itemPool: TIER3_MAGICAL, percentChance: 45 },
             ]
         },
+        precipice_guardian: {
+            type: 'precipice_guardian',
+            tier: 3,
+            subtype: 'construct',
+            key: 'precipice_guardian',
+            image_names: ['precipice_guardian'],
+            monster_names: [],
+            stats: { hp: 1, atk: 0, def: 0, speed: 0, willpower: 0, str: 0, int: 0, dex: 0, fort: 0 },
+            level: 1,
+            portrait: images['precipice_guardian_portrait'],
+            greetings: [], deathCries: [], specials: [], attacks: [], weaknesses: [], drops: []
+        },
         // ── Level 29 ─────────────────────────────────────────────────────
         sphinx: {
             type: 'sphinx',
@@ -620,6 +668,60 @@ export function MonsterManager() {
                 { itemPool: TIER4_ITEM, percentChance: 35 },
                 { itemPool: TIER4_ITEM, percentChance: 20 },
             ]
+        },
+        hagigah: {
+            type: 'hagigah',
+            tier: 4,
+            subtype: 'demon',
+            key: 'hagigah',
+            image_names: ['hagigah'],
+            monster_names: [],
+            stats: {
+                hp: 300,
+                atk: 20,
+                def: 17,
+                speed: 6, // immense, slow but near-immune to damage
+                willpower: 0,
+                str: 12,
+                int: 6,
+                dex: 4,
+                fort: 14
+            },
+            level: 25,
+            portrait: images['Hagigah'],
+            greetings: [],
+            deathCries: [],
+            specials: [],
+            attacks: [],
+            weaknesses: [],
+            drops: []
+        },
+        hashmallim: {
+            type: 'hashmallim',
+            tier: 4,
+            subtype: 'eldritch',
+            key: 'hashmallim',
+            image_names: ['hashmallim'],
+            monster_names: [],
+            stats: {
+                hp: 335,
+                atk: 20,
+                def: 17,
+                speed: 6, // immense, slow but near-immune to damage
+                willpower: 0,
+                str: 12,
+                int: 6,
+                dex: 4,
+                fort: 14
+            },
+            level: 25,
+            portrait: images['Hashmallim'],
+            greetings: [],
+            deathCries: [],
+            specials: [],
+            attacks: [],
+            weaknesses: [],
+            drops: []
         },
     }
     let count = 100;

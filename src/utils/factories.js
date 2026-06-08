@@ -137,6 +137,20 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
         regenerating: false,
         regenerating_eras: 0,
         regeneration_percent: 0,
+
+        // -- Mentality Debuff Properties --
+        asleep: false,
+        asleep_eras: 0,
+        feared: false,
+        feared_eras: 0,
+        ensnared: false,
+        ensnared_eras: 0,
+        betrayed: false,
+        betrayed_eras: 0,
+        crimsonSight: false,
+        crimsonSight_eras: 0,
+        twinFingerStun: false,
+        twinFingerStun_eras: 0,
     // Ensure attacks are always full objects, not just strings.
     attacks: formattedAttacks,
     specials: (typeof formatSpecials === 'function') ? formatSpecials(fighter.specials || []) : (fighter.specials || []),
@@ -204,7 +218,7 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
         color: fighter.color,
         facing: initialFacing, // persistent facing property
         attack: function(){
-            if (this.invisible || this.petrified) return;
+            if (this.invisible || this.petrified || this.asleep || this.betrayed) return;
             if (this.manualCommandCooldownUntil && Date.now() < this.manualCommandCooldownUntil) return;
             const target = getCombatant(this.targetId);
             if(!target) return;
@@ -224,7 +238,7 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
             initiateAttack(this);
         },
         manualAttack: function(){
-            if (this.invisible || this.petrified) return;
+            if (this.invisible || this.petrified || this.asleep || this.betrayed) return;
             this.manualMovesCurrent-= 2
             initiateAttack(this, true);
         },
@@ -497,6 +511,79 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
                             if (typeof broadcastDataUpdate === 'function' && !isCombatOver()) broadcastDataUpdate(this);
                         }
                     }
+
+                    // -- Sleep effect: tick down and clear --
+                    if (this.asleep && this.asleep_eras > 0) {
+                        this.asleep_eras--;
+                        if (this.asleep_eras <= 0) {
+                            this.asleep = false;
+                            this.asleep_eras = 0;
+                            if (!this.targetId) acquireTarget(this);
+                            if (typeof broadcastDataUpdate === 'function' && !isCombatOver()) broadcastDataUpdate(this);
+                        }
+                    }
+
+                    // -- Ensnared effect: tick down and clear --
+                    if (this.ensnared && this.ensnared_eras > 0) {
+                        this.ensnared_eras--;
+                        if (this.ensnared_eras <= 0) {
+                            this.ensnared = false;
+                            this.ensnared_eras = 0;
+                            if (typeof broadcastDataUpdate === 'function' && !isCombatOver()) broadcastDataUpdate(this);
+                        }
+                    }
+
+                    // -- Betrayal effect: tick down and restore allegiance --
+                    if (this.betrayed && this.betrayed_eras > 0) {
+                        this.betrayed_eras--;
+                        if (this.betrayed_eras <= 0) {
+                            // Restore original allegiance flags
+                            if (this._betrayalOriginalIsMonster != null) {
+                                this.isMonster = this._betrayalOriginalIsMonster;
+                                delete this._betrayalOriginalIsMonster;
+                            }
+                            if (this._betrayalOriginalIsMinion != null) {
+                                this.isMinion = this._betrayalOriginalIsMinion;
+                                delete this._betrayalOriginalIsMinion;
+                            }
+                            this.targetId = null;
+                            this.pendingAttack = null;
+                            this.betrayed = false;
+                            this.betrayed_eras = 0;
+                            acquireTarget(this);
+                            if (typeof broadcastDataUpdate === 'function' && !isCombatOver()) broadcastDataUpdate(this);
+                        }
+                    }
+
+                    // -- Crimson Sight effect: tick down and restore DEF --
+                    if (this.crimsonSight && this.crimsonSight_eras > 0) {
+                        this.crimsonSight_eras--;
+                        if (this.crimsonSight_eras <= 0) {
+                            if (this._crimsonSightOriginalDef != null) {
+                                if (this.stats) this.stats.def = this._crimsonSightOriginalDef;
+                                this.def = this._crimsonSightOriginalDef;
+                                delete this._crimsonSightOriginalDef;
+                            }
+                            this.crimsonSight = false;
+                            this.crimsonSight_eras = 0;
+                            if (typeof broadcastDataUpdate === 'function' && !isCombatOver()) broadcastDataUpdate(this);
+                        }
+                    }
+
+                    // -- Twin Finger Stun effect: tick down and restore ATK --
+                    if (this.twinFingerStun && this.twinFingerStun_eras > 0) {
+                        this.twinFingerStun_eras--;
+                        if (this.twinFingerStun_eras <= 0) {
+                            if (this._twinFingerOriginalAtk != null) {
+                                this.atk = this._twinFingerOriginalAtk;
+                                delete this._twinFingerOriginalAtk;
+                            }
+                            this.twinFingerStun = false;
+                            this.twinFingerStun_eras = 0;
+                            // Note: stun is cleared separately via its own era countdown
+                            if (typeof broadcastDataUpdate === 'function' && !isCombatOver()) broadcastDataUpdate(this);
+                        }
+                    }
                     // -- Bleed effect: damage per era --
                     if (this.bleed && this.bleed_eras > 0 && !this.dead) {
                         const bleedDamage = Math.floor(Math.random() * 6) + 3; // 3-8 damage
@@ -555,7 +642,8 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
                 }
 
                 const eraMove = () => {
-                    if(this.stunned || this.petrified) return; // petrified/stunned cannot move or attack
+                    if(this.stunned || this.petrified || this.asleep || this.betrayed) return; // cannot move or attack
+                    if(this.ensnared) return; // ensnared: cannot move (attack is handled in processMove)
                     if(!era.moved && !this.onMoveCooldown){
                         this.retargetToCloserEnemyIfNeeded();
                         era.moved = true;

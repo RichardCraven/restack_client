@@ -4157,6 +4157,38 @@
     }
 }
 
+@keyframes batTravelMeander0 {
+    0% { transform: translate(0, 0) scale(0.75); }
+    30% { transform: translate(calc(var(--fb-dx) * 0.3 - 25px), calc(var(--fb-dy) * 0.3 - 35px)) scale(1.0); }
+    70% { transform: translate(calc(var(--fb-dx) * 0.7 + 15px), calc(var(--fb-dy) * 0.7 + 25px)) scale(0.85); }
+    100% { transform: translate(var(--fb-dx), var(--fb-dy)) scale(0.75); }
+}
+@keyframes batTravelMeander1 {
+    0% { transform: translate(0, 0) scale(0.75); }
+    25% { transform: translate(calc(var(--fb-dx) * 0.25 + 30px), calc(var(--fb-dy) * 0.25 + 20px)) scale(0.85); }
+    65% { transform: translate(calc(var(--fb-dx) * 0.65 - 20px), calc(var(--fb-dy) * 0.65 - 30px)) scale(1.05); }
+    100% { transform: translate(var(--fb-dx), var(--fb-dy)) scale(0.75); }
+}
+@keyframes batTravelMeander2 {
+    0% { transform: translate(0, 0) scale(0.75); }
+    35% { transform: translate(calc(var(--fb-dx) * 0.35 - 30px), calc(var(--fb-dy) * 0.35 + 30px)) scale(1.05); }
+    75% { transform: translate(calc(var(--fb-dx) * 0.75 + 20px), calc(var(--fb-dy) * 0.75 - 15px)) scale(0.85); }
+    100% { transform: translate(var(--fb-dx), var(--fb-dy)) scale(0.75); }
+}
+@keyframes batTravelMeander3 {
+    0% { transform: translate(0, 0) scale(0.75); }
+    20% { transform: translate(calc(var(--fb-dx) * 0.2 + 20px), calc(var(--fb-dy) * 0.2 - 20px)) scale(0.95); }
+    55% { transform: translate(calc(var(--fb-dx) * 0.55 - 15px), calc(var(--fb-dy) * 0.55 + 25px)) scale(0.85); }
+    80% { transform: translate(calc(var(--fb-dx) * 0.8 + 10px), calc(var(--fb-dy) * 0.8 - 10px)) scale(1.05); }
+    100% { transform: translate(var(--fb-dx), var(--fb-dy)) scale(0.75); }
+}
+@keyframes batTravelMeander4 {
+    0% { transform: translate(0, 0) scale(0.75); }
+    40% { transform: translate(calc(var(--fb-dx) * 0.4 + 35px), calc(var(--fb-dy) * 0.4 - 35px)) scale(0.85); }
+    70% { transform: translate(calc(var(--fb-dx) * 0.7 - 25px), calc(var(--fb-dy) * 0.7 + 20px)) scale(1.05); }
+    100% { transform: translate(var(--fb-dx), var(--fb-dy)) scale(0.75); }
+}
+
 @keyframes explosionPop {
     0% {
         transform: scale(0.3);
@@ -4168,6 +4200,12 @@
     100% {
         transform: scale(1.6);
         opacity: 0;
+    }
+}
+
+@keyframes drawRopes {
+    to {
+        stroke-dashoffset: 0;
     }
 }
 
@@ -4679,4 +4717,44 @@
     45% { transform: translateY(3px); }
     80% { transform: translateY(3px); opacity: 1; }
     100% { transform: translateY(10px); opacity: 0; }
+}
+
+@keyframes geomSpinClockwise {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+@keyframes geomSpinCounter {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(-360deg); }
+}
+
+@keyframes explode {
+    0% { transform: scale(0.3); opacity: 1; }
+    50% { opacity: 1; }
+    100% { transform: scale(1.6); opacity: 0; }
+}
+
+@keyframes bleedPulseGlow {
+    0% {
+        box-shadow: inset 0 0 10px rgba(224, 85, 85, 0.3), 0 0 8px rgba(224, 85, 85, 0.2);
+        background: rgba(224, 85, 85, 0.05);
+    }
+    100% {
+        box-shadow: inset 0 0 25px rgba(224, 85, 85, 0.7), 0 0 20px rgba(224, 85, 85, 0.6);
+        background: rgba(224, 85, 85, 0.25);
+    }
+}
+
+@keyframes soulSuckBeamPulse {
+    0% {
+        height: 20px;
+        opacity: 0.8;
+        filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.7));
+    }
+    100% {
+        height: 28px;
+        opacity: 1.0;
+        filter: drop-shadow(0 0 20px rgba(255, 255, 255, 1.0));
+    }
 }

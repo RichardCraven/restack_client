@@ -118,7 +118,7 @@ const isLargeMover = (caller) => {
     if (!caller) return false;
     if (isHugeMover(caller)) return false;
     if (typeof caller.large === 'boolean' && caller.large) return true;
-    if (caller.type && LARGE_MOVER_TYPES.includes(caller.type)) return true;
+    if (caller.type && LARGE_MOVER_TYPES.includes(caller.type) && caller.isMinion !== true) return true;
     if (typeof caller.size === 'number' && caller.size >= 2) return true;
     if (typeof caller.scale === 'number' && caller.scale >= 2) return true;
     // Main battle monster (not a minion) always uses 2x portrait

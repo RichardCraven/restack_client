@@ -481,6 +481,14 @@ import troll_portrait from '../assets/portraits/monsters/troll.png'
 import wraith_portrait from '../assets/portraits/monsters/wraith.png'
 import wraith from '../assets/portraits/monsters/wraith.png'
 import skeleton_portrait from '../assets/portraits/monsters/skeleton.png'
+import Hagigah from '../assets/portraits/monsters/Hagigah.png'
+import Hashmallim from '../assets/portraits/monsters/Hashmallim.png'
+import ghoul from '../assets/portraits/monsters/ghoul.png'
+import ghoul_portrait from '../assets/portraits/monsters/ghoul.png'
+import precipice_guardian from '../assets/portraits/monsters/precipice guardian.png'
+import precipice_guardian_portrait from '../assets/portraits/monsters/precipice guardian.png'
+import blalok from '../assets/portraits/monsters/blalok.png'
+import shade from '../assets/portraits/monsters/shade.png'
 
 
 //MID JOURNEY
@@ -698,8 +706,24 @@ import claw_strike from '../assets/icons/combat-icons/specials/monsters/claw_str
 import claw_hit from '../assets/icons/combat-icons/specials/monsters/claw_hit.png';
 import claw_hit_crit from '../assets/icons/combat-icons/specials/monsters/claw_hit_crit.png';
 import claw_strike_animation from '../assets/icons/combat-icons/specials/monsters/claw_strike_animation.png';
-import gore from '../assets/icons/combat-icons/specials/monsters/gore.png';
+import ensnare from '../assets/icons/combat-icons/specials/ranger/ensnare.png';
+import gore from '../assets/icons/combat-icons/specials/monsters/troll/gore.png';
+import regenerate from '../assets/icons/combat-icons/specials/monsters/troll/regenerate.png';
+import blue_dragon_breath from '../assets/icons/combat-icons/specials/monsters/dragon/blue_dragon_breath.png';
+import bombard from '../assets/icons/combat-icons/specials/monsters/dragon/bombard.png';
+import dispell from '../assets/icons/combat-icons/specials/monsters/dragon/dispell.png';
+import elder_presence from '../assets/icons/combat-icons/specials/monsters/dragon/elder_presence.png';
+import impenetrable_scales from '../assets/icons/combat-icons/specials/monsters/dragon/impenetrable_scales.png';
+import lay_eggs from '../assets/icons/combat-icons/specials/monsters/dragon/lay_eggs.png';
+import serpent_vision from '../assets/icons/combat-icons/specials/monsters/dragon/serpent_vision.png';
+import whirlwind from '../assets/icons/combat-icons/specials/monsters/dragon/whirlwinnd.png';
 import spineskin from '../assets/icons/combat-icons/specials/monsters/spineskin.png';
+
+// Sphinx
+import begin_trials from '../assets/icons/combat-icons/specials/monsters/sphinx/begin the trials.png';
+import polymorph from '../assets/icons/combat-icons/specials/monsters/sphinx/polymorph.png';
+import third_eye from '../assets/icons/combat-icons/specials/monsters/sphinx/third eye.png';
+import hex from '../assets/icons/combat-icons/specials/monsters/sphinx/hex.png';
 
 // body
 import body_male from '../assets/icons/figures/body_man.png'
@@ -921,6 +945,8 @@ export {
     black_demon,
     golden_demon,
     kabuki_demon,
+    blalok,
+    shade,
 
     beetle_charm,
     demonskull_charm,
@@ -1377,6 +1403,17 @@ export {
     tackle,
     grasp,
     energy_drain,
+    ensnare,
+    gore,
+    regenerate,
+    blue_dragon_breath,
+    bombard,
+    dispell,
+    elder_presence,
+    impenetrable_scales,
+    lay_eggs,
+    serpent_vision,
+    whirlwind,
     induce_fear,
 
     archway,
@@ -1485,7 +1522,6 @@ export {
     claw_hit,
     claw_hit_crit,
     claw_strike_animation,
-    gore,
     spineskin,
     duration_icon,
     fire_blast,
@@ -1598,5 +1634,15 @@ export {
     death_missile_hit,
     bind,
 
-    energy_blast
+    energy_blast,
+    Hagigah,
+    Hashmallim,
+    ghoul,
+    ghoul_portrait,
+    precipice_guardian,
+    precipice_guardian_portrait,
+    begin_trials,
+    polymorph,
+    third_eye,
+    hex
 };

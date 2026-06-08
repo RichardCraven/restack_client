@@ -37,12 +37,13 @@ export class AnimationManagerRedux {
   }
 
   /** Pixel center of a tile at grid coordinates {x, y} */
-  _px(coords) {
+  _px(coords, forceLarge = false) {
     if (!coords || typeof coords.x !== 'number' || typeof coords.y !== 'number') return { x: 0, y: 0 };
     const borderOffset = this.USE_TILE_BORDERS ? this.TILE_BORDER : 0;
     let x = coords.x * (this.TILE_SIZE + borderOffset) + this.TILE_SIZE / 2;
     let y = coords.y * (this.TILE_SIZE + borderOffset) + this.TILE_SIZE / 2;
-    if (this._isTargetLarge && this._currentTargetCoords && coords.x === this._currentTargetCoords.x && coords.y === this._currentTargetCoords.y) {
+    const isLarge = forceLarge || (this._isTargetLarge && this._currentTargetCoords && coords.x === this._currentTargetCoords.x && coords.y === this._currentTargetCoords.y);
+    if (isLarge) {
       // Anchor row y is the bottom row of the 2x2. Center is 50px up.
       y -= this.TILE_SIZE / 2;
       // Anchor col x is right if x >= 4 (center is 50px left), otherwise left (center is 50px right)
@@ -77,7 +78,7 @@ export class AnimationManagerRedux {
    */
   triggerAbility(sourceCoords, targetCoords, abilityName, isTargetLarge = false, targetOccupiedCoords = null, sourceUnitId = null, arrowType = null) {
     if (!sourceCoords || !targetCoords) return;
-    const name = (abilityName || '').toLowerCase().replace(/\s+/g, '_');
+    const name = String(abilityName || '').toLowerCase().replace(/\s+/g, '_');
     this._currentTargetCoords = targetCoords;
     this._isTargetLarge = isTargetLarge;
     this._currentTargetOccupiedCoords = Array.isArray(targetOccupiedCoords) ? targetOccupiedCoords : null;
@@ -182,10 +183,13 @@ export class AnimationManagerRedux {
         this._vampiricBite(sourceCoords, targetCoords);
         break;
       case 'bat_fly':
-        this._batFly(sourceCoords, targetCoords);
+        this._batFly(sourceCoords, targetCoords, sourceUnitId);
         break;
       case 'soul_suck':
         this._soulSuck(sourceCoords, targetCoords);
+        break;
+      case 'bind':
+        this._bindRopes(sourceCoords, targetCoords, isTargetLarge);
         break;
       case 'crimson_sight':
         this._crimsonSight(sourceCoords, targetCoords);
@@ -338,20 +342,29 @@ export class AnimationManagerRedux {
 
     const fireMissile = (delayTime, offsetY) => {
       setTimeout(() => {
-        const adjustedTgtPx = {
+        const finalTgtPx = {
           x: tgtPx.x,
           y: tgtPx.y + offsetY
         };
-        const dx = adjustedTgtPx.x - srcPx.x;
-        const dy = adjustedTgtPx.y - srcPx.y;
+        const dx = finalTgtPx.x - srcPx.x;
+        const dy = finalTgtPx.y - srcPx.y;
         const angle = Math.atan2(dy, dx) * (180 / Math.PI);
         this._emit({
           type: 'magic_missile_projectile',
           srcPx,
-          tgtPx: adjustedTgtPx,
+          tgtPx: finalTgtPx,
           angle,
           duration: 400,
         });
+
+        // Emit hit sigil at impact (400ms later)
+        setTimeout(() => {
+          this._emit({
+            type: 'magic_missile_hit_sigil',
+            tgtPx: finalTgtPx,
+            duration: 350
+          });
+        }, 400);
       }, delayTime);
     };
 
@@ -749,25 +762,13 @@ export class AnimationManagerRedux {
   _leapAttack(src, tgt, sourceUnitId = null) {
     const srcPx = this._px(src);
     const tgtPx = this._px(tgt);
-    const dxFull = tgtPx.x - srcPx.x;
-    const dyFull = tgtPx.y - srcPx.y;
-    const dist = Math.sqrt(dxFull * dxFull + dyFull * dyFull);
-    let landPx = tgtPx;
-    if (dist > 0) {
-      const stepX = (dxFull / dist) * 102;
-      const stepY = (dyFull / dist) * 102;
-      landPx = {
-        x: tgtPx.x - stepX,
-        y: tgtPx.y - stepY
-      };
-    }
-    const dx = landPx.x - srcPx.x;
-    const dy = landPx.y - srcPx.y;
+    const dx = tgtPx.x - srcPx.x;
+    const dy = tgtPx.y - srcPx.y;
     this._emit({
       type: 'leap_attack_jump',
       sourceUnitId,
       srcPx,
-      tgtPx: landPx,
+      tgtPx,
       dx,
       dy,
       duration: 1650
@@ -784,14 +785,16 @@ export class AnimationManagerRedux {
     });
   }
 
-  _batFly(src, tgt) {
-    const srcPx = this._px(src);
-    const tgtPx = this._px(tgt);
+  _batFly(src, tgt, sourceUnitId = null) {
+    const isLarge = this._isTargetLarge;
+    const srcPx = this._px(src, isLarge);
+    const tgtPx = this._px(tgt, isLarge);
     this._emit({
       type: 'bat_fly_anim',
       srcPx,
       tgtPx,
-      duration: 800
+      sourceUnitId,
+      duration: 1200
     });
   }
 
@@ -803,6 +806,16 @@ export class AnimationManagerRedux {
       srcPx,
       tgtPx,
       duration: 1000
+    });
+  }
+
+  _bindRopes(src, tgt, isTargetLarge = false) {
+    const tgtPx = this._px(tgt, isTargetLarge);
+    this._emit({
+      type: 'bind_hit_ropes',
+      tgtPx,
+      isTargetLarge,
+      duration: 1500
     });
   }
 }
