@@ -857,34 +857,54 @@ export function CombatManager() {
             try { this._setCombatantOccupiedCoords(this.combatants[e.id]); } catch (err) { }
         })
 
-        this.data.monster.coordinates = { x: 0, y: 0 }
-        this.data.monster.coordinates.y = 2;
-        this.data.monster.coordinates.x = MAX_DEPTH;
+        const m = this.data.monster;
+        const isHuge = (
+            (typeof m.huge === 'boolean' && m.huge === true)
+            || (m.type === 'dragon')
+            || (m.tier === 4)
+            || (typeof m.size === 'number' && m.size === 3)
+            || (typeof m.scale === 'number' && m.scale === 3)
+        );
+        const LARGE_COMBAT_KEYS = ['dragon', 'beholder', 'ogre', 'sphinx', 'manticore', 'wyvern', 'wyvern_alt', 'mummy', 'djinn', 'vampire', 'summoned_djinn', 'summoned_mummy', 'summoned_ogre', 'summoned_vampire'];
+        const isLarge = (
+            !isHuge && (
+                (typeof m.large === 'boolean' && m.large === true)
+                || (m.type && LARGE_COMBAT_KEYS.includes(m.type) && m.isMinion !== true)
+                || (typeof m.size === 'number' && m.size >= 2)
+                || (typeof m.scale === 'number' && m.scale >= 2)
+                || (m.isMonster === true && m.isMinion !== true)
+            )
+        );
+
+        let monsterY = 2;
+        const minionCount = this.data.minions ? this.data.minions.length : 0;
+        if ((isHuge || isLarge) && minionCount <= 2) {
+            monsterY = 3;
+        }
+
+        this.data.monster.coordinates = { x: MAX_DEPTH, y: monsterY };
         this.data.monster.isMonster = true;
         if (this.data.monster.specials) {
             // console.log('monster specials: ', this.data.monster.specials);
         }
 
-
-        // this.data.monster.coordinates = {x:MAX_DEPTH, y:2}
         let monster = createFighter(this.data.monster, callbacks, this.FIGHT_INTERVAL);
         monster.isMonster = true;
         this.combatants[monster.id] = monster;
         try { this._setCombatantOccupiedCoords(this.combatants[monster.id], this.combatants); } catch (err) { }
 
         if (this.data.minions) {
-            const monsterLane = this.data.monster.coordinates.y; // e.g. 2
-            // The main monster is always 2x scale — it virtually occupies the tile
-            // directly above it (monsterLane - 1) as well. Exclude both tiles so
-            // no minion is placed inside the monster's virtual space.
-            const monsterVirtualLane = monsterLane - 1; // tile above (may be -1 if monster is at row 0, handled below)
-            // All valid lanes 0..MAX_LANES-1, excluding the main monster's lane and its virtual tile above
+            const occupiedLanes = [monsterY];
+            if (isHuge) {
+                occupiedLanes.push(monsterY - 1);
+                occupiedLanes.push(monsterY - 2);
+            } else if (isLarge) {
+                occupiedLanes.push(monsterY - 1);
+            }
             const availableLanes = [];
             for (let i = MAX_LANES - 1; i >= 0; i--) {
-                if (i !== monsterLane && i !== monsterVirtualLane) availableLanes.push(i);
+                if (!occupiedLanes.includes(i)) availableLanes.push(i);
             }
-            // availableLanes has MAX_LANES-1 slots. If there are more minions than that,
-            // overflow minions are placed one column behind (MAX_DEPTH-1) to avoid overlap.
             this.data.minions.forEach((e, i) => {
                 e.isMinion = true;
                 e.coordinates = { x: 0, y: 0 }

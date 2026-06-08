@@ -196,6 +196,44 @@ const getActiveEffects = (combatant, combatManager) => {
             totalDurationMs: liveUnit.ensnaredTotalDurationMs
         });
     }
+    const shadowCurseDebuff = Array.isArray(liveUnit.activeDebuffs) ? liveUnit.activeDebuffs.find(d => d && d.name === 'shadow_curse') : null;
+    if (shadowCurseDebuff) {
+        list.push({
+            key: 'shadow_curse',
+            icon: images.shadow_curse,
+            border: '#7209b7',
+            roundsLeft: shadowCurseDebuff.roundsLeft || 0,
+            totalDuration: shadowCurseDebuff.totalRounds || shadowCurseDebuff.roundsLeft || 4,
+            endTimeMs: shadowCurseDebuff.endTimeMs,
+            totalDurationMs: shadowCurseDebuff.totalDurationMs
+        });
+    }
+    const hexDebuff = Array.isArray(liveUnit.activeDebuffs) ? liveUnit.activeDebuffs.find(d => d && normalizeName(d.name) === 'hexed') : null;
+    if (hexDebuff || liveUnit.hexed) {
+        const hexRounds = hexDebuff?.roundsLeft || liveUnit.hexRounds || 0;
+        list.push({
+            key: 'hexed',
+            icon: images.hex,
+            border: '#cc44ff',
+            roundsLeft: hexRounds,
+            totalDuration: hexDebuff?.totalRounds || liveUnit.hexTotalRounds || hexRounds || 4,
+            endTimeMs: hexDebuff?.endTimeMs,
+            totalDurationMs: hexDebuff?.totalDurationMs
+        });
+    }
+    const polymorphDebuff = Array.isArray(liveUnit.activeDebuffs) ? liveUnit.activeDebuffs.find(d => d && normalizeName(d.name) === 'polymorphed') : null;
+    if (polymorphDebuff || liveUnit.polymorphed) {
+        const polymorphRounds = polymorphDebuff?.roundsLeft || liveUnit.polymorphRounds || 0;
+        list.push({
+            key: 'polymorphed',
+            icon: images.polymorph,
+            border: '#22c55e',
+            roundsLeft: polymorphRounds,
+            totalDuration: polymorphDebuff?.totalRounds || liveUnit.polymorphTotalRounds || polymorphRounds || 4,
+            endTimeMs: polymorphDebuff?.endTimeMs,
+            totalDurationMs: polymorphDebuff?.totalDurationMs
+        });
+    }
     if (liveUnit.isBones) {
         list.push({
             key: 'skeleton_bones_hourglass',
@@ -299,6 +337,34 @@ const getActiveEffects = (combatant, combatManager) => {
                     totalDuration: copBuff.totalRounds || copBuff.roundsLeft || 4,
                     endTimeMs: copBuff.endTimeMs,
                     totalDurationMs: copBuff.totalDurationMs
+                });
+            }
+        }
+    }
+
+    // Circle of Deflection effect icon
+    const codBuff = getBuff('circle_of_deflection');
+    if (codBuff) {
+        const sameTeamSage = combatManager && combatManager.combatants && Object.values(combatManager.combatants).find(c => {
+            if (!c || c.dead || c.isVCT) return false;
+            const sameTeam = (liveUnit.isMonster || liveUnit.isMinion)
+                ? (c.isMonster || c.isMinion)
+                : (!c.isMonster && !c.isMinion);
+            return sameTeam && c.type === 'sage';
+        });
+        if (sameTeamSage) {
+            const dx = liveUnit.coordinates.x - sameTeamSage.coordinates.x;
+            const dy = liveUnit.coordinates.y - sameTeamSage.coordinates.y;
+            const d = Math.sqrt(dx * dx + dy * dy);
+            if (d < 1.9) {
+                list.push({
+                    key: 'circle_of_deflection',
+                    icon: images.circle_of_deflection,
+                    border: '#20e8c8',
+                    roundsLeft: codBuff.roundsLeft || 0,
+                    totalDuration: codBuff.totalRounds || codBuff.roundsLeft || 4,
+                    endTimeMs: codBuff.endTimeMs,
+                    totalDurationMs: codBuff.totalDurationMs
                 });
             }
         }
@@ -700,6 +766,9 @@ export default function CombatGrid(props) {
     // ── Fighter rendering ─────────────────────────────────────────────────────
     const activeCrew = crew.filter(f => {
         const details = getFighterDetails(f);
+        // Hide fighters who are currently in a Sphinx trial (off-board)
+        const liveFighter = combatManager.getCombatant(f.id) || details || f;
+        if (typeof liveFighter?.inTrial === 'number') return false;
         return battleData[f.id] && !details?.invisible && (!details?.dead || (showDeathAnimation[f.id] && !fullyDead[f.id]));
     });
 
@@ -759,6 +828,7 @@ export default function CombatGrid(props) {
             details?.healPulse ? 'heal-pulse' : '',
             details?.bleed ? 'bleeding' : '',
             details?.frozen ? 'frozen' : '',
+            details?.activeDebuffs?.some(d => d && d.name === 'shadow_curse') ? 'shadow-cursed' : '',
             combatManager.getCombatant(fighter.id)?.astralBeingActive ? 'astral-being' : '',
             combatManager.getCombatant(fighter.id)?.astralProjectionActive ? 'astral-projection-active' : '',
             fighter.isLeader ? 'leader-portrait' : '',
@@ -791,7 +861,7 @@ export default function CombatGrid(props) {
                         position: 'relative',
                         pointerEvents: 'auto',
                         overflow: 'visible',
-                        animation: activeLeapAnim ? 'barbarianLeapTravel 1.65s cubic-bezier(0.22, 0.61, 0.36, 1) both' : undefined,
+                        animation: activeLeapAnim ? `barbarianLeapTravel ${activeLeapAnim.duration / 1000}s cubic-bezier(0.22, 0.61, 0.36, 1) both` : undefined,
                         '--leap-dx': activeLeapAnim ? `${activeLeapAnim.dx}px` : '0px',
                         '--leap-dy': activeLeapAnim ? `${activeLeapAnim.dy}px` : '0px',
                         transformOrigin: '50% 50%',
@@ -1318,6 +1388,7 @@ export default function CombatGrid(props) {
             liveMonster.regenerating ? 'regenerating' : '',
             liveMonster.bleed ? 'bleeding' : '',
             liveMonster.frozen ? 'frozen' : '',
+            liveMonster.activeDebuffs?.some(d => d && d.name === 'shadow_curse') ? 'shadow-cursed' : '',
             unit.fadingIn ? 'minion-fade-in' : '',
         ].filter(Boolean).join(' ');
 
@@ -1881,6 +1952,121 @@ export default function CombatGrid(props) {
             );
         }
 
+        if (anim.type === 'hex_overlay' && anim.tgtPx) {
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: `${anim.tgtPx.x}px`,
+                    top: `${anim.tgtPx.y}px`,
+                    width: '120px',
+                    height: '120px',
+                    transform: 'translate(-50%, -50%)',
+                    pointerEvents: 'none',
+                    zIndex: 4500,
+                }}>
+                    {/* Outer clockwise dashed ring */}
+                    <div style={{
+                        position: 'absolute',
+                        top: '10px', left: '10px', right: '10px', bottom: '10px',
+                        border: '2px dashed #ab47bc',
+                        borderRadius: '50%',
+                        boxShadow: '0 0 12px rgba(171, 71, 188, 0.6), inset 0 0 12px rgba(171, 71, 188, 0.6)',
+                        animation: 'hexRingSpinCw 1.5s cubic-bezier(0.25, 1, 0.5, 1) forwards',
+                    }} />
+                    {/* Inner counter-clockwise dotted ring */}
+                    <div style={{
+                        position: 'absolute',
+                        top: '22px', left: '22px', right: '22px', bottom: '22px',
+                        border: '1.5px dotted #e040fb',
+                        borderRadius: '50%',
+                        boxShadow: '0 0 8px rgba(224, 64, 251, 0.5), inset 0 0 8px rgba(224, 64, 251, 0.5)',
+                        animation: 'hexRingSpinCcw 1.5s cubic-bezier(0.25, 1, 0.5, 1) forwards',
+                    }} />
+                    {/* Overlapping glowing squares forming an 8-pointed star */}
+                    <div style={{
+                        position: 'absolute',
+                        top: '32px', left: '32px', right: '32px', bottom: '32px',
+                        border: '1.5px solid #d500f9',
+                        boxShadow: '0 0 15px #d500f9',
+                        transform: 'rotate(0deg)',
+                        animation: 'hexStarPulse 1.5s cubic-bezier(0.25, 1, 0.5, 1) forwards',
+                    }} />
+                    <div style={{
+                        position: 'absolute',
+                        top: '32px', left: '32px', right: '32px', bottom: '32px',
+                        border: '1.5px solid #d500f9',
+                        boxShadow: '0 0 15px #d500f9',
+                        transform: 'rotate(45deg)',
+                        animation: 'hexStarPulseOffset 1.5s cubic-bezier(0.25, 1, 0.5, 1) forwards',
+                    }} />
+                    {/* Glowing core */}
+                    <div style={{
+                        position: 'absolute',
+                        top: '45px', left: '45px', right: '45px', bottom: '45px',
+                        borderRadius: '50%',
+                        background: 'radial-gradient(circle, #ffffff 0%, #aa00ff 50%, transparent 100%)',
+                        boxShadow: '0 0 20px #d500f9',
+                        animation: 'hexCorePulse 1.5s cubic-bezier(0.1, 0.8, 0.3, 1) forwards',
+                    }} />
+                    {/* Floating curse runes */}
+                    <div style={{
+                        position: 'absolute',
+                        top: '50%', left: '50%',
+                        color: '#d500f9',
+                        fontSize: '18px',
+                        fontWeight: 'bold',
+                        textShadow: '0 0 8px #d500f9',
+                        transform: 'translate(-50%, -50%)',
+                        animation: 'hexRuneFloat 1.5s ease-out forwards',
+                    }}>
+                        ☠
+                    </div>
+                    {/* Glowing particle burst */}
+                    {[...Array(6)].map((_, idx) => {
+                        const angle = (idx * 360) / 6;
+                        const rad = angle * (Math.PI / 180);
+                        const dist = 45; // Max distance
+                        return (
+                            <div
+                                key={idx}
+                                style={{
+                                    position: 'absolute',
+                                    top: '50%', left: '50%',
+                                    width: '6px', height: '6px',
+                                    backgroundColor: '#e040fb',
+                                    borderRadius: '50%',
+                                    boxShadow: '0 0 8px #e040fb',
+                                    transform: 'translate(-50%, -50%)',
+                                    animation: `hexParticleFly 1.5s cubic-bezier(0.1, 0.8, 0.3, 1) forwards`,
+                                    '--target-x': `${Math.cos(rad) * dist}px`,
+                                    '--target-y': `${Math.sin(rad) * dist}px`,
+                                }}
+                            />
+                        );
+                    })}
+                </div>
+            );
+        }
+
+        if (anim.type === 'shadow_curse_rings' && anim.tgtPx) {
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: `${anim.tgtPx.x}px`,
+                    top: `${anim.tgtPx.y}px`,
+                    width: '120px',
+                    height: '120px',
+                    transform: 'translate(-50%, -50%)',
+                    pointerEvents: 'none',
+                    zIndex: 4500,
+                }}>
+                    <div className="shadow-curse-ring ring-1" />
+                    <div className="shadow-curse-ring ring-2" />
+                    <div className="shadow-curse-ring ring-3" />
+                </div>
+            );
+        }
+
         if (anim.type === 'induce_fear_overlay') {
             return (
                 <div key={key} style={{
@@ -2382,6 +2568,7 @@ export default function CombatGrid(props) {
             // Net projectile for Ensnare
             if (anim.subtype === 'ensnare_net' && anim.isNet) {
                 const netIcon = anim.netIcon?.default || anim.netIcon || '';
+                const durSec = `${(anim.duration || 800) / 1000}s`;
                 return (
                     <div key={key} style={{
                         position: 'absolute',
@@ -2391,14 +2578,14 @@ export default function CombatGrid(props) {
                         height: '40px',
                         pointerEvents: 'none',
                         zIndex: 4000,
-                        animation: 'fireballTravel 0.5s linear forwards',
+                        animation: `fireballTravel ${durSec} linear forwards`,
                         '--fb-dx': `${anim.tgtPx.x - anim.srcPx.x}px`,
                         '--fb-dy': `${anim.tgtPx.y - anim.srcPx.y}px`,
                     }}>
                         <div style={{
                             width: '100%',
                             height: '100%',
-                            animation: 'acidBlastLobY 0.5s ease-in-out forwards',
+                            animation: `acidBlastLobY ${durSec} ease-in-out forwards`,
                         }}>
                             <div style={{
                                 width: '100%',
@@ -2502,6 +2689,60 @@ export default function CombatGrid(props) {
         }
 
 
+        if (anim.type === 'circle_of_deflection' && anim.srcPx) {
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: `${anim.srcPx.x}px`,
+                    top: `${anim.srcPx.y}px`,
+                    width: '400px',
+                    height: '400px',
+                    transform: 'translate(-50%, -50%)',
+                    zIndex: 2000,
+                    pointerEvents: 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                }}>
+                  <div style={{
+                    width: '100%',
+                    height: '100%',
+                    borderRadius: '50%',
+                    border: '5px solid rgba(32, 232, 200, 0.75)',
+                    boxShadow: '0 0 35px rgba(32, 232, 200, 0.45), inset 0 0 35px rgba(32, 232, 200, 0.15)',
+                    position: 'relative',
+                    animation: 'spin-slow 14s linear infinite reverse',
+                  }}>
+                    {['ᚠ', 'ᚢ', 'ᚦ', 'ᚨ', 'ᚱ', 'ᚲ', 'ᚷ', 'ᚹ', 'ᚺ', 'ᛁ', 'ᛃ', 'ᛈ'].map((rune, i) => {
+                      const angle = (i / 12) * 360;
+                      const radius = 42;
+                      const rad = (angle - 90) * (Math.PI / 180);
+                      return (
+                        <span
+                          key={i}
+                          style={{
+                            position: 'absolute',
+                            left: `${50 + radius * Math.cos(rad)}%`,
+                            top: `${50 + radius * Math.sin(rad)}%`,
+                            transform: `translate(-50%, -50%) rotate(${angle}deg)`,
+                            color: 'rgba(32, 232, 200, 0.85)',
+                            fontSize: '22px',
+                            fontWeight: 'bold',
+                            textShadow: '0 0 10px rgba(32, 232, 200, 0.65)',
+                            pointerEvents: 'none',
+                            userSelect: 'none'
+                          }}
+                        >
+                          {rune}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+            );
+        }
+
+
         if (anim.type === 'sword_slash' && anim.srcPx && anim.tgtPx) {
             const dx = anim.tgtPx.x - anim.srcPx.x;
             const dy = anim.tgtPx.y - anim.srcPx.y;
@@ -2560,7 +2801,22 @@ export default function CombatGrid(props) {
                     pointerEvents: 'none',
                     zIndex: 4000,
                     animation: 'healGlowPop 0.8s ease-out forwards',
-                }} />
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                }}>
+                    <img
+                        src={images.healing_hands?.default || images.healing_hands}
+                        alt="healing hands"
+                        style={{
+                            width: '40px',
+                            height: '40px',
+                            objectFit: 'contain',
+                            filter: 'drop-shadow(0 0 5px #2ecc71)',
+                            animation: 'scaleUp 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275) both'
+                        }}
+                    />
+                </div>
             );
         }
 
@@ -2982,8 +3238,97 @@ export default function CombatGrid(props) {
             );
         }
 
+        // ── Trials Beam (purple beam from trials icon to fighter) ─────────────
+        if (anim.type === 'trials_beam' && anim.srcPx && anim.tgtPx) {
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: `${anim.srcPx.x}px`,
+                    top: `${anim.srcPx.y}px`,
+                    width: `${anim.length}px`,
+                    height: '10px',
+                    background: 'linear-gradient(to right, rgba(138, 43, 226, 0.2), #7b2ff7 25%, #d8b4fe 50%, #7b2ff7 75%, rgba(138, 43, 226, 0.2))',
+                    boxShadow: '0 0 12px #7b2cbf, 0 0 24px #a855f7, 0 0 36px rgba(168, 85, 247, 0.6)',
+                    transformOrigin: '0 50%',
+                    transform: `rotate(${anim.angle}deg) translateY(-50%)`,
+                    zIndex: 4800,
+                    pointerEvents: 'none',
+                    filter: 'blur(0.5px)',
+                    animation: 'pinkBeamPulse 1.0s ease-out forwards',
+                }} />
+            );
+        }
+
+        if (anim.type === 'trials_burst' && anim.tgtPx) {
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: `${anim.tgtPx.x}px`,
+                    top: `${anim.tgtPx.y}px`,
+                    width: '0px',
+                    height: '0px',
+                    transform: 'translate(-50%, -50%)',
+                    pointerEvents: 'none',
+                    zIndex: 4900,
+                    animation: 'annihilationRing 0.7s cubic-bezier(0.1, 0.8, 0.3, 1) forwards'
+                }} />
+            );
+        }
+
+        if ((anim.type === 'trials_icon_appear' || anim.type === 'trials_icon_destroy') && anim.srcPx) {
+            // Just a glow pulse — the persistent spinning icon is already rendered separately.
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: `${anim.srcPx.x}px`,
+                    top: `${anim.srcPx.y}px`,
+                    width: '200px',
+                    height: '200px',
+                    transform: 'translate(-50%, -50%)',
+                    borderRadius: '50%',
+                    background: 'radial-gradient(circle, rgba(168,85,247,0.55) 0%, rgba(123,44,191,0.25) 50%, transparent 80%)',
+                    pointerEvents: 'none',
+                    zIndex: 5100,
+                    animation: anim.type === 'trials_icon_appear'
+                        ? 'fadeIn 0.9s ease-out forwards'
+                        : 'explosionPop 0.8s ease-out forwards',
+                }} />
+            );
+        }
+
+        // ── Return from Trial overlay ─────────────────────────────────────────
+        if (anim.type === 'return_from_trial' && anim.tgtPx) {
+            const returnIcons = [
+                images['return_from_trial_1'],
+                images['return_from_trial_2'],
+                images['return_from_trial_3'],
+            ];
+            const iconSrc = returnIcons[anim.trialIndex] || returnIcons[0];
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: `${anim.tgtPx.x}px`,
+                    top: `${anim.tgtPx.y}px`,
+                    width: '140px',
+                    height: '140px',
+                    transform: 'translate(-50%, -50%)',
+                    pointerEvents: 'none',
+                    zIndex: 5600,
+                    animation: 'scaleUpFadeOut 2.5s ease-out forwards',
+                    backgroundImage: `url(${iconSrc})`,
+                    backgroundSize: 'contain',
+                    backgroundRepeat: 'no-repeat',
+                    backgroundPosition: 'center',
+                    maskImage: 'radial-gradient(circle, rgba(0,0,0,1) 30%, rgba(0,0,0,0.5) 55%, rgba(0,0,0,0) 75%)',
+                    WebkitMaskImage: 'radial-gradient(circle, rgba(0,0,0,1) 30%, rgba(0,0,0,0.5) 55%, rgba(0,0,0,0) 75%)',
+                    filter: 'drop-shadow(0 0 14px #a855f7) drop-shadow(0 0 28px #7b2cbf)',
+                }} />
+            );
+        }
+
         return null;
     };
+
 
     // ── VCT units — damage indicators only, no portrait ──────────────────────
     const vctUnits = Object.values(battleData).filter(u => u && u.isVCT);
@@ -3019,8 +3364,8 @@ export default function CombatGrid(props) {
         );
     };
 
-    // ── Monster units — exclude VCT ───────────────────────────────────────────
-    const monsterUnits = Object.values(battleData).filter(u => u && (u.isMonster || u.isMinion) && !crewIds.has(u.id) && !u.isVCT);
+    // ── Monster units — exclude VCT and trials_icon (rendered separately) ─────
+    const monsterUnits = Object.values(battleData).filter(u => u && (u.isMonster || u.isMinion) && !crewIds.has(u.id) && !u.isVCT && !u.isTrialIcon);
 
     const getUnitCenterPx = (unitId) => {
         // Find in crew
@@ -3133,6 +3478,182 @@ export default function CombatGrid(props) {
 
             {/* Soul Suck continuous channeling beams */}
             {renderSoulSuckChannelingBeams()}
+
+            {/* ── Sphinx Trials: spinning trial effect icon above Sphinx ── */}
+            {(() => {
+                const trialsIcon = battleData['trials_icon'];
+                if (!trialsIcon || !trialsIcon.coordinates) return null;
+                // Fixed coords set at cast time — icon never moves
+                const ic = trialsIcon.coordinates;
+                // 2×2 tile block — standard top-left positioning (same as fighter tiles)
+                const iconLeft = tilePos(ic.x);
+                const iconTop  = tilePos(ic.y);
+                const iconW    = TILE_SIZE * 2;   // 200px
+                const iconH    = TILE_SIZE * 2;   // 200px
+                const hpPct    = trialsIcon.maxHp > 0 ? Math.max(0, trialsIcon.hp / trialsIcon.maxHp) : 0;
+                const isDying  = !!trialsIcon.dying;
+                // Core: single tile, centered within the 2×2 block
+                const coreSize = TILE_SIZE;
+                const coreLeft = iconLeft + (iconW - coreSize) / 2;  // = iconLeft + 50
+                const coreTop  = iconTop  + (iconH - coreSize) / 2;  // = iconTop  + 50
+                // HP bar: flush at the south pixel edge of the 2×2 block
+                const barH    = 3;
+                const barTop  = iconTop + iconH - barH;              // = iconTop + 197
+
+                return (
+                    <React.Fragment key="trials_icon_persistent">
+                        {/* Outer vortex container — 2×2 tile block, pure rotate (no translate) */}
+                        <div
+                            style={{
+                                position: 'absolute',
+                                left: `${iconLeft}px`,
+                                top: `${iconTop}px`,
+                                width: `${iconW}px`,
+                                height: `${iconH}px`,
+                                zIndex: 5200,
+                                pointerEvents: isDying ? 'none' : 'auto',
+                                cursor: isDying ? 'default' : 'pointer',
+                                overflow: 'visible',
+                            }}
+                        >
+                            {/* Glow halo — extends slightly beyond the container */}
+                            <div style={{
+                                position: 'absolute',
+                                top: '-20%', left: '-20%',
+                                width: '140%', height: '140%',
+                                borderRadius: '50%',
+                                background: 'radial-gradient(circle, rgba(168,85,247,0.4) 0%, rgba(123,44,191,0.18) 45%, transparent 70%)',
+                                filter: 'blur(20px)',
+                                animation: isDying
+                                    ? 'trialIconMelt 2.5s cubic-bezier(0.6,0,1,1) forwards'
+                                    : 'trialOuterSpin 8s linear infinite reverse',
+                                pointerEvents: 'none',
+                            }} />
+                            {/* Spinning outer icon — fills the 2×2 block exactly, fuzzy circular mask */}
+                            <div style={{
+                                position: 'absolute',
+                                top: 0, left: 0, width: '100%', height: '100%',
+                                backgroundImage: `url(${images['trial_effect_icon']})`,
+                                backgroundSize: 'cover',
+                                backgroundRepeat: 'no-repeat',
+                                backgroundPosition: 'center',
+                                maskImage: 'radial-gradient(circle, rgba(0,0,0,1) 30%, rgba(0,0,0,0.65) 52%, rgba(0,0,0,0) 75%)',
+                                WebkitMaskImage: 'radial-gradient(circle, rgba(0,0,0,1) 30%, rgba(0,0,0,0.65) 52%, rgba(0,0,0,0) 75%)',
+                                filter: 'drop-shadow(0 0 14px #a855f7) drop-shadow(0 0 30px #7b2cbf)',
+                                animation: isDying
+                                    ? 'trialIconMelt 2.5s cubic-bezier(0.6,0,1,1) forwards'
+                                    : 'trialOuterSpin 3s linear infinite',
+                                opacity: isDying ? undefined : 0.92,
+                                pointerEvents: 'none',
+                                transformOrigin: 'center center',
+                            }} />
+                        </div>
+                        {/* Trial Core — single tile centered in the 2×2 block, spins counter-clockwise */}
+                        <div style={{
+                            position: 'absolute',
+                            left: `${coreLeft}px`,
+                            top: `${coreTop}px`,
+                            width: `${coreSize}px`,
+                            height: `${coreSize}px`,
+                            zIndex: 5210,
+                            pointerEvents: 'none',
+                            backgroundImage: `url(${images['trial_core']})`,
+                            backgroundSize: 'contain',
+                            backgroundRepeat: 'no-repeat',
+                            backgroundPosition: 'center',
+                            // Very fuzzy radial mask — fade to transparent well before the edges
+                            maskImage: 'radial-gradient(circle, rgba(0,0,0,1) 22%, rgba(0,0,0,0.7) 42%, rgba(0,0,0,0.2) 62%, rgba(0,0,0,0) 80%)',
+                            WebkitMaskImage: 'radial-gradient(circle, rgba(0,0,0,1) 22%, rgba(0,0,0,0.7) 42%, rgba(0,0,0,0.2) 62%, rgba(0,0,0,0) 80%)',
+                            filter: 'drop-shadow(0 0 10px #f59e0b) drop-shadow(0 0 22px #d97706)',
+                            animation: isDying
+                                ? 'trialCoreFade 2.5s cubic-bezier(0.6,0,1,1) forwards'
+                                : 'trialCoreSpin 4s linear infinite',
+                            transformOrigin: 'center center',
+                        }} />
+                        {/* HP bar — flush at south edge of the 2×2 block, hidden while dying */}
+                        {!isDying && (
+                            <div style={{
+                                position: 'absolute',
+                                left: `${iconLeft}px`,
+                                top: `${barTop}px`,
+                                width: `${iconW}px`,
+                                height: `${barH}px`,
+                                background: 'rgba(0,0,0,0.5)',
+                                borderRadius: '2px',
+                                overflow: 'hidden',
+                                zIndex: 5201,
+                                pointerEvents: 'none',
+                            }}>
+                                <div style={{
+                                    width: `${hpPct * 100}%`,
+                                    height: '100%',
+                                    background: 'linear-gradient(90deg, #c0392b, #e74c3c)',
+                                    transition: 'width 0.3s ease',
+                                }} />
+                            </div>
+                        )}
+                    </React.Fragment>
+                );
+            })()}
+
+            {/* ── Sphinx Trials: trial marker icons for off-board fighters ── */}
+            {crew.map(f => {
+                const liveFighter = combatManager.getCombatant(f.id) || battleData[f.id];
+                if (!liveFighter || typeof liveFighter.inTrial !== 'number') return null;
+                const preCoords = liveFighter.preTrialCoordinates;
+                if (!preCoords) return null;
+                const markerIcons = [
+                    images['first_trial'],
+                    images['second_trial'],
+                    images['third_trial'],
+                ];
+                const markerSrc = markerIcons[liveFighter.inTrial] || markerIcons[0];
+                // Position exactly like fighters: tilePos(x/y), TILE_SIZE × TILE_SIZE
+                const mx = tilePos(preCoords.x);
+                const my = tilePos(preCoords.y);
+                return (
+                    <div
+                        key={`trial_marker_${f.id}`}
+                        style={{
+                            position: 'absolute',
+                            left: `${mx}px`,
+                            top: `${my}px`,
+                            width: `${TILE_SIZE}px`,
+                            height: `${TILE_SIZE}px`,
+                            zIndex: 400,
+                            pointerEvents: 'none',
+                            overflow: 'visible',
+                        }}
+                    >
+                        {/* Fuzzy outer glow halo centered */}
+                        <div style={{
+                            position: 'absolute',
+                            top: '10px', left: '10px',
+                            width: '80px', height: '80px',
+                            borderRadius: '50%',
+                            background: 'radial-gradient(circle, rgba(168,85,247,0.3) 0%, rgba(123,44,191,0.1) 50%, transparent 75%)',
+                            filter: 'blur(10px)',
+                            animation: 'trialOuterSpin 8s linear infinite reverse',
+                        }} />
+                        {/* Portal icon centered within the tile */}
+                        <div style={{
+                            position: 'absolute',
+                            top: '20px', left: '20px',
+                            width: '60px', height: '60px',
+                            backgroundImage: `url(${markerSrc})`,
+                            backgroundSize: 'contain',
+                            backgroundRepeat: 'no-repeat',
+                            backgroundPosition: 'center',
+                            maskImage: 'radial-gradient(circle, rgba(0,0,0,1) 30%, rgba(0,0,0,0.6) 55%, rgba(0,0,0,0) 78%)',
+                            WebkitMaskImage: 'radial-gradient(circle, rgba(0,0,0,1) 30%, rgba(0,0,0,0.6) 55%, rgba(0,0,0,0) 78%)',
+                            filter: 'drop-shadow(0 0 10px #a855f7) drop-shadow(0 0 20px #7b2cbf)',
+                            animation: 'trialOuterSpin 4s linear infinite',
+                            opacity: 0.9,
+                            transformOrigin: 'center center',
+                        }} />
+                    </div>
+                );
+            })}
 
             {/* Sandbox-style CSS animation overlays from AnimationManagerRedux */}
             {activeAnimations.map(renderAnimation)}

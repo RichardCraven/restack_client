@@ -434,7 +434,7 @@ export function MonsterManager() {
             portrait: images['witch_p1_1'],
             greetings: ['Thy blood is quickening'],
             deathCries: ['Mercy'],
-            specials: ['obliterate', 'invisibility'],
+            specials: ['hex', 'shadow_curse', 'spiderweb', 'summon_spiders', 'dispell', 'demonic_whispers', 'transform'],
             attacks: ['void_lance', 'major_magic_missile'],
             weaknesses: ['arcane', 'holy-aura'],
             drops: [
@@ -601,7 +601,6 @@ export function MonsterManager() {
             portrait: images['precipice_guardian_portrait'],
             greetings: [], deathCries: [], specials: [], attacks: [], weaknesses: [], drops: []
         },
-        // ── Level 29 ─────────────────────────────────────────────────────
         sphinx: {
             type: 'sphinx',
             tier: 4,
@@ -612,10 +611,10 @@ export function MonsterManager() {
             stats: {
                 hp: 325,
                 atk: 13,
-                // atk: 2,
                 def: 13,
                 speed: 7, // large creature, deliberate movements
                 willpower: 0,
+                wits: 18,  // used for willpower checks in Begin the Trials
                 str: 8,
                 int: 10,
                 dex: 5,
@@ -626,9 +625,8 @@ export function MonsterManager() {
             portrait: images['sphinx_portrait2'],
             greetings: ['be thee worthy?'],
             deathCries: ['you may pass'],
-            specials: ['possess', 'tesseract'],
-            // attacks: ['claws', 'claws', 'claws'],
-            attacks: ['claws', 'claws', 'induce_madness', 'lightning'],
+            specials: ['third_eye', 'polymorph', 'hex', 'begin_the_trials'],
+            attacks: ['claw_strike', 'claw_strike', 'induce_madness', 'lightning'],
             weaknesses: ['arcane'],
             minions: ['djinn'],
             drops: [
@@ -637,6 +635,7 @@ export function MonsterManager() {
                 { itemPool: TIER4_ITEM, percentChance: 15 },
             ]
         },
+
         // ── Level 30 ─────────────────────────────────────────────────────
         dragon: {
             type: 'dragon',

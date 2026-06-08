@@ -1211,8 +1211,7 @@ class DungeonPage extends React.Component {
             const destPixel = this.getPixelForIndex(destIndex);
 
             // Choose image for floating player (camp or avatar)
-            let meta = {};
-            try { meta = getMeta() || {}; } catch (e) { meta = {}; }
+            try { getMeta(); } catch (e) { /* ignore */ }
 
             // Apply logical move first, then animate overlay from old world position to new one.
             switch (direction) {
@@ -3357,7 +3356,7 @@ class DungeonPage extends React.Component {
                 tilesToInspect = Array.isArray(resolvedBoard?.tiles) ? resolvedBoard.tiles : [];
             }
 
-            const snapshot = tileIndexes.map((idx) => this.formatTileDiagnostic(tilesToInspect[idx], idx));
+            tileIndexes.map((idx) => this.formatTileDiagnostic(tilesToInspect[idx], idx));
         } catch (e) {
             // Diagnostics helper is best-effort only; swallow failures.
         }

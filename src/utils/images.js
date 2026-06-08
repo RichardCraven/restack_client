@@ -647,8 +647,10 @@ import ranger_mark from '../assets/icons/combat-icons/specials/ranger/mark.png'
 import ranger_execute from '../assets/icons/combat-icons/specials/ranger/execute.png'
 import ranger_ensnare from '../assets/icons/combat-icons/specials/ranger/ensnare.png'
 import ranger_net_throw from '../assets/icons/combat-icons/specials/ranger/net-throw.png'
+import eagle_eye from '../assets/icons/combat-icons/specials/ranger/eagle_eye.png'
 import healing_hands from '../assets/icons/combat-icons/specials/sage/healing_hands.png'
 import circle_of_protection from '../assets/icons/combat-icons/specials/sage/circle_of_protection.png'
+import circle_of_deflection from '../assets/icons/combat-icons/specials/sage/circle_of_deflection.png'
 import shielded from '../assets/icons/combat-icons/specials/sage/shielded.png'
 import shielded_partial from '../assets/icons/combat-icons/specials/sage/shielded_partial.png'
 import perceive from '../assets/icons/combat-icons/specials/sage/perceive.png'
@@ -720,10 +722,26 @@ import whirlwind from '../assets/icons/combat-icons/specials/monsters/dragon/whi
 import spineskin from '../assets/icons/combat-icons/specials/monsters/spineskin.png';
 
 // Sphinx
-import begin_trials from '../assets/icons/combat-icons/specials/monsters/sphinx/begin the trials.png';
+import begin_trials from '../assets/icons/combat-icons/specials/monsters/sphinx/begin_the_trials.png';
 import polymorph from '../assets/icons/combat-icons/specials/monsters/sphinx/polymorph.png';
-import third_eye from '../assets/icons/combat-icons/specials/monsters/sphinx/third eye.png';
+import third_eye from '../assets/icons/combat-icons/specials/monsters/sphinx/third_eye.png';
 import hex from '../assets/icons/combat-icons/specials/monsters/sphinx/hex.png';
+import trial_effect_icon from '../assets/icons/combat-icons/specials/monsters/sphinx/trial_effect_icon.png';
+import trial_core from '../assets/icons/combat-icons/specials/monsters/sphinx/trial_core.png';
+import first_trial from '../assets/icons/combat-icons/specials/monsters/sphinx/first_trial.png';
+import second_trial from '../assets/icons/combat-icons/specials/monsters/sphinx/second_trial.png';
+import third_trial from '../assets/icons/combat-icons/specials/monsters/sphinx/third_trial.png';
+import return_from_trial_1 from '../assets/icons/combat-icons/specials/monsters/sphinx/return_from_trial_1.png';
+import return_from_trial_2 from '../assets/icons/combat-icons/specials/monsters/sphinx/return_from_trial_2.png';
+import return_from_trial_3 from '../assets/icons/combat-icons/specials/monsters/sphinx/return_from_trial_3.png';
+
+// Witch
+import shadow_curse from '../assets/icons/combat-icons/specials/monsters/witch/shadow curse.png';
+import spiderweb from '../assets/icons/combat-icons/specials/monsters/witch/spiderweb.png';
+import summon_spiders_icon from '../assets/icons/combat-icons/specials/monsters/witch/summon spiders.png';
+import witch_dispell from '../assets/icons/combat-icons/specials/monsters/witch/dispell.png';
+import demonic_whispers from '../assets/icons/combat-icons/specials/monsters/witch/demonic whispers.png';
+import transform from '../assets/icons/combat-icons/specials/monsters/witch/transform.png';
 
 // body
 import body_male from '../assets/icons/figures/body_man.png'
@@ -1474,10 +1492,12 @@ export {
     ranger_execute,
     ranger_ensnare,
     ranger_net_throw,
+    eagle_eye,
     healing_hands,
     perceive,
     weakness_doubled,
     circle_of_protection,
+    circle_of_deflection,
     shielded,
     shielded_partial,
     monk_ethereal_speed,
@@ -1644,5 +1664,21 @@ export {
     begin_trials,
     polymorph,
     third_eye,
-    hex
+    hex,
+    trial_effect_icon,
+    trial_core,
+    first_trial,
+    second_trial,
+    third_trial,
+    return_from_trial_1,
+    return_from_trial_2,
+    return_from_trial_3,
+    
+    shadow_curse,
+    spiderweb,
+    summon_spiders_icon,
+    summon_spiders_icon as summon_spiders,
+    witch_dispell,
+    demonic_whispers,
+    transform
 };

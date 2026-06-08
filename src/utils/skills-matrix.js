@@ -59,6 +59,18 @@ const skillsMatrix = {
         type: 'debuff',
         effect: { type: 'ensnared', chance: 100, duration: 2 }
     },
+    eagle_eye: {
+        id: 'eagle_eye',
+        tier: 1,
+        name: 'Eagle Eye',
+        desc: 'Passive: Whenever an enemy unit is summoned on the battlefield, immediately shoot two randomly chosen arrows at it.',
+        icon: images['eagle_eye'],
+        cooldown: 0,
+        duration: 'instant',
+        range: 'far',
+        type: 'passive',
+        isPassive: true
+    },
 
     // === SAGE ===
     heal: {
@@ -103,6 +115,19 @@ const skillsMatrix = {
         range: 'far',
         type: 'debuff',
         effect: ['weakness_doubled']
+    },
+    circle_of_deflection: {
+        id: 'circle_of_deflection',
+        tier: 3,
+        name: 'Circle of Deflection',
+        desc: 'A teal runic barrier that gives allies inside a 50% chance to reflect ranged attacks back at the attacker.',
+        icon: images['circle_of_deflection'],
+        cooldown: 14,
+        duration: 'long',
+        range: 'self',
+        type: 'buff',
+        effect: ['buff_self'],
+        buff: {}
     },
 
     // === SOLDIER ===
@@ -200,14 +225,15 @@ const skillsMatrix = {
     },
     inspire: {
         id: 'inspire',
-        tier: 2,
+        tier: 3,
         name: 'Inspire',
-        desc: 'Inspire nearby allies to fight harder.',
+        desc: 'Inspire nearby allies to fight harder. Inspired units always succeed resolve checks and replenish 10% stamina each round.',
         icon: images['inspire'],
-        cooldown: 8,
-        duration: 'short',
+        cooldown: 10,
+        duration: 'long',
         range: 'medium',
-        type: 'buff'
+        type: 'buff',
+        effect: ['buff_allies']
     },
     battlecry: {
         id: 'battlecry',
@@ -348,7 +374,7 @@ const skillsMatrix = {
         name: 'Slash',
         desc: 'Execute a fast horizontal slash.',
         icon: images['barbarian_slash'],
-        cooldown: 0,
+        cooldown: 2,
         duration: 'instant',
         range: 'close',
         type: 'damage'
@@ -707,7 +733,7 @@ const skillsMatrix = {
         name: 'Claw Strike',
         desc: 'Execute a savage claw strike.',
         icon: images['claw_strike'],
-        cooldown: 0,
+        cooldown: 2,
         duration: 'instant',
         range: 'close',
         type: 'damage'
@@ -890,6 +916,133 @@ const skillsMatrix = {
         mentalityDebuff: true,
         power: 35,
         effect: { type: 'ensnared', duration: 2 }
+    },
+    // ── Sphinx skills ────────────────────────────────────────────────────────
+    third_eye: {
+        id: 'third_eye',
+        tier: 1,
+        name: 'Third Eye',
+        desc: 'Chance to dodge incoming physical attacks.',
+        icon: images['third_eye'],
+        cooldown: 6,
+        duration: 'medium',
+        range: 'self',
+        type: 'buff',
+    },
+    polymorph: {
+        id: 'polymorph',
+        tier: 2,
+        name: 'Polymorph',
+        desc: 'Transform the target into a helpless frog for a long duration.',
+        icon: images['polymorph'],
+        cooldown: 12,
+        duration: 'long',
+        range: 'medium',
+        type: 'debuff',
+        mentalityDebuff: true,
+        power: 60,
+    },
+    hex: {
+        id: 'hex',
+        tier: 2,
+        name: 'Hex',
+        desc: 'Curse the target, giving their skills a chance to backfire.',
+        icon: images['hex'],
+        cooldown: 10,
+        duration: 'medium',
+        range: 'medium',
+        type: 'debuff',
+        mentalityDebuff: true,
+        power: 45,
+    },
+    begin_the_trials: {
+        id: 'begin_the_trials',
+        tier: 3,
+        name: 'Begin the Trials',
+        desc: 'Unleash the Trials of the Sphinx. Summons a mystical trial icon that attacks fighters with willpower-sapping beams.',
+        icon: images['begin_trials'],
+        cooldown: 22,
+        duration: 'long',
+        range: 'self',
+        type: 'begin_trials_type',
+        mentalityDebuff: true,
+        power: 55
+    },
+    shadow_curse: {
+        id: 'shadow_curse',
+        tier: 3,
+        name: 'Shadow Curse',
+        desc: 'Curse the target, causing them to lose triple stamina on any movement or action for a long duration.',
+        icon: images['shadow_curse'],
+        cooldown: 12,
+        duration: 'long',
+        range: 'medium',
+        type: 'debuff',
+        effect: { type: 'shadow_curse', duration: 4 }
+    },
+    spiderweb: {
+        id: 'spiderweb',
+        tier: 2,
+        name: 'Spiderweb',
+        desc: 'Ensnare the target in a sticky web, preventing movement.',
+        icon: images['spiderweb'],
+        cooldown: 8,
+        duration: 'short',
+        range: 'medium',
+        type: 'debuff',
+        effect: { type: 'ensnared', duration: 2 }
+    },
+    summon_spiders: {
+        id: 'summon_spiders',
+        tier: 3,
+        name: 'Summon Spiders',
+        desc: 'Summon giant spiders to assist in combat.',
+        icon: images['summon_spiders_icon'],
+        cooldown: 12,
+        duration: 'instant',
+        range: 'medium',
+        type: 'utility'
+    },
+    dispell: {
+        id: 'dispell',
+        tier: 3,
+        name: 'Dispell',
+        desc: 'Dispel active magical effects from targets.',
+        icon: images['witch_dispell'],
+        cooldown: 10,
+        duration: 'instant',
+        range: 'medium',
+        type: 'utility'
+    },
+    demonic_whispers: {
+        id: 'demonic_whispers',
+        tier: 3,
+        name: 'Demonic Whispers',
+        desc: "Sow madness in the target's mind, causing fear.",
+        icon: images['demonic_whispers'],
+        cooldown: 10,
+        duration: 'short',
+        range: 'medium',
+        type: 'debuff',
+        effect: { type: 'fear', duration: 2 }
+    },
+    transform: {
+        id: 'transform',
+        tier: 3,
+        name: 'Transform',
+        desc: 'Transform into a dark beast, increasing attack power.',
+        icon: images['transform'],
+        cooldown: 14,
+        duration: 'long',
+        range: 'self',
+        type: 'buff',
+        effect: ['buff_self'],
+        buff: {
+            increase_stats: {
+                stats: ['atk'],
+                amounts: [8]
+            }
+        }
     }
 };
 

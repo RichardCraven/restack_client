@@ -20,6 +20,7 @@ import {
   monk_punch,
   monk_force_punch,
   ranger_net_throw,
+  hex,
 } from './images';
 
 export class AnimationManagerRedux {
@@ -36,13 +37,12 @@ export class AnimationManagerRedux {
     this.onAnimationEvent = callback;
   }
 
-  /** Pixel center of a tile at grid coordinates {x, y} */
-  _px(coords, forceLarge = false) {
+  _px(coords, forceLarge = false, ignoreLarge = false) {
     if (!coords || typeof coords.x !== 'number' || typeof coords.y !== 'number') return { x: 0, y: 0 };
     const borderOffset = this.USE_TILE_BORDERS ? this.TILE_BORDER : 0;
     let x = coords.x * (this.TILE_SIZE + borderOffset) + this.TILE_SIZE / 2;
     let y = coords.y * (this.TILE_SIZE + borderOffset) + this.TILE_SIZE / 2;
-    const isLarge = forceLarge || (this._isTargetLarge && this._currentTargetCoords && coords.x === this._currentTargetCoords.x && coords.y === this._currentTargetCoords.y);
+    const isLarge = !ignoreLarge && (forceLarge || (this._isTargetLarge && this._currentTargetCoords && coords.x === this._currentTargetCoords.x && coords.y === this._currentTargetCoords.y));
     if (isLarge) {
       // Anchor row y is the bottom row of the 2x2. Center is 50px up.
       y -= this.TILE_SIZE / 2;
@@ -208,6 +208,18 @@ export class AnimationManagerRedux {
       case 'leap_attack':
       case 'leap':
         this._leapAttack(sourceCoords, targetCoords, sourceUnitId);
+        break;
+      case 'trials_beam':
+        this._trialsBeam(sourceCoords, targetCoords);
+        break;
+      case 'begin_the_trials':
+        // Initial cast just spawns the Trial icon, no beam from Sphinx
+        break;
+      case 'hex':
+        this._hex(sourceCoords, targetCoords);
+        break;
+      case 'shadow_curse':
+        this._shadowCurse(sourceCoords, targetCoords);
         break;
       default:
         // Generic melee hit for unknown abilities
@@ -500,7 +512,7 @@ export class AnimationManagerRedux {
       angle,
       isNet: true,
       netIcon: ranger_net_throw,
-      duration: 500,
+      duration: 800,
     });
   }
 
@@ -588,10 +600,22 @@ export class AnimationManagerRedux {
   }
 
   _barbarianCleave(src, tgt) {
+    let targetCoords = tgt;
+    if (this._isTargetLarge && Array.isArray(this._currentTargetOccupiedCoords) && this._currentTargetOccupiedCoords.length > 0) {
+      let minDist = Infinity;
+      this._currentTargetOccupiedCoords.forEach(tc => {
+        const dist = Math.abs(src.x - tc.x) + Math.abs(src.y - tc.y);
+        if (dist < minDist) {
+          minDist = dist;
+          targetCoords = tc;
+        }
+      });
+    }
+
     const srcPx = this._px(src);
-    const tgtPx = this._px(tgt);
-    const dx = src.x - tgt.x;
-    const dy = src.y - tgt.y;
+    const tgtPx = this._px(targetCoords, false, true);
+    const dx = src.x - targetCoords.x;
+    const dy = src.y - targetCoords.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
     const colStep = dist > 0 ? Math.round(dx / dist) : 0;
     const rowStep = dist > 0 ? Math.round(dy / dist) : 0;
@@ -771,7 +795,7 @@ export class AnimationManagerRedux {
       tgtPx,
       dx,
       dy,
-      duration: 1650
+      duration: 600
     });
   }
 
@@ -816,6 +840,101 @@ export class AnimationManagerRedux {
       tgtPx,
       isTargetLarge,
       duration: 1500
+    });
+  }
+
+  /** Trials beam — purple beam from source (trials icon position) to target fighter */
+  _trialsBeam(src, tgt) {
+    const srcPx = this._px(src);
+    const tgtPx = this._px(tgt);
+    const dx = tgtPx.x - srcPx.x;
+    const dy = tgtPx.y - srcPx.y;
+    const length = Math.sqrt(dx * dx + dy * dy);
+    const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+
+    // Phase 1: purple beam from trials icon to fighter
+    this._emit({
+      type: 'trials_beam',
+      srcPx,
+      tgtPx,
+      length,
+      angle,
+      duration: 1000
+    });
+
+    // Phase 2: Burst on target
+    setTimeout(() => {
+      this._emit({
+        type: 'trials_burst',
+        tgtPx,
+        duration: 700
+      });
+    }, 800);
+  }
+
+  /**
+   * Trigger the spinning trial effect icon appearing above the Sphinx.
+   * @param {object} sphinxCoords  { x, y } of Sphinx's anchor tile
+   */
+  triggerTrialIconAppear(sphinxCoords) {
+    const srcPx = this._px(sphinxCoords);
+    // Place icon above sphinx's top row (offset by -TILE_SIZE * 1.5 in y)
+    const iconPx = {
+      x: srcPx.x,
+      y: srcPx.y - this.TILE_SIZE * 1.5
+    };
+    this._emit({
+      type: 'trials_icon_appear',
+      srcPx: iconPx,
+      duration: 900
+    });
+  }
+
+  /** Trigger a burst when the trial effect icon is destroyed */
+  triggerTrialIconDestroy(iconCoords) {
+    const srcPx = this._px(iconCoords);
+    const iconPx = {
+      x: srcPx.x,
+      y: srcPx.y - this.TILE_SIZE * 1.5
+    };
+    this._emit({
+      type: 'trials_icon_destroy',
+      srcPx: iconPx,
+      duration: 800
+    });
+  }
+
+  /**
+   * Trigger the return-from-trial overlay on a fighter's tile.
+   * @param {object} fighterCoords  { x, y }
+   * @param {number} trialIndex     0, 1, or 2
+   */
+  triggerReturnFromTrial(fighterCoords, trialIndex) {
+    const tgtPx = this._px(fighterCoords);
+    this._emit({
+      type: 'return_from_trial',
+      tgtPx,
+      trialIndex,
+      duration: 2500
+    });
+  }
+
+  _hex(src, tgt) {
+    const tgtPx = this._px(tgt);
+    this._emit({
+      type: 'hex_overlay',
+      tgtPx,
+      icon: hex,
+      duration: 1500,
+    });
+  }
+
+  _shadowCurse(src, tgt) {
+    const tgtPx = this._px(tgt);
+    this._emit({
+      type: 'shadow_curse_rings',
+      tgtPx,
+      duration: 1500,
     });
   }
 }

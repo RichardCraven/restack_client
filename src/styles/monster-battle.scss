@@ -201,9 +201,6 @@
         width: 100px;
         height: 100px;
         border-radius: 100px;
-        &.frozen {
-            border-radius: 0 !important;
-        }
         background-size: 100% 100%;
         background-repeat: no-repeat;
         background-position: center;
@@ -2379,8 +2376,15 @@
         // }
 
         &.frozen{
-            background-color: #2e9dd28a;
-            border-radius: 0 !important;
+            background: radial-gradient(circle at 20% 35%, rgba(46, 157, 210, 0.6) 0%, rgba(46, 157, 210, 0.5) 15%, transparent 25%),
+                        radial-gradient(circle at 75% 20%, rgba(29, 114, 184, 0.7) 0%, rgba(29, 114, 184, 0.5) 12%, transparent 22%),
+                        radial-gradient(circle at 65% 75%, rgba(79, 195, 247, 0.65) 0%, rgba(79, 195, 247, 0.5) 18%, transparent 30%),
+                        radial-gradient(circle at 15% 80%, rgba(2, 136, 209, 0.7) 0%, rgba(2, 136, 209, 0.5) 10%, transparent 20%),
+                        radial-gradient(circle at 85% 85%, rgba(46, 157, 210, 0.6) 0%, rgba(46, 157, 210, 0.45) 20%, transparent 35%),
+                        radial-gradient(circle at 40% 50%, rgba(0, 188, 212, 0.55) 0%, rgba(0, 188, 212, 0.4) 8%, transparent 18%);
+            border-radius: inherit !important;
+            box-shadow: inset 0 0 10px rgba(0, 191, 255, 0.5);
+            animation: icePatchShimmer 4s ease-in-out infinite alternate;
         }
 
 
@@ -4466,13 +4470,13 @@
       opacity: 1;
   }
   25% {
-      transform: translate3d(calc(var(--leap-dx) * -0.75), calc(var(--leap-dy) * -0.75 - 45px), 0) scale(1.1);
+      transform: translate3d(calc(var(--leap-dx) * -0.75), calc(var(--leap-dy) * -0.75 - 45px), 0) scale(1.28);
   }
   50% {
-      transform: translate3d(calc(var(--leap-dx) * -0.5), calc(var(--leap-dy) * -0.5 - 92px), 0) scale(1.24);
+      transform: translate3d(calc(var(--leap-dx) * -0.5), calc(var(--leap-dy) * -0.5 - 92px), 0) scale(1.55);
   }
   75% {
-      transform: translate3d(calc(var(--leap-dx) * -0.25), calc(var(--leap-dy) * -0.25 - 38px), 0) scale(1.08);
+      transform: translate3d(calc(var(--leap-dx) * -0.25), calc(var(--leap-dy) * -0.25 - 38px), 0) scale(1.28);
   }
   100% {
       transform: translate3d(0px, 0px, 0) scale(1.0);
@@ -4756,5 +4760,271 @@
         height: 28px;
         opacity: 1.0;
         filter: drop-shadow(0 0 20px rgba(255, 255, 255, 1.0));
+    }
+}
+// ── Sphinx Trials keyframes ────────────────────────────────────────────────
+
+@keyframes fadeIn {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.6); }
+    60% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+    100% { opacity: 1; transform: translate(-50%, -50%) scale(1.0); }
+}
+
+@keyframes scaleUpFadeOut {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(0.4); }
+    20% { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+    60% { opacity: 1; transform: translate(-50%, -50%) scale(1.0); }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(1.4); }
+}
+
+/* ── Trial Icon Death: outer purple vortex melts down ─────────────────────── */
+/* Spin decelerates from full speed to standstill, then expands and melts away */
+@keyframes trialIconMelt {
+    0%   { transform: rotate(0deg)   scale(1.00); opacity: 0.92; filter: blur(0.5px); }
+    30%  { transform: rotate(75deg)  scale(1.05); opacity: 0.85; filter: blur(1.5px); }
+    55%  { transform: rotate(120deg) scale(1.15); opacity: 0.70; filter: blur(3px); }
+    75%  { transform: rotate(140deg) scale(1.35); opacity: 0.45; filter: blur(5px); }
+    90%  { transform: rotate(145deg) scale(1.75); opacity: 0.15; filter: blur(8px); }
+    100% { transform: rotate(145deg) scale(2.20); opacity: 0;    filter: blur(12px); }
+}
+
+/* ── Trial Core Death: inner core spin slows to standstill then fades ─────── */
+@keyframes trialCoreFade {
+    0%   { transform: rotate(0deg)    scale(1.0); opacity: 1.0; filter: drop-shadow(0 0 10px #f59e0b) brightness(1.0); }
+    30%  { transform: rotate(-56deg)  scale(1.0); opacity: 0.95; filter: drop-shadow(0 0 12px #f59e0b) brightness(1.1); }
+    55%  { transform: rotate(-90deg)  scale(0.90); opacity: 0.85; filter: drop-shadow(0 0 10px #f59e0b) brightness(1.2); }
+    75%  { transform: rotate(-105deg) scale(0.70); opacity: 0.55; filter: drop-shadow(0 0 6px #f59e0b) brightness(1.4) blur(1px); }
+    90%  { transform: rotate(-110deg) scale(0.45); opacity: 0.20; filter: drop-shadow(0 0 2px #f59e0b) brightness(1.7) blur(3px); }
+    100% { transform: rotate(-110deg) scale(0.20); opacity: 0;   filter: drop-shadow(0 0 0px #f59e0b) brightness(2.0) blur(5px); }
+}
+
+/* Pure-rotate animations for trial icon elements (no translate, standard top-left positioning) */
+@keyframes trialOuterSpin {
+    0%   { transform: rotate(0deg)   scale(0.96); }
+    50%  { transform: rotate(180deg) scale(1.04); }
+    100% { transform: rotate(360deg) scale(0.96); }
+}
+
+@keyframes trialCoreSpin {
+    0%   { transform: rotate(0deg); }
+    100% { transform: rotate(-360deg); }
+}
+
+/* ── Custom Hex Sigil & Particle hit overlay keyframes ── */
+@keyframes hexRingSpinCw {
+    0% {
+        transform: rotate(0deg) scale(0.3);
+        opacity: 0;
+        filter: blur(2px);
+    }
+    15% {
+        transform: rotate(45deg) scale(1.0);
+        opacity: 1;
+        filter: blur(0px);
+    }
+    75% {
+        transform: rotate(270deg) scale(1.02);
+        opacity: 0.95;
+    }
+    100% {
+        transform: rotate(360deg) scale(0.85);
+        opacity: 0;
+        filter: blur(4px);
+    }
+}
+
+@keyframes hexRingSpinCcw {
+    0% {
+        transform: rotate(0deg) scale(0.3);
+        opacity: 0;
+        filter: blur(2px);
+    }
+    15% {
+        transform: rotate(-60deg) scale(1.0);
+        opacity: 1;
+        filter: blur(0px);
+    }
+    75% {
+        transform: rotate(-300deg) scale(0.98);
+        opacity: 0.95;
+    }
+    100% {
+        transform: rotate(-360deg) scale(0.8);
+        opacity: 0;
+        filter: blur(4px);
+    }
+}
+
+@keyframes hexStarPulse {
+    0% {
+        transform: rotate(0deg) scale(0.2);
+        opacity: 0;
+    }
+    20% {
+        transform: rotate(90deg) scale(1.0);
+        opacity: 1;
+    }
+    75% {
+        transform: rotate(270deg) scale(1.0);
+        opacity: 0.9;
+        filter: hue-rotate(90deg);
+    }
+    100% {
+        transform: rotate(360deg) scale(0.5);
+        opacity: 0;
+        filter: hue-rotate(180deg) blur(2px);
+    }
+}
+
+@keyframes hexStarPulseOffset {
+    0% {
+        transform: rotate(45deg) scale(0.2);
+        opacity: 0;
+    }
+    20% {
+        transform: rotate(135deg) scale(1.0);
+        opacity: 1;
+    }
+    75% {
+        transform: rotate(315deg) scale(1.0);
+        opacity: 0.9;
+        filter: hue-rotate(90deg);
+    }
+    100% {
+        transform: rotate(405deg) scale(0.5);
+        opacity: 0;
+        filter: hue-rotate(180deg) blur(2px);
+    }
+}
+
+@keyframes hexCorePulse {
+    0% {
+        transform: scale(0.2);
+        opacity: 0;
+    }
+    20% {
+        transform: scale(1.2);
+        opacity: 1;
+    }
+    40% {
+        transform: scale(1.0);
+        opacity: 0.95;
+    }
+    75% {
+        transform: scale(1.05);
+        opacity: 0.9;
+    }
+    100% {
+        transform: scale(0.1);
+        opacity: 0;
+        filter: blur(2px);
+    }
+}
+
+@keyframes hexRuneFloat {
+    0% {
+        transform: translate(-50%, -50%) scale(0.1);
+        opacity: 0;
+    }
+    20% {
+        transform: translate(-50%, -50%) scale(1.3);
+        opacity: 1;
+    }
+    40% {
+        transform: translate(-50%, -50%) scale(1.0);
+        opacity: 0.95;
+    }
+    75% {
+        transform: translate(-50%, -50%) scale(1.1);
+        opacity: 0.9;
+    }
+    100% {
+        transform: translate(-50%, -30%) scale(0.7);
+        opacity: 0;
+        filter: blur(3px);
+    }
+}
+
+@keyframes hexParticleFly {
+    0% {
+        transform: translate(-50%, -50%) scale(0.5);
+        opacity: 0;
+    }
+    15% {
+        transform: translate(-50%, -50%) scale(1.0);
+        opacity: 1;
+    }
+    100% {
+        transform: translate(calc(-50% + var(--target-x)), calc(-50% + var(--target-y))) scale(0.2);
+        opacity: 0;
+    }
+}
+
+/* ── Shadow Curse Styles ── */
+.portrait.shadow-cursed {
+    animation: shadowCursedPulse 1.2s ease-in-out infinite alternate;
+    position: relative;
+}
+
+@keyframes shadowCursedPulse {
+    from {
+        box-shadow:
+            0 0 10px 5px rgba(114, 9, 183, 0.8),
+            0 0 24px 10px rgba(114, 9, 183, 0.4);
+    }
+    to {
+        box-shadow:
+            0 0 18px 8px rgba(114, 9, 183, 1),
+            0 0 36px 16px rgba(114, 9, 183, 0.6);
+    }
+}
+
+.shadow-curse-ring {
+    position: absolute;
+    inset: 0;
+    border: 3px double #7209b7;
+    border-radius: 50%;
+    opacity: 0;
+    box-shadow: 0 0 8px #7209b7, inset 0 0 8px #7209b7;
+    animation: shadowCurseRingShrink 1.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+.shadow-curse-ring.ring-1 {
+    animation-delay: 0s;
+}
+
+.shadow-curse-ring.ring-2 {
+    animation-delay: 0.3s;
+}
+
+.shadow-curse-ring.ring-3 {
+    animation-delay: 0.6s;
+}
+
+@keyframes shadowCurseRingShrink {
+    0% {
+        transform: scale(1.6);
+        opacity: 0;
+    }
+    20% {
+        opacity: 1;
+    }
+    80% {
+        opacity: 0.8;
+    }
+    100% {
+        transform: scale(0.3);
+        opacity: 0;
+    }
+}
+
+@keyframes icePatchShimmer {
+    0% {
+        opacity: 0.85;
+        filter: brightness(1.0) contrast(1.0);
+    }
+    100% {
+        opacity: 1.0;
+        filter: brightness(1.15) contrast(1.1);
     }
 }

@@ -45,6 +45,16 @@ const MonstersCombatGrid = ({
         if (liveUnit.astralBeingActive) list.push({ key: 'astral_being', icon: images.monk_astral_being, border: '#21e6c1' });
         if (liveUnit.thirdEyeActive) list.push({ key: 'third_eye', icon: images.monk_third_eye, border: '#21e6c1' });
 
+        const normalizeName = (value) => String(value || '').trim().toLowerCase().replace(/\s+/g, '_');
+        const hexDebuff = Array.isArray(liveUnit.activeDebuffs) ? liveUnit.activeDebuffs.find(d => d && normalizeName(d.name) === 'hexed') : null;
+        if (hexDebuff || liveUnit.hexed) {
+            list.push({ key: 'hexed', icon: images.hex, border: '#cc44ff' });
+        }
+        const polymorphDebuff = Array.isArray(liveUnit.activeDebuffs) ? liveUnit.activeDebuffs.find(d => d && normalizeName(d.name) === 'polymorphed') : null;
+        if (polymorphDebuff || liveUnit.polymorphed) {
+            list.push({ key: 'polymorphed', icon: images.polymorph, border: '#22c55e' });
+        }
+
         return list;
     };
 

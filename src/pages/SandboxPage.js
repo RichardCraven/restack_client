@@ -769,7 +769,7 @@ const SandboxPage = () => {
 
   useEffect(() => {
     let interval;
-    if (copActive || defensiveStanceActive || berserkerActive || inspireActive || etherealSpeedActive || innerFireActive || targetEnsnared || targetMarked || frozenIconActive || targetPoisoned || sleepIconActive || bleedEndTime || astralModeActive || sagePerceiveActive || thirdEyeActive || riftPortalActive || targetFeared || extraRangerFeared || vampireCrimsonSightActive || skeletonReassemblyActive || skeletonReassemblyCooldownEndTime || djinnDeathMissileHitActive || djinnArcaneBarrierActive || djinnBindActive || rangerBetrayalEffectActive) {
+    if (copActive || defensiveStanceActive || berserkerActive || inspireActive || etherealSpeedActive || innerFireActive || targetEnsnared || targetMarked || frozenIconActive || targetPoisoned || sleepIconActive || bleedEndTime || astralModeActive || sagePerceiveActive || thirdEyeActive || riftPortalActive || targetFeared || extraRangerFeared || vampireCrimsonSightActive || skeletonReassemblyActive || skeletonReassemblyCooldownEndTime || djinnDeathMissileHitActive || djinnArcaneBarrierActive || djinnBindActive || rangerBetrayalEffectActive || fighterHexed || monsterHexed) {
       interval = setInterval(() => {
         setCurrentTime(Date.now());
       }, 50);
@@ -779,7 +779,7 @@ const SandboxPage = () => {
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [copActive, defensiveStanceActive, berserkerActive, inspireActive, etherealSpeedActive, innerFireActive, targetEnsnared, targetMarked, frozenIconActive, targetPoisoned, sleepIconActive, bleedEndTime, astralModeActive, sagePerceiveActive, thirdEyeActive, riftPortalActive, targetFeared, extraRangerFeared, vampireCrimsonSightActive, skeletonReassemblyActive, skeletonReassemblyCooldownEndTime, djinnDeathMissileHitActive, djinnArcaneBarrierActive, djinnBindActive, rangerBetrayalEffectActive]);
+  }, [copActive, defensiveStanceActive, berserkerActive, inspireActive, etherealSpeedActive, innerFireActive, targetEnsnared, targetMarked, frozenIconActive, targetPoisoned, sleepIconActive, bleedEndTime, astralModeActive, sagePerceiveActive, thirdEyeActive, riftPortalActive, targetFeared, extraRangerFeared, vampireCrimsonSightActive, skeletonReassemblyActive, skeletonReassemblyCooldownEndTime, djinnDeathMissileHitActive, djinnArcaneBarrierActive, djinnBindActive, rangerBetrayalEffectActive, fighterHexed, monsterHexed]);
 
   // Central status cleanups effect
   useEffect(() => {
@@ -9880,19 +9880,22 @@ const SandboxPage = () => {
                                          WEAPONS_DB.axes[0];
                     const weaponIcon = activeWeapon.image;
 
-                    const dx = fighterPos.col - targetPos.col;
-                    const dy = fighterPos.row - targetPos.row;
+                    const targetTileCol = hitEffect.col !== undefined ? hitEffect.col : targetPos.col;
+                    const targetTileRow = hitEffect.row !== undefined ? hitEffect.row : targetPos.row;
+
+                    const dx = fighterPos.col - targetTileCol;
+                    const dy = fighterPos.row - targetTileRow;
                     const dist = Math.sqrt(dx * dx + dy * dy);
                     let adjCol = fighterPos.col;
                     let adjRow = fighterPos.row;
                     if (dist > 0) {
                       const colStep = Math.round(dx / dist);
                       const rowStep = Math.round(dy / dist);
-                      adjCol = targetPos.col + colStep;
-                      adjRow = targetPos.row + rowStep;
+                      adjCol = targetTileCol + colStep;
+                      adjRow = targetTileRow + rowStep;
                     }
-                    const swingDx = targetPos.col - adjCol;
-                    const swingDy = targetPos.row - adjRow;
+                    const swingDx = targetTileCol - adjCol;
+                    const swingDy = targetTileRow - adjRow;
                     const baseAngle = Math.atan2(swingDy, swingDx) * (180 / Math.PI);
                     const adjDist = Math.sqrt(swingDx * swingDx + swingDy * swingDy);
                     const halfDistPx = (adjDist * 100) / 2;

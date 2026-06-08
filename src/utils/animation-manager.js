@@ -1112,7 +1112,6 @@ export function AnimationManager(){
             case 'induce_fear':
             case 'defensive_stance':
             case 'shield_wall':
-            case 'cleave':
             case 'leap_attack':
             case 'disintegrate':
             case 'one_man_army':
@@ -1133,7 +1132,6 @@ export function AnimationManager(){
                 else if (type === 'acid_blast') iconKey = 'wizard_acid_blast';
                 else if (type === 'defensive_stance') iconKey = 'soldier_defensive_stance';
                 else if (type === 'claw_strike') iconKey = 'claw_strike_animation';
-                else if (type === 'cleave') iconKey = 'barbarian_cleave';
                 else if (type === 'leap_attack') iconKey = 'barbarian_leap_attack';
                 else if (type === 'disintegrate') iconKey = 'wizard_disintegrate';
                 else if (type === 'one_man_army') iconKey = 'soldier_one_man_army';
@@ -1162,16 +1160,23 @@ export function AnimationManager(){
                 }, this.animationsMatrix[type].duration);
             }
                 break;
-            case 'void lance': {
-                if (sourceTileId == null || targetTileId == null) break;
-                const beamColor = 'purple';
-                this.straightBeamTo(targetTileId, sourceTileId, beamColor)
-                    .then(() => {
-                        // this.rippleAnimation(targetTileId, beamColor);
-                    })
-                    .catch(() => {
-                        // Best-effort visuals only.
-                    });
+            case 'cleave': {
+                const targetTile = this.tiles.find(e => e.id === targetTileId);
+                const tileToAnimate = targetTile || animationTile;
+                tileToAnimate.animationType = type;
+                tileToAnimate.transitionType = 'fade';
+                tileToAnimate.animationData = {
+                    icon: data.icon || images['barbarian_cleave'] || images[type],
+                    duration: this.animationsMatrix[type].duration,
+                    facing
+                };
+                this.update();
+                setTimeout(() => {
+                    tileToAnimate.animationType = null;
+                    tileToAnimate.transitionType = null;
+                    tileToAnimate.animationData = {};
+                    this.update();
+                }, this.animationsMatrix[type].duration);
             }
                 break;
             default: {

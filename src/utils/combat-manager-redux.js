@@ -141,7 +141,13 @@ export function CombatManagerRedux() {
     this.applyEnduranceCost = (unit, cost = this.ACTION_ENDURANCE_COST, source = 'action') => {
         if (!unit) return;
         if ((unit.endurance || 0) <= 0 && unit.exhausted) return;
-        unit.endurance = Math.max(0, (unit.endurance || 0) - cost);
+
+        let actualCost = cost;
+        if (unit.activeDebuffs && unit.activeDebuffs.some(d => d.name === 'shadow_curse')) {
+            actualCost = cost * 3;
+        }
+
+        unit.endurance = Math.max(0, (unit.endurance || 0) - actualCost);
         if (unit.endurance > 0) return;
 
         const longDuration = getDurationRounds('long');
@@ -443,8 +449,33 @@ export function CombatManagerRedux() {
             this._setCombatantOccupiedCoords(fighter);
         });
 
+        const m = this.data.monster;
+        const isHuge = (
+            (typeof m.huge === 'boolean' && m.huge === true)
+            || (m.type === 'dragon')
+            || (m.tier === 4)
+            || (typeof m.size === 'number' && m.size === 3)
+            || (typeof m.scale === 'number' && m.scale === 3)
+        );
+        const LARGE_COMBAT_KEYS = ['dragon', 'beholder', 'ogre', 'sphinx', 'manticore', 'wyvern', 'wyvern_alt', 'mummy', 'djinn', 'vampire', 'summoned_djinn', 'summoned_mummy', 'summoned_ogre', 'summoned_vampire'];
+        const isLarge = (
+            !isHuge && (
+                (typeof m.large === 'boolean' && m.large === true)
+                || (m.type && LARGE_COMBAT_KEYS.includes(m.type) && m.isMinion !== true)
+                || (typeof m.size === 'number' && m.size >= 2)
+                || (typeof m.scale === 'number' && m.scale >= 2)
+                || (m.isMonster === true && m.isMinion !== true)
+            )
+        );
+
+        let monsterY = 2;
+        const minionCount = this.data.minions ? this.data.minions.length : 0;
+        if ((isHuge || isLarge) && minionCount <= 2) {
+            monsterY = 3;
+        }
+
         // Set up main monster
-        this.data.monster.coordinates = { x: MAX_DEPTH, y: 2 };
+        this.data.monster.coordinates = { x: MAX_DEPTH, y: monsterY };
         this.data.monster.isMonster = true;
         const monster = createFighter(this.data.monster, callbacks, this.FIGHT_INTERVAL);
         monster.isMonster = true;
@@ -461,11 +492,16 @@ export function CombatManagerRedux() {
 
         // Set up minions
         if (this.data.minions) {
-            const monsterLane = this.data.monster.coordinates.y;
-            const monsterVirtualLane = monsterLane - 1;
+            const occupiedLanes = [monsterY];
+            if (isHuge) {
+                occupiedLanes.push(monsterY - 1);
+                occupiedLanes.push(monsterY - 2);
+            } else if (isLarge) {
+                occupiedLanes.push(monsterY - 1);
+            }
             const availableLanes = [];
             for (let i = MAX_LANES - 1; i >= 0; i--) {
-                if (i !== monsterLane && i !== monsterVirtualLane) availableLanes.push(i);
+                if (!occupiedLanes.includes(i)) availableLanes.push(i);
             }
 
             this.data.minions.forEach((e, i) => {
@@ -650,7 +686,9 @@ export function CombatManagerRedux() {
 
     this.isTileOccupied = (x, y, excludeUnitId = null) => {
         return Object.values(this.combatants).some(c => {
-            if (!c || c.dead || c.id === excludeUnitId) return false;
+            if (!c || c.dead) return false;
+            if (c.id === excludeUnitId) return false;
+            if (c.isVCT && c.parentMonsterId === excludeUnitId) return false;
             if (c.coordinates && c.coordinates.x === x && c.coordinates.y === y) return true;
             if (Array.isArray(c.occupiedCoords) && c.occupiedCoords.some(coord => coord.x === x && coord.y === y)) return true;
             return false;
@@ -713,10 +751,20 @@ export function CombatManagerRedux() {
     };
 
     this.updateUnitCoordinates = (unit, nx, ny) => {
+        const ox = unit.coordinates.x;
+        const oy = unit.coordinates.y;
         unit.coordinates.x = nx;
         unit.coordinates.y = ny;
         this._setCombatantOccupiedCoords(unit, this.combatants);
         this.syncVCTs();
+
+        // If Sage has Circle active and actually moved/repositioned, end the Circles immediately
+        if (unit.type === 'sage' && (ox !== nx || oy !== ny)) {
+            const hasCircle = unit.activeBuffs && unit.activeBuffs.some(b => b.name === 'circle_of_protection' || b.name === 'circle_of_deflection');
+            if (hasCircle) {
+                this._endSageCircles(unit, 'Sage moved');
+            }
+        }
     };
 
     this.hitCheck = (caller, target) => {
@@ -923,6 +971,31 @@ export function CombatManagerRedux() {
     };
 
     this.targetKilled = (target) => {
+        // Special: if the trial effect icon is destroyed, trigger death animation then end trials
+        if (target && target.isTrialIcon) {
+            // Mark dying so CombatGrid renders the death animation
+            if (this.combatants['trials_icon']) {
+                this.combatants['trials_icon'].dying = true;
+                this.combatants['trials_icon'].dead = true; // Mark dead immediately so combat count filters it out
+                if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+            }
+            // Delay actual cleanup so the 2.5s death animation plays out
+            setTimeout(() => {
+                if (this.combatOver && Object.keys(this.combatants).length === 0) return; // already reset
+                const sphinx = this._getSphinx();
+                if (sphinx) {
+                    this._endTrials(sphinx, 'trial icon destroyed');
+                } else {
+                    delete this.combatants['trials_icon'];
+                    Object.values(this.combatants).forEach(c => {
+                        if (c && typeof c.inTrial === 'number') this._returnFromTrial(c);
+                    });
+                }
+                this.combatOverCheck(); // Trigger combat over check after trials end and fighters return!
+            }, 2500);
+            return;
+        }
+
         if (this.tryTriggerReassemble(target)) {
             return;
         }
@@ -930,9 +1003,40 @@ export function CombatManagerRedux() {
             return;
         }
         target.dead = true;
+
+        const isSphinx = target && (target.type === 'sphinx' || target.key === 'sphinx' || (target.id && target.id.toString().includes('sphinx')));
+        if (isSphinx) {
+            const trialsIcon = this.combatants['trials_icon'];
+            if (trialsIcon && !trialsIcon.dead) {
+                // Mark trial icon dying/dead immediately so it plays the death/fade animation
+                // and gets excluded from combatOverCheck monsters count.
+                trialsIcon.dying = true;
+                trialsIcon.dead = true;
+                
+                // Return all crew members in trial immediately so their state is saved correctly on game over.
+                Object.values(this.combatants).forEach(c => {
+                    if (c && typeof c.inTrial === 'number') {
+                        this._returnFromTrial(c);
+                    }
+                });
+                
+                if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+                
+                setTimeout(() => {
+                    if (this.combatOver && Object.keys(this.combatants).length === 0) return; // already reset
+                    this._endTrials(target, 'Sphinx was defeated');
+                    this.combatOverCheck();
+                }, 2500);
+            }
+        }
+
         target.locked = true;
         target.deathRemovalScheduled = true;
         this.appendCombatLog(`${this.getCombatantLogName(target)} has been defeated.`);
+
+        if (target.type === 'sage') {
+            this._endSageCircles(target, 'Sage was defeated');
+        }
 
         // Decrement Resolve by 10 on crew member death
         if (target && !target.isMonster) {
@@ -954,6 +1058,7 @@ export function CombatManagerRedux() {
         }, this.DEATH_ANIMATION_MS);
         this.combatOverCheck();
     };
+
 
     this.tryTriggerReassemble = (combatant) => {
         if (!combatant) return false;
@@ -1008,13 +1113,13 @@ export function CombatManagerRedux() {
         if (!crewAlive) {
             this.combatOver = true;
             this.appendCombatLog('Defeat! The crew has fallen.');
-            if (this.gameOver) this.gameOver(false);
+            if (this.gameOver) this.gameOver('monstersWin');
             return true;
         }
         if (!monstersAlive) {
             this.combatOver = true;
             this.appendCombatLog('Victory! All enemies defeated.');
-            if (this.gameOver) this.gameOver(true);
+            if (this.gameOver) this.gameOver('crewWins');
             return true;
         }
         return false;
@@ -1041,8 +1146,19 @@ export function CombatManagerRedux() {
         if (!unit || !target) return;
 
         const sourceTileId = this.animationManager.getTileIdByCoords(unit.coordinates);
-        const targetTileId = this.animationManager.getTileIdByCoords(target.coordinates);
-        const facing = target.coordinates.x >= unit.coordinates.x ? 'right' : 'left';
+        let targetCoords = target.coordinates;
+        if (target.occupiedCoords && target.occupiedCoords.length > 0) {
+            let minDistance = Infinity;
+            target.occupiedCoords.forEach(tc => {
+                const dist = Math.abs(unit.coordinates.x - tc.x) + Math.abs(unit.coordinates.y - tc.y);
+                if (dist < minDistance) {
+                    minDistance = dist;
+                    targetCoords = tc;
+                }
+            });
+        }
+        const targetTileId = this.animationManager.getTileIdByCoords(targetCoords);
+        const facing = targetCoords.x >= unit.coordinates.x ? 'right' : 'left';
 
         let rawName = '';
         if (ability) {
@@ -1148,11 +1264,7 @@ export function CombatManagerRedux() {
     // ── Round Turn Processing ─────────────────────────────────────────────────
     // Stagger AI turns by initiative (speed/dexterity); tick down buff durations.
     this.processRoundTurns = () => {
-        const activeUnits = Object.values(this.combatants).filter(c => c && !c.dead && !c.isVCT);
-        this.appendCombatLog(`DEBUG: processRoundTurns. activeUnits count: ${activeUnits.length}`);
-        if (activeUnits.length > 0) {
-            this.appendCombatLog(`DEBUG: activeUnits: ${activeUnits.map(u => `${u.name} (${u.type})`).join(', ')}`);
-        }
+        const activeUnits = Object.values(this.combatants).filter(c => c && !c.dead && !c.isVCT && !c.skipAI && typeof c.inTrial !== 'number');
 
         // Sort by speed/dexterity descending (higher dex acts first)
         activeUnits.sort((a, b) => {
@@ -1222,7 +1334,10 @@ export function CombatManagerRedux() {
                     if (unit && !unit.isMonster) {
                         const meta = getMeta();
                         const resolve = (meta && typeof meta.resolve === 'number') ? meta.resolve : 100;
-                        if (resolve < 20 && Math.random() < 0.10) {
+                        // Inspired units are immune to resolve breaks
+                        const isInspired = unit.inspiredActive ||
+                            (unit.activeBuffs && unit.activeBuffs.some(b => b.name === 'Inspire'));
+                        if (!isInspired && resolve < 20 && Math.random() < 0.10) {
                             this.appendCombatLog(`${this.getCombatantLogName(unit)}'s resolve is broken! They refuse to act this turn.`);
                             if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
                             return;
@@ -1248,8 +1363,21 @@ export function CombatManagerRedux() {
             if (buff.roundsLeft <= 0) {
                 // Revert stat changes when buff expires
                 this._revertBuff(unit, buff);
-                this.appendCombatLog(`${this.getCombatantLogName(unit)}'s ${buff.name} has worn off.`);
+                // Clear inspire flag on expiry
+                if (buff.name === 'Inspire') {
+                    unit.inspiredActive = false;
+                    this.appendCombatLog(`${this.getCombatantLogName(unit)} is no longer Inspired.`);
+                } else {
+                    this.appendCombatLog(`${this.getCombatantLogName(unit)}'s ${buff.name} has worn off.`);
+                }
                 return false;
+            }
+            // Per-round Inspire effects: endurance regen + flag
+            if (buff.name === 'Inspire') {
+                unit.inspiredActive = true;
+                const regenAmt = Math.round((unit.maxEndurance || 100) * 0.10);
+                unit.endurance = Math.min(unit.maxEndurance || 100, (unit.endurance || 0) + regenAmt);
+                this.appendCombatLog(`${this.getCombatantLogName(unit)} is Inspired — stamina restored by ${regenAmt}.`);
             }
             buff.roundsLeft--;
             return true;
@@ -1304,6 +1432,28 @@ export function CombatManagerRedux() {
                 unit.markedTotalDurationMs = 0;
                 unit.markedEndTimeMs = 0;
                 this.appendCombatLog(`${this.getCombatantLogName(unit)}'s mark has expired.`);
+            }
+        }
+        if (unit.hexed && typeof unit.hexRounds === 'number') {
+            unit.hexRounds--;
+            if (unit.hexRounds <= 0) {
+                unit.hexed = false;
+                unit.hexRounds = 0;
+                this.appendCombatLog(`${this.getCombatantLogName(unit)}'s Hex has expired.`);
+            }
+        }
+        if (unit.polymorphed && typeof unit.polymorphRounds === 'number') {
+            unit.polymorphRounds--;
+            if (unit.polymorphRounds <= 0) {
+                unit.polymorphed = false;
+                unit.polymorphRounds = 0;
+                unit.stunned = false;
+                unit.stunnedRounds = 0;
+                unit.stunnedTotalRounds = 0;
+                unit.stunnedStackDuration = 0;
+                unit.stunnedTotalDurationMs = 0;
+                unit.stunnedEndTimeMs = 0;
+                this.appendCombatLog(`${this.getCombatantLogName(unit)} is no longer polymorphed.`);
             }
         }
         if (unit.poison && typeof unit.poisonRounds === 'number') {
@@ -1436,6 +1586,7 @@ export function CombatManagerRedux() {
             case 'ranger':   return this._aiRanger(unit);
             case 'summoner': return this._aiSummoner(unit);
             case 'vampire':  return this._aiVampire(unit);
+            case 'sphinx':   return this._aiSphinx(unit);
             default:         return this._aiGeneric(unit);
         }
     };
@@ -1847,7 +1998,26 @@ export function CombatManagerRedux() {
             }
         }
 
-        // Priority 2: Force back to push enemies away
+        // Priority 2: Inspire — use when: ability is ready AND (resolve is low OR any ally has low endurance)
+        if (this._abilityReady(unit, 'inspire')) {
+            const meta = getMeta();
+            const partyResolve = (meta && typeof meta.resolve === 'number') ? meta.resolve : 100;
+            const allies = Object.values(this.combatants).filter(
+                c => c && !c.dead && !c.isMonster && !c.isMinion && c.id !== unit.id
+            );
+            const anyAllyLowEndurance = allies.some(
+                c => (c.endurance || 0) < (c.maxEndurance || 100) * 0.5
+            );
+            const shouldInspire = partyResolve < 60 || anyAllyLowEndurance || allies.length >= 2;
+            if (shouldInspire) {
+                const pick = this.resolveSpecial(unit, 'inspire') || {
+                    id: 'inspire', name: 'Inspire', cooldown: 10, range: 'medium', duration: 'long'
+                };
+                return this.useAbility(unit, pick, unit);
+            }
+        }
+
+        // Priority 3: Force back to push enemies away
         if (this._abilityReady(unit, 'force_back') && this.targetInRange(unit, target, 'close')) {
             const pick = this.resolveSpecial(unit, 'force_back');
             if (pick) {
@@ -2150,7 +2320,67 @@ export function CombatManagerRedux() {
             }
         }
 
-        // Priority 3: Perceive (doubles weakness of all enemies for 2x-long duration: 8 rounds)
+        // Priority 3: Circle of Deflection (tier 3) — teal ranged-deflection barrier
+        if (this.round > 1 && this._abilityReady(unit, 'circle_of_deflection')) {
+            const pick = this.resolveSpecial(unit, 'circle_of_deflection');
+            if (pick) {
+                // Reposition to cover max allies (same scoring as COP)
+                const candidates = [
+                    { x: unit.coordinates.x, y: unit.coordinates.y },
+                    { x: unit.coordinates.x + 1, y: unit.coordinates.y },
+                    { x: unit.coordinates.x - 1, y: unit.coordinates.y },
+                    { x: unit.coordinates.x, y: unit.coordinates.y + 1 },
+                    { x: unit.coordinates.x, y: unit.coordinates.y - 1 }
+                ];
+                const getScore = (nx, ny) => {
+                    let score = 0;
+                    Object.values(this.combatants).forEach(c => {
+                        const sameTeam = (!!unit.isMonster === !!c.isMonster);
+                        if (!sameTeam) return;
+                        const dx = c.coordinates.x - nx;
+                        const dy = c.coordinates.y - ny;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist < 1.9) score += 2;
+                        else if (dist <= 2.25) score += 1;
+                    });
+                    return score;
+                };
+                let bestTile = { x: unit.coordinates.x, y: unit.coordinates.y };
+                let maxScore = getScore(bestTile.x, bestTile.y);
+                if (!unit.ensnared && !unit.shieldWallActive && unit.movesTakenThisRound < 1) {
+                    candidates.forEach(cand => {
+                        if (cand.x < 0 || cand.x > MAX_DEPTH || cand.y < 0 || cand.y >= MAX_LANES) return;
+                        if (cand.x !== unit.coordinates.x || cand.y !== unit.coordinates.y) {
+                            if (!this.canFitAt(unit, cand.x, cand.y)) return;
+                        }
+                        const score = getScore(cand.x, cand.y);
+                        if (score > maxScore) { maxScore = score; bestTile = cand; }
+                    });
+                }
+                if (bestTile.x !== unit.coordinates.x || bestTile.y !== unit.coordinates.y) {
+                    this.updateUnitCoordinates(unit, bestTile.x, bestTile.y);
+                    unit.movesTakenThisRound += 1;
+                    this.applyEnduranceCost(unit, this.MOVE_ENDURANCE_COST, 'move');
+                    this.appendCombatLog(`${this.getCombatantLogName(unit)} repositions to optimize Circle of Deflection.`);
+                }
+                const dur = getDurationRounds(pick.duration || 'long');
+                Object.values(this.combatants).forEach(c => {
+                    const sameTeam = (!!unit.isMonster === !!c.isMonster);
+                    if (!sameTeam) return;
+                    this._applyBuff(c, pick.buff || {}, 'circle_of_deflection', dur);
+                });
+                this.appendCombatLog(`${this.getCombatantLogName(unit)} erects a Circle of Deflection — ranged attacks may be reflected!`);
+                this._setCooldown(unit, 'circle_of_deflection', pick.cooldown || 14);
+                unit.actionsTakenThisRound += 1;
+                if (this.animManagerRedux && typeof this.animManagerRedux.triggerAbility === 'function') {
+                    this.animManagerRedux.triggerAbility(unit.coordinates, unit.coordinates, 'circle_of_deflection', false, null, unit.id);
+                }
+                if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+                return;
+            }
+        }
+
+        // Priority 4: Perceive (doubles weakness of all enemies for 2x-long duration: 8 rounds)
         if (this._abilityReady(unit, 'perceive')) {
             const pick = this.resolveSpecial(unit, 'perceive');
             if (pick) {
@@ -2174,11 +2404,16 @@ export function CombatManagerRedux() {
             }
         }
 
-        // Fallback: stay at range and basic attack
-        this.acquireTarget(unit, true);
-        const target = this.combatants[unit.targetId];
-        if (target) {
-            this._basicAttack(unit, target);
+        // Fallback: stay near allies and pass turn (Sage has no basic attacks)
+        const circleActive = unit.activeBuffs && unit.activeBuffs.some(b => b.name === 'circle_of_protection' || b.name === 'circle_of_deflection');
+        if (woundedAlly && unit.movesTakenThisRound < 1 && !unit.ensnared && !circleActive) {
+            this.moveCloser(unit, woundedAlly);
+            this.appendCombatLog(`${this.getCombatantLogName(unit)} moves to support ${this.getCombatantLogName(woundedAlly)}.`);
+        }
+        
+        // Pass action
+        if (unit.actionsTakenThisRound < 1) {
+            unit.actionsTakenThisRound += 1;
         }
     };
 
@@ -2398,6 +2633,7 @@ export function CombatManagerRedux() {
             type: minionType,
             name: minionType.replace(/_/g, ' '),
             isMinion: true,
+            isMonster: !!unit.isMonster,
             dead: false,
             coordinates: { ...freeTile },
             hp: hpBase,
@@ -2420,6 +2656,7 @@ export function CombatManagerRedux() {
 
         this.combatants[minionId] = newMinion;
         this._setCombatantOccupiedCoords(newMinion);
+        this._triggerEagleEyePassives(newMinion);
         this._setCooldown(unit, abilityKey, ability.cooldown || 8);
         unit.actionsTakenThisRound += 1;
         this.appendCombatLog(`${this.getCombatantLogName(unit)} summons a ${newMinion.name}!`);
@@ -2488,6 +2725,7 @@ export function CombatManagerRedux() {
                 s => s !== 'summoner_duplicate' && s !== 'summoner_triplicate'
             );
             this.combatants[copyId] = copy;
+            this._triggerEagleEyePassives(copy);
             spawned++;
             this.appendCombatLog(`${this.getCombatantLogName(unit)} duplicates a ${source.name}!`);
 
@@ -2515,6 +2753,377 @@ export function CombatManagerRedux() {
         if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
     };
 
+    // SPHINX: priority is Hex, then Trials, then Claw Strike or Polymorph, with post-claw retreat.
+    this._aiSphinx = (unit) => {
+        this.acquireTarget(unit, true);
+        const target = this.combatants[unit.targetId];
+        if (!target) return;
+
+        const hexSpec = this.resolveSpecial(unit, 'hex');
+        const trialsSpec = this.resolveSpecial(unit, 'begin_the_trials');
+        const clawSpec = this.resolveSpecial(unit, 'claw_strike') || { id: 'claw_strike', range: 'close', type: 'damage' };
+        const polymorphSpec = this.resolveSpecial(unit, 'polymorph');
+
+        const hexReady = hexSpec && this._abilityReady(unit, 'hex');
+        const trialsReady = trialsSpec && this._abilityReady(unit, 'begin_the_trials') && !this.combatants['trials_icon'];
+        const clawReady = clawSpec && this._abilityReady(unit, 'claw_strike');
+        const polymorphReady = polymorphSpec && this._abilityReady(unit, 'polymorph');
+
+        // Helper function for post-claw-strike retreat
+        const attemptClawRetreat = () => {
+            if (unit.movesTakenThisRound < 1) {
+                const currentX = unit.coordinates.x;
+                const currentY = unit.coordinates.y;
+                let retreatDest = null;
+                const candidateOffsets = [
+                    { dx: 2, dy: 0 }, { dx: 2, dy: -1 }, { dx: 2, dy: 1 },
+                    { dx: 1, dy: 0 }, { dx: 1, dy: -1 }, { dx: 1, dy: 1 }
+                ];
+                for (const offset of candidateOffsets) {
+                    const rx = currentX + offset.dx;
+                    const ry = currentY + offset.dy;
+                    if (rx >= 0 && rx <= MAX_DEPTH && ry >= 0 && ry < MAX_LANES) {
+                        if (this.canFitAt(unit, rx, ry)) {
+                            retreatDest = { x: rx, y: ry };
+                            break;
+                        }
+                    }
+                }
+                if (retreatDest) {
+                    this.updateUnitCoordinates(unit, retreatDest.x, retreatDest.y);
+                    unit.movesTakenThisRound += 1;
+                    this.applyEnduranceCost(unit, this.MOVE_ENDURANCE_COST, 'retreat');
+                    this.appendCombatLog(`${this.getCombatantLogName(unit)} retreats back to (${retreatDest.x}, ${retreatDest.y}) to maintain distance.`);
+                }
+            }
+        };
+
+        // 1. Prioritize Hex
+        if (hexReady) {
+            if (this.targetInRange(unit, target, hexSpec.range || 'medium')) {
+                this.useAbility(unit, hexSpec, target);
+                return;
+            } else if (unit.movesTakenThisRound < 1) {
+                this.moveCloser(unit, target);
+                if (this.targetInRange(unit, target, hexSpec.range || 'medium')) {
+                    this.useAbility(unit, hexSpec, target);
+                }
+                return;
+            }
+        }
+
+        // 2. Prioritize Trials (Begin the Trials)
+        if (trialsReady) {
+            const liveFighters = Object.values(this.combatants).filter(
+                c => c && !c.dead && !c.isMonster && !c.isMinion && !c.isVCT && !c.inTrial
+            );
+            if (liveFighters.length >= 1) {
+                const anchorCoords = this._getSphinxAnchorCoords(unit);
+                const topRow = anchorCoords ? anchorCoords.y : unit.coordinates.y;
+
+                if (topRow >= 2) {
+                    this.useAbility(unit, trialsSpec, unit);
+                    return;
+                } else if (unit.movesTakenThisRound < 1) {
+                    const newY = unit.coordinates.y + 1;
+                    const newX = unit.coordinates.x;
+                    if (this.canFitAt(unit, newX, newY)) {
+                        this.updateUnitCoordinates(unit, newX, newY);
+                        unit.movesTakenThisRound += 1;
+                        this.appendCombatLog(`${this.getCombatantLogName(unit)} repositions to make room for the Trials.`);
+                        return;
+                    }
+                }
+            }
+        }
+
+        // 3. Claw Strike (close range) or Polymorph (medium range)
+        const adjacent = this.targetInRange(unit, target, 'close');
+        if (adjacent && clawReady) {
+            this.useAbility(unit, clawSpec, target);
+            attemptClawRetreat();
+            return;
+        }
+
+        const mediumRange = this.targetInRange(unit, target, 'medium');
+        if (mediumRange && polymorphReady) {
+            this.useAbility(unit, polymorphSpec, target);
+            return;
+        }
+
+        // 4. Movement and Fallback
+        if (unit.movesTakenThisRound < 1) {
+            this.moveCloser(unit, target);
+            
+            // Re-evaluate in range options after moving
+            const nowAdjacent = this.targetInRange(unit, target, 'close');
+            if (nowAdjacent && clawReady) {
+                this.useAbility(unit, clawSpec, target);
+                attemptClawRetreat();
+                return;
+            }
+            const nowMedium = this.targetInRange(unit, target, 'medium');
+            if (nowMedium && polymorphReady) {
+                this.useAbility(unit, polymorphSpec, target);
+                return;
+            }
+        }
+
+        // Fall through to generic scored ability selection or basic attack
+        const scored = this._scoredAbilityPick(unit, target);
+        const rangeType = scored ? (scored.resolved.range || 'medium') : 'medium';
+        const finalInRange = this.targetInRange(unit, target, rangeType);
+
+        if (finalInRange) {
+            if (scored && scored.resolved.id !== 'begin_the_trials') {
+                this.useAbility(unit, scored.resolved, target);
+            } else {
+                this._basicAttack(unit, target);
+            }
+        } else if (unit.movesTakenThisRound < 1) {
+            this.moveCloser(unit, target);
+        }
+    };
+
+
+    // ── Trials Helper Methods ─────────────────────────────────────────────────
+
+    /** Get the Sphinx unit from combatants (first found) */
+    this._getSphinx = () => {
+        return Object.values(this.combatants).find(
+            c => c && (c.type === 'sphinx' || c.key === 'sphinx' || (c.id && c.id.toString().includes('sphinx')))
+        ) || null;
+    };
+
+    /**
+     * Returns the best coordinates to anchor the trials icon above the Sphinx.
+     * Uses the top-left tile of the Sphinx's 2x2 block.
+     */
+    this._getSphinxAnchorCoords = (sphinx) => {
+        if (!sphinx) return null;
+        if (Array.isArray(sphinx.occupiedCoords) && sphinx.occupiedCoords.length > 0) {
+            // Topmost, leftmost occupied tile
+            const sorted = [...sphinx.occupiedCoords].sort((a, b) =>
+                a.y !== b.y ? a.y - b.y : a.x - b.x
+            );
+            return sorted[0];
+        }
+        return sphinx.coordinates || null;
+    };
+
+    /**
+     * Willpower check: returns true if the fighter FAILS the check (is sent to trial).
+     * Medium power = ~55% base fail rate, modified by wits differential.
+     */
+    this._willpowerCheck = (fighter, sphinx) => {
+        const fighterWP = (fighter.stats && (fighter.stats.wits || fighter.stats.int)) || 10;
+        const sphinxWP  = (sphinx.stats && (sphinx.stats.wits || sphinx.stats.int)) || 15;
+        const diff = sphinxWP - fighterWP; // positive = sphinx stronger
+        // Base fail rate 55% (medium power mentality effect), 2% shift per point diff
+        const failChance = Math.min(0.90, Math.max(0.15, 0.55 + diff * 0.02));
+        return Math.random() < failChance; // true = fail = sent to trial
+    };
+
+    this._endSageCircles = (sageUnit, reason) => {
+        this.appendCombatLog(`The Sage's circle collapses because: ${reason}.`);
+        Object.values(this.combatants).forEach(c => {
+            if (!c || c.dead || c.isVCT) return;
+            const sameTeam = (!!sageUnit.isMonster === !!c.isMonster);
+            if (!sameTeam) return;
+            if (c.activeBuffs) {
+                const hadCircle = c.activeBuffs.some(b => b.name === 'circle_of_protection' || b.name === 'circle_of_deflection');
+                if (hadCircle) {
+                    c.activeBuffs = c.activeBuffs.filter(b => b.name !== 'circle_of_protection' && b.name !== 'circle_of_deflection');
+                }
+            }
+        });
+        if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+    };
+
+    /** Remove a fighter from the grid and send them to a trial */
+    this._sendToTrial = (fighter, trialIndex) => {
+        fighter.inTrial = trialIndex;              // 0=first, 1=second, 2=third
+        fighter.trialSuccesses = 0;
+        fighter.preTrialCoordinates = { ...fighter.coordinates };
+        // Move them off-grid (large negative coordinate so they're hidden)
+        fighter.coordinates = { x: -99, y: -99 + trialIndex };
+        fighter.inTrialSince = this.round;
+
+        if (fighter.type === 'sage') {
+            this._endSageCircles(fighter, 'Sage was seized by the Trial');
+        } else {
+            // If the fighter has Circle of Protection active, dispel it immediately —
+            // a combatant ripped from the battlefield cannot maintain the barrier.
+            if (fighter.activeBuffs && fighter.activeBuffs.some(b => b.name === 'circle_of_protection')) {
+                fighter.activeBuffs = fighter.activeBuffs.filter(b => b.name !== 'circle_of_protection');
+                this.appendCombatLog(`${this.getCombatantLogName(fighter)}'s Circle of Protection is dispelled as they are seized by the Trial!`);
+            }
+            // Likewise dispel Circle of Deflection
+            if (fighter.activeBuffs && fighter.activeBuffs.some(b => b.name === 'circle_of_deflection')) {
+                fighter.activeBuffs = fighter.activeBuffs.filter(b => b.name !== 'circle_of_deflection');
+                this.appendCombatLog(`${this.getCombatantLogName(fighter)}'s Circle of Deflection is dispelled as they are seized by the Trial!`);
+            }
+        }
+
+        this.appendCombatLog(`${this.getCombatantLogName(fighter)} has been seized by the ${trialIndex === 0 ? 'First' : trialIndex === 1 ? 'Second' : 'Third'} Trial!`);
+        if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+    };
+
+    /** Return a fighter from their trial back to the board */
+    this._returnFromTrial = (fighter) => {
+        const trialIndex = fighter.inTrial;
+        const returnCoords = fighter.preTrialCoordinates || fighter.coordinates;
+
+        fighter.coordinates = returnCoords;
+        delete fighter.inTrial;
+        delete fighter.trialSuccesses;
+        delete fighter.preTrialCoordinates;
+        delete fighter.inTrialSince;
+
+        const trialNames = ['First', 'Second', 'Third'];
+        this.appendCombatLog(`${this.getCombatantLogName(fighter)} has survived the ${trialNames[trialIndex] || ''} Trial and returned!`);
+
+        // Trigger return overlay animation
+        if (this.animManagerRedux && typeof this.animManagerRedux.triggerReturnFromTrial === 'function') {
+            this.animManagerRedux.triggerReturnFromTrial(returnCoords, trialIndex);
+        }
+        if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+    };
+
+    /** End all active trials (destroy icon, return all off-board fighters) */
+    this._endTrials = (sphinx, reason) => {
+        this.appendCombatLog(`The Trials of the Sphinx have ended (${reason || 'completed'}).`);
+
+        // Return all fighters still in a trial
+        Object.values(this.combatants).forEach(c => {
+            if (c && typeof c.inTrial === 'number') {
+                this._returnFromTrial(c);
+            }
+        });
+
+        // Remove the trials icon pseudo-combatant
+        if (this.combatants['trials_icon']) {
+            if (this.animManagerRedux && typeof this.animManagerRedux.triggerTrialIconDestroy === 'function') {
+                const anchorCoords = this._getSphinxAnchorCoords(sphinx);
+                if (anchorCoords) this.animManagerRedux.triggerTrialIconDestroy(anchorCoords);
+            }
+            delete this.combatants['trials_icon'];
+        }
+
+        // Clear trial schedule on sphinx
+        if (sphinx) {
+            sphinx.trialsActive = null;
+        }
+
+        if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+    };
+
+    /**
+     * Fire a single trial beam at a random fighter.
+     * If the fighter fails the willpower check, they go to the trial.
+     * @param {object} sphinx
+     * @param {number} phaseIndex  0, 1, or 2
+     */
+    this._beginTrialPhase = (sphinx, phaseIndex) => {
+        if (!sphinx || sphinx.dead) return;
+        if (!this.combatants['trials_icon']) return; // trials already ended
+
+        const liveFighters = Object.values(this.combatants).filter(
+            c => c && !c.dead && !c.isMonster && !c.isMinion && !c.isVCT
+                && typeof c.inTrial !== 'number' // not already in a trial
+        );
+
+        if (liveFighters.length === 0) {
+            // No targets; end trials
+            this._endTrials(sphinx, 'no targets remaining');
+            return;
+        }
+
+        // Pick a random fighter
+        const targetFighter = liveFighters[Math.floor(Math.random() * liveFighters.length)];
+        const trialsIcon = this.combatants['trials_icon'];
+        const srcCoords = trialsIcon && trialsIcon.coordinates 
+            ? { x: trialsIcon.coordinates.x + 0.5, y: trialsIcon.coordinates.y + 0.5 }
+            : this._getSphinxAnchorCoords(sphinx);
+
+        this.appendCombatLog(`The Trial Effect Icon fires a mystical beam at ${this.getCombatantLogName(targetFighter)}!`);
+
+        if (this.animManagerRedux && srcCoords && targetFighter.coordinates) {
+            this.animManagerRedux.triggerAbility(srcCoords, targetFighter.coordinates, 'trials_beam');
+        }
+
+        // After 1s (beam travel), resolve willpower check
+        setTimeout(() => {
+            if (!targetFighter || targetFighter.dead) return;
+            const fails = this._willpowerCheck(targetFighter, sphinx);
+            if (fails) {
+                this._sendToTrial(targetFighter, phaseIndex);
+            } else {
+                this.appendCombatLog(`${this.getCombatantLogName(targetFighter)} resists the Trial beam!`);
+                if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+            }
+        }, 1100);
+    };
+
+    /**
+     * Called each round from incrementRound to:
+     * 1. Check if trial phase schedule is due
+     * 2. Process off-board willpower checks for fighters in trials
+     * 3. Check if trials_icon HP <= 0
+     */
+    this._processTrialRound = () => {
+        const sphinx = this._getSphinx();
+        if (!sphinx || sphinx.dead || !sphinx.trialsActive) return;
+
+        const trialsIcon = this.combatants['trials_icon'];
+        if (!trialsIcon) {
+            sphinx.trialsActive = null;
+            return;
+        }
+
+        // Check icon HP
+        if (trialsIcon.hp <= 0) {
+            this._endTrials(sphinx, 'trial icon destroyed');
+            return;
+        }
+
+        const ta = sphinx.trialsActive;
+        const roundsSinceStart = this.round - ta.startRound;
+
+        // Phase schedule: +1, +3, +5 rounds after start; auto-end at +9
+        const phaseSchedule = [1, 3, 5];
+        phaseSchedule.forEach((offset, phaseIdx) => {
+            if (roundsSinceStart === offset && !ta.phaseFired[phaseIdx]) {
+                ta.phaseFired[phaseIdx] = true;
+                this._beginTrialPhase(sphinx, phaseIdx);
+            }
+        });
+
+        // Auto-end after 9 rounds
+        if (roundsSinceStart >= 9) {
+            this._endTrials(sphinx, 'trials expired');
+            return;
+        }
+
+        // Off-board willpower checks for each fighter currently in a trial
+        Object.values(this.combatants).forEach(fighter => {
+            if (!fighter || typeof fighter.inTrial !== 'number' || fighter.dead) return;
+            const fails = this._willpowerCheck(fighter, sphinx);
+            if (!fails) {
+                fighter.trialSuccesses = (fighter.trialSuccesses || 0) + 1;
+                const trialNames = ['First', 'Second', 'Third'];
+                this.appendCombatLog(`${this.getCombatantLogName(fighter)} passes a willpower check in the ${trialNames[fighter.inTrial] || ''} Trial (${fighter.trialSuccesses}/2 successes).`);
+                if (fighter.trialSuccesses >= 2) {
+                    this._returnFromTrial(fighter);
+                }
+            } else {
+                this.appendCombatLog(`${this.getCombatantLogName(fighter)} fails their willpower check in the Trial.`);
+            }
+        });
+
+        if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+    };
+
     // GENERIC: Used for monsters and unrecognized unit types
     this._aiGeneric = (unit) => {
         this.acquireTarget(unit, true);
@@ -2536,6 +3145,7 @@ export function CombatManagerRedux() {
             }
         }
     };
+
 
     // VAMPIRE: relocation, health-drain, debuffing
     this._aiVampire = (unit) => {
@@ -2794,6 +3404,59 @@ export function CombatManagerRedux() {
             }
         }
 
+        if (abilityId === 'begin_the_trials') {
+            // Create the trial effect icon pseudo-combatant
+            const trialHp = Math.max(10, Math.round((unit.hp || 100) / 3));
+
+            // anchorCoords is the topmost, leftmost tile the Sphinx occupies.
+            // The 2×2 icon must spawn ABOVE the Sphinx — 2 rows up from the anchor.
+            // The AI gate (topRow >= 2) already guarantees these rows are on-screen.
+            const anchorCoords = this._getSphinxAnchorCoords(unit);
+            const iconCoords = anchorCoords
+                ? { x: anchorCoords.x, y: anchorCoords.y - 2 }
+                : { x: -10, y: -10 };
+
+            this.combatants['trials_icon'] = {
+                id: 'trials_icon',
+                name: 'Trial Effect',
+                type: 'trials_icon',
+                isTrialIcon: true,
+                isMonster: true,        // so fighters can target it
+                isMinion: true,         // exclude from VCT handling
+                hp: trialHp,
+                maxHp: trialHp,
+                starting_hp: trialHp,
+                coordinates: iconCoords,
+                dead: false,
+                stats: { atk: 0, def: 0, spd: 0 },
+                cooldowns: {},
+                movesTakenThisRound: 0,
+                actionsTakenThisRound: 0,
+                damageIndicators: [],
+                manualControl: false,
+                skipAI: true,
+            };
+
+            this._triggerEagleEyePassives(this.combatants['trials_icon']);
+
+            // Initialize trial schedule on sphinx
+            unit.trialsActive = {
+                startRound: this.round,
+                phaseFired: [false, false, false],
+            };
+
+            this.appendCombatLog(`${this.getCombatantLogName(unit)} begins the Trials of the Sphinx! A mystical Trial Effect Icon appears above the Sphinx.`);
+
+            // Trigger appear animation at the icon's fixed position
+            if (this.animManagerRedux && typeof this.animManagerRedux.triggerTrialIconAppear === 'function' && anchorCoords) {
+                this.animManagerRedux.triggerTrialIconAppear(iconCoords);
+            }
+
+            if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+            return;
+        }
+
+
         if (abilityId === 'monk_meditate') {
             unit.endurance = unit.maxEndurance;
             unit.asleep = false;
@@ -2931,7 +3594,24 @@ export function CombatManagerRedux() {
         const selfBuffDuration = getDurationRounds(ability.duration || 'long');
         const selfBuffDurationMs = getDurationMsFromRounds(selfBuffDuration);
         if (abilityId === 'inspire') {
-            this._applyBuff(unit, { increase_stats: { stats: [] } }, 'Inspire', selfBuffDuration);
+            // Apply Inspire buff to all allied units within medium range (~3 tiles)
+            const inspireRange = 3;
+            const durationRounds = getDurationRounds('long');
+            let inspiredCount = 0;
+            Object.values(this.combatants).forEach(ally => {
+                if (!ally || ally.dead || ally.isMonster || ally.isMinion || ally.isVCT) return;
+                const dx = Math.abs((ally.coordinates?.x || 0) - (unit.coordinates?.x || 0));
+                const dy = Math.abs((ally.coordinates?.y || 0) - (unit.coordinates?.y || 0));
+                if (dx + dy <= inspireRange) {
+                    this._applyBuff(ally, { increase_stats: { stats: [] } }, 'Inspire', durationRounds);
+                    ally.inspiredActive = true;
+                    inspiredCount++;
+                }
+            });
+            // Always inspire self too
+            this._applyBuff(unit, { increase_stats: { stats: [] } }, 'Inspire', durationRounds);
+            unit.inspiredActive = true;
+            this.appendCombatLog(`${this.getCombatantLogName(unit)} Inspires the party! ${inspiredCount} allies are filled with resolve.`);
         }
         if (abilityId === 'monk_ethereal_speed') {
             unit.etherealSpeedActive = true;
@@ -3075,6 +3755,34 @@ export function CombatManagerRedux() {
                 }
 
                 if (finalDmg > 0) {
+                    // ── Circle of Deflection: ranged attacks may reflect back to the attacker ──
+                    const hasCod = target.activeBuffs && target.activeBuffs.some(b => b.name === 'circle_of_deflection');
+                    const isRangedAttack = ability.range && ability.range !== 'close';
+                    if (hasCod && isRangedAttack && !isSelfTarget) {
+                        const sameTeamSage = Object.values(this.combatants).find(c => {
+                            if (!c || c.dead || c.isVCT) return false;
+                            const sameTeam = (!!target.isMonster === !!c.isMonster);
+                            if (!sameTeam || c.type !== 'sage') return false;
+                            const dx = target.coordinates.x - c.coordinates.x;
+                            const dy = target.coordinates.y - c.coordinates.y;
+                            return Math.sqrt(dx * dx + dy * dy) < 1.9;
+                        });
+                        if (sameTeamSage && Math.random() < 0.5) {
+                            // Reflect: damage hits the attacker instead
+                            unit.hp = Math.max(0, unit.hp - finalDmg);
+                            unit.damageIndicators = unit.damageIndicators || [];
+                            unit.damageIndicators.push({
+                                id: Date.now() + Math.random() + h,
+                                value: `-${finalDmg}`,
+                                source: 'Deflected!',
+                                type: 'damage'
+                            });
+                            this.appendCombatLog(`${this.getCombatantLogName(unit)}'s ranged attack is DEFLECTED by the Circle of Deflection! ${finalDmg} damage reflects back!`);
+                            hitsSucceeded++;
+                            if (unit.hp <= 0) this.targetKilled(unit);
+                            return; // skip normal damage application
+                        }
+                    }
                     target.hp = Math.max(0, target.hp - finalDmg);
                     this.wakeSleepingTarget(target, ability.name || this.getCombatActionName(ability));
                     target.damageIndicators = target.damageIndicators || [];
@@ -3120,6 +3828,24 @@ export function CombatManagerRedux() {
                             type: 'crit'
                         });
                         this.appendCombatLog(`${this.getCombatantLogName(unit)} detonates the mark on ${this.getCombatantLogName(target)} for +${markBonus} bonus damage.`);
+                    }
+
+                    if (abilityId === 'hex') {
+                        const dur = getDurationRounds(ability.duration || 'medium');
+                        target.hexed = true;
+                        target.hexRounds = dur;
+                        this._applyDebuff(target, { decrease_stats: { stats: [{ stat: 'atk', amount: 2 }] } }, 'Hexed', dur);
+                        this.appendCombatLog(`${this.getCombatantLogName(target)} is HEXED!`);
+                    }
+
+                    if (abilityId === 'polymorph') {
+                        const dur = getDurationRounds(ability.duration || 'long');
+                        target.polymorphed = true;
+                        target.polymorphRounds = dur;
+                        target.stunned = true;
+                        target.stunnedRounds = dur;
+                        this._applyDebuff(target, { decrease_stats: { stats: [{ stat: 'def', amount: 4 }] } }, 'Polymorphed', dur);
+                        this.appendCombatLog(`${this.getCombatantLogName(target)} is turned into a helpless frog (Polymorphed)!`);
                     }
 
                     if (abilityId === 'fire_blast' || abilityId === 'fireball') {
@@ -3278,6 +4004,9 @@ export function CombatManagerRedux() {
                                 target.fearTotalDurationMs = 0;
                                 target.fearEndTimeMs = 0;
                                 this.appendCombatLog(`${this.getCombatantLogName(target)} is put to sleep!`);
+                            } else if (eff.type === 'shadow_curse') {
+                                this._applyDebuff(target, null, 'shadow_curse', dur);
+                                this.appendCombatLog(`${this.getCombatantLogName(target)} is cursed by shadow!`);
                             }
                         }
                     });
@@ -3300,6 +4029,124 @@ export function CombatManagerRedux() {
                 performHit(h);
             }
         }
+    };
+    
+    this._triggerEagleEyePassives = (summonedUnit) => {
+        if (!summonedUnit || summonedUnit.dead || summonedUnit.hp <= 0) return;
+        const oppositeSideIsMonster = !summonedUnit.isMonster;
+
+        const rangers = Object.values(this.combatants).filter(c =>
+            c &&
+            !c.dead &&
+            (!!c.isMonster === oppositeSideIsMonster) &&
+            Array.isArray(c.passives) &&
+            c.passives.includes('eagle_eye')
+        );
+
+        rangers.forEach(ranger => {
+            this._fireEagleEyeArrows(ranger, summonedUnit);
+        });
+    };
+
+    this._fireEagleEyeArrows = (ranger, target) => {
+        const arrowTypes = ['force', 'ice', 'poison', 'celestial'];
+        const firstArrow = arrowTypes[Math.floor(Math.random() * arrowTypes.length)];
+        const secondArrow = arrowTypes[Math.floor(Math.random() * arrowTypes.length)];
+
+        // Fire first arrow immediately
+        this._fireSingleEagleEyeArrow(ranger, target, firstArrow);
+
+        // Fire second arrow after 300ms delay
+        setTimeout(() => {
+            if (!target || target.dead || target.hp <= 0) return;
+            if (!ranger || ranger.dead || ranger.hp <= 0) return;
+            this._fireSingleEagleEyeArrow(ranger, target, secondArrow);
+        }, 300);
+    };
+
+    this._fireSingleEagleEyeArrow = (ranger, target, arrowType) => {
+        if (!target || target.dead || target.hp <= 0) return;
+
+        if (this.animManagerRedux && typeof this.animManagerRedux.triggerAbility === 'function') {
+            const sourceCoords = ranger.coordinates;
+            const targetCoords = target.coordinates;
+            const targetTiles = (Array.isArray(target.occupiedCoords) && target.occupiedCoords.length > 0) ? target.occupiedCoords : [target.coordinates];
+            const isTargetLarge = targetTiles.length > 1;
+            this.animManagerRedux.triggerAbility(sourceCoords, targetCoords, 'loose', isTargetLarge, targetTiles, ranger.id, arrowType);
+        }
+
+        setTimeout(() => {
+            if (!target || target.dead || target.hp <= 0) return;
+
+            const hit = this.hitCheck(ranger, target);
+            if (hit) {
+                const rangerAtk = ranger.stats ? (ranger.stats.atk || 8) : 8;
+                const baseDamage = Math.round(rangerAtk * 1.0);
+                const dmgMult = target.weaknessRevealed ? 1.25 : 1.0;
+                let finalDmg = Math.round(this.damageCheck(ranger, target, baseDamage) * dmgMult);
+
+                if (arrowType === 'celestial') {
+                    finalDmg = Math.round(finalDmg * 1.75);
+                }
+
+                if (finalDmg > 0) {
+                    const hasCod = target.activeBuffs && target.activeBuffs.some(b => b.name === 'circle_of_deflection');
+                    if (hasCod && Math.random() < 0.5) {
+                        ranger.hp = Math.max(0, ranger.hp - finalDmg);
+                        ranger.damageIndicators = ranger.damageIndicators || [];
+                        ranger.damageIndicators.push({ id: Date.now() + Math.random(), value: `-${finalDmg}`, source: 'Reflected Arrow', type: 'damage' });
+                        this.appendCombatLog(`Eagle Eye arrow reflected! ${this.getCombatantLogName(ranger)} takes ${finalDmg} damage.`);
+                        if (ranger.hp <= 0) this.targetKilled(ranger);
+                    } else {
+                        target.hp = Math.max(0, target.hp - finalDmg);
+                        this.wakeSleepingTarget(target, 'Eagle Eye');
+                        target.damageIndicators = target.damageIndicators || [];
+                        target.damageIndicators.push({ id: Date.now() + Math.random(), value: `-${finalDmg}`, source: 'Eagle Eye', type: 'damage' });
+                        this.appendCombatLog(`${this.getCombatantLogName(ranger)}'s Eagle Eye passive fires a ${arrowType} arrow and hits ${this.getCombatantLogName(target)} for ${finalDmg} damage!`);
+                        if (target.hp <= 0) this.targetKilled(target);
+                    }
+                }
+
+                if (target.hp > 0 && !target.dead) {
+                    const now = Date.now();
+                    if (arrowType === 'ice') {
+                        const dur = getDurationRounds('short');
+                        const durMs = getDurationMsFromRounds(dur);
+                        target.frozen = true;
+                        target.frozenRounds = (target.frozenRounds || 0) + dur;
+                        target.frozenTotalRounds = (target.frozenTotalRounds || 0) + dur;
+                        target.frozenStackDuration = dur;
+                        target.frozenTotalDurationMs = (target.frozenTotalDurationMs || 0) + durMs;
+                        target.frozenEndTimeMs = target.frozenEndTimeMs && target.frozenEndTimeMs > now ? target.frozenEndTimeMs + durMs : now + durMs;
+                        this.appendCombatLog(`${this.getCombatantLogName(target)} is frozen by the Eagle Eye ice arrow!`);
+                    } else if (arrowType === 'poison') {
+                        const dur = getDurationRounds('medium');
+                        target.poison = true;
+                        target.poisonRounds = dur;
+                        this._applyDebuff(target, { decrease_stats: { stats: [{ stat: 'atk', amount: 3 }] } }, 'poison', dur);
+                        this.appendCombatLog(`${this.getCombatantLogName(target)} is poisoned by the Eagle Eye poison arrow!`);
+                    } else if (arrowType === 'force') {
+                        const dx = target.coordinates.x - ranger.coordinates.x;
+                        const dy = target.coordinates.y - ranger.coordinates.y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist > 0) {
+                            const pushX = Math.round(dx / dist);
+                            const pushY = Math.round(dy / dist);
+                            const newX = Math.max(0, Math.min(MAX_DEPTH, target.coordinates.x + pushX));
+                            const newY = Math.max(0, Math.min(MAX_LANES - 1, target.coordinates.y + pushY));
+                            if ((newX !== target.coordinates.x || newY !== target.coordinates.y) && !this.isTileOccupied(newX, newY, target.id)) {
+                                this.updateUnitCoordinates(target, newX, newY);
+                                this.appendCombatLog(`${this.getCombatantLogName(target)} is pushed back by the force arrow!`);
+                            }
+                        }
+                    }
+                }
+            } else {
+                this.appendCombatLog(`${this.getCombatantLogName(ranger)}'s Eagle Eye passive fires a ${arrowType} arrow but misses ${this.getCombatantLogName(target)}.`);
+            }
+
+            if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+        }, 700);
     };
 
     // Basic attack wrapper (no cooldown for basic attacks)
@@ -3616,9 +4463,13 @@ export function CombatManagerRedux() {
         
         // Execute AI turns
         this.processRoundTurns();
+
+        // Process trials (Sphinx ability): phase schedule & off-board checks
+        this._processTrialRound();
         
         if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
     };
+
 
     // Legacy callbacks & interfaces mapping
     this.attacksMatrix = attacksMatrix;

@@ -768,14 +768,20 @@ class MonsterBattle extends React.Component {
             ? clonedBattleData[selectedFighterId] || null
             : null;
 
+        const selectedMonsterId = this.state.selectedMonster?.id;
+        const nextSelectedMonster = selectedMonsterId
+            ? clonedBattleData[selectedMonsterId] || null
+            : null;
+
         this.setState({
             battleData: clonedBattleData,
             combatLog,
-            ...(selectedFighterId ? { selectedFighter: nextSelectedFighter } : {})
+            ...(selectedFighterId ? { selectedFighter: nextSelectedFighter } : {}),
+            ...(selectedMonsterId ? { selectedMonster: nextSelectedMonster } : {})
         }, () => {
             if (!this._isMounted) return;
-            // If nothing is selected yet, pick the default top-most / left-most crew member
-            if (!this.state.selectedFighter) {
+            // If nothing is selected (neither fighter nor monster is active/alive), pick the default top-most / left-most crew member
+            if (!this.state.selectedFighter && (!this.state.selectedMonster || this.state.selectedMonster.dead)) {
                 const liveCrew = this.getSortedLiveCrew();
                 if (liveCrew && liveCrew.length) {
                     const first = liveCrew[0];
@@ -785,6 +791,7 @@ class MonsterBattle extends React.Component {
                     }
                     this.setState({
                         selectedFighter: first,
+                        selectedMonster: null,
                         glyphTrayExpanded: first.type === 'wizard',
                         greetingInProcess: false // show interaction pane by default
                     });
@@ -966,7 +973,7 @@ class MonsterBattle extends React.Component {
             goldGained,
             foodGained = 0,
             itemsGained,
-            crewWins = outcome === 'crewWins',
+            crewWins = outcome === 'crewWins' || outcome === true,
             summaryMessage, battleResult;
 
         // liveCrew should be derived from the freshest snapshot
@@ -1411,6 +1418,11 @@ class MonsterBattle extends React.Component {
     }
     specialTileClicked = (val) => {
     // special tile clicked
+        const selectedUnit = this.state.selectedFighter || this.state.selectedMonster;
+        if (selectedUnit?.isMonster || selectedUnit?.isMinion) {
+            console.log('[SpecialClickDiag][MonsterBattle] specialTileClicked ignored: monster/minion selected.');
+            return;
+        }
         console.log('[SpecialClickDiag][MonsterBattle] specialTileClicked', {
             incoming: val,
             selectedFighterId: this.state.selectedFighter?.id,
@@ -1840,8 +1852,9 @@ class MonsterBattle extends React.Component {
     }
 
     render(){
-        const liveSelectedFighter = this.state.selectedFighter
-            ? (this.state.battleData[this.state.selectedFighter.id] || this.state.selectedFighter)
+        const selectedUnit = this.state.selectedFighter || this.state.selectedMonster;
+        const liveSelectedFighter = selectedUnit
+            ? (this.state.battleData[selectedUnit.id] || selectedUnit)
             : null;
         const activeTargetId = liveSelectedFighter?.targetId || null;
         const selectedPortraitUrl = liveSelectedFighter
@@ -1966,6 +1979,66 @@ class MonsterBattle extends React.Component {
                             }
                         </div>
                     )}
+
+                    {/* ── Party Resolve Meter ── */}
+                    {(() => {
+                        const meta = getMeta();
+                        const resolve = (meta && typeof meta.resolve === 'number') ? meta.resolve : 100;
+                        const pct = Math.max(0, Math.min(100, resolve));
+                        const isCritical = resolve < 20;
+                        const isLow = resolve >= 20 && resolve < 40;
+                        const barColor = isCritical
+                            ? 'linear-gradient(90deg, #7f1d1d, #ef4444)'
+                            : isLow
+                                ? 'linear-gradient(90deg, #78350f, #f59e0b)'
+                                : 'linear-gradient(90deg, #14532d, #22c55e)';
+                        const labelColor = isCritical ? '#fca5a5' : isLow ? '#fcd34d' : '#86efac';
+                        return (
+                            <div
+                                title="Party Resolve — below 20: fighters may refuse to act (10% chance/turn). Below 40: reduced morale. 80+: high morale bonus."
+                                style={{
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    gap: '3px',
+                                    cursor: 'default',
+                                    userSelect: 'none',
+                                }}
+                            >
+                                <div style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '5px',
+                                    fontSize: '10px',
+                                    color: labelColor,
+                                    fontWeight: 700,
+                                    letterSpacing: '0.5px',
+                                    textTransform: 'uppercase',
+                                }}>
+                                    {isCritical && <span role="img" aria-label="warning" style={{ fontSize: '11px' }}>⚠️</span>}
+                                    Resolve
+                                    <span style={{ color: '#fff', fontWeight: 400 }}>{Math.round(resolve)}</span>
+                                </div>
+                                <div style={{
+                                    width: '80px',
+                                    height: '6px',
+                                    background: 'rgba(255,255,255,0.1)',
+                                    borderRadius: '3px',
+                                    overflow: 'hidden',
+                                    border: isCritical ? '1px solid rgba(239,68,68,0.5)' : '1px solid rgba(255,255,255,0.1)',
+                                }}>
+                                    <div style={{
+                                        width: `${pct}%`,
+                                        height: '100%',
+                                        background: barColor,
+                                        borderRadius: '3px',
+                                        transition: 'width 0.5s ease, background 0.5s ease',
+                                    }} />
+                                </div>
+                            </div>
+                        );
+                    })()}
+
                 </div>
                 { this.state.navToDeathScene && <Redirect to='/death'/>}
                 <div className="combat-grid-container"
@@ -2394,18 +2467,22 @@ class MonsterBattle extends React.Component {
                                         </div>
 
                                         {/* Endurance Bar */}
-                                        <div className="redux-stat-label">
-                                            <span>Endurance</span>
-                                            <span className="redux-stat-value">
-                                                {Math.max(0, Math.round(liveSelectedFighter.endurance ?? 0))} / {Math.round(liveSelectedFighter.maxEndurance ?? 100)}
-                                            </span>
-                                        </div>
-                                        <div className="redux-bar-track">
-                                            <div
-                                                className="redux-bar-fill endurance-fill"
-                                                style={{ width: `${Math.max(0, Math.min(100, ((liveSelectedFighter.endurance ?? 100) / (liveSelectedFighter.maxEndurance || 100)) * 100))}%` }}
-                                            />
-                                        </div>
+                                        {!(liveSelectedFighter.isMonster || liveSelectedFighter.isMinion) && (
+                                            <>
+                                                <div className="redux-stat-label">
+                                                    <span>Endurance</span>
+                                                    <span className="redux-stat-value">
+                                                        {Math.max(0, Math.round(liveSelectedFighter.endurance ?? 0))} / {Math.round(liveSelectedFighter.maxEndurance ?? 100)}
+                                                    </span>
+                                                </div>
+                                                <div className="redux-bar-track">
+                                                    <div
+                                                        className="redux-bar-fill endurance-fill"
+                                                        style={{ width: `${Math.max(0, Math.min(100, ((liveSelectedFighter.endurance ?? 100) / (liveSelectedFighter.maxEndurance || 100)) * 100))}%` }}
+                                                    />
+                                                </div>
+                                            </>
+                                        )}
 
                                         {/* Active status effects */}
                                         {(() => {
@@ -2429,10 +2506,19 @@ class MonsterBattle extends React.Component {
                                             }
                                             if (Array.isArray(liveUnit?.activeDebuffs)) {
                                                 liveUnit.activeDebuffs.forEach(d => {
-                                                    if (d && d.label) {
-                                                        statuses.push({ label: d.label, color: '#ff8844' });
+                                                    if (d) {
+                                                        const label = d.label || (d.name === 'Hexed' ? 'Hexed' : d.name === 'Polymorphed' ? 'Polymorphed' : d.name);
+                                                        if (label && !statuses.find(s => s.label === label)) {
+                                                            statuses.push({ label, color: '#ff8844' });
+                                                        }
                                                     }
                                                 });
+                                            }
+                                            if ((liveUnit?.hexed || liveSelectedFighter.hexed) && !statuses.find(s => s.label === 'Hexed')) {
+                                                statuses.push({ label: 'Hexed', color: '#cc44ff' });
+                                            }
+                                            if ((liveUnit?.polymorphed || liveSelectedFighter.polymorphed) && !statuses.find(s => s.label === 'Polymorphed')) {
+                                                statuses.push({ label: 'Polymorphed', color: '#22c55e' });
                                             }
                                             if (!statuses.length) return null;
                                             return (
@@ -2450,12 +2536,15 @@ class MonsterBattle extends React.Component {
                                             const targetId = liveUnit?.targetId;
                                             const target = targetId ? this.props.combatManager.getCombatant?.(targetId) : null;
                                             if (!target || target.dead) return null;
+                                            const targetPortraitUrl = target
+                                                ? (images[target.portrait] || target.portrait || images.avatar)
+                                                : images.avatar;
                                             return (
                                                 <div className="redux-target-row">
                                                     <span className="redux-stat-label-inline">Target:</span>
                                                     <div
                                                         className="redux-target-portrait"
-                                                        style={{ backgroundImage: `url(${target.portrait})` }}
+                                                        style={{ backgroundImage: `url(${targetPortraitUrl})` }}
                                                     />
                                                     <span className="redux-target-name">{target.name || target.type}</span>
                                                 </div>
@@ -2472,7 +2561,10 @@ class MonsterBattle extends React.Component {
                                 <div className="interaction-header">Abilities</div>
                                 <div className="interaction-tile-container">
                                     {liveSelectedFighter && (() => {
-                                        const rawSpecials = liveSelectedFighter.specials || [];
+                                        const rawSpecials = [
+                                            ...(liveSelectedFighter.specials || []),
+                                            ...((liveSelectedFighter.isMonster || liveSelectedFighter.isMinion) ? (liveSelectedFighter.attacks || []) : [])
+                                        ];
                                         const seenKeys = new Set();
                                         const cm = this.props.combatManager;
                                         return rawSpecials.filter(entry => {
@@ -2483,13 +2575,18 @@ class MonsterBattle extends React.Component {
                                             return true;
                                         }).map((a, i) => {
                                             const sourceKey = typeof a === 'string' ? a : (a?.key || a?.name || '');
-                                            const canonicalSpecial = cm?.specialsMatrix
-                                                ? (cm.specialsMatrix[sourceKey] || cm.specialsMatrix[String(sourceKey).toLowerCase().replaceAll(' ', '_')] || {})
+                                            const normalizedSourceKey = String(sourceKey).toLowerCase().replaceAll(' ', '_');
+                                            const canonicalSpecial = cm
+                                                ? ((cm.specialsMatrix && (cm.specialsMatrix[sourceKey] || cm.specialsMatrix[normalizedSourceKey])) ||
+                                                   (cm.attacksMatrix && (cm.attacksMatrix[sourceKey] || cm.attacksMatrix[normalizedSourceKey])) || {})
                                                 : {};
                                             const runtimeSpecial = (cm?.resolveSpecial && liveSelectedFighter)
                                                 ? (cm.resolveSpecial(liveSelectedFighter, sourceKey) || {})
                                                 : {};
                                             const spec = { ...canonicalSpecial, ...(typeof a === 'object' ? a : {}), ...runtimeSpecial };
+                                            if (!spec.name) {
+                                                spec.name = String(sourceKey).replaceAll('_', ' ');
+                                            }
                                             const iconCandidate = spec.iconUrl || spec.icon;
                                             const resolveIcon = (candidate) => {
                                                 if (!candidate) return '';
@@ -2503,7 +2600,7 @@ class MonsterBattle extends React.Component {
                                                 return '';
                                             };
                                             const iconUrl = resolveIcon(iconCandidate);
-                                            const remainingRounds = liveSelectedFighter?.cooldowns?.[spec.id] || liveSelectedFighter?.cooldowns?.[sourceKey] || 0;
+                                            const remainingRounds = liveSelectedFighter?.cooldowns?.[spec.id] || liveSelectedFighter?.cooldowns?.[sourceKey] || liveSelectedFighter?.cooldowns?.[normalizedSourceKey] || 0;
                                             const baseCd = spec.cooldown || 5;
                                             const cooldownPct = remainingRounds > 0 ? Math.ceil((remainingRounds / baseCd) * 100) : 0;
                                             const isReady = cooldownPct === 0;
@@ -2513,11 +2610,14 @@ class MonsterBattle extends React.Component {
                                                         className={`interaction-tile special ${isReady ? 'available' : ''}`}
                                                         style={{
                                                             backgroundImage: iconUrl ? `url("${encodeURI(String(iconUrl).replace(/^['"]|['"]$/g, ''))}")` : 'none',
-                                                            cursor: 'pointer',
+                                                            cursor: (liveSelectedFighter.isMonster || liveSelectedFighter.isMinion) ? 'default' : 'pointer',
                                                             opacity: isReady ? 1 : 0.7,
                                                         }}
                                                         title={spec.name || sourceKey}
-                                                        onClick={() => this.specialTileClicked(spec)}
+                                                        onClick={() => {
+                                                            if (liveSelectedFighter.isMonster || liveSelectedFighter.isMinion) return;
+                                                            this.specialTileClicked(spec);
+                                                        }}
                                                     />
                                                     {cooldownPct > 0 && (
                                                          <svg 

@@ -497,7 +497,7 @@ export function CrewManager(){
             inventory: [],
             specials: ['notch', 'mark', 'execute', 'ensnare'],
             attacks: ['loose'],
-            passives: ['nimble_dodge'],
+            passives: ['nimble_dodge', 'eagle_eye'],
             weaknesses: ['ice', 'curse', 'crushing'],
             description: "Dormund was born a slave, surviving and advancing through sheer cunning and a ruthless will",
             specialActions: [],

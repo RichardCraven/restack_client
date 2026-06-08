@@ -107,10 +107,10 @@ class CrewManagerPage extends React.Component{
 
   componentDidMount(){
         const meta = getMeta();
-        // meta.crew[0].specialActions.pop();
-        // meta.crew[0].specialActions.pop();
-        // meta.crew[0].specialActions.pop();
+        // Combat Simulator always starts with resolve at 50 (mid-point morale)
+        meta.resolve = 50;
         storeMeta(meta);
+
 
         // Restore combat speed from meta if present
         if (meta && meta.combatSpeed && this.props.combatManager) {
@@ -868,7 +868,7 @@ combatKeyUpListener = (event) => {
                     <div className="monster-roster-label">Monster Roster — double-click to add to slot</div>
                     <div className="monster-roster">
                         {Object.values(this.props.monsterManager.monsters)
-                            .filter(m => ['skeleton', 'goblin', 'ogre', 'vampire', 'mummy', 'djinn'].includes(m.key))
+                            .filter(m => ['skeleton', 'goblin', 'ogre', 'troll', 'mummy', 'wraith', 'vampire', 'gorgon', 'witch', 'beholder', 'kabuki_demon', 'djinn', 'dragon', 'sphinx'].includes(m.key))
                             .map((m, i) => (
                             <div
                                 key={i}
