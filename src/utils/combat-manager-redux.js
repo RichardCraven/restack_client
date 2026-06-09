@@ -2,7 +2,7 @@ import { createFighter } from './factories';
 import attacksMatrix from './attacks-matrix';
 import specialsMatrix from './specials-matrix';
 import { activeShieldWalls } from './shared-ai-methods/movement-methods';
-import { INTERVALS } from './shared-constants';
+import { INTERVALS, DURATION_ROUNDS, getDurationRounds } from './shared-constants';
 import * as images from './images';
 import { getMeta, storeMeta } from './session-handler';
 
@@ -13,15 +13,6 @@ const MAX_LANES = 6;
 const clone = (val) => {
     if (val === undefined || val === null) return val;
     return JSON.parse(JSON.stringify(val));
-};
-
-const DURATION_ROUNDS = {
-    'instant': 0,
-    'short': 2,
-    'long': 4,
-    '2x-long': 8,
-    '3x-long': 12,
-    '4x-long': 16
 };
 
 const formatCombatText = (value) => String(value || '')
@@ -122,14 +113,6 @@ export function CombatManagerRedux() {
             console.log(`[MUMMY-DIAG][CombatManagerRedux][${context}] Mummy is no longer present in combatants! Call stack:\n${new Error().stack}`);
             lastMummyState = null;
         }
-    };
-
-    const getDurationRounds = (dur) => {
-        if (typeof dur === 'number') return dur;
-        if (typeof dur === 'string') {
-            return DURATION_ROUNDS[dur] !== undefined ? DURATION_ROUNDS[dur] : 4;
-        }
-        return 4;
     };
 
     const getRoundDurationMs = () => this.roundDurationMs || (this.gameSpeed === 'fast' ? 1000 : 2000);
@@ -1439,6 +1422,9 @@ export function CombatManagerRedux() {
             if (unit.hexRounds <= 0) {
                 unit.hexed = false;
                 unit.hexRounds = 0;
+                unit.hexTotalRounds = 0;
+                unit.hexTotalDurationMs = 0;
+                unit.hexEndTimeMs = 0;
                 this.appendCombatLog(`${this.getCombatantLogName(unit)}'s Hex has expired.`);
             }
         }
@@ -1483,7 +1469,9 @@ export function CombatManagerRedux() {
                 enemy && !enemy.dead && (!!enemy.isMonster !== !!unit.isMonster) &&
                 enemy.activeBuffs && enemy.activeBuffs.some(b => b.name === 'Crimson Sight')
             );
-            const bleedDmg = isAffectedByCrimsonSight ? 10 : 5;
+            const bleedDebuff = unit.activeDebuffs ? unit.activeDebuffs.find(d => d.name === 'bleed') : null;
+            const stacks = bleedDebuff && bleedDebuff.stacks ? bleedDebuff.stacks : 1;
+            const bleedDmg = (isAffectedByCrimsonSight ? 10 : 5) * stacks;
             unit.hp = Math.max(0, unit.hp - bleedDmg);
             unit.damageIndicators = unit.damageIndicators || [];
             unit.damageIndicators.push({
@@ -1552,15 +1540,32 @@ export function CombatManagerRedux() {
 
     this._applyDebuff = (unit, nerfDef, name, durationRounds) => {
         if (!unit.activeDebuffs) unit.activeDebuffs = [];
+        const durationMs = durationRounds * (this.roundDurationMs || (this.gameSpeed === 'fast' ? 1000 : 2000));
+        const now = Date.now();
         const existing = unit.activeDebuffs.find(d => d.name === name);
         if (existing) {
-            existing.roundsLeft += durationRounds;
-            existing.totalRounds = (existing.totalRounds || existing.roundsLeft) + durationRounds;
-            existing.singleDurationRounds = durationRounds;
+            if (name === 'bleed') {
+                existing.stacks = (existing.stacks || 1) + 1;
+            } else {
+                existing.roundsLeft += durationRounds;
+                existing.totalRounds = (existing.totalRounds || existing.roundsLeft) + durationRounds;
+                existing.singleDurationRounds = durationRounds;
+                existing.totalDurationMs = (existing.totalDurationMs || 0) + durationMs;
+                existing.endTimeMs = existing.endTimeMs && existing.endTimeMs > now ? existing.endTimeMs + durationMs : now + durationMs;
+            }
             return;
         }
 
-        const applied = { name, roundsLeft: durationRounds, totalRounds: durationRounds, singleDurationRounds: durationRounds, statChanges: {} };
+        const applied = {
+            name,
+            stacks: 1,
+            roundsLeft: durationRounds,
+            totalRounds: durationRounds,
+            singleDurationRounds: durationRounds,
+            totalDurationMs: durationMs,
+            endTimeMs: now + durationMs,
+            statChanges: {}
+        };
         if (nerfDef && nerfDef.decrease_stats && Array.isArray(nerfDef.decrease_stats.stats)) {
             nerfDef.decrease_stats.stats.forEach(({ stat, amount, isPercent }) => {
                 const reduction = isPercent ? Math.round((unit.stats[stat] || 0) * (amount / 100)) : amount;
@@ -1587,6 +1592,7 @@ export function CombatManagerRedux() {
             case 'summoner': return this._aiSummoner(unit);
             case 'vampire':  return this._aiVampire(unit);
             case 'sphinx':   return this._aiSphinx(unit);
+            case 'ogre':     return this._aiOgre(unit);
             default:         return this._aiGeneric(unit);
         }
     };
@@ -1600,8 +1606,22 @@ export function CombatManagerRedux() {
             const key = this._resolveAbilityKey(s);
             if (!key) return;
             const resolved = this.resolveSpecial(combatant, key);
-            if (resolved && typeof resolved.tier === 'number' && resolved.tier >= 1 && key !== 'slash') {
-                combatant.cooldowns[key] = resolved.tier * roundDurSec;
+            if (resolved && key !== 'slash') {
+                let initial = 0;
+                if (typeof resolved.initialCooldown === 'number') {
+                    initial = resolved.initialCooldown;
+                } else if (typeof resolved.tier === 'number' && resolved.tier >= 1) {
+                    initial = (resolved.tier * 2) - 1;
+                }
+                
+                if (initial > 0) {
+                    combatant.cooldowns[key] = initial * roundDurSec;
+                }
+            }
+            // Custom Sphinx magic_missile initial cooldown wait period of 4 rounds
+            const isSphinx = combatant.type === 'sphinx' || combatant.key === 'sphinx' || (combatant.id && combatant.id.toString().includes('sphinx'));
+            if (isSphinx && key === 'magic_missile') {
+                combatant.cooldowns[key] = 4 * roundDurSec;
             }
         });
     };
@@ -1660,6 +1680,7 @@ export function CombatManagerRedux() {
         unit.specials.forEach(s => {
             const key = this._resolveAbilityKey(s);
             if (!key || !this._abilityReady(unit, key)) return;
+            if (key === 'barbarian_leap_attack' && target && this.targetInRange(unit, target, 'close')) return;
             const resolved = this.resolveSpecial(unit, key);
             if (!resolved || resolved.type === 'passive' || resolved.isPassive) return;
 
@@ -2079,7 +2100,7 @@ export function CombatManagerRedux() {
         // Priority 2: Leap Attack to close the gap if not adjacent but within medium range (3 tiles)
         const isAdjacent = this.targetInRange(unit, target, 'close');
         const leapReady = this._abilityReady(unit, 'barbarian_leap_attack');
-        if (!isAdjacent && leapReady && this.targetInRange(unit, target, 'medium')) {
+        if (!isAdjacent && leapReady && this.targetInRange(unit, target, 'far')) {
             const pick = this.resolveSpecial(unit, 'barbarian_leap_attack');
             if (pick) {
                 this.useAbility(unit, pick, target);
@@ -2229,7 +2250,7 @@ export function CombatManagerRedux() {
                 woundedAlly.damageIndicators = woundedAlly.damageIndicators || [];
                 woundedAlly.damageIndicators.push({ id: Date.now() + Math.random(), value: `+${healAmount}`, source: 'Healing Hands', type: 'heal' });
                 this.appendCombatLog(`${this.getCombatantLogName(unit)} uses Healing Hands on ${this.getCombatantLogName(woundedAlly)} for +${healAmount} HP.`);
-                this._setCooldown(unit, 'heal', pick.cooldown || 4);
+                this._setCooldown(unit, 'heal', typeof pick.cooldown === 'number' ? pick.cooldown : 4);
                 unit.actionsTakenThisRound += 1;
                 
                 // Trigger animation
@@ -2763,11 +2784,13 @@ export function CombatManagerRedux() {
         const trialsSpec = this.resolveSpecial(unit, 'begin_the_trials');
         const clawSpec = this.resolveSpecial(unit, 'claw_strike') || { id: 'claw_strike', range: 'close', type: 'damage' };
         const polymorphSpec = this.resolveSpecial(unit, 'polymorph');
+        const mmSpec = this.resolveSpecial(unit, 'magic_missile');
 
         const hexReady = hexSpec && this._abilityReady(unit, 'hex');
         const trialsReady = trialsSpec && this._abilityReady(unit, 'begin_the_trials') && !this.combatants['trials_icon'];
         const clawReady = clawSpec && this._abilityReady(unit, 'claw_strike');
         const polymorphReady = polymorphSpec && this._abilityReady(unit, 'polymorph');
+        const mmReady = mmSpec && this._abilityReady(unit, 'magic_missile');
 
         // Helper function for post-claw-strike retreat
         const attemptClawRetreat = () => {
@@ -2835,6 +2858,12 @@ export function CombatManagerRedux() {
                     }
                 }
             }
+        }
+
+        // 2.5 Prioritize Magic Missile at medium-to-far range (not adjacent/close)
+        if (mmReady && !this.targetInRange(unit, target, 'close')) {
+            this.useAbility(unit, mmSpec, target);
+            return;
         }
 
         // 3. Claw Strike (close range) or Polymorph (medium range)
@@ -3146,6 +3175,59 @@ export function CombatManagerRedux() {
         }
     };
 
+    // OGRE: stomping, headbutting, biting at adjacent range
+    this._aiOgre = (unit) => {
+        this.acquireTarget(unit, true);
+        const target = this.combatants[unit.targetId];
+        if (!target) return;
+
+        const stompSpec = this.resolveSpecial(unit, 'stomp');
+        const hbSpec = this.resolveSpecial(unit, 'head_butt');
+        const biteSpec = this.resolveSpecial(unit, 'bite');
+
+        const stompReady = stompSpec && this._abilityReady(unit, 'stomp');
+        const hbReady = hbSpec && this._abilityReady(unit, 'head_butt');
+        const biteReady = biteSpec && this._abilityReady(unit, 'bite');
+
+        const inClose = this.targetInRange(unit, target, 'close');
+
+        if (inClose) {
+            if (stompReady) {
+                this.useAbility(unit, stompSpec, target);
+                return;
+            }
+            if (hbReady) {
+                this.useAbility(unit, hbSpec, target);
+                return;
+            }
+            if (biteReady) {
+                this.useAbility(unit, biteSpec, target);
+                return;
+            }
+            this._basicAttack(unit, target);
+        } else {
+            if (unit.movesTakenThisRound < 1) {
+                this.moveCloser(unit, target);
+                const nowClose = this.targetInRange(unit, target, 'close');
+                if (nowClose) {
+                    if (stompReady) {
+                        this.useAbility(unit, stompSpec, target);
+                        return;
+                    }
+                    if (hbReady) {
+                        this.useAbility(unit, hbSpec, target);
+                        return;
+                    }
+                    if (biteReady) {
+                        this.useAbility(unit, biteSpec, target);
+                        return;
+                    }
+                    this._basicAttack(unit, target);
+                }
+            }
+        }
+    };
+
 
     // VAMPIRE: relocation, health-drain, debuffing
     this._aiVampire = (unit) => {
@@ -3402,6 +3484,44 @@ export function CombatManagerRedux() {
             if (typeof this.triggerBoardEvent === 'function') {
                 this.triggerBoardEvent('induce_fear', { duration: 1800 });
             }
+            const dur = getDurationRounds(ability.duration || 'short') || 2;
+            const durMs = dur * this.roundDurationMs;
+            const now = Date.now();
+
+            Object.values(this.combatants).forEach(c => {
+                if (!c || c.dead || c.isVCT) return;
+                const isEnemy = (!!unit.isMonster !== !!c.isMonster);
+                if (isEnemy) {
+                    this._applyDebuff(c, {
+                        decrease_stats: {
+                            stats: [
+                                { stat: 'atk', amount: 30, isPercent: true },
+                                { stat: 'def', amount: 30, isPercent: true }
+                            ]
+                        }
+                    }, 'Induce Fear', dur);
+
+                    c.stunned = true;
+                    c.stunnedRounds = dur;
+                    c.stunnedTotalRounds = dur;
+                    c.stunnedStackDuration = dur;
+                    c.stunnedTotalDurationMs = durMs;
+                    c.stunnedEndTimeMs = now + durMs;
+
+                    c.feared = true;
+                    c.fearRounds = dur;
+                    c.fearTotalRounds = dur;
+                    c.fearTotalDurationMs = durMs;
+                    c.fearEndTimeMs = now + durMs;
+
+                    c.asleep = false;
+                    c.sleepTotalDurationMs = 0;
+                    c.sleepEndTimeMs = 0;
+
+                    this.appendCombatLog(`${this.getCombatantLogName(c)} is terrified by Mummy's scream!`);
+                }
+            });
+            if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
         }
 
         if (abilityId === 'begin_the_trials') {
@@ -3832,8 +3952,12 @@ export function CombatManagerRedux() {
 
                     if (abilityId === 'hex') {
                         const dur = getDurationRounds(ability.duration || 'medium');
+                        const durMs = dur * (this.roundDurationMs || (this.gameSpeed === 'fast' ? 1000 : 2000));
                         target.hexed = true;
                         target.hexRounds = dur;
+                        target.hexTotalRounds = dur;
+                        target.hexTotalDurationMs = durMs;
+                        target.hexEndTimeMs = Date.now() + durMs;
                         this._applyDebuff(target, { decrease_stats: { stats: [{ stat: 'atk', amount: 2 }] } }, 'Hexed', dur);
                         this.appendCombatLog(`${this.getCombatantLogName(target)} is HEXED!`);
                     }
@@ -3850,18 +3974,30 @@ export function CombatManagerRedux() {
 
                     if (abilityId === 'fire_blast' || abilityId === 'fireball') {
                         const splashDamage = Math.max(1, Math.round(finalDmg * 0.5));
+                        const targetMainId = target.parentId || target.id;
+                        const hitIds = new Set([targetMainId]);
+                        
                         Object.values(this.combatants).forEach(c => {
-                            if (!c || c.dead || c.isVCT || c.id === target.id) return;
+                            if (!c || c.dead) return;
+                            const cMainId = c.parentId || c.id;
+                            if (hitIds.has(cMainId)) return;
+                            
                             const isEnemy = (!!unit.isMonster !== !!c.isMonster);
                             if (!isEnemy) return;
+                            
                             const adx = Math.abs(target.coordinates.x - c.coordinates.x);
                             const ady = Math.abs(target.coordinates.y - c.coordinates.y);
-                            if (adx > 1 || ady > 1) return;
-                            c.hp = Math.max(0, c.hp - splashDamage);
-                            this.wakeSleepingTarget(c, `${ability.name || this.getCombatActionName(ability)} splash`);
-                            c.damageIndicators = c.damageIndicators || [];
-                            c.damageIndicators.push({ id: Date.now() + Math.random(), value: `-${splashDamage}`, source: `${ability.name} splash`, type: 'damage' });
-                            if (c.hp <= 0) this.targetKilled(c);
+                            if (adx <= 1 && ady <= 1) {
+                                hitIds.add(cMainId);
+                                const mainEntity = this.combatants[cMainId];
+                                if (!mainEntity || mainEntity.dead) return;
+                                
+                                mainEntity.hp = Math.max(0, mainEntity.hp - splashDamage);
+                                this.wakeSleepingTarget(mainEntity, `${ability.name || this.getCombatActionName(ability)} splash`);
+                                mainEntity.damageIndicators = mainEntity.damageIndicators || [];
+                                mainEntity.damageIndicators.push({ id: Date.now() + Math.random(), value: `-${splashDamage}`, source: `${ability.name} splash`, type: 'damage' });
+                                if (mainEntity.hp <= 0) this.targetKilled(mainEntity);
+                            }
                         });
                         this.appendCombatLog(`${this.getCombatantLogName(unit)}'s fire blast secondary ring scorches adjacent enemies.`);
                     }
@@ -3985,7 +4121,7 @@ export function CombatManagerRedux() {
                                 this.appendCombatLog(`${this.getCombatantLogName(target)} is poisoned!`);
                             } else if (eff.type === 'bleed') {
                                 target.bleed = true;
-                                target.bleedRounds = dur;
+                                if (!target.bleedRounds) target.bleedRounds = dur;
                                 this._applyDebuff(target, { decrease_stats: { stats: [{ stat: 'atk', amount: 2 }] } }, 'bleed', dur);
                                 this.appendCombatLog(`${this.getCombatantLogName(target)} is bleeding!`);
                             } else if (eff.type === 'sleep') {

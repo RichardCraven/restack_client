@@ -40,6 +40,8 @@ export function BoardManager(){
     // `largeMonsterBlockingEnabled = true` only when a board instance is used
     // for combat overlays.
     this.largeMonsterBlockingEnabled = false;
+    this.chestPickupInProgress = false;
+    this.treasurePickupInProgress = false;
     this.pickRandom = (array) => {
         let index = Math.floor(Math.random() * array.length)
         return array[index]
@@ -1415,7 +1417,9 @@ export function BoardManager(){
             case 'item':
                 console.log('picked up item');
                 if (subtype === 'silver_chest' || subtype === 'gold_chest' || subtype === 'ornate_chest') {
+                    this.chestPickupInProgress = true;
                     const chestResult = this.handleChestPickup(subtype, destinationTile);
+                    this.chestPickupInProgress = false;
                     if (chestResult) return chestResult;
                 }
                 // destinationTile.contains may be object; callers expect string contains
@@ -1466,6 +1470,7 @@ export function BoardManager(){
             break;
             case 'treasure':
                 console.log('picked up treasure');
+                this.treasurePickupInProgress = true;
                 let treasureFactor, treasureNum = Math.random();
                 if(treasureNum > .85){
                     treasureFactor = 4
@@ -1522,6 +1527,7 @@ export function BoardManager(){
 
                     break;
                 }
+                this.treasurePickupInProgress = false;
                 this.removeTileFromBoard(destinationTile)
             break;
             default:

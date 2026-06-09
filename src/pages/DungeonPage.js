@@ -29,6 +29,7 @@ import { RECIPES } from '../utils/spells-table'
 import '../styles/inventory-modal.scss'
 import '../styles/quests-modal.scss'
 import '../styles/camp-modal.scss'
+import SkillTree from '../components/SkillTree';
 import '../styles/narrative-overlay.scss'
 
 const NarrativeOverlay = ({ sequence, onClose }) => {
@@ -77,6 +78,19 @@ const ModalInner = ({ modalType, updates, crew, tileSize, handleMemberClickRitua
     const [merchantStock, setMerchantStock] = React.useState([]);
     const [feedbackMsg, setFeedbackMsg] = React.useState('');
     const [feedbackColor, setFeedbackColor] = React.useState('#fff');
+    const [showContent, setShowContent] = React.useState(false);
+
+    React.useEffect(() => {
+        if (modalType === 'Merchant' || modalType === 'Alchemist') {
+            setShowContent(false);
+            const timer = setTimeout(() => {
+                setShowContent(true);
+            }, 650);
+            return () => clearTimeout(timer);
+        } else {
+            setShowContent(true);
+        }
+    }, [modalType]);
 
     React.useEffect(() => {
         if (modalType === 'Merchant' && inventoryManager) {
@@ -236,12 +250,15 @@ const ModalInner = ({ modalType, updates, crew, tileSize, handleMemberClickRitua
     };
 
     const renderItemIcon = (iconName) => {
-        const src = images[iconName]?.default || images[iconName] || '';
+        let src = images[iconName]?.default || images[iconName] || '';
+        if (typeof src === 'object') {
+            src = src.default || '';
+        }
         if (!src) return <div style={{width: 32, height: 32, backgroundColor: '#333', borderRadius: 4, flexShrink: 0}} />;
         return <div style={{
             width: 32,
             height: 32,
-            backgroundImage: `url(${src})`,
+            backgroundImage: `url("${encodeURI(String(src))}")`,
             backgroundSize: 'contain',
             backgroundRepeat: 'no-repeat',
             backgroundPosition: 'center',
@@ -387,7 +404,12 @@ const ModalInner = ({ modalType, updates, crew, tileSize, handleMemberClickRitua
             )}
 
             {modalType === 'Merchant' && (
-                <div className="merchant-screen">
+                <div className="merchant-screen" style={{
+                    opacity: showContent ? 1 : 0,
+                    transform: showContent ? 'scale(1)' : 'scale(0.98)',
+                    transition: 'opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1)',
+                    pointerEvents: showContent ? 'auto' : 'none'
+                }}>
                     <div className="vendor-split-container">
                         <div className="vendor-panel">
                             <h3 className="panel-title">Merchant's Stock</h3>
@@ -451,7 +473,12 @@ const ModalInner = ({ modalType, updates, crew, tileSize, handleMemberClickRitua
             )}
 
             {modalType === 'Alchemist' && (
-                <div className="alchemist-screen">
+                <div className="alchemist-screen" style={{
+                    opacity: showContent ? 1 : 0,
+                    transform: showContent ? 'scale(1)' : 'scale(0.98)',
+                    transition: 'opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1)',
+                    pointerEvents: showContent ? 'auto' : 'none'
+                }}>
                     <div className="vendor-split-container">
                         <div className="vendor-panel">
                             <h3 className="panel-title">Potion Brewing</h3>
@@ -902,9 +929,14 @@ class DungeonPage extends React.Component {
             , devConsoleOpen: false
             , devConsoleInput: ''
             , devConsoleOutput: []
+            , activeChestLoot: []
+            , chestLootVisible: false
+            , chestLootFadeOut: false
             , showQuestsPopup: false
             , showCampPopup: false
             , campWarningMessage: null
+            , showSkillTreePopup: false
+            , selectedSkillTreeCrewMember: null
             , showFoodPrepOverlay: false
             , showSpellsOverlay: false
             , showMapOverlay: false
@@ -2408,6 +2440,39 @@ class DungeonPage extends React.Component {
         let index = Math.floor(Math.random() * array.length)
         return array[index]
     }
+    triggerLootRadialArc = (lootInput) => {
+        const newItems = Array.isArray(lootInput) ? lootInput : [lootInput];
+        
+        if (this._chestLootTimer) {
+            clearTimeout(this._chestLootTimer);
+            this._chestLootTimer = null;
+        }
+        if (this._chestLootCleanupTimer) {
+            clearTimeout(this._chestLootCleanupTimer);
+            this._chestLootCleanupTimer = null;
+        }
+
+        this.setState(prevState => {
+            const baseList = prevState.chestLootFadeOut ? [] : prevState.activeChestLoot;
+            return {
+                activeChestLoot: [...baseList, ...newItems],
+                chestLootVisible: true,
+                chestLootFadeOut: false
+            };
+        }, () => {
+            this._chestLootTimer = this._setTimeout(() => {
+                this.setState({ chestLootFadeOut: true });
+                
+                this._chestLootCleanupTimer = this._setTimeout(() => {
+                    this.setState({
+                        activeChestLoot: [],
+                        chestLootVisible: false,
+                        chestLootFadeOut: false
+                    });
+                }, 300);
+            }, 1000);
+        });
+    }
     addCurrencyToInventory = (data) => {
         let type;
         switch(data.type){
@@ -2425,6 +2490,21 @@ class DungeonPage extends React.Component {
         }
         this.displayMessage(`You found ${data.amount} ${type}!`)
         this.props.inventoryManager.addCurrency(data)
+
+        if (this.props.boardManager && (this.props.boardManager.chestPickupInProgress || this.props.boardManager.treasurePickupInProgress)) {
+            let iconKey = 'gold';
+            if (data.type === 'shimmering_dust' || data.type === 'shimmering dust') {
+                iconKey = 'magic_moon_1';
+            } else if (data.type === 'totems' || data.type === 'totem') {
+                iconKey = 'eclipse';
+            }
+            this.triggerLootRadialArc({
+                type: 'currency',
+                id: data.type + '_' + Math.random(),
+                icon: images[iconKey] || images['gold'] || null,
+                name: `${data.amount} ${type}`
+            });
+        }
     }
     addFoodToSupplies = () => {
         const crew = (this.props.crewManager && Array.isArray(this.props.crewManager.crew))
@@ -2469,6 +2549,16 @@ class DungeonPage extends React.Component {
         this.setState({
             inventoryHoverMatrix: matrix
         })
+
+        if (this.props.boardManager && (this.props.boardManager.chestPickupInProgress || this.props.boardManager.treasurePickupInProgress)) {
+            const iconKey = itemDefinition?.icon || tileContains;
+            this.triggerLootRadialArc({
+                type: 'item',
+                id: tileContains + '_' + Math.random(),
+                icon: images[iconKey] || images[tileContains] || images['treasure'] || null,
+                name: itemDisplayName
+            });
+        }
     }
     addTreasureToInventory = (treasure) => {
         let item = treasure.item
@@ -2476,6 +2566,33 @@ class DungeonPage extends React.Component {
         this.displayMessage(message);
         this.props.inventoryManager.addItem(this.props.inventoryManager.allItems[treasure.item])
         this.props.inventoryManager.addCurrency(treasure.currency);
+
+        const itemDefinition = this.props.inventoryManager.allItems[treasure.item];
+        const itemDisplayName = itemDefinition?.name || item.replaceAll('_', ' ');
+        const itemIconName = itemDefinition?.icon || treasure.item;
+        
+        let currencyType = treasure.currency.type;
+        let currencyIconKey = 'gold';
+        if (currencyType === 'shimmering_dust' || currencyType === 'shimmering dust') {
+            currencyIconKey = 'magic_moon_1';
+        } else if (currencyType === 'totems' || currencyType === 'totem') {
+            currencyIconKey = 'eclipse';
+        }
+
+        this.triggerLootRadialArc([
+            {
+                type: 'item',
+                id: treasure.item + '_' + Math.random(),
+                icon: images[itemIconName] || images[treasure.item] || images['treasure'] || null,
+                name: itemDisplayName
+            },
+            {
+                type: 'currency',
+                id: treasure.currency.type + '_' + Math.random(),
+                icon: images[currencyIconKey] || images['gold'] || null,
+                name: `${treasure.currency.amount} ${treasure.currency.type}`
+            }
+        ]);
     }
     useConsumableFromInventory = (item) => {
         let foundItem = this.props.inventoryManager.inventory.find(e=> e.name === item.name),
@@ -4933,6 +5050,12 @@ class DungeonPage extends React.Component {
         try { this.setState({ showCampPopup: true }); } catch(e) {}
     }
 
+    handleOpenSkillTree = (crewMember) => {
+        try { this.setState({ showSkillTreePopup: true, selectedSkillTreeCrewMember: crewMember }); } catch(e) {}
+    }
+    handleCloseSkillTree = () => {
+        try { this.setState({ showSkillTreePopup: false, selectedSkillTreeCrewMember: null }); } catch(e) {}
+    }
     handleCloseCampPopup = () => {
         try { this.setState({ showCampPopup: false, showFoodPrepOverlay: false, showSpellsOverlay: false, showMapOverlay: false, mapZoomedLevelId: null, mapUnzoomingLevelId: null, mapRevealAfterUnzoom: false, mapPendingZoomLevelId: null, mapSelectedLevelId: null, mapBoardDetailStage: null, mapBoardDetailBoardIndex: null }, () => this._cleanupModalBodyClass()); } catch(e) {}
     }
@@ -5390,7 +5513,7 @@ class DungeonPage extends React.Component {
                                     color={member.color}
                                     editMode={false}
                                     type={'crew-tile'}
-                                    handleClick={() => {}}
+                                    handleClick={() => this.handleOpenSkillTree(member)}
                                     handleHover={() => {}}
                                 />
                                 <div className="camp-crew-name">{member.name}</div>
@@ -6070,6 +6193,13 @@ class DungeonPage extends React.Component {
                     );
                 })()}
             </CModal>
+
+            {/* Skill Tree popup */}
+            <CModal size="xl" className="skill-tree-modal" alignment="center" visible={this.state.showSkillTreePopup} onClose={this.handleCloseSkillTree} backdrop={true}>
+                {this.state.selectedSkillTreeCrewMember && (
+                    <SkillTree crewMember={this.state.selectedSkillTreeCrewMember} onClose={this.handleCloseSkillTree} />
+                )}
+            </CModal>
             {/* <ExpositionPane></ExpositionPane> */}
             {this.props.boardManager.currentOrientation === 'B' && <div className="dark-mask"></div>}
             <div className={`left-side-panel ${this.state.leftPanelExpanded ? 'expanded' : ''}`}>
@@ -6737,6 +6867,64 @@ class DungeonPage extends React.Component {
                             backgroundImage: this.state.playerFloatStyle.backgroundImage
                         }}
                     />
+                )}
+                {/* Chest loot radial arc overlay */}
+                {this.state.chestLootVisible && this.state.activeChestLoot.length > 0 && (
+                    <div
+                        className="chest-loot-overlay"
+                        style={{
+                            position: 'absolute',
+                            left: this.state.playerFloatStyle.left,
+                            top: this.state.playerFloatStyle.top,
+                            width: this.state.tileSize,
+                            height: this.state.tileSize,
+                            transform: this.state.playerFloatStyle.transform,
+                            pointerEvents: 'none',
+                            zIndex: 6
+                        }}
+                    >
+                        {this.state.activeChestLoot.map((loot, idx) => {
+                            const total = this.state.activeChestLoot.length;
+                            const radius = this.state.tileSize * 0.9;
+                            let angle = -90;
+                            if (total > 1) {
+                                const arcSpan = 100;
+                                const startAngle = -90 - arcSpan / 2;
+                                const step = arcSpan / (total - 1);
+                                angle = startAngle + idx * step;
+                            }
+                            const rad = (angle * Math.PI) / 180;
+                            const x = Math.cos(rad) * radius;
+                            const y = Math.sin(rad) * radius;
+                            
+                            const centerOffset = this.state.tileSize / 2;
+                            const lootSize = this.state.tileSize * 0.6;
+                            
+                            const left = centerOffset + x - lootSize / 2;
+                            const top = centerOffset + y - lootSize / 2;
+                            
+                            const iconUrl = loot.icon?.default || loot.icon || '';
+                            
+                            return (
+                                <div
+                                    key={loot.id}
+                                    className={`chest-loot-item ${this.state.chestLootFadeOut ? 'fade-out' : 'fade-in'}`}
+                                    style={{
+                                        position: 'absolute',
+                                        left: left,
+                                        top: top,
+                                        width: lootSize,
+                                        height: lootSize,
+                                        backgroundImage: `url(${iconUrl})`,
+                                        backgroundSize: '70% 70%',
+                                        backgroundRepeat: 'no-repeat',
+                                        backgroundPosition: 'center',
+                                        filter: 'drop-shadow(0px 2px 4px rgba(0,0,0,0.8))'
+                                    }}
+                                />
+                            );
+                        })}
+                    </div>
                 )}
             </div>}
             

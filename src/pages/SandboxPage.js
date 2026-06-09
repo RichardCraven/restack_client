@@ -326,7 +326,7 @@ const monstersData = [
     { id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' },
     { id: 'bite', name: 'Bite', desc: 'Savage bite attack.', icon: monster_bite, type: 'bite' },
     { id: 'blue_dragon_breath', name: 'Blue Dragon Breath', desc: 'A fat, wavy beam that deals heavy damage over time.', icon: blue_dragon_breath, type: 'blue_dragon_breath_type' },
-    { id: 'whirlwind', name: 'Whirlwind', desc: 'Creates a devastating whirlwind.', icon: whirlwind, type: 'whirlwind_type' },
+    { id: 'dragon_whirlwind', name: 'Whirlwind', desc: 'Create a massive windstorm that pushes units back.', icon: whirlwind, type: 'dragon_whirlwind_type' },
     { id: 'bombard', name: 'Bombard', desc: 'Bombard the enemy from above.', icon: bombard, type: 'bombard_type' },
     { id: 'dispell', name: 'Dispell', desc: 'Remove magical effects.', icon: dispell, type: 'dispell_type' },
     { id: 'serpent_vision', name: 'Serpent Vision', desc: 'Enhanced vision to see vulnerabilities.', icon: serpent_vision, type: 'serpent_vision_type' },
@@ -533,6 +533,7 @@ const SandboxPage = () => {
   const [selectedMonsterId, setSelectedMonsterId] = useState(localStorage.getItem('sandboxMonster') || 'goblin');
   const [fighterPos, setFighterPos] = useState({ row: 2, col: 0 });
   const [targetPos, setTargetPos] = useState({ row: 2, col: 2 });
+  const [barbarianPos, setBarbarianPos] = useState({ row: 3, col: 3 });
 
   useEffect(() => {
     localStorage.setItem('sandboxUnitType', selectedUnitType);
@@ -567,12 +568,14 @@ const SandboxPage = () => {
   const [sagePerceiveInstanceActive, setSagePerceiveInstanceActive] = useState(false);
   const [copFading, setCopFading] = useState(false);
   const [isAnimating, setAnimating] = useState(false);
+  const [isCasting, setIsCasting] = useState(false);
   const [animationPhase, setAnimationPhase] = useState(null); // 'lunge', 'leap', 'behind_target', 'teleport_fade', etc.
   const [projectile, setProjectile] = useState(null);
   const [projectiles, setProjectiles] = useState([]); // For wizard magic missile
   const [hitEffect, setHitEffect] = useState(null);
   const [floatingTexts, setFloatingTexts] = useState([]);
   const [targetShake, setTargetShake] = useState(false);
+  const [fighterShake, setFighterShake] = useState(false);
   const [targetFlash, setTargetFlash] = useState(false);
   const [targetFrozen, setTargetFrozen] = useState(false);
   const [selfBuffEffect, setSelfBuffEffect] = useState(null); // 'heal', 'barrier', 'rage'
@@ -1652,6 +1655,7 @@ const SandboxPage = () => {
 
   // Helper to determine dynamic lunge/jump transform offsets
   const getFighterTransformStyle = () => {
+    if (fighterShake) return 'translate(5px, 2px) rotate(2deg)';
     if (!isAnimating) return 'none';
     const colDiff = targetPos.col - fighterPos.col;
     const rowDiff = targetPos.row - fighterPos.row;
@@ -2896,7 +2900,7 @@ const SandboxPage = () => {
 
     // --- DRAGON BREATH ---
     else if (ability.type === 'blue_dragon_breath_type') {
-      setAnimating(true);
+      setIsCasting(true);
       setActiveBeam('blue_dragon_breath');
       setBlueDragonBreathActive(true);
       
@@ -2917,7 +2921,110 @@ const SandboxPage = () => {
         setBlueDragonBreathActive(false);
         setHitEffect(null);
         setAnimating(false);
+        setIsCasting(false);
       }, 3000);
+    }
+
+    // --- DRAGON WHIRLWIND ---
+    else if (ability.type === 'dragon_whirlwind_type') {
+      setIsCasting(true);
+      setHitEffect({ type: 'dragon_whirlwind_effect' });
+      setTimeout(() => {
+        // Push back logic: source is the Dragon (caster)
+        const isDragonFighter = selectedUnitType === 'monster' && selectedMonsterId === 'dragon';
+        const dCol = isDragonFighter ? fighterPos.col : targetPos.col;
+        const dRow = isDragonFighter ? fighterPos.row : targetPos.row;
+        const dHuge = isDragonFighter ? isFighterHuge : isTargetHuge;
+        const dLarge = isDragonFighter ? isFighterLarge : isTargetLarge;
+
+        const fCol = getUnitVisualCol(dCol, dHuge, dLarge);
+        const fRow = getUnitVisualRow(dRow, dHuge, dLarge);
+
+        const pushUnit = (pos, setPos, isHugeTarget, isLargeTarget) => {
+          const tCol = getUnitVisualCol(pos.col, isHugeTarget, isLargeTarget);
+          const tRow = getUnitVisualRow(pos.row, isHugeTarget, isLargeTarget);
+          const dx = tCol - fCol;
+          const dy = tRow - fRow;
+          const dist = Math.max(Math.abs(dx), Math.abs(dy)); // Chebyshev distance
+          // 3 tiles from center is exactly 2 tiles from the outer edge of a 3x3 dragon
+          if (dist <= 3 && dist > 0) {
+             const angle = Math.atan2(dy, dx);
+             let newCol = pos.col + Math.round(Math.cos(angle));
+             let newRow = pos.row + Math.round(Math.sin(angle));
+             // keep in bounds
+             newCol = Math.max(0, Math.min(9, newCol));
+             newRow = Math.max(0, Math.min(9, newRow));
+             setPos({ row: newRow, col: newCol });
+          }
+        };
+
+        // Push the other units (targets) away from the Dragon
+        const tHuge = isDragonFighter ? isTargetHuge : isFighterHuge;
+        const tLarge = isDragonFighter ? isTargetLarge : isFighterLarge;
+        pushUnit(isDragonFighter ? targetPos : fighterPos, isDragonFighter ? setTargetPos : setFighterPos, tHuge, tLarge);
+        pushUnit(barbarianPos, setBarbarianPos, false, false); // Barbarian is 1x1
+
+        setIsCasting(false);
+        setHitEffect(null);
+      }, 1000);
+    }
+
+    // --- BOMBARD ---
+    else if (ability.type === 'bombard_type') {
+      setIsCasting(true);
+      
+      // Calculate target area (3x3). Target is centered on targetPos.
+      const bombardCenter = { ...targetPos }; 
+
+      setHitEffect({
+        type: 'bombard_emission',
+        center: fighterPos,
+        isTargetHuge: isFighterHuge,
+        isTargetLarge: isFighterLarge
+      });
+
+      // Emission phase
+      setTimeout(() => {
+        // NOTE: In actual combat logic, the bombardment strike delay MUST be tied to exactly 1 full combat round.
+        // For Sandbox visualization purposes, we are simulating this round delay with a fixed 1.5s timeout.
+        setHitEffect(null);
+        setIsCasting(false);
+
+        setTimeout(() => {
+          // Bombardment strike phase
+          setHitEffect({ type: 'bombard_strike', center: bombardCenter });
+
+          // Damage logic after strike animation
+          setTimeout(() => {
+            const hitUnit = (pos, isHuge, isLarge) => {
+              const uCol = getUnitVisualCol(pos.col, isHuge, isLarge);
+              const uRow = getUnitVisualRow(pos.row, isHuge, isLarge);
+              const dx = Math.abs(uCol - bombardCenter.col);
+              const dy = Math.abs(uRow - bombardCenter.row);
+              if (dx <= 1 && dy <= 1) { // within 3x3
+                return true;
+              }
+              return false;
+            };
+
+            if (hitUnit(targetPos, isTargetHuge, isTargetLarge)) {
+              setTargetShake(true);
+              setTargetFlash(true);
+              addFloatingText('-45', 'damage', '#ff3333', targetPos.row, targetPos.col);
+              setTimeout(() => {
+                setTargetShake(false);
+                setTargetFlash(false);
+              }, 500);
+            }
+            if (hitUnit(barbarianPos, false, false)) {
+              addFloatingText('-45', 'damage', '#ff3333', barbarianPos.row, barbarianPos.col);
+            }
+
+            setHitEffect(null);
+          }, 800); // Wait for strike animation
+
+        }, 1500); // 1.5s delay
+      }, 1000); // 1s emission
     }
 
     // --- OGRE STOMP ---
@@ -8761,6 +8868,35 @@ const SandboxPage = () => {
                   </div>
                 </>
               )}
+              {/* --- Barbarian Sandbox Target --- */}
+              <div
+                style={{
+                  position: 'absolute',
+                  width: `${TILE_PCT}%`,
+                  height: `${TILE_PCT}%`,
+                  left: `${barbarianPos.col * TILE_PCT}%`,
+                  top: `${barbarianPos.row * TILE_PCT}%`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  zIndex: 9,
+                  pointerEvents: 'none',
+                  transition: 'transform 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94), left 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94), top 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+                }}
+              >
+                <div style={{
+                  width: '80%',
+                  height: '80%',
+                  borderRadius: '8px',
+                  border: '2px solid #ffb703',
+                  backgroundColor: '#222',
+                  backgroundImage: `url(${barbarian})`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  boxShadow: '0 8px 16px rgba(0,0,0,0.5)',
+                }} />
+              </div>
+
 
               {/* --- Extra Ranger Target (col 0, row 3) for Monsters --- */}
               {selectedUnitType === 'monster' && (
@@ -9382,7 +9518,7 @@ const SandboxPage = () => {
               ))}
 
               {/* --- Special Beams / Overlays (like Smite, Lightning) --- */}
-              {activeBeam && activeBeam !== 'annihilation' && activeBeam !== 'energy_drain_beam' && (
+              {activeBeam && activeBeam !== 'annihilation' && activeBeam !== 'energy_drain_beam' && activeBeam !== 'blue_dragon_breath' && (
                 <div
                   style={{
                     position: 'absolute',
@@ -9498,10 +9634,30 @@ const SandboxPage = () => {
 
               {/* --- Blue Dragon Breath Beam --- */}
               {activeBeam === 'blue_dragon_breath' && (() => {
-                const px1 = fighterPos.col * TILE_PCT + TILE_PCT / 2;
-                const py1 = fighterPos.row * TILE_PCT + TILE_PCT / 2;
-                const px2 = targetPos.col * TILE_PCT + TILE_PCT / 2;
-                const py2 = targetPos.row * TILE_PCT + TILE_PCT / 2;
+                const fCol = getUnitVisualCol(fighterPos.col, isFighterHuge, isFighterLarge);
+                const fRow = getUnitVisualRow(fighterPos.row, isFighterHuge, isFighterLarge);
+                const tCol = getUnitVisualCol(targetPos.col, isTargetHuge, isTargetLarge);
+                const tRow = getUnitVisualRow(targetPos.row, isTargetHuge, isTargetLarge);
+
+                let originCol = fCol;
+                let originRow = fRow;
+                const diffX = tCol - fCol;
+                const diffY = tRow - fRow;
+                
+                // Shift origin to outer edge based on facing direction
+                if (Math.abs(diffX) > Math.abs(diffY)) {
+                  originCol += diffX > 0 ? 1 : -1;
+                } else if (Math.abs(diffY) > Math.abs(diffX)) {
+                  originRow += diffY > 0 ? 1 : -1;
+                } else {
+                  originCol += diffX > 0 ? 1 : -1;
+                  originRow += diffY > 0 ? 1 : -1;
+                }
+
+                const px1 = originCol * TILE_PCT + TILE_PCT / 2;
+                const py1 = originRow * TILE_PCT + TILE_PCT / 2;
+                const px2 = tCol * TILE_PCT + TILE_PCT / 2;
+                const py2 = tRow * TILE_PCT + TILE_PCT / 2;
                 const dx = px2 - px1;
                 const dy = py2 - py1;
                 const length = Math.sqrt(dx * dx + dy * dy);
@@ -9514,17 +9670,86 @@ const SandboxPage = () => {
                       top: `${py1}%`,
                       width: `${length}%`,
                       height: '35px',
-                      background: 'linear-gradient(to bottom, rgba(0,212,255,0.8), rgba(0,100,255,1), rgba(0,212,255,0.8))',
-                      boxShadow: '0 0 20px #00d4ff, 0 0 40px #0055ff, inset 0 0 15px #ffffff',
                       transformOrigin: '0 50%',
                       transform: `translateY(-50%) rotate(${angle}deg)`,
+                      '--beam-angle': `${angle}deg`,
                       zIndex: 25,
+                      animation: 'beamGrowX 0.3s ease-out forwards',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      overflow: 'visible'
+                    }}
+                  >
+                    {/* Fuzzy bubbling orb at the origin of the beam (left edge) to obscure sharp square lines */}
+                    <div style={{
+                      position: 'absolute',
+                      left: '-20px',
+                      top: '-2px',
+                      width: '40px',
+                      height: '40px',
+                      background: 'radial-gradient(circle, #ffffff 10%, #00d4ff 40%, rgba(0, 212, 255, 0) 100%)',
+                      borderRadius: '60% 40% 50% 50% / 40% 50% 60% 50%',
+                      animation: 'organicGlow 1.2s linear infinite',
+                      boxShadow: '0 0 15px #00d4ff, 0 0 25px #0055ff',
+                      filter: 'blur(4px)',
+                      zIndex: 1
+                    }}>
+                      {[...Array(4)].map((_, i) => (
+                        <div key={`org-spark-${i}`} style={{
+                          position: 'absolute',
+                          left: '10px', top: '10px',
+                          width: '6px', height: '6px',
+                          background: '#fff',
+                          borderRadius: '50%',
+                          boxShadow: '0 0 10px #ffffff, 0 0 15px #00d4ff',
+                          animation: `particleSpark 0.8s ease-out infinite ${i * 0.2}s`
+                        }} />
+                      ))}
+                    </div>
+
+                    {/* The core beam itself */}
+                    <div style={{
+                      position: 'absolute',
+                      left: 0,
+                      top: 0,
+                      width: '100%',
+                      height: '100%',
+                      background: 'linear-gradient(to bottom, rgba(0,212,255,0.8), rgba(0,100,255,1), rgba(0,212,255,0.8))',
+                      boxShadow: '0 0 20px #00d4ff, 0 0 40px #0055ff, inset 0 0 15px #ffffff',
                       borderRadius: '10px',
-                      animation: 'wavyBeam 0.5s infinite alternate, beamGrow 0.3s ease-out forwards',
+                      animation: 'wavyBeamY 0.5s infinite alternate',
                       opacity: 0.9,
                       filter: 'contrast(1.2) brightness(1.3)'
-                    }}
-                  />
+                    }} />
+
+                    {/* Undulating organic tip at the end of the beam touching the target */}
+                    <div style={{
+                      position: 'absolute',
+                      right: '-20px',
+                      top: '-2px',
+                      width: '40px',
+                      height: '40px',
+                      background: 'radial-gradient(circle, #ffffff 10%, #0055ff 40%, rgba(0, 85, 255, 0) 100%)',
+                      borderRadius: '50% 50% 30% 70% / 60% 40% 60% 40%',
+                      animation: 'organicGlow 1.2s linear infinite',
+                      boxShadow: '0 0 15px #00d4ff, 0 0 25px #0055ff',
+                      filter: 'blur(4px)',
+                      zIndex: 1
+                    }}>
+                      {[...Array(4)].map((_, i) => (
+                        <div key={`tip-spark-${i}`} style={{
+                          position: 'absolute',
+                          left: '10px', top: '10px',
+                          width: '6px', height: '6px',
+                          background: '#fff',
+                          borderRadius: '50%',
+                          boxShadow: '0 0 10px #ffffff, 0 0 15px #0055ff',
+                          animation: `particleSpark 0.8s ease-out infinite ${i * 0.2}s`
+                        }} />
+                      ))}
+                    </div>
+                  </div>
                 );
               })()}
 
@@ -10013,6 +10238,191 @@ const SandboxPage = () => {
                       </div>
                     );
                   })()}
+                  {hitEffect.type === 'dragon_whirlwind_effect' && (() => {
+                    const isDragonFighter = selectedUnitType === 'monster' && selectedMonsterId === 'dragon';
+                    const col = isDragonFighter ? fighterPos.col : targetPos.col;
+                    const row = isDragonFighter ? fighterPos.row : targetPos.row;
+                    const isHuge = isDragonFighter ? isFighterHuge : isTargetHuge;
+                    const isLarge = isDragonFighter ? isFighterLarge : isTargetLarge;
+
+                    const fCol = getUnitVisualCol(col, isHuge, isLarge);
+                    const fRow = getUnitVisualRow(row, isHuge, isLarge);
+                    
+                    // Center on 3x3 complex (huge) or 2x2 complex (large)
+                    const centerOffsetX = isHuge ? TILE_PCT : (isLarge ? TILE_PCT / 2 : 0);
+                    const centerOffsetY = isHuge ? TILE_PCT : (isLarge ? TILE_PCT / 2 : 0);
+
+                    return (
+                      <div style={{
+                        position: 'absolute',
+                        left: `${fCol * TILE_PCT + TILE_PCT / 2 + centerOffsetX}%`,
+                        top: `${fRow * TILE_PCT + TILE_PCT / 2 + centerOffsetY}%`,
+                        width: '0px', height: '0px',
+                        zIndex: 35,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}>
+                        {[...Array(4)].map((_, i) => (
+                          <div key={`ww-ring-${i}`} style={{
+                            position: 'absolute',
+                            animation: `windstormBobble 0.3s ease-in-out infinite alternate ${i * 0.1}s`
+                          }}>
+                            <div style={{
+                              border: '4px solid rgba(255, 255, 255, 0.8)',
+                              borderRadius: '50%',
+                              boxShadow: '0 0 20px #ffffff, inset 0 0 10px #ffffff',
+                              animation: `windstormExpand 1s cubic-bezier(0.1, 0.8, 0.3, 1) forwards ${i * 0.15}s`,
+                              opacity: 0,
+                              width: '20px',
+                              height: '20px',
+                            }} />
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
+
+                  {hitEffect.type === 'bombard_emission' && (() => {
+                    const { center, isTargetHuge, isTargetLarge } = hitEffect;
+                    const cCol = getUnitVisualCol(center.col, isTargetHuge, isTargetLarge);
+                    const cRow = getUnitVisualRow(center.row, isTargetHuge, isTargetLarge);
+                    // Center offset
+                    const centerOffsetX = isTargetHuge ? TILE_PCT : (isTargetLarge ? TILE_PCT / 2 : 0);
+                    const centerOffsetY = isTargetHuge ? TILE_PCT : (isTargetLarge ? TILE_PCT / 2 : 0);
+
+                    return (
+                      <div style={{
+                        position: 'absolute',
+                        left: `${cCol * TILE_PCT + TILE_PCT / 2 + centerOffsetX}%`,
+                        top: `${cRow * TILE_PCT + TILE_PCT / 2 + centerOffsetY}%`,
+                        width: '0px', height: '0px',
+                        zIndex: 40,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        pointerEvents: 'none'
+                      }}>
+                        {[...Array(10)].map((_, i) => {
+                          const delay = i * 0.04;
+                          const size = 6 + (i % 3) * 3; // various sizes
+                          const rx1 = `${((i * 17) % 73 - 36) * 3}px`;
+                          const ry1 = `${((i * 23) % 67 - 33) * 3}px`;
+                          const rx2 = `${((i * 31) % 79 - 39) * 3}px`;
+                          const ry2 = `${((i * 13) % 71 - 35) * 3}px`;
+                          const rx3 = `${((i * 19) % 83 - 41) * 3}px`;
+                          const ry3 = `${((i * 29) % 73 - 36) * 3}px`;
+                          const rx4 = `${((i * 37) % 67 - 33) * 3}px`;
+                          const ry4 = `${((i * 41) % 79 - 39) * 3}px`;
+                          const rx5 = `${((i * 43) % 71 - 35) * 3}px`;
+                          const ry5 = `${((i * 47) % 83 - 41) * 3}px`;
+                          
+                          const shadowColor = (i % 2 === 0) ? '#00ffff' : '#ffffff';
+                          
+                          return (
+                            <div
+                              key={`bombard-particle-${i}`}
+                              style={{
+                                '--rx1': rx1, '--ry1': ry1,
+                                '--rx2': rx2, '--ry2': ry2,
+                                '--rx3': rx3, '--ry3': ry3,
+                                '--rx4': rx4, '--ry4': ry4,
+                                '--rx5': rx5, '--ry5': ry5,
+                                position: 'absolute',
+                                width: `${size}px`,
+                                height: `${size}px`,
+                                borderRadius: '50%',
+                                backgroundColor: '#ffffff',
+                                boxShadow: `0 0 10px ${shadowColor}, 0 0 20px ${shadowColor}, inset 0 0 5px #ffffff`,
+                                animation: 'bombardParticle 1.0s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards',
+                                animationDelay: `${delay}s`,
+                              }}
+                            />
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
+
+                  {hitEffect.type === 'bombard_strike' && (() => {
+                    const { center } = hitEffect;
+                    // It strikes a 3x3 area centered on hitEffect.center
+                    // But the effect origin should be exactly at center
+                    const cCol = getUnitVisualCol(center.col, false, false);
+                    const cRow = getUnitVisualRow(center.row, false, false);
+
+                    return (
+                      <div style={{
+                        position: 'absolute',
+                        left: `${cCol * TILE_PCT + TILE_PCT / 2}%`,
+                        top: `${cRow * TILE_PCT + TILE_PCT / 2}%`,
+                        width: '0px', height: '0px',
+                        zIndex: 40,
+                        pointerEvents: 'none'
+                      }}>
+                        {[...Array(10)].map((_, i) => {
+                          const isSet2 = i >= 5;
+                          const delay = isSet2 ? 0.15 + (i - 5) * 0.02 : i * 0.02;
+                          
+                          const widths = [8, 24, 12, 36, 16, 10, 28, 14, 40, 18];
+                          const width = widths[i];
+                          
+                          const leftOffsets = [-90, 40, -40, 80, -110, 10, -70, 95, -20, 120];
+                          const left = leftOffsets[i];
+                          
+                          const topOffsets = [-20, 15, -10, 30, 5, -25, 20, -5, 10, -15];
+                          const top = topOffsets[i];
+                          
+                          const glowColor = (i % 2 === 0) ? '#00ffff' : '#00bfff';
+                          
+                          return (
+                            <div
+                              key={`bombard-beam-container-${i}`}
+                              style={{
+                                position: 'absolute',
+                                left: `${left}px`,
+                                top: `${top}px`,
+                                pointerEvents: 'none'
+                              }}
+                            >
+                              <div
+                                style={{
+                                  position: 'absolute',
+                                  bottom: 0,
+                                  left: `-${width / 2}px`,
+                                  width: `${width}px`,
+                                  height: '800px',
+                                  background: `linear-gradient(to bottom, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.3) 30%, ${glowColor} 70%, #ffffff 100%)`,
+                                  boxShadow: `0 0 15px ${glowColor}, 0 0 30px ${glowColor}`,
+                                  borderRadius: `${width / 2}px ${width / 2}px 0 0`,
+                                  transformOrigin: 'bottom center',
+                                  animation: 'bombardBeamFall 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards',
+                                  animationDelay: `${delay}s`,
+                                }}
+                              />
+                              <div
+                                style={{
+                                  position: 'absolute',
+                                  left: '-50px',
+                                  top: '-50px',
+                                  width: '100px',
+                                  height: '100px',
+                                  borderRadius: '50%',
+                                  background: `radial-gradient(circle, #ffffff 10%, ${glowColor} 50%, rgba(255, 255, 255, 0) 70%)`,
+                                  boxShadow: `0 0 30px ${glowColor}, inset 0 0 15px #ffffff`,
+                                  animation: 'bombardBeamSplash 0.5s cubic-bezier(0.1, 0.8, 0.3, 1) forwards',
+                                  animationDelay: `${delay + 0.25}s`,
+                                  opacity: 0,
+                                  transform: 'scale(0)'
+                                }}
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
+
                   {hitEffect.type === 'barbarian_cleave_effect' && (() => {
                     const activeWeaponId = equippedWeapons['barbarian'] || 'woodcutters_axe';
                     const activeWeapon = WEAPONS_DB.axes.find(w => w.id === activeWeaponId) ||

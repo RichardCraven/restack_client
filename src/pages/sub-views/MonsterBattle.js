@@ -967,7 +967,8 @@ class MonsterBattle extends React.Component {
             return;
         }
 
-        executeTeardown();
+        this._setTimeout(() => {
+            executeTeardown();
 
         let experienceGained,
             goldGained,
@@ -1225,6 +1226,7 @@ class MonsterBattle extends React.Component {
             suppressSummaryPortraits: !!this._suppressPersistFinalHP,
             isFinalDeath: false,
         })
+        }, 1500);
     }
     launchDeathSequence = () => {
             this.props.setNarrativeSequence('death')

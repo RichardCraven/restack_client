@@ -172,7 +172,7 @@ class CrewManagerPage extends React.Component{
     const savedDefaults = getMeta()?.simulatorDefaults;
     const enemyState = savedDefaults
         ? { selectedMonsterKey: savedDefaults.selectedMonsterKey ?? 'mummy', selectedMinionKeys: savedDefaults.selectedMinionKeys ?? ['skeleton', 'skeleton', 'skeleton', null] }
-        : {};
+        : { selectedMonsterKey: 'mummy', selectedMinionKeys: ['skeleton', 'skeleton', 'skeleton', null] };
 
     // Restore saved crew roster if present; otherwise fall back to the hardcoded defaults above
     if (savedDefaults?.selectedCrewTypes && Array.isArray(savedDefaults.selectedCrewTypes)) {
@@ -182,6 +182,9 @@ class CrewManagerPage extends React.Component{
         if (restoredCrew.length > 0) selectedCrew = restoredCrew;
     }
 
+    const initialMonsterKey = enemyState.selectedMonsterKey || 'mummy';
+    const initialMonster = this.props.monsterManager.getMonster(initialMonsterKey);
+
     this.setState({
         options,
         selectedCrew,
@@ -189,6 +192,7 @@ class CrewManagerPage extends React.Component{
         ...(savedDefaults?.fighterLevels ? { fighterLevels: savedDefaults.fighterLevels } : {}),
         ...(savedDefaults?.fighterSkillTiers ? { fighterSkillTiers: savedDefaults.fighterSkillTiers } : {}),
         ...enemyState,
+        selectedEnemyForInfo: initialMonster || null
     })
     }
 
@@ -796,97 +800,92 @@ combatKeyUpListener = (event) => {
                         </button>
                     </div>
 
-                    {/* Main monster + 4 minion slots */}
-                    <div className="enemy-slots-row">
-                        {/* Main monster slot */}
-                        <div className="enemy-slot-group">
-                            <div className="enemy-slot-label">Monster</div>
-                            <div
-                                className={`enemy-slot ${!this.state.selectedMonsterKey ? 'empty' : ''}`}
-                                title={this.state.selectedMonsterKey ? 'Double-click to remove' : 'Select from roster below'}
-                                onDoubleClick={() => this.removeEnemySlot('monster', 0)}
-                                onClick={() => {
-                                    if (this.state.selectedMonsterKey) {
+                    {/* Main monster + 4 minion slots + Info panel */}
+                    <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'flex-start', gap: '24px', flexWrap: 'wrap', marginBottom: '14px' }}>
+                        <div className="enemy-slots-row" style={{ margin: 0, flexWrap: 'nowrap' }}>
+                            {/* Main monster slot */}
+                            <div className="enemy-slot-group">
+                                <div className="enemy-slot-label">Monster</div>
+                                <div
+                                    className={`enemy-slot ${!this.state.selectedMonsterKey ? 'empty' : ''}`}
+                                    title={this.state.selectedMonsterKey ? 'Double-click to remove' : 'Select from roster below'}
+                                    onDoubleClick={() => this.removeEnemySlot('monster', 0)}
+                                    onClick={() => {
+                                        if (this.state.selectedMonsterKey) {
+                                            const m = this.props.monsterManager.getMonster(this.state.selectedMonsterKey);
+                                            this.setState({ selectedEnemyForInfo: m });
+                                        }
+                                    }}
+                                >
+                                    {this.state.selectedMonsterKey && (() => {
                                         const m = this.props.monsterManager.getMonster(this.state.selectedMonsterKey);
-                                        this.setState({ selectedEnemyForInfo: m });
-                                    }
-                                }}
-                            >
+                                        return m ? <div className="enemy-slot-portrait" style={{backgroundImage: `url(${m.portrait})`}}></div> : null;
+                                    })()}
+                                    {!this.state.selectedMonsterKey && <span className="enemy-slot-placeholder">＋</span>}
+                                </div>
                                 {this.state.selectedMonsterKey && (() => {
                                     const m = this.props.monsterManager.getMonster(this.state.selectedMonsterKey);
-                                    return m ? <div className="enemy-slot-portrait" style={{backgroundImage: `url(${m.portrait})`}}></div> : null;
+                                    return m ? <div className="enemy-slot-name">{formatMonsterType(m.type)}</div> : null;
                                 })()}
-                                {!this.state.selectedMonsterKey && <span className="enemy-slot-placeholder">＋</span>}
                             </div>
-                            {this.state.selectedMonsterKey && (() => {
-                                const m = this.props.monsterManager.getMonster(this.state.selectedMonsterKey);
-                                return m ? <div className="enemy-slot-name">{formatMonsterType(m.type)}</div> : null;
-                            })()}
+
+                            {/* 4 minion slots */}
+                            {[0,1,2,3].map(i => {
+                                const key = this.state.selectedMinionKeys[i];
+                                const m = key ? this.props.monsterManager.getMonster(key) : null;
+                                return (
+                                    <div className="enemy-slot-group" key={i}>
+                                        <div className="enemy-slot-label">Minion {i+1}</div>
+                                        <div
+                                            className={`enemy-slot ${!key ? 'empty' : ''}`}
+                                            title={key ? 'Double-click to remove' : 'Select from roster below'}
+                                            onDoubleClick={() => this.removeEnemySlot('minion', i)}
+                                            onClick={() => { if (m) this.setState({ selectedEnemyForInfo: m }); }}
+                                        >
+                                            {m && <div className="enemy-slot-portrait" style={{backgroundImage: `url(${m.portrait})`}}></div>}
+                                            {!key && <span className="enemy-slot-placeholder">＋</span>}
+                                        </div>
+                                        {m && <div className="enemy-slot-name">{formatMonsterType(m.type)}</div>}
+                                    </div>
+                                );
+                            })}
                         </div>
 
-                        {/* 4 minion slots */}
-                        {[0,1,2,3].map(i => {
-                            const key = this.state.selectedMinionKeys[i];
-                            const m = key ? this.props.monsterManager.getMonster(key) : null;
-                            return (
-                                <div className="enemy-slot-group" key={i}>
-                                    <div className="enemy-slot-label">Minion {i+1}</div>
-                                    <div
-                                        className={`enemy-slot ${!key ? 'empty' : ''}`}
-                                        title={key ? 'Double-click to remove' : 'Select from roster below'}
-                                        onDoubleClick={() => this.removeEnemySlot('minion', i)}
-                                        onClick={() => { if (m) this.setState({ selectedEnemyForInfo: m }); }}
-                                    >
-                                        {m && <div className="enemy-slot-portrait" style={{backgroundImage: `url(${m.portrait})`}}></div>}
-                                        {!key && <span className="enemy-slot-placeholder">＋</span>}
-                                    </div>
-                                    {m && <div className="enemy-slot-name">{formatMonsterType(m.type)}</div>}
+                        {/* Info panel for selected enemy */}
+                        {this.state.selectedEnemyForInfo && (
+                            <div className="enemy-info-panel" style={{ flex: '1', margin: 0, boxSizing: 'border-box' }}>
+                                <div className="enemy-info-portrait" style={{backgroundImage: `url(${this.state.selectedEnemyForInfo.portrait})`}}></div>
+                                <div className="enemy-info-details">
+                                    <div className="enemy-info-type">{formatMonsterType(this.state.selectedEnemyForInfo.type)}</div>
+                                    <div className="enemy-info-stat">HP: {this.state.selectedEnemyForInfo.stats?.hp} | ATK: {this.state.selectedEnemyForInfo.stats?.atk} | DEF: {this.state.selectedEnemyForInfo.stats?.def}</div>
+                                    <div className="enemy-info-stat">Level: {this.state.selectedEnemyForInfo.level}</div>
+                                    {this.state.selectedEnemyForInfo.specials?.length > 0 && (
+                                        <div className="enemy-info-stat">Specials: {this.state.selectedEnemyForInfo.specials.map(s => s.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')).join(', ')}</div>
+                                    )}
+                                    {this.state.selectedEnemyForInfo.weaknesses?.length > 0 && (
+                                        <div className="enemy-info-stat">Weaknesses: {this.state.selectedEnemyForInfo.weaknesses.map(s => s.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')).join(', ')}</div>
+                                    )}
                                 </div>
-                            );
-                        })}
+                            </div>
+                        )}
                     </div>
 
-                    {/* Info panel for selected enemy */}
-                    {this.state.selectedEnemyForInfo && (
-                        <div className="enemy-info-panel">
-                            <div className="enemy-info-portrait" style={{backgroundImage: `url(${this.state.selectedEnemyForInfo.portrait})`}}></div>
-                            <div className="enemy-info-details">
-                                <div className="enemy-info-type">{formatMonsterType(this.state.selectedEnemyForInfo.type)}</div>
-                                <div className="enemy-info-stat">HP: {this.state.selectedEnemyForInfo.stats?.hp} | ATK: {this.state.selectedEnemyForInfo.stats?.atk} | DEF: {this.state.selectedEnemyForInfo.stats?.def}</div>
-                                <div className="enemy-info-stat">Level: {this.state.selectedEnemyForInfo.level}</div>
-                                {this.state.selectedEnemyForInfo.specials?.length > 0 && (
-                                    <div className="enemy-info-stat">Specials: {this.state.selectedEnemyForInfo.specials.join(', ')}</div>
-                                )}
-                                {this.state.selectedEnemyForInfo.weaknesses?.length > 0 && (
-                                    <div className="enemy-info-stat">Weaknesses: {this.state.selectedEnemyForInfo.weaknesses.join(', ')}</div>
-                                )}
-                            </div>
-                        </div>
-                    )}
-
                     {/* Monster roster */}
-                    <div className="monster-roster-label">Monster Roster — double-click to add to slot</div>
+                    <div className="monster-roster-label">Monster Roster — click to select, click again to add to slot</div>
                     <div className="monster-roster">
                         {Object.values(this.props.monsterManager.monsters)
-                            .filter(m => ['skeleton', 'goblin', 'ogre', 'troll', 'mummy', 'wraith', 'vampire', 'gorgon', 'witch', 'beholder', 'kabuki_demon', 'djinn', 'dragon', 'sphinx'].includes(m.key))
+                            .filter(m => ['skeleton', 'goblin', 'ogre', 'troll', 'mummy', 'wraith', 'vampire', 'gorgon', 'witch', 'beholder', 'beholder_minion', 'kabuki_demon', 'djinn', 'dragon', 'sphinx'].includes(m.key))
                             .map((m, i) => (
                             <div
                                 key={i}
                                 className="monster-roster-portrait"
                                 style={{backgroundImage: `url(${m.portrait})`}}
                                 title={formatMonsterType(m.type)}
-                                onClick={() => this.setState({ selectedEnemyForInfo: m })}
-                                onDoubleClick={() => {
-                                    // Double-click: fill main monster slot first, then minions
-                                    if (!this.state.selectedMonsterKey) {
-                                        this.setState({ selectedMonsterKey: m.key });
+                                onClick={() => {
+                                    if (this.state.selectedEnemyForInfo && this.state.selectedEnemyForInfo.key === m.key) {
+                                        this.addEnemyFromRoster(m.key);
                                     } else {
-                                        const keys = this.state.selectedMinionKeys.slice();
-                                        const emptyIndex = keys.findIndex(k => !k);
-                                        if (emptyIndex !== -1) {
-                                            keys[emptyIndex] = m.key;
-                                            this.setState({ selectedMinionKeys: keys });
-                                        }
+                                        this.setState({ selectedEnemyForInfo: m });
                                     }
                                 }}
                             >

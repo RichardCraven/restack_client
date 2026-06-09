@@ -512,7 +512,7 @@ export class AnimationManagerRedux {
       angle,
       isNet: true,
       netIcon: ranger_net_throw,
-      duration: 800,
+      duration: 1200,
     });
   }
 
@@ -784,8 +784,8 @@ export class AnimationManagerRedux {
   }
 
   _leapAttack(src, tgt, sourceUnitId = null) {
-    const srcPx = this._px(src);
-    const tgtPx = this._px(tgt);
+    const srcPx = this._px(src, false, true);
+    const tgtPx = this._px(tgt, false, true);
     const dx = tgtPx.x - srcPx.x;
     const dy = tgtPx.y - srcPx.y;
     this._emit({

@@ -2,9 +2,64 @@ import * as images from './images';
 
 const skillsMatrix = {
     // === RANGER ===
+    ranger_global_t1: {
+        class: 'ranger',
+        id: 'ranger_global_t1',
+        tier: 1,
+        name: 'Ranger Global T1',
+        desc: 'Global passive upgrade for Ranger.',
+        icon: images.avatar,
+        cooldown: 0,
+        type: 'passive',
+        treePath: 'global',
+        isPassive: true,
+        knownByDefault: true
+    },
+    ranger_global_t2: {
+        class: 'ranger',
+        id: 'ranger_global_t2',
+        tier: 2,
+        name: 'Ranger Global T2',
+        desc: 'Global passive upgrade for Ranger.',
+        icon: images.avatar,
+        cooldown: 0,
+        type: 'passive',
+        treePath: 'global',
+        isPassive: true,
+        knownByDefault: false
+    },
+    ranger_global_t3: {
+        class: 'ranger',
+        id: 'ranger_global_t3',
+        tier: 3,
+        name: 'Ranger Global T3',
+        desc: 'Global passive upgrade for Ranger.',
+        icon: images.avatar,
+        cooldown: 0,
+        type: 'passive',
+        treePath: 'global',
+        isPassive: true,
+        knownByDefault: false
+    },
+    ranger_global_t4: {
+        class: 'ranger',
+        id: 'ranger_global_t4',
+        tier: 4,
+        name: 'Ranger Global T4',
+        desc: 'Global passive upgrade for Ranger.',
+        icon: images.avatar,
+        cooldown: 0,
+        type: 'passive',
+        treePath: 'global',
+        isPassive: true,
+        knownByDefault: false
+    },
     notch: {
+        class: 'ranger',
+        treePath: 'combat_a',
         id: 'notch',
         tier: 1,
+        knownByDefault: true,
         name: 'Notch',
         desc: 'Select arrow type to load.',
         icon: images['ranger_notch'],
@@ -14,8 +69,11 @@ const skillsMatrix = {
         type: 'utility'
     },
     loose: {
+        class: 'ranger',
+        treePath: 'combat_a',
         id: 'loose',
         tier: 1,
+        knownByDefault: true,
         name: 'Loose',
         desc: 'Shoot the selected notched arrow.',
         icon: images['ranger_loose'],
@@ -25,8 +83,11 @@ const skillsMatrix = {
         type: 'damage'
     },
     mark: {
+        class: 'ranger',
+        treePath: 'combat_b',
         id: 'mark',
         tier: 1,
+        knownByDefault: true,
         name: 'Mark',
         desc: 'Place a target mark on the enemy.',
         icon: images['ranger_mark'],
@@ -37,6 +98,8 @@ const skillsMatrix = {
         effect: ['target_marked']
     },
     execute: {
+        class: 'ranger',
+        treePath: 'combat_a',
         id: 'execute',
         tier: 3,
         name: 'Execute',
@@ -48,6 +111,8 @@ const skillsMatrix = {
         type: 'damage'
     },
     ensnare: {
+        class: 'ranger',
+        treePath: 'combat_b',
         id: 'ensnare',
         tier: 2,
         name: 'Ensnare',
@@ -57,11 +122,14 @@ const skillsMatrix = {
         duration: 'short',
         range: 'medium',
         type: 'debuff',
-        effect: { type: 'ensnared', chance: 100, duration: 2 }
+        effect: { type: 'ensnared', chance: 100, duration: 'short' }
     },
     eagle_eye: {
+        class: 'ranger',
+        treePath: 'combat_b',
         id: 'eagle_eye',
         tier: 1,
+        knownByDefault: true,
         name: 'Eagle Eye',
         desc: 'Passive: Whenever an enemy unit is summoned on the battlefield, immediately shoot two randomly chosen arrows at it.',
         icon: images['eagle_eye'],
@@ -73,13 +141,69 @@ const skillsMatrix = {
     },
 
     // === SAGE ===
+    sage_global_t1: {
+        class: 'sage',
+        id: 'sage_global_t1',
+        tier: 1,
+        name: 'Sage Global T1',
+        desc: 'Global passive upgrade for Sage.',
+        icon: images.avatar,
+        cooldown: 0,
+        type: 'passive',
+        treePath: 'global',
+        isPassive: true,
+        knownByDefault: true
+    },
+    sage_global_t2: {
+        class: 'sage',
+        id: 'sage_global_t2',
+        tier: 2,
+        name: 'Sage Global T2',
+        desc: 'Global passive upgrade for Sage.',
+        icon: images.avatar,
+        cooldown: 0,
+        type: 'passive',
+        treePath: 'global',
+        isPassive: true,
+        knownByDefault: false
+    },
+    sage_global_t3: {
+        class: 'sage',
+        id: 'sage_global_t3',
+        tier: 3,
+        name: 'Sage Global T3',
+        desc: 'Global passive upgrade for Sage.',
+        icon: images.avatar,
+        cooldown: 0,
+        type: 'passive',
+        treePath: 'global',
+        isPassive: true,
+        knownByDefault: false
+    },
+    sage_global_t4: {
+        class: 'sage',
+        id: 'sage_global_t4',
+        tier: 4,
+        name: 'Sage Global T4',
+        desc: 'Global passive upgrade for Sage.',
+        icon: images.avatar,
+        cooldown: 0,
+        type: 'passive',
+        treePath: 'global',
+        isPassive: true,
+        knownByDefault: false
+    },
     heal: {
+        class: 'sage',
+        treePath: 'combat_a',
         id: 'heal',
         tier: 1,
+        knownByDefault: true,
         name: 'Heal',
         desc: 'Cast restorative magic on an ally.',
         icon: images['healing_hands'],
-        cooldown: 6,
+        cooldown: 2,
+        initialCooldown: 1,
         duration: 'instant',
         range: 'medium',
         type: 'heal',
@@ -87,8 +211,11 @@ const skillsMatrix = {
         regeneration_percent: 30
     },
     circle_of_protection: {
+        class: 'sage',
+        treePath: 'combat_a',
         id: 'circle_of_protection',
         tier: 1,
+        knownByDefault: true,
         name: 'Circle of Protection',
         desc: 'Create a sanctuary shielding allies.',
         icon: images['circle_of_protection'],
@@ -105,6 +232,8 @@ const skillsMatrix = {
         }
     },
     perceive: {
+        class: 'sage',
+        treePath: 'combat_b',
         id: 'perceive',
         tier: 2,
         name: 'Perceive',
@@ -117,6 +246,8 @@ const skillsMatrix = {
         effect: ['weakness_doubled']
     },
     circle_of_deflection: {
+        class: 'sage',
+        treePath: 'combat_b',
         id: 'circle_of_deflection',
         tier: 3,
         name: 'Circle of Deflection',
@@ -131,9 +262,64 @@ const skillsMatrix = {
     },
 
     // === SOLDIER ===
+    soldier_global_t1: {
+        class: 'soldier',
+        id: 'soldier_global_t1',
+        tier: 1,
+        name: 'Soldier Global T1',
+        desc: 'Global passive upgrade for Soldier.',
+        icon: images.avatar,
+        cooldown: 0,
+        type: 'passive',
+        treePath: 'global',
+        isPassive: true,
+        knownByDefault: true
+    },
+    soldier_global_t2: {
+        class: 'soldier',
+        id: 'soldier_global_t2',
+        tier: 2,
+        name: 'Soldier Global T2',
+        desc: 'Global passive upgrade for Soldier.',
+        icon: images.avatar,
+        cooldown: 0,
+        type: 'passive',
+        treePath: 'global',
+        isPassive: true,
+        knownByDefault: false
+    },
+    soldier_global_t3: {
+        class: 'soldier',
+        id: 'soldier_global_t3',
+        tier: 3,
+        name: 'Soldier Global T3',
+        desc: 'Global passive upgrade for Soldier.',
+        icon: images.avatar,
+        cooldown: 0,
+        type: 'passive',
+        treePath: 'global',
+        isPassive: true,
+        knownByDefault: false
+    },
+    soldier_global_t4: {
+        class: 'soldier',
+        id: 'soldier_global_t4',
+        tier: 4,
+        name: 'Soldier Global T4',
+        desc: 'Global passive upgrade for Soldier.',
+        icon: images.avatar,
+        cooldown: 0,
+        type: 'passive',
+        treePath: 'global',
+        isPassive: true,
+        knownByDefault: false
+    },
     slash: {
+        class: 'soldier',
+        treePath: 'combat_b',
         id: 'slash',
         tier: 1,
+        knownByDefault: true,
         name: 'Slash',
         desc: 'Execute a heavy steel blade slash.',
         icon: images['soldier_slash'],
@@ -143,6 +329,8 @@ const skillsMatrix = {
         type: 'damage'
     },
     shield_wall: {
+        class: 'soldier',
+        treePath: 'combat_a',
         id: 'shield_wall',
         tier: 2,
         name: 'Shield Wall',
@@ -154,8 +342,11 @@ const skillsMatrix = {
         type: 'buff'
     },
     shield_slam: {
+        class: 'soldier',
+        treePath: 'combat_a',
         id: 'shield_slam',
         tier: 1,
+        knownByDefault: true,
         name: 'Shield Slam',
         desc: 'Ram target, causing heavy structural shake.',
         icon: images['shield_slam'],
@@ -166,6 +357,8 @@ const skillsMatrix = {
         effect: { type: 'stun', chance: 100, duration: 1 }
     },
     defensive_stance: {
+        class: 'soldier',
+        treePath: 'combat_a',
         id: 'defensive_stance',
         tier: 2,
         name: 'Defensive Stance',
@@ -184,8 +377,11 @@ const skillsMatrix = {
         }
     },
     fist_of_honor: {
+        class: 'soldier',
+        treePath: 'combat_b',
         id: 'fist_of_honor',
         tier: 1,
+        knownByDefault: true,
         name: 'Fist of Honor',
         desc: 'Strike with a fist of pure honor.',
         icon: images['soldier_fist_of_honor'],
@@ -195,8 +391,11 @@ const skillsMatrix = {
         type: 'damage'
     },
     imbued_strike: {
+        class: 'soldier',
+        treePath: 'combat_b',
         id: 'imbued_strike',
         tier: 1,
+        knownByDefault: true,
         name: 'Imbued Strike',
         desc: 'Strike with an energy-imbued blade.',
         icon: images['soldier_imbued_strike'],
@@ -206,6 +405,8 @@ const skillsMatrix = {
         type: 'damage'
     },
     one_man_army: {
+        class: 'soldier',
+        treePath: 'combat_b',
         id: 'one_man_army',
         tier: 4,
         name: 'One Man Army',
@@ -224,6 +425,8 @@ const skillsMatrix = {
         }
     },
     inspire: {
+        class: 'soldier',
+        treePath: 'combat_a',
         id: 'inspire',
         tier: 3,
         name: 'Inspire',
@@ -236,6 +439,8 @@ const skillsMatrix = {
         effect: ['buff_allies']
     },
     battlecry: {
+        class: 'soldier',
+        treePath: 'combat_a',
         id: 'battlecry',
         tier: 3,
         name: 'Battlecry',
@@ -255,9 +460,64 @@ const skillsMatrix = {
     },
 
     // === WIZARD ===
+    wizard_global_t1: {
+        class: 'wizard',
+        id: 'wizard_global_t1',
+        tier: 1,
+        name: 'Wizard Global T1',
+        desc: 'Global passive upgrade for Wizard.',
+        icon: images.avatar,
+        cooldown: 0,
+        type: 'passive',
+        treePath: 'global',
+        isPassive: true,
+        knownByDefault: true
+    },
+    wizard_global_t2: {
+        class: 'wizard',
+        id: 'wizard_global_t2',
+        tier: 2,
+        name: 'Wizard Global T2',
+        desc: 'Global passive upgrade for Wizard.',
+        icon: images.avatar,
+        cooldown: 0,
+        type: 'passive',
+        treePath: 'global',
+        isPassive: true,
+        knownByDefault: false
+    },
+    wizard_global_t3: {
+        class: 'wizard',
+        id: 'wizard_global_t3',
+        tier: 3,
+        name: 'Wizard Global T3',
+        desc: 'Global passive upgrade for Wizard.',
+        icon: images.avatar,
+        cooldown: 0,
+        type: 'passive',
+        treePath: 'global',
+        isPassive: true,
+        knownByDefault: false
+    },
+    wizard_global_t4: {
+        class: 'wizard',
+        id: 'wizard_global_t4',
+        tier: 4,
+        name: 'Wizard Global T4',
+        desc: 'Global passive upgrade for Wizard.',
+        icon: images.avatar,
+        cooldown: 0,
+        type: 'passive',
+        treePath: 'global',
+        isPassive: true,
+        knownByDefault: false
+    },
     fireball: {
+        class: 'wizard',
+        treePath: 'combat_a',
         id: 'fireball',
         tier: 1,
+        knownByDefault: true,
         name: 'Fireball',
         desc: 'Launch an explosive orb of flame.',
         icon: images['fireball'],
@@ -268,8 +528,11 @@ const skillsMatrix = {
         damage: 15
     },
     ice_blast: {
+        class: 'wizard',
+        treePath: 'combat_b',
         id: 'ice_blast',
         tier: 1,
+        knownByDefault: true,
         name: 'Ice Blast',
         desc: 'Freeze target in a block of absolute-zero ice.',
         icon: images['ice_blast_icon'],
@@ -278,11 +541,14 @@ const skillsMatrix = {
         range: 'medium',
         type: 'debuff',
         damage: 22,
-        effect: { type: 'frozen', chance: 100, duration: 2 }
+        effect: { type: 'frozen', chance: 100, duration: 'short' }
     },
     magic_missile: {
+        class: 'wizard',
+        treePath: 'combat_b',
         id: 'magic_missile',
         tier: 1,
+        knownByDefault: true,
         name: 'Magic Missile',
         desc: 'Fire three seeking missiles in sequence.',
         icon: images['magic_missile_icon'],
@@ -293,6 +559,8 @@ const skillsMatrix = {
         damage: 10
     },
     lightning_strike: {
+        class: 'wizard',
+        treePath: 'combat_a',
         id: 'lightning_strike',
         tier: 2,
         name: 'Lightning',
@@ -305,6 +573,8 @@ const skillsMatrix = {
         damage: 22
     },
     acid_blast: {
+        class: 'wizard',
+        treePath: 'combat_a',
         id: 'acid_blast',
         tier: 2,
         name: 'Acid Blast',
@@ -315,9 +585,11 @@ const skillsMatrix = {
         range: 'medium',
         type: 'debuff',
         damage: 12,
-        effect: { type: 'poison', chance: 100, duration: 2 }
+        effect: { type: 'poison', chance: 100, duration: 'short' }
     },
     disintegrate: {
+        class: 'wizard',
+        treePath: 'combat_a',
         id: 'disintegrate',
         tier: 3,
         name: 'Disintegrate',
@@ -330,6 +602,8 @@ const skillsMatrix = {
         damage: 30
     },
     sleep: {
+        class: 'wizard',
+        treePath: 'combat_b',
         id: 'sleep',
         tier: 2,
         name: 'Sleep',
@@ -341,9 +615,11 @@ const skillsMatrix = {
         type: 'debuff',
         mentalityDebuff: true,
         power: 40,
-        effect: { type: 'sleep', duration: 8 }
+        effect: { type: 'sleep', duration: '2x-long' }
     },
     annihilation: {
+        class: 'wizard',
+        treePath: 'combat_a',
         id: 'annihilation',
         tier: 3,
         name: 'Annihilation',
@@ -356,6 +632,8 @@ const skillsMatrix = {
         damage: 40
     },
     vortex: {
+        class: 'wizard',
+        treePath: 'combat_b',
         id: 'vortex',
         tier: 4,
         name: 'Vortex',
@@ -368,9 +646,64 @@ const skillsMatrix = {
     },
 
     // === BARBARIAN ===
+    barbarian_global_t1: {
+        class: 'barbarian',
+        id: 'barbarian_global_t1',
+        tier: 1,
+        name: 'Barbarian Global T1',
+        desc: 'Global passive upgrade for Barbarian.',
+        icon: images.avatar,
+        cooldown: 0,
+        type: 'passive',
+        treePath: 'global',
+        isPassive: true,
+        knownByDefault: true
+    },
+    barbarian_global_t2: {
+        class: 'barbarian',
+        id: 'barbarian_global_t2',
+        tier: 2,
+        name: 'Barbarian Global T2',
+        desc: 'Global passive upgrade for Barbarian.',
+        icon: images.avatar,
+        cooldown: 0,
+        type: 'passive',
+        treePath: 'global',
+        isPassive: true,
+        knownByDefault: false
+    },
+    barbarian_global_t3: {
+        class: 'barbarian',
+        id: 'barbarian_global_t3',
+        tier: 3,
+        name: 'Barbarian Global T3',
+        desc: 'Global passive upgrade for Barbarian.',
+        icon: images.avatar,
+        cooldown: 0,
+        type: 'passive',
+        treePath: 'global',
+        isPassive: true,
+        knownByDefault: false
+    },
+    barbarian_global_t4: {
+        class: 'barbarian',
+        id: 'barbarian_global_t4',
+        tier: 4,
+        name: 'Barbarian Global T4',
+        desc: 'Global passive upgrade for Barbarian.',
+        icon: images.avatar,
+        cooldown: 0,
+        type: 'passive',
+        treePath: 'global',
+        isPassive: true,
+        knownByDefault: false
+    },
     barbarian_slash: {
+        class: 'barbarian',
+        treePath: 'combat_a',
         id: 'barbarian_slash',
         tier: 1,
+        knownByDefault: true,
         name: 'Slash',
         desc: 'Execute a fast horizontal slash.',
         icon: images['barbarian_slash'],
@@ -380,8 +713,11 @@ const skillsMatrix = {
         type: 'damage'
     },
     barbarian_cleave: {
+        class: 'barbarian',
+        treePath: 'combat_a',
         id: 'barbarian_cleave',
         tier: 1,
+        knownByDefault: true,
         name: 'Cleave',
         desc: 'Crush target skull with axe, causing bleed.',
         icon: images['barbarian_cleave'],
@@ -389,9 +725,11 @@ const skillsMatrix = {
         duration: 'short',
         range: 'close',
         type: 'damage',
-        effect: { type: 'bleed', chance: 100, duration: 2 }
+        effect: { type: 'bleed', chance: 100, duration: 'short' }
     },
     barbarian_axe_throw: {
+        class: 'barbarian',
+        treePath: 'combat_a',
         id: 'barbarian_axe_throw',
         tier: 2,
         name: 'Axe Throw',
@@ -403,8 +741,11 @@ const skillsMatrix = {
         type: 'damage'
     },
     barbarian_berserker: {
+        class: 'barbarian',
+        treePath: 'combat_b',
         id: 'barbarian_berserker',
         tier: 1,
+        knownByDefault: true,
         name: 'Berserker',
         desc: 'Enter a state of absolute fury.',
         icon: images['barbarian_berserker'],
@@ -421,22 +762,80 @@ const skillsMatrix = {
         }
     },
     barbarian_leap_attack: {
+        class: 'barbarian',
+        treePath: 'combat_b',
         id: 'barbarian_leap_attack',
         tier: 2,
         name: 'Leap Attack',
         desc: 'Leap onto target, knocking back and stunning.',
         icon: images['barbarian_leap_attack'],
         cooldown: 8,
+        initialCooldown: 1,
         duration: 'short',
-        range: 'medium',
+        range: 'far',
         type: 'damage',
-        effect: { type: 'stun', chance: 100, duration: 2 }
+        effect: { type: 'stun', chance: 100, duration: 'short' }
     },
 
     // === MONK ===
+    monk_global_t1: {
+        class: 'monk',
+        id: 'monk_global_t1',
+        tier: 1,
+        name: 'Monk Global T1',
+        desc: 'Global passive upgrade for Monk.',
+        icon: images.avatar,
+        cooldown: 0,
+        type: 'passive',
+        treePath: 'global',
+        isPassive: true,
+        knownByDefault: true
+    },
+    monk_global_t2: {
+        class: 'monk',
+        id: 'monk_global_t2',
+        tier: 2,
+        name: 'Monk Global T2',
+        desc: 'Global passive upgrade for Monk.',
+        icon: images.avatar,
+        cooldown: 0,
+        type: 'passive',
+        treePath: 'global',
+        isPassive: true,
+        knownByDefault: false
+    },
+    monk_global_t3: {
+        class: 'monk',
+        id: 'monk_global_t3',
+        tier: 3,
+        name: 'Monk Global T3',
+        desc: 'Global passive upgrade for Monk.',
+        icon: images.avatar,
+        cooldown: 0,
+        type: 'passive',
+        treePath: 'global',
+        isPassive: true,
+        knownByDefault: false
+    },
+    monk_global_t4: {
+        class: 'monk',
+        id: 'monk_global_t4',
+        tier: 4,
+        name: 'Monk Global T4',
+        desc: 'Global passive upgrade for Monk.',
+        icon: images.avatar,
+        cooldown: 0,
+        type: 'passive',
+        treePath: 'global',
+        isPassive: true,
+        knownByDefault: false
+    },
     monk_ethereal_speed: {
+        class: 'monk',
+        treePath: 'combat_a',
         id: 'monk_ethereal_speed',
         tier: 1,
+        knownByDefault: true,
         name: 'Ethereal Speed',
         desc: 'Flow like wind, gaining extreme speed.',
         icon: images['monk_ethereal_speed'],
@@ -447,6 +846,8 @@ const skillsMatrix = {
         effect: ['buff_self']
     },
     monk_astral_focus: {
+        class: 'monk',
+        treePath: 'combat_b',
         id: 'monk_astral_focus',
         tier: 3,
         name: 'Astral Focus',
@@ -458,6 +859,8 @@ const skillsMatrix = {
         type: 'buff'
     },
     monk_astral_projection: {
+        class: 'monk',
+        treePath: 'combat_b',
         id: 'monk_astral_projection',
         tier: 3,
         name: 'Astral Projection',
@@ -469,6 +872,8 @@ const skillsMatrix = {
         type: 'damage'
     },
     monk_force_punch_flurry: {
+        class: 'monk',
+        treePath: 'combat_b',
         id: 'monk_force_punch_flurry',
         tier: 2,
         name: 'Force Punch Flurry',
@@ -480,6 +885,8 @@ const skillsMatrix = {
         type: 'damage'
     },
     monk_third_eye: {
+        class: 'monk',
+        treePath: 'combat_b',
         id: 'monk_third_eye',
         tier: 3,
         name: 'Third Eye',
@@ -491,6 +898,8 @@ const skillsMatrix = {
         type: 'buff'
     },
     monk_twin_finger_authority: {
+        class: 'monk',
+        treePath: 'combat_a',
         id: 'monk_twin_finger_authority',
         tier: 3,
         name: 'Twin Finger Authority',
@@ -502,9 +911,11 @@ const skillsMatrix = {
         type: 'damage/debuff',
         mentalityDebuff: true,
         power: 45,
-        effect: { type: 'twin_finger_stun', duration: 3, atkReductionPercent: 20 }
+        effect: { type: 'twin_finger_stun', duration: '3-rounds', atkReductionPercent: 20 }
     },
     monk_inner_fire: {
+        class: 'monk',
+        treePath: 'combat_a',
         id: 'monk_inner_fire',
         tier: 4,
         name: 'Inner Fire',
@@ -523,8 +934,11 @@ const skillsMatrix = {
         }
     },
     monk_meditate: {
+        class: 'monk',
+        treePath: 'combat_a',
         id: 'monk_meditate',
         tier: 1,
+        knownByDefault: true,
         name: 'Meditate',
         desc: 'Restores chi and heals deep wounds.',
         icon: images['monk_meditate'],
@@ -535,6 +949,8 @@ const skillsMatrix = {
         damage: -25
     },
     monk_whirlwind: {
+        class: 'monk',
+        treePath: 'combat_b',
         id: 'monk_whirlwind',
         tier: 2,
         name: 'Whirlwind',
@@ -546,8 +962,11 @@ const skillsMatrix = {
         type: 'damage'
     },
     monk_force_punch: {
+        class: 'monk',
+        treePath: 'combat_b',
         id: 'monk_force_punch',
         tier: 1,
+        knownByDefault: true,
         name: 'Force Punch',
         desc: 'Concentrate force to strike.',
         icon: images['monk_force_punch'],
@@ -557,8 +976,11 @@ const skillsMatrix = {
         type: 'damage'
     },
     monk_flurry: {
+        class: 'monk',
+        treePath: 'combat_b',
         id: 'monk_flurry',
         tier: 1,
+        knownByDefault: true,
         name: 'Flurry',
         desc: 'Unleash a rapid flurry of strikes.',
         icon: images['monk_flurry'],
@@ -568,8 +990,11 @@ const skillsMatrix = {
         type: 'damage'
     },
     monk_punch: {
+        class: 'monk',
+        treePath: 'combat_b',
         id: 'monk_punch',
         tier: 1,
+        knownByDefault: true,
         name: 'Punch',
         desc: 'Deliver a powerful, centered chi punch.',
         icon: images['monk_punch'],
@@ -580,7 +1005,61 @@ const skillsMatrix = {
     },
 
     // === SUMMONER ===
+    summoner_global_t1: {
+        class: 'summoner',
+        id: 'summoner_global_t1',
+        tier: 1,
+        name: 'Summoner Global T1',
+        desc: 'Global passive upgrade for Summoner.',
+        icon: images.avatar,
+        cooldown: 0,
+        type: 'passive',
+        treePath: 'global',
+        isPassive: true,
+        knownByDefault: true
+    },
+    summoner_global_t2: {
+        class: 'summoner',
+        id: 'summoner_global_t2',
+        tier: 2,
+        name: 'Summoner Global T2',
+        desc: 'Global passive upgrade for Summoner.',
+        icon: images.avatar,
+        cooldown: 0,
+        type: 'passive',
+        treePath: 'global',
+        isPassive: true,
+        knownByDefault: false
+    },
+    summoner_global_t3: {
+        class: 'summoner',
+        id: 'summoner_global_t3',
+        tier: 3,
+        name: 'Summoner Global T3',
+        desc: 'Global passive upgrade for Summoner.',
+        icon: images.avatar,
+        cooldown: 0,
+        type: 'passive',
+        treePath: 'global',
+        isPassive: true,
+        knownByDefault: false
+    },
+    summoner_global_t4: {
+        class: 'summoner',
+        id: 'summoner_global_t4',
+        tier: 4,
+        name: 'Summoner Global T4',
+        desc: 'Global passive upgrade for Summoner.',
+        icon: images.avatar,
+        cooldown: 0,
+        type: 'passive',
+        treePath: 'global',
+        isPassive: true,
+        knownByDefault: false
+    },
     open_rift: {
+        class: 'summoner',
+        treePath: 'combat_b',
         id: 'open_rift',
         tier: 3,
         name: 'Open the Rift',
@@ -592,8 +1071,11 @@ const skillsMatrix = {
         type: 'utility'
     },
     summon_skeleton: {
+        class: 'summoner',
+        treePath: 'combat_a',
         id: 'summon_skeleton',
         tier: 1,
+        knownByDefault: true,
         name: 'Summon Skeleton',
         desc: 'Summon a skeleton warrior to the field.',
         icon: images['summon_skeleton_icon'],
@@ -603,8 +1085,11 @@ const skillsMatrix = {
         type: 'utility'
     },
     summon_imp: {
+        class: 'summoner',
+        treePath: 'combat_b',
         id: 'summon_imp',
         tier: 1,
+        knownByDefault: true,
         name: 'Summon Imp',
         desc: 'Summon a fiery imp minion.',
         icon: images['summon_imp_icon'],
@@ -614,6 +1099,8 @@ const skillsMatrix = {
         type: 'utility'
     },
     summon_skeleton_knight: {
+        class: 'summoner',
+        treePath: 'combat_a',
         id: 'summon_skeleton_knight',
         tier: 2,
         name: 'Summon Skeleton Knight',
@@ -625,6 +1112,8 @@ const skillsMatrix = {
         type: 'utility'
     },
     summon_zombie: {
+        class: 'summoner',
+        treePath: 'combat_a',
         id: 'summon_zombie',
         tier: 2,
         name: 'Summon Zombie',
@@ -636,6 +1125,8 @@ const skillsMatrix = {
         type: 'utility'
     },
     summon_ghoul: {
+        class: 'summoner',
+        treePath: 'combat_a',
         id: 'summon_ghoul',
         tier: 2,
         name: 'Summon Ghoul',
@@ -647,6 +1138,8 @@ const skillsMatrix = {
         type: 'utility'
     },
     summon_imp_army: {
+        class: 'summoner',
+        treePath: 'combat_b',
         id: 'summon_imp_army',
         tier: 3,
         name: 'Summon Imp Army',
@@ -658,6 +1151,8 @@ const skillsMatrix = {
         type: 'utility'
     },
     summon_skeleton_army: {
+        class: 'summoner',
+        treePath: 'combat_a',
         id: 'summon_skeleton_army',
         tier: 3,
         name: 'Summon Skeleton Army',
@@ -669,6 +1164,8 @@ const skillsMatrix = {
         type: 'utility'
     },
     summon_devil: {
+        class: 'summoner',
+        treePath: 'combat_b',
         id: 'summon_devil',
         tier: 4,
         name: 'Summon Devil',
@@ -680,8 +1177,11 @@ const skillsMatrix = {
         type: 'utility'
     },
     summoner_duplicate: {
+        class: 'summoner',
+        treePath: 'combat_b',
         id: 'summoner_duplicate',
         tier: 1,
+        knownByDefault: true,
         name: 'Duplicate',
         desc: 'Create a duplicate of the summoned minion.',
         icon: images['duplicate_icon'],
@@ -691,6 +1191,8 @@ const skillsMatrix = {
         type: 'utility'
     },
     summoner_triplicate: {
+        class: 'summoner',
+        treePath: 'combat_b',
         id: 'summoner_triplicate',
         tier: 3,
         name: 'Triplicate',
@@ -725,7 +1227,7 @@ const skillsMatrix = {
         duration: 'short',
         range: 'close',
         type: 'damage',
-        effect: { type: 'bleed', chance: 100, duration: 2 }
+        effect: { type: 'bleed', chance: 100, duration: 'short' }
     },
     claw_strike: {
         id: 'claw_strike',
@@ -748,7 +1250,7 @@ const skillsMatrix = {
         duration: 'short',
         range: 'close',
         type: 'damage',
-        effect: { type: 'bleed', chance: 40, duration: 2 }
+        effect: { type: 'bleed', chance: 40, duration: 'short' }
     },
     // Skeleton
     reassembly: {
@@ -776,7 +1278,7 @@ const skillsMatrix = {
         type: 'debuff',
         mentalityDebuff: true,
         power: 30,
-        effect: { type: 'fear', duration: 2, atkReductionPercent: 30, defReductionPercent: 30 }
+        effect: { type: 'fear', duration: 'short', atkReductionPercent: 30, defReductionPercent: 30 }
     },
     energy_drain: {
         id: 'energy_drain',
@@ -788,7 +1290,7 @@ const skillsMatrix = {
         duration: 'short',
         range: 'medium',
         type: 'debuff',
-        effect: { type: 'poison', chance: 100, duration: 2 }
+        effect: { type: 'poison', chance: 100, duration: 'short' }
     },
     // Ogre
     stomp: {
@@ -801,7 +1303,7 @@ const skillsMatrix = {
         duration: 'short',
         range: 'close',
         type: 'damage',
-        effect: { type: 'stun', chance: 100, duration: 2 }
+        effect: { type: 'stun', chance: 100, duration: 'short' }
     },
     head_butt: {
         id: 'head_butt',
@@ -851,7 +1353,7 @@ const skillsMatrix = {
         type: 'debuff',
         mentalityDebuff: true,
         power: 25,
-        effect: { type: 'crimson_sight', duration: 3, defReductionPercent: 40 }
+        effect: { type: 'crimson_sight', duration: '3-rounds', defReductionPercent: 40 }
     },
     soul_suck: {
         id: 'soul_suck',
@@ -863,7 +1365,7 @@ const skillsMatrix = {
         duration: 'short',
         range: 'medium',
         type: 'damage/debuff',
-        effect: { type: 'stun', chance: 10, duration: 4 }
+        effect: { type: 'stun', chance: 10, duration: 'long' }
     },
     // Djinn
     betrayal: {
@@ -878,7 +1380,7 @@ const skillsMatrix = {
         type: 'debuff',
         mentalityDebuff: true,
         power: 50,
-        effect: { type: 'betrayal', duration: 4 }
+        effect: { type: 'betrayal', duration: 'long' }
     },
     arcane_barrier: {
         id: 'arcane_barrier',
@@ -901,7 +1403,7 @@ const skillsMatrix = {
         duration: 'short',
         range: 'far',
         type: 'debuff',
-        effect: { type: 'poison', chance: 100, duration: 2 }
+        effect: { type: 'poison', chance: 100, duration: 'short' }
     },
     bind: {
         id: 'bind',
@@ -915,7 +1417,7 @@ const skillsMatrix = {
         type: 'debuff',
         mentalityDebuff: true,
         power: 35,
-        effect: { type: 'ensnared', duration: 2 }
+        effect: { type: 'ensnared', duration: 'short' }
     },
     // ── Sphinx skills ────────────────────────────────────────────────────────
     third_eye: {
@@ -978,7 +1480,7 @@ const skillsMatrix = {
         duration: 'long',
         range: 'medium',
         type: 'debuff',
-        effect: { type: 'shadow_curse', duration: 4 }
+        effect: { type: 'shadow_curse', duration: 'long' }
     },
     spiderweb: {
         id: 'spiderweb',
@@ -990,7 +1492,7 @@ const skillsMatrix = {
         duration: 'short',
         range: 'medium',
         type: 'debuff',
-        effect: { type: 'ensnared', duration: 2 }
+        effect: { type: 'ensnared', duration: 'short' }
     },
     summon_spiders: {
         id: 'summon_spiders',
@@ -1024,7 +1526,7 @@ const skillsMatrix = {
         duration: 'short',
         range: 'medium',
         type: 'debuff',
-        effect: { type: 'fear', duration: 2 }
+        effect: { type: 'fear', duration: 'short' }
     },
     transform: {
         id: 'transform',

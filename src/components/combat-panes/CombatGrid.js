@@ -111,7 +111,8 @@ const getActiveEffects = (combatant, combatManager) => {
             roundsLeft: bleedDebuff?.roundsLeft || getDebuffRounds('bleed'),
             totalDuration: bleedDebuff?.totalRounds || bleedDebuff?.roundsLeft || 4,
             endTimeMs: bleedDebuff?.endTimeMs,
-            totalDurationMs: bleedDebuff?.totalDurationMs
+            totalDurationMs: bleedDebuff?.totalDurationMs,
+            stacks: bleedDebuff?.stacks || 1
         });
     }
     if (liveUnit.poison) {
@@ -603,6 +604,8 @@ export default function CombatGrid(props) {
     // ── Refs ─────────────────────────────────────────────────────────────────
     // portraitWrapperRefs kept for any external code that reads them
     const portraitWrapperRefs = React.useRef({});
+    // Track previous coordinates to prevent animation from top-left on spawn/mount
+    const prevCoordsRef = React.useRef({});
     // fighterWrapperRefs no longer needed (no fighter-wrapper element) but kept
     // so any ref captures still get a no-op assignment
     const fighterWrapperRefs = React.useRef({}); // eslint-disable-line no-unused-vars
@@ -781,6 +784,11 @@ export default function CombatGrid(props) {
         if (!coords) return null;
         const xPos = tilePos(coords.x);
         const yPos = tilePos(coords.y);
+
+        const isFirstRender = !prevCoordsRef.current[fighter.id];
+        prevCoordsRef.current[fighter.id] = true;
+        const shouldTransition = !isFirstRender;
+
         const liveFighter = combatManager.getCombatant(fighter.id) || details || fighter;
         const berserkerBuffActive = Array.isArray(liveFighter.activeBuffs)
             && liveFighter.activeBuffs.some(b => b && ['barbarian_berserker', 'berserker'].includes((b.name || '').toLowerCase().replace(/\s+/g, '_')));
@@ -842,14 +850,13 @@ export default function CombatGrid(props) {
                 className={unitTileClasses}
                 style={{
                     position: 'absolute',
-                    left: `${xPos}px`,
-                    top: `${yPos}px`,
+                    transform: `translate3d(${xPos}px, ${yPos}px, 0px)`,
                     width: `${TILE_SIZE}px`,
                     height: `${TILE_SIZE}px`,
                     overflow: 'visible',
                     pointerEvents: 'none',
                     zIndex: activeLeapAnim ? 350 : 300,
-                    transition: (isTelep || activeLeapAnim || liveFighter.attacking) ? 'none' : `left ${FIGHTER_MOVE_TRANSITION_MS}ms, top ${FIGHTER_MOVE_TRANSITION_MS}ms`,
+                    transition: (isTelep || activeLeapAnim || liveFighter.attacking || !shouldTransition) ? 'none' : 'transform 1000ms cubic-bezier(0.25, 1, 0.5, 1)',
                     ...computeHitVars(details || fighter, getHitAnimation),
                 }}
                 ref={el => { portraitWrapperRefs.current[fighter.id] = el; }}
@@ -861,7 +868,7 @@ export default function CombatGrid(props) {
                         position: 'relative',
                         pointerEvents: 'auto',
                         overflow: 'visible',
-                        animation: activeLeapAnim ? `barbarianLeapTravel ${activeLeapAnim.duration / 1000}s cubic-bezier(0.22, 0.61, 0.36, 1) both` : undefined,
+                        animation: activeLeapAnim ? `barbarianLeapTravel ${activeLeapAnim.duration / 1000}s linear both` : undefined,
                         '--leap-dx': activeLeapAnim ? `${activeLeapAnim.dx}px` : '0px',
                         '--leap-dy': activeLeapAnim ? `${activeLeapAnim.dy}px` : '0px',
                         transformOrigin: '50% 50%',
@@ -1349,6 +1356,10 @@ export default function CombatGrid(props) {
         const leftPos = xPos + hOffset;
         const topPos = yPos + vOffset;
 
+        const isFirstRender = !prevCoordsRef.current[unit.id];
+        prevCoordsRef.current[unit.id] = true;
+        const shouldTransition = !isFirstRender;
+
         const isDisintegrating = activeAnimations.some(a => a.type === 'disintegrate_beam' && a.tgtPx && Math.abs(a.tgtPx.x - (leftPos + width/2)) < 15 && Math.abs(a.tgtPx.y - (topPos + height/2)) < 15);
         const isBatFlying = activeAnimations.some(a => a.type === 'bat_fly_anim' && a.sourceUnitId === unit.id);
         const liveMonster = combatManager.getCombatant(unit.id) || unit;
@@ -1398,14 +1409,13 @@ export default function CombatGrid(props) {
                 className={unitTileClasses}
                 style={{
                     position: 'absolute',
-                    left: `${leftPos}px`,
-                    top: `${topPos}px`,
+                    transform: `translate3d(${leftPos}px, ${topPos}px, 0px)`,
                     width: `${width}px`,
                     height: `${height}px`,
                     overflow: 'visible',
                     pointerEvents: 'none',
                     zIndex: isDead ? 0 : (isMonster ? 200 : 100),
-                    transition: isTelep ? 'none' : '1s',
+                    transition: (isTelep || !shouldTransition) ? 'none' : 'transform 1000ms cubic-bezier(0.25, 1, 0.5, 1)',
                     ...computeHitVars(unit, getHitAnimation),
                 }}
             >
@@ -2116,10 +2126,10 @@ export default function CombatGrid(props) {
             return (
                 <div key={key} style={{
                     position: 'absolute',
-                    left: `${anim.tgtPx.x - 50}px`,
-                    top: `${anim.tgtPx.y - 50}px`,
-                    width: '100px',
-                    height: '100px',
+                    left: `${anim.tgtPx.x - 100}px`,
+                    top: `${anim.tgtPx.y - 100}px`,
+                    width: '200px',
+                    height: '200px',
                     borderRadius: '50%',
                     background: 'radial-gradient(circle, #fff 0%, #ffaa00 30%, #ff4400 60%, transparent 100%)',
                     boxShadow: '0 0 30px #ff6600, 0 0 60px #ff2200',
@@ -2144,7 +2154,7 @@ export default function CombatGrid(props) {
                     transform: 'translate(-50%, -50%)',
                     pointerEvents: 'none',
                     zIndex: 4460,
-                    animation: 'annihilationRing 0.5s cubic-bezier(0.1, 0.8, 0.3, 1) forwards'
+                    animation: 'fireBlastRing 0.5s cubic-bezier(0.1, 0.8, 0.3, 1) forwards'
                 }} />
             );
         }

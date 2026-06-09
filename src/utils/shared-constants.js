@@ -16,3 +16,21 @@ export const FIGHTER_MOVE_TRANSITION_MS = 500;
 export const CRIT_THRESHOLD_DEFAULT = 80; // percent (r*100 > threshold means crit)
 export const CRIT_THRESHOLD_INCREASED = 50; // used when increasedCritChance is present
 export const CRITICAL_DAMAGE_MULTIPLIER = 3; // damage multiplier on a critical hit
+
+export const DURATION_ROUNDS = {
+    'instant': 0,
+    'short': 3,
+    'medium': 4,
+    'long': 6,
+    '2x-long': 12,
+    '3x-long': 18,
+    '4x-long': 24
+};
+
+export const getDurationRounds = (dur) => {
+    if (typeof dur === 'number') return dur;
+    if (typeof dur === 'string') {
+        return DURATION_ROUNDS[dur] !== undefined ? DURATION_ROUNDS[dur] : 4;
+    }
+    return 4;
+};

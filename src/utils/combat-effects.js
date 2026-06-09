@@ -1,5 +1,6 @@
 // combat-effects.js
 // Centralized helpers for applying and clearing combat effects (visual and stateful)
+import { getDurationRounds } from './shared-constants';
 
 /**
  * Applies the "drained" effect to a combatant (energy drain visual flag).
@@ -261,8 +262,10 @@ export function resolveMentalityDebuff(caster, target, skill) {
         chance = 20;
     }
 
-    const baseDuration = (skill && skill.effect && typeof skill.effect.duration === 'number')
-        ? skill.effect.duration : 1;
+    const baseRawDuration = (skill && skill.effect && skill.effect.duration !== undefined)
+        ? skill.effect.duration : (skill && skill.duration ? skill.duration : 'short');
+    const baseDuration = getDurationRounds(baseRawDuration);
+    
     const halfEffect = (outcome === 'partial' || outcome === 'resisted');
     const adjustedDuration = halfEffect ? Math.max(1, Math.ceil(baseDuration / 2)) : baseDuration;
 
@@ -574,77 +577,81 @@ export function applyAttackEffect(target, effect, broadcastDataUpdate, isCrit, c
     const roll = Math.random() * 100;
     if (roll >= effectiveChance) return null;
 
+    // Resolve duration: prefer effect.duration, fallback to skill.duration, then 'short'
+    const rawDur = effect.duration !== undefined ? effect.duration : (skill && skill.duration ? skill.duration : 'short');
+    const resolvedDur = getDurationRounds(rawDur);
+
     let applied = false;
     let appliedLabel = null;
 
     switch (type.toLowerCase()) {
         case 'stun':
-            applied = applyStunEffect(target, effect.duration, broadcastDataUpdate);
+            applied = applyStunEffect(target, resolvedDur, broadcastDataUpdate);
             appliedLabel = 'stuns';
             break;
         case 'bleed':
-            applied = applyBleedEffect(target, effect.duration, broadcastDataUpdate);
+            applied = applyBleedEffect(target, resolvedDur, broadcastDataUpdate);
             appliedLabel = 'causes bleed';
             break;
         case 'energy drain':
         case 'energy_drain':
-            applied = applyEnergyDrainEffect(target, effect.duration, broadcastDataUpdate);
+            applied = applyEnergyDrainEffect(target, resolvedDur, broadcastDataUpdate);
             appliedLabel = 'drains energy';
             break;
         case 'regeneration':
         case 'greater regeneration':
         case 'greater_regeneration':
-            applied = applyRegenerationEffect(target, effect.duration, effect.regeneration_percent, broadcastDataUpdate);
+            applied = applyRegenerationEffect(target, resolvedDur, effect.regeneration_percent, broadcastDataUpdate);
             appliedLabel = 'grants regeneration';
             break;
         case 'invisibility':
-            applied = applyInvisibilityEffect(target, effect.duration, broadcastDataUpdate);
+            applied = applyInvisibilityEffect(target, resolvedDur, broadcastDataUpdate);
             appliedLabel = 'turns invisible';
             break;
         case 'petrify':
-            applied = applyPetrifyEffect(target, effect.duration, broadcastDataUpdate);
+            applied = applyPetrifyEffect(target, resolvedDur, broadcastDataUpdate);
             appliedLabel = 'petrifies';
             break;
         case 'frozen':
         case 'freeze':
-            applied = applyFrozenEffect(target, effect.duration, broadcastDataUpdate);
+            applied = applyFrozenEffect(target, resolvedDur, broadcastDataUpdate);
             appliedLabel = 'freezes';
             break;
         case 'reduce_def':
         case 'def_break':
         case 'defense break':
-            applied = applyDefenseBreakEffect(target, effect.duration, effect.percent, broadcastDataUpdate);
+            applied = applyDefenseBreakEffect(target, resolvedDur, effect.percent, broadcastDataUpdate);
             appliedLabel = 'reduces defense';
             break;
         case 'psionic burn':
         case 'psionic_burn':
-            applied = applyPsionicBurnEffect(target, effect.duration, broadcastDataUpdate);
+            applied = applyPsionicBurnEffect(target, resolvedDur, broadcastDataUpdate);
             appliedLabel = 'causes psionic burn';
             break;
         // Mentality debuff types routed through standard path when no caster is provided
         // (fallback — shouldn't normally happen for these types)
         case 'sleep':
-            applied = applySleepEffect(target, effect.duration, broadcastDataUpdate);
+            applied = applySleepEffect(target, resolvedDur, broadcastDataUpdate);
             appliedLabel = 'puts to sleep';
             break;
         case 'fear':
-            applied = applyFearEffect(target, effect.duration, effect.atkReductionPercent, effect.defReductionPercent, broadcastDataUpdate);
+            applied = applyFearEffect(target, resolvedDur, effect.atkReductionPercent, effect.defReductionPercent, broadcastDataUpdate);
             appliedLabel = 'induces fear';
             break;
         case 'ensnared':
-            applied = applyEnsnaredEffect(target, effect.duration, broadcastDataUpdate);
+            applied = applyEnsnaredEffect(target, resolvedDur, broadcastDataUpdate);
             appliedLabel = 'ensnares';
             break;
         case 'betrayal':
-            applied = applyBetrayalEffect(target, effect.duration, broadcastDataUpdate);
+            applied = applyBetrayalEffect(target, resolvedDur, broadcastDataUpdate);
             appliedLabel = 'betrays';
             break;
         case 'crimson_sight':
-            applied = applyCrimsonSightEffect(target, effect.duration, effect.defReductionPercent, broadcastDataUpdate);
+            applied = applyCrimsonSightEffect(target, resolvedDur, effect.defReductionPercent, broadcastDataUpdate);
             appliedLabel = 'exposes vulnerabilities';
             break;
         case 'twin_finger_stun':
-            applied = applyTwinFingerStunEffect(target, effect.duration, effect.atkReductionPercent, broadcastDataUpdate);
+            applied = applyTwinFingerStunEffect(target, resolvedDur, effect.atkReductionPercent, broadcastDataUpdate);
             appliedLabel = 'disrupts chakra';
             break;
         default:

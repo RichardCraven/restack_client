@@ -625,7 +625,7 @@ export function MonsterManager() {
             portrait: images['sphinx_portrait2'],
             greetings: ['be thee worthy?'],
             deathCries: ['you may pass'],
-            specials: ['third_eye', 'polymorph', 'hex', 'begin_the_trials'],
+            specials: ['third_eye', 'polymorph', 'hex', 'begin_the_trials', 'magic_missile'],
             attacks: ['claw_strike', 'claw_strike', 'induce_madness', 'lightning'],
             weaknesses: ['arcane'],
             minions: ['djinn'],
@@ -645,7 +645,7 @@ export function MonsterManager() {
             image_names: ['dragon'],
             monster_names: ['Theraxes', 'Daedron', 'Kykerod'],
             stats: {
-                hp: 325,
+                hp: 485,
                 atk: 20,
                 def: 17,
                 speed: 6, // immense, slow but near-immune to damage
@@ -676,7 +676,7 @@ export function MonsterManager() {
             image_names: ['hagigah'],
             monster_names: [],
             stats: {
-                hp: 300,
+                hp: 450,
                 atk: 20,
                 def: 17,
                 speed: 6, // immense, slow but near-immune to damage
@@ -703,7 +703,7 @@ export function MonsterManager() {
             image_names: ['hashmallim'],
             monster_names: [],
             stats: {
-                hp: 335,
+                hp: 510,
                 atk: 20,
                 def: 17,
                 speed: 6, // immense, slow but near-immune to damage
