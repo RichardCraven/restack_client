@@ -138,6 +138,11 @@ class MapMakerPage extends React.Component {
       optionClickedIdx: null,
       pinnedOption: null,
       mouseDown: false,
+      // Inscription placement state
+      inscriptionDragStartId: null,
+      showInscriptionModal: false,
+      inscriptionPendingTileId: null,
+      inscriptionTextInput: '',
       toastMessage: '',
       // mapView: true,
       selectedView: viewStateFromPrefs ? viewStateFromPrefs : 'plane',
@@ -826,10 +831,75 @@ class MapMakerPage extends React.Component {
   }
   
   mouseDownHandler = () => {
-    this.setState({mouseDown: true})
+    this.setState({mouseDown: true, inscriptionDragStartId: this.state.hoveredTileIdx});
   }
-  mouseUpHandler = () => {
-    this.setState({mouseDown: false})
+  mouseUpHandler = (e) => {
+    const prevMouseDown = this.state.mouseDown;
+    this.setState({mouseDown: false});
+
+    // If inscription tool is pinned and we just released, check if we can place one
+    const pinnedOption = this.state.pinnedOption;
+    const pinnedTile = pinnedOption && this.props.mapMaker.paletteTiles[pinnedOption.id];
+    if (prevMouseDown && pinnedTile && pinnedTile.optionType === 'inscription') {
+      const startId = this.state.inscriptionDragStartId;
+      const endId = this.state.hoveredTileIdx;
+      if (startId !== null && endId !== null && startId !== endId) {
+        // Find a wall (void) tile between start and end
+        const delta = endId - startId;
+        let wallId = null;
+        if (Math.abs(delta) === 2) {
+          wallId = startId + delta / 2;
+        } else if (Math.abs(delta) === 30) {
+          wallId = startId + delta / 2;
+        }
+        if (wallId !== null) {
+          const tiles = this.state.tiles;
+          const wallTile = tiles[wallId];
+          const wallContainsType = wallTile && wallTile.contains && wallTile.contains.type;
+          // Wall tiles are void
+          if (wallContainsType === 'void' || wallContainsType === null || wallContainsType === undefined) {
+            this.setState({
+              showInscriptionModal: true,
+              inscriptionPendingTileId: wallId,
+              inscriptionTextInput: (wallTile && wallTile.contains && wallTile.contains.text) || ''
+            });
+          }
+        }
+      }
+      this.setState({ inscriptionDragStartId: null });
+    }
+  }
+
+  handleInscriptionTextChange = (e) => {
+    this.setState({ inscriptionTextInput: e.target.value });
+  }
+
+  confirmInscription = () => {
+    const tileId = this.state.inscriptionPendingTileId;
+    const text = this.state.inscriptionTextInput;
+    if (tileId !== null && tileId !== undefined) {
+      let arr = [...this.state.tiles];
+      arr[tileId] = {
+        ...arr[tileId],
+        contains: { type: 'inscription', subtype: null, text },
+        color: '#2a1e0a',
+        image: null
+      };
+      this.setState({
+        tiles: arr,
+        showInscriptionModal: false,
+        inscriptionPendingTileId: null,
+        inscriptionTextInput: ''
+      });
+    }
+  }
+
+  cancelInscription = () => {
+    this.setState({
+      showInscriptionModal: false,
+      inscriptionPendingTileId: null,
+      inscriptionTextInput: ''
+    });
   }
   
   handleResize() {
@@ -3148,6 +3218,34 @@ class MapMakerPage extends React.Component {
             </div>
           </div>
         </div>}
+
+
+        {/* Inscription Modal */}
+        {this.state.showInscriptionModal && (
+          <CModal alignment="center" backdrop="static" visible={this.state.showInscriptionModal} onClose={this.cancelInscription}>
+            <CModalHeader>
+              <CModalTitle>✍ Wall Inscription</CModalTitle>
+            </CModalHeader>
+            <CModalBody>
+              <p style={{color: '#888', fontSize: '13px', marginBottom: '10px'}}>
+                Enter the text that will be carved into this wall. Players will read it when they walk up to it in the dungeon.
+              </p>
+              <textarea
+                className="dungeonname-input"
+                rows={4}
+                style={{width: '100%', resize: 'vertical', fontFamily: 'serif', fontSize: '14px'}}
+                value={this.state.inscriptionTextInput}
+                onChange={this.handleInscriptionTextChange}
+                placeholder="e.g. 'Beware the shadow that walks in three...' "
+                autoFocus
+              />
+            </CModalBody>
+            <CModalFooter>
+              <CButton color="secondary" onClick={this.cancelInscription}>Cancel</CButton>
+              <CButton color="warning" onClick={this.confirmInscription}>Carve Inscription</CButton>
+            </CModalFooter>
+          </CModal>
+        )}
 
         <CModal alignment="center" backdrop="static" visible={this.state.showModal} onClose={
           () => this.closeModal()

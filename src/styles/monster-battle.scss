@@ -5078,25 +5078,25 @@
     opacity: 0;
   }
   15% {
-    transform: translate(var(--rx1), var(--ry1)) scale(1);
+    transform: translate(var(--bounce-x1, 12px), var(--bounce-y1, -8px)) scale(1);
     opacity: 1;
   }
   35% {
-    transform: translate(var(--rx2), var(--ry2)) scale(1.2);
+    transform: translate(var(--bounce-x2, -8px), var(--bounce-y2, 15px)) scale(1.2);
   }
   55% {
-    transform: translate(var(--rx3), var(--ry3)) scale(1);
+    transform: translate(var(--bounce-x3, 15px), var(--bounce-y3, -10px)) scale(1);
   }
   75% {
-    transform: translate(var(--rx4), var(--ry4)) scale(1.1);
+    transform: translate(var(--bounce-x1, -10px), var(--bounce-y1, 8px)) scale(1.1);
     opacity: 1;
   }
   85% {
-    transform: translate(var(--rx5), var(--ry5)) scale(1.3);
+    transform: translate(var(--bounce-x2, 5px), var(--bounce-y2, -5px)) scale(1.3);
     opacity: 1;
   }
   100% {
-    transform: translate(var(--rx5), -120vh) scale(0.6);
+    transform: translate(var(--shoot-x, 0px), -120vh) scale(0.6);
     opacity: 0;
   }
 }
@@ -5135,5 +5135,81 @@
   100% {
     transform: scale(2.2);
     opacity: 0;
+  }
+}
+
+/* ── Bombard Warning Area Shimmer ── */
+.bombard-warning-shimmer {
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: inset 0 0 15px rgba(0, 255, 255, 0.15), 0 0 10px rgba(0, 255, 255, 0.1);
+  background: rgba(0, 255, 255, 0.03);
+  animation: 
+    bombardWarningFade 1.0s cubic-bezier(0.4, 0, 0.2, 1) forwards,
+    bombardWarningFill 1.0s ease-in-out infinite alternate;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    border-radius: 8px;
+    padding: 3px; /* border thickness */
+    background: linear-gradient(90deg, #00ffff, #00bfff, #ffffff, #00ffff);
+    background-size: 300% 100%;
+    -webkit-mask: 
+      linear-gradient(#fff 0 0) content-box, 
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+            mask-composite: exclude;
+    animation: bombardWarningBorder 1.5s linear infinite;
+  }
+}
+
+@keyframes bombardWarningFade {
+  0% { opacity: 0; }
+  15% { opacity: 1; }
+  85% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes bombardWarningBorder {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 300% 50%; }
+}
+
+@keyframes bombardWarningFill {
+  0% { background: rgba(0, 255, 255, 0.02); }
+  100% { background: rgba(0, 255, 255, 0.08); }
+}
+
+/* ── Dragon Dispel Wave ── */
+.dragon-dispel-wave {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 50;
+  background: radial-gradient(circle, rgba(155, 93, 229, 0.25) 0%, rgba(0, 191, 255, 0.25) 60%, rgba(0, 0, 0, 0) 100%);
+  animation: dragonDispelWaveAnimation 1.5s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+}
+
+@keyframes dragonDispelWaveAnimation {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+    box-shadow: inset 0 0 0px rgba(155, 93, 229, 0);
+  }
+  15% {
+    opacity: 1;
+  }
+  70% {
+    box-shadow: inset 0 0 100px rgba(155, 93, 229, 0.8), 0 0 100px rgba(0, 191, 255, 0.8);
+  }
+  100% {
+    transform: scale(2.5);
+    opacity: 0;
+    box-shadow: inset 0 0 200px rgba(155, 93, 229, 0), 0 0 200px rgba(0, 191, 255, 0);
   }
 }

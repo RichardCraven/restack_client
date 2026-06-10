@@ -331,6 +331,23 @@ function Tile(props) {
                 }} />
            )}
 
+
+           {/* Inscription marker: 3 diagonal lines drawn on wall tiles */}
+           { (props.contains && props.contains.type === 'inscription') && (
+                <div style={{
+                    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+                    zIndex: 10, pointerEvents: 'none',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}>
+                    <svg width='70%' height='70%' viewBox='0 0 30 30' xmlns='http://www.w3.org/2000/svg'>
+                        <line x1='4' y1='28' x2='12' y2='2' stroke='#d4a844' strokeWidth='3' strokeLinecap='round'/>
+                        <line x1='11' y1='28' x2='19' y2='2' stroke='#d4a844' strokeWidth='3' strokeLinecap='round'/>
+                        <line x1='18' y1='28' x2='26' y2='2' stroke='#d4a844' strokeWidth='3' strokeLinecap='round'/>
+                        <line x1='0' y1='16' x2='30' y2='14' stroke='#d4a844' strokeWidth='1.5' strokeLinecap='round' opacity='0.7'/>
+                    </svg>
+                </div>
+           )}
+
            {props.partialObscured && props.color !== 'black' && (
                 <div style={{
                     position: 'absolute',

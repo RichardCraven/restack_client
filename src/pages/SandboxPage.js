@@ -657,6 +657,13 @@ const SandboxPage = () => {
   const [rangerBetrayalEffectEndTime, setRangerBetrayalEffectEndTime] = useState(null);
 
 
+  // Sage target and Dispel states
+  const [sagePos, setSagePos] = useState({ row: 1, col: 4 });
+  const [dragonDispellSageCopActive, setDragonDispellSageCopActive] = useState(false);
+  const [dragonDispellWaveActive, setDragonDispellWaveActive] = useState(false);
+  const [sageTargetFlash, setSageTargetFlash] = useState(false);
+  const [sageTargetShake, setSageTargetShake] = useState(false);
+
   // Extra Ranger Target states
   const [extraRangerShake, setExtraRangerShake] = useState(false);
   const [extraRangerFlash, setExtraRangerFlash] = useState(false);
@@ -2928,10 +2935,23 @@ const SandboxPage = () => {
     // --- DRAGON WHIRLWIND ---
     else if (ability.type === 'dragon_whirlwind_type') {
       setIsCasting(true);
-      setHitEffect({ type: 'dragon_whirlwind_effect' });
+      const isDragonFighter = selectedUnitType === 'monster' && selectedMonsterId === 'dragon';
+      const wCol = isDragonFighter ? fighterPos.col : targetPos.col;
+      const wRow = isDragonFighter ? fighterPos.row : targetPos.row;
+      const wHuge = isDragonFighter ? isFighterHuge : isTargetHuge;
+      const wLarge = isDragonFighter ? isFighterLarge : isTargetLarge;
+      
+      const leftCol = getUnitLeftTileCol(wCol, wHuge, wLarge);
+      const topRow = getUnitTopTileRow(wRow, wHuge, wLarge);
+      const size = getUnitSizeFactor(wHuge, wLarge);
+      
+      setHitEffect({
+        type: 'dragon_whirlwind_effect',
+        col: leftCol + (size - 1) / 2,
+        row: topRow + (size - 1) / 2
+      });
       setTimeout(() => {
         // Push back logic: source is the Dragon (caster)
-        const isDragonFighter = selectedUnitType === 'monster' && selectedMonsterId === 'dragon';
         const dCol = isDragonFighter ? fighterPos.col : targetPos.col;
         const dRow = isDragonFighter ? fighterPos.row : targetPos.row;
         const dHuge = isDragonFighter ? isFighterHuge : isTargetHuge;
@@ -2958,29 +2978,77 @@ const SandboxPage = () => {
           }
         };
 
-        // Push the other units (targets) away from the Dragon
-        const tHuge = isDragonFighter ? isTargetHuge : isFighterHuge;
-        const tLarge = isDragonFighter ? isTargetLarge : isFighterLarge;
-        pushUnit(isDragonFighter ? targetPos : fighterPos, isDragonFighter ? setTargetPos : setFighterPos, tHuge, tLarge);
-        pushUnit(barbarianPos, setBarbarianPos, false, false); // Barbarian is 1x1
+        if (isDragonFighter) {
+          pushUnit(targetPos, setTargetPos, isTargetHuge, isTargetLarge);
+          pushUnit(barbarianPos, setBarbarianPos, false, false);
+        } else {
+          pushUnit(fighterPos, setFighterPos, isFighterHuge, isFighterLarge);
+        }
 
-        setIsCasting(false);
         setHitEffect(null);
-      }, 1000);
+        setIsCasting(false);
+      }, 1500);
     }
 
     // --- BOMBARD ---
     else if (ability.type === 'bombard_type') {
       setIsCasting(true);
       
-      // Calculate target area (3x3). Target is centered on targetPos.
       const bombardCenter = { ...targetPos }; 
+      
+      // Calculate all possible grid cells within the 3x3 area centered on targetPos
+      const candidates = [];
+      for (let dx = -1; dx <= 1; dx++) {
+        for (let dy = -1; dy <= 1; dy++) {
+          const c = bombardCenter.col + dx;
+          const r = bombardCenter.row + dy;
+          if (c >= 0 && c <= 5 && r >= 0 && r <= 5) {
+            candidates.push({ col: c, row: r });
+          }
+        }
+      }
+      
+      // Select 3 distinct random tiles from the candidates
+      const shuffled = [...candidates].sort(() => 0.5 - Math.random());
+      const strikeTile1 = shuffled[0] || bombardCenter;
+      const strikeTile2 = shuffled[1] || strikeTile1;
+      const strikeTile3 = shuffled[2] || strikeTile2;
+
+      // Generate random beams for each of the 3 barrages
+      const generateRandomBeams = () => {
+        return [...Array(10)].map((_, i) => {
+          const isSet2 = i >= 5;
+          const baseDelay = isSet2 ? 0.35 : 0.0;
+          // Random delay offset within the set
+          const delay = parseFloat((baseDelay + Math.random() * 0.35).toFixed(3));
+          
+          // Random width between 7px and 19px
+          const width = Math.floor(Math.random() * 13) + 7;
+          
+          // Random offsets within target cell bounds (-30% to +30%)
+          const left = Math.floor(Math.random() * 61) - 30;
+          const top = Math.floor(Math.random() * 61) - 30;
+          
+          const glowColor = Math.random() > 0.5 ? '#00ffff' : '#00bfff';
+          
+          return { delay, width, left, top, glowColor };
+        });
+      };
+      
+      const barrage1Beams = generateRandomBeams();
+      const barrage2Beams = generateRandomBeams();
+      const barrage3Beams = generateRandomBeams();
 
       setHitEffect({
         type: 'bombard_emission',
-        center: fighterPos,
-        isTargetHuge: isFighterHuge,
-        isTargetLarge: isFighterLarge
+        col: getUnitVisualCol(fighterPos.col, isFighterHuge, isFighterLarge),
+        row: getUnitVisualRow(fighterPos.row, isFighterHuge, isFighterLarge),
+        targetCol: strikeTile1.col,
+        targetRow: strikeTile1.row,
+        adjacentCol1: strikeTile2.col,
+        adjacentRow1: strikeTile2.row,
+        adjacentCol2: strikeTile3.col,
+        adjacentRow2: strikeTile3.row
       });
 
       // Emission phase
@@ -2992,22 +3060,39 @@ const SandboxPage = () => {
 
         setTimeout(() => {
           // Bombardment strike phase
-          setHitEffect({ type: 'bombard_strike', center: bombardCenter });
+          setHitEffect({
+            type: 'bombard_strike',
+            col: getUnitVisualCol(strikeTile1.col, false, false),
+            row: getUnitVisualRow(strikeTile1.row, false, false),
+            adjacentCol1: getUnitVisualCol(strikeTile2.col, false, false),
+            adjacentRow1: getUnitVisualRow(strikeTile2.row, false, false),
+            adjacentCol2: getUnitVisualCol(strikeTile3.col, false, false),
+            adjacentRow2: getUnitVisualRow(strikeTile3.row, false, false),
+            center: bombardCenter,
+            adjacent1: strikeTile2,
+            adjacent2: strikeTile3,
+            barrage1Beams,
+            barrage2Beams,
+            barrage3Beams
+          });
 
           // Damage logic after strike animation
           setTimeout(() => {
-            const hitUnit = (pos, isHuge, isLarge) => {
-              const uCol = getUnitVisualCol(pos.col, isHuge, isLarge);
-              const uRow = getUnitVisualRow(pos.row, isHuge, isLarge);
-              const dx = Math.abs(uCol - bombardCenter.col);
-              const dy = Math.abs(uRow - bombardCenter.row);
-              if (dx <= 1 && dy <= 1) { // within 3x3
-                return true;
-              }
-              return false;
+            const overlapsTile = (pos, isHuge, isLarge, checkCol, checkRow) => {
+              const left = getUnitLeftTileCol(pos.col, isHuge, isLarge);
+              const top = getUnitTopTileRow(pos.row, isHuge, isLarge);
+              const size = getUnitSizeFactor(isHuge, isLarge);
+              return checkCol >= left && checkCol < left + size &&
+                     checkRow >= top && checkRow < top + size;
             };
 
-            if (hitUnit(targetPos, isTargetHuge, isTargetLarge)) {
+            const checkHit = (pos, isHuge, isLarge) => {
+              return overlapsTile(pos, isHuge, isLarge, strikeTile1.col, strikeTile1.row) ||
+                     overlapsTile(pos, isHuge, isLarge, strikeTile2.col, strikeTile2.row) ||
+                     overlapsTile(pos, isHuge, isLarge, strikeTile3.col, strikeTile3.row);
+            };
+
+            if (checkHit(targetPos, isTargetHuge, isTargetLarge)) {
               setTargetShake(true);
               setTargetFlash(true);
               addFloatingText('-45', 'damage', '#ff3333', targetPos.row, targetPos.col);
@@ -3016,15 +3101,71 @@ const SandboxPage = () => {
                 setTargetFlash(false);
               }, 500);
             }
-            if (hitUnit(barbarianPos, false, false)) {
+            if (checkHit(barbarianPos, false, false)) {
               addFloatingText('-45', 'damage', '#ff3333', barbarianPos.row, barbarianPos.col);
             }
+          }, 1000); // Apply damage after 1.0s (midway through bombardment waves)
 
+          // Cleanup hit effect after all animations finish
+          setTimeout(() => {
             setHitEffect(null);
-          }, 800); // Wait for strike animation
+          }, 2000); // 2.0s to allow all slow splash animations to complete
 
         }, 1500); // 1.5s delay
       }, 1000); // 1s emission
+    }
+
+    // --- DRAGON DISPELL ---
+    else if (ability.type === 'dispell_type') {
+      setIsCasting(true);
+
+      // Step 1: Sage triggers Circle of Protection and applies buffs to units in radius (Sage & Barbarian)
+      setDragonDispellSageCopActive(true);
+      addFloatingText('Circle of Protection!', 'normal', '#00bfff', sagePos.row, sagePos.col);
+      addFloatingText('+Shielded', 'heal', '#00ffcc', barbarianPos.row, barbarianPos.col);
+      addFloatingText('+COP Buff', 'heal', '#00ffcc', barbarianPos.row, barbarianPos.col);
+      addFloatingText('+Shielded', 'heal', '#00ffcc', sagePos.row, sagePos.col);
+
+      // Step 2: After 1.5 seconds, Dragon triggers the Dispel grid overlay wave
+      setTimeout(() => {
+        setDragonDispellWaveActive(true);
+        
+        // Dragon visual shake on roar/dispel
+        setFighterShake(true);
+        setTimeout(() => setFighterShake(false), 500);
+
+        // Calculate center for dragon floating text
+        const dragonVisualCenterRow = getUnitVisualRow(fighterPos.row, isFighterHuge, isFighterLarge);
+        const dragonVisualCenterCol = getUnitVisualCol(fighterPos.col, isFighterHuge, isFighterLarge);
+        addFloatingText('DISPEL!', 'crit', '#9b5de5', dragonVisualCenterRow + 1, dragonVisualCenterCol + 1);
+
+        // Immediately cancel COP and remove all buffs/icons from the Sage and Barbarian targets
+        setDragonDispellSageCopActive(false);
+        
+        // Show dispelled labels and hit shakes on affected units
+        setSageTargetShake(true);
+        setSageTargetFlash(true);
+        addFloatingText('Dispelled!', 'normal', '#ff3333', sagePos.row, sagePos.col);
+        addFloatingText('Buffs Removed!', 'normal', '#ff3333', sagePos.row, sagePos.col);
+
+        setTargetShake(true);
+        setTargetFlash(true);
+        addFloatingText('Buffs Dispelled!', 'normal', '#ff3333', barbarianPos.row, barbarianPos.col);
+
+        setTimeout(() => {
+          setSageTargetShake(false);
+          setSageTargetFlash(false);
+          setTargetShake(false);
+          setTargetFlash(false);
+        }, 500);
+
+        // Step 3: Cleanup dispel wave and cast state after the wave completes (1.5s)
+        setTimeout(() => {
+          setDragonDispellWaveActive(false);
+          setIsCasting(false);
+        }, 1500);
+
+      }, 1500);
     }
 
     // --- OGRE STOMP ---
@@ -6452,6 +6593,75 @@ const SandboxPage = () => {
                 </div>
               )}
 
+              {/* --- Dragon Dispel Demo: Sage Circle of Protection (COP) Ring Overlay --- */}
+              {selectedUnitType === 'monster' && selectedMonsterId === 'dragon' && dragonDispellSageCopActive && (
+                <div
+                  className="effect-icon-active"
+                  style={{
+                    position: 'absolute',
+                    width: `${TILE_PCT * 4}%`,
+                    height: `${TILE_PCT * 4}%`,
+                    left: `${sagePos.col * TILE_PCT - TILE_PCT * 1.5}%`,
+                    top: `${sagePos.row * TILE_PCT - TILE_PCT * 1.5}%`,
+                    zIndex: 7,
+                    pointerEvents: 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  {/* Outer ring with glow */}
+                  <div style={{
+                    width: '100%',
+                    height: '100%',
+                    borderRadius: '50%',
+                    border: '5px solid rgba(0, 191, 255, 0.75)',
+                    boxShadow: '0 0 35px rgba(0, 191, 255, 0.45), inset 0 0 35px rgba(0, 191, 255, 0.15)',
+                    position: 'relative',
+                    animation: 'spin-slow 20s linear infinite',
+                  }}>
+                    {/* Rune characters around the inside */}
+                    {['\u16A0', '\u16A2', '\u16A6', '\u16A8', '\u16B1', '\u16B2', '\u16B7', '\u16B9', '\u16BA', '\u16C1', '\u16C3', '\u16C8'].map((rune, i) => {
+                      const angle = (i / 12) * 360;
+                      const radius = 42;
+                      const rad = (angle - 90) * (Math.PI / 180);
+                      return (
+                        <span
+                          key={i}
+                          style={{
+                            position: 'absolute',
+                            left: `${50 + radius * Math.cos(rad)}%`,
+                            top: `${50 + radius * Math.sin(rad)}%`,
+                            transform: `translate(-50%, -50%) rotate(${angle}deg)`,
+                            color: 'rgba(0, 191, 255, 0.85)',
+                            fontSize: '22px',
+                            textShadow: '0 0 10px rgba(0, 191, 255, 1)',
+                            userSelect: 'none',
+                          }}
+                        >
+                          {rune}
+                        </span>
+                      );
+                    })}
+                    {/* Inner circle accent */}
+                    <div style={{
+                      position: 'absolute',
+                      top: '15%',
+                      left: '15%',
+                      width: '70%',
+                      height: '70%',
+                      borderRadius: '50%',
+                      border: '1px solid rgba(0, 191, 255, 0.2)',
+                    }} />
+                  </div>
+                </div>
+              )}
+
+              {/* --- Dragon Dispel Wave Overlay --- */}
+              {selectedUnitType === 'monster' && selectedMonsterId === 'dragon' && dragonDispellWaveActive && (
+                <div className="dragon-dispel-wave" />
+              )}
+
               {/* --- Djinn Arcane Barrier Ring Overlay --- */}
               {selectedMonsterId === 'djinn' && djinnArcaneBarrierActive && (
                 <div
@@ -8894,8 +9104,135 @@ const SandboxPage = () => {
                   backgroundSize: 'cover',
                   backgroundPosition: 'center',
                   boxShadow: '0 8px 16px rgba(0,0,0,0.5)',
-                }} />
+                  position: 'relative'
+                }}>
+                  {/* Status Icons Indicator Bar for Barbarian */}
+                  <div style={{
+                    position: 'absolute',
+                    top: '-6px',
+                    right: '-6px',
+                    display: 'flex',
+                    flexDirection: 'row-reverse',
+                    gap: '2px',
+                    zIndex: 15
+                  }}>
+                    {selectedUnitType === 'monster' && selectedMonsterId === 'dragon' && dragonDispellSageCopActive && (
+                      <>
+                        <div
+                          className="effect-icon-active"
+                          style={{
+                            width: '20px',
+                            height: '20px',
+                            borderRadius: '50%',
+                            backgroundColor: '#111',
+                            border: '2px solid #00bfff',
+                            backgroundImage: `url(${circle_of_protection})`,
+                            backgroundSize: 'contain',
+                            backgroundRepeat: 'no-repeat',
+                            backgroundPosition: 'center',
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.5)',
+                          }}
+                        />
+                        <div
+                          className="effect-icon-active"
+                          style={{
+                            width: '20px',
+                            height: '20px',
+                            borderRadius: '50%',
+                            backgroundColor: '#111',
+                            border: '2px solid #ffdd57',
+                            backgroundImage: `url(${shielded})`,
+                            backgroundSize: 'contain',
+                            backgroundRepeat: 'no-repeat',
+                            backgroundPosition: 'center',
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.5)',
+                          }}
+                        />
+                      </>
+                    )}
+                  </div>
+                </div>
               </div>
+
+              {/* --- Sage Target (col 4, row 1) for Dragon --- */}
+              {selectedUnitType === 'monster' && selectedMonsterId === 'dragon' && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    width: `${TILE_PCT}%`,
+                    height: `${TILE_PCT}%`,
+                    left: `${sagePos.col * TILE_PCT}%`,
+                    top: `${sagePos.row * TILE_PCT}%`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 9,
+                    pointerEvents: 'none',
+                    transition: 'left 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94), top 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+                  }}
+                >
+                  <div style={{
+                    width: '80%',
+                    height: '80%',
+                    borderRadius: '8px',
+                    border: sageTargetFlash ? '3px solid #ffffff' : '2px solid #00bfff',
+                    backgroundColor: sageTargetFlash ? '#00bfff' : '#222',
+                    backgroundImage: `url(${sage})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    boxShadow: '0 8px 16px rgba(0,0,0,0.5)',
+                    position: 'relative',
+                    transform: sageTargetShake ? 'translate(5px, 2px) rotate(2deg)' : 'none',
+                    transition: 'transform 0.05s',
+                  }}>
+                    {/* Status Icons Indicator Bar for Sage */}
+                    <div style={{
+                      position: 'absolute',
+                      top: '-6px',
+                      right: '-6px',
+                      display: 'flex',
+                      flexDirection: 'row-reverse',
+                      gap: '2px',
+                      zIndex: 15
+                    }}>
+                      {dragonDispellSageCopActive && (
+                        <>
+                          <div
+                            className="effect-icon-active"
+                            style={{
+                              width: '20px',
+                              height: '20px',
+                              borderRadius: '50%',
+                              backgroundColor: '#111',
+                              border: '2px solid #00bfff',
+                              backgroundImage: `url(${circle_of_protection})`,
+                              backgroundSize: 'contain',
+                              backgroundRepeat: 'no-repeat',
+                              backgroundPosition: 'center',
+                              boxShadow: '0 2px 4px rgba(0,0,0,0.5)',
+                            }}
+                          />
+                          <div
+                            className="effect-icon-active"
+                            style={{
+                              width: '20px',
+                              height: '20px',
+                              borderRadius: '50%',
+                              backgroundColor: '#111',
+                              border: '2px solid #ffdd57',
+                              backgroundImage: `url(${shielded})`,
+                              backgroundSize: 'contain',
+                              backgroundRepeat: 'no-repeat',
+                              backgroundPosition: 'center',
+                              boxShadow: '0 2px 4px rgba(0,0,0,0.5)',
+                            }}
+                          />
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
 
 
               {/* --- Extra Ranger Target (col 0, row 3) for Monsters --- */}
@@ -9906,8 +10243,8 @@ const SandboxPage = () => {
                 <div
                   style={{
                     position: 'absolute',
-                    width: '120px',
-                    height: '120px',
+                    width: `${TILE_PCT}%`,
+                    height: `${TILE_PCT}%`,
                     left: `${(hitEffect.col !== undefined ? hitEffect.col : targetPos.col) * TILE_PCT + TILE_PCT / 2}%`,
                     top: `${(hitEffect.row !== undefined ? hitEffect.row : targetPos.row) * TILE_PCT + TILE_PCT / 2}%`,
                     transform: 'translate(-50%, -50%)',
@@ -10238,190 +10575,217 @@ const SandboxPage = () => {
                       </div>
                     );
                   })()}
-                  {hitEffect.type === 'dragon_whirlwind_effect' && (() => {
-                    const isDragonFighter = selectedUnitType === 'monster' && selectedMonsterId === 'dragon';
-                    const col = isDragonFighter ? fighterPos.col : targetPos.col;
-                    const row = isDragonFighter ? fighterPos.row : targetPos.row;
-                    const isHuge = isDragonFighter ? isFighterHuge : isTargetHuge;
-                    const isLarge = isDragonFighter ? isFighterLarge : isTargetLarge;
-
-                    const fCol = getUnitVisualCol(col, isHuge, isLarge);
-                    const fRow = getUnitVisualRow(row, isHuge, isLarge);
-                    
-                    // Center on 3x3 complex (huge) or 2x2 complex (large)
-                    const centerOffsetX = isHuge ? TILE_PCT : (isLarge ? TILE_PCT / 2 : 0);
-                    const centerOffsetY = isHuge ? TILE_PCT : (isLarge ? TILE_PCT / 2 : 0);
-
-                    return (
-                      <div style={{
-                        position: 'absolute',
-                        left: `${fCol * TILE_PCT + TILE_PCT / 2 + centerOffsetX}%`,
-                        top: `${fRow * TILE_PCT + TILE_PCT / 2 + centerOffsetY}%`,
-                        width: '0px', height: '0px',
-                        zIndex: 35,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}>
-                        {[...Array(4)].map((_, i) => (
-                          <div key={`ww-ring-${i}`} style={{
+                  {hitEffect.type === 'dragon_whirlwind_effect' && (
+                    <div style={{
+                      position: 'absolute',
+                      left: '50%',
+                      top: '50%',
+                      width: '0px',
+                      height: '0px',
+                      zIndex: 35,
+                      pointerEvents: 'none'
+                    }}>
+                      {[...Array(4)].map((_, i) => (
+                        <div
+                          key={`ww-ring-${i}`}
+                          style={{
                             position: 'absolute',
+                            left: 0,
+                            top: 0,
+                            width: '0px',
+                            height: '0px',
+                            pointerEvents: 'none',
                             animation: `windstormBobble 0.3s ease-in-out infinite alternate ${i * 0.1}s`
-                          }}>
-                            <div style={{
-                              border: '4px solid rgba(255, 255, 255, 0.8)',
-                              borderRadius: '50%',
-                              boxShadow: '0 0 20px #ffffff, inset 0 0 10px #ffffff',
-                              animation: `windstormExpand 1s cubic-bezier(0.1, 0.8, 0.3, 1) forwards ${i * 0.15}s`,
-                              opacity: 0,
-                              width: '20px',
-                              height: '20px',
-                            }} />
-                          </div>
-                        ))}
-                      </div>
-                    );
-                  })()}
+                          }}
+                        >
+                          <div style={{
+                            position: 'absolute',
+                            left: 0,
+                            top: 0,
+                            border: '4px solid rgba(255, 255, 255, 0.8)',
+                            borderRadius: '50%',
+                            boxShadow: '0 0 20px #ffffff, inset 0 0 10px #ffffff',
+                            animation: `windstormExpand 1s cubic-bezier(0.1, 0.8, 0.3, 1) forwards ${i * 0.15}s`,
+                            opacity: 0,
+                            width: '20px',
+                            height: '20px',
+                          }} />
+                        </div>
+                      ))}
+                    </div>
+                  )}
 
-                  {hitEffect.type === 'bombard_emission' && (() => {
-                    const { center, isTargetHuge, isTargetLarge } = hitEffect;
-                    const cCol = getUnitVisualCol(center.col, isTargetHuge, isTargetLarge);
-                    const cRow = getUnitVisualRow(center.row, isTargetHuge, isTargetLarge);
-                    // Center offset
-                    const centerOffsetX = isTargetHuge ? TILE_PCT : (isTargetLarge ? TILE_PCT / 2 : 0);
-                    const centerOffsetY = isTargetHuge ? TILE_PCT : (isTargetLarge ? TILE_PCT / 2 : 0);
+                  {hitEffect.type === 'bombard_emission' && (
+                    <>
+                      {/* Warning target tiles */}
+                      {[
+                        { col: hitEffect.targetCol, row: hitEffect.targetRow, key: 'main' },
+                        { col: hitEffect.adjacentCol1, row: hitEffect.adjacentRow1, key: 'adj1' },
+                        { col: hitEffect.adjacentCol2, row: hitEffect.adjacentRow2, key: 'adj2' }
+                      ].map((tile) => {
+                        if (tile.col === undefined || tile.row === undefined) return null;
+                        const colOffset = tile.col - hitEffect.col;
+                        const rowOffset = tile.row - hitEffect.row;
+                        return (
+                          <div
+                            key={`bombard-warning-${tile.key}`}
+                            className="bombard-warning-shimmer"
+                            style={{
+                              position: 'absolute',
+                              left: `${50 + colOffset * 100}%`,
+                              top: `${50 + rowOffset * 100}%`,
+                              width: '100%',
+                              height: '100%',
+                              transform: 'translate(-50%, -50%)',
+                              zIndex: 10,
+                              pointerEvents: 'none'
+                            }}
+                          />
+                        );
+                      })}
 
-                    return (
+                      {/* Emission Particles on Caster */}
                       <div style={{
                         position: 'absolute',
-                        left: `${cCol * TILE_PCT + TILE_PCT / 2 + centerOffsetX}%`,
-                        top: `${cRow * TILE_PCT + TILE_PCT / 2 + centerOffsetY}%`,
-                        width: '0px', height: '0px',
+                        left: '50%',
+                        top: '-50%', // Centers vertical position exactly on the top row of the 3x3 complex
+                        width: '300%', // Covers the full 3-tile width (NW, N, NE)
+                        height: '100%', // Covers 1 tile height
+                        transform: 'translate(-50%, -50%)',
                         zIndex: 40,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
                         pointerEvents: 'none'
                       }}>
                         {[...Array(10)].map((_, i) => {
                           const delay = i * 0.04;
-                          const size = 6 + (i % 3) * 3; // various sizes
-                          const rx1 = `${((i * 17) % 73 - 36) * 3}px`;
-                          const ry1 = `${((i * 23) % 67 - 33) * 3}px`;
-                          const rx2 = `${((i * 31) % 79 - 39) * 3}px`;
-                          const ry2 = `${((i * 13) % 71 - 35) * 3}px`;
-                          const rx3 = `${((i * 19) % 83 - 41) * 3}px`;
-                          const ry3 = `${((i * 29) % 73 - 36) * 3}px`;
-                          const rx4 = `${((i * 37) % 67 - 33) * 3}px`;
-                          const ry4 = `${((i * 41) % 79 - 39) * 3}px`;
-                          const rx5 = `${((i * 43) % 71 - 35) * 3}px`;
-                          const ry5 = `${((i * 47) % 83 - 41) * 3}px`;
+                          const size = 6 + (i % 3) * 3;
+                          
+                          // Scatter starting positions completely across the full 3-tile width and 1-tile height
+                          const leftOffset = ((i * 17) % 80 + 10); 
+                          const topOffset = ((i * 23) % 80 + 10);
                           
                           const shadowColor = (i % 2 === 0) ? '#00ffff' : '#ffffff';
+                          
+                          // Organic meander offsets using CSS variables defined in keyframes
+                          const signX1 = i % 2 === 0 ? 1 : -1;
+                          const signX2 = i % 3 === 0 ? -1 : 1;
+                          const signX3 = i % 4 === 0 ? 1 : -1;
+                          
+                          const bx1 = signX1 * (20 + (i * 11) % 50); // bounce left/right up to 70px
+                          const by1 = ((i * 7) % 30 - 15);          // bounce up/down up to 15px
+                          
+                          const bx2 = signX2 * (30 + (i * 13) % 70); // bounce left/right up to 100px
+                          const by2 = ((i * 9) % 30 - 15);
+                          
+                          const bx3 = signX3 * (40 + (i * 17) % 90); // bounce left/right up to 130px
+                          const by3 = ((i * 11) % 30 - 15);
+                          
+                          const sx = (signX1 * (30 + (i * 5) % 50));
                           
                           return (
                             <div
                               key={`bombard-particle-${i}`}
                               style={{
-                                '--rx1': rx1, '--ry1': ry1,
-                                '--rx2': rx2, '--ry2': ry2,
-                                '--rx3': rx3, '--ry3': ry3,
-                                '--rx4': rx4, '--ry4': ry4,
-                                '--rx5': rx5, '--ry5': ry5,
                                 position: 'absolute',
+                                left: `${leftOffset}%`,
+                                top: `${topOffset}%`,
                                 width: `${size}px`,
                                 height: `${size}px`,
                                 borderRadius: '50%',
                                 backgroundColor: '#ffffff',
                                 boxShadow: `0 0 10px ${shadowColor}, 0 0 20px ${shadowColor}, inset 0 0 5px #ffffff`,
-                                animation: 'bombardParticle 1.0s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards',
+                                animation: 'bombardParticle 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards',
                                 animationDelay: `${delay}s`,
+                                '--bounce-x1': `${bx1}px`,
+                                '--bounce-y1': `${by1}px`,
+                                '--bounce-x2': `${bx2}px`,
+                                '--bounce-y2': `${by2}px`,
+                                '--bounce-x3': `${bx3}px`,
+                                '--bounce-y3': `${by3}px`,
+                                '--shoot-x': `${sx}px`,
                               }}
                             />
                           );
                         })}
                       </div>
-                    );
-                  })()}
+                    </>
+                  )}
 
-                  {hitEffect.type === 'bombard_strike' && (() => {
-                    const { center } = hitEffect;
-                    // It strikes a 3x3 area centered on hitEffect.center
-                    // But the effect origin should be exactly at center
-                    const cCol = getUnitVisualCol(center.col, false, false);
-                    const cRow = getUnitVisualRow(center.row, false, false);
-
-                    return (
-                      <div style={{
-                        position: 'absolute',
-                        left: `${cCol * TILE_PCT + TILE_PCT / 2}%`,
-                        top: `${cRow * TILE_PCT + TILE_PCT / 2}%`,
-                        width: '0px', height: '0px',
-                        zIndex: 40,
-                        pointerEvents: 'none'
-                      }}>
-                        {[...Array(10)].map((_, i) => {
-                          const isSet2 = i >= 5;
-                          const delay = isSet2 ? 0.15 + (i - 5) * 0.02 : i * 0.02;
-                          
-                          const widths = [8, 24, 12, 36, 16, 10, 28, 14, 40, 18];
-                          const width = widths[i];
-                          
-                          const leftOffsets = [-90, 40, -40, 80, -110, 10, -70, 95, -20, 120];
-                          const left = leftOffsets[i];
-                          
-                          const topOffsets = [-20, 15, -10, 30, 5, -25, 20, -5, 10, -15];
-                          const top = topOffsets[i];
-                          
-                          const glowColor = (i % 2 === 0) ? '#00ffff' : '#00bfff';
-                          
-                          return (
-                            <div
-                              key={`bombard-beam-container-${i}`}
-                              style={{
-                                position: 'absolute',
-                                left: `${left}px`,
-                                top: `${top}px`,
-                                pointerEvents: 'none'
-                              }}
-                            >
+                  {hitEffect.type === 'bombard_strike' && (
+                    <>
+                      {[
+                        { l: '50%', t: '50%', key: 'main', beams: hitEffect.barrage1Beams || [] },
+                        { l: `${50 + (hitEffect.adjacentCol1 - hitEffect.col) * 100}%`, t: `${50 + (hitEffect.adjacentRow1 - hitEffect.row) * 100}%`, key: 'adj1', beams: hitEffect.barrage2Beams || [] },
+                        { l: `${50 + (hitEffect.adjacentCol2 - hitEffect.col) * 100}%`, t: `${50 + (hitEffect.adjacentRow2 - hitEffect.row) * 100}%`, key: 'adj2', beams: hitEffect.barrage3Beams || [] }
+                      ].map((barrage) => (
+                        <div
+                          key={`bombard-barrage-${barrage.key}`}
+                          style={{
+                            position: 'absolute',
+                            left: barrage.l,
+                            top: barrage.t,
+                            width: '100%',
+                            height: '100%',
+                            transform: 'translate(-50%, -50%)',
+                            zIndex: 40,
+                            pointerEvents: 'none'
+                          }}
+                        >
+                          {barrage.beams.map((beam, i) => {
+                            const delay = beam.delay;
+                            const width = beam.width;
+                            const left = beam.left;
+                            const top = beam.top;
+                            const glowColor = beam.glowColor;
+                            
+                            return (
                               <div
+                                key={`bombard-beam-${barrage.key}-${i}`}
                                 style={{
                                   position: 'absolute',
-                                  bottom: 0,
-                                  left: `-${width / 2}px`,
-                                  width: `${width}px`,
-                                  height: '800px',
-                                  background: `linear-gradient(to bottom, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.3) 30%, ${glowColor} 70%, #ffffff 100%)`,
-                                  boxShadow: `0 0 15px ${glowColor}, 0 0 30px ${glowColor}`,
-                                  borderRadius: `${width / 2}px ${width / 2}px 0 0`,
-                                  transformOrigin: 'bottom center',
-                                  animation: 'bombardBeamFall 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards',
-                                  animationDelay: `${delay}s`,
+                                  left: `${50 + left}%`,
+                                  top: `${50 + top}%`,
+                                  pointerEvents: 'none'
                                 }}
-                              />
-                              <div
-                                style={{
-                                  position: 'absolute',
-                                  left: '-50px',
-                                  top: '-50px',
-                                  width: '100px',
-                                  height: '100px',
-                                  borderRadius: '50%',
-                                  background: `radial-gradient(circle, #ffffff 10%, ${glowColor} 50%, rgba(255, 255, 255, 0) 70%)`,
-                                  boxShadow: `0 0 30px ${glowColor}, inset 0 0 15px #ffffff`,
-                                  animation: 'bombardBeamSplash 0.5s cubic-bezier(0.1, 0.8, 0.3, 1) forwards',
-                                  animationDelay: `${delay + 0.25}s`,
-                                  opacity: 0,
-                                  transform: 'scale(0)'
-                                }}
-                              />
-                            </div>
-                          );
-                        })}
-                      </div>
-                    );
-                  })()}
+                              >
+                                <div
+                                  style={{
+                                    position: 'absolute',
+                                    bottom: 0,
+                                    left: `-${width / 2}px`,
+                                    width: `${width}px`,
+                                    height: '800px',
+                                    background: `linear-gradient(to bottom, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.3) 30%, ${glowColor} 70%, #ffffff 100%)`,
+                                    boxShadow: `0 0 15px ${glowColor}, 0 0 30px ${glowColor}`,
+                                    borderRadius: `${width / 2}px ${width / 2}px 0 0`,
+                                    transformOrigin: 'bottom center',
+                                    opacity: 0,
+                                    animation: 'bombardBeamFall 1.0s cubic-bezier(0.25, 0.46, 0.45, 0.94) both',
+                                    animationDelay: `${delay}s`,
+                                  }}
+                                />
+                                <div
+                                  style={{
+                                    position: 'absolute',
+                                    left: '-50px',
+                                    top: '-50px',
+                                    width: '100px',
+                                    height: '100px',
+                                    borderRadius: '50%',
+                                    background: `radial-gradient(circle, #ffffff 10%, ${glowColor} 50%, rgba(255, 255, 255, 0) 70%)`,
+                                    boxShadow: `0 0 30px ${glowColor}, inset 0 0 15px #ffffff`,
+                                    animation: 'bombardBeamSplash 0.6s cubic-bezier(0.1, 0.8, 0.3, 1) forwards',
+                                    animationDelay: `${delay + 0.5}s`,
+                                    opacity: 0,
+                                    transform: 'scale(0)'
+                                  }}
+                                />
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ))}
+                    </>
+                  )}
 
                   {hitEffect.type === 'barbarian_cleave_effect' && (() => {
                     const activeWeaponId = equippedWeapons['barbarian'] || 'woodcutters_axe';

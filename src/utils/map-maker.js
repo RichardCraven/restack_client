@@ -33,7 +33,8 @@ export function MapMaker(props){
         'pit',
         'cloud',
         'dungeon portal',
-        'magic'
+        'magic',
+        'inscription'
     ]
 
     this.tierOptions = [
@@ -341,6 +342,15 @@ export function MapMaker(props){
                     optionType: 'obscured space',
                     image: null,
                     color: '#a8a8a8',
+                    id: i
+                })
+            } else if(key === 'inscription'){
+                this.paletteTiles.push({
+                    type: 'palette-tile',
+                    optionType: 'inscription',
+                    image: null,
+                    color: null,
+                    isInscription: true,
                     id: i
                 })
             } else {
@@ -679,6 +689,8 @@ export function MapMaker(props){
                 return 'food'
             case 'spawn':
                 return 'spawn_point'    
+            case 'inscription':
+                return 'inscription'
             default:
                 return false
         }
