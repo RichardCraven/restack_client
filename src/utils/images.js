@@ -717,6 +717,9 @@ import dispell from '../assets/icons/combat-icons/specials/monsters/dragon/dispe
 import elder_presence from '../assets/icons/combat-icons/specials/monsters/dragon/elder_presence.png';
 import impenetrable_scales from '../assets/icons/combat-icons/specials/monsters/dragon/impenetrable_scales.png';
 import lay_eggs from '../assets/icons/combat-icons/specials/monsters/dragon/lay_eggs.png';
+import egg_1 from '../assets/icons/combat-icons/specials/monsters/dragon/egg_1.png';
+import egg_2 from '../assets/icons/combat-icons/specials/monsters/dragon/egg_2.png';
+import egg_3 from '../assets/icons/combat-icons/specials/monsters/dragon/egg_3.png';
 import serpent_vision from '../assets/icons/combat-icons/specials/monsters/dragon/serpent_vision.png';
 import whirlwind from '../assets/icons/combat-icons/specials/monsters/dragon/whirlwinnd.png';
 import spineskin from '../assets/icons/combat-icons/specials/monsters/spineskin.png';
@@ -1433,6 +1436,9 @@ export {
     elder_presence,
     impenetrable_scales,
     lay_eggs,
+    egg_1,
+    egg_2,
+    egg_3,
     serpent_vision,
     whirlwind,
     induce_fear,

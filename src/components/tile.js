@@ -278,7 +278,7 @@ function Tile(props) {
                 }
             }}
             onDragStart={(e) => e.preventDefault()}
-            className={`tile ${props.className}`}
+            className={`tile ${props.className || ''} ${props.type || ''}`.trim()}
         >
            {edgeLines && (
                 <>
@@ -333,7 +333,7 @@ function Tile(props) {
 
 
            {/* Inscription marker: 3 diagonal lines drawn on wall tiles */}
-           { (props.contains && props.contains.type === 'inscription') && (
+           { ((props.contains && props.contains.type === 'inscription') || props.optionType === 'inscription') && (
                 <div style={{
                     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
                     zIndex: 10, pointerEvents: 'none',
@@ -346,6 +346,66 @@ function Tile(props) {
                         <line x1='0' y1='16' x2='30' y2='14' stroke='#d4a844' strokeWidth='1.5' strokeLinecap='round' opacity='0.7'/>
                     </svg>
                 </div>
+           )}
+
+           {/* Shrine marker */}
+           { (props.contains && props.contains.type === 'shrine') && (
+                <div style={{
+                    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+                    zIndex: 10, pointerEvents: 'none',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                    fontSize: Math.max(8, (props.tileSize || 30) * 0.45) + 'px'
+                }}>
+                    <span style={{lineHeight: 1}}>🏛</span>
+                    <span style={{
+                        fontSize: Math.max(5, (props.tileSize || 30) * 0.2) + 'px',
+                        color: '#ffd700', fontWeight: 'bold',
+                        textTransform: 'uppercase', lineHeight: 1.2
+                    }}>{(props.contains.subtype || '').slice(0,3)}</span>
+                </div>
+           )}
+
+           {/* Lore Tablet marker */}
+           { (props.contains && props.contains.type === 'lore_tablet') && (
+                <div style={{
+                    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+                    zIndex: 10, pointerEvents: 'none',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                    fontSize: Math.max(8, (props.tileSize || 30) * 0.45) + 'px'
+                }}>
+                    <span style={{lineHeight: 1}}>📜</span>
+                    <span style={{
+                        fontSize: Math.max(5, (props.tileSize || 30) * 0.2) + 'px',
+                        color: '#d4a844', fontWeight: 'bold',
+                        textTransform: 'uppercase', lineHeight: 1.2
+                    }}>{(props.contains.subtype || '').slice(0,3)}</span>
+                </div>
+           )}
+
+           {/* Inscription edge markers — golden bars on inscribed walls */}
+           { props.inscriptions && (
+               <>
+                   { props.inscriptions.top && (
+                       <div style={{position:'absolute', top:0, left:'10%', right:'10%', height:'4px',
+                           background:'linear-gradient(90deg,transparent,#d4a844 30%,#d4a844 70%,transparent)',
+                           zIndex:50, pointerEvents:'none'}} title={'✍ ' + props.inscriptions.top}/>
+                   )}
+                   { props.inscriptions.bottom && (
+                       <div style={{position:'absolute', bottom:0, left:'10%', right:'10%', height:'4px',
+                           background:'linear-gradient(90deg,transparent,#d4a844 30%,#d4a844 70%,transparent)',
+                           zIndex:50, pointerEvents:'none'}} title={'✍ ' + props.inscriptions.bottom}/>
+                   )}
+                   { props.inscriptions.left && (
+                       <div style={{position:'absolute', left:0, top:'10%', bottom:'10%', width:'4px',
+                           background:'linear-gradient(180deg,transparent,#d4a844 30%,#d4a844 70%,transparent)',
+                           zIndex:50, pointerEvents:'none'}} title={'✍ ' + props.inscriptions.left}/>
+                   )}
+                   { props.inscriptions.right && (
+                       <div style={{position:'absolute', right:0, top:'10%', bottom:'10%', width:'4px',
+                           background:'linear-gradient(180deg,transparent,#d4a844 30%,#d4a844 70%,transparent)',
+                           zIndex:50, pointerEvents:'none'}} title={'✍ ' + props.inscriptions.right}/>
+                   )}
+               </>
            )}
 
            {props.partialObscured && props.color !== 'black' && (

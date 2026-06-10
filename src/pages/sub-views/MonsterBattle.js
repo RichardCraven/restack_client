@@ -2200,16 +2200,28 @@ class MonsterBattle extends React.Component {
                             const mx = mainMonster.coordinates.x;
                             const my = mainMonster.coordinates.y;
                             
-                            // Width is 2 tiles = 200px.
-                            // Anchor is at bottom-right if mx >= 4 (hOffset = -100px), else bottom-left (hOffset = 0).
-                            const hOffset = (mx >= 4) ? -TILE_SIZE : 0;
-                            const leftPos = mx * TILE_SIZE + hOffset;
-                            const topPos = my * TILE_SIZE - TILE_SIZE; // Top row of the 2x2
+                            const isHuge = mainMonster.type === 'dragon' || mainMonster.key === 'dragon' || mainMonster.size === 3 || mainMonster.huge === true;
                             
-                            // Center X of the 2x2 monster is leftPos + 100px.
-                            // We place a speech bubble styled container pointing to this center.
-                            const bubbleCenterX = leftPos + TILE_SIZE;
-                            const bubbleCenterY = topPos; // Directly above the top row
+                            let bubbleCenterX = 0;
+                            let bubbleCenterY = 0;
+                            
+                            if (isHuge) {
+                                // 3x3 footprint: top row is my - 2, middle column is mx + hDir
+                                const hDir = (mx >= 4) ? -1 : 1;
+                                const middleCol = mx + hDir;
+                                const topRow = my - 2;
+                                
+                                bubbleCenterX = middleCol * TILE_SIZE + TILE_SIZE / 2;
+                                bubbleCenterY = topRow * TILE_SIZE;
+                            } else {
+                                // 2x2 footprint
+                                const hOffset = (mx >= 4) ? -TILE_SIZE : 0;
+                                const leftPos = mx * TILE_SIZE + hOffset;
+                                const topPos = my * TILE_SIZE - TILE_SIZE; // Top row of the 2x2
+                                
+                                bubbleCenterX = leftPos + TILE_SIZE;
+                                bubbleCenterY = topPos; // Directly above the top row
+                            }
                             
                             return (
                                 <div 
@@ -2692,11 +2704,12 @@ class MonsterBattle extends React.Component {
                                 <div className="event-log-container" ref={this.combatLogContainerRef}>
                                     {this.state.combatLog
                                         .filter((entry) => {
-                                            if (!this.state.logFilterSelectedFighter || !this.state.selectedFighter) return true;
-                                            const fName = String(this.state.selectedFighter.name || '').toLowerCase();
-                                            const fType = String(this.state.selectedFighter.type || '').toLowerCase();
+                                            const selectedUnit = this.state.selectedFighter || this.state.selectedMonster;
+                                            if (!this.state.logFilterSelectedFighter || !selectedUnit) return true;
+                                            const uName = String(selectedUnit.name || '').toLowerCase();
+                                            const uType = String(selectedUnit.type || '').toLowerCase();
                                             const msg = String(entry.message || '').toLowerCase();
-                                            return msg.includes(fName) || msg.includes(fType);
+                                            return msg.includes(uName) || msg.includes(uType);
                                         })
                                         .map((entry, index, filteredArray) => {
                                             const isLatest = index === filteredArray.length - 1;
@@ -3140,11 +3153,12 @@ class MonsterBattle extends React.Component {
                             <div className="event-log-container" ref={this.combatLogContainerRef}>
                                 {this.state.combatLog
                                     .filter((entry) => {
-                                        if (!this.state.logFilterSelectedFighter || !this.state.selectedFighter) return true;
-                                        const fName = String(this.state.selectedFighter.name || '').toLowerCase();
-                                        const fType = String(this.state.selectedFighter.type || '').toLowerCase();
+                                        const selectedUnit = this.state.selectedFighter || this.state.selectedMonster;
+                                        if (!this.state.logFilterSelectedFighter || !selectedUnit) return true;
+                                        const uName = String(selectedUnit.name || '').toLowerCase();
+                                        const uType = String(selectedUnit.type || '').toLowerCase();
                                         const msg = String(entry.message || '').toLowerCase();
-                                        return msg.includes(fName) || msg.includes(fType);
+                                        return msg.includes(uName) || msg.includes(uType);
                                     })
                                     .map((entry, index, filteredArray) => {
                                         const isLatest = index === filteredArray.length - 1;

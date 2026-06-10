@@ -38,6 +38,8 @@ export function CombatManagerRedux() {
     this.combatLogSequence = 0;
     this.selectedFighter = null;
     this.vctByMonster = {};
+    this.pendingBombardments = [];
+    this.bombardWarnings = null;
 
     // Mummy status change logging/diagnostic helper
     let lastMummyState = null;
@@ -198,6 +200,8 @@ export function CombatManagerRedux() {
         this.roundDurationMs = 2000;
         this.combatants = {};
         this.vctByMonster = {};
+        this.pendingBombardments = [];
+        this.bombardWarnings = null;
         if (typeof this.updateData === 'function') this.updateData({});
     };
 
@@ -371,6 +375,8 @@ export function CombatManagerRedux() {
         this.data = data;
         this.combatants = {};
         this.vctByMonster = {};
+        this.pendingBombardments = [];
+        this.bombardWarnings = null;
         this.round = 1;
         this.roundTimeRemainingRatio = 1.0;
         this.roundTimeElapsedMs = 0;
@@ -433,6 +439,7 @@ export function CombatManagerRedux() {
         });
 
         const m = this.data.monster;
+        m.isMonster = true; // Mark as monster early so isLarge/isHuge sizing evaluates correctly for VCT occupied lanes
         const isHuge = (
             (typeof m.huge === 'boolean' && m.huge === true)
             || (m.type === 'dragon')
@@ -462,6 +469,7 @@ export function CombatManagerRedux() {
         this.data.monster.isMonster = true;
         const monster = createFighter(this.data.monster, callbacks, this.FIGHT_INTERVAL);
         monster.isMonster = true;
+        monster.tier = this.data.monster.tier;
         monster.maxEndurance = this.data.monster.stats.vitality || Math.round(20 + (this.data.monster.stats.def || 5) * 2);
         monster.endurance = monster.maxEndurance;
         monster.enduranceFrozenRounds = 0;
@@ -482,9 +490,34 @@ export function CombatManagerRedux() {
             } else if (isLarge) {
                 occupiedLanes.push(monsterY - 1);
             }
+            // Distribute available lanes above and below the boss as evenly as possible to flank the boss
+            const bossMinY = Math.min(...occupiedLanes);
+            const bossMaxY = Math.max(...occupiedLanes);
+            const aboveLanes = [];
+            const belowLanes = [];
+            for (let y = 0; y < MAX_LANES; y++) {
+                if (!occupiedLanes.includes(y)) {
+                    if (y < bossMinY) {
+                        aboveLanes.push(y);
+                    } else if (y > bossMaxY) {
+                        belowLanes.push(y);
+                    }
+                }
+            }
+            // Sort aboveLanes descending (closest to boss first) and belowLanes ascending (closest to boss first)
+            aboveLanes.sort((a, b) => b - a);
+            belowLanes.sort((a, b) => a - b);
+
             const availableLanes = [];
-            for (let i = MAX_LANES - 1; i >= 0; i--) {
-                if (!occupiedLanes.includes(i)) availableLanes.push(i);
+            let aboveIdx = 0;
+            let belowIdx = 0;
+            while (aboveIdx < aboveLanes.length || belowIdx < belowLanes.length) {
+                if (belowIdx < belowLanes.length) {
+                    availableLanes.push(belowLanes[belowIdx++]);
+                }
+                if (aboveIdx < aboveLanes.length) {
+                    availableLanes.push(aboveLanes[aboveIdx++]);
+                }
             }
 
             this.data.minions.forEach((e, i) => {
@@ -497,6 +530,7 @@ export function CombatManagerRedux() {
                 const minion = createFighter(e, callbacks, this.FIGHT_INTERVAL);
                 minion.isMinion = true;
                 minion.isMonster = true; // Starting boss minions are hostile monsters
+                minion.tier = e.tier || 1;
                 minion.maxEndurance = e.stats.vitality || Math.round(20 + (e.stats.def || 5) * 2);
                 minion.endurance = minion.maxEndurance;
                 minion.enduranceFrozenRounds = 0;
@@ -1593,6 +1627,7 @@ export function CombatManagerRedux() {
             case 'vampire':  return this._aiVampire(unit);
             case 'sphinx':   return this._aiSphinx(unit);
             case 'ogre':     return this._aiOgre(unit);
+            case 'dragon':   return this._aiDragon(unit);
             default:         return this._aiGeneric(unit);
         }
     };
@@ -2484,13 +2519,17 @@ export function CombatManagerRedux() {
             const pick = this.resolveSpecial(unit, 'ensnare');
             if (pick) {
                 this.useAbility(unit, pick, target);
-                target.ensnared = true;
-                target.ensnaredRounds = getDurationRounds(pick.duration || 'short');
-                target.ensnaredTotalRounds = target.ensnaredRounds;
-                target.ensnaredStackDuration = target.ensnaredRounds;
-                const durMs = getDurationMsFromRounds(target.ensnaredRounds);
-                target.ensnaredTotalDurationMs = durMs;
-                target.ensnaredEndTimeMs = Date.now() + durMs;
+                if (target.type === 'dragon' && Math.random() < 0.5) {
+                    this.appendCombatLog(`${this.getCombatantLogName(target)} resists Ensnare! (Dragon CC Immunity)`);
+                } else {
+                    target.ensnared = true;
+                    target.ensnaredRounds = getDurationRounds(pick.duration || 'short');
+                    target.ensnaredTotalRounds = target.ensnaredRounds;
+                    target.ensnaredStackDuration = target.ensnaredRounds;
+                    const durMs = getDurationMsFromRounds(target.ensnaredRounds);
+                    target.ensnaredTotalDurationMs = durMs;
+                    target.ensnaredEndTimeMs = Date.now() + durMs;
+                }
                 this._setCooldown(unit, 'ensnare', pick.cooldown || 6);
                 return;
             }
@@ -3421,10 +3460,273 @@ export function CombatManagerRedux() {
         }
     };
 
+    // DRAGON: whirlwinds, bombardments, dispels, laying eggs, claws/bites/fire breath
+    this._aiDragon = (unit) => {
+        this.acquireTarget(unit, true);
+        const target = this.combatants[unit.targetId];
+        if (!target) return;
+
+        // Resolve all specials
+        const whirlwindSpec = this.resolveSpecial(unit, 'dragon_whirlwind');
+        const bombardSpec = this.resolveSpecial(unit, 'bombard');
+        const dispellSpec = this.resolveSpecial(unit, 'dragon_dispell');
+        const layEggsSpec = this.resolveSpecial(unit, 'lay_eggs');
+
+        // Resolve attacks
+        const fireBreathSpec = this.resolveSpecial(unit, 'blue_dragon_breath');
+        const biteSpec = this.resolveSpecial(unit, 'bite');
+        const clawSpec = this.resolveSpecial(unit, 'claw_strike') || { id: 'claw_strike', range: 'close', type: 'damage' };
+
+        // Check readiness
+        const whirlwindReady = whirlwindSpec && this._abilityReady(unit, 'dragon_whirlwind');
+        const bombardReady = bombardSpec && this._abilityReady(unit, 'bombard');
+        const dispellReady = dispellSpec && this._abilityReady(unit, 'dragon_dispell');
+        const layEggsReady = layEggsSpec && this._abilityReady(unit, 'lay_eggs');
+        const fireBreathReady = fireBreathSpec && this._abilityReady(unit, 'blue_dragon_breath');
+        const biteReady = biteSpec && this._abilityReady(unit, 'bite');
+        const clawReady = clawSpec && this._abilityReady(unit, 'claw_strike');
+
+        // Count how many minions the dragon has alive
+        const minionCount = Object.values(this.combatants).filter(c =>
+            c && !c.dead && c.isMinion && c.isMonster
+        ).length;
+
+        // Check if any enemy is adjacent (close range) to the dragon
+        const enemiesClose = Object.values(this.combatants).some(c =>
+            c && !c.dead && !c.isMonster && !c.isVCT && this.targetInRange(unit, c, 'close')
+        );
+
+        // Check if any enemy has active buffs to dispel
+        const enemiesWithBuffs = Object.values(this.combatants).filter(c =>
+            c && !c.dead && !c.isMonster && !c.isVCT && Array.isArray(c.activeBuffs) && c.activeBuffs.length > 0
+        );
+
+        // 1. Prioritize Lay Eggs if minion count is low (max 2 active minions)
+        if (layEggsReady && minionCount < 2) {
+            // Find an adjacent cell to place the egg
+            const adjacentCells = [];
+            const occupied = unit.occupiedCoords || [unit.coordinates];
+            let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+            occupied.forEach(c => {
+                if (c.x < minX) minX = c.x;
+                if (c.x > maxX) maxX = c.x;
+                if (c.y < minY) minY = c.y;
+                if (c.y > maxY) maxY = c.y;
+            });
+            const tryX = minX - 1;
+            for (let y = minY; y <= maxY; y++) {
+                if (tryX >= 0 && tryX < MAX_DEPTH && y >= 0 && y < MAX_LANES) {
+                    if (this.canFitAt({ size: 1 }, tryX, y)) {
+                        adjacentCells.push({ x: tryX, y });
+                    }
+                }
+            }
+            if (adjacentCells.length > 0) {
+                const spawnCoord = adjacentCells[Math.floor(Math.random() * adjacentCells.length)];
+                const eggTarget = { id: 'egg_vct', coordinates: spawnCoord, name: 'Egg Spot', dead: false, isVCT: true };
+                this.useAbility(unit, layEggsSpec, eggTarget);
+                return;
+            }
+        }
+
+        // 2. Dispel enemy buffs if any are active and dispell is ready
+        if (dispellReady && enemiesWithBuffs.length > 0) {
+            const targetEnemy = enemiesWithBuffs[0];
+            if (this.targetInRange(unit, targetEnemy, 'medium')) {
+                this.useAbility(unit, dispellSpec, targetEnemy);
+                return;
+            }
+        }
+
+        // 3. Whirlwind to push back enemies if they get too close
+        if (whirlwindReady && enemiesClose) {
+            this.useAbility(unit, whirlwindSpec, target);
+            return;
+        }
+
+        // 4. Bombard (devastating range attack, priority over other actions)
+        if (bombardReady && this.targetInRange(unit, target, 'medium')) {
+            this.useAbility(unit, bombardSpec, target);
+            return;
+        }
+
+        // 5. Fire Breath (medium range cone attack)
+        if (fireBreathReady && this.targetInRange(unit, target, 'medium')) {
+            this.useAbility(unit, fireBreathSpec, target);
+            return;
+        }
+
+        // 6. Close range combat: Claw Strike or Bite
+        if (this.targetInRange(unit, target, 'close')) {
+            if (clawReady) {
+                this.useAbility(unit, clawSpec, target);
+            } else if (biteReady) {
+                this.useAbility(unit, biteSpec, target);
+            } else {
+                this._basicAttack(unit, target);
+            }
+            return;
+        }
+
+        // 7. If not in range of anything, move closer to the target
+        this.moveCloser(unit, target);
+        // After moving, check if we can attack
+        if (this.targetInRange(unit, target, 'close')) {
+            if (clawReady) {
+                this.useAbility(unit, clawSpec, target);
+            } else if (biteReady) {
+                this.useAbility(unit, biteSpec, target);
+            } else {
+                this._basicAttack(unit, target);
+            }
+        } else if (fireBreathReady && this.targetInRange(unit, target, 'medium')) {
+            this.useAbility(unit, fireBreathSpec, target);
+        }
+    };
+
     // ── Cooldown Helper ───────────────────────────────────────────────────────
     this._setCooldown = (unit, key, rounds) => {
         const normalized = key.replace(/\s+/g, '_').toLowerCase();
         unit.cooldowns[normalized] = rounds;
+    };
+
+    this.dispelTarget = (target) => {
+        if (!target) return 0;
+        let dispelledCount = 0;
+        if (Array.isArray(target.activeBuffs)) {
+            const buffsToRevert = [...target.activeBuffs];
+            buffsToRevert.forEach(buff => {
+                this._revertBuff(target, buff);
+                dispelledCount++;
+            });
+            target.activeBuffs = [];
+        }
+        const flagsToCheck = [
+            'inspiredActive',
+            'berserkerActive',
+            'etherealSpeedActive',
+            'astralBeingActive',
+            'thirdEyeActive',
+            'defensiveStanceActive',
+            'defensiveStance'
+        ];
+        flagsToCheck.forEach(flag => {
+            if (target[flag]) {
+                target[flag] = false;
+                dispelledCount++;
+            }
+        });
+        target.berserkerRoundsLeft = 0;
+        target.berserkerRounds = 0;
+        target.berserkerTotalRounds = 0;
+        target.etherealSpeedRoundsLeft = 0;
+        target.etherealSpeedTotalRounds = 0;
+        target.etherealSpeedTotalDurationMs = 0;
+        target.etherealSpeedEndTimeMs = 0;
+        target.astralBeingRoundsLeft = 0;
+        target.astralBeingTotalRounds = 0;
+        target.astralBeingTotalDurationMs = 0;
+        target.astralBeingEndTimeMs = 0;
+        target.thirdEyeRoundsLeft = 0;
+        target.thirdEyeRounds = 0;
+        target.thirdEyeTotalRounds = 0;
+        target.thirdEyeEndTimeMs = 0;
+        target.thirdEyeTotalDurationMs = 0;
+        target.defensiveStanceRoundsLeft = 0;
+        target.defensiveStanceRounds = 0;
+        target.defensiveStanceTotalRounds = 0;
+        return dispelledCount;
+    };
+
+    this._hatchEgg = (egg) => {
+        const coords = { ...egg.coordinates };
+        const id = egg.id;
+        delete this.combatants[id];
+        const hatchlingId = `hatchling_${Date.now()}`;
+        const hpBase = 80;
+        const newMinion = {
+            id: hatchlingId,
+            type: 'dragon_hatchling',
+            name: 'Dragon Hatchling',
+            isMinion: true,
+            isMonster: true,
+            dead: false,
+            coordinates: coords,
+            hp: hpBase,
+            starting_hp: hpBase,
+            stats: { str: 5, dex: 4, atk: 8, def: 5, speed: 6 },
+            attacks: ['claw_strike', 'bite'],
+            specials: [],
+            portrait: 'wyvern_portrait2',
+            cooldowns: {},
+            movesTakenThisRound: 0,
+            actionsTakenThisRound: 0,
+            endurance: 40,
+            maxEndurance: 40,
+            damageIndicators: [],
+            activeBuffs: [],
+            activeDebuffs: [],
+            invisible: false
+        };
+        this.combatants[hatchlingId] = newMinion;
+        this._setCombatantOccupiedCoords(newMinion);
+        this.appendCombatLog(`A Dragon Hatchling hatches from the egg!`);
+        if (this.animManagerRedux && typeof this.animManagerRedux.triggerAbility === 'function') {
+            this.animManagerRedux.triggerAbility(coords, coords, 'summon', false, null, hatchlingId);
+        }
+    };
+
+    this._resolveBombardmentStrike = (pb) => {
+        const caster = this.combatants[pb.casterId];
+        this.bombardWarnings = null;
+        const targetCoords = pb.tiles.map(t => ({ x: t.x, y: t.y }));
+        if (this.animManagerRedux && typeof this.animManagerRedux.triggerBombardStrike === 'function') {
+            this.animManagerRedux.triggerBombardStrike(targetCoords);
+        }
+        setTimeout(() => {
+            if (this.combatOver) return;
+            const baseDamage = 35;
+            const hitNames = [];
+            pb.tiles.forEach(tile => {
+                Object.values(this.combatants).forEach(c => {
+                    if (!c || c.dead || c.isVCT) return;
+                    const occupied = Array.isArray(c.occupiedCoords) ? c.occupiedCoords : [c.coordinates];
+                    const standsOnTile = occupied.some(oc => oc.x === tile.x && oc.y === tile.y);
+                    if (standsOnTile) {
+                        const isEnemy = caster ? (!!caster.isMonster !== !!c.isMonster) : true;
+                        if (isEnemy) {
+                            const hit = this.hitCheck(caster || { stats: { dex: 8 } }, c);
+                            if (hit) {
+                                let finalDmg = this.damageCheck(caster || { stats: { atk: 15 } }, c, baseDamage);
+                                c.hp = Math.max(0, c.hp - finalDmg);
+                                if (finalDmg > 0) {
+                                    this.wakeSleepingTarget(c, 'Bombardment');
+                                }
+                                c.damageIndicators = c.damageIndicators || [];
+                                c.damageIndicators.push({
+                                    id: Date.now() + Math.random(),
+                                    value: `-${finalDmg}`,
+                                    source: 'Bombardment',
+                                    type: 'damage'
+                                });
+                                hitNames.push(`${this.getCombatantLogName(c)} (${finalDmg} dmg)`);
+                                if (c.hp <= 0) {
+                                    this.targetKilled(c);
+                                }
+                            }
+                        }
+                    }
+                });
+            });
+            if (hitNames.length > 0) {
+                this.appendCombatLog(`Bombardment strikes: ${hitNames.join(', ')}.`);
+            } else {
+                this.appendCombatLog(`Bombardment strikes empty ground.`);
+            }
+            if (typeof this.updateData === 'function') {
+                this.updateData(clone(this.combatants));
+            }
+        }, 1000);
     };
 
     // ── Ability Use ───────────────────────────────────────────────────────────
@@ -3480,6 +3782,203 @@ export function CombatManagerRedux() {
         const finalCooldown = Math.round(baseCooldown * cooldownPenalty);
         unit.cooldowns[abilityId] = finalCooldown;
 
+        if (abilityId === 'dragon_dispell' || abilityId === 'dispell') {
+            const count = this.dispelTarget(target);
+            this.appendCombatLog(`${this.getCombatantLogName(unit)} dispels magical effects from ${this.getCombatantLogName(target)}! (Removed ${count} buffs/effects)`);
+            if (this.animManagerRedux && typeof this.animManagerRedux.triggerAbility === 'function') {
+                this.animManagerRedux.triggerAbility(unit.coordinates, target.coordinates, 'dragon_dispell', false, null, unit.id);
+            }
+            if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+            return;
+        }
+
+        if (abilityId === 'dragon_whirlwind') {
+            const hOffset = (unit.coordinates.x >= 4) ? -1 : 1;
+            const centerX = unit.coordinates.x + hOffset;
+            const centerY = unit.coordinates.y - 1;
+            const dragonOccupied = unit.occupiedCoords || [unit.coordinates];
+            const pushedUnitIds = new Set();
+
+            const pushUnitCascade = (unitToPush, px, py) => {
+                if (pushedUnitIds.has(unitToPush.id)) return true;
+
+                const targetX = unitToPush.coordinates.x + px;
+                const targetY = unitToPush.coordinates.y + py;
+
+                if (targetX < 0 || targetX > MAX_DEPTH || targetY < 0 || targetY >= MAX_LANES) {
+                    return false;
+                }
+
+                const occupier = Object.values(this.combatants).find(c => {
+                    if (!c || c.dead || c.isVCT || c.id === unitToPush.id) return false;
+                    const occupied = Array.isArray(c.occupiedCoords) ? c.occupiedCoords : [c.coordinates];
+                    return occupied.some(coord => coord.x === targetX && coord.y === targetY);
+                });
+
+                if (occupier) {
+                    const occupierPushed = pushUnitCascade(occupier, px, py);
+                    if (!occupierPushed) {
+                        return false;
+                    }
+                }
+
+                if (this.canFitAt(unitToPush, targetX, targetY)) {
+                    this.updateUnitCoordinates(unitToPush, targetX, targetY);
+                    pushedUnitIds.add(unitToPush.id);
+                    this.appendCombatLog(`${this.getCombatantLogName(unitToPush)} is pushed back by the Whirlwind!`);
+                    return true;
+                }
+                return false;
+            };
+
+            Object.values(this.combatants).forEach(c => {
+                if (!c || c.dead || c.isVCT) return;
+                const isEnemy = (!!unit.isMonster !== !!c.isMonster);
+                if (!isEnemy) return;
+                if (pushedUnitIds.has(c.id)) return;
+
+                const isAdjacent = dragonOccupied.some(oc => 
+                    Math.abs(oc.x - c.coordinates.x) <= 2 && Math.abs(oc.y - c.coordinates.y) <= 2
+                );
+
+                if (isAdjacent) {
+                    const dx = c.coordinates.x - centerX;
+                    const dy = c.coordinates.y - centerY;
+                    let pushX = 0;
+                    let pushY = 0;
+
+                    if (Math.abs(dx) >= Math.abs(dy)) {
+                        pushX = dx >= 0 ? 1 : -1;
+                    } else {
+                        pushY = dy >= 0 ? 1 : -1;
+                    }
+
+                    pushUnitCascade(c, pushX, pushY);
+                }
+            });
+
+            if (this.animManagerRedux && typeof this.animManagerRedux.triggerAbility === 'function') {
+                this.animManagerRedux.triggerAbility(unit.coordinates, unit.coordinates, 'dragon_whirlwind', false, null, unit.id);
+            }
+            if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+            return;
+        }
+
+        if (abilityId === 'lay_eggs') {
+            const eggId = `dragon_egg_${Date.now()}`;
+            const hpBase = 50;
+
+            const eggMinion = {
+                id: eggId,
+                type: 'dragon_egg',
+                name: 'Dragon Egg',
+                isMinion: true,
+                isMonster: true,
+                dead: false,
+                coordinates: { ...target.coordinates },
+                hp: hpBase,
+                starting_hp: hpBase,
+                stats: { str: 1, dex: 0, atk: 0, def: 5, speed: 0, fort: 10 },
+                attacks: [],
+                specials: [],
+                portrait: 'egg_1',
+                cooldowns: {},
+                movesTakenThisRound: 0,
+                actionsTakenThisRound: 0,
+                endurance: 0,
+                maxEndurance: 0,
+                damageIndicators: [],
+                activeBuffs: [],
+                activeDebuffs: [],
+                hatchTimer: 6,
+                invisible: false
+            };
+
+            this.combatants[eggId] = eggMinion;
+            this._setCombatantOccupiedCoords(eggMinion);
+            this.appendCombatLog(`${this.getCombatantLogName(unit)} lays a Dragon Egg!`);
+
+            if (this.animManagerRedux && typeof this.animManagerRedux.triggerAbility === 'function') {
+                this.animManagerRedux.triggerAbility(unit.coordinates, target.coordinates, 'lay_eggs', false, null, unit.id);
+            }
+            if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+            return;
+        }
+
+        if (abilityId === 'bombard') {
+            const center = { x: target.coordinates.x, y: target.coordinates.y };
+            const candidates = [];
+            for (let dx = -1; dx <= 1; dx++) {
+                for (let dy = -1; dy <= 1; dy++) {
+                    const tx = center.x + dx;
+                    const ty = center.y + dy;
+                    if (tx >= 0 && tx < MAX_DEPTH && ty >= 0 && ty < MAX_LANES) {
+                        candidates.push({ x: tx, y: ty });
+                    }
+                }
+            }
+            const shuffled = [...candidates].sort(() => 0.5 - Math.random());
+            const strike1 = shuffled[0] || center;
+            const strike2 = shuffled[1] || strike1;
+            const strike3 = shuffled[2] || strike2;
+
+            const tiles = [
+                { x: strike1.x, y: strike1.y, col: strike1.x, row: strike1.y, key: 'main' },
+                { x: strike2.x, y: strike2.y, col: strike2.x, row: strike2.y, key: 'adj1' },
+                { x: strike3.x, y: strike3.y, col: strike3.x, row: strike3.y, key: 'adj2' }
+            ];
+
+            this.bombardWarnings = { tiles };
+
+            this.pendingBombardments.push({
+                roundsRemaining: 1,
+                tiles,
+                casterId: unit.id
+            });
+
+            this.appendCombatLog(`${this.getCombatantLogName(unit)} launches a devastating Bombardment! Warning shimmers appear on targeted tiles.`);
+            if (this.animManagerRedux && typeof this.animManagerRedux.triggerAbility === 'function') {
+                this.animManagerRedux.triggerAbility(unit.coordinates, target.coordinates, 'bombard', false, null, unit.id);
+            }
+            if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+            return;
+        }
+
+        if (abilityId === 'fire_breath' || abilityId === 'blue_dragon_breath') {
+            const rawDamage = ability.damage || 25;
+            let hitCount = 0;
+            Object.values(this.combatants).forEach(c => {
+                if (!c || c.dead || c.isVCT) return;
+                const isEnemy = (!!unit.isMonster !== !!c.isMonster);
+                if (!isEnemy) return;
+
+                if (this.targetInRange(unit, c, 'medium')) {
+                    const hit = this.hitCheck(unit, c);
+                    if (hit) {
+                        let finalDmg = this.damageCheck(unit, c, rawDamage);
+                        c.hp = Math.max(0, c.hp - finalDmg);
+                        if (finalDmg > 0) this.wakeSleepingTarget(c, 'Blue Dragon Breath');
+                        c.damageIndicators = c.damageIndicators || [];
+                        c.damageIndicators.push({
+                            id: Date.now() + Math.random(),
+                            value: `-${finalDmg}`,
+                            source: 'Blue Dragon Breath',
+                            type: 'damage'
+                        });
+                        hitCount++;
+                        if (c.hp <= 0) this.targetKilled(c);
+                    }
+                }
+            });
+
+            this.appendCombatLog(`${this.getCombatantLogName(unit)} breathes a cone of fire! Hits ${hitCount} enemies.`);
+            if (this.animManagerRedux && typeof this.animManagerRedux.triggerAbility === 'function') {
+                this.animManagerRedux.triggerAbility(unit.coordinates, target.coordinates, 'blue_dragon_breath', false, null, unit.id);
+            }
+            if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+            return;
+        }
+
         if (abilityId === 'induce_fear') {
             if (typeof this.triggerBoardEvent === 'function') {
                 this.triggerBoardEvent('induce_fear', { duration: 1800 });
@@ -3492,33 +3991,37 @@ export function CombatManagerRedux() {
                 if (!c || c.dead || c.isVCT) return;
                 const isEnemy = (!!unit.isMonster !== !!c.isMonster);
                 if (isEnemy) {
-                    this._applyDebuff(c, {
-                        decrease_stats: {
-                            stats: [
-                                { stat: 'atk', amount: 30, isPercent: true },
-                                { stat: 'def', amount: 30, isPercent: true }
-                            ]
-                        }
-                    }, 'Induce Fear', dur);
+                    if (c.type === 'dragon' && Math.random() < 0.5) {
+                        this.appendCombatLog(`${this.getCombatantLogName(c)} resists Induce Fear! (Dragon CC Immunity)`);
+                    } else {
+                        this._applyDebuff(c, {
+                            decrease_stats: {
+                                stats: [
+                                    { stat: 'atk', amount: 30, isPercent: true },
+                                    { stat: 'def', amount: 30, isPercent: true }
+                                ]
+                            }
+                        }, 'Induce Fear', dur);
 
-                    c.stunned = true;
-                    c.stunnedRounds = dur;
-                    c.stunnedTotalRounds = dur;
-                    c.stunnedStackDuration = dur;
-                    c.stunnedTotalDurationMs = durMs;
-                    c.stunnedEndTimeMs = now + durMs;
+                        c.stunned = true;
+                        c.stunnedRounds = dur;
+                        c.stunnedTotalRounds = dur;
+                        c.stunnedStackDuration = dur;
+                        c.stunnedTotalDurationMs = durMs;
+                        c.stunnedEndTimeMs = now + durMs;
 
-                    c.feared = true;
-                    c.fearRounds = dur;
-                    c.fearTotalRounds = dur;
-                    c.fearTotalDurationMs = durMs;
-                    c.fearEndTimeMs = now + durMs;
+                        c.feared = true;
+                        c.fearRounds = dur;
+                        c.fearTotalRounds = dur;
+                        c.fearTotalDurationMs = durMs;
+                        c.fearEndTimeMs = now + durMs;
 
-                    c.asleep = false;
-                    c.sleepTotalDurationMs = 0;
-                    c.sleepEndTimeMs = 0;
+                        c.asleep = false;
+                        c.sleepTotalDurationMs = 0;
+                        c.sleepEndTimeMs = 0;
 
-                    this.appendCombatLog(`${this.getCombatantLogName(c)} is terrified by Mummy's scream!`);
+                        this.appendCombatLog(`${this.getCombatantLogName(c)} is terrified by Mummy's scream!`);
+                    }
                 }
             });
             if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
@@ -3692,11 +4195,31 @@ export function CombatManagerRedux() {
                     }
                 });
             });
+
+            const isCallerLarge = unit.isMonster && !unit.isMinion && (
+                unit.tier === 4 || unit.type === 'dragon' || unit.key === 'dragon' || unit.huge === true || unit.size === 3 ||
+                unit.type === 'sphinx' || unit.key === 'sphinx' ||
+                ['beholder', 'ogre', 'manticore', 'wyvern', 'wyvern_alt', 'mummy', 'djinn', 'vampire'].includes(unit.type)
+            );
+            const isMeleeAbility = [
+                'claw_strike', 'claws', 'bite', 'crush', 'tackle', 'stomp', 'head_butt',
+                'slash', 'barbarian_slash', 'cleave', 'barbarian_cleave',
+                'monk_punch', 'punch', 'force_punch', 'shield_slam', 'shield_bash'
+            ].includes(abilityId);
+
+            let sourceCoord = bestCallerCoord;
+            if (isCallerLarge && !isMeleeAbility) {
+                sourceCoord = unit.coordinates;
+            }
+
             let targetCoord = bestTargetCoord;
+            if (isTargetLarge && !isMeleeAbility) {
+                targetCoord = target.coordinates;
+            }
             if (abilityId === 'barbarian_leap_attack') {
                 targetCoord = { x: unit.coordinates.x, y: unit.coordinates.y };
             }
-            this.animManagerRedux.triggerAbility(bestCallerCoord, targetCoord, abilityId, isTargetLarge, targetTiles, unit.id, unit.notchedArrowType);
+            this.animManagerRedux.triggerAbility(sourceCoord, targetCoord, abilityId, isTargetLarge, targetTiles, unit.id, unit.notchedArrowType);
         }
 
         if (abilityId === 'loose' || abilityId === 'execute' || abilityId === 'deadeye_shot') {
@@ -3963,13 +4486,17 @@ export function CombatManagerRedux() {
                     }
 
                     if (abilityId === 'polymorph') {
-                        const dur = getDurationRounds(ability.duration || 'long');
-                        target.polymorphed = true;
-                        target.polymorphRounds = dur;
-                        target.stunned = true;
-                        target.stunnedRounds = dur;
-                        this._applyDebuff(target, { decrease_stats: { stats: [{ stat: 'def', amount: 4 }] } }, 'Polymorphed', dur);
-                        this.appendCombatLog(`${this.getCombatantLogName(target)} is turned into a helpless frog (Polymorphed)!`);
+                        if (target.type === 'dragon' && Math.random() < 0.5) {
+                            this.appendCombatLog(`${this.getCombatantLogName(target)} resists Polymorph! (Dragon CC Immunity)`);
+                        } else {
+                            const dur = getDurationRounds(ability.duration || 'long');
+                            target.polymorphed = true;
+                            target.polymorphRounds = dur;
+                            target.stunned = true;
+                            target.stunnedRounds = dur;
+                            this._applyDebuff(target, { decrease_stats: { stats: [{ stat: 'def', amount: 4 }] } }, 'Polymorphed', dur);
+                            this.appendCombatLog(`${this.getCombatantLogName(target)} is turned into a helpless frog (Polymorphed)!`);
+                        }
                     }
 
                     if (abilityId === 'fire_blast' || abilityId === 'fireball') {
@@ -4043,6 +4570,12 @@ export function CombatManagerRedux() {
                     resolvedEffects.forEach(eff => {
                         const chance = typeof eff.chance === 'number' ? eff.chance : 100;
                         if (Math.random() * 100 <= chance) {
+                            if (target.type === 'dragon' && ['frozen', 'stun', 'sleep', 'fear', 'ensnared', 'polymorph'].includes(eff.type)) {
+                                if (Math.random() < 0.5) {
+                                    this.appendCombatLog(`${this.getCombatantLogName(target)} resists ${formatCombatText(eff.type)}! (Dragon CC Immunity)`);
+                                    return;
+                                }
+                            }
                             // Fortitude resistance check for applicable effects
                             if (eff.type === 'poison' && targetFort > 0) {
                                 const resistChance = targetFort * 3; // 3% per fort point
@@ -4246,15 +4779,19 @@ export function CombatManagerRedux() {
                 if (target.hp > 0 && !target.dead) {
                     const now = Date.now();
                     if (arrowType === 'ice') {
-                        const dur = getDurationRounds('short');
-                        const durMs = getDurationMsFromRounds(dur);
-                        target.frozen = true;
-                        target.frozenRounds = (target.frozenRounds || 0) + dur;
-                        target.frozenTotalRounds = (target.frozenTotalRounds || 0) + dur;
-                        target.frozenStackDuration = dur;
-                        target.frozenTotalDurationMs = (target.frozenTotalDurationMs || 0) + durMs;
-                        target.frozenEndTimeMs = target.frozenEndTimeMs && target.frozenEndTimeMs > now ? target.frozenEndTimeMs + durMs : now + durMs;
-                        this.appendCombatLog(`${this.getCombatantLogName(target)} is frozen by the Eagle Eye ice arrow!`);
+                        if (target.type === 'dragon' && Math.random() < 0.5) {
+                            this.appendCombatLog(`${this.getCombatantLogName(target)} resists the ice arrow freeze! (Dragon CC Immunity)`);
+                        } else {
+                            const dur = getDurationRounds('short');
+                            const durMs = getDurationMsFromRounds(dur);
+                            target.frozen = true;
+                            target.frozenRounds = (target.frozenRounds || 0) + dur;
+                            target.frozenTotalRounds = (target.frozenTotalRounds || 0) + dur;
+                            target.frozenStackDuration = dur;
+                            target.frozenTotalDurationMs = (target.frozenTotalDurationMs || 0) + durMs;
+                            target.frozenEndTimeMs = target.frozenEndTimeMs && target.frozenEndTimeMs > now ? target.frozenEndTimeMs + durMs : now + durMs;
+                            this.appendCombatLog(`${this.getCombatantLogName(target)} is frozen by the Eagle Eye ice arrow!`);
+                        }
                     } else if (arrowType === 'poison') {
                         const dur = getDurationRounds('medium');
                         target.poison = true;
@@ -4490,11 +5027,15 @@ export function CombatManagerRedux() {
 
                 // Stun chance: 5%
                 if (Math.random() < 0.05) {
-                    target.stunned = true;
-                    target.stunnedRounds = Math.max(target.stunnedRounds || 0, 1);
-                    const durMs = getDurationMsFromRounds(1);
-                    target.stunnedEndTimeMs = target.stunnedEndTimeMs && target.stunnedEndTimeMs > Date.now() ? target.stunnedEndTimeMs + durMs : Date.now() + durMs;
-                    this.appendCombatLog(`${this.getCombatantLogName(target)} is STUNNED by Soul Suck!`);
+                    if (target.type === 'dragon' && Math.random() < 0.5) {
+                        this.appendCombatLog(`${this.getCombatantLogName(target)} resists the Soul Suck stun! (Dragon CC Immunity)`);
+                    } else {
+                        target.stunned = true;
+                        target.stunnedRounds = Math.max(target.stunnedRounds || 0, 1);
+                        const durMs = getDurationMsFromRounds(1);
+                        target.stunnedEndTimeMs = target.stunnedEndTimeMs && target.stunnedEndTimeMs > Date.now() ? target.stunnedEndTimeMs + durMs : Date.now() + durMs;
+                        this.appendCombatLog(`${this.getCombatantLogName(target)} is STUNNED by Soul Suck!`);
+                    }
                 }
 
                 this.appendCombatLog(`${this.getCombatantLogName(unit)} drains the soul of ${this.getCombatantLogName(target)} for ${finalDmg} damage & stamina, healing/replenishing self.`);
@@ -4593,7 +5134,29 @@ export function CombatManagerRedux() {
                     }
                 }
             }
+
+            // Tick down dragon egg hatch timer
+            if (c.type === 'dragon_egg' && typeof c.hatchTimer === 'number') {
+                c.hatchTimer--;
+                if (c.hatchTimer <= 0) {
+                    this._hatchEgg(c);
+                }
+            }
         });
+
+        // Process pending bombardments
+        if (Array.isArray(this.pendingBombardments) && this.pendingBombardments.length > 0) {
+            const resolved = [];
+            this.pendingBombardments.forEach(pb => {
+                pb.roundsRemaining--;
+                if (pb.roundsRemaining <= 0) {
+                    this._resolveBombardmentStrike(pb);
+                } else {
+                    resolved.push(pb);
+                }
+            });
+            this.pendingBombardments = resolved;
+        }
         
         this.appendCombatLog(`Round ${this.round} begins.`);
         

@@ -421,6 +421,62 @@ class BoardsPalette extends React.Component {
                                 </div>
                             })}
                         </div>}
+                        {tile.optionType === 'shrine' && <div className={`palette-option-expandable-container ${this.props.optionClickedIdx === i ? 'expanded' : ''}`}>
+                            {(this.props.mapMaker.shrineOptions || []).map((shrineItem, si) => {
+                                const isHovered = this.state.hoveredSubItem?.type === 'shrine' && this.state.hoveredSubItem?.id === si;
+                                const isSelected = this.props.pinnedOption?.type === 'shrine-tile' && this.props.pinnedOption?.id === si;
+                                return <div
+                                key={`shrine-${si}`}
+                                className={`palette-option-subcontainer${isHovered ? ' sub-hovered' : ''}${isSelected ? ' sub-selected' : ''}`}
+                                onMouseEnter={() => this.setState({ hoveredSubItem: { type: 'shrine', id: si } })}
+                                onMouseLeave={() => this.setState({ hoveredSubItem: null })}
+                                onClick={() => {
+                                    this.props.handleClick({
+                                        type: 'shrine-tile',
+                                        id: si
+                                    })
+                                }}
+                                >
+                                    <div className="text-container">{shrineItem.name}</div>
+                                    <div style={{
+                                        width: this.props.tileSize + 'px',
+                                        height: this.props.tileSize + 'px',
+                                        backgroundColor: shrineItem.color,
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        fontSize: Math.max(8, this.props.tileSize * 0.35) + 'px',
+                                        flexShrink: 0
+                                    }}>🏛</div>
+                                </div>
+                            })}
+                        </div>}
+                        {tile.optionType === 'lore_tablet' && <div className={`palette-option-expandable-container ${this.props.optionClickedIdx === i ? 'expanded' : ''}`}>
+                            {(this.props.mapMaker.loreTabletOptions || []).map((tabletItem, li) => {
+                                const isHovered = this.state.hoveredSubItem?.type === 'lore_tablet' && this.state.hoveredSubItem?.id === li;
+                                const isSelected = this.props.pinnedOption?.type === 'lore-tablet-tile' && this.props.pinnedOption?.id === li;
+                                return <div
+                                key={`lore-tablet-${li}`}
+                                className={`palette-option-subcontainer${isHovered ? ' sub-hovered' : ''}${isSelected ? ' sub-selected' : ''}`}
+                                onMouseEnter={() => this.setState({ hoveredSubItem: { type: 'lore_tablet', id: li } })}
+                                onMouseLeave={() => this.setState({ hoveredSubItem: null })}
+                                onClick={() => {
+                                    this.props.handleClick({
+                                        type: 'lore-tablet-tile',
+                                        id: li
+                                    })
+                                }}
+                                >
+                                    <div className="text-container">{tabletItem.name}</div>
+                                    <div style={{
+                                        width: this.props.tileSize + 'px',
+                                        height: this.props.tileSize + 'px',
+                                        backgroundColor: tabletItem.color,
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        fontSize: Math.max(8, this.props.tileSize * 0.35) + 'px',
+                                        flexShrink: 0
+                                    }}>📜</div>
+                                </div>
+                            })}
+                        </div>}
                     </div>
                     )
                 })}

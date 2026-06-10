@@ -659,14 +659,41 @@ export function MonsterManager() {
             portrait: images[this.pickRandom(['wyvern_portrait', 'wyvern_portrait2'])],
             greetings: ['*roar*'],
             deathCries: ['*scream*'],
-            specials: ['firestorm'],
-            attacks: ['claws', 'bite', 'fire_breath'],
+            specials: ['dragon_whirlwind', 'bombard', 'dragon_dispell', 'lay_eggs', 'blue_dragon_breath'],
+            attacks: ['claw_strike', 'bite'],
             weaknesses: ['psionic'],
             drops: [
                 { item: TIER4_POTION, percentChance: 35 },
                 { itemPool: TIER4_ITEM, percentChance: 35 },
                 { itemPool: TIER4_ITEM, percentChance: 20 },
             ]
+        },
+        dragon_egg: {
+            type: 'dragon_egg',
+            tier: 1,
+            subtype: 'construct',
+            key: 'dragon_egg',
+            image_names: ['egg_1'],
+            monster_names: ['Dragon Egg'],
+            stats: {
+                hp: 50,
+                atk: 0,
+                def: 5,
+                speed: 0,
+                willpower: 0,
+                str: 1,
+                int: 0,
+                dex: 0,
+                fort: 10
+            },
+            level: 1,
+            portrait: images['egg_1'],
+            greetings: [],
+            deathCries: ['*splat*'],
+            specials: [],
+            attacks: [],
+            weaknesses: ['fire'],
+            drops: []
         },
         hagigah: {
             type: 'hagigah',

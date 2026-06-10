@@ -134,6 +134,10 @@ class CardDuel extends React.Component {
     renderTutorialOverlay = () => {
         if (!this.state.tutorialOpen) return null;
         const step = TUTORIAL_STEPS[this.state.tutorialStep];
+        let stepText = step.text;
+        if (this.props.scrimmage && this.state.tutorialStep === 0) {
+            stepText = "Your objective is to reduce the Reaper's Resolve to 0. Since this is a scrimmage, there are no gold penalties or soul taxes if you lose.";
+        }
 
         return (
             <div className="tutorial-overlay">
@@ -144,7 +148,7 @@ class CardDuel extends React.Component {
                     </div>
                     <div className="tutorial-body">
                         <div className="tutorial-image" style={{ backgroundImage: `url(${images[step.image] || ''})` }}></div>
-                        <p>{step.text}</p>
+                        <p>{stepText}</p>
                     </div>
                     <div className="tutorial-footer">
                         <div className="step-dots">
@@ -481,9 +485,9 @@ class CardDuel extends React.Component {
     }
 
     finish = (winner) => {
-        const result = { winner, playerResolve: this.state.player.resolve, reaperResolve: this.state.reaper.resolve };
+        const result = { winner, playerResolve: this.state.player.resolve, reaperResolve: this.state.reaper.resolve, scrimmage: !!this.props.scrimmage };
         
-        if (winner === 'reaper' && this.props.inventoryManager) {
+        if (!this.props.scrimmage && winner === 'reaper' && this.props.inventoryManager) {
             const im = this.props.inventoryManager;
             im.gold = Math.floor(im.gold * 0.75);
             if (this.props.saveUserData) this.props.saveUserData();
@@ -494,7 +498,11 @@ class CardDuel extends React.Component {
         if (winner === 'player') {
             this.setState({ gameEnding: 'victory' });
         } else {
-            this.displayMessage(`Duel Outcome: TAXATION`);
+            if (this.props.scrimmage) {
+                this.displayMessage(`Scrimmage Outcome: DEFEAT`);
+            } else {
+                this.displayMessage(`Duel Outcome: TAXATION`);
+            }
         }
     }
 

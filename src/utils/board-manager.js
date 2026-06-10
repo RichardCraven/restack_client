@@ -185,6 +185,12 @@ export function BoardManager(){
     this.establishVendorEncounterCallback = (callback) => {
         this.triggerVendorEncounter = callback
     }
+    this.establishShrineEncounterCallback = (callback) => {
+        this.triggerShrineEncounter = callback;
+    }
+    this.establishLoreTabletEncounterCallback = (callback) => {
+        this.triggerLoreTabletEncounter = callback;
+    }
     this.establishSetMonsterCallback = (callback) => {
         this.setMonster = callback;
     }
@@ -392,7 +398,7 @@ export function BoardManager(){
                 if (!tile) return;
 
                 const containsType = this.getContainsType(tile.contains);
-                if (containsType === 'void') return;
+                if (containsType === 'void' || containsType === 'inscription') return;
 
                 visited.set(nextIdx, steps + 1);
 
@@ -1530,6 +1536,22 @@ export function BoardManager(){
                 this.treasurePickupInProgress = false;
                 this.removeTileFromBoard(destinationTile)
             break;
+            case 'shrine':
+                // Shrine: trigger messaging and return 'shrine' so DungeonPage can launch the shrine UI
+                try {
+                    const shrineClass = subtype || 'unknown';
+                    if (this.messaging) this.messaging(`🏛 An ancestral shrine resonates with the spirit of a ${shrineClass}...`);
+                    if (this.triggerShrineEncounter) this.triggerShrineEncounter(destinationTile);
+                } catch (e) {}
+                return 'shrine';
+            case 'lore_tablet':
+                // Lore Tablet: award a domain token to the crew, then messaging
+                try {
+                    const domain = subtype || 'unknown';
+                    if (this.messaging) this.messaging(`📜 Ancient lore is inscribed here — a tablet of ${domain}.`);
+                    if (this.triggerLoreTabletEncounter) this.triggerLoreTabletEncounter(destinationTile);
+                } catch (e) {}
+                return 'lore_tablet';
             default:
                 break;
         }
@@ -1819,8 +1841,8 @@ export function BoardManager(){
             const type = this.getContainsType(destTile.contains);
             const gateType = this.getGateTypeFromTile(destTile);
             
-            // Check for void
-            if (type === 'void') return true;
+            // Check for void or inscription (wall with text)
+            if (type === 'void' || type === 'inscription') return true;
             
             // Check for large monster blocking
             if (destTile.blockedByLargeMonster) return true;
@@ -1838,12 +1860,25 @@ export function BoardManager(){
         const destinationIndex = this.getIndexFromCoordinates(destinationCoords);
         const destinationTile = this.tiles[destinationIndex];
         if (!destinationTile || typeof destinationTile.contains === 'undefined') return;
+        // Check for side-specific inscriptions on the CURRENT tile (wall as a border, not a void tile)
+        const sideMap = { up: 'top', down: 'bottom', left: 'left', right: 'right' };
+        const inscribedSide = direction ? sideMap[direction] : null;
+        const currentTileInscription = inscribedSide && tile.inscriptions && tile.inscriptions[inscribedSide];
+
         if (this.getContainsType(destinationTile.contains) === 'void') {
-            try { if (this.messaging) this.messaging('A wall blocks your way.'); } catch (e) {}
+            if (currentTileInscription) {
+                try { if (this.messaging) this.messaging(`✍ ${currentTileInscription}`); } catch (e) {}
+            } else {
+                try { if (this.messaging) this.messaging('A wall blocks your way.'); } catch (e) {}
+            }
             return;
         }
         if (this.isPassageWallBlockingBetween(tile.id, destinationIndex)) {
-            try { if (this.messaging) this.messaging('A wall blocks your way.'); } catch (e) {}
+            if (currentTileInscription) {
+                try { if (this.messaging) this.messaging(`✍ ${currentTileInscription}`); } catch (e) {}
+            } else {
+                try { if (this.messaging) this.messaging('A wall blocks your way.'); } catch (e) {}
+            }
             return;
         }
                 // Prevent movement into tiles that are logically occupied by a large monster

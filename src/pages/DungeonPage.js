@@ -617,8 +617,23 @@ const MARKER_TYPES = [
 
 class DungeonPage extends React.Component {
     getCharacterActions = (character) => {
-        // Show all potential glyphs for wizard, with only magic missile available initially
         let actions = [];
+
+        // All crew members get Card Scrimmage
+        actions.push({
+            type: 'scrimmage',
+            name: 'Card Scrimmage',
+            iconUrl: images['reaper_card_back'] || '',
+            subTypes: [
+                {
+                    type: 'Duel Reaper',
+                    available: true,
+                    count: 0
+                }
+            ]
+        });
+
+        // Show all potential glyphs for wizard, with only magic missile available initially
         if (character.type === 'wizard') {
             // Count available for each subtype
                 const mmCount = (character.specialActions || []).filter(a => a.subtype === 'magic missile' && a.available).length;
@@ -944,6 +959,8 @@ class DungeonPage extends React.Component {
             , showNarrativeOverlay: false
             , showAmbushPopup: false
             , ambushMonster: null
+            , showShrineOverlay: false
+            , shrineData: null
         }
     // Native browser tooltip will be used for death-tracker; no custom tooltip state required.
         // Track timers/intervals created by this component so we can clear on unmount
@@ -1112,14 +1129,19 @@ class DungeonPage extends React.Component {
 
     handleCardDuelFinish = (result) => {
         try{
-            if(result && result.winner === 'player'){
-                console.log('you win');
-            } else if(result && result.winner === 'reaper'){
-                // Surface a toast informing of the pending tax, but DO NOT apply it here.
-                const taxPercent = 25;
-                this.setState({ toastMessage: `You lost the duel — pending tax ${taxPercent}% gold (NOT applied in test)` });
+            if (this.state.isCardScrimmage) {
+                this.setState({ toastMessage: `Scrimmage finished — Outcome: ${result && result.winner === 'player' ? 'Victory!' : 'Defeat'}` });
+            } else {
+                if(result && result.winner === 'player'){
+                    console.log('you win');
+                } else if(result && result.winner === 'reaper'){
+                    // Surface a toast informing of the pending tax, but DO NOT apply it here.
+                    const taxPercent = 25;
+                    this.setState({ toastMessage: `You lost the duel — pending tax ${taxPercent}% gold (NOT applied in test)` });
+                }
             }
         } catch(e){ console.warn('handleCardDuelFinish failed', e); }
+        this.setState({ isCardScrimmage: false });
         this.closeCardDuel();
     }
 
@@ -1366,6 +1388,8 @@ class DungeonPage extends React.Component {
         this.props.boardManager.establishRitualEncounterCallback(this.triggerRitualEncounter)
         this.props.boardManager.establishNarrativeEncounterCallback(this.triggerNarrativeEncounter)
         this.props.boardManager.establishVendorEncounterCallback(this.triggerVendorEncounter)
+        this.props.boardManager.establishShrineEncounterCallback(this.triggerShrineEncounter)
+        this.props.boardManager.establishLoreTabletEncounterCallback(this.triggerLoreTabletEncounter)
 
         this.props.boardManager.establishBoardTransitionCallback(this.boardTransition)
         this.props.boardManager.establishLevelChangeCallback(this.handleLevelChange)
@@ -4798,6 +4822,12 @@ class DungeonPage extends React.Component {
         })
     }
     handleActionClick = (action) => {
+        if (action.type === 'scrimmage') {
+            this.setState({ isCardScrimmage: true });
+            this.openCardDuel(null);
+            return;
+        }
+
         const current = Array.isArray(this.state.actionMenuTypeExpanded) ? this.state.actionMenuTypeExpanded : [];
         const isOpen = current.includes(action.type);
         const val = isOpen ? current.filter(t => t !== action.type) : [...current, action.type];
@@ -5022,6 +5052,138 @@ class DungeonPage extends React.Component {
             modalType: normalized === 'alchemist' ? 'Alchemist' : 'Merchant',
             showModal: true
         });
+    }
+
+    triggerShrineEncounter = (tile) => {
+        // tile.contains = { type: 'shrine', subtype: classKey, key: shrineKey }
+        const shrineClass = (tile && tile.contains && tile.contains.subtype) || null;
+        const crew = (this.props.crewManager && this.props.crewManager.crew) || [];
+        const meta = getMeta() || {};
+
+        // Check Resolve gate (must be > 50)
+        const currentResolve = typeof meta.resolve === 'number' ? meta.resolve : 100;
+        if (currentResolve <= 50) {
+            try { if (this.props.boardManager.messaging) this.props.boardManager.messaging('🏛 The shrine is cold — your party\'s resolve is too low to commune.'); } catch(e) {}
+            return;
+        }
+
+        // Check one-time use per run
+        const shrinesUsed = Array.isArray(meta.shrinesUsed) ? meta.shrinesUsed : [];
+        const shrineKey = tile && tile.contains && tile.contains.key;
+        if (shrineKey && shrinesUsed.includes(shrineKey)) {
+            try { if (this.props.boardManager.messaging) this.props.boardManager.messaging('🏛 This shrine has already been communed with.'); } catch(e) {}
+            return;
+        }
+
+        // Find the matching crew member
+        const matchingMember = shrineClass ? crew.find(m => (m.type || '').toLowerCase() === shrineClass.toLowerCase()) : null;
+
+        this.setState({
+            keysLocked: true,
+            showShrineOverlay: true,
+            shrineData: {
+                tile,
+                shrineClass,
+                shrineKey,
+                matchingMember,
+                ritualActive: true,
+                ritualDuration: 20, // seconds
+                ritualTimeLeft: 20,
+                ritualComplete: false,
+            }
+        }, () => {
+            // Start the countdown
+            this._shrineInterval = setInterval(() => {
+                this.setState(prev => {
+                    if (!prev.shrineData || !prev.shrineData.ritualActive) return null;
+                    const next = prev.shrineData.ritualTimeLeft - 1;
+                    if (next <= 0) {
+                        clearInterval(this._shrineInterval);
+                        return { shrineData: { ...prev.shrineData, ritualTimeLeft: 0, ritualActive: false, ritualComplete: true } };
+                    }
+                    return { shrineData: { ...prev.shrineData, ritualTimeLeft: next } };
+                });
+            }, 1000);
+        });
+    }
+
+    closeShrineOverlay = (cancelled = false) => {
+        clearInterval(this._shrineInterval);
+        this.setState({
+            keysLocked: false,
+            showShrineOverlay: false,
+            shrineData: null,
+        });
+    }
+
+    confirmGlobalSkill = (skillKey) => {
+        if (!skillKey) return;
+        const { shrineData } = this.state;
+        const meta = getMeta() || {};
+
+        // Mark shrine as used
+        if (shrineData && shrineData.shrineKey) {
+            const shrinesUsed = Array.isArray(meta.shrinesUsed) ? meta.shrinesUsed : [];
+            if (!shrinesUsed.includes(shrineData.shrineKey)) shrinesUsed.push(shrineData.shrineKey);
+            meta.shrinesUsed = shrinesUsed;
+        }
+
+        // Award the global skill to the matching crew member
+        const crew = Array.isArray(meta.crew) ? meta.crew : [];
+        const shrineClass = shrineData && shrineData.shrineClass;
+        if (shrineClass) {
+            const memberIdx = crew.findIndex(m => (m.type || '').toLowerCase() === shrineClass.toLowerCase());
+            if (memberIdx !== -1) {
+                const member = crew[memberIdx];
+                const globalSkills = Array.isArray(member.globalSkills) ? member.globalSkills : [];
+                if (!globalSkills.includes(skillKey)) globalSkills.push(skillKey);
+                crew[memberIdx] = { ...member, globalSkills };
+                meta.crew = crew;
+                // Mirror to crewManager
+                if (this.props.crewManager && Array.isArray(this.props.crewManager.crew)) {
+                    const cmIdx = this.props.crewManager.crew.findIndex(m => (m.type || '').toLowerCase() === shrineClass.toLowerCase());
+                    if (cmIdx !== -1) {
+                        this.props.crewManager.crew[cmIdx] = { ...this.props.crewManager.crew[cmIdx], globalSkills };
+                    }
+                }
+            }
+        }
+
+        try { storeMeta(meta); } catch(e) {}
+        try { if (typeof this.props.saveUserData === 'function') this.props.saveUserData(); } catch(e) {}
+
+        // Remove shrine tile from board so it can't be re-triggered this session
+        if (shrineData && shrineData.tile) {
+            try { this.props.boardManager.removeTileFromBoard(shrineData.tile); } catch(e) {}
+        }
+
+        clearInterval(this._shrineInterval);
+        this.setState({ keysLocked: false, showShrineOverlay: false, shrineData: null });
+        try { if (this.props.boardManager.messaging) this.props.boardManager.messaging(`✨ Global skill unlocked: ${skillKey.replace(/_/g,' ')}`); } catch(e) {}
+    }
+
+    triggerLoreTabletEncounter = (tile) => {
+        const domain = (tile && tile.contains && tile.contains.subtype) || 'unknown';
+        const meta = getMeta() || {};
+        const selectedMember = this.state.selectedCrewMember;
+        if (!selectedMember) return;
+
+        // Award a domain token to the active crew member
+        const crew = Array.isArray(meta.crew) ? meta.crew : [];
+        const memberIdx = crew.findIndex(m => m.id === selectedMember.id);
+        if (memberIdx !== -1) {
+            const member = crew[memberIdx];
+            const loreTokens = { ...(member.loreTokens || {}) };
+            loreTokens[domain] = (loreTokens[domain] || 0) + 1;
+            crew[memberIdx] = { ...member, loreTokens };
+            meta.crew = crew;
+            try { storeMeta(meta); } catch(e) {}
+            try { if (typeof this.props.saveUserData === 'function') this.props.saveUserData(); } catch(e) {}
+            // Remove tablet from board
+            try { this.props.boardManager.removeTileFromBoard(tile); } catch(e) {}
+            const count = loreTokens[domain];
+            try { if (this.props.boardManager.messaging) this.props.boardManager.messaging(`📜 ${selectedMember.name} absorbs the lore of ${domain}. (${count}/3 tokens)`); } catch(e) {}
+        }
     }
 
     closeNarrativeOverlay = () => {
@@ -5395,6 +5557,143 @@ class DungeonPage extends React.Component {
                     onClose={this.closeNarrativeOverlay}
                 />
             )}
+
+            {/* Shrine Encounter Overlay */}
+            {this.state.showShrineOverlay && this.state.shrineData && (() => {
+                const sd = this.state.shrineData;
+                const duration = sd.ritualDuration || 20;
+                const timeLeft = sd.ritualTimeLeft || 0;
+                const progress = sd.ritualComplete ? 1 : (duration - timeLeft) / duration;
+                const circumference = 2 * Math.PI * 44; // r=44 in viewBox 100
+                const strokeDashoffset = circumference * (1 - progress);
+                const classLabel = sd.shrineClass ? sd.shrineClass.charAt(0).toUpperCase() + sd.shrineClass.slice(1) : 'Unknown';
+                const memberName = sd.matchingMember ? sd.matchingMember.name : classLabel;
+
+                // Global skills for this class (from proposed_new_features spec)
+                const globalSkillsByClass = {
+                    ranger:   [{ key: 'keen_eye', name: 'Keen Eye', desc: 'Reveals +2 fog tiles on miniboard entry' }, { key: 'hunters_quarry', name: "Hunter's Quarry", desc: '+10% food drop on monster defeat' }, { key: 'read_the_land', name: 'Read the Land', desc: 'Adjacent tile types hinted on entry' }, { key: 'trailblaze', name: 'Trailblaze', desc: 'Visual breadcrumb to last camp spot' }],
+                    sage:     [{ key: 'herbalism', name: 'Herbalism', desc: 'Camp costs 1 less food per member' }, { key: 'mend', name: 'Mend', desc: 'Out-of-combat potions restore +15% HP' }, { key: 'ritual_efficiency', name: 'Ritual Efficiency', desc: 'Ritual prep time -25%' }, { key: 'revive', name: 'Revive', desc: 'Once per run: fallen member revived at 25% HP' }],
+                    soldier:  [{ key: 'fortify', name: 'Fortify', desc: 'Resolve does not decay while camping' }, { key: 'breacher', name: 'Breacher', desc: 'Force open a Minor Key gate once per level' }, { key: 'rally', name: 'Rally', desc: '+5 bonus Resolve on combat victory' }, { key: 'iron_will', name: 'Iron Will', desc: 'Party Resolve never drops below 20 from deaths' }],
+                    wizard:   [{ key: 'arcane_sense', name: 'Arcane Sense', desc: 'Identifies chest tier before opening' }, { key: 'ley_tap', name: 'Ley Tap', desc: 'Draw energy at Magic Nexus — recover 15% endurance' }, { key: 'dimensional_pocket', name: 'Dimensional Pocket', desc: '+2 shared inventory slots' }, { key: 'scry', name: 'Scry', desc: 'Reveals all chests and monsters for 30s once per run' }],
+                    barbarian:[{ key: 'iron_gut', name: 'Iron Gut', desc: 'Barbarian does not count toward camping food cost' }, { key: 'savage_haul', name: 'Savage Haul', desc: 'Heavy items take only 1 inventory slot' }, { key: 'bloodhound', name: 'Bloodhound', desc: 'Reveals all monsters on miniboard entry' }, { key: 'endure', name: 'Endure', desc: 'Zero-food camp: no Resolve penalty, crew heals to 50%' }],
+                    monk:     [{ key: 'swift_step', name: 'Swift Step', desc: 'Movement animation 30% faster' }, { key: 'focused_rest', name: 'Focused Rest', desc: 'Camping duration -30% (same healing)' }, { key: 'pressure_points', name: 'Pressure Points', desc: '15% vendor discount once per vendor' }, { key: 'astral_map', name: 'Astral Map', desc: 'Full fog reveal for 60s once per run' }],
+                    summoner: [{ key: 'spirit_sight', name: 'Spirit Sight', desc: 'Narrative tiles glow through fog' }, { key: 'plunder', name: 'Plunder', desc: 'Open a chest a second time once per run' }, { key: 'soul_tithe', name: 'Soul Tithe', desc: '+1 Shimmering Dust per combat victory' }, { key: 'dark_pact', name: 'Dark Pact', desc: 'Trade Shimmering Dust at vendors (1 Dust = 25g)' }],
+                };
+                const availableSkills = globalSkillsByClass[sd.shrineClass] || [];
+                const memberGlobalSkills = (sd.matchingMember && sd.matchingMember.globalSkills) || [];
+                const unlockedSkills = availableSkills.filter(s => !memberGlobalSkills.includes(s.key));
+                const nextSkill = unlockedSkills[0] || null; // Next in tier order
+
+                return (
+                    <div style={{
+                        position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+                        backgroundColor: 'rgba(8,4,20,0.96)',
+                        zIndex: 8000, display: 'flex', flexDirection: 'column',
+                        alignItems: 'center', justifyContent: 'center',
+                        fontFamily: "'Palatino Linotype', Palatino, serif",
+                    }}>
+                        {/* Animated ambient particles (CSS-based shimmer) */}
+                        <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
+                            {[...Array(12)].map((_, i) => (
+                                <div key={i} style={{
+                                    position: 'absolute',
+                                    width: '2px', height: '2px',
+                                    borderRadius: '50%',
+                                    background: '#d4a844',
+                                    opacity: 0.4,
+                                    left: `${8 + i * 7.5}%`,
+                                    top: `${20 + (i % 4) * 15}%`,
+                                    animation: `float-up ${2 + (i % 3)}s ease-in-out ${i * 0.3}s infinite alternate`,
+                                    boxShadow: '0 0 6px 2px rgba(212,168,68,0.5)',
+                                }}/>
+                            ))}
+                        </div>
+
+                        {/* Header */}
+                        <div style={{ color: '#d4a844', fontSize: '11px', letterSpacing: '4px', textTransform: 'uppercase', marginBottom: '6px', opacity: 0.7 }}>
+                            Ancestral Shrine
+                        </div>
+                        <div style={{ color: '#fff', fontSize: '20px', letterSpacing: '2px', marginBottom: '24px', textShadow: '0 0 20px rgba(212,168,68,0.6)' }}>
+                            🏛 {classLabel} Communion
+                        </div>
+
+                        {/* Ritual Timer Ring */}
+                        {!sd.ritualComplete && (
+                            <div style={{ position: 'relative', width: '140px', height: '140px', marginBottom: '24px' }}>
+                                <svg viewBox="0 0 100 100" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', transform: 'rotate(-90deg)' }}>
+                                    <circle cx="50" cy="50" r="44" fill="none" stroke="rgba(212,168,68,0.15)" strokeWidth="6"/>
+                                    <circle cx="50" cy="50" r="44" fill="none" stroke="#d4a844"
+                                        strokeWidth="6" strokeLinecap="round"
+                                        strokeDasharray={circumference}
+                                        strokeDashoffset={strokeDashoffset}
+                                        style={{ transition: 'stroke-dashoffset 0.9s linear', filter: 'drop-shadow(0 0 8px rgba(212,168,68,0.8))' }}
+                                    />
+                                </svg>
+                                <div style={{
+                                    position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
+                                    alignItems: 'center', justifyContent: 'center',
+                                    color: '#fff', textAlign: 'center'
+                                }}>
+                                    <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#d4a844' }}>{timeLeft}</div>
+                                    <div style={{ fontSize: '10px', letterSpacing: '2px', opacity: 0.6, textTransform: 'uppercase' }}>seconds</div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Ritual in progress text */}
+                        {!sd.ritualComplete && (
+                            <div style={{ color: '#ccc', fontSize: '13px', textAlign: 'center', maxWidth: '280px', lineHeight: 1.6, marginBottom: '20px', fontStyle: 'italic' }}>
+                                {memberName} kneels before the shrine, communing with the ancestors of the {classLabel} lineage…
+                            </div>
+                        )}
+
+                        {/* Ritual complete — skill select */}
+                        {sd.ritualComplete && (
+                            <div style={{ textAlign: 'center', maxWidth: '360px', animation: 'fade-in 0.5s ease-out' }}>
+                                <div style={{ color: '#d4a844', fontSize: '15px', letterSpacing: '2px', marginBottom: '8px' }}>✨ The communion is complete</div>
+                                <div style={{ color: '#ccc', fontSize: '13px', marginBottom: '20px', fontStyle: 'italic' }}>
+                                    The ancestors grant {memberName} wisdom.
+                                </div>
+                                {nextSkill ? (
+                                    <div
+                                        onClick={() => this.confirmGlobalSkill(nextSkill.key)}
+                                        style={{
+                                            background: 'linear-gradient(135deg, rgba(212,168,68,0.2), rgba(212,168,68,0.08))',
+                                            border: '1px solid rgba(212,168,68,0.6)',
+                                            borderRadius: '8px', padding: '16px 24px',
+                                            cursor: 'pointer', marginBottom: '12px',
+                                            transition: 'all 0.2s',
+                                        }}
+                                        onMouseEnter={e => { e.currentTarget.style.background = 'linear-gradient(135deg, rgba(212,168,68,0.35), rgba(212,168,68,0.15))'; e.currentTarget.style.boxShadow = '0 0 20px rgba(212,168,68,0.3)'; }}
+                                        onMouseLeave={e => { e.currentTarget.style.background = 'linear-gradient(135deg, rgba(212,168,68,0.2), rgba(212,168,68,0.08))'; e.currentTarget.style.boxShadow = 'none'; }}
+                                    >
+                                        <div style={{ color: '#d4a844', fontSize: '16px', fontWeight: 'bold', marginBottom: '6px' }}>{nextSkill.name}</div>
+                                        <div style={{ color: '#aaa', fontSize: '12px', lineHeight: 1.5 }}>{nextSkill.desc}</div>
+                                    </div>
+                                ) : (
+                                    <div style={{ color: '#888', fontSize: '13px', fontStyle: 'italic' }}>All global skills for {classLabel} have been unlocked.</div>
+                                )}
+                                <div
+                                    onClick={() => this.closeShrineOverlay(false)}
+                                    style={{ color: '#666', fontSize: '12px', cursor: 'pointer', marginTop: '10px', textDecoration: 'underline' }}
+                                >
+                                    {nextSkill ? 'Leave without claiming' : 'Depart'}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Cancel button during ritual */}
+                        {!sd.ritualComplete && (
+                            <div
+                                onClick={() => this.closeShrineOverlay(true)}
+                                style={{ color: '#555', fontSize: '12px', cursor: 'pointer', marginTop: '16px', textDecoration: 'underline' }}
+                            >
+                                Abandon ritual
+                            </div>
+                        )}
+                    </div>
+                );
+            })()}
             <CModal className={this.state.modalType === 'PrepComplete' ? 'prep-complete-modal' : this.state.modalType === 'RitualComplete' ? 'ritual-complete-modal' : this.state.modalType === 'Magic' ? 'ritual-encounter-modal' : this.state.modalType === 'FoodComplete' ? 'food-complete-modal' : this.state.modalType === 'Merchant' ? 'merchant-modal' : this.state.modalType === 'Alchemist' ? 'alchemist-modal' : ''} alignment="center" visible={this.state.showModal} onClose={() => this.onUpdateModalClosed()}>
                 {this.state.modalType === 'Merchant' && (
                     <div className="merchant-modal-bg" style={{
@@ -5452,34 +5751,123 @@ class DungeonPage extends React.Component {
                 </CModalHeader>
                 <CModalBody>
                     {(() => {
-                        const QUEST_STYLES = {
-                            travel:         { bg: '#1a2535', border: '#4a90d9', titleColor: '#7eb8f7', emoji: '🗺️' },
-                            bounty:         { bg: '#2a1515', border: '#c0392b', titleColor: '#e74c3c', emoji: '⚔️' },
-                            item_retrieval: { bg: '#162216', border: '#27ae60', titleColor: '#2ecc71', emoji: '🔍' },
-                        };
                         const quests = (this.props.questManager && this.props.questManager.activeQuests) || [];
-                        if (!quests.length) {
-                            return <div style={{color: '#aaa', textAlign: 'center', padding: '32px 0'}}>No active quests. Explore a dungeon to receive missions.</div>;
+                        const completed = (this.props.questManager && this.props.questManager.completedQuests) || [];
+                        const all = [...quests, ...completed];
+
+                        const TYPE_LABELS = {
+                            travel: 'Journey',
+                            bounty: 'Bounty',
+                            item_retrieval: 'Recovery',
+                            lore: 'Lore',
+                            communion: 'Communion',
+                            inscription: 'Discovery',
+                        };
+
+                        if (!all.length) {
+                            return (
+                                <div style={{color: '#888', textAlign: 'center', padding: '48px 0', fontStyle: 'italic', fontSize: 14}}>
+                                    <div style={{fontSize: 40, marginBottom: 16}}>📜</div>
+                                    No active quests. Enter a dungeon to receive your mission.
+                                </div>
+                            );
                         }
+
                         return (
-                            <div className="quests-grid" style={{display:'flex', flexDirection:'row', flexWrap:'wrap', gap: 16, justifyContent: 'center'}}>
-                                {quests.map(quest => {
-                                    const s = QUEST_STYLES[quest.type] || QUEST_STYLES.travel;
+                            <div style={{display: 'flex', flexDirection: 'column', gap: 12}}>
+                                {all.map(quest => {
+                                    const c = quest.color || { bg: '#1a2535', border: '#4a90d9', title: '#7eb8f7' };
                                     const showProgress = quest.progressTarget > 1;
+                                    const pct = showProgress ? Math.round((quest.progress / quest.progressTarget) * 100) : 100;
+                                    const isComplete = !!quest.completed;
+                                    const typeLabel = TYPE_LABELS[quest.type] || quest.type;
+
                                     return (
-                                        <div key={quest.id} className="quest-panel" style={{width: 200, padding: 14, background: s.bg, color: '#fff', borderRadius: 6, boxShadow: '0 2px 8px rgba(0,0,0,0.7)', borderTop: `3px solid ${s.border}`, opacity: quest.completed ? 0.5 : 1}}>
-                                            <div style={{fontSize: 32, textAlign: 'center', marginBottom: 6}}>{s.emoji}</div>
-                                            <div style={{fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: s.titleColor, marginBottom: 6}}>{quest.title}</div>
-                                            <div style={{fontSize: 12, color: '#ccc', lineHeight: 1.5}}>{quest.description}</div>
-                                            {showProgress && (
-                                                <div style={{marginTop: 10}}>
-                                                    <div style={{fontSize: 11, color: '#aaa', marginBottom: 3}}>{quest.progress} / {quest.progressTarget}</div>
-                                                    <div style={{height: 4, background: '#333', borderRadius: 2}}>
-                                                        <div style={{height: '100%', width: `${Math.round((quest.progress / quest.progressTarget) * 100)}%`, background: s.border, borderRadius: 2, transition: 'width 0.3s'}} />
-                                                    </div>
+                                        <div key={quest.id} style={{
+                                            display: 'flex',
+                                            alignItems: 'flex-start',
+                                            gap: 16,
+                                            background: c.bg,
+                                            borderRadius: 8,
+                                            padding: '14px 16px',
+                                            border: `1px solid ${isComplete ? 'rgba(255,255,255,0.08)' : c.border}`,
+                                            boxShadow: isComplete ? 'none' : `0 0 0 1px ${c.border}22, 0 4px 16px rgba(0,0,0,0.5)`,
+                                            opacity: isComplete ? 0.6 : 1,
+                                            transition: 'opacity 0.3s',
+                                        }}>
+                                            {/* Icon badge */}
+                                            <div style={{
+                                                flexShrink: 0,
+                                                width: 48, height: 48,
+                                                borderRadius: 8,
+                                                background: `${c.border}22`,
+                                                border: `1px solid ${c.border}55`,
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                fontSize: 22,
+                                            }}>
+                                                {isComplete ? '✅' : (quest.icon || '📋')}
+                                            </div>
+
+                                            {/* Content */}
+                                            <div style={{flex: 1, minWidth: 0}}>
+                                                {/* Type label + status */}
+                                                <div style={{display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4}}>
+                                                    <span style={{
+                                                        fontSize: 9, fontWeight: 700, letterSpacing: '1.5px',
+                                                        textTransform: 'uppercase', color: c.border,
+                                                        background: `${c.border}18`, borderRadius: 3,
+                                                        padding: '2px 6px',
+                                                    }}>{typeLabel}</span>
+                                                    {isComplete && <span style={{fontSize: 9, color: '#6bc96b', fontWeight: 700, letterSpacing: '1px'}}>✓ COMPLETE</span>}
                                                 </div>
-                                            )}
-                                            {quest.completed && <div style={{marginTop: 8, fontSize: 11, color: '#8bc34a', fontWeight: 700}}>✓ COMPLETE</div>}
+
+                                                {/* Title */}
+                                                <div style={{
+                                                    fontSize: 14, fontWeight: 700,
+                                                    color: isComplete ? '#888' : c.title,
+                                                    marginBottom: 4,
+                                                    letterSpacing: '0.3px',
+                                                }}>
+                                                    {quest.title}
+                                                </div>
+
+                                                {/* Description */}
+                                                <div style={{fontSize: 12, color: '#bbb', lineHeight: 1.5, marginBottom: showProgress ? 8 : 0}}>
+                                                    {quest.description}
+                                                </div>
+
+                                                {/* Progress bar */}
+                                                {showProgress && (
+                                                    <div>
+                                                        <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: 4}}>
+                                                            <span style={{fontSize: 10, color: '#888'}}>Progress</span>
+                                                            <span style={{fontSize: 10, color: '#aaa', fontWeight: 600}}>{quest.progress} / {quest.progressTarget}</span>
+                                                        </div>
+                                                        <div style={{height: 4, background: 'rgba(255,255,255,0.1)', borderRadius: 2, overflow: 'hidden'}}>
+                                                            <div style={{
+                                                                height: '100%',
+                                                                width: `${pct}%`,
+                                                                background: isComplete ? '#6bc96b' : `linear-gradient(90deg, ${c.border}, ${c.title})`,
+                                                                borderRadius: 2,
+                                                                transition: 'width 0.4s ease',
+                                                                boxShadow: isComplete ? 'none' : `0 0 6px ${c.border}88`,
+                                                            }}/>
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* Hint — shown when not complete */}
+                                                {!isComplete && quest.hint && (
+                                                    <div style={{
+                                                        marginTop: 8, fontSize: 10, color: '#666',
+                                                        fontStyle: 'italic', lineHeight: 1.4,
+                                                        borderLeft: `2px solid ${c.border}44`,
+                                                        paddingLeft: 8,
+                                                    }}>
+                                                        {quest.hint}
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                     );
                                 })}
@@ -7339,6 +7727,7 @@ class DungeonPage extends React.Component {
                         onClose={() => this.setState({ showCardDuelModal: false })}
                         saveUserData={this.props.saveUserData} 
                         inventoryManager={this.props.inventoryManager} 
+                        scrimmage={!!this.state.isCardScrimmage}
                     />
                 </div>
             )}

@@ -542,6 +542,9 @@ const SandboxPage = () => {
     if (selectedUnitType === 'monster') {
       setFighterPos({ row: 2, col: 3 });
       setTargetPos({ row: 2, col: 1 });
+      if (selectedMonsterId === 'dragon') {
+        setSagePos({ row: 4, col: 1 });
+      }
     } else {
       if (selectedFighterId === 'ranger') {
         setFighterPos({ row: 2, col: 0 });
@@ -573,8 +576,10 @@ const SandboxPage = () => {
   const [projectile, setProjectile] = useState(null);
   const [projectiles, setProjectiles] = useState([]); // For wizard magic missile
   const [hitEffect, setHitEffect] = useState(null);
+  const [bombardWarnings, setBombardWarnings] = useState(null);
   const [floatingTexts, setFloatingTexts] = useState([]);
   const [targetShake, setTargetShake] = useState(false);
+  // eslint-disable-next-line no-unused-vars
   const [fighterShake, setFighterShake] = useState(false);
   const [targetFlash, setTargetFlash] = useState(false);
   const [targetFrozen, setTargetFrozen] = useState(false);
@@ -658,7 +663,7 @@ const SandboxPage = () => {
 
 
   // Sage target and Dispel states
-  const [sagePos, setSagePos] = useState({ row: 1, col: 4 });
+  const [sagePos, setSagePos] = useState({ row: 4, col: 1 });
   const [dragonDispellSageCopActive, setDragonDispellSageCopActive] = useState(false);
   const [dragonDispellWaveActive, setDragonDispellWaveActive] = useState(false);
   const [sageTargetFlash, setSageTargetFlash] = useState(false);
@@ -1084,11 +1089,8 @@ const SandboxPage = () => {
   const TIER4_MONSTER_IDS = ['sphinx', 'dragon', 'hagigah', 'hashmallim'];
   const isFighterHuge = selectedUnitType === 'monster' && TIER4_MONSTER_IDS.includes(selectedMonsterId);
   const isFighterLarge = selectedUnitType === 'monster' && !isFighterHuge && selectedMonsterId !== 'goblin' && selectedMonsterId !== 'skeleton' && selectedMonsterId !== 'beholder_minion';
-  const isTargetHuge = selectedUnitType === 'fighter' && TIER4_MONSTER_IDS.includes(selectedMonsterId);
-  const isTargetLarge = selectedUnitType === 'fighter' && !isTargetHuge && (
-    (selectedFighterId === 'ranger') || // Ranger target is Ogre (2x)
-    (selectedFighterId !== 'sage' && selectedMonsterId !== 'goblin' && selectedMonsterId !== 'skeleton' && selectedMonsterId !== 'beholder_minion')
-  );
+  const isTargetHuge = false;
+  const isTargetLarge = selectedUnitType === 'fighter' && selectedFighterId === 'ranger';
 
 
   // Safety check: if fighter or target is large/huge but positioned out of bounds, push them
@@ -3051,6 +3053,14 @@ const SandboxPage = () => {
         adjacentRow2: strikeTile3.row
       });
 
+      setBombardWarnings({
+        tiles: [
+          { col: strikeTile1.col, row: strikeTile1.row, key: 'main' },
+          { col: strikeTile2.col, row: strikeTile2.row, key: 'adj1' },
+          { col: strikeTile3.col, row: strikeTile3.row, key: 'adj2' }
+        ]
+      });
+
       // Emission phase
       setTimeout(() => {
         // NOTE: In actual combat logic, the bombardment strike delay MUST be tied to exactly 1 full combat round.
@@ -3059,6 +3069,8 @@ const SandboxPage = () => {
         setIsCasting(false);
 
         setTimeout(() => {
+          setBombardWarnings(null); // Clear shimmers at the beginning of the bombardment strike stage
+
           // Bombardment strike phase
           setHitEffect({
             type: 'bombard_strike',
@@ -3130,10 +3142,8 @@ const SandboxPage = () => {
       setTimeout(() => {
         setDragonDispellWaveActive(true);
         
-        // Dragon visual shake on roar/dispel
-        setFighterShake(true);
-        setTimeout(() => setFighterShake(false), 500);
-
+        // No shake/buck back on dispel execution per requirements
+        
         // Calculate center for dragon floating text
         const dragonVisualCenterRow = getUnitVisualRow(fighterPos.row, isFighterHuge, isFighterLarge);
         const dragonVisualCenterCol = getUnitVisualCol(fighterPos.col, isFighterHuge, isFighterLarge);
@@ -7452,6 +7462,26 @@ const SandboxPage = () => {
                     }} />
                   )}
 
+                  {/* Dragon Dispel casting instance icon */}
+                  {selectedUnitType === 'monster' && selectedMonsterId === 'dragon' && dragonDispellSageCopActive && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '-14px',
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      width: '28px',
+                      height: '28px',
+                      borderRadius: '4px',
+                      border: '2px solid #9b5de5',
+                      backgroundImage: `url(${dispell})`,
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
+                      boxShadow: '0 0 10px #9b5de5',
+                      zIndex: 20,
+                      animation: 'hoverFloatLoop 2s ease-in-out infinite'
+                    }} />
+                  )}
+
                   {/* Name Tag */}
                   <div style={{
                     position: 'absolute',
@@ -9154,7 +9184,7 @@ const SandboxPage = () => {
                 </div>
               </div>
 
-              {/* --- Sage Target (col 4, row 1) for Dragon --- */}
+              {/* --- Sage Target (col 1, row 4) for Dragon --- */}
               {selectedUnitType === 'monster' && selectedMonsterId === 'dragon' && (
                 <div
                   style={{
@@ -10238,6 +10268,30 @@ const SandboxPage = () => {
                 />
               )}
 
+              {/* --- Bombard Warning Shimmer Overlays --- */}
+              {bombardWarnings && (
+                <>
+                  {bombardWarnings.tiles.map((tile) => {
+                    if (tile.col === undefined || tile.row === undefined) return null;
+                    return (
+                      <div
+                        key={`bombard-warning-${tile.key}`}
+                        className="bombard-warning-shimmer"
+                        style={{
+                          position: 'absolute',
+                          left: `${tile.col * TILE_PCT}%`,
+                          top: `${tile.row * TILE_PCT}%`,
+                          width: `${TILE_PCT}%`,
+                          height: `${TILE_PCT}%`,
+                          zIndex: 10,
+                          pointerEvents: 'none'
+                        }}
+                      />
+                    );
+                  })}
+                </>
+              )}
+
               {/* --- Hit Particle Effect Overlay --- */}
               {hitEffect && (
                 <div
@@ -10605,10 +10659,11 @@ const SandboxPage = () => {
                             border: '4px solid rgba(255, 255, 255, 0.8)',
                             borderRadius: '50%',
                             boxShadow: '0 0 20px #ffffff, inset 0 0 10px #ffffff',
-                            animation: `windstormExpand 1s cubic-bezier(0.1, 0.8, 0.3, 1) forwards ${i * 0.15}s`,
+                            animation: `windstormExpand 1s cubic-bezier(0.1, 0.8, 0.3, 1) both ${i * 0.15}s`,
                             opacity: 0,
-                            width: '20px',
-                            height: '20px',
+                            width: '50px',
+                            height: '50px',
+                            transform: 'translate(-50%, -50%)'
                           }} />
                         </div>
                       ))}
@@ -10617,33 +10672,6 @@ const SandboxPage = () => {
 
                   {hitEffect.type === 'bombard_emission' && (
                     <>
-                      {/* Warning target tiles */}
-                      {[
-                        { col: hitEffect.targetCol, row: hitEffect.targetRow, key: 'main' },
-                        { col: hitEffect.adjacentCol1, row: hitEffect.adjacentRow1, key: 'adj1' },
-                        { col: hitEffect.adjacentCol2, row: hitEffect.adjacentRow2, key: 'adj2' }
-                      ].map((tile) => {
-                        if (tile.col === undefined || tile.row === undefined) return null;
-                        const colOffset = tile.col - hitEffect.col;
-                        const rowOffset = tile.row - hitEffect.row;
-                        return (
-                          <div
-                            key={`bombard-warning-${tile.key}`}
-                            className="bombard-warning-shimmer"
-                            style={{
-                              position: 'absolute',
-                              left: `${50 + colOffset * 100}%`,
-                              top: `${50 + rowOffset * 100}%`,
-                              width: '100%',
-                              height: '100%',
-                              transform: 'translate(-50%, -50%)',
-                              zIndex: 10,
-                              pointerEvents: 'none'
-                            }}
-                          />
-                        );
-                      })}
-
                       {/* Emission Particles on Caster */}
                       <div style={{
                         position: 'absolute',

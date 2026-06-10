@@ -34,7 +34,9 @@ export function MapMaker(props){
         'cloud',
         'dungeon portal',
         'magic',
-        'inscription'
+        'inscription',
+        'shrine',
+        'lore_tablet'
     ]
 
     this.tierOptions = [
@@ -109,6 +111,24 @@ export function MapMaker(props){
 
     this.passageOptions = [
         { key: 'wall_breaker', name: 'Wall breaker', image: null }
+    ];
+
+    this.shrineOptions = [
+        { key: 'shrine_barbarian', name: 'Barbarian Shrine', classKey: 'barbarian', color: '#8B0000' },
+        { key: 'shrine_ranger',   name: 'Ranger Shrine',    classKey: 'ranger',    color: '#2D6A00' },
+        { key: 'shrine_sage',     name: 'Sage Shrine',      classKey: 'sage',      color: '#4B0082' },
+        { key: 'shrine_soldier',  name: 'Soldier Shrine',   classKey: 'soldier',   color: '#1A3A6B' },
+        { key: 'shrine_wizard',   name: 'Wizard Shrine',    classKey: 'wizard',    color: '#7700CC' },
+        { key: 'shrine_monk',     name: 'Monk Shrine',      classKey: 'monk',      color: '#8B4513' },
+        { key: 'shrine_summoner', name: 'Summoner Shrine',  classKey: 'summoner',  color: '#1C1C3A' },
+    ];
+
+    this.loreTabletOptions = [
+        { key: 'lore_tablet_endurance',  name: 'Endurance Tablet',  domain: 'endurance',  color: '#3A2A00' },
+        { key: 'lore_tablet_perception', name: 'Perception Tablet', domain: 'perception', color: '#003A3A' },
+        { key: 'lore_tablet_willpower',  name: 'Willpower Tablet',  domain: 'willpower',  color: '#3A003A' },
+        { key: 'lore_tablet_cunning',    name: 'Cunning Tablet',    domain: 'cunning',    color: '#2A3A00' },
+        { key: 'lore_tablet_fortitude',  name: 'Fortitude Tablet',  domain: 'fortitude',  color: '#001A3A' },
     ];
 
     this.paletteTiles = [];
@@ -349,8 +369,26 @@ export function MapMaker(props){
                     type: 'palette-tile',
                     optionType: 'inscription',
                     image: null,
-                    color: null,
+                    color: '#2a1e0a',
                     isInscription: true,
+                    id: i
+                })
+            } else if(key === 'shrine'){
+                this.paletteTiles.push({
+                    type: 'palette-tile',
+                    optionType: 'shrine',
+                    image: null,
+                    color: '#8B0000',
+                    isShrine: true,
+                    id: i
+                })
+            } else if(key === 'lore_tablet'){
+                this.paletteTiles.push({
+                    type: 'palette-tile',
+                    optionType: 'lore_tablet',
+                    image: null,
+                    color: '#3A2A00',
+                    isLoreTablet: true,
                     id: i
                 })
             } else {
@@ -691,6 +729,10 @@ export function MapMaker(props){
                 return 'spawn_point'    
             case 'inscription':
                 return 'inscription'
+            case 'shrine':
+                return 'shrine'
+            case 'lore_tablet':
+                return 'lore_tablet'
             default:
                 return false
         }

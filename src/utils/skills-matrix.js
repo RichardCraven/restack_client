@@ -1545,6 +1545,66 @@ const skillsMatrix = {
                 amounts: [8]
             }
         }
+    },
+    dragon_whirlwind: {
+        id: 'dragon_whirlwind',
+        tier: 3,
+        name: 'Whirlwind',
+        desc: 'Unleash a massive windstorm pushing back nearby enemies.',
+        icon: images['whirlwind'],
+        cooldown: 10,
+        initialCooldown: 0,
+        duration: 'instant',
+        range: 'self',
+        type: 'dragon_whirlwind_type'
+    },
+    bombard: {
+        id: 'bombard',
+        tier: 4,
+        name: 'Bombard',
+        desc: 'Bombard the enemy from above after a 1-round delay.',
+        icon: images['bombard'],
+        cooldown: 12,
+        initialCooldown: 0,
+        duration: 'long',
+        range: 'medium',
+        type: 'bombard_type'
+    },
+    dragon_dispell: {
+        id: 'dragon_dispell',
+        tier: 3,
+        name: 'Dispell',
+        desc: 'Dispel active magical effects from targets.',
+        icon: images['dispell'],
+        cooldown: 10,
+        initialCooldown: 0,
+        duration: 'instant',
+        range: 'medium',
+        type: 'dispell_type'
+    },
+    lay_eggs: {
+        id: 'lay_eggs',
+        tier: 3,
+        name: 'Lay Eggs',
+        desc: 'Lay a dragon egg adjacent to the dragon that hatches into an ally minion after 6 rounds.',
+        icon: images['lay_eggs'],
+        cooldown: 8,
+        initialCooldown: 2,
+        duration: 'instant',
+        range: 'close',
+        type: 'lay_eggs_type'
+    },
+    blue_dragon_breath: {
+        id: 'blue_dragon_breath',
+        tier: 3,
+        name: 'Blue Dragon Breath',
+        desc: 'Breathe a cone of fire dealing damage to all targets in a medium range.',
+        icon: images['blue_dragon_breath'],
+        cooldown: 4,
+        duration: 'instant',
+        range: 'medium',
+        type: 'damage',
+        damage: 25
     }
 };
 

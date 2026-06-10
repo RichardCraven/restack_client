@@ -95,6 +95,7 @@ class BoardView extends React.Component {
                     <div className="board map-board" 
                         onMouseLeave={() => {return this.props.setHover(null)}}
                         style={{
+                        position: 'relative',
                         width: this.props.boardSize+'px', height: this.props.boardSize+ 'px',
                         backgroundColor: 'white'
                         }}>
@@ -121,6 +122,7 @@ class BoardView extends React.Component {
                                     (hoveredTileFootprint.length > 0 && hoveredTileFootprint.includes(tile.id)) || this.props.hoveredTileIdx === tile.id ?
                                     true : false
                                 }
+                                inscriptions={tile.inscriptions}
                                 combatManager={this.props.combatManager}
                             />
                         })}

@@ -142,6 +142,8 @@ class MapMakerPage extends React.Component {
       inscriptionDragStartId: null,
       showInscriptionModal: false,
       inscriptionPendingTileId: null,
+      inscriptionPendingSide: null,      // 'top'|'bottom'|'left'|'right'
+      inscriptionWallPicker: null,       // { tileId } — shows compass picker on that tile
       inscriptionTextInput: '',
       toastMessage: '',
       // mapView: true,
@@ -803,7 +805,11 @@ class MapMakerPage extends React.Component {
           hoveredTileIdx: null,
           tiles: arr
         })
-      } 
+      } else if(pinned && pinned.optionType === 'inscription'){
+        // Inscription hover: do nothing (inscription is placed via click/drag, not hover-paint)
+        this.setState({ hoveredTileIdx: tile.id })
+        return;
+      }
       if(pinned && pinned.optionType === 'delete'){
         let arr = [...this.state.tiles];
         arr = this.deleteTileWithVendorSupport(arr, tile.id);
@@ -856,13 +862,8 @@ class MapMakerPage extends React.Component {
           const tiles = this.state.tiles;
           const wallTile = tiles[wallId];
           const wallContainsType = wallTile && wallTile.contains && wallTile.contains.type;
-          // Wall tiles are void
           if (wallContainsType === 'void' || wallContainsType === null || wallContainsType === undefined) {
-            this.setState({
-              showInscriptionModal: true,
-              inscriptionPendingTileId: wallId,
-              inscriptionTextInput: (wallTile && wallTile.contains && wallTile.contains.text) || ''
-            });
+            this.showInscriptionWallPicker(wallId);
           }
         }
       }
@@ -874,21 +875,48 @@ class MapMakerPage extends React.Component {
     this.setState({ inscriptionTextInput: e.target.value });
   }
 
+  // Step 1: user clicked a tile with inscription tool — show compass picker
+  showInscriptionWallPicker = (tileId) => {
+    this.setState({ inscriptionWallPicker: { tileId } });
+  }
+
+  // Step 2: user picked a side (top/bottom/left/right) — open the text modal
+  selectInscriptionSide = (side) => {
+    const tileId = this.state.inscriptionWallPicker?.tileId;
+    if (tileId === null || tileId === undefined) return;
+    const tile = this.state.tiles[tileId];
+    const existing = tile?.inscriptions?.[side] || '';
+    this.setState({
+      inscriptionWallPicker: null,
+      showInscriptionModal: true,
+      inscriptionPendingTileId: tileId,
+      inscriptionPendingSide: side,
+      inscriptionTextInput: existing,
+    });
+  }
+
   confirmInscription = () => {
     const tileId = this.state.inscriptionPendingTileId;
+    const side = this.state.inscriptionPendingSide;
     const text = this.state.inscriptionTextInput;
-    if (tileId !== null && tileId !== undefined) {
+    if (tileId !== null && tileId !== undefined && side) {
       let arr = [...this.state.tiles];
-      arr[tileId] = {
-        ...arr[tileId],
-        contains: { type: 'inscription', subtype: null, text },
-        color: '#2a1e0a',
-        image: null
+      const t = { ...arr[tileId] };
+      // Store inscriptions as a map: tile.inscriptions = { top: '...', left: '...', etc. }
+      t.inscriptions = { ...(t.inscriptions || {}), [side]: text };
+      // Add a visual marker border highlight so the inscribed wall shows in the mapmaker
+      const borderColor = text ? '3px solid #d4a844' : (t.borders?.[side] || '1px solid transparent');
+      t.borders = {
+        top: 'none', bottom: 'none', left: 'none', right: 'none',
+        ...(t.borders || {}),
+        [side]: borderColor
       };
+      arr[tileId] = t;
       this.setState({
         tiles: arr,
         showInscriptionModal: false,
         inscriptionPendingTileId: null,
+        inscriptionPendingSide: null,
         inscriptionTextInput: ''
       });
     }
@@ -897,7 +925,9 @@ class MapMakerPage extends React.Component {
   cancelInscription = () => {
     this.setState({
       showInscriptionModal: false,
+      inscriptionWallPicker: null,
       inscriptionPendingTileId: null,
+      inscriptionPendingSide: null,
       inscriptionTextInput: ''
     });
   }
@@ -936,8 +966,8 @@ class MapMakerPage extends React.Component {
         })
       }
       
-    } else if(tile.type === 'monster-tile' || tile.type === 'gate-tile' || tile.type === 'key-tile' || tile.type === 'tier-tile' || tile.type === 'jewel-tile' || tile.type === 'rune-tile' || tile.type === 'treasure-tile' || tile.type === 'vendor-tile'){
-      console.log('MONSTER/GATE/KEY/TIER/JEWEL/RUNE/TREASURE TILE');
+    } else if(tile.type === 'monster-tile' || tile.type === 'gate-tile' || tile.type === 'key-tile' || tile.type === 'tier-tile' || tile.type === 'jewel-tile' || tile.type === 'rune-tile' || tile.type === 'treasure-tile' || tile.type === 'vendor-tile' || tile.type === 'shrine-tile' || tile.type === 'lore-tablet-tile'){
+      console.log('MONSTER/GATE/KEY/TIER/JEWEL/RUNE/TREASURE/SHRINE/LORETABLET TILE');
       this.setState({
         pinnedOption: tile
       })
@@ -977,6 +1007,14 @@ class MapMakerPage extends React.Component {
       };
       if(this.state.pinnedOption && this.state.pinnedOption.type === 'passage-tool-tile'){
         passageToolOption = this.props.mapMaker.passageOptions[this.state.pinnedOption.id];
+      };
+      // Shrine and lore_tablet: resolve sub-item when a specific variant is pinned
+      let shrineOption = null, loreTabletOption = null;
+      if(this.state.pinnedOption && this.state.pinnedOption.type === 'shrine-tile'){
+        shrineOption = this.props.mapMaker.shrineOptions[this.state.pinnedOption.id];
+      };
+      if(this.state.pinnedOption && this.state.pinnedOption.type === 'lore-tablet-tile'){
+        loreTabletOption = this.props.mapMaker.loreTabletOptions[this.state.pinnedOption.id];
       };
       if(monster){
         console.log('monster get here, monster: ', monster);
@@ -1061,6 +1099,20 @@ class MapMakerPage extends React.Component {
         return
       } else if(passageToolOption){
         return
+      } else if(shrineOption){
+        let arr = [...this.state.tiles];
+        arr[tile.id].contains = { type: 'shrine', subtype: shrineOption.classKey, key: shrineOption.key };
+        arr[tile.id].color = shrineOption.color;
+        arr[tile.id].image = null;
+        this.setState({ tiles: arr, hoveredTileIdx: null });
+        return;
+      } else if(loreTabletOption){
+        let arr = [...this.state.tiles];
+        arr[tile.id].contains = { type: 'lore_tablet', subtype: loreTabletOption.domain, key: loreTabletOption.key };
+        arr[tile.id].color = loreTabletOption.color;
+        arr[tile.id].image = null;
+        this.setState({ tiles: arr, hoveredTileIdx: null });
+        return;
       } else if(this.state.pinnedOption && this.props.mapMaker.paletteTiles[this.state.pinnedOption.id]){ 
         pinned = this.props.mapMaker.paletteTiles[this.state.pinnedOption.id]
       }
@@ -1103,6 +1155,10 @@ class MapMakerPage extends React.Component {
           tiles: arr,
           hoveredTileIdx: tile.id
         })
+      } else if(pinned && pinned.optionType === 'inscription'){
+        // Inscription: click any tile to show the wall-side picker
+        this.showInscriptionWallPicker(tile.id);
+        return;
       } else if(pinned && pinned.optionType === 'void'){
         let arr = [...this.state.tiles];
         arr[tile.id].image = null;
@@ -3219,8 +3275,61 @@ class MapMakerPage extends React.Component {
           </div>
         </div>}
 
+        {/* Inscription Wall-Picker — compass overlay on the clicked tile */}
+        {this.state.inscriptionWallPicker && (() => {
+          const tileId = this.state.inscriptionWallPicker.tileId;
+          const tileSize = this.state.tileSize || 30;
+          const col = tileId % 15;
+          const row = Math.floor(tileId / 15);
+          // Calculate pixel position relative to the board grid container
+          // The board grid is a flex-wrap grid; we compute top/left from row/col
+          const pickerSize = tileSize * 3;
+          const left = col * tileSize - tileSize;
+          const top = row * tileSize - tileSize;
+          const btnStyle = (active) => ({
+            width: tileSize + 'px', height: tileSize + 'px',
+            background: active ? 'rgba(212,168,68,0.92)' : 'rgba(30,20,5,0.85)',
+            border: '1px solid #d4a844',
+            color: '#fff', fontSize: Math.max(10, tileSize * 0.4) + 'px',
+            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            borderRadius: '3px', transition: 'background 0.15s'
+          });
+          const cancelBtnStyle = {
+            ...btnStyle(false),
+            background: 'rgba(80,20,20,0.85)', fontSize: Math.max(8, tileSize * 0.3) + 'px'
+          };
+          const tile = this.state.tiles[tileId] || {};
+          const ins = tile.inscriptions || {};
+          return (
+            <div style={{
+              position: 'absolute',
+              left: left + 'px',
+              top: top + 'px',
+              width: pickerSize + 'px',
+              height: pickerSize + 'px',
+              display: 'grid',
+              gridTemplateColumns: `repeat(3, ${tileSize}px)`,
+              gridTemplateRows: `repeat(3, ${tileSize}px)`,
+              zIndex: 500,
+              pointerEvents: 'all'
+            }}>
+              {/* Row 1: empty, Top, empty */}
+              <div/>
+              <div style={btnStyle(!!ins.top)} onClick={() => this.selectInscriptionSide('top')} title={ins.top ? '✍ ' + ins.top : 'Inscribe north wall'}>↑</div>
+              <div/>
+              {/* Row 2: Left, Cancel-X, Right */}
+              <div style={btnStyle(!!ins.left)} onClick={() => this.selectInscriptionSide('left')} title={ins.left ? '✍ ' + ins.left : 'Inscribe west wall'}>←</div>
+              <div style={cancelBtnStyle} onClick={this.cancelInscription} title="Cancel">✕</div>
+              <div style={btnStyle(!!ins.right)} onClick={() => this.selectInscriptionSide('right')} title={ins.right ? '✍ ' + ins.right : 'Inscribe east wall'}>→</div>
+              {/* Row 3: empty, Bottom, empty */}
+              <div/>
+              <div style={btnStyle(!!ins.bottom)} onClick={() => this.selectInscriptionSide('bottom')} title={ins.bottom ? '✍ ' + ins.bottom : 'Inscribe south wall'}>↓</div>
+              <div/>
+            </div>
+          );
+        })()}
 
-        {/* Inscription Modal */}
+        {/* Inscription Text Modal */}
         {this.state.showInscriptionModal && (
           <CModal alignment="center" backdrop="static" visible={this.state.showInscriptionModal} onClose={this.cancelInscription}>
             <CModalHeader>

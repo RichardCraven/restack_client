@@ -82,6 +82,7 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
         portrait: fighter.portrait,
         portraitFilter: fighter.portraitFilter || null,
         level: fighter.level,
+        tier: fighter.tier,
         FIGHT_INTERVAL: FIGHT_INTERVAL,
     // Use incoming current hp if provided (persisted from DungeonPage), otherwise default to stats.hp
     hp: (typeof fighter.hp === 'number') ? fighter.hp : fighter.stats.hp,

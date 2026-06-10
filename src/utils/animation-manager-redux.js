@@ -76,7 +76,7 @@ export class AnimationManagerRedux {
    * @param {object} targetCoords  { x, y }
    * @param {string} abilityName   e.g. 'claw_strike', 'energy_drain'
    */
-  triggerAbility(sourceCoords, targetCoords, abilityName, isTargetLarge = false, targetOccupiedCoords = null, sourceUnitId = null, arrowType = null) {
+   triggerAbility(sourceCoords, targetCoords, abilityName, isTargetLarge = false, targetOccupiedCoords = null, sourceUnitId = null, arrowType = null, customDuration = null) {
     if (!sourceCoords || !targetCoords) return;
     const name = String(abilityName || '').toLowerCase().replace(/\s+/g, '_');
     this._currentTargetCoords = targetCoords;
@@ -85,6 +85,18 @@ export class AnimationManagerRedux {
     this._currentAbilityName = name;
 
     switch (name) {
+      case 'dragon_whirlwind':
+        this._dragonWhirlwind(sourceCoords);
+        break;
+      case 'bombard':
+        this._bombardEmission(sourceCoords, targetCoords, targetOccupiedCoords);
+        break;
+      case 'dragon_dispell':
+        this._dragonDispell(sourceCoords, targetCoords);
+        break;
+      case 'fire_breath':
+        this._fireBreath(sourceCoords, targetCoords, customDuration || 1500);
+        break;
       case 'claw_strike':
       case 'claws':
       case 'bite':
@@ -93,7 +105,7 @@ export class AnimationManagerRedux {
       case 'grasp':
       case 'stomp':
       case 'head_butt':
-        this._clawStrike(sourceCoords, targetCoords);
+        this._clawStrike(sourceCoords, targetCoords, sourceUnitId);
         break;
       case 'energy_drain':
         this._energyDrain(sourceCoords, targetCoords);
@@ -254,14 +266,14 @@ export class AnimationManagerRedux {
         return { x: acc.x + tile.x, y: acc.y + tile.y, n: acc.n + 1 };
       }, { x: 0, y: 0, n: 0 });
       if (sum.n > 0) {
-        return this._px({ x: sum.x / sum.n, y: sum.y / sum.n });
+        return this._px({ x: sum.x / sum.n, y: sum.y / sum.n }, false, true);
       }
     }
     return this._px(this._currentTargetCoords);
   }
 
   _getImpactTargetPx(tgt) {
-    if (this._isProjectileAbility(this._currentAbilityName) && this._isTargetLarge) {
+    if (this._isTargetLarge) {
       return this._getLargeTargetCenterPx();
     }
     return this._px(tgt);
@@ -269,7 +281,7 @@ export class AnimationManagerRedux {
 
   // ─── Animation implementations ───────────────────────────────────────────────
 
-  _clawStrike(src, tgt) {
+  _clawStrike(src, tgt, sourceUnitId = null) {
     const srcPx = this._px(src);
     const tgtPx = this._px(tgt);
     const dx = tgtPx.x - srcPx.x;
@@ -287,6 +299,7 @@ export class AnimationManagerRedux {
       angle,
       icon: claw_strike_animation,
       duration: 750,
+      sourceUnitId,
     });
 
     // Phase 2: claw_hit overlay on target, staggered after swipe
@@ -296,6 +309,7 @@ export class AnimationManagerRedux {
         tgtPx,
         icon: claw_hit,
         duration: 400,
+        sourceUnitId,
       });
     }, 500);
   }
@@ -386,7 +400,7 @@ export class AnimationManagerRedux {
   }
 
   _lightning(src, tgt) {
-    const tgtPx = this._px(tgt);
+    const tgtPx = this._getImpactTargetPx(tgt);
     // Emit lightning vertical beam
     this._emit({
       type: 'lightning_beam',
@@ -423,7 +437,7 @@ export class AnimationManagerRedux {
 
   _acidBlast(src, tgt) {
     const srcPx = this._px(src);
-    const tgtPx = this._px(tgt);
+    const tgtPx = this._getImpactTargetPx(tgt);
     const dx = tgtPx.x - srcPx.x;
     const dy = tgtPx.y - srcPx.y;
     const angle = Math.atan2(dy, dx) * (180 / Math.PI);
@@ -704,7 +718,7 @@ export class AnimationManagerRedux {
   }
 
   _sleep(src, tgt) {
-    const tgtPx = this._px(tgt);
+    const tgtPx = this._getImpactTargetPx(tgt);
     this._emit({
       type: 'sleep_rings',
       tgtPx,
@@ -920,7 +934,7 @@ export class AnimationManagerRedux {
   }
 
   _hex(src, tgt) {
-    const tgtPx = this._px(tgt);
+    const tgtPx = this._getImpactTargetPx(tgt);
     this._emit({
       type: 'hex_overlay',
       tgtPx,
@@ -930,11 +944,111 @@ export class AnimationManagerRedux {
   }
 
   _shadowCurse(src, tgt) {
-    const tgtPx = this._px(tgt);
+    const tgtPx = this._getImpactTargetPx(tgt);
     this._emit({
       type: 'shadow_curse_rings',
       tgtPx,
       duration: 1500,
+    });
+  }
+
+  _getHugeCenterPx(coords) {
+    if (!coords) return { x: 0, y: 0 };
+    const hOffset = (coords.x >= 4) ? -1 : 1;
+    const centerCol = coords.x + hOffset;
+    const centerRow = coords.y - 1;
+    return this._px({ x: centerCol, y: centerRow });
+  }
+
+  _dragonWhirlwind(sourceCoords) {
+    const centerPx = this._getHugeCenterPx(sourceCoords);
+    this._emit({
+      type: 'dragon_whirlwind_effect',
+      centerPx,
+      duration: 1500
+    });
+  }
+
+  _bombardEmission(sourceCoords, targetCoords, targetOccupiedCoords) {
+    const centerPx = this._getHugeCenterPx(sourceCoords);
+    const warningTilePxs = (targetOccupiedCoords || [targetCoords]).map(tc => this._px(tc));
+    this._emit({
+      type: 'bombard_emission',
+      centerPx,
+      warningTilePxs,
+      duration: 1500
+    });
+  }
+
+  triggerBombardStrike(targetCoords) {
+    if (!Array.isArray(targetCoords)) return;
+    const strikeTilePxs = targetCoords.map(tc => this._px(tc));
+
+    // Generate 10 random beams for each targeted tile
+    const generateRandomBeams = () => {
+      return [...Array(10)].map((_, i) => {
+        const isSet2 = i >= 5;
+        const baseDelay = isSet2 ? 0.35 : 0.0;
+        const delay = parseFloat((baseDelay + Math.random() * 0.35).toFixed(3));
+        const width = Math.floor(Math.random() * 13) + 7;
+        // Random offsets in pixels (-30px to +30px)
+        const left = Math.floor(Math.random() * 61) - 30;
+        const top = Math.floor(Math.random() * 61) - 30;
+        const glowColor = Math.random() > 0.5 ? '#00ffff' : '#00bfff';
+        return { delay, width, left, top, glowColor };
+      });
+    };
+
+    const barrages = strikeTilePxs.map(tilePx => ({
+      tilePx,
+      beams: generateRandomBeams()
+    }));
+
+    this._emit({
+      type: 'bombard_strike',
+      barrages,
+      duration: 1500
+    });
+  }
+
+  _dragonDispell(sourceCoords, targetCoords) {
+    const centerPx = this._getHugeCenterPx(sourceCoords);
+    const targetPx = this._px(targetCoords);
+    this._emit({
+      type: 'dragon_dispel_cast_icon',
+      centerPx,
+      duration: 1500
+    });
+    setTimeout(() => {
+      this._emit({
+        type: 'dragon_dispel_wave',
+        centerPx,
+        targetPx,
+        duration: 1200
+      });
+    }, 1500);
+  }
+
+  _fireBreath(sourceCoords, targetCoords, duration = 1500) {
+    const centerPx = this._getHugeCenterPx(sourceCoords);
+    const targetPx = this._px(targetCoords);
+    const isTargetLeft = targetPx.x < centerPx.x;
+    const originPx = {
+      x: isTargetLeft ? centerPx.x - this.TILE_SIZE * 1.1 : centerPx.x + this.TILE_SIZE * 1.1,
+      y: centerPx.y
+    };
+    const dx = targetPx.x - originPx.x;
+    const dy = targetPx.y - originPx.y;
+    const length = Math.sqrt(dx * dx + dy * dy);
+    const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+
+    this._emit({
+      type: 'dragon_fire_breath',
+      originPx,
+      targetPx,
+      length,
+      angle,
+      duration
     });
   }
 }

@@ -17,6 +17,9 @@ export default function LandingPage(props) {
   const [validDungeons, setValidDungeons] = useState([])
   const [showDungeonPicker, setShowDungeonPicker] = useState(false)
   const [selectedDungeonTemplateId, setSelectedDungeonTemplateId] = useState(null)
+  const [skipIntro, setSkipIntro] = useState(() => {
+    try { return !!(getMeta() || {}).skipIntro; } catch(e) { return false; }
+  })
 
   const [navToIntro, setNavToIntro] = useState(false)
 
@@ -145,35 +148,41 @@ export default function LandingPage(props) {
     }
   }
 
+  const toggleSkipIntro = (checked) => {
+    setSkipIntro(checked);
+    try {
+      const meta = getMeta() || {};
+      meta.skipIntro = checked;
+      storeMeta(meta);
+    } catch(e) {}
+  }
+
   const enterClicked = () => {
     const meta = getMeta();
     if(!meta || !meta.crew || meta.crew.length === 0){
       setShowWarning(true)
       return
     }
-    console.log('enter clicked, meta: ', meta);
     if(meta.dungeonId){
       setNavDungeon(true)
-    } else {  
-      const nextMeta = meta || {};
-      if (selectedDungeonTemplateId) {
-        const selectedDungeon = validDungeons.find((d) => d.id === selectedDungeonTemplateId);
-        nextMeta.selectedDungeonTemplateId = selectedDungeonTemplateId;
-        nextMeta.selectedDungeonTemplateName = selectedDungeon ? selectedDungeon.name : undefined;
-      } else {
-        delete nextMeta.selectedDungeonTemplateId;
-        delete nextMeta.selectedDungeonTemplateName;
-      }
-      storeMeta(nextMeta);
+      return
+    }
+    const nextMeta = meta || {};
+    if (selectedDungeonTemplateId) {
+      const selectedDungeon = validDungeons.find((d) => d.id === selectedDungeonTemplateId);
+      nextMeta.selectedDungeonTemplateId = selectedDungeonTemplateId;
+      nextMeta.selectedDungeonTemplateName = selectedDungeon ? selectedDungeon.name : undefined;
+    } else {
+      delete nextMeta.selectedDungeonTemplateId;
+      delete nextMeta.selectedDungeonTemplateName;
+    }
+    storeMeta(nextMeta);
 
-      console.log('show intro sequence');
-
-
-
-      console.log('setting props narrative sequence to intro');
-      props.setNarrativeSequence('intro')
-      
-      setNavToIntro(true)
+    if (skipIntro) {
+      setNavDungeon(true);
+    } else {
+      props.setNarrativeSequence('intro');
+      setNavToIntro(true);
     }
   }
 
@@ -206,6 +215,29 @@ export default function LandingPage(props) {
           { navToCombatSimulator && <Redirect to='/combatSimulator'/> }
           { navToSandbox && <Redirect to='/sandbox'/> }
           <div className="landing-buttons-container">
+            {/* Skip intro checkbox - positioned absolutely to float 20px above the container, left-aligned */}
+            <label style={{
+              position: 'absolute',
+              bottom: 'calc(100% + 20px)',
+              left: '0',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              color: '#333333',
+              fontSize: '14px',
+              cursor: 'pointer',
+              userSelect: 'none',
+              letterSpacing: '0.5px',
+              fontWeight: '500'
+            }}>
+              <input
+                type="checkbox"
+                checked={skipIntro}
+                onChange={(e) => toggleSkipIntro(e.target.checked)}
+                style={{ accentColor: '#d4a844', width: '16px', height: '16px', cursor: 'pointer' }}
+              />
+              <span>Skip intro</span>
+            </label>
             {showWarning && <span className="warning" style={{pointerEvents: 'none'}}>Cannot enter dungeon without a crew</span>}
             <div
               className={`landing-button enter-dungeon ${showWarning ? 'disabled' : ''}`}
