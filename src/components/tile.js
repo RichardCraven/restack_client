@@ -321,7 +321,7 @@ function Tile(props) {
            )}
 
            {/* Obscured space texture overlay */}
-           { ((props.contains && props.contains.type === 'obscured_space') || props.optionType === 'obscured space') && (
+           { props.color !== 'black' && ((props.contains && props.contains.type === 'obscured_space') || props.optionType === 'obscured space') && (
                 <div style={{
                     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
                     backgroundImage: 'repeating-linear-gradient(45deg, #777 0, #777 2px, transparent 2px, transparent 8px)',
@@ -333,7 +333,7 @@ function Tile(props) {
 
 
            {/* Inscription marker: 3 diagonal lines drawn on wall tiles */}
-           { ((props.contains && props.contains.type === 'inscription') || props.optionType === 'inscription') && (
+           { props.color !== 'black' && ((props.contains && props.contains.type === 'inscription') || props.optionType === 'inscription') && (
                 <div style={{
                     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
                     zIndex: 10, pointerEvents: 'none',
@@ -349,7 +349,7 @@ function Tile(props) {
            )}
 
            {/* Shrine marker */}
-           { (props.contains && props.contains.type === 'shrine') && (
+           { props.color !== 'black' && (props.contains && props.contains.type === 'shrine') && (
                 <div style={{
                     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
                     zIndex: 10, pointerEvents: 'none',
@@ -366,7 +366,7 @@ function Tile(props) {
            )}
 
            {/* Lore Tablet marker */}
-           { (props.contains && props.contains.type === 'lore_tablet') && (
+           { props.color !== 'black' && (props.contains && props.contains.type === 'lore_tablet') && (
                 <div style={{
                     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
                     zIndex: 10, pointerEvents: 'none',
@@ -383,7 +383,7 @@ function Tile(props) {
            )}
 
            {/* Inscription edge markers — golden bars on inscribed walls */}
-           { props.inscriptions && (
+           { props.color !== 'black' && props.inscriptions && (
                <>
                    { props.inscriptions.top && (
                        <div style={{position:'absolute', top:0, left:'10%', right:'10%', height:'4px',

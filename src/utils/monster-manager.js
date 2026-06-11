@@ -149,7 +149,7 @@ export function MonsterManager() {
             deathCries: ['Urdu meklak milnauru...'],
             specials: ['bifurcate', 'minor_magic_missile'],
             passives: ['flying'],
-            attacks: ['claws'],
+            attacks: ['claw_strike'],
             weaknesses: ['arcane', 'holy-aura'],
             drops: [
                 { item: TIER1_POTION, percentChance: 35 },

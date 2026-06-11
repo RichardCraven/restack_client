@@ -95,6 +95,7 @@ export class AnimationManagerRedux {
         this._dragonDispell(sourceCoords, targetCoords);
         break;
       case 'fire_breath':
+      case 'blue_dragon_breath':
         this._fireBreath(sourceCoords, targetCoords, customDuration || 1500);
         break;
       case 'claw_strike':
@@ -141,7 +142,7 @@ export class AnimationManagerRedux {
         break;
       case 'shield_slam':
       case 'shield_bash':
-        this._shieldSlam(sourceCoords, targetCoords);
+        this._shieldSlam(sourceCoords, targetCoords, sourceUnitId);
         break;
       case 'shield_wall':
         this._shieldWall(sourceCoords);
@@ -744,13 +745,16 @@ export class AnimationManagerRedux {
     });
   }
 
-  _shieldSlam(src, tgt) {
+  _shieldSlam(src, tgt, sourceUnitId) {
     const srcPx = this._px(src);
     const tgtPx = this._px(tgt);
     this._emit({
       type: 'shield_slam_connect',
       srcPx,
       tgtPx,
+      srcCoords: src,
+      tgtCoords: tgt,
+      sourceUnitId,
       duration: 600,
     });
   }

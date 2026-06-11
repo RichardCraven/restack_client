@@ -2,7 +2,7 @@
 // Functions accept the DungeonPage component instance as the first arg so we can
 // reuse existing component state and helpers without heavy refactors.
 
-import { storeMeta, getMeta, getUserId } from './session-handler';
+import { storeMeta, getMeta, getUserId, applyResolvePenalty } from './session-handler';
 import { updateUserRequest } from './api-handler';
 
 export async function setUpCamp(component, maybeDuration) {
@@ -23,10 +23,11 @@ export async function setUpCamp(component, maybeDuration) {
         const currentFood = typeof meta.food === 'number' ? meta.food : 55;
         if (currentFood < foodCost) {
             const currentResolve = typeof meta.resolve === 'number' ? meta.resolve : 100;
-            meta.resolve = Math.max(0, currentResolve - 2);
+            const penalty = applyResolvePenalty(2);
+            meta.resolve = Math.max(0, currentResolve - penalty);
             storeMeta(meta);
             try {
-                component.setState({ campWarningMessage: `Not enough food to camp (need ${foodCost}, have ${currentFood}). Resolve decreased by 2!` });
+                component.setState({ campWarningMessage: `Not enough food to camp (need ${foodCost}, have ${currentFood}). Resolve decreased by ${penalty}!` });
                 // auto-clear after 4s
                 const setTimeoutFn = (component._setTimeout && typeof component._setTimeout === 'function') ? component._setTimeout : setTimeout;
                 setTimeoutFn(() => { try { component.setState({ campWarningMessage: null }); } catch(e){} }, 4000);
@@ -113,7 +114,20 @@ export async function endCamp(component) {
         delete m.campingStart;
         delete m.campingEnd;
         const currentResolve = typeof m.resolve === 'number' ? m.resolve : 100;
-        m.resolve = Math.min(100, currentResolve + 15);
+        let awakeRefreshedBonus = 0;
+        const crew = (component.props.crewManager && component.props.crewManager.crew) || [];
+        crew.forEach(member => {
+            if (!member || !member.globalSkills) return;
+            const skill = member.globalSkills.find(s => (typeof s === 'string' ? s : s.key) === 'awake_refreshed');
+            if (skill) {
+                const lvl = typeof skill === 'string' ? 1 : (skill.level || 1);
+                if (lvl === 1) awakeRefreshedBonus += 10;
+                else if (lvl === 2) awakeRefreshedBonus += 20;
+                else if (lvl === 3) awakeRefreshedBonus += 40;
+            }
+        });
+        m.resolve = Math.min(100, currentResolve + 15 + awakeRefreshedBonus);
+        console.log(`[CampManager] endCamp: recovered resolve base 15 + bonus ${awakeRefreshedBonus} (total: ${m.resolve})`);
         try {
             const crew = (component.props.crewManager && component.props.crewManager.crew) || [];
             // Build a new array of spread objects so React sees new prop references on Tile

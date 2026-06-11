@@ -554,6 +554,7 @@ import vamp_bite_top from '../assets/icons/combat-icons/specials/monsters/vampir
 import vampiric_bite from '../assets/icons/combat-icons/specials/monsters/vampire/vampiric_bite.png';
 import heartbeat from '../assets/icons/combat-icons/specials/monsters/vampire/heartbeat.png';
 import reassembly from '../assets/icons/combat-icons/specials/monsters/skeleton/reassmbly.png';
+import bifurcate from '../assets/icons/combat-icons/specials/monsters/beholder minion/bifurcate.png';
 import bones from '../assets/icons/combat-icons/specials/monsters/skeleton/bones.png';
 import betrayal from '../assets/icons/combat-icons/specials/monsters/djinn/betrayal.png';
 import betrayal_hit from '../assets/icons/combat-icons/specials/monsters/djinn/betrayal_hit.png';
@@ -693,6 +694,7 @@ import summon_devil_icon from '../assets/icons/combat-icons/specials/summoner/su
 import summon_zombie_icon from '../assets/icons/combat-icons/specials/summoner/summon_zombie.png';
 import summon_ghoul_icon from '../assets/icons/combat-icons/specials/summoner/summon_ghoul.png';
 import summon_imp_icon from '../assets/icons/combat-icons/specials/summoner/summon_imp.png';
+import dominate_minion_icon from '../assets/icons/combat-icons/specials/summoner/dominate_minion.png';
 import duration_icon from '../assets/icons/combat-icons/effects/duration.png';
 
 // monster skills
@@ -755,6 +757,12 @@ import camp from '../assets/icons/misc/camp/camp.png'
 import camping from '../assets/gemini_images/camping.png';
 import merchant_bg from '../assets/gemini_images/merchant.png';
 import alchemist_bg from '../assets/gemini_images/alchemist.png';
+import codex from '../assets/icons/codex.png';
+
+// global skills
+import awake_refreshed_sage from '../assets/icons/global skills/Sage/awake refreshed.png';
+import awake_refreshed_soldier from '../assets/icons/global skills/Soldier/awake refreshed.png';
+import strong_resolve_soldier from '../assets/icons/global skills/Soldier/strong resolve.png';
 
 //terrain
 import terrain_1 from '../assets/icons/terrain/stone-1.png'
@@ -1539,6 +1547,7 @@ export {
     summon_zombie_icon,
     summon_ghoul_icon,
     summon_imp_icon,
+    dominate_minion_icon,
     wound,
     major_wound,
     stomp,
@@ -1654,6 +1663,7 @@ export {
     vampiric_bite,
     heartbeat,
     reassembly,
+    bifurcate,
     bones,
 
     betrayal,
@@ -1692,5 +1702,9 @@ export {
     transform,
     camping,
     merchant_bg,
-    alchemist_bg
+    alchemist_bg,
+    awake_refreshed_sage,
+    awake_refreshed_soldier,
+    strong_resolve_soldier,
+    codex
 };

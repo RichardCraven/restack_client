@@ -1203,6 +1203,21 @@ const skillsMatrix = {
         range: 'medium',
         type: 'utility'
     },
+    dominate_minion: {
+        class: 'summoner',
+        treePath: 'combat_a',
+        id: 'dominate_minion',
+        tier: 3,
+        name: 'Dominate Minion',
+        desc: 'Exert your will upon an enemy minion. Pit your INT against their willpower — on success, the minion switches sides and fights for you.',
+        icon: images['dominate_minion_icon'],
+        cooldown: 10,
+        initialCooldown: 4,
+        duration: 'instant',
+        range: 'far',
+        type: 'debuff',
+        effect: { type: 'dominate', willpowerCheck: true }
+    },
 
     // === MONSTERS ===
     // Goblin
@@ -1264,6 +1279,28 @@ const skillsMatrix = {
         range: 'self',
         type: 'passive',
         isPassive: true
+    },
+    bifurcate: {
+        id: 'bifurcate',
+        tier: 1,
+        name: 'Bifurcate',
+        desc: 'At full energy, split into two smaller copies, each with 50% of current HP.',
+        icon: images['bifurcate'],
+        cooldown: 0,
+        duration: 'instant',
+        range: 'self',
+        type: 'utility'
+    },
+    minor_magic_missile: {
+        id: 'minor_magic_missile',
+        tier: 1,
+        name: 'Minor Magic Missile',
+        desc: 'Shoot a small magic missile at a target.',
+        icon: images['magic_missile_icon'],
+        cooldown: 4,
+        duration: 'instant',
+        range: 'far',
+        type: 'damage'
     },
     // Mummy
     induce_fear: {

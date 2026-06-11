@@ -14,7 +14,7 @@ import {
     updateUserRequest,
     addDungeonRequest
   } from '../utils/api-handler';
-import {storeMeta, getMeta, getUserId, getUserName} from '../utils/session-handler';
+import {storeMeta, getMeta, getUserId, getUserName, applyResolvePenalty} from '../utils/session-handler';
 import { keyCleanup, itemCleanup, resolveItemPools, resolveMonsterPools } from '../utils/cache-cleanup';
 import * as CampManager from '../utils/camp-manager';
 import Typewriter from '../utils/typewriter';
@@ -29,7 +29,9 @@ import { RECIPES } from '../utils/spells-table'
 import '../styles/inventory-modal.scss'
 import '../styles/quests-modal.scss'
 import '../styles/camp-modal.scss'
+import '../styles/codex.scss'
 import SkillTree from '../components/SkillTree';
+import CodexModal from '../components/CodexModal';
 import '../styles/narrative-overlay.scss'
 
 const NarrativeOverlay = ({ sequence, onClose }) => {
@@ -615,6 +617,71 @@ const MARKER_TYPES = [
     'custom'
 ]
 
+// ── Training Drill Picker ─────────────────────────────────────────────────────
+// Local component for selecting a drill type + risk level per crew member.
+function TrainingDrillPicker({ member, drills, canAfford, onConfirm }) {
+    const [selectedDrill, setSelectedDrill] = React.useState(drills[0]?.stat || 'str');
+    const [takeRisk, setTakeRisk] = React.useState(false);
+    const drill = drills.find(d => d.stat === selectedDrill) || drills[0];
+
+    return (
+        <div className="training-drill-picker">
+            {/* Drill type pills */}
+            <div className="training-drill-pills">
+                {drills.map(d => (
+                    <button
+                        key={d.stat}
+                        className={`training-drill-pill${selectedDrill === d.stat ? ' active' : ''}`}
+                        style={selectedDrill === d.stat ? { borderColor: d.color, color: d.color, background: `${d.color}18` } : {}}
+                        onClick={() => setSelectedDrill(d.stat)}
+                        title={d.desc}
+                    >
+                        <span role="img" aria-label={d.label}>{d.emoji}</span> {d.label}
+                    </button>
+                ))}
+            </div>
+
+            {/* Drill description */}
+            {drill && (
+                <div className="training-drill-desc">{drill.desc}</div>
+            )}
+
+            {/* Risk toggle */}
+            <div className="training-risk-row">
+                <button
+                    className={`training-risk-btn${!takeRisk ? ' active' : ''}`}
+                    onClick={() => setTakeRisk(false)}
+                >
+                    <span className="training-risk-icon">🛡</span>
+                    <span>
+                        <div className="training-risk-mode">Safe</div>
+                        <div className="training-risk-detail">{drill?.safeDesc || ''}</div>
+                    </span>
+                </button>
+                <button
+                    className={`training-risk-btn risk${takeRisk ? ' active' : ''}`}
+                    onClick={() => setTakeRisk(true)}
+                >
+                    <span className="training-risk-icon">⚡</span>
+                    <span>
+                        <div className="training-risk-mode">Push Hard</div>
+                        <div className="training-risk-detail">{drill?.riskDesc || ''}</div>
+                    </span>
+                </button>
+            </div>
+
+            {/* Confirm button */}
+            <button
+                className={`training-confirm-btn${!canAfford ? ' disabled' : ''}`}
+                disabled={!canAfford}
+                onClick={() => canAfford && onConfirm(selectedDrill, takeRisk)}
+            >
+                {canAfford ? `Begin ${drill?.label || 'Drill'} ${takeRisk ? '(Push Hard)' : '(Safe)'}` : 'Not enough food'}
+            </button>
+        </div>
+    );
+}
+
 class DungeonPage extends React.Component {
     getCharacterActions = (character) => {
         let actions = [];
@@ -955,6 +1022,9 @@ class DungeonPage extends React.Component {
             , showFoodPrepOverlay: false
             , showSpellsOverlay: false
             , showMapOverlay: false
+            , showTrainingOverlay: false
+            , trainingResults: {} // { memberId: { stat, delta, risk, message } }
+            , showCodex: false
             , activeNarrativeSequence: null
             , showNarrativeOverlay: false
             , showAmbushPopup: false
@@ -1625,6 +1695,10 @@ class DungeonPage extends React.Component {
                         else ambushMonsterTier = 4;
                         
                         ambushMonster = this.props.monsterManager.getRandomMonsterByTier(ambushMonsterTier);
+                        if (ambushMonster) {
+                            const typeName = String(ambushMonster.type || 'monster').replace(/_/g, ' ');
+                            ambushMonster.name = typeName.charAt(0).toUpperCase() + typeName.slice(1);
+                        }
                     }
                 }
             }
@@ -2790,7 +2864,7 @@ class DungeonPage extends React.Component {
             minions = [];
             monster.minions.forEach((e,i)=>{
                 const minion = this.props.monsterManager.getMonster(e)
-                minion.id = minion.id+i+700
+                minion.id = minion.id + (i * 10) + 700;
                 let minionName = this.pickRandom(minion.monster_names)
                 minion.name = minionName
                 minion.inventory = [];
@@ -2808,6 +2882,43 @@ class DungeonPage extends React.Component {
             monster,
             minions
         })
+    }
+    startAmbushCombat = () => {
+        if (this.ambushTimeout) {
+            clearTimeout(this.ambushTimeout);
+            this.ambushTimeout = null;
+        }
+        const monster = this.state.ambushMonster;
+        if (!monster) return;
+
+        let minions = null;
+        if (monster.minions) {
+            minions = [];
+            monster.minions.forEach((e, i) => {
+                const minion = this.props.monsterManager.getMonster(e);
+                if (minion) {
+                    minion.id = minion.id + (i * 10) + 700;
+                    let minionName = this.pickRandom(minion.monster_names);
+                    minion.name = minionName;
+                    minion.inventory = [];
+                    minions.push(minion);
+                }
+            });
+        }
+
+        if (!monster.name) {
+            monster.name = this.pickRandom(monster.monster_names) || monster.type;
+        }
+        monster.inventory = [];
+
+        this.setState({
+            showAmbushPopup: false,
+            monster,
+            minions
+        }, () => {
+            const playerIdx = this.props.boardManager ? this.props.boardManager.getIndexFromCoordinates(this.props.boardManager.playerTile.location) : null;
+            this.triggerMonsterBattle(true, playerIdx);
+        });
     }
     getCurrentInventory = () => {
         return this.props.inventoryManager.inventory;
@@ -4306,7 +4417,8 @@ class DungeonPage extends React.Component {
                   
                   // Adjust resolve on defeat: -5 resolve
                   const currentResolve = typeof meta2.resolve === 'number' ? meta2.resolve : 100;
-                  meta2.resolve = Math.max(0, currentResolve - 5);
+                  const penalty = applyResolvePenalty(5);
+                  meta2.resolve = Math.max(0, currentResolve - penalty);
                     if (meta2 && Array.isArray(meta2.crew)) {
                         meta2.crew.forEach(c => {
                             if (!c) return;
@@ -5136,7 +5248,17 @@ class DungeonPage extends React.Component {
             if (memberIdx !== -1) {
                 const member = crew[memberIdx];
                 const globalSkills = Array.isArray(member.globalSkills) ? member.globalSkills : [];
-                if (!globalSkills.includes(skillKey)) globalSkills.push(skillKey);
+                
+                const skillIdx = globalSkills.findIndex(s => (typeof s === 'string' ? s : s.key) === skillKey);
+                if (skillIdx !== -1) {
+                    const existing = globalSkills[skillIdx];
+                    const currentLvl = typeof existing === 'string' ? 1 : (existing.level || 1);
+                    const newLvl = Math.min(3, currentLvl + 1);
+                    globalSkills[skillIdx] = { key: skillKey, level: newLvl };
+                } else {
+                    globalSkills.push({ key: skillKey, level: 1 });
+                }
+
                 crew[memberIdx] = { ...member, globalSkills };
                 meta.crew = crew;
                 // Mirror to crewManager
@@ -5236,6 +5358,90 @@ class DungeonPage extends React.Component {
 
     handleSpellsBack = () => {
         this.setState({ showSpellsOverlay: false });
+    }
+
+    handleOpenTraining = () => {
+        this.setState({ showTrainingOverlay: true, trainingResults: {} });
+    }
+
+    handleTrainingBack = () => {
+        this.setState({ showTrainingOverlay: false, trainingResults: {} });
+    }
+
+    handleConfirmDrill = (member, drillStat, takeRisk) => {
+        try {
+            const meta = getMeta() || {};
+            const currentFood = typeof meta.food === 'number' ? meta.food : 0;
+            const FOOD_COST = 2;
+            if (currentFood < FOOD_COST) return;
+
+            // Resolve progress delta based on stat + risk choice
+            const DRILLS = {
+                str: { safe: 1, risk: 2, riskLabel: 'Exhausted next combat', riskChance: 1.0 },
+                dex: { safe: 1, risk: 2, riskLabel: '25% chance: 50% endurance next combat', riskChance: 0.25 },
+                fort: { safe: 1, risk: 2, riskLabel: 'Bleed risk next combat', riskChance: 1.0 },
+                int: { safe: 1, risk: null, riskLabel: '75% chance +2, 25% chance +0', riskChance: null },
+            };
+            const drill = DRILLS[drillStat];
+            if (!drill) return;
+
+            let delta = drill.safe;
+            let riskTriggered = false;
+            if (takeRisk) {
+                if (drillStat === 'int') {
+                    delta = Math.random() < 0.75 ? 2 : 0;
+                } else if (drillStat === 'dex') {
+                    delta = 2;
+                    riskTriggered = Math.random() < 0.25;
+                } else {
+                    delta = 2;
+                    riskTriggered = true;
+                }
+            }
+
+            // Apply training effect flags for next combat
+            if (riskTriggered) {
+                if (drillStat === 'str') member.trainingExhausted = true;
+                if (drillStat === 'dex') member.trainingHalfEndurance = true;
+                if (drillStat === 'fort') member.trainingBleedRisk = true;
+            }
+
+            // Update training progress
+            member.trainingProgress = member.trainingProgress || { str: 0, dex: 0, fort: 0, int: 0 };
+            member.trainingProgress[drillStat] = (member.trainingProgress[drillStat] || 0) + delta;
+
+            let statGained = false;
+            const THRESHOLD = 10;
+            if (member.trainingProgress[drillStat] >= THRESHOLD) {
+                member.trainingProgress[drillStat] -= THRESHOLD;
+                member.stats[drillStat] = (member.stats[drillStat] || 1) + 1;
+                if (this.props.crewManager && typeof this.props.crewManager.computeDerivedStats === 'function') {
+                    this.props.crewManager.computeDerivedStats(member);
+                }
+                statGained = true;
+            }
+
+            // Deduct food
+            meta.food = currentFood - FOOD_COST;
+            try { storeMeta(meta); } catch(e) {}
+            try { if (typeof this.props.saveUserData === 'function') this.props.saveUserData(); } catch(e) {}
+
+            const STAT_LABELS = { str: 'STR', dex: 'DEX', fort: 'FORT', int: 'INT' };
+            let message;
+            if (delta === 0) {
+                message = `${member.name} lost focus. No progress gained.`;
+            } else if (statGained) {
+                message = `✨ ${member.name} gained +1 ${STAT_LABELS[drillStat]}!`;
+            } else {
+                message = `${member.name} gained +${delta} ${STAT_LABELS[drillStat]} progress${riskTriggered ? ' (risk triggered!)' : ''}.`;
+            }
+
+            this.setState(prev => ({
+                trainingResults: { ...prev.trainingResults, [member.id || member.name]: { stat: drillStat, delta, riskTriggered, message, statGained } }
+            }));
+        } catch (e) {
+            console.warn('handleConfirmDrill failed', e);
+        }
     }
 
     handleOpenMapOverlay = () => {
@@ -5535,7 +5741,7 @@ class DungeonPage extends React.Component {
     }
     render(){
         const crew = ((this.props.crewManager && this.props.crewManager.crew) || []);
-        const hasMeleeTrainerCandidate = crew.some(member => ['soldier', 'monk', 'barbarian'].includes((member.type || '').toLowerCase()));
+
         const hasMagicUser = crew.some(member => ['wizard', 'sage'].includes((member.type || '').toLowerCase()));
         const magicUsers = crew.filter(member => ['wizard', 'sage'].includes((member.type || '').toLowerCase()));
 
@@ -5558,6 +5764,13 @@ class DungeonPage extends React.Component {
                 />
             )}
 
+            {/* Codex Modal */}
+            <CodexModal
+                visible={!!this.state.showCodex}
+                onClose={() => this.setState({ showCodex: false })}
+                monsterManager={this.props.monsterManager}
+            />
+
             {/* Shrine Encounter Overlay */}
             {this.state.showShrineOverlay && this.state.shrineData && (() => {
                 const sd = this.state.shrineData;
@@ -5572,8 +5785,8 @@ class DungeonPage extends React.Component {
                 // Global skills for this class (from proposed_new_features spec)
                 const globalSkillsByClass = {
                     ranger:   [{ key: 'keen_eye', name: 'Keen Eye', desc: 'Reveals +2 fog tiles on miniboard entry' }, { key: 'hunters_quarry', name: "Hunter's Quarry", desc: '+10% food drop on monster defeat' }, { key: 'read_the_land', name: 'Read the Land', desc: 'Adjacent tile types hinted on entry' }, { key: 'trailblaze', name: 'Trailblaze', desc: 'Visual breadcrumb to last camp spot' }],
-                    sage:     [{ key: 'herbalism', name: 'Herbalism', desc: 'Camp costs 1 less food per member' }, { key: 'mend', name: 'Mend', desc: 'Out-of-combat potions restore +15% HP' }, { key: 'ritual_efficiency', name: 'Ritual Efficiency', desc: 'Ritual prep time -25%' }, { key: 'revive', name: 'Revive', desc: 'Once per run: fallen member revived at 25% HP' }],
-                    soldier:  [{ key: 'fortify', name: 'Fortify', desc: 'Resolve does not decay while camping' }, { key: 'breacher', name: 'Breacher', desc: 'Force open a Minor Key gate once per level' }, { key: 'rally', name: 'Rally', desc: '+5 bonus Resolve on combat victory' }, { key: 'iron_will', name: 'Iron Will', desc: 'Party Resolve never drops below 20 from deaths' }],
+                    sage:     [{ key: 'herbalism', name: 'Herbalism', desc: 'Camp costs 1 less food per member' }, { key: 'mend', name: 'Mend', desc: 'Out-of-combat potions restore +15% HP' }, { key: 'ritual_efficiency', name: 'Ritual Efficiency', desc: 'Ritual prep time -25%' }, { key: 'revive', name: 'Revive', desc: 'Once per run: fallen member revived at 25% HP' }, { key: 'awake_refreshed', name: 'Awake Refreshed', desc: 'Recuperates an additional +10/+20/+40 Resolve after camping.' }],
+                    soldier:  [{ key: 'fortify', name: 'Fortify', desc: 'Resolve does not decay while camping' }, { key: 'breacher', name: 'Breacher', desc: 'Force open a Minor Key gate once per level' }, { key: 'rally', name: 'Rally', desc: '+5 bonus Resolve on combat victory' }, { key: 'iron_will', name: 'Iron Will', desc: 'Party Resolve never drops below 20 from deaths' }, { key: 'awake_refreshed', name: 'Awake Refreshed', desc: 'Recuperates an additional +10/+20/+40 Resolve after camping.' }, { key: 'strong_resolve', name: 'Strong Resolve', desc: 'Reduces Resolve penalties by 40%/75%/90%.' }],
                     wizard:   [{ key: 'arcane_sense', name: 'Arcane Sense', desc: 'Identifies chest tier before opening' }, { key: 'ley_tap', name: 'Ley Tap', desc: 'Draw energy at Magic Nexus — recover 15% endurance' }, { key: 'dimensional_pocket', name: 'Dimensional Pocket', desc: '+2 shared inventory slots' }, { key: 'scry', name: 'Scry', desc: 'Reveals all chests and monsters for 30s once per run' }],
                     barbarian:[{ key: 'iron_gut', name: 'Iron Gut', desc: 'Barbarian does not count toward camping food cost' }, { key: 'savage_haul', name: 'Savage Haul', desc: 'Heavy items take only 1 inventory slot' }, { key: 'bloodhound', name: 'Bloodhound', desc: 'Reveals all monsters on miniboard entry' }, { key: 'endure', name: 'Endure', desc: 'Zero-food camp: no Resolve penalty, crew heals to 50%' }],
                     monk:     [{ key: 'swift_step', name: 'Swift Step', desc: 'Movement animation 30% faster' }, { key: 'focused_rest', name: 'Focused Rest', desc: 'Camping duration -30% (same healing)' }, { key: 'pressure_points', name: 'Pressure Points', desc: '15% vendor discount once per vendor' }, { key: 'astral_map', name: 'Astral Map', desc: 'Full fog reveal for 60s once per run' }],
@@ -5581,8 +5794,17 @@ class DungeonPage extends React.Component {
                 };
                 const availableSkills = globalSkillsByClass[sd.shrineClass] || [];
                 const memberGlobalSkills = (sd.matchingMember && sd.matchingMember.globalSkills) || [];
-                const unlockedSkills = availableSkills.filter(s => !memberGlobalSkills.includes(s.key));
+                
+                const getSkillLevel = (member, skillKey) => {
+                    if (!member || !member.globalSkills) return 0;
+                    const skill = member.globalSkills.find(s => (typeof s === 'string' ? s : s.key) === skillKey);
+                    if (!skill) return 0;
+                    return typeof skill === 'string' ? 1 : (skill.level || 1);
+                };
+
+                const unlockedSkills = availableSkills.filter(s => getSkillLevel(sd.matchingMember, s.key) < 3);
                 const nextSkill = unlockedSkills[0] || null; // Next in tier order
+                const nextSkillLevel = nextSkill ? getSkillLevel(sd.matchingMember, nextSkill.key) + 1 : 1;
 
                 return (
                     <div style={{
@@ -5667,7 +5889,9 @@ class DungeonPage extends React.Component {
                                         onMouseEnter={e => { e.currentTarget.style.background = 'linear-gradient(135deg, rgba(212,168,68,0.35), rgba(212,168,68,0.15))'; e.currentTarget.style.boxShadow = '0 0 20px rgba(212,168,68,0.3)'; }}
                                         onMouseLeave={e => { e.currentTarget.style.background = 'linear-gradient(135deg, rgba(212,168,68,0.2), rgba(212,168,68,0.08))'; e.currentTarget.style.boxShadow = 'none'; }}
                                     >
-                                        <div style={{ color: '#d4a844', fontSize: '16px', fontWeight: 'bold', marginBottom: '6px' }}>{nextSkill.name}</div>
+                                        <div style={{ color: '#d4a844', fontSize: '16px', fontWeight: 'bold', marginBottom: '6px' }}>
+                                            {nextSkill.name} {nextSkillLevel > 1 ? `(Upgrade to Lvl ${nextSkillLevel})` : ''}
+                                        </div>
                                         <div style={{ color: '#aaa', fontSize: '12px', lineHeight: 1.5 }}>{nextSkill.desc}</div>
                                     </div>
                                 ) : (
@@ -5927,12 +6151,10 @@ class DungeonPage extends React.Component {
                             <span className="camp-btn-icon"><span role="img" aria-label="map">🗺️</span></span>
                             <span>Map</span>
                         </button>
-                        {hasMeleeTrainerCandidate && (
-                            <button className="camp-action-btn" onClick={() => {}}>
-                                <span className="camp-btn-icon"><span role="img" aria-label="crossed swords">⚔️</span></span>
-                                <span>Train</span>
-                            </button>
-                        )}
+                        <button className="camp-action-btn" onClick={this.handleOpenTraining}>
+                            <span className="camp-btn-icon"><span role="img" aria-label="crossed swords">⚔️</span></span>
+                            <span>Train</span>
+                        </button>
                         {hasMagicUser && (
                             <button className="camp-action-btn" onClick={this.handleOpenSpells}>
                                 <span className="camp-btn-icon"><span role="img" aria-label="sparkles">✨</span></span>
@@ -5997,6 +6219,105 @@ class DungeonPage extends React.Component {
                                                 >
                                                     {isCookingAnything ? 'Busy' : canAfford ? 'Cook' : 'Not enough food'}
                                                 </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    );
+                })()}
+
+                {this.state.showTrainingOverlay && (() => {
+                    const meta = getMeta() || {};
+                    const currentFood = typeof meta.food === 'number' ? meta.food : 0;
+                    const FOOD_COST = 2;
+                    const DRILLS = [
+                        { stat: 'str', label: 'Conditioning', emoji: '💪', color: '#c94040', desc: 'Build raw strength through rigorous physical endurance.', safeDesc: '+1 STR progress', riskDesc: '+2 progress — exhausted next combat' },
+                        { stat: 'dex', label: 'Footwork',     emoji: '🦶', color: '#d48a30', desc: 'Sprint drills and evasion practice sharpen reflexes.', safeDesc: '+1 DEX progress', riskDesc: '+2 progress — 25% chance: 50% endurance next fight' },
+                        { stat: 'fort', label: 'Hardening',   emoji: '🛡',  color: '#4a86c8', desc: 'Toughening the body through punishment and resistance.', safeDesc: '+1 FORT progress', riskDesc: '+2 progress — bleed risk next combat' },
+                        { stat: 'int', label: 'Meditation',   emoji: '🧘', color: '#9b64c9', desc: 'Deep focus and mental discipline unlock hidden insight.', safeDesc: '+1 INT progress', riskDesc: '75% chance +2, 25% chance +0' },
+                    ];
+                    const STAT_COLORS = { str: '#c94040', dex: '#d48a30', fort: '#4a86c8', int: '#9b64c9' };
+                    const STAT_LABELS = { str: 'STR', dex: 'DEX', fort: 'FORT', int: 'INT' };
+                    const THRESHOLD = 10;
+
+                    return (
+                        <div className="training-overlay">
+                            <div className="training-header">
+                                <button className="training-back" onClick={this.handleTrainingBack}>← Back</button>
+                                <div className="training-title"><span role="img" aria-label="crossed swords">⚔️</span> Training Grounds</div>
+                                <div className="training-food-badge"><span role="img" aria-label="food">🍖</span> {currentFood} food &nbsp;·&nbsp; <span style={{color: currentFood >= FOOD_COST ? '#aaa' : '#c94040'}}>Each drill costs {FOOD_COST}</span></div>
+                            </div>
+
+                            <div className="training-subtitle">Choose a drill for each crew member. Drills consume food and build toward permanent stat gains.</div>
+
+                            <div className="training-crew-cards">
+                                {crew.map((member) => {
+                                    const progress = member.trainingProgress || { str: 0, dex: 0, fort: 0, int: 0 };
+                                    const memberId = member.id || member.name;
+                                    const result = (this.state.trainingResults || {})[memberId];
+                                    const alreadyTrained = !!result;
+                                    const canAfford = currentFood >= FOOD_COST && !alreadyTrained;
+
+                                    return (
+                                        <div key={memberId} className={`training-crew-card${alreadyTrained ? ' trained' : ''}`}>
+                                            {/* Portrait + Name */}
+                                            <div className="training-card-portrait-row">
+                                                <div className="training-card-portrait">
+                                                    <img
+                                                        src={typeof member.portrait === 'string' ? member.portrait : (member.portrait?.default || '')}
+                                                        alt={member.name}
+                                                        style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: 6 }}
+                                                        onError={e => { e.target.style.display = 'none'; }}
+                                                    />
+                                                </div>
+                                                <div className="training-card-identity">
+                                                    <div className="training-card-name">{member.name}</div>
+                                                    <div className="training-card-class">{(member.type || '').toUpperCase()}</div>
+                                                </div>
+                                            </div>
+
+                                            {/* Stat progress bars */}
+                                            <div className="training-stat-bars">
+                                                {['str','dex','fort','int'].map(stat => {
+                                                    const pct = Math.min(100, ((progress[stat] || 0) / THRESHOLD) * 100);
+                                                    const justGained = result && result.stat === stat && result.statGained;
+                                                    return (
+                                                        <div key={stat} className="training-stat-row">
+                                                            <div className="training-stat-label" style={{ color: STAT_COLORS[stat] }}>{STAT_LABELS[stat]}</div>
+                                                            <div className="training-stat-track">
+                                                                <div
+                                                                    className={`training-stat-fill${justGained ? ' just-gained' : ''}`}
+                                                                    style={{ width: `${pct}%`, background: STAT_COLORS[stat] }}
+                                                                />
+                                                            </div>
+                                                            <div className="training-stat-val" style={{ color: STAT_COLORS[stat] }}>
+                                                                {progress[stat] || 0}<span style={{opacity:0.4}}>/{THRESHOLD}</span>
+                                                            </div>
+                                                            <div className="training-stat-base" style={{ color: '#666' }}>
+                                                                [{member.stats?.[stat] || 0}]
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+
+                                            {/* Result toast */}
+                                            {result && (
+                                                <div className={`training-result-toast${result.statGained ? ' gained' : result.delta === 0 ? ' failed' : ''}`}>
+                                                    {result.message}
+                                                </div>
+                                            )}
+
+                                            {/* Drill selector (hidden if already trained this session) */}
+                                            {!alreadyTrained && (
+                                                <TrainingDrillPicker
+                                                    member={member}
+                                                    drills={DRILLS}
+                                                    canAfford={canAfford}
+                                                    onConfirm={(stat, risk) => this.handleConfirmDrill(member, stat, risk)}
+                                                />
                                             )}
                                         </div>
                                     );
@@ -6668,6 +6989,114 @@ class DungeonPage extends React.Component {
                             </div>
                         </div>
                         <div className="name-line">{this.state.selectedCrewMember.name} the {this.uppercaseFirstLetter(this.state.selectedCrewMember.type || this.state.selectedCrewMember.image)}</div>
+                        
+                        {/* Global Skills row */}
+                        {(() => {
+                            const member = this.state.selectedCrewMember;
+                            const globalSkills = member.globalSkills || [];
+                            if (globalSkills.length === 0) return null;
+                            
+                            const skillDetails = {
+                                keen_eye: { name: 'Keen Eye', desc: 'Reveals +2 fog tiles on miniboard entry' },
+                                hunters_quarry: { name: "Hunter's Quarry", desc: '+10% food drop on monster defeat' },
+                                read_the_land: { name: 'Read the Land', desc: 'Adjacent tile types hinted on entry' },
+                                trailblaze: { name: 'Trailblaze', desc: 'Visual breadcrumb to last camp spot' },
+                                herbalism: { name: 'Herbalism', desc: 'Camp costs 1 less food per member' },
+                                mend: { name: 'Mend', desc: 'Out-of-combat potions restore +15% HP' },
+                                ritual_efficiency: { name: 'Ritual Efficiency', desc: 'Ritual prep time -25%' },
+                                revive: { name: 'Revive', desc: 'Once per run: fallen member revived at 25% HP' },
+                                fortify: { name: 'Fortify', desc: 'Resolve does not decay while camping' },
+                                breacher: { name: 'Breacher', desc: 'Force open a Minor Key gate once per level' },
+                                rally: { name: 'Rally', desc: '+5 bonus Resolve on combat victory' },
+                                iron_will: { name: 'Iron Will', desc: 'Party Resolve never drops below 20 from deaths' },
+                                arcane_sense: { name: 'Arcane Sense', desc: 'Identifies chest tier before opening' },
+                                ley_tap: { name: 'Ley Tap', desc: 'Draw energy at Magic Nexus — recover 15% endurance' },
+                                dimensional_pocket: { name: 'Dimensional Pocket', desc: '+2 shared inventory slots' },
+                                scry: { name: 'Scry', desc: 'Reveals all chests and monsters for 30s once per run' },
+                                iron_gut: { name: 'Iron Gut', desc: 'Barbarian does not count toward camping food cost' },
+                                savage_haul: { name: 'Savage Haul', desc: 'Heavy items take only 1 inventory slot' },
+                                bloodhound: { name: 'Bloodhound', desc: 'Reveals all monsters on miniboard entry' },
+                                endure: { name: 'Endure', desc: 'Zero-food camp: no Resolve penalty, crew heals to 50%' },
+                                swift_step: { name: 'Swift Step', desc: 'Movement animation 30% faster' },
+                                focused_rest: { name: 'Focused Rest', desc: 'Camping duration -30% (same healing)' },
+                                pressure_points: { name: 'Pressure Points', desc: '15% vendor discount once per vendor' },
+                                astral_map: { name: 'Astral Map', desc: 'Full fog reveal for 60s once per run' },
+                                spirit_sight: { name: 'Spirit Sight', desc: 'Narrative tiles glow through fog' },
+                                plunder: { name: 'Plunder', desc: 'Open a chest a second time once per run' },
+                                soul_tithe: { name: 'Soul Tithe', desc: '+1 Shimmering Dust per combat victory' },
+                                dark_pact: { name: 'Dark Pact', desc: 'Trade Shimmering Dust at vendors (1 Dust = 25g)' },
+                                awake_refreshed: { name: 'Awake Refreshed', desc: 'Camp recuperation grants an additional +10/+20/+40 Resolve.' },
+                                strong_resolve: { name: 'Strong Resolve', desc: 'Reduces Resolve penalties by 40%/75%/90%.' }
+                            };
+
+                            const getGlobalSkillIcon = (memberType, skillKey) => {
+                                const type = (memberType || '').toLowerCase();
+                                const key = (skillKey || '').toLowerCase();
+                                if (key === 'awake_refreshed') {
+                                    if (type === 'sage') return images.awake_refreshed_sage;
+                                    if (type === 'soldier') return images.awake_refreshed_soldier;
+                                }
+                                if (key === 'strong_resolve' && type === 'soldier') {
+                                    return images.strong_resolve_soldier;
+                                }
+                                return images.glyph_inverted || images.avatar;
+                            };
+
+                            return (
+                                <div className="global-skills-row" style={{ display: 'flex', flexDirection: 'row', gap: '8px', margin: '8px 0 12px 0', justifyContent: 'center', flexWrap: 'wrap' }}>
+                                    {globalSkills.map((s, sIdx) => {
+                                        const key = typeof s === 'string' ? s : s.key;
+                                        const level = typeof s === 'string' ? 1 : (s.level || 1);
+                                        const details = skillDetails[key] || { name: key, desc: '' };
+                                        const iconUrl = getGlobalSkillIcon(member.type, key);
+                                        return (
+                                            <div
+                                                key={key + '-' + sIdx}
+                                                className="global-skill-icon-wrapper"
+                                                style={{
+                                                    position: 'relative',
+                                                    width: '32px',
+                                                    height: '32px',
+                                                    border: '1px solid rgba(212,168,68,0.4)',
+                                                    borderRadius: '4px',
+                                                    background: 'rgba(0,0,0,0.6)',
+                                                    cursor: 'pointer',
+                                                    boxShadow: '0 0 6px rgba(212,168,68,0.2)'
+                                                }}
+                                                onMouseEnter={() => this.setState({ descriptionText: `${details.name} (Level ${level}): ${details.desc}` })}
+                                                onMouseLeave={() => this.setState({ descriptionText: '' })}
+                                            >
+                                                <img
+                                                    src={iconUrl}
+                                                    alt={details.name}
+                                                    style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '3px' }}
+                                                />
+                                                <div style={{
+                                                    position: 'absolute',
+                                                    bottom: '-5px',
+                                                    right: '-5px',
+                                                    backgroundColor: '#d4a844',
+                                                    color: 'black',
+                                                    fontWeight: 'bold',
+                                                    fontSize: '9px',
+                                                    borderRadius: '50%',
+                                                    minWidth: '13px',
+                                                    height: '13px',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    border: '1px solid black',
+                                                    padding: '1px',
+                                                    lineHeight: 1
+                                                }}>
+                                                    {level}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            );
+                        })()}
                         {/* HP bar (hp-line-container) - shows current HP proportion */}
                         {(() => {
                             const selected = this.state.selectedCrewMember || {};
@@ -7136,8 +7565,29 @@ class DungeonPage extends React.Component {
                                 );
                             }
                             return (
-                                <div className="crew-action-item action-row" style={{display:'flex', flexDirection:'column', gap:6}}>
+                    <div className="crew-action-item action-row" style={{display:'flex', flexDirection:'column', gap:6}}>
                                     <div onClick={() => this.handleOpenCampPopup()} style={{cursor:'pointer', paddingLeft: '15px'}}>Go to camp</div>
+                                    <div
+                                        className="codex-crew-btn"
+                                        onClick={() => this.setState({ showCodex: true })}
+                                    >
+                                        <img
+                                            src={typeof images.codex === 'string' ? images.codex : (images.codex?.default || '')}
+                                            alt="Codex"
+                                            className="codex-crew-btn-icon"
+                                        />
+                                        Codex
+                                    </div>
+                                    <div
+                                        style={{cursor:'pointer', paddingLeft: '15px'}}
+                                        onClick={() => {
+                                            this.setState({ isCardScrimmage: true }, () => {
+                                                this.openCardDuel(null);
+                                            });
+                                        }}
+                                    >
+                                        Card Scrimmage
+                                    </div>
                                     {this.state.campWarningMessage && (
                                         <div style={{paddingLeft: 15, fontSize: 11, color: '#e74c3c', lineHeight: 1.4}}>
                                             {this.state.campWarningMessage}

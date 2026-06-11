@@ -829,6 +829,10 @@ export default function CombatGrid(props) {
             if (!anim.srcPx) return false;
             return Math.abs(anim.srcPx.x - (xPos + TILE_SIZE / 2)) < 1 && Math.abs(anim.srcPx.y - (yPos + TILE_SIZE / 2)) < 1;
         });
+        const activeShieldSlamAnim = activeAnimations.find((anim) => {
+            if (anim.type !== 'shield_slam_connect') return false;
+            return anim.sourceUnitId === fighter.id;
+        });
 
         // All visual-state classes go on the unit-tile (100×100) — no full-width ancestors
         const isDisintegrating = activeAnimations.some(a => a.type === 'disintegrate_beam' && a.tgtPx && Math.abs(a.tgtPx.x - xPos - TILE_SIZE/2) < 5 && Math.abs(a.tgtPx.y - yPos - TILE_SIZE/2) < 5);
@@ -896,12 +900,18 @@ export default function CombatGrid(props) {
                         position: 'relative',
                         pointerEvents: 'auto',
                         overflow: 'visible',
-                        animation: activeLeapAnim ? `barbarianLeapTravel ${activeLeapAnim.duration / 1000}s linear both` : undefined,
+                        animation: activeLeapAnim 
+                            ? `barbarianLeapTravel ${activeLeapAnim.duration / 1000}s linear both` 
+                            : (activeShieldSlamAnim 
+                                ? `shieldSlamLunge ${activeShieldSlamAnim.duration / 1000}s ease-in-out both` 
+                                : undefined),
                         '--leap-dx': activeLeapAnim ? `${activeLeapAnim.dx}px` : '0px',
                         '--leap-dy': activeLeapAnim ? `${activeLeapAnim.dy}px` : '0px',
+                        '--slam-dx': activeShieldSlamAnim ? `${activeShieldSlamAnim.tgtPx.x - activeShieldSlamAnim.srcPx.x}px` : '0px',
+                        '--slam-dy': activeShieldSlamAnim ? `${activeShieldSlamAnim.tgtPx.y - activeShieldSlamAnim.srcPx.y}px` : '0px',
                         transformOrigin: '50% 50%',
-                        willChange: activeLeapAnim ? 'transform' : 'auto',
-                        zIndex: activeLeapAnim ? 4500 : undefined,
+                        willChange: (activeLeapAnim || activeShieldSlamAnim) ? 'transform' : 'auto',
+                        zIndex: (activeLeapAnim || activeShieldSlamAnim) ? 4500 : undefined,
                         opacity: isBatFlying ? 0 : 1,
                         transition: 'opacity 0.25s ease-in-out'
                     }}
@@ -1390,6 +1400,10 @@ export default function CombatGrid(props) {
 
         const isDisintegrating = activeAnimations.some(a => a.type === 'disintegrate_beam' && a.tgtPx && Math.abs(a.tgtPx.x - (leftPos + width/2)) < 15 && Math.abs(a.tgtPx.y - (topPos + height/2)) < 15);
         const isBatFlying = activeAnimations.some(a => a.type === 'bat_fly_anim' && a.sourceUnitId === unit.id);
+        const activeShieldSlamAnim = activeAnimations.find((anim) => {
+            if (anim.type !== 'shield_slam_connect') return false;
+            return anim.sourceUnitId === unit.id;
+        });
         const liveMonster = combatManager.getCombatant(unit.id) || unit;
         const monsterSleepDebuff = Array.isArray(liveMonster.activeDebuffs)
             && liveMonster.activeDebuffs.some(d => d && d.name && ['sleep', 'sleep_spell'].includes(d.name.toLowerCase()) && (d.roundsLeft || 0) > 0);
@@ -1461,6 +1475,13 @@ export default function CombatGrid(props) {
                         borderRadius: '8px',
                         overflow: 'visible',
                         opacity: isBatFlying ? 0 : 1,
+                        animation: activeShieldSlamAnim 
+                            ? `shieldSlamLunge ${activeShieldSlamAnim.duration / 1000}s ease-in-out both` 
+                            : undefined,
+                        '--slam-dx': activeShieldSlamAnim ? `${activeShieldSlamAnim.tgtPx.x - activeShieldSlamAnim.srcPx.x}px` : '0px',
+                        '--slam-dy': activeShieldSlamAnim ? `${activeShieldSlamAnim.tgtPx.y - activeShieldSlamAnim.srcPx.y}px` : '0px',
+                        willChange: activeShieldSlamAnim ? 'transform' : 'auto',
+                        zIndex: activeShieldSlamAnim ? 4500 : undefined,
                         transition: 'opacity 0.25s ease-in-out'
                     }}
                 >
@@ -3703,6 +3724,8 @@ export default function CombatGrid(props) {
 
     // ── Monster units — exclude VCT and trials_icon (rendered separately) ─────
     const monsterUnits = Object.values(battleData).filter(u => u && (u.isMonster || u.isMinion) && !crewIds.has(u.id) && !u.isVCT && !u.isTrialIcon);
+    console.log('[DEBUG][CombatGrid] Object.values(battleData):', Object.values(battleData).map(u => ({ id: u.id, isMonster: u.isMonster, isMinion: u.isMinion, invisible: u.invisible, dead: u.dead, coordinates: u.coordinates })));
+    console.log('[DEBUG][CombatGrid] filtered monsterUnits:', monsterUnits.map(u => u.id));
 
     const getUnitCenterPx = (unitId) => {
         // Find in crew

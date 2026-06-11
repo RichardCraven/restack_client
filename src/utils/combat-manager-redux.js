@@ -4,7 +4,7 @@ import specialsMatrix from './specials-matrix';
 import { activeShieldWalls } from './shared-ai-methods/movement-methods';
 import { INTERVALS, DURATION_ROUNDS, getDurationRounds } from './shared-constants';
 import * as images from './images';
-import { getMeta, storeMeta } from './session-handler';
+import { getMeta, storeMeta, applyResolvePenalty } from './session-handler';
 
 const MAX_DEPTH = 7;
 const MAX_LANES = 6;
@@ -481,6 +481,7 @@ export function CombatManagerRedux() {
         this._initializeInitialCooldowns(monster);
         this._setCombatantOccupiedCoords(monster, this.combatants);
 
+        console.log('[DEBUG][CombatManagerRedux] initializeCombat incoming monster:', this.data.monster, 'minions:', this.data.minions);
         // Set up minions
         if (this.data.minions) {
             const occupiedLanes = [monsterY];
@@ -519,6 +520,7 @@ export function CombatManagerRedux() {
                     availableLanes.push(aboveLanes[aboveIdx++]);
                 }
             }
+            console.log('[DEBUG][CombatManagerRedux] occupiedLanes:', occupiedLanes, 'availableLanes:', availableLanes);
 
             this.data.minions.forEach((e, i) => {
                 e.isMinion = true;
@@ -526,6 +528,7 @@ export function CombatManagerRedux() {
                 const laneIndex = i % availableLanes.length;
                 const columnOffset = Math.floor(i / availableLanes.length);
                 e.coordinates = { x: MAX_DEPTH - columnOffset, y: availableLanes[laneIndex] };
+                console.log(`[DEBUG][CombatManagerRedux] minion index ${i} key ${e.key} resolved coordinates:`, e.coordinates);
 
                 const minion = createFighter(e, callbacks, this.FIGHT_INTERVAL);
                 minion.isMinion = true;
@@ -542,6 +545,7 @@ export function CombatManagerRedux() {
                 this._initializeInitialCooldowns(minion);
                 this._setCombatantOccupiedCoords(minion, this.combatants);
             });
+            console.log('[DEBUG][CombatManagerRedux] final combatants list:', Object.keys(this.combatants));
         }
 
         checkMummyState('initializeCombat');
@@ -712,6 +716,26 @@ export function CombatManagerRedux() {
         });
     };
 
+    this.shouldPushbackSucceed = (target) => {
+        if (!target) return true;
+        const isMonster = target.isMonster === true;
+        const isMinion = target.isMinion === true;
+        if (isMonster && !isMinion) {
+            const targetIsHuge = (
+                (typeof target.huge === 'boolean' && target.huge === true)
+                || (target.type === 'dragon')
+                || (target.tier === 4)
+                || (typeof target.size === 'number' && target.size === 3)
+                || (typeof target.scale === 'number' && target.scale === 3)
+            );
+            if (targetIsHuge) {
+                return Math.random() >= 0.90; // 90% chance to fail
+            }
+            return Math.random() >= 0.70; // 70% chance to fail
+        }
+        return true;
+    };
+
     this.canFitAt = (unit, x, y) => {
         if (!unit) return false;
         if (x < 0 || x > MAX_DEPTH || y < 0 || y >= MAX_LANES) return false;
@@ -768,6 +792,10 @@ export function CombatManagerRedux() {
     };
 
     this.updateUnitCoordinates = (unit, nx, ny) => {
+        if (!unit) return;
+        if (unit.type === 'dragon_egg' || unit.type === 'trials_icon' || unit.isTrialIcon) {
+            return;
+        }
         const ox = unit.coordinates.x;
         const oy = unit.coordinates.y;
         unit.coordinates.x = nx;
@@ -1059,9 +1087,10 @@ export function CombatManagerRedux() {
         if (target && !target.isMonster) {
             const meta = getMeta();
             const currentResolve = (meta && typeof meta.resolve === 'number') ? meta.resolve : 100;
-            meta.resolve = Math.max(0, currentResolve - 10);
+            const penalty = applyResolvePenalty(10);
+            meta.resolve = Math.max(0, currentResolve - penalty);
             storeMeta(meta);
-            this.appendCombatLog(`Resolve decreased by 10. Current Resolve: ${meta.resolve}`);
+            this.appendCombatLog(`Resolve decreased by ${penalty}. Current Resolve: ${meta.resolve}`);
         }
 
         if (typeof this.updateData === 'function') {
@@ -1384,6 +1413,9 @@ export function CombatManagerRedux() {
                 if (buff.name === 'Inspire') {
                     unit.inspiredActive = false;
                     this.appendCombatLog(`${this.getCombatantLogName(unit)} is no longer Inspired.`);
+                } else if (buff.name === 'barbarian_berserker') {
+                    unit.berserkerActive = false;
+                    this.appendCombatLog(`${this.getCombatantLogName(unit)} is no longer Berserk.`);
                 } else {
                     this.appendCombatLog(`${this.getCombatantLogName(unit)}'s ${buff.name} has worn off.`);
                 }
@@ -1557,10 +1589,27 @@ export function CombatManagerRedux() {
             statChanges: {}
         };
         if (buffDef && buffDef.increase_stats && Array.isArray(buffDef.increase_stats.stats)) {
-            buffDef.increase_stats.stats.forEach(({ stat, amount }) => {
-                unit.stats[stat] = (unit.stats[stat] || 0) + amount;
-                applied.statChanges[stat] = (applied.statChanges[stat] || 0) + amount;
+            buffDef.increase_stats.stats.forEach((entry, idx) => {
+                let statName, amount;
+                if (typeof entry === 'object' && entry !== null) {
+                    // New format: { stat: 'atk', amount: 12 }
+                    statName = entry.stat;
+                    amount = entry.amount;
+                } else {
+                    // Legacy format: stats: ['atk'], amounts: [12]
+                    statName = entry;
+                    amount = Array.isArray(buffDef.increase_stats.amounts)
+                        ? buffDef.increase_stats.amounts[idx]
+                        : 0;
+                }
+                if (statName && amount) {
+                    unit.stats[statName] = (unit.stats[statName] || 0) + amount;
+                    applied.statChanges[statName] = (applied.statChanges[statName] || 0) + amount;
+                }
             });
+        }
+        if (name === 'barbarian_berserker') {
+            unit.berserkerActive = true;
         }
         unit.activeBuffs.push(applied);
     };
@@ -1615,6 +1664,9 @@ export function CombatManagerRedux() {
     this.executeUnitAI = (unit) => {
         if (!unit || unit.dead) return;
         const unitType = unit.type || unit.image || '';
+        if (unitType === 'dragon_egg' || unitType === 'trials_icon' || unit.isTrialIcon) {
+            return;
+        }
 
         switch (unitType) {
             case 'monk':     return this._aiMonk(unit);
@@ -1628,6 +1680,7 @@ export function CombatManagerRedux() {
             case 'sphinx':   return this._aiSphinx(unit);
             case 'ogre':     return this._aiOgre(unit);
             case 'dragon':   return this._aiDragon(unit);
+            case 'beholder_minion': return this._aiBeholderMinion(unit);
             default:         return this._aiGeneric(unit);
         }
     };
@@ -2106,8 +2159,12 @@ export function CombatManagerRedux() {
                 // Push one tile further away
                 const nx = c.coordinates.x + forwardDir;
                 if (this.canFitAt(c, nx, c.coordinates.y)) {
-                    this.updateUnitCoordinates(c, nx, c.coordinates.y);
-                    this.appendCombatLog(`${this.getCombatantLogName(c)} is pushed back!`);
+                    if (this.shouldPushbackSucceed(c)) {
+                        this.updateUnitCoordinates(c, nx, c.coordinates.y);
+                        this.appendCombatLog(`${this.getCombatantLogName(c)} is pushed back!`);
+                    } else {
+                        this.appendCombatLog(`${this.getCombatantLogName(c)} resisted the push back!`);
+                    }
                 }
             }
         });
@@ -2633,6 +2690,21 @@ export function CombatManagerRedux() {
                     this._executeSummon(unit, pick, key);
                     return;
                 }
+            }
+        }
+
+        // Priority 3b: Dominate an enemy minion if one exists and ability is ready
+        if (this._abilityReady(unit, 'dominate_minion')) {
+            const dominatePick = this.resolveSpecial(unit, 'dominate_minion');
+            const isUnitMonster = !!unit.isMonster;
+            const enemyMinion = Object.values(this.combatants).find(
+                c => c && !c.dead && c.isMinion && !!c.isMonster !== isUnitMonster && !c.dominatedBy
+            );
+            if (dominatePick && enemyMinion) {
+                this.appendCombatLog(`${this.getCombatantLogName(unit)} targets ${this.getCombatantLogName(enemyMinion)} with Dominate Minion!`);
+                this.useAbility(unit, dominatePick, enemyMinion);
+                unit.actionsTakenThisRound += 1;
+                return;
             }
         }
 
@@ -3473,7 +3545,7 @@ export function CombatManagerRedux() {
         const layEggsSpec = this.resolveSpecial(unit, 'lay_eggs');
 
         // Resolve attacks
-        const fireBreathSpec = this.resolveSpecial(unit, 'blue_dragon_breath');
+        const blueDragonBreathSpec = this.resolveSpecial(unit, 'blue_dragon_breath');
         const biteSpec = this.resolveSpecial(unit, 'bite');
         const clawSpec = this.resolveSpecial(unit, 'claw_strike') || { id: 'claw_strike', range: 'close', type: 'damage' };
 
@@ -3482,7 +3554,7 @@ export function CombatManagerRedux() {
         const bombardReady = bombardSpec && this._abilityReady(unit, 'bombard');
         const dispellReady = dispellSpec && this._abilityReady(unit, 'dragon_dispell');
         const layEggsReady = layEggsSpec && this._abilityReady(unit, 'lay_eggs');
-        const fireBreathReady = fireBreathSpec && this._abilityReady(unit, 'blue_dragon_breath');
+        const blueDragonBreathReady = blueDragonBreathSpec && this._abilityReady(unit, 'blue_dragon_breath');
         const biteReady = biteSpec && this._abilityReady(unit, 'bite');
         const clawReady = clawSpec && this._abilityReady(unit, 'claw_strike');
 
@@ -3497,9 +3569,20 @@ export function CombatManagerRedux() {
         );
 
         // Check if any enemy has active buffs to dispel
-        const enemiesWithBuffs = Object.values(this.combatants).filter(c =>
-            c && !c.dead && !c.isMonster && !c.isVCT && Array.isArray(c.activeBuffs) && c.activeBuffs.length > 0
-        );
+        const enemiesWithBuffs = Object.values(this.combatants).filter(c => {
+            if (!c || c.dead || c.isMonster || c.isVCT) return false;
+            if (Array.isArray(c.activeBuffs) && c.activeBuffs.length > 0) return true;
+            const flagsToCheck = [
+                'inspiredActive',
+                'berserkerActive',
+                'etherealSpeedActive',
+                'astralBeingActive',
+                'thirdEyeActive',
+                'defensiveStanceActive',
+                'defensiveStance'
+            ];
+            return flagsToCheck.some(flag => c[flag]);
+        });
 
         // 1. Prioritize Lay Eggs if minion count is low (max 2 active minions)
         if (layEggsReady && minionCount < 2) {
@@ -3545,14 +3628,25 @@ export function CombatManagerRedux() {
         }
 
         // 4. Bombard (devastating range attack, priority over other actions)
-        if (bombardReady && this.targetInRange(unit, target, 'medium')) {
-            this.useAbility(unit, bombardSpec, target);
-            return;
+        if (bombardReady) {
+            let bombardTarget = target;
+            if (!this.targetInRange(unit, bombardTarget, 'medium') || this.targetInRange(unit, bombardTarget, 'close')) {
+                // Primary target is either out of range or adjacent. Find another enemy in range that is not adjacent.
+                bombardTarget = Object.values(this.combatants).find(c =>
+                    c && !c.dead && !c.isMonster && !c.isVCT &&
+                    this.targetInRange(unit, c, 'medium') &&
+                    !this.targetInRange(unit, c, 'close')
+                );
+            }
+            if (bombardTarget) {
+                this.useAbility(unit, bombardSpec, bombardTarget);
+                return;
+            }
         }
 
-        // 5. Fire Breath (medium range cone attack)
-        if (fireBreathReady && this.targetInRange(unit, target, 'medium')) {
-            this.useAbility(unit, fireBreathSpec, target);
+        // 5. Blue Dragon Breath (medium range cone attack)
+        if (blueDragonBreathReady && this.targetInRange(unit, target, 'medium')) {
+            this.useAbility(unit, blueDragonBreathSpec, target);
             return;
         }
 
@@ -3579,8 +3673,46 @@ export function CombatManagerRedux() {
             } else {
                 this._basicAttack(unit, target);
             }
-        } else if (fireBreathReady && this.targetInRange(unit, target, 'medium')) {
-            this.useAbility(unit, fireBreathSpec, target);
+        } else if (blueDragonBreathReady && this.targetInRange(unit, target, 'medium')) {
+            this.useAbility(unit, blueDragonBreathSpec, target);
+        }
+    };
+
+    // BEHOLDER MINION: splitting / bifurcating, long range magic missile, claws
+    this._aiBeholderMinion = (unit) => {
+        this.acquireTarget(unit, true);
+        const target = this.combatants[unit.targetId];
+        if (!target) return;
+
+        const bifurcateSpec = this.resolveSpecial(unit, 'bifurcate');
+        const mmSpec = this.resolveSpecial(unit, 'minor_magic_missile');
+
+        const bifurcateReady = bifurcateSpec && this._abilityReady(unit, 'bifurcate');
+        const mmReady = mmSpec && this._abilityReady(unit, 'minor_magic_missile');
+
+        // Simulate energy accumulation (starts at 0, builds +20 each turn/action)
+        unit.energy = (unit.energy || 0) + 20;
+
+        // 1. Bifurcate triggers at 100 energy OR if health drops below 75%
+        if (bifurcateReady && !unit._hasCloned && ((unit.energy || 0) >= 100 || unit.hp < unit.starting_hp * 0.75)) {
+            this.useAbility(unit, bifurcateSpec, unit);
+            return;
+        }
+
+        // 2. Minor Magic Missile: 33% chance if ready and target is at far range
+        if (mmReady && this.targetInRange(unit, target, 'far') && Math.random() < 0.33) {
+            this.useAbility(unit, mmSpec, target);
+            return;
+        }
+
+        // 3. Melee attack or move closer
+        if (this.targetInRange(unit, target, 'close')) {
+            this._basicAttack(unit, target);
+        } else {
+            this.moveCloser(unit, target);
+            if (this.targetInRange(unit, target, 'close')) {
+                this._basicAttack(unit, target);
+            }
         }
     };
 
@@ -3792,6 +3924,155 @@ export function CombatManagerRedux() {
             return;
         }
 
+        // ── DOMINATE MINION ─────────────────────────────────────────────────────
+        if (abilityId === 'dominate_minion') {
+            if (!target || !target.isMinion) {
+                this.appendCombatLog(`${this.getCombatantLogName(unit)} tries to dominate, but finds no minion to control.`);
+                if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+                return;
+            }
+            // Willpower check: summoner INT vs target willpower (or int if willpower absent)
+            const summonerINT = (unit.stats && unit.stats.int) || 8;
+            const minionWP   = (target.stats && (target.stats.willpower || target.stats.int)) || 5;
+            // Roll: summoner INT + 1d10 vs minion WP + 1d10
+            const attackRoll  = summonerINT + Math.floor(Math.random() * 10) + 1;
+            const defenseRoll = minionWP    + Math.floor(Math.random() * 10) + 1;
+            const success = attackRoll > defenseRoll;
+            if (this.animManagerRedux && typeof this.animManagerRedux.triggerAbility === 'function') {
+                this.animManagerRedux.triggerAbility(unit.coordinates, target.coordinates, 'dominate_minion', false, null, unit.id);
+            }
+            if (success) {
+                // Switch sides: flip isMonster flag and clear targeting
+                target.isMonster = !unit.isMonster; // now on same team as summoner's allies
+                target.dominatedBy = unit.id;
+                target.targetId = null;
+                // Restore a burst of HP to the dominated minion (25% max)
+                const hpBoost = Math.round((target.starting_hp || target.hp || 20) * 0.25);
+                target.hp = Math.min(target.starting_hp || 999, (target.hp || 0) + hpBoost);
+                this.appendCombatLog(
+                    `${this.getCombatantLogName(unit)} DOMINATES ${this.getCombatantLogName(target)}! ` +
+                    `(Roll ${attackRoll} vs ${defenseRoll}) — it now fights for your side! (+${hpBoost} HP)`
+                );
+            } else {
+                // Failed: minion resists, summoner takes minor psychic backlash damage
+                const backlash = Math.max(2, Math.floor(minionWP * 0.4));
+                unit.hp = Math.max(0, (unit.hp || 0) - backlash);
+                this.appendCombatLog(
+                    `${this.getCombatantLogName(unit)}'s Dominate Minion RESISTED by ${this.getCombatantLogName(target)}! ` +
+                    `(Roll ${attackRoll} vs ${defenseRoll}) — psychic backlash deals ${backlash} damage!`
+                );
+                if (unit.hp <= 0) this.targetKilled(unit);
+            }
+            if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+            return;
+        }
+
+        if (abilityId === 'bifurcate') {
+            if (unit._hasCloned) return;
+            unit._hasCloned = true;
+
+            const findSpawnCoords = (caller) => {
+                const occupiedYs = new Set(
+                    Object.values(this.combatants).filter(c => c && !c.dead && !c.isVCT).map(c => c.coordinates.y)
+                );
+                const preferredXs = [caller.coordinates.x, Math.max(0, caller.coordinates.x - 1), Math.min(MAX_DEPTH, caller.coordinates.x + 1)];
+                for (const x of preferredXs) {
+                    for (let y = 0; y < MAX_LANES; y++) {
+                        if (!occupiedYs.has(y) && !this.isTileOccupied(x, y)) {
+                            return { x, y };
+                        }
+                    }
+                }
+                // Fallback: search any free tile on right side (x >= 3)
+                for (let x = 3; x <= MAX_DEPTH; x++) {
+                    for (let y = 0; y < MAX_LANES; y++) {
+                        if (!this.isTileOccupied(x, y)) {
+                            return { x, y };
+                        }
+                    }
+                }
+                return null;
+            };
+
+            const coords1 = findSpawnCoords(unit);
+            if (!coords1) {
+                this.appendCombatLog(`${this.getCombatantLogName(unit)} tried to bifurcate, but no free tile was found.`);
+                return;
+            }
+
+            const tempId = `__bif_temp_${Date.now()}`;
+            this.combatants[tempId] = { dead: false, coordinates: coords1 };
+            const coords2 = findSpawnCoords(unit);
+            delete this.combatants[tempId];
+
+            if (!coords2) {
+                this.appendCombatLog(`${this.getCombatantLogName(unit)} tried to bifurcate, but couldn't find a second free tile.`);
+                return;
+            }
+
+            this.appendCombatLog(`${this.getCombatantLogName(unit)} splits into two smaller copies!`);
+
+            const originalHp = unit.hp;
+            const halfHp = Math.max(1, Math.floor(originalHp / 2));
+
+            // Set original to dead / bifurcating
+            unit.hp = 0;
+            unit.dead = true;
+            unit.bifurcating = true;
+
+            const makeCopy = (idSuffix, coords, nameSuffix) => {
+                const copyId = `${unit.id}_bif_${idSuffix}`;
+                const copy = {
+                    ...clone(unit),
+                    id: copyId,
+                    name: `${unit.name || 'Beholder Minion'}${nameSuffix}`,
+                    hp: halfHp,
+                    starting_hp: halfHp,
+                    stats: {
+                        ...unit.stats,
+                        hp: halfHp
+                    },
+                    coordinates: coords,
+                    dead: false,
+                    bifurcating: false,
+                    _hasCloned: true,
+                    isBifurcateCopy: true,
+                    isBifurcateSmall: true,
+                    specials: (unit.specials || []).filter(s => {
+                        const name = typeof s === 'string' ? s : (s.id || s.key || s.name || '');
+                        const norm = name.replace(/\s+/g, '_').toLowerCase();
+                        return norm !== 'bifurcate' && norm !== 'duplicate';
+                    }),
+                    attacks: ['claws'],
+                    actionsTakenThisRound: 0,
+                    movesTakenThisRound: 0,
+                    damageIndicators: [],
+                    activeBuffs: [],
+                    activeDebuffs: [],
+                    invisible: false,
+                    fadingIn: true
+                };
+                return copy;
+            };
+
+            const copy1 = makeCopy('1', coords1, ' α');
+            const copy2 = makeCopy('2', coords2, ' β');
+
+            this.combatants[copy1.id] = copy1;
+            this.combatants[copy2.id] = copy2;
+            this._setCombatantOccupiedCoords(copy1);
+            this._setCombatantOccupiedCoords(copy2);
+
+            setTimeout(() => {
+                copy1.fadingIn = false;
+                copy2.fadingIn = false;
+                if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+            }, 600);
+
+            if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+            return;
+        }
+
         if (abilityId === 'dragon_whirlwind') {
             const hOffset = (unit.coordinates.x >= 4) ? -1 : 1;
             const centerX = unit.coordinates.x + hOffset;
@@ -3842,18 +4123,22 @@ export function CombatManagerRedux() {
                 );
 
                 if (isAdjacent) {
-                    const dx = c.coordinates.x - centerX;
-                    const dy = c.coordinates.y - centerY;
-                    let pushX = 0;
-                    let pushY = 0;
+                    if (this.shouldPushbackSucceed(c)) {
+                        const dx = c.coordinates.x - centerX;
+                        const dy = c.coordinates.y - centerY;
+                        let pushX = 0;
+                        let pushY = 0;
 
-                    if (Math.abs(dx) >= Math.abs(dy)) {
-                        pushX = dx >= 0 ? 1 : -1;
+                        if (Math.abs(dx) >= Math.abs(dy)) {
+                            pushX = dx >= 0 ? 1 : -1;
+                        } else {
+                            pushY = dy >= 0 ? 1 : -1;
+                        }
+
+                        pushUnitCascade(c, pushX, pushY);
                     } else {
-                        pushY = dy >= 0 ? 1 : -1;
+                        this.appendCombatLog(`${this.getCombatantLogName(c)} resisted the push back from the Whirlwind!`);
                     }
-
-                    pushUnitCascade(c, pushX, pushY);
                 }
             });
 
@@ -3907,13 +4192,46 @@ export function CombatManagerRedux() {
 
         if (abilityId === 'bombard') {
             const center = { x: target.coordinates.x, y: target.coordinates.y };
+
+            // Safeguard: Ensure center is never adjacent to or on the caster
+            const casterCoords = unit.occupiedCoords || [unit.coordinates];
+            const isAdjacentOrOccupied = (x, y) => casterCoords.some(cc =>
+                Math.abs(cc.x - x) <= 1 && Math.abs(cc.y - y) <= 1
+            );
+
+            if (isAdjacentOrOccupied(center.x, center.y)) {
+                let foundSafe = false;
+                for (let d = 1; d < Math.max(MAX_DEPTH, MAX_LANES); d++) {
+                    for (let dx = -d; dx <= d; dx++) {
+                        for (let dy = -d; dy <= d; dy++) {
+                            if (Math.abs(dx) === d || Math.abs(dy) === d) {
+                                const tx = center.x + dx;
+                                const ty = center.y + dy;
+                                if (tx >= 0 && tx < MAX_DEPTH && ty >= 0 && ty < MAX_LANES) {
+                                    if (!isAdjacentOrOccupied(tx, ty)) {
+                                        center.x = tx;
+                                        center.y = ty;
+                                        foundSafe = true;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                        if (foundSafe) break;
+                    }
+                    if (foundSafe) break;
+                }
+            }
+
             const candidates = [];
             for (let dx = -1; dx <= 1; dx++) {
                 for (let dy = -1; dy <= 1; dy++) {
                     const tx = center.x + dx;
                     const ty = center.y + dy;
                     if (tx >= 0 && tx < MAX_DEPTH && ty >= 0 && ty < MAX_LANES) {
-                        candidates.push({ x: tx, y: ty });
+                        if (!isAdjacentOrOccupied(tx, ty)) {
+                            candidates.push({ x: tx, y: ty });
+                        }
                     }
                 }
             }
@@ -3938,7 +4256,7 @@ export function CombatManagerRedux() {
 
             this.appendCombatLog(`${this.getCombatantLogName(unit)} launches a devastating Bombardment! Warning shimmers appear on targeted tiles.`);
             if (this.animManagerRedux && typeof this.animManagerRedux.triggerAbility === 'function') {
-                this.animManagerRedux.triggerAbility(unit.coordinates, target.coordinates, 'bombard', false, null, unit.id);
+                this.animManagerRedux.triggerAbility(unit.coordinates, center, 'bombard', false, null, unit.id);
             }
             if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
             return;
@@ -3971,7 +4289,7 @@ export function CombatManagerRedux() {
                 }
             });
 
-            this.appendCombatLog(`${this.getCombatantLogName(unit)} breathes a cone of fire! Hits ${hitCount} enemies.`);
+            this.appendCombatLog(`${this.getCombatantLogName(unit)} unleashes Blue Dragon Breath! Hits ${hitCount} enemies.`);
             if (this.animManagerRedux && typeof this.animManagerRedux.triggerAbility === 'function') {
                 this.animManagerRedux.triggerAbility(unit.coordinates, target.coordinates, 'blue_dragon_breath', false, null, unit.id);
             }
@@ -4447,6 +4765,31 @@ export function CombatManagerRedux() {
                         this.appendCombatLog(`${this.getCombatantLogName(unit)} heals for ${healAmt} from Vampiric Bite.`);
                     }
 
+                    if (abilityId === 'shield_slam') {
+                        const dx = target.coordinates.x - unit.coordinates.x;
+                        const dy = target.coordinates.y - unit.coordinates.y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist > 0) {
+                            const pushX = Math.round(dx / dist);
+                            const pushY = Math.round(dy / dist);
+                            const newX = Math.max(0, Math.min(MAX_DEPTH, target.coordinates.x + pushX));
+                            const newY = Math.max(0, Math.min(MAX_LANES - 1, target.coordinates.y + pushY));
+
+                            if ((newX !== target.coordinates.x || newY !== target.coordinates.y)) {
+                                if (this.shouldPushbackSucceed(target)) {
+                                    if (!this.isTileOccupied(newX, newY, target.id)) {
+                                        this.updateUnitCoordinates(target, newX, newY);
+                                        this.appendCombatLog(`${this.getCombatantLogName(target)} is pushed back 1 space by Shield Slam!`);
+                                    } else {
+                                        this.appendCombatLog(`${this.getCombatantLogName(target)} could not be pushed back because the space was occupied!`);
+                                    }
+                                } else {
+                                    this.appendCombatLog(`${this.getCombatantLogName(target)} resisted the push back from Shield Slam!`);
+                                }
+                            }
+                        }
+                    }
+
                     if (abilityId === 'soul_suck') {
                         unit.soulSuckChanneling = {
                             targetId: target.id,
@@ -4556,9 +4899,17 @@ export function CombatManagerRedux() {
                             const newX = Math.max(0, Math.min(MAX_DEPTH, target.coordinates.x + pushX));
                             const newY = Math.max(0, Math.min(MAX_LANES - 1, target.coordinates.y + pushY));
 
-                            if ((newX !== target.coordinates.x || newY !== target.coordinates.y) && !this.isTileOccupied(newX, newY, target.id)) {
-                                this.updateUnitCoordinates(target, newX, newY);
-                                this.appendCombatLog(`${this.getCombatantLogName(target)} is pushed back by the force arrow!`);
+                            if ((newX !== target.coordinates.x || newY !== target.coordinates.y)) {
+                                if (this.shouldPushbackSucceed(target)) {
+                                    if (!this.isTileOccupied(newX, newY, target.id)) {
+                                        this.updateUnitCoordinates(target, newX, newY);
+                                        this.appendCombatLog(`${this.getCombatantLogName(target)} is pushed back by the force arrow!`);
+                                    } else {
+                                        this.appendCombatLog(`${this.getCombatantLogName(target)} could not be pushed back by the force arrow because the space was occupied!`);
+                                    }
+                                } else {
+                                    this.appendCombatLog(`${this.getCombatantLogName(target)} resisted the push back from the force arrow!`);
+                                }
                             }
                         }
                     }
@@ -4807,9 +5158,17 @@ export function CombatManagerRedux() {
                             const pushY = Math.round(dy / dist);
                             const newX = Math.max(0, Math.min(MAX_DEPTH, target.coordinates.x + pushX));
                             const newY = Math.max(0, Math.min(MAX_LANES - 1, target.coordinates.y + pushY));
-                            if ((newX !== target.coordinates.x || newY !== target.coordinates.y) && !this.isTileOccupied(newX, newY, target.id)) {
-                                this.updateUnitCoordinates(target, newX, newY);
-                                this.appendCombatLog(`${this.getCombatantLogName(target)} is pushed back by the force arrow!`);
+                            if ((newX !== target.coordinates.x || newY !== target.coordinates.y)) {
+                                if (this.shouldPushbackSucceed(target)) {
+                                    if (!this.isTileOccupied(newX, newY, target.id)) {
+                                        this.updateUnitCoordinates(target, newX, newY);
+                                        this.appendCombatLog(`${this.getCombatantLogName(target)} is pushed back by the force arrow!`);
+                                    } else {
+                                        this.appendCombatLog(`${this.getCombatantLogName(target)} could not be pushed back by the force arrow because the space was occupied!`);
+                                    }
+                                } else {
+                                    this.appendCombatLog(`${this.getCombatantLogName(target)} resisted the push back from the force arrow!`);
+                                }
                             }
                         }
                     }

@@ -300,7 +300,7 @@ class CrewManagerPage extends React.Component{
         if (!key) return;
         const minion = this.props.monsterManager.getMonster(key);
         if (!minion) return;
-        minion.id = minion.id + i + 700;
+        minion.id = minion.id + (i * 10) + 700;
         minion.name = this.pickRandom(minion.monster_names);
         minion.inventory = [];
         minions.push(minion);
@@ -362,7 +362,7 @@ class CrewManagerPage extends React.Component{
 
   removeEnemySlot = (slotType, index) => {
     if (slotType === 'monster') {
-        this.setState({ selectedMonsterKey: null });
+        this.setState({ selectedMonsterKey: null, selectedMinionKeys: [null, null, null, null] });
     } else {
         const keys = this.state.selectedMinionKeys.slice();
         keys[index] = null;
@@ -373,7 +373,16 @@ class CrewManagerPage extends React.Component{
   addEnemyFromRoster = (monsterKey) => {
     // Fill main monster slot first, then minion slots in order
     if (!this.state.selectedMonsterKey) {
-        this.setState({ selectedMonsterKey: monsterKey });
+        const monster = this.props.monsterManager.getMonster(monsterKey);
+        const defaultMinions = (monster && Array.isArray(monster.minions)) ? monster.minions : [];
+        const newMinions = [...defaultMinions];
+        while (newMinions.length < 4) {
+            newMinions.push(null);
+        }
+        this.setState({
+            selectedMonsterKey: monsterKey,
+            selectedMinionKeys: newMinions
+        });
         return;
     }
     const keys = this.state.selectedMinionKeys.slice();
@@ -495,13 +504,36 @@ class CrewManagerPage extends React.Component{
           });
       }
 
-      this.setMonster();
+      console.log('[DEBUG][CombatSimulator] submit() called. selectedMonsterKey:', this.state.selectedMonsterKey, 'selectedMinionKeys:', this.state.selectedMinionKeys);
+      // Calculate monster and minions synchronously
+      const useMonsterKey = this.state.selectedMonsterKey || 'mummy';
+      const useMinionKeys = this.state.selectedMinionKeys || [];
+      let monster = this.props.monsterManager.getMonster(useMonsterKey);
+      if(!monster) monster = this.props.monsterManager.getRandomMonster();
+      let monsterName = this.pickRandom(monster.monster_names)
+      monster.name = monsterName
+      monster.inventory = [];
+
+      let minions = [];
+      useMinionKeys.forEach((key, i) => {
+          if (!key) return;
+          const minion = this.props.monsterManager.getMonster(key);
+          if (!minion) return;
+          minion.id = minion.id + (i * 10) + 700;
+          minion.name = this.pickRandom(minion.monster_names);
+          minion.inventory = [];
+          minions.push(minion);
+      });
+      console.log('[DEBUG][CombatSimulator] computed monster:', monster, 'computed minions:', minions);
+
       if (this.state.useReduxCombat) {
           this.reduxCombatManager = new CombatManagerRedux();
       } else {
           this.reduxCombatManager = null;
       }
       this.setState({
+          monster,
+          minions,
           preppedCrew: clonedCrew,
           crewSelected: true
       });
