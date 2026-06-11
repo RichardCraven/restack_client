@@ -550,3 +550,117 @@
     opacity: 0.7;
   }
 }
+
+/* Power Ratings Trading Card Stat Panels */
+.codex-power-ratings {
+  background: linear-gradient(145deg, rgba(24, 18, 32, 0.95), rgba(12, 10, 18, 0.98));
+  border: 1px solid rgba(200, 155, 80, 0.35);
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: #d4c8b4;
+  font-family: 'Outfit', 'Inter', sans-serif;
+  margin-top: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  box-sizing: border-box;
+}
+
+.pe-power-header-top {
+  display: flex;
+  justify-content: flex-end;
+  border-bottom: 1px solid rgba(200, 155, 80, 0.25);
+  padding-bottom: 4px;
+  margin-bottom: 6px;
+}
+
+.pe-power-ticks-labels {
+  display: flex;
+  width: 58%;
+  justify-content: space-between;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: #8a7c6a;
+  padding-left: 2px;
+  box-sizing: border-box;
+}
+
+.pe-power-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pe-power-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 22px;
+}
+
+.pe-power-label {
+  width: 35%;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: #e8c48a;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pe-power-bar-container {
+  width: 58%;
+  height: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(200, 155, 80, 0.25);
+  border-radius: 2px;
+  position: relative;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.pe-power-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, rgba(212, 138, 48, 0.85), rgba(232, 196, 138, 0.95)); /* premium gold gradient */
+  border-right: 1px solid rgba(200, 155, 80, 0.4);
+  box-sizing: border-box;
+  box-shadow: 0 0 8px rgba(212, 138, 48, 0.3);
+}
+
+.pe-power-ticks-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+.pe-power-tick-line {
+  width: 1px;
+  height: 100%;
+  background: rgba(200, 155, 80, 0.18);
+}
+
+.pe-power-val {
+  width: 7%;
+  font-size: 11px;
+  font-weight: 700;
+  color: #d4c8b4;
+  text-align: right;
+}
+
+.pe-power-footer {
+  text-align: center;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  background: rgba(200, 155, 80, 0.12);
+  border: 1px solid rgba(200, 155, 80, 0.22);
+  color: #e8c48a;
+  padding: 4px 0;
+  margin-top: 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}

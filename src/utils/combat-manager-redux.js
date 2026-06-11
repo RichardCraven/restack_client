@@ -422,6 +422,24 @@ export function CombatManagerRedux() {
 
         this.data.crew.forEach((e, index) => {
             if (e && (e.dead === true || e.hp === 0)) return;
+
+            // Ensure fundamental abilities are always available
+            if (e.type === 'ranger') {
+                e.specials = e.specials || [];
+                if (!e.specials.includes('notch')) e.specials.push('notch');
+                e.attacks = e.attacks || [];
+                if (!e.attacks.includes('loose')) e.attacks.push('loose');
+            } else if (e.type === 'sage') {
+                e.attacks = e.attacks || [];
+                if (!e.attacks.includes('heal')) e.attacks.push('heal');
+            } else if (e.type === 'soldier') {
+                e.attacks = e.attacks || [];
+                if (!e.attacks.includes('slash')) e.attacks.push('slash');
+            } else if (e.type === 'barbarian') {
+                e.attacks = e.attacks || [];
+                if (!e.attacks.includes('barbarian_slash')) e.attacks.push('barbarian_slash');
+            }
+
             e.coordinates = { x: 0, y: index };
             e.color = colors[index % colors.length];
 
@@ -715,8 +733,7 @@ export function CombatManagerRedux() {
             return false;
         });
     };
-
-    this.shouldPushbackSucceed = (target) => {
+    this.shouldPushbackSucceed = (target, forceBoost = false) => {
         if (!target) return true;
         const isMonster = target.isMonster === true;
         const isMinion = target.isMinion === true;
@@ -729,9 +746,9 @@ export function CombatManagerRedux() {
                 || (typeof target.scale === 'number' && target.scale === 3)
             );
             if (targetIsHuge) {
-                return Math.random() >= 0.90; // 90% chance to fail
+                return forceBoost ? Math.random() >= 0.50 : Math.random() >= 0.90; // 50% fail if forced, else 90%
             }
-            return Math.random() >= 0.70; // 70% chance to fail
+            return forceBoost ? true : Math.random() >= 0.70; // 0% fail if forced, else 70%
         }
         return true;
     };
@@ -4526,7 +4543,7 @@ export function CombatManagerRedux() {
             );
             const isMeleeAbility = [
                 'claw_strike', 'claws', 'bite', 'crush', 'tackle', 'stomp', 'head_butt',
-                'slash', 'barbarian_slash', 'cleave', 'barbarian_cleave',
+                'slash', 'barbarian_slash', 'cleave', 'barbarian_cleave', 'imbued_strike',
                 'monk_punch', 'punch', 'force_punch', 'shield_slam', 'shield_bash'
             ].includes(abilityId);
 
@@ -4716,8 +4733,8 @@ export function CombatManagerRedux() {
                 }
 
                 let finalDmg = Math.round(this.damageCheck(unit, target, currentRawDmg) * dmgMult);
-                if (arrowType === 'celestial') {
-                    finalDmg = Math.round(finalDmg * 1.75);
+                if (arrowType === 'celestial' && target.subtype === 'undead') {
+                    finalDmg = Math.round(finalDmg * 1.5);
                 }
                 const isVampire = unit.type === 'vampire' || unit.key === 'vampire' || unit.id === 'vampire';
                 const hasCrimsonSight = unit.activeBuffs && unit.activeBuffs.some(b => b.name === 'Crimson Sight');
@@ -4911,7 +4928,7 @@ export function CombatManagerRedux() {
                             const newY = Math.max(0, Math.min(MAX_LANES - 1, target.coordinates.y + pushY));
 
                             if ((newX !== target.coordinates.x || newY !== target.coordinates.y)) {
-                                if (this.shouldPushbackSucceed(target)) {
+                                if (this.shouldPushbackSucceed(target, true)) {
                                     if (!this.isTileOccupied(newX, newY, target.id)) {
                                         this.updateUnitCoordinates(target, newX, newY);
                                         this.appendCombatLog(`${this.getCombatantLogName(target)} is pushed back by the force arrow!`);
@@ -4925,6 +4942,28 @@ export function CombatManagerRedux() {
                         }
                     }
 
+                    if (arrowType === 'celestial' && hitsSucceeded > 0 && Math.random() < 0.5) {
+                        this.appendCombatLog(`${this.getCombatantLogName(unit)}'s celestial arrow triggers a holy explosion!`);
+                        const splashTargets = Object.values(this.combatants).filter(c => {
+                            if (!c || c.dead || c.id === target.id) return false;
+                            const isEnemy = (!!unit.isMonster !== !!c.isMonster);
+                            if (!isEnemy) return false;
+                            const dx = Math.abs(c.coordinates.x - target.coordinates.x);
+                            const dy = Math.abs(c.coordinates.y - target.coordinates.y);
+                            return dx <= 1 && dy <= 1;
+                        });
+                        const splashDamage = Math.max(1, Math.round((rawDamage || 10) * 0.5));
+                        splashTargets.forEach(c => {
+                            c.hp = Math.max(0, c.hp - splashDamage);
+                            this.wakeSleepingTarget(c, 'Celestial Explosion');
+                            c.damageIndicators = c.damageIndicators || [];
+                            c.damageIndicators.push({ id: Date.now() + Math.random(), value: `-${splashDamage}`, source: 'Celestial Explosion', type: 'damage' });
+                            if (c.hp <= 0) this.targetKilled(c);
+                        });
+                        if (typeof this.addAnimation === 'function') {
+                            this.addAnimation({ type: 'celestial_arrow_hit', x: target.coordinates.x, y: target.coordinates.y, id: Date.now() });
+                        }
+                    }
                     // Process side effects (stun, frozen, ensnared, fear, poison, bleed, sleep)
                     const resolvedEffects = effects.filter(e => typeof e === 'object' && e && e.type);
                     // Fortitude-based resistance: target's fort stat grants % chance to resist certain ailments
@@ -5116,8 +5155,8 @@ export function CombatManagerRedux() {
                 const dmgMult = target.weaknessRevealed ? 1.25 : 1.0;
                 let finalDmg = Math.round(this.damageCheck(ranger, target, baseDamage) * dmgMult);
 
-                if (arrowType === 'celestial') {
-                    finalDmg = Math.round(finalDmg * 1.75);
+                if (arrowType === 'celestial' && target.subtype === 'undead') {
+                    finalDmg = Math.round(finalDmg * 1.5);
                 }
 
                 if (finalDmg > 0) {
@@ -5170,7 +5209,7 @@ export function CombatManagerRedux() {
                             const newX = Math.max(0, Math.min(MAX_DEPTH, target.coordinates.x + pushX));
                             const newY = Math.max(0, Math.min(MAX_LANES - 1, target.coordinates.y + pushY));
                             if ((newX !== target.coordinates.x || newY !== target.coordinates.y)) {
-                                if (this.shouldPushbackSucceed(target)) {
+                                if (this.shouldPushbackSucceed(target, true)) {
                                     if (!this.isTileOccupied(newX, newY, target.id)) {
                                         this.updateUnitCoordinates(target, newX, newY);
                                         this.appendCombatLog(`${this.getCombatantLogName(target)} is pushed back by the force arrow!`);
@@ -5181,6 +5220,28 @@ export function CombatManagerRedux() {
                                     this.appendCombatLog(`${this.getCombatantLogName(target)} resisted the push back from the force arrow!`);
                                 }
                             }
+                        }
+                    }
+                    if (arrowType === 'celestial' && Math.random() < 0.5) {
+                        this.appendCombatLog(`${this.getCombatantLogName(ranger)}'s celestial arrow triggers a holy explosion!`);
+                        const splashTargets = Object.values(this.combatants).filter(c => {
+                            if (!c || c.dead || c.id === target.id) return false;
+                            const isEnemy = (!!ranger.isMonster !== !!c.isMonster);
+                            if (!isEnemy) return false;
+                            const dx = Math.abs(c.coordinates.x - target.coordinates.x);
+                            const dy = Math.abs(c.coordinates.y - target.coordinates.y);
+                            return dx <= 1 && dy <= 1;
+                        });
+                        const splashDamage = Math.max(1, Math.round((baseDamage || 10) * 0.5));
+                        splashTargets.forEach(c => {
+                            c.hp = Math.max(0, c.hp - splashDamage);
+                            this.wakeSleepingTarget(c, 'Celestial Explosion');
+                            c.damageIndicators = c.damageIndicators || [];
+                            c.damageIndicators.push({ id: Date.now() + Math.random(), value: `-${splashDamage}`, source: 'Celestial Explosion', type: 'damage' });
+                            if (c.hp <= 0) this.targetKilled(c);
+                        });
+                        if (typeof this.addAnimation === 'function') {
+                            this.addAnimation({ type: 'celestial_arrow_hit', x: target.coordinates.x, y: target.coordinates.y, id: Date.now() });
                         }
                     }
                 }

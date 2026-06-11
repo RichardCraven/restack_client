@@ -159,6 +159,42 @@ export function MonsterManager() {
             ]
         },
         // ── Level 6 ──────────────────────────────────────────────────────
+        ghoul: {
+            type: 'ghoul',
+            tier: 2,
+            subtype: 'undead',
+            key: 'ghoul',
+            image_names: ['ghoul'],
+            monster_names: [],
+            stats: { hp: 1, atk: 0, def: 0, speed: 0, willpower: 0, str: 0, int: 0, dex: 0, fort: 0 },
+            level: 6,
+            portrait: images['ghoul_portrait'],
+            greetings: [], deathCries: [], specials: [], attacks: [], weaknesses: [], drops: []
+        },
+        blalok: {
+            type: 'blalok',
+            tier: 2,
+            subtype: 'aberration',
+            key: 'blalok',
+            image_names: ['blalok'],
+            monster_names: [],
+            stats: { hp: 1, atk: 0, def: 0, speed: 0, willpower: 0, str: 0, int: 0, dex: 0, fort: 0 },
+            level: 6,
+            portrait: images['blalok'],
+            greetings: [], deathCries: [], specials: [], attacks: [], weaknesses: [], drops: []
+        },
+        shade: {
+            type: 'shade',
+            tier: 2,
+            subtype: 'undead',
+            key: 'shade',
+            image_names: ['shade'],
+            monster_names: [],
+            stats: { hp: 1, atk: 0, def: 0, speed: 0, willpower: 0, str: 0, int: 0, dex: 0, fort: 0 },
+            level: 6,
+            portrait: images['shade'],
+            greetings: [], deathCries: [], specials: [], attacks: [], weaknesses: [], drops: []
+        },
         troll: {
             type: 'troll',
             tier: 2,
@@ -344,42 +380,7 @@ export function MonsterManager() {
                 { itemPool: TIER2_WEAPONS, percentChance: 45 },
             ]
         },
-        ghoul: {
-            type: 'ghoul',
-            tier: 2,
-            subtype: 'undead',
-            key: 'ghoul',
-            image_names: ['ghoul'],
-            monster_names: [],
-            stats: { hp: 1, atk: 0, def: 0, speed: 0, willpower: 0, str: 0, int: 0, dex: 0, fort: 0 },
-            level: 1,
-            portrait: images['ghoul_portrait'],
-            greetings: [], deathCries: [], specials: [], attacks: [], weaknesses: [], drops: []
-        },
-        blalok: {
-            type: 'blalok',
-            tier: 2,
-            subtype: 'aberration',
-            key: 'blalok',
-            image_names: ['blalok'],
-            monster_names: [],
-            stats: { hp: 1, atk: 0, def: 0, speed: 0, willpower: 0, str: 0, int: 0, dex: 0, fort: 0 },
-            level: 1,
-            portrait: images['blalok'],
-            greetings: [], deathCries: [], specials: [], attacks: [], weaknesses: [], drops: []
-        },
-        shade: {
-            type: 'shade',
-            tier: 2,
-            subtype: 'undead',
-            key: 'shade',
-            image_names: ['shade'],
-            monster_names: [],
-            stats: { hp: 1, atk: 0, def: 0, speed: 0, willpower: 0, str: 0, int: 0, dex: 0, fort: 0 },
-            level: 1,
-            portrait: images['shade'],
-            greetings: [], deathCries: [], specials: [], attacks: [], weaknesses: [], drops: []
-        },
+
         // ── Level 11 ─────────────────────────────────────────────────────
         goat_demon: {
             type: 'goat_demon',

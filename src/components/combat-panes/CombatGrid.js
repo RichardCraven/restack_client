@@ -1208,7 +1208,7 @@ export default function CombatGrid(props) {
                     </div>
                     {selectedFighter?.id === fighter.id && !fighter.dead && (
                         <div className="circular-progress selected" style={{
-                            background: `conic-gradient(${getManualMovementArcColor(getFighterDetails(fighter))} ${getManualMovementArc(getFighterDetails(fighter))}deg, black 0deg)`,
+                            background: `conic-gradient(${getManualMovementArcColor(getFighterDetails(fighter))} ${getManualMovementArc(getFighterDetails(fighter))}deg, transparent 0deg)`,
                         }}>
                             <div className="inner-circle" />
                         </div>
@@ -1261,6 +1261,10 @@ export default function CombatGrid(props) {
                         weaponStyle = { left: `${(tileW / 2) - (weaponW / 2)}px`, top: '110px', opacity: 1, backgroundImage: `url(${icon})`, transform: 'rotate(90deg)' };
                     } else {
                         weaponStyle = { left: `${(tileW / 2) - (weaponW / 2)}px`, top: '50px', opacity: 1, backgroundImage: `url(${icon})` };
+                    }
+
+                    if (details.pendingAttack && details.pendingAttack.id === 'imbued_strike') {
+                        weaponStyle.filter = 'drop-shadow(0 0 8px rgba(0, 240, 255, 0.9)) drop-shadow(0 0 12px rgba(0, 240, 255, 0.6))';
                     }
 
                     const verticalFacingClass = details.facing === 'up' ? 'facing-up' : (details.facing === 'down' ? 'facing-down' : '');
@@ -2870,7 +2874,7 @@ export default function CombatGrid(props) {
                             left: '50%',
                             top: '50%',
                             width: '120px',
-                            height: '8px',
+                            height: '6px',
                             transform: `translate(-100%, -50%) rotate(${anim.angle}deg)`,
                             transformOrigin: '100% 50%',
                             pointerEvents: 'none',
@@ -2884,29 +2888,28 @@ export default function CombatGrid(props) {
                                     transform: 'translateY(-50%)',
                                     width: 0,
                                     height: 0,
-                                    borderTop: '4px solid transparent',
-                                    borderBottom: '4px solid transparent',
-                                    borderLeft: `8px solid ${arrowColor}`,
-                                    filter: `drop-shadow(0 0 4px ${arrowColor})`
+                                    borderTop: '3px solid transparent',
+                                    borderBottom: '3px solid transparent',
+                                    borderLeft: `6px solid ${arrowColor}`,
+                                    filter: `drop-shadow(0 0 3px ${arrowColor})`
                                 }} />
                                 {/* Arrow shaft - tapered tail */}
                                 <div style={{
                                     position: 'absolute',
-                                    right: '8px',
+                                    right: '6px',
                                     top: '50%',
                                     transform: 'translateY(-50%)',
-                                    width: '112px',
-                                    height: '6px',
+                                    width: '108px',
+                                    height: '4px',
                                     background: `linear-gradient(to left, ${arrowColor}, transparent)`,
                                     clipPath: 'polygon(0% 50%, 100% 10%, 100% 90%)',
-                                    boxShadow: `0 0 6px ${arrowColor}40`
+                                    boxShadow: `0 0 4px ${arrowColor}40`
                                 }} />
                                 {/* Poison droplets */}
                                 {anim.arrowType === 'poison' && (
                                     <>
-                                        <div style={{ position: 'absolute', left: '5px', top: '-4px', width: '4px', height: '4px', borderRadius: '50%', background: '#38b000', opacity: 0.8, animation: 'poisonDrop 0.35s ease-out infinite', boxShadow: '0 0 4px #38b000' }} />
-                                        <div style={{ position: 'absolute', left: '15px', top: '8px', width: '3px', height: '3px', borderRadius: '50%', background: '#4ade80', opacity: 0.7, animation: 'poisonDrop 0.35s ease-out 0.12s infinite', boxShadow: '0 0 3px #4ade80' }} />
-                                        <div style={{ position: 'absolute', left: '10px', top: '-6px', width: '3px', height: '3px', borderRadius: '50%', background: '#22c55e', opacity: 0.6, animation: 'poisonDrop 0.35s ease-out 0.24s infinite', boxShadow: '0 0 3px #22c55e' }} />
+                                        <div style={{ position: 'absolute', left: '3px', top: '-3px', width: '3px', height: '3px', borderRadius: '50%', background: '#38b000', opacity: 0.7, animation: 'poisonDrop 0.3s ease-out infinite', boxShadow: '0 0 3px #38b000' }} />
+                                        <div style={{ position: 'absolute', left: '10px', top: '6px', width: '2px', height: '2px', borderRadius: '50%', background: '#4ade80', opacity: 0.6, animation: 'poisonDrop 0.3s ease-out 0.1s infinite' }} />
                                     </>
                                 )}
                             </div>
@@ -3697,6 +3700,42 @@ export default function CombatGrid(props) {
                     WebkitMaskImage: 'radial-gradient(circle, rgba(0,0,0,1) 30%, rgba(0,0,0,0.5) 55%, rgba(0,0,0,0) 75%)',
                     filter: 'drop-shadow(0 0 14px #a855f7) drop-shadow(0 0 28px #7b2cbf)',
                 }} />
+            );
+        }
+        if (anim.type === 'celestial_arrow_hit' && anim.x !== undefined && anim.y !== undefined) {
+            const px = {
+                x: tilePos(anim.x) + TILE_SIZE / 2,
+                y: tilePos(anim.y) + TILE_SIZE / 2
+            };
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: `${px.x}px`,
+                    top: `${px.y}px`,
+                    width: '160px',
+                    height: '160px',
+                    transform: 'translate(-50%, -50%)',
+                    pointerEvents: 'none',
+                    zIndex: 4200,
+                }}>
+                    <div style={{
+                        width: '100%', height: '100%',
+                        position: 'absolute', top: 0, left: 0,
+                        animation: 'scaleUpFadeOut 0.5s ease-out forwards',
+                        background: 'radial-gradient(circle, rgba(255,255,255,0.9) 10%, rgba(255,221,87,0.7) 40%, transparent 70%)',
+                        boxShadow: '0 0 20px rgba(255,255,255,0.8), 0 0 40px rgba(255,221,87,0.5)',
+                        borderRadius: '50%',
+                        mixBlendMode: 'screen'
+                    }} />
+                    <div style={{
+                        width: '100%', height: '100%',
+                        position: 'absolute', top: 0, left: 0,
+                        animation: 'scaleUpFadeOut 0.7s ease-out forwards',
+                        border: '4px solid rgba(255, 255, 255, 0.6)',
+                        borderRadius: '50%',
+                        boxShadow: '0 0 10px rgba(255, 221, 87, 0.8)'
+                    }} />
+                </div>
             );
         }
 

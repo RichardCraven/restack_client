@@ -388,7 +388,7 @@ const skillsMatrix = {
         name: 'Slash',
         desc: 'Execute a heavy steel blade slash.',
         icon: images['soldier_slash'],
-        cooldown: 1,
+        cooldown: 0,
         duration: 'instant',
         range: 'close',
         type: 'damage'

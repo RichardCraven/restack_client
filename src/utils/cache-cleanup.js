@@ -254,7 +254,7 @@ export function resolveMonsterPools(dungeon, monsters) {
 
     Object.keys(monsters).forEach(monsterKey => {
         const monster = monsters[monsterKey];
-        if (!monster || typeof monster.tier !== 'number') return;
+        if (!monster || typeof monster.tier !== 'number' || monster.isMinion || monster.isSummoned) return;
         const poolKey = `tier_${monster.tier}_monster`;
         if (pools[poolKey]) {
             pools[poolKey].push(monsterKey);

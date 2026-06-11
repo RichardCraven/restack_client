@@ -237,17 +237,15 @@
         .actions-tray{
             color: white;
             overflow: hidden;
-            transition: all 1s;
-            height: 0px;
-            min-height: 0px;
+            transition: max-height 0.4s ease-in-out, padding 0.4s ease-in-out;
+            max-height: 0px;
             border: 1px solid #bbbbb84d;
             display: flex;
             justify-content: flex-start;
             align-items: center;
             // padding-left: 21px;
             &.expanded{
-                height: auto;
-                min-height: 50px;
+                max-height: 500px;
                 padding: 10px 0;
             }
             .crew-action-item{
@@ -935,6 +933,7 @@
                     transition: width 300ms ease; /* match HP bar transition */
                 }
             }
+
             .hp-line-container{
                 height: 6px;
                 width: 100%;
@@ -951,23 +950,20 @@
             }
             .actions-tray{
                 color: white;
-                // height: 0px;
                 overflow: hidden;
-                transition: all 1s;
+                transition: max-height 0.4s ease-in-out, padding 0.4s ease-in-out;
                 border: 1px solid #bbbbb84d;
                 width: calc(100% - 40px);
                 padding: 0px 20px;
-                height: 0px;
-                min-height: 0px;
+                max-height: 0px;
                 position: relative;
+                flex-shrink: 0;
                 &.expanded{
-                    height: auto;
-                    min-height: 50px;
+                    max-height: 500px;
                     overflow: visible;
                 }
                 &.double-expanded{
-                    height: auto;
-                    min-height: 50px;
+                    max-height: 1500px;
                     overflow: visible;
                 }
                 .actions-container{

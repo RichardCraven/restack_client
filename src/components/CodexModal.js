@@ -3,6 +3,89 @@ import skillsMatrix from '../utils/skills-matrix';
 import * as images from '../utils/images';
 import { DURATION_ROUNDS } from '../utils/shared-constants';
 
+const CLASS_BASE_STATS = {
+    wizard:    { str: 3, int: 7, dex: 5, fort: 7, hp: 10 },
+    soldier:   { str: 8, int: 5, dex: 6, fort: 7, hp: 11 },
+    monk:      { str: 5, int: 6, dex: 7, fort: 7, hp: 10 },
+    sage:      { str: 3, int: 7, dex: 5, fort: 7, hp: 10 },
+    ranger:    { str: 5, int: 5, dex: 6, fort: 3, hp: 10 },
+    barbarian: { str: 8, int: 3, dex: 4, fort: 6, hp: 52 },
+    engineer:  { str: 5, int: 6, dex: 7, fort: 6, hp: 10 },
+    summoner:  { str: 3, int: 8, dex: 5, fort: 6, hp: 10 },
+};
+
+function PowerRatingsPanel({ stats, classId, footerText }) {
+    let s = stats || {};
+    if (classId && CLASS_BASE_STATS[classId]) {
+        const base = CLASS_BASE_STATS[classId];
+        s = {
+            str: base.str,
+            int: base.int,
+            dex: base.dex,
+            fort: base.fort,
+            speed: Math.round(base.dex * 1.5),
+            def: Math.round((base.str + base.dex) / 2),
+            hp: base.hp
+        };
+    }
+
+    const strVal  = typeof s.str === 'number' ? s.str : 0;
+    const spdVal  = typeof s.speed === 'number' ? s.speed : (typeof s.spd === 'number' ? s.spd : 0);
+    const dexVal  = typeof s.dex === 'number' ? s.dex : 0;
+    const fortVal = typeof s.fort === 'number' ? s.fort : 0;
+    const defVal  = typeof s.def === 'number' ? s.def : 0;
+    const intVal  = typeof s.int === 'number' ? s.int : 0;
+    const hpVal   = typeof s.hp === 'number' ? s.hp : 0;
+
+    const items = [
+        { label: 'STRENGTH',     val: strVal,  max: 15 },
+        { label: 'SPEED',        val: spdVal,  max: 20 },
+        { label: 'AGILITY',      val: dexVal,  max: 15 },
+        { label: 'STAMINA',      val: fortVal, max: 15 },
+        { label: 'DURABILITY',   val: defVal,  max: 20 },
+        { label: 'INTELLIGENCE', val: intVal,  max: 15 },
+        { label: 'HEALTH (HP)',  val: hpVal,   max: 500 }
+    ];
+
+    return (
+        <div className="codex-power-ratings">
+            <div className="pe-power-header-top">
+                <div className="pe-power-ticks-labels">
+                    <span>0</span>
+                    <span>1</span>
+                    <span>2</span>
+                    <span>3</span>
+                    <span>4</span>
+                    <span>5</span>
+                    <span>6</span>
+                    <span>7</span>
+                </div>
+            </div>
+            <div className="pe-power-grid">
+                {items.map((item, idx) => {
+                    const rating = Math.min(7, Math.max(0, Math.round((item.val / item.max) * 7)));
+                    const fillPct = (rating / 7) * 100;
+                    return (
+                        <div key={idx} className="pe-power-row">
+                            <span className="pe-power-label">{item.label}</span>
+                            <div className="pe-power-bar-container">
+                                <div className="pe-power-bar-fill" style={{ width: `${fillPct}%` }} />
+                                <div className="pe-power-ticks-overlay">
+                                    {[0, 1, 2, 3, 4, 5, 6, 7].map(i => (
+                                        <div key={i} className="pe-power-tick-line" />
+                                    ))}
+                                </div>
+                            </div>
+                            <span className="pe-power-val">{item.val}</span>
+                        </div>
+                    );
+                })}
+            </div>
+            {footerText && <div className="pe-power-footer">{footerText}</div>}
+        </div>
+    );
+}
+
 // ── Interactables / dungeon objects catalogue ────────────────────────────────
 
 const INTERACTABLES = [
@@ -172,6 +255,8 @@ const MONSTER_LORE = {
     witch:            { lore: 'A shadowy hex-caster who curses, dispels, and whispers demonic commands.', tactics: 'Purge curses with Sage. High willpower units resist hex effects.' },
     beholder:         { lore: 'A floating eyeball horror with multiple magical ray attacks, each with a different effect.', tactics: 'Divide attention — keep crew spread to avoid being caught by multiple rays.' },
     ghoul:            { lore: 'A ravenous undead predator. Tears flesh and can paralyze with its bite.', tactics: 'Poison and acid are effective. Paralysis breaks your action economy — purge fast.' },
+    hagigah:          { lore: 'The demonlord overseer of the outer reaches. Drawn to the tower by insatiable hunger.' },
+    hashmallim:       { lore: "The tower's old custodian, torn in two by infinite contradictions." },
 };
 
 // ── Classes info ─────────────────────────────────────────────────────────────
@@ -245,7 +330,7 @@ export default function CodexModal({ visible, onClose, monsterManager }) {
     });
 
     // ── Monsters data
-    const monsters = monsterManager ? Object.values(monsterManager.monsters || {}) : [];
+    const monsters = monsterManager ? Object.values(monsterManager.monsters || {}).filter(m => !m.isSummoned) : [];
     const filteredMonsters = monsters.filter(m => !q || (m.type||'').includes(q) || (MONSTER_LORE[m.type] || {}).lore?.toLowerCase().includes(q));
 
     // ── Classes
@@ -565,13 +650,7 @@ function MonsterDetail({ monster }) {
                 </div>
             </div>
             {lore.lore && <div className="codex-detail-desc">{lore.lore}</div>}
-            <div className="codex-detail-stats">
-                {stats.hp   != null && <CodexStat label="HP"    value={stats.hp}   color="#c94040" />}
-                {stats.atk  != null && <CodexStat label="ATK"   value={stats.atk}  color="#d48a30" />}
-                {stats.def  != null && <CodexStat label="DEF"   value={stats.def}  color="#4a86c8" />}
-                {stats.spd  != null && <CodexStat label="SPD"   value={stats.spd}  />}
-                {stats.speed!= null && <CodexStat label="SPD"   value={stats.speed}/>}
-            </div>
+            <PowerRatingsPanel stats={stats} footerText="Monster Power Ratings" />
             {monster.weaknesses && monster.weaknesses.length > 0 && (
                 <div className="codex-detail-effects">
                     <div className="codex-effects-label" style={{ color: '#c94040' }}>Weaknesses</div>
@@ -612,6 +691,7 @@ function ClassDetail({ cls, allSkills }) {
                 </div>
             </div>
             <div className="codex-detail-desc">{cls.desc}</div>
+            <PowerRatingsPanel classId={cls.id} footerText={`${cls.name} Power Ratings`} />
             {classSkills.length > 0 && (
                 <div className="codex-detail-effects">
                     <div className="codex-effects-label">Abilities ({classSkills.length})</div>

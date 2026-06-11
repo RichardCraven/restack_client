@@ -2839,6 +2839,9 @@ class DungeonPage extends React.Component {
         const rawItems = Array.isArray(lootInput) ? lootInput : [lootInput];
         const newItems = rawItems.map(item => {
             let resolvedIcon = item.icon;
+            if (typeof resolvedIcon === 'string' && images[resolvedIcon]) {
+                resolvedIcon = images[resolvedIcon];
+            }
             if (resolvedIcon && typeof resolvedIcon === 'object') {
                 resolvedIcon = resolvedIcon.default || resolvedIcon;
             }

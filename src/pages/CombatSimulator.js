@@ -474,15 +474,21 @@ class CrewManagerPage extends React.Component{
                   const selectedTier = this.getSimSkillTier(member.type);
                   member.specials = filterSpecialsByTier(member.specials, selectedTier);
 
-                  // Ensure notch and loose are always available for Ranger
+                  // Ensure fundamental abilities are always available
                   if (member.type === 'ranger') {
-                      if (!member.specials.includes('notch')) {
-                          member.specials.push('notch');
-                      }
+                      member.specials = member.specials || [];
+                      if (!member.specials.includes('notch')) member.specials.push('notch');
                       member.attacks = member.attacks || [];
-                      if (!member.attacks.includes('loose')) {
-                          member.attacks.push('loose');
-                      }
+                      if (!member.attacks.includes('loose')) member.attacks.push('loose');
+                  } else if (member.type === 'sage') {
+                      member.attacks = member.attacks || [];
+                      if (!member.attacks.includes('heal')) member.attacks.push('heal');
+                  } else if (member.type === 'soldier') {
+                      member.attacks = member.attacks || [];
+                      if (!member.attacks.includes('slash')) member.attacks.push('slash');
+                  } else if (member.type === 'barbarian') {
+                      member.attacks = member.attacks || [];
+                      if (!member.attacks.includes('barbarian_slash')) member.attacks.push('barbarian_slash');
                   }
 
                   // Gear assignment
