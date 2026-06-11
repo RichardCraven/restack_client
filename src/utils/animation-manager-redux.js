@@ -655,10 +655,22 @@ export class AnimationManagerRedux {
   }
 
   _monkPunch(src, tgt, name) {
+    let targetCoords = tgt;
+    if (this._isTargetLarge && Array.isArray(this._currentTargetOccupiedCoords) && this._currentTargetOccupiedCoords.length > 0) {
+      let minDist = Infinity;
+      this._currentTargetOccupiedCoords.forEach(tc => {
+        const dist = Math.abs(src.x - tc.x) + Math.abs(src.y - tc.y);
+        if (dist < minDist) {
+          minDist = dist;
+          targetCoords = tc;
+        }
+      });
+    }
+
     const srcPx = this._px(src);
-    const tgtPx = this._px(tgt);
-    const dx = src.x - tgt.x;
-    const dy = src.y - tgt.y;
+    const tgtPx = this._px(targetCoords);
+    const dx = src.x - targetCoords.x;
+    const dy = src.y - targetCoords.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
     const colStep = dist > 0 ? Math.round(dx / dist) : 0;
     const rowStep = dist > 0 ? Math.round(dy / dist) : 0;

@@ -5423,6 +5423,7 @@ class DungeonPage extends React.Component {
 
             // Deduct food
             meta.food = currentFood - FOOD_COST;
+            member.lastTrained = new Date().toISOString();
             try { storeMeta(meta); } catch(e) {}
             try { if (typeof this.props.saveUserData === 'function') this.props.saveUserData(); } catch(e) {}
 
@@ -6257,7 +6258,13 @@ class DungeonPage extends React.Component {
                                     const progress = member.trainingProgress || { str: 0, dex: 0, fort: 0, int: 0 };
                                     const memberId = member.id || member.name;
                                     const result = (this.state.trainingResults || {})[memberId];
-                                    const alreadyTrained = !!result;
+                                    
+                                    const COOLDOWN_MS = 24 * 60 * 60 * 1000;
+                                    const lastTrainedTime = member.lastTrained ? new Date(member.lastTrained).getTime() : 0;
+                                    const remainingMs = Math.max(0, COOLDOWN_MS - (Date.now() - lastTrainedTime));
+                                    const hasCooldown = remainingMs > 0;
+                                    
+                                    const alreadyTrained = !!result || hasCooldown;
                                     const canAfford = currentFood >= FOOD_COST && !alreadyTrained;
 
                                     return (
@@ -6303,14 +6310,22 @@ class DungeonPage extends React.Component {
                                                 })}
                                             </div>
 
-                                            {/* Result toast */}
-                                            {result && (
+                                            {/* Result / Cooldown status */}
+                                            {result ? (
                                                 <div className={`training-result-toast${result.statGained ? ' gained' : result.delta === 0 ? ' failed' : ''}`}>
                                                     {result.message}
                                                 </div>
-                                            )}
+                                            ) : hasCooldown ? (
+                                                <div className="training-result-toast" style={{ background: 'rgba(255, 255, 255, 0.05)', color: '#aaa', border: '1px dashed #444', animation: 'none' }}>
+                                                    <span role="img" aria-label="hourglass">⏳</span> Cooldown: {(() => {
+                                                        const hours = Math.floor(remainingMs / 3600000);
+                                                        const minutes = Math.floor((remainingMs % 3600000) / 60000);
+                                                        return `${hours}h ${minutes}m remaining`;
+                                                    })()}
+                                                </div>
+                                            ) : null}
 
-                                            {/* Drill selector (hidden if already trained this session) */}
+                                            {/* Drill selector (hidden if already trained or on cooldown) */}
                                             {!alreadyTrained && (
                                                 <TrainingDrillPicker
                                                     member={member}

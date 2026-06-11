@@ -1,22 +1,39 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 
 const Typewriter = ({ text, delay }) => {
-  const [currentText, setCurrentText] = useState('');
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const spanRef = useRef(null);
 
-  // Typing logic goes here
   useEffect(() => {
-    if (currentIndex < text.length) {
-      const timeout = setTimeout(() => {
-        setCurrentText(prevText => prevText + text[currentIndex]);
-        setCurrentIndex(prevIndex => prevIndex + 1);
-      }, delay);
-  
-      return () => clearTimeout(timeout);
-    }
-  }, [currentIndex, delay, text]);
+    if (!spanRef.current) return;
+    spanRef.current.textContent = '';
+    
+    let currentIndex = 0;
+    let lastTime = performance.now();
+    let frameId;
 
-  return <span>{currentText}</span>;
+    const tick = (now) => {
+      const elapsed = now - lastTime;
+      const charsToType = Math.floor(elapsed / delay);
+
+      if (charsToType > 0) {
+        currentIndex = Math.min(text.length, currentIndex + charsToType);
+        spanRef.current.textContent = text.slice(0, currentIndex);
+        lastTime = now - (elapsed % delay);
+      }
+
+      if (currentIndex < text.length) {
+        frameId = requestAnimationFrame(tick);
+      }
+    };
+
+    frameId = requestAnimationFrame(tick);
+
+    return () => {
+      cancelAnimationFrame(frameId);
+    };
+  }, [text, delay]);
+
+  return <span ref={spanRef} />;
 };
 
 export default Typewriter;
