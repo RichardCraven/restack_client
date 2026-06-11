@@ -1,6 +1,7 @@
 import React from 'react';
 import skillsMatrix from '../utils/skills-matrix';
 import * as images from '../utils/images';
+import { DURATION_ROUNDS } from '../utils/shared-constants';
 
 // ── Interactables / dungeon objects catalogue ────────────────────────────────
 
@@ -190,8 +191,9 @@ const CLASS_LORE = [
 const TABS = [
     { id: 'skills',         label: 'Skills',         emoji: '⚡' },
     { id: 'monsters',       label: 'Monsters',       emoji: '👹' },
-    { id: 'classes',        label: 'Classes',        emoji: '🧑‍🤝‍🧑' },
+    { id: 'classes',        label: 'Classes',        emoji: '🧑\u200d🤝\u200d🧑' },
     { id: 'interactables',  label: 'World',          emoji: '🗺️' },
+    { id: 'pyre_echo',      label: 'Pyre & Echo',    emoji: '🃏' },
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -454,6 +456,13 @@ export default function CodexModal({ visible, onClose, monsterManager }) {
                             </div>
                         </>
                     )}
+
+                    {/* ── PYRE & ECHO tab ──────────────────────────── */}
+                    {activeTab === 'pyre_echo' && (
+                        <div className="codex-pyre-echo">
+                            <PyreEchoRules />
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
@@ -464,6 +473,46 @@ export default function CodexModal({ visible, onClose, monsterManager }) {
 
 function SkillDetail({ skill }) {
     const iconSrc = resolveImg(skill.icon);
+
+    // Resolve duration label: "short (3 rounds)" or "instant"
+    const resolveDurationLabel = (dur) => {
+        if (!dur || dur === 'instant') return 'Instant';
+        if (typeof dur === 'number') return `${dur} rounds`;
+        const rounds = DURATION_ROUNDS[dur];
+        return rounds != null ? `${dur} (${rounds} rounds)` : dur;
+    };
+
+    // Damage description for damage-type skills
+    const damageNote = (() => {
+        if (skill.damage == null) {
+            if (skill.type && (skill.type.includes('damage') || skill.type.includes('heal'))) {
+                if (skill.id === 'execute') {
+                    return '3 hits of 75% of caster ATK';
+                }
+                if (skill.damagePercent) {
+                    return `${skill.damagePercent}% of caster ATK`;
+                }
+                const isSpell = ['wizard', 'sage', 'summoner'].includes(skill.class);
+                if (isSpell) {
+                    return '100% of caster ATK (scales with INT)';
+                }
+                return '100% of caster ATK';
+            }
+            return null;
+        }
+        if (typeof skill.damage === 'string') {
+            return skill.damage;
+        }
+        if (skill.damage < 0) {
+            return `Restores ~${Math.abs(skill.damage)} HP (base, scales with INT)`;
+        }
+        const isSpell = ['wizard', 'sage', 'summoner'].includes(skill.class);
+        if (isSpell) {
+            return `Base damage: ${skill.damage} (+ caster ATK modifier, scales with INT)`;
+        }
+        return `Base damage: ${skill.damage} (+ caster ATK modifier)`;
+    })();
+
     return (
         <div className="codex-detail-inner">
             <div className="codex-detail-header">
@@ -478,7 +527,8 @@ function SkillDetail({ skill }) {
             <div className="codex-detail-desc">{skill.desc || 'No description available.'}</div>
             <div className="codex-detail-stats">
                 {skill.cooldown != null && <CodexStat label="Cooldown" value={skill.cooldown === 0 ? 'None' : `${skill.cooldown} turns`} />}
-                {skill.duration && <CodexStat label="Duration" value={skill.duration} />}
+                {skill.duration && <CodexStat label="Duration" value={resolveDurationLabel(skill.duration)} />}
+                {damageNote && <CodexStat label="Damage" value={damageNote} color="#e08080" />}
                 {skill.range && <CodexStat label="Range" value={skill.range} />}
                 {skill.tier && <CodexStat label="Tier" value={skill.tier} />}
                 {skill.isPassive && <CodexStat label="Passive" value="Yes — always active" />}
@@ -488,7 +538,11 @@ function SkillDetail({ skill }) {
                     <div className="codex-effects-label">Effects</div>
                     <div className="codex-effects-list">
                         {(Array.isArray(skill.effect) ? skill.effect : [skill.effect]).map((e, i) => (
-                            <span key={i} className="codex-effect-pill">{typeof e === 'object' ? `${e.type} (${e.chance}%)` : e}</span>
+                            <span key={i} className="codex-effect-pill">
+                                {typeof e === 'object'
+                                    ? `${e.type} (${e.chance}%${e.duration ? ` · ${resolveDurationLabel(e.duration)}` : ''})`
+                                    : e}
+                            </span>
                         ))}
                     </div>
                 </div>
@@ -619,3 +673,156 @@ function CodexStat({ label, value, color }) {
         </div>
     );
 }
+
+// ── Pyre & Echo Rules component ───────────────────────────────────────────────
+function PyreEchoRules() {
+    const ECHO_TABLE = [
+        { monster: 'Goblin',            effect: 'Frenzy — Deal 5 damage. Free to play (0 Energy).',                  rarity: 'Common' },
+        { monster: 'Skeleton',          effect: 'Undying Grasp — Negate all Reaper damage this turn.',               rarity: 'Common' },
+        { monster: 'Ghoul',             effect: 'Ghoul Swarm — Deal 3 damage. Costs only 1 Energy.',                 rarity: 'Common' },
+        { monster: 'Troll',             effect: 'Regenerate — Restore 4 Soul.',                                       rarity: 'Uncommon' },
+        { monster: 'Vampire',           effect: 'Life Drain — Deal 3 damage and gain 3 Soul.',                        rarity: 'Uncommon' },
+        { monster: 'Mummy',             effect: 'Ancient Curse — Reaper loses 2 Energy next turn.',                   rarity: 'Uncommon' },
+        { monster: 'Wraith',            effect: 'Haunt — Deal 4 piercing damage (ignores all defenses).',             rarity: 'Uncommon' },
+        { monster: 'Ogre',              effect: 'Earthshatter — Deal 4 damage, reduce Reaper next attack by 2.',      rarity: 'Uncommon' },
+        { monster: 'Djinn',             effect: 'Wish — Draw 2 cards immediately.',                                   rarity: 'Uncommon' },
+        { monster: 'Gorgon',            effect: 'Stone Glare — Deal 4 damage.',                                       rarity: 'Uncommon' },
+        { monster: 'Witch',             effect: 'Hex Curse — Reaper\'s next card is discarded before play.',          rarity: 'Rare' },
+        { monster: 'Beholder',          effect: 'Petrifying Gaze — Reaper skips their entire next turn.',             rarity: 'Rare' },
+        { monster: 'Sphinx',            effect: 'Riddle — Answer a riddle. Correct: 8 damage. Wrong: 2 damage.',      rarity: 'Rare' },
+        { monster: 'Dragon',            effect: 'Inferno — Deal 10 damage to the Reaper.',                            rarity: 'Rare' },
+        { monster: 'Kabuki Demon',      effect: 'Demon Illusion — Dodge all Reaper damage for 2 turns.',              rarity: 'Rare' },
+        { monster: 'Hagigah',           effect: 'Divine Judgment — Deal 6 damage to the Reaper.',                     rarity: 'Rare' },
+        { monster: 'Hashmallim',        effect: 'Holy Light — Restore 5 Soul.',                                       rarity: 'Rare' },
+        { monster: 'Precipice Guardian',effect: 'Guardian\'s Ward — Block all Reaper damage for 2 turns.',            rarity: 'Rare' },
+    ];
+
+    const GLOBAL_SKILL_BONUSES = [
+        { skill: 'strong_resolve',  class: 'Soldier',  bonus: 'Player starting Soul +5' },
+        { skill: 'iron_will',       class: 'Soldier',  bonus: 'Survive a lethal hit at 1 Soul (once per duel)' },
+        { skill: 'focused_rest',    class: 'Monk',     bonus: 'Start each turn with 4 Energy instead of 3' },
+        { skill: 'mend',            class: 'Sage',     bonus: "Sage's Mend ability restores 4 Soul instead of 2" },
+        { skill: 'revive',          class: 'Sage',     bonus: 'Discarded crew champion re-enters deck once per duel' },
+        { skill: 'awake_refreshed', class: 'Various',  bonus: 'Draw +1 card at turn start' },
+        { skill: 'bloodhound',      class: 'Barbarian',bonus: "Reveals the Reaper's next card name before they play" },
+        { skill: 'arcane_sense',    class: 'Wizard',   bonus: '+1 bonus Energy per turn' },
+        { skill: 'soul_tithe',      class: 'Summoner', bonus: 'Each Echo card played restores 1 Soul' },
+        { skill: 'spirit_sight',    class: 'Summoner', bonus: "Spirit insight — passive awareness of Reaper's draw patterns" },
+        { skill: 'keen_eye',        class: 'Ranger',   bonus: '10% passive dodge chance against all Reaper attacks' },
+    ];
+
+    const rarityColor = r => r === 'Rare' ? '#9b64c9' : r === 'Uncommon' ? '#4a86c8' : '#666';
+
+    return (
+        <div className="pe-rules-scroll">
+            {/* Title */}
+            <div className="pe-rules-title">🃏 Pyre &amp; Echo — How to Play</div>
+
+            {/* Overview */}
+            <div className="pe-rules-section">
+                <div className="pe-rules-heading">Overview</div>
+                <p className="pe-rules-text">
+                    Pyre &amp; Echo is a soul card duel against the Reaper. Reduce the Reaper's <strong>Soul</strong> to 0 before he reduces yours. The cards in your deck are your actual crew members — the stronger they are in the dungeon, the stronger they are here.
+                </p>
+            </div>
+
+            {/* Turn Structure */}
+            <div className="pe-rules-section">
+                <div className="pe-rules-heading">Turn Structure</div>
+                <div className="pe-rules-steps">
+                    <div className="pe-rules-step"><span className="pe-step-num">1</span><div><strong>DRAW</strong> — Fill your hand to 3 cards (draw from deck or reshuffle discard).</div></div>
+                    <div className="pe-rules-step"><span className="pe-step-num">2</span><div><strong>PLAY</strong> — Play any cards you can afford with your Energy (3 per turn). Each card has a cost shown in the top-right gem.</div></div>
+                    <div className="pe-rules-step"><span className="pe-step-num">3</span><div><strong>ATTACK</strong> — Champion cards contribute their ATK to a shared damage pool automatically when played. Press End Turn to send the attack.</div></div>
+                    <div className="pe-rules-step"><span className="pe-step-num">4</span><div><strong>REAPER RESPONDS</strong> — The Reaper draws and plays cards from its own deck, then attacks.</div></div>
+                </div>
+            </div>
+
+            {/* Champion Cards */}
+            <div className="pe-rules-section">
+                <div className="pe-rules-heading">Champion Cards (Crew Members)</div>
+                <p className="pe-rules-text">Each living crew member becomes a Champion Card. Their real dungeon stats determine card strength:</p>
+                <div className="pe-rules-stat-grid">
+                    <div className="pe-rules-stat-row"><span className="pe-rs-label">⚔ ATK</span><span>1 + floor(STR ÷ 3)</span></div>
+                    <div className="pe-rules-stat-row"><span className="pe-rs-label">⚡ Dodge</span><span>DEX × 4 %</span></div>
+                    <div className="pe-rules-stat-row"><span className="pe-rs-label">💎 Energy Cost</span><span>max(1, 4 − floor(FORT ÷ 3))</span></div>
+                    <div className="pe-rules-stat-row"><span className="pe-rs-label">+Draw</span><span>+1 card if INT ≥ 5</span></div>
+                </div>
+                <p className="pe-rules-text" style={{ marginTop: 8 }}>Each class also has a unique ability triggered when that champion is played.</p>
+            </div>
+
+            {/* Echo Cards */}
+            <div className="pe-rules-section">
+                <div className="pe-rules-heading">Echo Cards (Monster Cards)</div>
+                <p className="pe-rules-text">
+                    When you defeat a monster in combat, there's a chance a <strong>Soul Shard</strong> drops. Collect 3 Shards of the same monster type and visit the <em>Pyre &amp; Echo</em> camp station to forge an Echo Card. You can have up to 4 Echo Cards active in your deck at once.
+                </p>
+                <p className="pe-rules-text" style={{ marginBottom: 8 }}>
+                    Shard drop chances: Tier 1 (30%) → Tier 2 (20%) → Tier 3 (12%) → Tier 4+ (7%).
+                </p>
+                <div className="pe-echo-table">
+                    <div className="pe-echo-table-header">
+                        <span>Monster</span><span>Effect</span><span>Rarity</span>
+                    </div>
+                    {ECHO_TABLE.map(row => (
+                        <div key={row.monster} className="pe-echo-table-row">
+                            <span className="pe-echo-monster">{row.monster}</span>
+                            <span className="pe-echo-effect">{row.effect}</span>
+                            <span style={{ color: rarityColor(row.rarity), fontSize: 10, fontWeight: 600 }}>{row.rarity}</span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* Global Skills */}
+            <div className="pe-rules-section">
+                <div className="pe-rules-heading">Global Skill Cross-Overs</div>
+                <p className="pe-rules-text">Shrines unlock Global Skills that carry over into Pyre &amp; Echo:</p>
+                <div className="pe-gs-table">
+                    {GLOBAL_SKILL_BONUSES.map(row => (
+                        <div key={row.skill} className="pe-gs-row">
+                            <div className="pe-gs-skill">{row.skill.replace(/_/g, ' ')}</div>
+                            <div className="pe-gs-class" style={{ color: classColor(row.class.toLowerCase()) }}>{row.class}</div>
+                            <div className="pe-gs-bonus">{row.bonus}</div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* Win / Lose */}
+            <div className="pe-rules-section">
+                <div className="pe-rules-heading">Stakes</div>
+                <p className="pe-rules-text">
+                    <strong style={{ color: '#c9a84c' }}>Win:</strong> The Reaper is banished. Your crew continues unharmed.<br />
+                    <strong style={{ color: '#c94040' }}>Lose:</strong> A soul tax of 25% of your gold is forfeited. (Scrimmage mode has no penalty.)
+                </p>
+            </div>
+
+            <style>{`
+                .pe-rules-scroll { padding: 20px 24px; overflow-y: auto; height: 100%; font-family: 'Inter', sans-serif; color: #e8e0d0; }
+                .pe-rules-title { font-family: 'Cinzel', serif; font-size: 20px; font-weight: 700; color: #c9a84c; letter-spacing: 0.08em; margin-bottom: 20px; }
+                .pe-rules-section { margin-bottom: 24px; }
+                .pe-rules-heading { font-family: 'Cinzel', serif; font-size: 13px; font-weight: 700; color: #9b64c9; letter-spacing: 0.07em; margin-bottom: 8px; border-bottom: 1px solid rgba(155,100,201,0.2); padding-bottom: 4px; }
+                .pe-rules-text { font-size: 12px; color: #a09080; line-height: 1.65; margin: 0; }
+                .pe-rules-steps { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
+                .pe-rules-step { display: flex; gap: 10px; align-items: flex-start; font-size: 12px; color: #c8b898; line-height: 1.5; }
+                .pe-step-num { width: 22px; height: 22px; border-radius: 50%; background: rgba(155,100,201,0.2); border: 1px solid rgba(155,100,201,0.4); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #9b64c9; flex-shrink: 0; }
+                .pe-rules-stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px; }
+                .pe-rules-stat-row { background: rgba(255,255,255,0.04); border-radius: 6px; padding: 6px 10px; display: flex; justify-content: space-between; font-size: 11px; color: #a09080; }
+                .pe-rs-label { font-weight: 600; color: #c9a84c; }
+                .pe-echo-table { border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; overflow: hidden; margin-top: 8px; }
+                .pe-echo-table-header { display: grid; grid-template-columns: 140px 1fr 70px; gap: 8px; padding: 7px 10px; background: rgba(155,100,201,0.12); font-size: 10px; font-weight: 700; color: #9b64c9; letter-spacing: 0.08em; }
+                .pe-echo-table-row { display: grid; grid-template-columns: 140px 1fr 70px; gap: 8px; padding: 6px 10px; border-top: 1px solid rgba(255,255,255,0.05); font-size: 11px; align-items: center; }
+                .pe-echo-table-row:hover { background: rgba(255,255,255,0.03); }
+                .pe-echo-monster { font-weight: 600; color: #e8e0d0; }
+                .pe-echo-effect { color: #a09080; line-height: 1.4; }
+                .pe-gs-table { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+                .pe-gs-row { display: grid; grid-template-columns: 140px 80px 1fr; gap: 8px; background: rgba(255,255,255,0.03); border-radius: 6px; padding: 6px 10px; font-size: 11px; align-items: center; }
+                .pe-gs-skill { font-weight: 600; color: #e8e0d0; text-transform: capitalize; }
+                .pe-gs-class { font-size: 10px; font-weight: 600; }
+                .pe-gs-bonus { color: #a09080; }
+                .codex-pyre-echo { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+            `}</style>
+        </div>
+    );
+}
+

@@ -444,6 +444,22 @@ const computeHitVars = (combatant, getHitAnimation) => {
     };
 };
 
+// Resolve portrait/icon to a string URL
+const resolvePortrait = (portraitVal) => {
+    if (!portraitVal) return '';
+    if (typeof portraitVal === 'string') {
+        const mapped = images[portraitVal];
+        if (mapped) {
+            return mapped.default || mapped;
+        }
+        return portraitVal;
+    }
+    if (typeof portraitVal === 'object') {
+        return portraitVal.default || '';
+    }
+    return '';
+};
+
 // Compute pixel position for a tile coordinate
 const tilePos = (coord) => coord * TILE_SIZE + (SHOW_TILE_BORDERS ? coord * 2 : 0);
 
@@ -919,7 +935,7 @@ export default function CombatGrid(props) {
                     <div
                         className={portraitClasses}
                         style={{
-                            backgroundImage: `url(${images[fighter.portrait]?.default || images[fighter.portrait] || fighter.portrait})`,
+                            backgroundImage: `url(${resolvePortrait(fighter.portrait)})`,
                             opacity: combatManager.getCombatant(fighter.id)?.astralBeingActive ? 0.55 : 1,
                             filter: [
                                 details?.chargingUpActive ? "url('#ripple-effect')" : null,
@@ -1204,13 +1220,13 @@ export default function CombatGrid(props) {
                     const target = liveFighter?.targetId ? combatManager.getCombatant(liveFighter.targetId) : null;
                     return target?.portrait && !target?.invisible && !details?.dead ? (
                         <div className="monster-target-indicator" style={{ zIndex: 310, position: 'absolute' }}>
-                            <div className="monster-target-portrait" style={{ backgroundImage: `url(${images[target.portrait]?.default || images[target.portrait] || target.portrait})` }} />
+                            <div className="monster-target-portrait" style={{ backgroundImage: `url(${resolvePortrait(target.portrait)})` }} />
                         </div>
                     ) : null;
                 })()}
                 {consumableFlashes[fighter.id] && !details?.dead && (
                     <div className="fighter-consumable-indicator" style={{ zIndex: 310, position: 'absolute' }}>
-                        <div className="fighter-consumable-portrait" style={{ backgroundImage: `url(${images[consumableFlashes[fighter.id]]})` }} />
+                        <div className="fighter-consumable-portrait" style={{ backgroundImage: `url(${resolvePortrait(consumableFlashes[fighter.id])})` }} />
                     </div>
                 )}
                 {/* Attack Weapon Swing Animation (par parity with Sandbox / fighters.js) */}
@@ -1488,7 +1504,7 @@ export default function CombatGrid(props) {
                     <div
                         className={portraitClasses}
                         style={{
-                            backgroundImage: unit.portrait ? `url(${images[unit.portrait]?.default || images[unit.portrait] || unit.portrait})` : 'none',
+                            backgroundImage: unit.portrait ? `url(${resolvePortrait(unit.portrait)})` : 'none',
                             filter: `${unit.portraitFilter || ''} sepia(${portraitHoveredId === unit.id ? '2' : '0'}) ${liveMonster.frozen ? 'hue-rotate(165deg) saturate(1.35) brightness(1.08) contrast(1.05)' : ''} ${meltScales[unit.id] !== undefined ? `url(#melt-effect-${unit.id})` : ''}`,
                             zIndex: isMinion ? 2 : 1,
                             position: 'relative',
@@ -1703,13 +1719,13 @@ export default function CombatGrid(props) {
                         const target = unit.targetId ? combatManager?.getCombatant?.(unit.targetId) : null;
                         return target?.portrait && !isDead ? (
                             <div className="monster-target-indicator" style={{ zIndex: 10 }}>
-                                <div className="monster-target-portrait" style={{ backgroundImage: `url(${images[target.portrait]?.default || images[target.portrait] || target.portrait})` }} />
+                                <div className="monster-target-portrait" style={{ backgroundImage: `url(${resolvePortrait(target.portrait)})` }} />
                             </div>
                         ) : null;
                     })()}
                     {/* Stolen item */}
                     {(() => {
-                        const stolenImg = unit.stolenItemIcon ? (images[unit.stolenItemIcon] || unit.stolenItemIcon) : null;
+                        const stolenImg = unit.stolenItemIcon ? resolvePortrait(unit.stolenItemIcon) : null;
                         return stolenImg && !isDead ? (
                             <div className="monster-stolen-item-indicator" style={{ zIndex: 10 }}>
                                 <div className="monster-stolen-item-portrait" style={{ backgroundImage: `url(${stolenImg})` }} />

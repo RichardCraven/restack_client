@@ -314,11 +314,101 @@
                 height: 100%;
                 transition: width 0.6s linear;
             }
-            @keyframes campProgress{
-                from { width: 0%; }
-                to { width: 100%; }
+        }
+
+        @keyframes campProgress{
+            from { width: 0%; }
+            to { width: 100%; }
+        }
+
+        /* Always-visible quick-action button strip */
+        .quick-actions-strip {
+            padding: 6px 8px;
+            border-top: 1px solid rgba(255,255,255,0.08);
+
+            /* Camp progress overlay — same rules as .crew-actions-tray */
+            .action-row {
+                position: relative;
+                min-height: 36px;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                height: 100%;
+                width: 100%;
+                justify-content: center;
+            }
+            .camp-label {
+                display: flex;
+                position: relative;
+                line-height: 20px;
+                padding: 4px 6px;
+                height: 100%;
+                width: 100%;
+                align-items: center;
+                color: white;
+                font-size: 12px;
+                border-radius: 4px;
+                overflow: hidden;
+                min-height: 36px;
+                background: rgba(249,177,21,0.08);
+                border: 1px solid rgba(249,177,21,0.2);
+            }
+            .progress-overlay.debug-placeholder {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                box-sizing: border-box;
+                display: block;
+                z-index: 2;
+                pointer-events: none;
+            }
+            .progress-overlay.camp-anim {
+                position: absolute;
+                top: 0;
+                left: 0;
+                background-color: rgba(249,177,21,0.45);
+                width: 0%;
+                transition: none;
+                animation-name: campProgress;
+                animation-timing-function: linear;
+                animation-fill-mode: forwards;
+                height: 100%;
+                z-index: 1;
+                pointer-events: none;
+            }
+            .progress-overlay.camp-static {
+                background-color: rgba(249,177,21,0.45);
+                width: 0%;
+                height: 100%;
+                transition: width 0.6s linear;
             }
         }
+
+        .quick-actions-btns {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 2px;
+        }
+        .quick-action-btn {
+            background: transparent;
+            border: none;
+            color: rgba(255,255,255,0.7);
+            font-size: 12px;
+            text-align: left;
+            padding: 5px 8px;
+            cursor: pointer;
+            border-radius: 5px;
+            width: 100%;
+            transition: background 0.15s, color 0.15s;
+            &:hover {
+                background: rgba(255,255,255,0.07);
+                color: #f9b115;
+            }
+        }
+
         /* When crew-container is placed on the right panel, reuse the left-panel styling
            but render crew tiles horizontally with optional horizontal scrolling. */
         .crew-container{

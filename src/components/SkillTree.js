@@ -6,6 +6,7 @@ import '../styles/skill-tree.scss';
 const SkillTree = ({ crewMember, onClose }) => {
     const containerRef = useRef(null);
     const [lines, setLines] = useState([]);
+    const [selectedSkill, setSelectedSkill] = useState(null);
     
     // We need to keep references to the DOM nodes of each skill to draw lines between them
     const nodeRefs = useRef({});
@@ -170,17 +171,27 @@ const SkillTree = ({ crewMember, onClose }) => {
                                 return (
                                     <div key={`${pathName}-tier-${tier}`} className="skill-tier-row">
                                         {skillsInTier.map(skill => {
-                                            const isKnown = skill.knownByDefault;
+                                            const gsRecord = crewMember.globalSkills && crewMember.globalSkills.find(gs => {
+                                                const k = typeof gs === 'string' ? gs : gs.key;
+                                                return k === skill.id;
+                                            });
+                                            const isKnown = skill.knownByDefault || !!gsRecord;
+                                            const level = gsRecord ? (typeof gsRecord === 'string' ? 1 : (gsRecord.level || 1)) : (skill.knownByDefault ? 1 : 0);
                                             return (
                                                 <div 
                                                     key={skill.id} 
                                                     ref={(el) => setNodeRef(skill.id, el)}
                                                     className={`skill-node ${isKnown ? 'known' : 'locked'}`}
-                                                    title={`${skill.name}\n${skill.desc}\nCooldown: ${skill.cooldown}`}
+                                                    title={`${skill.name}\n${skill.desc}${level > 0 ? `\nLevel: ${level}` : ''}\nCooldown: ${skill.cooldown}`}
+                                                    onClick={() => setSelectedSkill({
+                                                        ...skill,
+                                                        isKnown,
+                                                        level
+                                                    })}
                                                 >
                                                     <div className="skill-node-icon-wrapper">
                                                         <img src={skill.icon || images.avatar} alt={skill.name} />
-                                                        {isKnown && <div className="known-badge">✓</div>}
+                                                        {isKnown && <div className="known-badge">{level > 1 ? `L${level}` : '✓'}</div>}
                                                     </div>
                                                 </div>
                                             );
@@ -193,6 +204,52 @@ const SkillTree = ({ crewMember, onClose }) => {
                     ))}
                 </div>
             </div>
+
+            {selectedSkill && (
+                <div className="skill-details-overlay" onClick={() => setSelectedSkill(null)}>
+                    <div className="skill-details-modal" onClick={(e) => e.stopPropagation()}>
+                        <button className="skill-details-close-btn" onClick={() => setSelectedSkill(null)}>✕</button>
+                        <div className="skill-details-header">
+                            <div className="skill-details-icon-frame">
+                                <img src={selectedSkill.icon || images.avatar} alt={selectedSkill.name} />
+                            </div>
+                            <div className="skill-details-title-group">
+                                <h3>{selectedSkill.name}</h3>
+                                <span className="skill-details-type">{selectedSkill.type ? selectedSkill.type.toUpperCase() : 'PASSIVE'}</span>
+                            </div>
+                        </div>
+                        <div className="skill-details-body">
+                            <p className="skill-details-description">{selectedSkill.desc}</p>
+                            <div className="skill-details-stats">
+                                {selectedSkill.cooldown !== undefined && (
+                                    <div className="skill-stat-row">
+                                        <span className="stat-label">Cooldown:</span>
+                                        <span className="stat-value">{selectedSkill.cooldown === 0 || selectedSkill.cooldown === '0' ? 'None' : `${selectedSkill.cooldown} Rounds`}</span>
+                                    </div>
+                                )}
+                                {selectedSkill.range && (
+                                    <div className="skill-stat-row">
+                                        <span className="stat-label">Range:</span>
+                                        <span className="stat-value" style={{ textTransform: 'capitalize' }}>{selectedSkill.range}</span>
+                                    </div>
+                                )}
+                                {selectedSkill.level > 0 && (
+                                    <div className="skill-stat-row">
+                                        <span className="stat-label">Current Level:</span>
+                                        <span className="stat-value" style={{ color: '#ffd700', fontWeight: 'bold' }}>Level {selectedSkill.level}</span>
+                                    </div>
+                                )}
+                                <div className="skill-stat-row">
+                                    <span className="stat-label">Status:</span>
+                                    <span className={`stat-value status-${selectedSkill.isKnown ? 'known' : 'locked'}`} style={{ fontWeight: 'bold', color: selectedSkill.isKnown ? '#32cd32' : '#ff4500' }}>
+                                        {selectedSkill.isKnown ? 'Learned ✓' : 'Locked 🔒'}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

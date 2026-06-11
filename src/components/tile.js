@@ -119,7 +119,14 @@ function Tile(props) {
 
     const toCssUrl = (rawUrl) => {
         if (!rawUrl) return undefined;
-        const normalizedUrl = String(rawUrl).trim().replace(/^['"]|['"]$/g, '');
+        let unwrapped = rawUrl;
+        if (typeof unwrapped === 'object') {
+            unwrapped = unwrapped.default || '';
+        }
+        if (typeof unwrapped === 'object') {
+            unwrapped = unwrapped.default || '';
+        }
+        const normalizedUrl = String(unwrapped).trim().replace(/^['"]|['"]$/g, '');
         return `url("${encodeURI(normalizedUrl)}")`;
     };
 

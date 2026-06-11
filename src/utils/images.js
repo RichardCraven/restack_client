@@ -326,6 +326,7 @@ import dungeon_portal from '../assets/icons/portals/dungeon portal.png';
 import black_magic from '../assets/icons/magic/black_magic.png';
 import fireball from '../assets/icons/combat-icons/specials/wizard/fireball.png';
 import grimoire from '../assets/icons/magic/grimoire.png';
+import pyre_echo_card from '../assets/icons/misc/pyre_echo_card.png';
 import necromancy from '../assets/icons/magic/necromancy.png';
 import exp from '../assets/icons/misc/exp related/exp.png';
 import spell from '../assets/icons/magic/spell.png';
@@ -763,6 +764,29 @@ import codex from '../assets/icons/codex.png';
 import awake_refreshed_sage from '../assets/icons/global skills/Sage/awake refreshed.png';
 import awake_refreshed_soldier from '../assets/icons/global skills/Soldier/awake refreshed.png';
 import strong_resolve_soldier from '../assets/icons/global skills/Soldier/strong resolve.png';
+import scrounging_rat from '../assets/icons/global skills/Ranger/scrounging rat.png';
+import fastidious_crow from '../assets/icons/global skills/Ranger/fastidious crow.png';
+import herbalism_sage from '../assets/icons/global skills/Sage/herbalism.png';
+import ritual_efficiency_sage from '../assets/icons/global skills/Sage/ritual efficiency.png';
+import revive_sage from '../assets/icons/global skills/Sage/revive.png';
+import breacher_soldier from '../assets/icons/global skills/Soldier/breacher.png';
+import rally_soldier from '../assets/icons/global skills/Soldier/rally.png';
+import iron_will_soldier from '../assets/icons/global skills/Soldier/iron will.png';
+import ley_tap_wizard from '../assets/icons/global skills/Wizard/ley tap.png';
+import dimensional_pocket_wizard from '../assets/icons/global skills/Wizard/dimensional pocket.png';
+import scry_wizard from '../assets/icons/global skills/Wizard/scry.png';
+import iron_gut_barbarian from '../assets/icons/global skills/Barbarian/iron gut.png';
+import savage_haul_barbarian from '../assets/icons/global skills/Barbarian/savage haul.png';
+import bloodhound_barbarian from '../assets/icons/global skills/Barbarian/bloodhound.png';
+import endure_barbarian from '../assets/icons/global skills/Barbarian/endure.png';
+import swift_step_monk from '../assets/icons/global skills/Monk/swift step.png';
+import pressure_points_monk from '../assets/icons/global skills/Monk/pressure points.png';
+import astral_map_monk from '../assets/icons/global skills/Monk/astral map.png';
+import spirit_sight_summoner from '../assets/icons/global skills/Summoner/spirit sight.png';
+import plunder_summoner from '../assets/icons/global skills/Summoner/plunder.png';
+import soul_tithe_summoner from '../assets/icons/global skills/Summoner/soul tithe.png';
+import dark_pact_summoner from '../assets/icons/global skills/Summoner/dark pact.png';
+
 
 //terrain
 import terrain_1 from '../assets/icons/terrain/stone-1.png'
@@ -1266,6 +1290,7 @@ export {
     black_magic,
     fireball,
     grimoire,
+    pyre_echo_card,
     necromancy,
     exp,
     spell,
@@ -1706,5 +1731,27 @@ export {
     awake_refreshed_sage,
     awake_refreshed_soldier,
     strong_resolve_soldier,
+    scrounging_rat,
+    fastidious_crow,
+    herbalism_sage,
+    ritual_efficiency_sage,
+    revive_sage,
+    breacher_soldier,
+    rally_soldier,
+    iron_will_soldier,
+    ley_tap_wizard,
+    dimensional_pocket_wizard,
+    scry_wizard,
+    iron_gut_barbarian,
+    savage_haul_barbarian,
+    bloodhound_barbarian,
+    endure_barbarian,
+    swift_step_monk,
+    pressure_points_monk,
+    astral_map_monk,
+    spirit_sight_summoner,
+    plunder_summoner,
+    soul_tithe_summoner,
+    dark_pact_summoner,
     codex
 };

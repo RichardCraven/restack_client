@@ -2061,6 +2061,29 @@ export function BoardManager(){
             if (ct === 'avatar' || ct === 'camp') { tile.contains = null; }
         };
 
+        // Check if this board has an active Fastidious Crow scout reveal
+        let isScoutedAreaActive = false;
+        let scoutRowStart = 0, scoutRowEnd = 0, scoutColStart = 0, scoutColEnd = 0;
+        try {
+            const meta = getMeta() || {};
+            if (meta.scoutActive && meta.scoutActive.scoutedArea) {
+                const now = new Date();
+                const start = new Date(meta.scoutActive.endDate);
+                const end = new Date(meta.scoutActive.scoutedArea.revealUntil);
+                if (now >= start && now < end &&
+                    this.currentOrientation === 'F' &&
+                    this.currentLevel.id === meta.scoutActive.scoutedArea.levelId &&
+                    this.playerTile.boardIndex === meta.scoutActive.scoutedArea.boardIndex) {
+                    
+                    isScoutedAreaActive = true;
+                    scoutRowStart = meta.scoutActive.scoutedArea.startRow;
+                    scoutRowEnd = scoutRowStart + 9;
+                    scoutColStart = meta.scoutActive.scoutedArea.startCol;
+                    scoutColEnd = scoutColStart + 9;
+                }
+            }
+        } catch (e) {}
+
         const destCoords = this.getCoordinatesFromIndex(destinationTile.id);
         this.tiles.forEach((e) => {
             try {
@@ -2069,8 +2092,14 @@ export function BoardManager(){
                 const dx = Math.abs(coords[0] - destCoords[0]);
                 const dy = Math.abs(coords[1] - destCoords[1]);
                 const manhattan = dx + dy;
-                // Reveal tiles within radius 2 that are reachable through unblocked edges.
-                if (manhattan <= 2 && visibleTileIds.has(e.id) && this.getContainsType(e.contains) !== 'void') {
+                
+                // Check if this tile falls within the scouted 10x10 area
+                const inScoutedArea = isScoutedAreaActive &&
+                    coords[0] >= scoutRowStart && coords[0] <= scoutRowEnd &&
+                    coords[1] >= scoutColStart && coords[1] <= scoutColEnd;
+
+                // Reveal tiles within radius 2 that are reachable OR within the scouted area
+                if ((inScoutedArea || (manhattan <= 2 && visibleTileIds.has(e.id))) && this.getContainsType(e.contains) !== 'void') {
                     const persistedColor = (this.currentBoard && this.currentBoard.tiles && this.currentBoard.tiles[e.id] && this.currentBoard.tiles[e.id].color);
                     const persistedBorders = (this.currentBoard && this.currentBoard.tiles && this.currentBoard.tiles[e.id] && this.currentBoard.tiles[e.id].borders);
                     const runtimeColor = (e.color && e.color !== 'black') ? e.color : null;
@@ -2080,7 +2109,7 @@ export function BoardManager(){
                     e.borders = this.normalizeFogBorders(persistedBorders);
                 }
             } catch (err) {}
-    });
+        });
 
         // Vendor visibility rule:
         // - If player is cardinal-adjacent to any tile in a vendor 2x2 group,

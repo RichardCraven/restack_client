@@ -94,6 +94,7 @@ export function MonsterManager() {
         // ── Level 4 (minion) ─────────────────────────────────────────────
         kabuki_demon_minion: {
             type: 'kabuki_demon_minion',
+            isMinion: true,
             tier: 1,
             subtype: 'demon',
             key: 'kabuki_demon_minion',
@@ -126,6 +127,7 @@ export function MonsterManager() {
         // ── Level 5 (minion) ─────────────────────────────────────────────
         beholder_minion: {
             type: 'beholder_minion',
+            isMinion: true,
             tier: 1,
             subtype: 'eldritch',
             key: 'beholder_minion',
@@ -670,6 +672,8 @@ export function MonsterManager() {
         },
         dragon_egg: {
             type: 'dragon_egg',
+            isMinion: true,
+            isSummoned: true,
             tier: 1,
             subtype: 'construct',
             key: 'dragon_egg',
@@ -766,10 +770,11 @@ export function MonsterManager() {
     }
     this.getRandomMonster = () => {
         // return this.monsters['sphinx']
-        return this.pickRandom(Object.values(this.monsters))
+        const available = Object.values(this.monsters).filter(e => !e.isMinion && !e.isSummoned);
+        return this.pickRandom(available);
     }
     this.getRandomMonsterByTier = (tier) => {
-        let availableMonsters = Object.values(this.monsters).filter(e => e.tier === tier);
+        let availableMonsters = Object.values(this.monsters).filter(e => e.tier === tier && !e.isMinion && !e.isSummoned);
         if (availableMonsters.length > 0) {
             return JSON.parse(JSON.stringify(this.pickRandom(availableMonsters)));
         }

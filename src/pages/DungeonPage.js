@@ -6,6 +6,8 @@ import Tile from '../components/tile'
 import MonsterBattle from './sub-views/MonsterBattle';
 import { CombatManagerRedux } from '../utils/combat-manager-redux';
 import CardDuel from './sub-views/CardDuel';
+import CardForge from './sub-views/CardForge';
+import { shardDropChance } from '../utils/card-manager';
 // import ExpositionPane from './sub-views/ExpositionPane';
 import {
     loadAllDungeonsRequest,
@@ -890,7 +892,130 @@ class DungeonPage extends React.Component {
                     }
                 }
             });
+
+            // Check active training lock
+            if (member.trainingActive) {
+                const end = new Date(member.trainingActive.endDate);
+                const now = new Date();
+                if (end - now <= 0) {
+                    const act = member.trainingActive;
+                    
+                    // Update training progress
+                    member.trainingProgress = member.trainingProgress || { str: 0, dex: 0, fort: 0, int: 0 };
+                    member.trainingProgress[act.stat] = (member.trainingProgress[act.stat] || 0) + act.delta;
+
+                    let statGained = false;
+                    const THRESHOLD = 10;
+                    if (member.trainingProgress[act.stat] >= THRESHOLD) {
+                        member.trainingProgress[act.stat] -= THRESHOLD;
+                        member.stats[act.stat] = (member.stats[act.stat] || 1) + 1;
+                        if (this.props.crewManager && typeof this.props.crewManager.computeDerivedStats === 'function') {
+                            this.props.crewManager.computeDerivedStats(member);
+                        }
+                        statGained = true;
+                    }
+
+                    // Apply training effect flags if risk was triggered
+                    if (act.riskTriggered) {
+                        if (act.stat === 'str') member.trainingExhausted = true;
+                        if (act.stat === 'dex') member.trainingHalfEndurance = true;
+                        if (act.stat === 'fort') member.trainingBleedRisk = true;
+                    }
+
+                    // Save lastTrained timestamp so the 1-day cooldown starts from when training FINISHED
+                    member.lastTrained = act.endDate;
+
+                    const STAT_LABELS = { str: 'STR', dex: 'DEX', fort: 'FORT', int: 'INT' };
+                    let message;
+                    if (act.delta === 0) {
+                        message = `${member.name} lost focus. No progress gained.`;
+                    } else if (statGained) {
+                        message = `✨ ${member.name} has finished training and gained +1 ${STAT_LABELS[act.stat]}!`;
+                    } else {
+                        message = `${member.name} has finished training and gained +${act.delta} ${STAT_LABELS[act.stat]} progress${act.riskTriggered ? ' (risk triggered!)' : ''}.`;
+                    }
+
+                    updates.push({
+                        text: message,
+                        owner: `${member.name}`,
+                        actionType: 'training_complete'
+                    });
+
+                    // Clear trainingActive
+                    delete member.trainingActive;
+                    modified = true;
+                    numeralUpdate = true;
+                }
+            }
         });
+
+        // Check Scrounging Rat completion
+        if (meta.scroungeActive) {
+            const end = new Date(meta.scroungeActive.endDate);
+            const now = new Date();
+            if (end - now <= 0) {
+                const yieldAmt = meta.scroungeActive.foodYield;
+                meta.food = (typeof meta.food === 'number' ? meta.food : 0) + yieldAmt;
+                updates.push({
+                    text: `🐀 Scrounging Rat has retrieved +${yieldAmt} food!`,
+                    actionType: 'scrounge_complete'
+                });
+                delete meta.scroungeActive;
+                modified = true;
+                numeralUpdate = true;
+            }
+        }
+
+        // Check Fastidious Crow completion
+        if (meta.scoutActive && !meta.scoutActive.scoutedArea) {
+            const end = new Date(meta.scoutActive.endDate);
+            const now = new Date();
+            if (end - now <= 0) {
+                const level = meta.scoutActive.level || 1;
+                const area = this.pickRandomBoardForScout();
+                if (area) {
+                    const revealUntil = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString();
+                    meta.scoutActive.scoutedArea = {
+                        levelId: area.levelId,
+                        boardIndex: area.boardIndex,
+                        startRow: area.startRow,
+                        startCol: area.startCol,
+                        revealUntil: revealUntil
+                    };
+                }
+                let goldAmt = 0;
+                if (level === 1) {
+                    goldAmt = Math.floor(Math.random() * (20 - 5 + 1)) + 5;
+                } else if (level === 2) {
+                    goldAmt = Math.floor(Math.random() * (80 - 25 + 1)) + 25;
+                }
+                if (goldAmt > 0 && this.props.inventoryManager) {
+                    this.props.inventoryManager.addCurrency({ type: 'gold', amount: goldAmt });
+                }
+                let shardMsg = "";
+                if (level === 2 && Math.random() < 0.30) {
+                    const shardPool = ['ruby_shards', 'sapphire_shards', 'amber_shards'];
+                    const chosenShard = shardPool[Math.floor(Math.random() * shardPool.length)];
+                    const count = Math.floor(Math.random() * 3) + 1;
+                    if (this.props.inventoryManager) {
+                        for (let i = 0; i < count; i++) {
+                            this.props.inventoryManager.addItemsByName([chosenShard]);
+                        }
+                    }
+                    shardMsg = ` and ${count} ${chosenShard.replace('_', ' ')}`;
+                }
+                const cdHours = level === 1 ? 6 : 3;
+                const cooldownUntil = new Date(now.getTime() + cdHours * 60 * 60 * 1000).toISOString();
+                meta.scoutActive.cooldownUntil = cooldownUntil;
+                const boardNameMsg = area ? `Level ${area.levelId}, Board ${area.boardIndex + 1}` : "a distant board";
+                updates.push({
+                    text: `🦅 Fastidious Crow has finished scouting ${boardNameMsg}! Retrieved ${goldAmt} gold${shardMsg}.`,
+                    actionType: 'scout_complete'
+                });
+                modified = true;
+                numeralUpdate = true;
+            }
+        }
 
         if (modified) {
             meta.crew = crew;
@@ -994,6 +1119,7 @@ class DungeonPage extends React.Component {
             showFullScreen: false
             , showCardDuelModal: false
             , cardDuelTileId: null
+            , showCardForge: false
             , toastMessage: null
             , mapZoomedLevelId: null
             , mapUnzoomingLevelId: null
@@ -1215,7 +1341,23 @@ class DungeonPage extends React.Component {
         this.closeCardDuel();
     }
 
+    preloadDungeonTiles() {
+        try {
+            const terrainKeys = Object.keys(images).filter(key => key.startsWith('terrain_'));
+            terrainKeys.forEach(key => {
+                const src = images[key];
+                if (src) {
+                    const img = new Image();
+                    img.src = typeof src === 'string' ? src : (src.default || '');
+                }
+            });
+        } catch (e) {
+            console.warn('Failed to preload dungeon tiles', e);
+        }
+    }
+
     componentDidMount(){
+        this.preloadDungeonTiles();
         // Migration: normalize legacy equippedSlot keys to 'pet'
         try {
             const metaForMigration = getMeta() || {};
@@ -1265,6 +1407,15 @@ class DungeonPage extends React.Component {
         } catch(e) {}
         // Real-time check for completed special actions
     this.realTimeSpecialActionCheckInterval = this._setInterval(() => {
+        try {
+            const nowSec = Math.floor(Date.now() / 1000);
+            if (nowSec !== this._lastSecRender) {
+                this._lastSecRender = nowSec;
+                if (this.state.showCampPopup || this.state.showMapOverlay) {
+                    this.forceUpdate();
+                }
+            }
+        } catch(e) {}
         // If quests popup is visible, or another modal is already open, suppress
         // additional modals so they don't stack (two CModal backdrops trap all clicks).
         try { if (this.state.showQuestsPopup || this.state.showModal) return; } catch(e) {}
@@ -1498,14 +1649,160 @@ class DungeonPage extends React.Component {
         
         this.checkDungeon();
 
-        // Register this component's displayMessage with App so external callers
-        // (e.g. the Save button) can post messages to the dungeon message container.
         if (typeof this.props.registerMessaging === 'function') {
             this.props.registerMessaging(this.displayMessage);
         }
 
         // Breadcrumb decay: prune stale trail entries every 60 seconds and re-render.
         this._breadcrumbDecayInterval = this._setInterval(this._pruneBreadcrumbs, 60 * 1000);
+    }
+
+    getScroungingRatLevel = () => {
+        const meta = getMeta() || {};
+        const crew = meta.crew || [];
+        let maxLvl = 0;
+        crew.forEach(m => {
+            if (m && !m.dead && ((m.type || '').toLowerCase() === 'ranger' || (m.image || '').toLowerCase() === 'ranger') && m.globalSkills) {
+                const skill = m.globalSkills.find(s => (typeof s === 'string' ? s : s.key) === 'scrounging_rat');
+                if (skill) {
+                    const lvl = typeof skill === 'string' ? 1 : (skill.level || 1);
+                    if (lvl > maxLvl) maxLvl = lvl;
+                }
+            }
+        });
+        return maxLvl;
+    }
+
+    getFastidiousCrowLevel = () => {
+        const meta = getMeta() || {};
+        const crew = meta.crew || [];
+        let maxLvl = 0;
+        crew.forEach(m => {
+            if (m && !m.dead && ((m.type || '').toLowerCase() === 'ranger' || (m.image || '').toLowerCase() === 'ranger') && m.globalSkills) {
+                const skill = m.globalSkills.find(s => (typeof s === 'string' ? s : s.key) === 'fastidious_crow');
+                if (skill) {
+                    const lvl = typeof skill === 'string' ? 1 : (skill.level || 1);
+                    if (lvl > maxLvl) maxLvl = lvl;
+                }
+            }
+        });
+        return maxLvl;
+    }
+
+    isScroungeActive = () => {
+        const meta = getMeta() || {};
+        if (meta.scroungeActive) {
+            const now = new Date();
+            const end = new Date(meta.scroungeActive.endDate);
+            return now < end;
+        }
+        return false;
+    }
+
+    getScroungeButtonLabel = () => {
+        const meta = getMeta() || {};
+        if (meta.scroungeActive) {
+            const now = new Date();
+            const end = new Date(meta.scroungeActive.endDate);
+            const diff = end - now;
+            if (diff > 0) {
+                const hrs = Math.floor(diff / 3600000);
+                const mins = Math.floor((diff % 3600000) / 60000);
+                const secs = Math.floor((diff % 60000) / 1000);
+                const pad = (n) => String(n).padStart(2, '0');
+                return `Scrounging... (${pad(hrs)}:${pad(mins)}:${pad(secs)})`;
+            }
+        }
+        return "Scrounge for food";
+    }
+
+    handleScroungeForFood = () => {
+        const level = this.getScroungingRatLevel();
+        if (level <= 0 || this.isScroungeActive()) return;
+        
+        let minFood = 15, maxFood = 30, durationHrs = 3;
+        if (level === 2) {
+            minFood = 30; maxFood = 50; durationHrs = 2;
+        } else if (level === 3) {
+            minFood = 50; maxFood = 80; durationHrs = 1;
+        }
+        
+        const foodYield = Math.floor(Math.random() * (maxFood - minFood + 1)) + minFood;
+        
+        const now = new Date();
+        const endDate = new Date(now.getTime() + durationHrs * 60 * 60 * 1000);
+        
+        const meta = getMeta() || {};
+        meta.scroungeActive = {
+            startDate: now.toISOString(),
+            endDate: endDate.toISOString(),
+            foodYield,
+            level
+        };
+        storeMeta(meta);
+        
+        this.displayMessage("🐀 You send the Scrounging Rat to forage for food...");
+        this.setState({ numeralUpdate: !this.state.numeralUpdate });
+        if (typeof this.props.saveUserData === 'function') {
+            this.props.saveUserData();
+        }
+    }
+
+    pickRandomBoardForScout = () => {
+        try {
+            const dungeon = this.props?.boardManager?.dungeon;
+            if (!dungeon || !Array.isArray(dungeon.levels)) return null;
+            
+            const candidateBoards = [];
+            dungeon.levels.forEach(level => {
+                if (level && level.front && Array.isArray(level.front.miniboards)) {
+                    level.front.miniboards.forEach((board, idx) => {
+                        candidateBoards.push({ levelId: level.id, boardIndex: idx });
+                    });
+                }
+            });
+            
+            if (candidateBoards.length === 0) return null;
+            const chosen = candidateBoards[Math.floor(Math.random() * candidateBoards.length)];
+            
+            const startRow = Math.floor(Math.random() * 6) + 15; // 15 to 20
+            const startCol = Math.floor(Math.random() * 6) + 15; // 15 to 20
+            
+            return {
+                levelId: chosen.levelId,
+                boardIndex: chosen.boardIndex,
+                startRow,
+                startCol
+            };
+        } catch (e) {
+            console.warn('Failed to pick random board for scout', e);
+            return null;
+        }
+    }
+
+    handleSendScoutCrow = () => {
+        const level = this.getFastidiousCrowLevel();
+        if (level <= 0) return;
+        
+        const now = new Date();
+        const durationMin = 20; // 20 minutes
+        const endDate = new Date(now.getTime() + durationMin * 60 * 1000);
+        
+        const meta = getMeta() || {};
+        meta.scoutActive = {
+            startDate: now.toISOString(),
+            endDate: endDate.toISOString(),
+            level,
+            scoutedArea: null,
+            cooldownUntil: null
+        };
+        storeMeta(meta);
+        
+        this.displayMessage("🦅 You send the Fastidious Crow to scout the dungeon...");
+        this.setState({ numeralUpdate: !this.state.numeralUpdate });
+        if (typeof this.props.saveUserData === 'function') {
+            this.props.saveUserData();
+        }
     }
 
     // Compute pixel position (left, top) for a tile index within the board
@@ -2455,13 +2752,13 @@ class DungeonPage extends React.Component {
                 // Changing animationDelay on an already-running element restarts the animation,
                 // causing the visible jumps. We only set it if not already applied.
                 try {
-                    if (el.classList && el.classList.contains('camp-anim') && !el._campAnimApplied) {
+                    if (el.classList && el.classList.contains('camp-anim') && el._campAnimApplied !== `${start}-${end}`) {
                         const now = new Date();
                         const totalSeconds = (s && e) ? Math.max(0, (e - s) / 1000) : 0;
                         const elapsedSeconds = s ? Math.max(0, (now - s) / 1000) : 0;
                         el.style.animationDuration = `${totalSeconds}s`;
                         el.style.animationDelay = `-${elapsedSeconds}s`;
-                        el._campAnimApplied = true;
+                        el._campAnimApplied = `${start}-${end}`;
                     }
                 } catch (e) {}
                 // ensure the draw loop is running when a new active placeholder is registered
@@ -2539,7 +2836,20 @@ class DungeonPage extends React.Component {
         return array[index]
     }
     triggerLootRadialArc = (lootInput) => {
-        const newItems = Array.isArray(lootInput) ? lootInput : [lootInput];
+        const rawItems = Array.isArray(lootInput) ? lootInput : [lootInput];
+        const newItems = rawItems.map(item => {
+            let resolvedIcon = item.icon;
+            if (resolvedIcon && typeof resolvedIcon === 'object') {
+                resolvedIcon = resolvedIcon.default || resolvedIcon;
+            }
+            if (resolvedIcon && typeof resolvedIcon === 'object') {
+                resolvedIcon = resolvedIcon.default || resolvedIcon;
+            }
+            return {
+                ...item,
+                icon: typeof resolvedIcon === 'string' ? resolvedIcon : resolvedIcon
+            };
+        });
         
         if (this._chestLootTimer) {
             clearTimeout(this._chestLootTimer);
@@ -4393,6 +4703,20 @@ class DungeonPage extends React.Component {
             const isBoss = this.state.monster && (this.state.monster.tier >= 3 || this.state.monster.isBoss);
             const currentResolve = typeof meta.resolve === 'number' ? meta.resolve : 100;
             meta.resolve = Math.min(100, currentResolve + (isBoss ? 10 : 5));
+
+            // ── Soul Shard drop ──────────────────────────────────────────────
+            try {
+                const defeatedMonster = this.state.monster;
+                if (defeatedMonster && defeatedMonster.type) {
+                    const dropChance = shardDropChance(defeatedMonster);
+                    if (Math.random() < dropChance) {
+                        if (!meta.soulShards) meta.soulShards = {};
+                        const mType = defeatedMonster.type;
+                        meta.soulShards[mType] = (meta.soulShards[mType] || 0) + 1;
+                        try { this.props.boardManager.messaging(`💀 Soul Shard: ${mType.replace(/_/g,' ')} (+1)`); } catch(e) {}
+                    }
+                }
+            } catch(e) { console.warn('shard drop failed', e); }
             
             meta.crew = this.props.crewManager.crew;
             storeMeta(meta)
@@ -5399,47 +5723,39 @@ class DungeonPage extends React.Component {
                 }
             }
 
-            // Apply training effect flags for next combat
-            if (riskTriggered) {
-                if (drillStat === 'str') member.trainingExhausted = true;
-                if (drillStat === 'dex') member.trainingHalfEndurance = true;
-                if (drillStat === 'fort') member.trainingBleedRisk = true;
-            }
-
-            // Update training progress
-            member.trainingProgress = member.trainingProgress || { str: 0, dex: 0, fort: 0, int: 0 };
-            member.trainingProgress[drillStat] = (member.trainingProgress[drillStat] || 0) + delta;
-
-            let statGained = false;
-            const THRESHOLD = 10;
-            if (member.trainingProgress[drillStat] >= THRESHOLD) {
-                member.trainingProgress[drillStat] -= THRESHOLD;
-                member.stats[drillStat] = (member.stats[drillStat] || 1) + 1;
-                if (this.props.crewManager && typeof this.props.crewManager.computeDerivedStats === 'function') {
-                    this.props.crewManager.computeDerivedStats(member);
-                }
-                statGained = true;
-            }
-
             // Deduct food
             meta.food = currentFood - FOOD_COST;
-            member.lastTrained = new Date().toISOString();
+
+            // Calculate duration based on current progress
+            const currentProgress = (member.trainingProgress && member.trainingProgress[drillStat]) || 0;
+            const durationHours = currentProgress + 1;
+
+            const now = new Date();
+            member.trainingActive = {
+                stat: drillStat,
+                delta,
+                takeRisk,
+                riskTriggered,
+                startDate: now.toISOString(),
+                endDate: new Date(now.getTime() + durationHours * 3600 * 1000).toISOString()
+            };
+
+            // Sync with meta.crew
+            const crew = meta.crew || [];
+            const idx = crew.findIndex(c => c.id === member.id);
+            if (idx !== -1) {
+                crew[idx].trainingActive = member.trainingActive;
+            }
+            meta.crew = crew;
+
             try { storeMeta(meta); } catch(e) {}
             try { if (typeof this.props.saveUserData === 'function') this.props.saveUserData(); } catch(e) {}
 
             const STAT_LABELS = { str: 'STR', dex: 'DEX', fort: 'FORT', int: 'INT' };
-            let message;
-            if (delta === 0) {
-                message = `${member.name} lost focus. No progress gained.`;
-            } else if (statGained) {
-                message = `✨ ${member.name} gained +1 ${STAT_LABELS[drillStat]}!`;
-            } else {
-                message = `${member.name} gained +${delta} ${STAT_LABELS[drillStat]} progress${riskTriggered ? ' (risk triggered!)' : ''}.`;
-            }
-
-            this.setState(prev => ({
-                trainingResults: { ...prev.trainingResults, [member.id || member.name]: { stat: drillStat, delta, riskTriggered, message, statGained } }
-            }));
+            const startMsg = `⚔️ ${member.name} started training ${STAT_LABELS[drillStat]}! (Takes ${durationHours}h)`;
+            this.setState({ toastMessage: startMsg }, () => {
+                setTimeout(() => this.setState({ toastMessage: null }), 4000);
+            });
         } catch (e) {
             console.warn('handleConfirmDrill failed', e);
         }
@@ -5785,7 +6101,7 @@ class DungeonPage extends React.Component {
 
                 // Global skills for this class (from proposed_new_features spec)
                 const globalSkillsByClass = {
-                    ranger:   [{ key: 'keen_eye', name: 'Keen Eye', desc: 'Reveals +2 fog tiles on miniboard entry' }, { key: 'hunters_quarry', name: "Hunter's Quarry", desc: '+10% food drop on monster defeat' }, { key: 'read_the_land', name: 'Read the Land', desc: 'Adjacent tile types hinted on entry' }, { key: 'trailblaze', name: 'Trailblaze', desc: 'Visual breadcrumb to last camp spot' }],
+                    ranger:   [{ key: 'keen_eye', name: 'Keen Eye', desc: 'Reveals +2 fog tiles on miniboard entry' }, { key: 'hunters_quarry', name: "Hunter's Quarry", desc: '+10% food drop on monster defeat' }, { key: 'read_the_land', name: 'Read the Land', desc: 'Adjacent tile types hinted on entry' }, { key: 'trailblaze', name: 'Trailblaze', desc: 'Visual breadcrumb to last camp spot' }, { key: 'scrounging_rat', name: 'Scrounging Rat', desc: 'Forage for food in camp: 15-30 food (3h) / 30-50 food (2h) / 50-80 food (1h).' }, { key: 'fastidious_crow', name: 'Fastidious Crow', desc: 'Scout a 10x10 board area for 24h. Process: 20m. Cooldown: 6h / 3h. Reward: 5-20g / 25-80g + 30% shard chance.' }],
                     sage:     [{ key: 'herbalism', name: 'Herbalism', desc: 'Camp costs 1 less food per member' }, { key: 'mend', name: 'Mend', desc: 'Out-of-combat potions restore +15% HP' }, { key: 'ritual_efficiency', name: 'Ritual Efficiency', desc: 'Ritual prep time -25%' }, { key: 'revive', name: 'Revive', desc: 'Once per run: fallen member revived at 25% HP' }, { key: 'awake_refreshed', name: 'Awake Refreshed', desc: 'Recuperates an additional +10/+20/+40 Resolve after camping.' }],
                     soldier:  [{ key: 'fortify', name: 'Fortify', desc: 'Resolve does not decay while camping' }, { key: 'breacher', name: 'Breacher', desc: 'Force open a Minor Key gate once per level' }, { key: 'rally', name: 'Rally', desc: '+5 bonus Resolve on combat victory' }, { key: 'iron_will', name: 'Iron Will', desc: 'Party Resolve never drops below 20 from deaths' }, { key: 'awake_refreshed', name: 'Awake Refreshed', desc: 'Recuperates an additional +10/+20/+40 Resolve after camping.' }, { key: 'strong_resolve', name: 'Strong Resolve', desc: 'Reduces Resolve penalties by 40%/75%/90%.' }],
                     wizard:   [{ key: 'arcane_sense', name: 'Arcane Sense', desc: 'Identifies chest tier before opening' }, { key: 'ley_tap', name: 'Ley Tap', desc: 'Draw energy at Magic Nexus — recover 15% endurance' }, { key: 'dimensional_pocket', name: 'Dimensional Pocket', desc: '+2 shared inventory slots' }, { key: 'scry', name: 'Scry', desc: 'Reveals all chests and monsters for 30s once per run' }],
@@ -5794,7 +6110,6 @@ class DungeonPage extends React.Component {
                     summoner: [{ key: 'spirit_sight', name: 'Spirit Sight', desc: 'Narrative tiles glow through fog' }, { key: 'plunder', name: 'Plunder', desc: 'Open a chest a second time once per run' }, { key: 'soul_tithe', name: 'Soul Tithe', desc: '+1 Shimmering Dust per combat victory' }, { key: 'dark_pact', name: 'Dark Pact', desc: 'Trade Shimmering Dust at vendors (1 Dust = 25g)' }],
                 };
                 const availableSkills = globalSkillsByClass[sd.shrineClass] || [];
-                const memberGlobalSkills = (sd.matchingMember && sd.matchingMember.globalSkills) || [];
                 
                 const getSkillLevel = (member, skillKey) => {
                     if (!member || !member.globalSkills) return 0;
@@ -6152,6 +6467,28 @@ class DungeonPage extends React.Component {
                             <span className="camp-btn-icon"><span role="img" aria-label="map">🗺️</span></span>
                             <span>Map</span>
                         </button>
+                        {this.getScroungingRatLevel() > 0 && (
+                            <button
+                                className="camp-action-btn"
+                                onClick={this.handleScroungeForFood}
+                                disabled={this.isScroungeActive()}
+                            >
+                                <span
+                                    className="camp-btn-icon"
+                                    style={{
+                                        backgroundImage: `url(${images.scrounging_rat})`,
+                                        backgroundSize: 'contain',
+                                        backgroundRepeat: 'no-repeat',
+                                        backgroundPosition: 'center',
+                                        display: 'inline-block',
+                                        width: '20px',
+                                        height: '20px',
+                                        verticalAlign: 'middle'
+                                    }}
+                                />
+                                <span>{this.getScroungeButtonLabel()}</span>
+                            </button>
+                        )}
                         <button className="camp-action-btn" onClick={this.handleOpenTraining}>
                             <span className="camp-btn-icon"><span role="img" aria-label="crossed swords">⚔️</span></span>
                             <span>Train</span>
@@ -6170,9 +6507,9 @@ class DungeonPage extends React.Component {
                             <div className="camp-bottom-tile-icon"><span role="img" aria-label="trophy">🏆</span></div>
                             <div className="camp-bottom-tile-label">Trophies</div>
                         </div>
-                        <div className="camp-bottom-tile">
-                            <div className="camp-bottom-tile-icon" style={{backgroundImage:`url(${images.grimoire})`, backgroundSize:'contain', backgroundRepeat:'no-repeat', backgroundPosition:'center', width:54, height:54}}></div>
-                            <div className="camp-bottom-tile-label">Card Deck</div>
+                        <div className="camp-bottom-tile" style={{cursor:'pointer'}} onClick={() => this.setState({ showCardForge: true })}>
+                            <div className="camp-bottom-tile-icon" style={{backgroundImage:`url(${images.pyre_echo_card || images.grimoire})`, backgroundSize:'contain', backgroundRepeat:'no-repeat', backgroundPosition:'center', width:54, height:54}}></div>
+                            <div className="camp-bottom-tile-label">Pyre &amp; Echo</div>
                         </div>
                         <div className="camp-bottom-tile">
                             <div className="camp-bottom-tile-icon" style={{backgroundImage:`url(${images.eclipse})`, backgroundSize:'contain', backgroundRepeat:'no-repeat', backgroundPosition:'center', width:54, height:54}}></div>
@@ -6264,11 +6601,36 @@ class DungeonPage extends React.Component {
                                     const remainingMs = Math.max(0, COOLDOWN_MS - (Date.now() - lastTrainedTime));
                                     const hasCooldown = remainingMs > 0;
                                     
-                                    const alreadyTrained = !!result || hasCooldown;
+                                    const alreadyTrained = !!result || hasCooldown || !!member.trainingActive;
                                     const canAfford = currentFood >= FOOD_COST && !alreadyTrained;
 
                                     return (
-                                        <div key={memberId} className={`training-crew-card${alreadyTrained ? ' trained' : ''}`}>
+                                        <div key={memberId} className={`training-crew-card${alreadyTrained ? ' trained' : ''}`} style={{ position: 'relative', overflow: 'hidden' }}>
+                                            {member.trainingActive && (() => {
+                                                const start = member.trainingActive.startDate;
+                                                const end = member.trainingActive.endDate;
+                                                const placeholderId = `train-progress-${memberId}`;
+                                                return (
+                                                    <div
+                                                        id={placeholderId}
+                                                        ref={el => this.placeholderRef(el, placeholderId, start, end)}
+                                                        className="progress-overlay camp-anim"
+                                                        data-start={start}
+                                                        data-end={end}
+                                                        style={{
+                                                            position: 'absolute',
+                                                            top: 0,
+                                                            left: 0,
+                                                            width: '100%',
+                                                            height: '100%',
+                                                            pointerEvents: 'none',
+                                                            zIndex: 10,
+                                                            backgroundColor: 'rgba(249, 177, 21, 0.15)',
+                                                            borderRadius: 8
+                                                        }}
+                                                    ></div>
+                                                );
+                                            })()}
                                             {/* Portrait + Name */}
                                             <div className="training-card-portrait-row">
                                                 <div className="training-card-portrait">
@@ -6314,6 +6676,18 @@ class DungeonPage extends React.Component {
                                             {result ? (
                                                 <div className={`training-result-toast${result.statGained ? ' gained' : result.delta === 0 ? ' failed' : ''}`}>
                                                     {result.message}
+                                                </div>
+                                            ) : member.trainingActive ? (
+                                                <div className="training-result-toast" style={{ background: 'rgba(249, 177, 21, 0.12)', color: '#f9b115', border: '1px solid rgba(249, 177, 21, 0.25)' }}>
+                                                    <span role="img" aria-label="crossed-swords">⚔️</span> Training {member.trainingActive.stat.toUpperCase()}… {(() => {
+                                                        const remainingMs = Math.max(0, new Date(member.trainingActive.endDate).getTime() - Date.now());
+                                                        const hours = Math.floor(remainingMs / 3600000);
+                                                        const minutes = Math.floor((remainingMs % 3600000) / 60000);
+                                                        const seconds = Math.floor((remainingMs % 60000) / 1000);
+                                                        if (hours > 0) return `${hours}h ${minutes}m`;
+                                                        if (minutes > 0) return `${minutes}m ${seconds}s`;
+                                                        return `${seconds}s`;
+                                                    })()}
                                                 </div>
                                             ) : hasCooldown ? (
                                                 <div className="training-result-toast" style={{ background: 'rgba(255, 255, 255, 0.05)', color: '#aaa', border: '1px dashed #444', animation: 'none' }}>
@@ -6755,31 +7129,110 @@ class DungeonPage extends React.Component {
                                     </div>
                                 </div>
                                 {/* Front / Back orientation toggle */}
-                                <div className="camp-map-orientation-toggle">
-                                    <button
-                                        className={`orientation-btn ${(this.props.boardManager?.currentOrientation || 'F') === 'F' ? 'active' : ''}`}
-                                        onClick={() => {
-                                            if (this.props.boardManager) {
-                                                this.props.boardManager.currentOrientation = 'F';
-                                                this.forceUpdate();
-                                            }
-                                        }}
-                                    >
-                                        <span className="orientation-icon">◈</span> Front
-                                    </button>
-                                    <button
-                                        className={`orientation-btn ${(this.props.boardManager?.currentOrientation || 'F') === 'B' ? 'active' : ''}`}
-                                        onClick={() => {
-                                            if (this.props.boardManager) {
-                                                this.props.boardManager.currentOrientation = 'B';
-                                                this.forceUpdate();
-                                            }
-                                        }}
-                                    >
-                                        <span className="orientation-icon">◇</span> Back
-                                    </button>
+                                <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', marginLeft: 'auto', gap: '8px' }}>
+                                    {this.getFastidiousCrowLevel() > 0 && (() => {
+                                        const meta = getMeta() || {};
+                                        const now = new Date();
+                                        const scout = meta.scoutActive;
+                                        const isOnCooldown = scout && now < new Date(scout.cooldownUntil);
+                                        const isScouting = scout && now < new Date(scout.endDate);
+                                        
+                                        let btnText = "Scout with Crow";
+                                        let disabled = false;
+                                        if (isScouting) {
+                                            const remMin = Math.ceil((new Date(scout.endDate) - now) / 60000);
+                                            btnText = `Scouting... (${remMin}m)`;
+                                            disabled = true;
+                                        } else if (isOnCooldown) {
+                                            const remMs = new Date(scout.cooldownUntil) - now;
+                                            const remHrs = Math.floor(remMs / 3600000);
+                                            const remMins = Math.ceil((remMs % 3600000) / 60000);
+                                            btnText = `Crow Cooldown (${remHrs}h ${remMins}m)`;
+                                            disabled = true;
+                                        }
+
+                                        return (
+                                            <button
+                                                className="orientation-btn scout-btn"
+                                                style={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '5px',
+                                                    border: '1px solid rgba(155, 199, 255, 0.25)',
+                                                    borderRadius: '999px',
+                                                    background: 'rgba(8, 16, 28, 0.7)',
+                                                    color: disabled ? 'rgba(180, 205, 230, 0.35)' : 'rgba(180, 205, 230, 0.85)',
+                                                    fontSize: '11px',
+                                                    fontWeight: '600',
+                                                    letterSpacing: '0.5px',
+                                                    textTransform: 'uppercase',
+                                                    padding: '4px 14px',
+                                                    cursor: disabled ? 'not-allowed' : 'pointer'
+                                                }}
+                                                onClick={this.handleSendScoutCrow}
+                                                disabled={disabled}
+                                                title="Send the Fastidious Crow to scout a random board"
+                                            >
+                                                <span style={{ fontSize: '14px' }}>🦅</span> {btnText}
+                                            </button>
+                                        );
+                                    })()}
+
+                                    <div className="camp-map-orientation-toggle" style={{ marginCenteringOverride: 'none', marginLeft: 0 }}>
+                                        <button
+                                            className={`orientation-btn ${(this.props.boardManager?.currentOrientation || 'F') === 'F' ? 'active' : ''}`}
+                                            onClick={() => {
+                                                if (this.props.boardManager) {
+                                                    this.props.boardManager.currentOrientation = 'F';
+                                                    this.forceUpdate();
+                                                }
+                                            }}
+                                        >
+                                            <span className="orientation-icon">◈</span> Front
+                                        </button>
+                                        <button
+                                            className={`orientation-btn ${(this.props.boardManager?.currentOrientation || 'F') === 'B' ? 'active' : ''}`}
+                                            onClick={() => {
+                                                if (this.props.boardManager) {
+                                                    this.props.boardManager.currentOrientation = 'B';
+                                                    this.forceUpdate();
+                                                }
+                                            }}
+                                        >
+                                            <span className="orientation-icon">◇</span> Back
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
+
+                            {(() => {
+                                const meta = getMeta() || {};
+                                if (!meta.scoutActive) return null;
+                                const now = new Date();
+                                const start = new Date(meta.scoutActive.endDate);
+                                const end = new Date(meta.scoutActive.scoutedArea?.revealUntil || meta.scoutActive.endDate);
+                                const isScouting = now < start;
+                                const isRevealed = now >= start && now < end;
+                                
+                                if (isScouting) {
+                                    const remMin = Math.ceil((start - now) / 60000);
+                                    return (
+                                        <div style={{ background: 'rgba(235,178,54,0.15)', border: '1px solid #ebb236', borderRadius: '4px', padding: '6px 10px', fontSize: '12px', color: '#ffd67a', marginBottom: '8px', textAlign: 'center', fontWeight: '500' }}>
+                                            🦅 Fastidious Crow is scouting a random board... ({remMin}m remaining)
+                                        </div>
+                                    );
+                                } else if (isRevealed) {
+                                    const remMs = end - now;
+                                    const remHours = Math.floor(remMs / 3600000);
+                                    const remMin = Math.floor((remMs % 3600000) / 60000);
+                                    return (
+                                        <div style={{ background: 'rgba(82,163,255,0.15)', border: '1px solid #52a3ff', borderRadius: '4px', padding: '6px 10px', fontSize: '12px', color: '#a3d1ff', marginBottom: '8px', textAlign: 'center', fontWeight: '500' }}>
+                                            🦅 Fastidious Crow has scouted a 10x10 area on Level {meta.scoutActive.scoutedArea.levelId}, Board {meta.scoutActive.scoutedArea.boardIndex + 1} ({remHours}h {remMin}m remaining)
+                                        </div>
+                                    );
+                                }
+                                return null;
+                            })()}
 
                             <div className="camp-map-scene-wrap" onClick={(e) => e.stopPropagation()}>
                                 <div className={`camp-map-scene ${hasZoomedLevel ? 'zoomed' : ''} ${hasPendingZoomLevel ? 'pre-zoom' : ''} ${isPreUnzoom ? 'pre-unzoom' : ''} ${revealAfterUnzoom ? 'reveal-others' : ''}`} role="list" aria-label="Dungeon tower floors">
@@ -6855,15 +7308,64 @@ class DungeonPage extends React.Component {
                                                                 {boardCells.map((cell) => {
                                                                     const isCurrentBoardCell = cell.boardIndex === activeMinimapIndex;
                                                                     const isFadedCell = (isBoardDetailFading || isBoardDetailActive) && !isCurrentBoardCell;
+                                                                    let isScouted = false;
+                                                                    try {
+                                                                        const meta = getMeta() || {};
+                                                                        if (meta.scoutActive && meta.scoutActive.scoutedArea) {
+                                                                            const now = new Date();
+                                                                            const start = new Date(meta.scoutActive.endDate);
+                                                                            const end = new Date(meta.scoutActive.scoutedArea.revealUntil);
+                                                                            if (now >= start && now < end &&
+                                                                                levelId === meta.scoutActive.scoutedArea.levelId &&
+                                                                                cell.boardIndex === meta.scoutActive.scoutedArea.boardIndex) {
+                                                                                isScouted = true;
+                                                                            }
+                                                                        }
+                                                                    } catch (e) {}
+
                                                                     return (
                                                                         <polygon
                                                                             key={`cell_${cell.boardIndex}`}
                                                                             points={cell.points}
                                                                             className={`board-cell ${isCurrentBoardCell ? 'current' : ''} ${isFadedCell ? 'faded' : ''}`}
+                                                                            style={isScouted ? { fill: 'rgba(92, 194, 255, 0.35)', stroke: '#52a3ff', strokeWidth: 1.2 } : undefined}
                                                                         />
                                                                     );
                                                                 })}
                                                             </svg>
+                                                            {(() => {
+                                                                try {
+                                                                    const meta = getMeta() || {};
+                                                                    if (meta.scoutActive && meta.scoutActive.scoutedArea) {
+                                                                        const now = new Date();
+                                                                        const start = new Date(meta.scoutActive.endDate);
+                                                                        const end = new Date(meta.scoutActive.scoutedArea.revealUntil);
+                                                                        if (now >= start && now < end && levelId === meta.scoutActive.scoutedArea.levelId) {
+                                                                            const scoutedIdx = meta.scoutActive.scoutedArea.boardIndex;
+                                                                            const cell = boardCells.find(c => c.boardIndex === scoutedIdx);
+                                                                            if (cell) {
+                                                                                return (
+                                                                                    <span
+                                                                                        className="slab-scout-marker"
+                                                                                        style={{
+                                                                                            position: 'absolute',
+                                                                                            left: `${cell.center.x}%`,
+                                                                                            top: `${cell.center.y}%`,
+                                                                                            transform: 'translate(-50%, -50%)',
+                                                                                            fontSize: '15px',
+                                                                                            zIndex: 10,
+                                                                                            pointerEvents: 'none'
+                                                                                        }}
+                                                                                    >
+                                                                                        🦅
+                                                                                    </span>
+                                                                                );
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                } catch (e) {}
+                                                                return null;
+                                                            })()}
                                                             <span className={`slab-board-detail-2d ${isBoardDetailActive ? 'visible' : ''}`} onClick={(event) => { event.preventDefault(); event.stopPropagation(); }}>
                                                                 <span className="board-detail-grid"></span>
                                                                 {boardDetailPathSegments.length > 0 && (
@@ -6939,7 +7441,16 @@ class DungeonPage extends React.Component {
                             <div className="status-container">
                                 <div className="member-level-indicator">Lvl {this.state.selectedCrewMember.level}</div>
                             </div>
-                            <div className="portrait" style={{backgroundImage: "url(" + this.state.selectedCrewMember.portrait + ")"}}></div>
+                            {(() => {
+                                let portraitUrl = this.state.selectedCrewMember.portrait;
+                                if (portraitUrl && typeof portraitUrl === 'object') {
+                                    portraitUrl = portraitUrl.default || portraitUrl;
+                                }
+                                if (portraitUrl && typeof portraitUrl === 'object') {
+                                    portraitUrl = portraitUrl.default || '';
+                                }
+                                return <div className="portrait" style={{backgroundImage: `url(${portraitUrl})`}}></div>;
+                            })()}
                             <div className="cooldowns-container">
                                 {/* Group special actions by type (flat structure) */}
                                 {(() => {
@@ -7013,6 +7524,8 @@ class DungeonPage extends React.Component {
                             
                             const skillDetails = {
                                 keen_eye: { name: 'Keen Eye', desc: 'Reveals +2 fog tiles on miniboard entry' },
+                                scrounging_rat: { name: 'Scrounging Rat', desc: 'Allows scrounging for food in camp: 15-30 food (3h) / 30-50 food (2h) / 50-80 food (1h).' },
+                                fastidious_crow: { name: 'Fastidious Crow', desc: 'Scouts a random board (10x10 fog reveal) for 24 hours. Process takes 20m. Cooldown and gold/gem reward based on level.' },
                                 hunters_quarry: { name: "Hunter's Quarry", desc: '+10% food drop on monster defeat' },
                                 read_the_land: { name: 'Read the Land', desc: 'Adjacent tile types hinted on entry' },
                                 trailblaze: { name: 'Trailblaze', desc: 'Visual breadcrumb to last camp spot' },
@@ -7541,19 +8054,14 @@ class DungeonPage extends React.Component {
                             })
                         }
                     </div>
-                    {/* Crew Actions: a right-panel mirror of the left Actions menu */}
-                    <div className="menu crew-actions" onClick={this.toggleCrewActionsTray}>
-                        <CIcon icon={cilMenu} className={`menu-icon ${this.state.crewActionsTrayExpanded ? 'expanded' : ''}`} size="sm"/>
-                        Crew Actions
-                    </div>
-                    <div className={`actions-tray crew-actions-tray ${this.state.crewActionsTrayExpanded ? 'expanded' : ''}`}>
+                    {/* Quick Actions — always-visible strip */}
+                    <div className="quick-actions-strip">
                         {(() => {
                             const meta = getMeta() || {};
                             const camping = meta.camping;
                             if (camping) {
                                 const start = meta.campingStart || '';
                                 const end = meta.campingEnd || '';
-                                // use a stable id so the placeholder element is not recreated each render
                                 const placeholderId = 'camp-progress-placeholder';
                                 return (
                                     <div className="crew-action-item action-row" style={{position:'relative'}}>
@@ -7574,37 +8082,46 @@ class DungeonPage extends React.Component {
                                             >
                                                 ×
                                             </div>
-                                            </div>
-                                        
+                                        </div>
                                     </div>
                                 );
                             }
                             return (
-                    <div className="crew-action-item action-row" style={{display:'flex', flexDirection:'column', gap:6}}>
-                                    <div onClick={() => this.handleOpenCampPopup()} style={{cursor:'pointer', paddingLeft: '15px'}}>Go to camp</div>
-                                    <div
-                                        className="codex-crew-btn"
-                                        onClick={() => this.setState({ showCodex: true })}
+                                <div className="quick-actions-btns">
+                                    <button
+                                        className="quick-action-btn"
+                                        onClick={() => this.handleOpenCampPopup()}
+                                        title="Go to Camp"
                                     >
-                                        <img
-                                            src={typeof images.codex === 'string' ? images.codex : (images.codex?.default || '')}
-                                            alt="Codex"
-                                            className="codex-crew-btn-icon"
-                                        />
-                                        Codex
-                                    </div>
-                                    <div
-                                        style={{cursor:'pointer', paddingLeft: '15px'}}
+                                        🏕 Go To Camp
+                                    </button>
+                                    <button
+                                        className="quick-action-btn"
+                                        onClick={() => this.setUpCamp()}
+                                        title="Immediately begin recuperating"
+                                    >
+                                        🛌 Recuperate
+                                    </button>
+                                    <button
+                                        className="quick-action-btn"
                                         onClick={() => {
                                             this.setState({ isCardScrimmage: true }, () => {
                                                 this.openCardDuel(null);
                                             });
                                         }}
+                                        title="Play a practice card duel (no penalty)"
                                     >
-                                        Card Scrimmage
-                                    </div>
+                                        🃏 Card Scrimmage
+                                    </button>
+                                    <button
+                                        className="quick-action-btn"
+                                        onClick={() => this.setState({ showCodex: true })}
+                                        title="Open the Codex"
+                                    >
+                                        📖 Codex
+                                    </button>
                                     {this.state.campWarningMessage && (
-                                        <div style={{paddingLeft: 15, fontSize: 11, color: '#e74c3c', lineHeight: 1.4}}>
+                                        <div style={{paddingLeft: 4, fontSize: 11, color: '#e74c3c', lineHeight: 1.4}}>
                                             {this.state.campWarningMessage}
                                         </div>
                                     )}
@@ -7756,7 +8273,16 @@ class DungeonPage extends React.Component {
                             const left = centerOffset + x - lootSize / 2;
                             const top = centerOffset + y - lootSize / 2;
                             
-                            const iconUrl = loot.icon?.default || loot.icon || '';
+                            let iconUrl = loot.icon;
+                            if (iconUrl && typeof iconUrl === 'object') {
+                                iconUrl = iconUrl.default || iconUrl;
+                            }
+                            if (iconUrl && typeof iconUrl === 'object') {
+                                iconUrl = iconUrl.default || '';
+                            }
+                            if (typeof iconUrl !== 'string') {
+                                iconUrl = '';
+                            }
                             
                             return (
                                 <div
@@ -7827,7 +8353,16 @@ class DungeonPage extends React.Component {
                     </div>
                     <div className='crew-panels'>
                         {((this.props.crewManager && this.props.crewManager.crew) || []).map((member, idx) => {
-                            const portraitUrl = (images && images[member.portrait]) || member.portrait;
+                            let rawPortrait = member.portrait;
+                            if (rawPortrait && typeof rawPortrait === 'object') {
+                                rawPortrait = rawPortrait.default || rawPortrait;
+                            }
+                            if (rawPortrait && typeof rawPortrait === 'object') {
+                                rawPortrait = rawPortrait.default || '';
+                            }
+                            const portraitUrl = (typeof rawPortrait === 'string' && images && images[rawPortrait])
+                                ? (images[rawPortrait].default || images[rawPortrait])
+                                : rawPortrait;
                             const isSelected = this.state.selectedCrewMember && this.state.selectedCrewMember.id === member.id;
                             return (
                                 <div className='crew-panel' key={member.id || idx}>
@@ -8193,8 +8728,24 @@ class DungeonPage extends React.Component {
                         saveUserData={this.props.saveUserData} 
                         inventoryManager={this.props.inventoryManager} 
                         scrimmage={!!this.state.isCardScrimmage}
+                        crew={this.props.crewManager ? this.props.crewManager.crew : []}
+                        meta={getMeta()}
+                        dungeonDepth={(() => { try { const m = getMeta(); const lid = m && m.location && m.location.levelId; return lid != null ? Math.max(1, Number(lid)) : 1; } catch(e) { return 1; } })()}
                     />
                 </div>
+            )}
+
+            {/* Pyre & Echo Forge overlay */}
+            {this.state.showCardForge && (
+                <CardForge
+                    crew={this.props.crewManager ? this.props.crewManager.crew : []}
+                    meta={getMeta()}
+                    onClose={() => this.setState({ showCardForge: false })}
+                    onSave={(updatedMeta) => {
+                        try { storeMeta(updatedMeta); } catch(e) {}
+                        try { if (this.props.saveUserData) this.props.saveUserData(); } catch(e) {}
+                    }}
+                />
             )}
         </div>
         )

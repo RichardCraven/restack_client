@@ -1887,10 +1887,11 @@ export function CombatManagerRedux() {
         if (this._abilityReady(unit, 'monk_ethereal_speed') && !unit.etherealSpeedActive) {
             const pick = this.resolveSpecial(unit, 'monk_ethereal_speed');
             if (pick) {
-                const durMs = getDurationMsFromRounds(4);
+                const dur = getDurationRounds(pick.duration || 'short');
+                const durMs = getDurationMsFromRounds(dur);
                 unit.etherealSpeedActive = true;
-                unit.etherealSpeedRoundsLeft = 4;
-                unit.etherealSpeedTotalRounds = 4;
+                unit.etherealSpeedRoundsLeft = dur;
+                unit.etherealSpeedTotalRounds = dur;
                 unit.etherealSpeedTotalDurationMs = durMs;
                 unit.etherealSpeedEndTimeMs = Date.now() + durMs;
                 this.appendCombatLog(`${this.getCombatantLogName(unit)} activates Ethereal Speed — glowing with power!`);
@@ -1929,11 +1930,12 @@ export function CombatManagerRedux() {
         if (!astralActive && this._abilityReady(unit, 'monk_astral_focus')) {
             const pick = this.resolveSpecial(unit, 'monk_astral_focus');
             if (pick && unit.hp / unit.starting_hp > 0.5) { // don't focus if low HP
-                const durMs = getDurationMsFromRounds(6);
-                this._applyBuff(unit, pick.buff || {}, 'astral_being', 6);
+                const dur = getDurationRounds(pick.duration || 'long');
+                const durMs = getDurationMsFromRounds(dur);
+                this._applyBuff(unit, pick.buff || {}, 'astral_being', dur);
                 unit.astralBeingActive = true;
-                unit.astralBeingRoundsLeft = 6;
-                unit.astralBeingTotalRounds = 6;
+                unit.astralBeingRoundsLeft = dur;
+                unit.astralBeingTotalRounds = dur;
                 unit.astralBeingTotalDurationMs = durMs;
                 unit.astralBeingEndTimeMs = Date.now() + durMs;
                 this.appendCombatLog(`${this.getCombatantLogName(unit)} enters Astral Being mode.`);
@@ -1968,10 +1970,11 @@ export function CombatManagerRedux() {
         if (astralActive && this._abilityReady(unit, 'monk_third_eye') && !unit.thirdEyeActive) {
             const pick = this.resolveSpecial(unit, 'monk_third_eye');
             if (pick) {
-                const durMs = getDurationMsFromRounds(4);
+                const dur = getDurationRounds(pick.duration || 'short');
+                const durMs = getDurationMsFromRounds(dur);
                 unit.thirdEyeActive = true;
-                unit.thirdEyeRoundsLeft = 4;
-                unit.thirdEyeTotalRounds = 4;
+                unit.thirdEyeRoundsLeft = dur;
+                unit.thirdEyeTotalRounds = dur;
                 unit.thirdEyeTotalDurationMs = durMs;
                 unit.thirdEyeEndTimeMs = Date.now() + durMs;
                 this.appendCombatLog(`${this.getCombatantLogName(unit)} activates Third Eye — evasion doubled.`);
@@ -3865,6 +3868,8 @@ export function CombatManagerRedux() {
     this.useAbility = (unit, ability, target) => {
         if (!ability || !target) return;
 
+        const activeArrowType = unit.notchedArrowType;
+
         if (target && target.isVCT && target.parentMonsterId && this.combatants[target.parentMonsterId]) {
             target = this.combatants[target.parentMonsterId];
         }
@@ -4537,7 +4542,7 @@ export function CombatManagerRedux() {
             if (abilityId === 'barbarian_leap_attack') {
                 targetCoord = { x: unit.coordinates.x, y: unit.coordinates.y };
             }
-            this.animManagerRedux.triggerAbility(sourceCoord, targetCoord, abilityId, isTargetLarge, targetTiles, unit.id, unit.notchedArrowType);
+            this.animManagerRedux.triggerAbility(sourceCoord, targetCoord, abilityId, isTargetLarge, targetTiles, unit.id, activeArrowType);
         }
 
         if (abilityId === 'loose' || abilityId === 'execute' || abilityId === 'deadeye_shot') {
@@ -4646,7 +4651,10 @@ export function CombatManagerRedux() {
 
         // AoE damage — hits all enemies in range
         if (effects.some(e => typeof e === 'string' && e.includes('multi_target'))) {
-            const rawDamage = ability.damage || unit.stats.atk || 5;
+            let rawDamage = ability.damage || unit.stats.atk || 5;
+            if (ability.damagePercent) {
+                rawDamage = Math.round(rawDamage * (ability.damagePercent / 100));
+            }
             let totalHits = 0;
             Object.values(this.combatants).forEach(c => {
                 if (!c || c.dead || c.isVCT) return;
@@ -4679,6 +4687,9 @@ export function CombatManagerRedux() {
         // Single-target damage (default path)
         const hasDamageProp = (typeof ability.damage === 'number');
         let rawDamage = hasDamageProp ? ability.damage : ((ability.type === 'damage' || (ability.type && ability.type.includes('damage'))) ? (unit.stats.atk || 5) : 0);
+        if (ability.damagePercent) {
+            rawDamage = Math.round(rawDamage * (ability.damagePercent / 100));
+        }
 
         // INT-based spell damage scaling for spellcaster classes
         const SPELLCASTER_TYPES = new Set(['wizard', 'sage', 'summoner']);
@@ -4688,7 +4699,7 @@ export function CombatManagerRedux() {
         }
         const dmgMult = target.weaknessRevealed ? 1.25 : 1.0;
         const isSelfTarget = target.id === unit.id || ability.range === 'self';
-        const arrowType = (abilityId === 'loose' || abilityId === 'execute') ? (unit.notchedArrowType || 'force') : null;
+        const arrowType = (abilityId === 'loose' || abilityId === 'execute') ? (activeArrowType || 'force') : null;
         const hitCount = (abilityId === 'execute') ? 3 : 1;
         let hitsSucceeded = 0;
         let anyHitConnected = false;
