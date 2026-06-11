@@ -246,7 +246,9 @@
             align-items: center;
             // padding-left: 21px;
             &.expanded{
+                height: auto;
                 min-height: 50px;
+                padding: 10px 0;
             }
             .crew-action-item{
                 color: white;
