@@ -443,9 +443,17 @@ class BoardsPalette extends React.Component {
                                         height: this.props.tileSize + 'px',
                                         backgroundColor: shrineItem.color,
                                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                        fontSize: Math.max(8, this.props.tileSize * 0.35) + 'px',
                                         flexShrink: 0
-                                    }}>🏛</div>
+                                    }}>
+                                        <div style={{
+                                            width: '70%',
+                                            height: '70%',
+                                            backgroundImage: `url(${images.shrine})`,
+                                            backgroundSize: 'contain',
+                                            backgroundRepeat: 'no-repeat',
+                                            backgroundPosition: 'center'
+                                        }} />
+                                    </div>
                                 </div>
                             })}
                         </div>}

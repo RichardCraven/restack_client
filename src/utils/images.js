@@ -21,12 +21,13 @@ import hand_20 from '../assets/icons/items/weapons/hands/hands_numbered/hand_20.
 import hand_21 from '../assets/icons/items/weapons/hands/hands_numbered/hand_21.png';
 import hand_22 from '../assets/icons/items/weapons/hands/hands_numbered/hand_22.png';
 
-import fist_punch from '../assets/icons/combat-icons/__fist-punch.png';
+import fist_punch from '../assets/icons/items/weapons/hands/punch.png';
 // monsters
 import monster from '../assets/icons/monster.png'
 import avatar from '../assets/icons/avatar.png'
 import avatar_white from '../assets/icons/avatar_white.png'
 import narrative from '../assets/icons/narrative.png'
+import lore_tablet from '../assets/icons/tablet.png'
 import beholder from '../assets/portraits/monsters/beholder.png'
 import black_banshee from '../assets/icons/monsters/black_banshee.png'
 import black_djinn from '../assets/icons/monsters/black_djinn.png'
@@ -490,11 +491,17 @@ import precipice_guardian from '../assets/portraits/monsters/precipice guardian.
 import precipice_guardian_portrait from '../assets/portraits/monsters/precipice guardian.png'
 import blalok from '../assets/portraits/monsters/blalok.png'
 import shade from '../assets/portraits/monsters/shade.png'
+import orbital_shaman from '../assets/portraits/monsters/orbital shaman.png'
+import orbital_shaman_portrait from '../assets/portraits/monsters/orbital shaman.png'
+import cultist_of_whispers from '../assets/portraits/monsters/cultist of whispers.png'
+import cultist_of_whispers_portrait from '../assets/portraits/monsters/cultist of whispers.png'
+import horned_pet from '../assets/portraits/monsters/horned pet.png'
+import horned_pet_portrait from '../assets/portraits/monsters/horned pet.png'
 
 
 //MID JOURNEY
-import goat_demon from '../assets/portraits/monsters/goat_demon.png'
-import gorgon from '../assets/portraits/monsters/gorgon.png'
+import goat_demon from '../assets/icons/monsters/mj_icons/goat_demon.png'
+import gorgon from '../assets/icons/monsters/mj_icons/gorgon.png'
 
 import gorgon_portrait from '../assets/portraits/monsters/gorgon.png'
 import goat_demon_portrait from '../assets/portraits/monsters/goat_demon.png'
@@ -715,6 +722,15 @@ import ensnare from '../assets/icons/combat-icons/specials/ranger/ensnare.png';
 import gore from '../assets/icons/combat-icons/specials/monsters/troll/gore.png';
 import regenerate from '../assets/icons/combat-icons/specials/monsters/troll/regenerate.png';
 import blue_dragon_breath from '../assets/icons/combat-icons/specials/monsters/dragon/blue_dragon_breath.png';
+
+// goat demon skills
+import malevolent_presence from '../assets/icons/combat-icons/specials/monsters/goat demon/malevolent presence.png';
+import gore_horns from '../assets/icons/combat-icons/specials/monsters/goat demon/gore horns.png';
+import demon_mark from '../assets/icons/combat-icons/specials/monsters/goat demon/demon mark.png';
+import new_moon from '../assets/icons/combat-icons/specials/monsters/goat demon/new moon.png';
+import rake from '../assets/icons/combat-icons/specials/monsters/goat demon/rake.png';
+import silence from '../assets/icons/combat-icons/specials/monsters/goat demon/silence.png';
+import fear from '../assets/icons/combat-icons/effects/fear.png';
 import bombard from '../assets/icons/combat-icons/specials/monsters/dragon/bombard.png';
 import dispell from '../assets/icons/combat-icons/specials/monsters/dragon/dispell.png';
 import elder_presence from '../assets/icons/combat-icons/specials/monsters/dragon/elder_presence.png';
@@ -748,6 +764,8 @@ import summon_spiders_icon from '../assets/icons/combat-icons/specials/monsters/
 import witch_dispell from '../assets/icons/combat-icons/specials/monsters/witch/dispell.png';
 import demonic_whispers from '../assets/icons/combat-icons/specials/monsters/witch/demonic whispers.png';
 import transform from '../assets/icons/combat-icons/specials/monsters/witch/transform.png';
+import shadow_presence from '../assets/icons/combat-icons/specials/monsters/witch/Aura_ShadowPresence_nb.png';
+import shrine from '../assets/icons/buildings/shrine.png';
 
 // body
 import body_male from '../assets/icons/figures/body_man.png'
@@ -959,6 +977,7 @@ export {
     avatar,
     avatar_white,
     narrative,
+    lore_tablet,
     beholder,
     beholder_portrait,
     beholder_minion,
@@ -1003,6 +1022,12 @@ export {
     kabuki_demon,
     blalok,
     shade,
+    orbital_shaman,
+    orbital_shaman_portrait,
+    cultist_of_whispers,
+    cultist_of_whispers_portrait,
+    horned_pet,
+    horned_pet_portrait,
 
     beetle_charm,
     demonskull_charm,
@@ -1719,6 +1744,7 @@ export {
     return_from_trial_3,
     
     shadow_curse,
+    shadow_presence,
     spiderweb,
     summon_spiders_icon,
     summon_spiders_icon as summon_spiders,
@@ -1753,5 +1779,14 @@ export {
     plunder_summoner,
     soul_tithe_summoner,
     dark_pact_summoner,
-    codex
+    codex,
+    shrine,
+
+    malevolent_presence,
+    gore_horns,
+    demon_mark,
+    new_moon,
+    rake,
+    silence,
+    fear
 };

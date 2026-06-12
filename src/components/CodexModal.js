@@ -14,7 +14,7 @@ const CLASS_BASE_STATS = {
     summoner:  { str: 3, int: 8, dex: 5, fort: 6, hp: 10 },
 };
 
-function PowerRatingsPanel({ stats, classId, footerText }) {
+function PowerRatingsPanel({ stats, classId }) {
     let s = stats || {};
     if (classId && CLASS_BASE_STATS[classId]) {
         const base = CLASS_BASE_STATS[classId];
@@ -43,9 +43,11 @@ function PowerRatingsPanel({ stats, classId, footerText }) {
         { label: 'AGILITY',      val: dexVal,  max: 15 },
         { label: 'STAMINA',      val: fortVal, max: 15 },
         { label: 'DURABILITY',   val: defVal,  max: 20 },
-        { label: 'INTELLIGENCE', val: intVal,  max: 15 },
-        { label: 'HEALTH (HP)',  val: hpVal,   max: 500 }
+        { label: 'INTELLIGENCE', val: intVal,  max: 15 }
     ];
+    if (!classId) {
+        items.push({ label: 'HEALTH (HP)',  val: hpVal,   max: 500 });
+    }
 
     return (
         <div className="codex-power-ratings">
@@ -81,7 +83,6 @@ function PowerRatingsPanel({ stats, classId, footerText }) {
                     );
                 })}
             </div>
-            {footerText && <div className="pe-power-footer">{footerText}</div>}
         </div>
     );
 }
@@ -176,6 +177,14 @@ const INTERACTABLES = [
         category: 'interactable',
         desc: 'Descend to a deeper dungeon level. Monsters and rewards scale with depth.',
         tags: ['navigation', 'stairs'],
+    },
+    {
+        id: 'lore_tablet',
+        name: 'Lore Tablet',
+        icon: images.lore_tablet,
+        category: 'interactable',
+        desc: 'Ancient stone tablets. Reading them reveals lost lore and grants domain tokens.',
+        tags: ['lore', 'buff'],
     },
     {
         id: 'narrative',
@@ -625,10 +634,51 @@ function SkillDetail({ skill }) {
                         {(Array.isArray(skill.effect) ? skill.effect : [skill.effect]).map((e, i) => (
                             <span key={i} className="codex-effect-pill">
                                 {typeof e === 'object'
-                                    ? `${e.type} (${e.chance}%${e.duration ? ` · ${resolveDurationLabel(e.duration)}` : ''})`
+                                    ? (() => {
+                                        const details = [];
+                                        if (e.chance != null) details.push(`${e.chance}%`);
+                                        if (e.duration != null) details.push(resolveDurationLabel(e.duration));
+                                        return `${e.type}${details.length > 0 ? ` (${details.join(' · ')})` : ''}`;
+                                      })()
                                     : e}
                             </span>
                         ))}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
+function AbilitiesSection({ skillsList }) {
+    const [popupSkill, setPopupSkill] = React.useState(null);
+
+    return (
+        <div className="codex-detail-effects">
+            <div className="codex-effects-label">Abilities ({skillsList.length})</div>
+            <div className="codex-class-skill-grid">
+                {skillsList.map(s => {
+                    const iconSrc = resolveImg(s.icon);
+                    return (
+                        <div key={s.id || s.name} className="codex-class-skill-chip" onClick={() => setPopupSkill(s)} style={{ cursor: 'pointer' }}>
+                            {iconSrc && <img src={iconSrc} alt="" className="codex-chip-icon" />}
+                            <span>{s.name}</span>
+                        </div>
+                    );
+                })}
+            </div>
+            {popupSkill && (
+                <div className="codex-backdrop" style={{ zIndex: 1001 }} onClick={() => setPopupSkill(null)}>
+                    <div className="codex-modal" style={{ maxWidth: '500px', height: 'auto', maxHeight: '80vh' }} onClick={e => e.stopPropagation()}>
+                        <div className="codex-header" style={{ padding: '8px 16px', minHeight: 'auto' }}>
+                            <div className="codex-header-left">
+                                <div className="codex-header-title" style={{ fontSize: '1.2rem' }}>Ability Info</div>
+                            </div>
+                            <button className="codex-close-btn" onClick={() => setPopupSkill(null)}>✕</button>
+                        </div>
+                        <div className="codex-body" style={{ padding: '16px' }}>
+                            <SkillDetail skill={popupSkill} />
+                        </div>
                     </div>
                 </div>
             )}
@@ -649,8 +699,8 @@ function MonsterDetail({ monster }) {
                     <div className="codex-detail-sub">Level {monster.level || '?'} · {monster.subtype || 'creature'} · Tier {monster.tier || '?'}</div>
                 </div>
             </div>
-            {lore.lore && <div className="codex-detail-desc">{lore.lore}</div>}
-            <PowerRatingsPanel stats={stats} footerText="Monster Power Ratings" />
+            {lore.lore && <div className="codex-detail-desc" style={{ textAlign: 'left' }}>{lore.lore}</div>}
+            <PowerRatingsPanel stats={stats} />
             {monster.weaknesses && monster.weaknesses.length > 0 && (
                 <div className="codex-detail-effects">
                     <div className="codex-effects-label" style={{ color: '#c94040' }}>Weaknesses</div>
@@ -660,12 +710,7 @@ function MonsterDetail({ monster }) {
                 </div>
             )}
             {monster.specials && monster.specials.length > 0 && (
-                <div className="codex-detail-effects">
-                    <div className="codex-effects-label" style={{ color: '#9b64c9' }}>Specials</div>
-                    <div className="codex-effects-list">
-                        {monster.specials.map((s, i) => <span key={i} className="codex-effect-pill codex-special-pill">{s.replace(/_/g, ' ')}</span>)}
-                    </div>
-                </div>
+                <AbilitiesSection skillsList={monster.specials.map(s => skillsMatrix[s] || { id: s, name: s.replace(/_/g, ' ') })} />
             )}
             {lore.tactics && (
                 <div className="codex-tactics-box">
@@ -691,7 +736,7 @@ function ClassDetail({ cls, allSkills }) {
                 </div>
             </div>
             <div className="codex-detail-desc">{cls.desc}</div>
-            <PowerRatingsPanel classId={cls.id} footerText={`${cls.name} Power Ratings`} />
+            <PowerRatingsPanel classId={cls.id} />
             {classSkills.length > 0 && (
                 <div className="codex-detail-effects">
                     <div className="codex-effects-label">Abilities ({classSkills.length})</div>

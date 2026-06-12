@@ -83,7 +83,7 @@ export function MonsterManager() {
             greetings: ['*screech*'],
             deathCries: ['*screech*'],
             specials: ['reassembly'],
-            attacks: ['claw_strike'],
+            attacks: ['sword_swing'],
             minions: ['skeleton', 'skeleton'],
             weaknesses: ['fire'],
             drops: [
@@ -158,6 +158,37 @@ export function MonsterManager() {
                 { itemPool: TIER1_WEAPONS, percentChance: 35 },
             ]
         },
+        horned_pet: {
+            type: 'horned_pet',
+            isMinion: true,
+            tier: 2,
+            subtype: 'demon',
+            key: 'horned_pet',
+            image_names: ['horned_pet'],
+            monster_names: ['Spiketooth', 'Gorehound', 'Ravager'],
+            stats: {
+                hp: 60,
+                atk: 7,
+                def: 6,
+                speed: 9,
+                willpower: 0,
+                str: 5,
+                int: 3,
+                dex: 6,
+                fort: 4
+            },
+            level: 5,
+            portrait: images['horned_pet_portrait'],
+            greetings: ['*growls and flares its horns*', '*snarls fiercely*'],
+            deathCries: ['*whines and collapses*'],
+            specials: ['head_butt'],
+            attacks: ['rake', 'bite'],
+            weaknesses: ['holy', 'holy-aura'],
+            drops: [
+                { item: TIER1_POTION, percentChance: 35 },
+                { itemPool: TIER1_ITEM, percentChance: 35 },
+            ]
+        },
         // ── Level 6 ──────────────────────────────────────────────────────
         ghoul: {
             type: 'ghoul',
@@ -189,11 +220,29 @@ export function MonsterManager() {
             subtype: 'undead',
             key: 'shade',
             image_names: ['shade'],
-            monster_names: [],
-            stats: { hp: 1, atk: 0, def: 0, speed: 0, willpower: 0, str: 0, int: 0, dex: 0, fort: 0 },
+            monster_names: ['Whisperer', 'Gloom'],
+            stats: {
+                hp: 120,
+                atk: 8,
+                def: 8,
+                speed: 10,
+                willpower: 5,
+                str: 3,
+                int: 7,
+                dex: 6,
+                fort: 4
+            },
             level: 6,
             portrait: images['shade'],
-            greetings: [], deathCries: [], specials: [], attacks: [], weaknesses: [], drops: []
+            greetings: ['*chilling whispers*', 'the shadows consume you'],
+            deathCries: ['*shrieks and fades*'],
+            specials: ['despair', 'induce_fear'],
+            attacks: ['claw_strike'],
+            weaknesses: ['fire', 'holy'],
+            drops: [
+                { item: TIER1_POTION, percentChance: 35 },
+                { itemPool: TIER1_ITEM, percentChance: 35 },
+            ]
         },
         troll: {
             type: 'troll',
@@ -254,6 +303,36 @@ export function MonsterManager() {
             drops: [
                 { item: TIER1_POTION, percentChance: 35 },
                 { itemPool: TIER1_ITEM, percentChance: 50 },
+            ]
+        },
+        cultist_of_whispers: {
+            type: 'cultist_of_whispers',
+            tier: 2,
+            subtype: 'eldritch',
+            key: 'cultist_of_whispers',
+            image_names: ['cultist_of_whispers'],
+            monster_names: ['Acolyte Vane', 'Zealot Malakor', 'Initiate Selene'],
+            stats: {
+                hp: 80,
+                atk: 6,
+                def: 5,
+                speed: 9,
+                willpower: 6,
+                str: 3,
+                int: 8,
+                dex: 7,
+                fort: 4
+            },
+            level: 7,
+            portrait: images['cultist_of_whispers_portrait'],
+            greetings: ['Hear the whispers...', 'The master speaks to us!'],
+            deathCries: ['The whispers... end...'],
+            specials: ['fire_blast', 'ice_blast'],
+            attacks: ['magic_missile'],
+            weaknesses: ['holy', 'physical'],
+            drops: [
+                { item: TIER1_POTION, percentChance: 35 },
+                { itemPool: TIER1_ITEM, percentChance: 35 },
             ]
         },
         // ── Level 8 ──────────────────────────────────────────────────────
@@ -380,6 +459,36 @@ export function MonsterManager() {
                 { itemPool: TIER2_WEAPONS, percentChance: 45 },
             ]
         },
+        orbital_shaman: {
+            type: 'orbital_shaman',
+            tier: 3,
+            subtype: 'aberration',
+            key: 'orbital_shaman',
+            image_names: ['orbital_shaman'],
+            monster_names: ['Kael-Zara', 'Zul-Garth', 'Mok-Tor'],
+            stats: {
+                hp: 140,
+                atk: 11,
+                def: 12,
+                speed: 7,
+                willpower: 5,
+                str: 8,
+                int: 7,
+                dex: 6,
+                fort: 7
+            },
+            level: 10,
+            portrait: images['orbital_shaman_portrait'],
+            greetings: ['*chants in tongues of the cosmos*', 'The stars demand your blood!'],
+            deathCries: ['*cosmic screams*'],
+            specials: [],
+            attacks: ['claw_strike', 'bite'],
+            weaknesses: ['holy', 'fire'],
+            drops: [
+                { item: TIER2_POTION, percentChance: 35 },
+                { itemPool: TIER2_WEAPONS, percentChance: 35 },
+            ]
+        },
 
         // ── Level 11 ─────────────────────────────────────────────────────
         goat_demon: {
@@ -404,10 +513,10 @@ export function MonsterManager() {
             portrait: images['goat_demon_portrait'],
             greetings: ['More ingredients for my ritual..'],
             deathCries: ['Arrrghhh!'],
-            specials: ['petrify'],
-            attacks: ['snake_strike', 'bite'],
+            specials: ['silence', 'demon_mark', 'new_moon', 'malevolent_presence'],
+            attacks: ['rake', 'gore_horns'],
             weaknesses: ['ice', 'psionic'],
-            minions: ['goblin', 'goblin'],
+            minions: ['horned_pet', 'horned_pet'],
             drops: [
                 { item: TIER2_POTION, percentChance: 35 },
                 { itemPool: TIER2_WEAPONS, percentChance: 35 },

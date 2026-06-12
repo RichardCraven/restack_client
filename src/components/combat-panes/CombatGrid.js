@@ -94,7 +94,7 @@ const getActiveEffects = (combatant, combatManager) => {
     if (liveUnit.feared) {
         list.push({
             key: 'fear',
-            icon: images.induce_fear,
+            icon: images.fear || images.induce_fear,
             border: '#8e2de2',
             roundsLeft: liveUnit.fearRounds || liveUnit.stunnedRounds || 0,
             totalDuration: liveUnit.fearTotalRounds || liveUnit.stunnedTotalRounds || liveUnit.fearRounds || liveUnit.stunnedRounds || 4,
@@ -910,6 +910,15 @@ export default function CombatGrid(props) {
                 ref={el => { portraitWrapperRefs.current[fighter.id] = el; }}
             >
                 {renderEffectIcons(details || fighter)}
+                {selectedFighter?.id === fighter.id && !fighter.dead && (
+                    <div className="portrait-overlay" style={{ overflow: 'visible', zIndex: 0 }}>
+                        <div className="circular-progress selected" style={{
+                            background: `conic-gradient(${getManualMovementArcColor(getFighterDetails(fighter))} ${getManualMovementArc(getFighterDetails(fighter))}deg, transparent 0deg)`,
+                        }}>
+                            <div className="inner-circle" />
+                        </div>
+                    </div>
+                )}
                 <div
                     className="portrait-relative-container"
                     style={{
@@ -1206,13 +1215,6 @@ export default function CombatGrid(props) {
                             return <div key={e.id || i} className={`damage-indicator${isStatDebuff ? ' stat-debuff' : ''}${e.isCrit ? ' crit' : ''}${e.isMiss ? ' miss' : ''}`}>{formatDamageValue(e.value)}</div>;
                         })}
                     </div>
-                    {selectedFighter?.id === fighter.id && !fighter.dead && (
-                        <div className="circular-progress selected" style={{
-                            background: `conic-gradient(${getManualMovementArcColor(getFighterDetails(fighter))} ${getManualMovementArc(getFighterDetails(fighter))}deg, transparent 0deg)`,
-                        }}>
-                            <div className="inner-circle" />
-                        </div>
-                    )}
                 </div>
                 {/* Target indicator */}
                 {(() => {
@@ -2444,6 +2446,29 @@ export default function CombatGrid(props) {
             );
         }
 
+        if (anim.type === 'despair_overlay') {
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: '50%',
+                    top: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    width: '420px',
+                    height: '420px',
+                    backgroundImage: anim.icon ? `url(${anim.icon})` : `url(${images.shadow_presence})`,
+                    backgroundSize: 'contain',
+                    backgroundRepeat: 'no-repeat',
+                    backgroundPosition: 'center',
+                    opacity: 0.65,
+                    pointerEvents: 'none',
+                    zIndex: 3500,
+                    maskImage: 'radial-gradient(circle, rgba(0,0,0,1) 35%, rgba(0,0,0,0) 70%)',
+                    WebkitMaskImage: 'radial-gradient(circle, rgba(0,0,0,1) 35%, rgba(0,0,0,0) 70%)',
+                    animation: 'fearOverlayPulse 1.5s ease-in-out forwards',
+                }} />
+            );
+        }
+
         if (anim.type === 'fireball_projectile' && anim.srcPx && anim.tgtPx) {
             return (
                 <div key={key} style={{
@@ -2793,7 +2818,7 @@ export default function CombatGrid(props) {
             const dy = anim.tgtPx.y - anim.srcPx.y;
             const midX = anim.srcPx.x + dx * 0.5;
             const midY = anim.srcPx.y + dy * 0.5;
-            const shieldSlamIcon = images.shield_slam?.default || images.shield_slam || '';
+            const shieldSlamIcon = anim.icon || images.shield_slam?.default || images.shield_slam || '';
             return (
                 <div key={key} style={{
                     position: 'absolute',
@@ -2809,6 +2834,134 @@ export default function CombatGrid(props) {
                     pointerEvents: 'none',
                     zIndex: 4100,
                     animation: 'scaleUp 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275) both',
+                }} />
+            );
+        }
+
+        if (anim.type === 'silence_projectile' && anim.srcPx && anim.tgtPx) {
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: `${anim.srcPx.x}px`,
+                    top: `${anim.srcPx.y}px`,
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
+                    background: 'radial-gradient(circle, #a8ffb2 0%, #a020f0 40%, #00ff00 75%, transparent 100%)',
+                    boxShadow: '0 0 16px #a020f0, 0 0 32px #00ff00',
+                    transform: `translate(-50%, -50%)`,
+                    transformOrigin: 'center',
+                    pointerEvents: 'none',
+                    zIndex: 4000,
+                    animation: `fireballTravel 1s cubic-bezier(0.25,0.46,0.45,0.94) forwards`,
+                    '--fb-dx': `${anim.tgtPx.x - anim.srcPx.x}px`,
+                    '--fb-dy': `${anim.tgtPx.y - anim.srcPx.y}px`,
+                }} />
+            );
+        }
+
+        if (anim.type === 'silence_hit' && anim.tgtPx) {
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: `${anim.tgtPx.x - 40}px`,
+                    top: `${anim.tgtPx.y - 40}px`,
+                    width: '80px',
+                    height: '80px',
+                    borderRadius: '50%',
+                    background: 'radial-gradient(circle, #ffffff 0%, #a020f0 50%, transparent 80%)',
+                    boxShadow: '0 0 20px #00ff00',
+                    pointerEvents: 'none',
+                    zIndex: 4500,
+                    animation: 'explosionPop 0.5s ease-out forwards',
+                }} />
+            );
+        }
+
+        if (anim.type === 'demon_mark_overlay') {
+            const markIcon = anim.icon || images.demon_mark || '';
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: '50%',
+                    top: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    width: '380px',
+                    height: '380px',
+                    backgroundImage: `url(${markIcon})`,
+                    backgroundSize: 'contain',
+                    backgroundRepeat: 'no-repeat',
+                    backgroundPosition: 'center',
+                    opacity: 0.6,
+                    pointerEvents: 'none',
+                    zIndex: 3500,
+                    maskImage: 'radial-gradient(circle, rgba(0,0,0,1) 35%, rgba(0,0,0,0) 70%)',
+                    WebkitMaskImage: 'radial-gradient(circle, rgba(0,0,0,1) 35%, rgba(0,0,0,0) 70%)',
+                    animation: 'fearOverlayPulse 1.5s ease-in-out forwards',
+                }} />
+            );
+        }
+
+        if (anim.type === 'demon_mark_hit' && anim.tgtPx) {
+            const markIcon = anim.icon || images.demon_mark || '';
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: `${anim.tgtPx.x}px`,
+                    top: `${anim.tgtPx.y}px`,
+                    width: '70px',
+                    height: '70px',
+                    backgroundImage: `url("${markIcon}")`,
+                    backgroundSize: 'contain',
+                    backgroundRepeat: 'no-repeat',
+                    backgroundPosition: 'center',
+                    transform: 'translate(-50%, -50%)',
+                    pointerEvents: 'none',
+                    zIndex: 4500,
+                    animation: 'scaleUpFadeOut 1.2s ease-out forwards',
+                }} />
+            );
+        }
+
+        if (anim.type === 'new_moon_overlay') {
+            const moonIcon = anim.icon || images.new_moon || '';
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: '50%',
+                    top: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    width: '380px',
+                    height: '380px',
+                    backgroundImage: `url(${moonIcon})`,
+                    backgroundSize: 'contain',
+                    backgroundRepeat: 'no-repeat',
+                    backgroundPosition: 'center',
+                    opacity: 0.75,
+                    pointerEvents: 'none',
+                    zIndex: 3500,
+                    animation: 'scaleUpFadeOut 1.8s ease-in-out forwards',
+                }} />
+            );
+        }
+
+        if (anim.type === 'fear_pulse' && anim.tgtPx) {
+            const fearIcon = anim.icon || images.fear || '';
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: `${anim.tgtPx.x}px`,
+                    top: `${anim.tgtPx.y}px`,
+                    width: '64px',
+                    height: '64px',
+                    backgroundImage: `url("${fearIcon}")`,
+                    backgroundSize: 'contain',
+                    backgroundRepeat: 'no-repeat',
+                    backgroundPosition: 'center',
+                    transform: 'translate(-50%, -50%)',
+                    pointerEvents: 'none',
+                    zIndex: 4500,
+                    animation: 'scaleUpFadeOut 1.0s ease-out forwards',
                 }} />
             );
         }

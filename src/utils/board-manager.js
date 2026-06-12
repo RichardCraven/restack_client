@@ -1272,6 +1272,7 @@ export function BoardManager(){
                 showCoordinates: false,
                 contains: tile.contains,
                 image: imageKey,
+                inscriptions: tile.inscriptions || null,
                 borders: null
             })
             this.overlayTiles.push({
@@ -1862,11 +1863,22 @@ export function BoardManager(){
         if (!destinationTile || typeof destinationTile.contains === 'undefined') return;
         // Check for side-specific inscriptions on the CURRENT tile (wall as a border, not a void tile)
         const sideMap = { up: 'top', down: 'bottom', left: 'left', right: 'right' };
+        const destSideMap = { up: 'bottom', down: 'top', left: 'right', right: 'left' };
         const inscribedSide = direction ? sideMap[direction] : null;
+        const destInscribedSide = direction ? destSideMap[direction] : null;
         const currentTileInscription = inscribedSide && tile.inscriptions && tile.inscriptions[inscribedSide];
+        const destTileInscription = destInscribedSide && destinationTile.inscriptions && destinationTile.inscriptions[destInscribedSide];
 
-        if (this.getContainsType(destinationTile.contains) === 'void') {
-            if (currentTileInscription) {
+        const destType = this.getContainsType(destinationTile.contains);
+        if (destType === 'void' || destType === 'inscription') {
+            const anyDestInscription = destinationTile.inscriptions && Object.values(destinationTile.inscriptions).find(v => !!v);
+            if (destType === 'inscription' && destinationTile.contains.subtype) {
+                try { if (this.messaging) this.messaging(`✍ ${destinationTile.contains.subtype}`); } catch (e) {}
+            } else if (destTileInscription) {
+                try { if (this.messaging) this.messaging(`✍ ${destTileInscription}`); } catch (e) {}
+            } else if (anyDestInscription) {
+                try { if (this.messaging) this.messaging(`✍ ${anyDestInscription}`); } catch (e) {}
+            } else if (currentTileInscription) {
                 try { if (this.messaging) this.messaging(`✍ ${currentTileInscription}`); } catch (e) {}
             } else {
                 try { if (this.messaging) this.messaging('A wall blocks your way.'); } catch (e) {}
@@ -1874,7 +1886,9 @@ export function BoardManager(){
             return;
         }
         if (this.isPassageWallBlockingBetween(tile.id, destinationIndex)) {
-            if (currentTileInscription) {
+            if (destTileInscription) {
+                try { if (this.messaging) this.messaging(`✍ ${destTileInscription}`); } catch (e) {}
+            } else if (currentTileInscription) {
                 try { if (this.messaging) this.messaging(`✍ ${currentTileInscription}`); } catch (e) {}
             } else {
                 try { if (this.messaging) this.messaging('A wall blocks your way.'); } catch (e) {}
@@ -2099,12 +2113,14 @@ export function BoardManager(){
                     coords[1] >= scoutColStart && coords[1] <= scoutColEnd;
 
                 // Reveal tiles within radius 2 that are reachable OR within the scouted area
-                if ((inScoutedArea || (manhattan <= 2 && visibleTileIds.has(e.id))) && this.getContainsType(e.contains) !== 'void') {
+                const isVoid = this.getContainsType(e.contains) === 'void';
+                const hasInscriptions = e.inscriptions && Object.values(e.inscriptions).some(v => !!v);
+                if ((inScoutedArea || (manhattan <= 2 && visibleTileIds.has(e.id))) && (!isVoid || hasInscriptions)) {
                     const persistedColor = (this.currentBoard && this.currentBoard.tiles && this.currentBoard.tiles[e.id] && this.currentBoard.tiles[e.id].color);
                     const persistedBorders = (this.currentBoard && this.currentBoard.tiles && this.currentBoard.tiles[e.id] && this.currentBoard.tiles[e.id].borders);
                     const runtimeColor = (e.color && e.color !== 'black') ? e.color : null;
                     const boardColor = (persistedColor && persistedColor !== 'black') ? persistedColor : (runtimeColor || null);
-                    e.color = boardColor || 'white';
+                    e.color = boardColor || (isVoid ? '#0e0e0e' : 'white');
                     e.image = this.getImageForContains(e.contains, e);
                     e.borders = this.normalizeFogBorders(persistedBorders);
                 }

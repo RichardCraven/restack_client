@@ -21,6 +21,12 @@ import {
   monk_force_punch,
   ranger_net_throw,
   hex,
+  shadow_presence,
+  rake,
+  gore_horns,
+  demon_mark,
+  new_moon,
+  fear
 } from './images';
 
 export class AnimationManagerRedux {
@@ -113,6 +119,31 @@ export class AnimationManagerRedux {
         break;
       case 'induce_fear':
         this._induceFear(sourceCoords, targetCoords);
+        break;
+      case 'despair':
+      case 'dispair':
+        this._despair(sourceCoords, targetCoords);
+        break;
+      case 'rake':
+        this._rakeStrike(sourceCoords, targetCoords, sourceUnitId);
+        break;
+      case 'gore_horns':
+        this._goreHorns(sourceCoords, targetCoords, sourceUnitId);
+        break;
+      case 'silence':
+        this._silenceProjectile(sourceCoords, targetCoords);
+        break;
+      case 'demon_mark':
+        this._demonMarkOverlay(sourceCoords);
+        break;
+      case 'demon_mark_hit':
+        this._demonMarkHit(sourceCoords, targetCoords);
+        break;
+      case 'new_moon':
+        this._newMoonOverlay(sourceCoords);
+        break;
+      case 'malevolent_presence_fear':
+        this._malevolentPresenceFear(sourceCoords, targetCoords);
         break;
       case 'fireball':
       case 'fire_blast':
@@ -338,6 +369,15 @@ export class AnimationManagerRedux {
       type: 'induce_fear_overlay',
       srcPx: this._px(src),
       icon: induce_fear,
+      duration: 1500,
+    });
+  }
+
+  _despair(src, _tgt) {
+    this._emit({
+      type: 'despair_overlay',
+      srcPx: this._px(src),
+      icon: shadow_presence,
       duration: 1500,
     });
   }
@@ -1065,6 +1105,113 @@ export class AnimationManagerRedux {
       length,
       angle,
       duration
+    });
+  }
+
+  _rakeStrike(src, tgt, sourceUnitId = null) {
+    const srcPx = this._px(src);
+    const tgtPx = this._px(tgt);
+    const dx = tgtPx.x - srcPx.x;
+    const dy = tgtPx.y - srcPx.y;
+    const midPx = { x: srcPx.x + dx * 0.6, y: srcPx.y + dy * 0.6 };
+    const angle = (Math.atan2(dy, dx) * (180 / Math.PI)) + 180;
+
+    this._emit({
+      type: 'claw_swipe',
+      srcPx,
+      tgtPx,
+      midPx,
+      angle,
+      icon: rake,
+      duration: 750,
+      sourceUnitId,
+    });
+
+    setTimeout(() => {
+      this._emit({
+        type: 'claw_hit',
+        tgtPx,
+        icon: claw_hit,
+        duration: 400,
+        sourceUnitId,
+      });
+    }, 500);
+  }
+
+  _goreHorns(src, tgt, sourceUnitId) {
+    const srcPx = this._px(src);
+    const tgtPx = this._px(tgt);
+    this._emit({
+      type: 'shield_slam_connect',
+      srcPx,
+      tgtPx,
+      srcCoords: src,
+      tgtCoords: tgt,
+      sourceUnitId,
+      icon: gore_horns,
+      duration: 600,
+    });
+  }
+
+  _silenceProjectile(src, tgt) {
+    const srcPx = this._px(src);
+    const tgtPx = this._getImpactTargetPx(tgt);
+    const dx = tgtPx.x - srcPx.x;
+    const dy = tgtPx.y - srcPx.y;
+    const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+    this._emit({
+      type: 'silence_projectile',
+      srcPx,
+      tgtPx,
+      angle,
+      duration: 1000,
+    });
+    setTimeout(() => {
+      this._emit({
+        type: 'silence_hit',
+        tgtPx,
+        duration: 500,
+      });
+    }, 950);
+  }
+
+  _demonMarkOverlay(src) {
+    this._emit({
+      type: 'demon_mark_overlay',
+      srcPx: this._px(src),
+      icon: demon_mark,
+      duration: 1500,
+    });
+  }
+
+  _demonMarkHit(src, tgt) {
+    const tgtPx = this._px(tgt);
+    this._emit({
+      type: 'demon_mark_hit',
+      tgtPx,
+      icon: demon_mark,
+      duration: 1200
+    });
+  }
+
+  _newMoonOverlay(src) {
+    this._emit({
+      type: 'new_moon_overlay',
+      srcPx: this._px(src),
+      icon: new_moon,
+      duration: 1800
+    });
+  }
+
+  _malevolentPresenceFear(src, tgt) {
+    const srcPx = this._px(src);
+    const tgtPx = this._px(tgt);
+    this._emit({
+      type: 'fear_pulse',
+      srcPx,
+      tgtPx,
+      icon: fear,
+      duration: 1000
     });
   }
 }

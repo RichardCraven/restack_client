@@ -5517,6 +5517,11 @@ class DungeonPage extends React.Component {
         // Find the matching crew member
         const matchingMember = shrineClass ? crew.find(m => (m.type || '').toLowerCase() === shrineClass.toLowerCase()) : null;
 
+        if (shrineClass && !matchingMember) {
+            try { if (this.props.boardManager.messaging) this.props.boardManager.messaging(`🏛 You need a ${shrineClass} in your party to commune with this shrine.`); } catch(e) {}
+            return;
+        }
+
         this.setState({
             keysLocked: true,
             showShrineOverlay: true,
@@ -6154,8 +6159,9 @@ class DungeonPage extends React.Component {
                         <div style={{ color: '#d4a844', fontSize: '11px', letterSpacing: '4px', textTransform: 'uppercase', marginBottom: '6px', opacity: 0.7 }}>
                             Ancestral Shrine
                         </div>
-                        <div style={{ color: '#fff', fontSize: '20px', letterSpacing: '2px', marginBottom: '24px', textShadow: '0 0 20px rgba(212,168,68,0.6)' }}>
-                            🏛 {classLabel} Communion
+                        <div style={{ color: '#fff', fontSize: '20px', letterSpacing: '2px', marginBottom: '24px', textShadow: '0 0 20px rgba(212,168,68,0.6)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <img src={images.shrine} alt="shrine" style={{ width: '24px', height: '24px', objectFit: 'contain' }} />
+                            <span>{classLabel} Communion</span>
                         </div>
 
                         {/* Ritual Timer Ring */}
@@ -6263,7 +6269,7 @@ class DungeonPage extends React.Component {
                     }} />
                 )}
                 {(this.state.modalType === 'Merchant' || this.state.modalType === 'Alchemist') && (
-                    <CModalHeader style={{position: 'relative', zIndex: 2}}>
+                    <CModalHeader closeButton={false} style={{position: 'relative', zIndex: 2}}>
                         <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', width:'100%', position:'relative', zIndex:2}}>
                             <CModalTitle>{this.state.modalType}</CModalTitle>
                             <button aria-label="Close vendor" className="camp-close" onClick={() => this.onUpdateModalClosed()} style={{background:'transparent', border:'none', color:'#fff', fontSize:20}}>✕</button>
@@ -6286,7 +6292,7 @@ class DungeonPage extends React.Component {
             </CModal>
             {/* Quests popup */}
             <CModal className={`quests-modal${this.state.showCampPopup ? ' quests-above-camp' : ''}`} alignment="center" visible={this.state.showQuestsPopup} onClose={this.handleCloseQuestsPopup} backdrop={true} style={this.state.showCampPopup ? {zIndex: 1100} : undefined}>
-                <CModalHeader>
+                <CModalHeader closeButton={false}>
                     <div style={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%'}}>
                         <CModalTitle>Quests</CModalTitle>
                         <button aria-label="Close quests" className="quests-close" onClick={this.handleCloseQuestsPopup} style={{background: 'transparent', border: 'none', color: '#fff', fontSize: 20}}>✕</button>
@@ -6423,7 +6429,7 @@ class DungeonPage extends React.Component {
             <CModal className={'camp-modal'} alignment="center" visible={this.state.showCampPopup} onClose={this.handleCloseCampPopup} backdrop={true}>
                 {/* Background: camp icon at cover opacity 0.3 */}
                 <div className="camp-modal-bg" style={{backgroundImage: `url(${images.camping?.default || images.camping})`}}></div>
-                <CModalHeader>
+                <CModalHeader closeButton={false}>
                     <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', width:'100%', position:'relative', zIndex:2}}>
                         <CModalTitle>Camp</CModalTitle>
                         <button aria-label="Close camp" className="camp-close" onClick={this.handleCloseCampPopup} style={{background:'transparent', border:'none', color:'#fff', fontSize:20}}>✕</button>
@@ -8207,6 +8213,7 @@ class DungeonPage extends React.Component {
                         terrain={tile.terrain}
                         color={tile.color ? tile.color : 'lightgrey'}
                         borders={tile.borders}
+                        inscriptions={tile.inscriptions}
                         partialObscured={!!tile.partialObscured}
                         coordinates={tile.coordinates}
                         index={tile.id}
@@ -8297,7 +8304,7 @@ class DungeonPage extends React.Component {
                                         top: top,
                                         width: lootSize,
                                         height: lootSize,
-                                        backgroundImage: `url(${iconUrl})`,
+                                        backgroundImage: `url("${iconUrl}")`,
                                         backgroundSize: '70% 70%',
                                         backgroundRepeat: 'no-repeat',
                                         backgroundPosition: 'center',

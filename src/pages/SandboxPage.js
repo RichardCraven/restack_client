@@ -46,6 +46,9 @@ import {
   precipice_guardian_portrait,
   blalok,
   shade,
+  horned_pet_portrait,
+  orbital_shaman_portrait,
+  cultist_of_whispers_portrait,
   claw_strike,
   claw_hit,
   claw_strike_animation,
@@ -185,6 +188,8 @@ import {
   polymorph,
   hex,
   third_eye,
+  shadow_presence,
+  rake,
 } from '../utils/images';
 
 // Dynamically load all runes from the directory
@@ -280,7 +285,7 @@ const monstersData = [
     { id: 'bite', name: 'Bite', desc: 'Savage bite attack.', icon: monster_bite, type: 'bite' }
   ] },
   { id: 'skeleton', name: 'Skeleton', portrait: skeleton_portrait, abilities: [
-    { id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' },
+    { id: 'sword_swing', name: 'Sword Swing', desc: 'Execute a sword swing.', icon: shortsword, type: 'sword_swing' },
     { id: 'reassembly', name: 'Reassembly (passive)', desc: 'Upon death, collapse into bones and reassemble after a long duration.', icon: reassembly, type: 'reassembly_type', isPassive: true }
   ] },
   { id: 'mummy', name: 'Mummy', portrait: mummy_portrait, abilities: [
@@ -350,7 +355,23 @@ const monstersData = [
     { id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' }
   ] },
   { id: 'shade', name: 'Shade', portrait: shade, abilities: [
-    { id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' }
+    { id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' },
+    { id: 'induce_fear', name: 'Induce Fear', desc: 'Scream, filling targets with dread.', icon: induce_fear, type: 'induce_fear' },
+    { id: 'despair', name: 'Despair', desc: "Unleash a wave of darkness that drains 30 stamina (endurance) from all enemies, and reduces the crew's resolve by 20 points.", icon: shadow_presence, type: 'despair' }
+  ] },
+  { id: 'horned_pet', name: 'Horned Pet', portrait: horned_pet_portrait, abilities: [
+    { id: 'rake', name: 'Rake', desc: 'Savage double-swipe rake attack.', icon: rake, type: 'rake' },
+    { id: 'head_butt', name: 'Headbutt', desc: 'Deliver a powerful headbutt, pushing back the target.', icon: head_butt, type: 'head_butt' },
+    { id: 'bite', name: 'Bite', desc: 'Savage bite attack.', icon: monster_bite, type: 'bite' }
+  ] },
+  { id: 'orbital_shaman', name: 'Orbital Shaman', portrait: orbital_shaman_portrait, abilities: [
+    { id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' },
+    { id: 'bite', name: 'Bite', desc: 'Savage bite attack.', icon: monster_bite, type: 'bite' }
+  ] },
+  { id: 'cultist_of_whispers', name: 'Cultist of Whispers', portrait: cultist_of_whispers_portrait, abilities: [
+    { id: 'magic_missile', name: 'Magic Missile', desc: 'Fire three seeking magic missiles in sequence.', icon: magic_missile_icon, type: 'magic_missile' },
+    { id: 'fire_blast', name: 'Fire Blast', desc: 'Unleash a roaring blast of fire.', icon: fire_blast, type: 'fire_blast' },
+    { id: 'ice_blast', name: 'Ice Blast', desc: 'Freeze the target in a block of absolute-zero ice.', icon: ice_blast_icon, type: 'ice_blast_proj' }
   ] }
 ];
 
@@ -617,6 +638,7 @@ const SandboxPage = () => {
 
   // Mummy - Induce Fear states
   const [induceFearActive, setInduceFearActive] = useState(false);
+  const [despairActive, setDespairActive] = useState(false);
   const [targetFeared, setTargetFeared] = useState(false);
   const [fearEndTime, setFearEndTime] = useState(null);
   const [fearFading, setFearFading] = useState(false);
@@ -1804,11 +1826,11 @@ const SandboxPage = () => {
       }
     }
 
-    if (ability.type === 'melee' || ability.type === 'melee_poison' || ability.type === 'melee_slam' || ability.type === 'melee_heavy' || ability.type === 'melee_punches' || ability.type === 'melee_spin' || ability.type === 'barbarian_slash' || ability.type === 'claw_strike' || ability.type === 'bite' || ability.type === 'head_butt' || ability.type === 'vampiric_bite') {
+    if (ability.type === 'melee' || ability.type === 'melee_poison' || ability.type === 'melee_slam' || ability.type === 'melee_heavy' || ability.type === 'melee_punches' || ability.type === 'melee_spin' || ability.type === 'barbarian_slash' || ability.type === 'claw_strike' || ability.type === 'bite' || ability.type === 'head_butt' || ability.type === 'vampiric_bite' || ability.type === 'sword_swing' || ability.id === 'sword_swing') {
       setAnimating(true);
       
       
-      const isSlash = ability.id === 'slash' || ability.id === 'barbarian_slash';
+      const isSlash = ability.id === 'slash' || ability.id === 'barbarian_slash' || ability.id === 'sword_swing' || ability.type === 'sword_swing';
       const isSlam = ability.type === 'melee_slam' || ability.type === 'head_butt';
       const isClawStrike = ability.type === 'claw_strike' || ability.id === 'claw_strike';
       const isBite = ability.type === 'bite' || ability.id === 'bite';
@@ -1826,7 +1848,9 @@ const SandboxPage = () => {
         setTimeout(() => {
           setTargetShake(true);
           setTargetFlash(true);
-          addFloatingText('-15', 'normal', '#ff4d4d', targetPos.row, targetPos.col);
+          const dmgText = (ability.id === 'sword_swing' || ability.type === 'sword_swing') ? '-18' : '-15';
+          const dmgColor = (ability.id === 'sword_swing' || ability.type === 'sword_swing') ? '#ff9f1c' : '#ff4d4d';
+          addFloatingText(dmgText, 'normal', dmgColor, targetPos.row, targetPos.col);
 
           // Clear target shake/flash after 250ms
           setTimeout(() => {
@@ -2729,6 +2753,51 @@ const SandboxPage = () => {
       }, 1600);
     }
 
+    // --- SHADE DESPAIR ---
+    else if (ability.type === 'despair' || ability.type === 'dispair') {
+      setAnimating(true);
+      setDespairActive(true);
+
+      // Floating text on caster (Despair!)
+      addFloatingText('DESPAIR!', 'crit', '#6a3093', fighterPos.row, fighterPos.col);
+
+      // Hit targets (at 500ms)
+      setTimeout(() => {
+        setTargetShake(true);
+        setTargetFlash(true);
+
+        addFloatingText('-30 Stamina', 'normal', '#e65c00', targetPos.row, targetPos.col);
+        addFloatingText('-20 Resolve', 'normal', '#6a3093', targetPos.row - 0.5, targetPos.col);
+
+        if (selectedUnitType === 'monster') {
+          setExtraRangerShake(true);
+          setExtraRangerFlash(true);
+          addFloatingText('-30 Stamina', 'normal', '#e65c00', rangerPos.row, rangerPos.col);
+          addFloatingText('-20 Resolve', 'normal', '#6a3093', rangerPos.row - 0.5, rangerPos.col);
+
+          setTimeout(() => {
+            setExtraRangerShake(false);
+            setExtraRangerFlash(false);
+          }, 300);
+        }
+
+        setTimeout(() => {
+          setTargetShake(false);
+          setTargetFlash(false);
+        }, 300);
+      }, 500);
+
+      // Clear board overlay after 1.5 seconds
+      setTimeout(() => {
+        setDespairActive(false);
+      }, 1500);
+
+      // Complete animation after 1.6 seconds
+      setTimeout(() => {
+        setAnimating(false);
+      }, 1600);
+    }
+
     // --- MUMMY ENERGY DRAIN ---
     else if (ability.type === 'energy_drain') {
       const dx = Math.abs(targetPos.col - fighterPos.col);
@@ -3387,7 +3456,7 @@ const SandboxPage = () => {
     }
 
     // --- WIZARD FIREBALL ---
-    else if (ability.type === 'fireball') {
+    else if (ability.type === 'fireball' || ability.type === 'fire_blast') {
       setAnimating(true);
       // CSS orb projectile
       setProjectile({
@@ -11590,6 +11659,30 @@ const SandboxPage = () => {
                     backgroundRepeat: 'no-repeat',
                     backgroundPosition: 'center',
                     opacity: 0.5,
+                    pointerEvents: 'none',
+                    zIndex: 90,
+                    maskImage: 'radial-gradient(circle, rgba(0,0,0,1) 35%, rgba(0,0,0,0) 70%)',
+                    WebkitMaskImage: 'radial-gradient(circle, rgba(0,0,0,1) 35%, rgba(0,0,0,0) 70%)',
+                    animation: 'fearOverlayPulse 1.5s ease-in-out forwards'
+                  }}
+                />
+              )}
+
+              {/* --- Despair Board Overlay --- */}
+              {despairActive && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    left: '50%',
+                    top: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    width: '420px',
+                    height: '420px',
+                    backgroundImage: `url(${shadow_presence})`,
+                    backgroundSize: 'contain',
+                    backgroundRepeat: 'no-repeat',
+                    backgroundPosition: 'center',
+                    opacity: 0.65,
                     pointerEvents: 'none',
                     zIndex: 90,
                     maskImage: 'radial-gradient(circle, rgba(0,0,0,1) 35%, rgba(0,0,0,0) 70%)',

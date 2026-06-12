@@ -594,6 +594,21 @@ const skillsMatrix = {
         type: 'damage',
         damage: 15
     },
+    fire_blast: {
+        class: 'wizard',
+        treePath: 'combat_a',
+        id: 'fire_blast',
+        tier: 1,
+        knownByDefault: true,
+        name: 'Fire Blast',
+        desc: 'Unleash a blast of roaring fire at the target.',
+        icon: images['fire_blast'],
+        cooldown: 5,
+        duration: 'instant',
+        range: 'medium',
+        type: 'damage',
+        damage: 25
+    },
     ice_blast: {
         class: 'wizard',
         treePath: 'combat_b',
@@ -1322,6 +1337,17 @@ const skillsMatrix = {
         range: 'close',
         type: 'damage'
     },
+    sword_swing: {
+        id: 'sword_swing',
+        tier: 1,
+        name: 'Sword Swing',
+        desc: 'Execute a sword swing.',
+        icon: images['shortsword'],
+        cooldown: 2,
+        duration: 'instant',
+        range: 'close',
+        type: 'damage'
+    },
     bite: {
         id: 'bite',
         tier: 1,
@@ -1333,6 +1359,17 @@ const skillsMatrix = {
         range: 'close',
         type: 'damage',
         effect: { type: 'bleed', chance: 40, duration: 'short' }
+    },
+    despair: {
+        id: 'despair',
+        tier: 2,
+        name: 'Despair',
+        desc: "Unleash a wave of darkness that drains 30 stamina (endurance) from all enemies, and reduces the crew's resolve by 20 points.",
+        icon: images['shadow_presence'],
+        cooldown: 8,
+        duration: 'instant',
+        range: 'far',
+        type: 'debuff'
     },
     // Skeleton
     reassembly: {
@@ -1709,6 +1746,67 @@ const skillsMatrix = {
         range: 'medium',
         type: 'damage',
         damage: 25
+    },
+    rake: {
+        id: 'rake',
+        name: 'Rake',
+        desc: 'Execute a claw strike with a 50% chance to strike again after 0.75 seconds.',
+        icon: images.rake,
+        cooldown: 2,
+        duration: 'instant',
+        range: 'close',
+        type: 'damage'
+    },
+    silence: {
+        id: 'silence',
+        name: 'Silence',
+        desc: 'Prevent casting magic users from using skills for a short duration.',
+        icon: images.silence,
+        cooldown: 6,
+        initialCooldown: 4,
+        duration: 'short',
+        range: 'medium',
+        type: 'debuff'
+    },
+    gore_horns: {
+        id: 'gore_horns',
+        name: 'Gore Horns',
+        desc: 'Lunge and hit the target for 200% attack damage, with a 60% chance to bleed.',
+        icon: images.gore_horns,
+        cooldown: 4,
+        duration: 'instant',
+        range: 'close',
+        type: 'damage',
+        damagePercent: 200,
+        effect: { type: 'bleed', chance: 60, duration: 'medium' }
+    },
+    demon_mark: {
+        id: 'demon_mark',
+        name: 'Demon Mark',
+        desc: 'Mark all enemies, increasing damage taken from demons by 50% for a long duration.',
+        icon: images.demon_mark,
+        cooldown: 6,
+        duration: 'long',
+        range: 'all',
+        type: 'debuff'
+    },
+    new_moon: {
+        id: 'new_moon',
+        name: 'New Moon',
+        desc: 'All demons gain +40% Attack (+60% for demon kids) and melee attacks have a 40% (50% for demon kids) chance to fear enemies for a short duration.',
+        icon: images.new_moon,
+        cooldown: 6,
+        duration: 'long',
+        range: 'self',
+        type: 'buff'
+    },
+    malevolent_presence: {
+        id: 'malevolent_presence',
+        name: 'Malevolent Presence',
+        desc: 'Passive: Adjacent enemies at round start have a 20% chance to be feared for a short duration.',
+        icon: images.malevolent_presence,
+        type: 'passive',
+        isPassive: true
     }
 };
 
