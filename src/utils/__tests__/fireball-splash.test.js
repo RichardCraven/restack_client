@@ -81,12 +81,93 @@ describe('Fireball Splash & Generic AI Basic Attack Range', () => {
     // Primary target should take full damage (20)
     expect(target.hp).toBe(80);
     // Large monster should take splash damage (10, which is Math.round(20 * 0.5))
-    expect(largeMonster.hp).toBe(90);
+  });
+
+  test('Fireball splash damage correctly handles Virtual Collision Tiles (VCTs) without breaking main unit HP', () => {
+    const wizard = {
+      id: 'wizard_unit',
+      name: 'Wizard',
+      type: 'wizard',
+      coordinates: { x: 0, y: 2 },
+      stats: { int: 0, speed: 5, dex: 5, def: 5 },
+      isMonster: false,
+      activeBuffs: [],
+      specials: [],
+      cooldowns: {}
+    };
+
+    const target = {
+      id: 'target_unit',
+      name: 'Primary Target',
+      type: 'fighter',
+      coordinates: { x: 2, y: 2 },
+      stats: { speed: 5, dex: 5, def: 5 },
+      isMonster: true,
+      hp: 100,
+      activeBuffs: [],
+      damageIndicators: []
+    };
+
+    // A large multi-tile enemy adjacent to the target
+    const largeMonster = {
+      id: 'large_monster',
+      name: 'Large Monster',
+      type: 'dragon',
+      coordinates: { x: 3, y: 1 }, // main coordinate is not directly adjacent to target (2,2)
+      occupiedCoords: [
+        { x: 3, y: 1 },
+        { x: 3, y: 2 }, // this coord is adjacent to target (2,2)
+        { x: 4, y: 1 },
+        { x: 4, y: 2 }
+      ],
+      stats: { speed: 5, dex: 5, def: 5 },
+      isMonster: true,
+      hp: 100,
+      activeBuffs: [],
+      damageIndicators: []
+    };
+
+    const largeMonsterVCT = {
+      id: 'large_monster_VCT',
+      isVCT: true,
+      parentMonsterId: 'large_monster',
+      coordinates: { x: 3, y: 2 },
+      hp: null,
+      stats: {},
+      dead: false,
+      isMonster: true,
+      damageIndicators: []
+    };
+
+    cm.combatants = {
+      [wizard.id]: wizard,
+      [target.id]: target,
+      [largeMonster.id]: largeMonster,
+      [largeMonsterVCT.id]: largeMonsterVCT
+    };
+
+    const fireballAbility = {
+      id: 'fireball',
+      name: 'Fireball',
+      flatDamage: 20,
+      atkPercentage: 100,
+      range: 'medium',
+      type: 'damage'
+    };
+
+    cm.useAbility(wizard, fireballAbility, target);
+
+    // Primary target should take full damage (20 flat + 5 wizard ATK = 25)
+    expect(target.hp).toBe(75);
+    // Large monster should take splash damage (13, which is Math.round(25 * 0.5))
+    expect(largeMonster.hp).toBe(87);
+    // VCT HP should remain null (not NaN)
+    expect(largeMonsterVCT.hp).toBeNull();
   });
 
   test('Generic AI with ranged basic attack (magic_missile) does not move closer when specials are on cooldown', () => {
     // Cultist of the Basilisk is a monster with magic_missile as basic attack (range: far)
-    // and fire_blast/ice_blast as specials
+    // and fireball/ice_blast as specials
     const cultist = {
       id: 'cultist_unit',
       name: 'Acolyte Vane',
@@ -95,10 +176,10 @@ describe('Fireball Splash & Generic AI Basic Attack Range', () => {
       coordinates: { x: 4, y: 2 },
       stats: { speed: 9, dex: 7, def: 5, atk: 6 },
       isMonster: true,
-      specials: ['fire_blast', 'ice_blast'],
+      specials: ['fireball', 'ice_blast'],
       attacks: ['magic_missile'],
       cooldowns: {
-        'fire_blast': 3, // specials on cooldown
+        'fireball': 3, // specials on cooldown
         'ice_blast': 5
       },
       movesTakenThisRound: 0,

@@ -447,17 +447,18 @@ const computeHitVars = (combatant, getHitAnimation) => {
 // Resolve portrait/icon to a string URL
 const resolvePortrait = (portraitVal) => {
     if (!portraitVal) return '';
+    let res = '';
     if (typeof portraitVal === 'string') {
         const mapped = images[portraitVal];
         if (mapped) {
-            return mapped.default || mapped;
+            res = mapped.default || mapped;
+        } else {
+            res = portraitVal;
         }
-        return portraitVal;
+    } else if (typeof portraitVal === 'object') {
+        res = portraitVal.default || '';
     }
-    if (typeof portraitVal === 'object') {
-        return portraitVal.default || '';
-    }
-    return '';
+    return res;
 };
 
 // Compute pixel position for a tile coordinate
@@ -640,6 +641,14 @@ export default function CombatGrid(props) {
             }
         });
     }, [indicatorQueues, visibleDamageIndicators, battleData]);
+
+    React.useEffect(() => {
+        Object.values(battleData).forEach(entity => {
+            if (entity && typeof entity.inTrial === 'number') {
+                prevCoordsRef.current[entity.id] = false;
+            }
+        });
+    }, [battleData]);
 
     // ── Refs ─────────────────────────────────────────────────────────────────
     // portraitWrapperRefs kept for any external code that reads them
@@ -860,6 +869,11 @@ export default function CombatGrid(props) {
             return anim.sourceUnitId === fighter.id;
         });
 
+        const activeReturnTrialAnim = activeAnimations.find(a => 
+            a.type === 'return_from_trial' && 
+            (a.sourceUnitId === fighter.id || (Math.abs(a.tgtPx.x - (xPos + TILE_SIZE / 2)) < 5 && Math.abs(a.tgtPx.y - (yPos + TILE_SIZE / 2)) < 5))
+        );
+
         // All visual-state classes go on the unit-tile (100×100) — no full-width ancestors
         const isDisintegrating = activeAnimations.some(a => a.type === 'disintegrate_beam' && a.tgtPx && Math.abs(a.tgtPx.x - xPos - TILE_SIZE/2) < 5 && Math.abs(a.tgtPx.y - yPos - TILE_SIZE/2) < 5);
         const unitTileClasses = [
@@ -874,6 +888,7 @@ export default function CombatGrid(props) {
             details?.facing === 'right' ? 'reversed' : '',
             (details?.stunned && !isAsleepFighter) ? 'stunned' : '',
             isDisintegrating ? 'disintegrate-shaking' : '',
+            activeReturnTrialAnim ? 'respawn-fade-in' : '',
         ].filter(Boolean).join(' ');
 
         const portraitClasses = [
@@ -914,7 +929,8 @@ export default function CombatGrid(props) {
                     overflow: 'visible',
                     pointerEvents: 'none',
                     zIndex: activeLeapAnim ? 350 : 300,
-                    transition: (isTelep || activeLeapAnim || liveFighter.attacking || !shouldTransition) ? 'none' : 'transform 1000ms cubic-bezier(0.25, 1, 0.5, 1)',
+                    transition: (isTelep || isBatFlying || activeReturnTrialAnim || activeLeapAnim || liveFighter.attacking || !shouldTransition) ? 'none' : 'transform 1000ms cubic-bezier(0.25, 1, 0.5, 1)',
+                    opacity: isBatFlying ? 0 : 1,
                     ...computeHitVars(details || fighter, getHitAnimation),
                 }}
                 ref={el => { portraitWrapperRefs.current[fighter.id] = el; }}
@@ -1241,53 +1257,7 @@ export default function CombatGrid(props) {
                         <div className="fighter-consumable-portrait" style={{ backgroundImage: `url(${resolvePortrait(consumableFlashes[fighter.id])})` }} />
                     </div>
                 )}
-                {/* Attack Weapon Swing Animation (par parity with Sandbox / fighters.js) */}
-                {details && details.pendingAttack && details.attacking && !details.dead && (() => {
-                    const isMonk = fighter.type === 'monk';
-                    const isBarbarian = fighter.type === 'barbarian';
-                    
-                    let icon = details.pendingAttack.icon;
-                    if (isMonk) {
-                        const isBasicPunch = details.pendingAttack.range === 'close' && details.pendingAttack.name !== 'dragon punch';
-                        icon = isBasicPunch ? images['fist_punch'] : (details.pendingAttack.icon || images['fist_punch']);
-                    } else {
-                        const equippedWeapon = (fighter.inventory || []).find(i => i && i.type === 'weapon' && (i.equippedSlot === 'right' || i.equippedSlot === 'left' || i.equippedBy === fighter.id));
-                        if (equippedWeapon) {
-                            icon = images[equippedWeapon.icon] || equippedWeapon.icon || images[equippedWeapon.id] || equippedWeapon.image || images[equippedWeapon.name] || details.pendingAttack.icon;
-                        }
-                        if (!icon) {
-                            icon = isBarbarian ? (images['axe'] || details.pendingAttack.icon) : (images['shortsword'] || images['sword'] || details.pendingAttack.icon);
-                        }
-                    }
 
-                    const tileW = 100;
-                    const weaponW = 90;
-                    let weaponStyle = {};
-                    if (details.facing === 'right') {
-                        weaponStyle = { left: `${tileW - weaponW}px`, opacity: 1, backgroundImage: `url(${icon})` };
-                    } else if (details.facing === 'left') {
-                        weaponStyle = { left: '0px', opacity: 1, backgroundImage: `url(${icon})` };
-                    } else if (details.facing === 'up') {
-                        weaponStyle = { left: `${(tileW / 2) - (weaponW / 2)}px`, top: '-40px', opacity: 1, backgroundImage: `url(${icon})`, transform: 'rotate(-90deg)' };
-                    } else if (details.facing === 'down') {
-                        weaponStyle = { left: `${(tileW / 2) - (weaponW / 2)}px`, top: '110px', opacity: 1, backgroundImage: `url(${icon})`, transform: 'rotate(90deg)' };
-                    } else {
-                        weaponStyle = { left: `${(tileW / 2) - (weaponW / 2)}px`, top: '50px', opacity: 1, backgroundImage: `url(${icon})` };
-                    }
-
-                    if (details.pendingAttack && details.pendingAttack.id === 'imbued_strike') {
-                        weaponStyle.filter = 'drop-shadow(0 0 8px rgba(0, 240, 255, 0.9)) drop-shadow(0 0 12px rgba(0, 240, 255, 0.6))';
-                    }
-
-                    const verticalFacingClass = details.facing === 'up' ? 'facing-up' : (details.facing === 'down' ? 'facing-down' : '');
-
-                    return (
-                        <div
-                            className={`weapon-wrapper ${details.facing === 'left' ? 'reversed' : ''} ${verticalFacingClass} ${details.aiming ? 'aiming' : ''} medium`}
-                            style={weaponStyle}
-                        />
-                    );
-                })()}
                 {(() => {
                     const hasPerceiveActive = details && activeAnimations.some(anim => anim.type === 'perceive_anim' && Math.floor(anim.srcPx.x / 102) === details.coordinates.x && Math.floor(anim.srcPx.y / 102) === details.coordinates.y);
                     const hasEnergyDrainActive = details && activeAnimations.some(anim => anim.type === 'energy_drain_beam' && Math.floor(anim.tgtPx.x / 102) === details.coordinates.x && Math.floor(anim.tgtPx.y / 102) === details.coordinates.y);
@@ -1440,6 +1410,11 @@ export default function CombatGrid(props) {
         const monsterSleepDebuff = Array.isArray(liveMonster.activeDebuffs)
             && liveMonster.activeDebuffs.some(d => d && d.name && ['sleep', 'sleep_spell'].includes(d.name.toLowerCase()) && (d.roundsLeft || 0) > 0);
         const isAsleepMonster = !!liveMonster.asleep || (liveMonster.sleepRounds || 0) > 0 || monsterSleepDebuff;
+        const activeReturnTrialAnim = activeAnimations.find(a => 
+            a.type === 'return_from_trial' && 
+            (a.sourceUnitId === unit.id || (Math.abs(a.tgtPx.x - (leftPos + width / 2)) < 5 && Math.abs(a.tgtPx.y - (topPos + height / 2)) < 5))
+        );
+
         // All state classes go on unit-tile — not on any full-width wrapper
         const unitTileClasses = [
             'unit-tile',
@@ -1452,6 +1427,7 @@ export default function CombatGrid(props) {
             unit.facing === 'right' ? 'reversed' : '',
             (unit.stunned && !isAsleepMonster) ? 'stunned' : '',
             isDisintegrating ? 'disintegrate-shaking' : '',
+            activeReturnTrialAnim ? 'respawn-fade-in' : '',
         ].filter(Boolean).join(' ');
 
         const portraitClasses = [
@@ -1489,7 +1465,8 @@ export default function CombatGrid(props) {
                     overflow: 'visible',
                     pointerEvents: 'none',
                     zIndex: isDead ? 0 : (isMonster ? 200 : 100),
-                    transition: (isTelep || !shouldTransition) ? 'none' : 'transform 1000ms cubic-bezier(0.25, 1, 0.5, 1)',
+                    transition: (isTelep || isBatFlying || activeReturnTrialAnim || !shouldTransition) ? 'none' : 'transform 1000ms cubic-bezier(0.25, 1, 0.5, 1)',
+                    opacity: isBatFlying ? 0 : 1,
                     ...computeHitVars(unit, getHitAnimation),
                 }}
             >
@@ -1834,34 +1811,7 @@ export default function CombatGrid(props) {
                         </>
                     );
                 })()}
-                {/* Attack Weapon Swing Animation for Skeletons */}
-                {liveMonster && liveMonster.pendingAttack && liveMonster.attacking && !liveMonster.dead && 
-                 (unit.type?.includes('skeleton') || unit.key?.includes('skeleton') || unit.id?.includes('skeleton')) && (() => {
-                    const icon = images.longsword?.default || images.longsword;
-                    const tileW = TILE_SIZE;
-                    const weaponW = 90;
-                    let weaponStyle = {};
-                    if (liveMonster.facing === 'right') {
-                        weaponStyle = { left: `${tileW - weaponW}px`, opacity: 1, backgroundImage: `url(${icon})` };
-                    } else if (liveMonster.facing === 'left') {
-                        weaponStyle = { left: '0px', opacity: 1, backgroundImage: `url(${icon})` };
-                    } else if (liveMonster.facing === 'up') {
-                        weaponStyle = { left: `${(tileW / 2) - (weaponW / 2)}px`, top: '-40px', opacity: 1, backgroundImage: `url(${icon})`, transform: 'rotate(-90deg)' };
-                    } else if (liveMonster.facing === 'down') {
-                        weaponStyle = { left: `${(tileW / 2) - (weaponW / 2)}px`, top: '110px', opacity: 1, backgroundImage: `url(${icon})`, transform: 'rotate(90deg)' };
-                    } else {
-                        weaponStyle = { left: `${(tileW / 2) - (weaponW / 2)}px`, top: '50px', opacity: 1, backgroundImage: `url(${icon})` };
-                    }
 
-                    const verticalFacingClass = liveMonster.facing === 'up' ? 'facing-up' : (liveMonster.facing === 'down' ? 'facing-down' : '');
-
-                    return (
-                        <div
-                            className={`weapon-wrapper ${liveMonster.facing === 'left' ? 'reversed' : ''} ${verticalFacingClass} ${liveMonster.aiming ? 'aiming' : ''} medium`}
-                            style={weaponStyle}
-                        />
-                    );
-                })()}
                 <div className="indicators-wrapper" style={{ zIndex: 10 }}>
                     <div className="monster-hp-bar hp-bar">
                         {!isDead && <div className="red-fill" style={{ width: `${(unit.hp / unit.stats?.hp) * 100}%` }} />}
@@ -3003,6 +2953,27 @@ export default function CombatGrid(props) {
             );
         }
 
+        if (anim.type === 'death_missile_burst' && anim.tgtPx) {
+            const hitIcon = anim.icon || images.death_missile_hit || '';
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: `${anim.tgtPx.x}px`,
+                    top: `${anim.tgtPx.y}px`,
+                    width: '90px',
+                    height: '90px',
+                    backgroundImage: `url("${hitIcon}")`,
+                    backgroundSize: 'contain',
+                    backgroundRepeat: 'no-repeat',
+                    backgroundPosition: 'center',
+                    transform: 'translate(-50%, -50%)',
+                    pointerEvents: 'none',
+                    zIndex: 4500,
+                    animation: 'scaleUpFadeOut 0.8s ease-out forwards',
+                }} />
+            );
+        }
+
         if (anim.type === 'new_moon_overlay') {
             const moonIcon = anim.icon || images.new_moon || '';
             return (
@@ -3189,11 +3160,14 @@ export default function CombatGrid(props) {
                 );
             }
 
-            let projectileImage = images.barbarian_axe_throw || images.axe_throw || images.axe || '';
+            let projectileImage = anim.projectileIcon || images.barbarian_axe_throw || images.axe_throw || images.axe || '';
             if (anim.subtype === 'spear_throw') {
                 projectileImage = images.spear || '';
             }
             const resolvedImg = projectileImage?.default || projectileImage || '';
+            const isSpinning = anim.subtype !== 'death_missile';
+            const rotation = anim.subtype === 'death_missile' ? `${anim.angle}deg` : '0deg';
+
             return (
                 <div key={key} style={{
                     position: 'absolute',
@@ -3214,8 +3188,8 @@ export default function CombatGrid(props) {
                         backgroundSize: 'contain',
                         backgroundRepeat: 'no-repeat',
                         backgroundPosition: 'center',
-                        transform: `translate(-50%, -50%) rotate(0deg)`,
-                        animation: 'spinAxis 0.7s linear infinite'
+                        transform: `translate(-50%, -50%) rotate(${rotation})`,
+                        animation: isSpinning ? 'spinAxis 0.7s linear infinite' : 'none'
                     }} />
                 </div>
             );
@@ -3354,48 +3328,83 @@ export default function CombatGrid(props) {
 
 
         if (anim.type === 'sword_slash' && anim.srcPx && anim.tgtPx) {
-            const dx = anim.tgtPx.x - anim.srcPx.x;
-            const dy = anim.tgtPx.y - anim.srcPx.y;
-            const midX = anim.srcPx.x + dx * 0.5;
-            const midY = anim.srcPx.y + dy * 0.5;
+            const sourceUnit = anim.sourceUnitId ? (crew.find(f => f.id === anim.sourceUnitId) || battleData[anim.sourceUnitId]) : null;
+            const isBarbarian = sourceUnit?.type === 'barbarian' || sourceUnit?.class === 'barbarian';
+            const weaponIcon = isBarbarian 
+                ? (images.axe?.default || images.axe || images.axe_white?.default || images.axe_white) 
+                : (images.longsword?.default || images.longsword);
+            const facing = anim.facing || 'right';
+            const duration = anim.duration || 600;
+
             return (
                 <div key={key} style={{
                     position: 'absolute',
-                    left: `${midX}px`,
-                    top: `${midY}px`,
-                    width: '70px',
-                    height: '6px',
-                    background: 'linear-gradient(to right, transparent, rgba(255,255,255,0.9), transparent)',
-                    boxShadow: '0 0 8px rgba(255,255,255,0.8)',
+                    left: `${anim.srcPx.x}px`,
+                    top: `${anim.srcPx.y}px`,
+                    width: '60px',
+                    height: '60px',
+                    transform: 'translate(-50%, -50%)',
                     pointerEvents: 'none',
-                    zIndex: 4000,
-                    '--slash-angle': `${anim.angle}deg`,
-                    animation: 'beamShrink 0.6s ease-out forwards',
-                }} />
+                    zIndex: 5000,
+                }}>
+                    <img
+                        src={weaponIcon}
+                        alt="weapon swing"
+                        style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'contain',
+                            animation: `ArcAnimation_${facing} ${duration / 1000}s linear forwards`
+                        }}
+                    />
+                </div>
             );
         }
 
         if (anim.type === 'imbued_strike' && anim.srcPx && anim.tgtPx) {
+            const sourceUnit = anim.sourceUnitId ? (crew.find(f => f.id === anim.sourceUnitId) || battleData[anim.sourceUnitId]) : null;
+            const equippedWeapon = sourceUnit ? (sourceUnit.inventory || []).find(i => i && i.type === 'weapon' && (i.equippedSlot === 'right' || i.equippedSlot === 'left' || i.equippedBy === sourceUnit.id)) : null;
+            const weaponIcon = equippedWeapon 
+                ? (images[equippedWeapon.icon]?.default || images[equippedWeapon.icon] || images[equippedWeapon.id]?.default || images[equippedWeapon.id] || equippedWeapon.image || images[equippedWeapon.name]) 
+                : (images.longsword?.default || images.longsword);
+
             const dx = anim.tgtPx.x - anim.srcPx.x;
             const dy = anim.tgtPx.y - anim.srcPx.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            const halfDistPx = dist / 2;
             const midX = anim.srcPx.x + dx * 0.5;
             const midY = anim.srcPx.y + dy * 0.5;
+
             return (
                 <div key={key} style={{
                     position: 'absolute',
                     left: `${midX}px`,
                     top: `${midY}px`,
-                    width: '80px',
-                    height: '10px',
-                    background: 'linear-gradient(to right, transparent, rgba(0, 240, 255, 0.95), transparent)',
-                    boxShadow: '0 0 15px rgba(0, 240, 255, 0.9), 0 0 5px rgba(255, 255, 255, 0.8)',
+                    width: '60px',
+                    height: '60px',
+                    transform: `translate(-50%, -50%) rotate(${anim.angle}deg)`,
                     pointerEvents: 'none',
-                    zIndex: 4000,
-                    '--slash-angle': `${anim.angle}deg`,
-                    animation: 'beamShrink 0.6s ease-out forwards',
-                }} />
+                    zIndex: 5000,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                }}>
+                    <img
+                        src={weaponIcon}
+                        alt="imbued strike weapon"
+                        style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'contain',
+                            transformOrigin: `${30 - halfDistPx}px 30px`,
+                            animation: 'imbuedStrikeThrust 1.0s ease-in-out forwards',
+                            filter: 'drop-shadow(0 0 6px rgba(0, 191, 255, 0.95)) drop-shadow(0 0 12px rgba(0, 191, 255, 0.6))'
+                        }}
+                    />
+                </div>
             );
         }
+
 
         if (anim.type === 'heal_glow' && anim.tgtPx) {
             return (
@@ -3824,8 +3833,37 @@ export default function CombatGrid(props) {
             );
         }
 
+        if (anim.type === 'bind_beam' && anim.srcPx && anim.tgtPx) {
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: `${anim.srcPx.x}px`,
+                    top: `${anim.srcPx.y}px`,
+                    width: `${anim.length}px`,
+                    height: '8px',
+                    background: 'linear-gradient(to right, rgba(255, 255, 255, 0.1), #ffffff 20%, #e0e7ff 50%, #ffffff 80%, rgba(255, 255, 255, 0.1))',
+                    boxShadow: '0 0 8px #ffffff, 0 0 16px #c7d2fe, 0 0 24px rgba(255, 255, 255, 0.6)',
+                    transformOrigin: '0 50%',
+                    transform: `rotate(${anim.angle}deg) translateY(-50%)`,
+                    zIndex: 4800,
+                    pointerEvents: 'none',
+                    filter: 'blur(0.3px)',
+                    animation: 'whiteBeamPulse 0.6s ease-out forwards',
+                }} />
+            );
+        }
+
         if (anim.type === 'bind_hit_ropes' && anim.tgtPx) {
             const size = anim.isTargetLarge ? TILE_SIZE * 2 : TILE_SIZE;
+            
+            // Find target combatant for portrait overlay
+            const targetUnit = anim.tgt ? Object.values(combatManager?.combatants || {}).find(c => {
+                if (!c || c.dead || c.isVCT) return false;
+                const coords = (Array.isArray(c.occupiedCoords) && c.occupiedCoords.length > 0) ? c.occupiedCoords : [c.coordinates];
+                return coords.some(tc => tc.x === anim.tgt.x && tc.y === anim.tgt.y);
+            }) : null;
+            const portraitUrl = targetUnit?.portrait;
+
             return (
                 <div key={key} style={{
                     position: 'absolute',
@@ -3836,28 +3874,52 @@ export default function CombatGrid(props) {
                     transform: 'translate(-50%, -50%)',
                     pointerEvents: 'none',
                     zIndex: 4100,
-                    animation: 'explode 0.3s ease-out forwards',
                 }}>
-                    <svg style={{
-                        position: 'absolute',
-                        left: 0,
-                        top: 0,
+                    <div style={{
                         width: '100%',
                         height: '100%',
-                    }} viewBox="0 0 100 100">
-                        <path d="M 10,25 C 30,15 70,35 90,25 M 5,50 C 25,65 75,35 95,50 M 10,75 C 30,65 70,85 90,75 M 20,10 C 10,40 40,60 30,90 M 80,10 C 90,40 60,60 70,90" 
-                              fill="none" 
-                              stroke="#ffffff" 
-                              strokeWidth="4" 
-                              strokeLinecap="round"
-                              style={{ 
-                                  filter: 'drop-shadow(0 0 3px rgba(0,0,0,0.5))',
-                                  strokeDasharray: '300',
-                                  strokeDashoffset: '300',
-                                  animation: 'drawRopes 0.8s ease-out forwards'
-                              }} 
-                        />
-                    </svg>
+                        position: 'relative',
+                        animation: 'bindRopesOverlay 1.2s ease-out forwards',
+                    }}>
+                        {portraitUrl && (
+                            <div style={{
+                                position: 'absolute',
+                                left: '10%',
+                                top: '10%',
+                                width: '80%',
+                                height: '80%',
+                                backgroundImage: `url(${portraitUrl})`,
+                                backgroundSize: 'cover',
+                                backgroundPosition: 'center',
+                                borderRadius: '50%',
+                                border: '3px solid rgba(255, 255, 255, 0.8)',
+                                boxShadow: '0 0 15px rgba(255, 255, 255, 0.6)',
+                                animation: 'portraitBindSqueeze 0.8s cubic-bezier(0.25, 0.8, 0.25, 1) forwards',
+                                zIndex: 1,
+                            }} />
+                        )}
+                        <svg style={{
+                            position: 'absolute',
+                            left: 0,
+                            top: 0,
+                            width: '100%',
+                            height: '100%',
+                            zIndex: 2,
+                        }} viewBox="0 0 100 100">
+                            <path d="M 10,25 C 30,15 70,35 90,25 M 5,50 C 25,65 75,35 95,50 M 10,75 C 30,65 70,85 90,75 M 20,10 C 10,40 40,60 30,90 M 80,10 C 90,40 60,60 70,90" 
+                                  fill="none" 
+                                  stroke="#ffffff" 
+                                  strokeWidth="5" 
+                                  strokeLinecap="round"
+                                  style={{ 
+                                      filter: 'drop-shadow(0 0 4px rgba(255,255,255,0.8)) drop-shadow(0 0 2px rgba(0,0,0,0.8))',
+                                      strokeDasharray: '300',
+                                      strokeDashoffset: '300',
+                                      animation: 'drawRopes 0.8s ease-out forwards'
+                                  }} 
+                            />
+                        </svg>
+                    </div>
                 </div>
             );
         }

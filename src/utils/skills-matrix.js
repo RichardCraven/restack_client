@@ -106,6 +106,7 @@ const skillsMatrix = {
         cooldown: 2,
         duration: 'instant',
         range: 'far',
+        atkPercentage: 100,
         type: 'damage'
     },
     mark: {
@@ -134,6 +135,7 @@ const skillsMatrix = {
         cooldown: 10,
         duration: 'instant',
         range: 'far',
+        atkPercentage: 100,
         type: 'damage'
     },
     ensnare: {
@@ -148,7 +150,7 @@ const skillsMatrix = {
         duration: 'short',
         range: 'medium',
         type: 'debuff',
-        effect: { type: 'ensnared', chance: 100, duration: 'short' }
+        effect: { type: 'ensnared', chance: 80, duration: 'short' }
     },
     eagle_eye: {
         class: 'ranger',
@@ -246,7 +248,7 @@ const skillsMatrix = {
         duration: 'instant',
         range: 'medium',
         type: 'heal',
-        damage: -30, // negative damage is healing
+        flatDamage: -30, // negative damage is healing
         regeneration_percent: 30
     },
     circle_of_protection: {
@@ -388,9 +390,10 @@ const skillsMatrix = {
         name: 'Slash',
         desc: 'Execute a heavy steel blade slash.',
         icon: images['soldier_slash'],
-        cooldown: 0,
+        cooldown: 1,
         duration: 'instant',
         range: 'close',
+        atkPercentage: 100,
         type: 'damage'
     },
     shield_wall: {
@@ -418,6 +421,7 @@ const skillsMatrix = {
         cooldown: 4,
         duration: 'instant',
         range: 'close',
+        atkPercentage: 100,
         type: 'damage',
         effect: { type: 'stun', chance: 100, duration: 1 }
     },
@@ -453,6 +457,7 @@ const skillsMatrix = {
         cooldown: 4,
         duration: 'instant',
         range: 'close',
+        atkPercentage: 100,
         type: 'damage',
         effect: { type: 'stun', chance: 100, duration: 2 }
     },
@@ -469,7 +474,7 @@ const skillsMatrix = {
         duration: 'instant',
         range: 'close',
         type: 'damage',
-        damagePercent: 200
+        atkPercentage: 200
     },
     one_man_army: {
         class: 'soldier',
@@ -591,23 +596,9 @@ const skillsMatrix = {
         cooldown: 4,
         duration: 'instant',
         range: 'far',
+        atkPercentage: 100,
         type: 'damage',
-        damage: 15
-    },
-    fire_blast: {
-        class: 'wizard',
-        treePath: 'combat_a',
-        id: 'fire_blast',
-        tier: 1,
-        knownByDefault: true,
-        name: 'Fire Blast',
-        desc: 'Unleash a blast of roaring fire at the target.',
-        icon: images['fire_blast'],
-        cooldown: 5,
-        duration: 'instant',
-        range: 'medium',
-        type: 'damage',
-        damage: 25
+        flatDamage: 15
     },
     ice_blast: {
         class: 'wizard',
@@ -621,8 +612,9 @@ const skillsMatrix = {
         cooldown: 6,
         duration: 'short',
         range: 'medium',
-        type: 'debuff',
-        damage: 22,
+        atkPercentage: 100,
+        type: 'debuff damage',
+        flatDamage: 10,
         effect: { type: 'frozen', chance: 100, duration: 'short' }
     },
     magic_missile: {
@@ -637,8 +629,9 @@ const skillsMatrix = {
         cooldown: 2,
         duration: 'instant',
         range: 'far',
+        atkPercentage: 10,
         type: 'damage',
-        damage: 10
+        flatDamage: 10
     },
     lightning_strike: {
         class: 'wizard',
@@ -651,8 +644,9 @@ const skillsMatrix = {
         cooldown: 6,
         duration: 'instant',
         range: 'far',
+        atkPercentage: 100,
         type: 'damage',
-        damage: 22
+        flatDamage: 22
     },
     acid_blast: {
         class: 'wizard',
@@ -665,8 +659,9 @@ const skillsMatrix = {
         cooldown: 4,
         duration: 'short',
         range: 'medium',
-        type: 'debuff',
-        damage: 12,
+        atkPercentage: 100,
+        type: 'debuff damage',
+        flatDamage: 12,
         effect: { type: 'poison', chance: 100, duration: 'short' }
     },
     disintegrate: {
@@ -680,8 +675,9 @@ const skillsMatrix = {
         cooldown: 8,
         duration: 'instant',
         range: 'medium',
+        atkPercentage: 100,
         type: 'damage',
-        damage: 30
+        flatDamage: 30
     },
     sleep: {
         class: 'wizard',
@@ -710,8 +706,9 @@ const skillsMatrix = {
         cooldown: 14,
         duration: 'instant',
         range: 'far',
+        atkPercentage: 100,
         type: 'damage',
-        damage: 40
+        flatDamage: 40
     },
     vortex: {
         class: 'wizard',
@@ -792,6 +789,7 @@ const skillsMatrix = {
         cooldown: 2,
         duration: 'instant',
         range: 'close',
+        atkPercentage: 100,
         type: 'damage'
     },
     barbarian_cleave: {
@@ -806,6 +804,7 @@ const skillsMatrix = {
         cooldown: 4,
         duration: 'short',
         range: 'close',
+        atkPercentage: 100,
         type: 'damage',
         effect: { type: 'bleed', chance: 100, duration: 'short' }
     },
@@ -820,6 +819,7 @@ const skillsMatrix = {
         cooldown: 2,
         duration: 'instant',
         range: 'medium',
+        atkPercentage: 100,
         type: 'damage'
     },
     barbarian_berserker: {
@@ -855,6 +855,7 @@ const skillsMatrix = {
         initialCooldown: 1,
         duration: 'short',
         range: 'far',
+        atkPercentage: 100,
         type: 'damage',
         effect: { type: 'stun', chance: 100, duration: 'short' }
     },
@@ -951,6 +952,7 @@ const skillsMatrix = {
         cooldown: 4,
         duration: 'instant',
         range: 'medium',
+        atkPercentage: 100,
         type: 'damage'
     },
     monk_force_punch_flurry: {
@@ -964,6 +966,7 @@ const skillsMatrix = {
         cooldown: 6,
         duration: 'instant',
         range: 'close',
+        atkPercentage: 100,
         type: 'damage'
     },
     monk_third_eye: {
@@ -990,6 +993,7 @@ const skillsMatrix = {
         cooldown: 8,
         duration: 'short',
         range: 'close',
+        atkPercentage: 100,
         type: 'damage/debuff',
         mentalityDebuff: true,
         power: 45,
@@ -1028,7 +1032,7 @@ const skillsMatrix = {
         duration: 'instant',
         range: 'self',
         type: 'heal',
-        damage: -25
+        flatDamage: -25
     },
     monk_whirlwind: {
         class: 'monk',
@@ -1041,6 +1045,7 @@ const skillsMatrix = {
         cooldown: 6,
         duration: 'instant',
         range: 'close',
+        atkPercentage: 100,
         type: 'damage'
     },
     monk_force_punch: {
@@ -1055,6 +1060,7 @@ const skillsMatrix = {
         cooldown: 2,
         duration: 'instant',
         range: 'close',
+        atkPercentage: 100,
         type: 'damage'
     },
     monk_flurry: {
@@ -1069,6 +1075,7 @@ const skillsMatrix = {
         cooldown: 2,
         duration: 'instant',
         range: 'close',
+        atkPercentage: 100,
         type: 'damage'
     },
     monk_punch: {
@@ -1083,6 +1090,7 @@ const skillsMatrix = {
         cooldown: 0,
         duration: 'instant',
         range: 'close',
+        atkPercentage: 100,
         type: 'damage'
     },
 
@@ -1312,6 +1320,7 @@ const skillsMatrix = {
         cooldown: 0,
         duration: 'instant',
         range: 'close',
+        atkPercentage: 100,
         type: 'damage'
     },
     goblin_bite: {
@@ -1323,6 +1332,7 @@ const skillsMatrix = {
         cooldown: 4,
         duration: 'short',
         range: 'close',
+        atkPercentage: 100,
         type: 'damage',
         effect: { type: 'bleed', chance: 100, duration: 'short' }
     },
@@ -1335,6 +1345,7 @@ const skillsMatrix = {
         cooldown: 2,
         duration: 'instant',
         range: 'close',
+        atkPercentage: 100,
         type: 'damage'
     },
     sword_swing: {
@@ -1346,6 +1357,7 @@ const skillsMatrix = {
         cooldown: 2,
         duration: 'instant',
         range: 'close',
+        atkPercentage: 100,
         type: 'damage'
     },
     bite: {
@@ -1357,6 +1369,7 @@ const skillsMatrix = {
         cooldown: 4,
         duration: 'short',
         range: 'close',
+        atkPercentage: 100,
         type: 'damage',
         effect: { type: 'bleed', chance: 40, duration: 'short' }
     },
@@ -1404,6 +1417,7 @@ const skillsMatrix = {
         cooldown: 4,
         duration: 'instant',
         range: 'far',
+        atkPercentage: 100,
         type: 'damage'
     },
     // Mummy
@@ -1443,6 +1457,7 @@ const skillsMatrix = {
         cooldown: 8,
         duration: 'short',
         range: 'close',
+        atkPercentage: 100,
         type: 'damage',
         effect: { type: 'stun', chance: 100, duration: 'short' }
     },
@@ -1455,6 +1470,7 @@ const skillsMatrix = {
         cooldown: 6,
         duration: 'instant',
         range: 'close',
+        atkPercentage: 100,
         type: 'damage'
     },
     // Vampire
@@ -1467,8 +1483,9 @@ const skillsMatrix = {
         cooldown: 4,
         duration: 'instant',
         range: 'close',
+        atkPercentage: 100,
         type: 'damage',
-        damage: 15,
+        flatDamage: 15,
         effect: { type: 'bleed', chance: 100, duration: 'medium' }
     },
     bat_fly: {
@@ -1505,6 +1522,7 @@ const skillsMatrix = {
         cooldown: 12,
         duration: 'short',
         range: 'medium',
+        atkPercentage: 100,
         type: 'damage/debuff',
         effect: { type: 'stun', chance: 10, duration: 'long' }
     },
@@ -1543,8 +1561,10 @@ const skillsMatrix = {
         cooldown: 8,
         duration: 'short',
         range: 'far',
-        type: 'debuff',
-        effect: { type: 'poison', chance: 100, duration: 'short' }
+        type: 'debuff damage',
+        flatDamage: 10,
+        atkPercentage: 120,
+        effect: { type: 'poison', chance: 80, duration: 'medium' }
     },
     bind: {
         id: 'bind',
@@ -1558,7 +1578,7 @@ const skillsMatrix = {
         type: 'debuff',
         mentalityDebuff: true,
         power: 35,
-        effect: { type: 'ensnared', duration: 'short' }
+        effect: { type: 'ensnared', duration: 'medium' }
     },
     // ── Sphinx skills ────────────────────────────────────────────────────────
     third_eye: {
@@ -1753,8 +1773,9 @@ const skillsMatrix = {
         cooldown: 4,
         duration: 'instant',
         range: 'medium',
+        atkPercentage: 100,
         type: 'damage',
-        damage: 25
+        flatDamage: 25
     },
     rake: {
         id: 'rake',
@@ -1764,6 +1785,7 @@ const skillsMatrix = {
         cooldown: 2,
         duration: 'instant',
         range: 'close',
+        atkPercentage: 100,
         type: 'damage'
     },
     silence: {
@@ -1786,7 +1808,7 @@ const skillsMatrix = {
         duration: 'instant',
         range: 'close',
         type: 'damage',
-        damagePercent: 200,
+        atkPercentage: 200,
         effect: { type: 'bleed', chance: 60, duration: 'medium' }
     },
     demon_mark: {

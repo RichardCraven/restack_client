@@ -440,9 +440,9 @@ const MonstersCombatGrid = ({
 
                         {/* {(() => {
                             let weaponWrapper = null;
-                            if (battleData[monster.id] && battleData[monster.id].pendingAttack) {
-                                const pendingAttack = battleData[monster.id].pendingAttack;
-                                if (pendingAttack && pendingAttack.type === 'grasp') {
+                            if (battleData[monster.id] && battleData[monster.id].activeAbility) {
+                                const activeAbility = battleData[monster.id].activeAbility;
+                                if (activeAbility && activeAbility.type === 'grasp') {
                                     debugger;
                                 }
                                 weaponWrapper = (
@@ -455,7 +455,7 @@ const MonstersCombatGrid = ({
                                             left: battleData[monster.id]?.facing === 'right'
                                                 ? `${battleData[monster.id]?.coordinates.x * 100 + 65 + (battleData[monster.id]?.coordinates.x * 2)}px`
                                                 : `${battleData[monster.id]?.coordinates.x * 100 - 45 + (battleData[monster.id]?.coordinates.x * 2)}px`,
-                                            backgroundImage: `url(${battleData[monster.id].pendingAttack.icon})`
+                                            backgroundImage: `url(${battleData[monster.id].activeAbility.icon})`
                                         }}
                                     ></div>
                                 );
@@ -711,7 +711,7 @@ const MonstersCombatGrid = ({
                             style={computeHitVars(minion)}
                         >
 
-                            {/* {minion.pendingAttack && (
+                            {/* {minion.activeAbility && (
                                 <div
                                     className={`weapon-wrapper
                                         ${getMonsterWeaponAnimation(minion)}
@@ -721,7 +721,7 @@ const MonstersCombatGrid = ({
                                         left: minion.facing === 'right'
                                             ? `${minion.coordinates.x * 100 + 65 + (minion.coordinates.x * 2)}px`
                                             : `${minion.coordinates.x * 100 - 45 + (minion.coordinates.x * 2)}px`,
-                                        backgroundImage: `url(${minion.pendingAttack.icon})`
+                                        backgroundImage: `url(${minion.activeAbility.icon})`
                                     }}
                                 ></div>
                             )} */}

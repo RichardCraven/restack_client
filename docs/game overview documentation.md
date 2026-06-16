@@ -380,7 +380,7 @@ Every combatant has `endurance` / `maxEndurance` (derived from `vitality` stat):
 
 Additional modifiers:
 - **Weakness Revealed** → 1.25× damage multiplier
-- **Fireball/Fire Blast** → 50% splash damage to adjacent enemies
+- **Fireball** → 50% splash damage to adjacent enemies
 
 ### Buff/Debuff System
 

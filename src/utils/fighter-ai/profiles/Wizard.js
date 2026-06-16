@@ -266,12 +266,12 @@ export function Wizard(data, utilMethods, animationManager, overlayManager) {
                         case 'ice blast':
                             this.triggerIceBlast(caller, target, combatants);
                             break;
-                        case 'fire blast':
-                            this.triggerFireBlast(caller, target, combatants);
+                        case 'fireball':
+                            this.triggerFireball(caller, target, combatants);
                             break;
                         default:
                             // fallback: try to trigger by name if supported
-                            if (special.name && special.name.toLowerCase().includes('fire')) this.triggerFireBlast(caller, target, combatants);
+                            if (special.name && special.name.toLowerCase().includes('fire')) this.triggerFireball(caller, target, combatants);
                             else if (special.name && special.name.toLowerCase().includes('ice')) this.triggerIceBlast(caller, target, combatants);
                             break;
                     }
@@ -784,8 +784,8 @@ export function Wizard(data, utilMethods, animationManager, overlayManager) {
 
 
     }
-    this.triggerFireBlast = (caller, target, combatants) => {
-        console.log('[SpecialClickDiag][Wizard] triggerFireBlast entry', {
+    this.triggerFireball = (caller, target, combatants) => {
+        console.log('[SpecialClickDiag][Wizard] triggerFireball entry', {
             callerId: caller?.id,
             callerType: caller?.type,
             targetId: target?.id || null,
@@ -794,36 +794,36 @@ export function Wizard(data, utilMethods, animationManager, overlayManager) {
             callerTargetId: caller?.targetId,
         });
         if (!target) {
-            console.log('[SpecialClickDiag][Wizard] triggerFireBlast aborted: missing target', {
+            console.log('[SpecialClickDiag][Wizard] triggerFireball aborted: missing target', {
                 callerId: caller?.id,
                 callerTargetId: caller?.targetId,
             });
             return;
         }
         // Prefer the centralized resolver when available.
-        let fireBlast = null;
+        let fireball = null;
         if (data && data.methods && typeof data.methods.resolveSpecial === 'function') {
-            fireBlast = data.methods.resolveSpecial(caller, 'fire blast');
+            fireball = data.methods.resolveSpecial(caller, 'fireball');
         }
         // Fallback: shallow find on caller.specials
-        if (!fireBlast && Array.isArray(caller.specials)) {
-            fireBlast = caller.specials.find(s => {
+        if (!fireball && Array.isArray(caller.specials)) {
+            fireball = caller.specials.find(s => {
                 if (!s) return false;
                 if (typeof s === 'string') return s.toLowerCase().includes('fire');
                 if (typeof s === 'object' && s.name) return s.name.toLowerCase().includes('fire');
                 return false;
             }) || null;
         }
-        if (!fireBlast) {
-            console.warn('triggerFireBlast: could not resolve fire blast special for', caller && (caller.id || caller.name));
+        if (!fireball) {
+            console.warn('triggerFireball: could not resolve fireball special for', caller && (caller.id || caller.name));
             return;
         }
-        if (typeof fireBlast.energy_cost === 'undefined') {
-            console.warn('triggerFireBlast: energy_cost missing on resolved fireBlast, falling back to 30', fireBlast);
-            fireBlast.energy_cost = 30;
+        if (typeof fireball.energy_cost === 'undefined') {
+            console.warn('triggerFireball: energy_cost missing on resolved fireball, falling back to 30', fireball);
+            fireball.energy_cost = 30;
         }
-        // console.log('fireBlast.energy_cost', fireBlast.energy_cost);
-        caller.energy -= fireBlast.energy_cost;
+        // console.log('fireball.energy_cost', fireball.energy_cost);
+        caller.energy -= fireball.energy_cost;
 
         let finalTargetCoords = target.coordinates;
         // Determine the best target tile (Primary or VCT) that has a clear horizontal path
@@ -851,7 +851,7 @@ export function Wizard(data, utilMethods, animationManager, overlayManager) {
         this.animationManager.fireball(caller.coordinates, finalTargetCoords, {
             // when animation reaches the target, invoke hit callback
             onComplete: () => {
-                // console.log('triggerFireBlast: fireball reached target for', caller && (caller.id || caller.name), 'target', target && (target.id || target.name));
+                // console.log('triggerFireball: fireball reached target for', caller && (caller.id || caller.name), 'target', target && (target.id || target.name));
                 try {
                     if (!caller || !target) return;
                     // Prefer centralized handler if available. Pass the resolved special so handlers
@@ -860,7 +860,7 @@ export function Wizard(data, utilMethods, animationManager, overlayManager) {
                         // Many callers use hitsCombatant(caller, target). Passing the special as a third
                         // argument is a non-breaking enhancement for handlers that accept it.
                         try {
-                            this.hitsCombatant(caller, target, fireBlast);
+                            this.hitsCombatant(caller, target, fireball);
                             return;
                         } catch (err) {
                             // If the handler doesn't accept the third arg, fall back to two-arg call
@@ -868,16 +868,16 @@ export function Wizard(data, utilMethods, animationManager, overlayManager) {
                                 this.hitsCombatant(caller, target);
                                 return;
                             } catch (err2) {
-                                console.warn('hitsCombatant failed when applying fireBlast, falling back to inline damage', err2);
+                                console.warn('hitsCombatant failed when applying fireball, falling back to inline damage', err2);
                             }
                         }
                     }
 
                     // Fallback: inline damage application using the levelMatrix defined above
-                    const level = (fireBlast && (fireBlast.level || fireBlast.lvl)) || 1;
+                    const level = (fireball && (fireball.level || fireball.lvl)) || 1;
                     const multiplier = (levelMatrix[level] && levelMatrix[level].multiplier) || levelMatrix[1].multiplier;
                     // Prefer canonical damage from the special definition. Fall back to caller.atk if missing.
-                    const baseDamage = (fireBlast && (typeof fireBlast.damage === 'number' ? fireBlast.damage : (fireBlast.base_damage || null))) || ((caller && caller.atk) || 1);
+                    const baseDamage = (fireball && (typeof fireball.damage === 'number' ? fireball.damage : (fireball.base_damage || null))) || ((caller && caller.atk) || 1);
                     const r = Math.random();
                     const critical = r * 100 > 80;
                     const damage = Math.round((critical ? baseDamage * multiplier * 3 : baseDamage * multiplier));
@@ -893,7 +893,7 @@ export function Wizard(data, utilMethods, animationManager, overlayManager) {
                         this.targetKilled(target);
                     }
                 } catch (err) {
-                    console.warn('triggerFireBlast onComplete handler failed', err);
+                    console.warn('triggerFireball onComplete handler failed', err);
                 }
             },
             // halve perTileMs to make fireball/magic visuals faster

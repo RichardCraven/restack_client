@@ -48,6 +48,37 @@
     }
 }
 
+@keyframes imbuedStrikeThrust {
+  0% {
+    transform: rotate(-60deg) translateX(0);
+    opacity: 0;
+  }
+  10% {
+    transform: rotate(-60deg) translateX(0);
+    opacity: 1;
+  }
+  22% {
+    transform: rotate(0deg) translateX(0);
+    opacity: 1;
+  }
+  55% {
+    transform: rotate(0deg) translateX(0);
+    opacity: 1;
+  }
+  65% {
+    transform: rotate(0deg) translateX(24px);
+    opacity: 1;
+  }
+  85% {
+    transform: rotate(0deg) translateX(24px);
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(0deg) translateX(24px);
+    opacity: 0;
+  }
+}
+
 // ── Shield Wall: white pulse glow on Soldier portrait while active ─────────────
 .fighter-portrait.shield-wall-active {
     box-shadow:
@@ -5296,4 +5327,77 @@
     transform: translate3d(0, 0, 0);
   }
 }
+
+@keyframes whiteBeamPulse {
+  0% {
+    height: 0px;
+    opacity: 0;
+  }
+  15% {
+    height: 8px;
+    opacity: 1;
+  }
+  85% {
+    height: 8px;
+    opacity: 1;
+  }
+  100% {
+    height: 0px;
+    opacity: 0;
+  }
+}
+
+@keyframes portraitBindSqueeze {
+  0% {
+    transform: scale(1.15);
+    filter: brightness(1.4);
+  }
+  25% {
+    transform: scale(0.9) rotate(-3deg);
+    filter: brightness(1);
+  }
+  50% {
+    transform: scale(0.93) rotate(3deg);
+  }
+  75% {
+    transform: scale(0.9) rotate(0deg);
+  }
+  100% {
+    transform: scale(0.9);
+    filter: brightness(1) saturate(0.85);
+  }
+}
+
+.respawn-fade-in {
+  animation: respawnFadeIn 1.5s ease-out forwards !important;
+}
+
+@keyframes respawnFadeIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes bindRopesOverlay {
+  0% {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+  15% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  80% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+}
+
 

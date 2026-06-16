@@ -404,40 +404,7 @@ export default function FightersCombatGrid(props) {
                                                 </div>
                                             </>
                                         )}
-                                    { props.getFighterDetails(fighter) && props.getFighterDetails(fighter).pendingAttack && props.getFighterDetails(fighter).attacking && !props.getFighterDetails(fighter).dead && (() => {
-                                        const details = props.getFighterDetails(fighter);
-                                        const isMonk = fighter.type === 'monk';
-                                        const isBarbarian = fighter.type === 'barbarian';
-                                        
-                                        let icon = details.pendingAttack.icon;
-                                        if (isMonk) {
-                                            const isBasicPunch = details.pendingAttack.range === 'close' && details.pendingAttack.name !== 'dragon punch';
-                                            icon = isBasicPunch ? images.fist_punch : (details.pendingAttack.icon || images.fist_punch);
-                                        } else if (!icon) {
-                                            icon = isBarbarian ? (images.woodcutters_axe || images.axe_strike || images.sword_strike) : (images.shortsword_sword || images.sword_strike);
-                                        }
 
-                                        // position weapon using measured portrait positions when available
-                                        const measured = weaponPositions[fighter.id];
-                                        const weaponStyle = measured ? { ...measured, backgroundImage: `url(${icon})`, opacity: 1 } : (() => {
-                                            // fallback to original coordinate math if measurement not ready
-                                            const tileW = 100;
-                                            const weaponW = 90;
-                                            if (details?.facing === 'right') return { left: `${details?.coordinates.x * tileW + tileW - weaponW}px`, opacity: 1, backgroundImage: `url(${icon})` };
-                                            if (details?.facing === 'left') return { left: `${details?.coordinates.x * tileW}px`, opacity: 1, backgroundImage: `url(${icon})` };
-                                            if (details?.facing === 'up') return { left: `${details?.coordinates.x * tileW + (tileW / 2) - (weaponW / 2)}px`, top: `-40px`, opacity: 1, backgroundImage: `url(${icon})`, transform: 'rotate(-90deg)' };
-                                            if (details?.facing === 'down') return { left: `${details?.coordinates.x * tileW + (tileW / 2) - (weaponW / 2)}px`, top: `110px`, opacity: 1, backgroundImage: `url(${icon})`, transform: 'rotate(90deg)' };
-                                            // Default: center
-                                            const left = `${details?.coordinates.x * tileW + (tileW / 2) - (weaponW / 2)}px`;
-                                            const top = `50px`;
-                                            return { left, top, opacity: 1, backgroundImage: `url(${icon})` };
-                                        })();
-
-                                        return (
-                                            <div className={`weapon-wrapper ${details?.facing === 'left' ? 'reversed' : ''} ${verticalFacingClass} ${details?.aiming ? 'aiming' : ''} medium`} style={weaponStyle}>
-                                            </div>
-                                        );
-                                    })()}
 
                                 </div>
                             </div>

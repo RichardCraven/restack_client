@@ -294,7 +294,13 @@ const TABS = [
 
 function resolveImg(val) {
     if (!val) return null;
-    if (typeof val === 'string') return val;
+    if (typeof val === 'string') {
+        const mapped = images[val] || images[val.replace('_portrait', '')] || images[val + '_portrait'];
+        if (mapped) {
+            return mapped.default || mapped;
+        }
+        return val;
+    }
     return val.default || null;
 }
 
@@ -592,33 +598,41 @@ function SkillDetail({ skill }) {
 
     // Damage description for damage-type skills
     const damageNote = (() => {
-        if (skill.damage == null) {
-            if (skill.type && (skill.type.includes('damage') || skill.type.includes('heal'))) {
-                if (skill.id === 'execute') {
-                    return '3 hits of 75% of caster ATK';
-                }
-                if (skill.damagePercent) {
-                    return `${skill.damagePercent}% of caster ATK`;
-                }
-                const isSpell = ['wizard', 'sage', 'summoner'].includes(skill.class);
-                if (isSpell) {
-                    return '100% of caster ATK (scales with INT)';
-                }
-                return '100% of caster ATK';
-            }
-            return null;
+        if (typeof skill.flatDamage === 'string') {
+            return skill.flatDamage;
         }
-        if (typeof skill.damage === 'string') {
-            return skill.damage;
+        if (skill.flatDamage < 0) {
+            return `Restores ~${Math.abs(skill.flatDamage)} HP (base, scales with INT)`;
         }
-        if (skill.damage < 0) {
-            return `Restores ~${Math.abs(skill.damage)} HP (base, scales with INT)`;
-        }
+
         const isSpell = ['wizard', 'sage', 'summoner'].includes(skill.class);
-        if (isSpell) {
-            return `Base damage: ${skill.damage} (+ caster ATK modifier, scales with INT)`;
+        const isDamage = skill.type && skill.type.includes('damage');
+        const hasFlat = typeof skill.flatDamage === 'number' && skill.flatDamage > 0;
+        const pct = skill.atkPercentage || 100;
+
+        if (isDamage || hasFlat) {
+            if (skill.id === 'execute') {
+                return '3 hits of 75% of caster ATK';
+            }
+            
+            let parts = [];
+            if (isDamage && pct > 0) {
+                parts.push(`${pct}% of caster ATK`);
+            }
+            if (hasFlat) {
+                parts.push(`${skill.flatDamage} flat damage`);
+            }
+
+            if (parts.length === 0) return null;
+
+            let desc = parts.join(' + ');
+            if (isSpell) {
+                desc += ' (scales with INT)';
+            }
+            return desc;
         }
-        return `Base damage: ${skill.damage} (+ caster ATK modifier)`;
+
+        return null;
     })();
 
     return (

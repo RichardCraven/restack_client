@@ -27,7 +27,9 @@ import {
   demon_mark,
   new_moon,
   fear,
-  soldier_fist_of_honor
+  soldier_fist_of_honor,
+  death_missile,
+  death_missile_hit
 } from './images';
 
 export class AnimationManagerRedux {
@@ -147,7 +149,6 @@ export class AnimationManagerRedux {
         this._malevolentPresenceFear(sourceCoords, targetCoords);
         break;
       case 'fireball':
-      case 'fire_blast':
         this._fireball(sourceCoords, targetCoords);
         break;
       case 'magic_missile':
@@ -168,11 +169,18 @@ export class AnimationManagerRedux {
         break;
       case 'sword_swing':
       case 'slash':
-      case 'barbarian_slash':
-        this._swordSlash(sourceCoords, targetCoords);
+      case 'barbarian_slash': {
+        let facing = 'right';
+        if (targetCoords.x === sourceCoords.x) {
+          facing = targetCoords.y > sourceCoords.y ? 'down' : 'up';
+        } else {
+          facing = targetCoords.x > sourceCoords.x ? 'right' : 'left';
+        }
+        this._swordSlash(sourceCoords, targetCoords, sourceUnitId, facing);
         break;
+      }
       case 'imbued_strike':
-        this._imbuedStrike(sourceCoords, targetCoords);
+        this._imbuedStrike(sourceCoords, targetCoords, sourceUnitId);
         break;
       case 'fist_of_honor':
         this._fistOfHonor(sourceCoords, targetCoords);
@@ -241,6 +249,9 @@ export class AnimationManagerRedux {
       case 'soul_suck':
         this._soulSuck(sourceCoords, targetCoords);
         break;
+      case 'death_missile':
+        this._deathMissile(sourceCoords, targetCoords);
+        break;
       case 'bind':
         this._bindRopes(sourceCoords, targetCoords, isTargetLarge);
         break;
@@ -290,11 +301,11 @@ export class AnimationManagerRedux {
       'execute',
       'energy_drain',
       'fireball',
-      'fire_blast',
       'magic_missile',
       'ice_blast',
       'reveal_weakness',
       'disintegrate',
+      'death_missile',
     ].includes(name);
   }
 
@@ -535,7 +546,7 @@ export class AnimationManagerRedux {
     }
   }
 
-  _swordSlash(src, tgt) {
+  _swordSlash(src, tgt, sourceUnitId = null, facing = 'right') {
     const srcPx = this._px(src);
     const tgtPx = this._px(tgt);
     const dx = tgtPx.x - srcPx.x;
@@ -547,10 +558,12 @@ export class AnimationManagerRedux {
       tgtPx,
       angle,
       duration: 600,
+      sourceUnitId,
+      facing,
     });
   }
 
-  _imbuedStrike(src, tgt) {
+  _imbuedStrike(src, tgt, sourceUnitId) {
     const srcPx = this._px(src);
     const tgtPx = this._px(tgt);
     const dx = tgtPx.x - srcPx.x;
@@ -561,7 +574,8 @@ export class AnimationManagerRedux {
       srcPx,
       tgtPx,
       angle,
-      duration: 600,
+      duration: 1000,
+      sourceUnitId,
     });
   }
 
@@ -976,13 +990,58 @@ export class AnimationManagerRedux {
   }
 
   _bindRopes(src, tgt, isTargetLarge = false) {
+    const srcPx = this._px(src);
     const tgtPx = this._px(tgt, isTargetLarge);
+    const dx = tgtPx.x - srcPx.x;
+    const dy = tgtPx.y - srcPx.y;
+    const length = Math.sqrt(dx * dx + dy * dy);
+    const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+
     this._emit({
-      type: 'bind_hit_ropes',
+      type: 'bind_beam',
+      srcPx,
       tgtPx,
-      isTargetLarge,
-      duration: 1500
+      length,
+      angle,
+      duration: 600
     });
+
+    setTimeout(() => {
+      this._emit({
+        type: 'bind_hit_ropes',
+        tgtPx,
+        tgt,
+        isTargetLarge,
+        duration: 1500
+      });
+    }, 500);
+  }
+
+  _deathMissile(src, tgt) {
+    const srcPx = this._px(src);
+    const tgtPx = this._getImpactTargetPx(tgt);
+    const dx = tgtPx.x - srcPx.x;
+    const dy = tgtPx.y - srcPx.y;
+    const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+
+    this._emit({
+      type: 'generic_projectile',
+      subtype: 'death_missile',
+      srcPx,
+      tgtPx,
+      angle,
+      projectileIcon: death_missile,
+      duration: 800,
+    });
+
+    setTimeout(() => {
+      this._emit({
+        type: 'death_missile_burst',
+        tgtPx,
+        icon: death_missile_hit,
+        duration: 500,
+      });
+    }, 700);
   }
 
   /** Trials beam — purple beam from source (trials icon position) to target fighter */
@@ -1051,12 +1110,13 @@ export class AnimationManagerRedux {
    * @param {object} fighterCoords  { x, y }
    * @param {number} trialIndex     0, 1, or 2
    */
-  triggerReturnFromTrial(fighterCoords, trialIndex) {
+  triggerReturnFromTrial(fighterCoords, trialIndex, sourceUnitId = null) {
     const tgtPx = this._px(fighterCoords);
     this._emit({
       type: 'return_from_trial',
       tgtPx,
       trialIndex,
+      sourceUnitId,
       duration: 2500
     });
   }

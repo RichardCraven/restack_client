@@ -81,7 +81,6 @@ import {
   barbarian_leap_attack,
   bleeding,
   poison,
-  fire_blast,
   shield_wall,
   lightning,
   magic_missile,
@@ -410,7 +409,7 @@ const monstersData = [
   {
     id: 'basilisk_cultists', name: 'Cultist of Whispers', portrait: basilisk_cultists_portrait, abilities: [
       { id: 'magic_missile', name: 'Magic Missile', desc: 'Fire three seeking magic missiles in sequence.', icon: magic_missile_icon, type: 'magic_missile' },
-      { id: 'fire_blast', name: 'Fire Blast', desc: 'Unleash a roaring blast of fire.', icon: fire_blast, type: 'fire_blast' },
+      { id: 'fireball', name: 'Fireball', desc: 'Unleash a roaring fireball.', icon: fireball, type: 'fireball' },
       { id: 'ice_blast', name: 'Ice Blast', desc: 'Freeze the target in a block of absolute-zero ice.', icon: ice_blast_icon, type: 'ice_blast_proj' }
     ]
   }
@@ -527,7 +526,7 @@ const fightersData = [
     portrait: engineer,
     abilities: [
       { id: 'shoot_rifle', name: 'Shoot Rifle', desc: 'Fire a rifle shot with mechanical precision.', icon: bow_and_arrow, type: 'projectile', projectileIcon: arrowUp },
-      { id: 'throw_grenade', name: 'Throw Grenade', desc: 'Toss a shrapnel bomb in an arc.', icon: fire_blast, type: 'projectile_arc', projectileIcon: fire_blast },
+      { id: 'throw_grenade', name: 'Throw Grenade', desc: 'Toss a shrapnel bomb in an arc.', icon: fireball, type: 'projectile_arc', projectileIcon: fireball },
       { id: 'deploy_turret', name: 'Deploy Turret', desc: 'Construct a defensive turret on the grid.', icon: construct_icon, type: 'deploy_turret' },
       { id: 'overdrive', name: 'Overdrive', desc: 'Overload mechanical core for extra stats.', icon: sigil_icon, type: 'overdrive' }
     ]
@@ -3540,7 +3539,7 @@ const SandboxPage = () => {
     }
 
     // --- WIZARD FIREBALL ---
-    else if (ability.type === 'fireball' || ability.type === 'fire_blast') {
+    else if (ability.type === 'fireball') {
       setAnimating(true);
       // CSS orb projectile
       setProjectile({

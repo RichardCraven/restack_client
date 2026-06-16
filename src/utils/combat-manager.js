@@ -1148,12 +1148,12 @@ export function CombatManager() {
                         });
                         wizardAI.triggerIceBlast(fighter, target)
                         break;
-                    case 'fire blast':
-                        console.log('[SpecialClickDiag][CombatManager] wizard triggerFireBlast', {
+                    case 'fireball':
+                        console.log('[SpecialClickDiag][CombatManager] wizard triggerFireball', {
                             fighterId: fighter.id,
                             targetId: target?.id || null,
                         });
-                        wizardAI.triggerFireBlast(fighter, target, this.combatants)
+                        wizardAI.triggerFireball(fighter, target, this.combatants)
                         break;
                     default:
                         console.log('[SpecialClickDiag][CombatManager] wizard dispatch fell through default', {

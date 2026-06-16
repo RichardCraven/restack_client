@@ -27,6 +27,7 @@ export function MonsterManager() {
         return array[index]
     }
     this.battleMonster = null;
+    console.log('[DEBUG][MonsterManager] wyvern_portrait:', images['wyvern_portrait'], 'goblin_portrait:', images['goblin_portrait']);
     this.monsters = {
         // ── Level 2 ──────────────────────────────────────────────────────
         goblin: {
@@ -69,7 +70,7 @@ export function MonsterManager() {
             image_names: ['skeleton'],
             monster_names: ['bones'],
             stats: {
-                hp: 50,
+                hp: 500,
                 atk: 5,
                 def: 7,
                 speed: 7, // shambling undead
@@ -328,7 +329,7 @@ export function MonsterManager() {
             portrait: images['basilisk_cultists_portrait'],
             greetings: ['Hear the whispers...', 'The master speaks to us!'],
             deathCries: ['The whispers... end...'],
-            specials: ['fire_blast', 'ice_blast'],
+            specials: ['fireball', 'ice_blast'],
             attacks: ['magic_missile'],
             weaknesses: ['holy', 'physical'],
             drops: [
@@ -694,8 +695,8 @@ export function MonsterManager() {
             portrait: images['djinn_portrait'],
             greetings: ['your fate leads you here, now it will all end'],
             deathCries: ['it seems your fate has other plans'],
-            specials: ['betrayal', 'arcane_barrier', 'bind'],
-            attacks: ['death_missile'],
+            specials: ['betrayal', 'arcane_barrier', 'bind', 'death_missile'],
+            attacks: ['void_lance'],
             weaknesses: ['arcane'],
             drops: [
                 { item: TIER2_POTION, percentChance: 35 },
@@ -769,7 +770,7 @@ export function MonsterManager() {
                 fort: 14
             },
             level: 30,
-            portrait: images[this.pickRandom(['wyvern_portrait', 'wyvern_portrait2'])],
+            portrait: 'wyvern_portrait',
             greetings: ['*roar*'],
             deathCries: ['*scream*'],
             specials: ['dragon_whirlwind', 'bombard', 'dragon_dispell', 'lay_eggs', 'blue_dragon_breath'],
@@ -865,18 +866,33 @@ export function MonsterManager() {
             drops: []
         },
     }
-    let count = 100;
+    let count = 50000;
     for (let key in this.monsters) {
         let m = this.monsters[key]
         m.id = count;
         count++
+
+        // Extract plain string URL if it is an object with default
+        if (m.portrait && typeof m.portrait === 'object') {
+            m.portrait = m.portrait.default || m.portrait;
+        }
+
+        // Dynamically resolve portrait string keys to their asset references
+        if (typeof m.portrait === 'string') {
+            const mapped = images[m.portrait] || images[m.portrait.replace('_portrait', '')] || images[key] || images[key + '_portrait'];
+            if (mapped) {
+                m.portrait = mapped.default || mapped;
+            } else if (typeof process === 'undefined' || process.env.NODE_ENV !== 'test') {
+                console.warn(`[WARN][MonsterManager] Could not resolve portrait for monster "${key}" with key "${m.portrait}"`);
+            }
+        }
+        console.log(`[DEBUG][MonsterManager] Init monster key: ${key}, resolved portrait:`, m.portrait);
     }
 
     this.getMonster = (monsterString) => {
-        // console.log('get monster:', monsterString);
         let match = null;
-        // console.log('this.monsters', this.monsters);
         match = this.monsters[monsterString];
+        console.log(`[DEBUG][MonsterManager] getMonster called for: ${monsterString}, template portrait:`, match?.portrait);
         return match ? JSON.parse(JSON.stringify(match)) : null;
     }
     this.getRandomMonster = () => {

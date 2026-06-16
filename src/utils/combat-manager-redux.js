@@ -122,7 +122,7 @@ export function CombatManagerRedux() {
 
     const getUnitStaggerDelay = (unit) => {
         if (!unit) return 0;
-        const activeUnits = Object.values(this.combatants).filter(c => c && !c.dead && !c.isVCT && !c.skipAI && typeof c.inTrial !== 'number');
+        const activeUnits = Object.values(this.combatants).filter(c => c && !c.dead && c.hp > 0 && !c.isVCT && !c.skipAI && typeof c.inTrial !== 'number');
         activeUnits.sort((a, b) => {
             const speedA = a.stats.speed || a.stats.dex || 1;
             const speedB = b.stats.speed || b.stats.dex || 1;
@@ -252,8 +252,8 @@ export function CombatManagerRedux() {
     };
 
     this.getRangeWidthVal = (caller) => {
-        if (caller && caller.pendingAttack) {
-            return RANGES[caller.pendingAttack.range] || 0;
+        if (caller && caller.activeAbility) {
+            return RANGES[caller.activeAbility.range] || 0;
         }
         return 0;
     };
@@ -1014,7 +1014,7 @@ export function CombatManagerRedux() {
         const HEALER_TYPES = new Set(['sage', 'summoner', 'wizard']);
 
         const candidateTargets = Object.values(this.combatants).filter(c => {
-            if (!c || c.dead || c.isVCT) return false;
+            if (!c || c.dead || c.isVCT || typeof c.inTrial === 'number') return false;
             const callerIsEnemy = !!caller.isMonster;
             const cIsEnemy = !!c.isMonster;
             return callerIsEnemy !== cIsEnemy;
@@ -1319,7 +1319,7 @@ export function CombatManagerRedux() {
             if (typeof this.animationManager.energyBlast === 'function') {
                 this.animationManager.energyBlast(unit.coordinates, target.coordinates);
             }
-        } else if (name === 'fireball' || name === 'fire_blast') {
+        } else if (name === 'fireball') {
             if (typeof this.animationManager.fireball === 'function') {
                 this.animationManager.fireball(unit.coordinates, target.coordinates);
             }
@@ -1396,7 +1396,7 @@ export function CombatManagerRedux() {
             }
         });
 
-        const activeUnits = Object.values(this.combatants).filter(c => c && !c.dead && !c.isVCT && !c.skipAI && typeof c.inTrial !== 'number');
+        const activeUnits = Object.values(this.combatants).filter(c => c && !c.dead && c.hp > 0 && !c.isVCT && !c.skipAI && typeof c.inTrial !== 'number');
         console.log('[DEBUG][CombatManagerRedux] activeUnits sorted keys:', activeUnits.map(u => u.id));
 
         // Sort by speed/dexterity descending (higher dex acts first)
@@ -1410,6 +1410,9 @@ export function CombatManagerRedux() {
             setTimeout(() => {
                 console.log(`[DEBUG][CombatManagerRedux] setTimeout callback fired for unit: ${unit.id} (${unit.type}), dead: ${unit.dead}`);
                 try {
+                    if (unit.hp <= 0 && !unit.dead) {
+                        this.targetKilled(unit);
+                    }
                     if (this.combatPaused || this.combatOver || unit.dead) {
                         this.appendCombatLog(`DEBUG: Skip turn for ${unit.name} - paused: ${this.combatPaused}, over: ${this.combatOver}, dead: ${unit.dead}`);
                         return;
@@ -3255,7 +3258,7 @@ export function CombatManagerRedux() {
 
         const hexSpec = this.resolveSpecial(unit, 'hex');
         const trialsSpec = this.resolveSpecial(unit, 'begin_the_trials');
-        const clawSpec = this.resolveSpecial(unit, 'claw_strike') || { id: 'claw_strike', range: 'close', type: 'damage' };
+        const clawSpec = this.resolveSpecial(unit, 'claw_strike') || { id: 'claw_strike', range: 'close', type: 'damage', flatDamage: 0, atkPercentage: 100 };
         const polymorphSpec = this.resolveSpecial(unit, 'polymorph');
         const mmSpec = this.resolveSpecial(unit, 'magic_missile');
 
@@ -3487,7 +3490,7 @@ export function CombatManagerRedux() {
 
         // Trigger return overlay animation
         if (this.animManagerRedux && typeof this.animManagerRedux.triggerReturnFromTrial === 'function') {
-            this.animManagerRedux.triggerReturnFromTrial(returnCoords, trialIndex);
+            this.animManagerRedux.triggerReturnFromTrial(returnCoords, trialIndex, fighter.id);
         }
         if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
     };
@@ -3842,8 +3845,8 @@ export function CombatManagerRedux() {
                 const crimsonSightSpec = this.resolveSpecial(unit, 'crimson_sight');
                 const batFlySpec = this.resolveSpecial(unit, 'bat_fly');
                 const strikeSpec = biteReady 
-                    ? (this.resolveSpecial(unit, 'vampiric_bite') || { id: 'vampiric_bite', range: 'close', type: 'damage', damage: 15 })
-                    : (this.resolveSpecial(unit, 'claw_strike') || { id: 'claw_strike', range: 'close', type: 'damage', damage: 10 });
+                    ? (this.resolveSpecial(unit, 'vampiric_bite') || { id: 'vampiric_bite', range: 'close', type: 'damage', flatDamage: 15, atkPercentage: 100 })
+                    : (this.resolveSpecial(unit, 'claw_strike') || { id: 'claw_strike', range: 'close', type: 'damage', flatDamage: 10, atkPercentage: 100 });
 
                 if (crimsonSightSpec && batFlySpec && strikeSpec) {
                     this.appendCombatLog(`${this.getCombatantLogName(unit)} initiates a clever combo chain!`);
@@ -3852,19 +3855,26 @@ export function CombatManagerRedux() {
                     unit.actionsTakenThisRound = 0;
                     this.useAbility(unit, crimsonSightSpec, unit);
 
-                    // Bat Fly
-                    unit.batFlyCustomDest = bestDest;
-                    unit.actionsTakenThisRound = 0;
-                    this.useAbility(unit, batFlySpec, targetSquishy);
-                    unit.targetId = targetSquishy.id;
+                    // Bat Fly (Delay to let Crimson Sight animation resolve, ~1550ms)
+                    setTimeout(() => {
+                        if (unit.dead || (targetSquishy && targetSquishy.dead)) return;
+                        unit.batFlyCustomDest = bestDest;
+                        unit.actionsTakenThisRound = 0;
+                        this.useAbility(unit, batFlySpec, targetSquishy);
+                        unit.targetId = targetSquishy.id;
 
-                    // Bite / Claw
-                    unit.actionsTakenThisRound = 0;
-                    this.useAbility(unit, strikeSpec, targetSquishy);
+                        // Bite / Claw (Delay to let Bat Fly animation resolve, ~1250ms)
+                        setTimeout(() => {
+                            if (unit.dead || (targetSquishy && targetSquishy.dead)) return;
+                            unit.actionsTakenThisRound = 0;
+                            this.useAbility(unit, strikeSpec, targetSquishy);
 
-                    if (meleeAlive) {
-                        unit.vampireState = 'retreat';
-                    }
+                            if (meleeAlive) {
+                                unit.vampireState = 'retreat';
+                            }
+                        }, 1250);
+                    }, 1550);
+
                     return;
                 }
             }
@@ -3895,8 +3905,8 @@ export function CombatManagerRedux() {
             if (bestDest && targetSquishy) {
                 const batFlySpec = this.resolveSpecial(unit, 'bat_fly');
                 const strikeSpec = biteReady
-                    ? (this.resolveSpecial(unit, 'vampiric_bite') || { id: 'vampiric_bite', range: 'close', type: 'damage', damage: 15 })
-                    : (this.resolveSpecial(unit, 'claw_strike') || { id: 'claw_strike', range: 'close', type: 'damage', damage: 10 });
+                    ? (this.resolveSpecial(unit, 'vampiric_bite') || { id: 'vampiric_bite', range: 'close', type: 'damage', flatDamage: 15, atkPercentage: 100 })
+                    : (this.resolveSpecial(unit, 'claw_strike') || { id: 'claw_strike', range: 'close', type: 'damage', flatDamage: 10, atkPercentage: 100 });
 
                 if (batFlySpec && strikeSpec) {
                     // Bat Fly
@@ -3905,13 +3915,17 @@ export function CombatManagerRedux() {
                     this.useAbility(unit, batFlySpec, targetSquishy);
                     unit.targetId = targetSquishy.id;
 
-                    // Bite / Claw
-                    unit.actionsTakenThisRound = 0;
-                    this.useAbility(unit, strikeSpec, targetSquishy);
+                    // Bite / Claw (Delay to let Bat Fly animation resolve, ~1250ms)
+                    setTimeout(() => {
+                        if (unit.dead || (targetSquishy && targetSquishy.dead)) return;
+                        unit.actionsTakenThisRound = 0;
+                        this.useAbility(unit, strikeSpec, targetSquishy);
 
-                    if (meleeAlive) {
-                        unit.vampireState = 'retreat';
-                    }
+                        if (meleeAlive) {
+                            unit.vampireState = 'retreat';
+                        }
+                    }, 1250);
+
                     return;
                 }
             }
@@ -3921,8 +3935,8 @@ export function CombatManagerRedux() {
         const inRange = this.targetInRange(unit, target, 'close');
         if (inRange) {
             const strikeSpec = biteReady
-                ? (this.resolveSpecial(unit, 'vampiric_bite') || { id: 'vampiric_bite', range: 'close', type: 'damage', damage: 15 })
-                : (clawReady ? (this.resolveSpecial(unit, 'claw_strike') || { id: 'claw_strike', range: 'close', type: 'damage', damage: 10 }) : null);
+                ? (this.resolveSpecial(unit, 'vampiric_bite') || { id: 'vampiric_bite', range: 'close', type: 'damage', flatDamage: 15, atkPercentage: 100 })
+                : (clawReady ? (this.resolveSpecial(unit, 'claw_strike') || { id: 'claw_strike', range: 'close', type: 'damage', flatDamage: 10, atkPercentage: 100 }) : null);
 
             if (strikeSpec) {
                 this.useAbility(unit, strikeSpec, target);
@@ -3979,8 +3993,8 @@ export function CombatManagerRedux() {
         this.moveCloser(unit, target);
         if (this.targetInRange(unit, target, 'close')) {
             const strikeSpec = biteReady
-                ? (this.resolveSpecial(unit, 'vampiric_bite') || { id: 'vampiric_bite', range: 'close', type: 'damage', damage: 15 })
-                : (this.resolveSpecial(unit, 'claw_strike') || { id: 'claw_strike', range: 'close', type: 'damage', damage: 10 });
+                ? (this.resolveSpecial(unit, 'vampiric_bite') || { id: 'vampiric_bite', range: 'close', type: 'damage', flatDamage: 15, atkPercentage: 100 })
+                : (this.resolveSpecial(unit, 'claw_strike') || { id: 'claw_strike', range: 'close', type: 'damage', flatDamage: 10, atkPercentage: 100 });
             this.useAbility(unit, strikeSpec, target);
         }
     };
@@ -4000,7 +4014,7 @@ export function CombatManagerRedux() {
         // Resolve attacks
         const blueDragonBreathSpec = this.resolveSpecial(unit, 'blue_dragon_breath');
         const biteSpec = this.resolveSpecial(unit, 'bite');
-        const clawSpec = this.resolveSpecial(unit, 'claw_strike') || { id: 'claw_strike', range: 'close', type: 'damage' };
+        const clawSpec = this.resolveSpecial(unit, 'claw_strike') || { id: 'claw_strike', range: 'close', type: 'damage', flatDamage: 0, atkPercentage: 100 };
 
         // Check readiness
         const whirlwindReady = whirlwindSpec && this._abilityReady(unit, 'dragon_whirlwind');
@@ -4388,11 +4402,13 @@ export function CombatManagerRedux() {
         }
         
         unit.attacking = true;
+        unit.activeAbility = ability;
         if (typeof this.updateData === 'function') {
             this.updateData(clone(this.combatants));
         }
         setTimeout(() => {
             unit.attacking = false;
+            unit.activeAbility = null;
             if (typeof this.updateData === 'function') {
                 this.updateData(clone(this.combatants));
             }
@@ -5092,6 +5108,9 @@ export function CombatManagerRedux() {
             unit.damageIndicators = unit.damageIndicators || [];
             unit.damageIndicators.push({ id: Date.now() + Math.random(), value: `+${drainAmt}`, source: 'Soul Suck', type: 'heal' });
             this.appendCombatLog(`${this.getCombatantLogName(unit)} sucks the soul of ${this.getCombatantLogName(target)} for ${drainAmt} drain.`);
+            if (target.hp <= 0) {
+                this.targetKilled(target);
+            }
         }
 
         if (abilityId === 'crimson_sight') {
@@ -5231,7 +5250,7 @@ export function CombatManagerRedux() {
         }
 
         if (abilityId === 'vortex') {
-            const base = typeof ability.damage === 'number' ? ability.damage : 10;
+            const base = typeof ability.flatDamage === 'number' ? ability.flatDamage : 10;
             const splash = Math.max(1, Math.round(base));
             let totalHits = 0;
             Object.values(this.combatants).forEach(c => {
@@ -5254,9 +5273,23 @@ export function CombatManagerRedux() {
 
         // AoE damage — hits all enemies in range
         if (effects.some(e => typeof e === 'string' && e.includes('multi_target'))) {
-            let rawDamage = ability.damage || unit.stats.atk || 5;
-            if (ability.damagePercent) {
-                rawDamage = Math.round(rawDamage * (ability.damagePercent / 100));
+            const isDamageType = ability.type === 'damage' || (ability.type && ability.type.includes('damage'));
+            const hasFlatDamageProp = (typeof ability.flatDamage === 'number');
+            const hasLegacyDamageProp = (typeof ability.damage === 'number');
+            const hasAtkPctProp = (typeof ability.atkPercentage === 'number');
+
+            let rawDamage = 0;
+            if (hasFlatDamageProp) {
+                rawDamage = ability.flatDamage;
+                if (isDamageType) {
+                    const pct = hasAtkPctProp ? ability.atkPercentage : 100;
+                    rawDamage += (unit.stats.atk || 5) * (pct / 100);
+                }
+            } else if (hasLegacyDamageProp) {
+                rawDamage = ability.damage;
+            } else if (isDamageType) {
+                const pct = hasAtkPctProp ? ability.atkPercentage : 100;
+                rawDamage += (unit.stats.atk || 5) * (pct / 100);
             }
             let totalHits = 0;
             Object.values(this.combatants).forEach(c => {
@@ -5288,10 +5321,23 @@ export function CombatManagerRedux() {
         }
 
         // Single-target damage (default path)
-        const hasDamageProp = (typeof ability.damage === 'number');
-        let rawDamage = hasDamageProp ? ability.damage : ((ability.type === 'damage' || (ability.type && ability.type.includes('damage'))) ? (unit.stats.atk || 5) : 0);
-        if (ability.damagePercent) {
-            rawDamage = Math.round(rawDamage * (ability.damagePercent / 100));
+        const isDamageType = ability.type === 'damage' || (ability.type && ability.type.includes('damage'));
+        const hasFlatDamageProp = (typeof ability.flatDamage === 'number');
+        const hasLegacyDamageProp = (typeof ability.damage === 'number');
+        const hasAtkPctProp = (typeof ability.atkPercentage === 'number');
+
+        let rawDamage = 0;
+        if (hasFlatDamageProp) {
+            rawDamage = ability.flatDamage;
+            if (isDamageType) {
+                const pct = hasAtkPctProp ? ability.atkPercentage : 100;
+                rawDamage += (unit.stats.atk || 5) * (pct / 100);
+            }
+        } else if (hasLegacyDamageProp) {
+            rawDamage = ability.damage;
+        } else if (isDamageType) {
+            const pct = hasAtkPctProp ? ability.atkPercentage : 100;
+            rawDamage += (unit.stats.atk || 5) * (pct / 100);
         }
 
         // INT-based spell damage scaling for spellcaster classes
@@ -5434,6 +5480,9 @@ export function CombatManagerRedux() {
                             type: 'crit'
                         });
                         this.appendCombatLog(`${this.getCombatantLogName(unit)} detonates the mark on ${this.getCombatantLogName(target)} for +${markBonus} bonus damage.`);
+                        if (target.hp <= 0) {
+                            this.targetKilled(target);
+                        }
                     }
 
                     if (abilityId === 'hex') {
@@ -5462,14 +5511,14 @@ export function CombatManagerRedux() {
                         }
                     }
 
-                    if (abilityId === 'fire_blast' || abilityId === 'fireball') {
+                    if (abilityId === 'fireball') {
                         const splashDamage = Math.max(1, Math.round(finalDmg * 0.5));
-                        const targetMainId = target.parentId || target.id;
+                        const targetMainId = target.parentMonsterId || target.parentId || target.id;
                         const hitIds = new Set([targetMainId]);
                         
                         Object.values(this.combatants).forEach(c => {
-                            if (!c || c.dead) return;
-                            const cMainId = c.parentId || c.id;
+                            if (!c || c.dead || c.isVCT) return;
+                            const cMainId = c.parentMonsterId || c.parentId || c.id;
                             if (hitIds.has(cMainId)) return;
                             
                             const isEnemy = (!!unit.isMonster !== !!c.isMonster);
@@ -5491,7 +5540,7 @@ export function CombatManagerRedux() {
                                 if (mainEntity.hp <= 0) this.targetKilled(mainEntity);
                             }
                         });
-                        this.appendCombatLog(`${this.getCombatantLogName(unit)}'s fire blast secondary ring scorches adjacent enemies.`);
+                        this.appendCombatLog(`${this.getCombatantLogName(unit)}'s fireball secondary ring scorches adjacent enemies.`);
                     }
 
                     if (target.hp <= 0) {
@@ -5887,19 +5936,26 @@ export function CombatManagerRedux() {
         }, 700);
     };
 
-    // Basic attack wrapper (no cooldown for basic attacks)
+    // Basic attack wrapper (respects cooldowns defined in skills matrix)
     this._basicAttack = (unit, target) => {
         if (!target || unit.actionsTakenThisRound >= 1) return;
         if (target && target.isVCT && target.parentMonsterId && this.combatants[target.parentMonsterId]) {
             target = this.combatants[target.parentMonsterId];
         }
         const baseAttack = Array.isArray(unit.attacks) && unit.attacks.length > 0 ? unit.attacks[0] : null;
+        if (!baseAttack) return;
+
+        const attackKey = typeof baseAttack === 'string' ? baseAttack : baseAttack.id;
+        if (attackKey && !this._abilityReady(unit, attackKey)) {
+            return;
+        }
+
         let attack;
         if (baseAttack && typeof baseAttack === 'object') {
             attack = {
                 ...baseAttack,
                 damage: unit.stats.atk || baseAttack.damage || 5,
-                cooldown: 0
+                cooldown: baseAttack.cooldown !== undefined ? baseAttack.cooldown : 0
             };
         } else if (typeof baseAttack === 'string') {
             const resolved = this.resolveSpecial(unit, baseAttack);
@@ -5908,7 +5964,7 @@ export function CombatManagerRedux() {
                     ...resolved,
                     id: resolved.id || baseAttack,
                     damage: unit.stats.atk || resolved.damage || 5,
-                    cooldown: 0
+                    cooldown: resolved.cooldown !== undefined ? resolved.cooldown : 0
                 };
             } else {
                 attack = {

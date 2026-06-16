@@ -618,7 +618,6 @@ import whiteskull from '../assets/icons/misc/white_skull.png'
 
 // special
 import ice_blast from '../assets/icons/combat-icons/specials/wizard/ice_blast.png'
-import fire_blast from '../assets/icons/combat-icons/specials/wizard/fireball.png'
 import meditate from '../assets/icons/combat-icons/specials/meditate.png'
 import shield_wall from '../assets/icons/combat-icons/specials/soldier/shield_wall_special.png'
 import soldier_slash from '../assets/icons/combat-icons/specials/soldier/slash.png'
@@ -1617,7 +1616,6 @@ export {
     claw_strike_animation,
     spineskin,
     duration_icon,
-    fire_blast,
     meditate,
     shield_wall,
     soldier_slash,

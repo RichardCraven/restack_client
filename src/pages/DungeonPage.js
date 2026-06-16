@@ -1283,7 +1283,20 @@ class DungeonPage extends React.Component {
         // Set selectedCrewMember synchronously here (crew was just initialized above).
         // loadExistingDungeon is async so its setState races; setting it now ensures the
         // crew panel renders immediately without waiting for the dungeon fetch to resolve.
-        const initialSelectedCrewMember = (meta && meta.crew && meta.crew.find(c => c.selected)) || (meta && meta.crew && meta.crew[0]) || {};
+        const metaObj = getMeta() || {};
+        if (this.props.crewManager && Array.isArray(this.props.crewManager.crew) && this.props.crewManager.crew.length > 0) {
+            const hasSelected = this.props.crewManager.crew.some(c => c.selected);
+            if (!hasSelected) {
+                this.props.crewManager.crew[0].selected = true;
+                metaObj.crew = this.props.crewManager.crew;
+                storeMeta(metaObj);
+            }
+        }
+        const initialSelectedCrewMember = (this.props.crewManager && this.props.crewManager.crew && this.props.crewManager.crew.find(c => c.selected))
+            || (this.props.crewManager && this.props.crewManager.crew && this.props.crewManager.crew[0])
+            || (metaObj && metaObj.crew && metaObj.crew.find(c => c.selected))
+            || (metaObj && metaObj.crew && metaObj.crew[0])
+            || {};
         const minimap = [];
         for(let i = 0; i<9; i++){
             minimap.push({active: false})
@@ -3918,17 +3931,15 @@ class DungeonPage extends React.Component {
             })
             foundMember.selected = true;
             meta.crew = this.props.crewManager.crew;
+            meta.leftExpanded = true;
             storeMeta(meta);
             this.props.saveUserData();
         }
-        if(this.state.selectedCrewMember && this.state.selectedCrewMember.type === member.data.type){
-            val = {};
-        } else {
-            val = member.data;
-        }
+        val = member.data;
 
         this.setState({
             selectedCrewMember: val,
+            leftPanelExpanded: true,
             actionsTrayExpanded: foundMember ? foundMember.actionsTrayExpanded : false,
             actionMenuTypeExpanded: foundMember ? (Array.isArray(foundMember.actionMenuTypeExpanded) ? foundMember.actionMenuTypeExpanded : (foundMember.actionMenuTypeExpanded ? [foundMember.actionMenuTypeExpanded] : [])) : []
         })
@@ -4708,7 +4719,15 @@ class DungeonPage extends React.Component {
             meta.minimapIndicators.push(indicatorsGroup)
             storeMeta(meta)
         }
-    let selectedCrewMember = this.props.crewManager.crew.find(c=>c.selected) || {};
+        let selectedCrewMember = this.props.crewManager.crew.find(c => c.selected) || this.props.crewManager.crew[0] || {};
+        if (selectedCrewMember && selectedCrewMember.id) {
+            this.props.crewManager.crew.forEach(c => {
+                c.selected = (c.id === selectedCrewMember.id);
+            });
+            const metaObj = getMeta() || {};
+            metaObj.crew = this.props.crewManager.crew;
+            storeMeta(metaObj);
+        }
         // Generate a fresh quest set for this dungeon run
         if (this.props.questManager) {
             this.props.questManager.generateQuestSet(dungeon, this.props.monsterManager, this.props.inventoryManager);
@@ -6181,7 +6200,13 @@ class DungeonPage extends React.Component {
                     <div style={{ backgroundColor: 'black', border: '2px solid red', padding: '30px', color: 'white', textAlign: 'center', borderRadius: '10px' }}>
                         <h2 style={{ color: 'red' }}>AMBUSH!</h2>
                         <p style={{ fontSize: '1.2em' }}>You were ambushed by a {this.state.ambushMonster.name}!</p>
-                        <img src={this.state.ambushMonster.portrait} alt={this.state.ambushMonster.name} style={{ width: '150px', height: '150px', objectFit: 'contain', margin: '20px auto', display: 'block' }} />
+                        <img 
+                            src={(typeof this.state.ambushMonster.portrait === 'string') 
+                                ? ((images[this.state.ambushMonster.portrait]?.default || images[this.state.ambushMonster.portrait] || images[this.state.ambushMonster.portrait.replace('_portrait', '')]?.default || images[this.state.ambushMonster.portrait.replace('_portrait', '')]) || this.state.ambushMonster.portrait) 
+                                : (this.state.ambushMonster.portrait?.default || this.state.ambushMonster.portrait)} 
+                            alt={this.state.ambushMonster.name} 
+                            style={{ width: '150px', height: '150px', objectFit: 'contain', margin: '20px auto', display: 'block' }} 
+                        />
                         <div className="btn" style={{ backgroundColor: 'darkred', color: 'white', padding: '10px 20px', cursor: 'pointer', display: 'inline-block' }} onClick={() => this.startAmbushCombat()}>FIGHT</div>
                     </div>
                 </div>

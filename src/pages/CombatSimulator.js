@@ -530,7 +530,7 @@ class CrewManagerPage extends React.Component {
             minion.inventory = [];
             minions.push(minion);
         });
-        console.log('[DEBUG][CombatSimulator] computed monster:', monster, 'computed minions:', minions);
+        console.log('[DEBUG][CombatSimulator] computed monster portrait:', monster?.portrait, 'minions portraits:', minions.map(m => m.portrait));
 
         if (this.state.useReduxCombat) {
             this.reduxCombatManager = new CombatManagerRedux();

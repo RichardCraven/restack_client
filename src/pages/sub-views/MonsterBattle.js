@@ -374,7 +374,7 @@ class MonsterBattle extends React.Component {
 
         this.setState({
             combatTiles: arr, ghostPortraitMatrix,
-            monsterPortrait: this.props.monster.portrait
+            monsterPortrait: this.props.monster?.portrait
         })
 
         // Wire the MonsterBattle component instance into the AI roster so
@@ -1380,7 +1380,7 @@ class MonsterBattle extends React.Component {
                 return aKey === formatted_val;
             }) || val;
 
-            selectedCombatant.pendingAttack = resolvedAttack;
+            selectedCombatant.activeAbility = resolvedAttack;
             this.setState({
                 selectedAttack: resolvedAttack,
                 showCrosshair: false,
@@ -1472,7 +1472,7 @@ class MonsterBattle extends React.Component {
             }
             consumableSpecials.forEach(a=>a.selected=false)
         } else {
-            // manual attack: ensure the authoritative combatant has a pendingAttack selected
+            // manual attack: ensure the authoritative combatant has an activeAbility selected
             try {
                 const sel = this.state.selectedFighter;
                 if (sel && this.props.combatManager && typeof this.props.combatManager.getCombatant === 'function') {
@@ -1491,29 +1491,29 @@ class MonsterBattle extends React.Component {
                                 a.name === selected.name &&
                                 a.cooldown_position === 100
                             );
-                            if (resolvedSelectedAttack) cmF.pendingAttack = resolvedSelectedAttack;
+                            if (resolvedSelectedAttack) cmF.activeAbility = resolvedSelectedAttack;
                         }
 
-                        // If no pending attack is set, choose one using the combat manager helper
-                        if (!cmF.pendingAttack) {
+                        // If no active ability is set, choose one using the combat manager helper
+                        if (!cmF.activeAbility) {
                             const target = (cmF.targetId) ? this.props.combatManager.getCombatant(cmF.targetId) : null;
                             try {
                                 if (typeof this.props.combatManager.chooseAttackType === 'function') {
                                     this.props.combatManager.chooseAttackType(cmF, target);
                                 } else if (Array.isArray(cmF.attacks) && cmF.attacks.length) {
-                                    cmF.pendingAttack = cmF.attacks.find(a => a.cooldown_position === 100) || cmF.attacks[0];
+                                    cmF.activeAbility = cmF.attacks.find(a => a.cooldown_position === 100) || cmF.attacks[0];
                                 }
                             } catch (e) {
                                 // defensive fallback
                                 if (Array.isArray(cmF.attacks) && cmF.attacks.length) {
-                                    cmF.pendingAttack = cmF.attacks.find(a => a.cooldown_position === 100) || cmF.attacks[0];
+                                    cmF.activeAbility = cmF.attacks.find(a => a.cooldown_position === 100) || cmF.attacks[0];
                                 }
                             }
                         }
                     }
                 }
             } catch (err) {
-                console.warn('manualFire: failed to ensure pendingAttack', err);
+                console.warn('manualFire: failed to ensure activeAbility', err);
             }
             // invoke the combat manager's manual attack which calls into the fighter
             this.props.combatManager.fighterManualAttack()
@@ -1819,8 +1819,8 @@ class MonsterBattle extends React.Component {
         
     }
     getMonsterWeaponAnimation = (monster) => {
-        if(!monster.attacking) return ''
-        switch(monster.pendingAttack.name){
+        if(!monster.attacking || !monster.activeAbility) return ''
+        switch(monster.activeAbility.name){
             case 'magic missile':
                 // return 'spinning'
                 return 'spin-left'
@@ -1829,11 +1829,11 @@ class MonsterBattle extends React.Component {
             default:
             break;
         }
-        if(monster.pendingAttack.name === 'magic missile'){
+        if(monster.activeAbility.name === 'magic missile'){
             // unexpected path reached
             debugger
         }
-        switch(monster.pendingAttack.range){
+        switch(monster.activeAbility.range){
             case 'close':
                 return 'swinging-left'
             case 'medium':
