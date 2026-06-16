@@ -2480,9 +2480,12 @@
         }
 
         .damage-indicator{
-            color: red;
+            color: #ff3b30;
             position: absolute;
-            font-size: 16px;
+            font-size: 18px;
+            font-weight: 800;
+            text-shadow: 0 0 4px rgba(255, 59, 48, 0.6), 0 0 12px rgba(255, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.9);
+            letter-spacing: 0.02em;
             opacity: 0;
             -webkit-animation: FloatUp 1.8s linear ;
             -moz-animation: FloatUp 1.8s linear ;

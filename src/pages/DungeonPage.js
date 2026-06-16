@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { INTERVALS } from '../utils/shared-constants';
+import { INTERVALS, MONSTER_RESPAWN_MINUTES, ITEM_RESPAWN_MINUTES } from '../utils/shared-constants';
 import '../styles/dungeon-board.scss'
 import Tile from '../components/tile'
 import MonsterBattle from './sub-views/MonsterBattle';
@@ -36,6 +36,17 @@ import SkillTree from '../components/SkillTree';
 import CodexModal from '../components/CodexModal';
 import '../styles/narrative-overlay.scss'
 
+const SLOT_INFO = {
+    'chest': { name: 'Chest Slot', desc: 'Equip body armor or amulets here.' },
+    'right': { name: 'Right Hand Slot', desc: 'Equip weapons, wands, shields, or off-hand items.' },
+    'left': { name: 'Left Hand Slot', desc: 'Equip weapons, wands, shields, or off-hand items.' },
+    'head': { name: 'Head Slot', desc: 'Equip helmets, masks, or hats here.' },
+    'boots': { name: 'Boots Slot', desc: 'Equip boots here.' },
+    'ancillary-left': { name: 'Ancillary Slot (Left)', desc: 'Equip rings, relics, or accessories here.' },
+    'ancillary-right': { name: 'Ancillary Slot (Right)', desc: 'Equip rings, relics, or accessories here.' },
+    'pet': { name: 'Pet Slot', desc: 'Equip companion pets here to support you in battle.' }
+};
+
 const NarrativeOverlay = ({ sequence, onClose }) => {
     if (!sequence) return null;
 
@@ -54,8 +65,8 @@ const NarrativeOverlay = ({ sequence, onClose }) => {
                 <div className="narrative-overlay__content">
                     <div className="narrative-overlay__eyebrow">Narrative Sequence</div>
                     <div className="narrative-overlay__name">{sequence.narratorName}</div>
-                    <div className="narrative-overlay__text">
-                        <Typewriter key={sequence.id} text={sequence.text} delay={28} />
+                    <div className="narrative-overlay__text" key={sequence.id}>
+                        <Typewriter text={sequence.text} delay={28} />
                     </div>
                 </div>
             </div>
@@ -1104,6 +1115,7 @@ class DungeonPage extends React.Component {
             markerType: '',
             descriptionText: '',
             hoveredInventoryItem: null,
+            hoveredSlotInfo: null,
             actionsTrayExpanded: false,
             actionMenuExpanded: '',
             modalType: '',
@@ -1157,6 +1169,7 @@ class DungeonPage extends React.Component {
             , ambushMonster: null
             , showShrineOverlay: false
             , shrineData: null
+            , contextMenu: { visible: false, x: 0, y: 0, slotName: '' }
         }
     // Native browser tooltip will be used for death-tracker; no custom tooltip state required.
         // Track timers/intervals created by this component so we can clear on unmount
@@ -2162,7 +2175,7 @@ class DungeonPage extends React.Component {
 
     setNewItemRespawnDate = () => {
         // Item respawn interval: 20 minutes
-        let soon = new Date().addMinutes(20)
+        let soon = new Date().addMinutes(ITEM_RESPAWN_MINUTES)
         let meta = getMeta() || {};
         meta.itemRespawnDate = soon;
         try { storeMeta(meta); } catch (e) {}
@@ -2814,7 +2827,7 @@ class DungeonPage extends React.Component {
         const meta = getMeta(); // eslint-disable-line no-unused-vars
     }
     setNewRespawnDate = () => {
-        let soon = new Date().addMinutes(3)
+        let soon = new Date().addMinutes(MONSTER_RESPAWN_MINUTES)
         let meta = getMeta();
         meta.respawnDate = soon;
         storeMeta(meta)
@@ -3974,6 +3987,97 @@ class DungeonPage extends React.Component {
         this.setState({
             selectedCrewMember
         })
+    }
+    handleSlotContextMenu = (e, slotName) => {
+        if (slotName !== 'left' && slotName !== 'right') return;
+        e.preventDefault();
+        
+        const selected = this.state.selectedCrewMember;
+        if (!selected || selected.id === undefined || selected.id === null) return;
+
+        const liveMember = (this.props.crewManager && Array.isArray(this.props.crewManager.crew))
+            ? this.props.crewManager.crew.find(c => c && c.id === selected.id)
+            : null;
+        const selectedType = (((liveMember && liveMember.type) || selected.type || '') + '').toLowerCase();
+        const normalizedClass = (((liveMember && liveMember.class) || selected.class || '') + '').toLowerCase();
+        const inferredClass = ['soldier', 'ranger', 'monk', 'barbarian'].includes(selectedType)
+            ? 'warrior'
+            : (['wizard', 'sage', 'engineer'].includes(selectedType) ? 'spellcaster' : '');
+        const crewClass = normalizedClass || inferredClass;
+        
+        if (crewClass !== 'warrior') return; // only warriors can equip weapons
+
+        this.setState({
+            contextMenu: {
+                visible: true,
+                x: e.clientX,
+                y: e.clientY,
+                slotName
+            }
+        });
+    }
+    handleEquipHighestAtkWeapon = (slotName) => {
+        const selected = this.state.selectedCrewMember;
+        if (!selected || selected.id === undefined || selected.id === null) return;
+
+        if (!Array.isArray(selected.inventory)) selected.inventory = [];
+
+        // 1. Un-equip current item in this slot if any
+        const currentEquipped = selected.inventory.find(i => i.equippedSlot === slotName);
+        if (currentEquipped) {
+            const itemIndex = selected.inventory.findIndex(e => e === currentEquipped);
+            currentEquipped.equippedBy = null;
+            currentEquipped.equippedSlot = null;
+            this.props.inventoryManager.addItem(currentEquipped);
+            selected.inventory.splice(itemIndex, 1);
+        }
+
+        // 2. Find best weapon
+        const available = (this.props.inventoryManager && Array.isArray(this.props.inventoryManager.inventory))
+            ? this.props.inventoryManager.inventory
+            : [];
+        
+        let bestWeapon = null;
+        let bestWeaponIndex = -1;
+        let highestScore = -1;
+
+        for (let i = 0; i < available.length; i++) {
+            const item = available[i];
+            if (item && item.type === 'weapon') {
+                const pct = item.damage || 0;
+                const flat = pct * 0.1;
+                const score = pct + flat;
+                if (score > highestScore) {
+                    highestScore = score;
+                    bestWeapon = item;
+                    bestWeaponIndex = i;
+                }
+            }
+        }
+
+        if (bestWeapon && bestWeaponIndex !== -1) {
+            // 3. Equip it
+            bestWeapon.equippedBy = selected.id;
+            bestWeapon.equippedSlot = slotName;
+
+            this.props.inventoryManager.removeItemByIndex(bestWeaponIndex);
+            selected.inventory.push(bestWeapon);
+        }
+
+        // Persist updates to global meta
+        const meta = getMeta();
+        const crew = meta.crew || this.props.crewManager.crew;
+        const found = crew.find(c => c.id === selected.id);
+        if (found) {
+            found.inventory = selected.inventory;
+        }
+        meta.crew = crew;
+        storeMeta(meta);
+        if (this.props.saveUserData) this.props.saveUserData();
+
+        this.setState({
+            selectedCrewMember: selected
+        });
     }
     handleItemClick = (item, index) => {
         // New equip logic: place item into an appropriate equip slot on the selected crew member
@@ -7692,30 +7796,38 @@ class DungeonPage extends React.Component {
                                     const ancillaryLeft = findEquipped('ancillary-left');
                                     const ancillaryRight = findEquipped('ancillary-right');
                                     // Read-only slot — no click, just a name tooltip on hover
-                                    const ReadOnlySlot = ({ item, slotClass }) => (
-                                        <div 
-                                            className={`equip-slot ${slotClass} ep-slot-wrapper`}
-                                            onMouseLeave={() => this.setState({ descriptionText: '' })}
-                                        >
-                                            {item && (
-                                                <>
-                                                    <Tile
-                                                        id={item.id}
-                                                        data={item}
-                                                        tileSize={this.state.tileSize}
-                                                        image={item.icon}
-                                                        contains={item.name ? item.name.replace(' ', '_') : null}
-                                                        color={item.color}
-                                                        editMode={false}
-                                                        type={'inventory-tile'}
-                                                        handleClick={() => {}}
-                                                        handleHover={() => this.setState({ descriptionText: this.buildItemSummaryDescription(item) })}
-                                                    />
-                                                    <div className="ep-slot-name">{item.name}</div>
-                                                </>
-                                            )}
-                                        </div>
-                                    );
+                                    const ReadOnlySlot = ({ item, slotClass }) => {
+                                        const slotKey = slotClass.replace('slot-', '');
+                                        const info = SLOT_INFO[slotKey] || { name: 'Equipment Slot', desc: '' };
+                                        const slotName = slotClass === 'slot-left' ? 'left' : (slotClass === 'slot-right' ? 'right' : null);
+                                        return (
+                                            <div 
+                                                className={`equip-slot ${slotClass} ep-slot-wrapper`}
+                                                title={!item ? info.name : undefined}
+                                                onMouseEnter={() => !item ? this.setState({ descriptionText: `${info.name}: ${info.desc}` }) : null}
+                                                onMouseLeave={() => this.setState({ descriptionText: '' })}
+                                                onContextMenu={(e) => slotName ? this.handleSlotContextMenu(e, slotName) : null}
+                                            >
+                                                {item && (
+                                                    <>
+                                                        <Tile
+                                                            id={item.id}
+                                                            data={item}
+                                                            tileSize={this.state.tileSize}
+                                                            image={item.icon}
+                                                            contains={item.name ? item.name.replace(' ', '_') : null}
+                                                            color={item.color}
+                                                            editMode={false}
+                                                            type={'inventory-tile'}
+                                                            handleClick={() => {}}
+                                                            handleHover={() => this.setState({ descriptionText: this.buildItemSummaryDescription(item) })}
+                                                        />
+                                                        <div className="ep-slot-name">{item.name}</div>
+                                                    </>
+                                                )}
+                                            </div>
+                                        );
+                                    };
                                     return (
                                         <>
                                             <ReadOnlySlot item={chest}        slotClass="slot-chest" />
@@ -8412,121 +8524,187 @@ class DungeonPage extends React.Component {
                                             };
                                             return (
                                                 <>
-                                                    <div className='equip-slot slot-chest' style={{border: getSlotBorder(chest)}}>{chest && (
-                                                        <Tile
-                                                            id={chest.id}
-                                                            data={chest}
-                                                            tileSize={this.state.tileSize}
-                                                            image={chest.icon}
-                                                            contains={chest.name ? chest.name.replace(' ', '_') : null}
-                                                            color={chest.color}
-                                                            editMode={false}
-                                                            type={'inventory-tile'}
-                                                            handleClick={() => isSelected ? this.handleEquipmentItemClick(chest) : null}
-                                                            handleHover={this.handleInventoryTileHover}
-                                                        />
-                                                    )}</div>
-                                                    <div className='equip-slot slot-right' style={{border: getSlotBorder(right)}}>{right && (
-                                                        <Tile
-                                                            id={right.id}
-                                                            data={right}
-                                                            tileSize={this.state.tileSize}
-                                                            image={right.icon}
-                                                            contains={right.name ? right.name.replace(' ', '_') : null}
-                                                            color={right.color}
-                                                            editMode={false}
-                                                            type={'inventory-tile'}
-                                                            handleClick={() => isSelected ? this.handleEquipmentItemClick(right) : null}
-                                                            handleHover={this.handleInventoryTileHover}
-                                                        />
-                                                    )}</div>
-                                                    <div className='equip-slot slot-left' style={{border: getSlotBorder(left)}}>{left && (
-                                                        <Tile
-                                                            id={left.id}
-                                                            data={left}
-                                                            tileSize={this.state.tileSize}
-                                                            image={left.icon}
-                                                            contains={left.name ? left.name.replace(' ', '_') : null}
-                                                            color={left.color}
-                                                            editMode={false}
-                                                            type={'inventory-tile'}
-                                                            handleClick={() => isSelected ? this.handleEquipmentItemClick(left) : null}
-                                                            handleHover={this.handleInventoryTileHover}
-                                                        />
-                                                    )}</div>
-                                                    <div className='equip-slot slot-head' style={{border: getSlotBorder(head)}}>{head && (
-                                                        <Tile
-                                                            id={head.id}
-                                                            data={head}
-                                                            tileSize={this.state.tileSize}
-                                                            image={head.icon}
-                                                            contains={head.name ? head.name.replace(' ', '_') : null}
-                                                            color={head.color}
-                                                            editMode={false}
-                                                            type={'inventory-tile'}
-                                                            handleClick={() => isSelected ? this.handleEquipmentItemClick(head) : null}
-                                                            handleHover={this.handleInventoryTileHover}
-                                                        />
-                                                    )}</div>
-                                                    <div className='equip-slot slot-boots' style={{border: getSlotBorder(boots)}}>{boots && (
-                                                        <Tile
-                                                            id={boots.id}
-                                                            data={boots}
-                                                            tileSize={this.state.tileSize}
-                                                            image={boots.icon}
-                                                            contains={boots.name ? boots.name.replace(' ', '_') : null}
-                                                            color={boots.color}
-                                                            editMode={false}
-                                                            type={'inventory-tile'}
-                                                            handleClick={() => isSelected ? this.handleEquipmentItemClick(boots) : null}
-                                                            handleHover={this.handleInventoryTileHover}
-                                                        />
-                                                    )}</div>
-                                                    <div className='equip-slot slot-ancillary-left' style={{border: getSlotBorder(ancillaryLeft)}}>{ancillaryLeft && (
-                                                        <Tile
-                                                            id={ancillaryLeft.id}
-                                                            data={ancillaryLeft}
-                                                            tileSize={this.state.tileSize}
-                                                            image={ancillaryLeft.icon}
-                                                            contains={ancillaryLeft.name ? ancillaryLeft.name.replace(' ', '_') : null}
-                                                            color={ancillaryLeft.color}
-                                                            editMode={false}
-                                                            type={'inventory-tile'}
-                                                            handleClick={() => isSelected ? this.handleEquipmentItemClick(ancillaryLeft) : null}
-                                                            handleHover={this.handleInventoryTileHover}
-                                                        />
-                                                    )}</div>
-                                                    <div className='equip-slot slot-ancillary-right' style={{border: getSlotBorder(ancillaryRight)}}>{ancillaryRight && (
-                                                        <Tile
-                                                            id={ancillaryRight.id}
-                                                            data={ancillaryRight}
-                                                            tileSize={this.state.tileSize}
-                                                            image={ancillaryRight.icon}
-                                                            contains={ancillaryRight.name ? ancillaryRight.name.replace(' ', '_') : null}
-                                                            color={ancillaryRight.color}
-                                                            editMode={false}
-                                                            type={'inventory-tile'}
-                                                            handleClick={() => isSelected ? this.handleEquipmentItemClick(ancillaryRight) : null}
-                                                            handleHover={this.handleInventoryTileHover}
-                                                        />
-                                                    )}</div>
-                                    <div className='equip-slot slot-pet' style={{border: getSlotBorder(bottomLeft)}}>{bottomLeft && (
-                                                        <>
-                                                        <Tile
-                                                            id={bottomLeft.id}
-                                                            data={bottomLeft}
-                                                            tileSize={this.state.tileSize}
-                                                            image={bottomLeft.icon}
-                                                            contains={bottomLeft.name ? bottomLeft.name.replace(' ', '_') : null}
-                                                            color={bottomLeft.color}
-                                                            editMode={false}
-                                                            type={'inventory-tile'}
-                                                            handleClick={() => isSelected ? this.handleEquipmentItemClick(bottomLeft) : null}
-                                                            handleHover={this.handleInventoryTileHover}
-                                                        />
-                                                        <div className="pet-overlay" aria-hidden="true">🐾</div>
-                                                        </>
-                                                    )}</div>
+                                                    <div 
+                                                        className='equip-slot slot-chest' 
+                                                        style={{border: getSlotBorder(chest)}}
+                                                        title={!chest ? SLOT_INFO['chest'].name : undefined}
+                                                        onMouseEnter={() => !chest && isSelected ? this.setState({ hoveredSlotInfo: { name: SLOT_INFO['chest'].name, description: SLOT_INFO['chest'].desc } }) : null}
+                                                        onMouseLeave={() => !chest && isSelected ? this.setState({ hoveredSlotInfo: null }) : null}
+                                                    >
+                                                        {chest && (
+                                                            <Tile
+                                                                id={chest.id}
+                                                                data={chest}
+                                                                tileSize={this.state.tileSize}
+                                                                image={chest.icon}
+                                                                contains={chest.name ? chest.name.replace(' ', '_') : null}
+                                                                color={chest.color}
+                                                                editMode={false}
+                                                                type={'inventory-tile'}
+                                                                handleClick={() => isSelected ? this.handleEquipmentItemClick(chest) : null}
+                                                                handleHover={this.handleInventoryTileHover}
+                                                            />
+                                                        )}
+                                                    </div>
+                                                    <div 
+                                                        className='equip-slot slot-right' 
+                                                        style={{border: getSlotBorder(right)}}
+                                                        title={!right ? SLOT_INFO['right'].name : undefined}
+                                                        onMouseEnter={() => !right && isSelected ? this.setState({ hoveredSlotInfo: { name: SLOT_INFO['right'].name, description: SLOT_INFO['right'].desc } }) : null}
+                                                        onMouseLeave={() => !right && isSelected ? this.setState({ hoveredSlotInfo: null }) : null}
+                                                        onContextMenu={(e) => isSelected ? this.handleSlotContextMenu(e, 'right') : null}
+                                                    >
+                                                        {right && (
+                                                            <Tile
+                                                                id={right.id}
+                                                                data={right}
+                                                                tileSize={this.state.tileSize}
+                                                                image={right.icon}
+                                                                contains={right.name ? right.name.replace(' ', '_') : null}
+                                                                color={right.color}
+                                                                editMode={false}
+                                                                type={'inventory-tile'}
+                                                                handleClick={() => isSelected ? this.handleEquipmentItemClick(right) : null}
+                                                                handleHover={this.handleInventoryTileHover}
+                                                            />
+                                                        )}
+                                                    </div>
+                                                    <div 
+                                                        className='equip-slot slot-left' 
+                                                        style={{border: getSlotBorder(left)}}
+                                                        title={!left ? SLOT_INFO['left'].name : undefined}
+                                                        onMouseEnter={() => !left && isSelected ? this.setState({ hoveredSlotInfo: { name: SLOT_INFO['left'].name, description: SLOT_INFO['left'].desc } }) : null}
+                                                        onMouseLeave={() => !left && isSelected ? this.setState({ hoveredSlotInfo: null }) : null}
+                                                        onContextMenu={(e) => isSelected ? this.handleSlotContextMenu(e, 'left') : null}
+                                                    >
+                                                        {left && (
+                                                            <Tile
+                                                                id={left.id}
+                                                                data={left}
+                                                                tileSize={this.state.tileSize}
+                                                                image={left.icon}
+                                                                contains={left.name ? left.name.replace(' ', '_') : null}
+                                                                color={left.color}
+                                                                editMode={false}
+                                                                type={'inventory-tile'}
+                                                                handleClick={() => isSelected ? this.handleEquipmentItemClick(left) : null}
+                                                                handleHover={this.handleInventoryTileHover}
+                                                            />
+                                                        )}
+                                                    </div>
+                                                    <div 
+                                                        className='equip-slot slot-head' 
+                                                        style={{border: getSlotBorder(head)}}
+                                                        title={!head ? SLOT_INFO['head'].name : undefined}
+                                                        onMouseEnter={() => !head && isSelected ? this.setState({ hoveredSlotInfo: { name: SLOT_INFO['head'].name, description: SLOT_INFO['head'].desc } }) : null}
+                                                        onMouseLeave={() => !head && isSelected ? this.setState({ hoveredSlotInfo: null }) : null}
+                                                    >
+                                                        {head && (
+                                                            <Tile
+                                                                id={head.id}
+                                                                data={head}
+                                                                tileSize={this.state.tileSize}
+                                                                image={head.icon}
+                                                                contains={head.name ? head.name.replace(' ', '_') : null}
+                                                                color={head.color}
+                                                                editMode={false}
+                                                                type={'inventory-tile'}
+                                                                handleClick={() => isSelected ? this.handleEquipmentItemClick(head) : null}
+                                                                handleHover={this.handleInventoryTileHover}
+                                                            />
+                                                        )}
+                                                    </div>
+                                                    <div 
+                                                        className='equip-slot slot-boots' 
+                                                        style={{border: getSlotBorder(boots)}}
+                                                        title={!boots ? SLOT_INFO['boots'].name : undefined}
+                                                        onMouseEnter={() => !boots && isSelected ? this.setState({ hoveredSlotInfo: { name: SLOT_INFO['boots'].name, description: SLOT_INFO['boots'].desc } }) : null}
+                                                        onMouseLeave={() => !boots && isSelected ? this.setState({ hoveredSlotInfo: null }) : null}
+                                                    >
+                                                        {boots && (
+                                                            <Tile
+                                                                id={boots.id}
+                                                                data={boots}
+                                                                tileSize={this.state.tileSize}
+                                                                image={boots.icon}
+                                                                contains={boots.name ? boots.name.replace(' ', '_') : null}
+                                                                color={boots.color}
+                                                                editMode={false}
+                                                                type={'inventory-tile'}
+                                                                handleClick={() => isSelected ? this.handleEquipmentItemClick(boots) : null}
+                                                                handleHover={this.handleInventoryTileHover}
+                                                            />
+                                                        )}
+                                                    </div>
+                                                    <div 
+                                                        className='equip-slot slot-ancillary-left' 
+                                                        style={{border: getSlotBorder(ancillaryLeft)}}
+                                                        title={!ancillaryLeft ? SLOT_INFO['ancillary-left'].name : undefined}
+                                                        onMouseEnter={() => !ancillaryLeft && isSelected ? this.setState({ hoveredSlotInfo: { name: SLOT_INFO['ancillary-left'].name, description: SLOT_INFO['ancillary-left'].desc } }) : null}
+                                                        onMouseLeave={() => !ancillaryLeft && isSelected ? this.setState({ hoveredSlotInfo: null }) : null}
+                                                    >
+                                                        {ancillaryLeft && (
+                                                            <Tile
+                                                                id={ancillaryLeft.id}
+                                                                data={ancillaryLeft}
+                                                                tileSize={this.state.tileSize}
+                                                                image={ancillaryLeft.icon}
+                                                                contains={ancillaryLeft.name ? ancillaryLeft.name.replace(' ', '_') : null}
+                                                                color={ancillaryLeft.color}
+                                                                editMode={false}
+                                                                type={'inventory-tile'}
+                                                                handleClick={() => isSelected ? this.handleEquipmentItemClick(ancillaryLeft) : null}
+                                                                handleHover={this.handleInventoryTileHover}
+                                                            />
+                                                        )}
+                                                    </div>
+                                                    <div 
+                                                        className='equip-slot slot-ancillary-right' 
+                                                        style={{border: getSlotBorder(ancillaryRight)}}
+                                                        title={!ancillaryRight ? SLOT_INFO['ancillary-right'].name : undefined}
+                                                        onMouseEnter={() => !ancillaryRight && isSelected ? this.setState({ hoveredSlotInfo: { name: SLOT_INFO['ancillary-right'].name, description: SLOT_INFO['ancillary-right'].desc } }) : null}
+                                                        onMouseLeave={() => !ancillaryRight && isSelected ? this.setState({ hoveredSlotInfo: null }) : null}
+                                                    >
+                                                        {ancillaryRight && (
+                                                            <Tile
+                                                                id={ancillaryRight.id}
+                                                                data={ancillaryRight}
+                                                                tileSize={this.state.tileSize}
+                                                                image={ancillaryRight.icon}
+                                                                contains={ancillaryRight.name ? ancillaryRight.name.replace(' ', '_') : null}
+                                                                color={ancillaryRight.color}
+                                                                editMode={false}
+                                                                type={'inventory-tile'}
+                                                                handleClick={() => isSelected ? this.handleEquipmentItemClick(ancillaryRight) : null}
+                                                                handleHover={this.handleInventoryTileHover}
+                                                            />
+                                                        )}
+                                                    </div>
+                                                    <div 
+                                                        className='equip-slot slot-pet' 
+                                                        style={{border: getSlotBorder(bottomLeft)}}
+                                                        title={!bottomLeft ? SLOT_INFO['pet'].name : undefined}
+                                                        onMouseEnter={() => !bottomLeft && isSelected ? this.setState({ hoveredSlotInfo: { name: SLOT_INFO['pet'].name, description: SLOT_INFO['pet'].desc } }) : null}
+                                                        onMouseLeave={() => !bottomLeft && isSelected ? this.setState({ hoveredSlotInfo: null }) : null}
+                                                    >
+                                                        {bottomLeft && (
+                                                            <>
+                                                                <Tile
+                                                                    id={bottomLeft.id}
+                                                                    data={bottomLeft}
+                                                                    tileSize={this.state.tileSize}
+                                                                    image={bottomLeft.icon}
+                                                                    contains={bottomLeft.name ? bottomLeft.name.replace(' ', '_') : null}
+                                                                    color={bottomLeft.color}
+                                                                    editMode={false}
+                                                                    type={'inventory-tile'}
+                                                                    handleClick={() => isSelected ? this.handleEquipmentItemClick(bottomLeft) : null}
+                                                                    handleHover={this.handleInventoryTileHover}
+                                                                />
+                                                                <div className="pet-overlay" aria-hidden="true">🐾</div>
+                                                            </>
+                                                        )}
+                                                    </div>
                                                 </>
                                             )
                                         })()}
@@ -8638,6 +8816,7 @@ class DungeonPage extends React.Component {
                     <div className="inventory-descriptor-panel">
                         {(() => {
                             const item = this.state.hoveredInventoryItem;
+                            const slotInfo = this.state.hoveredSlotInfo;
                             const iconImg = (() => {
                                 if (!item) return null;
                                 const raw = item.icon || item.iconUrl || item.image;
@@ -8655,16 +8834,21 @@ class DungeonPage extends React.Component {
                                         </div>
                                     )}
                                     <div className="idp-details">
-                                        {!item
+                                        {!item && !slotInfo
                                             ? <span className="idp-placeholder">Hover over an item to see details</span>
-                                            : <>
-                                                <div className="idp-name">{item.name || '—'}</div>
-                                                <div className="idp-meta">
-                                                    {item.subtype && <span className="idp-tag idp-subtype">{item.subtype}</span>}
-                                                    {item.range && <span className="idp-tag idp-range">{item.range}</span>}
-                                                </div>
-                                                {this.buildItemSummaryDescription(item) && <div className="idp-description">{this.buildItemSummaryDescription(item)}</div>}
-                                            </>
+                                            : slotInfo
+                                                ? <>
+                                                    <div className="idp-name">{slotInfo.name}</div>
+                                                    <div className="idp-description">{slotInfo.description}</div>
+                                                  </>
+                                                : <>
+                                                    <div className="idp-name">{item.name || '—'}</div>
+                                                    <div className="idp-meta">
+                                                        {item.subtype && <span className="idp-tag idp-subtype">{item.subtype}</span>}
+                                                        {item.range && <span className="idp-tag idp-range">{item.range}</span>}
+                                                    </div>
+                                                    {this.buildItemSummaryDescription(item) && <div className="idp-description">{this.buildItemSummaryDescription(item)}</div>}
+                                                </>
                                         }
                                     </div>
                                 </div>
@@ -8756,6 +8940,63 @@ class DungeonPage extends React.Component {
                         try { if (this.props.saveUserData) this.props.saveUserData(); } catch(e) {}
                     }}
                 />
+            )}
+
+            {/* Custom context menu for weapon slots */}
+            {this.state.contextMenu && this.state.contextMenu.visible && (
+                <>
+                    <div 
+                        className="context-menu-backdrop"
+                        style={{
+                            position: 'fixed',
+                            top: 0, left: 0, right: 0, bottom: 0,
+                            zIndex: 99998,
+                            backgroundColor: 'transparent'
+                        }}
+                        onClick={() => this.setState({ contextMenu: { ...this.state.contextMenu, visible: false } })}
+                        onContextMenu={(e) => {
+                            e.preventDefault();
+                            this.setState({ contextMenu: { ...this.state.contextMenu, visible: false } });
+                        }}
+                    />
+                    <div 
+                        className="context-menu"
+                        style={{
+                            position: 'fixed',
+                            top: this.state.contextMenu.y,
+                            left: this.state.contextMenu.x,
+                            zIndex: 99999,
+                            backgroundColor: '#1a1a1a',
+                            border: '1px solid #c9cac9',
+                            borderRadius: '4px',
+                            padding: '4px 0',
+                            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.7)',
+                            fontFamily: 'Outfit, Inter, sans-serif',
+                            fontSize: '13px',
+                            color: '#eee',
+                            minWidth: '180px',
+                            userSelect: 'none'
+                        }}
+                    >
+                        <div 
+                            className="context-menu-item"
+                            style={{
+                                padding: '8px 16px',
+                                cursor: 'pointer',
+                                transition: 'background-color 0.2s',
+                                fontWeight: '500'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#333'}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                            onClick={() => {
+                                this.handleEquipHighestAtkWeapon(this.state.contextMenu.slotName);
+                                this.setState({ contextMenu: { ...this.state.contextMenu, visible: false } });
+                            }}
+                        >
+                            Equip highest atk weapon
+                        </div>
+                    </div>
+                </>
             )}
         </div>
         )

@@ -1151,7 +1151,6 @@
                     transition: opacity 0.15s ease;
                     z-index: 10;
                 }
-                /* replicate equip-slot styling from inventory-modal so slots show in left panel */
                 .equip-slot{
                     position: absolute;
                     width: 55px;
@@ -1162,6 +1161,14 @@
                     box-sizing: border-box;
                     border-radius: 4px;
                     pointer-events: auto;
+
+                    .tile {
+                        background-color: transparent !important;
+                        border: none !important;
+                        margin: 0 !important;
+                        width: 100% !important;
+                        height: 100% !important;
+                    }
                 }
                 .crew-body .slot-chest{
                     left: 50%;

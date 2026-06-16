@@ -470,11 +470,13 @@ export default function NarrativeSequence(props) {
          />}
 
          {currentSequence && currentSequence.id%2===0 && <div 
+         key={currentSequence.id}
          className="text-container">
             <Typewriter text={currentSequence.text} delay={40}></Typewriter>
          </div>}
 
          {currentSequence && currentSequence.id%2===1 && <div 
+         key={currentSequence.id}
          className="text-container">
             <Typewriter text={currentSequence.text} delay={40}></Typewriter>
          </div>}

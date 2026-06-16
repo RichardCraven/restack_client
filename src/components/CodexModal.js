@@ -308,6 +308,20 @@ function typeColor(t) {
     return map[(t||'').toLowerCase()] || '#666';
 }
 
+function getEffectIcon(type) {
+    const t = String(type || '').toLowerCase();
+    if (t === 'stun' || t === 'stunned' || t === 'twin_finger_stun') return images.stunned;
+    if (t === 'fear' || t === 'feared') return images.fear;
+    if (t === 'frozen' || t === 'freeze') return images.frozen;
+    if (t === 'poison' || t === 'poisoned') return images.poison;
+    if (t === 'bleed' || t === 'bleeding') return images.bleeding;
+    if (t === 'ensnared' || t === 'ensnare') return images.ranger_ensnare || images.ensnare;
+    if (t === 'sleep' || t === 'asleep') return images.wizard_sleep;
+    if (t === 'target_marked' || t === 'marked') return images.ranger_mark;
+    if (t === 'buff_self' || t === 'buff_allies') return images.inspire;
+    return null;
+}
+
 // ── CodexModal component ──────────────────────────────────────────────────────
 
 export default function CodexModal({ visible, onClose, monsterManager }) {
@@ -631,18 +645,40 @@ function SkillDetail({ skill }) {
                 <div className="codex-detail-effects">
                     <div className="codex-effects-label">Effects</div>
                     <div className="codex-effects-list">
-                        {(Array.isArray(skill.effect) ? skill.effect : [skill.effect]).map((e, i) => (
-                            <span key={i} className="codex-effect-pill">
-                                {typeof e === 'object'
-                                    ? (() => {
-                                        const details = [];
-                                        if (e.chance != null) details.push(`${e.chance}%`);
-                                        if (e.duration != null) details.push(resolveDurationLabel(e.duration));
-                                        return `${e.type}${details.length > 0 ? ` (${details.join(' · ')})` : ''}`;
-                                      })()
-                                    : e}
-                            </span>
-                        ))}
+                        {(Array.isArray(skill.effect) ? skill.effect : [skill.effect]).map((e, i) => {
+                            const effType = typeof e === 'object' ? e.type : e;
+                            const icon = getEffectIcon(effType);
+                            const iconSrc = resolveImg(icon);
+                            return (
+                                <span key={i} className="codex-effect-pill" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px' }}>
+                                    {iconSrc && (
+                                        <img 
+                                            src={iconSrc} 
+                                            alt="" 
+                                            style={{ 
+                                                width: '14px', 
+                                                height: '14px', 
+                                                borderRadius: '50%',
+                                                objectFit: 'contain'
+                                            }} 
+                                        />
+                                    )}
+                                    {typeof e === 'object'
+                                        ? (() => {
+                                            const details = [];
+                                            if (e.chance != null) details.push(`${e.chance}%`);
+                                            if (e.duration != null) details.push(resolveDurationLabel(e.duration));
+                                            const typeStr = String(e.type).split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+                                            return `${typeStr}${details.length > 0 ? ` (${details.join(' · ')})` : ''}`;
+                                          })()
+                                        : (typeof e === 'string' 
+                                            ? e.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') 
+                                            : e
+                                          )
+                                    }
+                                </span>
+                            );
+                        })}
                     </div>
                 </div>
             )}

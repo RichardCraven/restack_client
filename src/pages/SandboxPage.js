@@ -47,8 +47,8 @@ import {
   blalok,
   shade,
   horned_pet_portrait,
-  orbital_shaman_portrait,
-  cultist_of_whispers_portrait,
+  high_priest_of_the_basilisk_portrait,
+  basilisk_cultists_portrait,
   claw_strike,
   claw_hit,
   claw_strike_animation,
@@ -208,7 +208,7 @@ req.keys().forEach(key => {
     // Inside a rune directory, e.g., "./archaic/top right.png"
     const runeName = parts[1];
     if (!runesData[runeName]) runesData[runeName] = { isComplete: false, pieces: {} };
-    
+
     const fileName = parts[2].replace('.png', '');
     if (fileName === `${runeName}_assembled`) {
       runesData[runeName].assembledImg = req(key).default || req(key);
@@ -222,13 +222,13 @@ req.keys().forEach(key => {
 Object.keys(runesData).forEach(runeName => {
   const data = runesData[runeName];
   const requiredPieces = ['top left', 'top right', 'bottom left', 'bottom right', 'top center'];
-  
+
   // Check if it has all the exact required piece names
   const hasAllPieces = requiredPieces.every(piece => !!data.pieces[piece]);
-  
+
   if (data.assembledImg && hasAllPieces) {
     data.isComplete = true;
-    
+
     // Filter out any "copy" or "edited" backup files that might be in the directory
     const filteredPieces = {};
     requiredPieces.forEach(piece => {
@@ -280,99 +280,140 @@ const WEAPONS_DB = {
 
 // Predefined list of monsters for sandbox selection
 const monstersData = [
-  { id: 'goblin', name: 'Goblin', portrait: goblin_portrait, abilities: [
-    { id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' },
-    { id: 'bite', name: 'Bite', desc: 'Savage bite attack.', icon: monster_bite, type: 'bite' }
-  ] },
-  { id: 'skeleton', name: 'Skeleton', portrait: skeleton_portrait, abilities: [
-    { id: 'sword_swing', name: 'Sword Swing', desc: 'Execute a sword swing.', icon: shortsword, type: 'sword_swing' },
-    { id: 'reassembly', name: 'Reassembly (passive)', desc: 'Upon death, collapse into bones and reassemble after a long duration.', icon: reassembly, type: 'reassembly_type', isPassive: true }
-  ] },
-  { id: 'mummy', name: 'Mummy', portrait: mummy_portrait, abilities: [
-    { id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' },
-    { id: 'induce_fear', name: 'Induce Fear', desc: 'Scream, filling targets with dread.', icon: induce_fear, type: 'induce_fear' },
-    { id: 'energy_drain', name: 'Energy Drain', desc: 'Drain vitality from target at range.', icon: energy_drain, type: 'energy_drain' }
-  ] },
-  { id: 'ogre', name: 'Ogre', portrait: ogre_portrait, abilities: [
-    { id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' },
-    { id: 'bite', name: 'Bite', desc: 'Savage bite attack.', icon: monster_bite, type: 'bite' },
-    { id: 'stomp', name: 'Stomp', desc: 'Leap and slam the ground, damaging and stunning adjacent enemies.', icon: stomp, type: 'stomp' },
-    { id: 'head_butt', name: 'Headbutt', desc: 'Deliver a powerful headbutt, pushing back the target.', icon: head_butt, type: 'head_butt' }
-  ] },
-  { id: 'vampire', name: 'Vampire', portrait: vampire_portrait, abilities: [
-    { id: 'vampiric_bite', name: 'Vampiric Bite', desc: 'Savage bite that drains vitality and damages the target.', icon: vampiric_bite, type: 'vampiric_bite' },
-    { id: 'bat_fly', name: 'Bat Fly', desc: 'Transform into a swarm of bats to fly across the battlefield.', icon: bat_fly, type: 'bat_fly_type' },
-    { id: 'crimson_sight', name: 'Crimson Sight', desc: 'Perceive critical target vulnerabilities.', icon: crimson_sight, type: 'crimson_sight_type' },
-    { id: 'soul_suck', name: 'Soul Suck', desc: 'Channel to drain the target\'s soul energy.', icon: soul_suck, type: 'soul_suck_type' }
-  ] },
-  { id: 'djinn', name: 'Djinn', portrait: djinn_portrait, abilities: [
-    { id: 'betrayal', name: 'Betrayal', desc: 'Sow discord, forcing the target to betray their allies.', icon: betrayal, type: 'betrayal_type' },
-    { id: 'arcane_barrier', name: 'Arcane Barrier', desc: 'Shield yourself in pure arcane force.', icon: arcane_barrier, type: 'arcane_barrier_type' },
-    { id: 'death_missile', name: 'Death Missile', desc: 'Fires a skull missile that curses the target on impact.', icon: death_missile, type: 'death_missile_type' },
-    { id: 'bind', name: 'Bind', desc: 'Conjure ethereal energy to restrict target movement.', icon: bind, type: 'bind_type' }
-  ] },
-  { id: 'sphinx', name: 'Sphinx', portrait: sphinx_portrait, abilities: [
-    { id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' },
-    { id: 'begin_trials', name: 'Begin the Trials', desc: 'Unleash the Trials of the Sphinx.', icon: begin_trials, type: 'begin_trials_type' },
-    { id: 'polymorph', name: 'Polymorph', desc: 'Transform the target into a helpless frog for a long duration.', icon: polymorph, type: 'polymorph_type' },
-    { id: 'hex', name: 'Hex', desc: 'Curse the target, giving their skills a chance to backfire.', icon: hex, type: 'hex_type' },
-    { id: 'third_eye', name: 'Third Eye', desc: 'Chance to dodge incoming physical attacks.', icon: third_eye, type: 'third_eye_type', isPassive: true }
-  ] },
+  {
+    id: 'goblin', name: 'Goblin', portrait: goblin_portrait, abilities: [
+      { id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' },
+      { id: 'bite', name: 'Bite', desc: 'Savage bite attack.', icon: monster_bite, type: 'bite' }
+    ]
+  },
+  {
+    id: 'skeleton', name: 'Skeleton', portrait: skeleton_portrait, abilities: [
+      { id: 'sword_swing', name: 'Sword Swing', desc: 'Execute a sword swing.', icon: shortsword, type: 'sword_swing' },
+      { id: 'reassembly', name: 'Reassembly (passive)', desc: 'Upon death, collapse into bones and reassemble after a long duration.', icon: reassembly, type: 'reassembly_type', isPassive: true }
+    ]
+  },
+  {
+    id: 'mummy', name: 'Mummy', portrait: mummy_portrait, abilities: [
+      { id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' },
+      { id: 'induce_fear', name: 'Induce Fear', desc: 'Scream, filling targets with dread.', icon: induce_fear, type: 'induce_fear' },
+      { id: 'energy_drain', name: 'Energy Drain', desc: 'Drain vitality from target at range.', icon: energy_drain, type: 'energy_drain' }
+    ]
+  },
+  {
+    id: 'ogre', name: 'Ogre', portrait: ogre_portrait, abilities: [
+      { id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' },
+      { id: 'bite', name: 'Bite', desc: 'Savage bite attack.', icon: monster_bite, type: 'bite' },
+      { id: 'stomp', name: 'Stomp', desc: 'Leap and slam the ground, damaging and stunning adjacent enemies.', icon: stomp, type: 'stomp' },
+      { id: 'head_butt', name: 'Headbutt', desc: 'Deliver a powerful headbutt, pushing back the target.', icon: head_butt, type: 'head_butt' }
+    ]
+  },
+  {
+    id: 'vampire', name: 'Vampire', portrait: vampire_portrait, abilities: [
+      { id: 'vampiric_bite', name: 'Vampiric Bite', desc: 'Savage bite that drains vitality and damages the target.', icon: vampiric_bite, type: 'vampiric_bite' },
+      { id: 'bat_fly', name: 'Bat Fly', desc: 'Transform into a swarm of bats to fly across the battlefield.', icon: bat_fly, type: 'bat_fly_type' },
+      { id: 'crimson_sight', name: 'Crimson Sight', desc: 'Perceive critical target vulnerabilities.', icon: crimson_sight, type: 'crimson_sight_type' },
+      { id: 'soul_suck', name: 'Soul Suck', desc: 'Channel to drain the target\'s soul energy.', icon: soul_suck, type: 'soul_suck_type' }
+    ]
+  },
+  {
+    id: 'djinn', name: 'Djinn', portrait: djinn_portrait, abilities: [
+      { id: 'betrayal', name: 'Betrayal', desc: 'Sow discord, forcing the target to betray their allies.', icon: betrayal, type: 'betrayal_type' },
+      { id: 'arcane_barrier', name: 'Arcane Barrier', desc: 'Shield yourself in pure arcane force.', icon: arcane_barrier, type: 'arcane_barrier_type' },
+      { id: 'death_missile', name: 'Death Missile', desc: 'Fires a skull missile that curses the target on impact.', icon: death_missile, type: 'death_missile_type' },
+      { id: 'bind', name: 'Bind', desc: 'Conjure ethereal energy to restrict target movement.', icon: bind, type: 'bind_type' }
+    ]
+  },
+  {
+    id: 'sphinx', name: 'Sphinx', portrait: sphinx_portrait, abilities: [
+      { id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' },
+      { id: 'begin_trials', name: 'Begin the Trials', desc: 'Unleash the Trials of the Sphinx.', icon: begin_trials, type: 'begin_trials_type' },
+      { id: 'polymorph', name: 'Polymorph', desc: 'Transform the target into a helpless frog for a long duration.', icon: polymorph, type: 'polymorph_type' },
+      { id: 'hex', name: 'Hex', desc: 'Curse the target, giving their skills a chance to backfire.', icon: hex, type: 'hex_type' },
+      { id: 'third_eye', name: 'Third Eye', desc: 'Chance to dodge incoming physical attacks.', icon: third_eye, type: 'third_eye_type', isPassive: true }
+    ]
+  },
   { id: 'wyvern', name: 'Wyvern', portrait: wyvern_portrait, abilities: [{ id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' }] },
-  { id: 'troll', name: 'Troll', portrait: troll_portrait, abilities: [
-    { id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' },
-    { id: 'gore', name: 'Gore', desc: 'A heavy strike that causes severe bleeding.', icon: gore, type: 'gore_type' },
-    { id: 'regenerate', name: 'Regenerate', desc: 'Heals continuously for a long duration.', icon: regenerate, type: 'regenerate_type' }
-  ] },
-  { id: 'wraith', name: 'Wraith', portrait: wraith_portrait, abilities: [{ id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' }] },
+  {
+    id: 'troll', name: 'Troll', portrait: troll_portrait, abilities: [
+      { id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' },
+      { id: 'gore', name: 'Gore', desc: 'A heavy strike that causes severe bleeding.', icon: gore, type: 'gore_type' },
+      { id: 'regenerate', name: 'Regenerate', desc: 'Heals continuously for a long duration.', icon: regenerate, type: 'regenerate_type' }
+    ]
+  },
+  {
+    id: 'wraith', name: 'Wraith', portrait: wraith_portrait, abilities: [
+      { id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' },
+      { id: 'shadow_armor', name: 'Shadow Armor (Passive)', desc: 'Passive: 15% physical damage reduction. 35% chance each round to dispel debuffs.', icon: shadow_presence, type: 'shadow_armor_type', isPassive: true }
+    ]
+  },
   { id: 'goat_demon', name: 'Goat Demon', portrait: goat_demon_portrait, abilities: [{ id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' }] },
   { id: 'gorgon', name: 'Gorgon', portrait: gorgon_portrait, abilities: [{ id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' }] },
-  { id: 'dragon', name: 'Dragon', portrait: wyvern_portrait, abilities: [
-    { id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' },
-    { id: 'bite', name: 'Bite', desc: 'Savage bite attack.', icon: monster_bite, type: 'bite' },
-    { id: 'blue_dragon_breath', name: 'Blue Dragon Breath', desc: 'A fat, wavy beam that deals heavy damage over time.', icon: blue_dragon_breath, type: 'blue_dragon_breath_type' },
-    { id: 'dragon_whirlwind', name: 'Whirlwind', desc: 'Create a massive windstorm that pushes units back.', icon: whirlwind, type: 'dragon_whirlwind_type' },
-    { id: 'bombard', name: 'Bombard', desc: 'Bombard the enemy from above.', icon: bombard, type: 'bombard_type' },
-    { id: 'dispell', name: 'Dispell', desc: 'Remove magical effects.', icon: dispell, type: 'dispell_type' },
-    { id: 'serpent_vision', name: 'Serpent Vision', desc: 'Enhanced vision to see vulnerabilities.', icon: serpent_vision, type: 'serpent_vision_type' },
-    { id: 'lay_eggs', name: 'Lay Eggs', desc: 'Lays dragon eggs on the battlefield.', icon: lay_eggs, type: 'lay_eggs_type' },
-    { id: 'impenetrable_scales', name: 'Impenetrable Scales (Passive)', desc: 'Thick dragon scales that reduce damage.', icon: impenetrable_scales, type: 'impenetrable_scales_type', isPassive: true },
-    { id: 'elder_presence', name: 'Elder Presence (Passive)', desc: 'An imposing aura that intimidates foes.', icon: elder_presence, type: 'elder_presence_type', isPassive: true }
-  ] },
-  { id: 'hagigah', name: 'Hagigah', portrait: Hagigah, abilities: [
-    { id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' }
-  ] },
-  { id: 'hashmallim', name: 'Hashmallim', portrait: Hashmallim, abilities: [
-    { id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' }
-  ] },
-  { id: 'ghoul', name: 'Ghoul', portrait: ghoul_portrait, abilities: [
-    { id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' }
-  ] },
-  { id: 'precipice_guardian', name: 'Precipice Guardian', portrait: precipice_guardian_portrait, abilities: [
-    { id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' }
-  ] },
-  { id: 'blalok', name: 'Blalok', portrait: blalok, abilities: [
-    { id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' }
-  ] },
-  { id: 'shade', name: 'Shade', portrait: shade, abilities: [
-    { id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' },
-    { id: 'induce_fear', name: 'Induce Fear', desc: 'Scream, filling targets with dread.', icon: induce_fear, type: 'induce_fear' },
-    { id: 'despair', name: 'Despair', desc: "Unleash a wave of darkness that drains 30 stamina (endurance) from all enemies, and reduces the crew's resolve by 20 points.", icon: shadow_presence, type: 'despair' }
-  ] },
-  { id: 'horned_pet', name: 'Horned Pet', portrait: horned_pet_portrait, abilities: [
-    { id: 'rake', name: 'Rake', desc: 'Savage double-swipe rake attack.', icon: rake, type: 'rake' },
-    { id: 'head_butt', name: 'Headbutt', desc: 'Deliver a powerful headbutt, pushing back the target.', icon: head_butt, type: 'head_butt' },
-    { id: 'bite', name: 'Bite', desc: 'Savage bite attack.', icon: monster_bite, type: 'bite' }
-  ] },
-  { id: 'orbital_shaman', name: 'Orbital Shaman', portrait: orbital_shaman_portrait, abilities: [
-    { id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' },
-    { id: 'bite', name: 'Bite', desc: 'Savage bite attack.', icon: monster_bite, type: 'bite' }
-  ] },
-  { id: 'cultist_of_whispers', name: 'Cultist of Whispers', portrait: cultist_of_whispers_portrait, abilities: [
-    { id: 'magic_missile', name: 'Magic Missile', desc: 'Fire three seeking magic missiles in sequence.', icon: magic_missile_icon, type: 'magic_missile' },
-    { id: 'fire_blast', name: 'Fire Blast', desc: 'Unleash a roaring blast of fire.', icon: fire_blast, type: 'fire_blast' },
-    { id: 'ice_blast', name: 'Ice Blast', desc: 'Freeze the target in a block of absolute-zero ice.', icon: ice_blast_icon, type: 'ice_blast_proj' }
-  ] }
+  {
+    id: 'dragon', name: 'Dragon', portrait: wyvern_portrait, abilities: [
+      { id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' },
+      { id: 'bite', name: 'Bite', desc: 'Savage bite attack.', icon: monster_bite, type: 'bite' },
+      { id: 'blue_dragon_breath', name: 'Blue Dragon Breath', desc: 'A fat, wavy beam that deals heavy damage over time.', icon: blue_dragon_breath, type: 'blue_dragon_breath_type' },
+      { id: 'dragon_whirlwind', name: 'Whirlwind', desc: 'Create a massive windstorm that pushes units back.', icon: whirlwind, type: 'dragon_whirlwind_type' },
+      { id: 'bombard', name: 'Bombard', desc: 'Bombard the enemy from above.', icon: bombard, type: 'bombard_type' },
+      { id: 'dispell', name: 'Dispell', desc: 'Remove magical effects.', icon: dispell, type: 'dispell_type' },
+      { id: 'serpent_vision', name: 'Serpent Vision', desc: 'Enhanced vision to see vulnerabilities.', icon: serpent_vision, type: 'serpent_vision_type' },
+      { id: 'lay_eggs', name: 'Lay Eggs', desc: 'Lays dragon eggs on the battlefield.', icon: lay_eggs, type: 'lay_eggs_type' },
+      { id: 'impenetrable_scales', name: 'Impenetrable Scales (Passive)', desc: 'Thick dragon scales that reduce damage.', icon: impenetrable_scales, type: 'impenetrable_scales_type', isPassive: true },
+      { id: 'elder_presence', name: 'Elder Presence (Passive)', desc: 'An imposing aura that intimidates foes.', icon: elder_presence, type: 'elder_presence_type', isPassive: true }
+    ]
+  },
+  {
+    id: 'hagigah', name: 'Hagigah', portrait: Hagigah, abilities: [
+      { id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' }
+    ]
+  },
+  {
+    id: 'hashmallim', name: 'Hashmallim', portrait: Hashmallim, abilities: [
+      { id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' }
+    ]
+  },
+  {
+    id: 'ghoul', name: 'Ghoul', portrait: ghoul_portrait, abilities: [
+      { id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' }
+    ]
+  },
+  {
+    id: 'precipice_guardian', name: 'Precipice Guardian', portrait: precipice_guardian_portrait, abilities: [
+      { id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' }
+    ]
+  },
+  {
+    id: 'blalok', name: 'Blalok', portrait: blalok, abilities: [
+      { id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' }
+    ]
+  },
+  {
+    id: 'shade', name: 'Shade', portrait: shade, abilities: [
+      { id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' },
+      { id: 'induce_fear', name: 'Induce Fear', desc: 'Scream, filling targets with dread.', icon: induce_fear, type: 'induce_fear' },
+      { id: 'despair', name: 'Despair', desc: "Unleash a wave of darkness that drains 30 stamina (endurance) from all enemies, and reduces the crew's resolve by 20 points.", icon: shadow_presence, type: 'despair' }
+    ]
+  },
+  {
+    id: 'horned_pet', name: 'Horned Pet', portrait: horned_pet_portrait, abilities: [
+      { id: 'rake', name: 'Rake', desc: 'Savage double-swipe rake attack.', icon: rake, type: 'rake' },
+      { id: 'head_butt', name: 'Headbutt', desc: 'Deliver a powerful headbutt, pushing back the target.', icon: head_butt, type: 'head_butt' },
+      { id: 'bite', name: 'Bite', desc: 'Savage bite attack.', icon: monster_bite, type: 'bite' }
+    ]
+  },
+  {
+    id: 'high_priest_of_the_basilisk', name: 'Orbital Shaman', portrait: high_priest_of_the_basilisk_portrait, abilities: [
+      { id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' },
+      { id: 'bite', name: 'Bite', desc: 'Savage bite attack.', icon: monster_bite, type: 'bite' }
+    ]
+  },
+  {
+    id: 'basilisk_cultists', name: 'Cultist of Whispers', portrait: basilisk_cultists_portrait, abilities: [
+      { id: 'magic_missile', name: 'Magic Missile', desc: 'Fire three seeking magic missiles in sequence.', icon: magic_missile_icon, type: 'magic_missile' },
+      { id: 'fire_blast', name: 'Fire Blast', desc: 'Unleash a roaring blast of fire.', icon: fire_blast, type: 'fire_blast' },
+      { id: 'ice_blast', name: 'Ice Blast', desc: 'Freeze the target in a block of absolute-zero ice.', icon: ice_blast_icon, type: 'ice_blast_proj' }
+    ]
+  }
 ];
 
 // Predefined list of 8 crew fighters and their test abilities
@@ -715,13 +756,13 @@ const SandboxPage = () => {
   const [lightningJagged, setLightningJagged] = useState(false);
   const [frozenIconActive, setFrozenIconActive] = useState(false);
   const [frozenEndTime, setFrozenEndTime] = useState(null);
-  
+
   // --- Troll & Dragon States ---
   const [trollHpPct, setTrollHpPct] = useState(30);
   const [trollRegenActive, setTrollRegenActive] = useState(false);
   const [trollRegenEndTime, setTrollRegenEndTime] = useState(null);
   const trollRegenIntervalRef = useRef(null);
-  
+
   const [blueDragonBreathActive, setBlueDragonBreathActive] = useState(false);
   const [thirdEyeTriggered, setThirdEyeTriggered] = useState(false);
   const [fighterHexed, setFighterHexed] = useState(false);
@@ -754,7 +795,7 @@ const SandboxPage = () => {
   const isThirdEyeDodgeRef = useRef(false);
   const [bleedSingleDuration, setBleedSingleDuration] = useState(0);
   const [bleedDuration, setBleedDuration] = useState(0);
-  
+
   const [poisonSingleDuration, setPoisonSingleDuration] = useState(8000);
   const [frozenSingleDuration, setFrozenSingleDuration] = useState(2000);
   const [bleedEndTime, setBleedEndTime] = useState(null);
@@ -836,7 +877,7 @@ const SandboxPage = () => {
         setFrozenFading(false);
       }
     }
-    
+
     // Check Hex
     if (fighterHexEndTime) {
       const remaining = fighterHexEndTime - currentTime;
@@ -875,7 +916,7 @@ const SandboxPage = () => {
       setMonsterPolymorphEndTime(null);
       if (monsterFrogIntervalRef.current) clearInterval(monsterFrogIntervalRef.current);
     }
-    
+
     if (trollRegenEndTime) {
       const remaining = trollRegenEndTime - currentTime;
       if (remaining <= 0) {
@@ -887,7 +928,7 @@ const SandboxPage = () => {
         }
       }
     }
-    
+
     if (bleedEndTime) {
       const remaining = bleedEndTime - currentTime;
       if (remaining <= 0) {
@@ -904,7 +945,7 @@ const SandboxPage = () => {
         setBleedFading(false);
       }
     }
-    
+
     if (poisonEndTime) {
       const remaining = poisonEndTime - currentTime;
       if (remaining <= 0) {
@@ -1137,47 +1178,47 @@ const SandboxPage = () => {
   const getBatPosition = (idx) => {
     const startX = fighterPos.col * 20 + 10;
     const startY = fighterPos.row * 20 + 10;
-    
+
     if (!batFlyMovementActive) {
       return { x: startX, y: startY, scaleX: 1 };
     }
-    
+
     const endX = 0 * 20 + 10;
     const endY = batFlyDestRow * 20 + 10;
-    
+
     const dx = endX - startX;
     const dy = endY - startY;
     const len = Math.sqrt(dx * dx + dy * dy);
-    
+
     const perpX = len > 0 ? -dy / len : 0;
     const perpY = len > 0 ? dx / len : 1;
-    
+
     // Wave amplitudes and frequencies for meandering paths
     const waveAmps = [12, -15, 8];
     const waveFreqs = [1.0, 1.2, 2.0];
-    
+
     const startOffsets = [
       { x: -4, y: -4 },
       { x: 4, y: -2 },
       { x: 0, y: 4 }
     ];
-    
+
     const endOffsets = [
       { x: -4, y: -4 },
       { x: 4, y: -2 },
       { x: 0, y: 4 }
     ];
-    
+
     const t = batFlyProgress;
     const wave = waveAmps[idx] * Math.sin(t * Math.PI * waveFreqs[idx]);
     const currentOffsetX = (1 - t) * startOffsets[idx].x + t * endOffsets[idx].x;
     const currentOffsetY = (1 - t) * startOffsets[idx].y + t * endOffsets[idx].y;
-    
+
     const x = startX + t * dx + currentOffsetX + perpX * wave;
     const y = startY + t * dy + currentOffsetY + perpY * wave;
-    
+
     const scaleX = (endX < startX || endX === startX) ? 1 : -1;
-    
+
     return { x, y, scaleX };
   };
 
@@ -1568,16 +1609,16 @@ const SandboxPage = () => {
     : (fightersData.find(f => f.id === selectedFighterId) || fightersData[0]);
   const targetPortraitBase = selectedUnitType === 'monster'
     ? soldier_portrait
-    : (selectedFighterId === 'sage' 
-        ? soldier_portrait 
-        : (selectedFighterId === 'ranger' ? ogre_portrait : goblin_portrait));
+    : (selectedFighterId === 'sage'
+      ? soldier_portrait
+      : (selectedFighterId === 'ranger' ? ogre_portrait : goblin_portrait));
   const isTargetPolymorphActive = selectedUnitType === 'monster' ? fighterPolymorphed : monsterPolymorphed;
   const targetPortrait = isTargetPolymorphActive ? polymorph : targetPortraitBase;
   const targetName = selectedUnitType === 'monster'
     ? 'Soldier Target'
-    : (selectedFighterId === 'sage' 
-        ? 'Soldier Target' 
-        : (selectedFighterId === 'ranger' ? 'Ogre Target' : 'Goblin Target'));
+    : (selectedFighterId === 'sage'
+      ? 'Soldier Target'
+      : (selectedFighterId === 'ranger' ? 'Ogre Target' : 'Goblin Target'));
 
 
 
@@ -1625,7 +1666,7 @@ const SandboxPage = () => {
       addFloatingText(`-${tickDamage}`, 'normal', '#e74c3c', targetPosRef.current.row, targetPosRef.current.col);
     }, tickInterval);
   };
-  
+
   const applyPoison = (duration, tickInterval = 1500, tickDamage = 4) => {
     setPoisonSingleDuration(duration);
     setPoisonDuration(prev => (prev || 0) + duration);
@@ -1798,7 +1839,7 @@ const SandboxPage = () => {
     const isFighterSource = selectedUnitType === 'fighter';
     const sourceHexed = isFighterSource ? fighterHexed : monsterHexed;
     const sourcePolymorphed = isFighterSource ? fighterPolymorphed : monsterPolymorphed;
-    
+
     isThirdEyeDodgeRef.current = false;
     const isTargetSphinx = isFighterSource ? selectedMonsterId === 'sphinx' : selectedFighterId === 'sphinx';
     if (isTargetSphinx && Math.random() <= 0.35) {
@@ -1826,15 +1867,16 @@ const SandboxPage = () => {
       }
     }
 
-    if (ability.type === 'melee' || ability.type === 'melee_poison' || ability.type === 'melee_slam' || ability.type === 'melee_heavy' || ability.type === 'melee_punches' || ability.type === 'melee_spin' || ability.type === 'barbarian_slash' || ability.type === 'claw_strike' || ability.type === 'bite' || ability.type === 'head_butt' || ability.type === 'vampiric_bite' || ability.type === 'sword_swing' || ability.id === 'sword_swing') {
+    if (ability.type === 'melee' || ability.type === 'melee_poison' || ability.type === 'melee_slam' || ability.type === 'melee_heavy' || ability.type === 'melee_punches' || ability.type === 'melee_spin' || ability.type === 'barbarian_slash' || ability.type === 'claw_strike' || ability.type === 'bite' || ability.type === 'head_butt' || ability.type === 'vampiric_bite' || ability.type === 'sword_swing' || ability.id === 'sword_swing' || ability.type === 'rake' || ability.id === 'rake') {
       setAnimating(true);
-      
-      
+
+
       const isSlash = ability.id === 'slash' || ability.id === 'barbarian_slash' || ability.id === 'sword_swing' || ability.type === 'sword_swing';
       const isSlam = ability.type === 'melee_slam' || ability.type === 'head_butt';
       const isClawStrike = ability.type === 'claw_strike' || ability.id === 'claw_strike';
       const isBite = ability.type === 'bite' || ability.id === 'bite';
       const isVampiricBite = ability.type === 'vampiric_bite' || ability.id === 'vampiric_bite';
+      const isRake = ability.type === 'rake' || ability.id === 'rake';
 
       if (isSlash) {
         setAnimationPhase('step_adjacent'); // Move to adjacent (takes 250ms)
@@ -1964,6 +2006,48 @@ const SandboxPage = () => {
           setAnimating(false);
           setAnimationPhase(null);
         }, 1200);
+      } else if (isRake) {
+        setAnimationPhase('step_adjacent'); // Move adjacent (takes 250ms)
+
+        // First rake swipe animation starts at 250ms (duration 0.75s)
+        setTimeout(() => {
+          setHitEffect({ type: 'claw_strike_swipe' });
+        }, 250);
+
+        // First hit resolves at 1000ms: show hit overlay, shake target, flash red, show damage text
+        setTimeout(() => {
+          setHitEffect({ type: 'claw_hit' });
+          setTargetShake(true);
+          setTargetFlash(true);
+          addFloatingText('-14', 'normal', '#ff9f1c', targetPos.row, targetPos.col);
+          setTimeout(() => {
+            setTargetShake(false);
+            setTargetFlash(false);
+          }, 250);
+        }, 1000);
+
+        // Second rake swipe animation starts at 1100ms
+        setTimeout(() => {
+          setHitEffect({ type: 'claw_strike_swipe' });
+        }, 1100);
+
+        // Second hit resolves at 1850ms: show hit overlay, shake target, flash red, show second damage text
+        setTimeout(() => {
+          setHitEffect({ type: 'claw_hit' });
+          setTargetShake(true);
+          setTargetFlash(true);
+          addFloatingText('-14', 'normal', '#ff9f1c', targetPos.row, targetPos.col);
+          setAnimationPhase('return'); // start returning
+        }, 1850);
+
+        // Arrives back at origin (2100ms total, return takes 250ms): end animating
+        setTimeout(() => {
+          setTargetShake(false);
+          setTargetFlash(false);
+          setHitEffect(null);
+          setAnimating(false);
+          setAnimationPhase(null);
+        }, 2100);
       } else if (isSlam) {
         setAnimating(true);
         // 0ms: Render the connect icon on the edge of the tile facing the target.
@@ -1973,23 +2057,23 @@ const SandboxPage = () => {
           setHitEffect({ type: 'shield_slam_connect' });
         }
         setAnimationPhase(null); // Keep at origin
- 
+
         const dx = targetPos.col - fighterPos.col;
         const dy = targetPos.row - fighterPos.row;
         const dist = Math.sqrt(dx * dx + dy * dy);
         const pushCol = dist > 0 ? Math.round(dx / dist) : 1;
         const pushRow = dist > 0 ? Math.round(dy / dist) : 0;
- 
+
         // 300ms: Lunge forward
         setTimeout(() => {
           setAnimationPhase('lunge');
         }, 300);
- 
+
         // 500ms: Impact target (shake, flash, damage text, and start pushback)
         setTimeout(() => {
           setTargetShake(true);
           setTargetFlash(true);
-          
+
           if (ability.type === 'head_butt') {
             addFloatingText('-18', 'normal', '#ff5400', targetPos.row, targetPos.col);
             addFloatingText('STUNNED!', 'normal', '#ffe600', targetPos.row, targetPos.col);
@@ -2000,7 +2084,7 @@ const SandboxPage = () => {
           } else {
             addFloatingText('-18', 'normal', '#ff9f1c', targetPos.row, targetPos.col);
           }
-          
+
           // Push target smoothly back 1 tile in direction of attack
           setTargetPushback(`translate(${pushCol * 100}%, ${pushRow * 100}%)`);
 
@@ -2174,7 +2258,7 @@ const SandboxPage = () => {
       setSelfBuffEffect('rage');
       setOneManArmyActive(true);
       addFloatingText('ONE MAN ARMY!', 'crit', '#e63946', fighterPos.row, fighterPos.col);
-      
+
       const arena = document.querySelector('.combat-grid-arena');
       if (arena) {
         arena.style.animation = 'shake 0.4s ease-out';
@@ -2198,7 +2282,7 @@ const SandboxPage = () => {
       setInspireFading(false);
       setInspireEndTime(Date.now() + 8000);
       addFloatingText('INSPIRE!', 'normal', '#ffdd57', fighterPos.row, fighterPos.col);
-      
+
       // Float combat stats on other friendly units (Ranger at 0,1 and Monk at 0,3)
       setTimeout(() => {
         addFloatingText('ATTACK UP!', 'normal', '#ffdd57', 0, 1);
@@ -2302,7 +2386,7 @@ const SandboxPage = () => {
       addFloatingText('FORESIGHT!', 'normal', '#21e6c1', fighterPos.row, fighterPos.col);
       addFloatingText('DOUBLED EVASION', 'normal', '#21e6c1', fighterPos.row, fighterPos.col);
       setHitEffect({ type: 'monk_third_eye_effect' });
-      
+
       setThirdEyeActive(true);
       setThirdEyeFading(false);
       setThirdEyeEndTime(Date.now() + 4000);
@@ -2343,7 +2427,7 @@ const SandboxPage = () => {
         }
       }
 
-      const destTile = destTiles.length > 0 
+      const destTile = destTiles.length > 0
         ? destTiles[Math.floor(Math.random() * destTiles.length)]
         : fighterPos;
 
@@ -2551,7 +2635,7 @@ const SandboxPage = () => {
       // Attack 2: Strike extra Goblin at 2,1 (at 550ms)
       setTimeout(() => {
         setHitEffect(null); // Clear main punch icon
-        
+
         if (isGoblin1Adjacent) {
           setMonkGoblin1Shake(true);
           setMonkGoblin1Flash(true);
@@ -2706,7 +2790,7 @@ const SandboxPage = () => {
     else if (ability.type === 'induce_fear') {
       setAnimating(true);
       setInduceFearActive(true);
-      
+
       // Floating text on caster (Induce Fear!)
       addFloatingText('INDUCE FEAR!', 'crit', '#8e2de2', fighterPos.row, fighterPos.col);
 
@@ -2714,12 +2798,12 @@ const SandboxPage = () => {
       setTimeout(() => {
         setTargetShake(true);
         setTargetFlash(true);
-        
+
         // Add fear effect icon to target fighter
         setTargetFeared(true);
         setFearFading(false);
         setFearEndTime(Date.now() + 8000); // 8 seconds long duration
-        
+
         addFloatingText('FEARED!', 'normal', '#8e2de2', targetPos.row, targetPos.col);
 
         if (selectedUnitType === 'monster') {
@@ -2923,14 +3007,14 @@ const SandboxPage = () => {
           setMonsterPolymorphEndTime(Date.now() + 16000);
           if (monsterFrogIntervalRef.current) clearInterval(monsterFrogIntervalRef.current);
           monsterFrogIntervalRef.current = setInterval(() => {
-             addFloatingText('hop!', 'normal', '#2ecc71', targetPosRef.current.row, targetPosRef.current.col);
+            addFloatingText('hop!', 'normal', '#2ecc71', targetPosRef.current.row, targetPosRef.current.col);
           }, 2000);
         } else {
           setFighterPolymorphed(true);
           setFighterPolymorphEndTime(Date.now() + 16000);
           if (fighterFrogIntervalRef.current) clearInterval(fighterFrogIntervalRef.current);
           fighterFrogIntervalRef.current = setInterval(() => {
-             addFloatingText('hop!', 'normal', '#2ecc71', targetPosRef.current.row, targetPosRef.current.col);
+            addFloatingText('hop!', 'normal', '#2ecc71', targetPosRef.current.row, targetPosRef.current.col);
           }, 2000);
         }
 
@@ -2956,7 +3040,7 @@ const SandboxPage = () => {
         setHexCastExplosion(null);
         setHitEffect({ type: 'hex_impact' });
         addFloatingText('HEXED!', 'crit', '#ff00ff', targetPosRef.current.row, targetPosRef.current.col);
-        
+
         if (isFighterSource) {
           setMonsterHexed(true);
           setMonsterHexEndTime(Date.now() + 16000);
@@ -2981,7 +3065,7 @@ const SandboxPage = () => {
       setIsCasting(true);
       setActiveBeam('blue_dragon_breath');
       setBlueDragonBreathActive(true);
-      
+
       const targetR = targetPosRef.current.row;
       const targetC = targetPosRef.current.col;
 
@@ -3011,11 +3095,11 @@ const SandboxPage = () => {
       const wRow = isDragonFighter ? fighterPos.row : targetPos.row;
       const wHuge = isDragonFighter ? isFighterHuge : isTargetHuge;
       const wLarge = isDragonFighter ? isFighterLarge : isTargetLarge;
-      
+
       const leftCol = getUnitLeftTileCol(wCol, wHuge, wLarge);
       const topRow = getUnitTopTileRow(wRow, wHuge, wLarge);
       const size = getUnitSizeFactor(wHuge, wLarge);
-      
+
       setHitEffect({
         type: 'dragon_whirlwind_effect',
         col: leftCol + (size - 1) / 2,
@@ -3039,13 +3123,13 @@ const SandboxPage = () => {
           const dist = Math.max(Math.abs(dx), Math.abs(dy)); // Chebyshev distance
           // 3 tiles from center is exactly 2 tiles from the outer edge of a 3x3 dragon
           if (dist <= 3 && dist > 0) {
-             const angle = Math.atan2(dy, dx);
-             let newCol = pos.col + Math.round(Math.cos(angle));
-             let newRow = pos.row + Math.round(Math.sin(angle));
-             // keep in bounds
-             newCol = Math.max(0, Math.min(9, newCol));
-             newRow = Math.max(0, Math.min(9, newRow));
-             setPos({ row: newRow, col: newCol });
+            const angle = Math.atan2(dy, dx);
+            let newCol = pos.col + Math.round(Math.cos(angle));
+            let newRow = pos.row + Math.round(Math.sin(angle));
+            // keep in bounds
+            newCol = Math.max(0, Math.min(9, newCol));
+            newRow = Math.max(0, Math.min(9, newRow));
+            setPos({ row: newRow, col: newCol });
           }
         };
 
@@ -3064,9 +3148,9 @@ const SandboxPage = () => {
     // --- BOMBARD ---
     else if (ability.type === 'bombard_type') {
       setIsCasting(true);
-      
-      const bombardCenter = { ...targetPos }; 
-      
+
+      const bombardCenter = { ...targetPos };
+
       // Calculate all possible grid cells within the 3x3 area centered on targetPos
       const candidates = [];
       for (let dx = -1; dx <= 1; dx++) {
@@ -3078,7 +3162,7 @@ const SandboxPage = () => {
           }
         }
       }
-      
+
       // Select 3 distinct random tiles from the candidates
       const shuffled = [...candidates].sort(() => 0.5 - Math.random());
       const strikeTile1 = shuffled[0] || bombardCenter;
@@ -3092,20 +3176,20 @@ const SandboxPage = () => {
           const baseDelay = isSet2 ? 0.35 : 0.0;
           // Random delay offset within the set
           const delay = parseFloat((baseDelay + Math.random() * 0.35).toFixed(3));
-          
+
           // Random width between 7px and 19px
           const width = Math.floor(Math.random() * 13) + 7;
-          
+
           // Random offsets within target cell bounds (-30% to +30%)
           const left = Math.floor(Math.random() * 61) - 30;
           const top = Math.floor(Math.random() * 61) - 30;
-          
+
           const glowColor = Math.random() > 0.5 ? '#00ffff' : '#00bfff';
-          
+
           return { delay, width, left, top, glowColor };
         });
       };
-      
+
       const barrage1Beams = generateRandomBeams();
       const barrage2Beams = generateRandomBeams();
       const barrage3Beams = generateRandomBeams();
@@ -3164,13 +3248,13 @@ const SandboxPage = () => {
               const top = getUnitTopTileRow(pos.row, isHuge, isLarge);
               const size = getUnitSizeFactor(isHuge, isLarge);
               return checkCol >= left && checkCol < left + size &&
-                     checkRow >= top && checkRow < top + size;
+                checkRow >= top && checkRow < top + size;
             };
 
             const checkHit = (pos, isHuge, isLarge) => {
               return overlapsTile(pos, isHuge, isLarge, strikeTile1.col, strikeTile1.row) ||
-                     overlapsTile(pos, isHuge, isLarge, strikeTile2.col, strikeTile2.row) ||
-                     overlapsTile(pos, isHuge, isLarge, strikeTile3.col, strikeTile3.row);
+                overlapsTile(pos, isHuge, isLarge, strikeTile2.col, strikeTile2.row) ||
+                overlapsTile(pos, isHuge, isLarge, strikeTile3.col, strikeTile3.row);
             };
 
             if (checkHit(targetPos, isTargetHuge, isTargetLarge)) {
@@ -3210,9 +3294,9 @@ const SandboxPage = () => {
       // Step 2: After 1.5 seconds, Dragon triggers the Dispel grid overlay wave
       setTimeout(() => {
         setDragonDispellWaveActive(true);
-        
+
         // No shake/buck back on dispel execution per requirements
-        
+
         // Calculate center for dragon floating text
         const dragonVisualCenterRow = getUnitVisualRow(fighterPos.row, isFighterHuge, isFighterLarge);
         const dragonVisualCenterCol = getUnitVisualCol(fighterPos.col, isFighterHuge, isFighterLarge);
@@ -3220,7 +3304,7 @@ const SandboxPage = () => {
 
         // Immediately cancel COP and remove all buffs/icons from the Sage and Barbarian targets
         setDragonDispellSageCopActive(false);
-        
+
         // Show dispelled labels and hit shakes on affected units
         setSageTargetShake(true);
         setSageTargetFlash(true);
@@ -3538,7 +3622,7 @@ const SandboxPage = () => {
         addFloatingText('-22', 'normal', '#00bfff', targetPos.row, targetPos.col);
         // Frozen overlay on portrait & effect icon
         applyFreeze(3000);
-        
+
         setTimeout(() => {
           setTargetShake(false);
           setTargetFlash(false);
@@ -3551,7 +3635,7 @@ const SandboxPage = () => {
     // --- PROJECTILE ATTACKS (generic: axe throw, shadow bolt, rifle, etc.) ---
     else if (ability.type === 'projectile' || ability.type === 'projectile_arc') {
       setAnimating(true);
-      
+
       const pIcon = ability.projectileIcon || ability.icon;
       setProjectile({
         x: fighterPos.col * 20,
@@ -3666,11 +3750,11 @@ const SandboxPage = () => {
           if (dist > 0) {
             const pushCol = Math.round(dx / dist);
             const pushRow = Math.round(dy / dist);
-            
+
             setTargetPos(prev => {
               const newCol = Math.max(0, Math.min(4, prev.col + pushCol));
               const newRow = Math.max(0, Math.min(4, prev.row + pushRow));
-              
+
               if (newCol !== prev.col || newRow !== prev.row) {
                 setTargetPushback(`translate(${pushCol * 100}%, ${pushRow * 100}%)`);
                 setTimeout(() => {
@@ -3833,18 +3917,18 @@ const SandboxPage = () => {
               if (dist > 0) {
                 const pushCol = Math.round(dx / dist);
                 const pushRow = Math.round(dy / dist);
-                
+
                 setTargetPos(prev => {
                   const newCol = Math.max(0, Math.min(4, prev.col + pushCol));
                   const newRow = Math.max(0, Math.min(4, prev.row + pushRow));
-                  
+
                   if (newCol !== prev.col || newRow !== prev.row) {
                     setProjectiles(projs => projs.map(p => p.isRangerArrow ? {
                       ...p,
                       x: newCol * 20,
                       y: newRow * 20
                     } : p));
-                    
+
                     setTargetPushback(`translate(${pushCol * 100}%, ${pushRow * 100}%)`);
                     setTimeout(() => {
                       setTargetPushback(null);
@@ -3993,7 +4077,7 @@ const SandboxPage = () => {
           const dx = targetPos.col - fighterPos.col;
           const dy = targetPos.row - fighterPos.row;
           const dist = Math.sqrt(dx * dx + dy * dy);
-          
+
           let midCol = targetPos.col;
           let midRow = targetPos.row;
           if (dist > 0) {
@@ -4008,7 +4092,7 @@ const SandboxPage = () => {
           // b) Render healing hands icon and target glow
           setHealIcon({ row: midRow, col: midCol, active: true });
           setTargetHealGlow(true);
-          
+
           addFloatingText(txt, 'normal', color, targetPos.row, targetPos.col);
 
           // c) Effect is finished: icon fades and color glow fades after 800ms
@@ -4083,10 +4167,12 @@ const SandboxPage = () => {
       }, 2000);
     }
 
+
+
     // --- BEAM SPELLS (non-lightning) ---
     else if (ability.type === 'beam' || ability.type === 'beam_drain') {
       setAnimating(true);
-      
+
       let beamType = 'smite';
       let dmg = '-32';
       let color = '#ffe600';
@@ -4152,7 +4238,7 @@ const SandboxPage = () => {
     // --- MAGIC MISSILE ---
     else if (ability.type === 'magic_missile') {
       setAnimating(true);
-      
+
       const fireMissile = (delayTime, offsetY) => {
         setTimeout(() => {
           const missileId = Math.random();
@@ -4504,7 +4590,7 @@ const SandboxPage = () => {
         addFloatingText('NO MINION TO DUPLICATE!', 'normal', '#e63946', fighterPos.row, fighterPos.col);
         return;
       }
-      
+
       const sourceMinion = minions[minions.length - 1];
       // Behind target is defined by facing direction. Default player unit faces right, so left is col - 1.
       const isFacingRight = fighterPos.col <= targetPos.col;
@@ -4559,7 +4645,7 @@ const SandboxPage = () => {
       const sourceMinion = minions[minions.length - 1];
       const isFacingRight = fighterPos.col <= targetPos.col;
       const colOffset = isFacingRight ? -1 : 1;
-      
+
       // Triplicate positions at NW and SW (NE and SE if Summoner is facing left)
       const targets = [];
       const nwRow = sourceMinion.row - 1;
@@ -4667,7 +4753,7 @@ const SandboxPage = () => {
       setAnimating(true);
       // 1. Reddish/white beam from Djinn to Ranger
       setBetrayalBeamActive(true);
-      
+
       // 2. Beam hits Ranger after 500ms
       setTimeout(() => {
         setBetrayalBeamActive(false);
@@ -4675,7 +4761,7 @@ const SandboxPage = () => {
         setExtraRangerShake(true);
         setExtraRangerFlash(true);
         addFloatingText('BETRAYED!', 'crit', '#e63946', rangerPos.row, rangerPos.col);
-        
+
         // 3. Shake/flash ends after 300ms
         setTimeout(() => {
           setExtraRangerShake(false);
@@ -4688,10 +4774,10 @@ const SandboxPage = () => {
         setBetrayalHitActive(false);
         setRangerBetrayalEffectActive(true);
         setRangerBetrayalEffectEndTime(Date.now() + 4000); // 4 seconds duration
-        
+
         // Move Ranger to (0, 2)
         setRangerPos({ row: 2, col: 0 });
-        
+
         // 5. Fire poison arrow after moving (e.g. 500ms after move)
         setTimeout(() => {
           setProjectile({
@@ -4701,14 +4787,14 @@ const SandboxPage = () => {
             isRangerArrow: true,
             arrowType: 'poison'
           });
-          
+
           // Projectile starts traveling
           setTimeout(() => {
             const targetCol = getUnitVisualCol(targetPos.col, isTargetHuge, isTargetLarge);
             const targetRow = getUnitVisualRow(targetPos.row, isTargetHuge, isTargetLarge);
             setProjectile(prev => prev ? { ...prev, x: targetCol * 20, y: targetRow * 20 } : null);
           }, 30);
-          
+
           // Projectile hits Soldier target
           setTimeout(() => {
             setProjectile(null);
@@ -4717,18 +4803,18 @@ const SandboxPage = () => {
             setHitEffect({ type: 'arrow_hit' });
             addFloatingText('-16', 'normal', '#2ec4b6', targetPos.row, targetPos.col);
             addFloatingText('POISONED!', 'normal', '#2ec4b6', targetPos.row, targetPos.col);
-            
+
             setTimeout(() => {
               setTargetShake(false);
               setTargetFlash(false);
               setHitEffect(null);
             }, 300);
           }, 430);
-          
+
         }, 500);
-        
+
       }, 1500);
-      
+
       // Let Djinn become non-animating after 2000ms
       setTimeout(() => {
         setAnimating(false);
@@ -5606,14 +5692,14 @@ const SandboxPage = () => {
       `}</style>
 
       {/* Header & Tabs */}
-      <div style={{ 
-        width: '100%', 
-        display: 'flex', 
-        borderBottom: '1px solid #333', 
+      <div style={{
+        width: '100%',
+        display: 'flex',
+        borderBottom: '1px solid #333',
         padding: '0 20px',
         marginBottom: '40px'
       }}>
-        <button 
+        <button
           onClick={() => history.push('/landing')}
           style={{
             padding: '10px 20px',
@@ -5631,10 +5717,10 @@ const SandboxPage = () => {
         >
           Back
         </button>
-        
+
         <div style={{ display: 'flex', gap: '20px', marginLeft: '40px' }}>
           {tabs.map(tab => (
-            <div 
+            <div
               key={tab.id}
               onClick={() => tab.enabled && setActiveTab(tab.id)}
               style={{
@@ -5879,7 +5965,7 @@ const SandboxPage = () => {
               >
                 Target
               </button>
-              
+
               <button
                 onClick={() => {
                   if (selectedFighterId === 'ranger') {
@@ -6043,7 +6129,7 @@ const SandboxPage = () => {
                           if ((isFighterHuge && r < 2) || (isFighterLarge && r < 1)) return; // Vertically out of bounds
                           const candidateTiles = getCandidateTiles(r, c, isFighterHuge, isFighterLarge);
                           if (candidateTiles.some(tile => isTileBlocked(tile.row, tile.col))) return;
-                          
+
                           const targetTiles = getTargetOccupiedTiles();
                           const overlap = candidateTiles.some(cTile =>
                             targetTiles.some(tTile => cTile.row === tTile.row && cTile.col === tTile.col)
@@ -6119,7 +6205,7 @@ const SandboxPage = () => {
                       {isMinion && (() => {
                         const minion = minions.find(m => m.row === r && m.col === c);
                         if (!minion) return null;
-                        
+
                         const minionIcon = minion.icon || bat_gate;
                         const minionLabel = minion.label || 'BAT';
                         const labelColor = minion.type === 'skeleton' ? '#a8a29e' : minion.type === 'skeleton_knight' ? '#3b82f6' : '#a2d2ff';
@@ -6137,7 +6223,7 @@ const SandboxPage = () => {
                       {isPortal && (
                         <div style={{ width: '80%', height: '80%', position: 'relative', animation: 'scaleUp 0.3s ease-out' }}>
                           <img src={portal_icon} alt="rift portal" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-                          
+
                           {/* Duration Overlay on Portal */}
                           <div
                             className={riftPortalFading ? 'effect-icon-fading' : 'effect-icon-active'}
@@ -6159,7 +6245,7 @@ const SandboxPage = () => {
                               overflow: 'hidden'
                             }}
                           >
-                            <svg 
+                            <svg
                               style={{
                                 position: 'absolute',
                                 top: 0,
@@ -6249,7 +6335,7 @@ const SandboxPage = () => {
                                 overflow: 'hidden'
                               }}
                             >
-                              <svg 
+                              <svg
                                 style={{
                                   position: 'absolute',
                                   top: 0,
@@ -6324,7 +6410,7 @@ const SandboxPage = () => {
                                 overflow: 'hidden'
                               }}
                             >
-                              <svg 
+                              <svg
                                 style={{
                                   position: 'absolute',
                                   top: 0,
@@ -6463,7 +6549,7 @@ const SandboxPage = () => {
                                 overflow: 'hidden'
                               }}
                             >
-                              <svg 
+                              <svg
                                 style={{
                                   position: 'absolute',
                                   top: 0,
@@ -6547,7 +6633,7 @@ const SandboxPage = () => {
                                 overflow: 'hidden'
                               }}
                             >
-                              <svg 
+                              <svg
                                 style={{
                                   position: 'absolute',
                                   top: 0,
@@ -6864,26 +6950,25 @@ const SandboxPage = () => {
                         ? '2px solid #ff3333'
                         : '2px solid #ffb703',
                     backgroundColor: '#222',
-                    backgroundImage: `url(${
-                      (selectedUnitType === 'monster' && selectedMonsterId === 'skeleton' && skeletonReassemblyActive)
-                        ? bones
-                        : selectedFighter.portrait
-                    })`,
+                    backgroundImage: `url(${(selectedUnitType === 'monster' && selectedMonsterId === 'skeleton' && skeletonReassemblyActive)
+                      ? bones
+                      : selectedFighter.portrait
+                      })`,
                     backgroundSize: 'cover',
                     backgroundPosition: 'center',
                     boxShadow: (selectedUnitType === 'fighter' ? fighterHexed : monsterHexed)
                       ? '0 0 15px 5px rgba(255, 0, 255, 0.8), inset 0 0 10px rgba(255, 0, 255, 0.5)'
                       : (selectedFighterId === 'soldier' && defensiveStanceActive)
-                      ? '0 0 12px 3px rgba(255, 255, 255, 0.9), inset 0 0 8px rgba(255, 255, 255, 0.5)'
-                      : (selectedFighterId === 'soldier' && shieldWallActive)
-                        ? undefined
-                        : (selectedFighterId === 'barbarian' && berserkerActive)
-                          ? 'none'
-                          : selfBuffEffect === 'rage'
-                            ? '0 0 20px rgba(255, 0, 0, 0.7), inset 0 0 10px rgba(255, 0, 0, 0.5)'
-                            : selfBuffEffect === 'barrier'
-                              ? '0 0 20px rgba(0, 150, 255, 0.7), inset 0 0 10px rgba(0, 150, 255, 0.5)'
-                              : '0 8px 16px rgba(0,0,0,0.5)',
+                        ? '0 0 12px 3px rgba(255, 255, 255, 0.9), inset 0 0 8px rgba(255, 255, 255, 0.5)'
+                        : (selectedFighterId === 'soldier' && shieldWallActive)
+                          ? undefined
+                          : (selectedFighterId === 'barbarian' && berserkerActive)
+                            ? 'none'
+                            : selfBuffEffect === 'rage'
+                              ? '0 0 20px rgba(255, 0, 0, 0.7), inset 0 0 10px rgba(255, 0, 0, 0.5)'
+                              : selfBuffEffect === 'barrier'
+                                ? '0 0 20px rgba(0, 150, 255, 0.7), inset 0 0 10px rgba(0, 150, 255, 0.5)'
+                                : '0 8px 16px rgba(0,0,0,0.5)',
                     animation: (selectedFighterId === 'barbarian' && animationPhase === 'leap_landing')
                       ? 'leapScale 0.6s ease-in-out forwards'
                       : (selectedMonsterId === 'ogre' && animationPhase === 'stomp_animation')
@@ -6922,7 +7007,7 @@ const SandboxPage = () => {
                         overflow: 'hidden'
                       }}
                     >
-                      <svg 
+                      <svg
                         style={{
                           position: 'absolute',
                           top: 0,
@@ -6970,7 +7055,7 @@ const SandboxPage = () => {
                         overflow: 'hidden'
                       }}
                     >
-                      <svg 
+                      <svg
                         style={{
                           position: 'absolute',
                           top: 0,
@@ -7091,7 +7176,7 @@ const SandboxPage = () => {
                           overflow: 'visible'
                         }}
                       >
-                        <svg 
+                        <svg
                           style={{
                             position: 'absolute',
                             top: 0,
@@ -7115,7 +7200,7 @@ const SandboxPage = () => {
                           />
                           {(() => {
                             const isMultiDur = ['astral_mode'].includes(eff.key);
-                            const coords = isMultiDur 
+                            const coords = isMultiDur
                               ? getRadialLineCoords(eff.endTime, 6000, 3000)
                               : getRadialLineCoords(eff.endTime, eff.key === 'third_eye' ? 4000 : 8000);
                             return coords ? (
@@ -7150,7 +7235,7 @@ const SandboxPage = () => {
                       <div className="yellow-ray" style={{ left: '75%', width: '12%', height: '70%', animationDelay: '0.4s' }} />
                     </div>
                   )}
-                   {selectedFighterId === 'monk' && meditateAnimActive && (
+                  {selectedFighterId === 'monk' && meditateAnimActive && (
                     <div style={{
                       position: 'absolute',
                       top: '-14px',
@@ -7243,7 +7328,7 @@ const SandboxPage = () => {
                         overflow: 'hidden'
                       }}
                     >
-                      <svg 
+                      <svg
                         style={{
                           position: 'absolute',
                           top: 0,
@@ -7302,7 +7387,7 @@ const SandboxPage = () => {
                         overflow: 'hidden'
                       }}
                     >
-                      <svg 
+                      <svg
                         style={{
                           position: 'absolute',
                           top: 0,
@@ -7361,7 +7446,7 @@ const SandboxPage = () => {
                         overflow: 'hidden'
                       }}
                     >
-                      <svg 
+                      <svg
                         style={{
                           position: 'absolute',
                           top: 0,
@@ -7423,7 +7508,7 @@ const SandboxPage = () => {
                           overflow: 'hidden'
                         }}
                       >
-                        <svg 
+                        <svg
                           style={{
                             position: 'absolute',
                             top: 0,
@@ -7472,12 +7557,11 @@ const SandboxPage = () => {
                       borderRadius: '50%',
                       backgroundColor: '#111',
                       border: '2px solid #ffb703',
-                      backgroundImage: `url(${
-                        notchedArrow === 'ice' ? ranger_ice_arrow :
+                      backgroundImage: `url(${notchedArrow === 'ice' ? ranger_ice_arrow :
                         notchedArrow === 'force' ? ranger_force_arrow :
-                        notchedArrow === 'poison' ? ranger_poison_arrow :
-                        ranger_celestial_arrow
-                      })`,
+                          notchedArrow === 'poison' ? ranger_poison_arrow :
+                            ranger_celestial_arrow
+                        })`,
                       backgroundSize: 'contain',
                       backgroundRepeat: 'no-repeat',
                       backgroundPosition: 'center',
@@ -7622,10 +7706,10 @@ const SandboxPage = () => {
                   boxShadow: (selectedUnitType === 'monster' ? fighterHexed : monsterHexed)
                     ? '0 0 15px 5px rgba(255, 0, 255, 0.8), inset 0 0 10px rgba(255, 0, 255, 0.5)'
                     : djinnBindActive
-                    ? '0 0 18px 4px rgba(179, 136, 255, 0.85), inset 0 0 10px rgba(179, 136, 255, 0.4)'
-                    : (innerFireActive && targetFlash)
-                      ? '0 0 24px 8px rgba(255, 84, 0, 0.95), inset 0 0 12px rgba(255, 84, 0, 0.8)'
-                      : '0 8px 16px rgba(0,0,0,0.5)',
+                      ? '0 0 18px 4px rgba(179, 136, 255, 0.85), inset 0 0 10px rgba(179, 136, 255, 0.4)'
+                      : (innerFireActive && targetFlash)
+                        ? '0 0 24px 8px rgba(255, 84, 0, 0.95), inset 0 0 12px rgba(255, 84, 0, 0.8)'
+                        : '0 8px 16px rgba(0,0,0,0.5)',
                   position: 'relative',
                   transform: targetShake ? 'translate(5px, 2px) rotate(2deg)' : 'none',
                   transition: 'transform 0.05s',
@@ -8426,7 +8510,7 @@ const SandboxPage = () => {
                         overflow: 'hidden'
                       }}
                     >
-                      <svg 
+                      <svg
                         style={{
                           position: 'absolute',
                           top: 0,
@@ -9739,21 +9823,21 @@ const SandboxPage = () => {
                           <div style={{ position: 'absolute', right: '1px', top: '15px', width: '7px', height: '7px', borderRadius: '50%', background: 'radial-gradient(circle, #adff2f 10%, #39ff14 80%)', opacity: 0.95, animation: 'bubbleWobble 0.2s ease-in-out infinite' }} />
                           <div style={{ position: 'absolute', right: '5px', top: '18px', width: '4px', height: '4px', borderRadius: '50%', background: '#adff2f', opacity: 0.85, animation: 'bubbleWobbleAlt 0.18s ease-in-out infinite 0.05s' }} />
                           <div style={{ position: 'absolute', right: '6px', top: '12px', width: '5px', height: '5px', borderRadius: '50%', background: '#adff2f', opacity: 0.85, animation: 'bubbleWobble 0.22s ease-in-out infinite 0.1s' }} />
-                          
+
                           {/* Mid-front section (medium-small bubbles) */}
                           <div style={{ position: 'absolute', right: '10px', top: '9px', width: '10px', height: '10px', borderRadius: '50%', background: 'radial-gradient(circle, #39ff14 20%, #38b000 80%)', opacity: 0.9, animation: 'bubbleWobbleAlt 0.25s ease-in-out infinite 0.03s' }} />
                           <div style={{ position: 'absolute', right: '10px', top: '21px', width: '9px', height: '9px', borderRadius: '50%', background: 'radial-gradient(circle, #39ff14 20%, #38b000 80%)', opacity: 0.9, animation: 'bubbleWobble 0.23s ease-in-out infinite 0.08s' }} />
-                          
+
                           {/* Mid section (medium-large bubbles) */}
                           <div style={{ position: 'absolute', right: '18px', top: '5px', width: '13px', height: '13px', borderRadius: '50%', background: 'radial-gradient(circle, #39ff14 20%, #38b000 80%)', opacity: 0.85, animation: 'bubbleWobble 0.3s ease-in-out infinite 0.12s' }} />
                           <div style={{ position: 'absolute', right: '18px', top: '22px', width: '12px', height: '12px', borderRadius: '50%', background: 'radial-gradient(circle, #39ff14 20%, #38b000 80%)', opacity: 0.85, animation: 'bubbleWobbleAlt 0.28s ease-in-out infinite 0.05s' }} />
                           <div style={{ position: 'absolute', right: '16px', top: '13px', width: '16px', height: '16px', borderRadius: '50%', background: 'radial-gradient(circle, #adff2f 10%, #38b000 80%)', opacity: 0.95, animation: 'bubbleWobble 0.26s ease-in-out infinite 0.02s' }} />
-                          
+
                           {/* Back tail of the cone (largest bubbles and dispersion) */}
                           <div style={{ position: 'absolute', left: '4px', top: '2px', width: '11px', height: '11px', borderRadius: '50%', background: 'radial-gradient(circle, #39ff14 20%, #38b000 80%)', opacity: 0.85, animation: 'bubbleWobbleAlt 0.32s ease-in-out infinite 0.15s' }} />
                           <div style={{ position: 'absolute', left: '4px', top: '27px', width: '10px', height: '10px', borderRadius: '50%', background: 'radial-gradient(circle, #39ff14 20%, #38b000 80%)', opacity: 0.85, animation: 'bubbleWobble 0.34s ease-in-out infinite 0.07s' }} />
                           <div style={{ position: 'absolute', left: '8px', top: '10px', width: '18px', height: '18px', borderRadius: '50%', background: 'radial-gradient(circle, #adff2f 10%, #38b000 80%)', opacity: 0.95, animation: 'bubbleWobbleAlt 0.24s ease-in-out infinite 0.1s' }} />
-                          
+
                           {/* Scattered tiny bubbles at the tail/perimeters */}
                           <div style={{ position: 'absolute', left: '0px', top: '16px', width: '6px', height: '6px', borderRadius: '50%', background: '#adff2f', opacity: 0.8, animation: 'bubbleWobble 0.2s ease-in-out infinite 0.18s' }} />
                           <div style={{ position: 'absolute', left: '10px', top: '0px', width: '4px', height: '4px', borderRadius: '50%', background: '#adff2f', opacity: 0.8, animation: 'bubbleWobbleAlt 0.22s ease-in-out infinite 0.04s' }} />
@@ -9863,8 +9947,8 @@ const SandboxPage = () => {
                     opacity: 0.8,
                     maskImage: 'radial-gradient(circle, rgba(0,0,0,1) 45%, rgba(0,0,0,0) 70%)',
                     WebkitMaskImage: 'radial-gradient(circle, rgba(0,0,0,1) 45%, rgba(0,0,0,0) 70%)',
-                    filter: summon.type === 'skeleton_knight' 
-                      ? 'drop-shadow(0 0 8px #00bfff) drop-shadow(0 0 15px #00ffff)' 
+                    filter: summon.type === 'skeleton_knight'
+                      ? 'drop-shadow(0 0 8px #00bfff) drop-shadow(0 0 15px #00ffff)'
                       : summon.type === 'duplicate'
                         ? 'drop-shadow(0 0 8px #d800ff) drop-shadow(0 0 15px #ff007f)'
                         : summon.type === 'triplicate'
@@ -10079,7 +10163,7 @@ const SandboxPage = () => {
                 let originRow = fRow;
                 const diffX = tCol - fCol;
                 const diffY = tRow - fRow;
-                
+
                 // Shift origin to outer edge based on facing direction
                 if (Math.abs(diffX) > Math.abs(diffY)) {
                   originCol += diffX > 0 ? 1 : -1;
@@ -10199,16 +10283,16 @@ const SandboxPage = () => {
                 const dx = (tCol - fCol) * TILE_PCT;
                 const dy_start = (tRow + 0.5) * TILE_PCT - (fRow * TILE_PCT + TILE_PCT / 2);
                 const dy_end = (tRow - 0.5) * TILE_PCT - (fRow * TILE_PCT + TILE_PCT / 2);
-                
+
                 const length_start = Math.sqrt(dx * dx + dy_start * dy_start);
                 const angle_start = Math.atan2(dy_start, dx) * (180 / Math.PI);
-                
+
                 const length_end = Math.sqrt(dx * dx + dy_end * dy_end);
                 const angle_end = Math.atan2(dy_end, dx) * (180 / Math.PI);
-                
+
                 const length = annihilationSweepActive ? length_end : length_start;
                 const angle = annihilationSweepActive ? angle_end : angle_start;
-                
+
                 return (
                   <div
                     style={{
@@ -10529,11 +10613,16 @@ const SandboxPage = () => {
                     </div>
                   )}
                   {hitEffect.type === 'weapon_slash' && (() => {
-                    const activeWeaponId = equippedWeapons[selectedFighterId] || 'shortsword_sword';
-                    const activeWeapon = WEAPONS_DB.swords.find(w => w.id === activeWeaponId) ||
-                                         WEAPONS_DB.axes.find(w => w.id === activeWeaponId) ||
-                                         WEAPONS_DB.swords[0];
-                    const weaponIcon = activeWeapon.image;
+                    let weaponIcon;
+                    if (selectedMonsterId === 'skeleton' && selectedUnitType === 'monster') {
+                      weaponIcon = longsword;
+                    } else {
+                      const activeWeaponId = equippedWeapons[selectedFighterId] || 'shortsword_sword';
+                      const activeWeapon = WEAPONS_DB.swords.find(w => w.id === activeWeaponId) ||
+                        WEAPONS_DB.axes.find(w => w.id === activeWeaponId) ||
+                        WEAPONS_DB.swords[0];
+                      weaponIcon = activeWeapon.image;
+                    }
 
                     const dx = fighterPos.col - targetPos.col;
                     const dy = fighterPos.row - targetPos.row;
@@ -10643,8 +10732,8 @@ const SandboxPage = () => {
                   {hitEffect.type === 'imbued_strike_effect' && (() => {
                     const activeWeaponId = equippedWeapons[selectedFighterId] || 'shortsword_sword';
                     const activeWeapon = WEAPONS_DB.swords.find(w => w.id === activeWeaponId) ||
-                                         WEAPONS_DB.axes.find(w => w.id === activeWeaponId) ||
-                                         WEAPONS_DB.swords[0];
+                      WEAPONS_DB.axes.find(w => w.id === activeWeaponId) ||
+                      WEAPONS_DB.swords[0];
                     const weaponIcon = activeWeapon.image;
 
                     const dx = fighterPos.col - targetPos.col;
@@ -10755,29 +10844,29 @@ const SandboxPage = () => {
                         {[...Array(10)].map((_, i) => {
                           const delay = i * 0.04;
                           const size = 6 + (i % 3) * 3;
-                          
+
                           // Scatter starting positions completely across the full 3-tile width and 1-tile height
-                          const leftOffset = ((i * 17) % 80 + 10); 
+                          const leftOffset = ((i * 17) % 80 + 10);
                           const topOffset = ((i * 23) % 80 + 10);
-                          
+
                           const shadowColor = (i % 2 === 0) ? '#00ffff' : '#ffffff';
-                          
+
                           // Organic meander offsets using CSS variables defined in keyframes
                           const signX1 = i % 2 === 0 ? 1 : -1;
                           const signX2 = i % 3 === 0 ? -1 : 1;
                           const signX3 = i % 4 === 0 ? 1 : -1;
-                          
+
                           const bx1 = signX1 * (20 + (i * 11) % 50); // bounce left/right up to 70px
                           const by1 = ((i * 7) % 30 - 15);          // bounce up/down up to 15px
-                          
+
                           const bx2 = signX2 * (30 + (i * 13) % 70); // bounce left/right up to 100px
                           const by2 = ((i * 9) % 30 - 15);
-                          
+
                           const bx3 = signX3 * (40 + (i * 17) % 90); // bounce left/right up to 130px
                           const by3 = ((i * 11) % 30 - 15);
-                          
+
                           const sx = (signX1 * (30 + (i * 5) % 50));
-                          
+
                           return (
                             <div
                               key={`bombard-particle-${i}`}
@@ -10833,7 +10922,7 @@ const SandboxPage = () => {
                             const left = beam.left;
                             const top = beam.top;
                             const glowColor = beam.glowColor;
-                            
+
                             return (
                               <div
                                 key={`bombard-beam-${barrage.key}-${i}`}
@@ -10887,8 +10976,8 @@ const SandboxPage = () => {
                   {hitEffect.type === 'barbarian_cleave_effect' && (() => {
                     const activeWeaponId = equippedWeapons['barbarian'] || 'woodcutters_axe';
                     const activeWeapon = WEAPONS_DB.axes.find(w => w.id === activeWeaponId) ||
-                                         WEAPONS_DB.swords.find(w => w.id === activeWeaponId) ||
-                                         WEAPONS_DB.axes[0];
+                      WEAPONS_DB.swords.find(w => w.id === activeWeaponId) ||
+                      WEAPONS_DB.axes[0];
                     const weaponIcon = activeWeapon.image;
 
                     const targetTileCol = hitEffect.col !== undefined ? hitEffect.col : targetPos.col;
@@ -10950,7 +11039,7 @@ const SandboxPage = () => {
                     const dist = Math.sqrt(dx * dx + dy * dy);
                     const stepX = dist > 0 ? dx / dist : 1;
                     const stepY = dist > 0 ? dy / dist : 0;
-                    
+
                     const leftOffset = (-dx * 100) + stepX * 50;
                     const topOffset = (-dy * 100) + stepY * 50;
 
@@ -10968,7 +11057,9 @@ const SandboxPage = () => {
                           zIndex: 5000,
                           display: 'flex',
                           alignItems: 'center',
-                          justifyContent: 'center'
+                          justifyContent: 'center',
+                          maskImage: 'radial-gradient(circle, black 50%, transparent 100%)',
+                          WebkitMaskImage: 'radial-gradient(circle, black 50%, transparent 100%)'
                         }}
                       >
                         <img
@@ -10990,7 +11081,7 @@ const SandboxPage = () => {
                     const dist = Math.sqrt(dx * dx + dy * dy);
                     const stepX = dist > 0 ? dx / dist : 1;
                     const stepY = dist > 0 ? dy / dist : 0;
-                    
+
                     const leftOffset = (-dx * 100) + stepX * 50;
                     const topOffset = (-dy * 100) + stepY * 50;
 
@@ -11204,7 +11295,6 @@ const SandboxPage = () => {
                     // Calculate divide (midpoint) offset relative to Target (like healing hands)
                     const leftOffset = (swingDx / 2) * -100;
                     const topOffset = (swingDy / 2) * -100;
-
                     return (
                       <div
                         style={{
@@ -11213,12 +11303,14 @@ const SandboxPage = () => {
                           top: `calc(50% + ${topOffset}px)`,
                           width: '56px',
                           height: '56px',
-                          transform: `translate(-50%, -50%) rotate(${baseAngle + 180}deg)`,
+                          transform: `translate(-50%, -50%) rotate(${baseAngle + 180}deg) rotate(-90deg) scaleX(-1)`,
                           pointerEvents: 'none',
                           zIndex: 5000,
                           display: 'flex',
                           alignItems: 'center',
-                          justifyContent: 'center'
+                          justifyContent: 'center',
+                          maskImage: 'radial-gradient(circle, black 50%, transparent 100%)',
+                          WebkitMaskImage: 'radial-gradient(circle, black 50%, transparent 100%)'
                         }}
                       >
                         <img
@@ -11340,7 +11432,7 @@ const SandboxPage = () => {
                             boxSizing: 'border-box'
                           }}
                         />
-                       ))}
+                      ))}
                     </div>
                   )}
                   {hitEffect.type === 'sleep_rings' && (
@@ -11446,7 +11538,7 @@ const SandboxPage = () => {
                     flexDirection: 'column',
                     animation: 'fadeIn 0.2s ease-out'
                   }}
-                  onClick={(e) => e.stopPropagation()}
+                    onClick={(e) => e.stopPropagation()}
                   >
                     {/* Modal Header */}
                     <div style={{
@@ -11720,8 +11812,8 @@ const SandboxPage = () => {
             {selectedUnitType === 'fighter' && (() => {
               const activeWeaponId = equippedWeapons[selectedFighterId] || 'shortsword_sword';
               const activeWeapon = WEAPONS_DB.swords.find(w => w.id === activeWeaponId) ||
-                                   WEAPONS_DB.axes.find(w => w.id === activeWeaponId) ||
-                                   WEAPONS_DB.swords[0];
+                WEAPONS_DB.axes.find(w => w.id === activeWeaponId) ||
+                WEAPONS_DB.swords[0];
               return (
                 <div
                   onClick={() => {
@@ -11876,28 +11968,28 @@ const SandboxPage = () => {
                         {renderAbilityButton(riftAbility)}
                       </div>
                     )}
-                    
+
                     {/* Tier 1 Group */}
                     <div>
                       <div style={{ fontSize: '11px', color: '#888', fontWeight: 'bold', textTransform: 'uppercase', marginBottom: '6px', marginTop: '6px', letterSpacing: '0.05em' }}>Tier 1 Summon Spells</div>
                       {tier1Abilities.map(renderAbilityButton)}
                     </div>
-                    
+
                     {/* Tier 2 Group */}
                     <div>
                       <div style={{ fontSize: '11px', color: '#888', fontWeight: 'bold', textTransform: 'uppercase', marginBottom: '6px', marginTop: '6px', letterSpacing: '0.05em' }}>Tier 2 Summon Spells</div>
                       {tier2Abilities.map(renderAbilityButton)}
                     </div>
-                    
+
                     {/* Tier 3 Group */}
                     <div>
-                      <div style={{ 
-                        fontSize: '11px', 
-                        color: riftPortalActive ? '#a855f7' : '#888', 
-                        fontWeight: 'bold', 
-                        textTransform: 'uppercase', 
-                        marginBottom: '6px', 
-                        marginTop: '6px', 
+                      <div style={{
+                        fontSize: '11px',
+                        color: riftPortalActive ? '#a855f7' : '#888',
+                        fontWeight: 'bold',
+                        textTransform: 'uppercase',
+                        marginBottom: '6px',
+                        marginTop: '6px',
                         letterSpacing: '0.05em',
                         display: 'flex',
                         alignItems: 'center',
@@ -11908,7 +12000,7 @@ const SandboxPage = () => {
                       </div>
                       {tier3Abilities.map(renderAbilityButton)}
                     </div>
-                    
+
                     {/* Utilities Group */}
                     {utilityAbilities.length > 0 && (
                       <div>
@@ -11923,15 +12015,15 @@ const SandboxPage = () => {
               selectedFighter.abilities.map(a => {
                 const isNotch = a.id === 'notch';
                 const isAstralSkill = a.id === 'monk_third_eye' || a.id === 'monk_astral_projection';
-                
+
                 const isReassemblySkill = a.id === 'reassembly';
                 const isReassemblyCooldown = isReassemblySkill && skeletonReassemblyCooldownEndTime && currentTime < skeletonReassemblyCooldownEndTime;
                 const isOtherSkillDisabledByDeath = !isReassemblySkill && selectedUnitType === 'monster' && selectedMonsterId === 'skeleton' && skeletonReassemblyActive;
-                const isDisabled = isAnimating || 
-                                   (isAstralSkill && !astralModeActive) || 
-                                   isReassemblyCooldown || 
-                                   isOtherSkillDisabledByDeath || 
-                                   (isReassemblySkill && skeletonReassemblyActive);
+                const isDisabled = isAnimating ||
+                  (isAstralSkill && !astralModeActive) ||
+                  isReassemblyCooldown ||
+                  isOtherSkillDisabledByDeath ||
+                  (isReassemblySkill && skeletonReassemblyActive);
                 return (
                   <div key={a.id} style={{ position: 'relative', width: '100%' }}>
                     {isNotch && submenuOpen && (
@@ -12056,7 +12148,7 @@ const SandboxPage = () => {
                             justifyContent: 'center',
                             zIndex: 2
                           }}>
-                            <svg 
+                            <svg
                               style={{
                                 position: 'absolute',
                                 top: 0,
@@ -12147,13 +12239,13 @@ const SandboxPage = () => {
               {Object.keys(runesData).map(runeName => {
                 const data = runesData[runeName];
                 const isSelected = selectedRune === runeName;
-                
+
                 return (
-                  <div 
-                    key={runeName} 
-                    style={{ 
-                      position: 'relative', 
-                      cursor: data.isComplete ? 'pointer' : 'not-allowed', 
+                  <div
+                    key={runeName}
+                    style={{
+                      position: 'relative',
+                      cursor: data.isComplete ? 'pointer' : 'not-allowed',
                       opacity: data.isComplete ? 1 : 0.4,
                       border: isSelected ? '2px solid white' : '2px solid transparent',
                       borderRadius: '4px',
@@ -12165,17 +12257,17 @@ const SandboxPage = () => {
                   >
                     <img src={data.baseImg} alt={runeName} style={{ width: '60px', height: '60px', objectFit: 'contain' }} />
                     {!data.isComplete && (
-                      <div style={{ 
-                        position: 'absolute', 
-                        top: 0, 
-                        left: 0, 
-                        width: '100%', 
-                        height: '100%', 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        justifyContent: 'center', 
-                        color: 'rgba(255, 0, 0, 0.8)', 
-                        fontSize: '60px', 
+                      <div style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'rgba(255, 0, 0, 0.8)',
+                        fontSize: '60px',
                         fontWeight: 'bold',
                         pointerEvents: 'none'
                       }}>
@@ -12187,7 +12279,7 @@ const SandboxPage = () => {
               })}
             </div>
 
-            <button 
+            <button
               onClick={() => setIsAssembled(!isAssembled)}
               style={{
                 padding: '10px 20px',
@@ -12215,10 +12307,10 @@ const SandboxPage = () => {
                   border: '1px solid #333',
                   position: 'relative'
                 }}>
-                  <img 
-                    src={activeData.assembledImg} 
-                    alt={`${selectedRune} Assembled`} 
-                    style={{ width: '100%', height: '100%', objectFit: 'contain' }} 
+                  <img
+                    src={activeData.assembledImg}
+                    alt={`${selectedRune} Assembled`}
+                    style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                   />
                 </div>
 
@@ -12229,9 +12321,9 @@ const SandboxPage = () => {
                   border: '1px solid #333',
                   position: 'relative'
                 }}>
-                  <AssemblyAnimation 
-                    pieces={activeData.pieces} 
-                    isAssembled={isAssembled} 
+                  <AssemblyAnimation
+                    pieces={activeData.pieces}
+                    isAssembled={isAssembled}
                     distance={40}
                   />
                 </div>

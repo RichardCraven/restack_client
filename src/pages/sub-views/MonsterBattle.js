@@ -741,7 +741,6 @@ class MonsterBattle extends React.Component {
         if (this.props.isSimulation) {
             this.ensureWizardSpells(clonedBattleData);
         }
-
         // Normalize battleData entries to ensure UI rendering doesn't get tripped
         // by missing fields (portrait, damageIndicators). This helps avoid
         // empty portrait placeholders if an upstream producer omitted the field.
@@ -1008,15 +1007,15 @@ class MonsterBattle extends React.Component {
             goldGained = Math.floor(Math.random() * experienceGained);
             // Defensive: log inventory/gold state before adding to help trace duplicate updates
             try { /* inventory snapshot suppressed */ } catch(e){}
-            // Food reward: 40% chance 5-15, 20% chance 20-30, 5% chance 40-60
+            // Food reward: 20% chance 5-15, 10% chance 20-30, 5% chance 40-60
             try {
                 const foodRoll = Math.random();
                 let foodRolled = 0;
                 if (foodRoll < 0.05) {
                     foodRolled = Math.floor(Math.random() * 21) + 40; // 40-60
-                } else if (foodRoll < 0.25) {
+                } else if (foodRoll < 0.15) {
                     foodRolled = Math.floor(Math.random() * 11) + 20; // 20-30
-                } else if (foodRoll < 0.65) {
+                } else if (foodRoll < 0.35) {
                     foodRolled = Math.floor(Math.random() * 11) + 5;  // 5-15
                 }
                 if (foodRolled > 0) {
@@ -2577,7 +2576,7 @@ class MonsterBattle extends React.Component {
                                     {liveSelectedFighter && (() => {
                                         const rawSpecials = [
                                             ...(liveSelectedFighter.specials || []),
-                                            ...((liveSelectedFighter.isMonster || liveSelectedFighter.isMinion) ? (liveSelectedFighter.attacks || []) : [])
+                                            ...(liveSelectedFighter.attacks || [])
                                         ];
                                         const seenKeys = new Set();
                                         const cm = this.props.combatManager;
@@ -2787,7 +2786,10 @@ class MonsterBattle extends React.Component {
                             <div className="interaction-tooltip">{this.state.hoveredSpecialTile}</div>
                             <div className="interaction-tile-container">
                                 {(() => {
-                                    const rawSpecials = this.state.selectedFighter?.specials || [];
+                                    const rawSpecials = [
+                                        ...(this.state.selectedFighter?.specials || []),
+                                        ...(this.state.selectedFighter?.attacks || [])
+                                    ];
                                     const seenSpecials = new Set();
                                     const uniqueSpecials = rawSpecials.filter((entry) => {
                                         const rawKey = typeof entry === 'string' ? entry : (entry?.key || entry?.name || '');

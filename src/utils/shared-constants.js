@@ -17,6 +17,10 @@ export const CRIT_THRESHOLD_DEFAULT = 80; // percent (r*100 > threshold means cr
 export const CRIT_THRESHOLD_INCREASED = 50; // used when increasedCritChance is present
 export const CRITICAL_DAMAGE_MULTIPLIER = 3; // damage multiplier on a critical hit
 
+// Respawn intervals in minutes
+export const MONSTER_RESPAWN_MINUTES = 10;
+export const ITEM_RESPAWN_MINUTES = 20;
+
 export const DURATION_ROUNDS = {
     'instant': 0,
     'short': 3,

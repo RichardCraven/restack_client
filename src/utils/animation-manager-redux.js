@@ -26,7 +26,8 @@ import {
   gore_horns,
   demon_mark,
   new_moon,
-  fear
+  fear,
+  soldier_fist_of_honor
 } from './images';
 
 export class AnimationManagerRedux {
@@ -82,7 +83,7 @@ export class AnimationManagerRedux {
    * @param {object} targetCoords  { x, y }
    * @param {string} abilityName   e.g. 'claw_strike', 'energy_drain'
    */
-   triggerAbility(sourceCoords, targetCoords, abilityName, isTargetLarge = false, targetOccupiedCoords = null, sourceUnitId = null, arrowType = null, customDuration = null) {
+   triggerAbility(sourceCoords, targetCoords, abilityName, isTargetLarge = false, targetOccupiedCoords = null, sourceUnitId = null, arrowType = null, customDuration = null, hitResults = null) {
     if (!sourceCoords || !targetCoords) return;
     const name = String(abilityName || '').toLowerCase().replace(/\s+/g, '_');
     this._currentTargetCoords = targetCoords;
@@ -150,7 +151,9 @@ export class AnimationManagerRedux {
         this._fireball(sourceCoords, targetCoords);
         break;
       case 'magic_missile':
-        this._magicMissile(sourceCoords, targetCoords);
+      case 'minor_magic_missile':
+      case 'major_magic_missile':
+        this._magicMissile(sourceCoords, targetCoords, hitResults);
         break;
       case 'lightning_strike':
       case 'lightning':
@@ -161,7 +164,7 @@ export class AnimationManagerRedux {
         this._iceBlast(sourceCoords, targetCoords);
         break;
       case 'acid_blast':
-        this._acidBlast(sourceCoords, targetCoords);
+        this._acidBlast(sourceCoords, targetCoords, hitResults);
         break;
       case 'sword_swing':
       case 'slash':
@@ -170,6 +173,9 @@ export class AnimationManagerRedux {
         break;
       case 'imbued_strike':
         this._imbuedStrike(sourceCoords, targetCoords);
+        break;
+      case 'fist_of_honor':
+        this._fistOfHonor(sourceCoords, targetCoords);
         break;
       case 'shield_slam':
       case 'shield_bash':
@@ -218,6 +224,9 @@ export class AnimationManagerRedux {
         break;
       case 'circle_of_protection':
         this._circleOfProtection(sourceCoords, targetCoords);
+        break;
+      case 'shadow_armor_dispel':
+        this._shadowArmorDispel(sourceCoords, isTargetLarge, targetOccupiedCoords);
         break;
       case 'heal':
       case 'healing_hymn':
@@ -403,15 +412,25 @@ export class AnimationManagerRedux {
     }, 980);
   }
 
-  _magicMissile(src, tgt) {
+  _magicMissile(src, tgt, hitResults = null) {
     const srcPx = this._px(src);
-    const tgtPx = this._getImpactTargetPx(tgt);
+    const occupiedCoords = this._currentTargetOccupiedCoords;
+    const hasComplex = Array.isArray(occupiedCoords) && occupiedCoords.length > 0;
 
-    const fireMissile = (delayTime, offsetY) => {
+    const fireMissile = (delayTime, offsetY, index) => {
       setTimeout(() => {
+        let currentTgtPx;
+        if (hasComplex && occupiedCoords) {
+          const randomIndex = Math.floor(Math.random() * occupiedCoords.length);
+          const randomTile = occupiedCoords[randomIndex];
+          currentTgtPx = this._px(randomTile, false, true);
+        } else {
+          currentTgtPx = this._getImpactTargetPx(tgt);
+        }
+
         const finalTgtPx = {
-          x: tgtPx.x,
-          y: tgtPx.y + offsetY
+          x: currentTgtPx.x,
+          y: currentTgtPx.y + offsetY
         };
         const dx = finalTgtPx.x - srcPx.x;
         const dy = finalTgtPx.y - srcPx.y;
@@ -424,20 +443,30 @@ export class AnimationManagerRedux {
           duration: 400,
         });
 
+        const isHit = Array.isArray(hitResults) ? hitResults[index] !== false : true;
+
         // Emit hit sigil at impact (400ms later)
         setTimeout(() => {
-          this._emit({
-            type: 'magic_missile_hit_sigil',
-            tgtPx: finalTgtPx,
-            duration: 350
-          });
+          if (isHit) {
+            this._emit({
+              type: 'magic_missile_hit_sigil',
+              tgtPx: finalTgtPx,
+              duration: 350
+            });
+          } else {
+            this._emit({
+              type: 'magic_missile_miss_dot',
+              tgtPx: finalTgtPx,
+              duration: 350
+            });
+          }
         }, 400);
       }, delayTime);
     };
 
-    fireMissile(0, -15);
-    fireMissile(200, 0);
-    fireMissile(400, 15);
+    fireMissile(0, -15, 0);
+    fireMissile(200, 0, 1);
+    fireMissile(400, 15, 2);
   }
 
   _lightning(src, tgt) {
@@ -476,7 +505,7 @@ export class AnimationManagerRedux {
     }, 600);
   }
 
-  _acidBlast(src, tgt) {
+  _acidBlast(src, tgt, hitResults = null) {
     const srcPx = this._px(src);
     const tgtPx = this._getImpactTargetPx(tgt);
     const dx = tgtPx.x - srcPx.x;
@@ -489,12 +518,21 @@ export class AnimationManagerRedux {
       angle,
       duration: 700,
     });
-    setTimeout(() => {
-      this._emit({ type: 'poison_burst', tgtPx, duration: 500 });
-    }, 600);
-    setTimeout(() => {
-      this._emit({ type: 'acid_secondary_ring', tgtPx, duration: 450 });
-    }, 690);
+
+    const isHit = Array.isArray(hitResults) ? hitResults[0] !== false : (hitResults !== false);
+
+    if (isHit) {
+      setTimeout(() => {
+        this._emit({ type: 'poison_burst', tgtPx, duration: 500 });
+      }, 600);
+      setTimeout(() => {
+        this._emit({ type: 'acid_secondary_ring', tgtPx, duration: 450 });
+      }, 690);
+    } else {
+      setTimeout(() => {
+        this._emit({ type: 'acid_blast_miss_dot', tgtPx, duration: 350 });
+      }, 600);
+    }
   }
 
   _swordSlash(src, tgt) {
@@ -524,6 +562,27 @@ export class AnimationManagerRedux {
       tgtPx,
       angle,
       duration: 600,
+    });
+  }
+
+  _fistOfHonor(src, tgt) {
+    const srcPx = this._px(src);
+    const tgtPx = this._px(tgt);
+    const dx = tgtPx.x - srcPx.x;
+    const dy = tgtPx.y - srcPx.y;
+    const leftOffset = (srcPx.x - tgtPx.x) / 2;
+    const topOffset = (srcPx.y - tgtPx.y) / 2;
+    const baseAngle = Math.atan2(dy, dx) * (180 / Math.PI);
+
+    this._emit({
+      type: 'fist_of_honor_effect',
+      srcPx,
+      tgtPx,
+      leftOffset,
+      topOffset,
+      baseAngle,
+      icon: soldier_fist_of_honor,
+      duration: 800,
     });
   }
 
@@ -623,6 +682,32 @@ export class AnimationManagerRedux {
     });
   }
 
+  _shadowArmorDispel(src, isLarge = false, occupiedCoords = null) {
+    let centerPx;
+    const tiles = Array.isArray(occupiedCoords) ? occupiedCoords : this._currentTargetOccupiedCoords;
+    const large = isLarge || this._isTargetLarge;
+
+    if (large && Array.isArray(tiles) && tiles.length > 0) {
+      const sum = tiles.reduce((acc, tile) => {
+        if (!tile || typeof tile.x !== 'number' || typeof tile.y !== 'number') return acc;
+        return { x: acc.x + tile.x, y: acc.y + tile.y, n: acc.n + 1 };
+      }, { x: 0, y: 0, n: 0 });
+      if (sum.n > 0) {
+        centerPx = this._px({ x: sum.x / sum.n, y: sum.y / sum.n }, false, true);
+      }
+    }
+
+    if (!centerPx) {
+      centerPx = this._px(src, large);
+    }
+
+    this._emit({
+      type: 'dragon_dispel_wave',
+      centerPx,
+      duration: 1500,
+    });
+  }
+
   _genericHit(src, tgt) {
     const tgtPx = this._px(tgt);
     this._emit({
@@ -669,18 +754,12 @@ export class AnimationManagerRedux {
 
     const srcPx = this._px(src);
     const tgtPx = this._px(targetCoords, false, true);
-    const dx = src.x - targetCoords.x;
-    const dy = src.y - targetCoords.y;
-    const dist = Math.sqrt(dx * dx + dy * dy);
-    const colStep = dist > 0 ? Math.round(dx / dist) : 0;
-    const rowStep = dist > 0 ? Math.round(dy / dist) : 0;
-    const swingDx = -colStep;
-    const swingDy = -rowStep;
-    const baseAngle = Math.atan2(swingDy, swingDx) * (180 / Math.PI);
-    const adjDist = Math.sqrt(swingDx * swingDx + swingDy * swingDy);
-    const halfDistPx = (adjDist * 100) / 2;
-    const leftOffset = (swingDx / 2) * -100;
-    const topOffset = (swingDy / 2) * -100;
+    const dx = tgtPx.x - srcPx.x;
+    const dy = tgtPx.y - srcPx.y;
+    const baseAngle = Math.atan2(dy, dx) * (180 / Math.PI);
+    const halfDistPx = Math.sqrt(dx * dx + dy * dy) / 2;
+    const leftOffset = (srcPx.x - tgtPx.x) / 2;
+    const topOffset = (srcPx.y - tgtPx.y) / 2;
 
     this._emit({
       type: 'barbarian_cleave_effect',
@@ -709,15 +788,8 @@ export class AnimationManagerRedux {
 
     const srcPx = this._px(src);
     const tgtPx = this._px(targetCoords);
-    const dx = src.x - targetCoords.x;
-    const dy = src.y - targetCoords.y;
-    const dist = Math.sqrt(dx * dx + dy * dy);
-    const colStep = dist > 0 ? Math.round(dx / dist) : 0;
-    const rowStep = dist > 0 ? Math.round(dy / dist) : 0;
-    const swingDx = -colStep;
-    const swingDy = -rowStep;
-    const leftOffset = (swingDx / 2) * -100;
-    const topOffset = (swingDy / 2) * -100;
+    const leftOffset = (srcPx.x - tgtPx.x) / 2;
+    const topOffset = (srcPx.y - tgtPx.y) / 2;
 
     const isForce = name.includes('force');
     const punchIcon = isForce ? monk_force_punch : monk_punch;

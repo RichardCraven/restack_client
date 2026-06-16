@@ -81,6 +81,8 @@ export function AnimationManager(){
     // - canvas: canvas-based animation (dynamic duration, rendered in overlay/canvas)
     this.animationsMatrix = {
         sword_swing: { duration: 600, animationType: 'canvas' },
+        fist_of_honor: { duration: 600, animationType: 'tile' },
+        imbued_strike: { duration: 600, animationType: 'tile' },
         spin_attack: { duration: 900, animationType: 'tile' },
         dragon_punch: { duration: 700, animationType: 'tile' },
         punch: { duration: 600, animationType: 'tile' },
@@ -1125,12 +1127,16 @@ export function AnimationManager(){
             case 'force_punch_flurry':
             case 'monk_force_punch_flurry':
             case 'astral_projection':
+            case 'fist_of_honor':
+            case 'imbued_strike':
             case 'monk_astral_projection': {
                 let iconKey = type;
                 if (type === 'sleep') iconKey = 'wizard_sleep';
                 else if (type === 'vortex') iconKey = 'wizard_vortex';
                 else if (type === 'acid_blast') iconKey = 'wizard_acid_blast';
                 else if (type === 'defensive_stance') iconKey = 'soldier_defensive_stance';
+                else if (type === 'fist_of_honor') iconKey = 'soldier_fist_of_honor';
+                else if (type === 'imbued_strike') iconKey = 'soldier_imbued_strike';
                 else if (type === 'claw_strike') iconKey = 'claw_strike_animation';
                 else if (type === 'leap_attack') iconKey = 'barbarian_leap_attack';
                 else if (type === 'disintegrate') iconKey = 'wizard_disintegrate';
@@ -1614,10 +1620,48 @@ export function AnimationManager(){
                 }, 400);
             }
         }
-        if (resolve) {
-            const tileCoords = targetTileId ? this.getTileCoordsById(targetTileId) : null;
-            const collision = tileCoords ? this.checkForCollision(tileCoords) : null;
-            resolve(collision);
+
+        const originCoords = this.getTileCoordsById(sourceTileId);
+        const targetCoords = this.getTileCoordsById(targetTileId);
+
+        if (originCoords && targetCoords) {
+            const animId = `sword_swing_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+            const duration = 600;
+            const canvasAnim = {
+                id: animId,
+                type: 'sword_swing',
+                origin: originCoords,
+                target: targetCoords,
+                facing: facing || 'right',
+                duration,
+                onComplete: () => {
+                    const idx = this.canvasAnimations.findIndex(a => a.id === animId);
+                    if (idx !== -1) {
+                        this.canvasAnimations.splice(idx, 1);
+                        this.update();
+                    }
+                    if (resolve) {
+                        const tileCoords = targetTileId ? this.getTileCoordsById(targetTileId) : null;
+                        const collision = tileCoords ? this.checkForCollision(tileCoords) : null;
+                        resolve(collision);
+                    }
+                }
+            };
+            this.canvasAnimations.push(canvasAnim);
+            this.update();
+            setTimeout(() => {
+                if (canvasAnim.onComplete) {
+                    const cb = canvasAnim.onComplete;
+                    canvasAnim.onComplete = null;
+                    cb();
+                }
+            }, duration);
+        } else {
+            if (resolve) {
+                const tileCoords = targetTileId ? this.getTileCoordsById(targetTileId) : null;
+                const collision = tileCoords ? this.checkForCollision(tileCoords) : null;
+                resolve(collision);
+            }
         }
     }
 

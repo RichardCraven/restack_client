@@ -75,7 +75,7 @@ export const activeShieldWalls = [];
  * Returns true if moving from `fromCoords` to `toCoords` would cross an
  * active shield wall line.
  */
-const crossesShieldWall = (fromCoords, toCoords) => {
+export const crossesShieldWall = (fromCoords, toCoords) => {
     if (!activeShieldWalls.length) return false;
     for (const wall of activeShieldWalls) {
         const { x: wallX, lanesAffected, isFacingRight } = wall;
@@ -245,12 +245,12 @@ const goTowards = (caller, combatants, targetTile, forwardFirst = false) => {
     const {N,E,S,W,NW,SW,NE,SE} = getSurroundings(caller.coordinates)
 
     // Wall-aware availability check: passes fromCoords and caller so large-mover two-tile check is evaluated
-    const canMoveTo = (coords) => isAvailableToMoveInto(coords, combatants, fromCoords, caller);
+    const canMoveTo = (coords, avoidLast = true) => {
+        if (!isAvailableToMoveInto(coords, combatants, fromCoords, caller)) return false;
+        if (avoidLast && caller.lastCoords && coords.x === caller.lastCoords.x && coords.y === caller.lastCoords.y) return false;
+        return true;
+    };
 
-    // overwriting
-    // let someoneIsInCoords = (coords)=>{
-    //     return Object.values(combatants).filter(c=>c.id!==caller.id).some(e=>JSON.stringify(e.coordinates) == JSON.stringify(coords))
-    // }
     const targetIsInCoords = (coords)=>{
         return JSON.stringify(targetTile) === JSON.stringify(coords);
     }
@@ -267,7 +267,7 @@ const goTowards = (caller, combatants, targetTile, forwardFirst = false) => {
     let newCoords = JSON.parse(JSON.stringify(caller.coordinates))
 
     if(targetIsNorthWest){ /////////////////////////////////////  NW
-        if(targetIsInCoords(NW) && !isTargetTileOccupied){
+        if(targetIsInCoords(NW) && !isTargetTileOccupied && canMoveTo(NW)){
             newCoords = NW;
         } else if(targetIsInCoords(NW)){
             if(canMoveTo(W)){
@@ -276,21 +276,31 @@ const goTowards = (caller, combatants, targetTile, forwardFirst = false) => {
                 newCoords = N;
             } else {
             }
-        } else if(someoneIsInCoords(NW, combatants)){
+        } else if(!canMoveTo(NW)){
             //go up or left
             if(canMoveTo(N)){
                 newCoords = N
             } else if(canMoveTo(W)){
                 newCoords = W
-            } else {
-                return
+            } else if(canMoveTo(SW)){
+                newCoords = SW
+            } else if(canMoveTo(S)){
+                newCoords = S
+            } else if(canMoveTo(NE)){
+                newCoords = NE
+            } else if(canMoveTo(E)){
+                newCoords = E
+            } else if(canMoveTo(N, false)){
+                newCoords = N
+            } else if(canMoveTo(W, false)){
+                newCoords = W
             }
         } else {
             // space available go NW
             newCoords = NW;
         }
     } else if(targetIsNorthEast){ /////////////////////// NE
-        if(targetIsInCoords(NE) && !isTargetTileOccupied){
+        if(targetIsInCoords(NE) && !isTargetTileOccupied && canMoveTo(NE)){
             newCoords = NE;
         } else if(targetIsInCoords(NE)){
             if(canMoveTo(E)){
@@ -299,7 +309,7 @@ const goTowards = (caller, combatants, targetTile, forwardFirst = false) => {
                 newCoords = N;
             } else {
             }
-        } else if(someoneIsInCoords(NE, combatants)){
+        } else if(!canMoveTo(NE)){
             //go up or right — when forwardFirst, prefer E (forward) over N (lane adjust)
             const first  = forwardFirst ? (canMoveTo(E) ? E : null) : (canMoveTo(N) ? N : null);
             const second = forwardFirst ? (canMoveTo(N) ? N : null) : (canMoveTo(E) ? E : null);
@@ -307,15 +317,25 @@ const goTowards = (caller, combatants, targetTile, forwardFirst = false) => {
                 newCoords = first
             } else if(second){
                 newCoords = second
-            } else {
-                return
+            } else if(canMoveTo(SE)){
+                newCoords = SE
+            } else if(canMoveTo(S)){
+                newCoords = S
+            } else if(canMoveTo(NW)){
+                newCoords = NW
+            } else if(canMoveTo(W)){
+                newCoords = W
+            } else if(canMoveTo(E, false)){
+                newCoords = E
+            } else if(canMoveTo(N, false)){
+                newCoords = N
             }
         } else {
             // space available go NE
             newCoords = NE;
         }
     } else if(targetIsSouthWest){ ////////////////////////////////////// SW
-        if(targetIsInCoords(SW) && !isTargetTileOccupied){
+        if(targetIsInCoords(SW) && !isTargetTileOccupied && canMoveTo(SW)){
             newCoords = SW;
         } else if(targetIsInCoords(SW)){
             if(canMoveTo(W)){
@@ -324,23 +344,33 @@ const goTowards = (caller, combatants, targetTile, forwardFirst = false) => {
                 newCoords = S;
             } else {
             }
-        } else if(someoneIsInCoords(SW, combatants)){
+        } else if(!canMoveTo(SW)){
             //go down or left
             if(canMoveTo(S)){
                 newCoords = S
             } else if(canMoveTo(W)){
                 newCoords = W
-            } else {
-                return
+            } else if(canMoveTo(NW)){
+                newCoords = NW
+            } else if(canMoveTo(N)){
+                newCoords = N
+            } else if(canMoveTo(SE)){
+                newCoords = SE
+            } else if(canMoveTo(E)){
+                newCoords = E
+            } else if(canMoveTo(S, false)){
+                newCoords = S
+            } else if(canMoveTo(W, false)){
+                newCoords = W
             }
         } else {
             // space available go SW
             newCoords = SW;
         }
     } else if(targetIsSouthEast){ //////////////////////// SE
-        if(targetIsInCoords(SE) && !isTargetTileOccupied){
+        if(targetIsInCoords(SE) && !isTargetTileOccupied && canMoveTo(SE)){
             newCoords = SE;
-        } else if(someoneIsInCoords(SE, combatants)){
+        } else if(!canMoveTo(SE)){
             //go down or right — when forwardFirst, prefer E (forward) over S (lane adjust)
             const first  = forwardFirst ? (canMoveTo(E) ? E : null) : (canMoveTo(S) ? S : null);
             const second = forwardFirst ? (canMoveTo(S) ? S : null) : (canMoveTo(E) ? E : null);
@@ -348,19 +378,29 @@ const goTowards = (caller, combatants, targetTile, forwardFirst = false) => {
                 newCoords = first
             } else if(second){
                 newCoords = second
-            } else {
-                return
+            } else if(canMoveTo(NE)){
+                newCoords = NE
+            } else if(canMoveTo(N)){
+                newCoords = N
+            } else if(canMoveTo(SW)){
+                newCoords = SW
+            } else if(canMoveTo(W)){
+                newCoords = W
+            } else if(canMoveTo(E, false)){
+                newCoords = E
+            } else if(canMoveTo(S, false)){
+                newCoords = S
             }
         } else {
             // space available go SE
             newCoords = SE;
         }
     } else if(targetIsNorth){ ////////// N
-        if(targetIsInCoords(N) && !isTargetTileOccupied){
+        if(targetIsInCoords(N) && !isTargetTileOccupied && canMoveTo(N)){
             newCoords = N;
         } else if(targetIsInCoords(N)){
             // do nothing (original code is empty here)
-        } else if(someoneIsInCoords(N, combatants)){
+        } else if(!canMoveTo(N)){
             //go NW or NE
             if(canMoveTo(NW)){
                 newCoords = NW
@@ -372,8 +412,20 @@ const goTowards = (caller, combatants, targetTile, forwardFirst = false) => {
                 const horiz = { x: caller.coordinates.x + horizDir, y: caller.coordinates.y };
                 if (canMoveTo(horiz)) {
                     newCoords = horiz;
-                } else {
-                    return
+                } else if(canMoveTo(W)) {
+                    newCoords = W;
+                } else if(canMoveTo(E)) {
+                    newCoords = E;
+                } else if(canMoveTo(SW)) {
+                    newCoords = SW;
+                } else if(canMoveTo(SE)) {
+                    newCoords = SE;
+                } else if(canMoveTo(S)) {
+                    newCoords = S;
+                } else if(canMoveTo(NW, false)){
+                    newCoords = NW
+                } else if(canMoveTo(NE, false)){
+                    newCoords = NE
                 }
             }
         } else {
@@ -381,11 +433,11 @@ const goTowards = (caller, combatants, targetTile, forwardFirst = false) => {
             newCoords = N;
         }
     } else if(targetIsSouth){ //////////// S
-        if(targetIsInCoords(S) && !isTargetTileOccupied){
+        if(targetIsInCoords(S) && !isTargetTileOccupied && canMoveTo(S)){
             newCoords = S;
         } else if(targetIsInCoords(S)){
             // do nothing (original code is empty here)
-        } else if(someoneIsInCoords(S, combatants)){
+        } else if(!canMoveTo(S)){
             //go SW or SE
             if(canMoveTo(SW)){
                 newCoords = SW
@@ -397,8 +449,20 @@ const goTowards = (caller, combatants, targetTile, forwardFirst = false) => {
                 const horiz = { x: caller.coordinates.x + horizDir, y: caller.coordinates.y };
                 if (canMoveTo(horiz)) {
                     newCoords = horiz;
-                } else {
-                    return
+                } else if(canMoveTo(W)) {
+                    newCoords = W;
+                } else if(canMoveTo(E)) {
+                    newCoords = E;
+                } else if(canMoveTo(NW)) {
+                    newCoords = NW;
+                } else if(canMoveTo(NE)) {
+                    newCoords = NE;
+                } else if(canMoveTo(N)) {
+                    newCoords = N;
+                } else if(canMoveTo(SW, false)){
+                    newCoords = SW
+                } else if(canMoveTo(SE, false)){
+                    newCoords = SE
                 }
             }
         } else {
@@ -406,11 +470,11 @@ const goTowards = (caller, combatants, targetTile, forwardFirst = false) => {
             newCoords = S;
         }
     } else if(targetIsEast){ ///////////  E
-        if(targetIsInCoords(E) && !isTargetTileOccupied){
+        if(targetIsInCoords(E) && !isTargetTileOccupied && canMoveTo(E)){
             newCoords = E;
         } else if(targetIsInCoords(E)){
             // Target is directly East and occupied — already adjacent, don't move
-        } else if(someoneIsInCoords(E, combatants)){
+        } else if(!canMoveTo(E)){
             //go NE or SE; for large movers fall back to pure N/S lane shift
             if(canMoveTo(NE)){
                 newCoords = NE
@@ -420,19 +484,27 @@ const goTowards = (caller, combatants, targetTile, forwardFirst = false) => {
                 newCoords = N
             } else if(canMoveTo(S)){
                 newCoords = S
-            } else {
-                return
+            } else if(canMoveTo(NW)){
+                newCoords = NW
+            } else if(canMoveTo(SW)){
+                newCoords = SW
+            } else if(canMoveTo(W)){
+                newCoords = W
+            } else if(canMoveTo(NE, false)){
+                newCoords = NE
+            } else if(canMoveTo(SE, false)){
+                newCoords = SE
             }
         } else {
             // space available go East
             newCoords = E;
         }
     } else if(targetIsWest){
-        if(targetIsInCoords(W) && !isTargetTileOccupied){
+        if(targetIsInCoords(W) && !isTargetTileOccupied && canMoveTo(W)){
             newCoords = W;
         } else if(targetIsInCoords(W)){
             // Target is directly West and occupied — already adjacent, don't move
-        } else if(someoneIsInCoords(W, combatants)){
+        } else if(!canMoveTo(W)){
             //go NW or SW; for large movers fall back to pure N/S lane shift
             if(canMoveTo(NW)){
                 newCoords = NW
@@ -442,8 +514,16 @@ const goTowards = (caller, combatants, targetTile, forwardFirst = false) => {
                 newCoords = N
             } else if(canMoveTo(S)){
                 newCoords = S
-            } else {
-                return
+            } else if(canMoveTo(NE)){
+                newCoords = NE
+            } else if(canMoveTo(SE)){
+                newCoords = SE
+            } else if(canMoveTo(E)){
+                newCoords = E
+            } else if(canMoveTo(NW, false)){
+                newCoords = NW
+            } else if(canMoveTo(SW, false)){
+                newCoords = SW
             }
         } else {
             // space available go West
@@ -461,7 +541,10 @@ const goTowards = (caller, combatants, targetTile, forwardFirst = false) => {
     if (isLargeMover(caller) && !isAvailableToMoveInto(newCoords, combatants, fromCoords, caller)) return;
     // Final shield-wall guard: even after clamping, block the move if it crosses a wall
     if (!crossesShieldWall(fromCoords, newCoords)) {
-        caller.coordinates = newCoords;
+        if (caller.coordinates.x !== newCoords.x || caller.coordinates.y !== newCoords.y) {
+            caller.lastCoords = { x: caller.coordinates.x, y: caller.coordinates.y };
+            caller.coordinates = newCoords;
+        }
     }
 }
 
@@ -659,6 +742,7 @@ export const MovementMethods = {
     },
     moveTowardsCloseEnemyTarget: (caller, combatants) => {
         const enemyTarget = Object.values(combatants).find(e=>e.id === caller.targetId)
+        if (!enemyTarget) return;
         // const distanceToTarget = Methods.getDistanceToTarget(caller, enemyTarget),
         // laneDiff = Methods.getLaneDifferenceToTarget(caller, enemyTarget)
         let targetTile = {x: enemyTarget.coordinates.x, y: enemyTarget.coordinates.y}
@@ -669,7 +753,10 @@ export const MovementMethods = {
         if(targetTile.x < coords.x) newCoords.x = coords.x-1
         if(targetTile.y > coords.y) newCoords.y = coords.y+1
         if(targetTile.y < coords.y) newCoords.y = coords.y-1
-        caller.coordinates = newCoords;
+        
+        if (!crossesShieldWall(coords, newCoords)) {
+            caller.coordinates = newCoords;
+        }
 
         // if(laneDiff === 1 || laneDiff === -1){
         //     if(distanceToTarget === 0){

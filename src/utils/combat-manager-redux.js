@@ -1,7 +1,7 @@
 import { createFighter } from './factories';
 import attacksMatrix from './attacks-matrix';
 import specialsMatrix from './specials-matrix';
-import { activeShieldWalls } from './shared-ai-methods/movement-methods';
+import { activeShieldWalls, crossesShieldWall } from './shared-ai-methods/movement-methods';
 import { INTERVALS, getDurationRounds } from './shared-constants';
 import * as images from './images';
 import { getMeta, storeMeta, applyResolvePenalty } from './session-handler';
@@ -16,7 +16,7 @@ const clone = (val) => {
 };
 
 const formatCombatText = (value) => String(value || '')
-    .replaceAll('_', ' ')
+    .replace(/_/g, ' ')
     .trim()
     .split(' ')
     .filter(Boolean)
@@ -120,6 +120,35 @@ export function CombatManagerRedux() {
     const getRoundDurationMs = () => this.roundDurationMs || (this.gameSpeed === 'fast' ? 1000 : 2000);
     const getDurationMsFromRounds = (rounds) => Math.max(0, (rounds || 0) * getRoundDurationMs());
 
+    const getUnitStaggerDelay = (unit) => {
+        if (!unit) return 0;
+        const activeUnits = Object.values(this.combatants).filter(c => c && !c.dead && !c.isVCT && !c.skipAI && typeof c.inTrial !== 'number');
+        activeUnits.sort((a, b) => {
+            const speedA = a.stats.speed || a.stats.dex || 1;
+            const speedB = b.stats.speed || b.stats.dex || 1;
+            return speedB - speedA;
+        });
+        const index = activeUnits.findIndex(c => c.id === unit.id);
+        return Math.max(0, index) * 220;
+    };
+
+    const getTimeUntilNextTurn = (unit) => {
+        const roundDurationMs = getRoundDurationMs();
+        const elapsed = this.roundTimeElapsedMs || 0;
+        const stagger = getUnitStaggerDelay(unit);
+        if (stagger > elapsed) {
+            return stagger - elapsed;
+        } else {
+            return (roundDurationMs - elapsed) + stagger;
+        }
+    };
+
+    const getStatusDurationMs = (unit, rounds) => {
+        const timeUntilNextTurn = getTimeUntilNextTurn(unit);
+        const roundDurationMs = getRoundDurationMs();
+        return timeUntilNextTurn + Math.max(0, rounds - 1) * roundDurationMs;
+    };
+
     this.ACTION_ENDURANCE_COST = 2;
     this.MOVE_ENDURANCE_COST = 2;
 
@@ -136,20 +165,21 @@ export function CombatManagerRedux() {
         if (unit.endurance > 0) return;
 
         const longDuration = getDurationRounds('long');
-        const longDurationMs = getDurationMsFromRounds(longDuration);
         const now = Date.now();
         unit.exhausted = true;
         unit.asleep = true;
         unit.sleepRounds = Math.max(unit.sleepRounds || 0, longDuration);
         unit.sleepTotalRounds = Math.max(unit.sleepTotalRounds || 0, longDuration);
-        unit.sleepTotalDurationMs = Math.max(unit.sleepTotalDurationMs || 0, longDurationMs);
-        unit.sleepEndTimeMs = unit.sleepEndTimeMs && unit.sleepEndTimeMs > now ? unit.sleepEndTimeMs + longDurationMs : now + longDurationMs;
+        const sleepDurMs = getStatusDurationMs(unit, unit.sleepRounds);
+        unit.sleepTotalDurationMs = sleepDurMs;
+        unit.sleepEndTimeMs = now + sleepDurMs;
         unit.stunned = true;
         unit.stunnedRounds = Math.max(unit.stunnedRounds || 0, longDuration);
         unit.stunnedTotalRounds = Math.max(unit.stunnedTotalRounds || 0, longDuration);
         unit.stunnedStackDuration = longDuration;
-        unit.stunnedTotalDurationMs = Math.max(unit.stunnedTotalDurationMs || 0, longDurationMs);
-        unit.stunnedEndTimeMs = unit.stunnedEndTimeMs && unit.stunnedEndTimeMs > now ? unit.stunnedEndTimeMs + longDurationMs : now + longDurationMs;
+        const stunDurMs = getStatusDurationMs(unit, unit.stunnedRounds);
+        unit.stunnedTotalDurationMs = stunDurMs;
+        unit.stunnedEndTimeMs = now + stunDurMs;
         if (unit.enduranceFrozenRounds <= 0) unit.enduranceFrozenRounds = longDuration;
         this.appendCombatLog(`${this.getCombatantLogName(unit)} is exhausted and collapses into sleep.`);
     };
@@ -756,6 +786,12 @@ export function CombatManagerRedux() {
     this.canFitAt = (unit, x, y) => {
         if (!unit) return false;
         if (x < 0 || x > MAX_DEPTH || y < 0 || y >= MAX_LANES) return false;
+
+        // Block moves that cross an active shield wall
+        if (unit.coordinates && (unit.isMonster || unit.isMinion) && crossesShieldWall(unit.coordinates, { x, y })) {
+            return false;
+        }
+
         if (this.isTileOccupied(x, y, unit.id)) return false;
 
         const isHuge = (
@@ -791,6 +827,7 @@ export function CombatManagerRedux() {
             ];
             for (let coord of extraCoords) {
                 if (coord.x < 0 || coord.x > MAX_DEPTH || coord.y < 0 || coord.y >= MAX_LANES) return false;
+                if (unit.coordinates && (unit.isMonster || unit.isMinion) && crossesShieldWall(unit.coordinates, coord)) return false;
                 if (this.isTileOccupied(coord.x, coord.y, unit.id)) return false;
             }
         } else if (isLarge) {
@@ -802,6 +839,7 @@ export function CombatManagerRedux() {
             ];
             for (let coord of extraCoords) {
                 if (coord.x < 0 || coord.x > MAX_DEPTH || coord.y < 0 || coord.y >= MAX_LANES) return false;
+                if (unit.coordinates && (unit.isMonster || unit.isMinion) && crossesShieldWall(unit.coordinates, coord)) return false;
                 if (this.isTileOccupied(coord.x, coord.y, unit.id)) return false;
             }
         }
@@ -817,6 +855,11 @@ export function CombatManagerRedux() {
         const oy = unit.coordinates.y;
         unit.coordinates.x = nx;
         unit.coordinates.y = ny;
+        if (nx !== ox) {
+            unit.facing = nx > ox ? 'right' : 'left';
+        } else if (ny !== oy) {
+            unit.facing = ny > oy ? 'down' : 'up';
+        }
         this._setCombatantOccupiedCoords(unit, this.combatants);
         this.syncVCTs();
 
@@ -860,7 +903,7 @@ export function CombatManagerRedux() {
         return (Math.random() * 100) >= missChance;
     };
 
-    this.damageCheck = (caller, target, rawDamage) => {
+    this.damageCheck = (caller, target, rawDamage, isMagical = false) => {
         if (!target || typeof rawDamage !== 'number' || rawDamage <= 0) return rawDamage || 0;
 
         // STR-based flat damage reduction: 1 point reduced per 2 STR
@@ -902,6 +945,16 @@ export function CombatManagerRedux() {
         if (totalArmor > 0) {
             const reduction = Math.min(totalArmor / 2.5, 75); // max 75% reduction
             finalDamage = Math.max(1, Math.round(damage * (1 - reduction / 100)));
+        }
+
+        // --- SHADOW ARMOR (Passive) ---
+        // Provides 15% damage reduction from physical attacks.
+        if (target.type === 'wraith' && !isMagical) {
+            const hasShadowArmor = target.specials && target.specials.some(s => s && (s === 'shadow_armor' || s.id === 'shadow_armor' || s.key === 'shadow_armor'));
+            if (hasShadowArmor) {
+                // Reduce by 15%
+                finalDamage = Math.max(1, Math.round(finalDamage * 0.85));
+            }
         }
 
         // Morale Damage Modifier (applied if caller is a crew member)
@@ -1224,7 +1277,13 @@ export function CombatManagerRedux() {
             });
         }
         const targetTileId = this.animationManager.getTileIdByCoords(targetCoords);
-        const facing = targetCoords.x >= unit.coordinates.x ? 'right' : 'left';
+        
+        let facing;
+        if (targetCoords.x === unit.coordinates.x) {
+            facing = targetCoords.y > unit.coordinates.y ? 'down' : 'up';
+        } else {
+            facing = targetCoords.x > unit.coordinates.x ? 'right' : 'left';
+        }
 
         let rawName = '';
         if (ability) {
@@ -1330,7 +1389,15 @@ export function CombatManagerRedux() {
     // ── Round Turn Processing ─────────────────────────────────────────────────
     // Stagger AI turns by initiative (speed/dexterity); tick down buff durations.
     this.processRoundTurns = () => {
+        console.log(`[DEBUG][CombatManagerRedux] processRoundTurns called for round ${this.round}. combatants keys:`, Object.keys(this.combatants));
+        Object.values(this.combatants).forEach(c => {
+            if (c) {
+                console.log(`[DEBUG][CombatManagerRedux] Combatant details - ID: ${c.id}, Name: ${c.name}, Type: ${c.type}, Dead: ${c.dead}, isVCT: ${c.isVCT}, skipAI: ${c.skipAI}, inTrial: ${c.inTrial}, Specials:`, c.specials);
+            }
+        });
+
         const activeUnits = Object.values(this.combatants).filter(c => c && !c.dead && !c.isVCT && !c.skipAI && typeof c.inTrial !== 'number');
+        console.log('[DEBUG][CombatManagerRedux] activeUnits sorted keys:', activeUnits.map(u => u.id));
 
         // Sort by speed/dexterity descending (higher dex acts first)
         activeUnits.sort((a, b) => {
@@ -1341,6 +1408,7 @@ export function CombatManagerRedux() {
 
         activeUnits.forEach((unit, index) => {
             setTimeout(() => {
+                console.log(`[DEBUG][CombatManagerRedux] setTimeout callback fired for unit: ${unit.id} (${unit.type}), dead: ${unit.dead}`);
                 try {
                     if (this.combatPaused || this.combatOver || unit.dead) {
                         this.appendCombatLog(`DEBUG: Skip turn for ${unit.name} - paused: ${this.combatPaused}, over: ${this.combatOver}, dead: ${unit.dead}`);
@@ -1350,6 +1418,39 @@ export function CombatManagerRedux() {
                     // Tick down active buff/debuff durations
                     this._tickUnitBuffs(unit);
                     this._tickUnitDebuffs(unit);
+
+                    // --- SHADOW ARMOR DISPEL CHECK ---
+                    if (unit.type === 'wraith' && unit.specials && unit.specials.some(s => s && (s === 'shadow_armor' || s.id === 'shadow_armor' || s.key === 'shadow_armor'))) {
+                        const roll = Math.random();
+                        const rollSuccess = roll <= 0.35;
+                        const hadDebuffs = (unit.activeDebuffs && unit.activeDebuffs.length > 0) || unit.poisoned || unit.bleed || unit.frozen || unit.stunned || unit.feared || unit.asleep || unit.ensnared || unit.marked;
+                        console.log(`[DEBUG][Wraith] Dispel check: Wraith ${unit.id} rolled ${roll.toFixed(3)} (needs <= 0.35: ${rollSuccess ? 'SUCCESS' : 'FAILED'}). Had debuffs to dispel: ${hadDebuffs ? 'YES' : 'NO'}`);
+                        if (rollSuccess) {
+                            if (hadDebuffs) {
+                                if (this.animManagerRedux && typeof this.animManagerRedux.triggerAbility === 'function') {
+                                    const isLarge = !!(
+                                        (typeof unit.large === 'boolean' && unit.large === true)
+                                        || (unit.isMonster && unit.isMinion !== true)
+                                        || (Array.isArray(unit.occupiedCoords) && unit.occupiedCoords.length > 1)
+                                    );
+                                    this.animManagerRedux.triggerAbility(unit.coordinates, unit.coordinates, 'shadow_armor_dispel', isLarge, unit.occupiedCoords, unit.id);
+                                }
+                                
+                                unit.activeDebuffs = [];
+                                unit.poisoned = false; unit.poisonRounds = 0; unit.poisonTotalRounds = 0; unit.poisonStackDuration = 0; unit.poisonTotalDurationMs = 0; unit.poisonEndTimeMs = 0;
+                                unit.bleed = false; unit.bleedRounds = 0; unit.bleedTotalRounds = 0; unit.bleedStackDuration = 0; unit.bleedTotalDurationMs = 0; unit.bleedEndTimeMs = 0;
+                                unit.frozen = false; unit.frozenRounds = 0; unit.frozenTotalRounds = 0; unit.frozenStackDuration = 0; unit.frozenTotalDurationMs = 0; unit.frozenEndTimeMs = 0;
+                                unit.stunned = false; unit.stunnedRounds = 0; unit.stunnedTotalRounds = 0; unit.stunnedStackDuration = 0; unit.stunnedTotalDurationMs = 0; unit.stunnedEndTimeMs = 0;
+                                unit.feared = false; unit.fearRounds = 0; unit.fearTotalRounds = 0; unit.fearStackDuration = 0; unit.fearTotalDurationMs = 0; unit.fearEndTimeMs = 0;
+                                unit.asleep = false; unit.sleepRounds = 0; unit.sleepTotalRounds = 0; unit.sleepTotalDurationMs = 0; unit.sleepEndTimeMs = 0;
+                                unit.ensnared = false; unit.ensnaredRounds = 0; unit.ensnaredTotalRounds = 0; unit.ensnaredStackDuration = 0; unit.ensnaredTotalDurationMs = 0; unit.ensnaredEndTimeMs = 0;
+                                unit.marked = false; unit.markedRounds = 0; unit.markedTotalRounds = 0; unit.markedStackDuration = 0; unit.markedTotalDurationMs = 0; unit.markedEndTimeMs = 0;
+                                
+                                this.appendCombatLog(`${this.getCombatantLogName(unit)}'s Shadow Armor dispelled all debuffs!`);
+                                if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+                            }
+                        }
+                    }
 
                     // Incapacitation check
                     if (unit.frozen || (unit.stunned && !unit.feared) || unit.petrified || unit.isBones) {
@@ -1626,15 +1727,16 @@ export function CombatManagerRedux() {
 
     this._applyBuff = (unit, buffDef, name, durationRounds) => {
         if (!unit.activeBuffs) unit.activeBuffs = [];
-        const durationMs = durationRounds * (this.roundDurationMs || (this.gameSpeed === 'fast' ? 1000 : 2000));
+        const durationMs = getStatusDurationMs(unit, durationRounds);
         const now = Date.now();
         const existing = unit.activeBuffs.find(b => b.name === name);
         if (existing) {
             existing.roundsLeft += durationRounds;
             existing.totalRounds = (existing.totalRounds || existing.roundsLeft) + durationRounds;
             existing.singleDurationRounds = durationRounds;
-            existing.totalDurationMs = (existing.totalDurationMs || 0) + durationMs;
-            existing.endTimeMs = existing.endTimeMs && existing.endTimeMs > now ? existing.endTimeMs + durationMs : now + durationMs;
+            const newDurationMs = getStatusDurationMs(unit, existing.roundsLeft);
+            existing.totalDurationMs = newDurationMs;
+            existing.endTimeMs = now + newDurationMs;
             return;
         }
 
@@ -1682,7 +1784,7 @@ export function CombatManagerRedux() {
 
     this._applyDebuff = (unit, nerfDef, name, durationRounds) => {
         if (!unit.activeDebuffs) unit.activeDebuffs = [];
-        const durationMs = durationRounds * (this.roundDurationMs || (this.gameSpeed === 'fast' ? 1000 : 2000));
+        const durationMs = getStatusDurationMs(unit, durationRounds);
         const now = Date.now();
         const existing = unit.activeDebuffs.find(d => d.name === name);
         if (existing) {
@@ -1692,8 +1794,9 @@ export function CombatManagerRedux() {
                 existing.roundsLeft += durationRounds;
                 existing.totalRounds = (existing.totalRounds || existing.roundsLeft) + durationRounds;
                 existing.singleDurationRounds = durationRounds;
-                existing.totalDurationMs = (existing.totalDurationMs || 0) + durationMs;
-                existing.endTimeMs = existing.endTimeMs && existing.endTimeMs > now ? existing.endTimeMs + durationMs : now + durationMs;
+                const newDurationMs = getStatusDurationMs(unit, existing.roundsLeft);
+                existing.totalDurationMs = newDurationMs;
+                existing.endTimeMs = now + newDurationMs;
             }
             return;
         }
@@ -2433,18 +2536,10 @@ export function CombatManagerRedux() {
         if (this.round > 1 && this._abilityReady(unit, 'circle_of_protection')) {
             const pick = this.resolveSpecial(unit, 'circle_of_protection');
             if (pick) {
-                // Determine best repositioning space to reach maximum allies
-                const candidates = [
-                    { x: unit.coordinates.x, y: unit.coordinates.y },
-                    { x: unit.coordinates.x + 1, y: unit.coordinates.y },
-                    { x: unit.coordinates.x - 1, y: unit.coordinates.y },
-                    { x: unit.coordinates.x, y: unit.coordinates.y + 1 },
-                    { x: unit.coordinates.x, y: unit.coordinates.y - 1 }
-                ];
-
                 const getScore = (nx, ny) => {
                     let score = 0;
                     Object.values(this.combatants).forEach(c => {
+                        if (!c || c.dead || c.isVCT) return;
                         const sameTeam = (!!unit.isMonster === !!c.isMonster);
                         if (!sameTeam) return;
 
@@ -2461,29 +2556,126 @@ export function CombatManagerRedux() {
                     return score;
                 };
 
-                let bestTile = { x: unit.coordinates.x, y: unit.coordinates.y };
-                let maxScore = getScore(bestTile.x, bestTile.y);
+                const countOtherAlliesCovered = (nx, ny) => {
+                    let count = 0;
+                    Object.values(this.combatants).forEach(c => {
+                        if (!c || c.dead || c.isVCT || c.id === unit.id) return;
+                        const sameTeam = (!!unit.isMonster === !!c.isMonster);
+                        if (!sameTeam) return;
 
-                if (!unit.ensnared && !unit.shieldWallActive && unit.movesTakenThisRound < 1) {
-                    candidates.forEach(cand => {
-                        if (cand.x < 0 || cand.x > MAX_DEPTH || cand.y < 0 || cand.y >= MAX_LANES) return;
-                        if (cand.x !== unit.coordinates.x || cand.y !== unit.coordinates.y) {
-                            if (!this.canFitAt(unit, cand.x, cand.y)) return;
-                        }
-                        const score = getScore(cand.x, cand.y);
-                        if (score > maxScore) {
-                            maxScore = score;
-                            bestTile = cand;
+                        const dx = c.coordinates.x - nx;
+                        const dy = c.coordinates.y - ny;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist <= 2.25) {
+                            count++;
                         }
                     });
+                    return count;
+                };
+
+                let bestTile = { x: unit.coordinates.x, y: unit.coordinates.y };
+                let maxScore = getScore(bestTile.x, bestTile.y);
+                let shouldCastThisRound = true;
+
+                if (!unit.ensnared && !unit.shieldWallActive && unit.movesTakenThisRound < 1) {
+                    let idealTile = null;
+                    let maxIdealScore = -1;
+
+                    for (let tx = 0; tx <= MAX_DEPTH; tx++) {
+                        for (let ty = 0; ty < MAX_LANES; ty++) {
+                            if (tx !== unit.coordinates.x || ty !== unit.coordinates.y) {
+                                if (!this.canFitAt(unit, tx, ty)) continue;
+                            }
+                            const dist = Math.abs(tx - unit.coordinates.x) + Math.abs(ty - unit.coordinates.y);
+                            if (dist > 3) continue;
+
+                            if (countOtherAlliesCovered(tx, ty) >= 2) {
+                                const score = getScore(tx, ty);
+                                if (score > maxIdealScore) {
+                                    maxIdealScore = score;
+                                    idealTile = { x: tx, y: ty };
+                                } else if (score === maxIdealScore) {
+                                    const currentIdealDist = Math.abs(idealTile.x - unit.coordinates.x) + Math.abs(idealTile.y - unit.coordinates.y);
+                                    if (dist < currentIdealDist) {
+                                        idealTile = { x: tx, y: ty };
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if (idealTile) {
+                        if (idealTile.x === unit.coordinates.x && idealTile.y === unit.coordinates.y) {
+                            shouldCastThisRound = true;
+                        } else {
+                            const candidates = [
+                                { x: unit.coordinates.x + 1, y: unit.coordinates.y },
+                                { x: unit.coordinates.x - 1, y: unit.coordinates.y },
+                                { x: unit.coordinates.x, y: unit.coordinates.y + 1 },
+                                { x: unit.coordinates.x, y: unit.coordinates.y - 1 }
+                            ];
+
+                            let bestStep = null;
+                            let minStepDist = Infinity;
+
+                            candidates.forEach(cand => {
+                                if (cand.x < 0 || cand.x > MAX_DEPTH || cand.y < 0 || cand.y >= MAX_LANES) return;
+                                if (!this.canFitAt(unit, cand.x, cand.y)) return;
+
+                                const dist = Math.abs(cand.x - idealTile.x) + Math.abs(cand.y - idealTile.y);
+                                if (dist < minStepDist) {
+                                    minStepDist = dist;
+                                    bestStep = cand;
+                                }
+                            });
+
+                            if (bestStep) {
+                                bestTile = bestStep;
+                                shouldCastThisRound = false;
+                            } else {
+                                shouldCastThisRound = true;
+                            }
+                        }
+                    } else {
+                        let targetTile = { x: unit.coordinates.x, y: unit.coordinates.y };
+                        let maxTargetScore = maxScore;
+
+                        const candidates = [
+                            { x: unit.coordinates.x + 1, y: unit.coordinates.y },
+                            { x: unit.coordinates.x - 1, y: unit.coordinates.y },
+                            { x: unit.coordinates.x, y: unit.coordinates.y + 1 },
+                            { x: unit.coordinates.x, y: unit.coordinates.y - 1 }
+                        ];
+
+                        candidates.forEach(cand => {
+                            if (cand.x < 0 || cand.x > MAX_DEPTH || cand.y < 0 || cand.y >= MAX_LANES) return;
+                            if (!this.canFitAt(unit, cand.x, cand.y)) return;
+                            const score = getScore(cand.x, cand.y);
+                            if (score > maxTargetScore) {
+                                maxTargetScore = score;
+                                targetTile = cand;
+                            }
+                        });
+
+                        bestTile = targetTile;
+                        shouldCastThisRound = true;
+                    }
                 }
 
-                // Perform repositioning if a better tile was chosen
                 if (bestTile.x !== unit.coordinates.x || bestTile.y !== unit.coordinates.y) {
                     this.updateUnitCoordinates(unit, bestTile.x, bestTile.y);
                     unit.movesTakenThisRound += 1;
                     this.applyEnduranceCost(unit, this.MOVE_ENDURANCE_COST, 'move');
-                    this.appendCombatLog(`${this.getCombatantLogName(unit)} repositions to optimize Circle of Protection.`);
+                    if (shouldCastThisRound) {
+                        this.appendCombatLog(`${this.getCombatantLogName(unit)} repositions to optimize Circle of Protection.`);
+                    } else {
+                        this.appendCombatLog(`${this.getCombatantLogName(unit)} moves towards ideal Circle of Protection location.`);
+                    }
+                }
+
+                if (!shouldCastThisRound) {
+                    if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+                    return;
                 }
 
                 const dur = getDurationRounds(pick.duration || 'long');
@@ -2511,17 +2703,10 @@ export function CombatManagerRedux() {
         if (this.round > 1 && this._abilityReady(unit, 'circle_of_deflection')) {
             const pick = this.resolveSpecial(unit, 'circle_of_deflection');
             if (pick) {
-                // Reposition to cover max allies (same scoring as COP)
-                const candidates = [
-                    { x: unit.coordinates.x, y: unit.coordinates.y },
-                    { x: unit.coordinates.x + 1, y: unit.coordinates.y },
-                    { x: unit.coordinates.x - 1, y: unit.coordinates.y },
-                    { x: unit.coordinates.x, y: unit.coordinates.y + 1 },
-                    { x: unit.coordinates.x, y: unit.coordinates.y - 1 }
-                ];
                 const getScore = (nx, ny) => {
                     let score = 0;
                     Object.values(this.combatants).forEach(c => {
+                        if (!c || c.dead || c.isVCT) return;
                         const sameTeam = (!!unit.isMonster === !!c.isMonster);
                         if (!sameTeam) return;
                         const dx = c.coordinates.x - nx;
@@ -2532,23 +2717,126 @@ export function CombatManagerRedux() {
                     });
                     return score;
                 };
+
+                const countOtherAlliesCovered = (nx, ny) => {
+                    let count = 0;
+                    Object.values(this.combatants).forEach(c => {
+                        if (!c || c.dead || c.isVCT || c.id === unit.id) return;
+                        const sameTeam = (!!unit.isMonster === !!c.isMonster);
+                        if (!sameTeam) return;
+                        const dx = c.coordinates.x - nx;
+                        const dy = c.coordinates.y - ny;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist <= 2.25) {
+                            count++;
+                        }
+                    });
+                    return count;
+                };
+
                 let bestTile = { x: unit.coordinates.x, y: unit.coordinates.y };
                 let maxScore = getScore(bestTile.x, bestTile.y);
+                let shouldCastThisRound = true;
+
                 if (!unit.ensnared && !unit.shieldWallActive && unit.movesTakenThisRound < 1) {
-                    candidates.forEach(cand => {
-                        if (cand.x < 0 || cand.x > MAX_DEPTH || cand.y < 0 || cand.y >= MAX_LANES) return;
-                        if (cand.x !== unit.coordinates.x || cand.y !== unit.coordinates.y) {
-                            if (!this.canFitAt(unit, cand.x, cand.y)) return;
+                    let idealTile = null;
+                    let maxIdealScore = -1;
+
+                    for (let tx = 0; tx <= MAX_DEPTH; tx++) {
+                        for (let ty = 0; ty < MAX_LANES; ty++) {
+                            if (tx !== unit.coordinates.x || ty !== unit.coordinates.y) {
+                                if (!this.canFitAt(unit, tx, ty)) continue;
+                            }
+                            const dist = Math.abs(tx - unit.coordinates.x) + Math.abs(ty - unit.coordinates.y);
+                            if (dist > 3) continue;
+
+                            if (countOtherAlliesCovered(tx, ty) >= 2) {
+                                const score = getScore(tx, ty);
+                                if (score > maxIdealScore) {
+                                    maxIdealScore = score;
+                                    idealTile = { x: tx, y: ty };
+                                } else if (score === maxIdealScore) {
+                                    const currentIdealDist = Math.abs(idealTile.x - unit.coordinates.x) + Math.abs(idealTile.y - unit.coordinates.y);
+                                    if (dist < currentIdealDist) {
+                                        idealTile = { x: tx, y: ty };
+                                    }
+                                }
+                            }
                         }
-                        const score = getScore(cand.x, cand.y);
-                        if (score > maxScore) { maxScore = score; bestTile = cand; }
-                    });
+                    }
+
+                    if (idealTile) {
+                        if (idealTile.x === unit.coordinates.x && idealTile.y === unit.coordinates.y) {
+                            shouldCastThisRound = true;
+                        } else {
+                            const candidates = [
+                                { x: unit.coordinates.x + 1, y: unit.coordinates.y },
+                                { x: unit.coordinates.x - 1, y: unit.coordinates.y },
+                                { x: unit.coordinates.x, y: unit.coordinates.y + 1 },
+                                { x: unit.coordinates.x, y: unit.coordinates.y - 1 }
+                            ];
+
+                            let bestStep = null;
+                            let minStepDist = Infinity;
+
+                            candidates.forEach(cand => {
+                                if (cand.x < 0 || cand.x > MAX_DEPTH || cand.y < 0 || cand.y >= MAX_LANES) return;
+                                if (!this.canFitAt(unit, cand.x, cand.y)) return;
+
+                                const dist = Math.abs(cand.x - idealTile.x) + Math.abs(cand.y - idealTile.y);
+                                if (dist < minStepDist) {
+                                    minStepDist = dist;
+                                    bestStep = cand;
+                                }
+                            });
+
+                            if (bestStep) {
+                                bestTile = bestStep;
+                                shouldCastThisRound = false;
+                            } else {
+                                shouldCastThisRound = true;
+                            }
+                        }
+                    } else {
+                        let targetTile = { x: unit.coordinates.x, y: unit.coordinates.y };
+                        let maxTargetScore = maxScore;
+
+                        const candidates = [
+                            { x: unit.coordinates.x + 1, y: unit.coordinates.y },
+                            { x: unit.coordinates.x - 1, y: unit.coordinates.y },
+                            { x: unit.coordinates.x, y: unit.coordinates.y + 1 },
+                            { x: unit.coordinates.x, y: unit.coordinates.y - 1 }
+                        ];
+
+                        candidates.forEach(cand => {
+                            if (cand.x < 0 || cand.x > MAX_DEPTH || cand.y < 0 || cand.y >= MAX_LANES) return;
+                            if (!this.canFitAt(unit, cand.x, cand.y)) return;
+                            const score = getScore(cand.x, cand.y);
+                            if (score > maxTargetScore) {
+                                maxTargetScore = score;
+                                targetTile = cand;
+                            }
+                        });
+
+                        bestTile = targetTile;
+                        shouldCastThisRound = true;
+                    }
                 }
+
                 if (bestTile.x !== unit.coordinates.x || bestTile.y !== unit.coordinates.y) {
                     this.updateUnitCoordinates(unit, bestTile.x, bestTile.y);
                     unit.movesTakenThisRound += 1;
                     this.applyEnduranceCost(unit, this.MOVE_ENDURANCE_COST, 'move');
-                    this.appendCombatLog(`${this.getCombatantLogName(unit)} repositions to optimize Circle of Deflection.`);
+                    if (shouldCastThisRound) {
+                        this.appendCombatLog(`${this.getCombatantLogName(unit)} repositions to optimize Circle of Deflection.`);
+                    } else {
+                        this.appendCombatLog(`${this.getCombatantLogName(unit)} moves towards ideal Circle of Deflection location.`);
+                    }
+                }
+
+                if (!shouldCastThisRound) {
+                    if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+                    return;
                 }
                 const dur = getDurationRounds(pick.duration || 'long');
                 Object.values(this.combatants).forEach(c => {
@@ -3345,7 +3633,22 @@ export function CombatManagerRedux() {
         if (!target) return;
 
         const scored = this._scoredAbilityPick(unit, target);
-        const rangeType = scored ? (scored.resolved.range || 'close') : 'close';
+        let rangeType = 'close';
+        if (scored) {
+            rangeType = scored.resolved.range || 'close';
+        } else {
+            const baseAttack = Array.isArray(unit.attacks) && unit.attacks.length > 0 ? unit.attacks[0] : null;
+            if (baseAttack) {
+                if (typeof baseAttack === 'object') {
+                    if (baseAttack.range) rangeType = baseAttack.range;
+                } else if (typeof baseAttack === 'string') {
+                    const resolved = this.resolveSpecial(unit, baseAttack);
+                    if (resolved && resolved.range) {
+                        rangeType = resolved.range;
+                    }
+                }
+            }
+        }
         const inRange = this.targetInRange(unit, target, rangeType);
 
         if (inRange) {
@@ -3406,7 +3709,22 @@ export function CombatManagerRedux() {
             }
         }
 
-        const rangeType = resolvedPick ? (resolvedPick.range || 'close') : 'close';
+        let rangeType = 'close';
+        if (resolvedPick) {
+            rangeType = resolvedPick.range || 'close';
+        } else {
+            const baseAttack = Array.isArray(unit.attacks) && unit.attacks.length > 0 ? unit.attacks[0] : null;
+            if (baseAttack) {
+                if (typeof baseAttack === 'object') {
+                    if (baseAttack.range) rangeType = baseAttack.range;
+                } else if (typeof baseAttack === 'string') {
+                    const resolved = this.resolveSpecial(unit, baseAttack);
+                    if (resolved && resolved.range) {
+                        rangeType = resolved.range;
+                    }
+                }
+            }
+        }
         const inRange = this.targetInRange(unit, target, rangeType);
 
         if (inRange) {
@@ -3918,13 +4236,14 @@ export function CombatManagerRedux() {
             isMinion: true,
             isMonster: true,
             dead: false,
+            image_names: ['dragon_hatchling'],
             coordinates: coords,
             hp: hpBase,
             starting_hp: hpBase,
             stats: { str: 5, dex: 4, atk: 8, def: 5, speed: 6 },
             attacks: ['claw_strike', 'bite'],
             specials: [],
-            portrait: 'wyvern_portrait2',
+            portrait: images['dragon_hatchling'],
             cooldowns: {},
             movesTakenThisRound: 0,
             actionsTakenThisRound: 0,
@@ -4006,11 +4325,42 @@ export function CombatManagerRedux() {
             target = this.combatants[target.parentMonsterId];
         }
 
+        if (target && target.id !== unit.id && ability.range !== 'self') {
+            let targetCoords = target.coordinates;
+            if (targetCoords && unit.coordinates) {
+                if (target.occupiedCoords && target.occupiedCoords.length > 0) {
+                    let minDistance = Infinity;
+                    target.occupiedCoords.forEach(tc => {
+                        const dist = Math.abs(unit.coordinates.x - tc.x) + Math.abs(unit.coordinates.y - tc.y);
+                        if (dist < minDistance) {
+                            minDistance = dist;
+                            targetCoords = tc;
+                        }
+                    });
+                }
+                if (targetCoords.x !== unit.coordinates.x) {
+                    unit.facing = targetCoords.x > unit.coordinates.x ? 'right' : 'left';
+                } else {
+                    unit.facing = targetCoords.y > unit.coordinates.y ? 'down' : 'up';
+                }
+            }
+        }
+
         const origCallerCoords = { x: unit.coordinates.x, y: unit.coordinates.y };
         const origCallerOccupied = Array.isArray(unit.occupiedCoords) ? clone(unit.occupiedCoords) : null;
 
         // Morale Shaken check: 5% chance to refuse to use a special ability and use basic attack instead
         const abilityId = ability.id || ability.key || (ability.name && ability.name.replace(/\s+/g, '_').toLowerCase()) || 'ability';
+        const isSelfTarget = target.id === unit.id || ability.range === 'self';
+        const isMagicMissile = ['magic_missile', 'minor_magic_missile', 'major_magic_missile'].includes(abilityId);
+        const preRolledHits = [];
+        if (isMagicMissile) {
+            for (let h = 0; h < 3; h++) {
+                preRolledHits.push(isSelfTarget ? true : this.hitCheck(unit, target));
+            }
+        } else if (abilityId === 'acid_blast') {
+            preRolledHits.push(isSelfTarget ? true : this.hitCheck(unit, target));
+        }
         const isMeleeAbility = [
             'claw_strike', 'claws', 'bite', 'crush', 'tackle', 'stomp', 'head_butt',
             'slash', 'barbarian_slash', 'cleave', 'barbarian_cleave', 'imbued_strike',
@@ -4528,7 +4878,6 @@ export function CombatManagerRedux() {
                 this.triggerBoardEvent('induce_fear', { duration: 1800 });
             }
             const dur = getDurationRounds(ability.duration || 'short') || 2;
-            const durMs = dur * this.roundDurationMs;
             const now = Date.now();
 
             Object.values(this.combatants).forEach(c => {
@@ -4547,18 +4896,19 @@ export function CombatManagerRedux() {
                             }
                         }, 'Induce Fear', dur);
 
+                        const finalDurMs = getStatusDurationMs(c, dur);
                         c.stunned = true;
                         c.stunnedRounds = dur;
                         c.stunnedTotalRounds = dur;
                         c.stunnedStackDuration = dur;
-                        c.stunnedTotalDurationMs = durMs;
-                        c.stunnedEndTimeMs = now + durMs;
+                        c.stunnedTotalDurationMs = finalDurMs;
+                        c.stunnedEndTimeMs = now + finalDurMs;
 
                         c.feared = true;
                         c.fearRounds = dur;
                         c.fearTotalRounds = dur;
-                        c.fearTotalDurationMs = durMs;
-                        c.fearEndTimeMs = now + durMs;
+                        c.fearTotalDurationMs = finalDurMs;
+                        c.fearEndTimeMs = now + finalDurMs;
 
                         c.asleep = false;
                         c.sleepTotalDurationMs = 0;
@@ -4795,7 +5145,7 @@ export function CombatManagerRedux() {
             if (abilityId === 'barbarian_leap_attack') {
                 targetCoord = { x: unit.coordinates.x, y: unit.coordinates.y };
             }
-            this.animManagerRedux.triggerAbility(sourceCoord, targetCoord, abilityId, isTargetLarge, targetTiles, unit.id, activeArrowType);
+            this.animManagerRedux.triggerAbility(sourceCoord, targetCoord, abilityId, isTargetLarge, targetTiles, unit.id, activeArrowType, null, preRolledHits);
         }
 
         if (abilityId === 'loose' || abilityId === 'execute' || abilityId === 'deadeye_shot') {
@@ -4951,16 +5301,22 @@ export function CombatManagerRedux() {
             rawDamage = Math.round(rawDamage * (1 + unitInt * 0.05));
         }
         const dmgMult = target.weaknessRevealed ? 1.25 : 1.0;
-        const isSelfTarget = target.id === unit.id || ability.range === 'self';
         const arrowType = (abilityId === 'loose' || abilityId === 'execute') ? (activeArrowType || 'force') : null;
-        const hitCount = (abilityId === 'execute') ? 3 : 1;
+        const hitCount = (abilityId === 'execute' || isMagicMissile) ? 3 : 1;
         let hitsSucceeded = 0;
         let anyHitConnected = false;
 
         const performHit = (h) => {
             if (target.hp <= 0 || target.dead) return;
 
-            const hit = isSelfTarget ? true : this.hitCheck(unit, target);
+            let hit;
+            if (isMagicMissile && Array.isArray(preRolledHits)) {
+                hit = preRolledHits[h];
+            } else if (abilityId === 'acid_blast' && Array.isArray(preRolledHits)) {
+                hit = preRolledHits[0];
+            } else {
+                hit = isSelfTarget ? true : this.hitCheck(unit, target);
+            }
             if (hit) {
                 anyHitConnected = true;
                 let currentRawDmg = rawDamage;
@@ -5119,9 +5475,11 @@ export function CombatManagerRedux() {
                             const isEnemy = (!!unit.isMonster !== !!c.isMonster);
                             if (!isEnemy) return;
                             
-                            const adx = Math.abs(target.coordinates.x - c.coordinates.x);
-                            const ady = Math.abs(target.coordinates.y - c.coordinates.y);
-                            if (adx <= 1 && ady <= 1) {
+                            const targetTiles = (Array.isArray(target.occupiedCoords) && target.occupiedCoords.length > 0) ? target.occupiedCoords : [target.coordinates];
+                            const cTiles = (Array.isArray(c.occupiedCoords) && c.occupiedCoords.length > 0) ? c.occupiedCoords : [c.coordinates];
+                            const isAdjacent = targetTiles.some(t1 => cTiles.some(t2 => Math.abs(t1.x - t2.x) <= 1 && Math.abs(t1.y - t2.y) <= 1));
+                            
+                            if (isAdjacent) {
                                 hitIds.add(cMainId);
                                 const mainEntity = this.combatants[cMainId];
                                 if (!mainEntity || mainEntity.dead) return;
@@ -5243,36 +5601,38 @@ export function CombatManagerRedux() {
                                 }
                             }
                             const dur = getDurationRounds(eff.duration || 'short');
-                            const durMs = getDurationMsFromRounds(dur);
                             const now = Date.now();
                             if (eff.type === 'frozen') {
                                 target.frozen = true;
                                 target.frozenRounds = (target.frozenRounds || 0) + dur;
                                 target.frozenTotalRounds = (target.frozenTotalRounds || 0) + dur;
                                 target.frozenStackDuration = dur;
-                                target.frozenTotalDurationMs = (target.frozenTotalDurationMs || 0) + durMs;
-                                target.frozenEndTimeMs = target.frozenEndTimeMs && target.frozenEndTimeMs > now ? target.frozenEndTimeMs + durMs : now + durMs;
+                                const finalDurMs = getStatusDurationMs(target, target.frozenRounds);
+                                target.frozenTotalDurationMs = finalDurMs;
+                                target.frozenEndTimeMs = now + finalDurMs;
                                 this.appendCombatLog(`${this.getCombatantLogName(target)} is frozen!`);
                             } else if (eff.type === 'ensnared') {
                                 target.ensnared = true;
                                 target.ensnaredRounds = dur;
                                 target.ensnaredTotalRounds = dur;
                                 target.ensnaredStackDuration = dur;
-                                target.ensnaredTotalDurationMs = durMs;
-                                target.ensnaredEndTimeMs = now + durMs;
+                                const finalDurMs = getStatusDurationMs(target, dur);
+                                target.ensnaredTotalDurationMs = finalDurMs;
+                                target.ensnaredEndTimeMs = now + finalDurMs;
                                 this.appendCombatLog(`${this.getCombatantLogName(target)} is ensnared!`);
                             } else if (eff.type === 'fear') {
                                 target.stunned = true;
                                 target.stunnedRounds = dur;
                                 target.stunnedTotalRounds = dur;
                                 target.stunnedStackDuration = dur;
-                                target.stunnedTotalDurationMs = durMs;
-                                target.stunnedEndTimeMs = now + durMs;
+                                const finalDurMs = getStatusDurationMs(target, dur);
+                                target.stunnedTotalDurationMs = finalDurMs;
+                                target.stunnedEndTimeMs = now + finalDurMs;
                                 target.feared = true;
                                 target.fearRounds = dur;
                                 target.fearTotalRounds = dur;
-                                target.fearTotalDurationMs = durMs;
-                                target.fearEndTimeMs = now + durMs;
+                                target.fearTotalDurationMs = finalDurMs;
+                                target.fearEndTimeMs = now + finalDurMs;
                                 target.asleep = false;
                                 target.sleepTotalDurationMs = 0;
                                 target.sleepEndTimeMs = 0;
@@ -5282,8 +5642,9 @@ export function CombatManagerRedux() {
                                 target.stunnedRounds = dur;
                                 target.stunnedTotalRounds = dur;
                                 target.stunnedStackDuration = dur;
-                                target.stunnedTotalDurationMs = durMs;
-                                target.stunnedEndTimeMs = now + durMs;
+                                const finalDurMs = getStatusDurationMs(target, dur);
+                                target.stunnedTotalDurationMs = finalDurMs;
+                                target.stunnedEndTimeMs = now + finalDurMs;
                                 target.feared = false;
                                 target.fearTotalDurationMs = 0;
                                 target.fearEndTimeMs = 0;
@@ -5306,17 +5667,18 @@ export function CombatManagerRedux() {
                                     this.appendCombatLog(`${this.getCombatantLogName(target)} is bleeding!`);
                                 }
                             } else if (eff.type === 'sleep') {
+                                const finalDurMs = getStatusDurationMs(target, dur);
                                 target.stunned = true;
                                 target.stunnedRounds = dur;
                                 target.stunnedTotalRounds = dur;
                                 target.stunnedStackDuration = dur;
-                                target.stunnedTotalDurationMs = durMs;
-                                target.stunnedEndTimeMs = now + durMs;
+                                target.stunnedTotalDurationMs = finalDurMs;
+                                target.stunnedEndTimeMs = now + finalDurMs;
                                 target.asleep = true;
                                 target.sleepRounds = dur;
                                 target.sleepTotalRounds = dur;
-                                target.sleepTotalDurationMs = durMs;
-                                target.sleepEndTimeMs = now + durMs;
+                                target.sleepTotalDurationMs = finalDurMs;
+                                target.sleepEndTimeMs = now + finalDurMs;
                                 target.feared = false;
                                 target.fearTotalDurationMs = 0;
                                 target.fearEndTimeMs = 0;
@@ -5360,6 +5722,12 @@ export function CombatManagerRedux() {
             setTimeout(() => performHit(0), 700);
             setTimeout(() => performHit(1), 950);
             setTimeout(() => performHit(2), 1200);
+        } else if (abilityId === 'ice_blast' || abilityId === 'acid_blast') {
+            setTimeout(() => performHit(0), 600);
+        } else if (isMagicMissile) {
+            setTimeout(() => performHit(0), 400);
+            setTimeout(() => performHit(1), 600);
+            setTimeout(() => performHit(2), 800);
         } else {
             for (let h = 0; h < hitCount; h++) {
                 performHit(h);
@@ -5450,13 +5818,13 @@ export function CombatManagerRedux() {
                             this.appendCombatLog(`${this.getCombatantLogName(target)} resists the ice arrow freeze! (Dragon CC Immunity)`);
                         } else {
                             const dur = getDurationRounds('short');
-                            const durMs = getDurationMsFromRounds(dur);
                             target.frozen = true;
                             target.frozenRounds = (target.frozenRounds || 0) + dur;
                             target.frozenTotalRounds = (target.frozenTotalRounds || 0) + dur;
                             target.frozenStackDuration = dur;
-                            target.frozenTotalDurationMs = (target.frozenTotalDurationMs || 0) + durMs;
-                            target.frozenEndTimeMs = target.frozenEndTimeMs && target.frozenEndTimeMs > now ? target.frozenEndTimeMs + durMs : now + durMs;
+                            const finalDurMs = getStatusDurationMs(target, target.frozenRounds);
+                            target.frozenTotalDurationMs = finalDurMs;
+                            target.frozenEndTimeMs = now + finalDurMs;
                             this.appendCombatLog(`${this.getCombatantLogName(target)} is frozen by the Eagle Eye ice arrow!`);
                         }
                     } else if (arrowType === 'poison') {

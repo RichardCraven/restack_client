@@ -72,7 +72,7 @@ const getActiveEffects = (combatant, combatManager) => {
     if (liveUnit.stunned && !liveUnit.asleep && !liveUnit.feared) {
         list.push({
             key: 'stunned',
-            icon: images.whiteskull || images.induce_fear,
+            icon: images.stunned || images.whiteskull || images.induce_fear,
             border: '#f5c842',
             roundsLeft: liveUnit.stunnedRounds || 0,
             totalDuration: liveUnit.stunnedTotalRounds || liveUnit.stunnedRounds || 4,
@@ -719,12 +719,22 @@ export default function CombatGrid(props) {
                     <div key={eff.key} className="effect-icon-active" style={{
                         width: '20px', height: '20px', borderRadius: '50%',
                         backgroundColor: '#111', border: `2px solid ${eff.border}`,
-                        backgroundImage: `url(${eff.icon?.default || eff.icon})`, backgroundSize: 'contain',
-                        backgroundRepeat: 'no-repeat', backgroundPosition: 'center',
                         boxShadow: '0 2px 4px rgba(0,0,0,0.5)',
                         position: 'relative',
                         overflow: 'visible'
                     }}>
+                        <div style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: '100%',
+                            borderRadius: '50%',
+                            backgroundImage: `url(${eff.icon?.default || eff.icon})`,
+                            backgroundSize: 'contain',
+                            backgroundRepeat: 'no-repeat',
+                            backgroundPosition: 'center'
+                        }} />
                         {preciseRoundsLeft > 0 && (
                             <svg 
                                 style={{
@@ -1824,6 +1834,34 @@ export default function CombatGrid(props) {
                         </>
                     );
                 })()}
+                {/* Attack Weapon Swing Animation for Skeletons */}
+                {liveMonster && liveMonster.pendingAttack && liveMonster.attacking && !liveMonster.dead && 
+                 (unit.type?.includes('skeleton') || unit.key?.includes('skeleton') || unit.id?.includes('skeleton')) && (() => {
+                    const icon = images.longsword?.default || images.longsword;
+                    const tileW = TILE_SIZE;
+                    const weaponW = 90;
+                    let weaponStyle = {};
+                    if (liveMonster.facing === 'right') {
+                        weaponStyle = { left: `${tileW - weaponW}px`, opacity: 1, backgroundImage: `url(${icon})` };
+                    } else if (liveMonster.facing === 'left') {
+                        weaponStyle = { left: '0px', opacity: 1, backgroundImage: `url(${icon})` };
+                    } else if (liveMonster.facing === 'up') {
+                        weaponStyle = { left: `${(tileW / 2) - (weaponW / 2)}px`, top: '-40px', opacity: 1, backgroundImage: `url(${icon})`, transform: 'rotate(-90deg)' };
+                    } else if (liveMonster.facing === 'down') {
+                        weaponStyle = { left: `${(tileW / 2) - (weaponW / 2)}px`, top: '110px', opacity: 1, backgroundImage: `url(${icon})`, transform: 'rotate(90deg)' };
+                    } else {
+                        weaponStyle = { left: `${(tileW / 2) - (weaponW / 2)}px`, top: '50px', opacity: 1, backgroundImage: `url(${icon})` };
+                    }
+
+                    const verticalFacingClass = liveMonster.facing === 'up' ? 'facing-up' : (liveMonster.facing === 'down' ? 'facing-down' : '');
+
+                    return (
+                        <div
+                            className={`weapon-wrapper ${liveMonster.facing === 'left' ? 'reversed' : ''} ${verticalFacingClass} ${liveMonster.aiming ? 'aiming' : ''} medium`}
+                            style={weaponStyle}
+                        />
+                    );
+                })()}
                 <div className="indicators-wrapper" style={{ zIndex: 10 }}>
                     <div className="monster-hp-bar hp-bar">
                         {!isDead && <div className="red-fill" style={{ width: `${(unit.hp / unit.stats?.hp) * 100}%` }} />}
@@ -2593,6 +2631,46 @@ export default function CombatGrid(props) {
             );
         }
 
+        if (anim.type === 'magic_missile_miss_dot' && anim.tgtPx) {
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: `${anim.tgtPx.x}px`,
+                    top: `${anim.tgtPx.y}px`,
+                    width: '10px',
+                    height: '10px',
+                    transform: 'translate(-50%, -50%)',
+                    pointerEvents: 'none',
+                    zIndex: 4100,
+                    animation: 'explode 0.35s ease-out forwards',
+                    borderRadius: '50%',
+                    border: '1px solid #ffffff',
+                    background: 'radial-gradient(circle, #ffffff 30%, #d946ef 70%)',
+                    boxShadow: '0 0 6px #d946ef, inset 0 0 2px #ffffff'
+                }} />
+            );
+        }
+
+        if (anim.type === 'acid_blast_miss_dot' && anim.tgtPx) {
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: `${anim.tgtPx.x}px`,
+                    top: `${anim.tgtPx.y}px`,
+                    width: '10px',
+                    height: '10px',
+                    transform: 'translate(-50%, -50%)',
+                    pointerEvents: 'none',
+                    zIndex: 4100,
+                    animation: 'explode 0.35s ease-out forwards',
+                    borderRadius: '50%',
+                    border: '1px solid #ffffff',
+                    background: 'radial-gradient(circle, #ffffff 30%, #adff2f 70%)',
+                    boxShadow: '0 0 6px #70e000, inset 0 0 2px #ffffff'
+                }} />
+            );
+        }
+
         if (anim.type === 'ice_projectile' && anim.srcPx && anim.tgtPx) {
             return (
                 <div key={key} style={{
@@ -2834,6 +2912,8 @@ export default function CombatGrid(props) {
                     pointerEvents: 'none',
                     zIndex: 4100,
                     animation: 'scaleUp 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275) both',
+                    maskImage: 'radial-gradient(circle, black 50%, transparent 100%)',
+                    WebkitMaskImage: 'radial-gradient(circle, black 50%, transparent 100%)'
                 }} />
             );
         }
@@ -3589,6 +3669,37 @@ export default function CombatGrid(props) {
             );
         }
 
+        if (anim.type === 'fist_of_honor_effect' && anim.tgtPx) {
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: `${anim.tgtPx.x + (anim.leftOffset || 0)}px`,
+                    top: `${anim.tgtPx.y + (anim.topOffset || 0)}px`,
+                    width: '56px',
+                    height: '56px',
+                    transform: `translate(-50%, -50%) rotate(${(anim.baseAngle || 0) + 180}deg) rotate(-90deg) scaleX(-1)`,
+                    pointerEvents: 'none',
+                    zIndex: 5000,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    maskImage: 'radial-gradient(circle, black 50%, transparent 100%)',
+                    WebkitMaskImage: 'radial-gradient(circle, black 50%, transparent 100%)'
+                }}>
+                    <img
+                        src={anim.icon || images['soldier_fist_of_honor']}
+                        alt="fist connect"
+                        style={{
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'contain',
+                            animation: 'scaleUp 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275) both'
+                        }}
+                    />
+                </div>
+            );
+        }
+
         if (anim.type === 'barbarian_cleave_effect' && anim.tgtPx) {
             const barbarianUnit = crew.find(f => f.type === 'barbarian');
             const equippedWeapon = barbarianUnit ? (barbarianUnit.inventory || []).find(i => i && i.type === 'weapon' && (i.equippedSlot === 'right' || i.equippedSlot === 'left' || i.equippedBy === barbarianUnit.id)) : null;
@@ -3932,8 +4043,6 @@ export default function CombatGrid(props) {
 
     // ── Monster units — exclude VCT and trials_icon (rendered separately) ─────
     const monsterUnits = Object.values(battleData).filter(u => u && (u.isMonster || u.isMinion) && !crewIds.has(u.id) && !u.isVCT && !u.isTrialIcon);
-    console.log('[DEBUG][CombatGrid] Object.values(battleData):', Object.values(battleData).map(u => ({ id: u.id, isMonster: u.isMonster, isMinion: u.isMinion, invisible: u.invisible, dead: u.dead, coordinates: u.coordinates })));
-    console.log('[DEBUG][CombatGrid] filtered monsterUnits:', monsterUnits.map(u => u.id));
 
     const getUnitCenterPx = (unitId) => {
         // Find in crew

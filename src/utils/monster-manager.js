@@ -53,6 +53,7 @@ export function MonsterManager() {
             deathCries: ['nooooooo'],
             specials: ['bite'],
             attacks: ['claw_strike'],
+            minions: ['goblin', 'goblin', 'goblin'],
             weaknesses: ['crushing', 'cutting', 'electricity'],
             drops: [
                 { item: TIER1_POTION, percentChance: 35 },
@@ -305,12 +306,12 @@ export function MonsterManager() {
                 { itemPool: TIER1_ITEM, percentChance: 50 },
             ]
         },
-        cultist_of_whispers: {
-            type: 'cultist_of_whispers',
+        basilisk_cultists: {
+            type: 'basilisk_cultists',
             tier: 2,
             subtype: 'eldritch',
-            key: 'cultist_of_whispers',
-            image_names: ['cultist_of_whispers'],
+            key: 'basilisk_cultists',
+            image_names: ['basilisk_cultists'],
             monster_names: ['Acolyte Vane', 'Zealot Malakor', 'Initiate Selene'],
             stats: {
                 hp: 80,
@@ -324,7 +325,7 @@ export function MonsterManager() {
                 fort: 4
             },
             level: 7,
-            portrait: images['cultist_of_whispers_portrait'],
+            portrait: images['basilisk_cultists_portrait'],
             greetings: ['Hear the whispers...', 'The master speaks to us!'],
             deathCries: ['The whispers... end...'],
             specials: ['fire_blast', 'ice_blast'],
@@ -344,7 +345,7 @@ export function MonsterManager() {
             image_names: ['wraith'],
             monster_names: ['Sicirath', 'Olnuk', 'Ygra'],
             stats: {
-                hp: 282,
+                hp: 1282,
                 atk: 9,
                 def: 8,
                 speed: 12, // ghostly, nearly untouchable
@@ -358,7 +359,7 @@ export function MonsterManager() {
             portrait: images['wraith_portrait'],
             greetings: ['*hissssss*', 'come to the silence'],
             deathCries: ['*screams*'],
-            specials: ['banshee wail'],
+            specials: ['banshee wail', 'shadow_armor'],
             attacks: ['grasp', 'energy_drain'],
             weaknesses: ['holy', 'psionic'],
             drops: [
@@ -459,12 +460,12 @@ export function MonsterManager() {
                 { itemPool: TIER2_WEAPONS, percentChance: 45 },
             ]
         },
-        orbital_shaman: {
-            type: 'orbital_shaman',
+        high_priest_of_the_basilisk: {
+            type: 'high_priest_of_the_basilisk',
             tier: 3,
             subtype: 'aberration',
-            key: 'orbital_shaman',
-            image_names: ['orbital_shaman'],
+            key: 'high_priest_of_the_basilisk',
+            image_names: ['high_priest_of_the_basilisk'],
             monster_names: ['Kael-Zara', 'Zul-Garth', 'Mok-Tor'],
             stats: {
                 hp: 140,
@@ -478,7 +479,7 @@ export function MonsterManager() {
                 fort: 7
             },
             level: 10,
-            portrait: images['orbital_shaman_portrait'],
+            portrait: images['high_priest_of_the_basilisk_portrait'],
             greetings: ['*chants in tongues of the cosmos*', 'The stars demand your blood!'],
             deathCries: ['*cosmic screams*'],
             specials: [],

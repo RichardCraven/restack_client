@@ -1969,6 +1969,36 @@ export function BoardManager(){
 
         if (interaction === 'narrative') {
             try {
+                destinationTile.contains = { type: 'narrative_visited', subtype: null };
+                destinationTile.image = 'narrative_visited';
+                this.tiles[destinationTile.id] = destinationTile;
+                if (this.currentBoard && this.currentBoard.tiles && this.currentBoard.tiles[destinationTile.id]) {
+                    this.currentBoard.tiles[destinationTile.id].contains = { type: 'narrative_visited', subtype: null };
+                    this.currentBoard.tiles[destinationTile.id].image = 'narrative_visited';
+                }
+                const levelEntry = this.dungeon.levels.find(e => e.id === this.currentLevel.id);
+                if (levelEntry) {
+                    if (this.currentOrientation === 'F' && levelEntry.front && levelEntry.front.miniboards) {
+                        const b = levelEntry.front.miniboards.find(bi => bi.id === this.currentBoard.id);
+                        if (b && b.tiles && b.tiles[destinationTile.id]) {
+                            b.tiles[destinationTile.id].contains = { type: 'narrative_visited', subtype: null };
+                            b.tiles[destinationTile.id].image = 'narrative_visited';
+                        }
+                    } else if (this.currentOrientation === 'B' && levelEntry.back && levelEntry.back.miniboards) {
+                        const b = levelEntry.back.miniboards.find(bi => bi.id === this.currentBoard.id);
+                        if (b && b.tiles && b.tiles[destinationTile.id]) {
+                            b.tiles[destinationTile.id].contains = { type: 'narrative_visited', subtype: null };
+                            b.tiles[destinationTile.id].image = 'narrative_visited';
+                        }
+                    }
+                }
+                if (this.updateDungeon) this.updateDungeon(this.dungeon);
+                if (this.refreshTiles) this.refreshTiles();
+            } catch (err) {
+                console.error("Failed to mark narrative visited:", err);
+            }
+
+            try {
                 if (this.triggerNarrativeEncounter) {
                     this.triggerNarrativeEncounter(destinationTile);
                 }
@@ -2039,6 +2069,8 @@ export function BoardManager(){
                 return 'spell'
             case 'narrative':
                 return 'narrative'
+            case 'narrative_visited':
+                return 'narrative_visited'
             case 'stairs':
                 return 'stairs_down'
             case 'door':

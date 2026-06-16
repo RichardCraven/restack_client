@@ -1,6 +1,5 @@
-// ⚠️  AGENTS: Before writing any attack logic, read the "Required Patterns for All AI Profiles"
-//    section at the top of CHANGELOG.md — pendingAttack guard, attacking flag, resolve(null)
 //    fallbacks, and attack-in-processMove are all mandatory.
+import { crossesShieldWall } from '../../shared-ai-methods/movement-methods';
 
 /**
  * BeholderMinion AI profile
@@ -128,7 +127,7 @@ export function BeholderMinion(data, utilMethods, animationManager, overlayManag
         ));
 
         for (const next of candidates) {
-            if (!this._isOccupied(next, combatants, caller)) {
+            if (!this._isOccupied(next, combatants, caller) && !crossesShieldWall(caller.coordinates, next)) {
                 caller.coordinates = next;
                 return true;
             }
@@ -612,13 +611,13 @@ export function BeholderMinion(data, utilMethods, animationManager, overlayManag
                         ? Math.min(caller.coordinates.x + 1, this.MAX_DEPTH)   // we are to the right — step further right
                         : Math.max(caller.coordinates.x - 1, 0);               // we are to the left  — step further left
                     const retreatCoords = { x: awayX, y: caller.coordinates.y };
-                    if (!someoneIsAt(retreatCoords) && retreatCoords.x >= 0 && retreatCoords.x <= this.MAX_DEPTH) {
+                    if (!someoneIsAt(retreatCoords) && retreatCoords.x >= 0 && retreatCoords.x <= this.MAX_DEPTH && !crossesShieldWall(caller.coordinates, retreatCoords)) {
                         caller.coordinates = retreatCoords;
                     } else {
                         // Straight retreat blocked — try diagonal retreat
                         const diagY = caller.coordinates.y < this.MAX_LANES - 1 ? caller.coordinates.y + 1 : caller.coordinates.y - 1;
                         const diagCoords = { x: awayX, y: diagY };
-                        if (!someoneIsAt(diagCoords)) {
+                        if (!someoneIsAt(diagCoords) && !crossesShieldWall(caller.coordinates, diagCoords)) {
                             caller.coordinates = diagCoords;
                         }
                         // If all retreat paths blocked, stay in place — will use claws
@@ -636,7 +635,7 @@ export function BeholderMinion(data, utilMethods, animationManager, overlayManag
                             ? caller.coordinates.y + 1
                             : caller.coordinates.y - 1;
                         const driftCoords = { x: caller.coordinates.x, y: driftY };
-                        if (!someoneIsAt(driftCoords) && driftY >= 0 && driftY < this.MAX_LANES) {
+                        if (!someoneIsAt(driftCoords) && driftY >= 0 && driftY < this.MAX_LANES && !crossesShieldWall(caller.coordinates, driftCoords)) {
                             caller.coordinates = driftCoords;
                         }
                     }

@@ -5,6 +5,7 @@
 import { AcquireTargetMethods } from '../../shared-ai-methods/acquire-target-methods';
 import { applyAttackEffect } from '../../combat-effects';
 import { MonsterTargetingHelpers } from '../../shared-ai-methods/monster-targeting-methods';
+import { crossesShieldWall } from '../../shared-ai-methods/movement-methods';
 
 export function Troll(data, utilMethods, animationManager, overlayManager){
     this.MAX_DEPTH = data.MAX_DEPTH;
@@ -72,6 +73,11 @@ export function Troll(data, utilMethods, animationManager, overlayManager){
         if (!tile || typeof tile.x !== 'number' || typeof tile.y !== 'number') return false;
         if (tile.x < 0 || tile.x > this.MAX_DEPTH || tile.y < 0 || tile.y > this.MAX_LANES) return false;
 
+        // Check shield wall crossing
+        if (caller.coordinates && crossesShieldWall(caller.coordinates, tile)) {
+            return false;
+        }
+
         // Main monsters are 2-tile tall in this combat system.
         const callerIsLarge = (caller.isMonster === true && caller.isMinion !== true) || caller.large === true;
         if (callerIsLarge && tile.y - 1 < 0) return false;
@@ -85,6 +91,9 @@ export function Troll(data, utilMethods, animationManager, overlayManager){
 
         if (callerIsLarge) {
             const above = { x: tile.x, y: tile.y - 1 };
+            if (caller.coordinates && crossesShieldWall(caller.coordinates, above)) {
+                return false;
+            }
             const aboveBlocked = Object.values(combatants || {}).some((e) => {
                 if (!e || e.dead || e.id === caller.id) return false;
                 const tiles = this.getEntityTiles(e);

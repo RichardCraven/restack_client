@@ -27,6 +27,7 @@ import monster from '../assets/icons/monster.png'
 import avatar from '../assets/icons/avatar.png'
 import avatar_white from '../assets/icons/avatar_white.png'
 import narrative from '../assets/icons/narrative.png'
+import narrative_visited from '../assets/icons/narrative visited.png'
 import lore_tablet from '../assets/icons/tablet.png'
 import beholder from '../assets/portraits/monsters/beholder.png'
 import black_banshee from '../assets/icons/monsters/black_banshee.png'
@@ -487,16 +488,17 @@ import Hagigah from '../assets/portraits/monsters/Hagigah.png'
 import Hashmallim from '../assets/portraits/monsters/Hashmallim.png'
 import ghoul from '../assets/portraits/monsters/ghoul.png'
 import ghoul_portrait from '../assets/portraits/monsters/ghoul.png'
-import precipice_guardian from '../assets/portraits/monsters/precipice guardian.png'
-import precipice_guardian_portrait from '../assets/portraits/monsters/precipice guardian.png'
+import precipice_guardian from '../assets/portraits/monsters/precipice_guardian.png'
+import precipice_guardian_portrait from '../assets/portraits/monsters/precipice_guardian.png'
 import blalok from '../assets/portraits/monsters/blalok.png'
 import shade from '../assets/portraits/monsters/shade.png'
-import orbital_shaman from '../assets/portraits/monsters/orbital shaman.png'
-import orbital_shaman_portrait from '../assets/portraits/monsters/orbital shaman.png'
-import cultist_of_whispers from '../assets/portraits/monsters/cultist of whispers.png'
-import cultist_of_whispers_portrait from '../assets/portraits/monsters/cultist of whispers.png'
-import horned_pet from '../assets/portraits/monsters/horned pet.png'
-import horned_pet_portrait from '../assets/portraits/monsters/horned pet.png'
+import high_priest_of_the_basilisk from '../assets/portraits/monsters/high_priest_of_the_basilisk.png'
+import high_priest_of_the_basilisk_portrait from '../assets/portraits/monsters/high_priest_of_the_basilisk.png'
+import basilisk_cultists from '../assets/portraits/monsters/basilisk_cultists.png'
+import basilisk_cultists_portrait from '../assets/portraits/monsters/basilisk_cultists.png'
+import horned_pet from '../assets/portraits/monsters/horned_pet.png'
+import horned_pet_portrait from '../assets/portraits/monsters/horned_pet.png'
+import dragon_hatchling from '../assets/portraits/monsters/dragon_hatchling.png'
 
 
 //MID JOURNEY
@@ -668,6 +670,7 @@ import bleeding from '../assets/icons/combat-icons/effects/bleeding.png';
 import poison from '../assets/icons/combat-icons/effects/poison.png';
 import frozen from '../assets/icons/combat-icons/effects/frozen.png';
 import acid_drop from '../assets/icons/combat-icons/effects/acid drop.png';
+import stunned from '../assets/icons/combat-icons/effects/stunned.png';
 
 import monk_ethereal_speed from '../assets/icons/combat-icons/specials/monk/ethereal_speed.png';
 import monk_astral_being from '../assets/icons/combat-icons/specials/monk/astral_being.png';
@@ -977,6 +980,7 @@ export {
     avatar,
     avatar_white,
     narrative,
+    narrative_visited,
     lore_tablet,
     beholder,
     beholder_portrait,
@@ -1022,12 +1026,13 @@ export {
     kabuki_demon,
     blalok,
     shade,
-    orbital_shaman,
-    orbital_shaman_portrait,
-    cultist_of_whispers,
-    cultist_of_whispers_portrait,
+    high_priest_of_the_basilisk,
+    high_priest_of_the_basilisk_portrait,
+    basilisk_cultists,
+    basilisk_cultists_portrait,
     horned_pet,
     horned_pet_portrait,
+    dragon_hatchling,
 
     beetle_charm,
     demonskull_charm,
@@ -1633,6 +1638,7 @@ export {
     barbarian_berserker,
     barbarian_leap_attack,
     bleeding,
+    stunned,
     poison,
     frozen,
     frozen as frozen_icon,
@@ -1742,7 +1748,7 @@ export {
     return_from_trial_1,
     return_from_trial_2,
     return_from_trial_3,
-    
+
     shadow_curse,
     shadow_presence,
     spiderweb,

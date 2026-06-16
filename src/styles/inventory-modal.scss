@@ -318,6 +318,14 @@
     box-sizing: border-box;
     border-radius: 4px;
     pointer-events: auto;
+
+    .tile {
+        background-color: transparent !important;
+        border: none !important;
+        margin: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+    }
 }
 /* chest slot centered on upper torso */
 .inventory-popup .crew-body .slot-chest,

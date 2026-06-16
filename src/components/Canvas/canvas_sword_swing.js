@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useMemo } from 'react';
-import { sword_white } from '../../utils/images';
+import { shortsword } from '../../utils/images';
 
 /**
  * CanvasSwordSwing
@@ -58,7 +58,7 @@ export default function CanvasSwordSwing({
     const ctx = canvas.getContext('2d');
 
     const img = new window.Image();
-    img.src = sword_white;
+    img.src = shortsword;
 
     let rafId;
     let completed = false;

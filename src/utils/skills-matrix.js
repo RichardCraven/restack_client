@@ -1611,6 +1611,15 @@ const skillsMatrix = {
         mentalityDebuff: true,
         power: 55
     },
+    shadow_armor: {
+        id: 'shadow_armor',
+        tier: 2,
+        name: 'Shadow Armor',
+        desc: 'Passive: 15% physical damage reduction. 35% chance each round to dispel debuffs.',
+        icon: images['shadow_presence'],
+        type: 'passive',
+        isPassive: true
+    },
     shadow_curse: {
         id: 'shadow_curse',
         tier: 3,

@@ -33,7 +33,7 @@ const MonstersCombatGrid = ({
         const liveUnit = combatManager?.getCombatant?.(combatant.id) || combatant;
 
         if (liveUnit.frozen) list.push({ key: 'frozen', icon: images.frozen, border: '#00bfff' });
-        if (liveUnit.stunned && !liveUnit.feared) list.push({ key: 'stunned', icon: images.whiteskull || images.induce_fear, border: '#f5c842' });
+        if (liveUnit.stunned && !liveUnit.feared) list.push({ key: 'stunned', icon: images.stunned || images.whiteskull || images.induce_fear, border: '#f5c842' });
         if (liveUnit.feared) list.push({ key: 'fear', icon: images.fear || images.induce_fear, border: '#8e2de2' });
         if (liveUnit.bleed) list.push({ key: 'bleed', icon: images.bleeding, border: '#e05555' });
         if (liveUnit.poison) list.push({ key: 'poison', icon: images.poison, border: '#7affa0' });
@@ -493,13 +493,23 @@ const MonstersCombatGrid = ({
                                             borderRadius: '50%',
                                             backgroundColor: '#111',
                                             border: `2px solid ${eff.border}`,
+                                            boxShadow: '0 2px 4px rgba(0,0,0,0.5)',
+                                            position: 'relative'
+                                        }}
+                                    >
+                                        <div style={{
+                                            position: 'absolute',
+                                            top: 0,
+                                            left: 0,
+                                            width: '100%',
+                                            height: '100%',
+                                            borderRadius: '50%',
                                             backgroundImage: `url(${eff.icon?.default || eff.icon})`,
                                             backgroundSize: 'contain',
                                             backgroundRepeat: 'no-repeat',
-                                            backgroundPosition: 'center',
-                                            boxShadow: '0 2px 4px rgba(0,0,0,0.5)',
-                                        }}
-                                    />
+                                            backgroundPosition: 'center'
+                                        }} />
+                                    </div>
                                 ))}
                             </div>
                             <div
@@ -744,13 +754,23 @@ const MonstersCombatGrid = ({
                                                 borderRadius: '50%',
                                                 backgroundColor: '#111',
                                                 border: `2px solid ${eff.border}`,
-                                                backgroundImage: `url(${eff.icon?.default || eff.icon})`,
+                                                boxShadow: '0 2px 4px rgba(0,0,0,0.5)',
+                                                position: 'relative'
+                                            }}
+                                        >
+                                            <div style={{
+                                                position: 'absolute',
+                                                top: 0,
+                                                left: 0,
+                                                width: '100%',
+                                                height: '100%',
+                                                borderRadius: '50%',
+                                                backgroundImage: `url(${eff.key === 'stunned' ? images.stunned : (eff.icon?.default || eff.icon)})`,
                                                 backgroundSize: 'contain',
                                                 backgroundRepeat: 'no-repeat',
-                                                backgroundPosition: 'center',
-                                                boxShadow: '0 2px 4px rgba(0,0,0,0.5)',
-                                            }}
-                                        />
+                                                backgroundPosition: 'center'
+                                            }} />
+                                        </div>
                                     ))}
                                 </div>
                                 <div
