@@ -472,23 +472,49 @@ class CrewManagerPage extends React.Component {
 
                     // Filter specials by selected skill tier
                     const selectedTier = this.getSimSkillTier(member.type);
-                    member.specials = filterSpecialsByTier(member.specials, selectedTier);
 
-                    // Ensure fundamental abilities are always available
-                    if (member.type === 'ranger') {
-                        member.specials = member.specials || [];
-                        if (!member.specials.includes('notch')) member.specials.push('notch');
-                        member.attacks = member.attacks || [];
-                        if (!member.attacks.includes('loose')) member.attacks.push('loose');
-                    } else if (member.type === 'sage') {
-                        member.attacks = member.attacks || [];
-                        if (!member.attacks.includes('heal')) member.attacks.push('heal');
-                    } else if (member.type === 'soldier') {
-                        member.attacks = member.attacks || [];
-                        if (!member.attacks.includes('slash')) member.attacks.push('slash');
-                    } else if (member.type === 'barbarian') {
-                        member.attacks = member.attacks || [];
-                        if (!member.attacks.includes('barbarian_slash')) member.attacks.push('barbarian_slash');
+                    if (member.skills) {
+                        const BASIC_ATTACK_KEYS = [
+                            'slash', 'magic_missile', 'monk_punch', 'heal', 'loose', 
+                            'barbarian_slash', 'sword_swing', 'axe_throw', 'summon_skeleton', 
+                            'claw_strike', 'claws', 'rake', 'gore_horns', 'snake_strike', 
+                            'grasp', 'void_lance', 'crush', 'tackle', 'major_magic_missile', 'greater_magic_missile',
+                            'vampiric_bite', 'induce_madness', 'lightning', 'bite'
+                        ];
+                        const basics = member.skills.filter(s => BASIC_ATTACK_KEYS.includes(s));
+                        let specials = member.skills.filter(s => !BASIC_ATTACK_KEYS.includes(s));
+                        specials = filterSpecialsByTier(specials, selectedTier);
+
+                        if (member.type === 'ranger') {
+                            if (!specials.includes('notch')) specials.push('notch');
+                            if (!basics.includes('loose')) basics.push('loose');
+                        } else if (member.type === 'sage') {
+                            if (!basics.includes('heal')) basics.push('heal');
+                        } else if (member.type === 'soldier') {
+                            if (!basics.includes('slash')) basics.push('slash');
+                        } else if (member.type === 'barbarian') {
+                            if (!basics.includes('barbarian_slash')) basics.push('barbarian_slash');
+                        }
+                        member.skills = [...basics, ...specials];
+                    } else {
+                        member.specials = filterSpecialsByTier(member.specials || [], selectedTier);
+
+                        // Ensure fundamental abilities are always available
+                        if (member.type === 'ranger') {
+                            member.specials = member.specials || [];
+                            if (!member.specials.includes('notch')) member.specials.push('notch');
+                            member.attacks = member.attacks || [];
+                            if (!member.attacks.includes('loose')) member.attacks.push('loose');
+                        } else if (member.type === 'sage') {
+                            member.attacks = member.attacks || [];
+                            if (!member.attacks.includes('heal')) member.attacks.push('heal');
+                        } else if (member.type === 'soldier') {
+                            member.attacks = member.attacks || [];
+                            if (!member.attacks.includes('slash')) member.attacks.push('slash');
+                        } else if (member.type === 'barbarian') {
+                            member.attacks = member.attacks || [];
+                            if (!member.attacks.includes('barbarian_slash')) member.attacks.push('barbarian_slash');
+                        }
                     }
 
                     // Gear assignment
@@ -740,18 +766,29 @@ class CrewManagerPage extends React.Component {
                                     <div className="stat">Fortitude: {this.state.selectedCrewMember.stats.fort}</div>
                                 </div>}
                                 {this.state.selectedCrewMember && <div className="abilities-pane">
-                                    <div className="attacks">Attacks: &nbsp;
-                                        {this.state.selectedCrewMember.attacks.map((e, i) => {
-                                            const name = typeof e === 'object' && e !== null ? e.name : e;
-                                            return <div key={i}>{name}{i !== this.state.selectedCrewMember.attacks.length - 1 ? ',' : ''} &nbsp; </div>
-                                        })}
-                                    </div>
-                                    <div className="specials">Specials: &nbsp;
-                                        {this.state.selectedCrewMember.specials.map((e, i) => {
-                                            const name = typeof e === 'object' && e !== null ? e.name : e;
-                                            return <div key={i}>{name}{i !== this.state.selectedCrewMember.specials.length - 1 ? ',' : ''} &nbsp; </div>
-                                        })}
-                                    </div>
+                                     {this.state.selectedCrewMember.skills ? (
+                                         <div className="specials">Skills: &nbsp;
+                                             {this.state.selectedCrewMember.skills.map((e, i) => {
+                                                 const name = typeof e === 'object' && e !== null ? e.name : e;
+                                                 return <div key={i}>{name}{i !== this.state.selectedCrewMember.skills.length - 1 ? ',' : ''} &nbsp; </div>
+                                             })}
+                                         </div>
+                                     ) : (
+                                         <>
+                                             <div className="attacks">Attacks: &nbsp;
+                                                 {this.state.selectedCrewMember.attacks.map((e, i) => {
+                                                     const name = typeof e === 'object' && e !== null ? e.name : e;
+                                                     return <div key={i}>{name}{i !== this.state.selectedCrewMember.attacks.length - 1 ? ',' : ''} &nbsp; </div>
+                                                 })}
+                                             </div>
+                                             <div className="specials">Specials: &nbsp;
+                                                 {this.state.selectedCrewMember.specials.map((e, i) => {
+                                                     const name = typeof e === 'object' && e !== null ? e.name : e;
+                                                     return <div key={i}>{name}{i !== this.state.selectedCrewMember.specials.length - 1 ? ',' : ''} &nbsp; </div>
+                                                 })}
+                                             </div>
+                                         </>
+                                     )}
                                     <div className="passives">Passives: &nbsp;
                                         {this.state.selectedCrewMember.passives.map((e, i) => {
                                             const name = typeof e === 'object' && e !== null ? e.name : e;
@@ -897,9 +934,9 @@ class CrewManagerPage extends React.Component {
                                             <div className="enemy-info-type">{formatMonsterType(this.state.selectedEnemyForInfo.type)}</div>
                                             <div className="enemy-info-stat">HP: {this.state.selectedEnemyForInfo.stats?.hp} | ATK: {this.state.selectedEnemyForInfo.stats?.atk} | DEF: {this.state.selectedEnemyForInfo.stats?.def}</div>
                                             <div className="enemy-info-stat">Level: {this.state.selectedEnemyForInfo.level}</div>
-                                            {this.state.selectedEnemyForInfo.specials?.length > 0 && (
-                                                <div className="enemy-info-stat">Specials: {this.state.selectedEnemyForInfo.specials.map(s => s.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')).join(', ')}</div>
-                                            )}
+                                             {((this.state.selectedEnemyForInfo.skills?.length > 0) || (this.state.selectedEnemyForInfo.specials?.length > 0)) && (
+                                                 <div className="enemy-info-stat">Skills: {((this.state.selectedEnemyForInfo.skills || this.state.selectedEnemyForInfo.specials) || []).map(s => s.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')).join(', ')}</div>
+                                             )}
                                             {this.state.selectedEnemyForInfo.weaknesses?.length > 0 && (
                                                 <div className="enemy-info-stat">Weaknesses: {this.state.selectedEnemyForInfo.weaknesses.map(s => s.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')).join(', ')}</div>
                                             )}

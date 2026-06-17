@@ -11,7 +11,7 @@ export const NARRATIVE_SEQUENCES = [
         id: 1,
         narratorName: 'Hikaron',
         narratorImage: hikaron,
-        text: 'Hail, dreamers. You have proven your resiliency. Now your destiny stretches out before you. You may think you arrived here if your own accord, but in truth I have brought you here, you will be the instruments of my ascension. When I am free, so will you be free. This ...place within a place that you find yourselves in, this is the tower of my mind, whos depths and spires yawn into infinity. I am lost inside this place. but as you grow, my little saplings, you will find your power can shake the very walls. You will be the instruments of my ascension. You will succeed where others have failed...'
+        text: 'Hail, dreamers. You have proven your resiliency. Now your destiny stretches out before you. You may think you arrived here of your own accord, but in truth I have brought you here, you will be the instruments of my ascension. When I am free, so will you be free. This ...place within a place that you find yourselves in, this is the tower of my mind, whos depths and spires yawn into infinity. I am lost inside this place. but as you grow, my little saplings, you will find your power can shake the very walls. You will be the instruments of my ascension. You will succeed where others have failed...'
     },
     {
         id: 2,

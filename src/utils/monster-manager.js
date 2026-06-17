@@ -52,8 +52,7 @@ export function MonsterManager() {
             portrait: images['goblin_portrait'],
             greetings: ['bones for my master!'],
             deathCries: ['nooooooo'],
-            specials: ['bite'],
-            attacks: ['claw_strike'],
+            skills: ['claw_strike', 'bite'],
             minions: ['goblin', 'goblin', 'goblin'],
             weaknesses: ['crushing', 'cutting', 'electricity'],
             drops: [
@@ -70,7 +69,7 @@ export function MonsterManager() {
             image_names: ['skeleton'],
             monster_names: ['bones'],
             stats: {
-                hp: 500,
+                hp: 50,
                 atk: 5,
                 def: 7,
                 speed: 7, // shambling undead
@@ -84,8 +83,7 @@ export function MonsterManager() {
             portrait: images['skeleton_portrait'],
             greetings: ['*screech*'],
             deathCries: ['*screech*'],
-            specials: ['reassembly'],
-            attacks: ['sword_swing'],
+            skills: ['sword_swing', 'reassembly'],
             minions: ['skeleton', 'skeleton'],
             weaknesses: ['fire'],
             drops: [
@@ -117,9 +115,8 @@ export function MonsterManager() {
             portrait: images['kabuki_demon_minion_portrait'],
             greetings: ['Assaaa'],
             deathCries: ['No! Impossible!'],
-            specials: ['obliterate', 'invisibility'],
+            skills: ['void_lance', 'major_magic_missile', 'obliterate', 'invisibility'],
             passives: ['flying'],
-            attacks: ['void_lance', 'major_magic_missile'],
             weaknesses: ['arcane', 'holy-aura'],
             drops: [
                 { item: TIER1_POTION, percentChance: 35 },
@@ -151,9 +148,8 @@ export function MonsterManager() {
             portraitFilter: 'sepia(0.4) hue-rotate(320deg)',
             greetings: ['Vukdaj kolo gurdu'],
             deathCries: ['Urdu meklak milnauru...'],
-            specials: ['bifurcate', 'minor_magic_missile'],
+            skills: ['claw_strike', 'bifurcate', 'minor_magic_missile'],
             passives: ['flying'],
-            attacks: ['claw_strike'],
             weaknesses: ['arcane', 'holy-aura'],
             drops: [
                 { item: TIER1_POTION, percentChance: 35 },
@@ -183,8 +179,7 @@ export function MonsterManager() {
             portrait: images['horned_pet_portrait'],
             greetings: ['*growls and flares its horns*', '*snarls fiercely*'],
             deathCries: ['*whines and collapses*'],
-            specials: ['head_butt'],
-            attacks: ['rake', 'bite'],
+            skills: ['rake', 'bite', 'head_butt'],
             weaknesses: ['holy', 'holy-aura'],
             drops: [
                 { item: TIER1_POTION, percentChance: 35 },
@@ -202,7 +197,7 @@ export function MonsterManager() {
             stats: { hp: 1, atk: 0, def: 0, speed: 0, willpower: 0, str: 0, int: 0, dex: 0, fort: 0 },
             level: 6,
             portrait: images['ghoul_portrait'],
-            greetings: [], deathCries: [], specials: [], attacks: [], weaknesses: [], drops: []
+            greetings: [], deathCries: [], skills: [], weaknesses: [], drops: []
         },
         blalok: {
             type: 'blalok',
@@ -214,7 +209,7 @@ export function MonsterManager() {
             stats: { hp: 1, atk: 0, def: 0, speed: 0, willpower: 0, str: 0, int: 0, dex: 0, fort: 0 },
             level: 6,
             portrait: images['blalok'],
-            greetings: [], deathCries: [], specials: [], attacks: [], weaknesses: [], drops: []
+            greetings: [], deathCries: [], skills: [], weaknesses: [], drops: []
         },
         shade: {
             type: 'shade',
@@ -238,8 +233,7 @@ export function MonsterManager() {
             portrait: images['shade'],
             greetings: ['*chilling whispers*', 'the shadows consume you'],
             deathCries: ['*shrieks and fades*'],
-            specials: ['despair', 'induce_fear'],
-            attacks: ['claw_strike'],
+            skills: ['claw_strike', 'despair', 'induce_fear'],
             weaknesses: ['fire', 'holy'],
             drops: [
                 { item: TIER1_POTION, percentChance: 35 },
@@ -268,8 +262,7 @@ export function MonsterManager() {
             portrait: images['troll_portrait'],
             greetings: ['you stink of fresh meat'],
             deathCries: ['*gurgle*'],
-            specials: ['regeneration'],
-            attacks: ['crush', 'tackle', 'bite'],
+            skills: ['crush', 'tackle', 'bite', 'regeneration'],
             weaknesses: ['fire'],
             drops: [
                 { item: TIER1_POTION, percentChance: 35 },
@@ -298,8 +291,7 @@ export function MonsterManager() {
             portrait: images['mummy_portrait'],
             greetings: ['time is unravelling'],
             deathCries: ['at last'],
-            specials: ['induce_fear', 'energy_drain'],
-            attacks: ['claw_strike'],
+            skills: ['claw_strike', 'induce_fear', 'energy_drain'],
             weaknesses: ['arcane', 'fire', 'electricity'],
             minions: ['skeleton', 'skeleton'],
             drops: [
@@ -329,8 +321,7 @@ export function MonsterManager() {
             portrait: images['basilisk_cultists_portrait'],
             greetings: ['Hear the whispers...', 'The master speaks to us!'],
             deathCries: ['The whispers... end...'],
-            specials: ['fireball', 'ice_blast'],
-            attacks: ['magic_missile'],
+            skills: ['magic_missile', 'fireball', 'ice_blast'],
             weaknesses: ['holy', 'physical'],
             drops: [
                 { item: TIER1_POTION, percentChance: 35 },
@@ -360,13 +351,13 @@ export function MonsterManager() {
             portrait: images['wraith_portrait'],
             greetings: ['*hissssss*', 'come to the silence'],
             deathCries: ['*screams*'],
-            specials: ['banshee wail', 'shadow_armor'],
-            attacks: ['grasp', 'energy_drain'],
+            skills: ['undead_grasp', 'nether_bolt', 'invoke_darkness', 'shadow_armor'],
             weaknesses: ['holy', 'psionic'],
             drops: [
                 { item: TIER1_POTION, percentChance: 35 },
                 { itemPool: TIER1_ITEM, percentChance: 50 },
-            ]
+            ],
+            minions: ['shade', 'skeleton'],
         },
         ogre: {
             type: 'ogre',
@@ -376,7 +367,7 @@ export function MonsterManager() {
             image_names: ['ogre'],
             monster_names: ['Uggo', 'Tubodu', 'Gumluk'],
             stats: {
-                hp: 172,
+                hp: 1192,
                 atk: 9,
                 def: 11,
                 speed: 5, // massive but slow
@@ -390,13 +381,13 @@ export function MonsterManager() {
             portrait: images['ogre_portrait'],
             greetings: ['Guarkog buzu', 'Mogab burdu'],
             deathCries: ['*gurgle*'],
-            specials: ['bite', 'stomp', 'head_butt'],
-            attacks: ['claw_strike'],
+            skills: ['claw_strike', 'bite', 'stomp', 'head_butt'],
             weaknesses: ['fire', 'psionic'],
             drops: [
                 { item: TIER1_POTION, percentChance: 35 },
                 { itemPool: TIER1_WEAPONS, percentChance: 45 },
-            ]
+            ],
+            minions: ['goblin', 'goblin', 'goblin'],
         },
         // ── Level 9 ──────────────────────────────────────────────────────
         gorgon: {
@@ -421,8 +412,7 @@ export function MonsterManager() {
             portrait: images['gorgon_portrait'],
             greetings: ['Ssssurrenderrrr', 'Be ssstill'],
             deathCries: ['Arrrghhh!'],
-            specials: ['petrify'],
-            attacks: ['snake_strike', 'bite'],
+            skills: ['snake_strike', 'bite', 'petrify'],
             weaknesses: ['ice', 'psionic'],
             drops: [
                 { item: TIER1_POTION, percentChance: 35 },
@@ -452,8 +442,7 @@ export function MonsterManager() {
             portrait: images['vampire_portrait'],
             greetings: ['My hunger sees you'],
             deathCries: ['Peace at last...'],
-            specials: ['bat_fly', 'crimson_sight', 'soul_suck'],
-            attacks: ['vampiric_bite', 'claw_strike'],
+            skills: ['vampiric_bite', 'claw_strike', 'bat_fly', 'crimson_sight', 'soul_suck'],
             weaknesses: ['arcane', 'holy-aura'],
             minions: ['goblin', 'goblin'],
             drops: [
@@ -483,8 +472,7 @@ export function MonsterManager() {
             portrait: images['high_priest_of_the_basilisk_portrait'],
             greetings: ['*chants in tongues of the cosmos*', 'The stars demand your blood!'],
             deathCries: ['*cosmic screams*'],
-            specials: [],
-            attacks: ['claw_strike', 'bite'],
+            skills: ['claw_strike', 'bite'],
             weaknesses: ['holy', 'fire'],
             drops: [
                 { item: TIER2_POTION, percentChance: 35 },
@@ -515,8 +503,7 @@ export function MonsterManager() {
             portrait: images['goat_demon_portrait'],
             greetings: ['More ingredients for my ritual..'],
             deathCries: ['Arrrghhh!'],
-            specials: ['silence', 'demon_mark', 'new_moon', 'malevolent_presence'],
-            attacks: ['rake', 'gore_horns'],
+            skills: ['rake', 'gore_horns', 'silence', 'demon_mark', 'new_moon', 'malevolent_presence'],
             weaknesses: ['ice', 'psionic'],
             minions: ['horned_pet', 'horned_pet'],
             drops: [
@@ -548,8 +535,7 @@ export function MonsterManager() {
             portrait: images['witch_p1_1'],
             greetings: ['Thy blood is quickening'],
             deathCries: ['Mercy'],
-            specials: ['hex', 'shadow_curse', 'spiderweb', 'summon_spiders', 'dispell', 'demonic_whispers', 'transform'],
-            attacks: ['void_lance', 'major_magic_missile'],
+            skills: ['greater_magic_missile', 'hex', 'shadow_curse', 'spiderweb', 'summon_spiders', 'dispell', 'demonic_whispers', 'transform'],
             weaknesses: ['arcane', 'holy-aura'],
             drops: [
                 { item: TIER3_POTION, percentChance: 35 },
@@ -603,8 +589,7 @@ export function MonsterManager() {
             portrait: images['beholder_portrait'],
             greetings: ['Vukudaj kolo gurdu'],
             deathCries: ['Urdu meklak milnaurku...'],
-            specials: ['obliterate', 'energy_burn', 'petrify', 'invisibility', 'major_magic_missile'],
-            attacks: ['void_lance'],
+            skills: ['void_lance', 'obliterate', 'energy_burn', 'petrify', 'invisibility', 'major_magic_missile'],
             weaknesses: ['arcane', 'holy-aura'],
             minions: ['beholder_minion', 'beholder_minion'],
             drops: [
@@ -662,9 +647,8 @@ export function MonsterManager() {
             portrait: images['kabuki_demon_portrait'],
             greetings: ['Assaaa'],
             deathCries: ['No! Impossible!'],
-            specials: ['obliterate', 'invisibility', 'major_magic_missile'],
+            skills: ['void_lance', 'claws', 'obliterate', 'invisibility', 'major_magic_missile'],
             passives: ['flying'],
-            attacks: ['void_lance', 'claws'],
             weaknesses: ['arcane', 'holy-aura'],
             minions: ['kabuki_demon_minion', 'kabuki_demon_minion'],
             drops: [
@@ -695,8 +679,7 @@ export function MonsterManager() {
             portrait: images['djinn_portrait'],
             greetings: ['your fate leads you here, now it will all end'],
             deathCries: ['it seems your fate has other plans'],
-            specials: ['betrayal', 'arcane_barrier', 'bind', 'death_missile'],
-            attacks: ['void_lance'],
+            skills: ['void_lance', 'betrayal', 'arcane_barrier', 'bind', 'death_missile'],
             weaknesses: ['arcane'],
             drops: [
                 { item: TIER2_POTION, percentChance: 35 },
@@ -713,7 +696,7 @@ export function MonsterManager() {
             stats: { hp: 1, atk: 0, def: 0, speed: 0, willpower: 0, str: 0, int: 0, dex: 0, fort: 0 },
             level: 1,
             portrait: images['precipice_guardian_portrait'],
-            greetings: [], deathCries: [], specials: [], attacks: [], weaknesses: [], drops: []
+            greetings: [], deathCries: [], skills: [], weaknesses: [], drops: []
         },
         sphinx: {
             type: 'sphinx',
@@ -739,8 +722,7 @@ export function MonsterManager() {
             portrait: images['sphinx_portrait2'],
             greetings: ['be thee worthy?'],
             deathCries: ['you may pass'],
-            specials: ['third_eye', 'polymorph', 'hex', 'begin_the_trials', 'magic_missile'],
-            attacks: ['claw_strike', 'claw_strike', 'induce_madness', 'lightning'],
+            skills: ['claw_strike', 'claw_strike', 'induce_madness', 'lightning', 'third_eye', 'polymorph', 'hex', 'begin_the_trials', 'magic_missile'],
             weaknesses: ['arcane'],
             minions: ['djinn'],
             drops: [
@@ -773,8 +755,7 @@ export function MonsterManager() {
             portrait: 'wyvern_portrait',
             greetings: ['*roar*'],
             deathCries: ['*scream*'],
-            specials: ['dragon_whirlwind', 'bombard', 'dragon_dispell', 'lay_eggs', 'blue_dragon_breath'],
-            attacks: ['claw_strike', 'bite'],
+            skills: ['claw_strike', 'bite', 'dragon_whirlwind', 'bombard', 'dragon_dispell', 'lay_eggs', 'blue_dragon_breath'],
             weaknesses: ['psionic'],
             drops: [
                 { item: TIER4_POTION, percentChance: 35 },
@@ -806,8 +787,7 @@ export function MonsterManager() {
             portrait: images['egg_1'],
             greetings: [],
             deathCries: ['*splat*'],
-            specials: [],
-            attacks: [],
+            skills: [],
             weaknesses: ['fire'],
             drops: []
         },
@@ -833,8 +813,7 @@ export function MonsterManager() {
             portrait: images['Hagigah'],
             greetings: [],
             deathCries: [],
-            specials: [],
-            attacks: [],
+            skills: [],
             weaknesses: [],
             drops: []
         },
@@ -860,8 +839,7 @@ export function MonsterManager() {
             portrait: images['Hashmallim'],
             greetings: [],
             deathCries: [],
-            specials: [],
-            attacks: [],
+            skills: [],
             weaknesses: [],
             drops: []
         },

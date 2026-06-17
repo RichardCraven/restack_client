@@ -211,6 +211,7 @@ const AnimationGrid = ({
                                 onComplete={anim.onComplete}
                                 tracer={typeof anim.tracer === 'boolean' ? anim.tracer : true}
                                 facing={anim.facing}
+                                color={anim.color}
                             />
                         } else if (anim.type === 'whirlwind') {
                             if (!anim.origin) {
@@ -223,6 +224,7 @@ const AnimationGrid = ({
                                 width={TILE_SIZE}
                                 height={TILE_SIZE}
                                 duration={anim.duration || 650}
+                                caller={anim.caller}
                                 onComplete={anim.onComplete}
                             />
                         } else if (anim.type === 'energy_blast') {

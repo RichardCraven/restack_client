@@ -350,7 +350,7 @@ export default function FightersCombatGrid(props) {
                                         <div className={`portrait-overlay${details?.drained ? ' drained' : ''}${details?.frozen ? ' frozen' : ''}`} >
                                             <div className="damage-indicator-container">
                                                 {props.getFighterDetails(fighter)?.damageIndicators.map((e,i)=>{
-                                                    const isStatDebuff = !e.isCrit && !e.isMiss && typeof e.value === 'string';
+                                                    const isStatDebuff = !e.isCrit && !e.isMiss && typeof e.value === 'string' && isNaN(e.value);
                                                     return <div key={e.id || i} className={`damage-indicator${isStatDebuff ? ' stat-debuff' : ''}${e.isCrit ? ' crit' : ''}${e.isMiss ? ' miss' : ''}`}>
                                                         {formatDamageIndicatorValue(e.value)}
                                                     </div>

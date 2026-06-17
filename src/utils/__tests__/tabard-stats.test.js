@@ -152,4 +152,26 @@ describe('Tabard stats and resistances', () => {
     const penalty = applyResolvePenalty(20);
     expect(penalty).toBe(15); // 20 * (1 - 0.25) = 15
   });
+
+  test('Goblin claw strike does 3 damage to Sardonis and is not reduced by Sardonis flat STR reduction', () => {
+    const goblin = {
+      id: 'goblin_unit',
+      name: 'Goblin',
+      type: 'goblin',
+      isMonster: true,
+      stats: { atk: 3, speed: 5, dex: 5, def: 5 }
+    };
+
+    const sardonis = {
+      id: 'sardonis_unit',
+      name: 'Sardonis',
+      type: 'soldier',
+      stats: { str: 8, def: 0 },
+      inventory: []
+    };
+
+    const rawDamage = 3;
+    const finalDamage = cm.damageCheck(goblin, sardonis, rawDamage);
+    expect(finalDamage).toBe(3);
+  });
 });

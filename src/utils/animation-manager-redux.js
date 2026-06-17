@@ -29,7 +29,11 @@ import {
   fear,
   soldier_fist_of_honor,
   death_missile,
-  death_missile_hit
+  death_missile_hit,
+  stomp,
+  head_butt,
+  bite_animation_top,
+  bite_animation_bottom
 } from './images';
 
 export class AnimationManagerRedux {
@@ -85,7 +89,7 @@ export class AnimationManagerRedux {
    * @param {object} targetCoords  { x, y }
    * @param {string} abilityName   e.g. 'claw_strike', 'energy_drain'
    */
-   triggerAbility(sourceCoords, targetCoords, abilityName, isTargetLarge = false, targetOccupiedCoords = null, sourceUnitId = null, arrowType = null, customDuration = null, hitResults = null) {
+   triggerAbility(sourceCoords, targetCoords, abilityName, isTargetLarge = false, targetOccupiedCoords = null, sourceUnitId = null, arrowType = null, customDuration = null, hitResults = null, sphereCoords = null) {
     if (!sourceCoords || !targetCoords) return;
     const name = String(abilityName || '').toLowerCase().replace(/\s+/g, '_');
     this._currentTargetCoords = targetCoords;
@@ -93,9 +97,16 @@ export class AnimationManagerRedux {
     this._currentTargetOccupiedCoords = Array.isArray(targetOccupiedCoords) ? targetOccupiedCoords : null;
     this._currentAbilityName = name;
 
+    const spherePx = sphereCoords ? this._px(sphereCoords) : null;
+
     switch (name) {
       case 'dragon_whirlwind':
         this._dragonWhirlwind(sourceCoords);
+        break;
+      case 'whirlwind':
+      case 'monk_whirlwind':
+      case 'barbarian_whirlwind':
+        this._meleeWhirlwind(sourceCoords, sourceUnitId, name);
         break;
       case 'bombard':
         this._bombardEmission(sourceCoords, targetCoords, targetOccupiedCoords);
@@ -109,13 +120,22 @@ export class AnimationManagerRedux {
         break;
       case 'claw_strike':
       case 'claws':
-      case 'bite':
       case 'crush':
       case 'tackle':
       case 'grasp':
-      case 'stomp':
-      case 'head_butt':
         this._clawStrike(sourceCoords, targetCoords, sourceUnitId);
+        break;
+      case 'undead_grasp':
+        this._undeadGraspStrike(sourceCoords, targetCoords, sourceUnitId);
+        break;
+      case 'stomp':
+        this._stomp(sourceCoords, targetCoords, sourceUnitId);
+        break;
+      case 'head_butt':
+        this._headButt(sourceCoords, targetCoords, sourceUnitId);
+        break;
+      case 'bite':
+        this._bite(sourceCoords, targetCoords);
         break;
       case 'energy_drain':
         this._energyDrain(sourceCoords, targetCoords);
@@ -151,10 +171,12 @@ export class AnimationManagerRedux {
       case 'fireball':
         this._fireball(sourceCoords, targetCoords);
         break;
+      case 'nether_bolt':
       case 'magic_missile':
       case 'minor_magic_missile':
       case 'major_magic_missile':
-        this._magicMissile(sourceCoords, targetCoords, hitResults);
+      case 'greater_magic_missile':
+        this._magicMissile(sourceCoords, targetCoords, hitResults, name, spherePx);
         break;
       case 'lightning_strike':
       case 'lightning':
@@ -194,7 +216,7 @@ export class AnimationManagerRedux {
         break;
       case 'cleave':
       case 'barbarian_cleave':
-        this._barbarianCleave(sourceCoords, targetCoords);
+        this._barbarianCleave(sourceCoords, targetCoords, sourceUnitId);
         break;
       case 'monk_punch':
       case 'punch':
@@ -225,10 +247,10 @@ export class AnimationManagerRedux {
       case 'deadeye_shot':
       case 'spear_throw':
       case 'loose':
-        this._projectileThrow(sourceCoords, targetCoords, name, arrowType);
+        this._projectileThrow(sourceCoords, targetCoords, name, arrowType, spherePx);
         break;
       case 'execute':
-        this._executeMultiShots(sourceCoords, targetCoords, name, arrowType);
+        this._executeMultiShots(sourceCoords, targetCoords, name, arrowType, spherePx);
         break;
       case 'circle_of_protection':
         this._circleOfProtection(sourceCoords, targetCoords);
@@ -366,6 +388,80 @@ export class AnimationManagerRedux {
     }, 500);
   }
 
+  _undeadGraspStrike(src, tgt, sourceUnitId = null) {
+    const srcPx = this._px(src);
+    const tgtPx = this._px(tgt);
+    const dx = tgtPx.x - srcPx.x;
+    const dy = tgtPx.y - srcPx.y;
+    // Place swipe icon halfway between attacker and target
+    const midPx = { x: srcPx.x + dx * 0.6, y: srcPx.y + dy * 0.6 };
+    const angle = (Math.atan2(dy, dx) * (180 / Math.PI)) + 180;
+
+    // Phase 1: undead grasp swipe arc (purple hue-rotated) traveling toward target
+    this._emit({
+      type: 'undead_grasp_swipe',
+      srcPx,
+      tgtPx,
+      midPx,
+      angle,
+      icon: claw_strike_animation,
+      duration: 750,
+      sourceUnitId,
+    });
+
+    // Phase 2: claw_hit overlay on target, staggered after swipe
+    setTimeout(() => {
+      this._emit({
+        type: 'claw_hit',
+        tgtPx,
+        icon: claw_hit,
+        duration: 400,
+        sourceUnitId,
+      });
+    }, 450);
+  }
+
+  _stomp(src, tgt, sourceUnitId) {
+    const srcPx = this._px(src);
+    this._emit({
+      type: 'stomp_cast',
+      sourceUnitId,
+      duration: 1000
+    });
+
+    setTimeout(() => {
+      this._emit({
+        type: 'stomp_shockwave',
+        centerPx: srcPx,
+        duration: 600
+      });
+    }, 450);
+  }
+
+  _headButt(src, tgt, sourceUnitId) {
+    const srcPx = this._px(src);
+    const tgtPx = this._px(tgt);
+    this._emit({
+      type: 'head_butt_lunge',
+      srcPx,
+      tgtPx,
+      srcCoords: src,
+      tgtCoords: tgt,
+      sourceUnitId,
+      duration: 1000
+    });
+  }
+
+  _bite(src, tgt) {
+    const tgtPx = this._px(tgt);
+    this._emit({
+      type: 'bite_chomping',
+      srcPx: this._px(src),
+      tgtPx,
+      duration: 1000
+    });
+  }
+
   _energyDrain(src, tgt) {
     const srcPx = this._px(src);
     const tgtPx = this._getImpactTargetPx(tgt);
@@ -423,7 +519,7 @@ export class AnimationManagerRedux {
     }, 980);
   }
 
-  _magicMissile(src, tgt, hitResults = null) {
+  _magicMissile(src, tgt, hitResults = null, abilityName = 'magic_missile', spherePx = null) {
     const srcPx = this._px(src);
     const occupiedCoords = this._currentTargetOccupiedCoords;
     const hasComplex = Array.isArray(occupiedCoords) && occupiedCoords.length > 0;
@@ -452,6 +548,8 @@ export class AnimationManagerRedux {
           tgtPx: finalTgtPx,
           angle,
           duration: 400,
+          spherePx,
+          abilityName,
         });
 
         const isHit = Array.isArray(hitResults) ? hitResults[index] !== false : true;
@@ -475,9 +573,17 @@ export class AnimationManagerRedux {
       }, delayTime);
     };
 
-    fireMissile(0, -15, 0);
-    fireMissile(200, 0, 1);
-    fireMissile(400, 15, 2);
+    if (abilityName === 'greater_magic_missile') {
+      fireMissile(0, -20, 0);
+      fireMissile(150, -10, 1);
+      fireMissile(300, 0, 2);
+      fireMissile(450, 10, 3);
+      fireMissile(600, 20, 4);
+    } else {
+      fireMissile(0, -15, 0);
+      fireMissile(200, 0, 1);
+      fireMissile(400, 15, 2);
+    }
   }
 
   _lightning(src, tgt) {
@@ -547,8 +653,20 @@ export class AnimationManagerRedux {
   }
 
   _swordSlash(src, tgt, sourceUnitId = null, facing = 'right') {
+    let targetCoords = tgt;
+    if (this._isTargetLarge && Array.isArray(this._currentTargetOccupiedCoords) && this._currentTargetOccupiedCoords.length > 0) {
+      let minDist = Infinity;
+      this._currentTargetOccupiedCoords.forEach(tc => {
+        const dist = Math.abs(src.x - tc.x) + Math.abs(src.y - tc.y);
+        if (dist < minDist) {
+          minDist = dist;
+          targetCoords = tc;
+        }
+      });
+    }
+
     const srcPx = this._px(src);
-    const tgtPx = this._px(tgt);
+    const tgtPx = this._px(targetCoords, false, true);
     const dx = tgtPx.x - srcPx.x;
     const dy = tgtPx.y - srcPx.y;
     const angle = Math.atan2(dy, dx) * (180 / Math.PI);
@@ -564,8 +682,20 @@ export class AnimationManagerRedux {
   }
 
   _imbuedStrike(src, tgt, sourceUnitId) {
+    let targetCoords = tgt;
+    if (this._isTargetLarge && Array.isArray(this._currentTargetOccupiedCoords) && this._currentTargetOccupiedCoords.length > 0) {
+      let minDist = Infinity;
+      this._currentTargetOccupiedCoords.forEach(tc => {
+        const dist = Math.abs(src.x - tc.x) + Math.abs(src.y - tc.y);
+        if (dist < minDist) {
+          minDist = dist;
+          targetCoords = tc;
+        }
+      });
+    }
+
     const srcPx = this._px(src);
-    const tgtPx = this._px(tgt);
+    const tgtPx = this._px(targetCoords, false, true);
     const dx = tgtPx.x - srcPx.x;
     const dy = tgtPx.y - srcPx.y;
     const angle = Math.atan2(dy, dx) * (180 / Math.PI);
@@ -580,8 +710,20 @@ export class AnimationManagerRedux {
   }
 
   _fistOfHonor(src, tgt) {
+    let targetCoords = tgt;
+    if (this._isTargetLarge && Array.isArray(this._currentTargetOccupiedCoords) && this._currentTargetOccupiedCoords.length > 0) {
+      let minDist = Infinity;
+      this._currentTargetOccupiedCoords.forEach(tc => {
+        const dist = Math.abs(src.x - tc.x) + Math.abs(src.y - tc.y);
+        if (dist < minDist) {
+          minDist = dist;
+          targetCoords = tc;
+        }
+      });
+    }
+
     const srcPx = this._px(src);
-    const tgtPx = this._px(tgt);
+    const tgtPx = this._px(targetCoords, false, true);
     const dx = tgtPx.x - srcPx.x;
     const dy = tgtPx.y - srcPx.y;
     const leftOffset = (srcPx.x - tgtPx.x) / 2;
@@ -600,7 +742,7 @@ export class AnimationManagerRedux {
     });
   }
 
-  _projectileThrow(src, tgt, name, arrowType = null) {
+  _projectileThrow(src, tgt, name, arrowType = null, spherePx = null) {
     const srcPx = this._px(src);
     const tgtPx = this._getImpactTargetPx(tgt);
     const dx = tgtPx.x - srcPx.x;
@@ -614,6 +756,7 @@ export class AnimationManagerRedux {
       angle,
       arrowType,
       duration: 700,
+      spherePx,
     });
     if (arrowType === 'ice') {
       setTimeout(() => {
@@ -644,7 +787,7 @@ export class AnimationManagerRedux {
     });
   }
 
-  _executeMultiShots(src, tgt, name, arrowType = null) {
+  _executeMultiShots(src, tgt, name, arrowType = null, spherePx = null) {
     const srcPx = this._px(src);
     const tgtPx = this._getImpactTargetPx(tgt);
     const dx = tgtPx.x - srcPx.x;
@@ -660,6 +803,7 @@ export class AnimationManagerRedux {
         angle,
         arrowType,
         duration: 700,
+        spherePx,
       });
       if (arrowType === 'ice') {
         setTimeout(() => {
@@ -753,7 +897,7 @@ export class AnimationManagerRedux {
     });
   }
 
-  _barbarianCleave(src, tgt) {
+  _barbarianCleave(src, tgt, sourceUnitId) {
     let targetCoords = tgt;
     if (this._isTargetLarge && Array.isArray(this._currentTargetOccupiedCoords) && this._currentTargetOccupiedCoords.length > 0) {
       let minDist = Infinity;
@@ -777,6 +921,7 @@ export class AnimationManagerRedux {
 
     this._emit({
       type: 'barbarian_cleave_effect',
+      sourceUnitId,
       srcPx,
       tgtPx,
       baseAngle,
@@ -801,7 +946,7 @@ export class AnimationManagerRedux {
     }
 
     const srcPx = this._px(src);
-    const tgtPx = this._px(targetCoords);
+    const tgtPx = this._px(targetCoords, false, true);
     const leftOffset = (srcPx.x - tgtPx.x) / 2;
     const topOffset = (srcPx.y - tgtPx.y) / 2;
 
@@ -1155,6 +1300,17 @@ export class AnimationManagerRedux {
       type: 'dragon_whirlwind_effect',
       centerPx,
       duration: 1500
+    });
+  }
+
+  _meleeWhirlwind(sourceCoords, sourceUnitId, abilityName) {
+    const centerPx = this._px(sourceCoords);
+    this._emit({
+      type: 'melee_whirlwind_effect',
+      centerPx,
+      sourceUnitId,
+      abilityName,
+      duration: 1000
     });
   }
 

@@ -15,6 +15,89 @@ import { FIGHTER_MOVE_TRANSITION_MS, ROCK_DURATION } from '../../utils/shared-co
 const TILE_SIZE = 100;
 const SHOW_TILE_BORDERS = true;
 
+function CurvedProjectile({ srcPx, tgtPx, spherePx, duration = 400, onComplete, color = '#d946ef', shadowColor = '#701a75', isNetherBolt = false }) {
+    const [pos, setPos] = React.useState(srcPx);
+    const [angle, setAngle] = React.useState(0);
+    const [opacity, setOpacity] = React.useState(1);
+    const [scale, setScale] = React.useState(1);
+    const startTimeRef = React.useRef(null);
+
+    React.useEffect(() => {
+        let animId;
+        const tick = (now) => {
+            if (!startTimeRef.current) startTimeRef.current = now;
+            const elapsed = now - startTimeRef.current;
+            const t = Math.min(elapsed / duration, 1);
+
+            const mt = 1 - t;
+            const x = mt * mt * srcPx.x + 2 * mt * t * tgtPx.x + t * t * spherePx.x;
+            const y = mt * mt * srcPx.y + 2 * mt * t * tgtPx.y + t * t * spherePx.y;
+
+            const nextT = Math.min(t + 0.01, 1);
+            const nextMt = 1 - nextT;
+            const nextX = nextMt * nextMt * srcPx.x + 2 * nextMt * nextT * tgtPx.x + nextT * nextT * spherePx.x;
+            const nextY = nextMt * nextMt * srcPx.y + 2 * nextMt * nextT * tgtPx.y + nextT * nextT * spherePx.y;
+            const newAngle = Math.atan2(nextY - y, nextX - x) * (180 / Math.PI);
+
+            setPos({ x, y });
+            setAngle(newAngle);
+
+            if (t > 0.6) {
+                const fadeProgress = (t - 0.6) / 0.4;
+                setOpacity(1 - fadeProgress);
+                setScale(1 - fadeProgress);
+            }
+
+            if (t < 1) {
+                animId = requestAnimationFrame(tick);
+            } else {
+                if (onComplete) onComplete();
+            }
+        };
+        animId = requestAnimationFrame(tick);
+        return () => cancelAnimationFrame(animId);
+    }, [srcPx, tgtPx, spherePx, duration, onComplete]);
+
+    return (
+        <div style={{
+            position: 'absolute',
+            left: `${pos.x}px`,
+            top: `${pos.y}px`,
+            width: isNetherBolt ? '32px' : '18px',
+            height: isNetherBolt ? '32px' : '18px',
+            pointerEvents: 'none',
+            zIndex: 4000,
+            transform: `translate(-50%, -50%) rotate(${angle}deg) scale(${scale})`,
+            opacity: opacity,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+        }}>
+            {isNetherBolt ? (
+                <img
+                    src={images['nether_bolt']}
+                    alt="nether bolt"
+                    style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'contain',
+                        filter: 'drop-shadow(0 0 4px #a21caf)'
+                    }}
+                />
+            ) : (
+                <div style={{
+                    width: '18px',
+                    height: '18px',
+                    borderRadius: '50%',
+                    border: '2px solid #ffffff',
+                    background: `radial-gradient(circle, #ffffff 15%, ${color} 45%, ${shadowColor} 80%)`,
+                    boxShadow: `0 0 10px ${color}, 0 0 20px ${shadowColor}, inset 0 0 4px #ffffff`,
+                }} />
+            )}
+        </div>
+    );
+}
+
 // ── Shared helpers ────────────────────────────────────────────────────────────
 
 const getRadialLineCoordsFromPct = (pct) => {
@@ -813,7 +896,7 @@ export default function CombatGrid(props) {
         return (
             <div className="damage-indicator-container" style={{ overflow: 'visible' }}>
                 {indicators.map((indicator, idx, arr) => {
-                    const isStatDebuff = !indicator.isCrit && !indicator.isMiss && typeof indicator.value === 'string' && indicator.type !== 'robbed';
+                    const isStatDebuff = !indicator.isCrit && !indicator.isMiss && typeof indicator.value === 'string' && indicator.type !== 'robbed' && isNaN(indicator.value);
                     const yOffset = idx * 28;
                     return (
                         <div
@@ -865,7 +948,11 @@ export default function CombatGrid(props) {
             return Math.abs(anim.srcPx.x - (xPos + TILE_SIZE / 2)) < 1 && Math.abs(anim.srcPx.y - (yPos + TILE_SIZE / 2)) < 1;
         });
         const activeShieldSlamAnim = activeAnimations.find((anim) => {
-            if (anim.type !== 'shield_slam_connect') return false;
+            if (anim.type !== 'shield_slam_connect' && anim.type !== 'head_butt_lunge') return false;
+            return anim.sourceUnitId === fighter.id;
+        });
+        const activeStompCast = activeAnimations.find((anim) => {
+            if (anim.type !== 'stomp_cast') return false;
             return anim.sourceUnitId === fighter.id;
         });
 
@@ -954,15 +1041,17 @@ export default function CombatGrid(props) {
                         animation: activeLeapAnim 
                             ? `barbarianLeapTravel ${activeLeapAnim.duration / 1000}s linear both` 
                             : (activeShieldSlamAnim 
-                                ? `shieldSlamLunge ${activeShieldSlamAnim.duration / 1000}s ease-in-out both` 
-                                : undefined),
+                                ? `${activeShieldSlamAnim.type === 'head_butt_lunge' ? 'headbuttLunge' : 'shieldSlamLunge'} ${activeShieldSlamAnim.duration / 1000}s ease-in-out both` 
+                                : (activeStompCast
+                                    ? `stompScale ${activeStompCast.duration / 1000}s ease-in-out both`
+                                    : undefined)),
                         '--leap-dx': activeLeapAnim ? `${activeLeapAnim.dx}px` : '0px',
                         '--leap-dy': activeLeapAnim ? `${activeLeapAnim.dy}px` : '0px',
                         '--slam-dx': activeShieldSlamAnim ? `${activeShieldSlamAnim.tgtPx.x - activeShieldSlamAnim.srcPx.x}px` : '0px',
                         '--slam-dy': activeShieldSlamAnim ? `${activeShieldSlamAnim.tgtPx.y - activeShieldSlamAnim.srcPx.y}px` : '0px',
                         transformOrigin: '50% 50%',
-                        willChange: (activeLeapAnim || activeShieldSlamAnim) ? 'transform' : 'auto',
-                        zIndex: (activeLeapAnim || activeShieldSlamAnim) ? 4500 : undefined,
+                        willChange: (activeLeapAnim || activeShieldSlamAnim || activeStompCast) ? 'transform' : 'auto',
+                        zIndex: (activeLeapAnim || activeShieldSlamAnim || activeStompCast) ? 4500 : undefined,
                         opacity: isBatFlying ? 0 : 1,
                         transition: 'opacity 0.25s ease-in-out'
                     }}
@@ -1010,8 +1099,23 @@ export default function CombatGrid(props) {
                             backgroundRepeat: 'no-repeat',
                             backgroundPosition: 'center',
                             zIndex: 310,
-                            animation: 'pulse 1.5s infinite ease-in-out',
-                            opacity: 0.5,
+                            animation: 'markPulse 1.5s infinite ease-in-out',
+                            opacity: 0.25,
+                            pointerEvents: 'none',
+                        }}></div>
+                    )}
+                    {activeShieldSlamAnim && activeShieldSlamAnim.type === 'head_butt_lunge' && (
+                        <div style={{
+                            position: 'absolute',
+                            top: '10%',
+                            left: '10%',
+                            width: '80%',
+                            height: '80%',
+                            backgroundImage: `url(${images.head_butt?.default || images.head_butt})`,
+                            backgroundSize: 'contain',
+                            backgroundRepeat: 'no-repeat',
+                            backgroundPosition: 'center',
+                            zIndex: 350,
                             pointerEvents: 'none',
                         }}></div>
                     )}
@@ -1166,20 +1270,22 @@ export default function CombatGrid(props) {
                             pointerEvents: 'none'
                         }} />
                     )}
-                    <div className="indicators-wrapper" style={{ zIndex: 310, position: 'absolute', bottom: 0, left: 0, width: '100%', pointerEvents: 'none' }}>
-                        <div className="hp-bar">
-                            {!getFighterDetails(fighter)?.dead && (
-                                <div className="red-fill" style={{ width: `${(getFighterDetails(fighter)?.hp / fighter.stats.hp) * 100}%` }} />
-                            )}
-                        </div>
-                        {combatManager && combatManager.round !== undefined ? (
-                            <div className="endurance-bar" style={{ height: '4px', backgroundColor: 'rgba(255,255,255,0.2)', width: '100%', marginTop: '2px', position: 'relative' }}>
+                    {fighter.type !== 'darkness_sphere' && (
+                        <div className="indicators-wrapper" style={{ zIndex: 310, position: 'absolute', bottom: 0, left: 0, width: '100%', pointerEvents: 'none' }}>
+                            <div className="hp-bar">
                                 {!getFighterDetails(fighter)?.dead && (
-                                    <div className="white-fill" style={{ height: '100%', backgroundColor: '#ffffff', width: `${(getFighterDetails(fighter)?.endurance / getFighterDetails(fighter)?.maxEndurance) * 100}%` }} />
+                                    <div className="red-fill" style={{ width: `${(getFighterDetails(fighter)?.hp / fighter.stats.hp) * 100}%` }} />
                                 )}
                             </div>
-                        ) : null}
-                    </div>
+                            {combatManager && combatManager.round !== undefined ? (
+                                <div className="endurance-bar" style={{ height: '4px', backgroundColor: 'rgba(255,255,255,0.2)', width: '100%', marginTop: '2px', position: 'relative' }}>
+                                    {!getFighterDetails(fighter)?.dead && (
+                                        <div className="white-fill" style={{ height: '100%', backgroundColor: '#ffffff', width: `${(getFighterDetails(fighter)?.endurance / getFighterDetails(fighter)?.maxEndurance) * 100}%` }} />
+                                    )}
+                                </div>
+                            ) : null}
+                        </div>
+                    )}
                     {details?.stunned && !isAsleepFighter && !details?.dead && (
                         <div style={{
                             position: 'absolute',
@@ -1237,7 +1343,7 @@ export default function CombatGrid(props) {
                 <div className={`portrait-overlay${details?.drained ? ' drained' : ''}${details?.frozen ? ' frozen' : ''}`} style={{ overflow: 'visible' }}>
                     <div className="damage-indicator-container">
                         {getFighterDetails(fighter)?.damageIndicators.map((e, i) => {
-                            const isStatDebuff = !e.isCrit && !e.isMiss && typeof e.value === 'string';
+                            const isStatDebuff = !e.isCrit && !e.isMiss && typeof e.value === 'string' && isNaN(e.value);
                             return <div key={e.id || i} className={`damage-indicator${isStatDebuff ? ' stat-debuff' : ''}${e.isCrit ? ' crit' : ''}${e.isMiss ? ' miss' : ''}`}>{formatDamageValue(e.value)}</div>;
                         })}
                     </div>
@@ -1403,7 +1509,11 @@ export default function CombatGrid(props) {
         const isDisintegrating = activeAnimations.some(a => a.type === 'disintegrate_beam' && a.tgtPx && Math.abs(a.tgtPx.x - (leftPos + width/2)) < 15 && Math.abs(a.tgtPx.y - (topPos + height/2)) < 15);
         const isBatFlying = activeAnimations.some(a => a.type === 'bat_fly_anim' && a.sourceUnitId === unit.id);
         const activeShieldSlamAnim = activeAnimations.find((anim) => {
-            if (anim.type !== 'shield_slam_connect') return false;
+            if (anim.type !== 'shield_slam_connect' && anim.type !== 'head_butt_lunge') return false;
+            return anim.sourceUnitId === unit.id;
+        });
+        const activeStompCast = activeAnimations.find((anim) => {
+            if (anim.type !== 'stomp_cast') return false;
             return anim.sourceUnitId === unit.id;
         });
         const liveMonster = combatManager.getCombatant(unit.id) || unit;
@@ -1485,12 +1595,14 @@ export default function CombatGrid(props) {
                         overflow: 'visible',
                         opacity: isBatFlying ? 0 : 1,
                         animation: activeShieldSlamAnim 
-                            ? `shieldSlamLunge ${activeShieldSlamAnim.duration / 1000}s ease-in-out both` 
-                            : undefined,
+                            ? `${activeShieldSlamAnim.type === 'head_butt_lunge' ? 'headbuttLunge' : 'shieldSlamLunge'} ${activeShieldSlamAnim.duration / 1000}s ease-in-out both` 
+                            : (activeStompCast
+                                ? `stompScale ${activeStompCast.duration / 1000}s ease-in-out both`
+                                : undefined),
                         '--slam-dx': activeShieldSlamAnim ? `${activeShieldSlamAnim.tgtPx.x - activeShieldSlamAnim.srcPx.x}px` : '0px',
                         '--slam-dy': activeShieldSlamAnim ? `${activeShieldSlamAnim.tgtPx.y - activeShieldSlamAnim.srcPx.y}px` : '0px',
-                        willChange: activeShieldSlamAnim ? 'transform' : 'auto',
-                        zIndex: activeShieldSlamAnim ? 4500 : undefined,
+                        willChange: (activeShieldSlamAnim || activeStompCast) ? 'transform' : 'auto',
+                        zIndex: (activeShieldSlamAnim || activeStompCast) ? 4500 : undefined,
                         transition: 'opacity 0.25s ease-in-out'
                     }}
                 >
@@ -1505,11 +1617,13 @@ export default function CombatGrid(props) {
                             height: '100%',
                             transform: 'none', // skip CSS transform scale(2)
                             borderRadius: '0',
-                            animation: (unit.stunned && !isAsleepMonster && !isDead)
-                                ? 'stunWobble 0.6s ease-in-out infinite'
-                                : ((unit.wounded && !isDead)
-                                    ? 'BulgePortrait var(--portrait-animation-duration, 420ms) var(--portrait-animation-timing, cubic-bezier(.2,.8,.2,1)) forwards'
-                                    : undefined)
+                            animation: unit.type === 'darkness_sphere'
+                                ? 'sphereOfDarknessFadeIn 1.5s cubic-bezier(0.19, 1, 0.22, 1) forwards'
+                                : ((unit.stunned && !isAsleepMonster && !isDead)
+                                    ? 'stunWobble 0.6s ease-in-out infinite'
+                                    : ((unit.wounded && !isDead)
+                                        ? 'BulgePortrait var(--portrait-animation-duration, 420ms) var(--portrait-animation-timing, cubic-bezier(.2,.8,.2,1)) forwards'
+                                        : undefined))
                         }}
                         onAnimationEnd={e => {
                             if (isDead && e.animationName && e.animationName.includes('meltDownDeath') && showDeathAnimation[unit.id]) {
@@ -1523,6 +1637,24 @@ export default function CombatGrid(props) {
                     >
                         {SHOW_MONSTER_IDS ? unit.id : null}
                         {unit.wounded && <div className="hit-flash-overlay" />}
+                        {unit.type === 'darkness_sphere' && (
+                            <div
+                                style={{
+                                    position: 'absolute',
+                                    left: 0,
+                                    top: 0,
+                                    width: '100%',
+                                    height: '100%',
+                                    backgroundImage: `url(${images['invoke_darkness']})`,
+                                    backgroundSize: 'contain',
+                                    backgroundRepeat: 'no-repeat',
+                                    backgroundPosition: 'center',
+                                    zIndex: 10,
+                                    animation: 'invokeDarknessSkillTransition 1.5s cubic-bezier(0.25, 1, 0.5, 1) forwards',
+                                    pointerEvents: 'none'
+                                }}
+                            />
+                        )}
                         {(() => {
                             if (isAsleepMonster && !isDead) {
                                 return (
@@ -1618,8 +1750,23 @@ export default function CombatGrid(props) {
                             backgroundRepeat: 'no-repeat',
                             backgroundPosition: 'center',
                             zIndex: 12,
-                            animation: 'pulse 1.5s infinite ease-in-out',
-                            opacity: 0.5,
+                            animation: 'markPulse 1.5s infinite ease-in-out',
+                            opacity: 0.25,
+                            pointerEvents: 'none',
+                        }}></div>
+                    )}
+                    {activeShieldSlamAnim && activeShieldSlamAnim.type === 'head_butt_lunge' && (
+                        <div style={{
+                            position: 'absolute',
+                            top: '10%',
+                            left: '10%',
+                            width: '80%',
+                            height: '80%',
+                            backgroundImage: `url(${images.head_butt?.default || images.head_butt})`,
+                            backgroundSize: 'contain',
+                            backgroundRepeat: 'no-repeat',
+                            backgroundPosition: 'center',
+                            zIndex: 350,
                             pointerEvents: 'none',
                         }}></div>
                     )}
@@ -1812,25 +1959,27 @@ export default function CombatGrid(props) {
                     );
                 })()}
 
-                <div className="indicators-wrapper" style={{ zIndex: 10 }}>
-                    <div className="monster-hp-bar hp-bar">
-                        {!isDead && <div className="red-fill" style={{ width: `${(unit.hp / unit.stats?.hp) * 100}%` }} />}
-                    </div>
-                    {combatManager && combatManager.round !== undefined ? (
-                        <div className="endurance-bar" style={{ height: '4px', backgroundColor: 'rgba(255,255,255,0.2)', width: '100%', marginTop: '2px', position: 'relative' }}>
-                            {!isDead && <div className="white-fill" style={{ height: '100%', backgroundColor: '#ffffff', width: `${(unit.endurance / unit.maxEndurance) * 100}%` }} />}
+                {unit.type !== 'darkness_sphere' && (
+                    <div className="indicators-wrapper" style={{ zIndex: 10 }}>
+                        <div className="monster-hp-bar hp-bar">
+                            {!isDead && <div className="red-fill" style={{ width: `${(unit.hp / unit.stats?.hp) * 100}%` }} />}
                         </div>
-                    ) : (
-                        <>
-                            <div className="monster-energy-bar energy-bar">
-                                {!isDead && <div className="yellow-fill" style={{ width: `calc(${unit.energy}%)` }} />}
+                        {combatManager && combatManager.round !== undefined ? (
+                            <div className="endurance-bar" style={{ height: '4px', backgroundColor: 'rgba(255,255,255,0.2)', width: '100%', marginTop: '2px', position: 'relative' }}>
+                                {!isDead && <div className="white-fill" style={{ height: '100%', backgroundColor: '#ffffff', width: `${(unit.endurance / unit.maxEndurance) * 100}%` }} />}
                             </div>
-                            <div className="tempo-bar">
-                                {!isDead && <div className="tempo-indicator" style={{ left: `calc(${unit.tempo}% - 4px)` }} />}
-                            </div>
-                        </>
-                    )}
-                </div>
+                        ) : (
+                            <>
+                                <div className="monster-energy-bar energy-bar">
+                                    {!isDead && <div className="yellow-fill" style={{ width: `calc(${unit.energy}%)` }} />}
+                                </div>
+                                <div className="tempo-bar">
+                                    {!isDead && <div className="tempo-indicator" style={{ left: `calc(${unit.tempo}% - 4px)` }} />}
+                                </div>
+                            </>
+                        )}
+                    </div>
+                )}
             </div>
         );
     };
@@ -1839,6 +1988,80 @@ export default function CombatGrid(props) {
     const renderAnimation = (anim) => {
         if (!anim) return null;
         const key = anim.id;
+
+        if (anim.type === 'stomp_shockwave' && anim.centerPx) {
+            return (
+                <div
+                    key={key}
+                    style={{
+                        position: 'absolute',
+                        left: `${anim.centerPx.x}px`,
+                        top: `${anim.centerPx.y}px`,
+                        transform: 'translate(-50%, -50%)',
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: '50%',
+                        border: '4px solid #ffdd57',
+                        boxShadow: '0 0 15px #ffdd57, inset 0 0 10px #ffdd57',
+                        animation: 'shockwaveExpand 0.6s cubic-bezier(0.1, 0.8, 0.3, 1) forwards',
+                        pointerEvents: 'none',
+                        zIndex: 4500
+                    }}
+                />
+            );
+        }
+
+        if (anim.type === 'headbutt_connect' && anim.tgtPx && anim.srcPx) {
+            return null;
+        }
+
+        if (anim.type === 'bite_chomping' && anim.tgtPx) {
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: `${anim.tgtPx.x}px`,
+                    top: `${anim.tgtPx.y}px`,
+                    width: '100px',
+                    height: '100px',
+                    transform: 'translate(-50%, -50%)',
+                    pointerEvents: 'none',
+                    zIndex: 5000,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                }}>
+                    <img
+                        src={images.bite_animation_top?.default || images.bite_animation_top}
+                        alt="bite top"
+                        style={{
+                            position: 'absolute',
+                            width: '90px',
+                            height: '45px',
+                            top: '5px',
+                            objectFit: 'contain',
+                            animation: 'biteCloseTop 0.7s ease-in-out forwards',
+                            pointerEvents: 'none',
+                            zIndex: 50
+                        }}
+                    />
+                    <img
+                        src={images.bite_animation_bottom?.default || images.bite_animation_bottom}
+                        alt="bite bottom"
+                        style={{
+                            position: 'absolute',
+                            width: '90px',
+                            height: '45px',
+                            bottom: '5px',
+                            objectFit: 'contain',
+                            animation: 'biteCloseBottom 0.7s ease-in-out forwards',
+                            pointerEvents: 'none',
+                            zIndex: 50
+                        }}
+                    />
+                </div>
+            );
+        }
 
         if (anim.type === 'dragon_whirlwind_effect' && anim.centerPx) {
             return (
@@ -1894,6 +2117,60 @@ export default function CombatGrid(props) {
                                 animation: 'windstormExpand 1.5s ease-out both',
                                 animationDelay: `${i * 0.15}s`,
                             }} />
+                        </div>
+                    ))}
+                </div>
+            );
+        }
+
+        if (anim.type === 'melee_whirlwind_effect' && anim.centerPx) {
+            const sourceUnit = anim.sourceUnitId ? (crew.find(f => f.id === anim.sourceUnitId) || battleData[anim.sourceUnitId]) : null;
+            const isMonk = sourceUnit ? sourceUnit.type === 'monk' : (anim.abilityName === 'monk_whirlwind');
+            
+            let resolvedIcon = null;
+            if (isMonk) {
+                resolvedIcon = images.monk_punch?.default || images.monk_punch;
+            } else if (sourceUnit) {
+                const equippedWeapon = (sourceUnit.inventory || []).find(i => i && i.type === 'weapon' && (i.equippedSlot === 'right' || i.equippedSlot === 'left' || i.equippedBy === sourceUnit.id));
+                resolvedIcon = equippedWeapon 
+                    ? (images[equippedWeapon.icon]?.default || images[equippedWeapon.icon] || images[equippedWeapon.id]?.default || images[equippedWeapon.id] || equippedWeapon.image || images[equippedWeapon.name]) 
+                    : (images.axe?.default || images.axe);
+            } else {
+                resolvedIcon = images.axe?.default || images.axe;
+            }
+
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: `${anim.centerPx.x}px`,
+                    top: `${anim.centerPx.y}px`,
+                    width: '0px',
+                    height: '0px',
+                    zIndex: 5000,
+                    pointerEvents: 'none',
+                }}>
+                    {[...Array(2)].map((_, i) => (
+                        <div key={i} style={{
+                            position: 'absolute',
+                            left: 0,
+                            top: 0,
+                            width: '40px',
+                            height: '40px',
+                            animation: 'meleeWhirlwindSpin 1s cubic-bezier(0.2, 0.8, 0.2, 1) both',
+                            animationDelay: `${i * 0.15}s`,
+                        }}>
+                            <img 
+                                src={resolvedIcon} 
+                                style={{ 
+                                    width: '100%', 
+                                    height: '100%', 
+                                    objectFit: 'contain',
+                                    filter: isMonk 
+                                      ? 'drop-shadow(0 0 5px #ffaa00) drop-shadow(0 0 10px #ff5500)' 
+                                      : 'drop-shadow(0 0 5px #ff3333) drop-shadow(0 0 10px #990000)',
+                                }} 
+                                alt="spinning-weapon"
+                            />
                         </div>
                     ))}
                 </div>
@@ -2210,7 +2487,7 @@ export default function CombatGrid(props) {
             );
         }
 
-        if (anim.type === 'claw_swipe' && anim.midPx && anim.icon) {
+        if ((anim.type === 'claw_swipe' || anim.type === 'undead_grasp_swipe') && anim.midPx && anim.icon) {
             const sourceUnit = anim.sourceUnitId ? (combatManager?.getCombatant?.(anim.sourceUnitId) || battleData[anim.sourceUnitId]) : null;
             const isHugeSource = sourceUnit && (
                 sourceUnit.huge === true
@@ -2220,6 +2497,7 @@ export default function CombatGrid(props) {
                 || sourceUnit.scale === 3
             );
             const scaleVal = isHugeSource ? 1.5 : 1.0;
+            const isUndeadGrasp = anim.type === 'undead_grasp_swipe';
             // Rotated claw image placed between attacker and target
             return (
                 <div key={key} style={{
@@ -2231,6 +2509,7 @@ export default function CombatGrid(props) {
                     transform: `translate(-50%, -50%) rotate(${anim.angle}deg) scale(${scaleVal})`,
                     pointerEvents: 'none',
                     zIndex: 5000,
+                    filter: isUndeadGrasp ? 'hue-rotate(270deg) saturate(2.5) drop-shadow(0 0 8px rgba(147, 51, 234, 0.8))' : 'none'
                 }}>
                     <img
                         src={anim.icon}
@@ -2517,14 +2796,29 @@ export default function CombatGrid(props) {
         }
 
         if (anim.type === 'magic_missile_projectile' && anim.srcPx && anim.tgtPx) {
+            const isNetherBolt = anim.abilityName === 'nether_bolt';
+            if (anim.spherePx) {
+                return (
+                    <CurvedProjectile
+                        key={key}
+                        srcPx={anim.srcPx}
+                        tgtPx={anim.tgtPx}
+                        spherePx={anim.spherePx}
+                        duration={anim.duration}
+                        color={isNetherBolt ? '#a21caf' : '#d946ef'}
+                        shadowColor={isNetherBolt ? '#4a044e' : '#701a75'}
+                        isNetherBolt={isNetherBolt}
+                    />
+                );
+            }
             const durationS = anim.duration ? anim.duration / 1000 : 0.4;
             return (
                 <div key={key} style={{
                     position: 'absolute',
                     left: `${anim.srcPx.x}px`,
                     top: `${anim.srcPx.y}px`,
-                    width: '18px',
-                    height: '18px',
+                    width: isNetherBolt ? '32px' : '18px',
+                    height: isNetherBolt ? '32px' : '18px',
                     pointerEvents: 'none',
                     zIndex: 4000,
                     animation: `fireballTravel ${durationS}s linear forwards`,
@@ -2532,17 +2826,31 @@ export default function CombatGrid(props) {
                     '--fb-dy': `${anim.tgtPx.y - anim.srcPx.y}px`,
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center'
+                    justifyContent: 'center',
+                    transform: isNetherBolt ? `translate(-50%, -50%) rotate(${anim.angle}deg)` : 'none'
                 }}>
-                    <div style={{
-                        width: '18px',
-                        height: '18px',
-                        borderRadius: '50%',
-                        border: '2px solid #ffffff',
-                        background: 'radial-gradient(circle, #ffffff 15%, #d946ef 45%, #701a75 80%)',
-                        boxShadow: '0 0 10px #d946ef, 0 0 20px #701a75, inset 0 0 4px #ffffff',
-                        animation: 'missileGlow 0.15s ease-in-out infinite alternate',
-                    }} />
+                    {isNetherBolt ? (
+                        <img
+                            src={images['nether_bolt']}
+                            alt="nether bolt"
+                            style={{
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'contain',
+                                filter: 'drop-shadow(0 0 4px #a21caf)'
+                            }}
+                        />
+                    ) : (
+                        <div style={{
+                            width: '18px',
+                            height: '18px',
+                            borderRadius: '50%',
+                            border: '2px solid #ffffff',
+                            background: 'radial-gradient(circle, #ffffff 15%, #d946ef 45%, #701a75 80%)',
+                            boxShadow: '0 0 10px #d946ef, 0 0 20px #701a75, inset 0 0 4px #ffffff',
+                            animation: 'missileGlow 0.15s ease-in-out infinite alternate',
+                        }} />
+                    )}
                 </div>
             );
         }
@@ -3051,6 +3359,26 @@ export default function CombatGrid(props) {
             );
         }
         if (anim.type === 'generic_projectile' && anim.srcPx && anim.tgtPx) {
+            if (anim.spherePx) {
+                const arrowTypeColors = {
+                    force: '#ff9f1c',
+                    ice: '#00bfff',
+                    poison: '#38b000',
+                    celestial: '#ffdd57'
+                };
+                const projColor = arrowTypeColors[anim.arrowType] || '#ff9f1c';
+                return (
+                    <CurvedProjectile
+                        key={key}
+                        srcPx={anim.srcPx}
+                        tgtPx={anim.tgtPx}
+                        spherePx={anim.spherePx}
+                        duration={anim.duration}
+                        color={projColor}
+                        shadowColor='#000000'
+                    />
+                );
+            }
             const isArrow = ['loose', 'execute', 'deadeye_shot'].includes(anim.subtype);
             if (isArrow) {
                 const arrowTypeColors = {
@@ -3333,19 +3661,31 @@ export default function CombatGrid(props) {
             const weaponIcon = isBarbarian 
                 ? (images.axe?.default || images.axe || images.axe_white?.default || images.axe_white) 
                 : (images.longsword?.default || images.longsword);
-            const facing = anim.facing || 'right';
             const duration = anim.duration || 600;
+
+            const dx = anim.tgtPx.x - anim.srcPx.x;
+            const dy = anim.tgtPx.y - anim.srcPx.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+
+            // Calculate midpoint and pivot offset
+            const midX = anim.srcPx.x + dx / 2;
+            const midY = anim.srcPx.y + dy / 2;
+            const halfDistPx = dist / 2;
 
             return (
                 <div key={key} style={{
                     position: 'absolute',
-                    left: `${anim.srcPx.x}px`,
-                    top: `${anim.srcPx.y}px`,
+                    left: `${midX}px`,
+                    top: `${midY}px`,
                     width: '60px',
                     height: '60px',
-                    transform: 'translate(-50%, -50%)',
+                    transform: `translate(-50%, -50%) rotate(${angle}deg)`,
                     pointerEvents: 'none',
                     zIndex: 5000,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
                 }}>
                     <img
                         src={weaponIcon}
@@ -3354,7 +3694,8 @@ export default function CombatGrid(props) {
                             width: '100%',
                             height: '100%',
                             objectFit: 'contain',
-                            animation: `ArcAnimation_${facing} ${duration / 1000}s linear forwards`
+                            transformOrigin: `${30 - halfDistPx}px 30px`,
+                            animation: `weaponSwingArc ${duration / 1000}s ease-in-out forwards`
                         }}
                     />
                 </div>
@@ -3710,7 +4051,7 @@ export default function CombatGrid(props) {
         }
 
         if (anim.type === 'barbarian_cleave_effect' && anim.tgtPx) {
-            const barbarianUnit = crew.find(f => f.type === 'barbarian');
+            const barbarianUnit = anim.sourceUnitId ? (crew.find(f => f.id === anim.sourceUnitId) || crew.find(f => f.class === 'barbarian' || f.type === 'barbarian' || f.image === 'barbarian')) : crew.find(f => f.class === 'barbarian' || f.type === 'barbarian' || f.image === 'barbarian');
             const equippedWeapon = barbarianUnit ? (barbarianUnit.inventory || []).find(i => i && i.type === 'weapon' && (i.equippedSlot === 'right' || i.equippedSlot === 'left' || i.equippedBy === barbarianUnit.id)) : null;
             const weaponIcon = equippedWeapon ? (images[equippedWeapon.icon] || equippedWeapon.icon || images[equippedWeapon.id] || equippedWeapon.image || images[equippedWeapon.name]) : images['axe'];
 

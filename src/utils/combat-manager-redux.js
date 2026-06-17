@@ -124,8 +124,10 @@ export function CombatManagerRedux() {
         if (!unit) return 0;
         const activeUnits = Object.values(this.combatants).filter(c => c && !c.dead && c.hp > 0 && !c.isVCT && !c.skipAI && typeof c.inTrial !== 'number');
         activeUnits.sort((a, b) => {
-            const speedA = a.stats.speed || a.stats.dex || 1;
-            const speedB = b.stats.speed || b.stats.dex || 1;
+            let speedA = a.stats.speed || a.stats.dex || 1;
+            if (a.etherealSpeedActive) speedA += 15;
+            let speedB = b.stats.speed || b.stats.dex || 1;
+            if (b.etherealSpeedActive) speedB += 15;
             return speedB - speedA;
         });
         const index = activeUnits.findIndex(c => c.id === unit.id);
@@ -154,10 +156,13 @@ export function CombatManagerRedux() {
 
     this.applyEnduranceCost = (unit, cost = this.ACTION_ENDURANCE_COST, source = 'action') => {
         if (!unit) return;
+        if (unit.type === 'darkness_sphere') return;
         if ((unit.endurance || 0) <= 0 && unit.exhausted) return;
 
         let actualCost = cost;
-        if (unit.activeDebuffs && unit.activeDebuffs.some(d => d.name === 'shadow_curse')) {
+        if (unit.etherealSpeedActive && (source === 'move' || source === 'retreat')) {
+            actualCost = 0;
+        } else if (unit.activeDebuffs && unit.activeDebuffs.some(d => d.name === 'shadow_curse')) {
             actualCost = cost * 3;
         }
 
@@ -264,6 +269,7 @@ export function CombatManagerRedux() {
         const normalized = key.replace(/\s+/g, '_').toLowerCase();
         let arr = [];
         if (callerOrArray) {
+            if (Array.isArray(callerOrArray.skills)) arr = arr.concat(callerOrArray.skills);
             if (Array.isArray(callerOrArray.specials)) arr = arr.concat(callerOrArray.specials);
             if (Array.isArray(callerOrArray.attacks)) arr = arr.concat(callerOrArray.attacks);
             if (Array.isArray(callerOrArray.specialActions)) arr = arr.concat(callerOrArray.specialActions);
@@ -848,7 +854,7 @@ export function CombatManagerRedux() {
 
     this.updateUnitCoordinates = (unit, nx, ny) => {
         if (!unit) return;
-        if (unit.type === 'dragon_egg' || unit.type === 'trials_icon' || unit.isTrialIcon) {
+        if (unit.type === 'dragon_egg' || unit.type === 'trials_icon' || unit.isTrialIcon || unit.type === 'darkness_sphere') {
             return;
         }
         const ox = unit.coordinates.x;
@@ -875,11 +881,18 @@ export function CombatManagerRedux() {
     this.hitCheck = (caller, target) => {
         if (!target || !caller) return true;
         // Dex is the primary dodge stat; fall back to speed for backward compat
-        const targetDex = target.stats.dex || target.stats.speed || 1;
-        const targetSpeed = target.stats.speed || targetDex;
+        let targetDex = target.stats.dex || target.stats.speed || 1;
+        if (target.etherealSpeedActive) targetDex += 10;
+        let targetSpeed = target.stats.speed || targetDex;
+        if (target.etherealSpeedActive) targetSpeed += 15;
         // Combine dex and speed for dodge: dex contributes 2% per point, speed 1%
         const baseMissChance = (targetDex * 2.0) + (targetSpeed * 1.0);
         let missChance = Math.min(baseMissChance, 45); // cap at 45% normally
+
+        if (target.etherealSpeedActive) {
+            missChance += 25;
+            missChance = Math.min(missChance, 70); // capped at 70% miss chance
+        }
 
         // Monk's Third Eye: doubles the chance that enemy attack will miss
         if (target.thirdEyeActive && caller.isMonster) {
@@ -919,7 +932,8 @@ export function CombatManagerRedux() {
 
         // STR-based flat damage reduction: 1 point reduced per 2 STR
         const targetStr = (target.stats && typeof target.stats.str === 'number') ? target.stats.str : 0;
-        const strReduction = Math.floor(targetStr / 2);
+        const isMonsterAttacker = caller && (caller.isMonster === true || caller.isMinion === true);
+        const strReduction = isMonsterAttacker ? 0 : Math.floor(targetStr / 2);
         let damage = Math.max(1, rawDamage - strReduction);
 
         let equippedArmor = 0;
@@ -1420,8 +1434,10 @@ export function CombatManagerRedux() {
         const activeUnits = Object.values(this.combatants).filter(c => c && !c.dead && c.hp > 0 && !c.isVCT && !c.skipAI && typeof c.inTrial !== 'number');
         // Sort by speed/dexterity descending (higher dex acts first)
         activeUnits.sort((a, b) => {
-            const speedA = a.stats.speed || a.stats.dex || 1;
-            const speedB = b.stats.speed || b.stats.dex || 1;
+            let speedA = a.stats.speed || a.stats.dex || 1;
+            if (a.etherealSpeedActive) speedA += 15;
+            let speedB = b.stats.speed || b.stats.dex || 1;
+            if (b.etherealSpeedActive) speedB += 15;
             return speedB - speedA;
         });
 
@@ -1473,7 +1489,7 @@ export function CombatManagerRedux() {
                     }
 
                     // Incapacitation check
-                    if (unit.frozen || (unit.stunned && !unit.feared) || unit.petrified || unit.isBones) {
+                    if (unit.frozen || (unit.stunned && !unit.feared) || unit.petrified || unit.isBones || unit.asleep) {
                         if (unit.isBones) {
                             this.appendCombatLog(`${this.getCombatantLogName(unit)} is a pile of bones and cannot act.`);
                             return;
@@ -1510,6 +1526,24 @@ export function CombatManagerRedux() {
                                 unit.sleepTotalRounds = 0;
                                 unit.sleepTotalDurationMs = 0;
                                 unit.sleepEndTimeMs = 0;
+                            }
+                        }
+                        if (unit.sleepRounds > 0) {
+                            unit.sleepRounds--;
+                            if (unit.sleepRounds <= 0) {
+                                unit.asleep = false;
+                                unit.sleepRounds = 0;
+                                unit.sleepTotalRounds = 0;
+                                unit.sleepTotalDurationMs = 0;
+                                unit.sleepEndTimeMs = 0;
+                                unit.stunned = false;
+                                unit.stunnedRounds = 0;
+                                unit.stunnedTotalRounds = 0;
+                                unit.stunnedStackDuration = 0;
+                                unit.stunnedTotalDurationMs = 0;
+                                unit.stunnedEndTimeMs = 0;
+                                unit.exhausted = false;
+                                this.appendCombatLog(`${this.getCombatantLogName(unit)} wakes up.`);
                             }
                         }
                         if (unit.petrifiedRounds > 0) { unit.petrifiedRounds--; if (unit.petrifiedRounds <= 0) { unit.petrified = false; } }
@@ -1810,6 +1844,11 @@ export function CombatManagerRedux() {
         if (existing) {
             if (name === 'bleed') {
                 existing.stacks = (existing.stacks || 1) + 1;
+                existing.roundsLeft = Math.max(existing.roundsLeft || 0, durationRounds);
+                existing.totalRounds = Math.max(existing.totalRounds || 0, durationRounds);
+                const newDurationMs = getStatusDurationMs(unit, existing.roundsLeft);
+                existing.totalDurationMs = newDurationMs;
+                existing.endTimeMs = now + newDurationMs;
             } else {
                 existing.roundsLeft += durationRounds;
                 existing.totalRounds = (existing.totalRounds || existing.roundsLeft) + durationRounds;
@@ -1856,7 +1895,7 @@ export function CombatManagerRedux() {
         }
 
         const unitType = unit.type || unit.image || '';
-        if (unitType === 'dragon_egg' || unitType === 'trials_icon' || unit.isTrialIcon) {
+        if (unitType === 'dragon_egg' || unitType === 'trials_icon' || unit.isTrialIcon || unitType === 'darkness_sphere') {
             return;
         }
 
@@ -2459,7 +2498,7 @@ export function CombatManagerRedux() {
                     if (!anyEnemyNear) {
                         this.updateUnitCoordinates(unit, nx, ny);
                         unit.movesTakenThisRound += 1;
-                        this.appendCombatLog(`${this.getCombatantLogName(unit)} flees to safety at (${nx}, ${ny}).`);
+                        // this.appendCombatLog(`${this.getCombatantLogName(unit)} flees to safety at (${nx}, ${ny}).`);
                         fled = true;
                         break;
                     }
@@ -2478,7 +2517,7 @@ export function CombatManagerRedux() {
             if (this.canFitAt(unit, backlineX, newY)) {
                 this.updateUnitCoordinates(unit, backlineX, newY);
                 unit.movesTakenThisRound += 1;
-                this.appendCombatLog(`${this.getCombatantLogName(unit)} shifts position to align with ${this.getCombatantLogName(target)}.`);
+                // this.appendCombatLog(`${this.getCombatantLogName(unit)} shifts position to align with ${this.getCombatantLogName(target)}.`);
             }
         }
 
@@ -2685,11 +2724,13 @@ export function CombatManagerRedux() {
                     this.updateUnitCoordinates(unit, bestTile.x, bestTile.y);
                     unit.movesTakenThisRound += 1;
                     this.applyEnduranceCost(unit, this.MOVE_ENDURANCE_COST, 'move');
+                    /*
                     if (shouldCastThisRound) {
                         this.appendCombatLog(`${this.getCombatantLogName(unit)} repositions to optimize Circle of Protection.`);
                     } else {
                         this.appendCombatLog(`${this.getCombatantLogName(unit)} moves towards ideal Circle of Protection location.`);
                     }
+                    */
                 }
 
                 if (!shouldCastThisRound) {
@@ -2846,11 +2887,13 @@ export function CombatManagerRedux() {
                     this.updateUnitCoordinates(unit, bestTile.x, bestTile.y);
                     unit.movesTakenThisRound += 1;
                     this.applyEnduranceCost(unit, this.MOVE_ENDURANCE_COST, 'move');
+                    /*
                     if (shouldCastThisRound) {
                         this.appendCombatLog(`${this.getCombatantLogName(unit)} repositions to optimize Circle of Deflection.`);
                     } else {
                         this.appendCombatLog(`${this.getCombatantLogName(unit)} moves towards ideal Circle of Deflection location.`);
                     }
+                    */
                 }
 
                 if (!shouldCastThisRound) {
@@ -2902,7 +2945,7 @@ export function CombatManagerRedux() {
         const circleActive = unit.activeBuffs && unit.activeBuffs.some(b => b.name === 'circle_of_protection' || b.name === 'circle_of_deflection');
         if (woundedAlly && unit.movesTakenThisRound < 1 && !unit.ensnared && !circleActive) {
             this.moveCloser(unit, woundedAlly);
-            this.appendCombatLog(`${this.getCombatantLogName(unit)} moves to support ${this.getCombatantLogName(woundedAlly)}.`);
+            // this.appendCombatLog(`${this.getCombatantLogName(unit)} moves to support ${this.getCombatantLogName(woundedAlly)}.`);
         }
         
         // Pass action
@@ -3308,7 +3351,7 @@ export function CombatManagerRedux() {
                     this.updateUnitCoordinates(unit, retreatDest.x, retreatDest.y);
                     unit.movesTakenThisRound += 1;
                     this.applyEnduranceCost(unit, this.MOVE_ENDURANCE_COST, 'retreat');
-                    this.appendCombatLog(`${this.getCombatantLogName(unit)} retreats back to (${retreatDest.x}, ${retreatDest.y}) to maintain distance.`);
+                    // this.appendCombatLog(`${this.getCombatantLogName(unit)} retreats back to (${retreatDest.x}, ${retreatDest.y}) to maintain distance.`);
                 }
             }
         };
@@ -3996,7 +4039,7 @@ export function CombatManagerRedux() {
                 }
                 if (retreatDest) {
                     this.updateUnitCoordinates(unit, retreatDest.x, retreatDest.y);
-                    this.appendCombatLog(`${this.getCombatantLogName(unit)} retreats back to (${retreatDest.x}, ${retreatDest.y}) to maintain distance.`);
+                    // this.appendCombatLog(`${this.getCombatantLogName(unit)} retreats back to (${retreatDest.x}, ${retreatDest.y}) to maintain distance.`);
                 }
             }
             return;
@@ -4417,13 +4460,14 @@ export function CombatManagerRedux() {
             ability.type === 'magical' ||
             ability.subtype === 'spell' ||
             ability.type === 'spell' ||
-            ['magic_missile', 'minor_magic_missile', 'major_magic_missile', 'fireball', 'ice_blast', 'lightning_strike', 'acid_blast', 'disintegrate', 'sleep', 'annihilation', 'vortex', 'heal', 'open_rift', 'summon_imp', 'force_back', 'bombardment', 'blue_dragon_breath', 'fire_breath', 'void_lance', 'lightning', 'stomp', 'spells'].includes((abilityId || ability.name || '').toLowerCase())
+            ['magic_missile', 'minor_magic_missile', 'major_magic_missile', 'greater_magic_missile', 'fireball', 'ice_blast', 'lightning_strike', 'acid_blast', 'disintegrate', 'sleep', 'annihilation', 'vortex', 'heal', 'open_rift', 'summon_imp', 'force_back', 'bombardment', 'blue_dragon_breath', 'fire_breath', 'void_lance', 'lightning', 'stomp', 'spells'].includes((abilityId || ability.name || '').toLowerCase())
         );
         const isSelfTarget = target.id === unit.id || ability.range === 'self';
-        const isMagicMissile = ['magic_missile', 'minor_magic_missile', 'major_magic_missile'].includes(abilityId);
+        const isMagicMissile = ['magic_missile', 'minor_magic_missile', 'major_magic_missile', 'greater_magic_missile'].includes(abilityId);
         const preRolledHits = [];
         if (isMagicMissile) {
-            for (let h = 0; h < 3; h++) {
+            const missilesCount = (abilityId === 'greater_magic_missile') ? 5 : 3;
+            for (let h = 0; h < missilesCount; h++) {
                 preRolledHits.push(isSelfTarget ? true : this.hitCheck(unit, target));
             }
         } else if (abilityId === 'acid_blast') {
@@ -4487,6 +4531,66 @@ export function CombatManagerRedux() {
             if (this.animManagerRedux && typeof this.animManagerRedux.triggerAbility === 'function') {
                 this.animManagerRedux.triggerAbility(unit.coordinates, target.coordinates, 'dragon_dispell', false, null, unit.id);
             }
+            if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+            return;
+        }
+
+        if (abilityId === 'invoke_darkness') {
+            const adjacentTiles = [
+                { x: unit.coordinates.x - 1, y: unit.coordinates.y },
+                { x: unit.coordinates.x,     y: unit.coordinates.y - 1 },
+                { x: unit.coordinates.x,     y: unit.coordinates.y + 1 },
+                { x: unit.coordinates.x + 1, y: unit.coordinates.y },
+            ].filter(t => t.x >= 0 && t.x <= MAX_DEPTH && t.y >= 0 && t.y < MAX_LANES);
+
+            const freeTile = adjacentTiles.find(t => !this.isTileOccupied(t.x, t.y));
+            if (!freeTile) {
+                this.appendCombatLog(`${this.getCombatantLogName(unit)} tried to summon a Sphere of Darkness, but no adjacent tile was free.`);
+                return;
+            }
+
+            const sphereId = `darkness_sphere_${Date.now()}`;
+            const newSphere = {
+                id: sphereId,
+                type: 'darkness_sphere',
+                name: 'Darkness Sphere',
+                isMinion: true,
+                isMonster: !!unit.isMonster,
+                dead: false,
+                coordinates: { ...freeTile },
+                hp: 9999,
+                starting_hp: 9999,
+                stats: { str: 1, dex: 1, atk: 0, def: 99, speed: 1 },
+                attacks: [],
+                specials: [],
+                portrait: images['sphere_of_darkness'],
+                cooldowns: {},
+                darknessRoundsLeft: 6,
+                unkillable: true,
+                invisible: true
+            };
+
+            this.combatants[sphereId] = newSphere;
+            this._setCombatantOccupiedCoords(newSphere);
+            
+            this.appendCombatLog(`${this.getCombatantLogName(unit)} summons a Sphere of Darkness at (${freeTile.x}, ${freeTile.y})!`);
+            
+            if (this.animManagerRedux && typeof this.animManagerRedux.triggerSummon === 'function') {
+                this.animManagerRedux.triggerSummon(freeTile, 'darkness_sphere', images['invoke_darkness']);
+            }
+
+            if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+
+            setTimeout(() => {
+                newSphere.invisible = false;
+                newSphere.fadingIn = true;
+                if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+                setTimeout(() => {
+                    newSphere.fadingIn = false;
+                    if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+                }, 500);
+            }, 1200);
+
             if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
             return;
         }
@@ -4715,6 +4819,98 @@ export function CombatManagerRedux() {
                 if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
             }, 600);
 
+            if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+            return;
+        }
+
+        if (abilityId === 'stomp') {
+            const callerOccupied = unit.occupiedCoords || [unit.coordinates];
+            let hitCount = 0;
+
+            Object.values(this.combatants).forEach(c => {
+                if (!c || c.dead || c.isVCT) return;
+                const isEnemy = (!!unit.isMonster !== !!c.isMonster);
+                if (!isEnemy) return;
+
+                const targetOccupied = c.occupiedCoords || [c.coordinates];
+                const isAdjacent = callerOccupied.some(oc => 
+                    targetOccupied.some(tc => Math.abs(oc.x - tc.x) <= 1 && Math.abs(oc.y - tc.y) <= 1)
+                );
+
+                if (isAdjacent) {
+                    const rawDamage = Math.round((unit.stats.atk || 9) * 1.5);
+                    const finalDmg = this.damageCheck(unit, c, rawDamage, false);
+                    c.hp = Math.max(0, c.hp - finalDmg);
+                    if (finalDmg > 0) this.wakeSleepingTarget(c, 'Stomp');
+                    c.damageIndicators = c.damageIndicators || [];
+                    c.damageIndicators.push({
+                        id: Date.now() + Math.random(),
+                        value: `-${finalDmg}`,
+                        source: 'Stomp',
+                        type: 'damage'
+                    });
+
+                    const dur = 2;
+                    c.stunned = true;
+                    c.stunnedRounds = Math.max(c.stunnedRounds || 0, dur);
+                    this._applyDebuff(c, null, 'Stunned', dur);
+                    c.damageIndicators.push({
+                        id: Date.now() + Math.random() + 10,
+                        value: 'STUNNED!',
+                        source: 'Stomp',
+                        type: 'crit'
+                    });
+
+                    hitCount++;
+                    if (c.hp <= 0) this.targetKilled(c);
+                }
+            });
+
+            this.appendCombatLog(`${this.getCombatantLogName(unit)} uses Stomp! Hits ${hitCount} adjacent enemies, dealing damage and stunning them.`);
+            
+            if (this.animManagerRedux && typeof this.animManagerRedux.triggerAbility === 'function') {
+                this.animManagerRedux.triggerAbility(unit.coordinates, unit.coordinates, 'stomp', false, null, unit.id);
+            }
+            if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+            return;
+        }
+
+        if (abilityId === 'monk_whirlwind' || abilityId === 'barbarian_whirlwind' || abilityId === 'whirlwind') {
+            const callerOccupied = unit.occupiedCoords || [unit.coordinates];
+            let hitCount = 0;
+
+            Object.values(this.combatants).forEach(c => {
+                if (!c || c.dead || c.isVCT) return;
+                const isEnemy = (!!unit.isMonster !== !!c.isMonster);
+                if (!isEnemy) return;
+
+                const targetOccupied = c.occupiedCoords || [c.coordinates];
+                const isAdjacent = callerOccupied.some(oc => 
+                    targetOccupied.some(tc => Math.abs(oc.x - tc.x) <= 1 && Math.abs(oc.y - tc.y) <= 1)
+                );
+
+                if (isAdjacent) {
+                    const rawDamage = unit.stats.atk || 10;
+                    const finalDmg = this.damageCheck(unit, c, rawDamage, true);
+                    c.hp = Math.max(0, c.hp - finalDmg);
+                    if (finalDmg > 0) this.wakeSleepingTarget(c, 'Whirlwind');
+                    c.damageIndicators = c.damageIndicators || [];
+                    c.damageIndicators.push({
+                        id: Date.now() + Math.random(),
+                        value: `-${finalDmg}`,
+                        source: 'Whirlwind',
+                        type: 'damage'
+                    });
+                    hitCount++;
+                    if (c.hp <= 0) this.targetKilled(c);
+                }
+            });
+
+            this.appendCombatLog(`${this.getCombatantLogName(unit)} uses Whirlwind! Hits ${hitCount} adjacent enemies for 100% ATK damage.`);
+            
+            if (this.animManagerRedux && typeof this.animManagerRedux.triggerAbility === 'function') {
+                this.animManagerRedux.triggerAbility(unit.coordinates, unit.coordinates, 'whirlwind', false, null, unit.id);
+            }
             if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
             return;
         }
@@ -5082,6 +5278,7 @@ export function CombatManagerRedux() {
 
         if (abilityId === 'monk_meditate') {
             unit.endurance = unit.maxEndurance;
+            unit.exhausted = false;
             unit.asleep = false;
             unit.sleepRounds = 0;
             unit.sleepTotalRounds = 0;
@@ -5218,7 +5415,12 @@ export function CombatManagerRedux() {
             if (abilityId === 'barbarian_leap_attack') {
                 targetCoord = { x: unit.coordinates.x, y: unit.coordinates.y };
             }
-            this.animManagerRedux.triggerAbility(sourceCoord, targetCoord, abilityId, isTargetLarge, targetTiles, unit.id, activeArrowType, null, preRolledHits);
+            const isRangedProj = ability.range && ability.range !== 'close' && ability.range !== 'self' && abilityId !== 'inspire' && ability.type !== 'summon';
+            const activeDarkSphere = isRangedProj ? Object.values(this.combatants).find(c => 
+                c && !c.dead && c.type === 'darkness_sphere' && !!c.isMonster === !!target.isMonster
+            ) : null;
+            const sphereCoords = activeDarkSphere ? activeDarkSphere.coordinates : null;
+            this.animManagerRedux.triggerAbility(sourceCoord, targetCoord, abilityId, isTargetLarge, targetTiles, unit.id, activeArrowType, null, preRolledHits, sphereCoords);
         }
 
         if (abilityId === 'loose' || abilityId === 'execute' || abilityId === 'deadeye_shot') {
@@ -5402,12 +5604,21 @@ export function CombatManagerRedux() {
         }
         const dmgMult = target.weaknessRevealed ? 1.25 : 1.0;
         const arrowType = (abilityId === 'loose' || abilityId === 'execute') ? (activeArrowType || 'force') : null;
-        const hitCount = (abilityId === 'execute' || isMagicMissile) ? 3 : 1;
+        const hitCount = (abilityId === 'execute') ? 3 : (isMagicMissile ? (abilityId === 'greater_magic_missile' ? 5 : 3) : 1);
         let hitsSucceeded = 0;
         let anyHitConnected = false;
 
         const performHit = (h) => {
             if (target.hp <= 0 || target.dead) return;
+
+            const isRangedProjectile = ability.range && ability.range !== 'close' && ability.range !== 'self' && abilityId !== 'inspire' && ability.type !== 'summon';
+            const activeDarknessSphere = isRangedProjectile ? Object.values(this.combatants).find(c => 
+                c && !c.dead && c.type === 'darkness_sphere' && !!c.isMonster === !!target.isMonster
+            ) : null;
+            if (activeDarknessSphere) {
+                this.appendCombatLog(`The projectile is sucked into the Sphere of Darkness and swallowed!`);
+                return;
+            }
 
             let hit;
             if (isMagicMissile && Array.isArray(preRolledHits)) {
@@ -5485,7 +5696,7 @@ export function CombatManagerRedux() {
                         this.appendCombatLog(`${this.getCombatantLogName(unit)} heals for ${healAmt} from Vampiric Bite.`);
                     }
 
-                    if (abilityId === 'shield_slam') {
+                    if (abilityId === 'shield_slam' || abilityId === 'head_butt') {
                         const dx = target.coordinates.x - unit.coordinates.x;
                         const dy = target.coordinates.y - unit.coordinates.y;
                         const dist = Math.sqrt(dx * dx + dy * dy);
@@ -5496,18 +5707,32 @@ export function CombatManagerRedux() {
                             const newY = Math.max(0, Math.min(MAX_LANES - 1, target.coordinates.y + pushY));
 
                             if ((newX !== target.coordinates.x || newY !== target.coordinates.y)) {
+                                const actionName = abilityId === 'shield_slam' ? 'Shield Slam' : 'Headbutt';
                                 if (this.shouldPushbackSucceed(target)) {
                                     if (!this.isTileOccupied(newX, newY, target.id)) {
                                         this.updateUnitCoordinates(target, newX, newY);
-                                        this.appendCombatLog(`${this.getCombatantLogName(target)} is pushed back 1 space by Shield Slam!`);
+                                        this.appendCombatLog(`${this.getCombatantLogName(target)} is pushed back 1 space by ${actionName}!`);
                                     } else {
                                         this.appendCombatLog(`${this.getCombatantLogName(target)} could not be pushed back because the space was occupied!`);
                                     }
                                 } else {
-                                    this.appendCombatLog(`${this.getCombatantLogName(target)} resisted the push back from Shield Slam!`);
+                                    this.appendCombatLog(`${this.getCombatantLogName(target)} resisted the push back from ${actionName}!`);
                                 }
                             }
                         }
+                    }
+
+                    if (abilityId === 'head_butt') {
+                        const dur = 2;
+                        target.stunned = true;
+                        target.stunnedRounds = Math.max(target.stunnedRounds || 0, dur);
+                        this._applyDebuff(target, null, 'Stunned', dur);
+                        target.damageIndicators.push({
+                            id: Date.now() + Math.random() + 20,
+                            value: 'STUNNED!',
+                            source: 'Headbutt',
+                            type: 'crit'
+                        });
                     }
 
                     if (abilityId === 'soul_suck') {
@@ -5781,7 +6006,7 @@ export function CombatManagerRedux() {
                                     this.appendCombatLog(`${this.getCombatantLogName(target)} does not bleed.`);
                                 } else {
                                     target.bleed = true;
-                                    if (!target.bleedRounds) target.bleedRounds = dur;
+                                    target.bleedRounds = Math.max(target.bleedRounds || 0, dur);
                                     this._applyDebuff(target, { decrease_stats: { stats: [{ stat: 'atk', amount: 2 }] } }, 'bleed', dur);
                                     this.appendCombatLog(`${this.getCombatantLogName(target)} is bleeding!`);
                                 }
@@ -5844,9 +6069,10 @@ export function CombatManagerRedux() {
         } else if (abilityId === 'ice_blast' || abilityId === 'acid_blast') {
             setTimeout(() => performHit(0), 600);
         } else if (isMagicMissile) {
-            setTimeout(() => performHit(0), 400);
-            setTimeout(() => performHit(1), 600);
-            setTimeout(() => performHit(2), 800);
+            const count = (abilityId === 'greater_magic_missile') ? 5 : 3;
+            for (let i = 0; i < count; i++) {
+                setTimeout(() => performHit(i), 400 + i * 200);
+            }
         } else {
             for (let h = 0; h < hitCount; h++) {
                 performHit(h);
@@ -6069,7 +6295,8 @@ export function CombatManagerRedux() {
             this.appendCombatLog(`${this.getCombatantLogName(unit)} cannot move while Shield Wall is active!`);
             return;
         }
-        if (unit.movesTakenThisRound >= 1 || !target) return;
+        const maxMoves = unit.etherealSpeedActive ? 2 : 1;
+        if (unit.movesTakenThisRound >= maxMoves || !target) return;
 
         if (target && target.isVCT && target.parentMonsterId && this.combatants[target.parentMonsterId]) {
             target = this.combatants[target.parentMonsterId];
@@ -6118,7 +6345,7 @@ export function CombatManagerRedux() {
             this.updateUnitCoordinates(unit, moved.x, moved.y);
             unit.movesTakenThisRound += 1;
             this.applyEnduranceCost(unit, this.MOVE_ENDURANCE_COST, 'move');
-            this.appendCombatLog(`${this.getCombatantLogName(unit)} moves toward ${this.getCombatantLogName(target)}.`);
+            // this.appendCombatLog(`${this.getCombatantLogName(unit)} moves toward ${this.getCombatantLogName(target)}.`);
         }
     };
 
@@ -6131,7 +6358,8 @@ export function CombatManagerRedux() {
             this.appendCombatLog(`${this.getCombatantLogName(unit)} cannot move while Shield Wall is active!`);
             return;
         }
-        if (unit.movesTakenThisRound >= 1) return;
+        const maxMoves = unit.etherealSpeedActive ? 2 : 1;
+        if (unit.movesTakenThisRound >= maxMoves) return;
 
         const dx = targetX - unit.coordinates.x;
         const dy = targetY - unit.coordinates.y;
@@ -6160,7 +6388,7 @@ export function CombatManagerRedux() {
             this.updateUnitCoordinates(unit, moved.x, moved.y);
             unit.movesTakenThisRound += 1;
             this.applyEnduranceCost(unit, this.MOVE_ENDURANCE_COST, 'move');
-            this.appendCombatLog(`${this.getCombatantLogName(unit)} is terrified and runs away toward (${targetX}, ${targetY}).`);
+            // this.appendCombatLog(`${this.getCombatantLogName(unit)} is terrified and runs away toward (${targetX}, ${targetY}).`);
         }
     };
 
@@ -6174,7 +6402,8 @@ export function CombatManagerRedux() {
             this.appendCombatLog(`${this.getCombatantLogName(unit)} cannot move while Shield Wall is active!`);
             return;
         }
-        if (unit.movesTakenThisRound >= 1 || !enemyTarget) return;
+        const maxMoves = unit.etherealSpeedActive ? 2 : 1;
+        if (unit.movesTakenThisRound >= maxMoves || !enemyTarget) return;
         if (mode === 'retreat') {
             // Move away from the enemy
             const dx = unit.coordinates.x - enemyTarget.coordinates.x;
@@ -6186,12 +6415,32 @@ export function CombatManagerRedux() {
                 this.updateUnitCoordinates(unit, newX, newY);
                 unit.movesTakenThisRound += 1;
                 this.applyEnduranceCost(unit, this.MOVE_ENDURANCE_COST, 'retreat');
-                this.appendCombatLog(`${this.getCombatantLogName(unit)} retreats from ${this.getCombatantLogName(enemyTarget)}.`);
+                // this.appendCombatLog(`${this.getCombatantLogName(unit)} retreats from ${this.getCombatantLogName(enemyTarget)}.`);
             }
         }
     };
 
     this.updateTick = (deltaMs) => {
+        // Ensure Darkness Spheres remain invulnerable and stationary constructs
+        Object.values(this.combatants).forEach(c => {
+            if (c && c.type === 'darkness_sphere') {
+                c.hp = 9999;
+                c.endurance = 9999;
+                c.maxEndurance = 9999;
+                c.exhausted = false;
+                c.asleep = false;
+                c.stunned = false;
+                c.sleepRounds = 0;
+                c.stunnedRounds = 0;
+                c.sleepEndTimeMs = 0;
+                c.stunnedEndTimeMs = 0;
+                c.sleepTotalDurationMs = 0;
+                c.stunnedTotalDurationMs = 0;
+                c.activeDebuffs = [];
+                c.statusEffects = [];
+            }
+        });
+
         // Tick down active Soul Suck channeling channels
         Object.values(this.combatants).forEach(unit => {
             if (!unit || unit.dead || !unit.soulSuckChanneling) return;
@@ -6348,6 +6597,39 @@ export function CombatManagerRedux() {
         
         Object.values(this.combatants).forEach(c => {
             if (!c || c.dead || c.isVCT) return;
+
+            if (c.type === 'darkness_sphere') {
+                c.darknessRoundsLeft = (c.darknessRoundsLeft || 6) - 1;
+                if (c.darknessRoundsLeft <= 0) {
+                    c.dead = true;
+                    c.fadingOut = true;
+                    this.appendCombatLog(`The Sphere of Darkness fades away.`);
+                    if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+                    setTimeout(() => {
+                        delete this.combatants[c.id];
+                        if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+                    }, 500);
+                } else {
+                    Object.values(this.combatants).forEach(enemy => {
+                        if (!enemy || enemy.dead || enemy.isVCT || !!enemy.isMonster === !!c.isMonster) return;
+                        const dx = Math.abs(enemy.coordinates.x - c.coordinates.x);
+                        const dy = Math.abs(enemy.coordinates.y - c.coordinates.y);
+                        if (dx <= 1 && dy <= 1) {
+                            enemy.hp = Math.max(0, enemy.hp - 5);
+                            enemy.damageIndicators = enemy.damageIndicators || [];
+                            enemy.damageIndicators.push({
+                                id: Date.now() + Math.random(),
+                                value: '-5',
+                                source: 'Darkness Sphere',
+                                type: 'damage'
+                            });
+                            this.appendCombatLog(`Sphere of Darkness deals 5 damage to adjacent enemy ${this.getCombatantLogName(enemy)}!`);
+                            if (enemy.hp <= 0) this.targetKilled(enemy);
+                        }
+                    });
+                }
+            }
+
             c.movesTakenThisRound = 0;
             c.actionsTakenThisRound = 0;
 
@@ -6579,15 +6861,177 @@ export function CombatManagerRedux() {
     this.itemUsed = (item, userInput) => {
         const user = this.combatants[userInput.id];
         if (!user) return;
-        switch (item.effect) {
-            case 'health gain':
-                const healthGain = Math.ceil(user.starting_hp * 0.01 * item.amount);
-                user.hp += healthGain;
-                if (user.hp > user.starting_hp) user.hp = user.starting_hp;
-                break;
-            default:
-                break;
+
+        const effect = item.effect;
+
+        if (effect && typeof effect === 'object') {
+            // ── Cleanse ──
+            if (effect.type === 'cleanse' || effect.cleanse) {
+                const cleanseList = effect.cleanse || [];
+                cleanseList.forEach(debuff => {
+                    if (debuff === 'poisoned' || debuff === 'poison') {
+                        user.poison = false;
+                        user.poisonRounds = 0;
+                        user.poison_eras = 0;
+                    }
+                    if (debuff === 'stunned' || debuff === 'stun' || debuff === 'sleep') {
+                        user.stunned = false;
+                        user.stunned_eras = 0;
+                        user.asleep = false;
+                        user.sleepRounds = 0;
+                        user.sleepTotalRounds = 0;
+                        user.sleepTotalDurationMs = 0;
+                        user.sleepEndTimeMs = 0;
+                        user.exhausted = false;
+                    }
+                    if (debuff === 'silenced' || debuff === 'silence') {
+                        user.silenced = false;
+                        user.silenced_eras = 0;
+                    }
+                    if (debuff === 'slowed' || debuff === 'slow') {
+                        user.slowed = false;
+                        user.slowed_eras = 0;
+                        if (user._slowOriginalSpeed != null) {
+                            if (user.stats) user.stats.speed = user._slowOriginalSpeed;
+                            user.movesPerTurnCycle = user._slowOriginalSpeed * 2;
+                            user.moveCooldown = (1 / user._slowOriginalSpeed) * 5000;
+                            delete user._slowOriginalSpeed;
+                        }
+                    }
+                    if (debuff === 'weakened' || debuff === 'weak') {
+                        user.weakened = false;
+                        user.weakened_eras = 0;
+                        if (user._weakOriginalAtk != null) {
+                            user.atk = user._weakOriginalAtk;
+                            delete user._weakOriginalAtk;
+                        }
+                    }
+                    if (debuff === 'burned' || debuff === 'burn') {
+                        user.burned = false;
+                        user.burned_eras = 0;
+                    }
+                    if (debuff === 'frozen' || debuff === 'freeze') {
+                        user.frozen = false;
+                        user.frozen_eras = 0;
+                    }
+                    if (debuff === 'ensnared' || debuff === 'bind') {
+                        user.ensnared = false;
+                        user.ensnared_eras = 0;
+                    }
+                });
+            }
+
+            // ── HP Healing ──
+            let healAmount = 0;
+            if (effect.type === 'heal_pct') {
+                healAmount = Math.ceil(user.starting_hp * 0.01 * effect.value);
+            } else if (effect.healPct) {
+                healAmount = Math.ceil(user.starting_hp * 0.01 * effect.healPct);
+            } else if (effect.healFlat) {
+                healAmount = effect.healFlat;
+            }
+            if (healAmount > 0) {
+                user.hp = Math.min(user.starting_hp, user.hp + healAmount);
+                // Add damage indicator (as healing)
+                const indicatorId = Date.now() + Math.random();
+                const vctId = `${user.id}_VCT`;
+                const indicatorRecipient = this.combatants[vctId] || user;
+                if (indicatorRecipient.damageIndicators) {
+                    indicatorRecipient.damageIndicators.push({ 
+                        id: indicatorId, 
+                        value: `+${healAmount}`, 
+                        source: 'Item', 
+                        type: 'heal',
+                        timestamp: Date.now()
+                    });
+                }
+            }
+
+            // ── Endurance Restoring ──
+            let restoreAmt = 0;
+            if (effect.type === 'restore_endurance') {
+                restoreAmt = Math.ceil((user.maxEndurance || 30) * 0.01 * effect.value);
+            } else if (effect.endurance) {
+                restoreAmt = Math.ceil((user.maxEndurance || 30) * 0.01 * effect.endurance);
+            }
+            if (restoreAmt > 0) {
+                user.endurance = Math.min(user.maxEndurance || 30, (user.endurance || 0) + restoreAmt);
+                if (user.endurance > 0) {
+                    if (user.exhausted) {
+                        user.exhausted = false;
+                        if (user.asleep) {
+                            this.wakeSleepingTarget(user, 'stamina recovery');
+                        }
+                    }
+                }
+            }
+
+            // ── Buff Stats ──
+            const applyStatBuff = (statName, val, rds) => {
+                user.buffs = user.buffs || [];
+                const existing = user.buffs.find(b => b.stat === statName);
+                if (existing) {
+                    existing.rounds = Math.max(existing.rounds, rds);
+                    return;
+                }
+
+                let originalValue;
+                if (statName === 'atk') {
+                    originalValue = user.atk;
+                    user.atk = Math.round(user.atk * (1 + val / 100));
+                } else if (statName === 'def') {
+                    originalValue = (user.stats && typeof user.stats.def === 'number') ? user.stats.def : (user.def || 0);
+                    const newVal = Math.round(originalValue * (1 + val / 100));
+                    user.def = newVal;
+                    if (user.stats) user.stats.def = newVal;
+                } else if (statName === 'speed') {
+                    originalValue = (user.stats && typeof user.stats.speed === 'number') ? user.stats.speed : 1;
+                    const newVal = originalValue + val;
+                    if (user.stats) user.stats.speed = newVal;
+                    user.movesPerTurnCycle = newVal * 2;
+                    user.moveCooldown = (1 / newVal) * 5000;
+                } else if (statName === 'magic_dmg') {
+                    originalValue = user.magic_dmg || 0;
+                    user.magic_dmg = (user.magic_dmg || 0) + val;
+                } else if (statName === 'dodge') {
+                    originalValue = user.dodge || 0;
+                    user.dodge = (user.dodge || 0) + val;
+                }
+
+                user.buffs.push({
+                    stat: statName,
+                    value: val,
+                    rounds: rds,
+                    originalValue
+                });
+            };
+
+            if (effect.type === 'buff_stat' && effect.stat) {
+                applyStatBuff(effect.stat, effect.value, effect.rounds || 3);
+            } else if (effect.type === 'buff_dodge') {
+                applyStatBuff('dodge', effect.value, effect.rounds || 3);
+            } else if (effect.type === 'buff_multi_stat' && Array.isArray(effect.buffs)) {
+                effect.buffs.forEach(b => {
+                    applyStatBuff(b.stat, b.value, effect.rounds || 3);
+                });
+            } else if (effect.type === 'cleanse_and_buff' && effect.stat) {
+                applyStatBuff(effect.stat, effect.value, effect.rounds || 3);
+            } else if (effect.type === 'heal_and_endurance') {
+                // healing and endurance are already applied above
+            }
+        } else {
+            // Fallback to old format
+            switch (item.effect) {
+                case 'health gain':
+                    const healthGain = Math.ceil(user.starting_hp * 0.01 * item.amount);
+                    user.hp += healthGain;
+                    if (user.hp > user.starting_hp) user.hp = user.starting_hp;
+                    break;
+                default:
+                    break;
+            }
         }
+
         if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
     };
 }

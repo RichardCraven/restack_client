@@ -239,18 +239,29 @@ goBack = () => {
                         <div className="stat">Fortitude: {this.state.selectedCrewMember.stats?.fort}</div>
                     </div>}
                     {this.state.selectedCrewMember && <div className="abilities-pane">
-                        <div className="attacks">Attacks: &nbsp;
-                            {(this.state.selectedCrewMember.attacks || []).map((e,i)=> {
-                                const name = typeof e === 'object' && e !== null ? e.name : e;
-                                return <div key={i}>{ name }{i !== this.state.selectedCrewMember.attacks.length-1 ?  ',' : ''} &nbsp; </div>
-                            })}
-                        </div>
-                        <div className="specials">Specials: &nbsp;
-                            {(this.state.selectedCrewMember.specials || []).map((e,i)=> {
-                                const name = typeof e === 'object' && e !== null ? e.name : e;
-                                return <div key={i}>{ name }{i !== this.state.selectedCrewMember.specials.length-1 ?  ',' : ''} &nbsp; </div>
-                            })}
-                        </div>
+                        {this.state.selectedCrewMember.skills ? (
+                            <div className="specials">Skills: &nbsp;
+                                {this.state.selectedCrewMember.skills.map((e, i) => {
+                                    const name = typeof e === 'object' && e !== null ? e.name : e;
+                                    return <div key={i}>{name}{i !== this.state.selectedCrewMember.skills.length - 1 ? ',' : ''} &nbsp; </div>
+                                })}
+                            </div>
+                        ) : (
+                            <>
+                                <div className="attacks">Attacks: &nbsp;
+                                    {(this.state.selectedCrewMember.attacks || []).map((e,i)=> {
+                                        const name = typeof e === 'object' && e !== null ? e.name : e;
+                                        return <div key={i}>{ name }{i !== this.state.selectedCrewMember.attacks.length-1 ?  ',' : ''} &nbsp; </div>
+                                    })}
+                                </div>
+                                <div className="specials">Specials: &nbsp;
+                                    {(this.state.selectedCrewMember.specials || []).map((e,i)=> {
+                                        const name = typeof e === 'object' && e !== null ? e.name : e;
+                                        return <div key={i}>{ name }{i !== this.state.selectedCrewMember.specials.length-1 ?  ',' : ''} &nbsp; </div>
+                                    })}
+                                </div>
+                            </>
+                        )}
                         <div className="passives">Passives: &nbsp;
                             {(this.state.selectedCrewMember.passives || []).map((e,i)=> {
                                 const name = typeof e === 'object' && e !== null ? e.name : e;

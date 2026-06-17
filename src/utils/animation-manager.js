@@ -5,7 +5,7 @@ export function AnimationManager(){
     // ...existing code...
 
     // Canvas-based claw swipe animation (for Skeleton and claw attacks)
-    this.clawSwipe = (targetTileId, sourceTileId, facing, resolve) => {
+    this.clawSwipe = (targetTileId, sourceTileId, facing, resolve, color = null) => {
         const originCoords = this.getTileCoordsById(sourceTileId);
         const targetCoords = this.getTileCoordsById(targetTileId);
 
@@ -20,6 +20,7 @@ export function AnimationManager(){
                 facing: facing || 'left',
                 duration,
                 tracer: false,
+                color, // pass custom color (e.g. 'purple')
                 onComplete: () => {
                     const idx = this.canvasAnimations.findIndex(a => a.id === animId);
                     if (idx !== -1) {
@@ -484,6 +485,7 @@ export function AnimationManager(){
             animationType: 'canvas',
             origin,
             duration,
+            caller,
             onComplete: null,
         };
 

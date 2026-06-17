@@ -1,14 +1,16 @@
 import React, { useEffect, useRef } from 'react';
+import * as images from '../../utils/images';
 
 /**
  * CanvasWhirlwind
- * Renders a short-lived spinning cyclone centered on a combatant tile.
+ * Renders a spinning equipped item (or Monk's fist) orbiting around the caster.
  */
 export default function CanvasWhirlwind({
   origin,
   width = 100,
   height = 100,
   duration = 650,
+  caller,
   onComplete = () => {},
 }) {
   const canvasRef = useRef(null);
@@ -26,6 +28,28 @@ export default function CanvasWhirlwind({
     const cx = w / 2;
     const cy = h / 2;
 
+    // Resolve caller's icon
+    const isMonk = caller ? caller.type === 'monk' : false;
+    let resolvedIcon = null;
+    if (isMonk) {
+      resolvedIcon = images.monk_punch?.default || images.monk_punch;
+    } else if (caller) {
+      const equippedWeapon = (caller.inventory || []).find(i => i && i.type === 'weapon' && (i.equippedSlot === 'right' || i.equippedSlot === 'left' || i.equippedBy === caller.id));
+      resolvedIcon = equippedWeapon 
+        ? (images[equippedWeapon.icon]?.default || images[equippedWeapon.icon] || images[equippedWeapon.id]?.default || images[equippedWeapon.id] || equippedWeapon.image || images[equippedWeapon.name]) 
+        : (images.axe?.default || images.axe);
+    } else {
+      resolvedIcon = images.axe?.default || images.axe;
+    }
+
+    // Load the image
+    const img = new Image();
+    img.src = resolvedIcon;
+    let imageLoaded = false;
+    img.onload = () => {
+      imageLoaded = true;
+    };
+
     const draw = (ts) => {
       if (!startTime) startTime = ts;
       const elapsed = ts - startTime;
@@ -33,50 +57,46 @@ export default function CanvasWhirlwind({
 
       ctx.clearRect(0, 0, w, h);
 
-      const alpha = 1 - progress;
-      const spin = progress * Math.PI * 8;
-
-      // Core glow
-      const coreGradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, w * 0.5);
-      coreGradient.addColorStop(0, `rgba(255,255,255,${0.6 * alpha})`);
-      coreGradient.addColorStop(0.45, `rgba(230,240,255,${0.32 * alpha})`);
-      coreGradient.addColorStop(1, 'rgba(230,240,255,0)');
+      // Background glowing trajectory sweep ring
       ctx.beginPath();
-      ctx.arc(cx, cy, w * 0.5, 0, Math.PI * 2);
-      ctx.fillStyle = coreGradient;
-      ctx.fill();
-
-      // Swirling streaks
-      const streakCount = 14;
-      for (let i = 0; i < streakCount; i++) {
-        const t = i / streakCount;
-        const a = spin + t * Math.PI * 2;
-        // Push the spin path outward so the effect traces the portrait edge.
-        const innerR = w * (0.22 + t * 0.12);
-        const outerR = w * (0.34 + t * 0.12);
-
-        const x1 = cx + Math.cos(a) * innerR;
-        const y1 = cy + Math.sin(a) * innerR;
-        const x2 = cx + Math.cos(a + 0.55) * outerR;
-        const y2 = cy + Math.sin(a + 0.55) * outerR;
-
-        ctx.beginPath();
-        ctx.moveTo(x1, y1);
-        ctx.quadraticCurveTo(cx, cy, x2, y2);
-        ctx.lineWidth = 1.5 + (1 - t) * 2.5;
-        ctx.strokeStyle = `rgba(245,248,255,${(0.25 + (1 - t) * 0.45) * alpha})`;
-        ctx.shadowColor = 'rgba(255,255,255,0.9)';
-        ctx.shadowBlur = 7;
-        ctx.stroke();
-      }
-      ctx.shadowBlur = 0;
-
-      // Ring pulse
-      ctx.beginPath();
-      ctx.arc(cx, cy, w * (0.26 + progress * 0.22), 0, Math.PI * 2);
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = `rgba(255,255,255,${0.55 * alpha})`;
+      ctx.arc(cx, cy, w * 0.28, 0, Math.PI * 2);
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = isMonk 
+        ? `rgba(255, 170, 0, ${0.15 * (1 - progress)})` 
+        : `rgba(255, 51, 51, ${0.15 * (1 - progress)})`;
       ctx.stroke();
+
+      if (imageLoaded) {
+        const orbitRadius = w * 0.28;
+        const copyCount = 2;
+
+        for (let i = 0; i < copyCount; i++) {
+          const trailProgress = Math.max(0, progress - i * 0.15);
+          if (trailProgress <= 0 || trailProgress >= 1) continue;
+
+          // 2 full orbits (4 * PI)
+          const angle = trailProgress * Math.PI * 4;
+          // Spin 7 times on its own axis
+          const spinAngle = trailProgress * Math.PI * 14;
+
+          const ix = cx + Math.cos(angle) * orbitRadius;
+          const iy = cy + Math.sin(angle) * orbitRadius;
+          
+          const size = w * 0.25;
+          const alpha = 1 - trailProgress;
+
+          ctx.save();
+          ctx.translate(ix, iy);
+          ctx.rotate(spinAngle);
+          ctx.globalAlpha = alpha;
+
+          ctx.shadowColor = isMonk ? '#ffaa00' : '#ff3333';
+          ctx.shadowBlur = 10;
+
+          ctx.drawImage(img, -size / 2, -size / 2, size, size);
+          ctx.restore();
+        }
+      }
 
       if (progress < 1) {
         raf = requestAnimationFrame(draw);
@@ -93,7 +113,7 @@ export default function CanvasWhirlwind({
       if (raf) cancelAnimationFrame(raf);
       clearTimeout(timeout);
     };
-  }, [origin, duration, onComplete]);
+  }, [origin, duration, caller, onComplete]);
 
   const tileSize = width;
   const canvasSize = Math.round(tileSize * 1.9);

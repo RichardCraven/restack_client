@@ -62,7 +62,24 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
         initialFacing = 'left';
     }
 
-    const rawAttacks = Array.isArray(fighter.attacks) ? fighter.attacks : [];
+    let rawAttacks = [];
+    let rawSpecials = [];
+    const BASIC_ATTACK_KEYS = [
+        'slash', 'magic_missile', 'monk_punch', 'heal', 'loose', 
+        'barbarian_slash', 'sword_swing', 'axe_throw', 'summon_skeleton', 
+        'claw_strike', 'claws', 'rake', 'gore_horns', 'snake_strike', 
+        'grasp', 'void_lance', 'crush', 'tackle', 'major_magic_missile', 'greater_magic_missile', 
+        'vampiric_bite', 'induce_madness', 'lightning', 'bite'
+    ];
+
+    if (Array.isArray(fighter.skills)) {
+        rawAttacks = fighter.skills.filter(s => BASIC_ATTACK_KEYS.includes(s));
+        rawSpecials = fighter.skills.filter(s => !BASIC_ATTACK_KEYS.includes(s));
+    } else {
+        rawAttacks = Array.isArray(fighter.attacks) ? fighter.attacks : [];
+        rawSpecials = Array.isArray(fighter.specials) ? fighter.specials : [];
+    }
+
     let formattedAttacks = (typeof callbacks.formatAttacks === 'function')
         ? callbacks.formatAttacks(rawAttacks)
         : rawAttacks;
@@ -154,13 +171,14 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
         twinFingerStun_eras: 0,
     // Ensure attacks are always full objects, not just strings.
     attacks: formattedAttacks,
-    specials: (typeof formatSpecials === 'function') ? formatSpecials(fighter.specials || []) : (fighter.specials || []),
+    specials: (typeof formatSpecials === 'function') ? formatSpecials(rawSpecials) : rawSpecials,
         specialActions: fighter.specialActions, // Now uses flat structure: type, name, iconUrl, subtype, etc.
         targettedBy: [],
         passives: Array.isArray(fighter.passives) ? [...fighter.passives] : [],
         reassembleUsed: !!fighter.reassembleUsed,
         hasReassembled: !!fighter.hasReassembled,
         combatPaused: false,
+        buffs: Array.isArray(fighter.buffs) ? [...fighter.buffs] : [],
         readout: {action:'', result: ''},
         // readout: '',
         hasOverlap: false,
@@ -456,6 +474,62 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
                 if (eraIndex !== this._lastEraIndex) {
                     this._lastEraIndex = eraIndex;
 
+                    const hasShadowArmor = this.specials && this.specials.some(s => s.id === 'shadow_armor' || s.name === 'Shadow Armor');
+                    if (hasShadowArmor) {
+                        const hasDebuff = this.feared || this.poison || this.stunned || this.silenced || this.slowed || this.weakened || this.petrified || this.frozen || this.ensnared || this.asleep;
+                        if (hasDebuff && Math.random() < 0.35) {
+                            this.feared = false;
+                            this.feared_eras = 0;
+                            if (this._fearOriginalAtk != null) { this.atk = this._fearOriginalAtk; delete this._fearOriginalAtk; }
+                            if (this._fearOriginalDef != null) { this.def = this._fearOriginalDef; delete this._fearOriginalDef; }
+
+                            this.poison = false;
+                            this.poisonRounds = 0;
+                            this.poison_eras = 0;
+
+                            this.stunned = false;
+                            this.stunned_eras = 0;
+
+                            this.silenced = false;
+                            this.silenced_eras = 0;
+
+                            this.slowed = false;
+                            this.slowed_eras = 0;
+                            if (this._slowOriginalSpeed != null) {
+                                if (this.stats) this.stats.speed = this._slowOriginalSpeed;
+                                this.movesPerTurnCycle = this._slowOriginalSpeed * 2;
+                                this.moveCooldown = (1 / this._slowOriginalSpeed) * 5000;
+                                delete this._slowOriginalSpeed;
+                            }
+
+                            this.weakened = false;
+                            this.weakened_eras = 0;
+                            if (this._weakOriginalAtk != null) {
+                                this.atk = this._weakOriginalAtk;
+                                delete this._weakOriginalAtk;
+                            }
+
+                            this.petrified = false;
+                            this.petrified_eras = 0;
+
+                            this.frozen = false;
+                            this.frozen_eras = 0;
+
+                            this.ensnared = false;
+                            this.ensnared_eras = 0;
+
+                            this.asleep = false;
+                            this.asleep_eras = 0;
+
+                            if (callbacks.appendCombatLog) {
+                                callbacks.appendCombatLog(`${this.name}'s Shadow Armor dispels all debuffs!`);
+                            }
+
+                            this.damageIndicators = this.damageIndicators || [];
+                            this.damageIndicators.push({ id: Date.now() + Math.random(), value: 'DISPEL!', isCrit: true, source: 'Shadow Armor' });
+                        }
+                    }
+
                     if (typeof onEraTransition === 'function') {
                         onEraTransition(this);
                     }
@@ -719,6 +793,35 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
                     this.drained_eras = 0;
                     if (typeof broadcastDataUpdate === 'function' && !isCombatOver()) broadcastDataUpdate(this);
                 }
+            }
+            // Stat Buffs ticking
+            if (Array.isArray(this.buffs) && this.buffs.length > 0) {
+                const activeBuffs = [];
+                this.buffs.forEach(buff => {
+                    buff.rounds--;
+                    if (buff.rounds <= 0) {
+                        const statName = buff.stat;
+                        const originalValue = buff.originalValue;
+                        if (statName === 'atk') {
+                            this.atk = originalValue;
+                        } else if (statName === 'def') {
+                            this.def = originalValue;
+                            if (this.stats) this.stats.def = originalValue;
+                        } else if (statName === 'speed') {
+                            if (this.stats) this.stats.speed = originalValue;
+                            this.movesPerTurnCycle = originalValue * 2;
+                            this.moveCooldown = (1 / originalValue) * 5000;
+                        } else if (statName === 'magic_dmg') {
+                            this.magic_dmg = originalValue;
+                        } else if (statName === 'dodge') {
+                            this.dodge = originalValue;
+                        }
+                    } else {
+                        activeBuffs.push(buff);
+                    }
+                });
+                this.buffs = activeBuffs;
+                if (typeof broadcastDataUpdate === 'function' && !isCombatOver()) broadcastDataUpdate(this);
             }
             // ─────────────────────────────────────────────────────────────
 

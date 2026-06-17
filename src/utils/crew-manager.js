@@ -59,12 +59,19 @@ export function CrewManager(){
             // Ensure specialActions exists; some persisted meta may omit this field.
             // Default to an empty array so initialization doesn't skip the member.
             member.specialActions = member.specialActions || [];
-            member.specials = Array.isArray(member.specials) ? member.specials : [];
+
+            // Migrate legacy saved crew objects to use unified skills array
+            if (!member.skills) {
+                member.skills = (member.attacks || []).concat(member.specials || []);
+                delete member.attacks;
+                delete member.specials;
+            }
+            member.skills = Array.isArray(member.skills) ? member.skills : [];
 
             // Migration/backfill: older saved Barbarian records may predate whirlwind.
             // Ensure it exists so combat receives both berserker and whirlwind.
-            if ((member.type || member.image) === 'barbarian' && !hasSpecial(member.specials, 'whirlwind')) {
-                member.specials.push('whirlwind');
+            if ((member.type || member.image) === 'barbarian' && !hasSpecial(member.skills, 'barbarian_whirlwind') && !hasSpecial(member.skills, 'whirlwind')) {
+                member.skills.push('barbarian_whirlwind');
             }
 
             member.specialActions.forEach(a=>{
@@ -428,6 +435,42 @@ export function CrewManager(){
                 });
             }
             break;
+            case 'compound': {
+                const potion = actionSubtype.potion;
+                const recipe = actionSubtype.recipe;
+                const duration = recipe.reagents.length === 2 ? 30 * 1000 : 60 * 1000;
+                endDate = new Date(Date.now() + duration);
+                member.specialActions.push({
+                    type: 'compound',
+                    name: `Brewing: ${potion.name}`,
+                    iconUrl: images[potion.icon] || images['potion'] || '',
+                    potionId: potion.id,
+                    recipeId: recipe.id,
+                    available: false,
+                    startDate,
+                    endDate,
+                    notified: false
+                });
+            }
+            break;
+            case 'brew': {
+                const brew = actionSubtype.brew;
+                const recipe = actionSubtype.recipe;
+                const duration = 30 * 1000; // 30 seconds
+                endDate = new Date(Date.now() + duration);
+                member.specialActions.push({
+                    type: 'brew',
+                    name: `Brewing: ${brew.name}`,
+                    iconUrl: images[brew.icon] || images['brew_beer'] || '',
+                    brewId: brew.id,
+                    recipeId: recipe.id,
+                    available: false,
+                    startDate,
+                    endDate,
+                    notified: false
+                });
+            }
+            break;
             default:
                 break;
         }
@@ -445,8 +488,7 @@ export function CrewManager(){
             stats: { str: 3, int: 7, dex: 5, fort: 7, baseHp: 10, experience: 0 },
             portrait: images['wizard_portrait'],
             inventory: [],
-            specials: ['fireball', 'ice_blast', 'lightning_strike', 'acid_blast', 'disintegrate', 'sleep', 'annihilation', 'vortex'],
-            attacks: ['magic_missile'],
+            skills: ['magic_missile', 'fireball', 'ice_blast', 'lightning_strike', 'acid_blast', 'disintegrate', 'sleep', 'annihilation', 'vortex'],
             passives: ['magic_affinity'],
             weaknesses: ['ice', 'fire', 'electricity', 'blood_magic'],
             description: "Hailing from the magister's college, Zildjikan was the dean of transmutation. A powerful magic user, he has been known to linger for long periods in the silent realm, searching for secret truths.",
@@ -465,8 +507,7 @@ export function CrewManager(){
             portrait: images['soldier_portrait'],
             inventory: [],
             passives: ['inspiring_force'],
-            specials: ['shield_wall', 'shield_slam', 'defensive_stance', 'fist_of_honor', 'imbued_strike', 'one_man_army', 'inspire', 'battlecry'],
-            attacks: ['slash'],
+            skills: ['slash', 'shield_wall', 'shield_slam', 'defensive_stance', 'fist_of_honor', 'imbued_strike', 'one_man_army', 'inspire', 'battlecry'],
             weaknesses: ['ice', 'electricity', 'blood_magic'],
             description: "Once the captain of the royal army's legendary vangard battalion, Sardonis has a reputation for fair leadership and honor.",
             specialActions: [],
@@ -486,8 +527,7 @@ export function CrewManager(){
             portrait: images['monk_portrait'],
             inventory: [],
             passives: ['diamond_skin'],
-            specials: ['monk_ethereal_speed', 'monk_astral_focus', 'monk_astral_projection', 'monk_force_punch_flurry', 'monk_third_eye', 'monk_twin_finger_authority', 'monk_inner_fire', 'monk_meditate', 'monk_whirlwind', 'monk_force_punch', 'monk_flurry'],
-            attacks: ['monk_punch'],
+            skills: ['monk_punch', 'monk_ethereal_speed', 'monk_astral_focus', 'monk_astral_projection', 'monk_force_punch_flurry', 'monk_third_eye', 'monk_twin_finger_authority', 'monk_inner_fire', 'monk_meditate', 'monk_whirlwind', 'monk_force_punch', 'monk_flurry'],
             weaknesses: ['fire', 'electricity', 'ice', 'blood_magic', 'crushing'],
             description: "Yu was born into the dynastic order of the White Serpent, inheriting the secrets of absolute stillness and unyielding motion",
             specialActions: [],
@@ -504,8 +544,7 @@ export function CrewManager(){
             stats: { str: 3, int: 7, dex: 5, fort: 7, baseHp: 10, experience: 0 },
             portrait: images['sage_portrait'],
             inventory: [],
-            specials: ['circle_of_protection', 'perceive'],
-            attacks: ['heal'],
+            skills: ['heal', 'circle_of_protection', 'perceive'],
             passives: ["owls_insight"],
             weaknesses: ['fire', 'electricity', 'ice', 'blood_magic', 'crushing'],
             description: "Loryastes is the headmaster of Citadel library, chronicler of the histories of three monarchies, and a pupil of The Great Scribe",
@@ -523,8 +562,7 @@ export function CrewManager(){
             stats: { str: 5, int: 5, dex: 6, fort: 3, baseHp: 10, experience: 0 },
             portrait: images['ranger_portrait'],
             inventory: [],
-            specials: ['notch', 'mark', 'execute', 'ensnare'],
-            attacks: ['loose'],
+            skills: ['loose', 'notch', 'mark', 'execute', 'ensnare'],
             passives: ['nimble_dodge', 'eagle_eye'],
             weaknesses: ['ice', 'curse', 'crushing'],
             description: "Dormund was born a slave, surviving and advancing through sheer cunning and a ruthless will",
@@ -542,8 +580,7 @@ export function CrewManager(){
             stats: { str: 8, int: 3, dex: 4, fort: 6, baseHp: 52, experience: 0, attackSpeedMult: 2 },
             portrait: images['barbarian_portrait'],
             inventory: [],
-            specials: ['barbarian_cleave', 'barbarian_axe_throw', 'barbarian_berserker', 'barbarian_leap_attack'],
-            attacks: ['barbarian_slash'],
+            skills: ['barbarian_slash', 'barbarian_cleave', 'barbarian_axe_throw', 'barbarian_berserker', 'barbarian_leap_attack', 'barbarian_whirlwind'],
             passives: ['fury'],
             weaknesses: ['ice', 'curse', 'psionic'],
             description: "Ulaf is the son of the chieftan of the Rootsnarl Clan. He is on a journey to prove his mettle and one day take his father's place",
@@ -561,8 +598,7 @@ export function CrewManager(){
             stats: { str: 5, int: 6, dex: 7, fort: 6, baseHp: 10, experience: 0 },
             portrait: images['engineer'],
             inventory: [],
-            specials: ['force_back'],
-            attacks: ['sword_swing', 'axe_throw'],
+            skills: ['sword_swing', 'axe_throw', 'force_back'],
             passives: ['inspiring_force'],
             weaknesses: ['curse', 'psionic'],
             description: 'A battlefield machinist who excels at spacing control and tactical pressure.',
@@ -580,7 +616,8 @@ export function CrewManager(){
             stats: { str: 3, int: 8, dex: 5, fort: 6, baseHp: 10, experience: 0 },
             portrait: images['summoner'],
             inventory: [],
-            specials: [
+            skills: [
+                'summon_skeleton',
                 'open_rift',
                 'summon_imp',
                 'summon_skeleton_knight',
@@ -592,7 +629,6 @@ export function CrewManager(){
                 'summoner_duplicate',
                 'summoner_triplicate'
             ],
-            attacks: ['summon_skeleton'],
             passives: ['magic_affinity'],
             weaknesses: ['crushing', 'blood_magic'],
             description: 'A conduit for unstable arcana who overwhelms enemies with elemental pressure by opening rifts and summoning minions.',

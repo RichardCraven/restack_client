@@ -40,6 +40,13 @@ const formatCombatText = (value) => String(value || '')
     .join(' ');
 
 export function CombatManager() {
+    this.updateData = () => {};
+    this.updateIndicatorsMatrix = () => {};
+    this.updateActor = () => {};
+    this.triggerBoardEvent = () => {};
+    this.gameOver = () => {};
+    this.greetingComplete = () => {};
+    this.fighterMovedToDestination = () => {};
     this.MANUAL_COMMAND_COOLDOWN_MS = 4000;
     // Update all combatants' intervals and restart their turn cycles
     this.updateAllFightIntervals = (newInterval) => {
@@ -308,9 +315,9 @@ export function CombatManager() {
                                 return this.formatSpecials([s])[0] || s;
                             }
                             // Already an object — re-merge from canonical but keep cooldown_position
-                            const lookupKey = s.name
+                            const lookupKey = s.key || s.id || (s.name
                                 ? s.name.replace(/\s+/g, '_').toLowerCase()
-                                : null;
+                                : null);
                             const canonical = lookupKey ? this.formatSpecials([lookupKey])[0] : null;
                             if (canonical) {
                                 const instanceProps = {};
@@ -333,7 +340,8 @@ export function CombatManager() {
                             return this.formatSpecials([sa])[0] || sa;
                         }
                         // Try to resolve by common keys
-                        const lookupKey = sa.key || sa.name || sa.subtype || (sa.type === 'special' && sa.name) || null;
+                        const rawKey = sa.key || sa.id || sa.name || sa.subtype || (sa.type === 'special' && sa.name) || null;
+                        const lookupKey = typeof rawKey === 'string' ? rawKey.replace(/\s+/g, '_').toLowerCase() : rawKey;
                         const canonical = lookupKey ? this.formatSpecials([lookupKey])[0] : null;
                         if (canonical) {
                             // Keep prefs from instance (counts, dynamic props) but
@@ -603,6 +611,7 @@ export function CombatManager() {
     this.combatants = {};
 
     this.initializeOverlayManager = (combatants) => {
+        if (!this.overlayManager) return;
         combatants.forEach(c => {
             this.overlayManager.addCombatant(c)
         })
@@ -754,6 +763,7 @@ export function CombatManager() {
             } else if (typeof s === 'object') {
                 if (s.name && (s.name.toLowerCase() === key.toLowerCase() || s.name.toLowerCase() === normalized)) return s;
                 if (s.key && s.key.toLowerCase() === normalized) return s;
+                if (s.id && s.id.toLowerCase() === normalized) return s;
             }
         }
 
@@ -934,6 +944,29 @@ export function CombatManager() {
             if (combatant.specials && Array.isArray(combatant.specials)) {
                 combatant.specials.forEach(action => {
                     if (action && typeof action === 'object') {
+                        if (typeof action.initialCooldown === 'number' && action.initialCooldown > 0) {
+                            action.cooldown_position = 0;
+                            const totalTicks = action.cooldown * TICKS_PER_ERA;
+                            const startTicks = Math.max(0, (action.cooldown - action.initialCooldown) * TICKS_PER_ERA);
+                            this.runCooldownTicks({
+                                totalTicks,
+                                startTicks,
+                                onTick: (ratio) => {
+                                    action.cooldown_position = ratio;
+                                    if (typeof this.updateData === 'function') {
+                                        this.updateData(clone(this.combatants));
+                                    }
+                                }
+                            });
+                        } else {
+                            action.cooldown_position = 100;
+                        }
+                    }
+                });
+            }
+            if (combatant.attacks && Array.isArray(combatant.attacks)) {
+                combatant.attacks.forEach(action => {
+                    if (action && typeof action === 'object') {
                         action.cooldown_position = 100;
                     }
                 });
@@ -949,10 +982,10 @@ export function CombatManager() {
         // initialize behaviors
         Object.values(this.combatants).forEach(combatant => {
             if (combatant.isMinion || combatant.isMonster) {
-                const ai = this.monsterAI.roster[combatant.type]
+                const ai = this.monsterAI && this.monsterAI.roster && this.monsterAI.roster[combatant.type]
                 if (ai && ai.initialize) ai.initialize(combatant);
             } else {
-                const ai = this.fighterAI.roster[combatant.type]
+                const ai = this.fighterAI && this.fighterAI.roster && this.fighterAI.roster[combatant.type]
                 if (ai && ai.initialize) ai.initialize(combatant);
                 // Ensure manualControl is initialized to false
                 combatant.manualControl = false;
@@ -1016,16 +1049,167 @@ export function CombatManager() {
     }
     this.itemUsed = (item, userInput) => {
         const user = this.combatants[userInput.id];
-        switch (item.effect) {
-            case 'health gain':
-                const healthGain = Math.ceil(user.starting_hp * 0.01 * item.amount)
-                user.hp += healthGain
-                if (user.hp > user.starting_hp) user.hp = user.starting_hp
-                // this needs to change to 'MAX HP, not starting
-                break;
-            default:
-                break;
+        if (!user) return;
+
+        const effect = item.effect;
+
+        if (effect && typeof effect === 'object') {
+            // ── Cleanse ──
+            if (effect.type === 'cleanse' || effect.cleanse) {
+                const cleanseList = effect.cleanse || [];
+                cleanseList.forEach(debuff => {
+                    if (debuff === 'poisoned' || debuff === 'poison') {
+                        user.poison = false;
+                        user.poisonRounds = 0;
+                        user.poison_eras = 0;
+                    }
+                    if (debuff === 'stunned' || debuff === 'stun') {
+                        user.stunned = false;
+                        user.stunned_eras = 0;
+                    }
+                    if (debuff === 'silenced' || debuff === 'silence') {
+                        user.silenced = false;
+                        user.silenced_eras = 0;
+                    }
+                    if (debuff === 'slowed' || debuff === 'slow') {
+                        user.slowed = false;
+                        user.slowed_eras = 0;
+                        if (user._slowOriginalSpeed != null) {
+                            if (user.stats) user.stats.speed = user._slowOriginalSpeed;
+                            user.movesPerTurnCycle = user._slowOriginalSpeed * 2;
+                            user.moveCooldown = (1 / user._slowOriginalSpeed) * 5000;
+                            delete user._slowOriginalSpeed;
+                        }
+                    }
+                    if (debuff === 'weakened' || debuff === 'weak') {
+                        user.weakened = false;
+                        user.weakened_eras = 0;
+                        if (user._weakOriginalAtk != null) {
+                            user.atk = user._weakOriginalAtk;
+                            delete user._weakOriginalAtk;
+                        }
+                    }
+                    if (debuff === 'burned' || debuff === 'burn') {
+                        user.burned = false;
+                        user.burned_eras = 0;
+                    }
+                    if (debuff === 'frozen' || debuff === 'freeze') {
+                        user.frozen = false;
+                        user.frozen_eras = 0;
+                    }
+                    if (debuff === 'ensnared' || debuff === 'bind') {
+                        user.ensnared = false;
+                        user.ensnared_eras = 0;
+                    }
+                });
+            }
+
+            // ── HP Healing ──
+            let healAmount = 0;
+            if (effect.type === 'heal_pct') {
+                healAmount = Math.ceil(user.starting_hp * 0.01 * effect.value);
+            } else if (effect.healPct) {
+                healAmount = Math.ceil(user.starting_hp * 0.01 * effect.healPct);
+            } else if (effect.healFlat) {
+                healAmount = effect.healFlat;
+            }
+            if (healAmount > 0) {
+                user.hp = Math.min(user.starting_hp, user.hp + healAmount);
+                // Add damage indicator (as healing)
+                const indicatorId = Date.now() + Math.random();
+                const vctId = `${user.id}_VCT`;
+                const indicatorRecipient = this.combatants[vctId] || user;
+                if (indicatorRecipient.damageIndicators) {
+                    indicatorRecipient.damageIndicators.push({ 
+                        id: indicatorId, 
+                        value: `+${healAmount}`, 
+                        source: 'Item', 
+                        type: 'heal',
+                        timestamp: Date.now()
+                    });
+                }
+            }
+
+            // ── Endurance Restoring ──
+            let restoreAmt = 0;
+            if (effect.type === 'restore_endurance') {
+                restoreAmt = Math.ceil((user.maxEndurance || 30) * 0.01 * effect.value);
+            } else if (effect.endurance) {
+                restoreAmt = Math.ceil((user.maxEndurance || 30) * 0.01 * effect.endurance);
+            }
+            if (restoreAmt > 0) {
+                user.endurance = Math.min(user.maxEndurance || 30, (user.endurance || 0) + restoreAmt);
+                if (user.endurance > 0) {
+                    user.exhausted = false;
+                }
+            }
+
+            // ── Buff Stats ──
+            const applyStatBuff = (statName, val, rds) => {
+                user.buffs = user.buffs || [];
+                const existing = user.buffs.find(b => b.stat === statName);
+                if (existing) {
+                    existing.rounds = Math.max(existing.rounds, rds);
+                    return;
+                }
+
+                let originalValue;
+                if (statName === 'atk') {
+                    originalValue = user.atk;
+                    user.atk = Math.round(user.atk * (1 + val / 100));
+                } else if (statName === 'def') {
+                    originalValue = (user.stats && typeof user.stats.def === 'number') ? user.stats.def : (user.def || 0);
+                    const newVal = Math.round(originalValue * (1 + val / 100));
+                    user.def = newVal;
+                    if (user.stats) user.stats.def = newVal;
+                } else if (statName === 'speed') {
+                    originalValue = (user.stats && typeof user.stats.speed === 'number') ? user.stats.speed : 1;
+                    const newVal = originalValue + val;
+                    if (user.stats) user.stats.speed = newVal;
+                    user.movesPerTurnCycle = newVal * 2;
+                    user.moveCooldown = (1 / newVal) * 5000;
+                } else if (statName === 'magic_dmg') {
+                    originalValue = user.magic_dmg || 0;
+                    user.magic_dmg = (user.magic_dmg || 0) + val;
+                } else if (statName === 'dodge') {
+                    originalValue = user.dodge || 0;
+                    user.dodge = (user.dodge || 0) + val;
+                }
+
+                user.buffs.push({
+                    stat: statName,
+                    value: val,
+                    rounds: rds,
+                    originalValue
+                });
+            };
+
+            if (effect.type === 'buff_stat' && effect.stat) {
+                applyStatBuff(effect.stat, effect.value, effect.rounds || 3);
+            } else if (effect.type === 'buff_dodge') {
+                applyStatBuff('dodge', effect.value, effect.rounds || 3);
+            } else if (effect.type === 'buff_multi_stat' && Array.isArray(effect.buffs)) {
+                effect.buffs.forEach(b => {
+                    applyStatBuff(b.stat, b.value, effect.rounds || 3);
+                });
+            } else if (effect.type === 'cleanse_and_buff' && effect.stat) {
+                applyStatBuff(effect.stat, effect.value, effect.rounds || 3);
+            } else if (effect.type === 'heal_and_endurance') {
+                // healing and endurance are already applied above, no stat buff needed
+            }
+        } else {
+            // Fallback to old format
+            switch (item.effect) {
+                case 'health gain':
+                    const healthGain = Math.ceil(user.starting_hp * 0.01 * item.amount);
+                    user.hp += healthGain;
+                    if (user.hp > user.starting_hp) user.hp = user.starting_hp;
+                    break;
+                default:
+                    break;
+            }
         }
+
         // Set consumableFlash so the portrait overlay can display the item icon briefly
         if (item && item.icon) {
             user.consumableFlash = { iconKey: item.icon, timestamp: Date.now() };
@@ -1713,9 +1897,9 @@ export function CombatManager() {
             return
         }
     }
-    this.runCooldownTicks = ({ totalTicks, onTick, onComplete }) => {
+    this.runCooldownTicks = ({ totalTicks, onTick, onComplete, startTicks = 0 }) => {
         const resolvedTotalTicks = Math.max(1, Math.ceil(Number(totalTicks) || 0));
-        let ticksElapsed = 0;
+        let ticksElapsed = Math.max(0, Math.min(resolvedTotalTicks, startTicks));
         let cancelled = false;
 
         const step = () => {
@@ -2510,6 +2694,17 @@ export function CombatManager() {
      */
     this.damageCheck = (caller, target, rawDamage) => {
         if (!target || typeof rawDamage !== 'number' || rawDamage <= 0) return rawDamage || 0;
+
+        let isPhysical = true;
+        const damageType = (caller && caller.pendingAttack && caller.pendingAttack.type) || null;
+        if (damageType && ['arcane', 'ice', 'fire', 'holy', 'psionic', 'holy-aura'].includes(damageType)) {
+            isPhysical = false;
+        }
+        const hasShadowArmor = target.specials && target.specials.some(s => s.id === 'shadow_armor' || s.name === 'Shadow Armor');
+        if (isPhysical && hasShadowArmor) {
+            rawDamage = Math.floor(rawDamage * 0.85);
+        }
+
         // Sum equipped armor from inventory items
         let equippedArmor = 0;
         try {

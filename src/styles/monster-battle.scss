@@ -1193,6 +1193,24 @@
                     opacity: 0;
                 }
             }
+            @keyframes weaponSwingArc {
+                0% {
+                    transform: rotate(60deg);
+                    opacity: 0;
+                }
+                10% {
+                    transform: rotate(60deg);
+                    opacity: 1;
+                }
+                90% {
+                    transform: rotate(-60deg);
+                    opacity: 1;
+                }
+                100% {
+                    transform: rotate(-60deg);
+                    opacity: 0;
+                }
+            }
             @keyframes StabAnimation_left {
                 0%{
                     transform: translate(0px, 0px) rotateZ(-129deg);
@@ -4432,19 +4450,23 @@
 
 @keyframes cleaveStuck {
   0% {
+    transform: rotate(-60deg);
+    opacity: 0;
+  }
+  10% {
+    transform: rotate(-60deg);
+    opacity: 1;
+  }
+  35% {
     transform: rotate(0deg);
     opacity: 1;
   }
-  30% {
-    transform: rotate(-35deg);
-    opacity: 1;
-  }
-  60% {
-    transform: rotate(45deg);
+  85% {
+    transform: rotate(0deg);
     opacity: 1;
   }
   100% {
-    transform: rotate(45deg);
+    transform: rotate(0deg);
     opacity: 0;
   }
 }
@@ -4510,6 +4532,25 @@
 @keyframes windstormBobble {
   0% { transform: translateY(-10px); }
   100% { transform: translateY(10px); }
+}
+
+@keyframes meleeWhirlwindSpin {
+  0% {
+    transform: rotate(0deg) translate(0, -55px) rotate(0deg) scale(0);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+    transform: rotate(108deg) translate(0, -55px) rotate(360deg) scale(1.2);
+  }
+  85% {
+    opacity: 1;
+    transform: rotate(612deg) translate(0, -55px) rotate(2160deg) scale(1.2);
+  }
+  100% {
+    transform: rotate(720deg) translate(0, -55px) rotate(2520deg) scale(0);
+    opacity: 0;
+  }
 }
 
 @keyframes disintegrateShake {
@@ -5400,4 +5441,126 @@
   }
 }
 
+@keyframes shockwaveExpand {
+  0% {
+    width: 40px;
+    height: 40px;
+    opacity: 1;
+    border-dasharray: none;
+    border-width: 6px;
+  }
+  100% {
+    width: 280px;
+    height: 280px;
+    opacity: 0;
+    border-width: 1px;
+  }
+}
 
+@keyframes markPulse {
+  0% { opacity: 0.15; }
+  50% { opacity: 0.35; }
+  100% { opacity: 0.15; }
+}
+
+@keyframes headbuttLunge {
+  0% {
+    transform: translate3d(0, 0, 0);
+    animation-timing-function: ease-in-out;
+  }
+  30% {
+    transform: translate3d(0, 0, 0);
+    animation-timing-function: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  }
+  40% {
+    transform: translate3d(calc(var(--slam-dx) * -0.08), calc(var(--slam-dy) * -0.08), 0);
+    animation-timing-function: cubic-bezier(0.55, 0.055, 0.675, 0.19);
+  }
+  55% {
+    transform: translate3d(calc(var(--slam-dx) * 0.85), calc(var(--slam-dy) * 0.85), 0);
+    animation-timing-function: cubic-bezier(0.215, 0.610, 0.355, 1.000);
+  }
+  70% {
+    transform: translate3d(calc(var(--slam-dx) * 0.85), calc(var(--slam-dy) * 0.85), 0);
+    animation-timing-function: cubic-bezier(0.55, 0.085, 0.68, 0.53);
+  }
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes biteCloseTop {
+  0% {
+    transform: translateY(-40px);
+    opacity: 0;
+  }
+  15% {
+    transform: translateY(-30px);
+    opacity: 1;
+  }
+  45% {
+    transform: translateY(12px);
+    opacity: 1;
+  }
+  80% {
+    transform: translateY(12px);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(12px);
+    opacity: 0;
+  }
+}
+
+@keyframes biteCloseBottom {
+  0% {
+    transform: translateY(40px);
+    opacity: 0;
+  }
+  15% {
+    transform: translateY(30px);
+    opacity: 1;
+  }
+  45% {
+    transform: translateY(-12px);
+    opacity: 1;
+  }
+  80% {
+    transform: translateY(-12px);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-12px);
+    opacity: 0;
+  }
+}
+
+@keyframes invokeDarknessSkillTransition {
+  0% {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+  30% {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.35) translateY(-30px);
+    opacity: 0;
+  }
+}
+
+@keyframes sphereOfDarknessFadeIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  40% {
+    opacity: 0.2;
+    transform: scale(0.85);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

@@ -171,6 +171,15 @@ import reagent_seaweed from '../assets/icons/potions/reagents/seaweed.png'
 import reagent_stinger from '../assets/icons/potions/reagents/stinger.png'
 import reagent_twig from '../assets/icons/potions/reagents/twig.png'
 
+// ── Brew ingredients ────────────────────────────────────────────────────────
+import brew_spices from '../assets/icons/brews/spices.png'
+import brew_meat from '../assets/icons/brews/meat.png'
+import brew_bone from '../assets/icons/brews/bone.png'
+import brew_water from '../assets/icons/brews/water.png'
+import brew_beer from '../assets/icons/brews/beer.png'
+import brew_pepper from '../assets/icons/brews/pepper.png'
+import brew_berries from '../assets/icons/brews/berries.png'
+
 
 import tier_1_armor from '../assets/icons/items/tier 1 .png'
 import tier_1_magical from '../assets/icons/items/tier 1 magical.png'
@@ -535,16 +544,16 @@ import blalok from '../assets/portraits/monsters/blalok.png'
 import shade from '../assets/portraits/monsters/shade.png'
 import high_priest_of_the_basilisk from '../assets/portraits/monsters/high_priest_of_the_basilisk.png'
 import high_priest_of_the_basilisk_portrait from '../assets/portraits/monsters/high_priest_of_the_basilisk.png'
-import basilisk_cultists from '../assets/portraits/monsters/basilisk_cultists.png'
-import basilisk_cultists_portrait from '../assets/portraits/monsters/basilisk_cultists.png'
+import basilisk_cultists from '../assets/portraits/monsters/basilisk_cultist.png'
+import basilisk_cultists_portrait from '../assets/portraits/monsters/basilisk_cultist.png'
 import horned_pet from '../assets/portraits/monsters/horned_pet.png'
 import horned_pet_portrait from '../assets/portraits/monsters/horned_pet.png'
 import dragon_hatchling from '../assets/portraits/monsters/dragon_hatchling.png'
 
 
 //MID JOURNEY
-import goat_demon from '../assets/icons/monsters/mj_icons/goat_demon.png'
-import gorgon from '../assets/icons/monsters/mj_icons/gorgon.png'
+import goat_demon from '../assets/portraits/monsters/goat_demon.png'
+import gorgon from '../assets/portraits/monsters/gorgon.png'
 
 import gorgon_portrait from '../assets/portraits/monsters/gorgon.png'
 import goat_demon_portrait from '../assets/portraits/monsters/goat_demon.png'
@@ -801,14 +810,22 @@ import return_from_trial_2 from '../assets/icons/combat-icons/specials/monsters/
 import return_from_trial_3 from '../assets/icons/combat-icons/specials/monsters/sphinx/return_from_trial_3.png';
 
 // Witch
-import shadow_curse from '../assets/icons/combat-icons/specials/monsters/witch/shadow curse.png';
+import shadow_curse from '../assets/icons/combat-icons/specials/monsters/witch/shadow_curse.png';
 import spiderweb from '../assets/icons/combat-icons/specials/monsters/witch/spiderweb.png';
-import summon_spiders_icon from '../assets/icons/combat-icons/specials/monsters/witch/summon spiders.png';
+import summon_spiders_icon from '../assets/icons/combat-icons/specials/monsters/witch/summon_spiders.png';
 import witch_dispell from '../assets/icons/combat-icons/specials/monsters/witch/dispell.png';
-import demonic_whispers from '../assets/icons/combat-icons/specials/monsters/witch/demonic whispers.png';
+import demonic_whispers from '../assets/icons/combat-icons/specials/monsters/witch/demonic_whispers.png';
 import transform from '../assets/icons/combat-icons/specials/monsters/witch/transform.png';
 import shadow_presence from '../assets/icons/combat-icons/specials/monsters/witch/Aura_ShadowPresence_nb.png';
+import greater_magic_missile from '../assets/icons/combat-icons/specials/monsters/witch/greater_magic_missile.png';
 import shrine from '../assets/icons/buildings/shrine.png';
+
+// Wraith
+import nether_bolt from '../assets/icons/combat-icons/specials/monsters/wraith/nether_bolt.png';
+import undead_grasp from '../assets/icons/combat-icons/specials/monsters/wraith/undead_grasp.png';
+import invoke_darkness from '../assets/icons/combat-icons/specials/monsters/wraith/invoke_darkness.png';
+import shadow_armor from '../assets/icons/combat-icons/specials/monsters/wraith/shadow_armor.png';
+import sphere_of_darkness from '../assets/icons/combat-icons/specials/monsters/wraith/sphere_of_darkness.png';
 
 // body
 import body_male from '../assets/icons/figures/body_man.png'
@@ -1806,6 +1823,7 @@ export {
     return_from_trial_3,
 
     shadow_curse,
+    greater_magic_missile,
     shadow_presence,
     spiderweb,
     summon_spiders_icon,
@@ -1813,6 +1831,13 @@ export {
     witch_dispell,
     demonic_whispers,
     transform,
+
+    nether_bolt,
+    undead_grasp,
+    invoke_darkness,
+    shadow_armor,
+    sphere_of_darkness,
+
     camping,
     merchant_bg,
     alchemist_bg,
@@ -1882,4 +1907,13 @@ export {
     reagent_seaweed,
     reagent_stinger,
     reagent_twig,
+
+    // ── Brew ingredients ───────────────────────────────────────────────────
+    brew_spices,
+    brew_meat,
+    brew_bone,
+    brew_water,
+    brew_beer,
+    brew_pepper,
+    brew_berries,
 };

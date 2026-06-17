@@ -759,8 +759,8 @@ function MonsterDetail({ monster }) {
                     </div>
                 </div>
             )}
-            {monster.specials && monster.specials.length > 0 && (
-                <AbilitiesSection skillsList={monster.specials.map(s => skillsMatrix[s] || { id: s, name: s.replace(/_/g, ' ') })} />
+            {((monster.skills && monster.skills.length > 0) || (monster.specials && monster.specials.length > 0)) && (
+                <AbilitiesSection skillsList={((monster.skills || monster.specials) || []).map(s => skillsMatrix[s] || { id: s, name: s.replace(/_/g, ' ') })} />
             )}
             {lore.tactics && (
                 <div className="codex-tactics-box">

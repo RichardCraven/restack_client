@@ -19,6 +19,7 @@ import { AnimationManagerRedux } from '../../utils/animation-manager-redux';
 
 import { INTERVALS, INTERVAL_DISPLAY_NAMES } from '../../utils/shared-constants';
 import REAGENTS, { REAGENT_KEYS } from '../../utils/reagents';
+import BREW_INGREDIENTS, { BREW_INGREDIENT_KEYS } from '../../utils/brew-ingredients';
 
 // const MAX_DEPTH = 7;
 const NUM_COLUMNS = 8;
@@ -406,6 +407,18 @@ class MonsterBattle extends React.Component {
             })
         }
         // key handling moved to parent DungeonPage
+
+        // Continuous RAF loop to smoothly animate cooldowns at 60 FPS
+        const updateLoop = () => {
+            if (this._isMounted) {
+                const isCombatActive = this.props.combatManager && !this.props.combatManager.gameOver && !this.props.paused;
+                if (isCombatActive) {
+                    this.forceUpdate();
+                }
+                this._rafId = requestAnimationFrame(updateLoop);
+            }
+        };
+        this._rafId = requestAnimationFrame(updateLoop);
     }
     componentDidUpdate(prevProps, prevState) {
         if (prevProps.paused !== this.props.paused && this.props.combatManager && typeof this.props.combatManager.pauseCombat === 'function') {
@@ -454,6 +467,9 @@ class MonsterBattle extends React.Component {
     componentWillUnmount() {
         // mark unmounted to prevent async callbacks attempting setState
         try { this._isMounted = false; } catch(e){}
+        if (this._rafId) {
+            cancelAnimationFrame(this._rafId);
+        }
         // Detach callbacks first so in-flight manager timers cannot call setState.
         try {
             if (this.props && this.props.combatManager) {
@@ -886,8 +902,8 @@ class MonsterBattle extends React.Component {
                     try {
                         const cm = this.props && this.props.combatManager;
                         const def = cm && (
-                            (cm.specialsMatrix && (cm.specialsMatrix['magic_missile'] || cm.specialsMatrix['major_magic_missile'])) ||
-                            (cm.attacksMatrix  && (cm.attacksMatrix['magic_missile']  || cm.attacksMatrix['major_magic_missile']))
+                            (cm.specialsMatrix && (cm.specialsMatrix['magic_missile'] || cm.specialsMatrix['major_magic_missile'] || cm.specialsMatrix['greater_magic_missile'])) ||
+                            (cm.attacksMatrix  && (cm.attacksMatrix['magic_missile']  || cm.attacksMatrix['major_magic_missile'] || cm.attacksMatrix['greater_magic_missile']))
                         );
                         if (def) {
                             ['energy_cost', 'cooldown', 'damage', 'effect', 'level', 'icon'].forEach(k => {
@@ -1054,6 +1070,23 @@ class MonsterBattle extends React.Component {
                     }
                 }
             } catch(e) { console.warn('reagent loot drop failed', e); }
+
+            // ── Brew ingredient loot drop: 15% chance per combat victory if Barbarian is in party ─────────────
+            try {
+                const hasBarbarian = (this.props.crew || []).some(m => m && m.type === 'barbarian');
+                if (hasBarbarian && Math.random() < 0.15) {
+                    const pickedKey = BREW_INGREDIENT_KEYS[Math.floor(Math.random() * BREW_INGREDIENT_KEYS.length)];
+                    const ingredientDef = BREW_INGREDIENTS[pickedKey];
+                    if (ingredientDef && this.props.inventoryManager) {
+                        this.props.inventoryManager.addItem({ ...ingredientDef });
+                        try {
+                            if (typeof this.props.onTriggerLootArc === 'function') {
+                                this.props.onTriggerLootArc({ type: 'reagent', id: pickedKey + Math.random(), icon: images[ingredientDef.icon], name: ingredientDef.name });
+                            }
+                        } catch(e) {}
+                    }
+                }
+            } catch(e) { console.warn('brew ingredient loot drop failed', e); }
 
             this._setTimeout(()=>{
                 // Snapshot levels before awarding XP so we can show before→after
@@ -2678,7 +2711,9 @@ class MonsterBattle extends React.Component {
                                             const iconUrl = resolveIcon(iconCandidate);
                                             const remainingRounds = liveSelectedFighter?.cooldowns?.[spec.id] || liveSelectedFighter?.cooldowns?.[sourceKey] || liveSelectedFighter?.cooldowns?.[normalizedSourceKey] || 0;
                                             const baseCd = spec.cooldown || 5;
-                                            const cooldownPct = remainingRounds > 0 ? Math.ceil((remainingRounds / baseCd) * 100) : 0;
+                                            const ratio = this.props.combatManager?.roundTimeRemainingRatio ?? 1.0;
+                                            const smoothRemaining = remainingRounds > 0 ? Math.max(0, remainingRounds - (1 - ratio)) : 0;
+                                            const cooldownPct = smoothRemaining > 0 ? (smoothRemaining / baseCd) * 100 : 0;
                                             const isReady = cooldownPct === 0;
                                             return (
                                                 <div key={i} className="interaction-tile-wrapper">
@@ -2722,7 +2757,7 @@ class MonsterBattle extends React.Component {
                                                          </svg>
                                                     )}
                                                     {!isReady && (
-                                                        <div className="redux-cd-badge">{Math.ceil(remainingRounds)}</div>
+                                                        <div className="redux-cd-badge">{Math.ceil(smoothRemaining)}</div>
                                                     )}
                                                 </div>
                                             );
@@ -2906,14 +2941,16 @@ class MonsterBattle extends React.Component {
                                     const specialBackgroundImage = specialIcon
                                         ? `${cssUrl(specialIcon)}`
                                         : 'none';
-                                    let specialCooldownRemaining = 0;
-                                    if (this.props.combatManager && this.props.combatManager.round !== undefined) {
-                                        const remainingSec = liveSelectedFighter?.cooldowns?.[normalizedSpecial.id] || liveSelectedFighter?.cooldowns?.[normalizedSpecial.key] || liveSelectedFighter?.cooldowns?.[sourceKey] || 0;
-                                        if (remainingSec > 0) {
-                                            const baseCooldown = normalizedSpecial.cooldown || 5;
-                                            specialCooldownRemaining = Math.ceil((remainingSec / baseCooldown) * 100);
-                                        }
-                                    } else {
+                                     let specialCooldownRemaining = 0;
+                                     const ratio = this.props.combatManager?.roundTimeRemainingRatio ?? 1.0;
+                                     if (this.props.combatManager && this.props.combatManager.round !== undefined) {
+                                         const remainingSec = liveSelectedFighter?.cooldowns?.[normalizedSpecial.id] || liveSelectedFighter?.cooldowns?.[normalizedSpecial.key] || liveSelectedFighter?.cooldowns?.[sourceKey] || 0;
+                                         if (remainingSec > 0) {
+                                             const baseCooldown = normalizedSpecial.cooldown || 5;
+                                             const smoothRemaining = Math.max(0, remainingSec - (1 - ratio));
+                                             specialCooldownRemaining = (smoothRemaining / baseCooldown) * 100;
+                                         }
+                                     } else {
                                         const specialCooldownPosition = typeof normalizedSpecial.cooldown_position === 'number'
                                             ? normalizedSpecial.cooldown_position
                                             : 100;
@@ -2928,7 +2965,7 @@ class MonsterBattle extends React.Component {
                                     return normalizedSpecial && <div key={i} className='interaction-tile-wrapper'>
                                                 <div 
                                                 style={{backgroundImage: specialBackgroundImage, cursor: 'pointer'}} 
-                                                className={`interaction-tile special ${specialCooldownRemaining === 0 ? 'available' : ''} ${normalizedSpecial.selected ? 'selected' : ''}`}
+                                                className={`interaction-tile special ${specialCooldownRemaining <= 0 ? 'available' : ''} ${normalizedSpecial.selected ? 'selected' : ''}`}
                                                 onClick={() => this.specialTileClicked(normalizedSpecial)} 
                                                 onMouseEnter={() => this.specialTileHovered(normalizedSpecial)} 
                                                 onMouseLeave={() => this.specialTileHovered(null)}>
@@ -2959,7 +2996,7 @@ class MonsterBattle extends React.Component {
                                                          />
                                                      </svg>
                                                  )}
-                                                {showSpecialEnergyRing && specialCooldownRemaining === 0 && (
+                                                {showSpecialEnergyRing && specialCooldownRemaining <= 0 && (
                                                     <div
                                                         className="interaction-tile-overlay energy-ring"
                                                         style={{ '--energy-ring-fill': specialEnergyFillPct }}
@@ -3090,44 +3127,21 @@ class MonsterBattle extends React.Component {
                                         if (!displayAttack) return null;
 
                                         const cooldownPosition = typeof displayAttack.cooldown_position === 'number'
-
-
                                             ? displayAttack.cooldown_position
-
-
                                             : 100;
 
-
                                         let cooldownRemaining = Math.max(0, Math.min(100, 100 - cooldownPosition));
-
-
                                         if (this.props.combatManager && this.props.combatManager.round !== undefined) {
-
-
                                             const fKey = String(displayAttack.key || displayAttack.name || '').trim().toLowerCase().replaceAll(' ', '_');
-
-
                                             const remainingSec = liveSelectedFighter?.cooldowns?.[displayAttack.id] || liveSelectedFighter?.cooldowns?.[displayAttack.key] || liveSelectedFighter?.cooldowns?.[fKey] || 0;
-
-
                                             if (remainingSec > 0) {
-
-
                                                 const baseCooldown = displayAttack.cooldown || 3;
-
-
-                                                cooldownRemaining = Math.ceil((remainingSec / baseCooldown) * 100);
-
-
+                                                const ratio = this.props.combatManager?.roundTimeRemainingRatio ?? 1.0;
+                                                const smoothRemaining = Math.max(0, remainingSec - (1 - ratio));
+                                                cooldownRemaining = (smoothRemaining / baseCooldown) * 100;
                                             } else {
-
-
                                                 cooldownRemaining = 0;
-
-
                                             }
-
-
                                         }
                                         const normalizedAttackName = String(displayAttack.name || '').replaceAll('_', ' ').trim().toLowerCase();
                                         const isAxeThrowTile = normalizedAttackName === 'axe throw';

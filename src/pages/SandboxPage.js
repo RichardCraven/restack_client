@@ -189,6 +189,19 @@ import {
   third_eye,
   shadow_presence,
   rake,
+  witch_p1_1,
+  greater_magic_missile,
+  shadow_curse,
+  spiderweb,
+  summon_spiders_icon,
+  witch_dispell,
+  demonic_whispers,
+  transform,
+  shadow_armor,
+  nether_bolt,
+  undead_grasp,
+  invoke_darkness,
+  sphere_of_darkness,
 } from '../utils/images';
 
 // Dynamically load all runes from the directory
@@ -341,8 +354,10 @@ const monstersData = [
   },
   {
     id: 'wraith', name: 'Wraith', portrait: wraith_portrait, abilities: [
-      { id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' },
-      { id: 'shadow_armor', name: 'Shadow Armor (Passive)', desc: 'Passive: 15% physical damage reduction. 35% chance each round to dispel debuffs.', icon: shadow_presence, type: 'shadow_armor_type', isPassive: true }
+      { id: 'undead_grasp', name: 'Undead Grasp', desc: 'Savage close-range claw strike dealing 100% ATK damage with a 20% chance to stun.', icon: undead_grasp, type: 'undead_grasp_type' },
+      { id: 'nether_bolt', name: 'Nether Bolt', desc: 'Fire a projectile dealing 115% ATK + 8 flat damage with a 40% chance to inflict fear.', icon: nether_bolt, type: 'nether_bolt_type' },
+      { id: 'invoke_darkness', name: 'Invoke Darkness', desc: 'Summon an unkillable black sphere adjacent that deals 5 damage to adjacent enemies and swallows projectiles.', icon: invoke_darkness, type: 'invoke_darkness_type' },
+      { id: 'shadow_armor', name: 'Shadow Armor (Passive)', desc: 'Passive: 15% physical damage reduction. 35% chance each round to dispel debuffs.', icon: shadow_armor, type: 'shadow_armor_type', isPassive: true }
     ]
   },
   { id: 'goat_demon', name: 'Goat Demon', portrait: goat_demon_portrait, abilities: [{ id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' }] },
@@ -412,6 +427,21 @@ const monstersData = [
       { id: 'fireball', name: 'Fireball', desc: 'Unleash a roaring fireball.', icon: fireball, type: 'fireball' },
       { id: 'ice_blast', name: 'Ice Blast', desc: 'Freeze the target in a block of absolute-zero ice.', icon: ice_blast_icon, type: 'ice_blast_proj' }
     ]
+  },
+  {
+    id: 'witch',
+    name: 'Witch',
+    portrait: witch_p1_1,
+    abilities: [
+      { id: 'greater_magic_missile', name: 'Greater Magic Missile', desc: 'Fire five seeking magic missiles in sequence.', icon: greater_magic_missile, type: 'greater_magic_missile' },
+      { id: 'hex', name: 'Hex', desc: 'Curse the target, giving their skills a chance to backfire.', icon: hex, type: 'hex_type' },
+      { id: 'shadow_curse', name: 'Shadow Curse', desc: 'Afflict the target with dark magic that drains their power.', icon: shadow_curse, type: 'shadow_curse_type' },
+      { id: 'spiderweb', name: 'Spiderweb', desc: 'Trap targets in a sticky web, restricting movement.', icon: spiderweb, type: 'spiderweb_type' },
+      { id: 'summon_spiders', name: 'Summon Spiders', desc: 'Summon arachnid minions to aid in battle.', icon: summon_spiders_icon, type: 'summon_spiders_type' },
+      { id: 'dispell', name: 'Dispell', desc: 'Remove magical effects.', icon: witch_dispell, type: 'witch_dispell_type' },
+      { id: 'demonic_whispers', name: 'Demonic Whispers', desc: 'Whisper dark commands, driving targets mad.', icon: demonic_whispers, type: 'demonic_whispers_type' },
+      { id: 'transform', name: 'Transform', desc: 'Transform into a dark beast, increasing attack power.', icon: transform, type: 'transform_type' }
+    ]
   }
 ];
 
@@ -480,7 +510,8 @@ const fightersData = [
       { id: 'barbarian_cleave', name: 'Cleave', desc: 'Crush target skull with axe, causing bleed.', icon: barbarian_cleave, type: 'barbarian_cleave' },
       { id: 'barbarian_axe_throw', name: 'Axe Throw', desc: 'Hurl a spinning axe at the target.', icon: barbarian_axe_throw, type: 'projectile', projectileIcon: barbarian_axe_throw },
       { id: 'barbarian_berserker', name: 'Berserker', desc: 'Enter a state of absolute fury.', icon: barbarian_berserker, type: 'barbarian_berserker' },
-      { id: 'barbarian_leap_attack', name: 'Leap Attack', desc: 'Leap onto the target, knocking them back and stunning.', icon: barbarian_leap_attack, type: 'barbarian_leap' }
+      { id: 'barbarian_leap_attack', name: 'Leap Attack', desc: 'Leap onto the target, knocking them back and stunning.', icon: barbarian_leap_attack, type: 'barbarian_leap' },
+      { id: 'barbarian_whirlwind', name: 'Whirlwind', desc: 'Attack all adjacent units with a spinning vortex.', icon: monk_whirlwind, type: 'monk_whirlwind_type' }
     ]
   },
   {
@@ -1866,13 +1897,14 @@ const SandboxPage = () => {
       }
     }
 
-    if (ability.type === 'melee' || ability.type === 'melee_poison' || ability.type === 'melee_slam' || ability.type === 'melee_heavy' || ability.type === 'melee_punches' || ability.type === 'melee_spin' || ability.type === 'barbarian_slash' || ability.type === 'claw_strike' || ability.type === 'bite' || ability.type === 'head_butt' || ability.type === 'vampiric_bite' || ability.type === 'sword_swing' || ability.id === 'sword_swing' || ability.type === 'rake' || ability.id === 'rake') {
+    if (ability.type === 'melee' || ability.type === 'melee_poison' || ability.type === 'melee_slam' || ability.type === 'melee_heavy' || ability.type === 'melee_punches' || ability.type === 'melee_spin' || ability.type === 'barbarian_slash' || ability.type === 'claw_strike' || ability.type === 'undead_grasp_type' || ability.type === 'bite' || ability.type === 'head_butt' || ability.type === 'vampiric_bite' || ability.type === 'sword_swing' || ability.id === 'sword_swing' || ability.type === 'rake' || ability.id === 'rake') {
       setAnimating(true);
 
 
       const isSlash = ability.id === 'slash' || ability.id === 'barbarian_slash' || ability.id === 'sword_swing' || ability.type === 'sword_swing';
       const isSlam = ability.type === 'melee_slam' || ability.type === 'head_butt';
       const isClawStrike = ability.type === 'claw_strike' || ability.id === 'claw_strike';
+      const isUndeadGrasp = ability.type === 'undead_grasp_type' || ability.id === 'undead_grasp';
       const isBite = ability.type === 'bite' || ability.id === 'bite';
       const isVampiricBite = ability.type === 'vampiric_bite' || ability.id === 'vampiric_bite';
       const isRake = ability.type === 'rake' || ability.id === 'rake';
@@ -1911,12 +1943,12 @@ const SandboxPage = () => {
           setAnimating(false);
           setAnimationPhase(null);
         }, 1250);
-      } else if (isClawStrike) {
+      } else if (isClawStrike || isUndeadGrasp) {
         setAnimationPhase('step_adjacent'); // Move to adjacent (takes 250ms)
 
         // Arrives adjacent: trigger claw strike swipe swing animation (duration 0.75s)
         setTimeout(() => {
-          setHitEffect({ type: 'claw_strike_swipe' });
+          setHitEffect({ type: isUndeadGrasp ? 'undead_grasp_swipe' : 'claw_strike_swipe' });
         }, 250);
 
         // Swing completes (1000ms total, 750ms swing): remove swipe icon, show claw_hit overlay, shake target, flash red, add damage text, and return to origin
@@ -1924,7 +1956,9 @@ const SandboxPage = () => {
           setHitEffect({ type: 'claw_hit' });
           setTargetShake(true);
           setTargetFlash(true);
-          addFloatingText('-18', 'normal', '#ff9f1c', targetPos.row, targetPos.col);
+          const dmg = isUndeadGrasp ? '-15' : '-18';
+          const dmgColor = isUndeadGrasp ? '#a21caf' : '#ff9f1c';
+          addFloatingText(dmg, 'normal', dmgColor, targetPos.row, targetPos.col);
           setAnimationPhase('return');
         }, 1000);
 
@@ -2394,6 +2428,45 @@ const SandboxPage = () => {
         setHitEffect(null);
         setAnimating(false);
       }, 1000);
+    }
+
+    // --- MONK / BARBARIAN WHIRLWIND ---
+    else if (ability.type === 'monk_whirlwind_type') {
+      setIsCasting(true);
+      setAnimating(true);
+
+      // Trigger whirlwind spinning weapon centered on caster
+      setHitEffect({
+        type: 'melee_whirlwind_effect',
+        col: fighterPos.col,
+        row: fighterPos.row,
+        abilityId: ability.id
+      });
+
+      // After 500ms, apply 100% ATK damage to adjacent target monster
+      setTimeout(() => {
+        const dx = Math.abs(fighterPos.col - targetPos.col);
+        const dy = Math.abs(fighterPos.row - targetPos.row);
+        const isAdjacent = dx <= 1 && dy <= 1;
+
+        if (isAdjacent) {
+          setTargetShake(true);
+          setTargetFlash(true);
+          addFloatingText('-18', 'normal', '#ff3333', targetPos.row, targetPos.col);
+
+          setTimeout(() => {
+            setTargetShake(false);
+            setTargetFlash(false);
+          }, 350);
+        }
+      }, 500);
+
+      // Clear animation/visuals after 1500ms
+      setTimeout(() => {
+        setHitEffect(null);
+        setAnimating(false);
+        setIsCasting(false);
+      }, 1500);
     }
 
     // --- MONK ASTRAL PROJECTION ---
@@ -3692,6 +3765,80 @@ const SandboxPage = () => {
       }, 430);
     }
 
+    // --- WITCH SHADOW CURSE ---
+    else if (ability.type === 'shadow_curse_type') {
+      setAnimationPhase('cast_spell');
+      setAnimating(true);
+      setTimeout(() => {
+        setHitEffect({ type: 'shadow' });
+        addFloatingText('SHADOW CURSE!', 'crit', '#9b59b6', targetPosRef.current.row, targetPosRef.current.col);
+        setTimeout(() => setHitEffect(null), 800);
+        setAnimationPhase('return');
+        setTimeout(() => { setAnimationPhase(null); setAnimating(false); }, 250);
+      }, 500);
+    }
+    // --- WITCH SPIDERWEB ---
+    else if (ability.type === 'spiderweb_type') {
+      setAnimationPhase('cast_spell');
+      setAnimating(true);
+      setTimeout(() => {
+        setHitEffect({ type: 'poison_burst' });
+        addFloatingText('ENSNARED!', 'crit', '#2ecc71', targetPosRef.current.row, targetPosRef.current.col);
+        setTimeout(() => setHitEffect(null), 800);
+        setAnimationPhase('return');
+        setTimeout(() => { setAnimationPhase(null); setAnimating(false); }, 250);
+      }, 500);
+    }
+    // --- WITCH SUMMON SPIDERS ---
+    else if (ability.type === 'summon_spiders_type') {
+      setAnimationPhase('cast_spell');
+      setAnimating(true);
+      setTimeout(() => {
+        setHitEffect({ type: 'poison_burst' });
+        addFloatingText('SPIDERS SUMMONED!', 'crit', '#2ecc71', fighterPos.row, fighterPos.col);
+        setTimeout(() => setHitEffect(null), 800);
+        setAnimationPhase('return');
+        setTimeout(() => { setAnimationPhase(null); setAnimating(false); }, 250);
+      }, 500);
+    }
+    // --- WITCH DISPELL ---
+    else if (ability.type === 'witch_dispell_type') {
+      setAnimationPhase('cast_spell');
+      setAnimating(true);
+      setTimeout(() => {
+        setHitEffect({ type: 'shadow' });
+        addFloatingText('DISPELLED!', 'crit', '#9b5de5', targetPosRef.current.row, targetPosRef.current.col);
+        setTimeout(() => setHitEffect(null), 800);
+        setAnimationPhase('return');
+        setTimeout(() => { setAnimationPhase(null); setAnimating(false); }, 250);
+      }, 500);
+    }
+    // --- WITCH DEMONIC WHISPERS ---
+    else if (ability.type === 'demonic_whispers_type') {
+      setAnimationPhase('cast_spell');
+      setAnimating(true);
+      setTimeout(() => {
+        setHitEffect({ type: 'shadow' });
+        addFloatingText('FEARED!', 'crit', '#e74c3c', targetPosRef.current.row, targetPosRef.current.col);
+        setTimeout(() => setHitEffect(null), 800);
+        setAnimationPhase('return');
+        setTimeout(() => { setAnimationPhase(null); setAnimating(false); }, 250);
+      }, 500);
+    }
+    // --- WITCH TRANSFORM ---
+    else if (ability.type === 'transform_type') {
+      setAnimationPhase('cast_spell');
+      setAnimating(true);
+      setTimeout(() => {
+        setHitEffect({ type: 'shadow' });
+        addFloatingText('TRANSFORMED!', 'crit', '#9b59b6', fighterPos.row, fighterPos.col);
+        addFloatingText('+8 ATK', 'normal', '#21e6c1', fighterPos.row, fighterPos.col);
+        setTimeout(() => setHitEffect(null), 800);
+        setAnimationPhase('return');
+        setTimeout(() => { setAnimationPhase(null); setAnimating(false); }, 250);
+      }, 500);
+    }
+
     // --- RANGER LOOSE (FIRES ARROW) ---
     else if (ability.id === 'loose') {
       setAnimating(true);
@@ -4235,53 +4382,97 @@ const SandboxPage = () => {
     }
 
     // --- MAGIC MISSILE ---
-    else if (ability.type === 'magic_missile') {
+    else if (ability.type === 'magic_missile' || ability.type === 'greater_magic_missile') {
       setAnimating(true);
+
+      const activeSphere = (selectedUnitType === 'fighter' && selectedMonsterId === 'wraith')
+        ? minions.find(m => m.type === 'darkness_sphere')
+        : null;
 
       const fireMissile = (delayTime, offsetY) => {
         setTimeout(() => {
           const missileId = Math.random();
+          const startX = fighterPos.col * 20;
+          const startY = fighterPos.row * 20;
+          const finalX = targetPos.col * 20;
+          const finalY = targetPos.row * 20 + offsetY;
+
           setProjectiles(prev => [...prev, {
             id: missileId,
-            x: fighterPos.col * 20,
-            y: fighterPos.row * 20,
-            isMagicMissile: true  // CSS orb, not an image
+            x: startX,
+            y: startY,
+            isMagicMissile: true,
+            isBezier: !!activeSphere
           }]);
 
-          // Move
-          setTimeout(() => {
-            setProjectiles(prev => prev.map(p => p.id === missileId ? {
-              ...p,
-              x: targetPos.col * 20,
-              y: targetPos.row * 20 + offsetY
-            } : p));
-          }, 30);
+          if (activeSphere) {
+            const sphereX = activeSphere.col * 20;
+            const sphereY = activeSphere.row * 20;
+            const duration = 400;
+            const startTime = Date.now();
+
+            const tick = () => {
+              const elapsed = Date.now() - startTime;
+              const t = Math.min(elapsed / duration, 1);
+              const mt = 1 - t;
+              const currentX = mt * mt * startX + 2 * mt * t * finalX + t * t * sphereX;
+              const currentY = mt * mt * startY + 2 * mt * t * finalY + t * t * sphereY;
+
+              setProjectiles(prev => prev.map(p => p.id === missileId ? {
+                ...p,
+                x: currentX,
+                y: currentY,
+                opacity: t > 0.6 ? 1 - (t - 0.6) / 0.4 : 1,
+                scale: t > 0.6 ? 1 - (t - 0.6) / 0.4 : 1
+              } : p));
+
+              if (t < 1) {
+                requestAnimationFrame(tick);
+              }
+            };
+            requestAnimationFrame(tick);
+          } else {
+            // Move standard
+            setTimeout(() => {
+              setProjectiles(prev => prev.map(p => p.id === missileId ? {
+                ...p,
+                x: finalX,
+                y: finalY
+              } : p));
+            }, 30);
+          }
 
           // Impact
           setTimeout(() => {
             setProjectiles(prev => prev.filter(p => p.id !== missileId));
-            setTargetShake(true);
-            setTargetFlash(true);
-            setHitEffect({ type: 'shadow' });
-            addFloatingText('-10', 'normal', '#b5179e', targetPos.row, targetPos.col);
+            if (activeSphere) {
+              addFloatingText('SWALLOWED', 'normal', '#b5179e', activeSphere.row, activeSphere.col);
+            } else {
+              setTargetShake(true);
+              setTargetFlash(true);
+              setHitEffect({ type: 'shadow' });
+              addFloatingText('-10', 'normal', '#b5179e', targetPos.row, targetPos.col);
 
-            setTimeout(() => {
-              setTargetShake(false);
-              setTargetFlash(false);
-              setHitEffect(null);
-            }, 150);
+              setTimeout(() => {
+                setTargetShake(false);
+                setTargetFlash(false);
+                setHitEffect(null);
+              }, 150);
+            }
           }, 430);
 
         }, delayTime);
       };
 
-      fireMissile(0, -5);
-      fireMissile(200, 0);
-      fireMissile(400, 5);
+      const isGreater = ability.type === 'greater_magic_missile';
+      const count = isGreater ? 5 : 3;
+      for (let i = 0; i < count; i++) {
+        fireMissile(i * 150, (i - (count - 1) / 2) * 5);
+      }
 
       setTimeout(() => {
         setAnimating(false);
-      }, 1050);
+      }, 650 + count * 150);
     }
 
     // --- WIZARD ACID BLAST ---
@@ -4541,6 +4732,102 @@ const SandboxPage = () => {
         setHitEffect(null);
         setAnimating(false);
       }, 800);
+    }
+
+    // --- INVOKE DARKNESS ---
+    else if (ability.type === 'invoke_darkness_type') {
+      executeSummonAnimation('darkness_sphere', invoke_darkness, sphere_of_darkness, 'DARKNESS SPHERE');
+    }
+
+    // --- NETHER BOLT ---
+    else if (ability.type === 'nether_bolt_type') {
+      setAnimating(true);
+
+      const missileId = Math.random();
+      const startX = fighterPos.col * 20;
+      const startY = fighterPos.row * 20;
+      const finalX = targetPos.col * 20;
+      const finalY = targetPos.row * 20;
+
+      const activeSphere = minions.find(m => m.type === 'darkness_sphere');
+      const dx = finalX - startX;
+      const dy = finalY - startY;
+      const startAngle = Math.atan2(dy, dx) * (180 / Math.PI);
+
+      setProjectiles(prev => [...prev, {
+        id: missileId,
+        x: startX,
+        y: startY,
+        angle: startAngle,
+        isNetherBolt: true,
+        isBezier: !!activeSphere,
+        color: '#a21caf',
+        shadowColor: '#4a044e'
+      }]);
+
+      if (activeSphere) {
+        const sphereX = activeSphere.col * 20;
+        const sphereY = activeSphere.row * 20;
+        const duration = 400;
+        const startTime = Date.now();
+
+        const tick = () => {
+          const elapsed = Date.now() - startTime;
+          const t = Math.min(elapsed / duration, 1);
+          const mt = 1 - t;
+          
+          const currentX = mt * mt * startX + 2 * mt * t * finalX + t * t * sphereX;
+          const currentY = mt * mt * startY + 2 * mt * t * finalY + t * t * sphereY;
+
+          const nextT = Math.min(t + 0.05, 1);
+          const nextMt = 1 - nextT;
+          const nextX = nextMt * nextMt * startX + 2 * nextMt * nextT * finalX + nextT * nextT * sphereX;
+          const nextY = nextMt * nextMt * startY + 2 * nextMt * nextT * finalY + nextT * nextT * sphereY;
+          const currentAngle = Math.atan2(nextY - currentY, nextX - currentX) * (180 / Math.PI);
+
+          setProjectiles(prev => prev.map(p => p.id === missileId ? {
+            ...p,
+            x: currentX,
+            y: currentY,
+            angle: currentAngle,
+            opacity: t > 0.6 ? 1 - (t - 0.6) / 0.4 : 1,
+            scale: t > 0.6 ? 1 - (t - 0.6) / 0.4 : 1
+          } : p));
+
+          if (t < 1) {
+            requestAnimationFrame(tick);
+          }
+        };
+        requestAnimationFrame(tick);
+      } else {
+        setTimeout(() => {
+          setProjectiles(prev => prev.map(p => p.id === missileId ? {
+            ...p,
+            x: finalX,
+            y: finalY
+          } : p));
+        }, 30);
+      }
+
+      // Impact
+      setTimeout(() => {
+        setProjectiles(prev => prev.filter(p => p.id !== missileId));
+        if (activeSphere) {
+          addFloatingText('SWALLOWED', 'normal', '#a21caf', activeSphere.row, activeSphere.col);
+        } else {
+          setTargetShake(true);
+          setTargetFlash(true);
+          setHitEffect({ type: 'shadow' });
+          addFloatingText('-16', 'normal', '#a21caf', targetPos.row, targetPos.col);
+
+          setTimeout(() => {
+            setTargetShake(false);
+            setTargetFlash(false);
+            setHitEffect(null);
+          }, 150);
+        }
+        setAnimating(false);
+      }, 430);
     }
 
     // --- SUMMON SKELETON ---
@@ -5003,6 +5290,11 @@ const SandboxPage = () => {
             background: rgba(56, 176, 0, 0.2);
           }
         }
+        @keyframes markPulse {
+          0% { opacity: 0.15; }
+          50% { opacity: 0.35; }
+          100% { opacity: 0.15; }
+        }
         @keyframes acidBlastLobY {
           0% { transform: translateY(0px); }
           50% { transform: translateY(-70px); }
@@ -5084,6 +5376,24 @@ const SandboxPage = () => {
           15% { transform: translate(-50%, -50%) scale(1.15) rotate(180deg); opacity: 0.9; }
           85% { transform: translate(-50%, -50%) scale(1.0) rotate(540deg); opacity: 0.9; }
           100% { transform: translate(-50%, -50%) scale(0.1) rotate(720deg); opacity: 0; }
+        }
+        @keyframes meleeWhirlwindSpin {
+          0% {
+            transform: rotate(0deg) translate(0, -55px) rotate(0deg) scale(0);
+            opacity: 0;
+          }
+          15% {
+            opacity: 1;
+            transform: rotate(108deg) translate(0, -55px) rotate(360deg) scale(1.2);
+          }
+          85% {
+            opacity: 1;
+            transform: rotate(612deg) translate(0, -55px) rotate(2160deg) scale(1.2);
+          }
+          100% {
+            transform: rotate(720deg) translate(0, -55px) rotate(2520deg) scale(0);
+            opacity: 0;
+          }
         }
         @keyframes floatUp {
           0% { transform: translate(-50%, 0); opacity: 1; }
@@ -5264,19 +5574,19 @@ const SandboxPage = () => {
         }
         @keyframes weaponSwingArc {
           0% {
-            transform: rotate(-60deg);
+            transform: rotate(60deg);
             opacity: 0;
           }
           10% {
-            transform: rotate(-60deg);
+            transform: rotate(60deg);
             opacity: 1;
           }
           90% {
-            transform: rotate(60deg);
+            transform: rotate(-60deg);
             opacity: 1;
           }
           100% {
-            transform: rotate(60deg);
+            transform: rotate(-60deg);
             opacity: 0;
           }
         }
@@ -6204,6 +6514,39 @@ const SandboxPage = () => {
                       {isMinion && (() => {
                         const minion = minions.find(m => m.row === r && m.col === c);
                         if (!minion) return null;
+
+                        if (minion.type === 'darkness_sphere') {
+                          return (
+                            <div style={{ width: '80%', height: '80%', position: 'relative' }}>
+                              {/* The sphere of darkness image fading in */}
+                              <img
+                                src={sphere_of_darkness}
+                                alt="darkness sphere"
+                                style={{
+                                  width: '100%',
+                                  height: '100%',
+                                  objectFit: 'contain',
+                                  animation: 'sphereOfDarknessFadeIn 1.5s cubic-bezier(0.19, 1, 0.22, 1) forwards'
+                                }}
+                              />
+                              {/* The skill icon rising and fading out */}
+                              <img
+                                src={invoke_darkness}
+                                alt="invoke darkness"
+                                style={{
+                                  position: 'absolute',
+                                  left: 0,
+                                  top: 0,
+                                  width: '100%',
+                                  height: '100%',
+                                  objectFit: 'contain',
+                                  animation: 'invokeDarknessSkillTransition 1.5s cubic-bezier(0.25, 1, 0.5, 1) forwards',
+                                  pointerEvents: 'none'
+                                }}
+                              />
+                            </div>
+                          );
+                        }
 
                         const minionIcon = minion.icon || bat_gate;
                         const minionLabel = minion.label || 'BAT';
@@ -7166,7 +7509,7 @@ const SandboxPage = () => {
                           borderRadius: '50%',
                           backgroundColor: '#111',
                           border: `2px solid ${eff.border}`,
-                          backgroundImage: `url(${eff.icon})`,
+                          backgroundImage: `url("${eff.icon}")`,
                           backgroundSize: 'contain',
                           backgroundRepeat: 'no-repeat',
                           backgroundPosition: 'center',
@@ -7244,7 +7587,7 @@ const SandboxPage = () => {
                       height: '28px',
                       borderRadius: '4px',
                       border: '2px solid #ffdd57',
-                      backgroundImage: `url(${monk_meditate})`,
+                      backgroundImage: `url("${monk_meditate}")`,
                       backgroundSize: 'cover',
                       backgroundPosition: 'center',
                       boxShadow: '0 0 10px #ffdd57',
@@ -7263,7 +7606,7 @@ const SandboxPage = () => {
                       height: '28px',
                       borderRadius: '4px',
                       border: '2px solid #ff007f',
-                      backgroundImage: `url(${perceive})`,
+                      backgroundImage: `url("${perceive}")`,
                       backgroundSize: 'cover',
                       backgroundPosition: 'center',
                       boxShadow: '0 0 10px #ff007f',
@@ -7298,7 +7641,7 @@ const SandboxPage = () => {
                       height: '30px',
                       borderRadius: '4px',
                       border: '2px solid #21e6c1',
-                      backgroundImage: `url(${monk_astral_focus})`,
+                      backgroundImage: `url("${monk_astral_focus}")`,
                       backgroundSize: 'cover',
                       backgroundPosition: 'center',
                       boxShadow: '0 0 10px #21e6c1',
@@ -7318,7 +7661,7 @@ const SandboxPage = () => {
                         borderRadius: '50%',
                         backgroundColor: '#111',
                         border: '2px solid #00bfff',
-                        backgroundImage: `url(${shielded})`,
+                        backgroundImage: `url("${shielded}")`,
                         backgroundSize: 'contain',
                         backgroundRepeat: 'no-repeat',
                         backgroundPosition: 'center',
@@ -7377,7 +7720,7 @@ const SandboxPage = () => {
                         borderRadius: '50%',
                         backgroundColor: '#111',
                         border: '2px solid #3b82f6',
-                        backgroundImage: `url(${soldier_defense_stance_mini_icon})`,
+                        backgroundImage: `url("${soldier_defense_stance_mini_icon}")`,
                         backgroundSize: 'contain',
                         backgroundRepeat: 'no-repeat',
                         backgroundPosition: 'center',
@@ -7436,7 +7779,7 @@ const SandboxPage = () => {
                         borderRadius: '50%',
                         backgroundColor: '#111',
                         border: '2px solid #ff3333',
-                        backgroundImage: `url(${barbarian_berserker})`,
+                        backgroundImage: `url("${barbarian_berserker}")`,
                         backgroundSize: 'contain',
                         backgroundRepeat: 'no-repeat',
                         backgroundPosition: 'center',
@@ -7498,7 +7841,7 @@ const SandboxPage = () => {
                           borderRadius: '50%',
                           backgroundColor: '#111',
                           border: '2px solid #cc44ff',
-                          backgroundImage: `url(${hex?.default || hex})`,
+                          backgroundImage: `url("${hex?.default || hex}")`,
                           backgroundSize: 'contain',
                           backgroundRepeat: 'no-repeat',
                           backgroundPosition: 'center',
@@ -7556,11 +7899,11 @@ const SandboxPage = () => {
                       borderRadius: '50%',
                       backgroundColor: '#111',
                       border: '2px solid #ffb703',
-                      backgroundImage: `url(${notchedArrow === 'ice' ? ranger_ice_arrow :
+                      backgroundImage: `url("${notchedArrow === 'ice' ? ranger_ice_arrow :
                         notchedArrow === 'force' ? ranger_force_arrow :
                           notchedArrow === 'poison' ? ranger_poison_arrow :
                             ranger_celestial_arrow
-                        })`,
+                        }")`,
                       backgroundSize: 'contain',
                       backgroundRepeat: 'no-repeat',
                       backgroundPosition: 'center',
@@ -7581,7 +7924,7 @@ const SandboxPage = () => {
                       height: '28px',
                       borderRadius: '4px',
                       border: '2px solid #ff3333',
-                      backgroundImage: `url(${crimson_sight})`,
+                      backgroundImage: `url("${crimson_sight}")`,
                       backgroundSize: 'cover',
                       backgroundPosition: 'center',
                       boxShadow: '0 0 10px #ff3333',
@@ -7603,7 +7946,7 @@ const SandboxPage = () => {
                       height: '28px',
                       borderRadius: '4px',
                       border: '2px solid #ffb703',
-                      backgroundImage: `url(${bat_fly})`,
+                      backgroundImage: `url("${bat_fly}")`,
                       backgroundSize: 'cover',
                       backgroundPosition: 'center',
                       boxShadow: '0 0 10px #ffb703',
@@ -7625,7 +7968,7 @@ const SandboxPage = () => {
                       height: '28px',
                       borderRadius: '4px',
                       border: '2px solid #9b5de5',
-                      backgroundImage: `url(${dispell})`,
+                      backgroundImage: `url("${dispell}")`,
                       backgroundSize: 'cover',
                       backgroundPosition: 'center',
                       boxShadow: '0 0 10px #9b5de5',
@@ -7698,7 +8041,7 @@ const SandboxPage = () => {
                     : targetFlash
                       ? (targetName === 'Soldier Target' ? 'rgba(255, 183, 3, 0.3)' : '#990000')
                       : '#222',
-                  backgroundImage: `url(${targetPortrait})`,
+                  backgroundImage: `url("${targetPortrait}")`,
                   backgroundSize: 'cover',
                   backgroundPosition: 'center',
                   filter: targetFrozen ? 'brightness(0.85) saturate(0.6)' : targetAsleep ? 'brightness(0.65) saturate(0.4) contrast(0.9)' : 'none',
@@ -7729,7 +8072,7 @@ const SandboxPage = () => {
                       height: '42px',
                       borderRadius: '4px',
                       border: 'none',
-                      backgroundImage: `url(${death_missile_hit})`,
+                      backgroundImage: `url("${death_missile_hit}")`,
                       backgroundSize: 'cover',
                       backgroundPosition: 'center',
                       boxShadow: 'none',
@@ -7862,7 +8205,7 @@ const SandboxPage = () => {
                           borderRadius: '50%',
                           backgroundColor: '#111',
                           border: '2px solid #b388ff',
-                          backgroundImage: `url(${bind})`,
+                          backgroundImage: `url("${bind}")`,
                           backgroundSize: 'contain',
                           backgroundRepeat: 'no-repeat',
                           backgroundPosition: 'center',
@@ -7905,7 +8248,7 @@ const SandboxPage = () => {
                           borderRadius: '50%',
                           backgroundColor: '#111',
                           border: '2px solid #8e2de2',
-                          backgroundImage: `url(${induce_fear})`,
+                          backgroundImage: `url("${induce_fear}")`,
                           backgroundSize: 'contain',
                           backgroundRepeat: 'no-repeat',
                           backgroundPosition: 'center',
@@ -7964,7 +8307,7 @@ const SandboxPage = () => {
                             borderRadius: '50%',
                             backgroundColor: '#111',
                             border: '2px solid #cc44ff',
-                            backgroundImage: `url(${hex?.default || hex})`,
+                            backgroundImage: `url("${hex?.default || hex}")`,
                             backgroundSize: 'contain',
                             backgroundRepeat: 'no-repeat',
                             backgroundPosition: 'center',
@@ -8021,7 +8364,7 @@ const SandboxPage = () => {
                           borderRadius: '50%',
                           backgroundColor: '#111',
                           border: '2px solid #8bc34a',
-                          backgroundImage: `url(${ranger_ensnare})`,
+                          backgroundImage: `url("${ranger_ensnare}")`,
                           backgroundSize: 'contain',
                           backgroundRepeat: 'no-repeat',
                           backgroundPosition: 'center',
@@ -8077,7 +8420,7 @@ const SandboxPage = () => {
                           borderRadius: '50%',
                           backgroundColor: '#111',
                           border: '2px solid #ff3333',
-                          backgroundImage: `url(${bleeding})`,
+                          backgroundImage: `url("${bleeding}")`,
                           backgroundSize: 'contain',
                           backgroundRepeat: 'no-repeat',
                           backgroundPosition: 'center',
@@ -8133,7 +8476,7 @@ const SandboxPage = () => {
                           borderRadius: '50%',
                           backgroundColor: '#111',
                           border: '2px solid #38b000',
-                          backgroundImage: `url(${poison})`,
+                          backgroundImage: `url("${poison}")`,
                           backgroundSize: 'contain',
                           backgroundRepeat: 'no-repeat',
                           backgroundPosition: 'center',
@@ -8217,7 +8560,7 @@ const SandboxPage = () => {
                           borderRadius: '50%',
                           backgroundColor: '#111',
                           border: '2px solid #00bfff',
-                          backgroundImage: `url(${frozen})`,
+                          backgroundImage: `url("${frozen}")`,
                           backgroundSize: 'contain',
                           backgroundRepeat: 'no-repeat',
                           backgroundPosition: 'center',
@@ -8301,7 +8644,7 @@ const SandboxPage = () => {
                           borderRadius: '50%',
                           backgroundColor: '#111',
                           border: '2px solid #90caf9',
-                          backgroundImage: `url(${wizard_sleep})`,
+                          backgroundImage: `url("${wizard_sleep}")`,
                           backgroundSize: 'contain',
                           backgroundRepeat: 'no-repeat',
                           backgroundPosition: 'center',
@@ -8357,7 +8700,7 @@ const SandboxPage = () => {
                           borderRadius: '50%',
                           backgroundColor: '#111',
                           border: '2px solid #ff007f',
-                          backgroundImage: `url(${weakness_doubled})`,
+                          backgroundImage: `url("${weakness_doubled}")`,
                           backgroundSize: 'contain',
                           backgroundRepeat: 'no-repeat',
                           backgroundPosition: 'center',
@@ -8439,7 +8782,7 @@ const SandboxPage = () => {
                         borderRadius: '50%',
                         backgroundColor: '#111',
                         border: '2px solid #ff5400',
-                        backgroundImage: `url(${ranger_mark})`,
+                        backgroundImage: `url("${ranger_mark}")`,
                         backgroundSize: 'contain',
                         backgroundRepeat: 'no-repeat',
                         backgroundPosition: 'center',
@@ -8500,7 +8843,7 @@ const SandboxPage = () => {
                         borderRadius: '50%',
                         backgroundColor: '#111',
                         border: '2px solid #00bfff',
-                        backgroundImage: `url(${shielded_partial})`,
+                        backgroundImage: `url("${shielded_partial}")`,
                         backgroundSize: 'contain',
                         backgroundRepeat: 'no-repeat',
                         backgroundPosition: 'center',
@@ -8706,13 +9049,13 @@ const SandboxPage = () => {
                       left: '-12.5%',
                       width: '125%',
                       height: '125%',
-                      backgroundImage: `url(${ranger_mark})`,
+                      backgroundImage: `url("${ranger_mark}")`,
                       backgroundSize: 'contain',
                       backgroundRepeat: 'no-repeat',
                       backgroundPosition: 'center',
                       zIndex: 12,
-                      animation: 'pulse 1.5s infinite ease-in-out',
-                      opacity: 0.75
+                      animation: 'markPulse 1.5s infinite ease-in-out',
+                      opacity: 0.25
                     }}></div>
                   )}
                   {/* Ensnare Visual Overlay – root/vine paralysis effect */}
@@ -8760,7 +9103,7 @@ const SandboxPage = () => {
                       height: '28px',
                       borderRadius: '4px',
                       border: '2px solid #ff00ff',
-                      backgroundImage: `url(${energy_drain})`,
+                      backgroundImage: `url("${energy_drain}")`,
                       backgroundSize: 'cover',
                       backgroundPosition: 'center',
                       boxShadow: '0 0 10px #ff00ff',
@@ -8780,7 +9123,7 @@ const SandboxPage = () => {
                       height: '42px',
                       borderRadius: '4px',
                       border: 'none',
-                      backgroundImage: `url(${heartbeat})`,
+                      backgroundImage: `url("${heartbeat}")`,
                       backgroundSize: 'cover',
                       backgroundPosition: 'center',
                       boxShadow: 'none',
@@ -8834,7 +9177,7 @@ const SandboxPage = () => {
                       borderRadius: '8px',
                       border: '2px solid #ff5400',
                       backgroundColor: '#222',
-                      backgroundImage: `url(${goblin_portrait})`,
+                      backgroundImage: `url("${goblin_portrait}")`,
                       backgroundSize: 'cover',
                       backgroundPosition: 'center',
                       boxShadow: '0 8px 16px rgba(0,0,0,0.5)',
@@ -8864,7 +9207,7 @@ const SandboxPage = () => {
                             borderRadius: '50%',
                             backgroundColor: '#111',
                             border: '2px solid #ff007f',
-                            backgroundImage: `url(${weakness_doubled})`,
+                            backgroundImage: `url("${weakness_doubled}")`,
                             backgroundSize: 'contain',
                             backgroundRepeat: 'no-repeat',
                             backgroundPosition: 'center',
@@ -8955,7 +9298,7 @@ const SandboxPage = () => {
                       borderRadius: '8px',
                       border: '2px solid #ff5400',
                       backgroundColor: '#222',
-                      backgroundImage: `url(${beholder_minion_portrait})`,
+                      backgroundImage: `url("${beholder_minion_portrait}")`,
                       backgroundSize: 'cover',
                       backgroundPosition: 'center',
                       boxShadow: '0 8px 16px rgba(0,0,0,0.5)',
@@ -8985,7 +9328,7 @@ const SandboxPage = () => {
                             borderRadius: '50%',
                             backgroundColor: '#111',
                             border: '2px solid #ff007f',
-                            backgroundImage: `url(${weakness_doubled})`,
+                            backgroundImage: `url("${weakness_doubled}")`,
                             backgroundSize: 'contain',
                             backgroundRepeat: 'no-repeat',
                             backgroundPosition: 'center',
@@ -9082,7 +9425,7 @@ const SandboxPage = () => {
                       borderRadius: '8px',
                       border: extraGoblin1Flash ? '3px solid #ff4d4d' : '2px solid #ff5400',
                       backgroundColor: extraGoblin1Flash ? '#990000' : '#222',
-                      backgroundImage: `url(${targetPortrait})`,
+                      backgroundImage: `url("${targetPortrait}")`,
                       backgroundSize: 'cover',
                       backgroundPosition: 'center',
                       boxShadow: '0 8px 16px rgba(0,0,0,0.5)',
@@ -9129,7 +9472,7 @@ const SandboxPage = () => {
                       borderRadius: '8px',
                       border: extraGoblin2Flash ? '3px solid #ff4d4d' : '2px solid #ff5400',
                       backgroundColor: extraGoblin2Flash ? '#990000' : '#222',
-                      backgroundImage: `url(${targetPortrait})`,
+                      backgroundImage: `url("${targetPortrait}")`,
                       backgroundSize: 'cover',
                       backgroundPosition: 'center',
                       boxShadow: '0 8px 16px rgba(0,0,0,0.5)',
@@ -9183,7 +9526,7 @@ const SandboxPage = () => {
                       borderRadius: '8px',
                       border: monkGoblin1Flash ? '3px solid #ff4d4d' : '2px solid #ff5400',
                       backgroundColor: monkGoblin1Flash ? '#990000' : '#222',
-                      backgroundImage: `url(${targetPortrait})`,
+                      backgroundImage: `url("${targetPortrait}")`,
                       backgroundSize: 'cover',
                       backgroundPosition: 'center',
                       boxShadow: '0 8px 16px rgba(0,0,0,0.5)',
@@ -9232,7 +9575,7 @@ const SandboxPage = () => {
                       borderRadius: '8px',
                       border: monkGoblin2Flash ? '3px solid #ff4d4d' : '2px solid #ff5400',
                       backgroundColor: monkGoblin2Flash ? '#990000' : '#222',
-                      backgroundImage: `url(${targetPortrait})`,
+                      backgroundImage: `url("${targetPortrait}")`,
                       backgroundSize: 'cover',
                       backgroundPosition: 'center',
                       boxShadow: '0 8px 16px rgba(0,0,0,0.5)',
@@ -9282,7 +9625,7 @@ const SandboxPage = () => {
                   borderRadius: '8px',
                   border: '2px solid #ffb703',
                   backgroundColor: '#222',
-                  backgroundImage: `url(${barbarian})`,
+                  backgroundImage: `url("${barbarian}")`,
                   backgroundSize: 'cover',
                   backgroundPosition: 'center',
                   boxShadow: '0 8px 16px rgba(0,0,0,0.5)',
@@ -9308,7 +9651,7 @@ const SandboxPage = () => {
                             borderRadius: '50%',
                             backgroundColor: '#111',
                             border: '2px solid #00bfff',
-                            backgroundImage: `url(${circle_of_protection})`,
+                            backgroundImage: `url("${circle_of_protection}")`,
                             backgroundSize: 'contain',
                             backgroundRepeat: 'no-repeat',
                             backgroundPosition: 'center',
@@ -9323,7 +9666,7 @@ const SandboxPage = () => {
                             borderRadius: '50%',
                             backgroundColor: '#111',
                             border: '2px solid #ffdd57',
-                            backgroundImage: `url(${shielded})`,
+                            backgroundImage: `url("${shielded}")`,
                             backgroundSize: 'contain',
                             backgroundRepeat: 'no-repeat',
                             backgroundPosition: 'center',
@@ -9359,7 +9702,7 @@ const SandboxPage = () => {
                     borderRadius: '8px',
                     border: sageTargetFlash ? '3px solid #ffffff' : '2px solid #00bfff',
                     backgroundColor: sageTargetFlash ? '#00bfff' : '#222',
-                    backgroundImage: `url(${sage})`,
+                    backgroundImage: `url("${sage}")`,
                     backgroundSize: 'cover',
                     backgroundPosition: 'center',
                     boxShadow: '0 8px 16px rgba(0,0,0,0.5)',
@@ -9387,7 +9730,7 @@ const SandboxPage = () => {
                               borderRadius: '50%',
                               backgroundColor: '#111',
                               border: '2px solid #00bfff',
-                              backgroundImage: `url(${circle_of_protection})`,
+                              backgroundImage: `url("${circle_of_protection}")`,
                               backgroundSize: 'contain',
                               backgroundRepeat: 'no-repeat',
                               backgroundPosition: 'center',
@@ -9402,7 +9745,7 @@ const SandboxPage = () => {
                               borderRadius: '50%',
                               backgroundColor: '#111',
                               border: '2px solid #ffdd57',
-                              backgroundImage: `url(${shielded})`,
+                              backgroundImage: `url("${shielded}")`,
                               backgroundSize: 'contain',
                               backgroundRepeat: 'no-repeat',
                               backgroundPosition: 'center',
@@ -9440,7 +9783,7 @@ const SandboxPage = () => {
                     borderRadius: '8px',
                     border: extraRangerFlash ? '3px solid #ff4d4d' : '2px solid #ff5400',
                     backgroundColor: extraRangerFlash ? '#990000' : '#222',
-                    backgroundImage: `url(${ranger})`,
+                    backgroundImage: `url("${ranger}")`,
                     backgroundSize: 'cover',
                     backgroundPosition: 'center',
                     boxShadow: '0 8px 16px rgba(0,0,0,0.5)',
@@ -9518,7 +9861,7 @@ const SandboxPage = () => {
                             borderRadius: '50%',
                             backgroundColor: '#111',
                             border: '2px solid #8e2de2',
-                            backgroundImage: `url(${induce_fear})`,
+                            backgroundImage: `url("${induce_fear}")`,
                             backgroundSize: 'contain',
                             backgroundRepeat: 'no-repeat',
                             backgroundPosition: 'center',
@@ -9574,7 +9917,7 @@ const SandboxPage = () => {
                             borderRadius: '50%',
                             backgroundColor: '#111',
                             border: '2px solid #ff3333',
-                            backgroundImage: `url(${betrayal_hit})`,
+                            backgroundImage: `url("${betrayal_hit}")`,
                             backgroundSize: 'contain',
                             backgroundRepeat: 'no-repeat',
                             backgroundPosition: 'center',
@@ -9633,7 +9976,7 @@ const SandboxPage = () => {
                         height: '42px',
                         borderRadius: '4px',
                         border: 'none',
-                        backgroundImage: `url(${heartbeat})`,
+                        backgroundImage: `url("${heartbeat}")`,
                         backgroundSize: 'cover',
                         backgroundPosition: 'center',
                         boxShadow: 'none',
@@ -9654,7 +9997,7 @@ const SandboxPage = () => {
                         height: '42px',
                         borderRadius: '4px',
                         border: 'none',
-                        backgroundImage: `url(${betrayal_hit})`,
+                        backgroundImage: `url("${betrayal_hit}")`,
                         backgroundSize: 'cover',
                         backgroundPosition: 'center',
                         boxShadow: 'none',
@@ -9997,6 +10340,36 @@ const SandboxPage = () => {
                       )}
                     </div>
                   </div>
+                ) : p.isNetherBolt ? (
+                  <div
+                    key={p.id}
+                    style={{
+                      position: 'absolute',
+                      width: '32px',
+                      height: '32px',
+                      left: `calc(${p.x}% + ${TILE_PCT / 2}% - 16px)`,
+                      top: `calc(${p.y}% + ${TILE_PCT / 2}% - 16px)`,
+                      zIndex: 30,
+                      transition: p.isBezier ? 'none' : 'left 0.4s linear, top 0.4s linear',
+                      opacity: p.opacity !== undefined ? p.opacity : 1,
+                      transform: `rotate(${p.angle !== undefined ? p.angle : getProjectileAngle()}deg) scale(${p.scale !== undefined ? p.scale : 1})`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      pointerEvents: 'none'
+                    }}
+                  >
+                    <img
+                      src={nether_bolt}
+                      alt="nether bolt"
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'contain',
+                        filter: 'drop-shadow(0 0 4px #a21caf)'
+                      }}
+                    />
+                  </div>
                 ) : p.isMagicMissile ? (
                   <div
                     key={p.id}
@@ -10006,12 +10379,18 @@ const SandboxPage = () => {
                       height: '18px',
                       left: `calc(${p.x}% + ${TILE_PCT / 2}% - 9px)`,
                       top: `calc(${p.y}% + ${TILE_PCT / 2}% - 9px)`,
-                      background: 'radial-gradient(circle, #ffffff 15%, #d946ef 45%, #701a75 80%)',
+                      background: p.color
+                        ? `radial-gradient(circle, #ffffff 15%, ${p.color} 45%, ${p.shadowColor || '#000'} 80%)`
+                        : 'radial-gradient(circle, #ffffff 15%, #d946ef 45%, #701a75 80%)',
                       borderRadius: '50%',
                       border: '2px solid #ffffff',
-                      boxShadow: '0 0 10px #d946ef, 0 0 20px #701a75, inset 0 0 4px #ffffff',
+                      boxShadow: p.color
+                        ? `0 0 10px ${p.color}, 0 0 20px ${p.shadowColor || '#000'}, inset 0 0 4px #ffffff`
+                        : '0 0 10px #d946ef, 0 0 20px #701a75, inset 0 0 4px #ffffff',
                       zIndex: 30,
-                      transition: 'left 0.4s linear, top 0.4s linear',
+                      transition: p.isBezier ? 'none' : 'left 0.4s linear, top 0.4s linear',
+                      opacity: p.opacity !== undefined ? p.opacity : 1,
+                      transform: p.scale !== undefined ? `scale(${p.scale})` : 'none',
                       animation: 'missileGlow 0.15s ease-in-out infinite alternate',
                     }}
                   />
@@ -10404,7 +10783,7 @@ const SandboxPage = () => {
                     top: `${vortexActive.row * TILE_PCT + TILE_PCT / 2}%`,
                     width: `${TILE_PCT * 3}%`,
                     height: `${TILE_PCT * 3}%`,
-                    backgroundImage: `url(${wizard_vortex})`,
+                    backgroundImage: `url("${wizard_vortex}")`,
                     backgroundSize: 'contain',
                     backgroundRepeat: 'no-repeat',
                     backgroundPosition: 'center',
@@ -10568,7 +10947,7 @@ const SandboxPage = () => {
                     <div style={{
                       width: '90px',
                       height: '90px',
-                      backgroundImage: `url(${claw_hit})`,
+                      backgroundImage: `url("${claw_hit}")`,
                       backgroundSize: 'contain',
                       backgroundRepeat: 'no-repeat',
                       backgroundPosition: 'center',
@@ -10674,7 +11053,7 @@ const SandboxPage = () => {
                       </div>
                     );
                   })()}
-                  {hitEffect.type === 'claw_strike_swipe' && (() => {
+                  {(hitEffect.type === 'claw_strike_swipe' || hitEffect.type === 'undead_grasp_swipe') && (() => {
                     const dx = fighterPos.col - targetPos.col;
                     const dy = fighterPos.row - targetPos.row;
                     const dist = Math.sqrt(dx * dx + dy * dy);
@@ -10711,7 +11090,8 @@ const SandboxPage = () => {
                           zIndex: 5000,
                           display: 'flex',
                           alignItems: 'center',
-                          justifyContent: 'center'
+                          justifyContent: 'center',
+                          filter: hitEffect.type === 'undead_grasp_swipe' ? 'hue-rotate(270deg) saturate(2.5) drop-shadow(0 0 8px rgba(147, 51, 234, 0.8))' : 'none'
                         }}
                       >
                         <img
@@ -10778,7 +11158,6 @@ const SandboxPage = () => {
                             width: '100%',
                             height: '100%',
                             objectFit: 'contain',
-                            transformOrigin: `${30 - halfDistPx}px 30px`,
                             animation: 'imbuedStrikeThrust 1.0s ease-in-out forwards',
                             filter: 'drop-shadow(0 0 6px rgba(0, 191, 255, 0.95)) drop-shadow(0 0 12px rgba(0, 191, 255, 0.6))'
                           }}
@@ -10826,6 +11205,51 @@ const SandboxPage = () => {
                       ))}
                     </div>
                   )}
+
+                  {hitEffect.type === 'melee_whirlwind_effect' && (() => {
+                    const isMonk = hitEffect.abilityId === 'monk_whirlwind';
+                    const icon = isMonk ? monk_punch : barbarian_cleave;
+                    return (
+                      <div style={{
+                        position: 'absolute',
+                        left: '50%',
+                        top: '50%',
+                        width: '0px',
+                        height: '0px',
+                        zIndex: 35,
+                        pointerEvents: 'none'
+                      }}>
+                        {[...Array(2)].map((_, i) => (
+                          <div
+                            key={`melee-ww-${i}`}
+                            style={{
+                              position: 'absolute',
+                              left: 0,
+                              top: 0,
+                              width: '40px',
+                              height: '40px',
+                              transformOrigin: 'center center',
+                              animation: `meleeWhirlwindSpin 1s cubic-bezier(0.2, 0.8, 0.2, 1) both`,
+                              animationDelay: `${i * 0.15}s`,
+                            }}
+                          >
+                            <img
+                              src={icon}
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'contain',
+                                filter: isMonk 
+                                  ? 'drop-shadow(0 0 4px #ffaa00) drop-shadow(0 0 8px #ff5500)' 
+                                  : 'drop-shadow(0 0 4px #ff3333) drop-shadow(0 0 8px #990000)',
+                              }}
+                              alt="spinning-weapon"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
 
                   {hitEffect.type === 'bombard_emission' && (
                     <>
@@ -11745,7 +12169,7 @@ const SandboxPage = () => {
                     transform: 'translate(-50%, -50%)',
                     width: '380px',
                     height: '380px',
-                    backgroundImage: `url(${induce_fear})`,
+                    backgroundImage: `url("${induce_fear}")`,
                     backgroundSize: 'contain',
                     backgroundRepeat: 'no-repeat',
                     backgroundPosition: 'center',
@@ -11769,7 +12193,7 @@ const SandboxPage = () => {
                     transform: 'translate(-50%, -50%)',
                     width: '420px',
                     height: '420px',
-                    backgroundImage: `url(${shadow_presence})`,
+                    backgroundImage: `url("${shadow_presence}")`,
                     backgroundSize: 'contain',
                     backgroundRepeat: 'no-repeat',
                     backgroundPosition: 'center',
@@ -11942,7 +12366,7 @@ const SandboxPage = () => {
                           height: '36px',
                           borderRadius: '4px',
                           background: '#222',
-                          backgroundImage: `url(${a.icon})`,
+                          backgroundImage: `url("${a.icon}")`,
                           backgroundSize: 'contain',
                           backgroundRepeat: 'no-repeat',
                           backgroundPosition: 'center',
@@ -12125,7 +12549,7 @@ const SandboxPage = () => {
                         height: '40px',
                         borderRadius: '4px',
                         background: '#222',
-                        backgroundImage: `url(${a.icon})`,
+                        backgroundImage: `url("${a.icon}")`,
                         backgroundSize: 'contain',
                         backgroundRepeat: 'no-repeat',
                         backgroundPosition: 'center',

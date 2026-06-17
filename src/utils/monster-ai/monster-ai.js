@@ -7,6 +7,9 @@ import { BeholderMinion } from './profiles/BeholderMinion'
 import { Troll } from './profiles/Troll'
 import { KabukiDemon } from './profiles/KabukiDemon'
 import { KabukiDemonMinion } from './profiles/KabukiDemonMinion'
+import { Ogre } from './profiles/Ogre'
+import { Wraith } from './profiles/Wraith'
+import { DarknessSphere } from './profiles/DarknessSphere'
 import {Methods, getSurroundings} from '../shared-ai-methods/basic-methods';
 import {MovementMethods} from '../shared-ai-methods/movement-methods';
 
@@ -57,6 +60,9 @@ export function MonsterAI(MAX_DEPTH, MAX_LANES, INTERVAL_TIME){
             troll: new Troll(data, this.utilMethods, this.animationManager, this.overlayManager),
             kabuki_demon: new KabukiDemon(data, this.utilMethods, this.animationManager, this.overlayManager),
             kabuki_demon_minion: new KabukiDemonMinion(data, this.utilMethods, this.animationManager, this.overlayManager),
+            ogre: new Ogre(data, this.utilMethods, this.animationManager, this.overlayManager),
+            wraith: new Wraith(data, this.utilMethods, this.animationManager, this.overlayManager),
+            darkness_sphere: new DarknessSphere(data, this.utilMethods, this.animationManager, this.overlayManager),
         }
     }
 

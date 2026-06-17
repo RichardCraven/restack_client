@@ -859,6 +859,34 @@ const skillsMatrix = {
         type: 'damage',
         effect: { type: 'stun', chance: 100, duration: 'short' }
     },
+    barbarian_whirlwind: {
+        class: 'barbarian',
+        treePath: 'combat_b',
+        id: 'barbarian_whirlwind',
+        tier: 2,
+        name: 'Whirlwind',
+        desc: 'Attack all adjacent units with a spinning vortex.',
+        icon: images['monk_whirlwind'],
+        cooldown: 6,
+        duration: 'instant',
+        range: 'close',
+        atkPercentage: 100,
+        type: 'damage'
+    },
+    whirlwind: {
+        class: 'barbarian',
+        treePath: 'combat_b',
+        id: 'whirlwind',
+        tier: 2,
+        name: 'Whirlwind',
+        desc: 'Attack all adjacent units with a spinning vortex.',
+        icon: images['monk_whirlwind'],
+        cooldown: 6,
+        duration: 'instant',
+        range: 'close',
+        atkPercentage: 100,
+        type: 'damage'
+    },
 
     // === MONK ===
     swift_step: {
@@ -1636,9 +1664,45 @@ const skillsMatrix = {
         tier: 2,
         name: 'Shadow Armor',
         desc: 'Passive: 15% physical damage reduction. 35% chance each round to dispel debuffs.',
-        icon: images['shadow_presence'],
+        icon: images['shadow_armor'],
         type: 'passive',
         isPassive: true
+    },
+    nether_bolt: {
+        id: 'nether_bolt',
+        tier: 2,
+        name: 'Nether Bolt',
+        desc: 'Fire a projectile dealing 115% ATK + 8 flat damage with a 40% chance to inflict fear.',
+        icon: images['nether_bolt'],
+        cooldown: 8,
+        initialCooldown: 2,
+        range: 'medium',
+        type: 'damage',
+        atkPercentage: 115,
+        flatBonus: 8,
+        effect: { type: 'fear', chance: 40, duration: 'medium' }
+    },
+    invoke_darkness: {
+        id: 'invoke_darkness',
+        tier: 2,
+        name: 'Invoke Darkness',
+        desc: 'Summon an unkillable black sphere adjacent that deals 5 damage to adjacent enemies and swallows projectiles.',
+        icon: images['invoke_darkness'],
+        cooldown: 12,
+        range: 'self',
+        type: 'summon'
+    },
+    undead_grasp: {
+        id: 'undead_grasp',
+        tier: 1,
+        name: 'Undead Grasp',
+        desc: 'Savage close-range claw strike dealing 100% ATK damage with a 20% chance to stun.',
+        icon: images['undead_grasp'],
+        cooldown: 4,
+        range: 'close',
+        type: 'damage',
+        atkPercentage: 100,
+        effect: { type: 'stun', chance: 20, duration: 'short' }
     },
     shadow_curse: {
         id: 'shadow_curse',

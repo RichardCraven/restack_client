@@ -32,6 +32,9 @@ import skillsMatrix from '../utils/skills-matrix'
 import REAGENTS, { REAGENT_KEYS } from '../utils/reagents'
 import POTIONS from '../utils/potions'
 import { RECIPES as POTION_RECIPES, matchRecipe } from '../utils/recipes'
+import BREW_INGREDIENTS, { BREW_INGREDIENT_KEYS } from '../utils/brew-ingredients'
+import BREWS from '../utils/brews'
+import { BREW_RECIPES, matchBrewRecipe } from '../utils/brew-recipes'
 import '../styles/inventory-modal.scss'
 import '../styles/quests-modal.scss'
 import '../styles/camp-modal.scss'
@@ -765,6 +768,14 @@ class DungeonPage extends React.Component {
         }
         // Sage also gets the Prepare Ritual action (same ritual pool as wizard)
         if (character.type === 'sage') {
+            // Mix Potions — Sage-exclusive brewing action
+            actions.push({
+                type: 'compound',
+                name: 'Mix Potions',
+                iconUrl: images['potion'] || '',
+                noMaxCap: true,
+                subTypes: [] // no tier subtypes; builder opens directly
+            });
             const knownRituals = character.knownRituals || [];
             const ritualSubTypes = Object.values(RITUALS).map(r => {
                 const isAvailable = knownRituals.includes(r.key);
@@ -782,13 +793,14 @@ class DungeonPage extends React.Component {
                 iconUrl: images['magic_moon_1'] || '',
                 subTypes: ritualSubTypes
             });
-            // Mix Potions — Sage-exclusive brewing action
+        }
+        if (character.type === 'barbarian') {
             actions.push({
-                type: 'compound',
-                name: 'Mix Potions',
-                iconUrl: images['potion'] || '',
+                type: 'brew',
+                name: 'Brew',
+                iconUrl: images['brew_beer'] || images['potion'] || '',
                 noMaxCap: true,
-                subTypes: [] // no tier subtypes; builder opens directly
+                subTypes: []
             });
         }
         // Add other class logic here as needed
@@ -871,8 +883,8 @@ class DungeonPage extends React.Component {
                                     const slotsUsed = pickedSpells.reduce((s, sp) => s + (GLYPH_SPELL_SLOT_COST[sp.tier] || 1), 0);
 
                                     // Wizard's eligible combat spells from skills-matrix
-                                    const wizardCombatSpellKeys = (this.state.selectedCrewMember?.specials || [])
-                                        .concat(this.state.selectedCrewMember?.attacks || [])
+                                    const wizardCombatSpellKeys = (this.state.selectedCrewMember?.skills || 
+                                        (this.state.selectedCrewMember?.specials || []).concat(this.state.selectedCrewMember?.attacks || []))
                                         .filter(key => {
                                             const def = skillsMatrix[key];
                                             return def && def.class === 'wizard' && def.type !== 'passive';
@@ -959,6 +971,15 @@ class DungeonPage extends React.Component {
                         {/* ── Compound Potions builder (Sage) ───────────────────────────── */}
                         {action.type === 'compound' && this.state.compoundBuilderOpen && (() => {
                             const allSlotsFull = compoundSlots.length >= 3;
+                            const isReagentCompatible = (rKey) => {
+                                if (compoundSlots.length === 0) return true;
+                                if (compoundSlots.includes(rKey)) return true;
+                                return POTION_RECIPES.some(recipe => {
+                                    const containsSlots = compoundSlots.every(s => recipe.reagents.includes(s));
+                                    const containsCandidate = recipe.reagents.includes(rKey);
+                                    return containsSlots && containsCandidate;
+                                });
+                            };
                             return (
                             <div className="compound-builder-panel">
                                 {/* TOP: 3 reagent slots */}
@@ -990,12 +1011,19 @@ class DungeonPage extends React.Component {
                                         const count = getReagentCount(rKey);
                                         const isSelected = compoundSlots.includes(rKey);
                                         const isDepleted = count === 0;
-                                        const isBlocked = !isSelected && allSlotsFull;
+
+                                        const hasSelection = compoundSlots.length > 0;
+                                        const isCompatible = !hasSelection || isReagentCompatible(rKey);
+
+                                        const isBlocked = (!isSelected && allSlotsFull) || (!isSelected && hasSelection && !isCompatible);
+                                        const isCompatibleHighlight = hasSelection && isCompatible && !isSelected && !isDepleted;
+                                        const isIncompatibleDim = hasSelection && !isCompatible && !isSelected;
+
                                         const iconUrl = images[reagent.icon];
                                         return (
                                             <div
                                                 key={rKey}
-                                                className={`compound-reagent-cell ${isSelected ? 'selected' : ''} ${(isDepleted || isBlocked) ? 'depleted' : ''}`}
+                                                className={`compound-reagent-cell ${isSelected ? 'selected' : ''} ${isCompatibleHighlight ? 'compatible' : ''} ${isIncompatibleDim ? 'incompatible' : ''} ${(isDepleted || isBlocked) ? 'depleted' : ''}`}
                                                 onClick={() => !isDepleted && !isBlocked && this.handleCompoundReagentClick(rKey)}
                                                 title={`${reagent.name} (×${count})${isDepleted ? ' — none in inventory' : ''}`}
                                             >
@@ -1020,6 +1048,96 @@ class DungeonPage extends React.Component {
                                     {matchedPotion ? `Brew: ${matchedPotion.name}` : (compoundSlots.length === 0 ? 'Select reagents above' : 'No matching recipe')}
                                 </button>
                             </div>
+                        );
+                    })()}
+
+                    {/* ── Brews builder (Barbarian) ───────────────────────────── */}
+                    {action.type === 'brew' && this.state.brewBuilderOpen && (() => {
+                        const brewSlots = this.state.brewBuilderSlots || [];
+                        const matchedBrew = matchBrewRecipe(brewSlots) ? BREWS[matchBrewRecipe(brewSlots).brewId] : null;
+                        const allSlotsFull = brewSlots.length >= 2;
+                        const getIngredientCount = (ingId) => {
+                            const inv = (this.props.inventoryManager && this.props.inventoryManager.inventory) || [];
+                            return inv.filter(item => item && item.id === ingId && item.category === 'reagent').length;
+                        };
+                        const isIngredientCompatible = (rKey) => {
+                            if (brewSlots.length === 0) return true;
+                            if (brewSlots.includes(rKey)) return true;
+                            return BREW_RECIPES.some(recipe => {
+                                const containsSlots = brewSlots.every(s => recipe.reagents.includes(s));
+                                const containsCandidate = recipe.reagents.includes(rKey);
+                                return containsSlots && containsCandidate;
+                            });
+                        };
+                        return (
+                        <div className="compound-builder-panel" style={{ width: 'calc(100% + 24px)', margin: '6px -12px 0 -12px' }}>
+                            {/* TOP: 2 ingredient slots */}
+                            <div className="compound-slot-row dual-slots" style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
+                                {[0, 1].map(i => {
+                                    const slotId = brewSlots[i];
+                                    const slotIngredient = slotId ? BREW_INGREDIENTS[slotId] : null;
+                                    const iconUrl = slotIngredient ? images[slotIngredient.icon] : null;
+                                    return (
+                                        <div
+                                            key={i}
+                                            className={`compound-slot ${slotIngredient ? 'filled' : 'empty'}`}
+                                            style={{ width: '42px', height: '42px' }}
+                                            title={slotIngredient ? `${slotIngredient.name} (click to remove)` : 'Empty slot'}
+                                            onClick={() => slotIngredient && this.handleBrewSlotRemove(i)}
+                                        >
+                                            {slotIngredient && (
+                                                <div className="compound-slot-icon"
+                                                     style={{ backgroundImage: iconUrl ? `url(${iconUrl})` : 'none' }} />
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+
+                            {/* MIDDLE: available ingredients from inventory */}
+                            <div className="compound-reagent-grid">
+                                {BREW_INGREDIENT_KEYS.map(rKey => {
+                                    const ingredient = BREW_INGREDIENTS[rKey];
+                                    const count = getIngredientCount(rKey);
+                                    const isSelected = brewSlots.includes(rKey);
+                                    const isDepleted = count === 0;
+
+                                    const hasSelection = brewSlots.length > 0;
+                                    const isCompatible = !hasSelection || isIngredientCompatible(rKey);
+
+                                    const isBlocked = (!isSelected && allSlotsFull) || (!isSelected && hasSelection && !isCompatible);
+                                    const isCompatibleHighlight = hasSelection && isCompatible && !isSelected && !isDepleted;
+                                    const isIncompatibleDim = hasSelection && !isCompatible && !isSelected;
+
+                                    const iconUrl = images[ingredient.icon];
+                                    return (
+                                        <div
+                                            key={rKey}
+                                            className={`compound-reagent-cell ${isSelected ? 'selected' : ''} ${isCompatibleHighlight ? 'compatible' : ''} ${isIncompatibleDim ? 'incompatible' : ''} ${(isDepleted || isBlocked) ? 'depleted' : ''}`}
+                                            onClick={() => !isDepleted && !isBlocked && this.handleBrewIngredientClick(rKey)}
+                                            title={`${ingredient.name} (×${count})${isDepleted ? ' — none in inventory' : ''}`}
+                                        >
+                                            <div className="compound-reagent-icon"
+                                                 style={{ backgroundImage: iconUrl ? `url(${iconUrl})` : 'none' }} />
+                                            <span className="compound-reagent-name">{ingredient.name}</span>
+                                            {count > 0 && <span className="compound-reagent-count">×{count}</span>}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+
+                            {/* BOTTOM: recipe match + brew button */}
+                            {matchedBrew && (
+                                <div className="compound-recipe-label">→ {matchedBrew.name}</div>
+                            )}
+                            <button
+                                className={`compound-brew-btn ${matchedBrew ? 'ready' : 'disabled'}`}
+                                onClick={this.handleBrewStart}
+                                disabled={!matchedBrew}
+                            >
+                                {matchedBrew ? `Brew: ${matchedBrew.name}` : (brewSlots.length === 0 ? 'Select ingredients above' : 'No matching recipe')}
+                            </button>
+                        </div>
                         );
                     })()}
                     </div>
@@ -1056,9 +1174,36 @@ class DungeonPage extends React.Component {
                         if (!a.notified) {
                             const isRitual = a.type === 'ritual';
                             if (isRitual) hasRitualUpdate = true;
+
+                            if (a.type === 'compound') {
+                                const potion = POTIONS[a.potionId];
+                                if (potion) {
+                                    this.props.inventoryManager.addItem({ ...potion });
+                                    try {
+                                        const iconUrl = images[potion.icon] || null;
+                                        this.triggerLootRadialArc({ type: 'potion', id: potion.id + '_' + Math.random(), icon: iconUrl, name: potion.name });
+                                    } catch (e) {}
+                                }
+                            }
+
+                            if (a.type === 'brew') {
+                                const brew = BREWS[a.brewId];
+                                if (brew) {
+                                    this.props.inventoryManager.addItem({ ...brew });
+                                    try {
+                                        const iconUrl = images[brew.icon] || null;
+                                        this.triggerLootRadialArc({ type: 'potion', id: brew.id + '_' + Math.random(), icon: iconUrl, name: brew.name });
+                                    } catch (e) {}
+                                }
+                            }
+
                             const updateText = isRitual
                                 ? `${member.name}'s ritual "${a.name}" is complete and ready to use`
-                                : `${member.name} has finished ${a.name}`;
+                                : (a.type === 'compound'
+                                    ? `${member.name} has finished mixing ${a.name.replace('Brewing: ', '')}!`
+                                    : (a.type === 'brew'
+                                        ? `${member.name} has finished brewing ${a.name.replace('Brewing: ', '')}!`
+                                        : `${member.name} has finished ${a.name}`));
                             updates.push({
                                 text: updateText,
                                 owner: `${member.name}`,
@@ -1074,7 +1219,11 @@ class DungeonPage extends React.Component {
                             if (isRitual) hasRitualUpdate = true;
                             const updateText = isRitual
                                 ? `${member.name}'s ritual "${a.name}" is complete and ready to use`
-                                : `${member.name} has finished ${a.name}`;
+                                : (a.type === 'compound'
+                                    ? `${member.name} has finished mixing ${a.name.replace('Brewing: ', '')}!`
+                                    : (a.type === 'brew'
+                                        ? `${member.name} has finished brewing ${a.name.replace('Brewing: ', '')}!`
+                                        : `${member.name} has finished ${a.name}`));
                             updates.push({
                                 text: updateText,
                                 owner: `${member.name}`,
@@ -1507,6 +1656,9 @@ class DungeonPage extends React.Component {
                 // Compound Potions builder state — whether the panel is open, and which reagents are in the 3 slots
                 compoundBuilderOpen: false,
                 compoundBuilderSlots: [], // array of reagent IDs (max 3)
+                // Brews builder state — whether the panel is open, and which ingredients are in the 2 slots
+                brewBuilderOpen: false,
+                brewBuilderSlots: [], // array of ingredient IDs (max 2)
                 // Do NOT open the modal at mount time — the CModal 'modal-open' body class
                 // from an immediately-visible modal can persist and trap all clicks if a
                 // second modal (quests popup) opens before CoreUI finishes the close animation.
@@ -2648,6 +2800,9 @@ class DungeonPage extends React.Component {
                         REAGENT_KEYS.forEach(rKey => {
                             this.props.inventoryManager.addItem({ ...REAGENTS[rKey] });
                         });
+                        BREW_INGREDIENT_KEYS.forEach(rKey => {
+                            this.props.inventoryManager.addItem({ ...BREW_INGREDIENTS[rKey] });
+                        });
                         try {
                             const meta = getMeta();
                             meta.inventory = {
@@ -2660,7 +2815,7 @@ class DungeonPage extends React.Component {
                             if (typeof this.props.saveUserData === 'function') this.props.saveUserData();
                         } catch(e){}
                         this.forceUpdate();
-                        this.setState(prev => ({ devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, `Added 1 of each reagent (${REAGENT_KEYS.length} total) to inventory`], devConsoleInput: '' }));
+                        this.setState(prev => ({ devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, `Added 1 of each reagent & brew ingredient (${REAGENT_KEYS.length + BREW_INGREDIENT_KEYS.length} total) to inventory`], devConsoleInput: '' }));
                     } catch (err) {
                         this.setState(prev => ({ devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, `Error: ${err && err.message ? err.message : err}`], devConsoleInput: '' }));
                     }
@@ -5643,8 +5798,31 @@ class DungeonPage extends React.Component {
         const nextState = { actionMenuTypeExpanded: val };
         // Toggle compound builder open/closed when the Compound Potions action row is clicked
         if (action.type === 'compound') {
+            const character = this.state.selectedCrewMember;
+            const isBrewing = character && (character.specialActions || []).some(a => {
+                if (!a || a.type !== 'compound') return false;
+                return new Date(a.endDate) > new Date();
+            });
+            if (isBrewing) {
+                this.displayMessage("Already brewing a potion!");
+                return;
+            }
             nextState.compoundBuilderOpen = !isOpen;
             if (isOpen) nextState.compoundBuilderSlots = [];
+        }
+        // Toggle brew builder open/closed when the Brew action row is clicked
+        if (action.type === 'brew') {
+            const character = this.state.selectedCrewMember;
+            const isBrewing = character && (character.specialActions || []).some(a => {
+                if (!a || a.type !== 'brew') return false;
+                return new Date(a.endDate) > new Date();
+            });
+            if (isBrewing) {
+                this.displayMessage("Already brewing a brew!");
+                return;
+            }
+            nextState.brewBuilderOpen = !isOpen;
+            if (isOpen) nextState.brewBuilderSlots = [];
         }
         this.setState(nextState);
     }
@@ -5785,7 +5963,7 @@ class DungeonPage extends React.Component {
         this.setState({ compoundBuilderSlots: slots });
     }
 
-    /** Brew the matched potion: consume 1 of each reagent from inventory, add potion. */
+    /** Brew the matched potion: consume 1 of each reagent from inventory, start brewing timer. */
     handleCompoundBrew = () => {
         const slots = this.state.compoundBuilderSlots || [];
         const recipe = matchRecipe(slots);
@@ -5793,7 +5971,7 @@ class DungeonPage extends React.Component {
         const potion = POTIONS[recipe.potionId];
         if (!potion) return;
 
-        // Consume 1 of each required reagent from inventory
+        // Consume 1 of each required reagent from inventory immediately
         recipe.reagents.forEach(reagentId => {
             const inv = (this.props.inventoryManager && this.props.inventoryManager.inventory) || [];
             const idx = inv.findIndex(item => item && item.id === reagentId && item.category === 'reagent');
@@ -5802,12 +5980,16 @@ class DungeonPage extends React.Component {
             }
         });
 
-        // Add the brewed potion to inventory
-        this.props.inventoryManager.addItem({ ...potion });
+        // Start timed action
+        const action = { type: 'compound' };
+        const subType = { recipe, potion };
+        const characterFromCrew = this.props.crewManager.crew.find(e => e.id === this.state.selectedCrewMember.id);
+        this.props.crewManager.beginSpecialAction(characterFromCrew, action, subType);
 
         // Persist
         try {
             const meta = getMeta();
+            meta.crew = this.props.crewManager.crew;
             meta.inventory = {
                 items: this.props.inventoryManager.inventory,
                 gold: this.props.inventoryManager.gold,
@@ -5818,16 +6000,80 @@ class DungeonPage extends React.Component {
             this.props.saveUserData();
         } catch (e) { console.warn('handleCompoundBrew: persist failed', e); }
 
-        // Show loot arc for the brewed potion
+        this.displayMessage(`Started mixing ${potion.name}...`);
+
+        // Reset builder slots and close
+        this.setState({
+            compoundBuilderSlots: [],
+            compoundBuilderOpen: false,
+            selectedCrewMember: characterFromCrew ? { ...characterFromCrew } : this.state.selectedCrewMember
+        });
+    }
+
+    /** Add a brew ingredient to the next empty slot (max 2). Deselects if already in slots. */
+    handleBrewIngredientClick = (ingredientId) => {
+        const slots = [...(this.state.brewBuilderSlots || [])];
+        const existingIdx = slots.indexOf(ingredientId);
+        if (existingIdx !== -1) {
+            slots.splice(existingIdx, 1);
+        } else if (slots.length < 2) {
+            slots.push(ingredientId);
+        }
+        this.setState({ brewBuilderSlots: slots });
+    }
+
+    /** Remove the brew ingredient at a specific slot index. */
+    handleBrewSlotRemove = (slotIndex) => {
+        const slots = [...(this.state.brewBuilderSlots || [])];
+        slots.splice(slotIndex, 1);
+        this.setState({ brewBuilderSlots: slots });
+    }
+
+    /** Brew the matched brew: consume ingredients, start brewing timer. */
+    handleBrewStart = () => {
+        const slots = this.state.brewBuilderSlots || [];
+        const recipe = matchBrewRecipe(slots);
+        if (!recipe) return;
+        const brew = BREWS[recipe.brewId];
+        if (!brew) return;
+
+        // Consume 1 of each required ingredient from inventory immediately
+        recipe.reagents.forEach(reagentId => {
+            const inv = (this.props.inventoryManager && this.props.inventoryManager.inventory) || [];
+            const idx = inv.findIndex(item => item && item.id === reagentId && item.category === 'reagent');
+            if (idx !== -1) {
+                this.props.inventoryManager.removeItemByIndex(idx);
+            }
+        });
+
+        // Start timed action
+        const action = { type: 'brew' };
+        const subType = { recipe, brew };
+        const characterFromCrew = this.props.crewManager.crew.find(e => e.id === this.state.selectedCrewMember.id);
+        this.props.crewManager.beginSpecialAction(characterFromCrew, action, subType);
+
+        // Persist
         try {
-            const iconUrl = images[potion.icon] || null;
-            this.triggerLootRadialArc({ type: 'potion', id: potion.id + '_' + Math.random(), icon: iconUrl, name: potion.name });
-        } catch (e) {}
+            const meta = getMeta();
+            meta.crew = this.props.crewManager.crew;
+            meta.inventory = {
+                items: this.props.inventoryManager.inventory,
+                gold: this.props.inventoryManager.gold,
+                shimmering_dust: this.props.inventoryManager.shimmering_dust,
+                totems: this.props.inventoryManager.totems,
+            };
+            storeMeta(meta);
+            this.props.saveUserData();
+        } catch (e) { console.warn('handleBrewStart: persist failed', e); }
 
-        this.displayMessage(`${potion.name} brewed!`);
+        this.displayMessage(`Started brewing ${brew.name}...`);
 
-        // Reset builder slots
-        this.setState({ compoundBuilderSlots: [], compoundBuilderOpen: false });
+        // Reset builder slots and close
+        this.setState({
+            brewBuilderSlots: [],
+            brewBuilderOpen: false,
+            selectedCrewMember: characterFromCrew ? { ...characterFromCrew } : this.state.selectedCrewMember
+        });
     }
 
     // Called by MonsterBattle (via prop) when a fighter's consumable specialActions change
@@ -5905,11 +6151,15 @@ class DungeonPage extends React.Component {
                         if (ref) ref.notified = true;
                     }
                 })
+                // Clean up notified compound actions
+                crew.forEach(c => {
+                    c.specialActions = (c.specialActions || []).filter(sa => !(sa.type === 'compound' && sa.notified));
+                });
                 meta.crew = crew;
                 this.props.crewManager.crew = crew;
                 storeMeta(meta);
                 this.props.saveUserData();
-                this.setState({showModal: false}, () => this._cleanupModalBodyClass())
+                this.setState({showModal: false, selectedCrewMember: crew.find(c => c.selected) || this.state.selectedCrewMember}, () => this._cleanupModalBodyClass())
             break;
             case 'PrepComplete':
                 // In-session preparation completion modal — clear auto-dismiss timeout and close
@@ -5917,7 +6167,17 @@ class DungeonPage extends React.Component {
                     clearTimeout(this.prepCompleteTimeout);
                     this.prepCompleteTimeout = null;
                 }
-                this.setState({ showModal: false }, () => this._cleanupModalBodyClass());
+                const prepCompleteMeta = getMeta();
+                prepCompleteMeta.crew.forEach(c => {
+                    c.specialActions = (c.specialActions || []).filter(sa => !(sa.type === 'compound' && sa.notified));
+                });
+                this.props.crewManager.crew = prepCompleteMeta.crew;
+                storeMeta(prepCompleteMeta);
+                this.props.saveUserData();
+                this.setState({
+                    showModal: false,
+                    selectedCrewMember: prepCompleteMeta.crew.find(c => c.selected) || this.state.selectedCrewMember
+                }, () => this._cleanupModalBodyClass());
             break;
             case 'RitualComplete':
                 // Ritual completion modal — same dismiss logic as PrepComplete
