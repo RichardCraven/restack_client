@@ -1,6 +1,6 @@
 
 import * as images from '../utils/images'
-import { SPELLS, RITUALS } from './spells-table'
+import { SPELLS, RITUALS, GLYPHS, GLYPH_SPELL_SLOT_COST, computeGlyphPrepTime } from './spells-table'
 
 // eslint-disable-next-line no-extend-native
 Date.prototype.addHours= function(h){
@@ -361,7 +361,34 @@ export function CrewManager(){
         // Flat structure for special actions
         switch(actionType.type){
             case 'glyph':
-            case 'spell':
+            case 'spell': {
+                // ── New tiered glyph system ──────────────────────────────────────
+                // actionSubtype shape: { glyphTier, spellDefs: [{id, tier, name, icon}] }
+                // Legacy path: actionSubtype.type === 'magic missile' (kept for safety)
+                if (actionSubtype.glyphTier && GLYPHS[actionSubtype.glyphTier]) {
+                    const glyphDef = GLYPHS[actionSubtype.glyphTier];
+                    const spellDefs = actionSubtype.spellDefs || [];
+                    const prepTime = computeGlyphPrepTime(spellDefs) || (5 * 60 * 1000);
+                    endDate = new Date(Date.now() + prepTime);
+
+                    member.specialActions.push({
+                        type: 'glyph',
+                        glyphTier: actionSubtype.glyphTier,
+                        name: glyphDef.name,
+                        iconUrl: images[glyphDef.icon] || '',
+                        // Store the spell keys and tier for combat firing
+                        spells: spellDefs.map(s => s.id),
+                        spellDefs: spellDefs.map(s => ({ id: s.id, tier: s.tier, name: s.name })),
+                        slotsUsed: spellDefs.reduce((sum, s) => sum + (GLYPH_SPELL_SLOT_COST[s.tier] || 1), 0),
+                        available: false,
+                        startDate,
+                        endDate,
+                        notified: false,
+                    });
+                    break;
+                }
+
+                // Legacy: magic missile (kept for backward compat with any persisted data)
                 switch(actionSubtype.type){
                     case 'magic missile': {
                         const prepareTime = SPELLS.magicMissile.prepareTime || 10000;
@@ -371,7 +398,7 @@ export function CrewManager(){
                             name: 'Magic Missile',
                             iconUrl: actionSubtype.iconUrl || '',
                             available: false,
-                            count: 1, // or logic for count
+                            count: 1,
                             subtype: 'magic missile',
                             startDate,
                             endDate,
@@ -382,6 +409,7 @@ export function CrewManager(){
                     default:
                         break;
                 }
+            }
             break;
             case 'ritual': {
                 const ritualDef = RITUALS[actionSubtype.ritualKey];

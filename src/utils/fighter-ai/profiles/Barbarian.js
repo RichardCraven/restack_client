@@ -583,6 +583,8 @@ export function Barbarian(data, utilMethods, animationManager) {
         } else {
             await (async () => {
                 switch (caller.pendingAttack.name) {
+                    case 'Slash':
+                    case 'slash':
                     case 'axe swing': {
                         const combatantHit = await this.triggerAxeSwing(caller.coordinates, facing);
                         if (combatantHit) {

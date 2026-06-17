@@ -34,10 +34,10 @@ const Typewriter = ({ text, delay }) => {
   }, [text, delay]);
 
   return (
-    <span style={{ position: 'relative' }}>
-      <span style={{ opacity: 0 }}>{text}</span>
-      <span ref={spanRef} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', whiteSpace: 'pre-wrap' }} />
-    </span>
+    <div style={{ position: 'relative', display: 'block', width: '100%', textAlign: 'center' }}>
+      <div style={{ opacity: 0, display: 'block', textAlign: 'center', whiteSpace: 'pre-wrap' }}>{text}</div>
+      <div ref={spanRef} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, whiteSpace: 'pre-wrap', textAlign: 'center', display: 'block' }} />
+    </div>
   );
 };
 

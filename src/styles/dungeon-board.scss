@@ -976,6 +976,7 @@
                     .action-wrapper{
                         position: relative;
                         width: 100%;
+                        overflow: hidden;
                         .info-icon{
                             position: absolute;
                             // top: 11px;
@@ -1087,6 +1088,354 @@
                                         color: #4f4d4d;
                                     }
                                 }
+                            }
+                        }
+                        // ── Glyph Builder Panel ──────────────────────────────────────
+                        .glyph-builder-panel {
+                            width: 100%;
+                            max-width: 100%;
+                            box-sizing: border-box;
+                            overflow: hidden;
+                            background: rgba(15, 12, 24, 0.97);
+                            border: 1px solid rgba(255, 255, 255, 0.18);
+                            border-radius: 6px;
+                            padding: 10px 8px 8px;
+                            margin-top: 6px;
+                            display: flex;
+                            flex-direction: column;
+                            gap: 8px;
+                            animation: glyphBuilderFadeIn 0.18s ease;
+                        }
+                        @keyframes glyphBuilderFadeIn {
+                            from { opacity: 0; transform: translateY(-5px); }
+                            to   { opacity: 1; transform: translateY(0); }
+                        }
+
+                        // ── Slot row ────────────────────────────────────────────────
+                        .glyph-slot-row {
+                            display: flex;
+                            gap: 5px;
+                            flex-wrap: wrap;
+                            padding-bottom: 8px;
+                            border-bottom: 1px solid rgba(255,255,255,0.08);
+                        }
+                        .glyph-slot {
+                            width: 38px;
+                            height: 38px;
+                            border-radius: 4px;
+                            border: 1.5px solid rgba(255,255,255,0.55);
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            cursor: pointer;
+                            position: relative;
+                            transition: border-color 0.15s, background 0.15s;
+
+                            // Empty slot — clean white border, transparent inside
+                            &.empty {
+                                background: transparent;
+                                cursor: default;
+                                border-color: rgba(255,255,255,0.4);
+                            }
+
+                            // Filled slot — icon occupying first sub-slot
+                            &.filled {
+                                border-color: white;
+                                background: rgba(255,255,255,0.06);
+                                &:hover { background: rgba(255,255,255,0.14); }
+
+                                .glyph-slot-icon {
+                                    width: 28px;
+                                    height: 28px;
+                                    background-size: contain;
+                                    background-repeat: no-repeat;
+                                    background-position: center;
+                                    filter: drop-shadow(0 0 3px rgba(255,255,255,0.5));
+                                }
+                            }
+
+                            // Overflow slot — red X, slot 'spent' by previous higher-tier spell
+                            &.slot-overflow {
+                                background: rgba(200, 30, 30, 0.18);
+                                border-color: rgba(220, 60, 60, 0.7);
+                                cursor: pointer;
+                                &:hover { background: rgba(200, 30, 30, 0.32); }
+
+                                .glyph-slot-x {
+                                    color: #ff4d4d;
+                                    font-size: 14px;
+                                    font-weight: 700;
+                                    line-height: 1;
+                                    user-select: none;
+                                }
+                            }
+                        }
+
+                        // ── Spell icon grid ─────────────────────────────────────────
+                        .glyph-spell-grid {
+                            display: flex;
+                            flex-wrap: wrap;
+                            gap: 5px;
+                            max-height: 180px;
+                            overflow-y: auto;
+                            padding-right: 2px;
+                            &::-webkit-scrollbar { width: 3px; }
+                            &::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 2px; }
+                        }
+                        .glyph-spell-cell {
+                            display: flex;
+                            flex-direction: column;
+                            align-items: center;
+                            gap: 3px;
+                            width: 48px;
+                            cursor: pointer;
+                            border-radius: 5px;
+                            padding: 4px 2px;
+                            border: 1px solid transparent;
+                            transition: background 0.12s, border-color 0.12s;
+
+                            &:hover:not(.overflow):not(.selected) {
+                                background: rgba(255,255,255,0.08);
+                                border-color: rgba(255,255,255,0.22);
+                            }
+                            &.selected {
+                                background: rgba(255,255,255,0.14);
+                                border-color: rgba(255,255,255,0.6);
+                                .glyph-spell-cell-icon {
+                                    filter: brightness(1.3) drop-shadow(0 0 4px rgba(255,255,255,0.6));
+                                }
+                            }
+                            &.overflow {
+                                opacity: 0.28;
+                                cursor: not-allowed;
+                                pointer-events: none;
+                            }
+
+                            .glyph-spell-cell-icon {
+                                width: 32px;
+                                height: 32px;
+                                background-size: contain;
+                                background-repeat: no-repeat;
+                                background-position: center;
+                                border-radius: 3px;
+                                transition: filter 0.12s;
+                                // Subtle tier tint on the icon border
+                                &.tier-1 { box-shadow: 0 0 0 1px rgba(100,160,255,0.35); }
+                                &.tier-2 { box-shadow: 0 0 0 1px rgba(80,220,120,0.35); }
+                                &.tier-3 { box-shadow: 0 0 0 1px rgba(255,160,40,0.35); }
+                                &.tier-4 { box-shadow: 0 0 0 1px rgba(210,80,255,0.4); }
+                            }
+                            .glyph-spell-cell-name {
+                                font-size: 8px;
+                                color: rgba(230,225,255,0.75);
+                                text-align: center;
+                                line-height: 1.2;
+                                word-break: break-word;
+                                max-width: 100%;
+                            }
+                        }
+
+                        // ── Prepare button ──────────────────────────────────────────
+                        .glyph-prepare-btn {
+                            width: 100%;
+                            padding: 7px 0;
+                            margin-top: 2px;
+                            background: rgba(255,255,255,0.07);
+                            border: 1px solid rgba(255,255,255,0.3);
+                            border-radius: 4px;
+                            color: rgba(230,225,255,0.9);
+                            font-size: 10px;
+                            font-weight: 600;
+                            cursor: pointer;
+                            letter-spacing: 0.04em;
+                            transition: background 0.15s, border-color 0.15s;
+                            &:hover:not(:disabled) {
+                                background: rgba(255,255,255,0.14);
+                                border-color: rgba(255,255,255,0.6);
+                            }
+                            &.disabled, &:disabled {
+                                opacity: 0.35;
+                                cursor: not-allowed;
+                            }
+                        }
+
+                        .action-subtype.active-tier {
+                            color: #ffffff !important;
+                            opacity: 1;
+                        }
+
+                        // ── Compound Potions Builder Panel ───────────────────────
+                        .compound-builder-panel {
+                            width: 100%;
+                            max-width: 100%;
+                            box-sizing: border-box;
+                            overflow: hidden;
+                            background: rgba(20, 14, 8, 0.97);
+                            border: 1px solid rgba(255, 180, 60, 0.25);
+                            border-radius: 6px;
+                            padding: 10px 8px 8px;
+                            margin-top: 6px;
+                            display: flex;
+                            flex-direction: column;
+                            gap: 8px;
+                            animation: compoundBuilderFadeIn 0.18s ease;
+                        }
+                        @keyframes compoundBuilderFadeIn {
+                            from { opacity: 0; transform: translateY(-5px); }
+                            to   { opacity: 1; transform: translateY(0); }
+                        }
+
+                        // ── Potion slot row ──────────────────────────────────────
+                        .compound-slot-row {
+                            display: flex;
+                            gap: 6px;
+                            padding-bottom: 8px;
+                            border-bottom: 1px solid rgba(255, 180, 60, 0.12);
+                        }
+                        .compound-slot {
+                            width: 42px;
+                            height: 42px;
+                            border-radius: 4px;
+                            border: 1.5px solid rgba(255, 255, 255, 0.45);
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            cursor: pointer;
+                            position: relative;
+                            transition: border-color 0.15s, background 0.15s;
+                            flex-shrink: 0;
+
+                            &.empty {
+                                background: transparent;
+                                cursor: default;
+                                border-color: rgba(255, 255, 255, 0.35);
+                            }
+                            &.filled {
+                                border-color: rgba(255, 200, 80, 0.85);
+                                background: rgba(255, 180, 60, 0.08);
+                                &:hover { background: rgba(255, 180, 60, 0.18); }
+
+                                .compound-slot-icon {
+                                    width: 30px;
+                                    height: 30px;
+                                    background-size: contain;
+                                    background-repeat: no-repeat;
+                                    background-position: center;
+                                    filter: drop-shadow(0 0 3px rgba(255, 200, 80, 0.5));
+                                }
+                            }
+                        }
+
+                        // ── Reagent grid ─────────────────────────────────────────
+                        .compound-reagent-grid {
+                            display: flex;
+                            flex-wrap: wrap;
+                            gap: 5px;
+                            max-height: 180px;
+                            overflow-y: auto;
+                            padding-right: 2px;
+                            &::-webkit-scrollbar { width: 3px; }
+                            &::-webkit-scrollbar-thumb { background: rgba(255, 180, 60, 0.3); border-radius: 2px; }
+                        }
+                        .compound-reagent-cell {
+                            display: flex;
+                            flex-direction: column;
+                            align-items: center;
+                            gap: 3px;
+                            width: 48px;
+                            cursor: pointer;
+                            border-radius: 5px;
+                            padding: 4px 2px;
+                            border: 1px solid transparent;
+                            transition: background 0.12s, border-color 0.12s;
+                            position: relative;
+
+                            &:hover:not(.depleted):not(.selected) {
+                                background: rgba(255, 180, 60, 0.1);
+                                border-color: rgba(255, 180, 60, 0.3);
+                            }
+                            &.selected {
+                                background: rgba(255, 180, 60, 0.18);
+                                border-color: rgba(255, 200, 80, 0.7);
+                                .compound-reagent-icon {
+                                    filter: brightness(1.3) drop-shadow(0 0 4px rgba(255, 200, 80, 0.6));
+                                }
+                            }
+                            &.depleted {
+                                opacity: 0.28;
+                                cursor: not-allowed;
+                                pointer-events: none;
+                            }
+
+                            .compound-reagent-icon {
+                                width: 32px;
+                                height: 32px;
+                                background-size: contain;
+                                background-repeat: no-repeat;
+                                background-position: center;
+                                border-radius: 3px;
+                                transition: filter 0.12s;
+                            }
+                            .compound-reagent-name {
+                                font-size: 8px;
+                                color: rgba(255, 220, 160, 0.75);
+                                text-align: center;
+                                line-height: 1.2;
+                                word-break: break-word;
+                                max-width: 100%;
+                            }
+                            .compound-reagent-count {
+                                position: absolute;
+                                top: 2px;
+                                right: 2px;
+                                background: rgba(0,0,0,0.55);
+                                color: rgba(255, 220, 120, 1);
+                                font-size: 9px;
+                                font-weight: 700;
+                                min-width: 14px;
+                                height: 14px;
+                                border-radius: 7px;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                line-height: 1;
+                            }
+                        }
+
+                        // ── Recipe match label ───────────────────────────────────
+                        .compound-recipe-label {
+                            font-size: 10px;
+                            color: rgba(255, 220, 120, 0.9);
+                            text-align: center;
+                            letter-spacing: 0.05em;
+                            padding: 2px 0;
+                        }
+
+                        // ── Brew button ──────────────────────────────────────────
+                        .compound-brew-btn {
+                            width: 100%;
+                            padding: 7px 0;
+                            margin-top: 2px;
+                            background: rgba(255, 180, 60, 0.12);
+                            border: 1px solid rgba(255, 180, 60, 0.35);
+                            border-radius: 4px;
+                            color: rgba(255, 220, 160, 0.9);
+                            font-size: 10px;
+                            font-weight: 600;
+                            cursor: pointer;
+                            letter-spacing: 0.04em;
+                            transition: background 0.15s, border-color 0.15s;
+                            &:hover:not(:disabled) {
+                                background: rgba(255, 180, 60, 0.28);
+                                border-color: rgba(255, 200, 80, 0.8);
+                            }
+                            &.ready {
+                                border-color: rgba(255, 200, 80, 0.8);
+                                color: rgba(255, 240, 180, 1);
+                            }
+                            &.disabled, &:disabled {
+                                opacity: 0.35;
+                                cursor: not-allowed;
                             }
                         }
                     }

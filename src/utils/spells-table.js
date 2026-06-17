@@ -10,6 +10,48 @@ export const SPELLS = {
   },
 };
 
+// ── Tiered Glyph Definitions ───────────────────────────────────────────────
+// Each tier has a fixed number of spell slots. Higher-tier spells consume more
+// slots. A glyph stores the chosen spells and fires them all at once in combat.
+export const GLYPHS = {
+  minor: {
+    key: 'minor',
+    name: 'Minor Glyph',
+    slots: 2,
+    icon: 'minor_glyph',
+  },
+  major: {
+    key: 'major',
+    name: 'Major Glyph',
+    slots: 3,
+    icon: 'major_glyph',
+  },
+  supreme: {
+    key: 'supreme',
+    name: 'Supreme Glyph',
+    slots: 5,
+    icon: 'supreme_glyph',
+  },
+};
+
+// How many glyph slots a spell costs, indexed by spell tier (1–4).
+export const GLYPH_SPELL_SLOT_COST = { 1: 1, 2: 2, 3: 3, 4: 4 };
+
+// Prep time (ms) contributed by each spell, by spell tier.
+// T1 = 5 min, T2 = 10 min, T3 = 20 min, T4 = 40 min.
+export const GLYPH_SPELL_PREP_TIME = { 1: 5 * 60 * 1000, 2: 20 * 60 * 1000, 3: 60 * 60 * 1000, 4: 120 * 60 * 1000 };
+
+/**
+ * Compute total glyph preparation time given an array of spell definitions
+ * (each with a `tier` property). Returns milliseconds.
+ */
+export function computeGlyphPrepTime(spellDefs) {
+  return spellDefs.reduce((sum, s) => {
+    const tier = s.tier || 1;
+    return sum + (GLYPH_SPELL_PREP_TIME[tier] || GLYPH_SPELL_PREP_TIME[1]);
+  }, 0);
+}
+
 // Ritual definitions — each has a stable key, display name, description, and prep time.
 // Shortest ritual is 1 hour (3 600 000 ms); others are 3h and 6h.
 export const RITUALS = {

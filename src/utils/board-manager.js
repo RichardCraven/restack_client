@@ -801,10 +801,10 @@ export function BoardManager(){
                         this.addCurrencyToInventory({
                             type: 'gold',
                             amount: reward.amount
-                        });
+                        }, destinationTile);
                     }
                 } else if (reward.itemKey) {
-                    this.addItemToInventory({ contains: reward.itemKey });
+                    this.addItemToInventory({ contains: reward.itemKey, id: destinationTile.id });
                 }
                 this.removeTileFromBoard(destinationTile)
                 return 'item';
@@ -816,10 +816,10 @@ export function BoardManager(){
                         this.addCurrencyToInventory({
                             type: 'gold',
                             amount: reward.amount
-                        });
+                        }, destinationTile);
                     }
                 } else if (reward.itemKey) {
-                    this.addItemToInventory({ contains: reward.itemKey });
+                    this.addItemToInventory({ contains: reward.itemKey, id: destinationTile.id });
                 }
                 this.removeTileFromBoard(destinationTile)
                 return 'item';
@@ -833,10 +833,10 @@ export function BoardManager(){
                             this.addCurrencyToInventory({
                                 type: 'gold',
                                 amount: reward.amount
-                            });
+                            }, destinationTile);
                         }
                     } else if (reward.itemKey) {
-                        this.addItemToInventory({ contains: reward.itemKey });
+                        this.addItemToInventory({ contains: reward.itemKey, id: destinationTile.id });
                     }
                 });
                 this.removeTileFromBoard(destinationTile)
@@ -1466,7 +1466,7 @@ export function BoardManager(){
                 this.addCurrencyToInventory({
                     type: 'gold',
                     amount
-                })
+                }, destinationTile)
                 this.removeTileFromBoard(destinationTile)
             break;
             case 'food':
@@ -1498,7 +1498,7 @@ export function BoardManager(){
                                 type: 'shimmering dust',
                                 amount: Math.floor(Math.random() * 30)
                             }
-                        })
+                        }, destinationTile)
                     break;
                     case 3:
                         treasureItems = ['glyndas_wand', 'knight_helm', 'hamsa_charm', 'grand_health_potion']
@@ -1508,7 +1508,7 @@ export function BoardManager(){
                                 type: 'shimmering dust',
                                 amount: Math.floor(Math.random() * 10)
                             }
-                        })
+                        }, destinationTile)
                     break;
                     case 2:
                         treasureItems = ['minor_key', 'cretan_helm', 'major_health_potion']
@@ -1518,7 +1518,7 @@ export function BoardManager(){
                                 type: 'gold',
                                 amount: Math.floor(Math.random() * 250)
                             }
-                        })
+                        }, destinationTile)
                     break;
                     case 1:
                         treasureItems = ['infantry_shield', 'crimson_mask', 'seraphic_mask', 'basic_helm', 'axe', 'minor_health_potion']
@@ -1528,10 +1528,9 @@ export function BoardManager(){
                                 type: 'gold',
                                 amount: Math.floor(Math.random() * 100)
                             }
-                        })
+                        }, destinationTile)
                     break;
                     default:
-
                     break;
                 }
                 this.treasurePickupInProgress = false;

@@ -906,6 +906,17 @@ export function CombatManagerRedux() {
     this.damageCheck = (caller, target, rawDamage, isMagical = false) => {
         if (!target || typeof rawDamage !== 'number' || rawDamage <= 0) return rawDamage || 0;
 
+        const callerType = (caller && (caller.type || caller.image || '')) + ''.toLowerCase();
+        const isSpellcaster = caller && (
+            caller.class === 'spellcaster' ||
+            ['wizard', 'sage', 'summoner', 'engineer'].includes(callerType)
+        );
+        const isMagicalMonster = caller && (
+            (caller.isMonster === true || caller.isMinion === true) &&
+            ['beholder', 'djinn', 'sphinx', 'mummy', 'kabuki_demon', 'vampire', 'summoned_djinn', 'summoned_mummy', 'summoned_vampire'].includes(callerType)
+        );
+        const isMagicalAttack = isMagical || isSpellcaster || isMagicalMonster;
+
         // STR-based flat damage reduction: 1 point reduced per 2 STR
         const targetStr = (target.stats && typeof target.stats.str === 'number') ? target.stats.str : 0;
         const strReduction = Math.floor(targetStr / 2);
@@ -949,12 +960,25 @@ export function CombatManagerRedux() {
 
         // --- SHADOW ARMOR (Passive) ---
         // Provides 15% damage reduction from physical attacks.
-        if (target.type === 'wraith' && !isMagical) {
+        if (target.type === 'wraith' && !isMagicalAttack) {
             const hasShadowArmor = target.specials && target.specials.some(s => s && (s === 'shadow_armor' || s.id === 'shadow_armor' || s.key === 'shadow_armor'));
             if (hasShadowArmor) {
                 // Reduce by 15%
                 finalDamage = Math.max(1, Math.round(finalDamage * 0.85));
             }
+        }
+
+        // --- MAGIC DAMAGE REDUCTION (Tabards) ---
+        let magicReductionPct = 0;
+        try {
+            const inv = target.inventory || [];
+            const equippedTabard = inv.find(i => i && i.type === 'armor' && (i.equippedSlot === 'chest' || i.equippedBy === target.id) && typeof i.magicReduction === 'number');
+            if (equippedTabard) {
+                magicReductionPct = equippedTabard.magicReduction;
+            }
+        } catch (e) {}
+        if (isMagicalAttack && magicReductionPct > 0) {
+            finalDamage = Math.max(1, Math.round(finalDamage * (1 - magicReductionPct / 100)));
         }
 
         // Morale Damage Modifier (applied if caller is a crew member)
@@ -987,6 +1011,9 @@ export function CombatManagerRedux() {
             : [caller.coordinates];
 
         const tileInRange = (cc, tc) => {
+            if (cc && tc && (caller.isMonster || caller.isMinion) && crossesShieldWall(cc, tc)) {
+                return false;
+            }
             const dx = Math.abs(cc.x - tc.x);
             const dy = Math.abs(cc.y - tc.y);
             const dist = dx + dy; // Manhattan distance
@@ -1389,16 +1416,8 @@ export function CombatManagerRedux() {
     // ── Round Turn Processing ─────────────────────────────────────────────────
     // Stagger AI turns by initiative (speed/dexterity); tick down buff durations.
     this.processRoundTurns = () => {
-        console.log(`[DEBUG][CombatManagerRedux] processRoundTurns called for round ${this.round}. combatants keys:`, Object.keys(this.combatants));
-        Object.values(this.combatants).forEach(c => {
-            if (c) {
-                console.log(`[DEBUG][CombatManagerRedux] Combatant details - ID: ${c.id}, Name: ${c.name}, Type: ${c.type}, Dead: ${c.dead}, isVCT: ${c.isVCT}, skipAI: ${c.skipAI}, inTrial: ${c.inTrial}, Specials:`, c.specials);
-            }
-        });
 
         const activeUnits = Object.values(this.combatants).filter(c => c && !c.dead && c.hp > 0 && !c.isVCT && !c.skipAI && typeof c.inTrial !== 'number');
-        console.log('[DEBUG][CombatManagerRedux] activeUnits sorted keys:', activeUnits.map(u => u.id));
-
         // Sort by speed/dexterity descending (higher dex acts first)
         activeUnits.sort((a, b) => {
             const speedA = a.stats.speed || a.stats.dex || 1;
@@ -1408,13 +1427,11 @@ export function CombatManagerRedux() {
 
         activeUnits.forEach((unit, index) => {
             setTimeout(() => {
-                console.log(`[DEBUG][CombatManagerRedux] setTimeout callback fired for unit: ${unit.id} (${unit.type}), dead: ${unit.dead}`);
                 try {
                     if (unit.hp <= 0 && !unit.dead) {
                         this.targetKilled(unit);
                     }
                     if (this.combatPaused || this.combatOver || unit.dead) {
-                        this.appendCombatLog(`DEBUG: Skip turn for ${unit.name} - paused: ${this.combatPaused}, over: ${this.combatOver}, dead: ${unit.dead}`);
                         return;
                     }
 
@@ -1865,7 +1882,6 @@ export function CombatManagerRedux() {
     this._initializeInitialCooldowns = (combatant) => {
         if (!combatant || !Array.isArray(combatant.specials)) return;
         combatant.cooldowns = combatant.cooldowns || {};
-        const roundDurSec = this.roundDurationMs / 1000;
         combatant.specials.forEach(s => {
             const key = this._resolveAbilityKey(s);
             if (!key) return;
@@ -1879,13 +1895,13 @@ export function CombatManagerRedux() {
                 }
                 
                 if (initial > 0) {
-                    combatant.cooldowns[key] = initial * roundDurSec;
+                    combatant.cooldowns[key] = initial;
                 }
             }
             // Custom Sphinx magic_missile initial cooldown wait period of 4 rounds
             const isSphinx = combatant.type === 'sphinx' || combatant.key === 'sphinx' || (combatant.id && combatant.id.toString().includes('sphinx'));
             if (isSphinx && key === 'magic_missile') {
-                combatant.cooldowns[key] = 4 * roundDurSec;
+                combatant.cooldowns[key] = 4;
             }
         });
     };
@@ -3425,7 +3441,21 @@ export function CombatManagerRedux() {
         const sphinxWP  = (sphinx.stats && (sphinx.stats.wits || sphinx.stats.int)) || 15;
         const diff = sphinxWP - fighterWP; // positive = sphinx stronger
         // Base fail rate 55% (medium power mentality effect), 2% shift per point diff
-        const failChance = Math.min(0.90, Math.max(0.15, 0.55 + diff * 0.02));
+        let failChance = Math.min(0.90, Math.max(0.15, 0.55 + diff * 0.02));
+
+        // Apply mentalityResist from equipped chest armor (tabards)
+        let mentalityResist = 0;
+        try {
+            const inv = fighter.inventory || [];
+            const equippedTabard = inv.find(i => i && i.type === 'armor' && (i.equippedSlot === 'chest' || i.equippedBy === fighter.id) && typeof i.mentalityResist === 'number');
+            if (equippedTabard) {
+                mentalityResist = equippedTabard.mentalityResist;
+            }
+        } catch (e) {}
+        if (mentalityResist > 0) {
+            failChance = failChance * (1 - mentalityResist / 100);
+        }
+
         return Math.random() < failChance; // true = fail = sent to trial
     };
 
@@ -4339,6 +4369,23 @@ export function CombatManagerRedux() {
             target = this.combatants[target.parentMonsterId];
         }
 
+        // Monsters/minions cannot attack through a Shield Wall
+        if (target && target.id !== unit.id && (unit.isMonster || unit.isMinion) && ability.range !== 'self') {
+            const unitTiles = (Array.isArray(unit.occupiedCoords) && unit.occupiedCoords.length > 0)
+                ? unit.occupiedCoords
+                : [unit.coordinates];
+            const targetTiles = (Array.isArray(target.occupiedCoords) && target.occupiedCoords.length > 0)
+                ? target.occupiedCoords
+                : [target.coordinates];
+            const hasPath = unitTiles.some(cc => 
+                targetTiles.some(tc => cc && tc && !crossesShieldWall(cc, tc))
+            );
+            if (!hasPath) {
+                this.appendCombatLog(`${this.getCombatantLogName(unit)} cannot attack through the Shield Wall!`);
+                return;
+            }
+        }
+
         if (target && target.id !== unit.id && ability.range !== 'self') {
             let targetCoords = target.coordinates;
             if (targetCoords && unit.coordinates) {
@@ -4365,6 +4412,13 @@ export function CombatManagerRedux() {
 
         // Morale Shaken check: 5% chance to refuse to use a special ability and use basic attack instead
         const abilityId = ability.id || ability.key || (ability.name && ability.name.replace(/\s+/g, '_').toLowerCase()) || 'ability';
+        const isMagicalAbility = ability && (
+            ability.isMagical === true ||
+            ability.type === 'magical' ||
+            ability.subtype === 'spell' ||
+            ability.type === 'spell' ||
+            ['magic_missile', 'minor_magic_missile', 'major_magic_missile', 'fireball', 'ice_blast', 'lightning_strike', 'acid_blast', 'disintegrate', 'sleep', 'annihilation', 'vortex', 'heal', 'open_rift', 'summon_imp', 'force_back', 'bombardment', 'blue_dragon_breath', 'fire_breath', 'void_lance', 'lightning', 'stomp', 'spells'].includes((abilityId || ability.name || '').toLowerCase())
+        );
         const isSelfTarget = target.id === unit.id || ability.range === 'self';
         const isMagicMissile = ['magic_missile', 'minor_magic_missile', 'major_magic_missile'].includes(abilityId);
         const preRolledHits = [];
@@ -4385,7 +4439,7 @@ export function CombatManagerRedux() {
             unit.arrowNotched = true;
             unit.notchedArrowType = ['force', 'ice', 'poison', 'celestial'][Math.floor(Math.random() * 4)];
         }
-        const isBasicAttack = unit.attacks && unit.attacks.includes(abilityId);
+        const isBasicAttack = unit.attacks && unit.attacks.some(a => (typeof a === 'string' ? a : a.id) === abilityId);
         if (unit.silenced && !isBasicAttack && abilityId !== 'meditate' && abilityId !== 'monk_meditate') {
             this.appendCombatLog(`${this.getCombatantLogName(unit)} is silenced and cannot cast specials!`);
             return;
@@ -4865,7 +4919,7 @@ export function CombatManagerRedux() {
                 if (this.targetInRange(unit, c, 'medium')) {
                     const hit = this.hitCheck(unit, c);
                     if (hit) {
-                        let finalDmg = this.damageCheck(unit, c, rawDamage);
+                        let finalDmg = this.damageCheck(unit, c, rawDamage, true);
                         c.hp = Math.max(0, c.hp - finalDmg);
                         if (finalDmg > 0) this.wakeSleepingTarget(c, 'Blue Dragon Breath');
                         c.damageIndicators = c.damageIndicators || [];
@@ -5300,7 +5354,7 @@ export function CombatManagerRedux() {
                 if (dist > 2) return;
                 const hit = this.hitCheck(unit, c);
                 if (hit) {
-                    let finalDmg = this.damageCheck(unit, c, rawDamage);
+                    let finalDmg = this.damageCheck(unit, c, rawDamage, isMagicalAbility);
                     const isVampire = unit.type === 'vampire' || unit.key === 'vampire' || unit.id === 'vampire';
                     const hasCrimsonSight = unit.activeBuffs && unit.activeBuffs.some(b => b.name === 'Crimson Sight');
                     if (isVampire && hasCrimsonSight && Math.random() < 0.5) {
@@ -5370,7 +5424,7 @@ export function CombatManagerRedux() {
                     currentRawDmg = Math.round(rawDamage * 0.75);
                 }
 
-                let finalDmg = Math.round(this.damageCheck(unit, target, currentRawDmg) * dmgMult);
+                let finalDmg = Math.round(this.damageCheck(unit, target, currentRawDmg, isMagicalAbility) * dmgMult);
                 if (arrowType === 'celestial' && target.subtype === 'undead') {
                     finalDmg = Math.round(finalDmg * 1.5);
                 }
@@ -5624,6 +5678,22 @@ export function CombatManagerRedux() {
                             if (target.type === 'dragon' && ['frozen', 'stun', 'sleep', 'fear', 'ensnared', 'polymorph'].includes(eff.type)) {
                                 if (Math.random() < 0.5) {
                                     this.appendCombatLog(`${this.getCombatantLogName(target)} resists ${formatCombatText(eff.type)}! (Dragon CC Immunity)`);
+                                    return;
+                                }
+                            }
+
+                            // Mentality check resistance from equipped chest tabard (for sleep and fear)
+                            if (['sleep', 'fear'].includes(eff.type)) {
+                                let mentalityResist = 0;
+                                try {
+                                    const inv = target.inventory || [];
+                                    const equippedTabard = inv.find(i => i && i.type === 'armor' && (i.equippedSlot === 'chest' || i.equippedBy === target.id) && typeof i.mentalityResist === 'number');
+                                    if (equippedTabard) {
+                                        mentalityResist = equippedTabard.mentalityResist;
+                                    }
+                                } catch (e) {}
+                                if (mentalityResist > 0 && Math.random() * 100 < mentalityResist) {
+                                    this.appendCombatLog(`${this.getCombatantLogName(target)} resists the ${eff.type}! (Mentality Resistance)`);
                                     return;
                                 }
                             }
@@ -6122,19 +6192,6 @@ export function CombatManagerRedux() {
     };
 
     this.updateTick = (deltaMs) => {
-        // Tick down cooldown durations
-        Object.values(this.combatants).forEach(c => {
-            if (!c || c.dead) return;
-            if (c.cooldowns) {
-                Object.keys(c.cooldowns).forEach(skillId => {
-                    c.cooldowns[skillId] = Math.max(0, c.cooldowns[skillId] - (deltaMs / 1000));
-                    if (c.cooldowns[skillId] === 0) {
-                        delete c.cooldowns[skillId];
-                    }
-                });
-            }
-        });
-
         // Tick down active Soul Suck channeling channels
         Object.values(this.combatants).forEach(unit => {
             if (!unit || unit.dead || !unit.soulSuckChanneling) return;
@@ -6293,6 +6350,15 @@ export function CombatManagerRedux() {
             if (!c || c.dead || c.isVCT) return;
             c.movesTakenThisRound = 0;
             c.actionsTakenThisRound = 0;
+
+            if (c.cooldowns) {
+                Object.keys(c.cooldowns).forEach(skillId => {
+                    c.cooldowns[skillId] = Math.max(0, c.cooldowns[skillId] - 1);
+                    if (c.cooldowns[skillId] === 0) {
+                        delete c.cooldowns[skillId];
+                    }
+                });
+            }
             
             // Endurance recovery every 2 rounds
             if (this.round % 2 === 0) {

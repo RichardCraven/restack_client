@@ -26,8 +26,12 @@ import  CIcon  from '@coreui/icons-react';
 
 import { CButton, CFormSelect, CFormInput, CModal, CModalHeader, CModalTitle, CModalBody} from '@coreui/react';
 import * as images from '../utils/images'
-import { RITUALS } from '../utils/spells-table'
+import { RITUALS, GLYPHS, GLYPH_SPELL_SLOT_COST, computeGlyphPrepTime } from '../utils/spells-table'
 import { RECIPES } from '../utils/spells-table'
+import skillsMatrix from '../utils/skills-matrix'
+import REAGENTS, { REAGENT_KEYS } from '../utils/reagents'
+import POTIONS from '../utils/potions'
+import { RECIPES as POTION_RECIPES, matchRecipe } from '../utils/recipes'
 import '../styles/inventory-modal.scss'
 import '../styles/quests-modal.scss'
 import '../styles/camp-modal.scss'
@@ -37,7 +41,7 @@ import CodexModal from '../components/CodexModal';
 import '../styles/narrative-overlay.scss'
 
 const SLOT_INFO = {
-    'chest': { name: 'Chest Slot', desc: 'Equip body armor or amulets here.' },
+    'chest': { name: 'Chest Slot', desc: 'Equip body armor, tabards, or amulets here.' },
     'right': { name: 'Right Hand Slot', desc: 'Equip weapons, wands, shields, or off-hand items.' },
     'left': { name: 'Left Hand Slot', desc: 'Equip weapons, wands, shields, or off-hand items.' },
     'head': { name: 'Head Slot', desc: 'Equip helmets, masks, or hats here.' },
@@ -699,47 +703,43 @@ class DungeonPage extends React.Component {
     getCharacterActions = (character) => {
         let actions = [];
 
-        // All crew members get Card Scrimmage
-        actions.push({
-            type: 'scrimmage',
-            name: 'Card Scrimmage',
-            iconUrl: images['reaper_card_back'] || '',
-            subTypes: [
-                {
-                    type: 'Duel Reaper',
-                    available: true,
-                    count: 0
-                }
-            ]
-        });
-
-        // Show all potential glyphs for wizard, with only magic missile available initially
+        // Show tiered glyph system for the wizard (Minor / Major / Supreme)
         if (character.type === 'wizard') {
-            // Count available for each subtype
-                const mmCount = (character.specialActions || []).filter(a => a.subtype === 'magic missile' && a.available).length;
+            // Count available (ready) glyphs per tier
+            const specialActions = character.specialActions || [];
+            const minorCount  = specialActions.filter(a => a.type === 'glyph' && a.glyphTier === 'minor'   && a.available).length;
+            const majorCount  = specialActions.filter(a => a.type === 'glyph' && a.glyphTier === 'major'   && a.available).length;
+            const supremeCount = specialActions.filter(a => a.type === 'glyph' && a.glyphTier === 'supreme' && a.available).length;
+            // Legacy magic-missile count (kept for any persisted old-format actions)
+            const mmCount = specialActions.filter(a => a.subtype === 'magic missile' && a.available).length;
+
             actions.push({
                 type: 'glyph',
                 name: 'Etch Glyph',
                 iconUrl: images['glyph_inverted'],
+                noMaxCap: true, // multiple glyphs of same tier are allowed
                 subTypes: [
                     {
-                        type: 'magic missile',
-                        iconUrl: images['magic_missile_icon'] || images['magic_missile_inverted'],
+                        type: 'Minor Glyph',
+                        glyphTier: 'minor',
+                        iconUrl: images['minor_glyph'] || '',
                         available: true,
-                        count: mmCount
+                        count: minorCount + (mmCount > 0 ? mmCount : 0), // fold legacy mm into minor display
                     },
                     {
-                        type: 'doppleganger',
-                        iconUrl: '',
-                        available: false,
-                        count: 0
+                        type: 'Major Glyph',
+                        glyphTier: 'major',
+                        iconUrl: images['major_glyph'] || '',
+                        available: true,
+                        count: majorCount,
                     },
                     {
-                        type: 'yawning rift',
-                        iconUrl: '',
-                        available: false,
-                        count: 0
-                    }
+                        type: 'Supreme Glyph',
+                        glyphTier: 'supreme',
+                        iconUrl: images['supreme_glyph'] || '',
+                        available: true,
+                        count: supremeCount,
+                    },
                 ]
             });
 
@@ -782,23 +782,44 @@ class DungeonPage extends React.Component {
                 iconUrl: images['magic_moon_1'] || '',
                 subTypes: ritualSubTypes
             });
+            // Mix Potions — Sage-exclusive brewing action
+            actions.push({
+                type: 'compound',
+                name: 'Mix Potions',
+                iconUrl: images['potion'] || '',
+                noMaxCap: true,
+                subTypes: [] // no tier subtypes; builder opens directly
+            });
         }
         // Add other class logic here as needed
         // Compute per-action maximum: only count subtypes belonging to that action type.
-        // A shared global count caused the ritual sub-menu to show "maximum reached" when
-        // the wizard had 3+ etched glyphs — rituals have no count so they should never cap.
+        // Glyph actions have no cap (multiple glyphs of same tier are allowed).
+        // Rituals cap at 3.
         const getMaxReachedForAction = (action) => {
+            if (action.noMaxCap) return false;
             const actionCount = (action.subTypes || []).reduce((sum, s) => sum + (s.count || 0), 0);
             return actionCount >= 3;
         };
+
+        // ── Helper: count reagents in inventory ─────────────────────────────
+        const getReagentCount = (reagentId) => {
+            const inv = (this.props.inventoryManager && this.props.inventoryManager.inventory) || [];
+            return inv.filter(item => item && item.id === reagentId && item.category === 'reagent').length;
+        };
+
+        // ── Compound builder: current recipe match ──────────────────────────
+        const compoundSlots = this.state.compoundBuilderSlots || [];
+        const matchedRecipe = matchRecipe(compoundSlots);
+        const matchedPotion = matchedRecipe ? POTIONS[matchedRecipe.potionId] : null;
+
         return <div className='actions-container'>
             {actions.map((action, i) => {
                 const maximumReached = getMaxReachedForAction(action);
                 // find the active special action that matches THIS action's type
-                // (e.g. 'glyph'/'spell' row shows spell progress; 'ritual' row shows ritual progress)
+                // type:'glyph' covers new format; type:'spell' fallback covers legacy magic missile
                 const activeAction = (character.specialActions || []).find(a => {
                     if (!a || !a.startDate || !a.endDate) return false;
-                    if (a.type !== action.type && !(action.type === 'glyph' && a.type === 'spell')) return false;
+                    if (a.type !== action.type && !(action.type === 'glyph' && (a.type === 'spell' || a.type === 'glyph'))) return false;
                     const start = new Date(a.startDate);
                     const end = new Date(a.endDate);
                     const now = new Date();
@@ -828,18 +849,179 @@ class DungeonPage extends React.Component {
                                 ></div>
                             );
                         })()}
-                        <div className='action-icon' style={{backgroundImage: `url(${action.iconUrl})`}}></div>
+                        <div className='action-icon' style={{backgroundImage: `url(${action.iconUrl})`, filter: action.type === 'compound' ? 'invert(1)' : undefined}}></div>
                         <div className="action-text">{action.name}</div>
                     </div>
                     {/* <div className="info-icon" style={{backgroundImage: `url(${images['info']})`}}></div> */}
                     <div className={`action-sub-menu ${(Array.isArray(this.state.actionMenuTypeExpanded) ? this.state.actionMenuTypeExpanded : []).includes(action.type) ? 'expanded' : ''}`}>
                         {maximumReached && <div className='max-reached'>maximum reached</div>}
                         {action.subTypes && action.subTypes.map((subType, j) => (
-                            <div key={j} onClick={() => this.handleActionSubtypeClick(action, subType)}
-                                className={`action-subtype ${this.getSubtypeClass(subType, maximumReached)} `}>
-                                {subType.type} {subType.count !== 0 && this.getSubtypeImageCountElement(subType)}
-                            </div>
+                            <React.Fragment key={j}>
+                                <div onClick={() => this.handleActionSubtypeClick(action, subType)}
+                                    className={`action-subtype ${this.getSubtypeClass(subType, maximumReached)} ${action.type === 'glyph' && this.state.glyphBuilderOpen === subType.glyphTier ? 'active-tier' : ''}`}>
+                                    {subType.type} {subType.count !== 0 && this.getSubtypeImageCountElement(subType)}
+                                </div>
+                                {/* Builder panel renders immediately below the tier that is open */}
+                                {action.type === 'glyph' && this.state.glyphBuilderOpen === subType.glyphTier && (() => {
+                                    const tier = this.state.glyphBuilderOpen;
+                                    const glyphDef = GLYPHS[tier];
+                                    if (!glyphDef) return null;
+                                    const totalSlots = glyphDef.slots;
+                                    const pickedSpells = this.state.glyphBuilderSpells || [];
+                                    const slotsUsed = pickedSpells.reduce((s, sp) => s + (GLYPH_SPELL_SLOT_COST[sp.tier] || 1), 0);
+
+                                    // Wizard's eligible combat spells from skills-matrix
+                                    const wizardCombatSpellKeys = (this.state.selectedCrewMember?.specials || [])
+                                        .concat(this.state.selectedCrewMember?.attacks || [])
+                                        .filter(key => {
+                                            const def = skillsMatrix[key];
+                                            return def && def.class === 'wizard' && def.type !== 'passive';
+                                        });
+
+                                    // Compute prep time label
+                                    const prepMs = computeGlyphPrepTime(pickedSpells);
+                                    const prepMin = Math.round(prepMs / 60000);
+                                    const prepLabel = prepMin >= 60
+                                        ? `${Math.floor(prepMin / 60)}h ${prepMin % 60 > 0 ? (prepMin % 60) + 'm' : ''}`.trim()
+                                        : `${prepMin} min`;
+
+                                    // Build slot row: slot-0 = spell icon, slots 1+ = red X
+                                    const slotBlocks = [];
+                                    let slotIdx = 0;
+                                    pickedSpells.forEach((sp) => {
+                                        const cost = GLYPH_SPELL_SLOT_COST[sp.tier] || 1;
+                                        const spDef = skillsMatrix[sp.id];
+                                        const spIconUrl = spDef?.icon
+                                            ? (typeof spDef.icon === 'object' ? (spDef.icon.default || '') : spDef.icon)
+                                            : '';
+                                        for (let c = 0; c < cost; c++) {
+                                            slotBlocks.push(
+                                                <div key={`slot-${slotIdx++}`}
+                                                     className={`glyph-slot filled tier-${sp.tier} ${c > 0 ? 'slot-overflow' : ''}`}
+                                                     title={c === 0 ? `${sp.name} (click to remove)` : `Slot used by ${sp.name}`}
+                                                     onClick={() => this.handleGlyphSpellToggle(sp.id)}>
+                                                    {c === 0
+                                                        ? <div className="glyph-slot-icon" style={{ backgroundImage: spIconUrl ? `url(${spIconUrl})` : 'none' }} />
+                                                        : <span className="glyph-slot-x">✕</span>
+                                                    }
+                                                </div>
+                                            );
+                                        }
+                                    });
+                                    for (let e = slotsUsed; e < totalSlots; e++) {
+                                        slotBlocks.push(<div key={`slot-empty-${e}`} className="glyph-slot empty" />);
+                                    }
+
+                                    return (
+                                        <div className="glyph-builder-panel">
+                                            {/* TOP: slot squares */}
+                                            <div className="glyph-slot-row">{slotBlocks}</div>
+
+                                            {/* BOTTOM: visual spell icon grid */}
+                                            <div className="glyph-spell-grid">
+                                                {wizardCombatSpellKeys.map(key => {
+                                                    const def = skillsMatrix[key];
+                                                    if (!def) return null;
+                                                    const cost = GLYPH_SPELL_SLOT_COST[def.tier] || 1;
+                                                    const isSelected = pickedSpells.some(s => s.id === key);
+                                                    const wouldOverflow = !isSelected && slotsUsed + cost > totalSlots;
+                                                    const iconUrl = def.icon
+                                                        ? (typeof def.icon === 'object' ? (def.icon.default || '') : def.icon)
+                                                        : '';
+                                                    return (
+                                                        <div
+                                                            key={key}
+                                                            className={`glyph-spell-cell ${isSelected ? 'selected' : ''} ${wouldOverflow ? 'overflow' : ''}`}
+                                                            onClick={() => this.handleGlyphSpellToggle(key)}
+                                                            title={`${def.name} — T${def.tier} · ${cost} slot${cost > 1 ? 's' : ''}`}
+                                                        >
+                                                            <div className={`glyph-spell-cell-icon tier-${def.tier}`}
+                                                                 style={{ backgroundImage: iconUrl ? `url(${iconUrl})` : 'none' }} />
+                                                            <span className="glyph-spell-cell-name">{def.name}</span>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+
+                                            <button
+                                                className={`glyph-prepare-btn ${pickedSpells.length === 0 ? 'disabled' : ''}`}
+                                                onClick={this.handleGlyphPrepare}
+                                                disabled={pickedSpells.length === 0}
+                                            >
+                                                {pickedSpells.length === 0 ? 'Pick spells above' : `Prepare · ${prepLabel}`}
+                                            </button>
+                                        </div>
+                                    );
+                                })()}
+                            </React.Fragment>
                         ))}
+
+                        {/* ── Compound Potions builder (Sage) ───────────────────────────── */}
+                        {action.type === 'compound' && this.state.compoundBuilderOpen && (() => {
+                            const allSlotsFull = compoundSlots.length >= 3;
+                            return (
+                            <div className="compound-builder-panel">
+                                {/* TOP: 3 reagent slots */}
+                                <div className="compound-slot-row">
+                                    {[0, 1, 2].map(i => {
+                                        const slotId = compoundSlots[i];
+                                        const slotReagent = slotId ? REAGENTS[slotId] : null;
+                                        const iconUrl = slotReagent ? images[slotReagent.icon] : null;
+                                        return (
+                                            <div
+                                                key={i}
+                                                className={`compound-slot ${slotReagent ? 'filled' : 'empty'}`}
+                                                title={slotReagent ? `${slotReagent.name} (click to remove)` : 'Empty slot'}
+                                                onClick={() => slotReagent && this.handleCompoundSlotRemove(i)}
+                                            >
+                                                {slotReagent && (
+                                                    <div className="compound-slot-icon"
+                                                         style={{ backgroundImage: iconUrl ? `url(${iconUrl})` : 'none' }} />
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+
+                                {/* MIDDLE: available reagents from inventory */}
+                                <div className="compound-reagent-grid">
+                                    {REAGENT_KEYS.map(rKey => {
+                                        const reagent = REAGENTS[rKey];
+                                        const count = getReagentCount(rKey);
+                                        const isSelected = compoundSlots.includes(rKey);
+                                        const isDepleted = count === 0;
+                                        const isBlocked = !isSelected && allSlotsFull;
+                                        const iconUrl = images[reagent.icon];
+                                        return (
+                                            <div
+                                                key={rKey}
+                                                className={`compound-reagent-cell ${isSelected ? 'selected' : ''} ${(isDepleted || isBlocked) ? 'depleted' : ''}`}
+                                                onClick={() => !isDepleted && !isBlocked && this.handleCompoundReagentClick(rKey)}
+                                                title={`${reagent.name} (×${count})${isDepleted ? ' — none in inventory' : ''}`}
+                                            >
+                                                <div className="compound-reagent-icon"
+                                                     style={{ backgroundImage: iconUrl ? `url(${iconUrl})` : 'none' }} />
+                                                <span className="compound-reagent-name">{reagent.name}</span>
+                                                {count > 0 && <span className="compound-reagent-count">×{count}</span>}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+
+                                {/* BOTTOM: recipe match + brew button */}
+                                {matchedPotion && (
+                                    <div className="compound-recipe-label">→ {matchedPotion.name}</div>
+                                )}
+                                <button
+                                    className={`compound-brew-btn ${matchedPotion ? 'ready' : 'disabled'}`}
+                                    onClick={this.handleCompoundBrew}
+                                    disabled={!matchedPotion}
+                                >
+                                    {matchedPotion ? `Brew: ${matchedPotion.name}` : (compoundSlots.length === 0 ? 'Select reagents above' : 'No matching recipe')}
+                                </button>
+                            </div>
+                        );
+                    })()}
                     </div>
                 </div>
                 )
@@ -1152,6 +1334,7 @@ class DungeonPage extends React.Component {
             , activeChestLoot: []
             , chestLootVisible: false
             , chestLootFadeOut: false
+            , chestLootStyle: null
             , showQuestsPopup: false
             , showCampPopup: false
             , campWarningMessage: null
@@ -1318,6 +1501,12 @@ class DungeonPage extends React.Component {
                 selectedCrewMember: initialSelectedCrewMember,
                 actionsTrayExpanded: initialSelectedCrewMember ? initialSelectedCrewMember.actionsTrayExpanded : false,
                 actionMenuTypeExpanded: initialSelectedCrewMember ? (Array.isArray(initialSelectedCrewMember.actionMenuTypeExpanded) ? initialSelectedCrewMember.actionMenuTypeExpanded : (initialSelectedCrewMember.actionMenuTypeExpanded ? [initialSelectedCrewMember.actionMenuTypeExpanded] : [])) : [],
+                // Glyph builder state — which tier is open, and which spells the user has slotted so far
+                glyphBuilderOpen: null,
+                glyphBuilderSpells: [],
+                // Compound Potions builder state — whether the panel is open, and which reagents are in the 3 slots
+                compoundBuilderOpen: false,
+                compoundBuilderSlots: [], // array of reagent IDs (max 3)
                 // Do NOT open the modal at mount time — the CModal 'modal-open' body class
                 // from an immediately-visible modal can persist and trap all clicks if a
                 // second modal (quests popup) opens before CoreUI finishes the close animation.
@@ -2431,6 +2620,7 @@ class DungeonPage extends React.Component {
                         'magical t3 / magical3 / magicalt3 — add 2 random tier-3 magical items',
                         'open board — jump to mapmaker board view for current board',
                         'launch cardgame — start a card duel battle',
+                        'reagents — add 1 of each reagent type to inventory',
                         'list / help'
                     ];
                     this.setState(prev => ({ devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, ...commands], devConsoleInput: '' }));
@@ -2445,6 +2635,32 @@ class DungeonPage extends React.Component {
                         try { updateUserRequest(getUserId(), getMeta()).catch(()=>{}); } catch(e){}
                         try { if (typeof this.props.saveUserData === 'function') this.props.saveUserData(); } catch(e){}
                         this.setState(prev => ({ devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, 'Death tracker reset to 0'], devConsoleInput: '' }));
+                    } catch (err) {
+                        this.setState(prev => ({ devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, `Error: ${err && err.message ? err.message : err}`], devConsoleInput: '' }));
+                    }
+                    try { if (this.devConsoleInputRef.current) this.devConsoleInputRef.current.focus(); } catch (err) {}
+                    e.preventDefault();
+                    return;
+                }
+                // reagents — add 1 of each reagent type to inventory
+                if (cmd === 'reagents') {
+                    try {
+                        REAGENT_KEYS.forEach(rKey => {
+                            this.props.inventoryManager.addItem({ ...REAGENTS[rKey] });
+                        });
+                        try {
+                            const meta = getMeta();
+                            meta.inventory = {
+                                items: this.props.inventoryManager.inventory,
+                                gold: this.props.inventoryManager.gold,
+                                shimmering_dust: this.props.inventoryManager.shimmering_dust,
+                                totems: this.props.inventoryManager.totems,
+                            };
+                            storeMeta(meta);
+                            if (typeof this.props.saveUserData === 'function') this.props.saveUserData();
+                        } catch(e){}
+                        this.forceUpdate();
+                        this.setState(prev => ({ devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, `Added 1 of each reagent (${REAGENT_KEYS.length} total) to inventory`], devConsoleInput: '' }));
                     } catch (err) {
                         this.setState(prev => ({ devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, `Error: ${err && err.message ? err.message : err}`], devConsoleInput: '' }));
                     }
@@ -2861,7 +3077,7 @@ class DungeonPage extends React.Component {
         let index = Math.floor(Math.random() * array.length)
         return array[index]
     }
-    triggerLootRadialArc = (lootInput) => {
+    triggerLootRadialArc = (lootInput, tile = null) => {
         const rawItems = Array.isArray(lootInput) ? lootInput : [lootInput];
         const newItems = rawItems.map(item => {
             let resolvedIcon = item.icon;
@@ -2889,12 +3105,28 @@ class DungeonPage extends React.Component {
             this._chestLootCleanupTimer = null;
         }
 
+        let chestLootStyle = null;
+        if (tile && tile.id !== undefined && tile.id !== null) {
+            const index = Number(tile.id);
+            if (!isNaN(index)) {
+                const pixel = this.getPixelForIndex(index);
+                if (pixel) {
+                    chestLootStyle = {
+                        left: pixel.left,
+                        top: pixel.top,
+                        transform: 'translate3d(0px, 0px, 0px)'
+                    };
+                }
+            }
+        }
+
         this.setState(prevState => {
             const baseList = prevState.chestLootFadeOut ? [] : prevState.activeChestLoot;
             return {
                 activeChestLoot: [...baseList, ...newItems],
                 chestLootVisible: true,
-                chestLootFadeOut: false
+                chestLootFadeOut: false,
+                chestLootStyle: chestLootStyle
             };
         }, () => {
             this._chestLootTimer = this._setTimeout(() => {
@@ -2904,13 +3136,14 @@ class DungeonPage extends React.Component {
                     this.setState({
                         activeChestLoot: [],
                         chestLootVisible: false,
-                        chestLootFadeOut: false
+                        chestLootFadeOut: false,
+                        chestLootStyle: null
                     });
                 }, 300);
             }, 1000);
         });
     }
-    addCurrencyToInventory = (data) => {
+    addCurrencyToInventory = (data, tile = null) => {
         let type;
         switch(data.type){
             case 'gold':
@@ -2940,7 +3173,7 @@ class DungeonPage extends React.Component {
                 id: data.type + '_' + Math.random(),
                 icon: images[iconKey] || images['gold'] || null,
                 name: `${data.amount} ${type}`
-            });
+            }, tile);
         }
     }
     addFoodToSupplies = () => {
@@ -2994,10 +3227,10 @@ class DungeonPage extends React.Component {
                 id: tileContains + '_' + Math.random(),
                 icon: images[iconKey] || images[tileContains] || images['treasure'] || null,
                 name: itemDisplayName
-            });
+            }, tile);
         }
     }
-    addTreasureToInventory = (treasure) => {
+    addTreasureToInventory = (treasure, tile = null) => {
         let item = treasure.item
         const message = `You open the treasure chest and find a ${item.replaceAll('_',' ')} and ${treasure.currency.amount} ${treasure.currency.type.replace('_',' ')}!`
         this.displayMessage(message);
@@ -3029,7 +3262,7 @@ class DungeonPage extends React.Component {
                 icon: images[currencyIconKey] || images['gold'] || null,
                 name: `${treasure.currency.amount} ${treasure.currency.type}`
             }
-        ]);
+        ], tile);
     }
     useConsumableFromInventory = (item) => {
         let foundItem = this.props.inventoryManager.inventory.find(e=> e.name === item.name),
@@ -4013,7 +4246,7 @@ class DungeonPage extends React.Component {
         const normalizedClass = (((liveMember && liveMember.class) || selected.class || '') + '').toLowerCase();
         const inferredClass = ['soldier', 'ranger', 'monk', 'barbarian'].includes(selectedType)
             ? 'warrior'
-            : (['wizard', 'sage', 'engineer'].includes(selectedType) ? 'spellcaster' : '');
+            : (['wizard', 'sage', 'engineer', 'summoner'].includes(selectedType) ? 'spellcaster' : '');
         const crewClass = normalizedClass || inferredClass;
         
         if (crewClass !== 'warrior') return; // only warriors can equip weapons
@@ -4105,6 +4338,16 @@ class DungeonPage extends React.Component {
         const subtype = item.subtype || '';
         const type = item.type || '';
 
+        const liveMember = (this.props.crewManager && Array.isArray(this.props.crewManager.crew))
+            ? this.props.crewManager.crew.find(c => c && c.id === selected.id)
+            : null;
+        const selectedType = (((liveMember && liveMember.type) || selected.type || '') + '').toLowerCase();
+        const normalizedClass = (((liveMember && liveMember.class) || selected.class || '') + '').toLowerCase();
+        const inferredClass = ['soldier', 'ranger', 'monk', 'barbarian'].includes(selectedType)
+            ? 'warrior'
+            : (['wizard', 'sage', 'engineer', 'summoner'].includes(selectedType) ? 'spellcaster' : '');
+        const crewClass = normalizedClass || inferredClass;
+
         const slotOccupied = (slotName) => selected.inventory.some(i => i.equippedSlot === slotName);
 
         let targetSlot = null;
@@ -4116,21 +4359,14 @@ class DungeonPage extends React.Component {
         } else if (subtype === 'boots') {
             targetSlot = 'boots';
             if (slotOccupied(targetSlot)) targetSlot = null;
-        } else if(['amulet','armor'].includes(subtype)){
+        } else if(['amulet','armor','tabard'].includes(subtype)){
+            if (subtype === 'tabard' && crewClass !== 'spellcaster') {
+                // Only spellcasters/magic users can equip tabards
+                return;
+            }
             targetSlot = 'chest';
             if(slotOccupied(targetSlot)) targetSlot = null;
         } else if(subtype === 'wand' || subtype === 'staff' || type === 'weapon' || subtype === 'shield'){
-            // Class-based equipment restrictions for hand slots
-            const liveMember = (this.props.crewManager && Array.isArray(this.props.crewManager.crew))
-                ? this.props.crewManager.crew.find(c => c && c.id === selected.id)
-                : null;
-            const selectedType = (((liveMember && liveMember.type) || selected.type || '') + '').toLowerCase();
-            const normalizedClass = (((liveMember && liveMember.class) || selected.class || '') + '').toLowerCase();
-            const inferredClass = ['soldier', 'ranger', 'monk', 'barbarian'].includes(selectedType)
-                ? 'warrior'
-                : (['wizard', 'sage', 'engineer'].includes(selectedType) ? 'spellcaster' : '');
-            const crewClass = normalizedClass || inferredClass;
-            
             // Warriors can equip weapons in hand slots
             if(type === 'weapon'){
                 if(crewClass !== 'warrior'){
@@ -5404,18 +5640,40 @@ class DungeonPage extends React.Component {
         storeMeta(meta);
         this.props.saveUserData();
 
-        this.setState({
-            actionMenuTypeExpanded: val
-        })
+        const nextState = { actionMenuTypeExpanded: val };
+        // Toggle compound builder open/closed when the Compound Potions action row is clicked
+        if (action.type === 'compound') {
+            nextState.compoundBuilderOpen = !isOpen;
+            if (isOpen) nextState.compoundBuilderSlots = [];
+        }
+        this.setState(nextState);
     }
     getSubtypeClass = (subtype, maxReached) => {
         if(!subtype.available) return 'disabled'
         if(maxReached) return 'max-reached'
-        if(this.state.selectedCrewMember.specialActions.some(a=> {
+        
+        const actionInProgress = this.state.selectedCrewMember.specialActions.find(a => {
             let end = new Date(a.endDate);
-            let now = new Date()
-            return end > now
-        })) return 'in-progress'
+            let now = new Date();
+            return end > now;
+        });
+
+        if (actionInProgress) {
+            let isMatch = false;
+            if (actionInProgress.type === 'glyph' && subtype.glyphTier) {
+                isMatch = actionInProgress.glyphTier === subtype.glyphTier;
+            } else if (actionInProgress.type === 'ritual' && subtype.ritualKey) {
+                isMatch = actionInProgress.ritualKey === subtype.ritualKey;
+            } else {
+                isMatch = actionInProgress.name === subtype.type || actionInProgress.type === subtype.type || actionInProgress.subtype === subtype.type;
+            }
+
+            if (isMatch) {
+                return 'in-progress';
+            } else {
+                return 'disabled';
+            }
+        }
     }
     // For special-action-icon: Roman numerals as text
     getSubtypeNumeralElement = (subtype) => {
@@ -5433,6 +5691,18 @@ class DungeonPage extends React.Component {
         return <div className="numeral" style={{backgroundImage: `url(${images[arr[idx]]})`}}></div>;
     }
     handleActionSubtypeClick = (action, subType) => {
+        // For glyph actions, open the spell-slot builder instead of immediately starting
+        if (action.type === 'glyph' && subType.glyphTier) {
+            const currentTier = this.state.glyphBuilderOpen;
+            // Toggle: clicking same tier closes the builder
+            if (currentTier === subType.glyphTier) {
+                this.setState({ glyphBuilderOpen: null, glyphBuilderSpells: [] });
+            } else {
+                this.setState({ glyphBuilderOpen: subType.glyphTier, glyphBuilderSpells: [] });
+            }
+            return;
+        }
+        // Original path for rituals, scrimmage, etc.
         let characterFromCrew = this.props.crewManager.crew.find(e=> e.id === this.state.selectedCrewMember.id)
         this.props.crewManager.beginSpecialAction(characterFromCrew, action, subType)
         const meta = getMeta();
@@ -5445,6 +5715,119 @@ class DungeonPage extends React.Component {
         if (updatedCrewMember) {
             this.setState({ selectedCrewMember: { ...updatedCrewMember } });
         }
+    }
+
+    // Toggle a spell in the glyph builder. spellKey is the skills-matrix key.
+    handleGlyphSpellToggle = (spellKey) => {
+        const tier = this.state.glyphBuilderOpen;
+        if (!tier || !GLYPHS[tier]) return;
+        const glyphSlots = GLYPHS[tier].slots;
+        const current = this.state.glyphBuilderSpells || [];
+        const spellDef = skillsMatrix[spellKey];
+        if (!spellDef) return;
+        const spellCost = GLYPH_SPELL_SLOT_COST[spellDef.tier] || 1;
+
+        // If already selected, remove it
+        const existingIdx = current.findIndex(s => s.id === spellKey);
+        if (existingIdx !== -1) {
+            this.setState({ glyphBuilderSpells: current.filter((_, i) => i !== existingIdx) });
+            return;
+        }
+        // Compute slots already used
+        const slotsUsed = current.reduce((sum, s) => sum + (GLYPH_SPELL_SLOT_COST[s.tier] || 1), 0);
+        if (slotsUsed + spellCost > glyphSlots) return; // not enough room
+        this.setState({
+            glyphBuilderSpells: [...current, { id: spellKey, tier: spellDef.tier, name: spellDef.name }]
+        });
+    }
+
+    // Commit the built glyph — starts the preparation timer.
+    handleGlyphPrepare = () => {
+        const tier = this.state.glyphBuilderOpen;
+        const spellDefs = this.state.glyphBuilderSpells || [];
+        if (!tier || spellDefs.length === 0) return;
+
+        const action = { type: 'glyph' };
+        const subType = { glyphTier: tier, spellDefs };
+        const characterFromCrew = this.props.crewManager.crew.find(e => e.id === this.state.selectedCrewMember.id);
+        this.props.crewManager.beginSpecialAction(characterFromCrew, action, subType);
+        const meta = getMeta();
+        meta.crew = this.props.crewManager.crew;
+        storeMeta(meta);
+        this.props.saveUserData();
+        const updatedCrewMember = this.props.crewManager.crew.find(e => e.id === this.state.selectedCrewMember.id);
+        this.setState({
+            glyphBuilderOpen: null,
+            glyphBuilderSpells: [],
+            selectedCrewMember: updatedCrewMember ? { ...updatedCrewMember } : this.state.selectedCrewMember,
+        });
+    }
+
+    // ── Compound Potions handlers ─────────────────────────────────────────────
+
+    /** Add a reagent to the next empty slot (max 3). Deselects if already in slots. */
+    handleCompoundReagentClick = (reagentId) => {
+        const slots = [...(this.state.compoundBuilderSlots || [])];
+        const existingIdx = slots.indexOf(reagentId);
+        if (existingIdx !== -1) {
+            // Deselect — remove from slots
+            slots.splice(existingIdx, 1);
+        } else if (slots.length < 3) {
+            slots.push(reagentId);
+        }
+        this.setState({ compoundBuilderSlots: slots });
+    }
+
+    /** Remove the reagent at a specific slot index by clicking the slot directly. */
+    handleCompoundSlotRemove = (slotIndex) => {
+        const slots = [...(this.state.compoundBuilderSlots || [])];
+        slots.splice(slotIndex, 1);
+        this.setState({ compoundBuilderSlots: slots });
+    }
+
+    /** Brew the matched potion: consume 1 of each reagent from inventory, add potion. */
+    handleCompoundBrew = () => {
+        const slots = this.state.compoundBuilderSlots || [];
+        const recipe = matchRecipe(slots);
+        if (!recipe) return;
+        const potion = POTIONS[recipe.potionId];
+        if (!potion) return;
+
+        // Consume 1 of each required reagent from inventory
+        recipe.reagents.forEach(reagentId => {
+            const inv = (this.props.inventoryManager && this.props.inventoryManager.inventory) || [];
+            const idx = inv.findIndex(item => item && item.id === reagentId && item.category === 'reagent');
+            if (idx !== -1) {
+                this.props.inventoryManager.removeItemByIndex(idx);
+            }
+        });
+
+        // Add the brewed potion to inventory
+        this.props.inventoryManager.addItem({ ...potion });
+
+        // Persist
+        try {
+            const meta = getMeta();
+            meta.inventory = {
+                items: this.props.inventoryManager.inventory,
+                gold: this.props.inventoryManager.gold,
+                shimmering_dust: this.props.inventoryManager.shimmering_dust,
+                totems: this.props.inventoryManager.totems,
+            };
+            storeMeta(meta);
+            this.props.saveUserData();
+        } catch (e) { console.warn('handleCompoundBrew: persist failed', e); }
+
+        // Show loot arc for the brewed potion
+        try {
+            const iconUrl = images[potion.icon] || null;
+            this.triggerLootRadialArc({ type: 'potion', id: potion.id + '_' + Math.random(), icon: iconUrl, name: potion.name });
+        } catch (e) {}
+
+        this.displayMessage(`${potion.name} brewed!`);
+
+        // Reset builder slots
+        this.setState({ compoundBuilderSlots: [], compoundBuilderOpen: false });
     }
 
     // Called by MonsterBattle (via prop) when a fighter's consumable specialActions change
@@ -7593,14 +7976,17 @@ class DungeonPage extends React.Component {
                                 {/* Group special actions by type (flat structure) */}
                                 {(() => {
                                     const actions = this.state.selectedCrewMember.specialActions || [];
+                                    // Group by a key that distinguishes glyph tiers — for type:'glyph' use 'glyph:minor' etc.
                                     const grouped = {};
                                     actions.forEach(action => {
-                                        const type = action.type;
-                                        if (!grouped[type]) grouped[type] = [];
-                                        grouped[type].push(action);
+                                        const key = action.type === 'glyph' && action.glyphTier
+                                            ? `glyph:${action.glyphTier}`
+                                            : action.type;
+                                        if (!grouped[key]) grouped[key] = [];
+                                        grouped[key].push(action);
                                     });
-                                    return Object.keys(grouped).map((type, i) => {
-                                        const group = grouped[type];
+                                    return Object.keys(grouped).map((groupKey, i) => {
+                                        const group = grouped[groupKey];
                                         const action = group[0]; // representative
                                         const count = group.filter(a => a.available).length;
                                         // Prefer an in-progress action (one whose start/end bracket 'now') for the circular progress UI.
@@ -7613,8 +7999,11 @@ class DungeonPage extends React.Component {
                                         });
                                         const progressPct = inProgressAction ? this.getActionCooldownPercentage(inProgressAction) : 0;
                                         
-                                        // Prefer iconUrlInverted for DungeonPage (dark bg), fallback to iconUrl, then subtype/default
+                                        // Resolve icon: new-format glyphs use tier icon; legacy magic missile uses its icon
                                         let iconUrl = action.iconUrlInverted || action.iconUrl;
+                                        if (!iconUrl && action.glyphTier && typeof images !== 'undefined') {
+                                            iconUrl = images[`${action.glyphTier}_glyph`] || '';
+                                        }
                                         if (!iconUrl && action.subtype === 'magic missile' && typeof images !== 'undefined') {
                                             iconUrl = images['magic_missile_icon'] || images['magic_missile_inverted'] || images['magic_missile'];
                                         }
@@ -7622,7 +8011,7 @@ class DungeonPage extends React.Component {
                                             iconUrl = images['glyph_inverted'] || '';
                                         }
                                         return (
-                                            <div key={type} className="special-action-wrapper" style={{position: 'relative'}}>
+                                            <div key={groupKey} className="special-action-wrapper" style={{position: 'relative'}}>
                                                 <div className="special-action-icon" style={{backgroundImage: `url(${iconUrl})`}}></div>
                                                 {inProgressAction && progressPct < 50 && <div className="progress-overlay"></div>}
                                                 {inProgressAction && <div className="left" style={{transform: `rotate(${this.getRotateDegreesLeft(progressPct)}deg)`}}></div>}
@@ -8391,11 +8780,11 @@ class DungeonPage extends React.Component {
                         className="chest-loot-overlay"
                         style={{
                             position: 'absolute',
-                            left: this.state.playerFloatStyle.left,
-                            top: this.state.playerFloatStyle.top,
+                            left: this.state.chestLootStyle ? this.state.chestLootStyle.left : this.state.playerFloatStyle.left,
+                            top: this.state.chestLootStyle ? this.state.chestLootStyle.top : this.state.playerFloatStyle.top,
                             width: this.state.tileSize,
                             height: this.state.tileSize,
-                            transform: this.state.playerFloatStyle.transform,
+                            transform: this.state.chestLootStyle ? this.state.chestLootStyle.transform : this.state.playerFloatStyle.transform,
                             pointerEvents: 'none',
                             zIndex: 6
                         }}
@@ -8486,6 +8875,7 @@ class DungeonPage extends React.Component {
                 useConsumableFromInventory={this.useConsumableFromInventory}
                 onFighterUpdate={this.handleFighterUpdateFromBattle}
                 onDeathTrackerChanged={this.handleDeathTrackerChanged}
+                onTriggerLootArc={this.triggerLootRadialArc}
             ></MonsterBattle>}
 
             <CModal className='inventory-modal' alignment='center' visible={this.state.showInventoryPopup} onClose={() => this.setState({ showInventoryPopup: false })}>

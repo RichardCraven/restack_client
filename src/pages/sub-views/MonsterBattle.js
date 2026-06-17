@@ -18,6 +18,7 @@ import CombatGrid from '../../components/combat-panes/CombatGrid'
 import { AnimationManagerRedux } from '../../utils/animation-manager-redux';
 
 import { INTERVALS, INTERVAL_DISPLAY_NAMES } from '../../utils/shared-constants';
+import REAGENTS, { REAGENT_KEYS } from '../../utils/reagents';
 
 // const MAX_DEPTH = 7;
 const NUM_COLUMNS = 8;
@@ -1037,6 +1038,23 @@ class MonsterBattle extends React.Component {
             } else {
                 // gold already awarded, skipping
             }
+            // ── Reagent loot drop: 15% chance per combat victory ─────────────
+            try {
+                if (Math.random() < 0.15) {
+                    const pickedKey = REAGENT_KEYS[Math.floor(Math.random() * REAGENT_KEYS.length)];
+                    const reagentDef = REAGENTS[pickedKey];
+                    if (reagentDef && this.props.inventoryManager) {
+                        this.props.inventoryManager.addItem({ ...reagentDef });
+                        // Trigger the loot arc overlay if parent exposes it
+                        try {
+                            if (typeof this.props.onTriggerLootArc === 'function') {
+                                this.props.onTriggerLootArc({ type: 'reagent', id: pickedKey + Math.random(), icon: images[reagentDef.icon], name: reagentDef.name });
+                            }
+                        } catch(e) {}
+                    }
+                }
+            } catch(e) { console.warn('reagent loot drop failed', e); }
+
             this._setTimeout(()=>{
                 // Snapshot levels before awarding XP so we can show before→after
                 const levelsBefore = {};
@@ -1538,6 +1556,10 @@ class MonsterBattle extends React.Component {
         selectedConsumableSpecial = consumableSpecials.find(a=> a.selected);
 
         if (special) {
+            if (typeof special === 'object' && special.type === 'glyph') {
+                this.fireGlyph(special, fighterRef);
+                return;
+            }
             const specialName = (typeof special === 'string' ? special : special?.name || '')
                 .replaceAll('_', ' ')
                 .toLowerCase();
@@ -1623,25 +1645,89 @@ class MonsterBattle extends React.Component {
     // glyph firing
         // Use override if provided (AI), else fall back to selectedFighter (manual)
         const selectedFighter = fighterOverride || this.state.selectedFighter;
+
+        // ── New tiered glyph: fire all stored spells sequentially (500ms apart) ──────────
+        if (glyph.type === 'glyph' && Array.isArray(glyph.spells) && glyph.spells.length > 0) {
+            const target = this.props.combatManager.getCombatant(selectedFighter?.targetId);
+            if (!target) return;
+
+            // Consume the glyph
+            let consumableSpecials = selectedFighter.specialActions;
+            if (consumableSpecials) {
+                const targetIndex = consumableSpecials.findIndex(a => a.name === glyph.name && a.glyphTier === glyph.glyphTier && a.startDate === glyph.startDate);
+                if (targetIndex > -1) {
+                    consumableSpecials.splice(targetIndex, 1);
+                    this.setState({
+                        selectedFighter: { ...selectedFighter, specialActions: consumableSpecials }
+                    }, () => {
+                        if (this.props.combatManager && typeof this.props.combatManager.syncCrewMember === 'function') {
+                            this.props.combatManager.syncCrewMember(this.state.selectedFighter);
+                        }
+                    });
+                }
+            }
+
+            try {
+                if (this.props.combatManager && typeof this.props.combatManager.appendCombatLog === 'function') {
+                    const attackerName = typeof this.props.combatManager.getCombatantLogName === 'function'
+                        ? this.props.combatManager.getCombatantLogName(selectedFighter)
+                        : (selectedFighter.name || 'Wizard');
+                    const targetName = typeof this.props.combatManager.getCombatantLogName === 'function'
+                        ? this.props.combatManager.getCombatantLogName(target)
+                        : (target.name || 'target');
+                    const spellNames = (glyph.spellDefs || []).map(s => s.name).join(', ') || glyph.spells.join(', ');
+                    this.props.combatManager.appendCombatLog(
+                        `${attackerName} unleashes ${glyph.name || 'Glyph'} (${spellNames}) at ${targetName}!`
+                    );
+                }
+            } catch (e) {}
+
+            glyph.spells.forEach((spellKey, index) => {
+                setTimeout(() => {
+                    try {
+                        const currentTarget = this.props.combatManager.getCombatant(selectedFighter.targetId);
+                        if (!currentTarget) return;
+
+                        if (spellKey === 'magic_missile') {
+                            this.props.combatManager.fighterAI.roster['wizard']
+                                .triggerMagicMissile(selectedFighter, currentTarget, 1500);
+                        } else {
+                            // Look up the skill definition from combatManager or use a minimal object
+                            const specialsMatrix = this.props.combatManager?.specialsMatrix || {};
+                            const spellDef = specialsMatrix[spellKey] || { id: spellKey, name: spellKey, type: 'damage', selected: true };
+                            const spellWithSelected = { ...spellDef, selected: true };
+                            
+                            // Bypass action restrictions for barrage spells
+                            const cmFighter = this.props.combatManager.getCombatant(selectedFighter.id);
+                            const prevActions = cmFighter ? cmFighter.actionsTakenThisRound : 0;
+                            if (cmFighter) cmFighter.actionsTakenThisRound = 0;
+                            
+                            this.props.combatManager.fighterSpecialAttack(spellWithSelected);
+                            
+                            // Restore so we don't grant free standard actions
+                            if (cmFighter) cmFighter.actionsTakenThisRound = prevActions;
+                        }
+                        const combatLog = this.props.combatManager && typeof this.props.combatManager.getCombatLog === 'function'
+                            ? this.props.combatManager.getCombatLog()
+                            : [];
+                        this.setState({ combatLog });
+                    } catch (e) {
+                        console.warn('[fireGlyph] spell firing error for', spellKey, e);
+                    }
+                }, index * 500);
+            });
+            return;
+        }
+
+        // ── Legacy: magic missile (backward compat for old persisted specialActions) ──────
         switch(glyph.subtype){
-            case 'magic missile':
-                // animation manager check
-                //     magicMissile_targetLaneDiff: 0
-                // })
-
-                
-
-
-
+            case 'magic missile': {
                 let specials = selectedFighter?.specials;
                 let consumableSpecials = selectedFighter?.specialActions;
                 if (consumableSpecials) consumableSpecials.forEach(a=>a.selected = false)
                 if (specials) specials.forEach(a=>a.selected = false)
 
-
-
                 let target = this.props.combatManager.getCombatant(selectedFighter.targetId)
-                // target resolved
                 if(!target) return
                 try {
                     if (this.props.combatManager && typeof this.props.combatManager.appendCombatLog === 'function') {
@@ -1654,37 +1740,13 @@ class MonsterBattle extends React.Component {
                         this.props.combatManager.appendCombatLog(`${attackerName} casts magic missile at ${targetName}`);
                     }
                 } catch (e) {}
-                // let targetDistance = this.props.combatManager.getDistanceToTarget(this.state.selectedFighter, target)
-                // let laneDiff = this.props.combatManager.getLaneDifferenceToTarget(this.state.selectedFighter, target)
-
-                // console.log('laneDiff: ', laneDiff);
                 const travelTime = 1500
-                // triggering magic missile via AI
                 this.props.combatManager.fighterAI.roster['wizard'].triggerMagicMissile(selectedFighter, target, travelTime)
                 const combatLog = this.props.combatManager && typeof this.props.combatManager.getCombatLog === 'function'
                     ? this.props.combatManager.getCombatLog()
                     : [];
                 this.setState({ combatLog });
-                // this.props.combatManager.lockFighter(this.state.selectedFighter.id)
-
-
-                // this.props.animationManager.magicCircle(selectedFighter.coordinates, target.coordinates)
-                // setTimeout(()=>{
-                //     this.props.animationManager.magicTriangle(selectedFighter.coordinates, target.coordinates)
-                // }, 500)
-
-
-                
-                
-                
-                // setTimeout(()=>{
-                //     this.setState({
-                //         magicMissile_fire: false,
-                //         magicMissile_connectParticles: true
-                //     })
-                //     if(this.state.selectedFighter) this.props.combatManager.unlockFighter(this.state.selectedFighter.id)
-                // }, 2500)
-                // ^ travel time + 1 second of damage animation
+            }
             break;
             default:
                 // unknown glyph subtype
@@ -2576,7 +2638,8 @@ class MonsterBattle extends React.Component {
                                     {liveSelectedFighter && (() => {
                                         const rawSpecials = [
                                             ...(liveSelectedFighter.specials || []),
-                                            ...(liveSelectedFighter.attacks || [])
+                                            ...(liveSelectedFighter.attacks || []),
+                                            ...(liveSelectedFighter.specialActions?.filter(a => a.type === 'glyph' && a.available) || [])
                                         ];
                                         const seenKeys = new Set();
                                         const cm = this.props.combatManager;
@@ -2913,19 +2976,27 @@ class MonsterBattle extends React.Component {
                             <div className="interaction-tooltip">{this.state.hoveredSpellTile}</div>
                             <div className="interaction-tile-container">
                                 {(() => {
-                                    // Group spells by type
-                                    const spells = this.state.selectedFighter?.specialActions?.filter(a => a.type === 'spell') || [];
-                                    if (!spells.length) return null;
-                                    const grouped = {};
-                                    spells.forEach(spellUnit => {
+                                    const specialActions = this.state.selectedFighter?.specialActions || [];
+
+                                    // Legacy spell entries (type:'spell', e.g. old magic missile)
+                                    const legacySpells = specialActions.filter(a => a.type === 'spell' && a.available);
+                                    // New tiered glyphs (type:'glyph', available)
+                                    const readyGlyphs = specialActions.filter(a => a.type === 'glyph' && a.available);
+
+                                    if (!legacySpells.length && !readyGlyphs.length) return null;
+
+                                    const romanNumerals = ['', 'I', 'II', 'III', 'IV', 'V'];
+
+                                    // ── Legacy spell tiles ──────────────────────────────────────
+                                    const legacyGrouped = {};
+                                    legacySpells.forEach(spellUnit => {
                                         if (!spellUnit) return;
                                         const spellType = spellUnit.subtype;
-                                        if (!grouped[spellType]) grouped[spellType] = [];
-                                        grouped[spellType].push(spellUnit);
+                                        if (!legacyGrouped[spellType]) legacyGrouped[spellType] = [];
+                                        legacyGrouped[spellType].push(spellUnit);
                                     });
-                                    const romanNumerals = ['', 'I', 'II', 'III', 'IV', 'V'];
-                                    return Object.keys(grouped).map((type, idx) => {
-                                        const group = grouped[type];
+                                    const legacyTiles = Object.keys(legacyGrouped).map((type, idx) => {
+                                        const group = legacyGrouped[type];
                                         const spellUnit = group[0];
                                         const count = group.length;
                                         const rawIcon = spellUnit.iconUrl || spellUnit.icon;
@@ -2939,7 +3010,7 @@ class MonsterBattle extends React.Component {
                                             }
                                         }
                                         return (
-                                            <div key={type} className='interaction-tile-wrapper' style={{position: 'relative'}}>
+                                            <div key={`legacy-${type}`} className='interaction-tile-wrapper' style={{position: 'relative'}}>
                                                 <div
                                                     style={{ backgroundImage: resolvedIconUrl ? `url(${resolvedIconUrl}), radial-gradient(white 0%, black 60%)` : 'none', cursor: 'pointer' }}
                                                     className={`interaction-tile special ${spellUnit.selected ? 'selected' : ''}`}
@@ -2950,18 +3021,52 @@ class MonsterBattle extends React.Component {
                                                 {count > 0 && (
                                                     <div className={`stack-badge small`}>{romanNumerals[Math.min(count, 5)]}</div>
                                                 )}
-                                                {(() => {
-                                                    const spellEnergyCost = Number(spellUnit.energy_cost || spellUnit.energyCost) || 0;
-                                                    const spellEnergyFillPct = spellEnergyCost > 0
-                                                        ? Math.min(100, Math.floor(((this.state.selectedFighter?.energy || 0) / spellEnergyCost) * 100))
-                                                        : 100;
-                                                    return spellEnergyCost > 0 && spellEnergyFillPct < 100
-                                                        ? <div className="interaction-tile-overlay energy-fill" style={{ '--energy-fill': spellEnergyFillPct }}></div>
-                                                        : null;
-                                                })()}
                                             </div>
                                         );
                                     });
+
+                                    // ── New tiered glyph tiles ──────────────────────────────
+                                    // Group by tier so each tier gets one tile with a count badge
+                                    const glyphGrouped = {};
+                                    readyGlyphs.forEach(g => {
+                                        const tier = g.glyphTier || 'minor';
+                                        if (!glyphGrouped[tier]) glyphGrouped[tier] = [];
+                                        glyphGrouped[tier].push(g);
+                                    });
+                                    const glyphTiles = Object.keys(glyphGrouped).map((tier, idx) => {
+                                        const group = glyphGrouped[tier];
+                                        const representative = group[0];
+                                        const count = group.length;
+                                        const rawIcon = representative.iconUrl || images[`${tier}_glyph`] || images['glyph_inverted'] || '';
+                                        let resolvedIconUrl = '';
+                                        if (rawIcon) {
+                                            if (typeof rawIcon === 'string') {
+                                                const mapped = images[rawIcon.trim()];
+                                                resolvedIconUrl = mapped ? (mapped.default || mapped) : rawIcon;
+                                            } else if (typeof rawIcon === 'object') {
+                                                resolvedIconUrl = rawIcon.default || String(rawIcon);
+                                            }
+                                        }
+                                        const spellNames = (representative.spellDefs || []).map(s => s.name).join(', ');
+                                        const tooltip = `${representative.name}${spellNames ? ': ' + spellNames : ''}`;
+                                        return (
+                                            <div key={`glyph-${tier}`} className='interaction-tile-wrapper' style={{position: 'relative'}}>
+                                                <div
+                                                    style={{ backgroundImage: resolvedIconUrl ? `url(${resolvedIconUrl}), radial-gradient(white 0%, black 60%)` : 'none', cursor: 'pointer' }}
+                                                    className={`interaction-tile special glyph-tile glyph-tile--${tier}`}
+                                                    onClick={() => this.fireGlyph(representative)}
+                                                    onMouseEnter={() => this.spellTileHovered({ subtype: tier, name: tooltip })}
+                                                    onMouseLeave={() => this.spellTileHovered(null)}
+                                                    title={tooltip}>
+                                                </div>
+                                                {count > 0 && (
+                                                    <div className={`stack-badge small glyph-badge--${tier}`}>{romanNumerals[Math.min(count, 5)]}</div>
+                                                )}
+                                            </div>
+                                        );
+                                    });
+
+                                    return [...legacyTiles, ...glyphTiles];
                                 })()}
                             </div>
                         </div>

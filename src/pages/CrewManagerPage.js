@@ -8,6 +8,8 @@ import {
   updateUserRequest,
 //   addDungeonRequest
 } from '../utils/api-handler';
+import { InventoryManager } from '../utils/inventory-manager';
+
 class CrewManagerPage extends React.Component{
   constructor(props){
     super(props)
@@ -128,10 +130,44 @@ class CrewManagerPage extends React.Component{
 //   }
 submit = async () => {
     const meta = getMeta();
-    meta.crew = this.state.selectedCrew.filter(e=> e !== null)
-    await updateUserRequest(getUserId(), meta)
-    storeMeta(meta)
-    this.goBack()
+    let selectedCrew = this.state.selectedCrew.filter(e=> e !== null);
+
+    // Provide starting items
+    const im = new InventoryManager();
+    im.initializeItems();
+    const allItems = im.allItems || {};
+
+    selectedCrew.forEach(member => {
+        if (!member.inventory) member.inventory = [];
+        if (member.inventory.length === 0) {
+            let itemKey = null;
+            if (member.type === 'soldier' || member.type === 'barbarian') {
+                const wKeys = Object.keys(allItems).filter(k => allItems[k] && allItems[k].type === 'weapon' && allItems[k].tier === 1);
+                if (wKeys.length) itemKey = wKeys[Math.floor(Math.random() * wKeys.length)];
+            } else if (member.type === 'sage' || member.type === 'wizard') {
+                const aKeys = Object.keys(allItems).filter(k => allItems[k] && allItems[k].type === 'armor' && allItems[k].tier === 1);
+                if (aKeys.length) itemKey = aKeys[Math.floor(Math.random() * aKeys.length)];
+            } else if (['ranger', 'monk', 'summoner', 'engineer'].includes(member.type)) {
+                const combined = Object.keys(allItems).filter(k => allItems[k] && (allItems[k].type === 'boots' || allItems[k].type === 'helmet') && allItems[k].tier === 1);
+                if (combined.length) itemKey = combined[Math.floor(Math.random() * combined.length)];
+            }
+
+            if (itemKey && allItems[itemKey]) {
+                const item = JSON.parse(JSON.stringify(allItems[itemKey]));
+                item.equippedBy = member.id;
+                if (item.type === 'weapon') item.equippedSlot = 'right';
+                if (item.type === 'armor') item.equippedSlot = 'body';
+                if (item.type === 'helmet') item.equippedSlot = 'head';
+                if (item.type === 'boots') item.equippedSlot = 'feet';
+                member.inventory.push(item);
+            }
+        }
+    });
+
+    meta.crew = selectedCrew;
+    await updateUserRequest(getUserId(), meta);
+    storeMeta(meta);
+    this.goBack();
 }
 clear = () => {
     const meta = getMeta();

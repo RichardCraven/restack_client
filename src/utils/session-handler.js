@@ -138,6 +138,13 @@ function getResolvePenaltyReduction() {
             else if (lvl === 3) reductionPct = Math.max(reductionPct, 0.90);
         }
     });
+    // Add resolve penalty resistance from equipped items (tabards)
+    const invItems = (meta.inventory && Array.isArray(meta.inventory.items)) ? meta.inventory.items : [];
+    invItems.forEach(item => {
+        if (item && item.equippedBy != null && typeof item.resolveResist === 'number') {
+            reductionPct = Math.min(1.0, reductionPct + (item.resolveResist / 100));
+        }
+    });
     return reductionPct;
 }
 

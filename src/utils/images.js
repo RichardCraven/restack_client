@@ -143,6 +143,35 @@ import grand_health_potion from '../assets/icons/items/potions/grand health poti
 import supreme_health_potion from '../assets/icons/items/potions/supreme health potion.png'
 import lantern from '../assets/icons/items/lantern.png'
 
+// ── Compound potions (Sage-brewed / Alchemist) ─────────────────────────────
+import potion_healing_salve from '../assets/icons/potions/Res_46_medicines.png'
+import potion_greater_salve from '../assets/icons/potions/Res_47_medicines.png'
+import potion_health from '../assets/icons/potions/Res_49_health.png'
+import potion_poison_antidote from '../assets/icons/potions/Res_50_poison.png'
+import potion_clarity from '../assets/icons/potions/Res_51_stun.png'
+import potion_strength from '../assets/icons/potions/Res_97.png'
+import potion_endurance from '../assets/icons/potions/Res_99.png'
+import potion_shadow from '../assets/icons/potions/Res_100.png'
+import potion_swiftness from '../assets/icons/potions/Res_101.png'
+import potion_frost from '../assets/icons/potions/Res_102.png'
+import potion_arcane from '../assets/icons/potions/Res_103_magicpotion.png'
+import potion_cobalt from '../assets/icons/potions/Res_104_colb.png'
+import potion_void from '../assets/icons/potions/Res_117.png'
+
+// ── Reagents ───────────────────────────────────────────────────────────────
+import reagent_bramble from '../assets/icons/potions/reagents/bramble.png'
+import reagent_egg from '../assets/icons/potions/reagents/egg.png'
+import reagent_eye from '../assets/icons/potions/reagents/eye.png'
+import reagent_flower from '../assets/icons/potions/reagents/flower.png'
+import reagent_grass from '../assets/icons/potions/reagents/grass.png'
+import reagent_leaves from '../assets/icons/potions/reagents/leaves.png'
+import reagent_mushroom from '../assets/icons/potions/reagents/mushroom.png'
+import reagent_nuts from '../assets/icons/potions/reagents/nuts.png'
+import reagent_seaweed from '../assets/icons/potions/reagents/seaweed.png'
+import reagent_stinger from '../assets/icons/potions/reagents/stinger.png'
+import reagent_twig from '../assets/icons/potions/reagents/twig.png'
+
+
 import tier_1_armor from '../assets/icons/items/tier 1 .png'
 import tier_1_magical from '../assets/icons/items/tier 1 magical.png'
 import tier_1_weapon from '../assets/icons/items/tier 1 weapon.png'
@@ -239,7 +268,19 @@ import imperial_helm_upgradeable from '../assets/icons/items/helms/upgradeable/i
 import imperial_helm_upgradeable_upgraded from '../assets/icons/items/helms/upgradeable/imperial helm upgraded.png';
 import ranger_hood_upgradeable from '../assets/icons/items/helms/upgradeable/rogue hood.png';
 import ranger_hood_upgradeable_upgraded from '../assets/icons/items/helms/upgradeable/rogue hood upgraded.png';
-
+import ockneys_tabard from '../assets/icons/items/armor/magical/Ockney\'s_tabard.png';
+import sigilum_tabard from '../assets/icons/items/armor/magical/sigilum_tabard.png';
+import mercurial_tabard from '../assets/icons/items/armor/magical/mercurial_tabard.png';
+import wayfair_tabard from '../assets/icons/items/armor/magical/wayfair_tabard.png';
+import justicairs_tabard from '../assets/icons/items/armor/magical/justicair\'s_tabard.png';
+import livinricks_tabard from '../assets/icons/items/armor/magical/Livinrick\'s_tabard.png';
+import sorcerers_tabard from '../assets/icons/items/armor/magical/sorcerer\'s_tabard.png';
+import medici_tabard from '../assets/icons/items/armor/magical/medici_tabard.png';
+import ophiniomancers_tabard from '../assets/icons/items/armor/magical/ophiniomancer\'s_tabard.png';
+import runic_tabard from '../assets/icons/items/armor/magical/runic_tabard.png';
+import oslins_tabard from '../assets/icons/items/armor/magical/Oslin\'s_tabard.png';
+import astral_tabard from '../assets/icons/items/armor/magical/astral_tabard.png';
+import archmages_tabard from '../assets/icons/items/armor/magical/archmage\'s_tabard.png';
 
 import cloudfire_wand from '../assets/icons/items/wands/cloudfire wand.png';
 import animus_wand from '../assets/icons/items/wands/animus wand.png';
@@ -795,6 +836,9 @@ import iron_will_soldier from '../assets/icons/global skills/Soldier/iron will.p
 import ley_tap_wizard from '../assets/icons/global skills/Wizard/ley tap.png';
 import dimensional_pocket_wizard from '../assets/icons/global skills/Wizard/dimensional pocket.png';
 import scry_wizard from '../assets/icons/global skills/Wizard/scry.png';
+import minor_glyph from '../assets/icons/global skills/Wizard/minor_glyph.png';
+import major_glyph from '../assets/icons/global skills/Wizard/major_glyph.png';
+import supreme_glyph from '../assets/icons/global skills/Wizard/supreme_glyph.png';
 import iron_gut_barbarian from '../assets/icons/global skills/Barbarian/iron gut.png';
 import savage_haul_barbarian from '../assets/icons/global skills/Barbarian/savage haul.png';
 import bloodhound_barbarian from '../assets/icons/global skills/Barbarian/bloodhound.png';
@@ -1163,6 +1207,20 @@ export {
     imperial_helm_upgradeable_upgraded,
     ranger_hood_upgradeable,
     ranger_hood_upgradeable_upgraded,
+
+    ockneys_tabard,
+    sigilum_tabard,
+    mercurial_tabard,
+    wayfair_tabard,
+    justicairs_tabard,
+    livinricks_tabard,
+    sorcerers_tabard,
+    medici_tabard,
+    ophiniomancers_tabard,
+    runic_tabard,
+    oslins_tabard,
+    astral_tabard,
+    archmages_tabard,
 
     cloudfire_wand,
     animus_wand,
@@ -1772,6 +1830,9 @@ export {
     ley_tap_wizard,
     dimensional_pocket_wizard,
     scry_wizard,
+    minor_glyph,
+    major_glyph,
+    supreme_glyph,
     iron_gut_barbarian,
     savage_haul_barbarian,
     bloodhound_barbarian,
@@ -1792,5 +1853,33 @@ export {
     new_moon,
     rake,
     silence,
-    fear
+    fear,
+
+    // ── Compound potions ───────────────────────────────────────────────────
+    potion_healing_salve,
+    potion_greater_salve,
+    potion_health,
+    potion_poison_antidote,
+    potion_clarity,
+    potion_strength,
+    potion_endurance,
+    potion_shadow,
+    potion_swiftness,
+    potion_frost,
+    potion_arcane,
+    potion_cobalt,
+    potion_void,
+
+    // ── Reagents ──────────────────────────────────────────────────────────
+    reagent_bramble,
+    reagent_egg,
+    reagent_eye,
+    reagent_flower,
+    reagent_grass,
+    reagent_leaves,
+    reagent_mushroom,
+    reagent_nuts,
+    reagent_seaweed,
+    reagent_stinger,
+    reagent_twig,
 };

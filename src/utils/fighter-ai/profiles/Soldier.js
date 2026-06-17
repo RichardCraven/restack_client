@@ -783,6 +783,8 @@ export function Soldier(data, utilMethods, animationManager, overlayManager){
                 laneDiff = data.methods.getLaneDifferenceToTarget(caller, target); // eslint-disable-line no-unused-vars
                 // debugger
                 switch(capturedPendingAttack.name){
+                    case 'Slash':
+                    case 'slash':
                     case 'sword swing': {
                         // console.log('SWING ', facing);
                         // if (facing === 'up'){

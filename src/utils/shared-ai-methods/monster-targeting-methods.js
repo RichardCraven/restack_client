@@ -1,3 +1,5 @@
+import { crossesShieldWall } from './movement-methods';
+
 // Shared helpers for monster AI targeting/range/animation origin.
 // Designed to mirror Mummy's VCT + occupied-tile logic so new monster profiles
 // can include this once and avoid custom per-profile implementations.
@@ -52,6 +54,18 @@ export const MonsterTargetingHelpers = {
 
     isTargetInRange: (caller, target, attack) => {
         if (!caller || !target || !attack) return false;
+
+        // Monsters/minions cannot target/attack through a Shield Wall
+        if ((caller.isMonster || caller.isMinion) && caller.coordinates && target.coordinates) {
+            const callerTiles = MonsterTargetingHelpers.getOccupiedTiles(caller);
+            const targetTiles = (Array.isArray(target.occupiedCoords) && target.occupiedCoords.length > 0)
+                ? target.occupiedCoords
+                : [target.coordinates];
+            const hasPath = callerTiles.some(cc => 
+                targetTiles.some(tc => cc && tc && !crossesShieldWall(cc, tc))
+            );
+            if (!hasPath) return false;
+        }
 
         const attackRange = attack.range || 'close';
         const dist = MonsterTargetingHelpers.getDistanceToTarget(caller, target);

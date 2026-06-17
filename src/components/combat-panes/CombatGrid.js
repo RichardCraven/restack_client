@@ -3657,7 +3657,7 @@ export default function CombatGrid(props) {
                     top: `${anim.tgtPx.y + anim.topOffset}px`,
                     width: '56px',
                     height: '56px',
-                    transform: 'translate(-50%, -50%)',
+                    transform: anim.facing === 'left' ? 'translate(-50%, -50%) scaleX(-1)' : 'translate(-50%, -50%)',
                     pointerEvents: 'none',
                     zIndex: 5000,
                     display: 'flex',

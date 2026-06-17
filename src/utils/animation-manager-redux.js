@@ -815,6 +815,7 @@ export class AnimationManagerRedux {
       leftOffset,
       topOffset,
       icon: punchIcon,
+      facing: src.x > targetCoords.x ? 'left' : 'right',
       duration: 500
     });
   }
